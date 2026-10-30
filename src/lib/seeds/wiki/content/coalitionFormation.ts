@@ -1,12 +1,12 @@
 export const coalitionFormationContent = `# Coalition Formation
 
-A coalition is easy to build and hard to break up, because a disband vote counts absent chairs as no. This page is the how-to for [coalitions](/wiki/coalitions): creating one, bringing parties in, taking them out, handing over the chair and voting one out of existence. All of it is done by party chairs. Your party's national chair acts for it ([Party Leadership](/wiki/party-leadership)), or the vice chair when the chair seat is empty, or held by an NPP ([Party Leadership & Authority](/wiki/party-leadership-authority), where an acting vice chair can create, join, leave and vote).
+A coalition is easy to build and hard to break up, because a disband vote counts absent chairs as no. This page is the how-to for [coalitions](/wiki/coalitions): creating one, bringing parties in, taking them out, handing over the chair and voting one out of existence. All of it is done by party chairs. Your party's national chair acts for it ([Party Leadership](/wiki/party-leadership)), or the vice chair when the chair seat is empty ([Party Leadership & Authority](/wiki/party-leadership-authority)). An acting vice chair can create, request to join, answer invites and leave, but cannot cast the party's disband vote.
 
 ![Lifecycle of a coalition from creation through invites and requests, leaving or kicking, chair transfer and a 24 turn disband vote that needs more than half of all member parties.](/wiki-images/diagrams/coalition-formation-lifecycle.svg)
 
 ## Starting one
 
-Only a national party chair can create a coalition. On \`/parties\`, pick your country, open the Coalitions tab and click Create Coalition; non-chairs see the button greyed out with a reason. You choose a name (3 to 60 characters, unique in your country), an abbreviation (2 to 10 characters) and a colour. Your party becomes the first member and the **chair party**, and you become the coalition chair. A party already in a coalition cannot create another.
+Only a national party chair (or an acting vice chair) can create a coalition, and it costs the creator **25 actions**. On \`/parties\`, pick your country, open the Coalitions tab and click Create Coalition; non-chairs see the button greyed out with a reason. You choose a name (3 to 60 characters, unique in your country), an abbreviation (2 to 10 characters) and a colour. Your party becomes the first member and the **chair party**, and you become the coalition chair. A party already in a coalition cannot create another.
 
 ## Getting parties in
 
@@ -43,7 +43,7 @@ Five parties sit in the Liberty Alliance. The coalition chair opens a disband vo
 | Yes votes to disband | More than half of all members: 2 of 3, 3 of 4, 3 of 5 |
 | Disband votes at once | 1 |
 
-Parliamentary governments are assembled from the starting seats, not from coalitions; see [game-starting-state](/wiki/game-starting-state).
+In parliamentary countries a coalition chair can propose a prime minister and the coalition's combined seats count toward that government's majority; see [Government Formation](/wiki/government-formation).
 
-Live in every world and country that has parties. Bloc effects apply to US leadership races; elsewhere coalitions only signal alignment. Last checked 2026-10-29, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
+Live in every world and country that has parties. Bloc effects apply to US leadership races; parliamentary countries use coalitions in government formation. Last checked 2026-10-30, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
 `;

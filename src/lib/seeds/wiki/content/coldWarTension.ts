@@ -43,9 +43,9 @@ tension-after-thermonuclear-test
 
 ## What raises it
 
-- **Nuclear tests.** Every device test spikes tension, and bigger devices spike it harder. See [The Nuclear Programme](/wiki/nuclear-programme).
+- **Nuclear tests.** Every device test spikes tension, though not in order of size: the boosted fission test spikes it less than the first fission test. See [The Nuclear Programme](/wiki/nuclear-programme).
 - **Escalation.** Climbing the rungs of an active proxy war raises the standing pressure, not just a one-off spike.
-- **Crises.** Each active world crisis keeps the temperature up while it burns. Campaign outcomes and escalation in [Global Response Crises](/wiki/global-response-crises) move the reading and the floor, and the shared reading sets which pressures and options apply there.
+- **Crises.** Each active world crisis keeps the temperature up while it burns. Campaign outcomes and escalation in [Global Response Crises](/wiki/global-response-crises) move the reading and the floor.
 - **The world's arsenals.** The total warhead count across all programmes sets part of the floor. An armed world is a tense world even on a quiet week.
 - **Shooting wars.** Every active war contributes according to its intensity. See [Conflicts & the Military System](/wiki/conflicts-overview) and [Declaring War](/wiki/declaring-war). A fresh war between nuclear-armed countries creates a crisis-grade shock. If a war stays limited for many turns, part of that initial panic slowly fades. Heating the war back up restores the full pressure at once, and an active conflict always leaves a substantial floor.
 
@@ -65,10 +65,10 @@ Tension is a cause, not a scoreboard. The Conflicts page header turns the readin
 | Dial | How it is set |
 | --- | --- |
 | Readiness level (DEFCON) | 5 below 45, 4 from 45, 3 from 65, 2 from 85. Tension alone never reaches 1. |
-| Arms demand multiplier | 1 plus 0.005 for every point above 12, so 1.25 at tension 62. This is what changes demand in [Defence Procurement](/wiki/defence-procurement). |
+| Arms demand multiplier | 1 plus 0.005 for every point above 12, so 1.25 at tension 62. It is a displayed Cold War board signal; enacted defence spending and available appropriations set actual orders in [Defence Procurement](/wiki/defence-procurement). |
 | Detente goodwill penalty | 0.75 for every point above 35, so 20 at tension 62. |
 
-Thaw is a resource, and a high penalty burns the goodwill that cooperative diplomacy needs.
+Thaw is a resource, and the penalty grows with tension.
 
 High tension also brings **domestic world events** (the gauge gates the four wartime society crises in [World Events](/wiki/world-events)): Civil Defense Fever can start from tension 50. Panic Buying and War Scare Protests can start from 60. A Run on the Banks can start from 65. Governments can stagger them with spending, rationing, mobilization or emergency powers, but cannot suppress them completely. Strong measures shift demand away from consumer industries and toward manufacturing, construction and defence, while damaging civil liberties and Democratic Health.
 
@@ -76,5 +76,5 @@ High tension also brings **domestic world events** (the gauge gates the four war
 
 You do not control the gauge. You contribute to it. A well-timed test, a rung of escalation, a crisis left to burn: each is a decision about the world's temperature, and the whole world pays the bill together. The powers that read the gauge best are the ones that choose when to be provocative, not the ones that are provocative by accident.
 
-The gauge runs in every world with the Cold War layer, which is the default. It reads the same whatever the era, but the arsenals that feed it exist only where a nuclear programme has been opened by the United States, the Soviet Union, the United Kingdom or East Germany. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+The gauge runs in every world with the Cold War layer, which is the default. It reads the same whatever the era, but the arsenals that feed it exist only where a nuclear programme has been opened. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

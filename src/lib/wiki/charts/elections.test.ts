@@ -18,6 +18,7 @@ import { advertiseFavorabilityGain } from "@/lib/actions/advertiseGain";
 import { AD_BONUS_CAP, TURNOUT_CAP } from "@/lib/campaignTargeting/rules";
 import { REQUEST_THRESHOLD } from "@/lib/constants/referendum";
 import { PRE_FINAL_REPORTING_CAP } from "@/lib/elections/liveResults/computeResults";
+import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { resolveRedistrictCaps } from "@/lib/redistricting/caps";
 import { BASE_UNCERTAINTY_BAND } from "@/lib/demographics/granularPollUncertainty";
 
@@ -36,9 +37,13 @@ describe("elections charts", () => {
   it("vote pool releases the engine's per-turn weight and sums to 100", () => {
     const spec = chart("general-election-vote-pool");
     const pts = spec.series[0].points;
-    expect(pts).toHaveLength(48);
-    expect(pts[47][1]).toBeCloseTo(turnVoteWeight(48, 47, 100), 3);
-    expect(pts[47][1]).toBeCloseTo((FINAL_POOL_SHARE * 100) / ELECTION_DAY_TURNS, 3);
+    const windowTurns = DEFAULT_DURATIONS.house.generalDurationHours + 1;
+    expect(pts).toHaveLength(windowTurns);
+    expect(pts[windowTurns - 1][1]).toBeCloseTo(
+      turnVoteWeight(windowTurns, windowTurns - 1, 100),
+      3
+    );
+    expect(pts[windowTurns - 1][1]).toBeCloseTo((FINAL_POOL_SHARE * 100) / ELECTION_DAY_TURNS, 3);
     expect(pts.reduce((a, [, y]) => a + y, 0)).toBeCloseTo(100, 1);
   });
 

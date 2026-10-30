@@ -2,7 +2,7 @@ export const privateBankingContent = `# Private Banking
 
 You own a financial sector and it earns a steady margin. A **private bank** is the second way to earn from it: the sector's licensed banking arm, which takes deposits, lends against a reserve requirement, sets its rates inside a corridor set by the central bank, and can fail if depositors lose confidence. It also gives other players a place to borrow and save beyond the central bank.
 
-A corporation that owns a financial sector can charter one bank. The bank attracts household deposits by offering a better rate than the central bank's savings rate, lends part of those deposits to named borrowers and a bulk NPC loan book, and must keep a share of deposits in reserve. A run on the bank, a capital shortfall or too many bad loans can end it. Insurance and the central bank stand behind depositors.
+A corporation that owns a financial sector can charter one bank. The bank attracts household deposits by offering a better rate than the central bank's savings rate, lends part of those deposits to named borrowers and a bulk NPC loan book, and must keep a share of deposits in reserve. A run on the bank, a capital shortfall or too many bad loans can end it. The deposit insurance fund, and behind it the Treasury, stand behind household depositors.
 
 ![A bank balance sheet with reserves, loans, deposits and capital, the run line, and the discount window, insurance fund and Treasury behind it.](/wiki-images/diagrams/private-banking-balance-sheet.svg)
 
@@ -16,7 +16,7 @@ A corporation that owns a financial sector can charter one bank. The bank attrac
 | Bank run line | 0.5 times required reserves |
 | Confidence bands | Green from 0.7, amber from 0.4, red below |
 | Minimum capital ratio | 8%, recapitalise within 12 turns or lose the charter |
-| Stress ratio | 6% after a 15% loss on the book |
+| Stress ratio | 6% after a loss set by the book's credit mix (about 3% to 15%; 15% for a book with no band detail) |
 | Prop book cap | 3 times desk equity; any one forex currency at most 50% |
 | Discount window | Prime + 3 points, up to 25% of the deposit base |
 | Charter type switch lock | 24 turns |
@@ -31,7 +31,7 @@ A [corporation](/wiki/corporations) that owns at least one financial sector may 
 | Investment | No | No | Yes |
 | Universal | Yes | Yes | Yes |
 
-Most nations start with a **banking separation** law that allows retail or investment, but not universal. To switch the country to universal charters, propose an economy bill on the **Banking Separation Act** law type and choose the **Universal Banking Charter Act** option. There is no standalone universal-charter bill: the switch lives inside the separation law. Command economies do not offer private bank charters.
+In historical worlds nations start under **banking separation**, which allows retail or investment, but not universal. In modern worlds universal charters are legal by default (the US keeps separation until 1999). To switch the country to universal charters, propose an economy bill on the **Banking Separation Act** law type and choose the **Universal Banking Charter Act** option. There is no standalone universal-charter bill: the switch lives inside the separation law. Command economies do not offer private bank charters.
 
 You can also change charter type yourself from the bank console, without re-chartering or posting capital twice. Moving to a charter that cannot take deposits returns the whole deposit book, and any switch locks the type for 24 turns.
 
@@ -94,28 +94,28 @@ Each solvency pass scores the bank on reserves, capital, and loan losses. The sc
 | Amber | Stress; players see the warning one turn before NPC flight intensifies |
 | Red | Failure path |
 
-NPC deposits flee in proportion to low confidence. A failed bank can raise panic at peer banks in the same currency.
+While a bank is published amber, 10% of its household deposits flee each turn; while red, 30%. Flight never exceeds the cash on hand. A failed bank can raise panic at peer banks in the same currency.
 
-Failure needs two things at once: a red band, and cash below the **run line**, which is 0.5 times required reserves, and required reserves are household deposits times the reserve ratio. The console shows both numbers and your distance to the line. A red band with cash above the line does not fail the bank; cash under the line with a green or amber band does not either. That is one turn of notice, on purpose.
+A run failure needs two things at once: a red band published on the previous pass, and cash (plus any sovereign treasuries the bank holds, which it can sell the same turn) below the **run line**, which is 0.5 times required reserves, and required reserves are household deposits times the reserve ratio. The console shows both numbers and your distance to the line. A red band with cash above the line does not fail the bank; cash under the line with a green or amber band does not either. That is one turn of notice, on purpose. Separately, a deposit-taking bank whose marked liabilities exceed its assets fails at once, whatever its band, and an investment bank fails when it is red with no equity left behind its book.
 
 In the example above, if the bank's confidence band turns red and cash falls below ₳2,500,000, it fails. If it is red with ₳3,000,000 in cash, it survives that turn, but that is one turn of notice. Borrowing from the discount window would add cash but lower its confidence.
 
 ## Supervision: capital before the run
 
-The warning badge and the run mechanic are the **market** disciplining a bank after the fact. Supervision is the regulator disciplining it before. Your bank's **capital ratio** is its capital (posted capital plus the corporation's own free cash) divided by its risk assets, meaning the loan book plus any proprietary book.
+The warning badge and the run mechanic are the **market** disciplining a bank after the fact. Supervision is the regulator disciplining it before. Your bank's **capital ratio** is its capital (the bank's own ring-fenced cash plus any sovereign treasuries it holds, minus what it owes on the discount window, the margin line and the interbank market) divided by its risk assets, meaning the loan book plus any proprietary book and treasury holdings.
 
 | Test | Requirement | What failing costs you |
 | --- | --- | --- |
 | Minimum | 8% capital ratio | Recapitalize within 12 turns or the charter is revoked |
-| Stress scenario | 6% after a 15% loss on the book | No distributions and no new proprietary positions until fixed |
+| Stress scenario | 6% after the published loss for your book | No distributions and no new proprietary positions until fixed |
 
-**The stress scenario is published and fixed.** The supervisor assumes 15% of the book defaults at once, absorbed by capital. There is no dice roll: you can compute your own result before the regulator does, which makes the requirement something to plan against rather than a periodic surprise.
+**The stress scenario is published and fixed.** The supervisor assumes part of the book defaults at once, absorbed by capital: five times each credit band's expected default rate, which comes to about 3% for a conservative book and about 15% for an aggressive one. Older loans with no band detail are shocked at 15%. There is no dice roll: you can compute your own result before the regulator does, which makes the requirement something to plan against rather than a periodic surprise.
 
 **Two thresholds, not one.** A single line would make supervision binary: fine one turn, dead the next. Failing the *stress* test does not endanger your bank and does not touch your charter; what you lose is the right to pay yourself. A bank that cannot survive a downturn on paper does not get to distribute in the meantime. Falling below the *minimum* is the serious one, and it starts a clock.
 
 **Recapitalizing** moves cash from the corporation into the bank's posted capital. It is the same balance sheet, but a different claim: posted capital absorbs losses before depositors do, and cannot be spent on anything else. The interface tells you the exact amount that cures the breach.
 
-**Missing the deadline revokes the charter: it does not fail the bank.** Those are different outcomes and the difference matters to your depositors. A failure means the bank ran out of money to pay them, and they take a haircut above the insured cap. A revocation means the regulator pulled the licence of a bank that would not recapitalize; the book is unwound in an orderly way and posted capital is returned. Depositors should not be punished because an owner ignored a deadline.
+**Missing the deadline revokes the charter: it does not fail the bank.** Those are different outcomes and the difference matters to your depositors. A failure means the bank ran out of money; household deposits it cannot return are covered by the insurance fund and then the Treasury, and player savings were never held by the bank. A revocation means the regulator pulled the licence of a bank that would not recapitalize; the book is unwound in an orderly way through the same wind-up, and whatever is left over, capped at book equity, goes to the owner. Depositors should not be punished because an owner ignored a deadline.
 
 A bank that cures a breach and later breaches again gets a fresh 12 turns. The clock tracks the current breach, not your history.
 
@@ -147,7 +147,7 @@ Drawing creates money at the central bank; repaying destroys it. Both legs are l
 
 Investment and universal charters run a proprietary book in equities, bonds, index units, and forex. Positions are marked each solvency turn: equity prices from the [Stock Market](/wiki/stock-market) mark the equities, and forex rates from [Currency Exchange](/wiki/currency-exchange) mark the currency positions. Funding comes from:
 
-- The **interbank** market: retail banks may lend part of their non reserved deposits to investment banks at a negotiated rate. A failed lender's loans are written off.
+- The **interbank** market: retail banks may lend up to half of their remaining lending headroom (deposits above the reserve requirement not already lent) to investment banks at a negotiated rate. If a borrowing bank fails, whatever it cannot repay on those loans is written off.
 - A **central bank margin** line against posted collateral at prime plus a spread.
 
 The prop book is capped at three times the desk's equity, and any single forex

@@ -50,9 +50,9 @@ Line up your three founders before you draft; the window above is all you get. A
 
 - [NPPs](/wiki/npps-overview) fill seats and offices in each party and keep it from being empty.
 - [Election Mechanics](/wiki/election-mechanics): winners take office and shift party strength.
-- Chairs use the [Party Slate](/wiki/party-slate) board to field candidates in each race, and the chair and treasurer can donate from the party treasury to candidates' campaigns through the [Campaign Manager](/wiki/campaign-manager).
+- Chairs use the [Party Slate](/wiki/party-slate) board to field candidates in each race, and the chair, vice chair and treasurer can donate from the party treasury to candidates' campaigns through the [Campaign Manager](/wiki/campaign-manager).
 - Party GOTV budgets raise turnout of a chosen census bucket each turn; see [Demographics](/wiki/demographics).
-- The platform sets the alignment half of every [primary](/wiki/primaries) score, and the party's membership decides who stands and votes in its national [committee](/wiki/committees) election.
+- The platform sets the party part of the alignment score in every [primary](/wiki/primaries), and the party's membership decides who stands and votes in its national [committee](/wiki/committees) election.
 - Only parties, not individuals, join [coalitions](/wiki/coalitions).
 - The party's treasury and tier set the resources its leaders can spend in [Party Actions](/wiki/party-actions).
 
@@ -60,7 +60,7 @@ Line up your three founders before you draft; the window above is all you get. A
 
 | Country | System | Key offices |
 | --- | --- | --- |
-| US | Presidential, first past the post | House, Senate, Governor, State Senate, President |
+| US | Presidential (electoral college); House and State Senate by Hare-quota PR; Senate and Governor first past the post | House, Senate, Governor, State Senate, President |
 | UK | Westminster parliamentary | Commons, Regional Councils |
 | DE | Mixed-member proportional | Bundestag, Minister-President |
 | JP | Parliamentary, regional multi-seat | Shugiin, Sangiin, Governor |
@@ -71,5 +71,5 @@ Line up your three founders before you draft; the window above is all you get. A
 
 ![Hub diagram with Political Parties in the centre, pages that drive it on the left and pages it affects on the right.](/wiki-images/diagrams/political-parties-connections.svg)
 
-Live in every world and every country with elections. Last checked 2026-10-29, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html)
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html)
 `;

@@ -4,7 +4,7 @@ You do not need to live in the tab. The game runs an hourly turn whether you are
 
 ## What the hourly turn does
 
-Every hour the game runs one **turn**. It refreshes actions, pays Campaign Funds, decays or grows your meters, counts election ballots and moves bills, NPPs and markets forward. You can act any time between turns, and what you spend is processed on the next turn.
+Every hour the game runs one **turn**. It refreshes actions, pays Campaign Funds, decays or grows your meters, counts election ballots and moves bills, NPPs and markets forward. You can act any time between turns. Most actions apply the moment you click, and their effect on income, polls and ballots lands on the next turn.
 
 \`\`\`wiki-chart
 general-election-vote-pool
@@ -12,7 +12,7 @@ general-election-vote-pool
 
 | Number | Value |
 | --- | --- |
-| Turn length | 1 real hour, on the hour |
+| Turn length | 1 real hour, on the hour (some worlds run at half past) |
 | Actions per turn | 4 base, plus office, role and party bonuses |
 | Action cap, hoard threshold | 200 to 250 and 100 to 125, set by your Energy stat |
 | Hoarding penalty | 4 actions per turn above the threshold |
@@ -26,14 +26,14 @@ The hourly turn, the action cap and the hoarding rule come from [Core Systems](/
 
 - Actions refresh (4 base plus bonuses).
 - Campaign Funds arrive from your home state, donor base and office.
-- PI decays 0.75% (faster for the governing party when its approval is low). NPI decays 1%, then gains from your PI and office. Infamy decays 5%. Favorability drains if above 60.
+- PI decays 0.75% (faster for the governing party when its approval is low). NPI decays 1%, then gains from your PI and office. Infamy decays 5%. Favorability drains if above 60, if Infamy is above 20, or if your party governs while its approval is under 50.
 - Elections, bills, NPPs and markets advance.
 
-Refresh the Dashboard after the hour to see the new numbers. Market prices can update at quarter-hour marks, and election returns and macro indicators can move at half past the hour. Those extra updates never give another action refresh. Click the turn timer to check turn health if processing looks late. The timer counts down to the next turn, so you never need to work out time zones.
+Refresh your Profile after the hour to see the new numbers. Market prices can update at quarter-hour marks, and election returns and macro indicators can move at half past the hour. Those extra updates never give another action refresh. Click the turn timer to check turn health if processing looks late. The timer counts down to the next turn, so you never need to work out time zones.
 
 ## Why the last four turns matter
 
- A general election accumulates ballots turn by turn, and the closing turns are weighted. In a 24-turn general window (the US House, for example), the first 12 turns share 50%, which is about 4.17% per turn. The 8 ramp turns carry 2.5% each. The final 4 turns carry 7.5% each. One closing turn is worth about 1.8 early turns, so a lead you hold into the end beats a lead you build and let slip.
+ A general election accumulates ballots turn by turn, and the closing turns are weighted. In a 24-turn general window (the US House, for example), ballots are cast on 25 turns because both the opening and the closing turn count. The first 13 share 50%, which is about 3.85% per turn. The 8 ramp turns carry 2.5% each. The final 4 turns carry 7.5% each. One closing turn is worth about 1.95 early turns, so a lead you hold into the end beats a lead you build and let slip.
 
 ## What skipping a day costs
 
@@ -43,8 +43,8 @@ Refresh the Dashboard after the hour to see the new numbers. Market prices can u
 
 ## The ten-minute daily pass
 
-1. Open **Dashboard** and read notifications (endorsements, attacks, race phase changes).
-2. If you are in a race, open **View Campaign** and spend Campaign until PI holds or rises.
+1. Open your **Profile** and the notifications bell (endorsements, attacks, race phase changes).
+2. Open **Actions** and spend Campaign until PI holds or rises.
 3. If Favorability is under 60, run one advertisement.
 4. Fundraise once if you have a donor base (level 1 or more).
 5. If you hold office, open the legislature and clear your vote queue.
@@ -53,7 +53,7 @@ Refresh the Dashboard after the hour to see the new numbers. Market prices can u
 dashboard
 \`\`\`
 
-Here is how a pass plays out. You are a new character in a large state with 96 actions banked after a day away. A pass of 6 Campaign (6 actions at PI under 20), 1 ad (7 actions at Favorability 50) and 1 Fundraise (3 actions) costs 16 actions and a net ₳202,800 of Campaign Funds (₳120,000 for Campaign, plus ₳140,000 for the ad, minus a ₳57,200 Fundraise yield at donor level 1 and PI 10). You still have 80 actions left, and the pass is paid for by a few hours of income. On most days funds, not actions, are what limit you.
+Here is how a pass plays out. You are a new character in a large state with 96 actions banked after a day away. A pass of 6 Campaign (6 actions at PI under 20), 1 ad (7 actions at Favorability 50) and 1 Fundraise (3 actions) costs 16 actions and a net ₳202,800 of Campaign Funds (₳120,000 for Campaign, plus ₳140,000 for the ad, minus a ₳57,200 Fundraise yield at donor level 1 and PI 10). You still have 80 actions left, and the pass is paid for by about ten hours of base income. On most days funds, not actions, are what limit you.
 
 ## When to log in hourly
 
@@ -96,7 +96,7 @@ Safe to ignore in week one: tiny Favorability drift, Infamy under 20, unconteste
 
 ## Your first week
 
-- [ ] Daily Dashboard pass (notifications, Campaign, one ad or fundraise).
+- [ ] Daily pass (notifications, Campaign, one ad or fundraise).
 - [ ] Elections page checked so a primary window cannot close unseen.
 - [ ] Favorability held at 60+; PI climbing, not rotting.
 - [ ] You know whether you are in Build, Primary, or General.

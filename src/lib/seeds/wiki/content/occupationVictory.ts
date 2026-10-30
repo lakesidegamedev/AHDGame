@@ -56,7 +56,7 @@ So **an interstate invasion opens with the defender holding 100% of their own te
 
 A conflict also records the **starting line** it opened at. Almost everything below is measured from *that* point, not from the middle of the track.
 
-**A new war starts slowly.** The two sides do not field their armies at the same pace, since a defensive pact answers at once but a coalition of attackers needs bills and mobilisation. So the front moves at a fraction of its normal pace on the first turn of a war and speeds up to full pace over the opening couple of days. A war cannot be run to a pole before the other side has had time to field an army.
+**A new war starts slowly.** The two sides do not field their armies at the same pace, since a defensive pact answers at once but a coalition of attackers needs bills and mobilisation. So the front moves at a fraction of its normal pace on the first turn of a war and speeds up to full pace over the opening 50 turns. A war cannot be run to a pole before the other side has had time to field an army.
 
 ## Moving the line
 

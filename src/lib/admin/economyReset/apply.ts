@@ -396,6 +396,13 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   await db
     .collection("states")
     .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
+  // Unions are wiped and reseeded vacant, so no character can still cache
+  // leadership of a union that no longer exists. Leaving it set would also
+  // block them from founding or taking another union (`foundUnion` 409s while
+  // `unionLeaderOf` is non-null) until a later read path repaired it.
+  await db
+    .collection("characters")
+    .updateMany({ unionLeaderOf: { $ne: null } }, { $set: { unionLeaderOf: null } });
 }
 
 /**
@@ -560,6 +567,15 @@ async function runPhase(
       const { seedNpcBanks } = await import("@/lib/admin/seed/seedNpcBanks");
       const result = await seedNpcBanks(db, log);
       log(`Economy reset: ${result.created} NPC banks`);
+      return {};
+    }
+    case "reseedUnions": {
+      const { seedUnions } = await import("@/lib/admin/seed/seedUnions");
+      // Idempotent upsert, not reset=true: the wipe phase already cleared the
+      // union collections, and a resumed apply must keep the same union ids so
+      // the representingUnionId pointers written into the rebuilt sectors stay
+      // valid.
+      await seedUnions(db, log, plan.preset, false);
       return {};
     }
     case "currencyTopology": {

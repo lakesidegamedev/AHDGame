@@ -44,7 +44,7 @@ It's **bounded and damped** on purpose: realization alone moves your revenue at 
 
 Once **clearing** is on, revenue is no longer handed to you: your output competes for real buyers. Each turn, demand fills the **cheapest sellers first**. Your realized revenue scales with the fraction of your output that actually sold (your **&ldquo;% sold last turn&rdquo;**). Check it each turn and adjust: unsold stock is lost revenue.
 
-This makes your **pricing posture** a real decision. Posture steps from -20% to +20% around the market reference (-20, -10, -5, 0, +5, +10, +20), or Auto. You set it per sector in the CEO operations table. In plain terms:
+This makes your **pricing posture** a real decision. Posture steps from -20% to +20% around the market reference (-20, -10, -5, 0, +5, +10, +20), or Auto. You set it on each sector's Pricing panel, or for many sectors at once in the CEO operations table. In plain terms:
 
 | Posture | What it does | Good when |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ Three consequences follow, and they change how you play:
 
 - **Output grows only when capacity does.** There is no passive revenue drift to lean on. If you want a bigger sector next year, you have to commission plant this year and wait for it to arrive. A sector you stop funding is a sector you are slowly closing.
 - **Entering a market is a build.** Founding a sector charges an era-scaled entry fee *and* a starter build of one facility, and that facility sits in a build queue before it produces anything. A brand-new sector earns nothing on its first turn.
-- **Taking share moves plant.** Splits and attacks no longer shuffle a revenue number around: they transfer real capacity units. Both are priced with a floor at build cost plus a premium, so capturing capacity is never cheaper than building it, and an attack **destroys** part of what it takes. See [Corporations](/wiki/corporations) for the capture and attack formulas.
+- **Taking share moves plant.** Buying a slice of the unowned market is retired under plants. An attack on a rival is a sector split: your marketing strength against theirs sets how many of their plants are at stake (1% up to 20%, and they always keep one) and your odds of success. You pay half the book value of those plants plus marketing strength whether or not it works, and on success the plants move to you intact. See [Corporations](/wiki/corporations) for the attack formulas.
 
 The practical upshot: growth is slower, more deliberate and more defensible than it was under the older tiers. A rival cannot conjure a sector overnight, and neither can you. Capacity arrives on a delay, so the plant you order now is the output you get later; decide where you want to be several turns out rather than reacting to this turn's prices. Unlocks in [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d) shift your cost and output curves.
 
@@ -104,7 +104,7 @@ The practical upshot: growth is slower, more deliberate and more defensible than
 
 Because capacity is a **real, owned asset**, your company is valued for the durable capacity it owns, not just this turn's earnings. Valuation leans on **tangible book** (your liquid capital + sector value + an owned-capacity floor) weighted *above* raw earnings power.
 
-That capacity floor is a **depreciated high-water mark** on the sector's going-concern value: it's seeded at the moment a tier flips (so it changes nothing at first) and only decays slowly if the sector is genuinely impaired. The practical effect: **a company holds its value through a transient profit dip**, because the assets it owns are still worth something even in a bad quarter. Your share price reflects **owned assets + earnings power**, not a single turn's profit, so think in assets, not just this turn: a dip in profit isn't a collapse if you own real capacity, and rivals who stop investing are quietly getting weaker. More on how shares are priced in [Stock Market](/wiki/stock-market).
+That capacity floor is a **depreciated high-water mark** on the sector's going-concern value: it's seeded at the moment a tier flips (so it changes nothing at first) and ratchets up as the sector's value rises. When value falls, the floor closes about 4% of the gap each turn, so a short dip is smoothed while a stale peak fades over about a game year, and it can never exceed five times the sector's current value. The practical effect: **a company holds its value through a transient profit dip**, because the assets it owns are still worth something even in a bad quarter. Your share price reflects **owned assets + earnings power**, not a single turn's profit, so think in assets, not just this turn: a dip in profit isn't a collapse if you own real capacity, and rivals who stop investing are quietly getting weaker. More on how shares are priced in [Stock Market](/wiki/stock-market).
 
 ## When a new tier goes live
 

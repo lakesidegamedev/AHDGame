@@ -4,7 +4,7 @@ Every dollar in a presidential campaign treasury eventually becomes a question: 
 
 ## What a level buys, and what it costs
 
-Presence belongs to a candidate, not the party. (Party organization is a separate lever that the party chair controls.) You need a live campaign that has not been archived, and every level is paid for by the campaign, never from your personal actions or personal cash. It draws on the action pool supplied by the [Campaign Manager](/wiki/campaign-manager) and on the cash you raised through [Fundraising and Ads](/wiki/fundraising-ads).
+Presence belongs to a candidate, not the party. (Party organization is a separate lever that the party's chairs, vice chairs and campaigners control.) You need a live campaign that has not been archived, and every level is paid for by the campaign, never from your personal actions or personal cash. It draws on the campaign's own action pool, run through the [Campaign Manager](/wiki/campaign-manager), and on the campaign treasury, which fills from the campaign's per-turn income and from donations (see [Fundraising and Ads](/wiki/fundraising-ads)). Money you raise personally reaches the treasury only when you donate it.
 
 Each level in a state:
 
@@ -47,15 +47,15 @@ Going from level 5 to level 10 in one state costs about ₳11.2 million and adds
 
 ## Choosing where to build
 
-You can build a level from the Political Operations hub, from the State operations hub in the [Campaign Manager](/wiki/campaign-manager), or from a state's primary page. All three charge the same price. Presence is public: opposing campaigns can see how deep your network is in each state, and you can see theirs.
+You can build a level from the Political Operations hub, from the State operations hub in the [Campaign Manager](/wiki/campaign-manager), from a state's primary page, or from a state on the presidential election map. All of them charge the same price. Presence is public: opposing campaigns can see how deep your network is in each state, and you can see theirs.
 
 A modest vote-weight change is worth the most where it flips delegates or electoral votes, so concentrate early spending in delegate-rich states and in states where [polling](/wiki/polling) shows a close race.
 
 - Spreading shallow levels across many states is cheaper at first, but it may fail to move any decisive contest.
 - Safe states and lost causes are poor places to buy level 6 and above.
-- Keep campaign actions and cash in reserve for [ads and canvassing](/wiki/fundraising-ads). Presence competes with them for the same campaign budget.
+- Keep campaign actions and treasury cash in reserve for campaign upgrades in the [Campaign Manager](/wiki/campaign-manager). Presence competes with them for the same campaign budget. [Ads and canvassing](/wiki/fundraising-ads) are paid from your own actions and campaign funds instead.
 
-The bonus lands in two places. In [primaries](/wiki/primaries) it raises your vote weight in each state by up to 25%. In [general elections](/wiki/general-elections) it raises it by up to 15%. It is one of the parts of a presidential candidate's vote weight in [Election Mechanics](/wiki/election-mechanics), and it shows up as the Campaign factor in the [Vote Factor Ledger](/wiki/vote-factor-ledger).
+The bonus lands in two places. In [primaries](/wiki/primaries) it raises your vote weight in each state by up to 25%. In [general elections](/wiki/general-elections) it raises it by up to 15%. It is one of the parts of a presidential candidate's vote weight in [Election Mechanics](/wiki/election-mechanics), and in the [Vote Factor Ledger](/wiki/vote-factor-ledger) it is counted inside the "State lean & standing" factor, not the Campaign factor.
 
 ## After the general election
 

@@ -94,6 +94,14 @@ export const ECONOMY_RESET_WIPE_COLLECTIONS = Object.freeze([
   "bargainingCampaigns",
   "collectiveAgreements",
   "bargainingRatificationBallots",
+  // Organized labour is keyed to the corporations and sectors the wipe deletes:
+  // a kept union would keep its old treasury, organizers and head while
+  // representing no shops at all. The reseedUnions phase rebuilds the vacant
+  // world roster and re-hands it the rebuilt sectors.
+  "unions",
+  "unionOrganizers",
+  "unionLeaderVotes",
+  "unionEndorsements",
   "governmentTenders",
   "defenceContracts",
   "defenceProcurementAllocations",
@@ -135,9 +143,10 @@ export const ECONOMY_RESET_EXTRA_WIPE_COLLECTIONS = Object.freeze([
 /**
  * Runtime collections the economy-only reset leaves in place: politics,
  * budgets, macro state, military, history, telemetry and the kept money
- * holders (parties, unions, pension schemes, organizations, bond pools).
- * Some kept collections are patched in place (sovereign coupon claims,
- * pension schemes, gameState); none are deleted.
+ * holders (parties, pension schemes, organizations, bond pools). Unions are
+ * not kept: they are economy entities and are wiped and reseeded with the
+ * corporations they organize. Some kept collections are patched in place
+ * (sovereign coupon claims, pension schemes, gameState); none are deleted.
  */
 export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
   // The money move journal is the replay witness for kept accounts too
@@ -458,10 +467,6 @@ export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
   "ukPartyPlatforms",
   "ukRecallPetitions",
   "unifiedCabinetMembers",
-  "unionEndorsements",
-  "unionLeaderVotes",
-  "unionOrganizers",
-  "unions",
   "vietnamEscalation",
   "voteTallies",
   "wireEvents",

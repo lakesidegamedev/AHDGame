@@ -4,7 +4,7 @@ If you want income that does not depend on any company staying solvent, you lend
 
 ## Buying one
 
-From any country's stock exchange page, you can browse available sovereign bonds and buy units. There is no minimum beyond 1 unit (1,000 in the bond's currency).
+From any country's stock exchange page, you can browse available sovereign bonds and buy units from the bond market pool at its asking price, which is 1% above the bond's market price before any pool adjustment. There is no minimum beyond 1 unit (1,000 face value in the bond's currency). No single holder may own more than 25% of one sovereign issue.
 
 - **Players:** Purchase from personal cash, receive coupon payments each turn (in the bond's currency). A [line of credit](/wiki/line-of-credit) counts that coupon income toward what you can borrow against, and a frozen line redirects it to the loan.
 - **Corporations:** Purchase as an investment, coupons flow into liquid capital.
@@ -14,18 +14,18 @@ You lend to the government and receive the coupon every turn, then your face val
 
 Each sovereign bond is denominated in the issuing country's currency. A US Treasury bond pays coupons in USD; a UK gilt pays in GBP; a Japanese government bond pays in JPY. Bond coupon payments and maturity returns are paid in that currency. For character holders, the system auto-converts foreign-currency bond income to the holder's home currency at the market-maker rate, which includes a spread, and [Currency Exchange](/wiki/currency-exchange) moves change what a foreign bond is worth to you. Corporate holders receive coupons in their own liquid capital currency. If you expect JPY to strengthen against your home currency, buying Japanese government bonds gives you both coupon income and FX appreciation.
 
-| Country | Currency | Maturity |
+| Country | Currency | Maturities issued |
 | --- | --- | --- |
-| United States | USD | 48 turns (1 game year) |
-| United Kingdom | GBP | 48 turns (1 game year) |
-| Japan | JPY | 48 turns (1 game year) |
-| Germany | EUR | 48 turns (1 game year) |
-| Ireland | EUR | 48 turns (1 game year) |
-| Brazil | BRL | 48 turns (1 game year) |
-| China | CNY | 48 turns (1 game year) |
-| Nigeria | NGN | 48 turns (1 game year) |
+| United States | USD | 48, 96 and 240 turns |
+| United Kingdom | GBP | 48, 96 and 240 turns |
+| Japan | JPY | 48, 96 and 240 turns |
+| Germany | EUR | 48, 96 and 240 turns |
+| Ireland | IEP | 48, 96 and 240 turns |
+| Brazil | BRL | 48, 96 and 240 turns |
+| China | CNY | 48, 96 and 240 turns |
+| Nigeria | NGN | 48, 96 and 240 turns |
 
-All configured countries with a national budget issue sovereign bonds automatically. Regular issuance for every issuer has the same 48-turn (1 game year) maturity. Longer paper of 96 and 240 turns also exists, created when a country's existing debt is reconciled into instruments; it carries a term premium of +0.25 and +0.75 percentage points over the 48-turn coupon.
+All configured countries with a national budget issue sovereign bonds automatically. Each quarter's issue is split into a ladder of 48-turn (1 game year), 96-turn and 240-turn paper. The default split is 25% / 35% / 40%. The country's Finance Minister (a confirmed holder, not an acting one) can set a different split from their cabinet office, at most once every 24 turns. The 96 and 240-turn paper carries a term premium of +0.25 and +0.75 percentage points over the 48-turn coupon.
 
 ## Where new bonds come from
 
@@ -38,56 +38,57 @@ deficitAmount = floor(quarterlyAmount / 1,000) * 1,000
 \`\`\`
 If the budget is in surplus, this component is zero. The amount is rounded down to a whole bond unit (1,000 face value).
 
-**Rollover component:** Any sovereign bonds maturing in the upcoming 12 turns are refinanced. Their total face value is reissued as new bonds. This keeps the bond market liquid even when the country is running a surplus: the float replenishes automatically. Bonds maturing within 12 turns also count toward the loan size under the [IMF Sovereign Facility](/wiki/imf-sovereign-facility).
+**Rollover component:** Sovereign bonds maturing in the upcoming 12 turns are refinanced by new bonds. Units the bond market pool will swap at par for fresh paper are left out, and the rollover is capped so outstanding bonds never exceed the country's recorded debt. This keeps the bond market liquid even when the country is running a surplus: the float replenishes automatically. Bonds maturing within 12 turns also count toward the loan size under the [IMF Sovereign Facility](/wiki/imf-sovereign-facility).
 
 | Rule | Value |
 | --- | --- |
 | Issuance interval | Every 12 turns |
 | Deficit issued per interval | A quarter of the annual deficit, rounded down to whole 1,000 units |
-| Standard maturity | 48 turns (1 game year) |
-| Longer paper (from debt reconciliation) | 96 and 240 turns, +0.25 and +0.75 points over the 48-turn coupon |
+| Maturity ladder | 48, 96 and 240 turns; 25% / 35% / 40% unless the Finance Minister sets another split |
+| Term premium | +0.25 points at 96 turns, +0.75 points at 240 turns |
 | Unit face value | 1,000 in the bond's currency |
 | Issue price | 1.0 (par) |
 | Minimum purchase | 1 unit |
+| Most one holder can own | 25% of an issue |
 | Failed auctions before a default crisis | 3 in a row, each with demand below 0.7 of supply |
 | Public trust penalty at BB / B / CCC | -5 / -10 / -15 |
 
 | Field | Value |
 | --- | --- |
 | Face value | 1,000 per unit (in the bond's currency) |
-| Maturity | 48 turns (1 game year) |
+| Maturity | 48, 96 or 240 turns |
 | Market price at issuance | 1.0 (par) |
-| Units start in | Public float (available to buy immediately) |
+| Units start in | Public float, for the units the market pool underwrites (available to buy immediately); the rest place in later turns as pool cash allows |
 | Can default in bond processor | No; sovereign distress is handled by the crisis system |
 
-When bonds are issued, the national budget is updated at once:
+When bonds are placed, the national budget is updated at once:
 
-- **Principal increases** by the total face value issued
+- **Principal increases** by the face value actually placed
 - **Annual interest cost** increases by \`couponRate% * totalIssued\`
 - **Surplus decreases** (or deficit increases) by the new interest cost
 - **Debt-to-GDP ratio** updates, which affects the country's credit rating
 
 When bonds mature, the process reverses: principal and interest obligations are reduced, improving the surplus figure.
 
-Each turn, the bond system issues any scheduled bonds, pays coupon interest to all holders from the national treasury, updates market prices based on current interest rates and time to maturity, settles matured bonds (returns face value to holders, reduces national debt) and records history snapshots. Sovereign bond coupons are ledgered as government coupon payments. This is not the same as the Monetize sovereign-crisis resolution, which is a separate executive action and is blocked once inflation reaches 8%.
+Each turn, the bond system issues any scheduled bonds, places unsold units as the pool's cash allows, pays coupon interest to all holders (the cost sits in the national budget's debt interest line), updates market prices based on current interest rates and time to maturity, settles matured bonds (returns face value to holders, reduces national debt) and records history snapshots. Sovereign bond coupons are ledgered as government coupon payments. This is not the same as the Monetize sovereign-crisis resolution, which is a separate executive action and is blocked while inflation is above 8%.
 
 ![Every twelve turns a quarter of the deficit plus a rollover is issued into the public float; each turn coupons are paid and matured bonds repaid, and the budget is updated.](/wiki-images/diagrams/sovereign-bonds-issuance-flow.svg)
 
 ## What the coupon is
 
-Sovereign bonds use the **central bank prime rate** as their base, plus a term premium for longer maturities and any credibility spread the issuing bank has accumulated:
+Sovereign bonds use the **central bank prime rate** as their base, plus a term premium for longer maturities, a spread for the country's credit rating, and a spread when the country's democratic health is poor:
 
 \`\`\`
-couponRate = primeRate + termPremium + credibilitySpread
+couponRate = primeRate + termPremium + ratingSpread + democraticSpread
 \`\`\`
 
-Unlike corporate bonds, there is no separate corporate risk premium. Corporate bonds pay a credit spread plus a 1.0 point premium over prime, so they pay more because they carry company risk. But a bank whose Chair has let scrutiny climb pays a credibility spread on top of the base rate, so sovereigns are not entirely immune to credit-style pricing. When the [Central Bank Chair](/wiki/central-banks) raises rates, newly issued bonds carry higher coupons, and existing bond prices move.
+The rating spread is 0 at AAA, 0.5 at AA, 1.5 at A, 3 at BBB, 5 at BB, 8 at B and 12 at CCC points. Unlike corporate bonds, there is no separate corporate risk premium. Corporate bonds pay the same rating spread plus a 1.0 point premium over prime. Paper reissued when the market will not refinance maturing float also carries a credibility spread if the Central Bank Chair has let scrutiny climb. When the [Central Bank Chair](/wiki/central-banks) raises rates, newly issued bonds carry higher coupons, and existing bond prices move.
 
-A country with a prime rate of 3.0% and an annual deficit of 240,000,000 issues 60,000,000 of new bonds this quarter, which is 60,000 units. The coupon is 3.0% (no term premium for 48 turns, no credibility spread).
+An AAA country with a prime rate of 3.0% and an annual deficit of 240,000,000 has a deficit component of 60,000,000 this quarter, which is 60,000 units, plus any rollover. Under the default split, 25% becomes 48-turn paper at 3.0%, 35% becomes 96-turn paper at 3.25% and 40% becomes 240-turn paper at 3.75%.
 
-You buy 100 units for 100,000. You earn 100,000 x 3.0% = 3,000 a year, or **62.50 per turn**, and get 100,000 back after 48 turns.
+You buy 100 units of the 48-turn paper at par. The pool's ask is 1% above par, so you pay about 101,000. You earn 100,000 x 3.0% = 3,000 a year, or **62.50 per turn**, and get 100,000 back after 48 turns.
 
-Now the central bank raises the prime rate to 5.0% straight after you buy. Your bond still pays 3.0%, so the market price falls to 0.981, and selling immediately returns about 98,100. If you hold to maturity the price pulls back to par and the drop does not matter. Selling before maturity is where rate risk bites.
+Now the central bank raises the prime rate to 5.0% straight after you buy. Your bond still pays 3.0%, so the market price falls to 0.981. The pool bids 1% below that, so selling immediately returns about 97,100. If you hold to maturity the price pulls back to par and the drop does not matter. Selling before maturity is where rate risk bites.
 
 ## Why the price moves
 
@@ -106,7 +107,7 @@ So buy when prime rates are high (prices are depressed) and sell when rates fall
 
 ## How debt sets the rating
 
-The country's debt-to-GDP ratio, from [National Metrics](/wiki/national-metrics), determines its credit rating, which affects the interest rate the government pays on new debt. Low investor confidence after takings under [Nationalization & National Corporations](/wiki/nationalization) raises the government's borrowing rate too.
+The country's debt-to-GDP ratio, from [National Metrics](/wiki/national-metrics), determines its credit rating, which sets the rating spread on new bonds. The Interest Rate column below is the rate the budget charges on debt not yet carried by bonds. Low investor confidence after takings under [Nationalization & National Corporations](/wiki/nationalization) raises the government's borrowing rate too.
 
 | Debt-to-GDP | Rating | Interest Rate | GDP Growth Penalty | Public Trust Penalty |
 | --- | --- | --- | --- | --- |
@@ -122,7 +123,7 @@ The country's debt-to-GDP ratio, from [National Metrics](/wiki/national-metrics)
 sovereign-bond-rating-tiers
 \`\`\`
 
-Public-trust penalties apply at fiscal year close. The table's GDP value is implemented as per-turn corporate margin drag, not as a direct write to the country's displayed GDP-growth metric. Risk scoring uses the country's current smoothed debt-to-GDP ratio; the historical sovereign-risk anchor is retained for seed and migration provenance, but does not rescale live risk.
+Public-trust penalties apply at fiscal year close. The table's GDP value is not applied as its own number; debt instead drags growth through the per-turn corporate margin penalty below. Risk scoring uses the country's current smoothed debt-to-GDP ratio; the historical sovereign-risk anchor is retained for seed and migration provenance, but does not rescale live risk.
 
 ## What national debt does to corporations
 

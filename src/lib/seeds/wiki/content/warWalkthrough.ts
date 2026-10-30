@@ -36,7 +36,7 @@ This is the part players skip and then lose wars over.
 - **Ministerial actions**: up to 4, regaining 1 every 6 turns.
 - **Defence appropriation**: enough to cover each order. Units are paid from it, and an order it cannot cover is refused.
 
-He recruits. Four ministerial actions means **four formations a day, maximum**, so this takes real time:
+He recruits. Each order costs one ministerial action and the bank refills at one every six turns, so the steady pace is **about four formations a day**. Spending 10 AP buys one extra action, once a turn, and that is the only way to go faster. This takes real time:
 
 | Day | Recruited | Manpower drawn |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ Each unit is unavailable for **6 turns** after ordering. Brennan is not building
 
 > **Mistake avoided:** he does not put everything on High Alert. A permanent war footing burns upkeep and erodes social cohesion at home for no benefit while nothing is happening.
 
-## Hale and Brennan spend the doctrine points
+## Brennan spends the doctrine points
 
 **Turn 1,010.** Brennan opens the **Doctrine** tab (see [National Doctrine](/wiki/national-doctrine) for points and chains). The US has the standard twelve starting doctrines and **12 points**. It will earn one more at the start of each game year and nothing else, so the budget for the whole decade is a handful.
 
@@ -64,7 +64,7 @@ He decides the United States is a **power-projection** nation and spends deliber
 | Carrier Experiments | 1 | 10 |
 | Carrier Task Forces | 2 | 12 |
 
-**Twelve points, gone, permanently.** Brennan cannot undo this and neither can his successor; the one point a year that arrives from now on is all there is to work with. Every US general from now on should be training toward naval and amphibious operations, because those are the traits the nation now boosts.
+**Twelve points, gone, permanently.** Brennan cannot undo this and neither can his successor; the one point a year that arrives from now on is all there is to work with. Only the defence minister can adopt doctrine; the President has no button for it. The payoff lands on the formations, not the generals: Surface Task Forces and Carrier Task Forces raise naval combat value, Amphibious Invasion Doctrine raises marine combat value, and the other four nodes carry no modifier of their own; they are the steps that unlock the ones that do.
 
 > **Mistake avoided:** he does not buy one node from each category. A scattered twelve points produces a nation good at nothing.
 
@@ -137,7 +137,7 @@ The moment it enacts:
 
 **Opening forces deploy automatically.** A matched slice of both sides' unassigned reserve moves to the front: both sides commit the same share, measured against whichever reserve pool is smaller, smallest formations first. Nobody is handed an army they did not build.
 
-Hale's declaration cooldown now runs until **turn 1,270**: it counts from the turn the bill was proposed (1,150), not from when it passed.
+The United States' declaration cooldown now runs until **turn 1,270**: it belongs to the country, not to Hale, and it counts from the turn the bill was proposed (1,150), not from when it passed.
 
 ---
 
@@ -165,9 +165,9 @@ Ruiz now also earns XP for battles at this front even when leading no units in t
 | Projected strength | 1,340 |
 | **Odds: You attack** | **44%** |
 | **Odds: They attack** | **61%** |
-| Supply | SUPPLIED |
+| Supply | SUPPLIED (91%) |
 | Enemy | **Evenly matched** |
-| Forces | 1 nation vs 1 nation |
+| Forces | 8 (formations of his own at the front) |
 
 Ruiz reads this correctly: **44% and 61% do not add to 100, and that is the point.** Attacking is harder than defending because the defender holds the terrain. Against a comparable Chinese force, **both Ruiz and Tang can honestly see themselves under 50% as the attacker.**
 
@@ -185,7 +185,7 @@ He never sees China's order of battle, only the band "Evenly matched."
 
 The offensive was declared on turn 1,196 and **resolves on 1,197**. In between, Tang has a full turn.
 
-**Tang is not told the attack is coming.** Incoming declarations are hidden by design. But Tang has been watching the front fill with American formations and correctly infers it, and posts another Chinese general with two divisions.
+**Tang is not told the attack is coming.** No notice names an incoming offensive. But a pending offensive aimed at China does heat that region on his office's threat map, and Tang has been watching the front fill with American formations, so he correctly infers it and posts another Chinese general with two divisions.
 
 The 58% Ruiz acted on is now stale.
 
@@ -198,9 +198,9 @@ The report:
 > **Victory** · US 4,100 losses · CN 6,800 losses
 > Control **100 → 97.8**
 
-Not decisive: Tang's reinforcement saw to that. A narrow win moves the line a little; only a decisive one takes the full step.
+Not decisive: Tang's reinforcement saw to that. A narrow win moves the line a little; a decisive one takes the full step. And for its first 50 turns a war is still mobilising, so every step, decisive or not, is cut: to 40% on the opening turn, rising to full by turn 50.
 
-**Ruiz earns 45 XP** for the win, plus a share for each formation they led. Their generals gain veterancy on the units that fought.
+**Ruiz earns 45 XP** for the win, plus a share for each formation they led, plus the Theater Commander's share. The units that fought gain experience of their own: every 100 points moves a formation up one veterancy grade.
 
 Aldridge, sitting in Pacific Command with no units at the front, earns nothing. **XP flows to whoever fought and to the Theater Commander, not up the chain.**
 
@@ -227,12 +227,12 @@ Back in Washington, Brennan opens **Military → Operations** and faces the choi
 
 | Mode | Fills per turn | Cost |
 | --- | --- | --- |
-| **Trained** | 10% of establishment | Preserves experience |
+| **Trained** | 10% of establishment | Arrives as Regulars: dilutes a Veteran or better unit, but only a little |
 | **Conscript** | 25% of establishment | Arrives green: **dilutes the unit's experience by headcount** |
 
 The US is on Selective Service, so conscription is legal.
 
-Brennan picks **Trained**. His reasoning: the 1st Marine Division is **Veteran**, and rebuilding it from 61% with raw conscripts would blend enough green bodies in to **drop it a veterancy grade or two**. Slower rebuilding is cheaper than losing the veterans.
+Brennan picks **Trained**. His reasoning: the 1st Marine Division is **Veteran**, and rebuilding it from 61% with raw conscripts would blend enough green bodies in to **drop it a full grade, to Regular**. Trained replacements arrive as Regulars, so they dilute it too, just by less: a division near the top of Veteran keeps the grade. Slower rebuilding is cheaper than losing the veterans.
 
 > **The rule to remember:** top a good formation up *early*, at 80%, when few of its people are new. Letting it fall to 30% and then rebuilding in one go is what actually destroys veterancy.
 
@@ -244,9 +244,9 @@ Reinforcement runs every turn, in place, at the front, still under Ruiz's comman
 
 > Supply: **STRAINED**
 
-This is the front punishing overextension. Supply is derived from **how far the line has moved from where it started**, and the US has moved it a long way. Deeper pushes degrade it further.
+This is partly the front punishing overextension. Supply is what the front hauls against what its formations draw, and one of the things that scales the haul is **how far the line has moved from where it started**; the US has moved it a long way. Deeper pushes degrade it further.
 
-Ruiz stops attacking for twenty turns and lets the units rebuild. **Supply is derived, not accumulated.** It is not permanently lost, and if the line were pushed back the US would recover it.
+Ruiz stops attacking for twenty turns and lets the units rebuild. **The overextension penalty is derived, not accumulated.** It is not permanently lost, and if the line were pushed back the US would recover it.
 
 This is the natural rhythm: **advance, overextend, stall, consolidate, advance.**
 
@@ -256,11 +256,11 @@ This is the natural rhythm: **advance, overextend, stall, consolidate, advance.*
 
 There is already a live war hosted in China, so the UK does **not** open a second one. Ashford is **enrolled on the side opposing China**: side A, alongside the US. One war per besieged country, one pin on the map.
 
-Ashford's own 120-turn cooldown starts anyway; joining is still a full declaration.
+Britain's own 120-turn cooldown starts anyway; joining is still a full declaration.
 
 **Turn 1,430.** A British general is posted to Conflict #4. Ruiz and the British TC both declare against China on turn 1,431.
 
-**Turn 1,432.** The two declarations **merge into one coalition offensive.** They share a front and an attacking side, so they are one attack, on one report, with each nation's dead recorded under its own flag. (Had Ashford set the front's standing order to join allied offensives, Ruiz's declaration alone would have carried the British in.)
+**Turn 1,432.** The two declarations **merge into one coalition offensive.** They share a front and an attacking side, so they are one attack, on one report, with each nation's dead recorded under its own flag. (Had the British Theater Commander set the front's standing order to join allied offensives, Ruiz's declaration alone would have carried the British in. A prime minister cannot set it: it belongs to whoever may declare at that front.)
 
 China's defence pools automatically: **defenders never declare anything.** Every country with units at the front on the defending side is in the battle. Deployment *is* the consent step.
 
@@ -268,7 +268,7 @@ China's defence pools automatically: **defenders never declare anything.** Every
 
 ## China breaks off
 
-**Turn 1,480.** Tang's side is losing an engagement badly and **breaks off** rather than fighting it out.
+**Turn 1,480.** Tang's side is losing an engagement badly and **breaks off** rather than fighting it out. Nobody presses a button for this: when a side's will to fight falls below the break point mid-battle, the engine pulls it out.
 
 The report reads:
 
@@ -282,7 +282,7 @@ Three things happened:
 
 **Chinese units held position and kept their generals.** A retreat is not a rout off the map: the formations are still there, still commanded, and start rebuilding on the same turn.
 
-Tang traded ground for an intact army. That is a real and often correct decision.
+China traded ground for an intact army. It was not Tang's call, but it is the outcome that the break point exists to produce.
 
 ---
 
@@ -306,12 +306,15 @@ China's foreign minister opens their office → **Overview** → Peace panel and
 | --- | --- |
 | War | Conflict #4 |
 | To | United States |
+| Who leaves | **China** |
 | Indemnity | **China pays 40,000** (quoted in China's local currency) |
 | Justification | "A negotiated settlement in the interest of both peoples." |
 
+China is the one leaving. It could not ask the United States to leave instead: a withdrawal that would end the war needs the asker's front to be three-quarters of the way forward, and China's front has gone backwards. Only a white peace escapes that bar.
+
 The offer stands for **72 turns**, three real days.
 
-Note it is addressed to **one country**. The UK is a separate belligerent and is not covered.
+It is addressed to **one country**, but these are not any two countries. The United States and China are the two that started this war, and a settlement between the two founders ends it for everyone, the UK included.
 
 ## Washington decides
 
@@ -328,20 +331,13 @@ Voss weighs it honestly:
 What happens, in order:
 
 1. The offer is **claimed**: no second acceptance is possible.
-2. **40,000 moves** from China's treasury, converted, into the US treasury. No affordability check: the payment may push China into debt, which is what national debt is.
-3. **The US stands down.** Ruiz's posting at Conflict #4 is dropped, and every American unit there returns to reserve. *(Removing the posting is what actually brings them home: clearing the location alone would just be re-derived back to a dead front.)*
-4. **The US comes off side A's roster.**
+2. **40,000 moves** from China's treasury, converted, into the US treasury. No affordability check: the payment may push China into debt, which is what national debt is. The only limit is a ceiling of twice China's annual GDP.
+3. **China stands down.** Its generals' postings at Conflict #4 are dropped, and every Chinese unit there returns to reserve. *(Removing the posting is what actually brings them home: clearing the location alone would just be re-derived back to a dead front.)*
+4. **China comes off side B's roster.**
 5. A **240-turn truce** is recorded between the US and China.
+6. **Side B is now empty, so the war ends outright.** It is recorded as a win for the United States' side, and every remaining belligerent, Britain included, stands down with it.
 
-**The war does not end.** The UK is still on side A, and Conflict #4 continues between Britain and China.
-
-Ashford, whose army is fresh but who never raised the **Territorial and Reserve Forces Act** past its default level, now finds themselves fighting China alone, with no American logistics, a front they did not build, and a manpower pool sized for peacetime. That is the cost of joining somebody else's war.
-
-## Britain's turn
-
-**Turn 1,690.** Britain, unable to sustain the front alone, offers its own **white peace**: the term that takes nothing and names no winner. It could have offered to pay an indemnity and been refused, or been asked for a harsher term and made to pay it.
-
-Britain was the last country on side A. **The side empties, so the war ends outright**, and because the last settlement was a white peace, the war is recorded as a stalemate with no winner. Every remaining cross-side pair is truced.
+Ashford, who joined somebody else's war, never got a say in how it ended. That is the cost of joining as a guest: the founders can settle over your head.
 
 ---
 
@@ -356,13 +352,14 @@ The truce ledger:
 | Pair | Until |
 | --- | --- |
 | US ↔ CN | turn 1,856 |
-| UK ↔ CN | turn 1,930 |
 
-Neither can declare on China until then, and **the truce cannot be traded away**. It is a consequence of the war ending, not a clause anyone negotiated.
+That is the only line. The truce covers the two countries in the deal; China had already left the roster when the war closed, so Britain was never paired with it and gets no truce of its own. Once its declaration cooldown lapses, Britain could declare on China again.
 
-The armies are home in reserve. Ruiz is a **Lt. General** now, several hundred XP richer, with promotion points spent deep in the expeditionary path. Aldridge, who commanded a Command but never held a front, gained far less.
+The US cannot declare on China until turn 1,856, and **the truce cannot be traded away**. It is a consequence of the war ending, not a clause anyone negotiated.
 
-And China, which lost the shooting and won the war, kept its army.
+The armies are home in reserve. Ruiz is a **Lt. General** now, several hundred XP richer, with promotion points spent deep in the expeditionary path. Aldridge, who commanded a Command but never held a front, earned no battle XP at all.
+
+And China lost the war on the record, paid for the privilege, and kept its army.
 
 ---
 
@@ -380,7 +377,7 @@ And China, which lost the shooting and won the war, kept its army.
 | 1,196 | Waited for two more divisions | 44% → 58% |
 | 1,260 | Chose Trained over Conscript | Preserved veterancy at the cost of speed |
 | 1,340 | Stopped at STRAINED | Overextension is a real penalty, and it is recoverable |
-| 1,480 | China broke off | Traded ground for an intact army |
+| 1,480 | China broke off | The engine traded its ground for an intact army |
 | 1,615 | Accepted a paid peace | An expensive victory 300 turns away was worth less than cash and a truce |
 
 ## The five mistakes this war avoided

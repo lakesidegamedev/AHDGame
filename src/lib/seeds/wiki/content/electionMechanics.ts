@@ -8,7 +8,7 @@ Every election has two phases.
 
 1. **Primary phase.** Candidates from the same party compete for one nomination.
    - **Down-ballot races** (House, Senate, Governor, State Senate and their equivalents abroad) count real primary ballots. Over the closing stretch of the primary, each party's registered voters release a slice of ballots every turn, split between that party's candidates by their standing that turn. The cumulative count names the nominee, so a sustained lead beats a late surge. See [Primaries](/wiki/primaries).
-   - **Presidential** primaries run staggered state voting that hands out pledged delegates. The delegate leader is nominated, at a [convention](/wiki/nominating-convention) if nobody holds a majority.
+   - **Presidential** primaries run staggered state voting that hands out pledged delegates. The delegate leader is nominated; in races on the reworked rules (1964 onward) a [convention](/wiki/nominating-convention) settles it if nobody holds a majority.
 2. **General phase.** Nominees from different parties compete. Votes accumulate turn by turn, and the final 4 turns carry 30% of the pool. Only registered voters cast general ballots, and a race can never certify more ballots than it has voters. See [General Elections](/wiki/general-elections).
 
 When the general resolves, winners take office and the next cycle spawns.
@@ -23,8 +23,8 @@ When the general resolves, winners take office and the next cycle spawns.
 | General pool, ramp band | 20% over the 8 turns before the final band |
 | General pool, final band | 30% over the last 4 turns |
 | Races of 4 turns or fewer | pool spread evenly |
-| State race approval modifier | 0.9x at 0% approval, 1.0x at 50%, 1.1x at 100% |
-| Presidential approval modifier | 0.75x at 0%, 1.0x at 50%, 1.25x at 100% |
+| State race approval modifier (ballots cast per turn) | 0.9x at 0% approval, 1.0x at 50%, 1.1x at 100% |
+| Presidential approval modifier (ballots cast per turn) | 0.75x at 0%, 1.0x at 50%, 1.25x at 100% |
 | Office strength | Governor 1.0, President 1.0, House 0.9, State Senate 0.85, Senate 0.8 |
 | NPP weight in a general with a player | 0.8x |
 | NPP score in a primary with a player in it | 0.5x |
@@ -40,11 +40,11 @@ Durations are in real hours, and one real hour is one game week.
 
 | Office | Total | Primary | General |
 | --- | --- | --- | --- |
-| House | 96h (2 game years) | 48h | 48h |
-| Senate | 288h (6 game years) | 240h | 48h |
-| Governor | 192h (4 game years) | 144h | 48h |
-| State Senate | 192h (4 game years) | 144h | 48h |
-| President | 192h (4 game years) | 144h | 48h |
+| House | 96h (2 game years) | 72h | 24h |
+| Senate | 288h (6 game years) | 264h | 24h |
+| Governor | 192h (4 game years) | 168h | 24h |
+| State Senate | 192h (4 game years) | 168h | 24h |
+| President | 192h (4 game years) | 168h | 24h |
 
 Senate seats are split into three classes per state, staggered about a third of the cycle apart, so one third of the Senate is up at any time. The UK, Germany and Japan use different cycle lengths; see each country hub.
 
@@ -59,9 +59,9 @@ The score is a candidate's standing in their own party's primary. It sets how ea
 | Favorability | 0 to 35 | Favorability / 100 x 35 |
 | Influence | 0 to 25 | The square root of your political influence, so the first points count most |
 
-A final infamy penalty cuts the total by 5% at infamy 100. NPP candidates (computer-run politicians) get half score when a player is in the same party's primary, and no infamy penalty. Presidential nominations are decided by delegates instead; the fallback ranking used when there is no delegate data weights party alignment 40, party influence 20, national reach 15 and favorability 25.
+A final infamy penalty cuts the total by 5% at infamy 100. NPP candidates (computer-run politicians) get half score when a player is in the same party's primary, and no infamy penalty. Presidential nominations are decided by delegates instead. With no delegates yet, the national sum of state primary votes decides; only when there are no recorded votes either does the fallback score rank them, weighting party alignment 40, party influence 20, national reach 15 and favorability 25.
 
-Presidential primary states vote in six waves modelled on the 2020 calendar: Iowa, New Hampshire, Nevada and South Carolina, a 14-state Super Tuesday, mid-March, then everyone left. Races from 1964 onward stretch the waves across the primary, and older races squeeze them into the last 6 turns.
+Presidential primary states vote in six waves modelled on the 2020 calendar: Iowa, New Hampshire, Nevada and South Carolina, a 14-state Super Tuesday, mid-March, then everyone left. Races from 1964 onward space the waves 8 turns apart over the last 41 turns of the primary, and older races squeeze them into the last 6 turns.
 
 ### How general votes are built
 
@@ -82,7 +82,7 @@ Influence is not part of appeal. It enters only through reach.
 
 **A single group, turn by turn.** One group has 10,000 votes this turn, with two candidates and no direction bonus. Candidate A is 2 econ and 1 social points from the group (appeal 15.1), has influence 49 (reach 0.70), effective favorability 80 (approval 0.84) and 60% of the state's party organization (0.90). Weight: 15.1 x 0.70 x 0.84 x 0.90 = 8.0. Candidate B is 3 and 2 points away (appeal 9.3), has reach 0.80, effective favorability 75 (0.79) and 40% of the organization (0.83): 9.3 x 0.80 x 0.79 x 0.83 = 4.9.
 
-A takes 8.0 / 12.9 = 62% of the group, or about 6,180 of 10,000 votes. In a final-band turn, with a 100,000 vote pool, each turn releases 7,500 votes against 1,389 in the early band (50% over 36 turns), so the same advantage is worth 5.4 times as much.
+A takes 8.0 / 12.9 = 62% of the group, or about 6,180 of 10,000 votes. In a 24-turn general with a 100,000 vote pool, each final-band turn releases 7,500 votes against about 4,167 in the early band (50% over 12 turns), so the same advantage is worth 1.8 times as much.
 
 **Why the closing surge exists.** It keeps races live until the end and rewards players who are still active. The same curve paces the primary ballot count over its closing window.
 
@@ -96,12 +96,12 @@ Presidential races also score the economy as a referendum on the party in the Wh
 
 | Input | Counts when | Points per unit | Cap |
 | --- | --- | --- | --- |
-| Unemployment | Above 6% | 0.6 per point | 4 |
-| Poverty | Above 20% | 0.15 per point | 3 |
-| Inflation | Outside 1% to 4%, either way | 0.4 per point | 3 |
+| Unemployment | Away from 6% (above costs, below pays) | 0.6 per point | 4 |
+| Poverty | Away from 20% (above costs, below pays) | 0.15 per point | 3 |
+| Inflation | Outside a 3-point band centred on the era's inflation target (1% to 4% with no target), either way, penalty only | 0.4 per point | 3 |
 | Real median income trend | Moves either way | 0.3 per point | 1.5 |
 
-Each input is signed. A good economy pays the incumbent party a bonus of up to 4 points in total, a bad one charges a penalty, and the total is clamped to 8 points either way. Bills enacted in the last 24 turns that push a suffering input the right way cut the penalty by up to 40%, with diminishing credit for each extra bill. A party seeking a 3rd straight term wears a bad economy at 1.25x, and a 4th or later at 1.5x. Because the inputs are live national metrics, you can change the card by changing policy before the election. See [National Metrics](/wiki/national-metrics).
+Unemployment, poverty and income are signed; inflation can only cost. A good economy pays the incumbent party a bonus of up to 4 points in total, a bad one charges a penalty, and the total is clamped to 8 points either way. Bills enacted in the last 24 turns that push a suffering input the right way cut the penalty by up to 40%, with diminishing credit for each extra bill. A party seeking a 3rd straight term wears a bad economy at 1.25x, and a 4th or later at 1.5x. Because the inputs are live national metrics, you can change the card by changing policy before the election. See [National Metrics](/wiki/national-metrics).
 
 ### Tenure and coattails
 
@@ -109,17 +109,17 @@ Holding a seat builds a personal edge, so the game scales your influence and fav
 
 ### Multi-seat races
 
-House, State Senate and other multi-seat contests allocate seats by the largest remainder method, in proportion to vote share. A party below the minimum share wins no seat: 20% for the US House, 10% for State Senate races. In a 2-seat House race the winner takes both unless the runner-up reaches 20%.
+House, State Senate and other multi-seat contests allocate seats by the largest remainder method, in proportion to vote share. A party below the minimum share wins no seat. For the US House the minimum is 1 / (seats + 1), kept between 10% and 20%: 20% for delegations of up to 4 seats, 10% for 9 or more. State Senate races use 10%. In a 2-seat House race the winner takes both unless the runner-up reaches 20%.
 
 ### Presidential specifics
 
 - **Campaign Presence** lets a candidate build vote weight state by state. See [Political Operations](/wiki/political-operations).
 - **Electoral College.** You need a majority of the college the election actually used: 270 of 538 today, 266 of 531 in the 1950s. Maine and Nebraska split electors by congressional district.
 - **Running mate.** After the primary each nominee picks a running mate (see [Running mate and surrogate](/wiki/running-mate-surrogate)). A nominee whose running mate is from the state gets +3% there.
-- **Travel.** A candidate can travel to one state at a time in the general for +1% favorability per turn there. It costs 3 actions for a state with 5 or fewer electoral votes, 5 for up to 10, 7 for up to 20 and 10 above that.
+- **Travel.** A candidate can travel to one state at a time in the general for +1 favorability per turn. The gain goes to your overall favorability, not just that state's. It costs 3 actions for a state with 5 or fewer electoral votes, 5 for up to 10, 7 for up to 20 and 10 above that.
 - **Governor endorsement.** A sitting governor who endorses a candidate gives them 1.5% more votes in that governor's state.
 - **Campaign strength.** Contributions add 0.75 x your national influence in strength, and the vote multiplier approaches a ceiling as strength grows (1 + bonus x (1 - exp(-strength / 50,000))). In races on the reworked rules (1964 onward) the bonus tops out at 25%, so the most it can add is 1.25x votes. Older races allow up to 2x. Each turn the strength leader is pulled back toward the race average by up to 175.
-- **Swing-state ground game.** In close states (lean under 0.5) invested ground game adds votes.
+- **Ground game.** Swing canvassing adds votes in close states (lean under 0.5), and get-out-the-vote adds votes in every state.
 - **Independents.** An independent presidential candidate keeps only 0.3x of their general vote share.
 - **Position blend.** In presidential generals candidate positions are blended 75% candidate, 25% party.
 - **Closing-period tactical voting.** In races on the reworked rules, 5% of the new ballots of candidates with no realistic chance in a state move to a viable candidate during the closing turns.
@@ -133,7 +133,7 @@ House, State Senate and other multi-seat contests allocate seats by the largest 
 
 - **Declare** for one office in your home state or region (President is national). Your home country must match the election's country.
 - **Pick a party.** Independents run in the independent party primary under the same rules.
-- **Withdraw** any time before the election resolves. Your votes are removed for good, your campaign is deleted and you cannot re-enter that election. During a primary this is almost always wrong; during a general you are losing it can free your actions for the next cycle.
+- **Withdraw** any time before the election resolves. Your votes are removed for good, your campaign is archived and you cannot re-enter that election. During a primary this is almost always wrong; during a general you are losing it can free your actions for the next cycle.
 - **Campaign** from the Campaign Manager page (see [Campaign Manager](/wiki/campaign-manager)).
 - **Build presence, travel, suspend or endorse** in presidential races, as described above.
 
@@ -146,7 +146,7 @@ Common questions:
 
 ## What feeds the vote, and what it feeds
 
-The size and positions of voter groups, from [Demographics](/wiki/demographics), set how each turn's pool splits. [Government Approval](/wiki/government-approval) scales the pool for the governing party, and [National Metrics](/wiki/national-metrics) (unemployment, poverty, inflation and income) set National Mood. Your own side of it comes from [Political Operations](/wiki/political-operations), where Campaign Presence raises vote weight in presidential races, from the actions and strength you build in the [Campaign Manager](/wiki/campaign-manager), and from the money in [Fundraising and Ads](/wiki/fundraising-ads) that pays for them. [Stats & Actions](/wiki/stats-actions) explains where PI, NPI and Favorability, which feed vote reach, appeal and primary scores, come from.
+The size and positions of voter groups, from [Demographics](/wiki/demographics), set how each turn's pool splits. [Government Approval](/wiki/government-approval) scales how many ballots each state casts per turn, for every candidate alike, so it changes turnout rather than shares, and [National Metrics](/wiki/national-metrics) (unemployment, poverty, inflation and income) set National Mood. Your own side of it comes from [Political Operations](/wiki/political-operations), where Campaign Presence raises vote weight in presidential races, from the actions and strength you build in the [Campaign Manager](/wiki/campaign-manager), and from the money in [Fundraising and Ads](/wiki/fundraising-ads) that pays for them. [Stats & Actions](/wiki/stats-actions) explains where PI, NPI and Favorability, which feed vote reach, appeal and primary scores, come from.
 
 The calendar around the vote matters too. [Core Systems](/wiki/core-systems) is where turns count the ballots and term lengths set the cycle, and [the game loop](/wiki/the-game-loop) shows when the primary and general windows and the vote-weight curve make timing decisive. A move through [Relocation](/wiki/relocation) withdraws open candidacies and vacates seats, which spawn new races. A [snap election](/wiki/snap-elections) resets the next regular election date and runs on the same rules. A passing independence vote in [Referendums](/wiki/referendums) stands up new elections, and [US House Redistricting](/wiki/us-house-redistricting) draws the district maps that decide which House seats are close.
 

@@ -20,6 +20,10 @@ import { getGameState } from "@/lib/gameState";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { expireLapsedActingAppointments } from "@/lib/cabinet/actingExpiry";
+import {
+  CABINET_NOMINATION_CHOICE_TURNS,
+  expireUnansweredCabinetNominationChoices,
+} from "@/lib/cabinetNominationChoice";
 import type {
   CabinetNomination,
   CabinetNominationRejectionReason,
@@ -287,6 +291,10 @@ export async function processCabinetNominationLifecycle(
   const gameState = await getGameState();
   const currentTurn = gameState?.currentTurn ?? 1;
 
+  // Offers the nominee did not answer return the seat to the President. Run
+  // before the expiry pass so a lapsed offer is final before anything seats.
+  await expireUnansweredCabinetNominationChoices(db, now, currentTurn);
+
   // Pre-fetch US NPP officials and NPPs once. This preload is US-scoped and is
   // ONLY reused for US nominations below; non-US nominations (e.g. NG) resolve
   // their own country-scoped NPP officials/president inside castNPPCabinetVotes
@@ -398,7 +406,7 @@ export async function processCabinetNominationLifecycle(
   );
   const notificationInputs: NotificationInput[] = [];
 
-  const rejectedUpdates: AnyBulkWriteOperation<CabinetNomination>[] = [];
+  const nominationUpdates: AnyBulkWriteOperation<CabinetNomination>[] = [];
 
   for (const nom of expired) {
     // Decide from the seat-weighted recompute scoped to the country's current
@@ -434,6 +442,9 @@ export async function processCabinetNominationLifecycle(
       !isVpNomination &&
       !!nom.nomineeCharacterId &&
       bankHolders.has(nom.nomineeCharacterId.toString());
+    // Remember the ballot result: a winner blocked only by a bank office is
+    // offered the seat instead of being rejected outright (ticket #1713).
+    const votePassed = passed;
     if (blockedByBankOffice) passed = false;
 
     // Both branches notify the same two people, so read each once per
@@ -450,8 +461,53 @@ export async function processCabinetNominationLifecycle(
       : (getCabinetPositionById(nom.positionId)?.name ?? nom.positionId);
     const isSameAsPresident =
       !!nomineeChar && nomineeChar._id.toString() === nom.proposedByPresidentId.toString();
+    const offerSeatTo = votePassed && blockedByBankOffice ? nomineeChar : null;
 
-    if (passed) {
+    if (offerSeatTo?.userId) {
+      // The Senate passed it, but the nominee holds a bank office. Offer the
+      // choice rather than voiding the appointment behind their back.
+      nominationUpdates.push({
+        updateOne: {
+          filter: { _id: nom._id },
+          update: {
+            $set: {
+              status: "awaiting_choice",
+              choiceOfferedAt: now,
+              choiceExpiresOnTurn: currentTurn + CABINET_NOMINATION_CHOICE_TURNS,
+              updatedAt: now,
+              votesFor: reTally.votesFor,
+              votesAgainst: reTally.votesAgainst,
+              votesAbstain: reTally.votesAbstain,
+            },
+          },
+        },
+      });
+
+      notificationInputs.push({
+        userId: offerSeatTo.userId,
+        type: "system",
+        title: "Cabinet Seat Offered",
+        message: `The Senate passed your nomination for ${posName}, but you hold a central bank office that cannot be combined with a cabinet seat. Choose whether to take the seat and give up that office, or stay where you are.`,
+        metadata: {
+          nominationId: nom._id.toString(),
+          type: "cabinet_choice_offered",
+          recipientCharacterId: offerSeatTo._id.toString(),
+        },
+      });
+      if (presidentChar?.userId && !isSameAsPresident) {
+        notificationInputs.push({
+          userId: presidentChar.userId,
+          type: "system",
+          title: "Cabinet Seat Offered",
+          message: `${nom.nomineeCharacterName} won the Senate vote for ${posName} but holds a central bank office, so they have been asked to choose between the seat and that office.`,
+          metadata: {
+            nominationId: nom._id.toString(),
+            type: "cabinet_choice_offered",
+            recipientCharacterId: presidentChar._id.toString(),
+          },
+        });
+      }
+    } else if (passed) {
       // VP nominations seat the character as VP; all other positions create a CabinetMember.
       if (nom.positionId === "vicePresident") {
         await seatConfirmedVicePresident(db, nom, now, currentTurn);
@@ -637,7 +693,7 @@ export async function processCabinetNominationLifecycle(
       const rejectionReason: CabinetNominationRejectionReason = blockedByBankOffice
         ? "incompatible_bank_office"
         : "senate_vote";
-      rejectedUpdates.push({
+      nominationUpdates.push({
         updateOne: {
           filter: { _id: nom._id },
           update: {
@@ -697,8 +753,8 @@ export async function processCabinetNominationLifecycle(
     }
   }
 
-  if (rejectedUpdates.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(rejectedUpdates);
+  if (nominationUpdates.length > 0) {
+    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(nominationUpdates);
   }
 
   await createNotifications(notificationInputs);

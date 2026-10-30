@@ -25,7 +25,7 @@ You buy hulls as ordinary units (see [Units, Recruitment & Procurement](/wiki/mi
 
 ### Winning a region with a carrier group
 
-A carrier group and two destroyers enter a region where an enemy squadron holds sea control of 70. Your ships are 80% of the weight in the region, so your sea control moves towards 80 at 12 a turn: 12, 24, 36, 48, 60, then 72 on turn 6. That passes the 65 needed to land marines, so your amphibious group can land on turn 6. The enemy's figure moves towards its 20% share and falls 15 a turn: 55, 40, 25, then 20.
+A carrier group and two destroyers enter a region where an enemy squadron holds sea control of 70. Your ships are about 78% of the weight in the region, so your sea control moves towards 78 at 12 a turn: 12, 24, 36, 48, 60, then 72 on turn 6. That passes the 65 needed to land marines, so your amphibious group can land on turn 6. The enemy's figure moves towards its 22% share and falls 15 a turn: 55, 40, 25, then 22.
 
 Holding Sea Control costs each ship 12 readiness a turn and it regains 6, a net loss of 6. From 90 readiness the fleet drops below the withdrawal point of 25 after 11 turns, and then returns to port on default orders.
 

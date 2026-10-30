@@ -1,12 +1,12 @@
-export const beta1Content = `**Iterations:** *Alpha 1 (not documented)*  ·  **Beta 1** *(concluded)*  ·  [[Beta 2]] *(concluded)*  ·  [[Iteration 1]] *(ongoing)*
+export const beta1Content = `**Iterations:** *Alpha 1 (not documented)*  ·  **Beta 1** *(concluded)*  ·  [[Beta 2]] *(concluded)*  ·  [[Iteration 1]] *(concluded)*
 
-*Alpha 1 ran before this wiki existed and was not documented; Beta 1 is the article you are reading, preserved as it was written at the close of the iteration; [[Beta 2]] followed it and has also concluded. [[Iteration 1]] follows the current live world.*
+*Alpha 1 ran before this wiki existed and was not documented; Beta 1 is the article you are reading, preserved as it was written at the close of the iteration; [[Beta 2]] followed it and has also concluded. [[Iteration 1]] has also concluded; the live world is now Iteration 2.*
 
 ---
 
 # Beta 1
 
-> *"The first iteration after the wipe. Four nations, twenty-one parties, two hundred corporations, one Empress, and a Galactic Emperor running the Bank of England. Here is what happened."*
+> *"The first iteration after the wipe. Four nations, forty-one parties, two hundred corporations, one Empress, and a Galactic Emperor running the Bank of England. Here is what happened."*
 
 **Beta 1** is the first numbered iteration of *A House Divided* after the spring database wipe. The world rebooted on **2026-04-11** with a fresh map, an empty Senate, and three playable capitals: Washington, London, and Tokyo. **Germany, China, Brazil, and Ireland** were added later as **economy-only** previews, exposed in the forex, commodity, and corporate-listing systems but not enabled for player politicking. By turn **621** (in-game year **2032**), Beta 1 had hosted four heads of government, a parliamentary regicide, three attempted UN walkouts, and the formal proclamation of the **Japanese Republic**.
 
@@ -170,7 +170,7 @@ Then, on **turn 549**, the Diet passed the *Declaration of the Japanese Republic
 
 ### Government
 
-The **Prime Minister** (LDP) was sworn in on **turn 515** and has since survived three no-confidence votes (T297, T206, T553). The PM is also the CEO of **Her Majesty's Arsenal**, Japan's flagship defence contractor and the **largest corporation in Beta 1 by local-currency market cap** (¥193.5 billion, ≈ $1.97B USD-equiv., headquartered in Kanto). The corporate name is, the Wire concedes, an anachronism the Republic has chosen to leave alone.
+The **Prime Minister** (LDP) was sworn in on **turn 515**, and Japan's Prime Ministers survived three no-confidence votes in all (T206, T297, T553). The PM is also the CEO of **Her Majesty's Arsenal**, Japan's flagship defence contractor and the **largest corporation in Beta 1 by local-currency market cap** (¥193.5 billion, ≈ $1.97B USD-equiv., headquartered in Kanto). The corporate name is, the Wire concedes, an anachronism the Republic has chosen to leave alone.
 
 ### Cabinet
 
@@ -262,14 +262,14 @@ Beta 1 introduced (and stress-tested) the in-game **forex system**. Internally, 
 
 | Currency | Code | Country / Bloc | Base rate (local per ₳) | Current rate | Drift |
 | --- | --- | --- | --- | --- | --- |
-| US Dollar | USD | US (active) | 1.00 | 1.019 | ▲ |
-| British Pound | GBP | UK (active) | 0.75 | **0.55** | ▼ (sterling has weakened sharply) |
+| US Dollar | USD | US (active) | 1.00 | 1.019 | ▼ (slightly weaker) |
+| British Pound | GBP | UK (active) | 0.75 | **0.55** | ▲ (sterling has strengthened sharply) |
 | Japanese Yen | JPY | JP (active) | 106 | 98.5 | ▲ (yen has strengthened) |
 | Euro | EUR | DE & IE (econ preview) | 0.92 | 0.93 | flat |
 | Chinese Yuan | CNY | CN (econ preview) | 7.20 | 7.63 | ▼ |
 | Brazilian Real | BRL | BR (econ preview) | 5.00 | 5.09 | flat |
 
-The headline forex story is the **strong yen / weak pound** axis, partly a consequence of Japan's diplomatic surplus, partly because Sterling has been carrying the weight of a *Subsidise Everything Act* and the Inflation Reduction Act: Tariffs simultaneously. (USD itself has drifted slightly *above* its anchor parity, which is why values rendered in USD vs. ₳ differ by a percent or two.)
+The headline forex story is a **much stronger pound**: fewer pounds per ₳ means sterling gained about a third against the anchor, far more than the yen's gain of about 8%, even while Britain carried a *Subsidise Everything Act* and the Inflation Reduction Act: Tariffs at the same time. (USD itself has drifted slightly *above* its anchor parity, which is why values rendered in USD vs. ₳ differ by a percent or two.)
 
 ### The 10 most valuable companies in Beta 1
 
@@ -279,7 +279,7 @@ Beta 1's forex system uses an **internal anchor unit (₳)** as the system-of-re
 | --- | --- | --- | --- | --- | --- |
 | 1 | **General Electric** | US (NYSE) | Energy | $64.5B | Secretary of Agriculture |
 | 2 | **AURORA Group** | US (NYSE) | Entertainment | $23.0B | **President A** |
-| 3 | **American Israel Public Affairs Committee** | US (NYSE) | Construction | $4.65B | A US Senator |
+| 3 | **American Israel Public Affairs Committee** | US (NYSE) | Construction | $4.65B | Corporate executive |
 | 4 | **Her Majesty's Arsenal** | JP (Nikkei) | Defense | $1.97B | **Japan's Prime Minister** |
 | 5 | **Bondi Group** | US (NYSE) | Retail | $1.89B | A US Senator (TX) |
 | 6 | **VOSS CORP** | US (NYSE) | Telecommunications | $1.77B | Corporate executive |
@@ -298,7 +298,7 @@ Among the largest just-outside-the-list corporations: **Sony Corporation Group**
 
 The top two corporations in Beta 1 are not just the largest. They are *categorically* larger than everything else. **General Electric** ($64.5B) and **AURORA Group** ($23.0B) together account for roughly **four-fifths** of the iteration's total listed equity value. The rest of the top ten clusters between $1B and $5B; the gap between #2 and #3 alone (AURORA → AIPAC at $4.65B) is **eighteen billion dollars**.
 
-Neither corporation started Beta 1 anywhere near the top. The earliest preserved Wealth Leaderboard snapshot (turn 2, 2026-04-11) ranks the founder of AURORA Group first at **$8.7M** and the founder of GE fourth at **$4.5M**, both modestly-capitalised opening-day founders. Six hundred and twenty turns later, the GE stake is worth $75.6B and the AURORA position is worth $34.6B. The compounding ratios are approximately **16,000× for the GE founder and 4,000× for the AURORA founder**.
+Neither corporation started Beta 1 anywhere near the top. The earliest preserved Wealth Leaderboard snapshot (turn 2, 2026-04-11) ranks the founder of AURORA Group first at **$8.7M** and the founder of GE fourth at **$4.5M**, both modestly-capitalised opening-day founders. Six hundred and twenty turns later, the GE stake is worth $75.6B and the AURORA position is worth $34.6B. The compounding ratios are approximately **17,000× for the GE founder and 4,000× for the AURORA founder**.
 
 Structurally the rise follows the standard *A House Divided* founder-CEO loop: a public corporation's founder retains a controlling stake, which appreciates with every successful sector expansion, share split, earnings cycle, and Wire-amplified narrative. The two giants got there via opposite share-count strategies. **GE has 5.8 billion shares outstanding**, the iteration's broadest industrial-energy distribution. Its growth story is volume, sector breadth, and a long bond-issuance cadence. **AURORA Group has only one million total shares**: a deliberately thin float that produces outsized per-share moves and amplifies every order-flow event. Both stocks were extraordinarily volatile in the 24 hours leading into the iteration pause; the in-game ticker showed GE up roughly **+131%** in a single trading session and AURORA shedding around **$8B** of market cap in the same window.
 
@@ -333,7 +333,7 @@ The political consequence is the iteration's most-cited corporate-political fact
 
 ### Wealth Leaderboard: top 10 by net worth
 
-Net worth is the in-game *Wealth Leaderboard* convention: stocks + bonds + portfolio + cash, summed and rendered in USD-equivalent. It is dominated almost entirely by **corporate CEOs** whose wealth tracks their stake in the public company they run. Eight of the Beta-1 top ten are corporate executives, and their combined net worth tops a quarter-trillion dollars.
+Net worth is the in-game *Wealth Leaderboard* convention: stocks + bonds + portfolio + cash, summed and rendered in USD-equivalent. It is dominated almost entirely by **corporate CEOs** whose wealth tracks their stake in the public company they run. Nine of the Beta-1 top ten are corporate executives, and the ten together hold about $173 billion.
 
 | # | Role | Country / State | Net worth | Source |
 | --- | --- | --- | --- | --- |

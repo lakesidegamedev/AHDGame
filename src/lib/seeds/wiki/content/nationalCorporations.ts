@@ -22,13 +22,13 @@ If you are a new finance minister, appoint a CEO (or yourself) first. Set the dr
 
 ## Where the profit goes
 
-Each turn, the corporation's operating profit is split in two. The CEO chooses how much to keep, from **0% to 75%** (the default is 0%, so everything is sent on). At least **25%** always goes to the national budget. When there is a loss, the treasury covers it and the corporation's cash returns to zero. A loss-making state company is therefore a real, ongoing drain on the [National Budget](/wiki/national-budget): profit remits in, losses and draws flow out.
+Each turn, the corporation's operating profit is split in two. The CEO chooses how much to keep, from **0% to 75%** (the default is 0%, so everything is sent on). At least **25%** always goes to the national budget. A loss comes out of the corporation's cash first. If cash goes negative, the treasury backfills it to zero, but only the part caused by operating losses: cash sunk into construction stays negative until the company earns it back. A loss-making state company is therefore a real, ongoing drain on the [National Budget](/wiki/national-budget): profit remits in, losses and draws flow out.
 
 ![Cash flow of a National Corporation: profit split between retained cash and remittance to the budget, capped CEO draws from the budget, and treasury cover for losses.](/wiki-images/diagrams/national-corporations-money-flow.svg)
 
 The CEO can also pull cash from the budget into the company, up to a per-turn cap that the finance minister sets. The default cap is 10 million in local currency. A cap of 0 freezes draws completely.
 
-Say a National Corporation earns 100 in operating profit, and the CEO has set retention to 40%. 40 stays in the corporation as working cash, and 60 goes to the national budget. Next turn the sector loses 20. The treasury pays 20, and the corporation's cash is set back to zero, so the budget is 20 worse off. The CEO then wants to fund a capacity expansion costing 30 and the draw cap is 25. They can draw at most 25 from the budget this turn and pay the other 5 from retained cash.
+Say a National Corporation earns 100 in operating profit, and the CEO has set retention to 40%. 40 stays in the corporation as working cash, and 60 goes to the national budget. Next turn the sector loses 20. That comes out of the 40 retained, leaving 20; the treasury pays nothing because cash never went negative. Had the corporation held no cash, the treasury would have paid the 20. The CEO then wants to fund a capacity expansion costing 30 and the draw cap is 25. They can draw at most 25 from the budget this turn and pay the other 5 from the 20 retained.
 
 ## What the CEO runs (Operations tab)
 
@@ -36,7 +36,7 @@ Say a National Corporation earns 100 in operating profit, and the CEO has set re
 | --- | --- |
 | Capacity investment | Grow a sector's output, revenue, remittance and jobs. |
 | Modernization (R&D) | Build innovation momentum. Full funding is 3% of sector revenue per turn. The momentum lapses to 0 in 48 turns without funding and climbs to full in 8 turns. |
-| Production target | Set an output target per sector. The sector drifts toward it. |
+| Production policy | Set a level from -25% to +25% per sector or across holdings. The live level moves 1 point a turn toward it, trading margin for revenue. |
 | Treasury draw | Pull budget cash into the corporation, up to the cap. |
 
 There is no marketing and no market bond issuance, since neither fits a state company.
@@ -47,7 +47,7 @@ The finance ministry can also **split off** a sector type into a new named Natio
 
 ## Why own it: public mandates
 
-The point of owning a company, rather than taxing a private one, is the **mandate**. Each turn a state sector nudges the national metric it is matched to, slowly and durably. Those are the metrics tracked in [National Metrics](/wiki/national-metrics).
+The point of owning a company, rather than taxing a private one, is the **mandate**. Each turn a state sector nudges the matched metric of the state where it operates, slowly and durably. Those are the metrics tracked in [National Metrics](/wiki/national-metrics).
 
 | Sector type | What it improves |
 | --- | --- |
@@ -62,7 +62,7 @@ The point of owning a company, rather than taxing a private one, is the **mandat
 | Retail | Lower cost of living |
 | Real estate | Housing affordability |
 
-At full state ownership of a sector in a region the nudge is **0.03 points per turn**, about 1.4 points a year before the metric's natural slow decay. It scales down with the state's share. No single sector can push a metric more than 8 points above its current level.
+At full state ownership of a sector in a region the nudge is **0.03 points per turn**, about 1.4 points a year before the metric's natural slow decay. It scales down with the state's share of that market. The only ceiling is the metric's own range.
 
 Two postures trade profit for public value, set for the whole company or per sector:
 

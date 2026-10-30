@@ -1,6 +1,6 @@
 export const playerProgressionContent = `# Player Progression
 
-Nothing is handed to you in this game: every seat is won at the ballot box, and every seat you win pays you back in actions, funds and National Influence (NPI), the number presidential races reward. This page is the climb as a click path: spawn, build, join a party, win a first primary, win a general, then go up. It says what to click at each stage and what each rung pays.
+Nothing is handed to you in this game: every elected seat is won at the ballot box (cabinet, court and central bank posts are appointed), and every seat you win pays you back in actions, funds and National Influence (NPI), the number presidential races reward. This page is the climb as a click path: spawn, build, join a party, win a first primary, win a general, then go up. It says what to click at each stage and what each rung pays.
 
 ## What each rung pays
 
@@ -18,13 +18,13 @@ Your character always has one **current office** (or none). You earn the next of
 | Supreme Court justice | +2, stacks | none | +1.5 |
 | Chamber leadership (Speaker +3, leaders +2, whips +1) | stacks on your seat | none | up to +2.0 |
 
-Non-US offices grant the local equivalent, and ceremonial heads of state get +0 actions. Country hubs have the exact table. Base actions are 4 per turn on top of everything here. The office you hold sets your action and fund bonuses each turn ([Core Systems](/wiki/core-systems)), and offices add to the NPI position bonus in [Stats & Actions](/wiki/stats-actions), whose PI, Favorability and donor level also decide whether you can win. NPI from offices feeds presidential races ([Elections Player Guide](/wiki/elections-player-guide)).
+Non-US offices grant the local equivalent, and ceremonial heads of state get +0 actions (Ireland's Uachtarán is the exception at +3). Country hubs have the exact table. Base actions are 4 per turn on top of everything here. The office you hold sets your action and fund bonuses each turn ([Core Systems](/wiki/core-systems)), and offices add to the NPI position bonus in [Stats & Actions](/wiki/stats-actions), whose PI, Favorability and donor level also decide whether you can win. NPI from offices feeds presidential races ([Elections Player Guide](/wiki/elections-player-guide)).
 
 ## The climb, stage by stage
 
 ### Just spawned
 
-Your dashboard shows Independent, no office, 25 actions, ₳250,000 Campaign Funds, personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50 and Political Influence 10. Your country and starting kit from [Create a Character](/wiki/create-a-character) decide the ladder and the first rung, and the first-week plan in [Getting Started](/wiki/getting-started) puts you on it.
+Your profile shows Independent, no office, 25 actions, ₳250,000 Campaign Funds, personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50 and Political Influence 10. Your country and starting kit from [Create a Character](/wiki/create-a-character) decide the ladder and the first rung, and the first-week plan in [Getting Started](/wiki/getting-started) puts you on it.
 
 ### Building before you file
 
@@ -39,7 +39,7 @@ Open **Parties**, open a party close to your sliders, and join. [Political Parti
 1. Open **Elections** and filter to your home state or region and a low office (State Senate, House, MP, MdB). State and regional races can only be entered from your home state, which is why [relocating](/wiki/relocation) comes first if you want a different one.
 2. Open the race and confirm the primary window is open.
 3. Run a Quick Poll, then declare.
-4. Open **View Campaign**, spend Campaign for PI and request NPP endorsements. Do not attack rivals in your own party.
+4. Spend Campaign on **Actions** for PI, use **View Campaign** for your campaign budget, and request NPP endorsements. Do not attack rivals in your own party.
 
 You can only hold one active candidacy at a time. Your standing sets how your party's voters split their ballots over the closing window, and the top count per party goes to the general.
 
@@ -92,7 +92,7 @@ In cycle 2 you run for the House with PI near 40: your seat now pays +1 action a
 
 ### Without an office
 
-You can run the whole campaign loop and a corporation. You cannot write or vote on bills. Corporations are under **Corporations** in the nav.
+You can run the whole campaign loop and a corporation. You cannot write or vote on bills. You found a corporation from **The Market** under **World**, and once you run one it appears there as **My Corporation**.
 
 \`\`\`guide-screenshot
 corporation
@@ -104,7 +104,7 @@ corporation
 - [ ] PI climbing with Campaign; Favorability 60+.
 - [ ] First low-office primary identified and polled.
 - [ ] You are not filing Senate/President as your opener.
-- [ ] You know which screen is Dashboard vs Elections vs Campaign vs legislature.
+- [ ] You know which screen is Profile vs Actions vs Elections vs Campaign vs legislature.
 
 \`\`\`guide-screenshot
 legislature

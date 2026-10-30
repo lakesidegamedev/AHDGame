@@ -8,11 +8,11 @@ When a world is created, the game seeds one **era preset**. The preset sets the 
 
 | Start date | What it opens for players | Notes |
 | --- | --- | --- |
-| 1953, early Cold War | United States, United Kingdom, Soviet Union, East Germany | Stalin has just died. Japan, China, West Germany, Brazil, Ireland and others run as economies. Democracies start with vacant legislatures, one-party legislatures start seated. |
-| 1979, Cold War | United States, United Kingdom, Soviet Union, East Germany | China, Japan, West Germany, Brazil and Nigeria run as economies. Legislatures start vacant. |
-| 1991 | United States, United Kingdom, Japan | US 102nd Congress, UK after the 1992 election, Japan after the 1990 election, Germany's 12th Bundestag. |
+| 1953, early Cold War | United States, United Kingdom, Soviet Union, East Germany | The year Stalin died. Japan, China, West Germany, Brazil, Ireland and others run as economies. Legislatures start vacant, the one-party chambers included, and a founding election fills them. |
+| 1979, Cold War | United States, United Kingdom, Soviet Union, East Germany | China, Japan, West Germany, Brazil and Nigeria run as economies. Legislatures start vacant and a founding election fills them. |
+| 1991 | United States, United Kingdom, Japan | US 102nd Congress, the UK Commons elected in 1987, Japan after the 1990 election, Germany's 12th Bundestag. |
 | 2019 | United States, United Kingdom, Japan | US 116th Congress, UK after the 2019 election, Germany, China and Ireland seated. Variants exist with no NPPs or no starting parties. |
-| 2023 | United States, United Kingdom, Japan | US 118th Congress, a divided government. Other countries use their 2019 data. |
+| 2023 | United States, United Kingdom, Japan | US state data, budget and policies from January 2023, though the seated Congress is still the 2020 roster. Other countries use their 2019 data. |
 | 2027 | United States, United Kingdom, Germany, Japan, China | A projection with the latest completed elections. |
 
 This is the roster at the start of a world. More countries can be opened to players later in a world's life, and the country picker in game is the authority. The era decides which countries and parties you can pick in [Create a Character](/wiki/create-a-character).
@@ -25,13 +25,13 @@ Economic and social positions each run from -5 to +5. Economic: -5 is far left a
 
 ## What every opening seeds
 
-- **Protected default parties**, with their platforms and starting treasuries ([Political Parties](/wiki/political-parties)).
-- **Generated NPPs** ([NPP Behavior](/wiki/npp-behavior) starts from these seeds) with positions drawn from their party range and blended with their home region's lean, plus randomised favorability, loyalty and stubbornness.
+- **Protected default parties**, with their platforms and starting treasuries ([Political Parties](/wiki/political-parties)), unless the world was started without parties.
+- **Generated NPPs** ([NPP Behavior](/wiki/npp-behavior) starts from these seeds) who take their party's own economic and social position, plus randomised favorability, loyalty, ambition and stubbornness.
 - **National budgets, debt, credit ratings, tax bases and currencies**, using that era's values where they are authored.
 - **Regional demographics and metrics** for that era.
-- **An unowned market in all 17 sector types** in every region, and separate per-region capacity ceilings for extractable resources.
+- **An unowned market in all 17 sector types** in every region, except where a command economy's state enterprises hold that market instead, and separate per-region capacity ceilings for extractable resources.
 
-Parliamentary governments are assembled from the starting seats ([Coalition Formation](/wiki/coalition-formation)). The 1991 preset also anchors election cycles to the real 1992 to 1994 calendar, and leaves out parties that did not exist yet (for example AfD, Die Linke and Reform UK).
+Parliamentary governments are assembled from the starting seats ([Coalition Formation](/wiki/coalition-formation)). The 1991 preset also anchors its first elections to the real post-1991 calendar (for example the 1992 US and UK elections and the 1994 Bundestag), and leaves out parties that did not exist yet (for example AfD, Die Linke and Reform UK).
 
 ## Reading the board for your country
 
@@ -47,7 +47,7 @@ The seeded sector markets and specialties are what [corporations](/wiki/corporat
 \`\`\`sector-seed-map
 \`\`\`
 
-Examples of the shape of the seeded markets:
+Examples of the shape of the seeded markets in a 2019 world. The 1979, 1991, 2023 and 2027 openings apply one national sector mix to every region of a country, so regions differ there only by size:
 
 - California leans heavily to technology and lightly to extraction. West Virginia is the reverse.
 - New York is strongest in financial services. Bavaria has a strong automobile seed.
@@ -55,14 +55,14 @@ Examples of the shape of the seeded markets:
 - China's northwest opens around energy and extraction, while the east and south lean toward technology and manufacturing.
 - Brazil splits sharply: Norte favors extraction, Centro-Oeste favors agriculture, and Sudeste favors finance and manufacturing.
 
-Seeded market sizes follow real GDP composition rather than an equal split, so a large technology market in California is large in absolute terms.
+Seeded market sizes are each region's GDP times its sector mix rather than an equal split, so a large technology market in California is large in absolute terms. A country with no authored mix for the era falls back to an even split.
 
 You found an extraction corporation in West Virginia, where extraction is the primary specialty. A sector there earns the region's +5 percentage points. If extraction is also your corporation's own primary type, the type match adds another +5, for +10 percentage points on top of the base margin before other modifiers. The same sector in a region with no extraction specialty gets only the +5 from your type. Check the dashboard before you commit capital.
 
 ## Default parties and empty legislatures
 
-- **Default parties cannot be deleted.** They exist in every world and survive any treasury or membership. Player-founded parties can be dissolved if they lose all members.
-- **Starting treasuries do not regenerate on their own.** Parties grow funds through player-paid dues, tax rates set by leadership, and events. A low-treasury party can still compete if players fund it.
+- **Default parties cannot be deleted.** They exist in every world that starts with parties and survive any treasury or membership. Player-founded parties are removed at turn time once they have no members and no sitting officials.
+- **Treasuries refill through party taxes.** Each turn, national and state parties take their tax rate from members' income, NPP members included. State parties with no players default to a small tax on their NPPs. A low-treasury party can still compete if players fund it.
 - **Where a legislature starts empty,** the first elections fill it.
 
 The opening board depends on the world's era preset and on which countries are open to players there, so check the country picker for the current world. Last checked 2026-10-29, version 1.18.0. Exact rules: [World and era systems (design)](https://docs.lakesidegames.net/design/world-and-era-systems-as-shipped.html)

@@ -1,3 +1,4 @@
+import type { SovereignRiskDisclosure } from "@/lib/bonds/sovereignRiskDisclosure";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CommodityPriceAttribution } from "@/lib/market/priceAttribution";
 
@@ -173,6 +174,7 @@ export interface WealthEntry {
 export interface BondListing {
   _id: string;
   issuerType?: "corporation" | "sovereign";
+  sovereignRisk?: SovereignRiskDisclosure | null;
   countryId?: string;
   /**
    * Canonical bond denomination (`bond.currencyCode` post-Task-18B). UI

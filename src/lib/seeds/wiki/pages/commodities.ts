@@ -7,13 +7,14 @@ import {
   EXTRACTABLE_RESOURCES,
   COMMODITY_PRESSURE_SOFT_KNEE,
   getPriceSoftKnee,
-  SECTOR_SUPPLY,
-  SECTOR_DEMAND,
   COMMODITIES_NATIONAL_REGIONAL_PRICE_BLEND,
   type CommodityType,
 } from "@/lib/constants/commodities";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategyDefinitions";
+import { HOUSEHOLD_CONSUMER_BASKET } from "@/lib/turn/householdConsumption";
+import { GOVERNMENT_COMMODITY_DEMAND } from "@/lib/market/governmentCommodityDemand";
 
 /**
  * One-line description per commodity: kept short so the page intro reads
@@ -27,20 +28,20 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
   energy:
     "electrical generation output; the universal input for almost every productive sector in the simulation.",
   chemicals:
-    "industrial chemicals: solvents, intermediates, and process inputs feeding manufacturing, agriculture, and pharmaceuticals.",
+    "industrial chemicals: solvents, intermediates, and process inputs feeding manufacturing, energy, extraction, and the chemical industry's own drug and fertilizer lines.",
   pharmaceuticals:
-    "finished drug formulations supplied by healthcare and consumed by retail and clinical demand.",
+    "finished drug formulations made by chemical companies running a drug recipe and bought by healthcare providers and households.",
   fertilizers:
     "nitrogen-phosphorus-potassium blends driving agricultural yield and, by extension, food supply.",
-  food: "agricultural output: raw and processed food products feeding retail, healthcare catering, and logistics.",
+  food: "agricultural output: raw and processed food products feeding households, healthcare catering, and logistics.",
   building_materials:
     "cement, aggregate, lumber, and related bulk inputs for construction and real estate development.",
   construction_services:
-    "crew-day labor capacity for construction projects: supplied by construction firms, demanded by infrastructure, energy, and real estate.",
+    "crew-day labor capacity for construction projects: supplied by construction firms, demanded by energy, real estate, telecom, defense, and extraction.",
   healthcare_services:
     "visit-equivalent clinical capacity: output of the healthcare sector and a macro demand sink driven by government health spending.",
   real_estate_services:
-    "leasing and brokerage activity: output of real estate firms and a diffuse demand across every revenue-generating sector.",
+    "leasing and brokerage activity: output of real estate firms, bought in small amounts by most sectors, by households, and by a macro demand leg tied to GDP and the prime rate.",
   software:
     "licensed software seats and platform services: supplied by tech and telco firms, consumed almost everywhere modern work happens.",
   financial_services:
@@ -48,46 +49,78 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
   advertising:
     "campaign-unit media capacity: supplied by media and entertainment, pulled hard by corporate marketing budgets.",
   vehicles:
-    "finished vehicles and heavy machinery: supplied by automobiles and defense, demanded by logistics, energy, agriculture, and retail.",
+    "finished vehicles and heavy machinery: supplied by automobiles, defense, and vehicle lines in manufacturing, demanded by logistics, energy, agriculture, and households.",
   retail:
-    "the consumer-goods basket: end-user demand for retail is scaled by GDP growth (half national, half state).",
+    "the consumer-goods basket: households buy it directly, alongside a legacy demand leg that mirrors local retail output scaled by GDP growth (half national, half state) and is being phased out.",
   freight:
     "container-equivalent transportation capacity: produced by logistics, demanded by anyone moving physical goods.",
   consulting_services:
     "professional engagement-hours: supplied by logistics/consulting, demanded by tech, media, finance, and defense.",
   iron: "extractable ore: raw input for steel and heavy manufacturing, gated by per-state capacity ceilings.",
   coal: "extractable fossil fuel: primary combustion input for energy and a meaningful input to manufacturing.",
-  oil: "extractable crude: the feedstock for chemicals and a core energy-sector input, priced globally.",
+  oil: "extractable crude: the feedstock for chemicals and a core energy-sector input.",
   rare_earth:
     "extractable strategic minerals: small volumes but critical for electronics, defense, and advanced manufacturing.",
-  timber:
-    "extractable forestry output: lumber and pulp inputs for construction, real estate, and manufacturing.",
+  timber: "extractable forestry output: lumber inputs for construction.",
   natural_gas:
-    "extractable fossil fuel: heat and process feedstock for chemicals, manufacturing, and energy.",
+    "extractable fossil fuel: fuel for energy generation and a smaller input to construction.",
   ordnance:
-    "finished weapons-system lots: supplied by defense, demanded primarily by extraction (industrial blasting).",
+    "finished weapons-system lots: supplied by defense, demanded by government defense budgets and by extraction (industrial blasting).",
   plastics:
     "polymer and extrusion output: feedstock for manufacturing, healthcare packaging, automobiles, and construction.",
   network_services:
     "subscription-equivalent broadband and connectivity capacity: unique output of telecom sectors, with macro demand scaling with state GDP.",
 };
 
-function formatSectorList(
-  map: Partial<Record<OperatingSectorType, { commodity: CommodityType; rate: number }[]>>,
-  commodity: CommodityType
-): string[] {
-  const rows: { label: string; rate: number }[] = [];
-  for (const [sector, flows] of Object.entries(map) as [
-    CorporationType,
-    { commodity: CommodityType; rate: number }[],
+const pct = (rate: number): string => `${(rate * 100).toFixed(0)}%`;
+
+/**
+ * One line per sector whose operating recipes (strategies) produce or consume
+ * the commodity. The standard recipe's rate leads; other recipes that carry
+ * the commodity are named after it. Retail's input recipe is skipped on the
+ * demand side because the household ledger books consumer purchases instead.
+ */
+function formatSectorList(side: "supply" | "demand", commodity: CommodityType): string[] {
+  const rows: { label: string; lead: number; text: string }[] = [];
+  for (const [sector, strategies] of Object.entries(SECTOR_STRATEGIES) as [
+    OperatingSectorType,
+    (typeof SECTOR_STRATEGIES)[OperatingSectorType],
   ][]) {
-    const flow = flows?.find((f) => f.commodity === commodity);
-    if (!flow) continue;
+    if (side === "demand" && sector === "retail") continue;
+    const carrying = strategies.filter((strategy) => (strategy[side][commodity] ?? 0) > 0);
+    if (carrying.length === 0) continue;
     const label = OPERATING_SECTOR_TYPE_LABELS[sector] ?? sector;
-    rows.push({ label, rate: flow.rate });
+    const standard = carrying.find((strategy) => strategy.id === "standard");
+    const others = carrying
+      .filter((strategy) => strategy.id !== "standard")
+      .map((strategy) => `${strategy.name} ${pct(strategy[side][commodity] ?? 0)}`);
+    const text = standard
+      ? `- **${label}**: ${pct(standard[side][commodity] ?? 0)} on the standard recipe${
+          others.length > 0 ? ` (other recipes: ${others.join(", ")})` : ""
+        }`
+      : `- **${label}**: only on some recipes (${others.join(", ")})`;
+    rows.push({ label, lead: standard?.[side][commodity] ?? 0, text });
   }
-  rows.sort((a, b) => b.rate - a.rate);
-  return rows.map((r) => `- **${r.label}**: ${(r.rate * 100).toFixed(0)}% of sector revenue`);
+  rows.sort((a, b) => b.lead - a.lead || a.label.localeCompare(b.label));
+  return rows.map((r) => r.text);
+}
+
+/** Final buyers outside the sector recipes: households and government budgets. */
+function formatFinalDemand(commodity: CommodityType): string[] {
+  const lines: string[] = [];
+  const householdShare = HOUSEHOLD_CONSUMER_BASKET[commodity];
+  if (householdShare) {
+    lines.push(`- **Households**: about ${pct(householdShare)} of the consumer budget`);
+  }
+  for (const entry of GOVERNMENT_COMMODITY_DEMAND) {
+    if (entry.commodity !== commodity) continue;
+    lines.push(
+      entry.plannedOnly
+        ? `- **Governments of planned economies**: from the ${entry.category} budget`
+        : `- **Governments**: from the ${entry.category} budget`
+    );
+  }
+  return lines;
 }
 
 function buildCommodityMarkdown(commodity: CommodityType): string {
@@ -98,22 +131,24 @@ function buildCommodityMarkdown(commodity: CommodityType): string {
   const isExtractable = (EXTRACTABLE_RESOURCES as readonly string[]).includes(commodity);
   const isMacro = COMMODITIES_NATIONAL_REGIONAL_PRICE_BLEND.has(commodity);
 
-  const suppliers = formatSectorList(SECTOR_SUPPLY, commodity);
-  const consumers = formatSectorList(SECTOR_DEMAND, commodity);
+  const suppliers = formatSectorList("supply", commodity);
+  const consumers = formatSectorList("demand", commodity);
+  const finalBuyers = formatFinalDemand(commodity);
 
   const suppliersSection =
     suppliers.length > 0
-      ? `## Who supplies it\n\nSectors that produce ${label} as output, with per-revenue supply rates:\n\n${suppliers.join(
+      ? `## Who supplies it\n\nSectors that produce ${label}, with the supply rate on each recipe (a corporation picks one recipe per sector):\n\n${suppliers.join(
           "\n"
         )}`
-      : `## Who supplies it\n\n${label} has no direct producing sector: supply is driven by the base market stabilizer and any seeded inventory.`;
+      : `## Who supplies it\n\nNo sector recipe produces ${label}; its market moves only with the stabilizer.`;
 
   const consumersSection =
-    consumers.length > 0
-      ? `## Who demands it\n\nSectors that consume ${label} as an input, with per-revenue demand rates:\n\n${consumers.join(
-          "\n"
-        )}`
-      : `## Who demands it\n\n${label} has no direct consuming sector in the default operating strategies.`;
+    consumers.length + finalBuyers.length > 0
+      ? `## Who demands it\n\nSectors that use ${label} as an input, with the share of sector revenue each recipe spends on it, followed by final buyers:\n\n${[
+          ...consumers,
+          ...finalBuyers,
+        ].join("\n")}`
+      : `## Who demands it\n\nNo sector recipe, household basket or government budget buys ${label} directly.`;
 
   const extractionNote = isExtractable
     ? `\n\nBecause ${label} is an **extractable resource**, per-state output is capped by [state resource capacity](/wiki/resources-overview). The live distribution below shows each country's current capacity alongside supply and demand.`
@@ -130,23 +165,23 @@ function buildCommodityMarkdown(commodity: CommodityType): string {
   }
 
   const blendDescription = isMacro
-    ? "**50% global + 50% national (country-aggregate)**: state-level S/D is meaningless because this market is driven by nationwide budgets, campaigns, or bond issuance rather than one state's local balance"
-    : "**50% global + 25% national (country-aggregate) + 25% regional (state)**";
+    ? "**50% world market (the part of it your country can trade with) + 50% national (country-aggregate)**: state-level S/D is meaningless because this market is driven by nationwide budgets, campaigns, or bond issuance rather than one state's local balance"
+    : "**50% world market (the part of it your country can trade with) + 25% national (country-aggregate) + 25% regional (state)**";
   const macroNote = isMacro
     ? " The national leg uses country-aggregate S/D with a 500-unit stabilizer on each side."
     : "";
 
   return `**${label}** (*${unit}*, base price **$${basePrice.toLocaleString()}**) is ${summary}
 
-Whether you run a supplier, buy it as an input, or just watch the margins of the sectors that depend on it, the price you see here is the one that counts. It is set by how much is actually sold against how much is wanted.
+Whether you run a supplier, buy it as an input, or just watch the margins of the sectors that depend on it, the price you see here is the one that counts. It is set by how much is actually produced against how much is wanted.
 
 ## What sets the price
 
-Supply for ${label} comes from real plant capacity: owned sectors produce up to what their capacity can make, sell into the clearing market, and only sold units count toward the D/S ratio and the price below. A sector that has not finished building, or that is mothballed, contributes nothing here even if its nameplate revenue implies it should. See [Running a Corporation under the Plants System](/wiki/plants-corp-guide) for how capacity is built and sold.
+Supply for ${label} comes from real plant capacity: owned sectors produce up to what their capacity can make, and that real output is what counts toward the D/S ratio and the price below. Output delivered under a military contract never reaches the market, and a sector that has not finished building, or that is mothballed, contributes nothing here even if its nameplate revenue implies it should. See [Running a Corporation under the Plants System](/wiki/plants-corp-guide) for how capacity is built and sold.
 
-![Price loop: sold supply and demand feed global, national and state pools, which are blended into a price that drifts 6% a turn, sets margins and revenue realization, and feeds back into output.](/wiki-images/diagrams/commodities-price-loop.svg)
+![Price loop: produced supply and demand feed global, national and state pools, which are blended into a price that drifts 6% a turn, sets margins and revenue realization, and feeds back into output.](/wiki-images/diagrams/commodities-price-loop.svg)
 
-Prices blend ${blendDescription}, drifting toward equilibrium at 6% per turn (95% closed in one game year). Raw D/S remains visible for diagnosis; price math uses the raw ratio up to ${getPriceSoftKnee(commodity)}x and margin math up to ${COMMODITY_PRESSURE_SOFT_KNEE}x, then a softened effective pressure tail beyond that.${macroNote}
+Prices blend ${blendDescription}, drifting toward equilibrium at 6% per turn (95% closed in one game year). Raw D/S remains visible for diagnosis; price math uses the raw ratio up to ${getPriceSoftKnee(commodity)}x and margin math up to ${COMMODITY_PRESSURE_SOFT_KNEE}x, then a softened effective pressure tail beyond that.${macroNote} In a planned economy the plan sets the price instead, wholly or in part (see [Planned Economies](/wiki/planned-economies)).
 
 [Tariffs](/wiki/tariffs) move weight in the margin blend from the global price to the national price.
 

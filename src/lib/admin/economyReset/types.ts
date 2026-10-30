@@ -24,6 +24,7 @@ export const ECONOMY_RESET_PHASES = [
   "reseedUnownedSectors",
   "reseedNppCorporations",
   "reseedNpcBanks",
+  "reseedUnions",
   "currencyTopology",
   "verifyCommandEconomy",
   "sovereignBonds",

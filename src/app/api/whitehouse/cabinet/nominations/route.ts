@@ -148,7 +148,7 @@ export async function POST(request: Request) {
     await db
       .collection<CabinetNomination>("cabinetNominations")
       .updateMany(
-        { positionId, status: { $in: ["active", "proposed"] } },
+        { positionId, status: { $in: ["active", "proposed", "awaiting_choice"] } },
         { $set: { status: "withdrawn", updatedAt: now } }
       );
 

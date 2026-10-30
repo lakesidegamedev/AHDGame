@@ -60,7 +60,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
     designDocUrl: "design/party-leadership-authority.html",
     title: "Party Leadership & Authority",
     description:
-      "Acting-chair vice-chair inheritance, the 24-turn leadership tenure gate, the unmanned-default capture shield, and where the UK regional parties start strong.",
+      "Acting-chair vice-chair inheritance, the 24-turn leadership tenure gate, abandoned built-in parties, and where the UK regional parties start strong.",
     content: partyLeadershipAuthorityContent,
     category: "parties",
     extraTags: ["chair", "tenure"],

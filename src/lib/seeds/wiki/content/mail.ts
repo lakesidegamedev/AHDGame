@@ -4,7 +4,7 @@ When you want to say something to one person and nobody else, you use Mail. It i
 
 ## Writing a message
 
-You write a message to another character and it appears in their inbox at once. Each message has a subject and a body, and is private to the sender and the recipient. Mail is for talking to people. Anything you do not want in the public [News](/wiki/news) feed belongs here. Automatic game events (election results, bill status, wires) arrive as notifications instead.
+You write a message to another character and it appears in their inbox at once. Each message has a subject and a body, and is private to the sender and the recipient. Mail is for talking to people. Anything you do not want in the public [News](/wiki/news) feed belongs here. Most automatic game events (election results, bill status, wires) arrive as notifications instead.
 
 | Limit | Value |
 | --- | --- |
@@ -18,20 +18,20 @@ You write a message to another character and it appears in their inbox at once. 
 
 ## Where it lives
 
-Open **Notifications**, then the **Mail** segment. You can also compose from a character's profile. Sent mail has its own list. Everything that is not mail stays in the **Notifs** segment. The Notification Center hosts the inbox and the archive, mute and snooze controls.
+Open **Notifications**, then the **Mail** segment. New mail starts from a character's profile, on its Mail tab. Your sent messages appear inside each thread next to the replies. Everything that is not mail sits in the **Notifications** segment, while **All** and **Needs action** mix both. The Notification Center hosts the inbox and the archive, mute and snooze controls.
 
-Some mail is automatic. At character creation, where the starter checklist is on, a welcome mail from the Game Guide arrives. Forex order fills also send mail from the Forex Market ([Currency Exchange](/wiki/currency-exchange)). These have no player behind them, so there is nobody to reply to.
+Some mail is automatic. At character creation, where the starter checklist is on, a welcome mail from the Game Guide arrives. Forex order fills send mail from the Forex Market ([Currency Exchange](/wiki/currency-exchange)), and a failed currency defence mails the central bank chair. A hard party whip mails the members it binds, a bank mails its decision on your loan, and an IMF restructuring mails the affected bondholders. These have no player behind them, so there is nobody to reply to.
 
 ## Reading and deleting
 
-Unread mail is tracked per message. Opening a thread marks the latest received message read. Deleting a received message hides it from your inbox but does not erase the sender's copy. A message is removed completely only after both sides have deleted it.
+Unread mail is tracked per message. Opening a thread marks every received message in it read. Deleting a received message hides it from your inbox but does not erase the sender's copy. A message is removed completely only after both sides have deleted it.
 
 ## Sending, blocking and reporting
 
-- **Send mail** from the inbox or a profile: pick the recipient, enter a subject and body, send.
-- **Read, reply and delete** from the Mail segment.
+- **Send mail** from the recipient's profile: open its Mail tab, enter a subject and body, send.
+- **Read, reply and delete** from the Mail segment. Replies go into the existing thread.
 - **Block a player** from their profile. A block hides their existing mail, stops them sending you more, and they are not told. You manage your blocked list in Settings, and can unblock there.
-- **Report abusive mail** from the thread. One report is allowed per message. Reports go to the game's moderators, who review the message as it was sent, even if you delete it afterward.
+- **Report abusive mail** from the thread, which reports the latest message you received in it. One report is allowed per message. Reports go to the game's moderators, who review the message as it was sent, even if you delete it afterward.
 
 Say you want to propose a joint fundraiser to the chair of your state party. Subject: "Joint fundraiser, Saturday" (26 characters). Body: three short sentences with the date and split (about 200 characters). Send. If you try to send a second message within 60 seconds, you are asked to wait. If the chair replies, their message appears in your Mail segment with an unread count.
 

@@ -1,6 +1,6 @@
 export const canvassingContent = `# Canvassing
 
-Ads move how much a group likes you. Canvassing moves how many of that group show up at all, and it is the only action that directly changes **voter turnout** for one demographic group in one state. It is cheap, targeted and single-state, and it is worth double in the final 4 turns of an election. It pays off most in the last turns, in groups that already lean your way. A Full Poll in [Polling](/wiki/polling) shows which groups to target and how well they turn out.
+Ads move how much voters like you. Canvassing moves how many of a group show up at all, and it is the only personal action that directly changes **voter turnout** for one demographic group in one state (party get-out-the-vote and suppression budgets also move turnout). It is cheap, targeted and single-state, and it is worth double in the final 4 turns of an election. It pays off most in the last turns, in groups that already lean your way. A Full Poll in [Polling](/wiki/polling) shows which groups to target and how well they turn out.
 
 ## What one canvass does
 
@@ -88,7 +88,7 @@ Tips:
 - **Check the modifier first.** At +18, a canvass adds only 10% of its base. Try a fresher group.
 - **At ₳100 per action the scarce resource is actions, not money.**
 
-Turnout is what the closing surge in [General Elections](/wiki/general-elections) rewards, because each group casts more ballots and the final-4-turn doubling lines up with it. Canvassing shows up in the Turnout factor of the [Vote Factor Ledger](/wiki/vote-factor-ledger). Races that opened before the current campaign rules still use an older, weaker canvassing model, with smaller boosts and slower decay.
+Turnout is what the closing surge in [General Elections](/wiki/general-elections) rewards, because each group casts more ballots and the final-4-turn doubling lines up with it. Canvassing has no line of its own in the [Vote Factor Ledger](/wiki/vote-factor-ledger): it changes how many ballots each group contributes, so it shows up inside the baseline and the group-weighted factors, not in the Turnout line (which is the state-approval turnout scaler). Races that opened before the current campaign rules still use an older, weaker canvassing model, with smaller boosts and slower decay.
 
-Live in every world and country with campaigns, for the groups of that country. Races that opened under the older campaign rules use the older canvassing numbers. Last checked 2026-10-29, version 1.18.0. Exact rules: [Canvassing (design)](https://docs.lakesidegames.net/design/canvassing.html). See also [Stats & Actions](/wiki/stats-actions), [Political Parties](/wiki/political-parties).
+Live in every world and country with campaigns, for the groups of that country. Races that opened under the older campaign rules use the older canvassing numbers. Last checked 2026-10-30, version 1.18.0. Exact rules: [Canvassing (design)](https://docs.lakesidegames.net/design/canvassing.html). See also [Stats & Actions](/wiki/stats-actions), [Political Parties](/wiki/political-parties).
 `;

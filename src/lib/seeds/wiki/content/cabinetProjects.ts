@@ -8,7 +8,7 @@ Buildings belong to the seat, not to you personally, and each sits in one region
 
 | System | Who gets it | Assets |
 | --- | --- | --- |
-| **Estates** | Most portfolio seats in the US, UK, Germany, China, Japan, Ireland and the command-economy states | Schools, hospitals, courts, embassies and more (three archetypes or more per portfolio) |
+| **Estates** | Most portfolio seats in the US, UK, Germany, China, Japan, Ireland and the command-economy states | Schools, hospitals, justice field offices, embassies and more (three archetypes per portfolio) |
 | **Energy plants** | The energy seat (US: Secretary of Energy; UK: Environment Secretary) | Coal, gas, nuclear, hydro, wind, solar |
 | **Infrastructure projects** | The transport seat | Highways, transit, bridges, railways, broadband, freight, airports |
 
@@ -38,7 +38,7 @@ Upkeep numbers are in millions per turn. Each building also nudges its region's 
 
 An **estate** is a facility tied to your portfolio. Every estate has four things:
 
-- **Location**: chosen when you open it, then fixed. Domestic estates sit in one region and affect that region. Foreign-portfolio estates, such as embassies, sit in another country and raise your own country's soft-power metrics, not the host's.
+- **Location**: chosen when you open it, then fixed. Domestic estates sit in one region and affect that region. Foreign-portfolio estates, such as embassies, sit in another country and raise your own country's national metrics (public trust, transparency and civic participation), not the host's.
 - **Tier**: the **Expand** lever. Higher tiers give stronger effects and higher upkeep.
 - **Funding**: the **Fund** lever, free to change. Higher funding raises upkeep and output and the condition the estate settles at.
 - **Condition** (0 to 100): drifts toward the baseline of your funding level (55, 75 or 90). Effects scale with condition, so a neglected estate does proportionally less. Upkeep does **not** scale with condition: a run-down hospital still costs money.

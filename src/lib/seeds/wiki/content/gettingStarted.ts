@@ -22,9 +22,9 @@ home
 
 | Number | What it is | What it buys |
 | --- | --- | --- |
-| **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, declaring, and most other moves. |
+| **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, and most other moves. Declaring for a race costs none. |
 | **Campaign Funds** | Money for political actions. New characters start with the local-currency equivalent of 250,000 anchor units. | Ads, polls, donor building, and influence operations. |
-| **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal and how forgiving voters are when you flip positions. |
+| **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal. Above 60 it slips a little every turn. |
 | **Political Influence (PI)** | Your standing in your home state. New characters start at 10, the same floor as NPPs. | Primary and general-election strength. It decays 0.75% per turn, so Campaign is a maintenance action. |
 | **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
 | **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at the grant for your wealth background: 1,000,000, 2,500,000 or 5,000,000 anchor units for low, middle or high, scaled to the world's era, plus a bonus if you were referred. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
@@ -41,7 +41,7 @@ There is a third pool you will meet later. A corporation's treasury is not your 
 
 2. **Campaign at home three times.** Open **Campaign** from the dashboard or the Actions page. Each use costs 1 action, spends campaign funds scaled to your state, and adds PI. This is the only routine action that raises PI directly. Three campaigns clears the first-days goal and gets you off the starting floor.
 
-3. **Join a party.** Open **Parties** and compare platforms. Independents can run through the independent primary, but a party gives you its primary, organization, action pool, and leadership ladder. If the party requires approval, start as an Independent and apply; do not wait to begin campaigning. A party also has to reach your home region before you can join it. After you join, there is a 24-hour wait before you can switch.
+3. **Join a party.** Open **Parties** and compare platforms. Independents can run without a party, but a party gives you its primary, organization, action pool, and leadership ladder. If the party requires approval, start as an Independent and apply; do not wait to begin campaigning. A party also has to reach your home region before you can join it. After you join, there is a 24-hour wait before you can switch.
 
 4. **Build one donor network and fundraise once.** **Build Donor Network** costs 4 actions at the starting donor level and raises your fundraising ceiling. **Fundraise** costs 3 actions and refills Campaign Funds. Together they are the engine that keeps the rest of your first week funded.
 
@@ -53,9 +53,9 @@ elections
 
 *The Elections page. The top row shows how many races are open, how many are contested, and when the next one closes.*
 
-6. **Run a Quick Poll before you declare.** A Quick Poll costs 2 actions and about 25,000 campaign funds. It shows your topline and your five best and five worst demographic groups. If you are far behind, pick a different seat. A poll is much cheaper than a lost primary.
+6. **Run a Commission Poll before you declare.** A Commission Poll costs 2 actions and about 25,000 campaign funds. It shows your topline and your five best and five worst demographic groups. If you are far behind, pick a different seat. A poll is much cheaper than a lost primary.
 
-7. **Declare during the primary window.** You can hold one active candidacy at a time. Missing the window means waiting a full cycle. You can withdraw from the race page, which costs no actions or funds, but the campaign spend you put into it is gone and the race goes to your rivals. After you declare, open **View Campaign** from the race page. That is where you spend funds, run ads, and canvass.
+7. **Declare during the primary window.** You can hold one active candidacy at a time. Missing the window means waiting a full cycle. Declaring costs no actions. You can withdraw from the race page, which also costs nothing, but the campaign spend you put into it is gone, you cannot re-enter that same race, and it goes to your rivals. After you declare, open **View Campaign** from the race page. That is where you spend funds, run ads, and canvass.
 
 8. **Spend the rest of your actions on the race, not on everything else.** Do not buy a corporation, a bond, or a central-bank position in week one unless you already understand the system.
 
@@ -74,9 +74,9 @@ campaign-advertise-action-cost
 | Campaign at home, three times | 3 | -₳60,000 | First-days goal, and the only routine PI gain. |
 | Build Donor Network, once | 4 | -₳5,000 | Raises the ceiling on every later Fundraise. The cost rises with donor level. |
 | Fundraise, once | 3 | +₳61,000 | Refills Campaign Funds after the early campaign spend. |
-| Quick Poll, once | 2 | -₳25,000 | Confirms your first race is winnable before you declare. |
+| Commission Poll, once | 2 | -₳25,000 | Confirms your first race is winnable before you declare. |
 | Run Advertisements, once | 7 | -₳140,000 | At starting Favorability. The action cost rises with Favorability, not falls. |
-| Hold the remaining actions | 6 | none | Declare, canvass, or respond to a race that opens. |
+| Hold the remaining actions | 6 | none | Canvass, or respond to a race that opens. Declaring is free. |
 
 That leaves about ₳81,000 of your ₳250,000, assuming a state with average GDP per person and a neutral Fundraising stat. Richer states cost up to 2 times as much and poorer ones as little as 0.85 times. Do the Fundraise before the ad, because the ad alone costs more than half your starting funds.
 
@@ -95,7 +95,7 @@ Your profile may also show a starter checklist, where the world has it switched 
 
 - [ ] Character created, party joined, policy positions close to that party's platform.
 - [ ] First 25 actions spent mostly on Campaign, donor building, fundraising, and one poll.
-- [ ] Quick Poll run on your first target race.
+- [ ] Commission Poll run on your first target race.
 - [ ] Candidacy declared in a State Senate or House seat, or the local equivalent.
 - [ ] Campaign page bookmarked; you know when the primary closes.
 - [ ] Read [First Campaign Walkthrough](/wiki/first-campaign-walkthrough) before you spend the rest of your war chest.
@@ -137,5 +137,5 @@ Each hub explains that country's offices, election system, legislature, governme
 - [Mail](/wiki/mail): player-to-player inbox.
 - [News](/wiki/news): the public feed.
 
-Applies in every world; which countries you can pick and which races are open depend on the world's era and what has been opened so far. Last checked 2026-10-29, version 1.18.0. Exact rules: [Getting Started (design)](https://docs.lakesidegames.net/design/getting-started.html)
+Applies in every world; which countries you can pick and which races are open depend on the world's era and what has been opened so far. Last checked 2026-10-30, version 1.18.0. Exact rules: [Getting Started (design)](https://docs.lakesidegames.net/design/getting-started.html)
 `;

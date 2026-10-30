@@ -19,7 +19,7 @@ Leans are **state-derived**. Each state carries its own position overrides on to
 
 ### What decides your share of a cell
 
-For each cell each turn, the pool is split between candidates in proportion to appeal x reach x approval x party organization x infamy.
+For each cell each turn, the core of each candidate's weight is appeal x reach x approval x party organization x infamy. The general-election engine multiplies in further factors (registration, support, coattails, regime, targeted ads) and then moves votes between parties in the persuasion swing; see [General Elections](/wiki/general-elections).
 
 | Factor | Range | What it measures |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ For each cell each turn, the pool is split between candidates in proportion to a
 
 The party strength modifier then scales the whole turn pool: for state races (1 + (state approval / 100 - 0.5) x 0.2) times office strength, and for presidential state results the approval swing is x0.5 instead of x0.2.
 
-![A cell's pool is split between candidates in proportion to the product of reach, appeal, approval, party organization and infamy.](/wiki-images/diagrams/demographics-targeting-vote-pipeline.svg)
+![A cell's pool is split between candidates by a weight built from reach, appeal, approval, party organization and infamy.](/wiki-images/diagrams/demographics-targeting-vote-pipeline.svg)
 
 ### Appeal falls off with distance
 
@@ -49,7 +49,7 @@ The curve is deliberately softer than squaring so that campaigning, favorability
 
 ### Ads or canvassing?
 
-A cell is worth its size times its turnout. A group that is 22% of the electorate at 40% turnout is worth 8.8. A group that is 15% at 70% is worth 10.5, so the smaller group is the bigger prize. Raising favorability from 50 to 60 with a group lifts your approval factor from 0.574 to 0.665, which is 16% more of your weight there. A single ad gain of +3 (50 to 53) is about +4.8%. By comparison, canvassing a group where you already have approval 80 and turnout is only 38% adds up to 2 points of turnout per action. If you already own a group, canvass it. If you are 50-50 with it, advertise to it.
+A cell is worth its size times its turnout. A group that is 22% of the electorate at 40% turnout is worth 8.8. A group that is 15% at 70% is worth 10.5, so the smaller group is the bigger prize. Raising your favorability from 50 to 60 lifts your approval factor from 0.574 to 0.665, which is 16% more of your weight in every group. A single ad gain of +3 (50 to 53) is about +4.8%. Run Advertisements raises favorability everywhere; to work one group, targeted ads add a capped bonus there. By comparison, canvassing a group where you already have approval 80 and turnout is only 38% adds up to 2 points of turnout per action (4 in the closing turns). If you already own a group, canvass it. If you are 50-50 with it, advertise, with targeted ads if it is one group you need.
 
 ### Turnout
 
@@ -63,7 +63,7 @@ A modifier applies to the bucket you target and reaches every cell that carries 
 
 ### State political lean
 
-A state's lean is the turnout-weighted average of all its cells. Labels use the shared -5 to +5 ruler: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean, plus or minus 3 Left or Right. Lean helps lean-aligned candidates in presidential races through the per-state lean modifier, and it decides which parties field candidates in some states.
+A state's lean is the turnout-weighted average of all its cells. Labels use the shared -5 to +5 ruler: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean, plus or minus 3 Left or Right. In presidential races the lean marks a state as a swing state (where swing-canvassing ground game pays); the old per-state lean vote multiplier applies only to races that opened under the first presidential rules.
 
 ### The numbers
 
@@ -82,12 +82,12 @@ A state's lean is the turnout-weighted average of all its cells. Labels use the 
 1. **Poll first.** Run a Full Demographic Poll at the start of every general you plan to win. It shows your vote share, appeal and approval group by group.
 2. **Sort the groups.** Locks are groups where you lead by a wide margin. Contested groups are within about 10 points. Lost groups are far behind and not worth chasing.
 3. **Spend on the contested groups, maintain the locks, ignore the lost ones** unless they are huge.
-4. **Match the tool to the group:** ads ([Fundraising and Ads](/wiki/fundraising-ads), about ₳100,000, 5 or more actions, lift favorability) where you are close to 50% approval. Canvassing where you already lead but turnout is low.
+4. **Match the tool to the group:** ads ([Fundraising and Ads](/wiki/fundraising-ads), ₳100,000 to ₳180,000 and 5 or more actions, lift favorability everywhere; targeted ads aim at one group) where you are close to 50% approval. Canvassing where you already lead but turnout is low.
 5. **Re-poll** after a canvassing burst or an opponent's ad spike. Targeting decides where limited actions and funds go in your wider plan; see [Campaign Strategy](/wiki/campaign-strategy).
 
 Tips:
 
-- A 1-point favorability bump on a 15% group is worth more than a 5-point bump on a 2% group.
+- A targeted push on a 15% group is worth more than a much bigger one on a 2% group.
 - Canvassing a group where your appeal is high turns turnout directly into votes. Canvassing one at appeal 5 is near-worthless.
 - Groups at appeal 12 to 20 are recoverable with ads. At appeal 5 and under, skip them mid-cycle.
 
@@ -104,7 +104,7 @@ The four-dimension model is US-specific. Other countries use their own census di
 | Germany | Education runs from no degree to Hochschulabschluss |
 | Japan, Brazil | Own education ladders (Japan five levels, Brazil three) |
 
-The math is the same. Each country's leans are calibrated per era against real election results. See the country hubs.
+The math is the same. Each country's group positions are authored per era from its documented political history, and regional leans emerge from census shares times those positions. See the country hubs.
 
-Live in every world and country with elections. The four-dimension buckets above are US; other countries use their own groups. Last checked 2026-10-29, version 1.18.0. Exact rules: [Demographics targeting (design)](https://docs.lakesidegames.net/design/demographics-targeting.html)
+Live in every world and country with elections. The four-dimension buckets above are US; other countries use their own groups. Last checked 2026-10-30, version 1.18.0. Exact rules: [Demographics targeting (design)](https://docs.lakesidegames.net/design/demographics-targeting.html)
 `;

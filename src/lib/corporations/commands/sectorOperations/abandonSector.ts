@@ -1,3 +1,4 @@
+import { rejectWhileTurnProcessing } from "./turnGuard";
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/abandon
  * Abandon a sector. Deletes the sector; revenue returns to the unowned pool.
@@ -39,6 +40,8 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
 
     const rateLimit = checkRateLimit(
       `lib/corporations/commands/sectorOperations/abandonSector:${auth.user.userId}`,

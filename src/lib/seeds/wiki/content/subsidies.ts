@@ -55,7 +55,7 @@ A corporation sector qualifies for a subsidy if it passes all four filters:
 
 ![A sector passes the territory, sector type, strategy and domestic-only filters to qualify, and the government pays a per-turn cost into the sector subsidies budget line.](/wiki-images/diagrams/subsidies-qualification-funnel.svg)
 
-Active subsidies are visible in the national Congress view and in the legislation history for the enacting bill. Each subsidy's scope, target, and domestic-only flag are displayed, along with the bill that created it. Check it for subsidies your sectors qualify for, then pick the strategy and location that match them.
+Active subsidies are visible in the national Congress view. Each subsidy's scope, target, and domestic-only flag are displayed, along with when it was last updated. Check it for subsidies your sectors qualify for, then pick the strategy and location that match them.
 
 ![Congress Subsidies tab listing active subsidies with scope, domestic-only flag and margin](/wiki-images/screens/subsidies-active-list.webp)
 
@@ -112,7 +112,7 @@ Sentiment pulses decay at rate **0.85 per 15-minute market interval** (a pulse l
 
 Subsidy margin modifiers are calculated during sector processing each turn:
 
-1. All active subsidies for the relevant country are loaded.
+1. All active subsidies are loaded.
 2. For each corporation sector, the system checks every subsidy against all four qualification filters.
 3. Qualifying subsidies are summed: each adds +7.5pp to the total margin modifier.
 4. The modifier is added to the sector's profit margin.

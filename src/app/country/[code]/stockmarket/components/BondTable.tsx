@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { SovereignBondRisk } from "@/components/SovereignBondRisk";
 import Image from "next/image";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/ui";
@@ -282,6 +283,9 @@ export function BondTable({
                               </span>
                             )}
                             <span className="truncate">Series {bond.maturityLabel}</span>
+                            {bond.issuerType === "sovereign" && (
+                              <SovereignBondRisk risk={bond.sovereignRisk} compact />
+                            )}
                             {(ownedUnits?.get(bond._id) ?? 0) > 0 && (
                               <span
                                 className="shrink-0 px-1.5 py-0.5 rounded-md bg-primary/15 border border-primary/30 text-primary uppercase text-[9px] tracking-wide font-semibold whitespace-nowrap"

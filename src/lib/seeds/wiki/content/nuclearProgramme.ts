@@ -23,7 +23,7 @@ The defence seat holder adopts device nodes (the physics) by conducting public n
 
 Two gates stand between a country and its first device. Both must be open.
 
-1. **The capable set.** Only the **United States, the Soviet Union and the United Kingdom** can open a nuclear programme. Other countries do not have the industrial and scientific base, whatever their budget says. East Germany has a separate covert route, described below.
+1. **The capable set.** The named capable set is the **United States, the Soviet Union and the United Kingdom**. A country that already holds an adopted node in its programme also counts as capable, which is how a covert breakout country climbs the tree. Other countries do not have the industrial and scientific base, whatever their budget says. East Germany has a separate covert route, described below.
 2. **The Nuclear Delivery doctrine node.** Your conventional [National Doctrine](/wiki/national-doctrine) tree must have adopted **Nuclear Delivery**, in Air Warfare, Strategic Bombing, a 1950s node costing 4 points. Its predecessor, Strategic Bombing Campaigns (1940s), costs 2, so the door costs 6 points of your doctrine budget in all.
 
 Entry runs through the defence cabinet seat. If you do not hold the defence portfolio, you are lobbying whoever does. The programme belongs to the country, so it carries over when a new defence minister takes the seat.
@@ -74,7 +74,7 @@ A US defence minister spends 6 doctrine points on Strategic Bombing Campaigns an
 
 A nuclear test is not a private milestone. When the device goes off:
 
-- **[Cold War Tension](/wiki/cold-war-tension) spikes.** The bigger the device, the bigger the jump (see the table above). The whole world feels it, including your allies.
+- **[Cold War Tension](/wiki/cold-war-tension) spikes.** The jump depends on the device, and it is not monotonic: the boosted test spikes less than the fission test (see the table above). The whole world feels it, including your allies.
 - **The news carries it.** The test appears in the world's recent developments. There is no concealing that it happened or who conducted it.
 - **Your deterrence posture jumps.** Rivals' planners now price you differently.
 

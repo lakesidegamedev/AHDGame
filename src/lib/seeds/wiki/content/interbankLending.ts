@@ -28,9 +28,9 @@ You must be the CEO of the bank. Open the bank's page for the corporation, then 
 
 **Lendable headroom** is your deposits less what you must hold in reserve, less your loans: deposits x (1 - reserve requirement) - loans. You also need the cash itself in your reserves.
 
-Cash moves from your reserves to the borrower's, and a loan record tracks principal, balance and rate. It is separate from your ordinary loan book and does not count in your loan total. The borrower pays interest every turn. They can repay any amount up to the balance whenever they like, and the loan is **interest only**: principal comes back only when the borrower repays it, and the lender cannot call it in.
+Cash moves from your reserves to the borrower's, and a loan record tracks principal, balance and rate. It is separate from your ordinary loan book and does not count in your loan total. The borrower pays interest every turn. The loan is **interest only** and has no maturity: the lender cannot call it in, and the bank console has no control for the borrower to repay principal either, so the principal stays out until the loan is written off or the borrowing bank fails and its estate pays its lenders.
 
-There is no market rate, so look at the prime rate and at how risky the borrower is. A higher rate earns more per turn but a borrower who cannot pay it will miss interest. Watch the loans table for borrowers falling behind, well before the 8th miss. Keep some headroom unlent so withdrawals do not catch you short.
+There is no market rate, so look at the prime rate and at how risky the borrower is. A higher rate earns more per turn but a borrower who cannot pay it will miss interest. The loans table shows each loan's balance and rate but not missed payments, so judge the borrower before you lend rather than counting on a warning before the 8th miss. Keep some headroom unlent so withdrawals do not catch you short.
 
 A retail bank has 20,000,000 of cash-backed deposits, a 10% reserve requirement and 8,000,000 of loans. Headroom is 20,000,000 x 0.9 - 8,000,000 = 10,000,000, so it may have at most 5,000,000 on the interbank market. It lends 3,000,000 at 4.8%: 3,000,000 x 0.048 / 48 = 3,000 of interest a turn. It can lend 2,000,000 more, not 5,000,000.
 
@@ -38,7 +38,7 @@ A retail bank has 20,000,000 of cash-backed deposits, a 10% reserve requirement 
 
 If the borrower cannot cover a turn's interest, they pay what they can and the turn counts against the loan. Eight misses in a row and the loan is written off: you lose the remaining principal and the borrower's recorded interbank debt drops by the same amount. A full payment in between resets the count. Chasing a defaulted borrower is not modelled. In the example above, if the borrower misses interest for 8 straight turns, the 3,000,000 is written off.
 
-If a lender fails, its interbank loans are marked defaulted, the borrowers keep the cash, and the loss lands on the failed bank's estate. A late recovery goes to the deposit insurance fund once the failed bank's depositors have been made whole. You do not act on this directly.
+If a borrowing bank fails, its interbank lenders are paid pro rata from whatever cash is left after the central bank facilities and household depositors, and the unpaid part is a loss on the loan. If a lender fails, its interbank loans are marked defaulted, the borrowers keep the cash, and the loss lands on the failed bank's estate. A recovery owed to a lender whose estate has already been closed goes to the deposit insurance fund instead. You do not act on this directly.
 
 ## The central bank margin line
 

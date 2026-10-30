@@ -11,8 +11,8 @@ Filing a bill costs 10 action points and up to 30 [national influence](/wiki/glo
 | Provisions per bill | 1 to 3 |
 | Voting window per chamber | 24 hours |
 | Presidential window | 10 hours, then auto-sign |
-| Veto override | Two-thirds of all seats |
-| Filibuster (US Senate) | 25 AP and 5 NPI, about 12 hours added |
+| Veto override | Two-thirds of the seated members of each chamber |
+| Filibuster (US Senate) | 25 AP and 5 Political Influence, about 12 hours added |
 | Time to comply with a tightened subsidiary or foreign-investment limit | 48 turns |
 
 \`\`\`wiki-chart
@@ -28,8 +28,8 @@ The NPI ladder makes omnibus bills expensive, the one-bill rule stops one sponso
 1. **File the bill** from the Congress or Parliament page. It is open for voting at once.
 2. **Chamber vote.** Members vote For, Against or Abstain for 24 hours (the mechanics are on [Voting & Whips](/wiki/voting-and-whips)). Ordinary bills need a simple majority. Nationalization, privatization and war declarations need two-thirds of For plus Against in each required chamber.
 3. **Second chamber** (bicameral countries). In a sequential flow a fresh 24 hour vote opens in the second chamber. Some countries vote in both chambers at once. Unicameral countries skip this step. In the US Senate, a [filibuster](/wiki/cloture-and-filibuster) lengthens this vote and raises the passing bar.
-4. **Executive action.** In presidential systems the president has 10 hours to sign or veto. No action means the bill is signed automatically. A veto goes to an override vote that needs two-thirds of all seats, not two-thirds of votes cast, so vacancies and abstentions do not lower the bar. Parliamentary executives have no ordinary veto: the bill becomes law once the chamber and cabinet stages finish.
-5. **Enactment.** Each provision applies its policy effects every turn from then on (see [Policy Effects](/wiki/policy-effects)), and your proposal costs are refunded.
+4. **Executive action.** In presidential systems the president has 10 hours to sign or veto. No action means the bill is signed automatically. A veto goes to an override vote that needs For votes from two-thirds of the seated members of each chamber, not two-thirds of votes cast, so abstentions and absent members count against the override. Vacant seats are not counted. Parliamentary executives have no ordinary veto: the bill becomes law once the chamber and cabinet stages finish.
+5. **Enactment.** Each provision applies its policy effects every turn from then on (see [Policy Effects](/wiki/policy-effects)), and your proposal costs are refunded (action points only up to your action cap).
 
 ![Flow of a bill from filing through two chamber votes to presidential sign or veto and override, or the parliamentary cabinet stage, ending in enactment.](/wiki-images/diagrams/bills-legislation-bill-lifecycle.svg)
 
@@ -66,7 +66,7 @@ Tips: count the chamber before you file; propose in the chamber where you are st
 | --- | --- |
 | One bill at a time | You may file another once your earlier bill clears its first chamber. In a one-chamber legislature you wait until it finishes. |
 | No government | If a parliamentary country has no seated PM, Chancellor or Taoiseach, new bills are blocked and active bills pause until a government forms. |
-| Banned parties | In China, Russia and East Germany a delegate's party must be legal to propose. |
+| Banned parties | In a one-party state, such as China, the Soviet Union or East Germany, a delegate's party must be legal to propose. |
 | Unplayed countries | An autonomous government files and moves bills itself so the country is not frozen. |
 
 The "no government" rule applies until [Government Formation](/wiki/government-formation) seats a head of government, and after a passed [no-confidence motion](/wiki/no-confidence-votes) removes the PM: bills stay frozen until a new PM is seated. In [one-party states](/wiki/one-party-states) banned parties cannot propose or vote, and the bill route is simpler.
@@ -102,7 +102,7 @@ These national bills change a law level rather than a metric.
 | **Subsidiary Limits Act** | No limit | 12 subsidiaries | 8 | 5 | 3 |
 | **Foreign Investment Act** | Open | Screening of new foreign-controlled holdings | Foreign groups capped at 25% of an industry | Capped at 10% | Foreign-controlled subsidiaries banned |
 
-A group caught by a tightened limit has 48 turns to sell the excess, then it is auctioned. A breakup case stays open six turns. These acts change what corporate groups may own; see [Corporations](/wiki/corporations#merger-review).
+A group caught by a tightened limit has 48 turns to give up control, then its controlling stake is sold down to half at book value on the equity market. A breakup case stays open six turns. These acts change what corporate groups may own; see [Corporations](/wiki/corporations#merger-review).
 
 ## When a bill fails
 
@@ -131,7 +131,7 @@ Legislators who voted For an enacted bill see approval move among census groups 
 
 ### Metric effects
 
-Enacted laws push state metrics away from baseline every turn (see [National Metrics](/wiki/national-metrics)). A federal US bill divides its effect by 50 (one share per state); a UK national bill by 12 (one per region). See [Policy Effects](/wiki/policy-effects).
+Enacted laws move state metrics every turn (see [National Metrics](/wiki/national-metrics)). The per-turn ticks of a national bill are split across regions: a US federal bill applies one fiftieth in each state, a UK bill one twelfth per region, Japan one eighth and Germany one sixteenth. The pull on each metric's long-run target uses the same fixed national share in every country, so a national law is equally strong whatever the number of regions. See [Policy Effects](/wiki/policy-effects).
 
 Live in every world that has a national legislature. The chambers, executive step and any cabinet stage depend on the country and era. Single-party states use their own restricted route. Bills go straight from filing to the floor vote; there is no committee stage (see [Committees](/wiki/committees)).
 

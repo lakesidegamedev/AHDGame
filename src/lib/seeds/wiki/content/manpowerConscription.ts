@@ -24,7 +24,7 @@ Manage this from the defence seat's office → **Military** tab → **Operations
 
 A country of 100 million people on Selective Service (×1.0) has a ceiling of 2,000,000 men and gains 50,000 a turn. It opens with 500,000. Filling the remaining 75% of the ceiling takes 30 turns, whatever the stance, because ceiling and regeneration scale together. On Universal Conscription (×2.0) the same country has a ceiling of 4,000,000 and gains 100,000 a turn. On an All-Volunteer Force (×0.6) it has 1,200,000 and gains 30,000.
 
-A 12,000-man Infantry Division at 40% strength is 4,800 men and needs 7,200 to be full. Trained replacement refills 1,200 a turn, so it takes 6 turns. Conscript replacement refills 3,000 a turn, so it takes 3 turns. For an Elite division that started with 50 experience points, the trained rebuild ends as Seasoned. The conscript rebuild ends as Regular, two grades lower than where it started.
+A 12,000-man Infantry Division at 40% strength is 4,800 men and needs 7,200 to be full. Trained replacement refills 1,200 a turn, so it takes 6 turns. Conscript replacement refills 3,000 a turn, so it takes 3 turns. For an Elite division that started with 50 experience points, the trained rebuild ends as Seasoned. The conscript rebuild ends as Regular, three grades lower than where it started.
 
 ## The pool
 
@@ -43,7 +43,7 @@ A fresh world does not start you at the ceiling. Each nation opens with **25% of
 
 **Manpower is a hard block.** If you try to raise an Armored Division with 9,000 men in the pool, the order is refused with both numbers shown. You cannot borrow men, run a manpower deficit, or pay cash instead. Money has the same hard edge: a unit also has to fit inside the defence appropriation. See [Units, Recruitment & Procurement](/wiki/military-units).
 
-Recruiting draws a unit's full establishment from the pool, and disbanding a unit returns its **surviving** personnel (not its establishment) to it.
+Recruiting draws a unit's full establishment from the pool, and disbanding a unit returns its **surviving** personnel (not its establishment) to it, up to the ceiling. Men that would push the pool past the ceiling are lost.
 
 **The ceiling follows your population.** It is recomputed every turn from the people living in your country. If a war or a shock shrinks the population, the ceiling falls, and a pool that is above the new ceiling is cut down to it on the next turn. The national force tier (reduced, standard or elevated) does not change manpower. It only changes upkeep and readiness.
 
@@ -109,7 +109,7 @@ When replacements join a unit, **their inexperience is blended into the unit's o
 The consequences:
 
 - **Rebuilding an elite unit with conscripts genuinely degrades it.** That is intended.
-- **Trained replacements preserve quality**, at the price of rebuilding two and a half times slower.
+- **Trained replacements dilute far less.** They arrive as Regulars, so they still pull a Seasoned, Veteran or Elite formation down, just much more slowly than conscripts, at the price of rebuilding two and a half times slower.
 - **Losses on veteran units are far more expensive than losses on green ones**, because the green unit has nothing to dilute.
 - **A unit at high strength dilutes far less than one at low strength**, since fewer of its people are new. Topping a formation up early and often costs less experience than letting it be ground down and then rebuilding it in one go.
 
@@ -124,7 +124,7 @@ A formation mauled in battle begins recovering at the end of the same turn, in p
 Two details:
 
 - **Reinforcement runs for every country**, including nations with no player in the defence seat. Everyone sustains their forces, so you are not fighting a static enemy. If the setting is Conscript but the stance forbids it, the engine refills with trained men instead.
-- **A short pool is shared out in proportion to need.** If your pool cannot cover every damaged unit, each unit gets a share equal to its fraction of the total shortfall. A large damaged army recovers more slowly per formation than a small one.
+- **A short pool is shared out in proportion to need.** If your pool cannot cover every damaged unit, each unit gets a share in proportion to what it would have drawn this turn. A large damaged army recovers more slowly per formation than a small one.
 
 ## Reading the panel
 
@@ -160,7 +160,7 @@ The regeneration and ceiling shown are computed with the **same formulas the tur
 - **Choose a replacement mode** on the Operations panel: Off, Trained or Conscript.
 - **Bank manpower in peacetime.** Regeneration accumulates toward the ceiling.
 
-**Questions that come up.** *Why does it say not enough manpower?* Your pool is smaller than the unit's establishment. *What is the difference between Trained and Conscript?* Trained refills 10% a turn with experienced men and keeps veterancy; Conscript refills 25% a turn with raw men and dilutes it. *Why did my veteran division get worse?* It was rebuilt with conscripts. *How do I raise the reserve law?* Only the four countries above have one, and it is raised by legislation.
+**Questions that come up.** *Why does it say not enough manpower?* Your pool is smaller than the unit's establishment. *What is the difference between Trained and Conscript?* Trained refills 10% a turn with Regular-grade men and dilutes veterancy only a little; Conscript refills 25% a turn with raw men and dilutes it heavily. *Why did my veteran division get worse?* It was rebuilt with conscripts. *How do I raise the reserve law?* Only the four countries above have one, and it is raised by legislation.
 
 ## See also
 

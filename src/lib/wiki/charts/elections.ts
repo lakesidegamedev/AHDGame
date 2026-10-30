@@ -28,6 +28,7 @@ import {
 } from "@/lib/governorOffice/devolution/rules";
 import { REQUEST_THRESHOLD } from "@/lib/constants/referendum";
 import { ELECTIONS_CAMPAIGN_CHARTS } from "./electionsCampaign";
+import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import type { WikiChartBuilder, WikiChartSpec } from "./types";
 
 const r4 = (n: number) => Math.round(n * 10000) / 10000;
@@ -37,8 +38,8 @@ const range = (from: number, to: number, step = 1): number[] => {
   return out;
 };
 
-/** One 48-turn general election window: share of the vote pool released each turn. */
-const GENERAL_WINDOW_TURNS = 48;
+const GENERAL_PHASE_TURNS = DEFAULT_DURATIONS.house.generalDurationHours;
+const GENERAL_WINDOW_TURNS = GENERAL_PHASE_TURNS + 1;
 
 function generalVotePool(): WikiChartSpec {
   const pool = 100;
@@ -64,7 +65,7 @@ function generalVotePool(): WikiChartSpec {
 }
 
 function finalHourReporting(): WikiChartSpec {
-  const span = GENERAL_WINDOW_TURNS;
+  const span = GENERAL_PHASE_TURNS;
   const base = (turn: number) =>
     computeBaselineReportingPct({
       currentTurn: turn,

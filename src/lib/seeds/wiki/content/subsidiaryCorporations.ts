@@ -8,7 +8,7 @@ Being a subsidiary is derived live, not stored as a permanent flag. A corporatio
 
 1. **Formalize one you already control.** You hold more than 50% of the voting power and declare it.
 2. **Buy one as a subsidiary.** Make an acquisition offer on the Deals tab and choose **Keep as subsidiary** (see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers)). The shareholders are paid and you become the only shareholder, while the target keeps its sectors, cash, bonds, bank charter and management. It keeps its own bonds, which is what lets you buy a bonded company this way (see [Corporate Bonds](/wiki/corporate-bonds)).
-3. **Spin off a piece of your own business** into a new corporation that you own 100%.
+3. **Spin off a piece of your own business** into a new corporation that your corporation owns 100%.
 
 Which route? Formalize when you already hold the votes and want the powers and tax relief. Buy as a subsidiary when you want a whole company to keep running as it is. Spin off when you want to separate part of your own business without losing it.
 
@@ -18,9 +18,9 @@ Which route? Formalize when you already hold the votes and want the powers and t
 - A target that is not already a subsidiary and is not state-owned.
 - A parent that is not state-owned and not itself a subsidiary. **No chains:** a subsidiary can never be a parent.
 - **No ownership cycles.** You cannot formalize a corporation that, through another holding, already controls you.
-- **A different human running it.** The subsidiary's sitting CEO cannot be you, the parent's CEO, or the sitting CEO of any of your other subsidiaries. A computer-run caretaker counts as a different operator.
+- **A different human running it.** The subsidiary's sitting CEO cannot be you. A computer-run caretaker counts as a different operator. The stricter rule (not the parent's CEO, and not the sitting CEO of any of your other subsidiaries) is checked when you buy a company as a subsidiary, appoint a human CEO, or a displaced human reclaims the seat.
 
-**It ends automatically.** If your voting control falls to 50% or below (you sell down or are diluted), the game clears the formalization on the next turn and the dividend floor goes with it. You can also release a subsidiary yourself, but only once it has been formalized for 24 turns, so the relationship cannot be flipped on and off in one session. A formalized group also counts as one controlled group when merger review measures market share and sell-down orders.
+**It ends automatically.** If your voting control falls to 50% or below (you sell down or are diluted) and no other corporation controls it, the game clears the formalization on the next turn and the dividend floor goes with it. If another corporation has taken over control, the formal tie stays and passes to that corporation, but your dividend floor is cleared. You can also release a subsidiary yourself, but only once it has been formalized for 24 turns, so the relationship cannot be flipped on and off in one session. Everything you control above 50%, formalized or not, counts as one group when a sell-down order from merger review is measured, and in some worlds when merger review measures market share.
 
 ![Checklist to formalize a subsidiary, the powers and limits it brings, and the automatic clearing when voting control falls to 50% or below.](/wiki-images/diagrams/subsidiary-corporations-formalization.svg)
 
@@ -49,7 +49,7 @@ All parent actions need you to be the parent's CEO.
 - **Inject capital.** Send cash straight into the subsidiary's treasury, converted by exchange rate if needed. One injection is capped at 25% of your liquid capital, with a 24-turn wait per subsidiary. Use it to prop up a struggling subsidiary or fund growth without the stock market. With ₳8,000,000 of liquid capital, you can inject up to ₳2,000,000 now, and again after 24 turns.
 - **Set a dividend floor.** Choose a minimum dividend rate from 0% to 25% that the subsidiary must pay, which its own CEO cannot undercut (they can pay more). The dividends go to its shareholders, including you. Lose control and the floor stops at once.
 - **Appoint the CEO.** Reseat the CEO with a computer-run caretaker (the previous human stays attached and can reclaim later) or with a different human. If the seat is vacant you can appoint an eligible computer-run official. A reclaim is refused if that human already runs another of your subsidiaries.
-- **Spin off a piece of your business.** Carve one sector type out of your own corporation into a new corporation that starts private and 100% owned by you. All sectors of that type move with their plant capacity intact. It is a formalized subsidiary from the moment it exists.
+- **Spin off a piece of your business.** Carve one sector type out of your own corporation into a new corporation that starts private and 100% owned by your corporation. All sectors of that type move with their plant capacity intact. It is a formalized subsidiary from the moment it exists.
 - **Release.** After 24 turns you can let a subsidiary go.
 
 **No share issuance.** A formalized subsidiary cannot go public, issue new shares or sell new stock for any reason. New shares would dilute your stake and could drop you below 50%. Fund it with a capital injection instead, or release it first if it genuinely needs to raise equity.
@@ -62,7 +62,7 @@ Corporations linked by formalized subsidiary ties form a **group**. Each is taxe
 
 Member A earns ₳1,000,000 and pays ₳250,000 tax (25%). Member B, in the same country, loses ₳400,000. The loss shelters ₳400,000 of profit at 25%, so the group is rebated ₳100,000, paid back to A. A loss in another country shelters nothing.
 
-The rebate never exceeds the tax actually paid, and it goes back to the members that paid, in proportion to what they paid. Cross-border pricing between group members is a separate audit: if more than ₳5,000,000 of profit appears to be shifted on one agreement, the tax authority can reassess it with a 40% surcharge. Same-country pricing is ignored, because it moves no tax between treasuries.
+The rebate never exceeds the tax actually paid, and it goes back to the members that paid, in proportion to what they paid. Cross-border pricing between group members is a separate audit: once more than ₳5,000,000 of profit has been shifted on one agreement, the tax authority reassesses it with a 40% surcharge. Same-country pricing is ignored, because it moves no tax between treasuries.
 
 ## Marketing and logistics strength
 

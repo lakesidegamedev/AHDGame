@@ -35,7 +35,7 @@ If you are asking "why did my PI drop": it decays every turn, and if your party 
 
 ## National Influence (NPI)
 
-NPI is your national reputation. It drives presidential races only: both reach and appeal. It decays 1% per turn, then gains a state PI term plus a position bonus.
+NPI is your national reputation. In elections it drives presidential races only: both reach and appeal. It is also spent to put policy provisions into national bills, and it orders German Landesliste places. It decays 1% per turn, then gains a state PI term plus a position bonus.
 
 \`\`\`wiki-chart
 national-influence-gain-from-pi
@@ -57,19 +57,19 @@ The position bonus uses only your single highest tier: national head of governme
 
 ## Favorability
 
-Favorability is how voters feel about you and multiplies your appeal in every race. It is stable at 60 or below. Above 60 it slowly drains if you stop running ads, and ads give less the higher you are: each ad adds 3 minus 0.1 per point above 70, never less than 1. Attacks from opponents lower it. Infamy above 20 also drains it by (infamy - 20) x 0.05 per turn, so Infamy 40 costs 1 point a turn and Infamy 100 costs 4.
+Favorability is how voters feel about you and multiplies your appeal in every race. On its own it is stable at 60 or below. Above 60 it drains by 0.05 per point over 60 each turn if you stop running ads, and ads give less the higher you are: each ad adds 3 minus 0.1 per point above 70, scaled by Charisma and rounded down, never less than 1. If your party is in government or holds a chamber majority while the government's approval is under 50, you also lose up to 0.25 a turn. Attacks from opponents lower it. Infamy above 20 also drains it by (infamy - 20) x 0.05 per turn, so Infamy 40 costs 1 point a turn and Infamy 100 costs 4.
 
 ## Infamy
 
-Infamy is a budget, not a punishment. Each Attack adds 2. Infamy decays 5% of its value per turn. It does nothing below 20. The chance an Attack fails equals your Infamy as a percentage (Infamy 20 means 20%), and a failed Attack still costs you the actions, the funds and the 2 Infamy. Two to four attacks on a rival is cheap. Twenty or more builds real damage to your own Favorability.
+Infamy is a budget, not a punishment. Each Attack adds 2. Infamy decays 5% of its value per turn. It only drains Favorability above 20, but any Infamy raises your Attack failure chance, trims your primary score (up to 5% at 100) and slows your Party Influence. The chance an Attack fails equals your Infamy as a percentage (Infamy 20 means 20%), and a failed Attack still costs you the actions, the funds and the 2 Infamy. Two to four attacks on a rival is cheap. Twenty or more builds real damage to your own Favorability.
 
 ## Policy positions
 
-Two axes, economic and social, each from -5 to +5, set at creation. Voting on bills moves you at most 0.25 per axis per bill: an Aye pulls you toward the bill's average position (never past it), a Nay pushes you 0.25 away, and re-voting is measured from where you stood before that bill, so flipping cannot stack. The vote buttons show the exact move first. Positions set your primary alignment with your party, how each demographic group sees you, and your share of the party action pool. A long career of floor votes causes drift, and a large drift from your party lowers primary scores and party bonuses.
+Two axes, economic and social, each from -5 to +5, set at creation. You can also shift one point on an axis from Settings or Actions for 15 actions, 5 Infamy and 5% of your Political and National Influence, or for a Position Update Voucher. Voting on bills moves you at most 0.25 per axis per bill: an Aye pulls you toward the bill's average position (never past it), a Nay pushes you 0.25 away, and re-voting is measured from where you stood before that bill, so flipping cannot stack. The vote buttons show the exact move first. Positions set your primary alignment with your party, how each demographic group sees you, and your share of the party action pool. A long career of floor votes causes drift, and a large drift from your party lowers primary scores and party bonuses.
 
 ## Donor Base level
 
-Donor level raises both your income and your Fundraise yield (see [Fundraising & Ads](/wiki/fundraising-ads), where Fundraise yield and ad costs come from these rules). Build Donor Network costs actions that rise with level (4 at level 0 to 9, 13 at level 50, 20 at level 75) and funds of ₳3,000 plus ₳1,500 per current level, scaled by state GDP per person (0.85 to 2.0 times). At average GDP, level 1 to 2 costs about ₳4,500 and level 74 to 75 costs about ₳114,000. Income per level per turn depends on the state's population: ₳100 (under 2 million), ₳200 (2 to 8 million), ₳400 (8 to 20 million) or ₳800 (over 20 million). If a move or event resets you to level 0, Fundraise is locked until you build one level.
+Donor level raises both your income and your Fundraise yield (see [Fundraising & Ads](/wiki/fundraising-ads), where Fundraise yield and ad costs come from these rules). Build Donor Network costs actions that rise with level (4 at level 0 to 6, 13 at level 50, 20 at level 75) and funds of ₳3,000 plus ₳1,500 per current level, scaled by state GDP per person (0.85 to 2.0 times), rounded to the nearest ₳1,000 and lowered by your Fundraising stat. At average GDP and a neutral stat, level 1 to 2 costs about ₳5,000 and level 74 to 75 costs about ₳114,000. Income per level per turn depends on the state's population: ₳100 (under 2 million), ₳200 (2 to 8 million), ₳400 (8 to 20 million) or ₳800 (over 20 million). If a move or event resets you to level 0, Fundraise is locked until you build one level.
 
 \`\`\`wiki-chart
 donor-base-costs
@@ -77,7 +77,7 @@ donor-base-costs
 
 ## Party Influence
 
-Party Influence runs from 0 to 100 and applies only to party members. It accrues passively while you are active, grows with the operations your party invests in, and decays with inactivity. Leaving and rejoining resets it to 0. It sets your share of the party's bonus action pool each turn, amplified by how close your positions are to the party platform. You can see it in your profile's Party Standing section.
+Party Influence applies only to party members and has no fixed cap. Each turn it decays 4% and gains up to 3 scaled by how close your positions are to the party platform, plus a flat bonus for leadership roles (party chair +5, vice chair or treasurer +2, state party or caucus chair +2, committee member, state vice chair or caucus vice chair +1), minus an Infamy penalty of up to 4. Leaving and rejoining resets it to 0. It sets your share of the party's bonus action pool each turn (3 actions per member, at most 6 for you), scaled by the same closeness. You can see it in your profile's Political standing section.
 
 ## What each action costs
 
@@ -96,9 +96,9 @@ All costs below are for a new character at a state with average GDP per person. 
 | Personal Campaign Donation | 2 | converts Cash on Hand | 50% lands in Campaign Funds, 50% is lost |
 | Post news | 0 | none | free article, 12-hour cooldown |
 | Sponsored news post | 5 | ₳100,000 of personal cash | paid placement, 30-minute cooldown |
-| Rest | 0 | none | resets per-turn cooldowns |
+| Rest | 0 | none | does nothing and does not count as activity |
 
-Campaign and ad funds are multiplied by a GDP factor: your state's GDP per person against the country average, held between 0.85 and 2.0. The figures here assume a factor of 1. Polls scale by up to 20% with your Intellect; see [Polling](/wiki/polling) for the poll action costs and the Intellect modifier on fund cost. Posting news costs actions and cash, and a sponsored post needs 5 actions and ₳100,000 ([News](/wiki/news)).
+Campaign and ad funds are multiplied by a GDP factor: your state's GDP per person against the country average, held between 0.85 and 2.0. The figures here assume a factor of 1. Polls scale by up to 20% with your Intellect; see [Polling](/wiki/polling) for the poll action costs and the Intellect modifier on fund cost. A free article costs nothing, and a sponsored post needs 5 actions and ₳100,000 ([News](/wiki/news)).
 
 **Fundraise yield** is the one formula worth knowing: (₳50,000 + ₳2,000 x donor level) x (1 + state PI / 100) x your Fundraising stat multiplier. A level 2 character at PI 10 with a neutral stat earns ₳59,400. A level 50 character at PI 50 earns ₳225,000.
 
@@ -120,7 +120,7 @@ Costs are not flat. They are priced from what it would cost the **target** to ga
 
 ### Presidential travel (US general election only)
 
-Active presidential candidates can travel during the general phase. Travel costs 3 to 10 actions by the state's electoral votes (up to 5 EV is 3, up to 10 is 5, up to 20 is 7, over 20 is 10). It sets your travel state, unlocks canvassing there and adds +1 Favorability per turn while you stay. You can be in one US state at a time, switching costs the same again, and travel ends on withdrawal or election end.
+Active presidential candidates can set a travel state, which matters in the general phase. Travel costs 3 to 10 actions by the state's electoral votes (up to 5 EV is 3, up to 10 is 5, up to 20 is 7, over 20 is 10). It sets your travel state, unlocks canvassing there and adds +1 Favorability per turn while you stay. You can be in one US state at a time, and switching costs the same again.
 
 ### Dealing with NPPs
 
@@ -139,21 +139,17 @@ There is no Request Withdrawal, Request Opposition or Request Leadership Support
 
 ### Party chairs
 
-Party chairs and vice chairs spend the party action pool on influence operations against NPPs, in-state for regional chairs and nationally for the National Chair. The pool refills each turn from member contributions. See [Political Parties](/wiki/political-parties) and [Party Organization](/wiki/party-organization).
+Party chairs, vice chairs and confirmed campaigners spend the party's NPP action points (1 per action, plus a treasury cost) on NPP management, through the state party in-state and the national party nationally. The points regenerate each turn at a fixed rate set by the party's tier (major or minor). See [Political Parties](/wiki/political-parties) and [Party Organization](/wiki/party-organization).
 
 ## What changes each turn, in order
 
 1. If you hold more actions than your hoard threshold (100 to 125, set by Energy), you lose 4.
-2. The base 4 actions arrive.
-3. Office, leadership, justice and central bank bonus actions arrive.
-4. Your party bonus is paid from the pool.
-5. Campaign Funds arrive: base rate, donor bonus and office bonus.
-6. PI decays 0.75% (faster for the governing party).
-7. Infamy decays 5%.
-8. Favorability drains if above 60 or if Infamy is above 20.
-9. NPI decays 1%, then gains the PI term and your position bonus.
+2. The base 4 actions arrive, with office, leadership, justice and central bank bonus actions.
+3. In the same step, PI decays 0.75% (faster for the governing party), Infamy decays 5%, Favorability drains if above 60, if Infamy is above 20 or if your government is unpopular, and NPI decays 1% then gains the PI term and your position bonus.
+4. Campaign Funds arrive: base rate, donor bonus and office bonus.
+5. Your party bonus is paid from the pool.
 
-Bills, NPP behavior, elections and everything else run afterward.
+Bills, NPP behavior, elections and most other systems run afterward.
 
 ![Actions arrive first, then Campaign Funds, then Political Influence, Infamy, Favorability and National Political Influence decay or drain.](/wiki-images/diagrams/stats-actions-turn-order.svg)
 
