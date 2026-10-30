@@ -1,3 +1,4 @@
+import { countyPopulationTotal } from "@/lib/counties/rules";
 // src/lib/maps/subdivisionData.ts
 // Server-side loader for committed subdivision JSON. Normalizes per-country
 // legacy shapes (US adapters arrive with Phases 2–3) to the generic shape.
@@ -39,9 +40,20 @@ export async function loadSubdivisionFile(
     if ("counties" in parsed) {
       if (
         options?.countyPopulations &&
-        parsed.counties.some((c) => !options.countyPopulations!.has(c.fips))
+        (options.countyPopulations.size !== parsed.counties.length ||
+          parsed.counties.some((c) => {
+            const population = options.countyPopulations!.get(c.fips);
+            return !Number.isSafeInteger(population) || population! < 0;
+          }))
       )
         throw new Error("Incomplete county population coverage");
+      if (options?.countyPopulations)
+        countyPopulationTotal(
+          parsed.counties.map((c) => ({
+            id: c.fips,
+            population: options.countyPopulations!.get(c.fips)!,
+          }))
+        );
       const eraLeans = options?.preset ? await loadCountyLeans(options.preset) : null;
       return {
         viewBox: parsed.viewBox,

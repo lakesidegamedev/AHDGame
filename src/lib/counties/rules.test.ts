@@ -69,4 +69,45 @@ describe("county population conservation", () => {
       expect(states.flat().reduce((n, c) => n + c.population, 0)).toBe(country);
     }
   });
+  it("repopulates an empty state from explicit baseline weights without relying on row order", () => {
+    const empty = [
+      { id: "b", population: 0 },
+      { id: "a", population: 0 },
+    ];
+    expect(
+      advanceCountyPopulations(empty, 10, [
+        { id: "a", population: 7 },
+        { id: "b", population: 3 },
+      ])
+    ).toEqual([
+      { id: "b", population: 3 },
+      { id: "a", population: 7 },
+    ]);
+    expect(() => advanceCountyPopulations(empty, 1, [{ id: "a", population: 1 }])).toThrow(
+      "roster"
+    );
+    expect(() => advanceCountyPopulations(empty, 1)).toThrow();
+    expect(advanceCountyPopulations(empty, 0)).toEqual(empty);
+  });
+  it("rejects corrupt stock values and unsafe aggregate headcounts", () => {
+    expect(() =>
+      advanceCountyPopulations(
+        [
+          { id: "a", population: 3 },
+          { id: "b", population: -1 },
+        ],
+        2
+      )
+    ).toThrow();
+    expect(() =>
+      advanceCountyPopulations(
+        [
+          { id: "a", population: Number.MAX_SAFE_INTEGER },
+          { id: "b", population: 1 },
+        ],
+        2
+      )
+    ).toThrow();
+    expect(() => apportionPopulation([{ id: 1 as never, population: 1 }], 2)).toThrow("ID");
+  });
 });

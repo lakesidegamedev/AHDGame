@@ -3,7 +3,7 @@
  * freezeAndApplyDemographicFlowPlan freezes all regions before publishing a receipt;
  * resumeDemographicFlowReceipt completes partial writes without recomputing flows.
  */
-import { freezeCountyPopulationPlans } from "@/lib/counties/projections";
+import { countyPopulationIdentity, freezeCountyPopulationPlans } from "@/lib/counties/projections";
 import type { County } from "@/lib/db/types/county";
 import type { CountyPopulation } from "@/lib/counties/rules";
 import { randomUUID } from "node:crypto";
@@ -314,15 +314,15 @@ async function materializeReceipt(
         .collection<County>("counties")
         .find(
           { _id: { $in: countyPlans.map((c) => c.id) } },
-          { projection: { _id: 1, stateId: 1, populationFlowStamp: 1 } }
+          { projection: { _id: 1, countryId: 1, stateId: 1, populationFlowStamp: 1 } }
         )
         .toArray()
     : [];
   const countyById = new Map(countyTargets.map((c) => [c._id, c]));
   for (const county of countyPlans) {
     const target = countyById.get(county.id);
-    if (!target || target.stateId !== county.stateId)
-      throw new Error(`Missing county target ${county.id}`);
+    if (!target || target.countryId !== "US" || target.stateId !== county.stateId)
+      throw new Error(`Missing or invalid county target ${county.id}`);
     assertNoLaterOrConflictingStamp(target.populationFlowStamp, receipt, `counties/${county.id}`);
   }
 
@@ -357,7 +357,10 @@ async function materializeReceipt(
     .filter((c) => !alreadyApplied(countyById.get(c.id)?.populationFlowStamp, receipt))
     .map((c) => ({
       updateOne: {
-        filter: projectionFilter(c.id, receipt.worldEpochId, receipt.turn),
+        filter: {
+          ...projectionFilter(c.id, receipt.worldEpochId, receipt.turn),
+          ...countyPopulationIdentity(c.stateId),
+        },
         update: { $set: { population: c.population, [STAMP_FIELD]: stamp } },
       },
     }));
@@ -368,7 +371,7 @@ async function materializeReceipt(
       .collection<County>("counties")
       .find(
         { _id: { $in: countyPlans.map((c) => c.id) } },
-        { projection: { _id: 1, population: 1, populationFlowStamp: 1 } }
+        { projection: { _id: 1, countryId: 1, stateId: 1, population: 1, populationFlowStamp: 1 } }
       )
       .toArray();
     const expected = new Map(countyPlans.map((c) => [c.id, c.population]));
@@ -376,7 +379,10 @@ async function materializeReceipt(
       confirmed.length !== countyPlans.length ||
       confirmed.some(
         (c) =>
-          c.population !== expected.get(c._id) || !alreadyApplied(c.populationFlowStamp, receipt)
+          c.countryId !== "US" ||
+          c.stateId !== countyById.get(c._id)?.stateId ||
+          c.population !== expected.get(c._id) ||
+          !alreadyApplied(c.populationFlowStamp, receipt)
       )
     )
       throw new Error("County population write not confirmed");

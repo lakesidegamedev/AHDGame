@@ -15,3 +15,6 @@ areas: [engine, backend]
 - Saved county populations now share each state's demographic changes proportionally and sum exactly to state totals.
 - Election maps and new field offices read saved county populations.
 - Fixed county IDs missing from field-office reads used by primary maps.
+
+- Kept historical county maps stable as current populations change.
+- Hardened migration checks, empty-state population recovery and non-reset reseeds.

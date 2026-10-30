@@ -1,3 +1,4 @@
+import { seedStates } from "@/lib/admin/seed/seedStates";
 /** Isolated synthetic county qualification. Never reads configured MongoDB credentials. */
 import { afterAll, beforeAll, describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -12,6 +13,7 @@ import {
   stopIsolatedMongod,
   type IsolatedMongod,
 } from "@/lib/test-utils/realMongoFixture";
+import { migration as countyMigration } from "@/lib/migrations/entries/2026-10-30-county-populations";
 import { seedCountyPopulations } from "@/lib/counties/seed";
 import { runDemographicFlows } from "@/lib/demographics/phase";
 import {
@@ -150,7 +152,8 @@ describe.runIf(REAL_MONGO_ENABLED)("real Mongo county population qualification",
           .filter(Boolean)
           .map((file) => [file, createHash("sha256").update(readFileSync(file)).digest("hex")])
       );
-      evidence.verdict = cases.length === 3 ? "passed" : "incomplete";
+      evidence.verdict =
+        cases.length === (process.env.AHD_COUNTY_BASELINE_MODULE ? 5 : 4) ? "passed" : "incomplete";
       evidence.baselinePopulationSource = JSON.parse(
         readFileSync("src/data/county-population-source.json", "utf8")
       );
@@ -228,6 +231,38 @@ describe.runIf(REAL_MONGO_ENABLED)("real Mongo county population qualification",
     await freezeAndApplyDemographicFlowPlan(db, { ...input, regions: [region("WY", 900000)] });
     expect(await countyCollection.find({}).sort({ _id: 1 }).toArray()).toEqual(saved);
     cases.push({ name: "partial batch recovery and duplicate replay", verdict: "passed" });
+  });
+  it("recovers an empty state's population and detects cross-country ID collisions", async () => {
+    const db = client.db("county_empty");
+    await seed(db, ["WY"]);
+    await db.collection("counties").updateMany({}, { $set: { population: 0 } });
+    await db.collection("states").updateOne({ _id: "WY" } as never, { $set: { population: 0 } });
+    await freezeAndApplyDemographicFlowPlan(db, {
+      worldEpochId: "county-qualification",
+      turn: 8,
+      regions: [region("WY", 25)],
+      stats: { regionsProcessed: 1, circuitBreakerTrips: 0 },
+    });
+    await assertConserved(db);
+    const before = await db.collection("counties").findOne({ _id: "56001" } as never);
+    await db
+      .collection("counties")
+      .updateOne({ _id: "56001" } as never, { $set: { countryId: "UK" } });
+    await expect(countyMigration.execute(db, { dryRun: true })).rejects.toThrow("existing county");
+    await db.collection("counties").replaceOne({ _id: "56001" } as never, before!);
+    cases.push({
+      name: "empty-state recovery and migration identity validation",
+      verdict: "passed",
+    });
+  });
+  it("preserves real county, state and cohort stocks across reference top-ups", async () => {
+    const db = client.db("county_reseed");
+    await seed(db);
+    const before = await db.collection("counties").find({}).sort({ _id: 1 }).toArray();
+    await seedStates(db, false, () => {}, "1991-default");
+    await assertConserved(db);
+    expect(await db.collection("counties").find({}).sort({ _id: 1 }).toArray()).toEqual(before);
+    cases.push({ name: "non-reset reference reseed conservation", verdict: "passed" });
   });
   it.runIf(!!process.env.AHD_COUNTY_BASELINE_MODULE)(
     "compares journal commands and bytes on identical state inputs",

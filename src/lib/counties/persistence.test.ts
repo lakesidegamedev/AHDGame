@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { seedStates } from "@/lib/admin/seed/seedStates";
 import { seedCountyPopulations } from "./seed";
 import { loadCountyPopulationMap } from "./queries";
 import {
@@ -180,5 +181,96 @@ describe("persisted county population lifecycle", () => {
       })
     ).rejects.toThrow();
     expect(db.collection("states").docs[0].population).toBe(10000);
+  });
+  it("detects ID collisions with another country in migration dry run before writing", async () => {
+    const db = fixture(),
+      target = db as unknown as Db;
+    db.seed("counties", [{ _id: "56001", countryId: "UK", stateId: "WY", population: 1 }]);
+    const before = structuredClone(db.collection("counties").docs);
+    for (const dryRun of [true, false])
+      await expect(migration.execute(target, { dryRun })).rejects.toThrow("existing county");
+    expect(db.collection("counties").docs).toEqual(before);
+  });
+  it("rejects partial or malformed persisted populations on map reads", async () => {
+    for (const value of [-1, 1.5, NaN, Infinity]) {
+      const db = fixture(),
+        target = db as unknown as Db;
+      await seedCountyPopulations(target);
+      db.collection("counties").docs[0].population = value;
+      await expect(loadCountyPopulationMap(target, "WY")).rejects.toThrow("population");
+    }
+    const db = fixture(),
+      target = db as unknown as Db;
+    await seedCountyPopulations(target);
+    db.collection("counties").docs.pop();
+    await expect(loadCountyPopulationMap(target, "WY")).rejects.toThrow("coverage");
+  });
+  it("keeps county and state stocks consistent across a non-reset reference reseed", async () => {
+    const db = fixture(),
+      target = db as unknown as Db;
+    await seedCountyPopulations(target);
+    const before = structuredClone(db.collection("counties").docs);
+    await seedStates(target, false, () => {}, "1991-default");
+    expect(db.collection("states").docs.find((s) => s._id === "WY")!.population).toBe(10000);
+    expect(db.collection("counties").docs).toEqual(before);
+    expect(
+      Number(db.collection("states").docs.find((s) => s._id === "AL")!.population)
+    ).toBeGreaterThan(0);
+  });
+  it("can materialize incoming population into a completely empty state", async () => {
+    const db = fixture(),
+      target = db as unknown as Db;
+    db.collection("states").docs[0].population = 0;
+    await seedCountyPopulations(target);
+    await freezeAndApplyDemographicFlowPlan(target, {
+      worldEpochId: "county-world",
+      turn: 2,
+      regions: [plan(20)],
+      stats: { regionsProcessed: 1, circuitBreakerTrips: 0 },
+    });
+    expect(total(db)).toBe(20);
+    expect(db.collection("states").docs[0].population).toBe(20);
+  });
+  it("detects foreign ID collisions before a destructive reset or reset dry run", async () => {
+    const db = fixture(),
+      target = db as unknown as Db;
+    await seedCountyPopulations(target);
+    db.collection("counties").docs.find((c) => c._id === "56001")!.countryId = "UK";
+    const before = structuredClone(db.collection("counties").docs);
+    for (const apply of [false, true])
+      await expect(seedCountyPopulations(target, { replace: true, apply })).rejects.toThrow(
+        "existing county"
+      );
+    expect(db.collection("counties").docs).toEqual(before);
+  });
+  it("does not replay a ready receipt into a county whose identity changed", async () => {
+    const db = fixture(),
+      target = db as unknown as Db;
+    await seedCountyPopulations(target);
+    const states = db.collection("states");
+    const original = states.bulkWrite.bind(states);
+    states.bulkWrite = async () => {
+      throw new Error("pause before parent write");
+    };
+    await expect(
+      freezeAndApplyDemographicFlowPlan(target, {
+        worldEpochId: "county-world",
+        turn: 2,
+        regions: [plan(10123)],
+        stats: { regionsProcessed: 1, circuitBreakerTrips: 0 },
+      })
+    ).rejects.toThrow("pause before parent");
+    const row = db.collection("counties").docs[0];
+    row.countryId = "UK";
+    states.bulkWrite = original;
+    await expect(resumeDemographicFlowReceipt(target, "county-world", 2)).rejects.toThrow(
+      "invalid county target"
+    );
+    expect(states.docs[0].population).toBe(10000);
+    expect(row.countryId).toBe("UK");
+    row.countryId = "US";
+    await resumeDemographicFlowReceipt(target, "county-world", 2);
+    expect(total(db)).toBe(10123);
+    expect(states.docs[0].population).toBe(10123);
   });
 });

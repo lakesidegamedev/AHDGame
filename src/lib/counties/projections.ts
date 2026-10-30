@@ -9,6 +9,11 @@ import type { DemographicFlowRegionInput } from "@/lib/demographics/flowJournal"
 import { advanceCountyPopulations } from "./rules";
 import { loadCountyReference } from "./reference";
 
+/** Identity retained on journal writes so reassigned targets cannot be overwritten. */
+export function countyPopulationIdentity(stateId: string): Pick<County, "countryId" | "stateId"> {
+  return { countryId: "US", stateId };
+}
+
 export async function freezeCountyPopulationPlans(
   db: Db,
   regions: DemographicFlowRegionInput[]
@@ -44,7 +49,8 @@ export async function freezeCountyPopulationPlans(
       state._id,
       advanceCountyPopulations(
         rows.map((c) => ({ id: c._id, population: c.population })),
-        inputs.get(state._id)!.stateAfter.population
+        inputs.get(state._id)!.stateAfter.population,
+        reference.map((c) => ({ id: c.fips, population: c.population }))
       )
     );
   }

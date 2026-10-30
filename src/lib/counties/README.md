@@ -8,16 +8,17 @@ weight, not a modern population to copy into historical worlds. It does not clai
 historically precise county shares for every world preset.
 
 At initialization, exact largest-remainder apportionment scales reference weights
-to each existing state's population. State and country totals do not change.
+to each existing state's population. State and country totals do not change. Non-reset reference reseeds preserve
+existing state populations; resetting a world remains an explicit bootstrap operation.
 `baselinePopulation` records the reference weight, while `population` is gameplay
 state. Geography and PVI remain in the existing map files.
 
 The existing regional cohort engine calculates births, deaths, migration and
 conflict effects. Their realized net population change is allocated among current
 county stocks proportionally, with FIPS tie breaks. Positive changes never reduce
-a county; losses never make one negative. Zero-population counties receive no
-proportional growth until a future county-specific migration mechanic assigns
-people to them. No independent county age/sex distribution is fabricated.
+a county; losses never make one negative. Individual zero-population counties receive no proportional growth while their
+state remains populated. A completely empty state uses its documented baseline
+weights when receiving people again. No independent county age/sex distribution is fabricated.
 
 County outcomes are frozen in the existing demographic projections before a
 receipt is published. Recovery writes absolute county stocks with the same
@@ -39,6 +40,9 @@ atomic cross-collection snapshot for concurrent readers.
    writers remain paused.
 3. Verify all US states have their complete county roster and county populations
    sum to `states.population`. Resume writers only after migration succeeds.
+
+The migration runner uses `MONGODB_URI`. Configure it for the intended paused
+world; it does not automatically select `MONGODB_URI_LIVE`.
 
 The migration refuses unfinished receipts, inserts missing records without
 replacing existing stocks and creates `counties_country_state`. A rerun after a
@@ -70,6 +74,11 @@ this task after the GitHub integration rejected issue creation.
 The isolated 48-turn all-county run preserved all 51 state sums and country totals.
 The matched journal replay preserved regional cohort vectors, population readouts
 and metrics: baseline 17 commands / 133,859 reply BSON bytes; candidate 25 commands /
-1,104,583 bytes. The first full demographic phase used 37 commands / 1,233,317 reply
+1,267,967 bytes. The first full demographic phase used 37 commands / 1,396,701 reply
 bytes, below its existing 600-command budget. These are synthetic local-world
 measurements, not production latency or a whole-economy balance qualification.
+
+Inactive general and primary county maps use the committed reference weights,
+matching the existing reconstructed-results model. Active races and office placement
+use persisted populations. This keeps historical maps stable as current stocks change;
+it does not claim archived, independently counted county ballots.

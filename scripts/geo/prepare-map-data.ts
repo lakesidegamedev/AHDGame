@@ -1,11 +1,11 @@
-import { COUNTY_POPULATION_SOURCE, parseCountyPopulations } from "./countyPopulationData";
+import { COUNTY_POPULATION_SOURCE, parseCountyPopulationDataset } from "./countyPopulationData";
 /**
  * Build script: Generate county and congressional district map data
  *
  * Fetches TopoJSON from us-atlas, converts to SVG paths, merges with Cook PVI and population data,
  * and writes per-state JSON files for use in the election map UI.
  *
- * Run: npx tsx scripts/prepare-map-data.ts
+ * Run: npx tsx scripts/geo/prepare-map-data.ts
  */
 
 import * as topojson from "topojson-client";
@@ -182,7 +182,7 @@ function calculateCountyPVI(
 
 // Fail closed: missing county population is a data error, never a 50,000-person estimate.
 async function loadCountyPopulation(): Promise<CountyPopulation> {
-  return parseCountyPopulations(await fetchText(COUNTY_POPULATION_SOURCE));
+  return parseCountyPopulationDataset(await fetchText(COUNTY_POPULATION_SOURCE)).populations;
 }
 
 // Load county election results and calculate PVI
@@ -548,4 +548,7 @@ async function main() {
   console.log(`Counties with real PVI data: ${countiesWithPVI}`);
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

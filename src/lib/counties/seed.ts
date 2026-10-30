@@ -36,24 +36,27 @@ export async function seedCountyPopulations(
   );
   const rows = groups.flat();
   const expectedById = new Map(rows.map((row) => [row._id, row]));
-  const existing = options.replace
-    ? []
-    : await db
-        .collection<County>("counties")
-        .find({ countryId: "US" }, { projection: { _id: 1, stateId: 1, population: 1 } })
-        .toArray();
+  const existing = await db
+    .collection<County>("counties")
+    .find(
+      { $or: [{ countryId: "US" }, { _id: { $in: rows.map((c) => c._id) } }] },
+      { projection: { _id: 1, countryId: 1, stateId: 1, population: 1 } }
+    )
+    .toArray();
   if (
     existing.some(
       (row) =>
-        !expectedById.has(row._id) ||
-        expectedById.get(row._id)!.stateId !== row.stateId ||
-        !Number.isSafeInteger(row.population) ||
-        row.population < 0
+        row.countryId !== "US" ||
+        (!options.replace &&
+          (!expectedById.has(row._id) ||
+            expectedById.get(row._id)!.stateId !== row.stateId ||
+            !Number.isSafeInteger(row.population) ||
+            row.population < 0))
     )
   )
     throw new Error("Unexpected or invalid existing county stock");
   const prospective = new Map(rows.map((row) => [row._id, row.population]));
-  for (const row of existing) prospective.set(row._id, row.population);
+  if (!options.replace) for (const row of existing) prospective.set(row._id, row.population);
   for (const state of states) {
     const sum = rows
       .filter((row) => row.stateId === state._id)
