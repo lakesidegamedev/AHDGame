@@ -190,9 +190,16 @@ function physicalWrite(
   target: ProducerSectorTarget,
   closing: ReturnType<typeof advanceProducerCapacity>
 ) {
+  const whole = closing.state.wholePlants;
   return {
     ...physicalImage(closing.state),
-    ...seedPlantLedger(target.plantType, closing.state.ownedDailyUnits),
+    ...(whole
+      ? {
+          plantCount: Math.round(closing.state.ownedDailyUnits / whole.plantUnits),
+          plantUnitRemainder: whole.creditUnits,
+          plantWearUnits: whole.wearUnits,
+        }
+      : seedPlantLedger(target.plantType, closing.state.ownedDailyUnits)),
     constructionInProgressAnchor: closing.constructionInProgressAnchor,
   };
 }

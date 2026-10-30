@@ -1,4 +1,5 @@
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
+import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { loadGroupDirectionMembership } from "./npp/groupDirectionMembership";
 /**
  * NPP corporation decisions use shared market and funding observations.
@@ -426,6 +427,7 @@ export async function processNppCorporationDecisions(
         commandEconomyEnabled?: boolean;
         producerConversionPaceShare?: number;
         producerFundedRestartStage?: number;
+        wholePlantsStage?: number;
       }>("gameConfig")
       .findOne(
         { _id: "default" as never },
@@ -434,6 +436,7 @@ export async function processNppCorporationDecisions(
             commandEconomyEnabled: 1,
             producerConversionPaceShare: 1,
             producerFundedRestartStage: 1,
+            wholePlantsStage: 1,
           },
         }
       );
@@ -449,6 +452,7 @@ export async function processNppCorporationDecisions(
       commodityDemandOf: (commodity) => priceByCommodity.get(commodity)?.globalDemand ?? null,
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
+      ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
     if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;

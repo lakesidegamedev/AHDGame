@@ -1,4 +1,5 @@
 import { rejectWhileTurnProcessing } from "./turnGuard";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
@@ -365,6 +366,8 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     };
 
     if (plantsEnabled) {
+      // Whole plants: the starter plant lands whole on its online turn.
+      const wholePlants = await loadWholePlantsOn(db);
       const starterOrder: SectorBuildOrder = {
         unitsOrdered: starterUnits,
         // Founded sectors carry no strategy, so this was priced at the
@@ -374,6 +377,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         startTurn: currentTurn,
         onlineTurn: starterOnlineTurn,
         smooth: true,
+        ...(wholePlants ? { plantUnits: starterUnits } : {}),
       };
       // capitalStock 0 + a queued order: the sector exists, owns nothing yet, and
       // produces nothing until the starter build lands. `sectorTurn` derives

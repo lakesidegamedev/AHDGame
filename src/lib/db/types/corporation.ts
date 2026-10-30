@@ -1090,6 +1090,13 @@ export interface SectorBuildOrder {
    * `src/lib/corporations/buildDelivery.ts`.
    */
   smooth?: boolean;
+  /**
+   * Whole plants: units in one plant of this order's sector, stamped when the
+   * order was placed or recounted under `gameConfig.wholePlantsStage`. A smooth
+   * order with this set delivers whole plants, never a part-plant slice.
+   * Absent = today's linear slices.
+   */
+  plantUnits?: number;
   /** Paid, secured construction loan. Absent on ordinary cash-funded orders. */
   constructionLoanId?: string;
   constructionClaimId?: string;
@@ -1535,6 +1542,13 @@ export interface CorporateSector {
    * Always less than the sector's facility quantum after normalization.
    */
   plantUnitRemainder?: number;
+  /**
+   * Whole plants (gameConfig.wholePlantsStage on): wear toward the next plant
+   * coming off, in capacity units, always below one plant. With the stage on,
+   * `plantUnitRemainder` is construction credit that does not produce and
+   * `capitalStock` is always `plantCount` whole plants.
+   */
+  plantWearUnits?: number;
   /**
    * Plants tier (marketSystemMode >= "plants"): anchors the launch-safety
    * governor's fade-in from the sector's first plants turn, exactly like

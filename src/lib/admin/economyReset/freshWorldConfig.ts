@@ -75,6 +75,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   soeSizeCostScale: "state-owned size cost rule",
   dominanceRunningCostScale: "running dominance cost rule",
   honestBalanceSheetsStage: "debt counted in credit and share price",
+  wholePlantsStage:
+    "plants are whole units of capacity; a rebuilt economy keeps counting, building and wearing whole plants",
   managementOverheadPpPerDoubling: "management overhead rule",
   ceoSalaryVoteNetIncomeShare: "governance rule on CEO pay",
   commandEconomySecondEconomyTolerance: "era regime setting, rewritten per preset",

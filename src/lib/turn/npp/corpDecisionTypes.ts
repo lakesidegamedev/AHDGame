@@ -199,6 +199,8 @@ export interface NppCorpDecision {
 /** World facts needed to price founding builds through the player-equivalent path. */
 export interface NppPlantsContext {
   enabled: boolean;
+  /** gameConfig.wholePlantsStage on: builds are sized in whole plants. */
+  wholePlants?: boolean;
   year: number;
   eraUnitScale: number;
   preset: string | undefined;

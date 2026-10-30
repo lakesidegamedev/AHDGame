@@ -88,6 +88,8 @@ import {
   PLANT_CREW_SUSTAINED_GLUT_THROTTLE,
 } from "@/lib/constants/capacityEconomy";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
   inputBasketCostIndex,
   recordCostPlusBasis,
@@ -468,6 +470,7 @@ export function processSector(
     mothballed,
     activeFraction,
     plantLedger,
+    plantWearUnits,
     plantsOwnedCapacity,
     capacityBookAnchor,
     plantsMixPrice,
@@ -498,6 +501,7 @@ export function processSector(
     governorGlide: market.governorGlide,
     embargoLegacyMothball,
     recessionCapacityFactor: lookups.recessionCapacityFactorByCountry?.get(sector.countryId ?? ""),
+    wholePlants: lookups.wholePlantsOn === true,
   });
   // (moved to computePlantsCapacity: plant ledger + owned-capacity advance)
   // (moved to computePlantsCapacity: P5 paid basis of capacity)
@@ -721,11 +725,35 @@ export function processSector(
       corp.ceoType === "npp" && lookups.engineSixCountries?.has(corp.countryId) === true,
   });
   const retainedCapacityShare = 1 - idleRetirement.retireFraction;
-  const persistedOwnedCapacity = plantsOwnedCapacity * retainedCapacityShare;
+  // Whole plants: retirement is wear too, and it is the one path that may take
+  // the last plant (a plant nobody buys from closes).
+  const idleWholePlants =
+    plantWearUnits != null && plantLedger
+      ? applyPlantChange(
+          {
+            capitalStock: plantsOwnedCapacity,
+            plantUnitRemainder: plantLedger.plantUnitRemainder,
+            plantWearUnits,
+          },
+          plantSizeForSector(sector),
+          {
+            lossUnits: plantsOwnedCapacity * idleRetirement.retireFraction,
+            protectLastPlant: false,
+          }
+        )
+      : null;
+  const persistedOwnedCapacity = idleWholePlants
+    ? idleWholePlants.capitalStock
+    : plantsOwnedCapacity * retainedCapacityShare;
   const idleCapacityRetiredUnits = plantsOwnedCapacity - persistedOwnedCapacity;
-  const persistedCapacityBookAnchor = capacityBookAnchor * retainedCapacityShare;
-  const persistedPlantLedger =
-    idleRetirement.retireFraction > 0
+  const persistedCapacityBookAnchor =
+    capacityBookAnchor * (idleWholePlants ? idleWholePlants.bookRetention : retainedCapacityShare);
+  const persistedPlantLedger = idleWholePlants
+    ? {
+        plantCount: idleWholePlants.plantCount,
+        plantUnitRemainder: idleWholePlants.plantUnitRemainder,
+      }
+    : idleRetirement.retireFraction > 0
       ? seedPlantLedger(sector, persistedOwnedCapacity)
       : plantLedger;
   // Phased stock-market boost, phase A: lift realized operating revenue AFTER
@@ -1227,6 +1255,7 @@ export function processSector(
       sectorUpdate.capacityBookAnchor = persistedCapacityBookAnchor;
       sectorUpdate.plantCount = persistedPlantLedger?.plantCount ?? 0;
       sectorUpdate.plantUnitRemainder = persistedPlantLedger?.plantUnitRemainder ?? 0;
+      if (idleWholePlants) sectorUpdate.plantWearUnits = idleWholePlants.plantWearUnits;
     }
   }
   // Plants ramp anchor (stamped once, on the flip turn).

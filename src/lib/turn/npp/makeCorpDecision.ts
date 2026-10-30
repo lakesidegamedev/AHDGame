@@ -3,6 +3,8 @@
  * makeNppCorpDecision uses the corporation, market signals and CEO strategy to
  * return planned sector and cash changes for the turn processor to apply.
  */
+import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
@@ -1070,13 +1072,18 @@ export function makeNppCorpDecision(
         ? starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES
         : Math.min(headroomUnits * NPP_FOUNDING_HEADROOM_SHARE, unmetSizing.sizeCap);
       const unmetBlocksEntry = unmetSizing.blocksEntry;
-      const buildUnits =
+      const sizedUnits =
         starterUnits > 0
           ? Math.max(
               starterUnits,
               Math.floor(Math.min(sizeCap, affordableUnits, MAX_BUILD_UNITS_PER_ORDER))
             )
           : 0;
+      // Whole plants: the founding order is a whole number of starter plants.
+      const buildUnits =
+        plants?.wholePlants && starterUnits > 0
+          ? Math.max(starterUnits, floorUnitsToPlants(sizedUnits, starterUnits))
+          : sizedUnits;
       const buildAnchor = perUnitFoundingAnchor * buildUnits;
       const foundingCost = toCorpLocal(entryFeeAnchor + buildAnchor);
       entryDiagnostic = {
@@ -1159,6 +1166,7 @@ export function makeNppCorpDecision(
             startTurn: ctx.turn,
             onlineTurn: ctx.turn + buildTurns,
             smooth: true,
+            ...(plants?.wholePlants ? { plantUnits: starterUnits } : {}),
           },
         });
         unownedDraws.push({
@@ -1690,7 +1698,15 @@ export function makeNppCorpDecision(
           );
         }
       }
-      const units = replacementUnits + growthUnits;
+      const rawUnits = replacementUnits + growthUnits;
+      // Whole plants: an NPP orders whole plants, at least one.
+      const units =
+        plants?.wholePlants && rawUnits > 0
+          ? Math.max(
+              plantSizeForSector(sector),
+              floorUnitsToPlants(rawUnits, plantSizeForSector(sector))
+            )
+          : rawUnits;
       if (!(units > 0)) {
         if (!autopilotGate && !throttleGate) {
           observeReinvestCandidate(
@@ -1825,6 +1841,7 @@ export function makeNppCorpDecision(
         startTurn: ctx.turn,
         onlineTurn: ctx.turn + buildTurns,
         smooth: true,
+        ...(plants?.wholePlants ? { plantUnits: plantSizeForSector(sector) } : {}),
       };
       if (!affordable) {
         const cashContributionLimitLocal =

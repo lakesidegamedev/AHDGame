@@ -1,4 +1,6 @@
 import type { Db } from "mongodb";
+import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -170,10 +172,27 @@ export async function shedSectorsForCorps(
         // keeps the doc's real value, so the in-memory mutation and the `$inc`
         // below are both no-ops on capacity (they must not write 0 over a real
         // stock), while the WORKER shed still runs.
-        const shedUnits = plantsCapacityEstablished
+        const continuousShedUnits = plantsCapacityEstablished
           ? Math.round(Math.min(stock, stock * rate) * 100) / 100
           : 0;
-        if (shedUnits <= 0 && shedWorkers <= 0) continue;
+        // Whole plants: the shed is wear. A whole plant leaves when the wear
+        // reaches one plant, and the last plant stays.
+        const wholeShed =
+          lookups.wholePlantsOn === true && plantsCapacityEstablished && stock > 0
+            ? applyPlantChange(
+                {
+                  capitalStock: stock,
+                  plantUnitRemainder: s.plantUnitRemainder,
+                  plantWearUnits: s.plantWearUnits,
+                },
+                plantSizeForSector(s),
+                { lossUnits: continuousShedUnits }
+              )
+            : null;
+        const shedUnits = wholeShed
+          ? Math.max(0, stock - wholeShed.capitalStock)
+          : continuousShedUnits;
+        if (shedUnits <= 0 && shedWorkers <= 0 && !wholeShed) continue;
 
         totalCapacityUnitsShed += shedUnits;
         // P5: the paid basis leaves with the plant, pro-rata. Written as an
@@ -182,7 +201,11 @@ export async function shedSectorsForCorps(
         // `$inc` would materialise the field at a negative number and book the
         // whole sector at zero. Only a sector that already carries a basis is
         // touched; the rest are corrected by `sectorTurn` on the same turn.
-        const remainingFraction = stock > 0 ? Math.max(0, stock - shedUnits) / stock : 1;
+        const remainingFraction = wholeShed
+          ? wholeShed.bookRetention
+          : stock > 0
+            ? Math.max(0, stock - shedUnits) / stock
+            : 1;
         const priorBook =
           typeof s.capacityBookAnchor === "number" &&
           Number.isFinite(s.capacityBookAnchor) &&
@@ -191,8 +214,14 @@ export async function shedSectorsForCorps(
             : null;
         const nextBook = priorBook != null ? priorBook * remainingFraction : null;
 
-        s.capitalStock = stock - shedUnits;
-        const plantLedger = seedPlantLedger(s, s.capitalStock);
+        s.capitalStock = wholeShed ? wholeShed.capitalStock : stock - shedUnits;
+        const plantLedger = wholeShed
+          ? {
+              plantCount: wholeShed.plantCount,
+              plantUnitRemainder: wholeShed.plantUnitRemainder,
+              plantWearUnits: wholeShed.plantWearUnits,
+            }
+          : seedPlantLedger(s, s.capitalStock);
         s.workers = workers - shedWorkers;
         if (nextBook != null) s.capacityBookAnchor = nextBook;
         s.updatedAt = now;
@@ -202,7 +231,7 @@ export async function shedSectorsForCorps(
             filter: { _id: s._id },
             update: {
               $inc: {
-                capitalStock: -shedUnits,
+                capitalStock: wholeShed ? wholeShed.capitalStock - stock : -shedUnits,
                 workers: -shedWorkers,
               },
               $set: {

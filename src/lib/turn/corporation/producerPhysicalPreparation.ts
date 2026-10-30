@@ -130,6 +130,8 @@ export type ProducerPhysicalEnv = Pick<
   decommissionGrantShare?: number;
   /** gameConfig.producerLowUseCostStage: >= 1 lets barely used and parked plants cost close to nothing. */
   lowUseCostStage?: number;
+  /** gameConfig.wholePlantsStage on: capacity moves in whole plants. */
+  wholePlants?: boolean;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -360,6 +362,7 @@ export function prepareProducerPhysicalSector(input: {
     otherOperatingCost: 0,
     labourRecipientAccountId: producerWalletId(input.worldEpoch, scopes[0]),
     operatingRecipientAccountId: producerWalletId(input.worldEpoch, scopes[1]),
+    wholePlants: env.wholePlants === true,
   });
   const { plan } = prepared;
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
