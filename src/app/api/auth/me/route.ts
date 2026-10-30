@@ -1,3 +1,4 @@
+import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isTokenRevokedByCutoff } from "@/lib/auth/revocationCutoff";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -328,6 +329,7 @@ export const GET = withNoStore(async () => {
           statusBarLayout: user?.statusBarLayout ?? undefined,
           corpOverviewMode: user?.corpOverviewMode ?? undefined,
           experimentalFeatures: user?.experimentalFeatures === true,
+          desktopNavigationLayout: desktopNavigationLayout(user?.desktopNavigationLayout),
           askDrawerSide: user?.askDrawerSide === "left" ? "left" : "right",
           hasCharacter: !!character || !!imperialCharacter,
           isImperial: !!imperialCharacter && isImperialMode,

@@ -219,6 +219,67 @@
         "bond": "Anleihe",
         "admin": "Admin"
       }
+    },
+    "desktop": {
+      "shortcuts": "Deine Verknüpfungen",
+      "openOverview": "Übersicht öffnen",
+      "sections": "Bereiche",
+      "keyboardHint": "Tab zum Navigieren · Esc zum Schließen",
+      "changeLayout": "Layout ändern",
+      "layouts": {
+        "cards": "Gruppierte Karten",
+        "browser": "Bereichsauswahl",
+        "directory": "Kompaktes Verzeichnis"
+      },
+      "groups": {
+        "markets": "Märkte & Finanzen",
+        "industry": "Industrie & Nachrichten",
+        "diplomacy": "Weltgeschehen",
+        "support": "Hilfe"
+      },
+      "descriptions": {
+        "overview": "Menschen, Institutionen und Ereignisse im Überblick.",
+        "myCorporation": "Deine Unternehmenszentrale",
+        "subsidiaryGroup": "Unternehmen in deinem Konzern",
+        "myParty": "Deine Parteizentrale",
+        "stateParty": "Deine Partei in dieser Region",
+        "activeElection": "Dein laufender Wahlkampf",
+        "presidentialElection": "Verfolge die Präsidentschaftswahl",
+        "map": "Entdecke Staaten und Regionen",
+        "myUnion": "Deine Gewerkschaft",
+        "cabinetOffice": "Deine Aufgaben im Kabinett",
+        "justiceOffice": "Deine richterlichen Aufgaben",
+        "governorOffice": "Deine regionalen Aufgaben",
+        "stockMarket": "Aktien und Marktgeschehen",
+        "legislature": "Kammern, Gesetze und Abstimmungen",
+        "parties": "Parteien und ihre Programme",
+        "elections": "Wahlkämpfe, Kandidaten und Ergebnisse",
+        "centralBank": "Öffentliche und private Banken",
+        "banking": "Öffentliche und private Banken",
+        "executive": "Regierung und Kabinett",
+        "politicians": "Das Politikerverzeichnis",
+        "economy": "Produktion, Arbeit und Wachstum",
+        "unions": "Organisierte Arbeitnehmerschaft",
+        "nations": "Entdecke Länder und die Weltkarte",
+        "sectors": "Industrie und Produktion",
+        "budget": "Einnahmen und öffentliche Ausgaben",
+        "news": "Nachrichten aus deinem Land",
+        "forex": "Währungen der Welt",
+        "trade": "Waren über Grenzen hinweg",
+        "governmentContracts": "Öffentliche Aufträge",
+        "imf": "Internationale Währungszusammenarbeit",
+        "policy": "Die Regeln des Landes",
+        "politicalMetrics": "Meinung und politische Bedingungen",
+        "metrics": "Nationale Kennzahlen",
+        "scotus": "Verfahren und Verfassung",
+        "internationalOrgs": "Diplomatie und Zusammenarbeit",
+        "crises": "Internationale Krisenherde",
+        "conflicts": "Laufende militärische Konflikte",
+        "politicalOperations": "Deine politische Organisation",
+        "guides": "Regeln, Spielmechanik und erste Schritte",
+        "support": "Hilfe bei einem Problem",
+        "feedback": "Beschreibe ein Problem mit Bildschirmfoto"
+      }
     }
   }
 }

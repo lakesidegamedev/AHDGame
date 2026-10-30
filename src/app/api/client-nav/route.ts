@@ -1,3 +1,4 @@
+import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { NextResponse } from "next/server";
@@ -216,6 +217,7 @@ export async function GET() {
             corpOverviewMode: 1,
             enableExperimentalUI: 1,
             experimentalFeatures: 1,
+            desktopNavigationLayout: 1,
             askDrawerSide: 1,
             patreonTier: 1,
             patreonExpiresAt: 1,
@@ -730,6 +732,7 @@ export async function GET() {
           // New interface is the default; only an explicit opt-out (false) is classic.
           enableExperimentalUI: user.enableExperimentalUI !== false,
           experimentalFeatures: user.experimentalFeatures === true,
+          desktopNavigationLayout: desktopNavigationLayout(user.desktopNavigationLayout),
           askDrawerSide: user.askDrawerSide === "left" ? "left" : "right",
           patreonTier: user.patreonTier ?? null,
           isPatronActive: isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null),

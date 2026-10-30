@@ -1,3 +1,4 @@
+import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NotificationPreferences } from "./notifications";
@@ -173,6 +174,8 @@ export interface User {
   enableExperimentalUI?: boolean;
   /** Opt-in to experimental features (Settings). Off unless explicitly true. */
   experimentalFeatures?: boolean;
+  /** Account presentation preference, preserved across world resets. Defaults to cards. */
+  desktopNavigationLayout?: DesktopNavigationLayout;
   /** Which edge of the screen the experimental Ask drawer docks to. */
   askDrawerSide?: "left" | "right";
   actionsViewMode?: "cards" | "compact";

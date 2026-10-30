@@ -358,7 +358,30 @@
       "intro": "Teste Funktionen, die noch in Arbeit sind. Sie können sich ändern, ausfallen oder wieder verschwinden. Wenn du dies ausschaltest, sind sie sofort weg.",
       "toggleLabel": "Experimentelle Funktionen einschalten",
       "toggleHint": "Standardmäßig aus. Ändert nur etwas für dich.",
-      "saveError": "Speichern fehlgeschlagen. Versuche es erneut."
+      "saveError": "Speichern fehlgeschlagen. Versuche es erneut.",
+      "desktopNavigation": {
+        "title": "Desktop-Navigation",
+        "hint": "Wähle das Layout der Desktop-Menüs. Die Auswahl wird in deinem Konto gespeichert. Die mobile Navigation bleibt gleich.",
+        "classicHint": "Diese Layouts gelten für die moderne Oberfläche. Deine klassische Oberfläche bleibt gleich.",
+        "options": {
+          "cards": {
+            "title": "A · Gruppierte Karten (Standard)",
+            "hint": "Alle Bereiche auf einen Blick, mit deinen Verknüpfungen daneben."
+          },
+          "browser": {
+            "title": "B · Bereichsauswahl",
+            "hint": "Wähle einen Bereich und erkunde seine Zielkarten."
+          },
+          "directory": {
+            "title": "C · Kompaktes Verzeichnis",
+            "hint": "Eine dichtere Liste mit weniger Beschreibungstext."
+          },
+          "standard": {
+            "title": "Bisherige Menüs",
+            "hint": "Die aktuellen Dropdown-Listen beibehalten."
+          }
+        }
+      }
     },
     "askDrawer": {
       "title": "Ask-Keir-Seitenleiste",
