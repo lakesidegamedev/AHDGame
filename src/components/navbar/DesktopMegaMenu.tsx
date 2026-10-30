@@ -17,9 +17,25 @@ interface Props {
   anchorRef: RefObject<HTMLDivElement | null>;
   panelRef: RefObject<HTMLDivElement | null>;
   onClose: () => void;
+  /** Item ids from this menu that are pinned to the top bar. */
+  pinnedIds?: Set<string>;
+  pinsFull?: boolean;
+  onTogglePin?: (itemId: string) => void;
+  onCustomize?: () => void;
 }
 
-export function DesktopMegaMenu({ menu, menuId, layout, anchorRef, panelRef, onClose }: Props) {
+export function DesktopMegaMenu({
+  menu,
+  menuId,
+  layout,
+  anchorRef,
+  panelRef,
+  onClose,
+  pinnedIds,
+  pinsFull = false,
+  onTogglePin,
+  onCustomize,
+}: Props) {
   const t = useTranslations("nav.desktop");
   const pathname = usePathname();
   const [section, setSection] = useState(menu.groups[0]?.id);
@@ -76,6 +92,37 @@ export function DesktopMegaMenu({ menu, menuId, layout, anchorRef, panelRef, onC
   }, [layout, menuId]);
 
   function row(item: DesktopNavLink, compact = false) {
+    if (!onTogglePin || item.disabled || !item.href) return linkRow(item, compact);
+    const pinned = pinnedIds?.has(item.id) ?? false;
+    return (
+      <div key={item.id} className="group/pin relative">
+        {linkRow(item, compact, true)}
+        <button
+          type="button"
+          aria-pressed={pinned}
+          disabled={!pinned && pinsFull}
+          aria-label={`${pinned ? t("unpin") : t("pin")}: ${item.label}`}
+          title={pinned ? t("unpin") : pinsFull ? t("pinsFull") : t("pin")}
+          onClick={() => onTogglePin(item.id)}
+          className={`absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition-opacity hover:bg-white/5 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary disabled:hidden ${pinned ? "text-primary opacity-100" : "text-muted opacity-0 hover:text-foreground group-hover/pin:opacity-100"}`}
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill={pinned ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  function linkRow(item: DesktopNavLink, compact = false, pinnable = false) {
     const active =
       item.href && !item.external && !item.href.includes("?") && pathname === item.href;
     const content = (
@@ -100,7 +147,7 @@ export function DesktopMegaMenu({ menu, menuId, layout, anchorRef, panelRef, onC
         </span>
       </>
     );
-    const className = `${["patreon", "supporters"].includes(item.id) ? "store-purchase-cta " : ""}group flex w-full items-center gap-2.5 rounded-lg border text-left transition-colors focus-visible:outline-2 focus-visible:outline-primary ${compact ? "px-2 py-2" : "p-2.5"} ${item.parentId ? "ml-3 !w-[calc(100%-0.75rem)]" : ""} ${active ? "border-card-border bg-card" : "border-transparent hover:border-card-border hover:bg-card"}`;
+    const className = `${["patreon", "supporters"].includes(item.id) ? "store-purchase-cta " : ""}group flex w-full items-center gap-2.5 rounded-lg border text-left transition-colors focus-visible:outline-2 focus-visible:outline-primary ${compact ? "px-2 py-2" : "p-2.5"} ${item.parentId ? "ml-3 !w-[calc(100%-0.75rem)]" : ""} ${pinnable ? "pr-10" : ""} ${active ? "border-card-border bg-card" : "border-transparent hover:border-card-border hover:bg-card"}`;
     const select = () => {
       void captureProductEvent("desktop_navigation_destination_selected", {
         layout,
@@ -289,13 +336,26 @@ export function DesktopMegaMenu({ menu, menuId, layout, anchorRef, panelRef, onC
       )}
       <div className="flex items-center justify-between gap-4 border-t border-card-border px-5 py-2 text-xs text-muted">
         <span>{t("keyboardHint")}</span>
-        <Link
-          href="/settings?section=experimental"
-          onClick={onClose}
-          className="hover:text-foreground hover:underline"
-        >
-          {t("changeLayout")}
-        </Link>
+        {onCustomize ? (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onCustomize();
+            }}
+            className="hover:text-foreground hover:underline"
+          >
+            {t("editNavigation")}
+          </button>
+        ) : (
+          <Link
+            href="/settings?section=experimental"
+            onClick={onClose}
+            className="hover:text-foreground hover:underline"
+          >
+            {t("changeLayout")}
+          </Link>
+        )}
       </div>
     </div>,
     document.body

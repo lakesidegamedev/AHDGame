@@ -36,6 +36,7 @@ import { defect as freightOverbillingRestitution } from "./defects/AHD-1448-frei
 import { defect as dissolutionNppSuccessors } from "./defects/AHD-dissolution-npp-successors";
 import { defect as sovereignMaturityStrandedPayout } from "./defects/AHD-sovereign-maturity-stranded-payout";
 import { defect as sovereignMaturityUnfundedRollover } from "./defects/AHD-sovereign-maturity-unfunded-rollover";
+import { defect as wholePlantsConversion } from "./defects/AHD-whole-plants-conversion";
 import type { Defect } from "./types";
 
 export const DEFECTS: Defect[] = [
@@ -104,6 +105,9 @@ export const DEFECTS: Defect[] = [
   // The fixed bond turn sells a refunding issue and pays every holder; this
   // reports the overdue backlog and stamps the approved figures.
   sovereignMaturityUnfundedRollover,
+  // Whole plants: one-time recount of every sector to whole plants before
+  // gameConfig.wholePlantsStage is switched on; part-plants are credited.
+  wholePlantsConversion,
 ];
 
 export function getDefect(id: string): Defect | undefined {

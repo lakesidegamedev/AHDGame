@@ -65,8 +65,14 @@ export interface EmploymentResult {
 }
 
 const EMPLOYMENT_RECOVERY_HALF_LIFE_YEARS = 0.5;
-/** Turns for half of a company's open positions to be filled at average skill. */
-const CORPORATE_VACANCY_HALF_LIFE_TURNS = 2;
+/**
+ * Turns for half of a company's open positions to be filled at average skill.
+ * Half a turn fills about three quarters of openings a turn where jobseekers
+ * exist; at 2 turns, growing plants after the 2026-10-29 reset kept adding
+ * jobs faster than they were filled while their states sat at 15% to 25%
+ * unemployment.
+ */
+const CORPORATE_VACANCY_HALF_LIFE_TURNS = 0.5;
 export const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
 const EMPLOYMENT_UNEMPLOYMENT_BOUNDS = [1, 100] as const;
 

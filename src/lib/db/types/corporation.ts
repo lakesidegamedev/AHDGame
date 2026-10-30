@@ -847,6 +847,12 @@ export interface Corporation {
    * dilution is applied when the share count changes.
    */
   shareIssuanceProceeds?: number;
+  /**
+   * What the system equity pool paid for this company's new shares, per turn,
+   * over the last 48 turns. Written only while
+   * gameConfig.equityCashoutLimitsStage is on; bounds cumulative placements.
+   */
+  primaryPoolPlacements?: { turn: number; paidLocal: number }[];
   /** When the CEO last sent a shareholder address (12-hour cooldown). */
   lastShareholderAddressAt?: Date;
   /** Guards the CEO quick-dissolve route against duplicate payout submits. */
@@ -1090,6 +1096,13 @@ export interface SectorBuildOrder {
    * `src/lib/corporations/buildDelivery.ts`.
    */
   smooth?: boolean;
+  /**
+   * Whole plants: units in one plant of this order's sector, stamped when the
+   * order was placed or recounted under `gameConfig.wholePlantsStage`. A smooth
+   * order with this set delivers whole plants, never a part-plant slice.
+   * Absent = today's linear slices.
+   */
+  plantUnits?: number;
   /** Paid, secured construction loan. Absent on ordinary cash-funded orders. */
   constructionLoanId?: string;
   constructionClaimId?: string;
@@ -1536,6 +1549,13 @@ export interface CorporateSector {
    */
   plantUnitRemainder?: number;
   /**
+   * Whole plants (gameConfig.wholePlantsStage on): wear toward the next plant
+   * coming off, in capacity units, always below one plant. With the stage on,
+   * `plantUnitRemainder` is construction credit that does not produce and
+   * `capitalStock` is always `plantCount` whole plants.
+   */
+  plantWearUnits?: number;
+  /**
    * Plants tier (marketSystemMode >= "plants"): anchors the launch-safety
    * governor's fade-in from the sector's first plants turn, exactly like
    * `clearingStartTurn` does for the clearing leg. Stamped once, on the turn
@@ -1688,6 +1708,8 @@ export interface CorporateSector {
     inventoryRevenue: number;
     /** Inventory carrying cost inside `totalCost`. */
     inventoryCarry: number;
+    /** "funded" when a funded producer receipt wrote the row (only the summary lines are set). */
+    source?: "funded";
     /** Funded market: inputs in output that went to stock unsold this turn, at cost (reported beside profit). */
     stockAddedAtCost?: number;
     /** Funded market: transition floor support received this turn (reported beside profit). */

@@ -100,6 +100,9 @@ export async function recomputeSharePricesAfterBondTurn(
   ]);
   const currentYear = gameState?.currentYear;
   const plantsEnabled = marketAtLeast(marketMode, "plants");
+  // Funded valuation: growth is read from real output sold, so a price climb
+  // on the same sales (or on no sales) earns no growth premium.
+  const realGrowth = (lookups.fundedValuationStage ?? 0) >= 1;
 
   if (lookups.corporations.length === 0) {
     return { corpsRepriced: 0, corpsSkipped: 0 };
@@ -129,6 +132,7 @@ export async function recomputeSharePricesAfterBondTurn(
           | "corporationId"
           | "sharePrice"
           | "sectorNPV"
+          | "realOutputAnchor"
           | "perTurnBondCouponIncome"
           | "perTurnBondDragOnNetIncome"
         >
@@ -136,6 +140,7 @@ export async function recomputeSharePricesAfterBondTurn(
         corporationId: 1,
         sharePrice: 1,
         sectorNPV: 1,
+        realOutputAnchor: 1,
         perTurnBondCouponIncome: 1,
         perTurnBondDragOnNetIncome: 1,
       })
@@ -143,18 +148,25 @@ export async function recomputeSharePricesAfterBondTurn(
     database
       .collection<CorporationHistory>("corporationHistory")
       .find({ turn: { $gte: turn - TRAILING_GROWTH_WINDOW_TURNS, $lt: turn } })
-      .project<{ corporationId: ObjectId; turn: number; sharePrice: number; sectorNPV: number }>({
+      .project<{
+        corporationId: ObjectId;
+        turn: number;
+        sharePrice: number;
+        sectorNPV: number;
+        realOutputAnchor?: number;
+      }>({
         corporationId: 1,
         turn: 1,
         sharePrice: 1,
         sectorNPV: 1,
+        realOutputAnchor: 1,
       })
       .toArray(),
   ]);
   const histByCorpId = new Map(histRows.map((h) => [h.corporationId.toString(), h]));
   const priorsByCorpId = new Map<
     string,
-    { turn: number; sharePrice: number; sectorNPV: number }[]
+    { turn: number; sharePrice: number; sectorNPV: number; realOutputAnchor?: number }[]
   >();
   for (const h of prevHistRows) {
     const key = h.corporationId.toString();
@@ -249,10 +261,15 @@ export async function recomputeSharePricesAfterBondTurn(
       growthNumer += (gr / 100) * rev;
       growthDenom += rev;
     }
+    const growthSeries = realGrowth ? "realOutputAnchor" : "sectorNPV";
+    const currentGrowthBasis = hist[growthSeries];
     const sectorGrowthRate = plantsEnabled
       ? annualizedTrailingGrowthRate(
-          typeof hist.sectorNPV === "number" ? hist.sectorNPV : 0,
-          (priorsByCorpId.get(id) ?? []).map((p) => ({ turn: p.turn, sectorNpv: p.sectorNPV })),
+          typeof currentGrowthBasis === "number" ? currentGrowthBasis : 0,
+          (priorsByCorpId.get(id) ?? []).map((p) => ({
+            turn: p.turn,
+            sectorNpv: p[growthSeries] ?? 0,
+          })),
           turn,
           TURNS_PER_YEAR
         )

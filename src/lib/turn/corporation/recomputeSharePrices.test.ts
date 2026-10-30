@@ -323,6 +323,61 @@ describe("recomputeSharePricesAfterBondTurn", () => {
     expect(flat).toBeGreaterThan(0);
   });
 
+  it("with funded valuation, growth comes from real output sold, not nominal sector value", async () => {
+    // A price climb raises nominal sector value on the same (or no) sales; that
+    // must not earn the growth premium. Real output growth still does.
+    db.collection("gameConfig");
+    const config = { marketSystemMode: "plants", fundedValuationStage: 1 };
+    const growthCorp = {
+      ...corp,
+      liquidCapital: 1_000_000,
+      sharePrice: 7,
+      totalShares: 1_000_000,
+      earningsHistory: [1_000_000, 1_000_000, 1_000_000],
+    } as unknown as Corporation;
+    const currentHist = {
+      ...histDoc,
+      sharePrice: 7,
+      sectorNPV: 500_000,
+      realOutputAnchor: 1_000,
+      perTurnBondCouponIncome: 0,
+      perTurnBondDragOnNetIncome: 0,
+    };
+    const runWithPriors = async (priorsIn: Array<{ npv: number; real: number }>) => {
+      vi.clearAllMocks();
+      db.collectionMocks.gameConfig.findOne.mockResolvedValue(config);
+      db.collectionMocks.corporations.find.mockReturnValue(makeCursor([growthCorp]));
+      db.collectionMocks.bonds.find.mockReturnValue(makeCursor([]));
+      const priors = priorsIn.map((p, i) => ({
+        _id: new ObjectId(),
+        corporationId: corp._id,
+        turn: turn - priorsIn.length + i,
+        sharePrice: 7,
+        sectorNPV: p.npv,
+        realOutputAnchor: p.real,
+      }));
+      db.collectionMocks.corporationHistory.find.mockImplementation(
+        (filter: { turn?: number | object } | undefined) => {
+          if (filter?.turn !== turn) return makeCursor(priors);
+          return makeCursor([currentHist]);
+        }
+      );
+      const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+      await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+      const ops = db.collectionMocks.corporations.bulkWrite.mock.calls[0][0] as Array<{
+        updateOne: { update: { $set: { sharePrice: number } } };
+      }>;
+      return ops[0].updateOne.update.$set.sharePrice;
+    };
+
+    const flat = Array.from({ length: 3 }, () => ({ npv: 500_000, real: 1_000 }));
+    const priceOnly = Array.from({ length: 3 }, () => ({ npv: 400_000, real: 1_000 }));
+    const realGrowth = Array.from({ length: 3 }, () => ({ npv: 500_000, real: 800 }));
+    const flatPrice = await runWithPriors(flat);
+    expect(await runWithPriors(priceOnly)).toBe(flatPrice);
+    expect(await runWithPriors(realGrowth)).toBeGreaterThan(flatPrice);
+  });
+
   it("skips corps with no same-turn history snapshot (defensive)", async () => {
     db.collectionMocks.corporationHistory.find.mockReturnValue(makeCursor([]));
     const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");

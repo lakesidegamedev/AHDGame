@@ -247,6 +247,14 @@ export interface GameConfig {
    */
   producerCaptiveDeliveryStage?: number;
   /**
+   * Funded producer market: >= 1 plans each product of a multi-product plant
+   * on its own and runs the plant at the highest product plan whose sold lines
+   * pay the plant's running cost per unit, never below the summed plan, so a
+   * glut in a cheap product no longer cuts a sold-out dear one. One-product
+   * plants are unchanged. 0 or absent = off.
+   */
+  producerJointRunStage?: number;
+  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price
@@ -260,6 +268,12 @@ export interface GameConfig {
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
   producerIdleRetireStage?: number;
+  /**
+   * Whole plants: >= 1 keeps every sector's capacity at a whole number of
+   * plants (wear and credit counters, whole-plant build steps). Flip between
+   * turns, after the conversion has run. 0 or absent = off.
+   */
+  wholePlantsStage?: number;
   /**
    * Funded producer market transition package (classification of over-built
    * sectors at the opening, struggling marks, support and free conversion for
@@ -328,6 +342,22 @@ export interface GameConfig {
    * instead of nameplate staffing. 0 or absent = off.
    */
   fundedHeadcountStage?: number;
+  /**
+   * Equity cashout limits: 1 caps the price the system equity pool pays for new
+   * shares (no sentiment premium, no more than book or 15x trailing earnings per
+   * share), caps one company's pool placements at its book equity per 48 turns,
+   * and counts a borrower's shares in a company they control at the lower of
+   * book and half the quote toward their credit line. 0 or absent = off.
+   */
+  equityCashoutLimitsStage?: number;
+  /**
+   * Funded producer path: 1 values each funded sector for the share price and
+   * credit rating on its settled earnings (floored at the paid basis of its
+   * capacity) instead of the legacy nameplate P&L, and reads the share price
+   * growth premium from real output sold rather than nominal value. 0 or
+   * absent = off.
+   */
+  fundedValuationStage?: number;
   /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.

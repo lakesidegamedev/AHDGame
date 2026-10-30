@@ -1,4 +1,5 @@
 import { DESKTOP_NAVIGATION_LAYOUTS } from "@/lib/navigation/desktopNavigationLayout";
+import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
 import { getAllDemographicCategoryKeys } from "@/lib/demographics/countryDemographics";
@@ -145,16 +146,32 @@ export const experimentalUiSchema = z.object({
   enableExperimentalUI: z.boolean(),
 });
 
+const NAV_ID = /^[A-Za-z0-9._:-]+$/;
+
 export const experimentalFeaturesSchema = z
   .object({
     experimentalFeatures: z.boolean().optional(),
     desktopNavigationLayout: z.enum(DESKTOP_NAVIGATION_LAYOUTS).optional(),
     askDrawerSide: z.enum(["left", "right"]).optional(),
+    askDrawerHidden: z.boolean().optional(),
+    navCustomization: z
+      .object({
+        pinned: z.array(z.string().regex(NAV_ID).max(80)).max(MAX_NAV_PINS),
+        order: z
+          .record(
+            z.string().regex(NAV_ID).max(80),
+            z.array(z.string().regex(NAV_ID).max(80)).max(60)
+          )
+          .refine((order) => Object.keys(order).length <= 40, "Too many groups"),
+      })
+      .optional(),
   })
   .refine(
     (v) =>
       v.experimentalFeatures !== undefined ||
       v.askDrawerSide !== undefined ||
+      v.askDrawerHidden !== undefined ||
+      v.navCustomization !== undefined ||
       v.desktopNavigationLayout !== undefined,
     {
       message: "Nothing to update",

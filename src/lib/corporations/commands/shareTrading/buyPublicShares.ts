@@ -44,7 +44,12 @@ import {
   resolveCorpLiquidCurrencyCode,
   shareTradeAnchorValue,
 } from "@/lib/currency/corporationCapital";
-import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/autoConvert";
+import {
+  autoConvertForPurchase,
+  convertForExplicitPay,
+  type ExplicitPayConversion,
+} from "@/lib/currency/autoConvert";
+import { reverseExplicitPayConversionOrCapture } from "@/lib/currency/explicitPayReversal";
 import { distributeConversionSpread } from "@/lib/currency/marketMaker";
 import { notifyHostileTakeoverThresholdIfEligible } from "@/lib/corporations/hostileTakeoverNotifications";
 import { isOrderFlowPriceEligible } from "@/lib/corporations/marketExecution";
@@ -481,6 +486,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       // Currency conversion: explicit pay-currency runs convertForExplicitPay;
       // otherwise honor character.autoConvertEnabled by consolidating other
       // wallets via autoConvertForPurchase (matches bond buy flow).
+      let imperialConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
         const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
         if (payCurrency && payCurrency !== imperialHomeCurrency) {
@@ -496,6 +502,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
           if (!convertResult.success) {
             return errorResponse(400, convertResult.error);
           }
+          imperialConversion = convertResult.conversion;
         } else {
           const convertResult = await autoConvertForPurchase(db, {
             character: imperial,
@@ -522,6 +529,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
         forexEnabled
       );
       if (!debitResult.ok) {
+        await reverseExplicitPayConversionOrCapture(db, imperialConversion, "shares.buy");
         return errorResponse(
           400,
           `Insufficient funds. Need ${costInImperialHome.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${imperialHomeCurrency}.`
@@ -579,6 +587,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
             costInImperialHome,
             forexEnabled
           );
+          await reverseExplicitPayConversionOrCapture(db, imperialConversion, "shares.buy");
           return errorResponse(409, "Not enough shares remain in public float");
         }
         sharesCredited = true;
@@ -668,6 +677,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
           costInImperialHome,
           forexEnabled
         );
+        await reverseExplicitPayConversionOrCapture(db, imperialConversion, "shares.buy");
         throw err;
       }
 
@@ -725,6 +735,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
     // otherwise honor character.autoConvertEnabled by consolidating other
     // wallets via autoConvertForPurchase (matches bond buy flow).
     let charSpreadCharged = 0;
+    let charConversion: ExplicitPayConversion | undefined;
     if (forexEnabled) {
       const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
       if (payCurrency && payCurrency !== homeCurrency) {
@@ -740,6 +751,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
           return errorResponse(400, convertResult.error);
         }
         charSpreadCharged = convertResult.spreadCharged;
+        charConversion = convertResult.conversion;
       } else {
         const convertResult = await autoConvertForPurchase(db, {
           character: charDoc,
@@ -768,6 +780,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       forexEnabled
     );
     if (!debitResult.ok) {
+      await reverseExplicitPayConversionOrCapture(db, charConversion, "shares.buy");
       return errorResponse(
         400,
         `Insufficient funds. Need ${costInHome.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${homeCurrency}.`
@@ -819,6 +832,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       );
       if (!credited) {
         await refundCharacterCash(db, character._id, homeCurrency, costInHome, forexEnabled);
+        await reverseExplicitPayConversionOrCapture(db, charConversion, "shares.buy");
         return errorResponse(409, "Not enough shares remain in public float");
       }
       sharesCredited = true;
@@ -899,6 +913,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
         );
       }
       await refundCharacterCash(db, character._id, homeCurrency, costInHome, forexEnabled);
+      await reverseExplicitPayConversionOrCapture(db, charConversion, "shares.buy");
       throw err;
     }
 

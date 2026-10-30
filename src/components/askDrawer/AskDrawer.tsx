@@ -185,7 +185,7 @@ export function AskDrawer() {
   const area = useVisibleArea(open && phone);
   useMobileScrollLock(open);
 
-  if (!user) return null;
+  if (!user || user.askDrawerHidden === true) return null;
   if (isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname)) return null;
 
   const left = side === "left";

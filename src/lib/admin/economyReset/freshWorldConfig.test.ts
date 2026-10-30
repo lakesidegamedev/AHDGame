@@ -76,7 +76,11 @@ describe("fresh plants world configuration", () => {
       producerShortageBuildFactor: 0.25,
       producerPriceMaxMove: 0.02,
       producerPriceMaxMultiplier: 3,
+      // The legacy-to-plants governor ramp is complete; unset, it would fall
+      // back to the 240-turn default and re-impose running dominance tolls.
+      marketGovernorRampTurns: 1,
     });
+    expect(removed).not.toContain("marketGovernorRampTurns");
     const set = new Set(Object.keys(update.$set ?? {}));
     for (const name of removed) expect(set.has(name), name).toBe(false);
     // A scheduled economy pause belongs to the rebuilt world, so a reset keeps it.

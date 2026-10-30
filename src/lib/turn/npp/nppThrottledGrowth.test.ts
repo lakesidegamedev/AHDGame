@@ -8,7 +8,18 @@ import { makeNppCorpDecision } from "./makeCorpDecision";
 import { getNppCashFloorAnchor } from "./nppCashReserve";
 import { NPP_GROWTH_MIN_THROTTLE } from "./nppCorporationTuning";
 
-function decide(demandThrottleFactor: number | null, plantUnits = 80) {
+const EPOCH = "epoch-1";
+
+interface FundedRun {
+  /** Share of nameplate the plant made this turn. */
+  runShare: number;
+  /** Share of offered units that sold. */
+  sellThrough: number;
+  /** Units offered per unit made: above 1 when held stock is also put up. */
+  offeredPerProduced?: number;
+}
+
+function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: FundedRun) {
   const modifiers = ceoArchetypeModifiers("cautious");
   const quote = computeBuildCost({
     sectorType: "retail",
@@ -51,6 +62,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80) {
     soldUnits: plantUnits,
     buildQueue: [],
     ...(demandThrottleFactor === null ? {} : { demandThrottleFactor }),
+    ...(funded ? fundedFields(plantUnits, funded) : {}),
   } as unknown as CorporateSector;
   const pool = {
     _id: new ObjectId(),
@@ -69,6 +81,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80) {
       now: new Date("2026-01-01"),
       modifiers,
       strategyLoopEnabled: false,
+      ...(funded ? { transitionFirstFundedTurn: 2, fundedWorldEpoch: EPOCH } : {}),
     },
     new Map([["US", [pool]]]),
     new Set(),
@@ -82,6 +95,28 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80) {
       costOfLivingOf: () => null,
     }
   );
+}
+
+/** Sector fields a funded turn writes: daily units from a per-turn receipt. */
+function fundedFields(plantUnits: number, run: FundedRun) {
+  const capacityPerTurn = plantUnits / 24;
+  const producedPerTurn = capacityPerTurn * run.runShare;
+  const offeredPerTurn = producedPerTurn * (run.offeredPerProduced ?? 1);
+  const soldPerTurn = offeredPerTurn * run.sellThrough;
+  return {
+    // The funded settlement writes sold / capacity here.
+    demandThrottleFactor: soldPerTurn / capacityPerTurn,
+    producedUnits: producedPerTurn * 24,
+    soldUnits: soldPerTurn * 24,
+    producerSettlement: {
+      worldEpoch: EPOCH,
+      turn: 69,
+      capacityUnits: capacityPerTurn,
+      producedUnits: producedPerTurn,
+      offeredUnits: offeredPerTurn,
+      soldUnits: soldPerTurn,
+    },
+  };
 }
 
 const growthOf = (d: ReturnType<typeof decide>) =>
@@ -105,5 +140,30 @@ describe("NPP growth in a throttled market", () => {
     const d = decide(0.5, 100_000);
     expect(growthOf(d)).toBeGreaterThan(0);
     expect(growthOf(d)).toBeLessThan(growthOf(decide(1, 100_000)));
+  });
+});
+
+describe("NPP growth on a funded world", () => {
+  it("grows a sold-out plant that inputs hold at a quarter of nameplate", () => {
+    // Throttle reads 0.25 (sold / capacity), which the legacy gate took for a glut.
+    const d = decide(null, 80, { runShare: 0.25, sellThrough: 1 });
+    expect(growthOf(d)).toBeGreaterThan(1);
+    expect(d.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(
+      false
+    );
+  });
+
+  it("still refuses growth when offered output went unsold", () => {
+    // Sells as much as it makes, but half of what it offers (stock included) is left over.
+    const d = decide(null, 80, { runShare: 1, sellThrough: 0.5, offeredPerProduced: 2 });
+    expect(growthOf(d)).toBeLessThan(1);
+    expect(d.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(true);
+  });
+
+  it("keeps the legacy throttle gate on a legacy world", () => {
+    const legacy = decide(0.25, 80);
+    expect(legacy.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(
+      true
+    );
   });
 });

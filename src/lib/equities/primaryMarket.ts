@@ -20,6 +20,15 @@ import {
   refundEquityPoolDebit,
 } from "./marketPool";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import {
+  equityCashoutLimitsOn,
+  loadCorpBookBasisById,
+  loadEquityCashoutLimitsStage,
+  loadPrimaryPlacementLimits,
+  primaryPlacementLimitsFromBasis,
+  recordPrimaryPoolPlacement,
+  type LoadedPrimaryPlacementLimits,
+} from "./cashoutLimits";
 
 /** Maximum share of the pool's equity-liquidity allocation committed to one issue. */
 const EQUITY_PRIMARY_COMMIT_SHARE = 0.2;
@@ -90,6 +99,8 @@ export interface PreparedEquityPlacement {
   placedShares: number;
   unsoldShares: number;
   paidLocal: number;
+  /** Set only while gameConfig.equityCashoutLimitsStage is on. */
+  cashoutLimits?: LoadedPrimaryPlacementLimits;
 }
 
 export interface PlannedEquityPlacement {
@@ -99,15 +110,48 @@ export interface PlannedEquityPlacement {
   placedShares: number;
   unsoldShares: number;
   plannedGrossLocal: number;
+  /** Set only while gameConfig.equityCashoutLimitsStage is on. */
+  cashoutLimits?: LoadedPrimaryPlacementLimits;
+}
+
+type PrimaryIssuer = Pick<Corporation, "countryId" | "liquidCurrencyCode"> &
+  Partial<Pick<Corporation, "totalShares" | "_id">>;
+
+export interface PrimaryPlacementOptions {
+  /** Turn for the placement window; read from game state when absent. */
+  turn?: number;
+}
+
+/** Price the pool pays per share: the asking price, or the cashout cap when lower. */
+export function placementPricePerShare(
+  placement: Pick<PlannedEquityPlacement, "cashoutLimits">,
+  askingPriceLocal: number
+): number {
+  return placement.cashoutLimits ? placement.cashoutLimits.price : askingPriceLocal;
+}
+
+/** Record a filled placement against the company's rolling window when the limits are on. */
+export async function recordCappedPrimaryPlacement(
+  db: Db,
+  corporationId: Corporation["_id"],
+  placement: Pick<PreparedEquityPlacement, "cashoutLimits" | "paidLocal">
+): Promise<void> {
+  if (!placement.cashoutLimits) return;
+  await recordPrimaryPoolPlacement(
+    db,
+    corporationId,
+    placement.cashoutLimits.turn,
+    placement.paidLocal
+  );
 }
 
 /** Read-only placement quote used when a journal will own the actual debit. */
 export async function planEquityPrimaryPlacement(
   db: Db,
-  corporation: Pick<Corporation, "countryId" | "liquidCurrencyCode"> &
-    Partial<Pick<Corporation, "totalShares">>,
+  corporation: PrimaryIssuer,
   requestedShares: number,
-  pricePerShareLocal: number
+  askingPricePerShareLocal: number,
+  options?: PrimaryPlacementOptions
 ): Promise<PlannedEquityPlacement> {
   const requested = wholeShares(requestedShares);
   const currency = equityPoolCurrency(corporation);
@@ -122,6 +166,20 @@ export async function planEquityPrimaryPlacement(
       plannedGrossLocal: 0,
     };
   }
+  // Equity cashout limits: the pool pays no more than the capped price, and no
+  // more in total over the window than the company's book equity.
+  const cashoutLimits = await loadPrimaryPlacementLimits(
+    db,
+    corporation._id,
+    askingPricePerShareLocal,
+    options?.turn
+  );
+  const pricePerShareLocal = cashoutLimits ? cashoutLimits.price : askingPricePerShareLocal;
+  const pacingCapShares = primaryPlaceCapShares({
+    totalShares: corporation.totalShares ?? 0,
+    pricePerShareLocal,
+    localPerAnchor: await getCorpFxRate(db, corporation),
+  });
   const plan = planEquityUnderwriting({
     requestedShares: requested,
     poolCashLocal: pool.cashLocal,
@@ -131,11 +189,9 @@ export async function planEquityPrimaryPlacement(
         ? pool.targetCashLocal
         : undefined,
     pricePerShareLocal,
-    maxPlacedShares: primaryPlaceCapShares({
-      totalShares: corporation.totalShares ?? 0,
-      pricePerShareLocal,
-      localPerAnchor: await getCorpFxRate(db, corporation),
-    }),
+    maxPlacedShares: cashoutLimits
+      ? Math.min(pacingCapShares, cashoutLimits.maxShares)
+      : pacingCapShares,
   });
   return {
     poolActive: true,
@@ -144,24 +200,27 @@ export async function planEquityPrimaryPlacement(
     placedShares: plan.placedShares,
     unsoldShares: plan.unsoldShares,
     plannedGrossLocal: Math.round(plan.placedShares * pricePerShareLocal * 100) / 100,
+    ...(cashoutLimits ? { cashoutLimits } : {}),
   };
 }
 
 /** Reserve real pool cash before a caller atomically creates primary float. */
 export async function prepareEquityPrimaryPlacement(
   db: Db,
-  corporation: Pick<Corporation, "countryId" | "liquidCurrencyCode"> &
-    Partial<Pick<Corporation, "totalShares">>,
+  corporation: PrimaryIssuer,
   requestedShares: number,
   pricePerShareLocal: number,
-  now: Date
+  now: Date,
+  options?: PrimaryPlacementOptions
 ): Promise<PreparedEquityPlacement> {
   const plan = await planEquityPrimaryPlacement(
     db,
     corporation,
     requestedShares,
-    pricePerShareLocal
+    pricePerShareLocal,
+    options
   );
+  const limits = plan.cashoutLimits ? { cashoutLimits: plan.cashoutLimits } : {};
   if (!plan.poolActive) {
     return {
       poolActive: false,
@@ -180,6 +239,7 @@ export async function prepareEquityPrimaryPlacement(
       placedShares: 0,
       unsoldShares: plan.requestedShares,
       paidLocal: 0,
+      ...limits,
     };
   }
   const debit = await debitEquityPoolGated(
@@ -196,6 +256,7 @@ export async function prepareEquityPrimaryPlacement(
     placedShares: debit.ok ? plan.placedShares : 0,
     unsoldShares: debit.ok ? plan.unsoldShares : plan.requestedShares,
     paidLocal: debit.ok ? plan.plannedGrossLocal : 0,
+    ...limits,
   };
 }
 
@@ -251,6 +312,14 @@ export async function placePendingShareIssuances(
           .toArray()
       : [];
   const bankById = new Map(banks.map((bank) => [bank._id.toHexString(), bank]));
+  // Equity cashout limits: one batched balance-sheet read for every pending issuer.
+  const cashoutBasisById =
+    corporations.length > 0 && equityCashoutLimitsOn(await loadEquityCashoutLimitsStage(db))
+      ? await loadCorpBookBasisById(
+          db,
+          corporations.map((corporation) => corporation._id)
+        )
+      : null;
 
   for (const corporation of corporations) {
     const pending = corporation.pendingShareIssuance;
@@ -268,8 +337,13 @@ export async function placePendingShareIssuances(
     const quote = await loadEquityQuote(db, corporation);
     // Match the bond pool's unsold-placement rail: deferred primary inventory
     // places at the dealer ask, with the same finite cash and reserve limits.
-    const price = quote.askPriceLocal;
+    const cashoutBasis = cashoutBasisById?.get(corporation._id.toHexString());
+    const cashoutLimits = cashoutBasis
+      ? primaryPlacementLimitsFromBasis(cashoutBasis, quote.askPriceLocal, turn)
+      : null;
+    const price = cashoutLimits ? cashoutLimits.price : quote.askPriceLocal;
     if (!(price > 0)) continue;
+    if (cashoutLimits && cashoutLimits.maxShares <= 0) continue;
     const perTurnCap = Math.max(
       1,
       Math.min(
@@ -278,7 +352,8 @@ export async function placePendingShareIssuances(
           totalShares: corporation.totalShares ?? 0,
           pricePerShareLocal: price,
           localPerAnchor: await getCorpFxRate(db, corporation),
-        })
+        }),
+        cashoutLimits ? cashoutLimits.maxShares : Number.MAX_SAFE_INTEGER
       )
     );
     const pacedShares = Math.min(
@@ -408,6 +483,7 @@ export async function placePendingShareIssuances(
         continue;
       }
     }
+    if (cashoutLimits) await recordPrimaryPoolPlacement(db, corporation._id, turn, paidLocal);
     budget -= paidLocal;
     budgetByCurrency.set(currency, budget);
     result.corporationsTouched++;

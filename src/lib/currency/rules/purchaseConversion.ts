@@ -38,6 +38,53 @@ export function purchaseConversionSpend(
   return Math.min(balance, required + buffer);
 }
 
+/**
+ * What the market maker actually credits for `spend`: the fee rounds to whole
+ * source units, the output rounds to whole target units (floors under fixed
+ * euro settlement, which charges no fee).
+ */
+export function purchaseConversionDelivered(
+  spend: number,
+  crossRate: number,
+  fixedSettlement: boolean,
+  spreadStrength?: number
+): number {
+  if (fixedSettlement) return Math.floor(spend * crossRate);
+  const fee = Math.round(spend * MARKET_MAKER_SPREAD * clampForexSpreadStrength(spreadStrength));
+  return Math.round((spend - fee) * crossRate);
+}
+
+/**
+ * Smallest practical spend whose delivered amount is at least `target` under
+ * the market maker's real rounding. The closed form in purchaseConversionRequired
+ * ignores rounding and can land a few units short, which used to strand a
+ * conversion when the following exact debit failed.
+ */
+export function purchaseConversionMinimumSpend(
+  target: number,
+  crossRate: number,
+  fixedSettlement: boolean,
+  spreadStrength?: number
+): number {
+  if (!Number.isFinite(target) || target <= 0) return 0;
+  if (!Number.isFinite(crossRate) || crossRate <= 0) return Number.NaN;
+  const effectiveRate = fixedSettlement
+    ? crossRate
+    : (1 - MARKET_MAKER_SPREAD * clampForexSpreadStrength(spreadStrength)) * crossRate;
+  let spend =
+    Math.ceil(
+      purchaseConversionRequired(target, crossRate, fixedSettlement, spreadStrength) * 100
+    ) / 100;
+  for (let step = 0; step < 32; step++) {
+    const shortBy =
+      target - purchaseConversionDelivered(spend, crossRate, fixedSettlement, spreadStrength);
+    if (shortBy <= 0) return spend;
+    spend = Math.ceil((spend + Math.max(shortBy / effectiveRate, 0.01)) * 100) / 100;
+  }
+  // Unreachable for finite inputs; fall back to the generous wallet buffer.
+  return spend + Math.max(1, Math.ceil(1 / crossRate));
+}
+
 export function purchaseSpreadRate(
   from: CurrencyCode,
   to: CurrencyCode,

@@ -21,6 +21,7 @@ import type {
   StatePartyOrg,
   CorporateSector,
   ElectionCandidate,
+  GameState,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -94,6 +95,12 @@ import {
   computeSectorConcentration,
 } from "@/lib/turn/npp/rules/sectorConcentration";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import {
+  foundingLanePeakShortage,
+  foundingRecipeFor,
+  type FoundingRecipeWorld,
+} from "@/lib/turn/npp/foundingRecipeChoice";
 import { resolveShareExecutionPrice } from "@/lib/corporations/marketExecution";
 import { deriveCeoArchetype } from "@/lib/turn/ceoArchetype";
 
@@ -1831,6 +1838,31 @@ export async function foundNppCorporationsSurplus(
   const chanceMultiplier = foundingChanceMultiplier(shortagePressure);
   let founded = 0;
   const { priceRatioOf } = buildNppPriceSignals(new Map(priceDocs.map((p) => [p.commodity, p])));
+  // Funded producer market: founding picks the recipe whose outputs are short,
+  // and a lane's shortage counts every recipe it can run. Legacy worlds keep
+  // the standard recipe and the static sector table.
+  const world = await db.collection<GameState>("gameState").findOne(
+    { _id: "current" },
+    {
+      projection: {
+        worldEpochId: 1,
+        producerOpening: 1,
+        sectorTechTreesEnabled: 1,
+        currentYear: 1,
+        startingYear: 1,
+        currentTurn: 1,
+      },
+    }
+  );
+  const fundedWorld =
+    world?.producerOpening != null && world.producerOpening.worldEpoch === world.worldEpochId;
+  const recipeWorld: FoundingRecipeWorld = {
+    currentYear:
+      world?.currentYear ??
+      (world?.startingYear ?? STARTING_YEAR) +
+        Math.floor(((world?.currentTurn ?? currentTurn) - 1) / TURNS_PER_YEAR),
+    techTreesEnabled: world?.sectorTechTreesEnabled === true,
+  };
   // Group canonical persisted identities by the operating lane used by founding.
   const operatingLaneExpression = (typeField: string) => ({
     $switch: {
@@ -1900,10 +1932,19 @@ export async function foundNppCorporationsSurplus(
       priceRatioOf,
       existingCount,
       challengerBoostOf: (type) => challengerBoost(concentrationBySector.get(type)),
+      ...(fundedWorld
+        ? {
+            peakShortageOf: (type: OperatingSectorType) =>
+              foundingLanePeakShortage(type, homeCountryForSector, priceRatioOf, recipeWorld),
+          }
+        : {}),
     });
     const sectorType = OPERATING_SECTOR_TYPES[
       pickWeightedIndex(weights, rng())
     ] as OperatingSectorType;
+    const initialStrategyId = fundedWorld
+      ? foundingRecipeFor(sectorType, homeCountryForSector, priceRatioOf, recipeWorld)
+      : undefined;
     const cell = `${homeCountryForSector}:${sectorType}`;
     existingByCell.set(cell, (existingByCell.get(cell) ?? 0) + 1);
 
@@ -1917,7 +1958,8 @@ export async function foundNppCorporationsSurplus(
       currentTurn,
       homeRate,
       blockedSet,
-      preset
+      preset,
+      initialStrategyId
     );
     if (outcome.ok) founded++;
   }

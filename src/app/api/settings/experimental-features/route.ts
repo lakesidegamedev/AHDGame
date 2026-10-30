@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { experimentalFeaturesSchema } from "@/lib/api/schemas/settings";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
+import { navCustomization } from "@/lib/navigation/navCustomization";
 import type { User } from "@/lib/db/types";
 
 // PATCH /api/settings/experimental-features: Opts the authenticated user in or out of
@@ -30,7 +31,13 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { experimentalFeatures, askDrawerSide, desktopNavigationLayout } = parsed.data;
+    const {
+      experimentalFeatures,
+      askDrawerSide,
+      askDrawerHidden,
+      desktopNavigationLayout,
+      navCustomization: customization,
+    } = parsed.data;
 
     const db = await getDb();
     await db.collection<User>("users").updateOne(
@@ -39,7 +46,11 @@ export async function PATCH(request: Request) {
         $set: {
           ...(experimentalFeatures !== undefined ? { experimentalFeatures } : {}),
           ...(askDrawerSide !== undefined ? { askDrawerSide } : {}),
+          ...(askDrawerHidden !== undefined ? { askDrawerHidden } : {}),
           ...(desktopNavigationLayout !== undefined ? { desktopNavigationLayout } : {}),
+          ...(customization !== undefined
+            ? { navCustomization: navCustomization(customization) }
+            : {}),
           updatedAt: new Date(),
         },
       }

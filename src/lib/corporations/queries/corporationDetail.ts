@@ -316,6 +316,7 @@ export async function loadCorporationDetailView(args: {
       rdBudget: corporation.rdBudget ?? 0,
       rdScore: Math.round(income.currentRdScore * 1000) / 1000,
       rdScoreNetChange: Math.round(income.rdScoreNetChange * 1000) / 1000,
+      rdDevelopmentProjects: income.rdDevelopmentProjects,
       marketCapitalization: Math.round(income.marketCapitalization),
       logoUrl: corporation.logoUrl,
       headerImageUrl: corporation.headerImageUrl,

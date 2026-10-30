@@ -1,4 +1,5 @@
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { navCustomization } from "@/lib/navigation/navCustomization";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { NextResponse } from "next/server";
@@ -220,6 +221,8 @@ export async function GET() {
             experimentalFeatures: 1,
             desktopNavigationLayout: 1,
             askDrawerSide: 1,
+            askDrawerHidden: 1,
+            navCustomization: 1,
             patreonTier: 1,
             patreonExpiresAt: 1,
             patreonProfileBorder: 1,
@@ -735,6 +738,8 @@ export async function GET() {
           experimentalFeatures: user.experimentalFeatures === true,
           desktopNavigationLayout: desktopNavigationLayout(user.desktopNavigationLayout),
           askDrawerSide: user.askDrawerSide === "left" ? "left" : "right",
+          askDrawerHidden: user.askDrawerHidden === true,
+          navCustomization: navCustomization(user.navCustomization),
           patreonTier: user.patreonTier ?? null,
           isPatronActive: isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null),
           sandboxTesterAccess: sandboxTesterAccessEnabled && !!user.sandboxAccessGrantedAt,
