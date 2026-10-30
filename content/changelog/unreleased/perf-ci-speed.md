@@ -19,9 +19,10 @@ areas: [backend]
 - The 2.2 GB Turbopack compiler cache is saved only by development pushes.
   Pull requests restore it without saving a copy each, which had pushed the
   repository over its cache limit.
-- The unit suite runs in six shards instead of five. The bootstrap fixture and
-  the federation transactions share one `integration` job, so a run still
-  uses the same number of runners.
+- The unit suite runs in six shards instead of five. The federation
+  transactions, the bootstrap fixture and the economy reset fixture share one
+  `integration` job, so a run still uses the same number of runners and no
+  shard is held up by a single long file.
 - The architecture audit runs beside lint, format and typecheck in the static
   job instead of before them.
 - A development to staging promotion waits for development's push run on the

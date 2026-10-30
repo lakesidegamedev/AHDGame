@@ -274,8 +274,8 @@ jobs:
       # Use job-total rather than a fixed divisor, so adding or removing a shard in
       # the matrix above cannot silently desync the divisor and drop test files.
       - name: Unit tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
-        # The full-world bootstrap fixture runs in the integration job instead.
-        run: npm run test:ci -- --shard=${{ matrix.shard }}/${{ strategy.job-total }} --exclude=src/lib/admin/seed/presetBootstrap.integration.test.ts
+        # The two long fixtures run in the integration job instead.
+        run: npm run test:ci -- --shard=${{ matrix.shard }}/${{ strategy.job-total }} --exclude=src/lib/admin/seed/presetBootstrap.integration.test.ts --exclude=src/lib/admin/economyReset/economyReset.integration.test.ts
         env:
           NODE_OPTIONS: --max-old-space-size=6144
 
@@ -437,11 +437,12 @@ jobs:
         run: npx vitest run src/lib/turn/federationSettlements.mongo.integration.test.ts src/lib/turn/democratic1991Bills.mongo.integration.test.ts src/lib/countries/ru/dumaElections.mongo.integration.test.ts src/lib/countries/ru/assemblySeating.mongo.integration.test.ts src/lib/countries/ru/assemblyVacancySeating.mongo.integration.test.ts src/lib/countries/ru/assemblyCampaigns.mongo.integration.test.ts src/lib/countries/ru/dumaConvocations.mongo.integration.test.ts src/lib/countries/ru/dumaElectoralProposals1995.mongo.integration.test.ts scripts/sim/experimentReportSummary.mongo.integration.test.ts src/lib/countries/ru/councilComposition.mongo.integration.test.ts src/lib/countries/bg/foundingAssembly1990.mongo.integration.test.ts src/lib/countries/bg/ordinaryAssemblySeating.mongo.integration.test.ts src/lib/countries/hu/assembly1991.mongo.integration.test.ts src/lib/countries/hu/electoralProposals1994.mongo.integration.test.ts src/lib/countries/hu/electoralProposals2011.mongo.integration.test.ts src/lib/countries/ro/electoralProposals1992.mongo.integration.test.ts src/lib/countries/bg/constitutionalProposals1991.mongo.integration.test.ts src/lib/countries/bg/constitutionalInitiative1991.mongo.integration.test.ts src/lib/countries/bg/listVacancies1991.mongo.integration.test.ts src/lib/countries/bg/constituencyByElections1991.mongo.integration.test.ts src/lib/currency/openingPolicyRates.mongo.integration.test.ts src/lib/currency/nativeGdpBasis1991.mongo.integration.test.ts src/lib/admin/seed/backfillMissingRegionLeans.mongo.integration.test.ts src/lib/charters/draftCharter.emptyStart.mongo.integration.test.ts src/lib/npp/mortality.nativeSlate.mongo.integration.test.ts src/lib/turn/bgAssemblyTransition.mongo.test.ts src/lib/admin/seed/indexes/boundedNpcCandidates.mongo.integration.test.ts src/lib/casino/casino.mongo.integration.test.ts src/app/api/discord-bot/casino/casinoRoutes.mongo.integration.test.ts src/app/api/discord-bot/tickets/intake.mongo.integration.test.ts src/lib/contests/history.mongo.integration.test.ts --maxWorkers=1
         env:
           FEDERATION_TEST_MONGO_URI: mongodb://127.0.0.1:27991/?replicaSet=federationQualification&directConnection=true
-      # The fixture alone took 320 s in a 583 s test shard, so it runs here
-      # rather than in the sharded suite.
-      - name: Qualify every shipping bootstrap preset
+      # Two single-file fixtures that each take 3 to 5 minutes: alone they set
+      # the length of whichever test shard drew them (economy reset took 220 s
+      # of a 439 s shard on 2026-10-30). Here they run side by side.
+      - name: Qualify bootstrap presets and the economy reset
         if: ${{ !cancelled() }}
-        run: npx vitest run src/lib/admin/seed/presetBootstrap.integration.test.ts --maxWorkers=1
+        run: npx vitest run src/lib/admin/seed/presetBootstrap.integration.test.ts src/lib/admin/economyReset/economyReset.integration.test.ts --maxWorkers=2
         env:
           NODE_OPTIONS: --max-old-space-size=6144
       - name: Stop isolated Mongo
