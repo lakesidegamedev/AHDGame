@@ -66,6 +66,8 @@ export interface SectorRowProps {
   mediaOperatingModelsEnabled?: boolean;
   /** A rival viewer may plan a split of these plants on the sector page. */
   canSplitRivalPlants?: boolean;
+  /** May change this sector's strategy; defaults to isCeo (the controlling parent's CEO also may). */
+  canChangeStrategy?: boolean;
 }
 
 export function SectorRow({
@@ -91,6 +93,7 @@ export function SectorRow({
   plantsMode = false,
   mediaOperatingModelsEnabled = false,
   canSplitRivalPlants = false,
+  canChangeStrategy = isCeo,
 }: SectorRowProps) {
   const [pendingChange, setPendingChange] = useState<{
     sectorId: string;
@@ -291,7 +294,7 @@ export function SectorRow({
   );
 
   const strategySelect = (isMobile = false) =>
-    isCeo && onStrategyChange && strategies ? (
+    canChangeStrategy && onStrategyChange && strategies ? (
       <select
         value={pendingChange?.sectorId === sector._id ? pendingChange.targetStrategyId : currentId}
         onChange={(e) => {
@@ -341,7 +344,7 @@ export function SectorRow({
       cooldownRemaining={cooldownRemaining}
       isTransitioning={isTransitioning}
       isReversing={isReversing}
-      isCeo={isCeo}
+      isCeo={canChangeStrategy}
       onCancelTransition={onCancelTransition}
       cancelCostDisplay={cancelCostDisplay}
       isCancelPending={cancelPending}

@@ -11,6 +11,7 @@ import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import type { CommodityPriceRatioFn } from "@/lib/turn/npp/marketSignals";
 import { isObsoleteNppParentStrategy } from "./rules/obsoleteStrategyRepair";
 import { strategyPriceScore } from "./rules/foundingRecipe";
+import { isParentDirectedStrategyProtected } from "./rules/parentDirectedStrategy";
 
 /** Effective profit margin at or below which a sector is a shift candidate. */
 export const STRATEGY_SHIFT_MARGIN_TRIGGER = -3;
@@ -62,6 +63,8 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
       continue;
     }
     if (sector.transitionFromStrategyId) continue;
+    // A controlling parent's CEO chose this strategy; the AI leaves it alone.
+    if (isParentDirectedStrategyProtected(sector, ctx.turn)) continue;
 
     const operatingType = getOperatingSectorType(
       sector.sectorType,
