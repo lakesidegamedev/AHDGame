@@ -132,7 +132,7 @@ Each state's approval scales the vote pool in every election there:
 approval-vote-pool-multiplier
 \`\`\`
 
-This applies in [General Elections](/wiki/general-elections) races, and [Election Mechanics](/wiki/election-mechanics) scales the pool for the governing party. Regional and Westminster approval also push independence and reunification desire toward the government's stance ([Independence and Reunification Referendums](/wiki/referendums)).
+This applies in [General Elections](/wiki/general-elections) races, and [Election Mechanics](/wiki/election-mechanics) scales the pool for the governing party. Regional approval also pushes independence and reunification desire toward the First Minister's stance. Low Westminster approval raises separation desire and high Westminster approval lowers it, independently of Westminster's stance ([Independence and Reunification Referendums](/wiki/referendums)).
 
 Low approval does not trigger a snap election and does not remove the head of government. In the UK, approval below 50 does make NPP ministers more likely to resign and erodes the government's confidence gauge. Snap elections in parliamentary countries (UK, Japan, Germany) come from only two things: the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, or no Prime Minister being appointed within 96 turns of the government entering pending status. See [Snap Elections](/wiki/snap-elections).
 
