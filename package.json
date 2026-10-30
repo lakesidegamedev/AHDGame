@@ -9,6 +9,8 @@
     "dev": "next dev",
     "design:build": "node scripts/build-design-md.mjs",
     "design:check": "node scripts/build-design-md.mjs --check",
+    "export:lore-corpus": "tsx scripts/exportLoreCorpus.ts",
+    "export:seed-audit-reference": "tsx scripts/exportSeedAuditReference.ts",
     "build": "node scripts/build-with-cache-recovery.mjs && tsx scripts/postbuild-quality.ts",
     "start": "next start",
     "start:turn-worker": "NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=3072 --max-semi-space-size=64\" tsx scripts/turn-worker.ts",
