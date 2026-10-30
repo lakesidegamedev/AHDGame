@@ -288,7 +288,7 @@ export async function processNppCorporationDecisions(
   const { unownedByCountry, unownedIndex } = indexOpenUnownedSectors(openUnowned);
 
   // NPPs cannot auto-expand into state-controlled buckets; players still may.
-  const [nationalCorpIds, globalSectors] = await Promise.all([
+  const [nationalCorpIds, globalSectors, strategyGate] = await Promise.all([
     loadNationalCorpIds(db),
     db
       .collection<CorporateSector>("corporateSectors")
@@ -311,21 +311,50 @@ export async function processNppCorporationDecisions(
             capitalStock: 1,
             // Physical saturation per cell: see rules/marketSaturation.
             demandThrottleFactor: 1,
+            // Funded worlds read sell-through from the receipt instead.
+            "producerSettlement.worldEpoch": 1,
+            "producerSettlement.offeredUnits": 1,
+            "producerSettlement.soldUnits": 1,
           },
         }
       )
       .toArray(),
+    // Cohort-wide kill switch, read once. Absent means ON.
+    db.collection<GameState>("gameState").findOne(
+      { _id: "current" },
+      {
+        projection: {
+          nppCorpStrategyEnabled: 1,
+          frontierEntryExperimentEnabled: 1,
+          subsidiaryCorporationsEnabled: 1,
+          worldEpochId: 1,
+          producerOpening: 1,
+          currentYear: 1,
+          startingYear: 1,
+          currentTurn: 1,
+        },
+      }
+    ),
   ]);
+  // Funded-market transition window, for AI use of the free conversion.
+  const transitionFirstFundedTurn =
+    strategyGate?.producerOpening &&
+    strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
+      ? strategyGate.producerOpening.turn + 1
+      : undefined;
+  // The funded world's epoch: NPP demand readings use funded sell-through there.
+  const fundedWorldEpoch =
+    transitionFirstFundedTurn != null ? (strategyGate?.worldEpochId ?? undefined) : undefined;
   const stateControlled = computeStateControlledBuckets(globalSectors, nationalCorpIds);
   placementSignals.activeMarketBuckets = buildActiveMarketBuckets(globalSectors);
-  const saturationIndex = buildMarketSaturationIndex(globalSectors);
+  const saturationIndex = buildMarketSaturationIndex(globalSectors, fundedWorldEpoch);
   // The index is a snapshot of this turn's sectors and nothing in the pass
   // writes it, so a cell's saturation is one number for the whole cohort. The
   // entry scan asks for it on every candidate of every corporation. The
   // `excluding` form is a single plant's own view and stays uncached.
   const saturationByCell = new Map<string, number | null>();
   placementSignals.marketSaturationOf = (cell, excluding) => {
-    if (excluding) return marketSaturationOf(saturationIndex, cell, excluding);
+    if (excluding) return marketSaturationOf(saturationIndex, cell, excluding, fundedWorldEpoch);
     const key = bucketKey(
       cell.stateId,
       cell.sectorType,
@@ -529,28 +558,6 @@ export async function processNppCorporationDecisions(
     preloaded
   );
 
-  // Cohort-wide kill switch, read once. Absent means ON.
-  const strategyGate = await db.collection<GameState>("gameState").findOne(
-    { _id: "current" },
-    {
-      projection: {
-        nppCorpStrategyEnabled: 1,
-        frontierEntryExperimentEnabled: 1,
-        subsidiaryCorporationsEnabled: 1,
-        worldEpochId: 1,
-        producerOpening: 1,
-        currentYear: 1,
-        startingYear: 1,
-        currentTurn: 1,
-      },
-    }
-  );
-  // Funded-market transition window, for AI use of the free conversion.
-  const transitionFirstFundedTurn =
-    strategyGate?.producerOpening &&
-    strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
-      ? strategyGate.producerOpening.turn + 1
-      : undefined;
   // Funded market: AI entrants build the recipe whose outputs are short. The
   // era gate needs the in-game year whether or not tech trees are on.
   const fundedRecipeWorld: FoundingRecipeWorld | undefined =
@@ -700,6 +707,7 @@ export async function processNppCorporationDecisions(
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,
       fundedRecipeWorld,
+      fundedWorldEpoch,
       conversionBudgetOf:
         conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
       reinvestPoolFor,

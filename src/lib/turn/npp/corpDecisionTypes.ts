@@ -85,6 +85,12 @@ export interface NppCorpDecisionContext {
    * (rules/foundingRecipe). Absent keeps entrants on the standard recipe.
    */
   fundedRecipeWorld?: import("./foundingRecipeChoice").FoundingRecipeWorld;
+  /**
+   * World epoch when the funded producer market runs; absent on a legacy world.
+   * Growth and mothball decisions read funded sell-through under it
+   * (rules/fundedSellThrough).
+   */
+  fundedWorldEpoch?: string;
   /** Per-country allowance of capacity that may start converting this turn; absent = unpaced. */
   conversionBudgetOf?: (
     countryId: string

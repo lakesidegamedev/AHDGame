@@ -25,6 +25,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { COMMODITY_BASE_PRICES, commodityMixWeight } from "@/lib/constants/commodities";
+import { nppDemandThrottle, type FundedReceiptLike } from "./fundedSellThrough";
 
 /**
  * A cell has room for another plant only when its plants run, capacity-weighted,
@@ -47,6 +48,8 @@ export interface SaturationSectorLike {
   capitalStock?: number | null;
   demandThrottleFactor?: number | null;
   mothballed?: boolean | null;
+  /** Funded settlement receipt; a funded world reads sell-through from it. */
+  producerSettlement?: FundedReceiptLike | null;
 }
 
 interface CellTally {
@@ -60,23 +63,34 @@ export type MarketSaturationIndex = ReadonlyMap<string, CellTally>;
  * One sector's contribution to its cell, or null when it carries no reading.
  * Shared by the index and by `excluding` so the two can never disagree.
  */
-function contributionOf(s: SaturationSectorLike): { capacity: number; run: number } | null {
+function contributionOf(
+  s: SaturationSectorLike,
+  fundedWorldEpoch: string | null | undefined
+): { capacity: number; run: number } | null {
   const capacity = s.capitalStock;
   if (typeof capacity !== "number" || !Number.isFinite(capacity) || capacity <= 0) return null;
   if (s.mothballed === true) return { capacity, run: 0 };
-  if (typeof s.demandThrottleFactor === "number" && Number.isFinite(s.demandThrottleFactor)) {
-    return { capacity, run: capacity * Math.max(0, Math.min(1, s.demandThrottleFactor)) };
+  // Funded worlds read sell-through, not sold / capacity: an input-starved
+  // plant that sells all it makes is not evidence of a glut (rules/fundedSellThrough).
+  const throttle = nppDemandThrottle(s, fundedWorldEpoch);
+  if (throttle != null) {
+    return { capacity, run: capacity * Math.max(0, Math.min(1, throttle)) };
   }
   // Mid-build, legacy or not yet cleared: no reading, no evidence.
   return null;
 }
 
+/**
+ * `fundedWorldEpoch` is the world epoch when the funded producer market runs,
+ * absent on a legacy world.
+ */
 export function buildMarketSaturationIndex(
-  sectors: readonly SaturationSectorLike[]
+  sectors: readonly SaturationSectorLike[],
+  fundedWorldEpoch?: string | null
 ): MarketSaturationIndex {
   const index = new Map<string, CellTally>();
   for (const s of sectors) {
-    const c = contributionOf(s);
+    const c = contributionOf(s, fundedWorldEpoch);
     if (!c) continue;
     const key = bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
     const tally = index.get(key) ?? { capacity: 0, runCapacity: 0 };
@@ -101,13 +115,14 @@ export function marketSaturationOf(
     industryModel?: string | null;
     mediaDiscriminator?: string | null;
   },
-  excluding?: SaturationSectorLike
+  excluding?: SaturationSectorLike,
+  fundedWorldEpoch?: string | null
 ): number | null {
   const tally = index.get(
     bucketKey(cell.stateId, cell.sectorType, cell.industryModel, cell.mediaDiscriminator)
   );
   if (!tally) return null;
-  const own = excluding ? contributionOf(excluding) : null;
+  const own = excluding ? contributionOf(excluding, fundedWorldEpoch) : null;
   const capacity = tally.capacity - (own?.capacity ?? 0);
   const run = tally.runCapacity - (own?.run ?? 0);
   if (!(capacity > 1e-9)) return null;
@@ -129,11 +144,15 @@ export const NPP_FLOOR_MOTHBALL_THROTTLE = 0.25;
  */
 export const NPP_FLOOR_MOTHBALL_TURNS = 12;
 
-export function isStuckAtThrottleFloor(sector: {
-  demandThrottleFactor?: number | null;
-  demandIdleTurns?: number | null;
-}): boolean {
-  const t = sector.demandThrottleFactor;
+export function isStuckAtThrottleFloor(
+  sector: {
+    demandThrottleFactor?: number | null;
+    demandIdleTurns?: number | null;
+    producerSettlement?: FundedReceiptLike | null;
+  },
+  fundedWorldEpoch?: string | null
+): boolean {
+  const t = nppDemandThrottle(sector, fundedWorldEpoch);
   const streak = sector.demandIdleTurns;
   return (
     typeof t === "number" &&
