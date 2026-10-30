@@ -1,4 +1,5 @@
 import { DESKTOP_NAVIGATION_LAYOUTS } from "@/lib/navigation/desktopNavigationLayout";
+import { MOBILE_NAVIGATION_LAYOUTS } from "@/lib/navigation/mobileNavigationLayout";
 import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
@@ -152,6 +153,7 @@ export const experimentalFeaturesSchema = z
   .object({
     experimentalFeatures: z.boolean().optional(),
     desktopNavigationLayout: z.enum(DESKTOP_NAVIGATION_LAYOUTS).optional(),
+    mobileNavigationLayout: z.enum(MOBILE_NAVIGATION_LAYOUTS).optional(),
     askDrawerSide: z.enum(["left", "right"]).optional(),
     askDrawerHidden: z.boolean().optional(),
     navCustomization: z
@@ -172,7 +174,8 @@ export const experimentalFeaturesSchema = z
       v.askDrawerSide !== undefined ||
       v.askDrawerHidden !== undefined ||
       v.navCustomization !== undefined ||
-      v.desktopNavigationLayout !== undefined,
+      v.desktopNavigationLayout !== undefined ||
+      v.mobileNavigationLayout !== undefined,
     {
       message: "Nothing to update",
     }

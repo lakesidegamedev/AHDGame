@@ -227,7 +227,7 @@ export function AskDrawer() {
             title="Ask Keir about this page"
             data-feedback-ignore="true"
             data-ask-fab
-            className="fixed bottom-[calc(max(var(--status-bar-height,0px),env(safe-area-inset-bottom))+0.75rem)] right-4 z-[44] flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/50 bg-card shadow-modal focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
+            className="fixed bottom-[calc(max(var(--status-bar-height,0px),var(--mobile-dock-height,0px),env(safe-area-inset-bottom))+0.75rem)] right-4 z-[44] flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/50 bg-card shadow-modal focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
           >
             <KeirAvatar mood="idle" size={52} />
           </button>

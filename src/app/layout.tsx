@@ -456,7 +456,7 @@ export default async function RootLayout({
                             horizontal clipping without creating a scroll container. */}
                           <main
                             id="main-content"
-                            className="min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px))]"
+                            className="min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))]"
                             tabIndex={-1}
                           >
                             <SiteTrafficTracker gameVersion={world.version} />

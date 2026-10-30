@@ -1,4 +1,5 @@
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { navCustomization } from "@/lib/navigation/navCustomization";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isSingleplayer } from "@/lib/singleplayer";
@@ -220,6 +221,7 @@ export async function GET() {
             enableExperimentalUI: 1,
             experimentalFeatures: 1,
             desktopNavigationLayout: 1,
+            mobileNavigationLayout: 1,
             askDrawerSide: 1,
             askDrawerHidden: 1,
             navCustomization: 1,
@@ -737,6 +739,7 @@ export async function GET() {
           enableExperimentalUI: user.enableExperimentalUI !== false,
           experimentalFeatures: user.experimentalFeatures === true,
           desktopNavigationLayout: desktopNavigationLayout(user.desktopNavigationLayout),
+          mobileNavigationLayout: mobileNavigationLayout(user.mobileNavigationLayout),
           askDrawerSide: user.askDrawerSide === "left" ? "left" : "right",
           askDrawerHidden: user.askDrawerHidden === true,
           navCustomization: navCustomization(user.navCustomization),

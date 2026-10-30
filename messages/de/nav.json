@@ -260,6 +260,18 @@
       "done": "Fertig",
       "saveError": "Navigation konnte nicht gespeichert werden. Bitte erneut versuchen."
     },
+    "dock": {
+      "label": "Handy-Navigation",
+      "company": "Unternehmen",
+      "market": "Markt",
+      "more": "Mehr",
+      "everything": "Alles",
+      "you": "Du",
+      "portfolio": "Portfolio",
+      "whatsNew": "Neuigkeiten",
+      "switchCountry": "Anderes Land ansehen",
+      "close": "Schließen"
+    },
     "desktop": {
       "editNavigation": "Navigation bearbeiten",
       "pin": "An obere Leiste heften",
