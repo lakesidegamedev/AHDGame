@@ -10,9 +10,9 @@ Available in current worlds for the US and for every country that has a census m
 
 ## What the panel shows
 
-The voters in a state are built from **cells**: every combination of the census dimensions available for that country. In the US these are race, age, education and wealth. Other countries use their own census dimensions, such as ethnicity, income and how urban an area is. Census totals and era tables from [Demographics](/wiki/demographics) set each cell's size and turnout. The cells are scaled so they add up to each state's real census totals. Tiny cells below 0.25% of the electorate are dropped.
+The voters in a state are built from **cells**: every combination of the census dimensions available for that country. In the US these are race, age, education and wealth. Other countries use their own census dimensions, such as ethnicity, income and how urban an area is. Census totals and era tables from [Demographics](/wiki/demographics) set each cell's size and turnout. The cells are scaled so they add up to each state's real census totals. Tiny cells are dropped: below 0.1% of the electorate, or below 0.25% when the panel reads a live campaign's electorate.
 
-Each cell has its own share of the electorate, its own turnout, and its own read on you and your opponents. The same vote math that decides the election runs on these cells, so the poll and the real count cannot disagree about who the electorate is.
+Each cell has its own share of the electorate, its own turnout, and its own read on you and your opponents. The cells come from the same census and era tables the vote count uses, so the poll and the real count cannot disagree about who the electorate is. Your standing in each cell is the poll's own projection, not the final count.
 
 Pick a dimension tab, for example age, and you see its buckets (young, middle, mature, senior). For each bucket:
 
@@ -32,7 +32,7 @@ A high turnout in a segment multiplies its weight. A segment with a modest share
 | US baseline turnout, age | Young 38%, middle 56%, mature 66%, senior 76% |
 | US baseline turnout, education | No college 52%, college 66%, graduate 74% |
 | US baseline turnout, wealth | Low 44%, middle 60%, high 74% |
-| Smallest cell kept | 0.25% of the electorate |
+| Smallest cell kept | 0.1% of the electorate (0.25% during a campaign) |
 | Extra cost over a normal poll | None |
 
 Baseline turnouts are the modern US starting values. In an earlier era, the turnout tables change with the year, and your [canvassing](/wiki/canvassing) and get-out-the-vote work then move them.

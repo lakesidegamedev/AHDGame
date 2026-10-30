@@ -6,7 +6,17 @@ Fully command economies run a passive monobank instead and the automatic rate se
 
 ## Getting the chair
 
-Outside the US, when a term ends a new chair is drawn from characters nominated by the country's executives. Lobbying shifts the odds: weight is 1 + lobbying / 500,000, so spending 500,000 doubles your weight. The chosen player has **24 turns to accept**. If you decline, or let the clock run out, the draw repeats without you for that cycle. If no one is available, the seat is left vacant or an autonomous caretaker is seated. The caretaker sets the rate by rule, weighing measured slack (the output gap and unemployment), until a player takes over. A chair who moves country resigns the post (see [Relocation](/wiki/relocation)). In the US the seat is a Board seat filled by presidential nomination and Senate vote (see [Confirmation Process](/wiki/confirmation-process)).
+**Nominations.** The holder of the country's executive office (President, Prime Minister or equivalent) nominates, at 1 action each, up to 3 player characters from their own country. Nominations open in the final 48 turns of a chair's term, whenever the seat is vacant, and at any time while an autonomous caretaker holds it. The head of government cannot be nominated, and neither can a cabinet member: leave the cabinet first. On a bank shared by several countries, each member's head of government nominates from their own country into the one pool.
+
+**The draw.** The draw runs when a term ends, when the seat is vacated (resignation, dismissal or removal), and for a bank that has never had a chair. It picks one nominee at random. Lobbying shifts the odds: weight is 1 + lobbying / 500,000, so 500,000 of lobbying doubles a nominee's weight. Any character in the bank's country can lobby, but only for someone already nominated, and pays in the bank's currency. Sitting heads of government, their deputies, ceremonial heads of state and cabinet members are skipped by the draw. A chair's acceptance clears every nomination and all lobbying.
+
+**Accepting.** The chosen player has **24 turns to accept**, and cannot accept while holding an executive office or a cabinet seat. If you decline, or let the clock run out, the draw repeats without you for that cycle. The 192-turn term starts when you accept.
+
+**No nominee.** If no one is eligible, the seat is left vacant or, when NPP autonomy is on, an autonomous caretaker is seated for a 192-turn term. The caretaker serves that whole term: nominations stay open, but the draw that can replace it runs only when the term ends. The caretaker sets the rate by rule, weighing measured slack (the output gap and unemployment), until a player takes over. The US Fed chair never gets a caretaker; it stays vacant until a nomination succeeds.
+
+**Leaving.** A chair can resign, and the head of government can dismiss a player chair (see below). A chair who takes executive office (head of government, deputy or ceremonial head of state) is removed on the next turn. A chair who moves country resigns the post (see [Relocation](/wiki/relocation)). Each of these opens the draw.
+
+In the US the chair is seat 1 of the FOMC board. The President fills it either by nominating to that seat for a Senate vote (see [FOMC / Rate-Setting Board](/wiki/fomc) and [Confirmation Process](/wiki/confirmation-process)) or, when the seat falls vacant, through the draw above.
 
 Is it worth it? You gain +3 actions and the influence, and you risk losing 1.5 actions per turn once scrutiny passes 25, so the net is +1.5. Position bonuses do not stack: your national influence is the highest tier you hold, while the +3 actions stack with any other office.
 
@@ -27,7 +37,7 @@ Each turn the game scores the chair, and each time the chair acts the game check
 | Scrutiny gain | Capped at 8 per turn. Decays 5% per turn |
 | Relief for holding a correct stance | 6 scrutiny after 3 turns in a row |
 | Price of government interference | 12 for a rate override, 18 for dismissal, 22 for a statute |
-| Scrutiny the next chair inherits | 75% |
+| Scrutiny kept through a handover | x0.75 when a pick is proposed and x0.75 again when it is accepted (about 56%). x0.75 if the seat is left vacant |
 | Currency regime change | Once per 48 turns |
 | FX band: narrowing or cancelling | 6-turn cooldown. Failed defence adds 15 scrutiny |
 | Reserve requirement | 5% to 95%. Default 10% (modern worlds) or 20% (historical) |
@@ -45,7 +55,7 @@ central-bank
 
 *The Federal Reserve page. The header shows the prime rate, inflation, savings flow, and reserves. The rate corridor shows the prime rate against the inflation band, and the left panel shows the Chair's term and public scrutiny.*
 
-If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank, or a command economy.
+If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank, a command economy, or (at the US Fed) a seated board, since only the FOMC can change the rate while governors sit.
 
 Rules of thumb that hold up:
 
@@ -90,7 +100,9 @@ At 40 scrutiny with inflation on target and growth at 2%, three correct turns go
 
 A government can take control of its bank. The price is paid in scrutiny by the **institution**, not the person: 12 to set the rate directly (only while the bank is government-controlled), 18 to dismiss the sitting chair, 22 to revoke independence by statute. Granting independence refunds nothing, so repeated grants and revocations cannot launder the score.
 
-A chair change at term end or by resignation keeps 75% of the score. A dismissal keeps all of it and adds 18, so firing a chair is always worse than waiting. The Bank of England had no operational independence until 1997, so a British world that starts earlier opens with the Treasury setting Bank Rate, and Parliament must legislate the change. Time passing does not do it. A bank shared across countries, like the European Central Bank, cannot have its independence legislated by one member.
+Changing the person does not reset the score. In a handover through the draw, scrutiny is multiplied by 0.75 when a pick is proposed and again when the pick accepts, so about 56% survives; a seat left vacant for lack of nominees also takes x0.75. Resigning cuts nothing by itself. A dismissal adds 18 before the replacement draw starts, so firing a chair always costs more than waiting the term out. Only a player chair can be dismissed.
+
+While a bank is government-controlled the chair is still chosen the usual way, but only the head of government or the finance minister can move the rate. The Bank of England had no operational independence until 1997, so a British world that starts earlier opens with the Treasury setting Bank Rate, and Parliament must legislate the change. Time passing does not do it. Granting independence gives the Bank of England back to its single governor; only the US bank gets a rate committee. A bank shared across countries, like the European Central Bank, cannot have its independence legislated by one member, and a euro member's own independence law leaves rate-setting with the euro authority.
 
 ## Money operations and bank reserves
 
@@ -100,7 +112,7 @@ A chair change at term end or by resignation keeps 75% of the score. A dismissal
 
 **Reserve requirement (Reserves tab).** Where [Private Banking](/wiki/private-banking) is open, the chair sets what share of deposits banks must hold back, from 5% to 95%. A bank's lendable room is deposits x (1 - requirement) minus loans. Raise it and banks at the old limit are frozen out of new lending. Lower it and room opens at once.
 
-**Deposit insurance fund (Insurance tab).** The fund is paid for by banks, not by the state, and bank premiums into it come through Private Banking. Each bank pays 0.4% a year on insured deposits, split across the turns, scaled by 0.5x to 3x depending on how thin its reserves are against the requirement. Deposits are insured up to a cap anchored at 5,000,000 in modern reference terms and scaled per currency and era. When a bank fails, insured balances are kept whole from the recovery pool, then the fund, then treasury cash, and any shortfall is funded by bonds. The expense shows in the federal budget, see [National Budget](/wiki/national-budget).
+**Deposit insurance fund (Insurance tab).** The fund is paid for by banks, not by the state, and bank premiums into it come through Private Banking. Each bank starts at 0.4% a year on insured deposits (once the fund has paid out claims, that base moves toward the losses it has actually seen, up to 2%), split across the turns, scaled by 0.5x to 3x depending on how thin its reserves are against the requirement. Deposits are insured up to a cap anchored at 5,000,000 in modern reference terms and scaled per currency and era. When a bank fails, insured balances are kept whole from the recovery pool, then the fund, then treasury cash, and any shortfall is funded by bonds. The expense shows in the federal budget, see [National Budget](/wiki/national-budget).
 
 ## The currency regime and defending it
 
@@ -116,7 +128,7 @@ The prime rate feeds several systems at once:
 
 - **Bonds.** New corporate bonds pay prime plus a credit spread. Sovereign bonds pay prime plus a term premium plus any credibility spread from scrutiny, so the prime rate sets the coupon on each new issue in the [National Budget](/wiki/national-budget). See [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds). Policy rates also move the price of the sovereign bonds held in an [Index Fund](/wiki/index-funds) reserve. Inflation and currency falls reduce bond demand and can block the Monetize path above 8% inflation, see [Sovereign Default](/wiki/sovereign-default).
 - **Savings and credit.** Savings pay half the real rate and lines of credit are priced off prime. Central bank savings interest creates new money, line draws create money and repayments retire it, and interest feeds bank reserves. See [Savings & Interest](/wiki/savings-interest) and [Line of Credit](/wiki/line-of-credit). The margin line banks use for trading books costs prime plus 1.5 points, with draws creating money and repayments retiring it. See [Interbank Lending](/wiki/interbank-lending).
-- **Exchange rate.** Higher rates strengthen the currency, inflation weakens it, growth strengthens it. A rate shock closes about 5% of the gap per turn, roughly 91% after 48 turns, on top of noise and trade pressure, with a final clamp of 50% below to 50% above the base rate.
+- **Exchange rate.** Higher rates strengthen the currency, inflation weakens it, growth strengthens it. A rate shock closes about 5% of the gap per turn, roughly 91% after 48 turns, on top of noise and trade pressure, with a final clamp of 50% below to 50% above the base rate (80% either way once a Bretton Woods world has floated).
 - **Inflation and margins.** High rates cool borrowing and spending. Inflation changes every sector's profit margin, so inflation and the prime rate move margins and growth costs across [Corporations](/wiki/corporations):
 
 \`\`\`wiki-chart
@@ -146,7 +158,7 @@ The chair does not control fiscal policy, which needs legislation. But the two i
 | Bank | Who sets the rate | What is different |
 | --- | --- | --- |
 | US Federal Reserve | Chair proposes, FOMC votes | Board terms, nominations by the President, Senate confirmation. The chair alone cannot move the rate. The move size, wait and scrutiny rules cap what the [committee](/wiki/fomc) can do. |
-| Bank of England | Treasury before 1997, then the Bank | Independence is a statute, not a date. |
+| Bank of England | Treasury in worlds that start before 1997, until Parliament grants independence; the Bank in worlds that start in 1997 or later | Independence is a statute, not a date. |
 | Euro area | Shared central bank | One policy rate for every member. |
 | Command economies | The plan | No automatic rate setter. |
 | Other national banks | The seated Chair, or the government where the bank is not independent | Same move limits and scrutiny. |

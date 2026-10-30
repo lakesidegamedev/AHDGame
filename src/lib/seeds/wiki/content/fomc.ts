@@ -4,12 +4,12 @@ In the United States no single person can move the interest rate. A seven-seat b
 
 ## Who sits on the board
 
-The engine does not staff the board. When a term runs out the seat falls vacant and stays that way until the President nominates and the Senate confirms a successor. A new world may start with gaps.
+A new world opens with all seven seats held by technocrat NPP governors, alternating hawk and dove, on staggered terms that run out one after another over the first 192 turns. After that the engine never restocks a seat: when a term runs out the seat falls vacant and stays that way until the President nominates and the Senate confirms a successor.
 
 | What | Value |
 | --- | --- |
 | Seats | 7, chair included (seat 1 is the chair seat) |
-| Term | 192 turns (4 game years), staggered so seats do not all open together |
+| Term | 192 turns (4 game years) from confirmation. The opening technocrat terms are staggered so seats do not all open together |
 | Meeting | Every 8 turns (6 per game year) |
 | Player voting window | 24 hours, which is the same as the 24-turn deadline |
 | To pass | A strict majority of seated governors |
@@ -17,7 +17,9 @@ The engine does not staff the board. When a term runs out the seat falls vacant 
 | Wait between rate changes | 6 turns |
 | Move size | Same limits as any chair: up to 0.75 up, 1.75 down, 3 up when inflation is 5 points over target |
 
-To get a seat as a player you need a nomination from the President and a Senate majority. There is no lobbying pool and no draw. As President, you fill a vacant seat or the chair seat; the nomination appears in the Senate confirmations panel with the nominee, the seat, whether they are a player or NPP, the running tally and the closing time. Sitting Senators vote For, Against or Abstain. See [Confirmation Process](/wiki/confirmation-process).
+To get a governor seat as a player you need a nomination from the President and a Senate majority. There is no lobbying pool and no draw for governor seats. As President, you nominate a player or an NPP to any seat, optionally making them chair, and assign hawk or dove. A seat can have one nomination before the Senate at a time, and a cabinet member cannot be nominated. The nomination appears in the Senate confirmations panel with the nominee, the seat, whether they are a player or NPP, the running tally and the closing time. Sitting Senators vote For, Against or Abstain; NPP senators vote along party lines, and the vote closes after 24 turns. A confirmed nominee takes the seat, replacing anyone sitting there, with a fresh 192-turn term. A rejected one leaves the seat as it was, and the President is told they can nominate again. See [Confirmation Process](/wiki/confirmation-process).
+
+The chair seat has a second route. When it falls vacant, the chair draw on [Central Banks](/wiki/central-banks) runs over the President's chair nominations, with lobbying, and a player who accepts takes seat 1. With no one nominated the chair stays vacant; the Fed never gets an autonomous caretaker chair.
 
 Vacant seats do not count toward a majority, so five seated governors need three votes. A governor without a ballot abstains, which makes the board lean toward holding when members do not show up.
 
@@ -29,12 +31,12 @@ If **no governors are seated**, meetings pause and the chair sets the rate direc
 2. The chair's motion is set automatically from the chair's own reading of inflation and growth (from [National Metrics](/wiki/national-metrics)): hike, cut or hold, with a signed rate change. If the 16-change cap is reached or the 6-turn wait is still running, the motion is a hold.
 3. NPP seats vote at once, from the same rule an autonomous chair uses, tilted hawk (leans to hike) or dove (leans to cut).
 4. Player governors vote within 24 hours. No ballot counts as an abstain.
-5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A meeting never resolves on the turn it opened.
+5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A decision reached on the turn the meeting opens takes effect the next turn; a decision reached on a later turn takes effect at once.
 6. If it passes, the rate moves and the change counts toward the 16.
 
 ![Flow of an FOMC meeting from the due date and automatic motion through NPP and player votes to a majority decision that moves the rate or fails.](/wiki-images/diagrams/fomc-meeting-flow.svg)
 
-Picture a board with five seats filled (three NPP governors and two players, one of them the chair) and two seats vacant. A majority of five is 3. The chair's automatic motion is a 0.50 hike. The NPP seats vote when the meeting opens: hike, hike, hold. One player then votes hike, which makes 3 votes. The motion is decided at once, and it takes effect on the next turn, because a meeting never resolves on the turn it opened. If the NPPs had voted hold, hold, hold, the motion could reach at most 2 votes with both players behind it, so it would fail early.
+Picture a board with five seats filled (three NPP governors and two players, one of them the chair) and two seats vacant. A majority of five is 3. The chair's automatic motion is a 0.50 hike. The NPP seats vote when the meeting opens: hike, hike, hold. One player then votes hike, which makes 3 votes. The motion is decided at once. If that vote came on the opening turn it takes effect the next turn; on any later turn it takes effect immediately. If the NPPs had voted hold, hold, hold, the motion could reach at most 2 votes with both players behind it, so it would fail early.
 
 ## Your vote and your motion
 

@@ -54,7 +54,7 @@ There are no confidence votes, no government formation and no snap elections. On
 
 ### The Federal Reserve Chair
 
-The Fed's prime rate affects GDP growth, inflation and borrowing costs nationwide. The post is filled by presidential nomination and a Senate vote during a **24-hour** window, not by an election (see [Confirmation Process](/wiki/confirmation-process)). The Chair serves a 4-year term (192 turns) and can be reappointed. The Chair proposes each rate move, but the 7-seat committee votes on it, so the Chair alone cannot set the rate (see [FOMC / Rate-Setting Board](/wiki/fomc)).
+The Fed's prime rate affects GDP growth, inflation and borrowing costs nationwide. The post is filled by presidential nomination and a Senate vote during a **24-hour** window, not by an election (see [Confirmation Process](/wiki/confirmation-process)). When the chair seat falls vacant it can also be filled by the chair draw from the President's nominations (see [Central Banks](/wiki/central-banks)); the Fed never gets an autonomous caretaker chair. The Chair serves a 4-year term (192 turns) and can be reappointed. The Chair proposes each rate move, but the 7-seat committee votes on it, so the Chair alone cannot set the rate (see [FOMC / Rate-Setting Board](/wiki/fomc)).
 
 | Item | Detail |
 | --- | --- |

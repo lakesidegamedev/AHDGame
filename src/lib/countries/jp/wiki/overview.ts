@@ -29,7 +29,7 @@ A Sangiin seat provides 6-year tenure that survives snap elections, which is use
 | Member of the House of Councillors (Sangiin) | Regional multi-seat election (Hare largest remainder), staggered | 6 years | 248 (252 in 1991) |
 | Governor | Regional election | 4 years | 1 per region (8) |
 | Emperor | Imperial character (ceremonial) | Lifetime | 1 |
-| Governor of the Bank of Japan | Appointed action | 5 years | 1 |
+| Governor of the Bank of Japan | Appointed action | 4 years | 1 |
 
 ## Running in one of eight regions
 

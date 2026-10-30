@@ -8,14 +8,14 @@ Each turn the scheduler goes through every active country.
 
 ![Per-turn scheduler checking each country for a pending offer, then picking the first due event, offering at most one to the head of government, and reporting the outcome in the news.](/wiki-images/diagrams/world-events-scheduler-flow.svg)
 
-1. If the country already has a pending world event, it is skipped.
+1. If the country already has a pending world event, it gets no new event card that turn. A wartime society crisis can still open.
 2. It looks for the first scheduled event that is due, allowed for that country, inside its year window and inside its tension window.
 3. At most **one** new world event is offered per country per turn.
 4. The offer goes to the head of government. Other players see the outcome in [News](/wiki/news), which publishes outcomes to the wire and the feed, and in how the country's numbers move, not as a decision card of their own.
 
 A scheduled event comes round again after a gap of several turns, set between a minimum and a maximum and fixed by the country and the last time it fired. A country that has never had that event is eligible straight away. The offer machinery and cooldowns are reused from [Player Random Events](/wiki/player-events).
 
-If the head of government does not answer, the safe default resolves for them. Every default is the neutral option, so a vacant seat or an absent leader never costs the treasury. Waiting is safe, but a good answer is often worth points. If you are not the executive you cannot answer, but you can lobby, run for the office, and read the outcome. Most responses move [Government Approval](/wiki/government-approval), and they shift sector demand, which changes [corporation](/wiki/corporations) sector revenue for 4 to 24 turns.
+If the head of government does not answer, the safe default resolves for them. Every default is the neutral option, so a vacant seat or an absent leader never costs the treasury. Waiting is safe, but a good answer is often worth points. If you are not the executive you cannot answer, but you can lobby, run for the office, and read the outcome. Most responses move [Government Approval](/wiki/government-approval), and they shift sector demand, which changes [corporation](/wiki/corporations) sector revenue for 3 to 24 turns.
 
 | Item | Value |
 | --- | --- |
@@ -28,7 +28,7 @@ If the head of government does not answer, the safe default resolves for them. E
 | Family | Who | Gap between events (turns) | What you decide |
 | --- | --- | --- | --- |
 | Sports victory | Every country | 6 to 16 | Wire-only celebration, approval up 2, treasury up 5,000 |
-| State visit | Every country | 8 to 20 | Host a standard reception |
+| State visit | Every country | 8 to 20 | Host lavishly, hold a standard reception or decline |
 | International summit | Every country | 10 to 24 | Assertive, moderate or conciliatory stance |
 | Scientific breakthrough | Every country | 12 to 30 | Fund commercialization or decline |
 | Papal visit | Every country | 20 to 40 | State reception, approval up 2 |
@@ -91,9 +91,9 @@ The world tension gauge reads 62, so War Scare Protests is allowed. Your Prime M
 - **Address the nation**: approval rises 1 and 4% mitigation lasts 8 turns. That rounds down to 0 extra turns, so the next crisis is still due in 3 to 6 turns.
 - **Disperse the marches**: approval falls 6 and civil liberties fall 7. The 18% mitigation adds 1 turn, so the next crisis is due in 4 to 7 turns, and defense and manufacturing demand rise 10% and 8% for 10 turns.
 
-Doing nothing for the 12 turns resolves it on the cautious default. A cautious response early can be cheaper than the political cost of ignoring a crisis for 12 turns. Harder measures buy more mitigation but cost approval and civil liberties, and a government that cracks down every time slides toward lower Democratic Health.
+Doing nothing for the 12 turns closes the crisis with no response, so none of the option effects apply and you get no mitigation. A cautious response early can be cheaper than ignoring a crisis for 12 turns. Harder measures buy more mitigation but cost approval and civil liberties, and a government that cracks down every time slides toward lower Democratic Health.
 
-These events do not start wars by themselves. The map begins with no pre-seeded wars, and every war was started by a player declaration or by a campaign you can read about in [Global Response Crises](/wiki/global-response-crises).
+These events do not start wars by themselves. The map begins with no pre-seeded wars; wars come from declarations, alliance defence calls, and the scripted campaigns you can read about in [Global Response Crises](/wiki/global-response-crises).
 
 Applies in every current world. Family availability depends on country and year: UK, US, Russia and the DDR have their own events, and Cold War families only run inside their dates. The wartime society crises need the tension gauge to be high enough. Last checked 2026-10-29, version 1.18.0. There is no separate technical page for the scheduler yet and the numbers above are the exact rules; for the crisis system the wartime events run on, see [Crisis System](https://docs.lakesidegames.net/design/crisis-system.html)
 `;
