@@ -18,10 +18,19 @@ import { getPolicyEffectInfo } from "@/lib/utils/productionPolicy";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CorporationDetail, SectorDetail } from "../CorporationPageTypes";
-import { formatUnits, sectorBuildUrl } from "../plantsPresentation";
+import {
+  BuildQueueBadge,
+  PlantCount,
+  RUNNING_SOLD_HEADING,
+  RUNNING_SOLD_HEADING_TITLE,
+  RunningSoldReading,
+  sectorBuildUrl,
+  sectorPlantCount,
+} from "../plantsPresentation";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
+import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import {
   DenseSection,
-  FillText,
   InlineStatus,
   SmallButton,
   TableScroll,
@@ -306,19 +315,25 @@ function OperationsRow({
         </Td>
         {plantsMode ? (
           <>
-            <Td align="right" className="text-muted">
-              {formatUnits(sector.capacityUnits)}
-              {sector.buildQueueSummary && sector.buildQueueSummary.unitsOrdered > 0 && (
-                <span
-                  className="ml-1 text-[11px] text-foreground"
-                  title={`${formatUnits(sector.buildQueueSummary.unitsOrdered)} units/day under construction`}
-                >
-                  +{formatUnits(sector.buildQueueSummary.unitsOrdered)}
-                </span>
-              )}
+            <Td align="right">
+              <PlantCount sector={sector} className="block" />
+              <BuildQueueBadge
+                queue={sector.buildQueueSummary}
+                plantUnits={plantSizeForSector(sector)}
+                plantSingular={facilitySingular(sector.sectorType)}
+                plantPlural={facilityPlural(sector.sectorType)}
+                className="items-end"
+              />
             </Td>
             <Td align="right">
-              <FillText fill={sector.fillRate} band={sector.fillRateBand} />
+              <RunningSoldReading
+                produced={sector.producedUnits}
+                capacity={sector.capacityUnits}
+                fill={sector.fillRate}
+                band={sector.fillRateBand}
+                plantCount={sectorPlantCount(sector)}
+                className="items-end"
+              />
             </Td>
           </>
         ) : (
@@ -960,12 +975,17 @@ export default function CeoOperationsTable({
                     <>
                       <Th
                         align="right"
-                        title="Nameplate capacity, units per day. +N is under construction."
+                        title="Plants built, and plants paid for and still being built."
                       >
-                        Capacity
+                        Plants
                       </Th>
-                      <Th align="right" onClick={() => sortBy("fill")} sorted={sortState("fill")}>
-                        Fill
+                      <Th
+                        align="right"
+                        onClick={() => sortBy("fill")}
+                        sorted={sortState("fill")}
+                        title={RUNNING_SOLD_HEADING_TITLE}
+                      >
+                        {RUNNING_SOLD_HEADING}
                       </Th>
                     </>
                   ) : (

@@ -2,8 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { STATE_FLAGS } from "@/lib/constants";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
-import { FillText, signTone } from "../dense/DenseKit";
-import { UsedText } from "../plantsPresentation";
+import { signTone } from "../dense/DenseKit";
+import { PlantCount, RunningSoldReading, sectorPlantCount } from "../plantsPresentation";
 import { DataBar } from "../dense/InlineViz";
 import { sectorMargin, sectorRevenue } from "../overviewModel";
 import type { SectorDetail } from "../CorporationPageTypes";
@@ -99,13 +99,8 @@ export function SectorCards({
                 {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
               </Figure>
               {plantsMode ? (
-                <Figure label="Sold">
-                  <FillText fill={s.fillRate} band={s.fillRateBand} />
-                  <UsedText
-                    produced={s.producedUnits}
-                    capacity={s.capacityUnits}
-                    className="ml-1.5"
-                  />
+                <Figure label="Plants">
+                  <PlantCount sector={s} />
                 </Figure>
               ) : (
                 <Figure label="Share" className="text-muted">
@@ -115,6 +110,15 @@ export function SectorCards({
                 </Figure>
               )}
             </div>
+            {plantsMode && (
+              <RunningSoldReading
+                produced={s.producedUnits}
+                capacity={s.capacityUnits}
+                fill={s.fillRate}
+                band={s.fillRateBand}
+                plantCount={sectorPlantCount(s)}
+              />
+            )}
           </li>
         );
       })}

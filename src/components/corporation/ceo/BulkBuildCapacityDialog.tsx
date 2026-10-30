@@ -13,7 +13,14 @@ import {
   selectBulkBuildSectors,
   type BulkBuildRule,
 } from "@/lib/corporations/rules/bulkBuildCapacity";
-import { formatUnits } from "../plantsPresentation";
+import { CAPACITY_UNIT_LABEL, formatUnits } from "../plantsPresentation";
+import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
+
+/** "+3 plants" for a bulk order: orders are always whole plants. */
+function bulkRowPlantsLabel(units: number, plantUnits: number, sectorType: string): string {
+  const plants = Math.max(1, Math.round(units / plantUnits));
+  return `${plants.toLocaleString("en-US")} ${plants === 1 ? facilitySingular(sectorType) : facilityPlural(sectorType)}`;
+}
 
 /** The fields of a holding this dialog reads. */
 export interface BulkBuildSectorOption {
@@ -33,6 +40,10 @@ export interface BulkBuildRow {
   sectorType: string;
   capacityUnits: number;
   units: number;
+  /** Capacity units in one plant. Absent from an older server: units are shown. */
+  plantUnits?: number;
+  /** Plants owned now. Absent from an older server: units are shown. */
+  plantCount?: number;
   costLocal: number;
   understaffed: boolean;
   status: "ready" | "over_budget" | "blocked" | "built" | "skipped";
@@ -370,7 +381,7 @@ export default function BulkBuildCapacityDialog({
               <thead className="bg-card-muted/60 text-body-xs text-muted">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Sector</th>
-                  <th className="px-3 py-2 text-right font-medium">Capacity now</th>
+                  <th className="px-3 py-2 text-right font-medium">Plants now</th>
                   <th className="px-3 py-2 text-right font-medium">Build</th>
                   <th className="px-3 py-2 text-right font-medium">Cost</th>
                   <th className="px-3 py-2 text-left font-medium">Status</th>
@@ -394,11 +405,21 @@ export default function BulkBuildCapacityDialog({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted">
-                      {formatUnits(row.capacityUnits)}
+                    <td
+                      className="px-3 py-2 text-right tabular-nums text-muted"
+                      title={`${formatUnits(row.capacityUnits)} ${CAPACITY_UNIT_LABEL} at full run`}
+                    >
+                      {row.plantCount != null
+                        ? row.plantCount.toLocaleString("en-US")
+                        : formatUnits(row.capacityUnits)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-foreground">
-                      +{formatUnits(row.units)}
+                    <td
+                      className="px-3 py-2 text-right tabular-nums text-foreground"
+                      title={`${formatUnits(row.units)} ${CAPACITY_UNIT_LABEL} of new capacity`}
+                    >
+                      {row.plantUnits != null && row.plantUnits > 0
+                        ? `+${bulkRowPlantsLabel(row.units, row.plantUnits, row.sectorType)}`
+                        : `+${formatUnits(row.units)}`}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-foreground">
                       {row.costLocal > 0 ? fmt(row.costLocal) : "n/a"}

@@ -25,17 +25,19 @@ import {
 import { SECTOR_TABLE_GRID, PLANTS_SECTOR_TABLE_GRID } from "./SectorTableHeader";
 import {
   BuildQueueBadge,
-  CAPACITY_UNIT_LABEL,
   DeliveryLimitedPill,
-  FillChip,
   MothballedPill,
-  UsedText,
-  formatUnits,
+  RUNNING_SOLD_HEADING,
+  RUNNING_SOLD_HEADING_TITLE,
+  RunningSoldReading,
+  plantCountLabel,
+  plantCountTitle,
   sectorBuildUrl,
+  sectorPlantCount,
   sectorSplitUrl,
 } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
-import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
@@ -192,12 +194,9 @@ export function SectorRow({
   // Whole facilities are persisted ownership. Capacity can wear down without
   // deleting a plant, so only fall back to the old capacity-derived count for
   // payloads served during deployment of the ledger migration.
-  const plantCount = plantsMode
-    ? (sector.plantCount ?? plantsFromUnitsForSector(sector, sector.capacityUnits ?? 0))
-    : 0;
+  const plantCount = plantsMode ? sectorPlantCount(sector) : 0;
   const unitsPerPlant = plantSizeForSector(sector);
-  const plantNoun =
-    plantCount === 1 ? facilitySingular(sector.sectorType) : facilityPlural(sector.sectorType);
+  const plantLabel = plantCountLabel(plantCount, sector.sectorType);
   // Fill-adjusted margin (query layer): profit over the FULL cost bill, not
   // over sold revenue. Under plants this is the number the row leads with:
   // `effectiveProfitMargin` divides by sold revenue only, so at a low fill it
@@ -573,10 +572,10 @@ export function SectorRow({
               capacity units are an engine measure and only appear on hover. */}
           <div className="flex min-w-0 flex-col items-end text-right">
             <span
-              className={`${cellNum} text-foreground`}
-              title={`${plantCount.toLocaleString("en-US")} ${plantNoun} built (${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL})`}
+              className={`${cellNum} ${plantCount > 0 ? "text-foreground" : "text-muted"}`}
+              title={plantCountTitle(sector)}
             >
-              {plantCount.toLocaleString("en-US")} {plantNoun}
+              {plantLabel}
             </span>
             <BuildQueueBadge
               queue={buildQueue}
@@ -587,9 +586,15 @@ export function SectorRow({
             />
           </div>
 
-          <div className="flex min-w-0 flex-col items-end">
-            <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
-            <UsedText produced={sector.producedUnits} capacity={sector.capacityUnits} />
+          <div className="flex min-w-0 flex-col items-end text-right">
+            <RunningSoldReading
+              produced={sector.producedUnits}
+              capacity={sector.capacityUnits}
+              fill={sector.fillRate}
+              band={sector.fillRateBand}
+              plantCount={plantCount}
+              className="items-end"
+            />
             <DeliveryLimitedPill
               fraction={deliveryLimited}
               freightClass={sector.deliveryLimitedFreightClass}
@@ -746,10 +751,10 @@ export function SectorRow({
               <div>
                 <dt className="text-[11px] text-muted">Plants</dt>
                 <dd
-                  className={`${cellNum} text-foreground`}
-                  title={`${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL}`}
+                  className={`${cellNum} ${plantCount > 0 ? "text-foreground" : "text-muted"}`}
+                  title={plantCountTitle(sector)}
                 >
-                  {plantCount.toLocaleString("en-US")} {plantNoun}
+                  {plantLabel}
                 </dd>
                 <BuildQueueBadge
                   queue={buildQueue}
@@ -759,17 +764,17 @@ export function SectorRow({
                 />
               </div>
               <div>
-                <dt
-                  className="text-[11px] text-muted"
-                  title="Share of the output offered that sold"
-                >
-                  Sold
+                <dt className="text-[11px] text-muted" title={RUNNING_SOLD_HEADING_TITLE}>
+                  {RUNNING_SOLD_HEADING}
                 </dt>
                 <dd>
-                  <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
-                </dd>
-                <dd>
-                  <UsedText produced={sector.producedUnits} capacity={sector.capacityUnits} />
+                  <RunningSoldReading
+                    produced={sector.producedUnits}
+                    capacity={sector.capacityUnits}
+                    fill={sector.fillRate}
+                    band={sector.fillRateBand}
+                    plantCount={plantCount}
+                  />
                 </dd>
                 <DeliveryLimitedPill
                   fraction={deliveryLimited}

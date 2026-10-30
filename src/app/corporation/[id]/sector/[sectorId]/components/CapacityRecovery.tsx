@@ -6,13 +6,22 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { PlantsData } from "../types";
+import type { PlantSizingSector } from "@/lib/constants/facilityQuantum";
+import {
+  CAPACITY_UNIT_LABEL,
+  formatUnits,
+  sectorPlantCount,
+} from "@/components/corporation/plantsPresentation";
 
 export default function CapacityRecovery({
   plants,
+  sizing,
   busy,
   onResize,
 }: {
   plants: PlantsData;
+  /** What decides how big one plant is: lane, operating model, strategy. */
+  sizing: PlantSizingSector;
   busy: boolean;
   onResize: (activePercent: number) => void;
 }) {
@@ -21,6 +30,11 @@ export default function CapacityRecovery({
   const current = plants.mothballed ? 0 : (plants.activeCapacityPercent ?? 100);
   const [percent, setPercent] = useState(Math.max(1, Math.round(current)));
   const coldUpkeep = plants.capacityRecovery?.coldUpkeepDailyAnchor;
+  const totalPlants = sectorPlantCount({
+    ...sizing,
+    plantCount: plants.plantCount,
+    capacityUnits: plants.capacityUnits,
+  });
   return (
     <div className="mt-4 rounded-lg border border-card-border bg-background/40 p-3">
       <label htmlFor="active-capacity" className="text-body-sm font-semibold text-foreground">
@@ -39,7 +53,14 @@ export default function CapacityRecovery({
       />
       <p className="text-body-sm text-muted">{t("recoveryExplanation")}</p>
       <p className="mt-2 text-body-xs text-muted">
-        {t("activeUnits", { units: Math.round(((plants.capacityUnits ?? 0) * percent) / 100) })}
+        <span
+          title={`${formatUnits(((plants.capacityUnits ?? 0) * percent) / 100)} ${CAPACITY_UNIT_LABEL} at full run`}
+        >
+          {t("activePlants", {
+            active: Math.round((totalPlants * percent) / 100),
+            total: totalPlants,
+          })}
+        </span>
         {coldUpkeep != null &&
           ` · ${t("coldCost", { amount: formatAmount((coldUpkeep * (1 - percent / 100)) / TURNS_PER_DAY) })}`}
       </p>

@@ -27,7 +27,11 @@ import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
-import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
+import {
+  plantSizeForSector,
+  plantsFromUnitsForSector,
+  sectorPlantCount,
+} from "@/lib/constants/facilityQuantum";
 import { estimateSectorFullCapacityOneHopFreightTeu } from "@/lib/logistics/freightVisibility";
 
 interface PlantPanelProps {
@@ -107,8 +111,11 @@ export default function PlantPanel({
     strategyId: plants.strategyId,
   };
   const unitsPerPlant = plantSizeForSector(plantSizing);
-  const ownedPlantCount =
-    plants.plantCount ?? plantsFromUnitsForSector(plantSizing, plants.capacityUnits ?? 0);
+  const ownedPlantCount = sectorPlantCount({
+    ...plantSizing,
+    plantCount: plants.plantCount,
+    capacityUnits: plants.capacityUnits,
+  });
   // Per order: plants ordered, plants finished (whole ones only, so a plant
   // a third built is not counted as built), and the rest still being built.
   const orderPlants = (o: { unitsOrdered: number; unitsDelivered: number }) => {
@@ -499,6 +506,7 @@ export default function PlantPanel({
         <CapacityRecovery
           key={`${plants.mothballed}:${plants.activeCapacityPercent}`}
           plants={plants}
+          sizing={plantSizing}
           busy={busy}
           onResize={onResize}
         />
