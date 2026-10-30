@@ -197,6 +197,50 @@ describe("physical producer preparation", () => {
     expect(retooled.plannedRunShare).toBeCloseTo(0.01 * 1.15, 12);
   });
 
+  it("runs a two-product plant at its sold-out dear line, not its glutted cheap one, under the joint run stage", () => {
+    const { input, env, sector } = fixture();
+    Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    // Chemicals: old stock on the book, a fraction sold. Plastics: sold out at a high price.
+    const plastics = 0.62;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: env.currentTurn - 1,
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 60 + plastics,
+      soldUnits: 9 + plastics,
+      revenue: 9 * 170 + plastics * 3000,
+      inputsConsumed: 1500,
+      plannedRunShare: 0.1,
+      products: [
+        {
+          commodity: "chemicals",
+          book: "world",
+          producedUnits: 10 - plastics,
+          offeredUnits: 60,
+          soldUnits: 9,
+          revenue: 9 * 170,
+        },
+        {
+          commodity: "plastics",
+          book: "world",
+          producedUnits: plastics,
+          offeredUnits: plastics,
+          soldUnits: plastics,
+          revenue: plastics * 3000,
+        },
+      ],
+    };
+    const summed = prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare;
+    expect(summed).toBe(0.01);
+    env.jointRunStage = 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeCloseTo(
+      0.1 * 1.15,
+      12
+    );
+  });
+
   it("records the planned run share only under the demand plan", () => {
     const { input, env } = fixture();
     expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeUndefined();

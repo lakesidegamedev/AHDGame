@@ -247,6 +247,14 @@ export interface GameConfig {
    */
   producerCaptiveDeliveryStage?: number;
   /**
+   * Funded producer market: >= 1 plans each product of a multi-product plant
+   * on its own and runs the plant at the highest product plan whose sold lines
+   * pay the plant's running cost per unit, never below the summed plan, so a
+   * glut in a cheap product no longer cuts a sold-out dear one. One-product
+   * plants are unchanged. 0 or absent = off.
+   */
+  producerJointRunStage?: number;
+  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price

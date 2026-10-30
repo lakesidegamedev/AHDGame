@@ -24,6 +24,7 @@ export function producerStageEnv(
         producerProcurementSpillShare?: number;
         producerShortageGrowthStage?: number;
         producerCaptiveDeliveryStage?: number;
+        producerJointRunStage?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
         wholePlantsStage?: number;
@@ -39,6 +40,7 @@ export function producerStageEnv(
     fundedBookStage: config?.producerFundedBookStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
+    jointRunStage: config?.producerJointRunStage,
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,
     wholePlants: wholePlantsOn(config?.wholePlantsStage),
