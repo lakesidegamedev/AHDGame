@@ -163,7 +163,7 @@
     "3dd41c663056c7d689ddc736f506217c62368f3d9504ce70ad5327b94b037b5c": 1,
     "7ad5bb1b2694bf1d94cefca4b1b04147140d5444a77b0adbb65461c42a194dc0": 1,
     "bd06f82ea352bfa2a6a6f2555d85feaf3870d94cba2529bfcb1637099860e72f": 1,
-    "ce312b2c5c112f4e0656ad36cda567da6a39e23de5cbcf9b81c6b67ded9059b8": 1,
+    "9e8ae2af3b5ce449faab4ac8104ab3418ec9732dd7288ad9488ffcf98ee8d4cd": 1,
     "a36fc4170fbf5cc4dcd6eb708c9822668c1235982e8394490a97315d13791c60": 1,
     "8ef8a438e9dfa19da8b73916af50496bb69100dbc1f56c1fd56d0690322ba3ea": 1,
     "aac01e9c382029b98523f66b00add47ebd0601174978c1666cd103af97f97c78": 1,
@@ -1829,9 +1829,9 @@
     {
       "file": "src/lib/indexFunds/nppRedemption.ts",
       "operation": "updateOne",
-      "owner": "processNppFundRedemptions",
+      "owner": "applyNppRedemptionsSequentially",
       "expression": "db .collection<IndexFund>(FUND_COLLECTION) .updateOne({ _id: intent.fundId, unitSupply: { $gte: intent.units } }, { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } })",
-      "fingerprint": "ce312b2c5c112f4e0656ad36cda567da6a39e23de5cbcf9b81c6b67ded9059b8"
+      "fingerprint": "9e8ae2af3b5ce449faab4ac8104ab3418ec9732dd7288ad9488ffcf98ee8d4cd"
     },
     {
       "file": "src/lib/indexFunds/domesticSovereignCoverage/ensure.ts",
