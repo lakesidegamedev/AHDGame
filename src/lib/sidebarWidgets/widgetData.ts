@@ -9,6 +9,7 @@ import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
 import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
+import { loadDueSoon } from "./dueSoon";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -182,6 +183,8 @@ export async function loadSidebarWidgetData(
       if (!parsed) return [key, null];
       try {
         switch (parsed.id) {
+          case "dueSoon":
+            return [key, await loadDueSoon(db, viewer.userId)];
           case "myCompany":
             return [key, await loadMyCompany(db, viewer)];
           case "stockTicker":

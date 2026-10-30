@@ -296,6 +296,7 @@
         "saveError": "Deine Widgets konnten nicht gespeichert werden. Versuch es noch einmal."
       },
       "names": {
+        "dueSoon": "Bald fällig",
         "myCompany": "Mein Unternehmen",
         "stockTicker": "Börsenticker",
         "staffQueues": "Prüfwarteschlangen"
@@ -310,6 +311,32 @@
         "world": "Weltmenü",
         "help": "Hilfemenü",
         "staff": "Teammenü"
+      },
+      "dueSoon": {
+        "title": "Bald fällig",
+        "empty": "Gerade wartet nichts auf dich.",
+        "turnsLeft": "{count, plural, one {Endet nächste Runde} other {Noch # Runden}}",
+        "hoursLeft": "{count, plural, one {Noch # Stunde} other {Noch # Stunden}}",
+        "closingNow": "Endet jetzt",
+        "more": "{count, plural, one {# weiterer Punkt} other {# weitere Punkte}}",
+        "positions": {
+          "chair": "Vorsitz",
+          "viceChair": "Stellvertretender Vorsitz",
+          "treasurer": "Schatzmeister"
+        },
+        "kinds": {
+          "billVote": "Abstimmung über Gesetz",
+          "overrideVote": "Abstimmung über Veto",
+          "billSign": "Unterzeichnen oder Veto",
+          "stateBillVote": "Abstimmung im Land",
+          "stateOverrideVote": "Veto-Abstimmung im Land",
+          "stateBillSign": "Landesgesetz unterzeichnen oder Veto",
+          "corpVote": "Unternehmensabstimmung",
+          "privatizationVote": "Abstimmung zur Privatisierung",
+          "debate": "Antworten für die Debatte",
+          "partyElection": "Parteiwahl",
+          "confirmation": "Bestätigungsabstimmung"
+        }
       },
       "myCompany": {
         "title": "Mein Unternehmen",

@@ -385,6 +385,7 @@
         "saveError": "Could not save your widgets. Try again."
       },
       "names": {
+        "dueSoon": "Due soon",
         "myCompany": "My company",
         "stockTicker": "Stock ticker",
         "staffQueues": "Staff review queues"
@@ -399,6 +400,32 @@
         "world": "World menu",
         "help": "Help menu",
         "staff": "Staff menu"
+      },
+      "dueSoon": {
+        "title": "Due soon",
+        "empty": "Nothing waiting on you.",
+        "turnsLeft": "{count, plural, one {Closes next turn} other {# turns left}}",
+        "hoursLeft": "{count, plural, one {# hour left} other {# hours left}}",
+        "closingNow": "Closing now",
+        "more": "{count, plural, one {# more waiting} other {# more waiting}}",
+        "positions": {
+          "chair": "Chair",
+          "viceChair": "Vice chair",
+          "treasurer": "Treasurer"
+        },
+        "kinds": {
+          "billVote": "Vote on bill",
+          "overrideVote": "Veto override vote",
+          "billSign": "Sign or veto",
+          "stateBillVote": "State bill vote",
+          "stateOverrideVote": "State veto override vote",
+          "stateBillSign": "Sign or veto state bill",
+          "corpVote": "Company vote",
+          "privatizationVote": "Privatization vote",
+          "debate": "Debate answers",
+          "partyElection": "Party ballot",
+          "confirmation": "Confirmation vote"
+        }
       },
       "myCompany": {
         "title": "My company",

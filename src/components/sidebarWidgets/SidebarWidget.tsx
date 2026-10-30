@@ -18,8 +18,11 @@ import type {
   StaffQueuesWidgetData,
   StockTickerWidgetData,
 } from "@/lib/sidebarWidgets/widgetData";
+import type { DueSoonWidgetData } from "@/lib/sidebarWidgets/dueSoon/types";
+import { DueSoonBody } from "./bodies/DueSoonBody";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
+  dueSoon: "bell",
   myCompany: "briefcase",
   stockTicker: "chart",
   staffQueues: "gear",
@@ -225,6 +228,7 @@ function StaffBody({ data, onNavigate }: { data: StaffQueuesWidgetData; onNaviga
 /** Count shown on the collapsed tray rail, or 0 for widgets that have none. */
 export function widgetBadge(widgetKey: string, data: unknown): number {
   const parsed = parseWidgetKey(widgetKey);
+  if (parsed?.id === "dueSoon" && data) return (data as DueSoonWidgetData).total;
   if (parsed?.id === "staffQueues" && data) {
     const queues = data as StaffQueuesWidgetData;
     return queues.wikiReview + queues.altClusters + queues.playerReports;
@@ -261,6 +265,19 @@ export function SidebarWidget({
   ) : null;
 
   switch (parsed.id) {
+    case "dueSoon": {
+      const due = data as DueSoonWidgetData | null;
+      return (
+        <Frame {...common} title={t("dueSoon.title")}>
+          {pending ??
+            (due ? (
+              <DueSoonBody data={due} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
     case "myCompany": {
       const company = data as MyCompanyWidgetData | null;
       return (

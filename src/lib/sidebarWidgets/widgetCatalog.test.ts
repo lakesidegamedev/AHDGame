@@ -13,12 +13,21 @@ const ceoStaff = { hasCorporation: true, isStaff: true };
 describe("sidebar widget keys", () => {
   it("accepts known widgets and the parameters they take", () => {
     expect(parseWidgetKey("myCompany")).toEqual({ id: "myCompany", param: null });
+    expect(parseWidgetKey("dueSoon")).toEqual({ id: "dueSoon", param: null });
     expect(parseWidgetKey("stockTicker:nyse")).toEqual({ id: "stockTicker", param: "nyse" });
     expect(parseWidgetKey("stockTicker:gosplan-bssr")?.param).toBe("gosplan-bssr");
   });
 
   it("rejects unknown widgets, missing parameters and unexpected ones", () => {
-    for (const key of ["", "nope", "stockTicker", "myCompany:7", "stockTicker:NYSE", "a b"]) {
+    for (const key of [
+      "",
+      "nope",
+      "stockTicker",
+      "myCompany:7",
+      "stockTicker:NYSE",
+      "dueSoon:1",
+      "a b",
+    ]) {
       expect(parseWidgetKey(key)).toBeNull();
     }
   });
@@ -50,9 +59,9 @@ describe("widget layouts", () => {
   });
 
   it("starts company runners and staff with their widgets", () => {
-    expect(defaultWidgetLayout(player).tray).toEqual(["stockTicker:home"]);
+    expect(defaultWidgetLayout(player).tray).toEqual(["dueSoon", "stockTicker:home"]);
     expect(defaultWidgetLayout(ceoStaff)).toEqual({
-      tray: ["myCompany", "stockTicker:home", "staffQueues"],
+      tray: ["dueSoon", "myCompany", "stockTicker:home", "staffQueues"],
       nav: { world: "stockTicker:global", staff: "staffQueues" },
     });
   });
