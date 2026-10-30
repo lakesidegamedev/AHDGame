@@ -190,6 +190,7 @@ function fixture() {
       },
     },
     now,
+    sleep: async () => {},
   };
   return { input, state, calls, head, merge, tree };
 }
@@ -548,6 +549,7 @@ function developmentFixture() {
       scriptBlob: blobs["scripts/ci/staging-qualification.mjs"],
     },
     now,
+    sleep: async () => {},
   };
   return { input, state, calls, devHead, merge, tree };
 }
@@ -640,4 +642,109 @@ test("feature pull requests are not development promotions", async () => {
   const result = await findDevelopmentQualification(f.input);
   assert.equal(result.reuse, false);
   assert.equal(result.promotion, false);
+});
+
+test("a promotion opened before GitHub indexes the previous merge still reuses", async () => {
+  const f = fixture();
+  const real = f.input.api;
+  let lookups = 0;
+  let sleeps = 0;
+  f.input.sleep = async () => {
+    sleeps++;
+  };
+  f.input.api = async (path) => {
+    if (path === `commits/${f.head}/pulls?per_page=30` && ++lookups <= 2) return [];
+    return real(path);
+  };
+  const result = await findStagingQualification(f.input);
+  assert.equal(result.reuse, true);
+  assert.equal(lookups, 3);
+  assert.equal(sleeps, 2);
+});
+
+test("a promotion whose previous merge never indexes falls back after bounded retries", async () => {
+  const f = fixture();
+  const real = f.input.api;
+  let lookups = 0;
+  f.input.api = async (path) => {
+    if (path === `commits/${f.head}/pulls?per_page=30`) {
+      lookups++;
+      return [];
+    }
+    return real(path);
+  };
+  const result = await findStagingQualification(f.input);
+  assert.equal(result.reuse, false);
+  assert.equal(result.promotion, true);
+  assert.equal(lookups, 6);
+});
+
+// Drives the development finder with a push run that changes state per poll.
+function waitingFixture(states, { waitUntil = now + 30 * 60 * 1000 } = {}) {
+  const f = developmentFixture();
+  let time = now;
+  let polls = 0;
+  const real = f.input.api;
+  f.input.clock = () => time;
+  f.input.waitUntil = waitUntil;
+  f.input.sleep = async (ms) => {
+    time += ms;
+  };
+  f.input.api = async (path) => {
+    if (path.startsWith("actions/workflows/ci.yml/runs?")) {
+      const next = states[Math.min(polls++, states.length - 1)];
+      if (next === null) return { workflow_runs: [] };
+      return {
+        workflow_runs: [{ ...f.state.run, ...next, updated_at: new Date(time).toISOString() }],
+      };
+    }
+    return real(path);
+  };
+  return { f, polls: () => polls };
+}
+
+test("a development promotion waits for the in-progress push run, then reuses it", async () => {
+  const { f, polls } = waitingFixture([
+    { status: "queued", conclusion: null },
+    { status: "in_progress", conclusion: null },
+    {},
+  ]);
+  const result = await findDevelopmentQualification(f.input);
+  assert.equal(result.reuse, true);
+  assert.equal(polls(), 3);
+});
+
+test("a development promotion waits for a push run that has not been created yet", async () => {
+  const { f } = waitingFixture([null, null, {}]);
+  assert.equal((await findDevelopmentQualification(f.input)).reuse, true);
+});
+
+const waitingInvalid = {
+  "push run fails after waiting": [
+    { status: "in_progress", conclusion: null },
+    { conclusion: "failure" },
+  ],
+  "push run is cancelled after waiting": [
+    { status: "in_progress", conclusion: null },
+    { conclusion: "cancelled" },
+  ],
+  "push run never finishes before the deadline": [{ status: "in_progress", conclusion: null }],
+  "push run never appears": [null],
+};
+for (const [name, states] of Object.entries(waitingInvalid)) {
+  test(`development promotion falls back to full checks: ${name}`, async () => {
+    const { f, polls } = waitingFixture(states);
+    const result = await findDevelopmentQualification(f.input);
+    assert.equal(result.reuse, false);
+    assert.equal(result.promotion, true);
+    assert.ok(polls() < 200, "the wait is bounded");
+  });
+}
+
+test("without a wait budget a development promotion does not wait", async () => {
+  const { f, polls } = waitingFixture([{ status: "in_progress", conclusion: null }, {}], {
+    waitUntil: 0,
+  });
+  assert.equal((await findDevelopmentQualification(f.input)).reuse, false);
+  assert.equal(polls(), 1);
 });
