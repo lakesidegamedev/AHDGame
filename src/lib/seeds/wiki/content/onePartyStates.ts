@@ -1,6 +1,6 @@
 export const onePartyStatesContent = `# One-Party States
 
-Twelve countries run as one-party states: China (CN), the Soviet Union (RU), East Germany (DD), Poland (PL), Czechoslovakia (CS), Hungary (HU), Romania (RO), Bulgaria (BG), Yugoslavia (YU), Ukraine (UKR), Belarus (BLR) and the Baltics (BAL). One party, the **ruling party**, controls government. Other parties are tolerated or banned. The ruling party survives by keeping its own members confident in the leader and the public tolerant of the regime. If both slip far enough, the country can convert to a multi-party system.
+Depending on the era, up to thirteen countries run as one-party states: China (CN), the Soviet Union (RU), East Germany (DD), Poland (PL), Czechoslovakia (CS), Hungary (HU), Romania (RO), Bulgaria (BG), Yugoslavia (YU), Ukraine (UKR), Belarus (BLR), the Baltics (BAL), and Spain (ES) in the 1953 era. Most of the Eastern bloc starts as a multi-party state in the 1991 and later eras. One party, the **ruling party**, controls government. Other parties are tolerated or banned. The ruling party survives by keeping its own members confident in the leader and the public tolerant of the regime. If both slip far enough, the country can convert to a multi-party system.
 
 ## Ruling, approved, banned
 
@@ -19,7 +19,7 @@ The badge next to a party's name on its profile and on the parties list shows it
 ## What is different from a parliamentary state
 
 - **Government formation:** only the ruling party can seat a head of government (see [Government Formation](/wiki/government-formation)). It can form government. Losing a legislative majority does not collapse the government.
-- **No-confidence vote:** only a ruling-party member can file one (see [No-Confidence Votes](/wiki/no-confidence-votes)), and in China the generic motion is disabled.
+- **No-confidence vote:** most one-party states have no motion at all. The Soviet Union is the exception, and there only a ruling-party member can file one (see [No-Confidence Votes](/wiki/no-confidence-votes)).
 - **Coalitions:** only the ruling party can create, invite or join one (see [Coalitions](/wiki/coalitions)). Banned parties have no coalition role.
 - **Snap elections:** not available by default.
 - **Cabinet and executive offices:** banned parties cannot hold cabinet seats; only the ruling party can field a candidate for Premier or President.
@@ -30,9 +30,9 @@ Banned parties cannot propose or vote on bills, and the bill route is simpler (s
 ## What keeps a regime standing
 
 - **Popular Legitimacy** (starts at 75, range 0 to 100): how the public reads the regime. Driven by the economy and conditions (see [National Metrics](/wiki/national-metrics)), repression, policy alignment with the country's priorities and the credibility of elections.
-- **Party Confidence** (starts at 75, range 0 to 95): how stable the ruling party is internally. Driven by intra-party bleed, policy alignment and a coupling from popular legitimacy.
+- **Party Confidence** (starts at 75, range 0 to 95): how stable the ruling party is internally. Driven by policy alignment, purges and a bleed that switches on when popular legitimacy falls below 30.
 
-Both get a small natural recovery each turn, slow enough that reforms stay meaningful.
+Popular legitimacy drifts slowly toward 60 each turn (0.1 a turn), so it sinks back from a high score and recovers from a low one. Party confidence has no natural recovery: only reforms, decisions, renewals and good policy alignment raise it.
 
 ## The four-stage slide toward collapse
 
@@ -43,7 +43,7 @@ The chain moves forward only. The regime must sit past a threshold for a number 
 | Stage | Name | Trigger |
 | --- | --- | --- |
 | 1 | Public Discontent | Popular legitimacy at 60 or below for 12 turns |
-| 2 | Mass Unrest | Popular at 35 or below for 36 turns in a row, or 48 turns in total within a 168 turn window |
+| 2 | Mass Unrest | Popular at 35 or below for 36 turns, or 48 turns in total (that total fades only slowly once popular recovers) |
 | 3 | Internal Challenge | Party confidence below 15 for 24 turns. A faction split fires and spawns a breakaway approved party |
 | 4 | Forced Collapse | Popular below 15 for 72 turns, reachable only from Stage 3 |
 
@@ -59,16 +59,16 @@ The ruling leader has five reform actions that trade party confidence for public
 | Anti-corruption purge | -2 | +3 | none | 72 turns |
 | Constitutional amendment | -8 | +12 | +0.3 for 240 turns | once only |
 
-Purges cost party confidence by severity: minor -2, regional -4, senior -7, faction -10, extreme -15. Anti-corruption purges are read by the public as a benefit, not repression. The Regime Health tab on the executive hub projects where each reform pushes the scalars before you spend it.
+Purges cost party confidence by severity: minor -2, regional -4, senior -7, faction -10, extreme -15. Anti-corruption purges are read by the public as a benefit, not repression. The Regime Health tab on the executive hub lists each reform's cost, gain and cooldown, and charts both scalars 48 turns ahead from the current economy and active boosts.
 
 ### A 20 turn slide
 
-Popular legitimacy falls to 55 and stays there. After 12 turns Stage 1 begins and the leader is offered a decision. The leader chooses to acknowledge and promise reform (-2 confidence, +3 popular, and the next reform costs half as much confidence). The leader then holds an honest by-election: its normal cost is 3 confidence, but the promise halves it, and it gives +5 popular. The action is then locked for 96 turns. Popular is back near 63, above the Stage 1 line, and the counters ease back one turn at a time. If the leader had ignored the decision, popular would have decayed 1.25 times faster for 24 turns and the regime would have ended up nearer Stage 2.
+Popular legitimacy falls to 55 and stays there. After 12 turns Stage 1 begins and the leader is offered a decision. The leader chooses to acknowledge and promise reform (-2 confidence, +3 popular, and the next reform costs half as much confidence). The same turn, the leader holds an honest by-election: its normal cost is 3 confidence, but the promise halves it (to 1), and it gives +5 popular. The discount only lasts for the turn the promise is made. The action is then locked for 96 turns. Popular is back near 63, above the Stage 1 line, and the counters ease back one turn at a time. If the leader had ignored the decision, popular would have decayed 1.25 times faster for 24 turns and the regime would have ended up nearer Stage 2.
 
 ## Who can do what
 
 - **Ruling leader (Premier or equivalent):** use the five reforms, respond to stage decisions, order purges, or announce a constitutional convention (below).
-- **Approved-party member:** hold seats, run for legislative offices, propose and vote on bills. A Regime Offers inbox surfaces open offers from the regime, such as seats reserved in a convention.
+- **Approved-party member:** hold seats, run for legislative offices, propose and vote on bills. A Regime Offers inbox on the party page lists regime events addressed to your party, such as being legalized as a concession to unrest.
 - **Founding a party:** a new party is marked banned when it is ratified. The charter page explains what it can and cannot do. It can become Approved if the ruling leader picks it with the legalize reform.
 - **Anyone:** read the public Regime Stability panel on the country overview, which shows the stage and a short description without raw numbers.
 
@@ -81,15 +81,15 @@ Common doubts:
 
 ## Command economy
 
-Where the command economy is in use, these states set consumer prices by administration rather than supply and demand, throttle cash growth with a wage-fund ceiling, and let a monetary overhang feed back into popular legitimacy and party confidence. Planning seats operate the levers (Gosplan and Gosbank equivalents in RU and DD, Vice Premier and PBoC Governor in CN), plus state-enterprise director appointments.
+Where the command economy is in use, these states set consumer prices by administration rather than supply and demand, throttle cash growth with a wage-fund ceiling, and let a monetary overhang build into goods shortages. Repressing the black market while shelves are empty costs popular legitimacy. Planning seats operate the levers (Gosplan and Gosbank equivalents in RU and DD, Vice Premier and PBoC Governor in CN), plus state-enterprise director appointments.
 
 ## Constitutional convention and forced conversion
 
-The leader can announce a voluntary convention: announce, draft, ratify. It freezes the Stage 4 counter, gives +15 popular and -10 confidence, and the draft sets the target system, a package of reserved seats for the former ruling party (up to 35) and the election delay (12, 24 or 48 turns).
+The leader can announce a voluntary convention: announce, draft, ratify. It freezes the Stage 4 counter, gives +15 popular and -10 confidence, and the draft sets the target system, a guaranteed share of seats for the former ruling party (up to 35% of seats) and the election delay (12, 24 or 48 turns).
 
-If collapse arrives instead, the Stage 4 decision offers a peaceful route or resistance, and the forced conversion reserves only 5 seats, applies a 0.2 vote-share penalty to the former ruling party and holds an election after 12 turns. Resisting costs -25 confidence and -20 popular, bans every approved party and delays conversion 48 turns. Every conversion dissolves the legislature and holds the election it schedules. The reverse can also happen: a victorious enemy can impose a regime-change peace term (see [Peace & Truces](/wiki/peace-and-truces)) that converts a democracy to a one-party state, and German reunification under the East creates a one-party Germany (see [Germany](/wiki/de-overview)).
+If collapse arrives instead, the Stage 4 decision offers a peaceful route or resistance, and the forced conversion guarantees only 5% of seats (3% if the regime resisted and popular is still below 15 when the delay ends), applies a 0.2 vote-share penalty to the former ruling party and holds an election after 12 turns. Resisting costs -25 confidence and -20 popular, bans every approved party and delays conversion 48 turns. Every conversion dissolves the legislature and holds the election it schedules. The reverse can also happen: a victorious enemy can impose a regime-change peace term (see [Peace & Truces](/wiki/peace-and-truces)) that converts a democracy to a one-party state, and German reunification under the East creates a one-party Germany (see [Germany](/wiki/de-overview)).
 
-Live in the countries listed above, in the eras where each exists. Only China, the Soviet Union and East Germany support the faction-split defection at Stage 3; the other countries skip that step. The command economy applies in worlds where it is switched on, which is the default for fresh worlds. Country detail: [China](/wiki/cn-overview), [Soviet Union](/wiki/ru-overview), [East Germany](/wiki/dd-overview).
+Live in the countries listed above, in the eras where each exists. Only China, the Soviet Union and East Germany support the faction-split defection at Stage 3; the other countries skip that step. The command economy is switched on by default in fresh 1953 and 1979 worlds and off in later eras. Country detail: [China](/wiki/cn-overview), [Soviet Union](/wiki/ru-overview), [East Germany](/wiki/dd-overview).
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [One-party states design doc](https://docs.lakesidegames.net/design/one-party-states-as-shipped.html)
 `;

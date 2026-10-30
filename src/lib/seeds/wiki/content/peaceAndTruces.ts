@@ -97,7 +97,7 @@ The country changes its system of government. A one-party state becomes a democr
 
 **Its legislature is dissolved and fresh elections are called.** The sitting government falls with it. There is a short interregnum before the campaign opens, so the fall is visible rather than instant.
 
-**A crown survives.** A parliamentary monarchy that loses a war loses its government, not its monarch. A settlement can also never install a monarchy: there is no dynasty for a treaty to seat.
+A settlement can never install a monarchy: there is no dynasty for a treaty to seat.
 
 **The rest of the calendar is left alone.** The dissolution brings one election forward. Every later election stays on the date it already had, and where that date now falls too close to run a nomination period, that election waits for the following cycle instead.
 
@@ -176,7 +176,7 @@ That last point is how most negotiated wars actually finish. A two-country war h
 
 ## Winning outright: dictating terms
 
-If your front runs all the way to the end of the track, the war is won, but it does not end on the spot. The fighting stops, every unit goes back to reserve, and you have **24 turns** to name one term from the same four. Nobody has to agree. If the window lapses, the war ends with nothing taken. The full sequence is on [Occupation, Territory & Victory](/wiki/occupation-and-victory).
+If your front runs all the way to the end of the track, the war is won, but it does not end on the spot. The fighting stops, every unit goes back to reserve, and you have **24 turns** to name one term from the same four. Nobody has to agree. If the window lapses, the war ends with a zero indemnity recorded as a dictated settlement, and the victor is still recorded as the winner. The full sequence is on [Occupation, Territory & Victory](/wiki/occupation-and-victory).
 
 Only the country that started the war on the winning side names the terms, and they land on the country that started it on the losing side. Allies who joined later get the truce and nothing else. A banner on your country's pages counts down the window, and you act from the war's own record page under **World, Conflicts**. A war against an insurgency, or one whose losing founder already left on a separate peace, skips this window and ends at once.
 

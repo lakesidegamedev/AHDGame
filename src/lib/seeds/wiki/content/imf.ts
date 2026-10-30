@@ -1,6 +1,6 @@
 export const imfContent = `# Corporate IMF Restructuring
 
-If your shares suddenly trade 15% lower, your bonds vanish from the market and the CEO's pay reads zero, the IMF has rescued the company. Corporate IMF restructuring is an emergency rescue for a corporation that cannot pay its bonds: the bonds are swapped for a loan from the IMF, the IMF becomes a large shareholder, and dividends and CEO pay stop until the loan is repaid. No player can start it: the game team applies it to a distressed corporation in exceptional cases. A bond default and the outstanding bond principal (see [Corporate Bonds](/wiki/corporate-bonds)) make a corporation a candidate.
+If your shares suddenly trade 15% lower, your bonds vanish from the market and the CEO's pay reads zero, the IMF has rescued the company. Corporate IMF restructuring is an emergency rescue for a corporation that cannot pay its bonds: the bonds are swapped for a loan from the IMF, the IMF becomes a large shareholder, and dividends and CEO pay stop until the loan is repaid. No player can start it: the game team applies it to a distressed corporation in exceptional cases. It is meant for a company that has defaulted on its bonds, but the only hard requirement is outstanding bond principal (see [Corporate Bonds](/wiki/corporate-bonds)).
 
 It is separate from the [IMF Sovereign Facility](/wiki/imf-sovereign-facility), which rescues a whole country's budget after a [sovereign default](/wiki/sovereign-default).
 
@@ -8,7 +8,7 @@ It is separate from the [IMF Sovereign Facility](/wiki/imf-sovereign-facility), 
 
 A rescue changes the corporation in one step:
 
-1. **Bonds are replaced.** The corporation's existing [corporate bonds](/wiki/corporate-bonds) are removed from the bond market. A share of their face value, chosen for each rescue, becomes the principal of an IMF loan. Bondholders get a system message telling them their position was reduced.
+1. **Bonds are replaced.** The corporation's existing [corporate bonds](/wiki/corporate-bonds) are deleted, along with their price history. A share of their face value, chosen for each rescue, becomes the principal of an IMF loan owed to the IMF. Player bondholders get a system message telling them their position was reduced.
 2. **The IMF becomes an owner.** New shares are issued to the IMF until it owns the chosen target share of the company. Everyone else is diluted.
 3. **Payouts stop.** The dividend is set to zero and the CEO salary is set to zero.
 4. **The share price is cut.** While the rescue is active the share price carries a 0.85 multiplier, a 15% discount, and the shares are diluted (see the [Stock Market](/wiki/stock-market)).
@@ -38,7 +38,7 @@ Picture a corporation with 100 million of bonds outstanding. The rescue keeps 60
 
 - **CEO.** This is why your salary reads zero. You cannot set a salary above zero or declare a dividend while the rescue lasts, and a shareholder vote to pay you is ignored. Your best move is to raise income so the payment is covered. The ordinary bond-default refinance option is also unavailable.
 - **Shareholder.** Your stake is diluted and the price is lower, so the question is whether to hold for the recovery or sell.
-- **Bondholder.** Your bonds were removed from the market and you get a notice. You cannot rebuy them, and the company cannot issue new ones while the rescue is active. Check the corporation's page and your mail.
+- **Bondholder.** Your bonds are deleted and you get a notice. The notice says holders keep part of face value, but nothing is paid to you: the retained amount becomes the IMF's loan, and every repayment goes to the IMF. The company cannot issue new bonds while the rescue is active. Check the corporation's page and your mail.
 - **Everyone else.** The IMF holds the rescued company as a portfolio position, and the loan is recorded as a receivable on the IMF side.
 
 ## How it ends

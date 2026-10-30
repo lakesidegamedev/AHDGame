@@ -15,7 +15,7 @@ This is separate from a [hostile takeover](/wiki/corporations#privatization-buyo
 
 Open the Deals tab on your corporation page, search for a target by name (any country, so cross-border deals are allowed) and enter a price. You can withdraw an offer until it is answered.
 
-**Reference valuation.** Next to your price the game shows an independent fair-value estimate. It is built from the target's share price times its shares (the [Stock Market](/wiki/stock-market) price feeds it), its cash, and the replacement cost of its plants. You do not have to pay it. It lets both sides see whether an offer is generous or a lowball. Start from it: a player CEO will compare your price with what they could get on the stock market, so a premium helps. If you are short of cash when the deal closes, it fails before anything moves. Keep cash for the full price.
+**Reference valuation.** Next to your price the game shows an independent fair-value estimate. It is the greater of the target's share price times its shares (the [Stock Market](/wiki/stock-market) price feeds it) and its cash plus the value of its sectors (the replacement cost of its plants in worlds with plants). You do not have to pay it. It lets both sides see whether an offer is generous or a lowball. Start from it: a player CEO will compare your price with what they could get on the stock market, so a premium helps. If you are short of cash when the deal closes, it fails before anything moves. Keep cash for the full price.
 
 You cannot make an offer when:
 
@@ -47,9 +47,9 @@ Say you offer ₳40,000,000 for a rival with a reference valuation of ₳36,000,
 
 **Why it exists.** Without a check, one player could buy every rival in an industry. The review gives a country's competition authority a say before that happens.
 
-**When it applies.** Both corporations must be privately owned. The target's country must not be a command economy, must have a competition law, and must have a live minister in the reviewing seat. Review is checked at the moment two firms would combine, for an agreed acquisition and for the squeeze-out that ends a hostile takeover.
+**When it applies.** Both corporations must be privately owned. The target's country must not be a command economy, must have a competition law, and must have the reviewing seat in the current era. The seat can be empty or held by a computer-run party: the review still opens and the timeout bands decide it. Review is checked at the moment two firms would combine, for an agreed acquisition and for the squeeze-out that ends a hostile takeover.
 
-**What trips it.** The combined share of the national industry where the two corporations overlap most, counted only inside the target's home country. The trip level depends on that country's competition law. At "No enforcement" there is no review.
+**What trips it.** The combined share of the national industry where the two corporations overlap most, counted only inside the target's home country. The trip level depends on that country's competition law. At "No enforcement" there is no concentration review. Separately, if the target's country has a Foreign Investment Act at screening or caps and your group is controlled from abroad, the deal is referred whatever the share; the minister can block it, and if they do nothing it clears.
 
 | Item | Value |
 | --- | --- |
@@ -81,7 +81,7 @@ merger-review-timeout-outcomes
 
 Suppose the combined firm would hold 68% of an industry in the target's country, which has Active Enforcement (trip level 60%). The deal is referred. If the minister does nothing for 6 turns, the margin is 68 - 60 = 8 points, which is between 5 and 15, so it clears with a sell-down order. You then have 12 turns to bring your group's share of that industry below 60%. If you miss the deadline and your group earns ₳2,000,000 in that industry, you pay 5% = ₳100,000 every turn until you comply, and you cannot open new offers.
 
-Acquisition offers work in every world that has the Deals tab. If your world has acquisitions switched off, the tab says so. The Keep as subsidiary outcome is offered only in worlds with subsidiaries. Merger review exists only in countries with a competition law and a reviewing seat in the current era, and never applies to state-owned corporations or command economies.
+Acquisition offers work in every world that has the Deals tab. If your world has acquisitions switched off, the Deals tab stays empty. The Keep as subsidiary outcome is offered only in worlds with subsidiaries. Merger review exists only in countries with a competition law and a reviewing seat in the current era, and never applies to state-owned corporations or command economies.
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [Corporate Mergers and Acquisitions (design)](https://docs.lakesidegames.net/design/corporate-mergers-and-acquisitions.html)
 `;

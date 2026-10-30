@@ -39,7 +39,7 @@ A state chair slates two NPPs in the same state race. NPP A has loyalty 38 and s
 - For A, the baseline needs loyalty 40, so A would decline for a national chair. A state chair gets 5 points of leeway, so the need drops to 35 and A is **Likely to Accept**.
 - For B, the baseline ceiling is 70, so B would decline for a national chair. The state chair's ceiling is 75, so B is **Likely to Accept** too.
 
-Both fit within the 3 slots. If a third same-party candidate already stands in that race, the NPPs can still join and create a contested primary rather than pushing the existing entrant out.
+Both fit within the 3 slots. If a third same-party candidate already stands in that race, the race is full: the next turn refuses the new row with Race Slate Full unless the slot is held by an auto-picked NPP with no chair row, which is displaced. A defending incumbent or another chair-slated candidate is never pushed out.
 
 ## What you can do
 

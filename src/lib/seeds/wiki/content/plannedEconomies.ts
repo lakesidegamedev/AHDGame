@@ -4,9 +4,9 @@ Your state firm is insolvent and nobody is closing it. The ruble has not moved i
 
 ## When a country is planned
 
-Command economies exist in 1953 and 1979 style starts and not in modern-era worlds. Countries that start on the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc satellites) come up as planned economies, with their state industries split into separate enterprises you can run. Two gates must both be true:
+Command economies exist in 1953, 1979 and 1991 starts and not in worlds that start in 1999 or later. Countries that start on the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc satellites) come up as planned economies, with their state industries split into separate enterprises you can run. Two gates must both be true:
 
-1. The world starts in an era with command regimes (1953 and 1979 starts).
+1. The world starts in an era with command regimes (1953, 1979 and 1991 starts; a 1991 world opens with the USSR fully command and China dual-track).
 2. The country's **marketization level** is below the market ceiling. The era only sets the *starting* value. From there the level moves on its own each turn based on what happens in the economy (see The marketization dial is earned below).
 
 A **marketization dial** from 0 to 100 measures how far a country has moved toward the market.
@@ -36,20 +36,20 @@ Private [corporations](/wiki/corporations) cannot be founded in a fully command 
 
 ## The enterprises
 
-Instead of one national conglomerate, a command country's commanding heights are split into **separate state enterprises (SOEs), one per strategic sector** (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport; the exact set is country and era specific). Each SOE carries its own:
+Instead of one national conglomerate, a command country's economy is split into **separate state enterprises (SOEs), one per sector**. The USSR and its republics, the Eastern bloc and Yugoslavia get one for every operating sector; China gets six (manufacturing, energy, extraction, agriculture, retail and chemicals). Each SOE carries its own:
 
 - **Plan target**: the output quota it is expected to hit.
 - **Output**: what it actually produced this turn.
 - **Plan fulfillment**: output divided by target. This is the score the enterprise is judged on.
 - **Capacity**: how much the enterprise *could* produce if it ran flat out.
-- **Efficiency**: this is **capacity utilisation**, output divided by capacity. It is *not* cost per unit. Efficiency under 50% means the enterprise is only using half the capacity it owns; efficiency over 100% means it is running above nameplate. Idle capacity still costs upkeep every turn, so low efficiency is a bill, not just a low score.
+- **Efficiency**: a slow moving average of **capacity utilisation** (output divided by capacity). Each turn it moves a tenth of the way toward this turn's utilisation, nudged by the director's labour/quality slider. It is *not* cost per unit. Efficiency under 50% means the enterprise has been using about half the capacity it owns; over 100% means it has been running above nameplate. Idle capacity still costs upkeep every turn, so low efficiency is a bill, not just a low score.
 - **Cumulative losses**: the running tally of missed plan (the soft-budget bill).
 
 When lots of SOEs beat their targets, the plan is working and the command model holds. When they chronically miss, shortages build and pressure to reform the whole system grows.
 
-A heavy-industry SOE has a plan target of 1,000 units and a capacity of 1,200 units, and produces 900. **Plan fulfillment** is 900 / 1,000 = **90%**. **Efficiency** (capacity utilisation) is 900 / 1,200 = **75%**. The missing 100 units of plan adds to its cumulative losses, and idle capacity still costs upkeep.
+A heavy-industry SOE has a plan target of 1,000 units and a capacity of 1,200 units, and produces 900. **Plan fulfillment** is 900 / 1,000 = **90%**. Capacity utilisation is 900 / 1,200 = **75%**, and the efficiency figure trends toward it over the next turns. The missing 100 units of plan adds to its cumulative losses, and idle capacity still costs upkeep.
 
-If the Gosbank Chair funds it, new capacity of 300 units would lower efficiency to 900 / 1,500 = 60% until output catches up. If it chronically misses plan, shortages grow, the black market swells, and marketization drifts upward toward the dual-track band at 30.
+If the Gosbank Chair funds it, new capacity of 300 units would drop utilisation to 900 / 1,500 = 60%, and efficiency would trend down toward it until output catches up. If it chronically misses plan, shortages grow, the black market swells, and marketization drifts upward toward the dual-track band at 30.
 
 ## Who sits where
 
@@ -63,16 +63,16 @@ One director seat per strategic SOE. The director runs a single enterprise and c
 - **Investment request**: ask the Gosbank Chair for capital to expand.
 - **Labor vs quality**: one slider, not two levers. Push it toward **quality** and the efficiency trend slowly climbs; push it toward **raw output** and the efficiency trend slowly drags down. It is a small nudge each turn (efficiency is mostly set by how well capacity is used), so treat it as a long-run lean: quality on the enterprises you are building up, raw output to squeeze the ones already running flat out.
 
-Hit your targets and your enterprise grows and your political standing rises. Miss them and you feed the shortages that erode the whole command system.
+Miss your targets and you feed the shortages that erode the whole command system. The automatic credit allocation leans toward enterprises that miss plan, so hitting it is about holding the system together, not winning more money.
 
 Because efficiency is capacity utilisation, investment (new capacity from the Gosbank) does the opposite of what it looks like on a *low*-efficiency enterprise: adding capacity to a factory that is only half used pushes utilisation down further and adds more upkeep for capacity nobody is producing with. The rule of thumb:
 
 - **Invest where efficiency is high** (near or above 100%). These enterprises are capacity-constrained with real demand behind them, so more capacity turns into more output.
-- **Where efficiency is low** (well under 50%), do **not** pour in capacity. Either lean the labor/quality slider toward raw output to use the capacity already there, or **close** capacity to stop the upkeep bleed. An enterprise sized far above its demand is a loss machine, and the fix is to shrink it, not fund it.
+- **Where efficiency is low** (well under 50%), do **not** pour in capacity. Lean the labor/quality slider toward raw output to use the capacity already there, and drop the investment request so the Gosbank stops building more. Directors have no lever to close capacity, so an enterprise sized far above its demand stays a loss machine until output catches up.
 
 ### Gosplan Central Planner (the macro)
 
-The planner sets the **national plan**: the output quotas and the investment split across every sector. This is the heavy-industry-versus-consumer-goods balancing act. Over-ambitious targets look strong on paper but widen the gap between plan and reality, which shows up as shortage. Under-ambitious targets leave growth on the table.
+The planner (or the head of government) sets the **national plan**: the output quota for every enterprise. The investment split across sectors belongs to the Gosbank Chair. This is the heavy-industry-versus-consumer-goods balancing act. Over-ambitious targets look strong on paper but widen the gap between plan and reality, which shows up as shortage. Under-ambitious targets leave growth on the table.
 
 ### Gosbank Chair (the kingmaker)
 
@@ -88,12 +88,12 @@ That is the Gosbank tightrope. You can grow industry with cheap credit, but the 
 
 ## The marketization dial is earned
 
-The single most important change: **marketization is no longer scripted.** The era sets the starting level, then it drifts every turn based on three live drivers. Shortage, overhang and the black market, which appear in [National Metrics](/wiki/national-metrics), feed the first.
+The single most important change: **marketization is no longer scripted.** The era sets the starting level, then it drifts every turn based on three live drivers. Shortage, overhang and the black market, which appear in the Planned Economy panel on the country's Budget and Economy pages, feed the first.
 
 | Driver | Pushes toward market when... |
 | --- | --- |
 | Black-market pressure | Shortages, the shadow premium (the markup black-market goods sell at over the official price), and the second economy are large |
-| SOE performance | The state enterprises are chronically missing their plan |
+| SOE performance | The state enterprises are using little of their capacity (output well below capacity) |
 | Policy stance | The elected government and the Gosbank lean reformist (market-leaning ruling party, disciplined credit, hard budgets) |
 
 There **is a weak era gravity**: a small restoring pull toward the historical schedule for that turn, on top of the three free drivers above. It is deliberately capped below what the free drivers can sustain, so it nudges rather than dictates. History can still break: a well-run orthodox USSR can stay red long past 1991, and a badly mismanaged one reforms toward the market and, eventually, out of communism. A hardline government with a disciplined plan can hold command indefinitely against gravity; a reformist government that lets the enterprises fail will marketize faster than the schedule alone would predict.
@@ -110,7 +110,7 @@ There **is a weak era gravity**: a small restoring pull toward the historical sc
 
 ### Repression: holding the line
 
-Reform is not the only answer to a swelling black market. A hardline government can crack down instead. The Gosbank Chair or head of government can set an **internal repression** level that forces the second economy down, hides the grey market, and slows the drift toward the market.
+Reform is not the only answer to a swelling black market. A hardline government can crack down instead. The Gosbank Chair or head of government can set an **internal repression** level that discounts the black-market premium and grey market (by up to 80% at full repression) in the pressure that pushes toward reform, slowing the drift toward the market.
 
 What repression does **not** do is fix the shortage. The shelves are still empty; you have only pushed the trading underground. And it is not free: cracking down costs regime legitimacy every turn, and the bill grows the harder you push amid scarcity. Heavy repression sitting on top of a deep shortage is a pressure cooker that bleeds legitimacy while the underlying problem festers.
 
@@ -123,12 +123,12 @@ The planned machinery applies while a country sits in the command or dual-track 
 - **Two-circuit wage fund**: planned share pulls nominal wage growth down toward real-goods growth plus 2 percentage points. It never raises wage growth. This is the primary brake on forced saving when wages outrun consumer goods.
 - **Fixed official currency**: in a fully command country the official rate is pinned to its era anchor and does not float. Do not build forex strategies around it the way you would around USD, GBP, or JPY.
 - **The iron curtain**: in the Cold War eras the bloc's trade with the open world is closed in both directions, while the bloc's internal market and the open world each trade freely among themselves. Yugoslavia, which broke with Moscow before the era begins, sits outside the curtain and trades with the West even though its domestic economy stays planned. See [International Trade](/wiki/trade-system).
-- **Administered prices and CPI**: national prices are set by the plan, not cleared by supply and demand, and open inflation sits on the era path. Shortage shows up as unmet demand at a held price, not as a price spike.
-- **Soft budgets**: state firms are not dissolved for insolvency the way market corporations are, unless the Gosbank Chair runs hard budgets. Zombie enterprises are the regime, not a stuck job.
+- **Administered prices and CPI**: national prices are set by the plan, not cleared by supply and demand, and in a fully command country open inflation sits on the era path. Shortage shows up as unmet demand at a held price, not as a price spike.
+- **Soft budgets**: in a fully command country state firms are not dissolved for insolvency the way market corporations are, unless the Gosbank Chair runs hard budgets. Zombie enterprises are the regime, not a stuck job.
 - **Monetary overhang, shortage, black market**: when money outruns real goods, the excess becomes forced savings that feed a shortage index and a black-market premium. Read these instead of waiting for prices to clear.
 - **The second economy**: repressed demand spills into an informal economy whose size tracks shortage and how far the state tolerates it. A tolerated grey market absorbs overhang and narrows the shadow premium.
 
-Dual-track means plan and market run in parallel: a share of pricing and shortage machinery stays planned, the rest clears like a market. As the marketization level climbs through the 30-to-70 band, more of the economy behaves like a market and the planned machinery fades. When a country crosses out of the planned bands entirely, floating FX, chair policy, supply-and-demand pricing, and normal insolvency rules return.
+Dual-track means plan and market run in parallel: a share of pricing and shortage machinery stays planned, the rest clears like a market. As the marketization level climbs through the 30-to-70 band, more of the economy behaves like a market and the planned machinery fades. Once the level passes 30, floating FX, an active central bank chair and normal insolvency rules return; when it passes 70 the rest of the planned machinery is gone and pricing is fully supply and demand.
 
 ## Playing a command country
 
@@ -143,5 +143,5 @@ Open a country's live control room at **Country > Command Economy**, for example
 
 You cannot rewrite the era starting level; only the *starting* value is era-authored, and everything after that is earned.
 
-Applies only in worlds that start in an era with command regimes (1953 and 1979 starts) and only for countries on the command end of the dial, such as the USSR, early China and the Eastern bloc; modern-era worlds are fully market. A country leaves the command bands when its marketization level passes 70. Last checked 2026-10-29, version 1.18.0. This system has no separate design page yet.
+Applies only in worlds that start in an era with command regimes (1953, 1979 and 1991 starts) and only for countries on the command end of the dial, such as the USSR, early China and the Eastern bloc; modern-era worlds are fully market. A country leaves the command bands when its marketization level passes 70. Last checked 2026-10-29, version 1.18.0. This system has no separate design page yet.
 `;

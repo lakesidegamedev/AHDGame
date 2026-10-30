@@ -42,7 +42,7 @@ Each conflict carries:
 | **Region & terrain** | Derived from the host country. Terrain shapes how the fighting goes. |
 | **Status** | Active, escalating, winding down, terms pending, or resolved. A war whose front has run to a pole sits at *terms pending* while the victor names a settlement; see [Peace, Indemnities & Truces](/wiki/peace-and-truces). |
 
-A resolved conflict keeps its page forever. That is the point of the numbering: conflict #1 is a permanent historical record, browsable long after the shooting stops.
+A resolved conflict keeps its page until the world resets. That is the point of the numbering: conflict #1 stays a historical record for the rest of the iteration, browsable long after the shooting stops.
 
 ## Where everything lives
 
@@ -64,7 +64,7 @@ Authority is deliberately split. No single office runs a war.
 
 | Decision | Who may take it |
 | --- | --- |
-| **Declare war** | Head of government **or** the defence seat holder, then the legislature must ratify it. A country can also be brought in without declaring: a mutual-defence pact (an alliance at the Article 5 posture, or NATO and the Warsaw Pact in Cold War worlds) pulls every member into a war declared **against** one of them, and a bloc can vote to enter a war at its own call. See [Declaring War](/wiki/declaring-war). |
+| **Declare war** | Head of government **or** the defence seat holder, then the legislature must ratify it. A country can also be brought in without declaring: a mutual-defence pact (an alliance at the Article 5 posture, or NATO and the Warsaw Pact in Cold War worlds) pulls the other members into a war declared **against** one of them (members not open to players, or allied with the attacker, stay out), and a bloc can vote to enter a war at its own call. See [Declaring War](/wiki/declaring-war). |
 | **Recruit, upgrade, set posture, assign units to generals** | The defence seat holder |
 | **Commission and dismiss generals** | The defence seat holder |
 | **Adopt national doctrine** | The defence seat holder |
@@ -97,7 +97,7 @@ A conflict shows you different things depending on who you are. This is enforced
 | Tier | Who gets it | What you see |
 | --- | --- | --- |
 | **Public** | Everyone else | Territory held, cumulative casualties, per-battle verdicts and loss totals. No force composition, either side. |
-| **Command** | A belligerent country's posted general, defence seat holder, or head of government | Everything public, **plus** your own live order of battle at that front, plus a coarse read of the enemy ("Stronger force", never a number). |
+| **Command** | A belligerent country's posted general, Commanding General, defence seat holder, or head of government | Everything public, **plus** your own live order of battle at that front, plus a coarse read of the enemy ("Stronger force", never a number). |
 | **Archive** | Everyone, 480 turns after the war is **resolved** | Everything, both sides, per engagement: who fought, what they lost. The fog lifts entirely for history. |
 
 Note the shape of that: **territory and casualties are public in every tier.** The world always knows how a war is going and how many have died. Only *force composition* is secret, and it stays secret for 480 turns after the war ends, because the day a war ends its order of battle is still a live picture of an army that may fight again. A resolved war reads exactly as it did while it ran until that window lapses; then the record opens for everyone.
@@ -136,12 +136,13 @@ Here is how the pieces meet, with turn numbers. One turn is one real hour.
 | Turn | What happens |
 | --- | --- |
 | 1000 | The defence secretary of country X files a declaration against country Y. It costs 10 action points. |
-| 1024 | The 24-turn vote closes. X's chamber returns 61 For and 29 Against, which clears two-thirds, so the war opens as conflict #4 and the 10 points come back. A fifth of the weaker side's reserve is committed automatically. |
+| 1024 | The 24-turn vote closes. X has a single chamber (a second chamber would vote next), and it returns 61 For and 29 Against, which clears two-thirds of votes cast, so the war opens as conflict #4 and the 10 points come back. Each side automatically commits an opening force worth a fifth of the weaker side's reserve. |
 | 1030 | The secretary assigns a division to General Ward. The Commanding General posts Ward to conflict #4, and the division goes with Ward. |
 | 1040 | The Theater Commander declares an offensive. |
 | 1041 | The battle resolves. The defender had the turn between to reinforce or withdraw. |
-| 1200 | The front reaches a pole and the war resolves. A 240-turn truce starts for every pair on opposite sides, so no one can re-declare before turn 1440. |
-| 1680 | 480 turns after the end, the fog lifts and the full order of battle becomes public. |
+| 1200 | The front reaches a pole. The war moves to terms pending and X has 24 turns to name a settlement. |
+| 1210 | X names its terms and the war resolves. A 240-turn truce starts for every pair on opposite sides, so no one can re-declare before turn 1450. |
+| 1690 | 480 turns after the end, the fog lifts and the full order of battle becomes public. |
 
 ## Where you fit
 

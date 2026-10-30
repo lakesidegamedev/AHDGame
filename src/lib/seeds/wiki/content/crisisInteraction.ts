@@ -4,7 +4,7 @@ A wildfire is burning through a region, a bank has failed, a strike has stopped 
 
 ## Where the card comes from
 
-A crisis starts, either from a game event or from the automatic disaster schedule. It applies its effects to state metrics ([National Metrics](/wiki/national-metrics)), [government approval](/wiki/government-approval) and corporate profit margins. Crises are created by the game itself, not by players. The wartime society events in [World Events](/wiki/world-events) open as crises with decision cards when world tension is high, and chained campaigns from [Global Response Crises](/wiki/global-response-crises) open their response windows through this same decision system. Crisis alerts and open decisions arrive in the [Notification Center](/wiki/notifications).
+A crisis starts from a game event, from economic or political conditions crossing a trigger, or from the automatic disaster schedule. It applies its effects to state metrics ([National Metrics](/wiki/national-metrics)), [government approval](/wiki/government-approval), corporate profit margins, and in some cases inflation, regional GDP and politicians' stats. Per-turn effects fade linearly from full strength at the start to zero at the end. Crises are created by the game itself, not by players. The wartime society events in [World Events](/wiki/world-events) open as crises with decision cards when world tension is high, and chained campaigns from [Global Response Crises](/wiki/global-response-crises) open their response windows through this same decision system. Crisis alerts and open decisions arrive in the [Notification Center](/wiki/notifications).
 
 If the crisis has a decision tree, it appears as a card on your actions page and on **World Crises**. A tree is a short branching story: the first question is the active node, and each option leads to another node, a funding step or the end.
 
@@ -12,7 +12,7 @@ If the crisis has a decision tree, it appears as a card on your actions page and
 
 ## Who answers
 
-Which card you see depends on your office: heads of government, cabinet members and state governors each get their own questions. If you cannot see a card, you do not hold the office it is addressed to, or the crisis has no decision tree. Single-country crises are answered by the first eligible leader. A crisis put to several countries at once, such as a Vietnam rung, is answered by each country's head of government separately, so one leader's answer never closes another's. Waiting on the other government does not help.
+Which card you see depends on your office: heads of government, cabinet members (some cards name a specific seat such as the finance minister), state governors, central bank chairs and party leaders can each get their own questions. If you cannot see a card, you do not hold the office it is addressed to, or the crisis has no decision tree. Single-country crises are answered by the first eligible leader. A crisis put to several countries at once, such as a Vietnam rung, is answered by each country's head of government separately, so one leader's answer never closes another's. Waiting on the other government does not help.
 
 When the window closes, any unanswered question resolves on its default. Decisions already made stay made. For Vietnam the cautious default holds your current commitment. The turn clock in [Core Systems](/wiki/core-systems) decides cadence, expiry and when windows close.
 
@@ -23,7 +23,7 @@ A funding step asks for money from your treasury. The game checks the balance in
 | Item | Value |
 | --- | --- |
 | Funding step window (typical) | 24 hours of real time, which is 24 turns |
-| Full funding of a collective fund | Cuts the crisis duration by 50% |
+| Full funding of a collective fund | Cuts the crisis's total duration by 50% |
 | Funding below target | Cut is proportional: 50% times the share of target raised, rounded down |
 | Vietnam opening windows | 24 turns, 24 real hours |
 
@@ -33,25 +33,25 @@ Take a wildfire crisis with a regional governor decision, then a national suppre
 collective-fund-duration-cut
 \`\`\`
 
-- The governor picks **Mandatory Evacuation**: GDP falls 1.0% once. **Defend in Place** costs 0.5% GDP and 3 points of government approval, but protects the economy more.
-- Two heads of government contribute 5,000,000 and 2,000,000. The fund reaches 7,000,000, which is 70% of the target.
-- The duration cut is 50% times 70% = 35% of the remaining duration. On a crisis with 20 turns left that is 7 turns saved, rounded down.
+- The governor picks **Mandatory Evacuation**: the region's GDP growth takes a one-off 1 point hit. **Defend in Place** costs a 0.5 point growth hit and 3 points of government approval, but protects the economy more.
+- Two leaders (heads of government, cabinet members or governors, from any country) contribute 5,000,000 and 2,000,000. The fund reaches 7,000,000, which is 70% of the target.
+- The duration cut is 50% times 70% = 35% of the crisis's total duration. On a crisis lasting 20 turns that is 7 turns cut, rounded down.
 - A third leader who declines gives nothing and loses nothing. The treasury is debited only for what a leader actually commits, and the amount is added to the fund total.
 
 This is why funding is a real fiscal choice. Funding a fund that other governments will fill anyway is cheaper for you than carrying the whole bill.
 
 ## Disasters that arrive on a schedule
 
-The automatic schedule creates regional disasters from the same templates, so the effects and durations match a crisis created by hand. Players are hit as residents of the region: the penalty lands on sector margins, state metrics and approval, and disasters cut profit margins for sectors in the affected region ([Corporations](/wiki/corporations)). Automatic disasters apply effects only. They have no decision card.
+The automatic schedule creates regional disasters from the same templates, using each template's region-scale duration. It swaps in its own margin shock (below) unless the template already carries one. Players are hit as residents of the region: the penalty lands on sector margins, state metrics and approval, and disasters cut profit margins for sectors in the affected region ([Corporations](/wiki/corporations)). Automatic disasters apply effects only. They have no decision card.
 
 | Item | Value |
 | --- | --- |
-| Auto-disaster cadence | One per country every 144 turns, staggered by country so they do not all fire together |
+| Auto-disaster cadence | One per country every 144 turns, staggered by country so they do not all fire together. Under high climate pressure a weather disaster can come early, but never sooner than 108 turns |
 | Same disaster type recurring | At least 144 turns apart in a country |
 | Auto-disaster margin penalty | Minus 10 percentage points on sectors in the hit region, fading linearly to zero by the end |
 | Weather disaster treasury loss | 0.02% of smoothed GDP, scaled up where climate pressure is high and regional resilience is low |
 
-A disaster is guaranteed within each 144-turn cycle, so keep enough treasury to afford a response; weather disasters also draw the treasury down directly.
+Expect a disaster in roughly every 144-turn cycle, so keep enough treasury to afford a response; weather disasters also draw the treasury down directly.
 
 ## Chains
 
@@ -61,5 +61,5 @@ Some historical crises continue across several decisions instead of ending after
 - Increasing support in a chain spends treasury and moves Cold War readiness, bloc cohesion, war weariness and procurement demand.
 - A flashpoint crisis lets a nation's alignment move faster while it stays open; see [Bloc Alignment & Spheres](/wiki/bloc-spheres).
 
-Applies in every current world. A world set in an early era only sees disaster types and chain families that have started by its current year. Last checked 2026-10-29, version 1.18.0. Exact rules: [Crisis System](https://docs.lakesidegames.net/design/crisis-system.html)
+Applies in every current world. A world only sees the era-bound crisis types and chain families that fit its current year; natural disasters are not limited by era. Last checked 2026-10-29, version 1.18.0. Exact rules: [Crisis System](https://docs.lakesidegames.net/design/crisis-system.html)
 `;

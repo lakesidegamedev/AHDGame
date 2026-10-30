@@ -4,7 +4,7 @@ Nine seats, appointed by the President and confirmed by the Senate, and a Court 
 
 ## Who sits on the bench
 
-Each seat is held by a player, an NPP or a scripted historical justice, or is vacant. Each era begins with its Original Roster. When an original justice reaches their authored departure year, the seat becomes vacant. Replacements are not automatic: the President nominates and the Senate confirms every one, by simple majority with the same seat-weighted vote as cabinet confirmation (see [Confirmation Process](/wiki/confirmation-process)). Whips shape NPP senators' votes on nominees (see [Voting & Whips](/wiki/voting-and-whips)).
+Each seat is held by a player, an NPP or a scripted historical justice, or is vacant. Each era with a Court begins with its Original Roster. When an original justice reaches their authored departure year, the seat becomes vacant. Replacements are not automatic: the President nominates and the Senate confirms every one, by simple majority with the same seat-weighted vote as cabinet confirmation (see [Confirmation Process](/wiki/confirmation-process)). Whips shape NPP senators' votes on nominees (see [Voting & Whips](/wiki/voting-and-whips)).
 
 After the first appointment, a sitting justice can leave mid-term, whether player or NPP. The President and the occupant are notified when a seat opens. The Court does not keep a confirmed player forever.
 
@@ -16,7 +16,7 @@ After the first appointment, a sitting justice can leave mid-term, whether playe
 
 ## The docket
 
-Curated historical cases resolve against the sitting Court, on the calendar year the world shows rather than the raw turn counter. A majority on the case's tagged axis can diverge from the historical outcome, and a divergence can enact policy through the same pipeline as a bill (see [Bills & Legislation](/wiki/bills-legislation)). An evenly split bench (4-4, or no seated majority) reaches no decision: the case affirms the existing outcome. Surprise cases can also fire. They are non-historical and resolve the turn they appear, using the sitting majority.
+Curated historical cases resolve against the sitting Court, on the calendar year the world shows rather than the raw turn counter. A majority on the case's tagged axis can diverge from the historical outcome, and a divergence can enact policy through the same pipeline as a bill (see [Bills & Legislation](/wiki/bills-legislation)). The racial equal-protection cases, such as Brown v. Board, always keep their historical outcome whatever the bench looks like. An evenly split bench (4-4, or no seated majority) reaches no decision: the case affirms the existing outcome. Surprise cases can also fire. They are non-historical and resolve the turn they appear, using the sitting majority.
 
 ## What a seat gives you
 
@@ -46,7 +46,7 @@ court-concentration-penalty
 
 The bench has 9 seated justices and a conservative bloc of 7. That is 7/9 = 77.8% of the bench. The penalty is ((0.778 - 0.667) / 0.333) x 12 = 4.0 points. The President nominates an eighth conservative to fill the last liberal seat: the bloc is 8/9 = 88.9%, and the penalty rises to 8.0. A 6-3 bench costs nothing because 6/9 is exactly two-thirds, not over it.
 
-Live in the United States in every era. A justice seat is not a cabinet office and is not gated by year the way HUD or Homeland Security are. No other country has an equivalent Court.
+Live in the United States in the 1953, 1979, 1991, 2019 and 2027 eras; the 1999, 2007 and 2023 starts seed no Court. A justice seat is not a cabinet office and is not gated by year the way HUD or Homeland Security are. No other country has an equivalent Court.
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: the numbers on this page are the full rule set; the nomination vote shares its rules with the cabinet vote on the [Cabinet design page](https://docs.lakesidegames.net/design/cabinet.html)
 `;

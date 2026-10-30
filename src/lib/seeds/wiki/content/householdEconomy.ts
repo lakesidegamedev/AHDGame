@@ -10,7 +10,7 @@ Each turn every state generates demand for a basket that includes food, energy, 
 - **Consumer confidence:** moves demand within a bounded range.
 - **Median income:** compared with the country's own average, never with another country's currency.
 
-Check these first when a consumer sector sells below expectation. Hiring and wage choices move unemployment and median income through [Labour & Wages](/wiki/labour-and-wages), and policymakers who lift employment or confidence raise household demand across the board.
+During a global financial crisis, a country's stimulus spending and bank lending also scale its households' budget. Check these first when a consumer sector sells below expectation. Hiring and wage choices move unemployment and median income through [Labour & Wages](/wiki/labour-and-wages), and policymakers who lift employment or confidence raise household demand across the board.
 
 Wealth changes the **mix** of the basket, not its size (Engel's law). Richer states spend a smaller share on staples and a larger share on vehicles, electronics, housing, finance and software, so sell goods that fit the local basket.
 

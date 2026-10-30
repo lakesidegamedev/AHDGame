@@ -29,7 +29,7 @@ primary-alignment-points
 
 The *state's lean* is the state's own economic and social centre. If a state has no recorded lean, alignment falls back to a party-only score of \`max(0, 40 - (econ gap + social gap) x 2)\`. In a presidential primary alignment is also worth 40, measured against the party only, with the same 2 per point of gap.
 
-Every version reaches **zero at a combined gap of 20 points** (for example 10 economic plus 10 social). Everything else in the primary score is favorability (up to 35, or 25 for a presidential primary) and political influence, so a candidate who is far from the party starts well behind.
+Every version reaches **zero at a combined gap of 20 points** (for example 10 economic plus 10 social). Everything else in the primary score is favorability (up to 35, or 25 for a presidential primary) and influence (political influence in a state primary; party influence and national reach in a presidential one), so a candidate who is far from the party starts well behind.
 
 You are at +3 economic and -1 social. Your state leans +2 and 0. Your party sits at +4 and -2.
 
@@ -43,7 +43,7 @@ Match the party, but also match your state's lean: that is 25 of the 40 points. 
 
 ## Beyond the primary
 
-In a [general election](/wiki/general-elections) each voter group has its own centre on the grid, and the closer your positions are to it, the more appeal you get. [Demographics & Targeting](/wiki/demographics-targeting) covers how each group's centre decides what a position earns. The scoring curve is gentle for small gaps and steep for large ones. It is one input beside favorability, [organization](/wiki/party-organization) and campaigning, not the only one.
+In a [general election](/wiki/general-elections) each voter group has its own centre on the grid, and the closer your positions are to it, the more appeal you get. [Demographics & Targeting](/wiki/demographics-targeting) covers how each group's centre decides what a position earns. The scoring curve is steepest for small gaps and flattens as the gap grows, and a group also gives a small bonus to candidates who lean its way. It is one input beside favorability, [organization](/wiki/party-organization) and campaigning, not the only one.
 
 An NPP legislator measures a bill's economic and social direction against its own positions. The match becomes a force of up to 100 for or against the bill, which is added to its other pressures. See [NPP Behavior](/wiki/npp-behavior).
 
@@ -67,5 +67,5 @@ Plan a few steps ahead of a primary rather than rushing. One step toward your st
 | Lock on a shifted axis | 336 turns |
 | Character position shift | 15 actions, +5 infamy, influence x 0.95 |
 
-Live in every world and country with parties, with the same -5 to +5 grid everywhere. Last checked 2026-10-29, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html)
+Live in every world and country with parties, with the same -5 to +5 grid everywhere. Last checked 2026-10-30, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html)
 `;

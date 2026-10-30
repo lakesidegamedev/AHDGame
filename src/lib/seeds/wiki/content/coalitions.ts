@@ -1,6 +1,6 @@
 export const coalitionsContent = `# Coalitions
 
-Allying with another party can lock you out of the minority leadership posts. In the US, a coalition adds its parties' seats into one bloc, and the largest bloc counts as the majority when chamber leaders are chosen. Everywhere else a coalition is a way to show unity and agree shared priorities. Coalitions are run by party chairs, not by individual players: you belong to a [party](/wiki/political-parties), and your party's chair speaks and votes for it.
+Allying with another party can lock you out of the minority leadership posts. In the US, a coalition adds its parties' seats into one bloc, and the largest bloc counts as the majority when chamber leaders are chosen. In parliamentary countries a coalition's combined seats count when a government is formed, and everywhere a coalition can agree shared priorities. Coalitions are run by party chairs, not by individual players: you belong to a [party](/wiki/political-parties), and your party's chair speaks and votes for it.
 
 ## What a coalition is
 
@@ -15,7 +15,7 @@ A party can be in **only one** coalition at a time, and a coalition only holds p
 
 The coalition chair is the national chair of the chair party. If that party leaves, the longest-standing member party takes over.
 
-To see coalitions, go to \`/parties\`, switch from the Parties tab to the Coalitions tab and pick a country. A coalition page has Overview (averaged positions, leaders, any disband vote), Parties, and a Chair's Office for the chair.
+To see coalitions, go to \`/parties\`, switch from the Parties tab to the Coalitions tab and pick a country. A coalition page has Overview (averaged positions, leaders, any disband vote), Parties, Priorities, and a Chair's Office for the chair.
 
 ![Coalition page with members, ideology and the list of member parties and their chairs](/wiki-images/screens/coalitions-coalition-page.webp)
 
@@ -48,7 +48,7 @@ The coalition changed who counts as the minority, not who holds the Majority Lea
 
 Coalitions also let parties agree up to three **shared priorities** (a bill, a policy theme or a leadership goal). Each member party's chair votes support, oppose or abstain, and a priority goes active when more than half of the member parties support it. The coalition page shows a cohesion label (Strong, Mixed, Fractured or Unaligned) from those votes. Priorities are a signal; they do not force members to vote any way.
 
-Outside the US, coalitions are signalling only. UK, German, Japanese and Irish governments are built by their own government formation step, which does not consult these alliances, though coalition chairs can nominate a PM and bring partner seats to the vote; see [Government Formation](/wiki/government-formation). Coalitions still show alignment and shared priorities in the UK and Germany.
+Outside the US chambers, coalitions matter in parliamentary government formation (the UK, Germany, Japan, Ireland and other parliamentary countries). A coalition chair can propose a prime minister, the coalition's combined seats decide whether that government counts as a majority or a minority, a coalition government's support is recounted from its live membership, and the largest opposition coalition's chair can be the opposition leader; see [Government Formation](/wiki/government-formation).
 
 | Item | Value |
 | --- | --- |
@@ -60,5 +60,5 @@ Outside the US, coalitions are signalling only. UK, German, Japanese and Irish g
 | Disband vote length | 24 turns (24 hours at the standard pace) |
 | Yes votes needed to disband | More than half of all member parties |
 
-Bloc effects apply to US House and Senate leadership; in every other country coalitions are signalling only. Same in every era and world that has parties. Last checked 2026-10-29, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
+Bloc effects apply to US House and Senate leadership; parliamentary countries use coalitions in government formation instead. Same in every era and world that has parties. Last checked 2026-10-30, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
 `;

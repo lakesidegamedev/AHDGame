@@ -38,12 +38,12 @@ New to the game? Start with [Getting Started](/wiki/getting-started) and the [Fi
 *Start here if you build tools or want the exact math:* [API Automation](/guides/api-automation) or [Reference Formulas](/wiki/reference-formulas).
 
 - [API Automation](/guides/api-automation): build bots and dashboards from live politics, metrics, markets, trade restrictions, international organizations, and sovereign-risk data.
-- [Reference Formulas](/wiki/reference-formulas): current election, approval, organization, and progression formulas.
+- [Reference Formulas](/wiki/reference-formulas): current primary score, influence timing, canvassing, general-election vote and party organization formulas.
 - [Turn Order](/wiki/reference-turn-order): the authoritative phase sequence for hourly processing.
 
 ---
 
-Prefer reference over walkthroughs? Browse the wiki by category from [Getting Started](/wiki/getting-started). The core rules behind every guide are in [Core Systems](/wiki/core-systems) and [Stats & Actions](/wiki/stats-actions).
+Prefer reference over walkthroughs? Browse the wiki by category from the [wiki home](/wiki). The core rules behind every guide are in [Core Systems](/wiki/core-systems) and [Stats & Actions](/wiki/stats-actions).
 
 Applies in every world. Last checked 2026-10-29, version 1.18.0.
 `;

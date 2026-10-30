@@ -1,6 +1,6 @@
 export const partyOrganizationContent = `# Party Organization
 
-Nobody can take Org away from your party. A rival can only dilute your share by building their own, and you lose units only by neglect. Organization (**Org**) is your party's share of the machinery in a state: local offices, volunteers and loyal precinct captains. A higher share lifts your candidates' general election vote there, makes your GOTV spending go further, and counts toward becoming a Major party (see [Party Actions](/wiki/party-actions)). You raise it one click at a time with **Build Org**.
+Nobody can take Org away from your party. A rival can only dilute your share by building their own, and you lose units only by neglect. Organization (**Org**) is your party's share of the machinery in a state: local offices, volunteers and loyal precinct captains. A higher share lifts your candidates' general election vote there and counts toward becoming a Major party (see [Party Actions](/wiki/party-actions)). You raise it one click at a time with **Build Org**.
 
 ## Your share of a state
 
@@ -34,7 +34,7 @@ build-org-click-cost
 
 If the treasury cannot cover the full price but covers at least **a quarter** of it, the click still adds one unit and takes whatever money is there. Below a quarter, the click is refused and costs nothing: no PS, no ladder rise.
 
-The state treasury fills from member taxes, and the state party gains PS each turn (5 passive, more if the chair invests treasury money). Ask the state treasurer for a tax rate above 0, or ask the national party for a transfer.
+The state treasury fills from member taxes, and the state party gains PS each turn (5 passive, more if the state chair, vice chair, treasurer or national chair sets a PS budget from the treasury). Ask the state treasurer for a tax rate above 0, or ask the national party for a transfer.
 
 You build five times in one turn. Your PS cost climbs 1, 2, 3, 4, 5 for 15 PS in total. Your money cost in an average US state is ₳2,813, ₳5,625, ₳8,438, ₳11,250 and ₳14,063: about **₳42,200** in all. You now have 45 units out of 205, a share of **22.0%**. If you had spread the same five clicks over five turns, you would have paid 1 PS each and about ₳14,100 in total, because the ladder drops by 3 a turn. Spacing out clicks is the cheap way to build.
 
@@ -66,5 +66,5 @@ In a [general election](/wiki/general-elections) your Org share is weighted with
 
 How much do you need? There is no fixed number. A party that reaches **20% Org in a third of a country's regions** graduates to Major (a quarter in the UK), and that is the usual goal. The UK's regional parties are the other place it shows: Org decides how strong they are outside their home nation, see [Party Leadership & Authority](/wiki/party-leadership-authority).
 
-Live in every world and country with parties and states or regions. Build Org is not available in a region that does not support party organization. Prices are quoted in each country's own currency. Last checked 2026-10-29, version 1.18.0. Exact rules: [Party Building design page](https://docs.lakesidegames.net/design/party-building.html)
+Live in every world and country with parties and states or regions. Build Org is not available in a region that does not support party organization. Prices are quoted in each country's own currency. Last checked 2026-10-30, version 1.18.0. Exact rules: [Party Building design page](https://docs.lakesidegames.net/design/party-building.html)
 `;

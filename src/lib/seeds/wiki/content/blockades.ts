@@ -7,7 +7,7 @@ A blockade is hulls in the water stopping trade that both parties still want. It
 | What | Value |
 | --- | --- |
 | Weight toward closing a lane | Blockade 1.0, Sea Denial 0.7, Sea Control 0.55, Escort 0.15, Transit and Port 0 |
-| Port defence of an approach | The region's port rating (0 to 9) times 7 |
+| Port defence of an approach | The region's port rating (0 to 9) times 7, with a minimum of 1 |
 | Closure on one approach | Pressure divided by (pressure plus port defence) |
 | Total closure | Pressure at 9 times port defence or more |
 | Trade multiplier | 1 minus closure, never below 0.10, and 0 at total closure |
@@ -17,7 +17,7 @@ A blockade is hulls in the water stopping trade that both parties still want. It
 
 ### Closing the Mediterranean
 
-A country's worst approach is the Mediterranean, which has a port rating of 8, so its port defence is 8 × 7 = 56. A hostile fleet on Blockade and Sea Denial, in good condition, adds up to a pressure of 56. Closure is 56 / (56 + 56) = 0.5, so trade into and out of the country runs at 50% of its normal affinity. With a pressure of 140, closure is 140 / 196 = 0.71 and trade runs at 29%. Once pressure reaches 9 × 56 = 504, closure is total and the country's seaborne supply is unreachable. In the South Atlantic, with a port rating of 3 and a defence of 21, a pressure of 189 gives total closure, so a lightly defended lane is much cheaper to shut.
+A country's worst approach is the Mediterranean, which has a port rating of 8, so its port defence is 8 × 7 = 56. Closure is pressure divided by pressure plus port defence, so trade into and out of the country runs at 50% of its normal affinity when pressure equals the port defence. With a pressure of 140, closure is 140 / 196 = 0.71 and trade runs at 29%. Once pressure reaches 9 × 56 = 504, closure is total and the country's seaborne supply is unreachable. In the South Atlantic, with a port rating of 3 and a defence of 21, a pressure of 189 gives total closure, so a lightly defended lane is much cheaper to shut.
 
 ## What you need
 
@@ -76,5 +76,5 @@ Because closure follows the ships' positions turn by turn, a blockade is a commi
 
 **Questions that come up.** *How do I blockade a country?* Be at war with it, then station ships on Blockade in one of its approach regions. *Why is my blockade not closing trade?* The target's port defence is higher than your pressure, your fleet is damaged, or it is on the wrong posture. *How do I break one?* See the list above. *Is a blockade the same as an embargo?* No. An embargo is a political trade ban. If both apply, an embargo blocks the lane outright, and a blockade multiplies whatever affinity is left, after tariffs.
 
-Works in every world and era where a navy exists and there is a war; Scotland and Wales have no defence seat and so no navy. Last checked 2026-10-29, version 1.18.0. Exact rules: no design page of their own yet; the system is summarised on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+Works in every world and era where a navy exists and there is a war; Scotland and Wales have no defence seat. Last checked 2026-10-29, version 1.18.0. Exact rules: no design page of their own yet; the system is summarised on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

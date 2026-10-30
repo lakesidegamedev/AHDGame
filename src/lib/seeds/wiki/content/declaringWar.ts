@@ -6,8 +6,8 @@ You do not click a button and start a war. You **file a bill**, and your legisla
 
 1. **File.** The head of government or the defence seat holder files a declaration of war naming a target country and a war goal.
 2. **Checks.** The server refuses the filing, at no cost to you, if any check in the list below fails.
-3. **Vote.** The bill sits before the legislature for 24 turns. It needs two-thirds of the votes cast (For plus Against, abstentions excluded) in every chamber that votes on it.
-4. **Outcome.** If it passes, the war starts at once and your 10 action points come back. If it fails, the points are gone and your cooldown keeps running.
+3. **Vote.** Each chamber that votes on bills gets a 24-turn vote. In a two-chamber legislature such as the US Congress the second chamber votes after the first, so the bill takes at least 48 turns. It needs two-thirds of the votes cast (For plus Against, abstentions excluded) in every chamber. Any signing step your country has comes last: the US President has 10 turns to sign or veto, and the UK Lords can hold a bill for up to 2 turns.
+4. **Outcome.** Once the last step clears, the war starts and your 10 action points come back. If it fails, the points are gone and your cooldown keeps running.
 
 ![Flow from filing the bill and server checks to a 24 turn vote needing two thirds, then passing to start or join a war or failing and losing the action points.](/wiki-images/diagrams/declaring-war-flow.svg)
 
@@ -16,7 +16,7 @@ You do not click a button and start a war. You **file a bill**, and your legisla
 | What | Value |
 | --- | --- |
 | Cost to file | 10 action points, refunded if the bill passes |
-| Voting window | 24 turns (one real day) |
+| Voting window | 24 turns (one real day) per chamber vote |
 | Bar to pass | Two-thirds of For plus Against, in every government type |
 | Cooldown between filings | 120 turns (five real days), counted from your last filing |
 | Truce after any war ends | 240 turns (ten real days), per pair of enemy countries |
@@ -34,7 +34,7 @@ One turn is one real hour, so these timers run in real time even when nobody is 
 | Head of government | Your executive shell, **Foreign Affairs** tab |
 | Defence seat holder | Your cabinet office, **Commands** tab, **Declaration of war** panel |
 
-Both forms post the same bill. The defence panel also lists your live truces, greys out the countries you cannot target, and shows how many turns of cooldown remain.
+Both places show the same form and post the same bill. It greys out the countries you cannot target (truced or allied), shows the turn each truce ends, and states the 120-turn cooldown rule. If you file inside the cooldown, the server tells you how many turns remain.
 
 **Everything that can refuse a declaration:**
 
@@ -51,7 +51,7 @@ Both forms post the same bill. The defence panel also lists your live truces, gr
 
 - Count your votes before you file. A declaration you are sure of is free, because the points come back. A speculative one costs 10 action points and a five-day cooldown.
 - Check the truce list before you plan a campaign, not after.
-- The debate is public. Your target sees the bill on your legislature floor for a full day, so surprise lives at the offensive level (see [Fighting a Battle](/wiki/fighting-a-battle)), not here.
+- The debate is public. Your target sees the bill on your legislature floor for at least a full day, so surprise lives at the offensive level (see [Fighting a Battle](/wiki/fighting-a-battle)), not here.
 
 ## Counting the vote
 
@@ -107,7 +107,7 @@ Truces are recorded for every pair on opposite sides, not only the two principal
 
 A mutual-defence pact is enforced by the engine. Any Security or Bloc organization at the Article 5 alert posture counts as one, and so do NATO and the Warsaw Pact in worlds that start in the Cold War, whatever their posture. When a declaration against a member is enacted, every other member that holds a ballot is enrolled on the defender's side with no vote and no bill. The war's belligerent roll names the alliance, for example "Warsaw Pact → DD", and the countries pulled in are notified.
 
-The pact is also checked every turn, so an alliance that moves to Article 5 during a member's war, or a country that joins one during a war, brings its members in on the next turn.
+The pact is also checked every turn, so an alliance that moves to Article 5 during a member's war brings its members in on the next turn, and a country that joins an alliance while a fellow member is under attack is enrolled on the next turn. Joining an alliance mid-war does not bring that alliance into a war you were already fighting.
 
 - **Defensive only.** The trigger is a declaration *against* a member, never "a member is at war". An ally dragged in has declared on nobody, so its own alliances do not fire in turn. Chains cannot happen.
 - **A truce still holds.** A member truced with the declarer is not pulled in against it. Neither is a member that shares a bloc or a binding alliance with the declarer. If the declarer is itself a member, the alliance takes no side.

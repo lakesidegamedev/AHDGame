@@ -7,16 +7,16 @@ Nobody in the United Kingdom is elected Prime Minister. You win seats, then you 
 There is no direct vote for Prime Minister. Instead:
 
 1. After Commons elections resolve across all 12 regions, seat totals are summed by party.
-2. The **largest party** (by seats) attempts to form a government.
-3. A **confidence vote** is held among all 650 elected MPs. The nominee needs more than 50% (326 votes) to be confirmed as PM.
-4. If the confidence vote fails, the next-largest party's leader is nominated, and the process repeats.
-5. **Minority government**: any party or coalition chair holding at least 100 Commons seats can call a confidence vote and propose a PM, even when a rival bloc has 326+. The Commons votes the bid up or down.
+2. If a Prime Minister is still seated, a **confidence motion** opens first. The PM stays unless nays strictly outnumber ayes.
+3. Otherwise, a **party chair or coalition chair** whose bloc holds a majority (326 seats) can propose a PM, as long as the bloc has at least one player MP.
+4. The Commons votes for 24 hours. The nominee is appointed if ayes outnumber nays among the MPs who vote; computer-controlled MPs vote automatically.
+5. **Minority government**: any party or coalition chair holding at least 100 Commons seats can also propose a PM, even when a rival bloc has 326+. The Commons votes the bid up or down. If a bid fails, another chair can try.
 
-![Loop for forming a UK government: seats by party, largest party nominated, confidence vote, next party on failure, a minority bid route, and a no-confidence vote that clears the cabinet.](/wiki-images/diagrams/uk-overview-pm-formation.svg)
+![Loop for forming a UK government: seats by party, a chair's bid for Prime Minister, the Commons vote, another bid on failure, a minority bid route, and a no-confidence vote that clears the cabinet.](/wiki-images/diagrams/uk-overview-pm-formation.svg)
 
-Say Labour wins 340 of 650 seats. Its leader is nominated and 326 or more Ayes are needed, so Labour passes with room to spare. If it won only 300 seats, it would need 26 more votes from MPs outside its party. If those do not come, the next-largest party gets its turn.
+Say Labour wins 340 of 650 seats. Its chair proposes a PM, and Labour's own MPs alone outvote everyone else, so the nominee passes with room to spare. If it won only 300 seats, it could still bid as a minority, but the other 350 MPs could outvote it, so it needs some of them to back it or stay out of the vote. If the bid fails, another chair can try.
 
-The PM serves until a new Commons election, resignation, or removal by no-confidence vote. There is no fixed term. When a new PM is appointed, the entire cabinet is cleared: all ministerial positions become vacant and pending nominations are withdrawn. See the [Cabinet Guide](/wiki/cabinet-guide) for every post, its metrics and its actions.
+The PM serves until resignation, removal by no-confidence vote, a snap election, or a lost confidence motion after a Commons election. There is no fixed term. When a new PM is appointed, the entire cabinet is cleared: all ministerial positions become vacant and pending nominations are withdrawn. See the [Cabinet Guide](/wiki/cabinet-guide) for every post, its metrics and its actions.
 
 ## Losing the Commons
 
@@ -24,17 +24,17 @@ Two mechanics have no US equivalent.
 
 **No-confidence votes.** Any sitting MP, in government or opposition, can table a motion of no confidence against the sitting PM. It needs a majority of the **whole** Commons (326 of 650), so abstentions and absent members count against the motion. The vote lasts 24 hours, and only one motion can run at a time, with at least 48 turns between filings. If it passes, the PM is removed immediately, the cabinet is cleared, and government formation restarts. If it fails, the PM stays. See [No-Confidence Votes](/wiki/no-confidence-votes).
 
-**Snap elections.** A sitting PM can call an early Commons election before the five-year maximum. It resets all regions at once and runs as a 48-hour sprint. A PM can call at most 2 snaps per appointment, with a 336-turn (2 real weeks) cooldown after the first, and cannot call one while a no-confidence vote is open. Calling a snap vacates the PM seat and clears the cabinet, so the winner is chosen through government formation afterward. If no PM is seated within 96 turns, a snap is triggered automatically. The [Snap Elections](/wiki/snap-elections) guide covers the mechanics and costs in detail.
+**Snap elections.** A sitting PM can call an early Commons election before the five-year maximum. It resets all regions at once and runs as a 48-hour sprint. A PM can call at most 2 snaps per appointment, with a 336-turn (2 real weeks) cooldown after the first, and cannot call one while a no-confidence vote or the post-election confidence motion is open. Calling a snap vacates the PM seat and clears the cabinet, so the winner is chosen through government formation afterward. If no PM is seated within 96 turns, a snap is triggered automatically. The [Snap Elections](/wiki/snap-elections) guide covers the mechanics and costs in detail.
 
 How well the government is regarded is computed from the country's own metrics and the national effects layered on them (a war, a national address, international statements, the state of the cabinet), not from the PM's favorability. See [Government Approval](/wiki/government-approval).
 
-When a bill passes the Commons, it receives Royal Assent automatically and is enacted immediately. There is no presidential veto and no executive signature step.
+When a bill passes the Commons, it receives Royal Assent automatically. Most bills are enacted immediately; about 28% are held for a turn or two of Lords revision first. There is no presidential veto and no executive signature step.
 
 ## Winning a Commons seat
 
 Commons elections use **regional multi-seat allocation**. The Commons resolver runs one race in each of 12 regions: England is split into nine, and Scotland, Wales and Northern Ireland each form one. Each region's seats are allocated by the Hare largest-remainder method, in every era. A party needs at least **10% of the pooled votes in a region** to qualify for seats there, so a small party's votes in a region can count for nothing.
 
-Your character's home region normally determines where you can stand for Commons, while party leaders have broader access. **Primaries advance the top 3 candidates** per party (not 1 as in the US), so up to three candidates from each party reach the general election.
+Your character's home region determines where you can stand for Commons; party leaders get no exception. **Primaries advance the top 3 candidates** per party (not 1 as in the US), so up to three candidates from each party reach the general election.
 
 | Region | Code | Modern Commons seats | Regional Council seats |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ The **House of Commons** (650 elected MPs, 625 in the 1953 preset) is the primar
 
 ## The Chancellor and the Bank of England
 
-The annual Budget bundles real tax rates and statutory programme levels (the NHS included) into one Commons confidence vote. It shares a single fiscal ledger with ordinary legislation, so a later Act or a later Budget controls each setting. The Treasury page shows a forecast of revenue, spending, balance and the tax phase-in before the package is tabled. If no Chancellor is appointed, the Prime Minister may act until the vacancy is filled.
+The annual Budget bundles real tax rates and statutory programme levels (the NHS included) into one Commons vote, and a defeated Budget badly damages the government's confidence standing. It shares a single fiscal ledger with ordinary legislation, so a later Act or a later Budget controls each setting. The Treasury page shows a forecast of revenue, spending, balance and the tax phase-in before the package is tabled. If no Chancellor is appointed, the Prime Minister may act until the vacancy is filled.
 
 A world that opens before the 1997 independence grant starts with the Treasury setting Bank Rate and no rate committee; Parliament can legislate the transfer either way. There is no FOMC-style committee here in any era: the Governor sets the rate alone once the bank is independent.
 
@@ -98,13 +98,13 @@ A world that opens before the 1997 independence grant starts with the Treasury s
 | Currency | GBP |
 | Central Bank | Bank of England (BoE) |
 | Chair title | Governor of the Bank of England |
-| Default prime rate | 3.0% |
+| Default prime rate | 3.0% (4.5% in a world that starts in 1991) |
 | Stock exchange | FTSE |
 | Finance Minister | Chancellor of the Exchequer |
 
 ## Living history
 
-The timeline below is written by the turn processor whenever a head-of-government transition or national-scope bill enactment happens in-game. Each entry is a real event from this save.
+The timeline below is written by the turn processor whenever a national milestone happens in-game, such as a change of Prime Minister, a national law, a referendum or a border change. Each entry is a real event from this save.
 
 \`\`\`country-history
 UK

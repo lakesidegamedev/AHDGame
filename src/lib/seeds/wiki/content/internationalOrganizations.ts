@@ -45,12 +45,12 @@ The threshold is counted against everyone entitled to vote, not against who turn
 
 | Ballot | Needs | Who votes |
 | --- | --- | --- |
-| Admitting a member | Every voter | Player-run members |
-| Declaring war, or entering a conflict at the bloc's call | Every voter | Player-run members |
+| Admitting a member | Every voter | Member countries open to players |
+| Declaring war, or entering a conflict at the bloc's call | Every voter | Member countries open to players |
 | Free trade agreement | Every named party | Only the countries named in the agreement |
 | Everything else (sanctions, directives, aid, dues, posture, statements, agency funding, leadership) | More than half | All voting members |
 
-The UN adds a veto: its founding members (US, UK, Germany and Japan) can each block a majority ballot by voting no. Client states are bound by what their bloc decides but do not vote. Countries nobody plays vote on their own, and a failed resolution is written to the country's history.
+The UN adds a veto: its founding members (US, UK, Germany and Japan) can each block a majority resolution by voting no (leadership elections are not subject to the veto). Client states are bound by what their bloc decides but do not vote. Countries nobody plays vote on their own, and a failed resolution is written to the country's history.
 
 ### A five-country vote
 

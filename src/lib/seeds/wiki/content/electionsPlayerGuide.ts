@@ -4,7 +4,7 @@ The elections UI has three levels: the country election board, the individual ra
 
 ## Results, maps and replay
 
-In normal multiplayer mode, general-election returns update at half past the hour as well as during the main hourly turn. Campaign budgets, action refresh and race deadlines stay on the main turn. A tick may be skipped while a turn is processing; faster returns do not mean another action allowance.
+In normal multiplayer mode, general-election returns update at half past the hour as well as during the main hourly turn, and so do state and regional primary counts once their ballot window has opened. Campaign budgets, action refresh and race deadlines stay on the main turn. A tick may be skipped while a turn is processing; faster returns do not mean another action allowance.
 
 Presidential races offer a full-screen map with state and county views, campaign presence and a road-to-270 strip for Electoral College races. Open a state in the map to inspect its results and campaign options. Popular-vote views answer a different question from the Electoral College count.
 
@@ -16,7 +16,7 @@ For a finished presidential race with recorded weekly history, choose **Replay t
 
 ![Elections board with the office, state and stage filters and the election night summary](/wiki-images/screens/elections-player-guide-elections-board.webp)
 
-Open **Nation > Elections**. Use the filters for country, office, stage, and state or region. The board is for finding a race and checking its phase. It is not the place to judge your detailed position.
+Open **Nation > Elections**. The board covers the country you opened it from. Use the filters for state or region, office, primary stage and field size, and the toggles for close races and races that have not opened yet. The board is for finding a race and checking its phase. It is not the place to judge your detailed position.
 
 Before entering, confirm:
 
@@ -102,7 +102,7 @@ You also receive the highest position bonus you qualify for:
 | National legislator, ceremonial head of state | +1.0 |
 | Acting cabinet member | +0.75 |
 | State or regional legislator, state party chair | +0.5 |
-| CEO of one of the 10 largest listed corporations in its country by market cap | +0.3 |
+| CEO of one of the 10 largest listed corporations in its country by market cap, not on autopilot | +0.3 |
 | CEO of any other listed corporation in the top half of its country by market cap | +0.15 |
 
 A CEO only qualifies after running the same corporation for 12 turns. Running a corporation grants no extra actions.
@@ -162,7 +162,7 @@ Party organization helps turn alignment into votes. Registration makes the party
 
 ### Money
 
-Money funds campaign actions and upgrades. It is a means, not a direct victory score. Spend it on the weakest link the race page exposes.
+Money funds campaign actions and upgrades, and recent spending also counts directly: the Money persuasion driver compares how much each side has spent lately. Money sitting in a treasury scores nothing. Spend it on the weakest link the race page exposes.
 
 ## Why you can win the primary and lose the general
 
@@ -178,8 +178,8 @@ So a candidate who matches the party base but sits far from the state's swing gr
 
 It depends on the race.
 
-- **State primary:** favorability is worth the most (35 points). Then political influence (25, square-root curve) and alignment.
-- **Presidential primary:** alignment (40), favorability (25), party influence (20) and national reach (15). Party chairs get no special multiplier in presidential primaries, so a chair loses when favorability and alignment are weaker than a rival's.
+- **State primary:** favorability is the largest single part (35 points). Alignment adds up to 40 but splits into 25 for the state and 15 for the party, and political influence is worth 25 on a square-root curve.
+- **Presidential primary:** alignment (40), favorability (25), party influence (20, and it keeps paying above that for very high party influence) and national reach (15). Party chairs get no special multiplier in presidential primaries, so a chair loses when favorability and alignment are weaker than a rival's.
 - **General:** favorability scales every vote you win, then reach (influence), then party organization.
 
 ## A turn-by-turn routine

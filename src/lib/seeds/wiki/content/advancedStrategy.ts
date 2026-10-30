@@ -8,11 +8,11 @@ Every race has an opportunity cost. Actions spent on one campaign cannot raise y
 
 **The legislature-first arc.** Win a House seat, use the seat's action bonus and credibility to build [Political Influence](/wiki/glossary) and favorability, then aim at the Senate or a governorship.
 
-**The governor-first arc.** A governor carries a higher party-strength weight in elections and signs state bills. Dominate your home state, then move up once your national profile can carry a presidential primary.
+**The governor-first arc.** A governor earns +2 actions a turn and signs or vetoes the state's bills. Dominate your home state, then move up once your national profile can carry a presidential primary.
 
 **The parliamentary arc (UK, Japan, Germany, Ireland).** Nobody runs for Prime Minister directly. Win a lower-chamber seat, stay a party member for at least 24 turns, stand in the party leadership election, then hope your party reaches a majority or a coalition. See [Multi-Country Play](/wiki/multi-country-play).
 
-**The corporation arc.** Found a corporation first (fee ₳1,000,000 in modern money, plus a starting treasury of ₳1,000,000) and enter politics with money already working. You can hold one CEO seat at a time, and after a corporation ends you wait 96 turns before founding another. See [Corporations](/wiki/corporations).
+**The corporation arc.** Found a corporation first (fee ₳1,000,000 in modern money, plus a starting treasury of ₳1,000,000) and enter politics with money already working. Your account can own one corporation at a time, and after it ends you wait 96 turns before founding another. See [Corporations](/wiki/corporations).
 
 **The dual-track arc.** Hold a legislative seat while running a corporation. The office supplies actions and credibility, the corporation supplies cash. It needs careful action budgeting.
 
@@ -97,13 +97,13 @@ Take a character with PI 28, favorability 52, 4 actions per turn and no bank (12
 
 Why ads come last: favorability above 60 decays by 0.05 per point above 60 each turn, so favorability bought early drains away. Influence decays too, but more slowly, so it is the one to build first.
 
-Funds are the hidden limit. Campaign costs ₳20,000 times its action cost before state GDP scaling, so those 70 actions need about ₳1.4 million. One Fundraise (3 actions) yields about ₳52,000 times (1 + PI divided by 100) at donor level 1, roughly ₳66,000 at PI 28. In practice, plan to spend a large share of your actions on Fundraise and Build Donor Network, or lean on an office and corporation for cash.
+Funds are the hidden limit. Campaign costs ₳20,000 times its action cost, plus 20% for each tier above the first, before state GDP scaling, so those 28 campaigns need about ₳1.8 million. One Fundraise (3 actions) yields about ₳52,000 times (1 + PI divided by 100) at donor level 1, roughly ₳66,000 at PI 28. In practice, plan to spend a large share of your actions on Fundraise and Build Donor Network, or lean on an office and corporation for cash.
 
 ## Saving your push for the last turns
 
 The general election pays out votes unevenly. The pool is split by turn: the early turns share 50%, the 8 turns before the last four share 20%, and the final 4 turns share 30%. In a 24-turn general, an early turn is worth about 4.17% of all votes, a ramp turn 2.5% and a final turn 7.5%.
 
-So a lead with 3 turns left is not safe: one final turn is worth five times an early one. Canvassing also doubles in strength once a race is in its closing turns. Save bursts of canvassing and ads for that window. See [Canvassing](/wiki/canvassing) and [Reference: Formulas](/wiki/reference-formulas).
+So a lead with 3 turns left is not safe: one final turn is worth three ramp turns and nearly two early ones. Canvassing also doubles in strength once a race is in its closing turns. Save bursts of canvassing and ads for that window. See [Canvassing](/wiki/canvassing) and [Reference: Formulas](/wiki/reference-formulas).
 
 ## Passing a bill before the election
 
@@ -121,7 +121,7 @@ Voting also moves your own positions, a step per bill toward what you back and a
 In the presidential primary, Party Influence is worth up to 20 of 100 points, behind party alignment (40) and favorability (25) and ahead of National Reach (15). State party organisation matters in the general instead.
 
 - Party influence builds from party activity and leadership over time. It is not a one-cycle burst.
-- The state party chair controls organisation growth. If your party has a weak chair, challenge for the post (24 turns of membership first).
+- Organisation is built by the state party's chair, vice chair and campaigners, or by the national officers. If your party's state chair is weak, challenge for the post (24 turns of membership first).
 - Organisation affects general-election votes through the party's share of the state's total organisation, raised to the 0.2 power. See [Party Organization](/wiki/party-organization).
 
 ## When moving seat is worth it
@@ -130,7 +130,7 @@ Moving can open a better seat, but it is a reset. Your state Political Influence
 
 ## Reading who holds power
 
-Watch the standings. The party with the most Senate seats controls committee chairs, and the party with the most governors controls the most state bills. If one party dominates, either join it and compete for leadership inside it, or organise the opposition and exploit its overreach.
+Watch the standings. Seat counts decide floor votes, and the party with the most governors signs or vetoes the most state bills. If one party dominates, either join it and compete for leadership inside it, or organise the opposition and exploit its overreach.
 
 [NPPs](/wiki/npps-overview) fill empty seats and vote on ideology. A party with few active players has mostly NPP legislators. Moving your positions close to that party's platform and running against its NPPs works well: in primaries NPPs take a 0.5 multiplier whenever a player is in the race, which is why players usually win those primaries.
 

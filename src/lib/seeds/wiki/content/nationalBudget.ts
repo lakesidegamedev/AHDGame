@@ -15,7 +15,7 @@ Borrow too much and the whole country gets poorer: a worse credit rating, less p
 | Tariffs | Rate set by law, charged on imports |
 | Sales tax | Rate set by law |
 | Healthcare income | Earnings of national healthcare corporations (the NHS, for example) |
-| Other | Earnings of other state-owned corporations |
+| Other | Non-tax receipts that grow with GDP, plus earnings of other state-owned corporations |
 
 Each source is a **tax base** (the amount of activity being taxed) multiplied by a rate. The rates come from enacted laws in [Bills & Legislation](/wiki/bills-legislation). The bases come from the economy: corporate profits and sales from [Corporations](/wiki/corporations), import value from [Tariffs](/wiki/tariffs). A US-headquartered corporation running a sector in Germany pays Germany's **foreign** corporate rate on those profits. A German-headquartered corporation in Germany pays the **domestic** rate.
 
@@ -31,7 +31,7 @@ Two other flows land here. Fund dividends are taxable income for holders, so [In
 - **State grants.** Transfers from the national budget to state budgets.
 - **Debt interest.** What the country pays on its sovereign bonds. This is already inside total spending, so it is not subtracted a second time.
 
-Government healthcare and real estate spending drives demand for [Commodities](/wiki/commodities). Building upkeep above or below the envelope tilts the budget balance metric, and the department appropriation sets the size of that envelope (see [Cabinet Projects & Buildings](/wiki/cabinet-projects)). Funding options and weather disasters draw down the treasury, and the treasury balance decides whether a funding option is available (see [Crisis Interaction](/wiki/crisis-interaction)).
+Government healthcare spending buys healthcare services and defence spending buys ordnance, which drives demand for [Commodities](/wiki/commodities); in planned economies education spending also buys state media advertising. Building upkeep above or below the envelope tilts the budget balance metric, and the department appropriation sets the size of that envelope (see [Cabinet Projects & Buildings](/wiki/cabinet-projects)). Funding options and weather disasters draw down the treasury, and the treasury balance decides whether a funding option is available (see [Crisis Interaction](/wiki/crisis-interaction)).
 
 ## Running a deficit
 
@@ -99,15 +99,15 @@ If debt keeps climbing to 3,000 (150%) the rating is still BB, but now each fisc
 
 A game year is 48 turns. Fiscal year processing runs once a year, at turn 40 (October). It freezes revenue, spending, rates, debt and the list of active laws into a record used for year-on-year comparisons, applies the public trust hit for the current rating, and updates grants. Tax bases already grow every turn, so closing the year does not add a second jump.
 
-Each country has a statutory debt ceiling. At fiscal close, if debt has reached 95% of the ceiling or passed it, the legislature raises the ceiling to 110% of current debt and any debt ceiling crisis flag is cleared. The ceiling does **not** stop borrowing. A national bill that breaches it only triggers a warning. The real costs of high debt are the rating, trust hit and margin drag above, and they apply whether or not the ceiling is breached. East Germany's borrowing limit cannot fall below 40% of smoothed GDP.
+Each country has a statutory debt ceiling. At fiscal close, if debt has reached 95% of the ceiling or passed it, the legislature raises the ceiling to 110% of current debt. A US raise also clears the debt ceiling crisis flag. The ceiling does **not** stop borrowing. A national bill that breaches it only triggers a warning. The real costs of high debt are the rating, trust hit and margin drag above, and they apply whether or not the ceiling is breached. East Germany's borrowing limit cannot fall below 40% of smoothed GDP.
 
-If a country is under an IMF sovereign bailout (see [IMF Sovereign Facility](/wiki/imf-sovereign-facility)), fiscal close scales every spending line, including grants and debt interest, down by the same factor until spending equals revenue. No deficit is allowed while the program runs. The facility's payment cap is set by revenue and its loan size by the deficit.
+If a country is under an IMF sovereign bailout (see [IMF Sovereign Facility](/wiki/imf-sovereign-facility)), fiscal close scales every spending line, including grants and debt interest, down by the same factor until spending equals revenue. No deficit is allowed while the program runs. The facility's payment cap is set by revenue, and its loan size is the bonds maturing in the next 12 turns plus the yearly deficit.
 
 ## State budgets
 
 Each state has its own budget. Its income comes from state income and sales tax, state corporate tax, property tax and grants from the national budget, and its balance is the running total of its surpluses and deficits.
 
-In the US, formula grants (Medicaid, the Highway Trust Fund, education block grants and SNAP) are worked out and paid at fiscal close. In the UK, Japan and Germany, regional budgets are recalculated every turn from the regional economy and enacted laws. The UK Budget bundles tax rates and programme levels into one confidence vote in the Commons and writes to the same ledger as ordinary laws.
+In the US, formula grants (Medicaid, the Highway Trust Fund, education block grants and SNAP) are worked out and paid at fiscal close. In the UK, Japan, Germany, Russia and China, regional budgets are recalculated every other turn from the regional economy and enacted laws. The UK Budget bundles tax rates and programme levels into one confidence vote in the Commons and writes to the same ledger as ordinary laws.
 
 ## Pulling the levers
 
@@ -133,7 +133,7 @@ Check your tier before a big sale. Your portfolio tax statement shows tax assess
 
 Two questions come up often. *Why did my sale pay less than expected?* Tax on the profit was withheld before the cash arrived. *Why is my wealth lower after I earned income?* Any tax you could not pay yet counts as debt against your wealth.
 
-Every world has national budgets for every country. The rules differ by country: US formula grants, regional budgets in the UK, Japan and Germany, the UK Budget vote, and East Germany's minimum borrowing limit. In worlds that start before 2000, fixed per-person policy costs are scaled down so early-era budgets are not hit by modern prices. IMF austerity applies only while a country is under a bailout.
+Every world has national budgets for every country. The rules differ by country: US formula grants, regional budgets in the UK, Japan and Germany, the UK Budget vote, and East Germany's minimum borrowing limit. Fixed per-person policy costs scale with the country's GDP per person, so poorer and early-era economies are not hit by modern prices. IMF austerity applies only while a country is under a bailout.
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [National Budget (design)](https://docs.lakesidegames.net/design/national-budget.html). See also: [Glossary](/wiki/glossary)
 `;

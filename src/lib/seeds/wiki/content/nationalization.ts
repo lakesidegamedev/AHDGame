@@ -1,6 +1,6 @@
 export const nationalizationContent = `# Nationalization
 
-If you own a company in a country that decides it wants it, you get 48 turns of notice and, with luck, full value. If you let your CEO seat sit empty for 72 turns, you may get neither. Nationalization is how a government takes a private corporation, or one of its sectors, into public hands. The state pays the owners (or does not), the assets move into the country's [National Corporation](/wiki/national-corporations), and the country's investor confidence takes a hit. Later the state can sell assets back to the market, which is called privatization.
+If you own a company in a country that decides it wants it, you get 48 turns of notice and, with luck, full value. If you let your CEO seat sit empty for 72 turns, you may get neither. Nationalization is how a government takes a private corporation, or one of its sectors, into public hands. The state pays the owners (or does not), the assets move into the country's [National Corporation](/wiki/national-corporations), and taking a player-owned company costs the country investor confidence. Later the state can sell assets back to the market, which is called privatization.
 
 \`\`\`
 private corp ──(nationalize: absorb)──▶  National Corporation  ──(privatize: spin out)──▶  new private corp
@@ -17,11 +17,11 @@ Unowned and computer-run (NPC) assets can be taken at any time. A **player-owned
 | Route | Who orders it | Reaches | Tiers | Notice |
 | --- | --- | --- | --- | --- |
 | **Executive** | Head of government, from the Nationalize tab | NPC and unowned assets, and player companies in financial distress | Discounted or Seizure | None for distress |
-| **Legislative** | A nationalization bill passed by the legislature | Any corporation in the country | Fair | 48 turns |
+| **Legislative** | A nationalization bill passed by the legislature | Any corporation in the country | Fair | 48 turns for a player company; NPC takings and industry-wide sector bills take effect at once |
 
 A player company counts as **in distress** when its CEO seat has been empty for 72 turns, or it has been insolvent (negative cash) or had a defaulted bond for 72 turns. A solvent company cannot be taken by the executive. It needs a bill (see [Bills and Legislation](/wiki/bills-legislation); a passed nationalization bill orders the Fair-tier taking).
 
-A bill-based taking is labelled by why the target qualified: sitting in a **strategic sector** (a type of business the head of government has marked strategic, up to 5 at a time), holding **75% or more** of a national sector market (a monopoly), or neither, in which case it is simply a legislative vote. Monopoly and distress takings count as popular. The others do not.
+A bill-based taking is labelled by why the target qualified: sitting in a **strategic sector** (a type of business the head of government has marked strategic, up to 5 at a time), holding **75% or more** of one state's market for a sector type (a monopoly), or neither, in which case it is simply a legislative vote. Monopoly and distress takings count as popular. The others do not.
 
 If you own the targeted company:
 
@@ -53,11 +53,11 @@ Now take the investor-confidence cost, with a neutral government and a state tha
 
 ## What a taking does to the country
 
-Every country has an **investor confidence** score from 0 to 100. It heals toward **70** by 5% of the gap each turn. From 50 it is back to about 58 after 10 turns and 66 after 30. A taking pushes it down, and the push is multiplied by the **State Ownership Concentration Index** (SOCI), the share of the economy the state already owns:
+Every country has an **investor confidence** score from 0 to 100. It heals toward **70** by 5% of the gap each turn. From 50 it is back to about 58 after 10 turns and 66 after 30. Taking a player-owned company pushes it down (NPC and unowned takings cost nothing), and the push is multiplied by the **State Ownership Concentration Index** (SOCI), the share of the economy the state already owns:
 
 - Up to **35**, takings cost the base amount.
 - Above 35, the multiplier rises along a curve to 3.5 at SOCI 100. At SOCI 50 it is about 1.13.
-- A statist government pays as little as half the political cost, and a market-liberal one as much as 1.5 times.
+- On a bill-based taking, a statist governing party pays as little as half the cost, and a market-liberal one as much as 1.5 times. The executive route is scored as neutral.
 
 \`\`\`wiki-chart
 nationalization-cost-multiplier
@@ -77,11 +77,11 @@ Low confidence is not cosmetic. Below 70 it feeds three live systems, in proport
 
 At confidence 62 (8 points down) that is about -0.7 margin points, +0.3 points of interest and +2.9% to found a company. The borrowing cost shows up in [Sovereign Bonds](/wiki/sovereign-bonds).
 
-A taking also costs the government approval and legitimacy (see [Government Approval](/wiki/government-approval)), and the freshly taken sector suffers a **transition shock**: 15% of its revenue is deleted once, and output starts 15% down and recovers over 120 turns. Both get worse at high SOCI. State-owned corporations cannot be bought and are outside merger review ([Corporate Mergers](/wiki/corporate-mergers)).
+An unpopular taking of a player company also lowers public trust, and legitimacy in countries with a leader confidence model (see [Government Approval](/wiki/government-approval)). A popular one (a distress rescue or monopoly break-up) lifts public trust while the state owns little, and turns negative as SOCI climbs. The freshly taken sector suffers a **transition shock**: 15% of its revenue is deleted once, and output starts 15% down and recovers over 120 turns. At high SOCI the output drag gets deeper (up to 50%) and lasts longer; the 15% cut stays fixed. State-owned corporations cannot be bought and are outside merger review ([Corporate Mergers](/wiki/corporate-mergers)).
 
 ## Ordering a taking
 
-The head of government opens the Nationalize tab on a National Corporation page, picks the target and, for an executive taking, the tier. You can only use the executive route on a distressed or NPC target. For a solvent company, push a nationalization bill through the legislature. Mark sectors strategic from the same tab, up to 5 at once. Adding one arms the strategic trigger for bills. Both powers sit with the head of government and finance minister in the [Cabinet](/wiki/cabinet).
+The head of government opens the Nationalize tab on a National Corporation page, picks the target and, for an executive taking, the tier. You can only use the executive route on a distressed or NPC target. For a solvent company, push a nationalization bill through the legislature. Mark sectors strategic from the same tab, up to 5 at once. Adding one arms the strategic trigger for bills. Both powers sit with the head of government; the finance minister in the [Cabinet](/wiki/cabinet) runs privatization.
 
 Legislators vote on nationalization bills. A passed bill pays Fair, so it is the expensive, defensible option.
 
@@ -92,7 +92,7 @@ The finance minister runs privatization from the Privatization tab. It carves pa
 | Rule | Value |
 | --- | --- |
 | Carve size per spin-out | 10% to 100% of the holding |
-| Market cap on the new company | no more than 30% of the whole regional market |
+| Share of the regional market the new company may hold | no more than 30% |
 | Golden share kept by the state | up to 40% |
 | Auction bid window | 48 turns |
 | Cooldown before a privatized company can be retaken | 168 turns |

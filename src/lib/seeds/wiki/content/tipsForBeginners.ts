@@ -16,7 +16,7 @@ Open **Parties**, pick a party whose platform is close to your sliders, and clic
 
 ## 3. Poll, then declare
 
-On the race page, run a **Quick Poll**. It costs 2 actions and a base of ₳25,000 (your exact quote is shown, and Intellect and the era change it). If you are far behind, pick another seat. Reason: a poll is much cheaper than a lost primary, and it uses the same vote math as the real count. See [Polling](/wiki/polling).
+On the race page, run a **Quick Poll**. It costs 2 actions and a base of ₳25,000 (your exact quote is shown, and Intellect and the era change it). If you are far behind, pick another seat. Reason: a poll is much cheaper than a lost primary, and it uses the same appeal, approval and organisation formulas as the real count. See [Polling](/wiki/polling).
 
 [Primaries](/wiki/primaries) count ballots over their closing window, so a lead you hold beats one you grab at the end. **Elections** is where you look.
 
@@ -66,7 +66,7 @@ Your country is chosen at creation, and you can relocate later. Relocation zeroe
 
 ## 14. Do not clone existing law
 
-Before **Propose bill**, skim active policy on the legislature pages. Duplicate provisions waste the bill slot and the actions you pay.
+Before **Propose bill**, skim active policy on the legislature pages. The game rejects a provision that is already current law or already sits in another active bill, so checking first saves you the round trip.
 
 \`\`\`guide-screenshot
 legislature
@@ -88,7 +88,7 @@ A new character has 25 actions, ₳250,000 of campaign funds, favorability 50, P
 | 1 Run Advertisements (7 actions at favorability 50 to 69) | 7 | scaled by GDP | Favorability up about 3 |
 | Total | 25 | | Bank is empty; funds low |
 
-Notice that funds run out before actions do. A Campaign click costs ₳20,000 times its action cost, and a Fundraise click returns about ₳57,000 at PI 10. Mixing both is normal.
+Notice that funds run out before actions do. A Campaign click costs ₳20,000 times its action cost, plus 20% for each tier above the first, and a Fundraise click returns about ₳57,000 at PI 10. Mixing both is normal.
 
 ## Your first week
 
