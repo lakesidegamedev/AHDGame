@@ -510,6 +510,10 @@ export async function snapshotMarketCap(
         // Persisted so recomputeSharePricesAfterBondTurn can rebuild the
         // share-price formula's inputs without re-deriving from sectors/bonds.
         sectorNPV: Math.round(writeCorpEconomicLocal(s.sectorNPV, code, rate)),
+        // Base-price real output (anchor, not FX-converted): only its trend is read.
+        ...(s.realOutputAnchor != null
+          ? { realOutputAnchor: Math.round(s.realOutputAnchor * 100) / 100 }
+          : {}),
         perTurnBondCouponIncome: Math.round(
           writeCorpEconomicLocal(s.perTurnBondCouponIncome, code, rate)
         ),

@@ -227,6 +227,8 @@ export interface CorporationLookups {
   fundedOverheadStage?: number;
   /** gameConfig.fundedHeadcountStage; absent = off. */
   fundedHeadcountStage?: number;
+  /** gameConfig.fundedValuationStage; absent = off. */
+  fundedValuationStage?: number;
   /**
    * gameConfig.honestBalanceSheetsStage and, from stage 1, each corporation's
    * outstanding bank construction-loan principal in anchor units. Absent = off.
@@ -511,6 +513,12 @@ export interface CorpSnapshot {
   actualSharePrice: number;
   totalShares: number;
   sectorNPV: number;
+  /**
+   * Funded valuation (gameConfig.fundedValuationStage >= 1): units sold this
+   * turn at each sector's fixed base mix price, anchor. The share price growth
+   * premium reads its trend. Absent when the stage is off.
+   */
+  realOutputAnchor?: number;
   creditComposite: number;
   creditRating: string;
   /** Diagnostic margin data for debugging cost/revenue spikes */

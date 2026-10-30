@@ -79,6 +79,11 @@ export interface SectorTurnResult {
   constructionInProgressAnchor: number;
   /** Capital book value in capital mode, otherwise sector NPV. */
   npvContribution: number;
+  /**
+   * Fixed base price of one unit of the sector's output mix (plants only, else
+   * absent). Funded valuation values units sold at it to measure real output.
+   */
+  outputMixPriceAnchor?: number;
   commodityMod: number;
   surplusMod: number;
   exportPremiumMod: number;
