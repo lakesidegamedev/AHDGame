@@ -1,3 +1,4 @@
+import { rejectWhileTurnProcessing } from "./turnGuard";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
@@ -86,6 +87,8 @@ export async function expandSector(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
 
     const rateLimit = checkRateLimit(
       `lib/corporations/commands/sectorOperations/expandSector:${auth.user.userId}`,
