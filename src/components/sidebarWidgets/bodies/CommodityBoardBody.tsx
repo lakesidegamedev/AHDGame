@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityBoardWidgetData } from "@/lib/sidebarWidgets/data/commodityBoard";
-import { TrendSparkline } from "../MiniCharts";
+import { toneOfChange, TrendSparkline } from "../MiniCharts";
 import { Change, Empty } from "./shared";
 
 export function CommodityBoardBody({
@@ -35,6 +35,7 @@ export function CommodityBoardBody({
                 label={t("trendLabel", { commodity: row.label, count: row.series.length })}
                 width={compact ? 36 : 56}
                 height={16}
+                endTone={toneOfChange(row.change)}
               />
             )}
             <span className="shrink-0 tabular-nums text-foreground">{formatPrice(row.price)}</span>

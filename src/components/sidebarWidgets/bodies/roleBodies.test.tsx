@@ -45,8 +45,12 @@ describe("role widget bodies", () => {
     show("myRace", race);
     expect(screen.getByText("Senate · CA")).toBeTruthy();
     expect(screen.getByText("3 turns left")).toBeTruthy();
-    expect(screen.getByText("2 of 3")).toBeTruthy();
-    expect(screen.getByText("Rival · 52.5%")).toBeTruthy();
+    expect(screen.getByText("Position 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Rival")).toBeTruthy();
+    expect(screen.getByText("52.5%")).toBeTruthy();
+    // Shares are drawn as meters against a majority tick for one seat.
+    const meters = screen.getAllByRole("meter");
+    expect(meters.map((meter) => meter.getAttribute("aria-valuenow"))).toEqual(["40", "52.5"]);
     expect(href(w.myRace.election)).toBe("/elections/e1");
     expect(href(w.myRace.campaign)).toBe("/campaign/c1");
   });
@@ -110,7 +114,8 @@ describe("role widget bodies", () => {
     show("officeDashboard", office);
     expect(screen.getByText("California")).toBeTruthy();
     expect(screen.getByText("54.0%")).toBeTruthy();
-    expect(screen.getByText("+2.1%")).toBeTruthy();
+    expect(screen.getByRole("meter").getAttribute("aria-valuenow")).toBe("54");
+    expect(screen.getByText("▲2.1%")).toBeTruthy();
     // Missing figures are left out rather than shown as blanks.
     expect(screen.queryByText(w.officeDashboard.unemployment)).toBeNull();
     expect(href(w.officeDashboard.office)).toBe("/country/us/region/CA/office");
@@ -129,7 +134,7 @@ describe("role widget bodies", () => {
       gdpGrowth: -0.4,
       unemployment: 5,
     } satisfies OfficeDashboardWidgetData);
-    expect(screen.getByText("-0.4%")).toBeTruthy();
+    expect(screen.getByText("▼0.4%")).toBeTruthy();
     expect(href(w.officeDashboard.economy)).toBe("/country/uk/economy");
     expect(href(w.officeDashboard.budget)).toBe("/country/uk/budget");
   });
