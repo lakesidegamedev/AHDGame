@@ -217,6 +217,29 @@ describe("persisted county population lifecycle", () => {
       Number(db.collection("states").docs.find((s) => s._id === "AL")!.population)
     ).toBeGreaterThan(0);
   });
+  it("repopulates an empty state using its persisted historical baseline", async () => {
+    const db = fixture(),
+      target = db as unknown as Db;
+    db.collection("gameState").docs[0].preset = "1979-default";
+    await seedCountyPopulations(target);
+    const expected = db
+      .collection("counties")
+      .docs.map((c) => ({ id: c._id, population: c.population }));
+    expect(
+      db.collection("counties").docs.every((c) => c.populationBaseline === "census-1979")
+    ).toBe(true);
+    db.collection("states").docs[0].population = 0;
+    for (const row of db.collection("counties").docs) row.population = 0;
+    await freezeAndApplyDemographicFlowPlan(target, {
+      worldEpochId: "county-world",
+      turn: 2,
+      regions: [plan(10000)],
+      stats: { regionsProcessed: 1, circuitBreakerTrips: 0 },
+    });
+    expect(
+      db.collection("counties").docs.map((c) => ({ id: c._id, population: c.population }))
+    ).toEqual(expected);
+  });
   it("can materialize incoming population into a completely empty state", async () => {
     const db = fixture(),
       target = db as unknown as Db;

@@ -30,7 +30,7 @@ export async function freezeCountyPopulationPlans(
     .collection<County>("counties")
     .find(
       { stateId: { $in: states.map((s) => s._id) }, countryId: "US" },
-      { projection: { _id: 1, stateId: 1, population: 1 } }
+      { projection: { _id: 1, stateId: 1, population: 1, baselinePopulation: 1 } }
     )
     .toArray();
   const plans = new Map<string, ReturnType<typeof advanceCountyPopulations>>();
@@ -50,7 +50,10 @@ export async function freezeCountyPopulationPlans(
       advanceCountyPopulations(
         rows.map((c) => ({ id: c._id, population: c.population })),
         inputs.get(state._id)!.stateAfter.population,
-        reference.map((c) => ({ id: c.fips, population: c.population }))
+        rows.map((c) => ({
+          id: c._id,
+          population: c.baselinePopulation ?? reference.find((r) => r.fips === c._id)!.population,
+        }))
       )
     );
   }
