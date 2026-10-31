@@ -35,6 +35,7 @@ import {
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { isInputStarved } from "@/lib/turn/npp/rules/inputAvailability";
+import { isStateShortfallCommodity } from "@/lib/turn/npp/rules/stateShortfallSignal";
 
 // Macro-aware production policy (SP5). A +33% price premium saturates to the
 // +25 policy bound; sub-5% moves are ignored so the policy does not churn on
@@ -637,12 +638,18 @@ export function findBestUnownedSector(
   // genuine single-input crisis behind a co-product. The essential-shortage
   // override gates on the peak so freight at 2.0x triggers logistics even
   // though consulting is at base.
+  // Freight reads its own state: a national average of 107% hid states that
+  // were 9% supplied, and freight cannot be shipped in from the surplus ones.
   const peakShortageOf = (c: UnownedSector): number =>
     remembered(facts?.peakShortage, factKey(c), () =>
       sectorPeakShortageScore(
         getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
         countryId,
-        depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, priceRatioOf)
+        depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) =>
+          isStateShortfallCommodity(commodity)
+            ? (signals?.statePriceRatioOf?.(commodity, c.stateId) ?? priceRatioOf(commodity, cid))
+            : priceRatioOf(commodity, cid)
+        )
       )
     );
   const candidatePeakShortage = memoOf(peakShortageOf);

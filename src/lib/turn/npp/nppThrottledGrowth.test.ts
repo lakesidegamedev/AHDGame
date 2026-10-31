@@ -15,6 +15,8 @@ interface FundedRun {
   runShare: number;
   /** Short inputs cut the funded run to this share (receipt billedRunShare). */
   inputCutShare?: number;
+  /** The company's cash could not fund the whole run. */
+  cashCut?: boolean;
   /** Share of offered units that sold. */
   sellThrough: number;
   /** Units offered per unit made: above 1 when held stock is also put up. */
@@ -117,8 +119,14 @@ function fundedFields(plantUnits: number, run: FundedRun) {
       producedUnits: producedPerTurn,
       offeredUnits: offeredPerTurn,
       soldUnits: soldPerTurn,
-      ...(run.inputCutShare != null
-        ? { billedRunShare: run.inputCutShare, runCutBy: ["inputs"] }
+      ...(run.inputCutShare != null || run.cashCut
+        ? {
+            ...(run.inputCutShare != null ? { billedRunShare: run.inputCutShare } : {}),
+            runCutBy: [
+              ...(run.cashCut ? ["cash"] : []),
+              ...(run.inputCutShare != null ? ["inputs"] : []),
+            ],
+          }
         : {}),
     },
   };
@@ -193,5 +201,23 @@ describe("NPP and autopilot growth with starved inputs", () => {
     const d = decide(null, 100_000, { runShare: 0.3, sellThrough: 1, inputCutShare: 0.3 });
     expect(outcomes(d)).toContain("growth_inputs_starved");
     expect(growthOf(d)).toBeGreaterThan(0);
+  });
+});
+
+describe("NPP builds while plants are idle for want of cash", () => {
+  const outcomes = (d: ReturnType<typeof decide>) =>
+    (d.capacityObservations ?? []).map((o) => o.outcome);
+
+  it("queues no capacity, growth or replacement, after a cash-cut run", () => {
+    const d = decide(null, 100_000, { runShare: 0.5, sellThrough: 1, cashCut: true });
+    expect(growthOf(d)).toBe(0);
+    expect(outcomes(d)).toContain("cash_cut_run");
+    expect(d.newSectors ?? []).toHaveLength(0);
+  });
+
+  it("builds as before when the run was not cut by cash", () => {
+    const d = decide(null, 100_000, { runShare: 0.5, sellThrough: 1 });
+    expect(growthOf(d)).toBeGreaterThan(0);
+    expect(outcomes(d)).not.toContain("cash_cut_run");
   });
 });

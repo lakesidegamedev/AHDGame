@@ -367,4 +367,10 @@ describe("CAPACITY_BUILD_TURNS (provisional)", () => {
     expect(CAPACITY_BUILD_TURNS("manufacturing")).toBeGreaterThan(CAPACITY_BUILD_TURNS("retail"));
     expect(CAPACITY_BUILD_TURNS("technology")).toBeGreaterThan(CAPACITY_BUILD_TURNS("retail"));
   });
+
+  it("builds a freight fleet in under a game day", () => {
+    expect(CAPACITY_BUILD_TURNS("logistics")).toBe(15);
+    expect(CAPACITY_BUILD_TURNS("logistics", true)).toBe(8);
+    expect(CAPACITY_BUILD_TURNS("logistics")).toBeGreaterThan(CAPACITY_BUILD_TURNS("retail"));
+  });
 });
