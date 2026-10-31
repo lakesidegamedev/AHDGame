@@ -20,6 +20,22 @@ export function dueSoonRemaining(
   return Number.isNaN(ms) ? null : { unit: "hours", count: Math.max(0, Math.floor(ms / HOUR_MS)) };
 }
 
+export type Urgency = "now" | "soon" | "later";
+
+/** Closing this turn or within two hours is now; within three turns or six hours is soon. */
+export function urgencyOf(remaining: ReturnType<typeof dueSoonRemaining>): Urgency {
+  if (!remaining) return "later";
+  if (remaining.unit === "turns")
+    return remaining.count <= 1 ? "now" : remaining.count <= 3 ? "soon" : "later";
+  return remaining.count < 2 ? "now" : remaining.count < 6 ? "soon" : "later";
+}
+
+const STRIPE: Record<Urgency, string> = {
+  now: "bg-warning",
+  soon: "bg-warning/40",
+  later: "bg-card-border",
+};
+
 function Countdown({
   item,
   currentTurn,
@@ -32,7 +48,7 @@ function Countdown({
   const t = useTranslations("nav.widgets.dueSoon");
   const remaining = dueSoonRemaining(item, currentTurn, now);
   if (!remaining) return null;
-  const urgent = remaining.unit === "turns" ? remaining.count <= 1 : remaining.count < 2;
+  const urgent = urgencyOf(remaining) === "now";
   const text =
     remaining.unit === "turns"
       ? t("turnsLeft", { count: remaining.count })
@@ -41,7 +57,7 @@ function Countdown({
         : t("hoursLeft", { count: remaining.count });
   return (
     <span
-      className={`shrink-0 tabular-nums ${urgent ? "font-semibold text-warning" : "text-muted"}`}
+      className={`shrink-0 self-start tabular-nums ${urgent ? "font-semibold text-warning" : "text-muted"}`}
     >
       {text}
     </span>
@@ -71,8 +87,13 @@ export function DueSoonBody({
             <Link
               href={item.href}
               onClick={onNavigate}
-              className="flex items-start gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
+              className="flex items-stretch gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
             >
+              {/* Urgency stripe; the countdown text carries the same in words. */}
+              <span
+                aria-hidden="true"
+                className={`w-0.5 shrink-0 rounded-full ${STRIPE[urgencyOf(dueSoonRemaining(item, data.currentTurn, now))]}`}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block text-[11px] text-muted">
                   {t(`kinds.${item.kind}`)}

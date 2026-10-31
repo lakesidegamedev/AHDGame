@@ -296,4 +296,33 @@ describe("a sold-out line short of inputs holds its plan", () => {
     const without = starved({ offeredUnits: 40, soldUnits: 20, plannedRunShare: undefined });
     expect(demandPlanRunShare(partial)).toBe(demandPlanRunShare(without));
   });
+
+  it("a run cut by cash plans from its planned run and the sell-through of what it made", () => {
+    // Planned half the plant, cash let it make 20 of 100 and it sold 18 of them.
+    const cut = starved({
+      offeredUnits: 20,
+      soldUnits: 18,
+      revenue: 360,
+      runCutBy: ["cash"],
+    });
+    // 0.5 x 100 x 0.9 x 1.1 expected sales, less the 2 units held.
+    expect(demandPlanRunShare(cut)).toBeCloseTo((0.5 * 100 * 0.9 * 1.1 - 2) / 100, 12);
+    // The same receipt with no recorded cut reads the low output as weak demand.
+    expect(demandPlanRunShare({ ...cut, runCutBy: undefined })).toBeCloseTo(
+      (18 * 1.1 - 2) / 100,
+      12
+    );
+  });
+
+  it("a cut run never plans below what its sales alone would", () => {
+    // It made more than it planned: the cut reason changes nothing.
+    const over = starved({
+      offeredUnits: 40,
+      soldUnits: 30,
+      producedUnits: 40,
+      plannedRunShare: 0.2,
+      runCutBy: ["inputs"],
+    });
+    expect(demandPlanRunShare(over)).toBe(demandPlanRunShare({ ...over, runCutBy: undefined }));
+  });
 });

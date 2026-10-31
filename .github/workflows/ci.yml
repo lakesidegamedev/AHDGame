@@ -27,10 +27,10 @@ jobs:
   # the full matrix on changes that can only affect prose or changelog data.
   changes:
     runs-on: ubuntu-latest
-    # A development -> staging promotion waits here (up to 35 minutes) for
+    # A development -> staging promotion waits here (up to 60 minutes) for
     # development's own push run on the same tree instead of rerunning the
     # matrix beside it. Every other event decides in seconds.
-    timeout-minutes: 40
+    timeout-minutes: 66
     permissions:
       contents: read
       actions: read
@@ -259,12 +259,15 @@ jobs:
     needs: changes
     if: needs.changes.outputs.full_suite == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        # Six shards: five ran about 7.5 minutes each and were the critical path.
-        shard: [1, 2, 3, 4, 5, 6]
+        # Branch runs (development, staging, main) are the promotion path and keep
+        # six shards (about 7.5 minutes each). Feature pull requests use four:
+        # every repository in the account shares one hosted-runner pool, and
+        # fewer jobs per PR run keeps promotion runs from queueing behind them.
+        shard: ${{ fromJSON(github.event_name == 'pull_request' && github.head_ref != 'development' && github.head_ref != 'staging' && '[1, 2, 3, 4]' || '[1, 2, 3, 4, 5, 6]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

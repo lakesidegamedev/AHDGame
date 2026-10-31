@@ -36,6 +36,7 @@ import { makeDoOutput, minorInputShortfallCost, minorInputs } from "./makeDoRule
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
+import { deferredBillFraction, salesAdvanceAmount, salesFundedRunShare } from "./salesAdvanceRules";
 
 export interface PurchasedStock {
   commodity: string;
@@ -99,14 +100,31 @@ export interface ProductionPlan {
   recentSoldByOutput?: Readonly<Record<string, number>>;
   /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
   plannedRunShare?: number;
+  /**
+   * Revenue one unit of physical output is expected to earn, from last turn's
+   * realized prices and sell-through (salesAdvanceRules). Lets a run be
+   * financed against its own sales; absent or 0 = no sales advance.
+   */
+  expectedUnitRevenue?: number;
+}
+
+/** Why a plant made less than its planned run this turn, recorded on its receipt. */
+export type RunCutReason = "cash" | "inputs";
+
+/** Cold upkeep inside a plan's site bill: owed with no run at all. Absent = the whole bill. */
+function idleUpkeep(p: ProductionPlan): number {
+  return p.idleOperatingCost != null
+    ? Math.min(p.otherOperatingCost, Math.max(0, p.idleOperatingCost))
+    : p.otherOperatingCost;
 }
 
 /**
  * What each company needs in cash to run its plants at full physical output
- * this turn: fixed site and regulatory bills, plus wages and the inputs its
- * stock does not cover, priced at the bid ceiling. The settlement scales a
- * company's run by the share of this its free cash covers; the state operating
- * advance sizes itself from the same figure so the two cannot drift.
+ * this turn: fixed bills (cold upkeep on its sites, owed with no run), plus
+ * wages, the running part of the site bill and the inputs its stock does not
+ * cover, priced at the bid ceiling. The settlement scales a company's run by
+ * the share of this its free cash covers; the state operating advance sizes
+ * itself from the same total so the two cannot drift.
  */
 export function producerRunBudget(plans: readonly ProductionPlan[]): {
   fixedBills: Map<string, number>;
@@ -116,14 +134,15 @@ export function producerRunBudget(plans: readonly ProductionPlan[]): {
   const variableNeed = new Map<string, number>();
   for (const p of plans) {
     const full = p.capacityUnits * p.activeFraction * p.outputMultiplier;
-    let spend = p.labourCost;
+    const idle = idleUpkeep(p);
+    let spend = p.labourCost + (p.otherOperatingCost - idle);
     for (const recipe of p.inputs) {
       const stock = p.inputStock
         .filter((s) => s.commodity === recipe.commodity)
         .reduce((n, s) => n + s.units, 0);
       spend += Math.max(0, full * recipe.unitsPerOutput - stock) * recipe.maximumUnitPrice;
     }
-    fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + p.otherOperatingCost);
+    fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + idle);
     variableNeed.set(
       p.accountId,
       (variableNeed.get(p.accountId) ?? 0) + finite(spend, "run budget")
@@ -157,6 +176,12 @@ export interface ProducerOperatingResult {
   billedRunShare?: number;
   /** Cold upkeep inside otherOperatingPaid plus arrears; not a cost of running. */
   idleOperatingCost?: number;
+  /**
+   * Why the plant made less than it planned: the company's cash could not fund
+   * the whole run, or short inputs cut it. Next turn's demand plan reads a cut
+   * run as a stoppage, not as weak demand. Absent when the run was not cut.
+   */
+  runCutBy?: RunCutReason[];
   producedUnits: number;
   offeredUnits: number;
   soldUnits: number;
@@ -258,7 +283,8 @@ function quoteVolumesExcept(
 /**
  * Joint production and delivery: shrink proposed production until every
  * recipe is backed by funded, delivered inputs. Each trial uses the same
- * opening cash and stock; no preview transfers money or borrows sale proceeds.
+ * opening cash and stock; no preview transfers money. Only a company on a
+ * sales advance spends past its cash, and only what its own sales repay.
  */
 /** Units an output sold last turn: its own row when the receipt has product rows, else the plant total. */
 function recentSoldOf(p: ProductionPlan, commodity: string, book: string): number | undefined {
@@ -385,6 +411,7 @@ export function advanceProducerEconomy(input: {
     )
       throw new Error("Invalid capacity fraction");
     finite(p.capacityUnits * p.activeFraction * p.outputMultiplier, "physical output");
+    if (p.expectedUnitRevenue != null) finite(p.expectedUnitRevenue, "expected unit revenue");
     bills.set(
       p.accountId,
       (bills.get(p.accountId) ?? 0) +
@@ -434,21 +461,34 @@ export function advanceProducerEconomy(input: {
         );
     }
   }
-  // Budget the run, not just the payroll. Site and regulatory bills are the
-  // fixed cost of owning plants and are paid first. Wages and inputs scale with
-  // the share of the plants the remaining cash can staff and supply (inputs at
-  // the bid ceiling), so a company short of cash runs smaller instead of paying
-  // every wage with nothing left for materials, and owes no wages for a run
-  // that never happened.
+  // Budget the run, not just the payroll. Cold upkeep on the sites is the
+  // fixed cost of owning plants and is paid first. Wages, the running part of
+  // the site bill and inputs scale with the share of the plants the remaining
+  // cash can staff and supply (inputs at the bid ceiling), so a company short
+  // of cash runs smaller instead of paying every wage with nothing left for
+  // materials, and owes no wages or running costs for a run that never happened.
   const { fixedBills, variableNeed } = producerRunBudget(plans);
   // A private company on the credit line may run past its cash: it buys the
   // inputs with cash and owes the wages and site bills it cannot cover, up to
   // its headroom (producerCreditRules). `inputReserve` is the cash kept back
   // for those inputs; only companies that actually draw credit get one.
   const creditAccounts = new Set(input.credit?.accountIds ?? []);
-  const fullLabour = new Map<string, number>();
-  for (const p of plans)
-    fullLabour.set(p.accountId, (fullLabour.get(p.accountId) ?? 0) + p.labourCost);
+  // Wages plus site running costs at a full run: the bills a company may owe.
+  const fullRunningBills = new Map<string, number>();
+  // What a full run is expected to earn, for the sales advance (salesAdvanceRules).
+  const expectedRevenue = new Map<string, number>();
+  for (const p of plans) {
+    fullRunningBills.set(
+      p.accountId,
+      (fullRunningBills.get(p.accountId) ?? 0) + p.labourCost + p.otherOperatingCost - idleUpkeep(p)
+    );
+    if ((p.expectedUnitRevenue ?? 0) > 0)
+      expectedRevenue.set(
+        p.accountId,
+        (expectedRevenue.get(p.accountId) ?? 0) +
+          p.capacityUnits * p.activeFraction * p.outputMultiplier * p.expectedUnitRevenue!
+      );
+  }
   const notShrinkingSince = new Map<string, number>();
   for (const claim of prior.payables)
     if (claim.notShrinkingSince != null)
@@ -460,13 +500,28 @@ export function advanceProducerEconomy(input: {
         )
       );
   const inputReserve = new Map<string, number>();
+  // Cash a company borrows against this turn's own sales to fund its run.
+  const salesAdvance = new Map<string, number>();
   const runShare = new Map(
     [...bills.keys()].map((id) => {
       const need = variableNeed.get(id) ?? 0;
       const free = Math.max(0, cash.get(id)! - (fixedBills.get(id) ?? 0));
       const cashOnly = need > 0 ? Math.min(1, free / need) : 1;
-      if (!creditAccounts.has(id) || cashOnly >= 1) return [id, cashOnly];
-      const labour = fullLabour.get(id) ?? 0;
+      if (cashOnly >= 1) return [id, cashOnly];
+      // Sales fund the run: a run that earns more than it costs is not held
+      // back by the cash the company happens to hold at the open.
+      const salesFunded = Math.max(
+        cashOnly,
+        salesFundedRunShare({ free, need, expectedRevenue: expectedRevenue.get(id) ?? 0 })
+      );
+      const advance = () => {
+        const amount = salesAdvanceAmount({ free, need, runShare: salesFunded });
+        if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && amount > 0)
+          salesAdvance.set(id, amount);
+        return [id, salesFunded] as const;
+      };
+      if (!creditAccounts.has(id) || salesFunded >= 1) return advance();
+      const labour = fullRunningBills.get(id) ?? 0;
       const inputs = Math.max(0, need - labour);
       const share = creditRunShare({
         cash: cash.get(id)!,
@@ -482,13 +537,22 @@ export function advanceProducerEconomy(input: {
           stuckTurns: input.credit?.stuckTurns,
         }),
       });
+      if (!(share > salesFunded * (1 + 1e-12) + 1e-15)) return advance();
       if (share > cashOnly * (1 + 1e-12) + 1e-15) inputReserve.set(id, inputs * share);
-      return [id, share];
+      return [id, share] as const;
     })
   );
+  // Wages and site running costs follow the run the company can fund; idle
+  // capacity keeps its cold upkeep.
   plans = plans.map((p) => {
     const share = runShare.get(p.accountId) ?? 1;
-    return share >= 1 ? p : { ...p, labourCost: p.labourCost * share };
+    if (share >= 1) return p;
+    const idle = idleUpkeep(p);
+    return {
+      ...p,
+      labourCost: p.labourCost * share,
+      otherOperatingCost: idle + (p.otherOperatingCost - idle) * share,
+    };
   });
   bills.clear();
   for (const p of plans)
@@ -499,6 +563,9 @@ export function advanceProducerEconomy(input: {
       return [id, bill > 0 ? Math.min(1, payable / bill) : 1];
     })
   );
+  // Wages and site bills a sales-advance company could not pay from cash at
+  // the open. Its sales pay them before close; what they cannot stays owed.
+  const deferredBills = new Map<string, number>();
   const credits = new Map<string, number>();
   for (const p of plans) {
     const fraction = funding.get(p.accountId)!;
@@ -515,8 +582,10 @@ export function advanceProducerEconomy(input: {
     );
     const owed = Math.max(0, p.labourCost - labour) + Math.max(0, p.otherOperatingCost - operating);
     pendingDueByAccount.set(p.accountId, (pendingDueByAccount.get(p.accountId) ?? 0) + owed);
-    if (inputReserve.has(p.accountId))
+    if (inputReserve.has(p.accountId) || salesAdvance.has(p.accountId))
       creditDrawn.set(p.accountId, (creditDrawn.get(p.accountId) ?? 0) + owed);
+    if (salesAdvance.has(p.accountId))
+      deferredBills.set(p.accountId, (deferredBills.get(p.accountId) ?? 0) + owed);
     payments.set(p.id, {
       labour,
       operating,
@@ -526,6 +595,14 @@ export function advanceProducerEconomy(input: {
   // Paid wages are actual income, not an invented household demand multiplier.
   for (const [id, amount] of credits) cash.set(id, cash.get(id)! + amount);
   reserveUnpaidCash();
+  // The rest of the advance buys inputs on intra-turn credit, settled from the
+  // run's sales in the clearing. A company whose sales fall short has its line
+  // cut until it closes with cash (settleWithinCredit), never below zero.
+  const inputCredit: Record<string, number> = {};
+  for (const [id, amount] of salesAdvance) {
+    const line = Math.max(0, amount - (deferredBills.get(id) ?? 0));
+    if (line > 0) inputCredit[id] = line;
+  }
   const householdIds = new Set<string>();
   let consumerOrders = [...(input.externalOrders ?? [])];
   for (const household of input.households ?? []) {
@@ -545,8 +622,11 @@ export function advanceProducerEconomy(input: {
         p.activeFraction *
         p.outputMultiplier *
         (runShare.get(p.accountId) ?? 1) *
-        // A run on credit is fully staffed: what cash did not pay is owed.
-        (inputReserve.has(p.accountId) ? 1 : (funding.get(p.accountId) ?? 1)),
+        // A run on credit or on its own sales is fully staffed: what cash did
+        // not pay is owed until the sales pay it.
+        (inputReserve.has(p.accountId) || salesAdvance.has(p.accountId)
+          ? 1
+          : (funding.get(p.accountId) ?? 1)),
     ])
   );
   // Physical maximum per plant, before the feasibility pre-pass picks a start.
@@ -756,7 +836,7 @@ export function advanceProducerEconomy(input: {
           ) *
           Math.min(
             1,
-            (cash.get(order.accountId) ?? 0) /
+            ((cash.get(order.accountId) ?? 0) + (inputCredit[order.accountId] ?? 0)) /
               Math.max(Number.MIN_VALUE, requestedSpend.get(order.accountId) ?? 0)
           ),
       }))
@@ -859,7 +939,33 @@ export function advanceProducerEconomy(input: {
       offers: proposedOffers,
       orders: [...consumerOrders, ...inputOrders()],
       ...(track ? { trackCountryBooks: true } : {}),
+      ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
     });
+  };
+  // Cut the input line of every company whose sales did not cover what it
+  // bought on it; true when any line changed.
+  const cutShortCredit = (settled: ReturnType<typeof settleProducerMarket>) => {
+    let cut = false;
+    for (const account of settled.accounts) {
+      const line = inputCredit[account.id];
+      if (line == null || !(account.cash < 0)) continue;
+      const next = Math.max(0, line + account.cash * (1 + 1e-9) - 1e-9);
+      if (next > 0) inputCredit[account.id] = next;
+      else delete inputCredit[account.id];
+      cut = true;
+    }
+    return cut;
+  };
+  // Settle at the current plan with every company closing on cash: a line its
+  // sales did not cover is cut and the clearing repeated. Without credit no
+  // buyer can spend past its cash, so the last resort always closes.
+  const settleWithinCredit = (track = false) => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const settled = trial(track);
+      if (!cutShortCredit(settled)) return settled;
+    }
+    for (const id of Object.keys(inputCredit)) delete inputCredit[id];
+    return trial(track);
   };
   let market: ReturnType<typeof settleProducerMarket> | undefined;
   const passes = input.maximumPlanningPasses ?? 128;
@@ -887,7 +993,7 @@ export function advanceProducerEconomy(input: {
   for (let pass = 0; pass < passes; pass++) {
     market = trial();
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
-    let changed = false;
+    let changed = cutShortCredit(market);
     for (const p of plans) {
       const previous = plannedById.get(p.id)!;
       const fills = p.inputs.map((recipe) => {
@@ -975,7 +1081,7 @@ export function advanceProducerEconomy(input: {
     ];
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
-  market = trial(input.trackCountryBooks === true);
+  market = settleWithinCredit(input.trackCountryBooks === true);
   if (!market) throw new Error("Missing producer market settlement");
   let spillover: { strandedSpend: number; extraRequested: number; recovered: number } | undefined;
   if ((input.spilloverShare ?? 0) > 0 && householdIds.size > 0) {
@@ -1011,15 +1117,56 @@ export function advanceProducerEconomy(input: {
       };
       const before = spend(market.orders);
       consumerOrders = next.orders;
-      market = trial(input.trackCountryBooks === true);
+      market = settleWithinCredit(input.trackCountryBooks === true);
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
   }
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
-  // Free cash after clearing; minor-input premiums are paid from it below.
-  const freeCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
+  // The run's sales pay the wages and site bills it deferred, pro rata, before
+  // close; what they cannot cover stays owed as an ordinary payable.
+  const settledCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
+  const unpaidBills = (p: ProductionPlan) => {
+    const paid = payments.get(p.id)!;
+    return (
+      Math.max(0, p.labourCost - paid.labour) + Math.max(0, p.otherOperatingCost - paid.operating)
+    );
+  };
+  for (const id of salesAdvance.keys()) {
+    // Read after the input true-up, which already forgave the unmade share.
+    const deferred = plans.reduce((sum, p) => (p.accountId === id ? sum + unpaidBills(p) : sum), 0);
+    const fraction = deferredBillFraction(settledCash.get(id) ?? 0, deferred);
+    if (!(fraction > 0)) continue;
+    for (const p of plans) {
+      if (p.accountId !== id) continue;
+      const paid = payments.get(p.id)!;
+      const labour = Math.max(0, p.labourCost - paid.labour) * fraction;
+      const operating = Math.max(0, p.otherOperatingCost - paid.operating) * fraction;
+      if (!(labour + operating > 0)) continue;
+      settledCash.set(id, settledCash.get(id)! - labour - operating);
+      settledCash.set(
+        p.labourRecipientAccountId,
+        settledCash.get(p.labourRecipientAccountId)! + labour
+      );
+      settledCash.set(
+        p.operatingRecipientAccountId,
+        settledCash.get(p.operatingRecipientAccountId)! + operating
+      );
+      payments.set(p.id, {
+        labour: paid.labour + labour,
+        operating: paid.operating + operating,
+        arrears: Math.max(0, paid.arrears - labour - operating),
+      });
+    }
+    // Float noise from the pro rata split must not leave a sliver below zero.
+    if (settledCash.get(id)! < 0) settledCash.set(id, 0);
+  }
+  for (const value of settledCash.values())
+    if (!(value >= 0)) throw new Error("Producer closed below zero after its sales advance");
+  // Free cash after the deferred bills are settled; minor-input premiums are
+  // paid from it below, and closing balances are read from it at the end.
+  const freeCash = settledCash;
   for (const p of plans) {
     const stocks = new Map<string, PurchasedStock>();
     for (const stock of p.inputStock) {
@@ -1224,6 +1371,18 @@ export function advanceProducerEconomy(input: {
       plannedUnits: proposedById.get(p.id)!,
       ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
       ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
+      ...(() => {
+        const reasons: RunCutReason[] = [];
+        if (
+          (runShare.get(p.accountId) ?? 1) < 1 - 1e-12 ||
+          (!inputReserve.has(p.accountId) &&
+            !salesAdvance.has(p.accountId) &&
+            (funding.get(p.accountId) ?? 1) < 1 - 1e-12)
+        )
+          reasons.push("cash");
+        if (billedRunShare.has(p.id)) reasons.push("inputs");
+        return reasons.length > 0 ? { runCutBy: reasons } : {};
+      })(),
       ...(p.idleOperatingCost != null
         ? { idleOperatingCost: Math.min(p.otherOperatingCost, Math.max(0, p.idleOperatingCost)) }
         : {}),

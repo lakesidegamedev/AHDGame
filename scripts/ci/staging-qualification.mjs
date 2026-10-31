@@ -483,8 +483,11 @@ async function main() {
   };
   const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
   // Room to wait for development's push run; the changes job timeout is above this.
-  const waitUntil = Date.now() + 35 * 60 * 1000;
-  const deadline = AbortSignal.timeout(38 * 60 * 1000);
+  // The push run's own wall clock includes queueing for a shared hosted runner,
+  // which reached 36 minutes on 2026-10-31 and turned a reusable promotion into
+  // a second full suite.
+  const waitUntil = Date.now() + 60 * 60 * 1000;
+  const deadline = AbortSignal.timeout(63 * 60 * 1000);
   const repository = process.env.GITHUB_REPOSITORY;
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository || "")) throw new Error("repository unavailable");
   const api = async (path) => {
