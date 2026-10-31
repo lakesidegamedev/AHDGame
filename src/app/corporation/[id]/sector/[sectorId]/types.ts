@@ -250,6 +250,8 @@ export interface PricingData {
   effectivePosture: number | null;
   /** Share of output that found a buyer last turn. */
   soldFraction: number | null;
+  /** Share of output handed to the company's own sites last turn (CEO only). Not a sale. */
+  ownSiteFraction?: number | null;
   /** Ramped clearing multiplier applied to realized revenue last turn. */
   clearingFactor: number | null;
   /**
