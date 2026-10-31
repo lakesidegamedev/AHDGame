@@ -46,17 +46,26 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     if (denied) return denied;
     const mode = await getMarketSystemMode();
     const [config, world] = await Promise.all([
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { groupSupplyCoordinationEnabled: 1 } }),
+      db.collection<GameConfig>("gameConfig").findOne(
+        { _id: "default" },
+        {
+          projection: { groupSupplyCoordinationEnabled: 1, producerMarketLiveFromTurn: 1 },
+        }
+      ),
       db
         .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } }),
+        .findOne(
+          { _id: "current" },
+          { projection: { subsidiaryCorporationsEnabled: 1, currentTurn: 1 } }
+        ),
     ]);
     const groupCoordinationActive =
       mode === "plants" &&
       config?.groupSupplyCoordinationEnabled === true &&
       world?.subsidiaryCorporationsEnabled === true;
+    // Funded worlds settle own-company fills as free transfers, so a discount has nothing to act on.
+    const liveFrom = config?.producerMarketLiveFromTurn;
+    const fundedMarket = typeof liveFrom === "number" && (world?.currentTurn ?? 0) >= liveFrom;
     const available = marketAtLeast(mode, "plants") && !groupCoordinationActive;
     const owners = await db
       .collection<Corporation>("corporations")
@@ -129,6 +138,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
           parentId: inherited ? effective?.root : null,
           available,
           groupCoordinationActive,
+          fundedMarket,
           lastTurn: lastTurn || null,
           received,
           reserved,
