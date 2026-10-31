@@ -62,9 +62,10 @@ export function westminsterPolicyDrift(policy: DevolutionPolicy): number {
   return DEVOLUTION_POLICY_DRIFT[policy] * WESTMINSTER_INFLUENCE;
 }
 
-/** Approval endorses Westminster's chosen stance toward this particular region. */
-export function nationalApprovalDrift(approval: number, policy: DevolutionPolicy = "anti"): number {
-  return regionalApprovalDrift(approval, policy) * WESTMINSTER_INFLUENCE;
+/** Dissatisfaction with Westminster raises separation desire regardless of its stance. */
+export function nationalApprovalDrift(approval: number): number {
+  if (approval === 50) return 0;
+  return -approvalMandate(approval) * WESTMINSTER_INFLUENCE;
 }
 
 /** Missing fields on older worlds retain a unionist constitutional position. */
@@ -150,10 +151,7 @@ export function computeIndependenceDesireDriftSnapshot(args: {
     policy: DEVOLUTION_POLICY_DRIFT[policy],
     regionalApproval: regionalApprovalDrift(regionalApproval, policy),
     westminsterPolicy: westminsterPolicyDrift(resolveWestminsterPolicy(args.westminsterPolicy)),
-    nationalApproval: nationalApprovalDrift(
-      nationalApproval,
-      resolveWestminsterPolicy(args.westminsterPolicy)
-    ),
+    nationalApproval: nationalApprovalDrift(nationalApproval),
     inflation: inflationDrift(inflationPercent),
     meanReversion: meanReversionDrift(previous),
   };

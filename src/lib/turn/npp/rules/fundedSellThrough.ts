@@ -7,8 +7,8 @@
  * clearing pass let the plant run because buyers would take no more: below 1
  * means unsold demand room ran out, a glut signal.
  *
- * The funded producer market writes the same field as sold / capacity
- * (`fundedDemandThrottle`). That mixes two different causes of low output: a
+ * The funded producer market used to write the same field as sold / capacity
+ * (`fundedDemandThrottle` now writes sell-through, ticket 1728). That mixes two different causes of low output: a
  * plant whose buyers stopped taking its goods, and a plant that could not make
  * its goods because inputs or cash ran short. A farm without fertilizer runs at
  * a quarter of nameplate and sells every unit, yet reads 0.25. Read as a glut,

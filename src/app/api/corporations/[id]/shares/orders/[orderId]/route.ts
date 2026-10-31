@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Character, Corporation, ShareOrder, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import {
   actorMayCancelShareOrder,
   cancelShareOrderAndRefund,
@@ -36,6 +37,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     const { orderId } = await params;
     const db = await getDb();
+    // The turn fills open orders from a snapshot of their escrow; a cancel
+    // refunding that escrow mid-turn would let the fill spend it again.
+    const turnGuard = await rejectDuringTurn(db);
+    if (turnGuard) return turnGuard;
 
     if (!ObjectId.isValid(orderId)) {
       return errorResponse(400, "Invalid order ID");

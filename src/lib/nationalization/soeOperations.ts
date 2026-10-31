@@ -679,19 +679,21 @@ export async function processSoeOperations(
       treasuryCurrencyByCountry.get(b.countryId),
       `soe-loss-backing:${cashLedger.context?.turn ?? 0}:${b.countryId}:${b.corpId.toString()}`
     );
+    const corp = corpById.get(b.corpId.toString());
+    const liquid = corp && Number.isFinite(corp.liquidCapital) ? corp.liquidCapital : 0;
     // Credit only what the treasury actually paid. Below plants that is the
-    // whole hole (liquidCapital → 0, as before); under plants an over-built SOE
-    // is left negative by the residual it spent on capacity.
+    // whole loaded hole (liquidCapital → 0, as before); under plants an
+    // over-built SOE is left negative by the residual it spent on capacity.
+    // Both are deltas so a concurrent cash movement is kept, not zeroed.
     backingOps.push({
       updateOne: {
         filter: { _id: b.corpId },
-        update: plantsEnabled
-          ? { $inc: { liquidCapital: b.coveredLocal }, $set: { updatedAt: now } }
-          : { $set: { liquidCapital: 0, updatedAt: now } },
+        update: {
+          $inc: { liquidCapital: plantsEnabled ? b.coveredLocal : -liquid },
+          $set: { updatedAt: now },
+        },
       },
     });
-    const corp = corpById.get(b.corpId.toString());
-    const liquid = corp && Number.isFinite(corp.liquidCapital) ? corp.liquidCapital : 0;
     backingCredits.push({
       corpId: b.corpId.toString(),
       currency: snapshotCorporationCurrency(corp ?? {}),

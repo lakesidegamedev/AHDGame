@@ -249,15 +249,17 @@ export async function settleExtractionContracts(
     .find({ status: "offered", offerExpiresTurn: { $lte: turn }, revokedTurn: { $exists: false } })
     .toArray();
   if (expiredOffers.length > 0) {
-    await contractsCol.bulkWrite(
+    // The filter repeats the selection: an offer accepted or revoked after the
+    // read keeps that outcome instead of being stamped expired over it.
+    const expiry = await contractsCol.bulkWrite(
       expiredOffers.map((c) => ({
         updateOne: {
-          filter: { _id: c._id },
+          filter: { _id: c._id, status: "offered", revokedTurn: { $exists: false } },
           update: { $set: { status: "expired", revokedTurn: turn, updatedAt: now } },
         },
       }))
     );
-    result.offersExpired = expiredOffers.length;
+    result.offersExpired = expiry.matchedCount;
   }
 
   // ── Active contracts: term expiry + royalty settlement. ─────────────────────

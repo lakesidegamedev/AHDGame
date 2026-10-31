@@ -104,6 +104,8 @@ import {
 } from "./fundCronRebalance";
 import { loadEquityPoolsByCurrency } from "@/lib/equities/marketPool";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
 export {
@@ -526,8 +528,14 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   for (const fund of await listActiveFunds(db)) {
     if (!navReadyFundIds.some((id) => id.toString() === fund._id.toString())) continue;
     if (!queuedUnitsByFundId.has(fund._id.toString())) funds.push(fund);
-    // Queued redemptions hold the fund out of trading; say so on the turn it was due.
-    else if (fund.targetConstituents.length > 0 && rebalanceDue(fund))
+    // Queued redemptions hold the fund out of trading; say so on the fund's own
+    // stagger turn. A later catch-up turn is still held, but repeating the same
+    // warning there floods the turn log without telling anyone anything new (#5083).
+    else if (
+      fund.targetConstituents.length > 0 &&
+      rebalanceDue(fund) &&
+      isStaggeredTurn(fund._id.toString(), currentTurn, TURNS_PER_DAY)
+    )
       result.errors.push(`Fund ${fund.slug}: rebalance deferred, queued redemptions pending`);
   }
   const rebalancedFundIds = new Set<string>();

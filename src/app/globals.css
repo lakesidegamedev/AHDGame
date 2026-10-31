@@ -1743,14 +1743,3 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
     padding-bottom: 0;
   }
 }
-
-/* Experimental side tray (SideTray): the page makes room for the collapsed
-   rail, and on wide screens for the open panel too. Phones never get it. */
-@media (min-width: 640px) {
-  html[data-side-tray="left"] body {
-    padding-left: var(--side-tray-push, 0px);
-  }
-  html[data-side-tray="right"] body {
-    padding-right: var(--side-tray-push, 0px);
-  }
-}

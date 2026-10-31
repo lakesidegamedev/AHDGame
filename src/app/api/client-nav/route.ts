@@ -1,6 +1,7 @@
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
+import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
 import { navCustomization } from "@/lib/navigation/navCustomization";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isSingleplayer } from "@/lib/singleplayer";
@@ -225,6 +226,7 @@ export async function GET() {
             mobileNavigationLayout: 1,
             widgetLayout: 1,
             widgetTrayOpen: 1,
+            widgetWatchlist: 1,
             askDrawerSide: 1,
             askDrawerHidden: 1,
             navCustomization: 1,
@@ -745,6 +747,7 @@ export async function GET() {
           mobileNavigationLayout: mobileNavigationLayout(user.mobileNavigationLayout),
           widgetLayout: widgetLayout(user.widgetLayout),
           widgetTrayOpen: user.widgetTrayOpen === true,
+          widgetWatchlist: widgetWatchlist(user.widgetWatchlist),
           askDrawerSide: user.askDrawerSide === "left" ? "left" : "right",
           askDrawerHidden: user.askDrawerHidden === true,
           navCustomization: navCustomization(user.navCustomization),

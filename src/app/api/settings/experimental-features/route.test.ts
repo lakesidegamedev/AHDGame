@@ -119,6 +119,25 @@ describe("PATCH /api/settings/experimental-features", () => {
     });
   });
 
+  it("saves a cleaned watchlist", async () => {
+    const response = await patch({
+      widgetWatchlist: [
+        { kind: "corporation", id: "12" },
+        { kind: "commodity", id: "oil" },
+        { kind: "corporation", id: "12" },
+        { kind: "commodity", id: "unobtainium" },
+      ],
+    });
+    expect(response.status).toBe(200);
+    const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+    expect(update[1].$set).toMatchObject({
+      widgetWatchlist: [
+        { kind: "corporation", id: "12" },
+        { kind: "commodity", id: "oil" },
+      ],
+    });
+  });
+
   it("does not write preferences without authentication", async () => {
     vi.mocked(requireBasicAuth).mockResolvedValue({
       ok: false,
@@ -145,6 +164,16 @@ describe("PATCH /api/settings/experimental-features", () => {
     { widgetLayout: { tray: [], nav: { sidebar: "myCompany" } } },
     { widgetLayout: { tray: Array.from({ length: 9 }, () => "myCompany"), nav: {} } },
     { widgetTrayOpen: "yes" },
+    { widgetWatchlist: [{ kind: "bill", id: "1" }] },
+    { widgetWatchlist: [{ kind: "corporation", id: "acme" }] },
+    { widgetWatchlist: [{ kind: "commodity", id: "Oil; drop" }] },
+    { widgetWatchlist: [{ kind: "corporation", id: "1", note: "x" }] },
+    {
+      widgetWatchlist: Array.from({ length: 21 }, (_, i) => ({
+        kind: "corporation",
+        id: String(i + 1),
+      })),
+    },
   ])("rejects %j", async (body) => {
     const response = await patch(body);
     expect(response.status).toBe(400);
