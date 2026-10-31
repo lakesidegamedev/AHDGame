@@ -32,7 +32,7 @@ import {
 } from "./producerCreditRules";
 import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
 import { householdPurchaseOrders } from "./householdRules";
-import { makeDoOutput } from "./makeDoRules";
+import { makeDoOutput, minorInputShortfallCost, minorInputs } from "./makeDoRules";
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
@@ -164,6 +164,11 @@ export interface ProducerOperatingResult {
   revenue: number;
   purchases: number;
   inputsConsumed: number;
+  /**
+   * Premium for minor-input units the plant ran without (makeDoRules.ts), paid
+   * to the operating payee; any unpaid part is an operating payable. Absent when zero.
+   */
+  minorInputPremium?: number;
   /** Acquisition value lost from unused purchased inputs; not another cash charge. */
   inventoryWriteOff: number;
   labourPaid: number;
@@ -588,8 +593,20 @@ export function advanceProducerEconomy(input: {
     }
     return row;
   };
+  // Minor inputs do not limit the plan (makeDoRules.ts): a plant short of one
+  // runs anyway and pays a premium for the missing units at settlement.
+  const minorByPlan = new Map(
+    plans.map((p) => [
+      p.id,
+      minorInputs(
+        p.inputs.map((r) => ({ unitsPerOutput: r.unitsPerOutput, unitValue: r.maximumUnitPrice }))
+      ),
+    ])
+  );
   for (const [j, segment] of segments.entries()) {
-    for (const recipe of segment.plan.inputs) {
+    const minor = minorByPlan.get(segment.plan.id)!;
+    for (const [k, recipe] of segment.plan.inputs.entries()) {
+      if (minor[k]) continue;
       const owned = segment.owned.get(recipe.commodity) ?? 0;
       resource(recipe.commodity, recipe.book).coefficients[j] +=
         Math.max(0, segment.to * recipe.unitsPerOutput - owned) -
@@ -1001,11 +1018,8 @@ export function advanceProducerEconomy(input: {
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
-  const closingAccounts = market.accounts.map((account) => ({
-    ...account,
-    cash: account.cash + (heldForPayables.get(account.id) ?? 0),
-  }));
-  const closingCash = new Map(closingAccounts.map((a) => [a.id, a.cash]));
+  // Free cash after clearing; minor-input premiums are paid from it below.
+  const freeCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
   for (const p of plans) {
     const stocks = new Map<string, PurchasedStock>();
     for (const stock of p.inputStock) {
@@ -1044,8 +1058,19 @@ export function advanceProducerEconomy(input: {
     // of each input; a short input is used up rather than limiting output.
     const produced = plannedById.get(p.id)!;
     let consumed = 0;
-    for (const recipe of p.inputs) {
+    // A minor input the plant ran without is improvised at a premium, paid to
+    // the site's operating payee (makeDoRules.ts). Unpaid premium is owed.
+    let minorInputPremium = 0;
+    const minor = minorByPlan.get(p.id)!;
+    for (const [k, recipe] of p.inputs.entries()) {
       const stock = stocks.get(recipe.commodity)!;
+      if (minor[k] && p.operatingRecipientAccountId !== p.accountId)
+        minorInputPremium += minorInputShortfallCost({
+          produced,
+          unitsPerOutput: recipe.unitsPerOutput,
+          available: stock.units,
+          maximumUnitPrice: recipe.maximumUnitPrice,
+        });
       const used = Math.min(stock.units, produced * recipe.unitsPerOutput);
       const exhausted = used >= stock.units * (1 - 1e-12);
       const cost = exhausted
@@ -1057,6 +1082,21 @@ export function advanceProducerEconomy(input: {
       stock.value = exhausted ? 0 : Math.max(0, stock.value - cost);
       consumed += cost;
     }
+    const premiumPaid = Math.min(minorInputPremium, Math.max(0, freeCash.get(p.accountId) ?? 0));
+    if (premiumPaid > 0) {
+      freeCash.set(p.accountId, freeCash.get(p.accountId)! - premiumPaid);
+      freeCash.set(
+        p.operatingRecipientAccountId,
+        (freeCash.get(p.operatingRecipientAccountId) ?? 0) + premiumPaid
+      );
+    }
+    accrueProducerPayable(closingPayables, {
+      debtorAccountId: p.accountId,
+      creditorAccountId: p.operatingRecipientAccountId,
+      producerId: p.id,
+      kind: "operating",
+      amount: Math.max(0, minorInputPremium - premiumPaid),
+    });
     let inventoryWriteOff = 0;
     for (const stock of stocks.values()) {
       const loss = carryLoss(stock.commodity);
@@ -1101,7 +1141,9 @@ export function advanceProducerEconomy(input: {
           ? cappedStockUnitCost(
               finite(
                 (openingRows.reduce((sum, stock) => sum + stock.units * stock.quoteUnitCost!, 0) +
-                  (made > 0 ? (consumed + p.labourCost + p.otherOperatingCost) * weight : 0)) /
+                  (made > 0
+                    ? (consumed + minorInputPremium + p.labourCost + p.otherOperatingCost) * weight
+                    : 0)) /
                   available,
                 "closing stock quote cost"
               ),
@@ -1172,7 +1214,7 @@ export function advanceProducerEconomy(input: {
     const closingArrears = (oldBillsRemainingByProducer.get(payableKey) ?? 0) + paid.arrears;
 
     finite(
-      consumed + inventoryWriteOff + p.labourCost + p.otherOperatingCost,
+      consumed + minorInputPremium + inventoryWriteOff + p.labourCost + p.otherOperatingCost,
       "production expense"
     );
     results.push({
@@ -1192,6 +1234,7 @@ export function advanceProducerEconomy(input: {
       revenue,
       purchases,
       inputsConsumed: consumed,
+      ...(minorInputPremium > 0 ? { minorInputPremium } : {}),
       inventoryWriteOff,
       labourPaid: paid.labour,
       otherOperatingPaid: paid.operating,
@@ -1200,9 +1243,15 @@ export function advanceProducerEconomy(input: {
       operatingArrears: paid.arrears,
       arrearsPaid,
       closingArrears,
-      profit: revenue - consumed - inventoryWriteOff - p.labourCost - p.otherOperatingCost,
+      profit:
+        revenue -
+        consumed -
+        minorInputPremium -
+        inventoryWriteOff -
+        p.labourCost -
+        p.otherOperatingCost,
       unsoldProductionCost: consumed * Math.min(1, Math.max(0, unsoldShare)),
-      cashFlow: revenue - purchases - paid.labour - paid.operating - arrearsPaid,
+      cashFlow: revenue - purchases - paid.labour - paid.operating - premiumPaid - arrearsPaid,
       inputStock: [...stocks.values()],
       // A sold-out retained good (no longer in the recipe) leaves no row: next
       // turn's plan has no output for it, so an empty row would be unrecognized.
@@ -1240,6 +1289,11 @@ export function advanceProducerEconomy(input: {
           }),
         });
   }
+  const closingAccounts = market.accounts.map((account) => ({
+    ...account,
+    cash: (freeCash.get(account.id) ?? account.cash) + (heldForPayables.get(account.id) ?? 0),
+  }));
+  const closingCash = new Map(closingAccounts.map((a) => [a.id, a.cash]));
   const openingTotal = [...originalCash.values()].reduce((n, v) => n + v, 0);
   const closingTotal = [...closingCash.values()].reduce((n, v) => n + v, 0);
   if (
