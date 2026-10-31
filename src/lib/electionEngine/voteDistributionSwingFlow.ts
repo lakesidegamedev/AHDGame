@@ -61,7 +61,7 @@ import { personalStatTenureRetentionForCandidate } from "./rules/tenureRetention
 import { persuasionDrivers } from "./persuasionDrivers";
 import type { EnrichedCandidate, DistributeVotesOptions, AppealWeightTrace } from "./types";
 import { democraticHealthMultiplierForCandidate } from "./democraticHealth";
-import { applyFptpSpoilerTransfers } from "./rules/spoilerTransfers";
+import { applyFptpSpoilerTransfers, shouldApplyFptpSpoiler } from "./rules/spoilerTransfers";
 
 /**
  * Per-candidate within-group weight for the §7.3.2 nominal_share line:
@@ -515,8 +515,9 @@ export function distributeVotesBySwingFlow(
   // Same logic as the legacy engine — applied after swing-flow to the
   // per-candidate votes. Spoiler is structurally orthogonal to the
   // peel-vs-resistance mechanic (it models within-coalition leakage, not
-  // cross-coalition persuasion), so it stays as a post-step.
-  if (options?.votingSystem !== "rcv") {
+  // cross-coalition persuasion), so it stays as a post-step. Same gate as the
+  // legacy engine: skipped under RCV and in one-party states.
+  if (shouldApplyFptpSpoiler(options)) {
     applyFptpSpoilerTransfers(enriched, votesPerCandidate, partyOrgByParty, options);
   }
 

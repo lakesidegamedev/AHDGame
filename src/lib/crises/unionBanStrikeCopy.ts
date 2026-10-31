@@ -51,7 +51,7 @@ export const UNION_BAN_STRUCK_SECTORS: OperatingSectorType[] = [
 ];
 
 /** What the struck trades are called in each country. Falls back to `default`. */
-export const STRUCK_TRADE_COPY: Record<string, string> = {
+const STRUCK_TRADE_COPY: Record<string, string> = {
   default: "steelworkers, car plants, dockers and freight drivers",
   US: "steelworkers, auto plants, longshoremen and teamsters",
   UK: "steelworkers, car plants, dockers and lorry drivers",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { HeroImage } from "@/components/HeroImage";
 import { HeroStatsStrip } from "@/components/ui";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 interface LegislatureHeaderProps {
   countryId: CountryId;

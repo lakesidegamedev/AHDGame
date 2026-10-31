@@ -89,7 +89,7 @@ export function getEligibleVoterSet(party: PoliticalParty): Set<string> {
 
 // ─── Effect helpers ───────────────────────────────────────────────────────────
 
-export async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<void> {
+async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<void> {
   if (!proposal.rename) throw new Error("Not a rename proposal");
   await db.collection<PoliticalParty>("politicalParties").updateOne(
     { _id: proposal.partyId },

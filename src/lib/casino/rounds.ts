@@ -28,16 +28,16 @@ export type RoundGame = "race" | "lottery" | "poker";
 export type RoundStatus = "open" | "running" | "settling" | "settled" | "cancelled";
 export type LotteryTier = "low" | "high";
 
-export const RACE_RAKE = 0.05;
-export const RACE_BETTING_SECONDS = { min: 15, max: 300, default: 45 };
-export const LOTTERY_RAKE = 0.1;
+const RACE_RAKE = 0.05;
+const RACE_BETTING_SECONDS = { min: 15, max: 300, default: 45 };
+const LOTTERY_RAKE = 0.1;
 export const LOTTERY_TICKET_ANCHOR: Record<LotteryTier, number> = { low: 50_000, high: 1_000_000 };
 export const LOTTERY_MAX_TICKETS = 100;
-export const LOTTERY_HOURS = { min: 1, max: 72, default: 24 };
-export const POKER_RAKE = 0.05;
-export const POKER_BUY_IN_ANCHOR = { min: 10_000, max: 5_000_000 };
-export const POKER_PLAYERS = { min: 2, max: 8 };
-export const POKER_STARTING_CHIPS = 1_000;
+const LOTTERY_HOURS = { min: 1, max: 72, default: 24 };
+const POKER_RAKE = 0.05;
+const POKER_BUY_IN_ANCHOR = { min: 10_000, max: 5_000_000 };
+const POKER_PLAYERS = { min: 2, max: 8 };
+const POKER_STARTING_CHIPS = 1_000;
 
 const RACE_GRACE_MS = 15 * 60_000;
 const LOTTERY_GRACE_MS = 6 * 3_600_000;

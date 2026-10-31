@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Skeleton } from "@/components/ui";
-import { COMMODITY_TYPES, COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
-import { type CountryId } from "@/lib/constants/countries";
+import {
+  COMMODITY_TYPES,
+  COMMODITY_LABELS,
+  type CommodityType,
+} from "@/lib/constants/commoditiesCore";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { formatEmbargoProvisionLabel } from "@/lib/legislature/embargoProvisionLabel";
 import {
@@ -415,7 +419,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
             </span>
           ) : (
             <span className="text-xs text-muted">
-              Only the trade minister (or head of government) may impose embargoes.
+              Only the trade minister may impose embargoes.
             </span>
           )}
           {feedback && (

@@ -1,3 +1,8 @@
+import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
+import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
+import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
+import { navCustomization } from "@/lib/navigation/navCustomization";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isTokenRevokedByCutoff } from "@/lib/auth/revocationCutoff";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -327,6 +332,15 @@ export const GET = withNoStore(async () => {
           theme: user?.theme ?? undefined,
           statusBarLayout: user?.statusBarLayout ?? undefined,
           corpOverviewMode: user?.corpOverviewMode ?? undefined,
+          experimentalFeatures: user?.experimentalFeatures === true,
+          desktopNavigationLayout: desktopNavigationLayout(user?.desktopNavigationLayout),
+          mobileNavigationLayout: mobileNavigationLayout(user?.mobileNavigationLayout),
+          widgetLayout: widgetLayout(user?.widgetLayout),
+          widgetTrayOpen: user?.widgetTrayOpen === true,
+          widgetWatchlist: widgetWatchlist(user?.widgetWatchlist),
+          askDrawerSide: user?.askDrawerSide === "left" ? "left" : "right",
+          askDrawerHidden: user?.askDrawerHidden === true,
+          navCustomization: navCustomization(user?.navCustomization),
           hasCharacter: !!character || !!imperialCharacter,
           isImperial: !!imperialCharacter && isImperialMode,
           forexEnabled,
@@ -371,6 +385,7 @@ export const GET = withNoStore(async () => {
                   rpgStatsEnabled &&
                   !character.statsAllocated &&
                   !character.statAllocationDismissed,
+                needsWealthTierRepick: character.wealthTierRepickPending === true,
                 displayCurrencyPreference:
                   character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),
               }

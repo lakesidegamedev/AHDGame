@@ -5,7 +5,7 @@ import type { EventInstance } from "@/lib/db/types/events";
 import { getEventHandler } from "./registry";
 import type { OfferEventInput, ResolveEventHooks } from "./types";
 
-export const EVENT_RESPONSE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const EVENT_RESPONSE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export class ActiveEventConflictError extends Error {
   constructor(scopeId: ObjectId) {
@@ -85,7 +85,7 @@ export function computeExpiresAtRealtimeMs(offeredAt: Date = new Date()): number
  * long enough for a decision to be meaningful, short enough that a country is
  * not locked out of every subsequent event for the rest of a long run.
  */
-export const EVENT_RESPONSE_WINDOW_TURNS = 48;
+const EVENT_RESPONSE_WINDOW_TURNS = 48;
 
 export function computeExpiresAtTurn(currentTurn: number): number {
   return currentTurn + EVENT_RESPONSE_WINDOW_TURNS;

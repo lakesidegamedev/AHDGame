@@ -11,13 +11,13 @@ import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { AltCluster, AltLink } from "@/lib/db/types/altDetection";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 
-export const DOSSIER_MAX_SESSIONS = 25;
-export const DOSSIER_MAX_FINANCIAL_ROWS = 50;
-export const DOSSIER_MAX_ACTIONS = 50;
-export const DOSSIER_MAX_LINKS = 50;
-export const DOSSIER_MAX_CLUSTERS = 20;
-export const DOSSIER_MAX_DEVICE_IP_ROWS = 50;
-export const DOSSIER_MAX_FLAGGED_ACTIONS = 25;
+const DOSSIER_MAX_SESSIONS = 25;
+const DOSSIER_MAX_FINANCIAL_ROWS = 50;
+const DOSSIER_MAX_ACTIONS = 50;
+const DOSSIER_MAX_LINKS = 50;
+const DOSSIER_MAX_CLUSTERS = 20;
+const DOSSIER_MAX_DEVICE_IP_ROWS = 50;
+const DOSSIER_MAX_FLAGGED_ACTIONS = 25;
 
 export interface DossierDeviceIpRow {
   ip: string | null;
@@ -145,7 +145,7 @@ function iso(d: Date | undefined | null): string | null {
   return d.toISOString();
 }
 
-export function buildDossierIdentity(user: User, isAdmin: boolean): DossierIdentity {
+function buildDossierIdentity(user: User, isAdmin: boolean): DossierIdentity {
   return {
     userId: user._id.toString(),
     username: user.username,
@@ -208,7 +208,7 @@ function pushDeviceRow(
   rows.push({ ip, fingerprint, trackingId, source: row.source, lastSeen: row.lastSeen });
 }
 
-export function buildDevicesAndIps(
+function buildDevicesAndIps(
   user: User,
   activityRows: ActivityLog[],
   isAdmin: boolean
@@ -290,7 +290,7 @@ export function buildDevicesAndIps(
   return rows.slice(0, DOSSIER_MAX_DEVICE_IP_ROWS);
 }
 
-export function serializeFinancialRow(row: FinancialTxLogEntry): DossierFinancialRow {
+function serializeFinancialRow(row: FinancialTxLogEntry): DossierFinancialRow {
   return {
     id: row._id.toString(),
     type: row.type,
@@ -307,7 +307,7 @@ export function serializeFinancialRow(row: FinancialTxLogEntry): DossierFinancia
   };
 }
 
-export function serializeSessionRow(row: ActivityLogAuth): DossierSessionRow {
+function serializeSessionRow(row: ActivityLogAuth): DossierSessionRow {
   return {
     id: row._id.toString(),
     type: row.type,
@@ -319,7 +319,7 @@ export function serializeSessionRow(row: ActivityLogAuth): DossierSessionRow {
   };
 }
 
-export function maskSessionRow(row: DossierSessionRow, isAdmin: boolean): DossierSessionRow {
+function maskSessionRow(row: DossierSessionRow, isAdmin: boolean): DossierSessionRow {
   if (isAdmin) return row;
   return {
     ...row,

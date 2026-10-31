@@ -18,7 +18,8 @@ const sector = (over: Partial<SectorDetail>) =>
     _id: "s1",
     stateId: "PA",
     stateName: "Pennsylvania",
-    sectorType: "steel",
+    sectorType: "manufacturing",
+    plantCount: 4,
     sectorLabel: "Steel",
     revenue: 14.2,
     profit: 1.76,
@@ -26,6 +27,8 @@ const sector = (over: Partial<SectorDetail>) =>
     marketSharePercent: 18.2,
     fillRate: 0.89,
     fillRateBand: "high",
+    producedUnits: 40,
+    capacityUnits: 100,
     ...over,
   }) as unknown as SectorDetail;
 
@@ -62,7 +65,14 @@ describe("SectorCards", () => {
     );
     expect(screen.getByText("12.4%")).toBeTruthy();
     expect(screen.getByText("-$0.09")).toBeTruthy();
-    expect(screen.getAllByText("Fill")).toHaveLength(2);
+    // Plants lead; the old "40% used" figure is now a labelled running share.
+    expect(screen.getAllByText("Plants")).toHaveLength(2);
+    expect(screen.getAllByText("4 plants")).toHaveLength(2);
+    expect(screen.queryByText(/% used/)).toBeNull();
+    expect(screen.getAllByText("Running")).toHaveLength(2);
+    expect(screen.getAllByText("40%")).toHaveLength(2);
+    expect(screen.getAllByText("Sold")).toHaveLength(2);
+    expect(screen.getAllByText("89%")).toHaveLength(2);
   });
 
   it("shows share instead of fill below plants, and n/a for hidden money", () => {
@@ -86,5 +96,31 @@ describe("SectorCards", () => {
     expect(screen.getByText("Share")).toBeTruthy();
     expect(screen.getByText("18.2%")).toBeTruthy();
     expect(screen.getAllByText("n/a").length).toBeGreaterThan(0);
+  });
+
+  it("reads a sector with no plants yet as not running", () => {
+    render(
+      <SectorCards
+        sectors={[
+          sector({
+            sectorType: "logistics",
+            plantCount: 0,
+            capacityUnits: 0,
+            producedUnits: 0,
+            fillRate: null,
+            fillRateBand: null,
+          } as Partial<SectorDetail>),
+        ]}
+        corpId="7"
+        plantsMode
+        fogged={false}
+        fmt={fmt}
+        fmtSigned={fmtSigned}
+        scale={(n) => n}
+        maxRevenue={14.2}
+      />
+    );
+    expect(screen.getByText("No depots yet")).toBeTruthy();
+    expect(screen.getByText("Not running yet")).toBeTruthy();
   });
 });

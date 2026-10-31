@@ -30,6 +30,28 @@ describe("native inbox push policy", () => {
     ).toBe(true);
     expect(shouldPush({ type: "resource_income", read: false }, {}, now)).toBe(false);
   });
+  it("pushes only what needs the player or is about them, never routine reports", () => {
+    for (const type of [
+      "bill_vote_open",
+      "ceo_vote_offer",
+      "player_attack",
+      "primary_win",
+    ] as const) {
+      expect(shouldPush({ type, read: false }, {}, now)).toBe(true);
+    }
+    for (const type of [
+      "corp_supply_agreement_update",
+      "rd_breakthrough",
+      "corp_bond_due_soon",
+      "corp_credit_rating_change",
+      "corp_bond_repaid",
+      "crisis",
+      "crisis_resolved",
+      "national_leadership_candidacy",
+    ] as const) {
+      expect(shouldPush({ type, read: false }, {}, now)).toBe(false);
+    }
+  });
 });
 
 const alert = (overrides: Record<string, unknown> = {}) => ({

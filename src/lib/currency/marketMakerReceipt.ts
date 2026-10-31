@@ -27,7 +27,7 @@ const request = (p: ReceiptRequest) => ({
   amount: p.amount,
   turn: p.turn,
 });
-export const marketReceiptKey = (p: ReceiptRequest) => `loc:fx:${p.characterId}:${p.commandId}`;
+const marketReceiptKey = (p: ReceiptRequest) => `loc:fx:${p.characterId}:${p.commandId}`;
 export async function replayMarketMakerReceipt(db: Db, p: ReceiptRequest) {
   const original = await loadLocSettlement(db, marketReceiptKey(p));
   if (!original) return null;

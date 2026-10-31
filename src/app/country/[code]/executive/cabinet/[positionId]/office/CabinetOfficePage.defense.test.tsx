@@ -126,15 +126,16 @@ import CabinetOfficePage from "./page";
 afterEach(cleanup);
 
 describe("CabinetOfficePage — defense seat", () => {
-  it("shows the force strip and the Military flagship roster", () => {
+  it("shows the force strip and the Military flagship roster", async () => {
     render(<CabinetOfficePage />);
     // Masthead force strip (defense) instead of the metric strip
     expect(screen.getByText("Combat power")).toBeTruthy();
     // The flagship tab is labelled Military
     const militaryTab = screen.getByRole("button", { name: "Military" });
     fireEvent.click(militaryTab);
-    // Roster renders the unit + recruit affordance
-    expect(screen.getByText("1st Vanguard Tank")).toBeTruthy();
+    // Roster renders the unit + recruit affordance. The flagship body is a lazy
+    // chunk, so the assertion waits for it to land.
+    expect(await screen.findByText("1st Vanguard Tank", {}, { timeout: 8000 })).toBeTruthy();
     expect(screen.getByText("Recruit unit")).toBeTruthy();
   });
 });
@@ -146,14 +147,15 @@ describe("CabinetOfficePage — tab deep-link via hash", () => {
     conflictsSpy.mockReturnValue(false);
   });
 
-  it("opens the Commands tab when the URL names it", () => {
+  it("opens the Commands tab when the URL names it", async () => {
     // How the Commanding General's page links back to their command's structure.
     window.location.hash = "#commands";
     render(<CabinetOfficePage />);
     const tab = screen.getByRole("button", { name: "Commands" });
     expect(tab.getAttribute("aria-selected") ?? tab.className).toBeTruthy();
-    // The Commands tab body is what actually proves the selection took.
-    expect(screen.getByText(/How your troops reach a front/i)).toBeTruthy();
+    // The Commands tab body is what actually proves the selection took. It is a
+    // lazy chunk, so the assertion waits for it to land.
+    expect(await screen.findByText(/How your troops reach a front/i)).toBeTruthy();
   });
 
   it("still opens on Overview with no hash", () => {

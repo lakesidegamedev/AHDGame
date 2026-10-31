@@ -1,12 +1,12 @@
 export const glossaryContent = `# Glossary
 
-Alphabetical definitions of terms used throughout A House Divided and its wiki.
+Met a word in the game or the wiki that you do not recognise? Look it up here. Terms are in alphabetical order, with a link to the full page where there is one.
 
 ---
 
 **Action**: The primary resource consumed by player activities. Base 4 per turn, refreshed every real hour, with office bonuses added. Unused actions carry forward up to the Energy-scaled cap (baseline 200). Above the hoard threshold (baseline 100), the pool loses 4 actions before each refresh.
 
-**Action bonus**: Additional actions per turn granted by holding a specific office. Example: Senator gets +2/turn; an executive President gets +4/turn, a ceremonial one +0. Central bank chair (+3), Supreme Court justice (+2) and chamber leadership (+1 to +3) stack on top.
+**Action bonus**: Additional actions per turn granted by holding a specific office. Example: Senator gets +2/turn; an executive President gets +4/turn, most ceremonial ones +0 (Ireland's President gets +3). Central bank chair (+3), Supreme Court justice (+2) and chamber leadership (+1 to +3) stack on top.
 
 **Alignment**: The component of primary and general election scores based on how close a candidate's policy position (econ + social) is to the party platform or the voter demographic. Also used in canvassing: the closer your ideology to a demographic group's ideology, the more effective your canvassing.
 
@@ -18,9 +18,9 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Cabinet**: The executive advisory body appointed by the President (US), Prime Minister (UK, JP), or Chancellor (DE). Cabinet positions grant certain powers (the Secretary of the Treasury can authorize FX Reserve Transfers). US Cabinet members are confirmed by the Senate; parliamentary cabinets are appointed directly after government formation.
 
-**Campaign**: A Campaign document created when you declare candidacy in an election. The campaign tracks your fundraising level, ground game, media spending, opposition research, and campaign actions. Campaign passive effects run each turn; the 2× season multiplier applies in the final 4 turns.
+**Campaign**: A Campaign document created when you declare candidacy in an election. The campaign tracks your fundraising level, ground game, media spending, opposition research, and campaign actions. Campaign passive effects run each turn; the 2× season multiplier on media and opposition-research effects applies in the final 4 turns.
 
-**Campaign season**: The final 4 turns (real hours) before an election ends. All campaign passive effects double during campaign season. This is the most valuable window for canvassing and active campaigning.
+**Campaign season**: The final 4 turns (real hours) before an election ends. Media Spending favorability gains, opposition-research drain and canvassing all double during campaign season. This is the most valuable window for canvassing and active campaigning.
 
 **Candidacy**: Your formal entry into an election's primary. Candidacies are tied to a party, an election, and an office. You can only hold one active candidacy at a time.
 
@@ -34,17 +34,17 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Commons**: The House of Commons, the elected lower chamber of the UK Parliament. 650 seats (625 in the 1953 preset), contested as one multi-seat race per region. Whoever commands a Commons majority forms the government.
 
-**Command economy**: A planned economy with administered prices, state-owned enterprises, and a monobank. Used by the USSR, China, and East Germany. See [Planned / Command Economies](/wiki/planned-economies).
+**Command economy**: A planned economy with administered prices, state-owned enterprises, and a monobank. Used by the USSR, China, East Germany and the other Eastern Bloc states during their planned eras, on worlds where the command economy is switched on. See [Planned / Command Economies](/wiki/planned-economies).
 
 **Country**: The nation your character belongs to (US, UK, DE, JP, and others). It determines which country's elections, legislature, and parties they participate in. Set at character creation, but can be changed later through relocation, which resets your national influence and party affiliation in the new country.
 
 **Cycle**: One complete election from spawn to resolution. When a general election resolves, a new cycle begins immediately (next election spawns).
 
-**Demographic effect**: A turn-processing phase that shifts state-level demographic composition based on economic conditions and active policies.
+**Demographic effect**: A turn-processing phase that shifts state-level demographic composition based on active policies, with shifts decaying back toward baseline when no policy pushes them.
 
-**Diminishing returns**: A mechanic that reduces the effectiveness of repeated actions on the same target. Canvassing a turnout modifier already at +18 returns ~10% of base effect. Applies to both canvassing and influence building.
+**Diminishing returns**: A mechanic that reduces the effectiveness of repeated actions on the same target. Canvassing a turnout modifier already at +18 returns ~10% of base effect. Applies to both canvassing and party GOTV turnout boosts.
 
-**Dissolution**: Ending a parliamentary term early to call snap elections (UK Commons, JP Shūgiin, DE Bundestag, IE Dáil). Triggers a compressed election cycle. A system conversion (a collapsed regime or a ratified constitutional convention) also dissolves the legislature, in any system.
+**Dissolution**: Ending a parliamentary term early to call snap elections (for example UK Commons, JP Shūgiin, DE Bundestag, IE Dáil). Triggers a compressed election cycle. A system conversion (a collapsed regime or a ratified constitutional convention) also dissolves the legislature, in any system.
 
 **Econ axis**: The economic dimension of the two-axis ideology grid (−5 to +5). Negative = left (redistributive, regulated); positive = right (market, low tax). Alongside the social axis, determines party alignment scoring.
 
@@ -52,9 +52,9 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Endorsement**: A formal expression of support from a player or NPP for your candidacy. NPP endorsements grant campaign actions. Player endorsements count as campaign actions for presidential races only.
 
-**Favorability**: A 0 to 100 stat representing public approval of your character. Used in primary scoring (worth up to 35 pts state, 25 pts presidential), general vote appeal (as an approval scalar), and national/PM approval ratings.
+**Favorability**: A 0 to 100 stat representing public approval of your character. Used in primary scoring (worth up to 35 pts state, 25 pts presidential) and general vote appeal (as an approval scalar). It is not an input to government approval; low government approval instead drains the governing party's members' favorability.
 
-**FOMC**: The US Federal Reserve's 7-seat rate-setting committee. The chair proposes hike, cut, or hold; a strict majority of seated governors must agree. Vacant seats do not count, while seated governors without a ballot abstain. Seats are filled by presidential nomination and Senate confirmation. Other central banks keep a single governor. See [FOMC / Rate-Setting Board](/wiki/fomc).
+**FOMC**: The US Federal Reserve's 7-seat rate-setting committee. The chair proposes hike, cut, or hold; a strict majority of seated governors must agree. Vacant seats do not count, while seated governors without a ballot abstain. A new world opens with seven technocrat governors; seats that fall vacant are filled by presidential nomination and Senate confirmation, and a vacant chair seat can also be filled by the chair draw. Other central banks keep a single governor. See [FOMC / Rate-Setting Board](/wiki/fomc).
 
 **FPTP (First Past the Post)**: In single-seat races, the candidate with the most votes wins. In the game's multi-seat FPTP families, the flag also enables a third-party spoiler transfer before the configured seat allocator distributes seats.
 
@@ -70,7 +70,7 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Ideology grid**: The two-axis system (econ × social) used to position characters, parties, NPPs, and voter groups. Alignment scoring uses Manhattan distance on this grid.
 
-**Infamy**: A stat increased by attacks, large personal campaign donations, and some random-event choices. High infamy reduces NPP endorsement success and trims your vote weight and primary standing. It decays by 5% each turn rather than resetting at elections. Defying a whip does not add infamy.
+**Infamy**: A stat increased by attacks, large personal campaign donations, and some random-event choices. High infamy trims your vote weight and primary standing, drains favorability above 20 infamy, slows party influence gain and makes your attacks more likely to fail. It decays by 5% each turn rather than resetting at elections. Defying a whip does not add infamy.
 
 **Influence**: Short for Political Influence (state level) or National Political Influence (national level). Used in primary score and general vote calculations. PI is built via Campaign actions and decays 0.75%/turn; NPI decays 1%/turn.
 
@@ -90,7 +90,7 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **National Front**: East Germany's single electoral list for the Volkskammer. The SED leads; approved bloc parties take the rest. See [East Germany](/wiki/dd-overview).
 
-**NPI (National Political Influence)**: A national-level reputation metric, distinct from state PI. Decays 1% per turn, then grows from your state PI and your highest office or party role, so it settles at 100 times your per-turn gain. The primary influence stat for presidential primaries and national vote calculations.
+**NPI (National Political Influence)**: A national-level reputation metric, distinct from state PI. Decays 1% per turn, then grows from your state PI and your highest office or party role, so it settles at 100 times your per-turn gain. Replaces state PI as the reach stat in presidential races: the national reach part of presidential primary scoring and vote reach in the presidential general.
 
 **NPP (Non-Player Politician)**: An autonomous politician generated by the game to fill empty seats and primary slots. NPPs enter elections, vote on bills, and make decisions based on ideology alignment and whip directives. They receive a 0.5× primary score penalty when a player is in the same primary.
 
@@ -104,13 +104,13 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Political Influence (PI)**: State-level reputation built via Campaign actions. Used in state primary scoring (up to 25 pts) and general vote reach calculations. Decays 0.75% per turn, faster for members of the party holding the national executive when that government's approval is below 100%.
 
-**Primary**: The intra-party competition phase of an election. Down-ballot primaries count real ballots from the party's registered voters over the primary's closing window, split each turn by primary-score standing; the top count per party advances to the general. Presidential primaries hand out pledged delegates. Closed when the primary window ends.
+**Primary**: The intra-party competition phase of an election. Down-ballot primaries count real ballots from the party's registered voters over the primary's closing window, split each turn by primary-score standing; the top counts per party advance to the general (one per party in presidential systems and single-winner races, more in parliamentary and one-party systems). Presidential primaries hand out pledged delegates. Closed when the primary window ends.
 
 **Primary score**: The calculated standing (0 to 100) that sets a candidate's share of each turn's primary ballots. Comprises alignment + favorability + influence. NPPs receive a 0.5× penalty when a player is competing.
 
 **Prime Minister**: The head of government in the UK, Japan and Ireland (Taoiseach). Emerges from a parliamentary majority; no direct election.
 
-**RCV (Ranked Choice Voting)**: An alternative to FPTP used in some US states (set by state legislation). Third parties compete on equal footing without the spoiler effect.
+**RCV (Ranked Choice Voting)**: A region voting-system setting that skips the FPTP spoiler step, so third parties compete without the spoiler effect. Several countries' region data uses it (Austria, Italy, Spain, France and others); US states use FPTP.
 
 **Sangiin**: Japan's House of Councillors (upper house). 248 seats, staggered 6-year terms. Cannot be dissolved. Revises legislation but cannot override the Shūgiin on confidence matters.
 
@@ -120,13 +120,13 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Shūgiin**: Japan's House of Representatives (lower house). 465 seats allocated through the configured multi-seat election path. The confidence-granting chamber: PM survival requires Shūgiin majority support. Can be dissolved for snap elections.
 
-**Snap election**: An early election called before the end of a parliamentary term. Available in the UK, JP, DE, and IE; also forced on any system by a regime conversion. Compresses the campaign cycle dramatically. See [Snap Elections](/wiki/snap-elections).
+**Snap election**: An early election called before the end of a parliamentary term. Available in parliamentary systems (the UK, JP, DE, IE and others); also forced on any system by a regime conversion. Compresses the campaign cycle dramatically. See [Snap Elections](/wiki/snap-elections).
 
 **Social axis**: The social dimension of the two-axis ideology grid. Negative = progressive (individual rights, social liberalism); positive = conservative (traditional values, social order).
 
 **Spoiler effect**: In FPTP elections, a third-party candidate draws votes from the ideologically closest major party, potentially handing the race to the opposition. Modeled by transferring a small share (4%, halved in presidential races) of a third party's group-level votes from the nearest major-party candidate.
 
-**State metrics**: Per-state statistics (healthcare index, economic index, education index, environment index, etc.) that shift based on active policies, demographic effects, and spending. Used in approval calculations and vote appeal.
+**State metrics**: Per-state statistics (healthcare index, economic index, education index, environment index, etc.) that shift based on active policies, demographic effects, and spending. Used in approval calculations, and through state approval in the governor's coattail on down-ballot races.
 
 **Term**: The fixed length of time an elected official holds an office before the next election cycle opens. US House: 2 years (96 turns); US Senate: 6 years (288 turns); Governor: 4 years (192 turns).
 
@@ -134,9 +134,9 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 **Turn**: One unit of game time = one game week. In normal multiplayer mode, the main turn runs once per real hour. Quarter-hour market updates and the half-hour election, growth, inflation and exchange-rate updates do not grant another action refresh or advance race deadlines. Sub-hour updates wait while a main turn is processing; fast mode uses its own main-turn cadence.
 
-**Turn log**: A record of everything that happened during a turn: which elections resolved, which bills advanced, which phases ran. Stored for 24 hours. Visible to admins; key events visible to players via notifications.
+**Turn log**: A record of everything that happened during a turn: which elections resolved, which bills advanced, which phases ran. Visible to admins; key events visible to players via notifications.
 
-**Whip directive**: An instruction from party leadership to NPP legislators on how to vote on a specific bill. NPPs in the party generally follow the whip. Players can defy the whip freely; it costs leadership trust, not infamy. A vote a whip writes onto you never moves your own positions.
+**Whip directive**: An instruction from party leadership to NPP legislators on how to vote on a specific bill. NPPs in the party generally follow the whip. Players can defy the whip freely and it adds no infamy, though party leaders can see who defied them (and a UK Prime Minister can withdraw the whip from a governing-party MP). A vote a whip writes onto you never moves your own positions.
 
 **Withdrawal**: Cancelling an active candidacy. Once withdrawn, you cannot re-enter the same election. Your votes are permanently removed from the tally. Candidates who switch from one party to another mid-election are auto-withdrawn. Independent candidates who join a party stay in the race under their new party.
 
@@ -144,10 +144,7 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 ---
 
-## Related
+## If a definition is not enough
 
-- [Reference: Formulas](/wiki/reference-formulas): All formula details.
-- [Reference: Turn Order](/wiki/reference-turn-order): Full turn processing sequence.
-- [Reference: Offices](/wiki/reference-offices): All offices and their stats.
-- [FAQ](/wiki/faq): Answers to common questions.
+[Reference: Formulas](/wiki/reference-formulas) has the math, [Reference: Turn Order](/wiki/reference-turn-order) the turn processing sequence, [Reference: Offices](/wiki/reference-offices) every office and its stats, and the [FAQ](/wiki/faq) answers common questions.
 `;

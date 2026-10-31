@@ -13,9 +13,9 @@ import { ObjectId } from "mongodb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
-function world(bankTreasuryEnabled = false) {
+function world(privateBankingEnabled = false) {
   const db = createInMemoryDb();
-  db.seed("gameConfig", [{ _id: "default", ledgerShadow: true, bankTreasuryEnabled }]);
+  db.seed("gameConfig", [{ _id: "default", ledgerShadow: true, privateBankingEnabled }]);
   db.seed("gameState", [{ _id: "current", currentTurn: 10 }]);
   db.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
   db.seed("federalBudget", [
@@ -165,6 +165,47 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(db.collection("bondMarketPools").docs[0].cashLocal).toBe(50);
   });
 
+  it("does not read an unfunded coupon backlog to build payee locks", async () => {
+    // The production shape: a Treasury with no cash against a long backlog. The
+    // payee locks used to come from every open claim document; now the server
+    // groups the settleable ones down to distinct keys, scoped by budget and its
+    // cash bound, and the prefetch groups the queue once for every budget.
+    const { db } = fundedCouponWorld(11, 0);
+    await processTreasuryTurn(8);
+    expect(
+      db.collection("sovereignCouponClaims").docs.filter((row) => row.settledTurn === undefined)
+    ).toHaveLength(1);
+
+    const claims = db.collection("sovereignCouponClaims");
+    const find = vi.spyOn(claims, "find");
+    const aggregate = vi.spyOn(claims, "aggregate");
+
+    await processTreasuryTurn(10);
+
+    // One grouping builds the settleable payee locks and the phase prefetch adds
+    // the oldest-open and pool-currency groupings. Each is grouped by budget id
+    // and scoped to the budgets it serves, never a whole-collection scan.
+    expect(aggregate).toHaveBeenCalledTimes(3);
+    for (const [pipeline] of aggregate.mock.calls) {
+      const [match] = pipeline as Array<{ $match?: Record<string, unknown> }>;
+      const filter = match.$match ?? {};
+      const branches = Array.isArray(filter.$or)
+        ? (filter.$or as Array<Record<string, unknown>>)
+        : [];
+      expect(
+        filter.budgetId !== undefined ||
+          (branches.length > 0 && branches.every((row) => row.budgetId !== undefined))
+      ).toBe(true);
+    }
+    // A budget with no cash against the backlog settles nothing, so the phase
+    // skips its claim load; the only claim read left is the frozen-claim
+    // install probe, scoped to this turn's ids.
+    for (const [filter] of find.mock.calls) {
+      const scoped = filter as Record<string, unknown>;
+      expect(scoped.budgetId ?? scoped._id).toBeDefined();
+    }
+  });
+
   it("does not treat modeled revenue totals as spendable cash under the funded-cash flag", async () => {
     const db = world(false);
     await db
@@ -291,13 +332,16 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(db.collection("ledgerEntries").docs).toHaveLength(1);
   });
 
+  // The accrual claim is one guarded write per budget. The witness for it is
+  // published once for the whole cohort after the lanes, so the injection
+  // point is that bulk write.
   it.each([
-    { collection: "federalBudget", afterWrite: true },
-    { collection: "ledgerEntries", afterWrite: false },
-    { collection: "ledgerEntries", afterWrite: true },
+    { collection: "federalBudget", op: "updateOne" as const, afterWrite: true },
+    { collection: "ledgerEntries", op: "bulkWrite" as const, afterWrite: false },
+    { collection: "ledgerEntries", op: "bulkWrite" as const, afterWrite: true },
   ])("recovers $collection afterWrite=$afterWrite without charging again", async (fault) => {
     const db = world();
-    const crash = withInjectedCrash(db, { ...fault, op: "updateOne", onCall: 1 });
+    const crash = withInjectedCrash(db, { ...fault, onCall: 1 });
     vi.mocked(getDb).mockResolvedValue(crash.db);
     await expect(processTreasuryTurn(10)).rejects.toThrow("crash");
     await processTreasuryTurn(10);
@@ -309,7 +353,7 @@ describe("treasury accrual stock-flow ownership", () => {
     const db = world();
     const crash = withInjectedCrash(db, {
       collection: "ledgerEntries",
-      op: "updateOne",
+      op: "bulkWrite",
       onCall: 1,
     });
     vi.mocked(getDb).mockResolvedValue(crash.db);

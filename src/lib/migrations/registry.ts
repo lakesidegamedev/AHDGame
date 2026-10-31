@@ -1,3 +1,6 @@
+import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
+import { migration as nationalPartyNppBills } from "./entries/2026-10-27-national-party-npp-bills";
+import { migration as partyNppRegionalBills } from "./entries/2026-10-27-party-npp-regional-bills";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as stockHoldingTaxTiers } from "./entries/2026-10-16-stock-holding-tax-tiers";
 import { migration as incomeTaxPolicyParity } from "./entries/2026-10-15-income-tax-policy-parity";
@@ -80,6 +83,8 @@ import { migration as easternDepositsCnSoeIron } from "./entries/2026-08-25-east
 import { migration as backfillRedistrictingAuthorityTypes } from "./entries/2026-08-26-backfill-redistricting-authority-types";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
+import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
+import { migration as playerReadIndexes } from "./entries/2026-10-27-player-read-indexes";
 import { migration as dropLogTextIndexes } from "./entries/2026-10-23-drop-log-text-indexes";
 import { migration as repairOutOfRangePolicyLevels } from "./entries/2026-08-26-repair-out-of-range-policy-levels";
 import { migration as dropOffRosterCommandCommanders } from "./entries/2026-08-26-drop-off-roster-command-commanders";
@@ -389,7 +394,11 @@ export const MIGRATIONS: Migration[] = [
   incomeTaxTiers,
   backfillMechanicalLawTypes,
   bankMoneyMoveUnprojectedIndex,
+  turnGrowthIndexes,
+  playerReadIndexes,
   dropLogTextIndexes,
+  partyNppRegionalBills,
+  nationalPartyNppBills,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.
@@ -426,6 +435,8 @@ export const HELD_MIGRATIONS: Migration[] = [
   // #2159: explicit live-world promotion. The dedicated script targets
   // MONGODB_URI_LIVE, defaults to dry-run, and requires the current world id.
   activateLiveDemographicsV2,
+  // County stock initialization requires paused population writers and an explicit --only.
+  countyPopulations,
 ];
 
 // Deferred to follow-up (need bootstrap-marker pass on production first):

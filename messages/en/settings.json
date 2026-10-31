@@ -131,6 +131,10 @@
         "label": "API Keys",
         "summary": "API access & automation"
       },
+      "experimental": {
+        "label": "Experimental Features",
+        "summary": "Try features before they ship"
+      },
       "danger": {
         "label": "Danger Zone",
         "summary": "Delete account"
@@ -380,6 +384,51 @@
       "unlinked": "{provider} unlinked successfully.",
       "avatarAlt": "{provider} avatar"
     },
+    "experimental": {
+      "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away. Right now this turns on the ASCII page decode: each page scrambles into place through a character grid.",
+      "toggleLabel": "Turn on experimental features",
+      "toggleHint": "Off by default. Only changes things for you.",
+      "saveError": "Could not save. Try again.",
+      "desktopNavigation": {
+        "title": "Desktop navigation",
+        "hint": "Choose how desktop dropdowns open. Saved to your account.",
+        "classicHint": "These layouts apply to the modern interface. Your classic interface stays the same.",
+        "options": {
+          "cards": {
+            "title": "Grouped cards (default)",
+            "hint": "See each section at once, with your shortcuts alongside. Adds a wide bar, a gear menu, pins and your own menu order."
+          },
+          "standard": {
+            "title": "Standard dropdowns",
+            "hint": "Keep the current dropdown lists."
+          }
+        }
+      },
+      "mobileNavigation": {
+        "title": "Phone navigation",
+        "hint": "Choose how you get around on a phone. Saved to your account.",
+        "classicHint": "These layouts apply to the modern interface. Your classic interface stays the same.",
+        "options": {
+          "dock": {
+            "title": "A · Bottom dock (default)",
+            "hint": "Tabs at the bottom for your company, home state, nation, Actions and everything else. Your stats sit just above them."
+          },
+          "standard": {
+            "title": "Standard menu",
+            "hint": "Keep the current menu button at the top."
+          }
+        }
+      }
+    },
+    "askDrawer": {
+      "showLabel": "Show Ask Keir",
+      "title": "Ask Keir drawer",
+      "body": "Ask Keir sits on the edge of most pages. Open it to ask about the game or the page you are on. It is signed in with your game account and shares your history and daily limits with the Ask Keir site. On a phone it opens from the round Keir button in the corner.",
+      "sideLabel": "Dock the drawer on the",
+      "sideLeft": "Left",
+      "sideRight": "Right",
+      "saveError": "Could not save. Try again."
+    },
     "apiKeys": {
       "intro": "API keys allow external applications to interact with your account.",
       "viewDocs": "View API documentation →",
@@ -532,7 +581,7 @@
     },
     "notifications": {
       "title": "Notifications",
-      "description": "Choose which alerts appear in your inbox and notification badges. Muted alerts stay saved and reappear when enabled. These preferences also apply to native push alerts. National and international crises share one control.",
+      "description": "Choose which alerts reach you. Alerts marked \"Phone and desktop\" also arrive as notifications on your phone and computer; the rest wait in your inbox. Muted alerts stay saved and come back when you turn them on again.",
       "loading": "Loading preferences...",
       "loadError": "Could not load notification preferences.",
       "retry": "Retry",
@@ -687,10 +736,22 @@
         "ask_correction": "Ask correction",
         "ask_watch": "Ask watch",
         "government_contract_awarded": "Government contract awards",
-        "government_contract_opened": "Government contracts open for bids"
+        "government_contract_opened": "Government contracts open for bids",
+        "crisis_resolved": "A crisis in your state ended"
       },
       "mail": "Direct-message alerts",
-      "mailHint": "Show unread message badges. Messages are still delivered and available in your inbox when muted."
+      "mailHint": "Show unread message badges. Messages are still delivered and available in your inbox when muted.",
+      "pushTag": "Phone and desktop",
+      "groups": {
+        "crisis": "Crises and attacks",
+        "legislation": "Legislation",
+        "election": "Elections",
+        "party": "Party",
+        "standing": "Your positions",
+        "treasury": "Money and companies",
+        "system": "Account and community"
+      },
+      "noMatch": "No alert matches that search."
     },
     "email": {
       "noneOnFile": "No email on file",

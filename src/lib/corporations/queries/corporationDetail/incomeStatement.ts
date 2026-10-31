@@ -31,7 +31,6 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
 import { bankBookEquity, bankNpvFromPerTurnIncome, bankValuation } from "@/lib/banking/valuation";
-import { bankNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import {
   TURNS_PER_DAY,
   MIN_SHARE_PRICE,
@@ -41,6 +40,10 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { computeTechAssetValueAnchor } from "@/lib/corporations/techAssetValue";
 import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
+import {
+  loadRdDevelopmentProjects,
+  type RdDevelopmentFundingProject,
+} from "@/lib/corporations/rdDevelopmentFunding";
 import { loadStrengthUpkeepStage } from "@/lib/corporations/strengthUpkeep";
 
 export interface SectorTaxLine {
@@ -108,8 +111,11 @@ export interface IncomeStatementResult {
   currentLogisticsStrength: number;
   currentRdScore: number;
   marketingStrengthGrowth: number;
+  marketingDecayRate: number;
   logisticsStrengthNetChange: number;
   rdScoreNetChange: number;
+  /** Active product projects that the R&D budget pays before generic research. */
+  rdDevelopmentProjects: RdDevelopmentFundingProject[];
   totalShares: number;
   marketCapitalization: number;
   currentSharePrice: number;
@@ -356,10 +362,8 @@ export async function computeIncomeStatement(
     corpCurrency,
     corpFxRate
   );
-  // Same phased bank-NPV boost as the share-price path so the corp page
-  // agrees with the market quote. Below the window the multiplier is 1.
   const bankNpvLocal = anchorToCorpCapital(
-    bankNpvFromPerTurnIncome(bankIncomePerTurnAnchor, bankNpvBoostMultiplier(currentTurn)),
+    bankNpvFromPerTurnIncome(bankIncomePerTurnAnchor),
     corpCurrency,
     corpFxRate
   );
@@ -462,20 +466,26 @@ export async function computeIncomeStatement(
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
   const currentRdScore = corporation.rdScore ?? 0;
   const strengthUpkeepStage = await loadStrengthUpkeepStage(db);
-  const { marketingStrengthGrowth, logisticsStrengthNetChange, rdScoreNetChange } =
-    calculateCorpStrengthProjection(
-      {
-        marketingBudget: corporation.marketingBudget,
-        marketingStrength: corporation.marketingStrength ?? 0,
-        logisticsBudget,
-        logisticsStrength: currentLogisticsStrength,
-        rdBudget: corporation.rdBudget ?? 0,
-        rdScore: currentRdScore,
-        liquidCurrencyCode: corpCurrency,
-        strengthUpkeepStage,
-      },
-      corpFxRate
-    );
+  const rdDevelopmentProjects = await loadRdDevelopmentProjects(db, String(corporation._id));
+  const {
+    marketingStrengthGrowth,
+    marketingDecayRate,
+    logisticsStrengthNetChange,
+    rdScoreNetChange,
+  } = calculateCorpStrengthProjection(
+    {
+      marketingBudget: corporation.marketingBudget,
+      marketingStrength: corporation.marketingStrength ?? 0,
+      logisticsBudget,
+      logisticsStrength: currentLogisticsStrength,
+      rdBudget: corporation.rdBudget ?? 0,
+      rdScore: currentRdScore,
+      liquidCurrencyCode: corpCurrency,
+      strengthUpkeepStage,
+      rdDevelopmentProjects,
+    },
+    corpFxRate
+  );
 
   const totalShares = corporation.totalShares ?? 10_000_000;
   const marketCapitalization = getRoundedPublicMarketCap(corporation, totalShares);
@@ -618,8 +628,10 @@ export async function computeIncomeStatement(
     currentLogisticsStrength,
     currentRdScore,
     marketingStrengthGrowth,
+    marketingDecayRate,
     logisticsStrengthNetChange,
     rdScoreNetChange,
+    rdDevelopmentProjects,
     totalShares,
     marketCapitalization,
     currentSharePrice,

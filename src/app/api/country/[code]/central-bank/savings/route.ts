@@ -29,7 +29,11 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
-import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/banking/rules/rates";
+import {
+  effectiveBankRatesFromPrime,
+  holdsPlayerSavings,
+  privateHolderSavingsApyPercent,
+} from "@/lib/banking/rules/rates";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -107,10 +111,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         ? Promise.resolve(null)
         : db.collection<Corporation>("corporations").findOne({ _id: holderId }),
     ]);
-    const validPrivateHolder =
-      holderBank?.bankCharter?.status === "active" &&
-      holderBank.bankCharter.currency === nationalCurrency &&
-      (holderBank.bankCharter.type === "retail" || holderBank.bankCharter.type === "universal");
+    const validPrivateHolder = holdsPlayerSavings(holderBank?.bankCharter, nationalCurrency);
     let apyPercent = centralBankApyPercent;
     let accrualApyPercent = centralBankApyPercent;
     let savingsHolderType: "central-bank" | "private-bank" | "unknown" = holderIsCentralBank
@@ -123,13 +124,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         primeRate
       ).depositRatePercent;
       const authoritative = savingsReadsAuthoritative(bankingPolicy, nationalCurrency);
-      const privateRate = playerDepositRatePercent(
+      accrualApyPercent = privateHolderSavingsApyPercent(
         postedRate,
         authoritative,
         primeRate,
-        inflationRate
+        inflationRate,
+        centralBankApyPercent
       );
-      accrualApyPercent = privateRate + (authoritative ? 0 : centralBankApyPercent);
       apyPercent = Math.round(accrualApyPercent * 100) / 100;
       savingsHolderType = "private-bank";
       savingsHolderName = holderBank.name ?? "Private bank";

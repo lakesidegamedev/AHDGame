@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="396" viewBox="0 0 720 396" role="img" font-family="system-ui, sans-serif">
+<title>Policy effects each turn</title>
+<desc>Active laws set a weighted target, the metric is pulled toward it, options add a direct push, unpushed metrics drift to baseline, and the result is clamped.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="395" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<text x="24" y="30" font-size="15" text-anchor="start" fill="#18181b" font-weight="700">What happens to a metric each turn (one real hour)</text>
+<rect x="24" y="48" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="74.5" font-size="13" text-anchor="middle">Active laws</text>
+<rect x="214" y="48" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="66.0" font-size="13" text-anchor="middle">Each legislation type lists the metrics it affects and a weight.</text>
+<text x="457.0" y="83.0" font-size="13" text-anchor="middle">A national law is divided so a country-wide metric moves fairly.</text>
+<polyline points="194,70.0 214,70.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,92 109.0,106" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="106" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="132.6" font-size="13" text-anchor="middle">Weighted target</text>
+<rect x="214" y="106" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="132.6" font-size="13" text-anchor="middle">The active options set a target value for each metric.</text>
+<polyline points="194,128.0 214,128.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,150 109.0,164" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="164" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="190.6" font-size="13" text-anchor="middle">Pull toward target</text>
+<rect x="214" y="164" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="190.6" font-size="13" text-anchor="middle">The metric closes about 0.72% of the remaining gap.</text>
+<polyline points="194,186.0 214,186.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,208 109.0,222" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="222" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="248.6" font-size="13" text-anchor="middle">Direct push</text>
+<rect x="214" y="222" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="240.1" font-size="13" text-anchor="middle">Some options add a small flat change, shared across regions.</text>
+<text x="457.0" y="257.1" font-size="13" text-anchor="middle">The center option pushes nothing.</text>
+<polyline points="194,244.0 214,244.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,266 109.0,280" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="280" width="170" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="109.0" y="306.6" font-size="13" text-anchor="middle">Drift to baseline</text>
+<rect x="214" y="280" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="298.1" font-size="13" text-anchor="middle">Only if no law pushes the metric: 0.25% of the distance</text>
+<text x="457.0" y="315.1" font-size="13" text-anchor="middle">back toward its historical baseline.</text>
+<polyline points="194,302.0 214,302.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,324 109.0,338" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="338" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="364.6" font-size="13" text-anchor="middle">Clamp</text>
+<rect x="214" y="338" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="364.6" font-size="13" text-anchor="middle">The metric is kept inside its allowed range.</text>
+<polyline points="194,360.0 214,360.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+</g>
+</svg>

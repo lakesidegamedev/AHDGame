@@ -28,7 +28,7 @@ describe("Northern Ireland v2 board transfer", () => {
       scope: "regional",
     });
     expect(movedLaw.ukTerritorialTax).toBeUndefined();
-    expect(Object.values(movedLaw.references)).toHaveLength(60);
+    expect(Object.values(movedLaw.references)).toHaveLength(61);
     expect(
       Object.values(movedLaw.references).every(
         (reference) =>

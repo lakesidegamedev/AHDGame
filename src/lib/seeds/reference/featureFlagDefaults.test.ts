@@ -174,3 +174,13 @@ describe("missingGameStateFlagDefaults", () => {
     expect(out).toHaveProperty("legislationSystemVersion", "v1");
   });
 });
+
+it("preserves the Discord creation requirement across resets and reference top-ups", () => {
+  expect(FRESH_WORLD_GAME_CONFIG_FLAGS).not.toHaveProperty("discordLinkRequiredForCharacter");
+  expect(NON_GAMEPLAY_GAME_CONFIG_FIELDS.discordLinkRequiredForCharacter).toContain(
+    "survives world resets"
+  );
+  const halves = splitFreshWorldGameConfigFlags({ discordLinkRequiredForCharacter: true });
+  expect(halves.flags).toEqual({ discordLinkRequiredForCharacter: true });
+  expect(halves.settings).not.toHaveProperty("discordLinkRequiredForCharacter");
+});

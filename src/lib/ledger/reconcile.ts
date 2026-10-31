@@ -222,7 +222,7 @@ export function reconcileLedger(input: ReconcileInput): ReconcileReport {
  * Roll the FULL (pre-cap) stock-vs-flow finding list into a per-kind
  * inventory ranked by unexplained balance change (Σ|divergence|). Pure.
  */
-export function summarizeStockVsFlowByKind(findings: StockVsFlowFinding[]): StockVsFlowByKind[] {
+function summarizeStockVsFlowByKind(findings: StockVsFlowFinding[]): StockVsFlowByKind[] {
   const byKind = new Map<string, StockVsFlowByKind>();
   for (const finding of findings) {
     const kind = accountKind(finding.account);

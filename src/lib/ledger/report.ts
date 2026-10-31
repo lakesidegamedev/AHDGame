@@ -1,9 +1,6 @@
 import type { Db } from "mongodb";
 import { isLedgerShadowEnabled } from "@/lib/ledger/featureFlag";
-import {
-  LEDGER_RECONCILIATIONS_COLLECTION,
-  loadLatestReconciliation,
-} from "@/lib/ledger/reconcile";
+import { loadLatestReconciliation } from "@/lib/ledger/reconcile";
 import type { LedgerReconciliation, ReconcileReport, ReconcileStatus } from "@/lib/ledger/types";
 
 /**
@@ -28,7 +25,7 @@ export interface LedgerWatchtowerSection {
 
 const STATUS_ICON: Record<ReconcileStatus, string> = { green: "🟢", amber: "🟡", red: "🔴" };
 
-export function buildWatchtowerSection(
+function buildWatchtowerSection(
   report: ReconcileReport | null,
   opts: { enabled: boolean } = { enabled: true }
 ): LedgerWatchtowerSection {
@@ -87,29 +84,6 @@ export function buildWatchtowerSection(
   };
 }
 
-export function formatReconciliationMarkdown(report: ReconcileReport | null): string {
-  const section = buildWatchtowerSection(report);
-  const lines: string[] = [];
-  lines.push(`## ${STATUS_ICON[section.status]} ${section.title} — ${section.headline}`);
-  lines.push("");
-  for (const check of section.checks) {
-    lines.push(`- ${STATUS_ICON[check.status]} **${check.name}** — ${check.detail}`);
-  }
-  if (section.topUnattributed.length > 0) {
-    lines.push("");
-    lines.push("### Phase 3 backlog — top unattributed emit sites (by ₳)");
-    lines.push("");
-    lines.push("| ₳ (abs) | txType | emitSite |");
-    lines.push("| ---: | --- | --- |");
-    for (const u of section.topUnattributed) {
-      lines.push(
-        `| ${Math.round(u.anchorAmount).toLocaleString()} | ${u.txType} | ${u.emitSite} |`
-      );
-    }
-  }
-  return lines.join("\n");
-}
-
 /** Load the latest reconciliation and render the Watchtower section. */
 export async function loadLatestWatchtowerSection(db: Db): Promise<LedgerWatchtowerSection> {
   const latest = await loadLatestReconciliation(db);
@@ -123,5 +97,3 @@ function stripId(doc: LedgerReconciliation | null): ReconcileReport | null {
   void _drop;
   return rest;
 }
-
-export { LEDGER_RECONCILIATIONS_COLLECTION };

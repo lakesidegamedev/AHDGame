@@ -252,13 +252,14 @@ describe("corporation producer market phase", () => {
     memory.collection("corporations").docs[0].liquidCapital = -20;
     const settled = await runCorporationProducerMarket(db, input);
     expect(corp.liquidCapital).toBe(-20);
+    // An overdrawn company staffs nothing; only its fixed site bill accrues.
     expect(settled.operatingByCorporation.get(corp._id.toHexString())).toEqual({
       revenue: 0,
-      expenses: 15,
-      profit: -15,
+      expenses: 5,
+      profit: -5,
       cashFlow: 0,
     });
-    expect(corp.producerPayables?.claims.reduce((sum, claim) => sum + claim.amount, 0)).toBe(15);
+    expect(corp.producerPayables?.claims.reduce((sum, claim) => sum + claim.amount, 0)).toBe(5);
     expect(
       memory.collection("producerEconomyAccounts").docs.every((wallet) => wallet.cash === 0)
     ).toBe(true);

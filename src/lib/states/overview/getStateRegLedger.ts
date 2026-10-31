@@ -10,7 +10,7 @@ export interface StateRegLedgerResult {
 
 const NEUTRAL_COLOR = "#6b6b7a";
 /** Default lookback window (turns) for the movement sparkline. */
-export const REG_LEDGER_LOOKBACK_TURNS = 24;
+const REG_LEDGER_LOOKBACK_TURNS = 24;
 /**
  * Upper bound on `reg` ledger rows one party can receive in a single turn.
  * Used to size the over-fetch so the per-turn collapse still covers the full

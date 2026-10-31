@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 
 interface PrimaryCandidate {
@@ -27,7 +27,7 @@ interface PrimaryCardProps {
   isUncontested: boolean;
 }
 
-export function PrimaryCard({
+function PrimaryCard({
   partyId,
   partyName,
   partyColor,

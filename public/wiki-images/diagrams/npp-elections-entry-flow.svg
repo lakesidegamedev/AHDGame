@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" font-family="system-ui, sans-serif">
+<title>NPP entry flow</title>
+<desc>Each turn an NPP first passes eligibility checks, incumbents defend their seats, accepted slate filings join, then generic fill adds one NPP per party per primary starting from the most junior office.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="329" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">How NPPs enter a primary each turn</text>
+<rect x="22" y="46" width="168" height="130" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="106.0" y="72.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">1. Eligibility</text>
+<text x="106.0" y="89.0" font-size="13" fill="#18181b" text-anchor="middle">Not retired</text>
+<text x="106.0" y="106.0" font-size="13" fill="#18181b" text-anchor="middle">No cooldown</text>
+<text x="106.0" y="123.0" font-size="13" fill="#18181b" text-anchor="middle">Not in another race</text>
+<text x="106.0" y="140.0" font-size="13" fill="#18181b" text-anchor="middle">Home and country</text>
+<text x="106.0" y="157.0" font-size="13" fill="#18181b" text-anchor="middle">match</text>
+<path d="M190 111 L204 111" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="204" y="46" width="168" height="130" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="288.0" y="72.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">2. Incumbent</text>
+<text x="288.0" y="89.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">defense</text>
+<text x="288.0" y="106.0" font-size="13" fill="#18181b" text-anchor="middle">The seat holder</text>
+<text x="288.0" y="123.0" font-size="13" fill="#18181b" text-anchor="middle">re-enters first and</text>
+<text x="288.0" y="140.0" font-size="13" fill="#18181b" text-anchor="middle">ignores that seat's</text>
+<text x="288.0" y="157.0" font-size="13" fill="#18181b" text-anchor="middle">cooldown</text>
+<path d="M372 111 L386 111" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="386" y="46" width="168" height="130" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="470.0" y="80.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">3. Slate filings</text>
+<text x="470.0" y="97.5" font-size="13" fill="#18181b" text-anchor="middle">Chair-slated NPPs</text>
+<text x="470.0" y="114.5" font-size="13" fill="#18181b" text-anchor="middle">that accept can join,</text>
+<text x="470.0" y="131.5" font-size="13" fill="#18181b" text-anchor="middle">even beside a</text>
+<text x="470.0" y="148.5" font-size="13" fill="#18181b" text-anchor="middle">same-party candidate</text>
+<path d="M554 111 L568 111" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="568" y="46" width="168" height="130" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="652.0" y="89.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">4. Generic fill</text>
+<text x="652.0" y="106.0" font-size="13" fill="#18181b" text-anchor="middle">One NPP per party per</text>
+<text x="652.0" y="123.0" font-size="13" fill="#18181b" text-anchor="middle">primary, most junior</text>
+<text x="652.0" y="140.0" font-size="13" fill="#18181b" text-anchor="middle">eligible office first</text>
+<rect x="22" y="216" width="168" height="46" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="106.0" y="242.5" font-size="13" fill="#18181b" text-anchor="middle">Stays out of the race</text>
+<path d="M106.0 176 L106.0 216" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="111.0" y="189" width="87.9" height="15" fill="#ffffff"/>
+<text x="114.0" y="200" font-size="12" fill="#52525b" text-anchor="start">fails a check</text>
+<text x="568" y="228" font-size="12" fill="#52525b" text-anchor="start">A party with a candidate</text>
+<text x="568" y="244" font-size="12" fill="#52525b" text-anchor="start">already in gets no</text>
+<text x="568" y="260" font-size="12" fill="#52525b" text-anchor="start">generic NPP.</text>
+<text x="22" y="300" font-size="12" fill="#52525b" text-anchor="start">Presidential primaries are closed to NPPs in any country that players can play in.</text>
+</svg>

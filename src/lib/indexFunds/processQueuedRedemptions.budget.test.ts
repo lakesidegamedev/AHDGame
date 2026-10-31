@@ -21,7 +21,7 @@ const ENTRIES = 600;
 const BUDGET = 250;
 const T0 = new Date("2000-01-01T00:00:00Z");
 
-function world() {
+function world(missingNppIndexes: ReadonlySet<number> = new Set()) {
   const memory = createInMemoryDb();
   const fundId = new ObjectId();
   const fund: IndexFund = {
@@ -70,9 +70,17 @@ function world() {
     "indexFundRedemptionQueue",
     entries.map((e) => ({ ...e }))
   );
-  memory.seed("npps", npps);
+  // A holder the world no longer has: a merged or dissolved NPP leaves its queue
+  // rows behind, and no credit can ever land on it.
+  memory.seed(
+    "npps",
+    npps.filter((_, index) => !missingNppIndexes.has(index))
+  );
+  const missingNppIds = new Set(
+    npps.filter((_, index) => missingNppIndexes.has(index)).map((npp) => String(npp._id))
+  );
   memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true }]);
-  return { memory, db: memory as unknown as Db, fund, fundId, entries };
+  return { memory, db: memory as unknown as Db, fund, fundId, entries, missingNppIds };
 }
 
 async function nppCashTotal(db: Db): Promise<number> {
@@ -148,5 +156,68 @@ describe("queued redemption pass budget", () => {
     expect(budget.claimsLeft).toBe(0);
     const again = await processQueuedRedemptions(w.db, w.fund, false, 9, true, budget);
     expect(again).toBe(0);
+  });
+
+  it("leaves a payout whose holder is gone alone instead of fencing it every turn", async () => {
+    // Every sixth NPP has been merged away. Its queue row can never be paid (the
+    // credit leg is guarded on that id), and before this it was fenced, broken
+    // out of the payout batch and restored on every single pass.
+    const missing = new Set(
+      Array.from({ length: ENTRIES }, (_, i) => i).filter((i) => i % 6 === 0)
+    );
+    const w = world(missing);
+    const trips = countRoundTrips(w.memory);
+
+    const paid = await processQueuedRedemptions(w.db, w.fund, false, 9, true, {
+      claimsLeft: BUDGET,
+    });
+
+    // The budget went to claims that can actually pay.
+    expect(paid).toBe(BUDGET);
+    // One fence per paid entry and none for the vanished holders.
+    expect(trips.count("indexFundRedemptionQueue", "findOneAndUpdate")).toBe(paid);
+    expect(trips.count("indexFundRedemptionQueue", "updateOne")).toBe(0);
+
+    const queue = await w.db
+      .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+      .find({})
+      .toArray();
+    const owedToNobody = queue.filter(
+      (e) => w.missingNppIds.has(String(e.nppId)) && e.paidAmountAnchor === 0
+    );
+    expect(owedToNobody).toHaveLength(missing.size);
+    for (const entry of owedToNobody) {
+      // Never claimed, never restored: the obligation is exactly as it was.
+      expect(entry).toMatchObject({ status: "queued", units: 10 });
+      expect(entry).not.toHaveProperty("settlementClaimId");
+      expect(entry).not.toHaveProperty("processingStartedAt");
+      expect(entry.updatedAt).toEqual(entry.createdAt);
+    }
+
+    // Cash left the fund only for the holders it paid.
+    const credited = await nppCashTotal(w.db);
+    const fundAfter = await w.db.collection<IndexFund>("indexFunds").findOne({ _id: w.fundId });
+    expect(credited).toBeGreaterThan(0);
+    expect(fundAfter!.cashAnchor + credited).toBeCloseTo(w.fund.cashAnchor, 6);
+  });
+
+  it("keeps the surviving holders' payouts batched when vanished holders lead the queue", async () => {
+    // The first entries are the ones that cannot pay: they used to flush the NPP
+    // batch before every settlement attempt, so 250 payable claims cost 250
+    // receipts instead of one.
+    const missing = new Set(Array.from({ length: 50 }, (_, i) => i));
+    const w = world(missing);
+    const trips = countRoundTrips(w.memory);
+
+    const paid = await processQueuedRedemptions(w.db, w.fund, false, 9, true, {
+      claimsLeft: BUDGET,
+    });
+
+    expect(paid).toBe(BUDGET);
+    const batches = w.memory
+      .collection("bankMoneyMoves")
+      .docs.filter((row) => String(row._id).startsWith("fund-redemption-batch:"));
+    expect(batches).toHaveLength(1);
+    expect(trips.total(), trips.summary()).toBeLessThan(BUDGET * 3);
   });
 });

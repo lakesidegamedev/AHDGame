@@ -70,3 +70,32 @@ describe("UK confidence tick", () => {
     expect(opts.brokenPromiseMeter).toBeUndefined();
   });
 });
+
+describe("confidence collapse while an election is running", () => {
+  it.each([
+    { status: "pending", pmCharacterId: null, pmNppId: null, expected: false },
+    { status: "collapsed", pmCharacterId: "player", expected: false },
+    { status: "formed", pmCharacterId: null, pmNppId: null, expected: false },
+    { status: "formed", pmCharacterId: "player", expected: true },
+    { status: "formed", pmCharacterId: null, pmNppId: "npp", expected: true },
+  ])("only dissolves a seated government: %j", async ({ expected, ...government }) => {
+    db.collectionMocks.governmentApprovals.findOne.mockResolvedValue({
+      _id: "UK",
+      approvalRating: 20,
+    });
+    db.collection("governmentFormations");
+    db.collectionMocks.governmentFormations.findOne.mockResolvedValue({ _id: "UK", ...government });
+    const { tickConfidenceForGov } = await import("@/lib/uk/confidence/confidenceGaugeStore");
+    vi.mocked(tickConfidenceForGov).mockResolvedValue({
+      value: 0,
+      dissolutionDue: true,
+      dissolutionEnabled: true,
+    });
+    const { tickUkGovernmentGauges } = await import("@/lib/countries/uk/governmentFormation");
+    await tickUkGovernmentGauges(db as unknown as Db, new Date("2026-10-29"));
+    const { triggerSnapElection } = await import("@/lib/turn/snapElection");
+    expect(triggerSnapElection).toHaveBeenCalledTimes(expected ? 1 : 0);
+    const { tickNhsFromBudget } = await import("@/lib/uk/nhs/nhsStore");
+    expect(tickNhsFromBudget).toHaveBeenCalledTimes(1);
+  });
+});

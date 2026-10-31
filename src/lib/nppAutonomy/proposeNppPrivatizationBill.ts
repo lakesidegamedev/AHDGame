@@ -343,6 +343,12 @@ export async function proposeNppPrivatizationBill(
     createdAt: now,
     updatedAt: now,
   };
-  const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
-  return { ok: true, billId: result.insertedId.toString(), sectors: sectorCount };
+  try {
+    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    return { ok: true, billId: result.insertedId.toString(), sectors: sectorCount };
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000)
+      return { ok: false, reason: "Party already has an active NPP bill" };
+    throw error;
+  }
 }

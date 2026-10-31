@@ -1,4 +1,4 @@
-import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
+import type { ActiveModifier } from "@/lib/approval/activeModifier";
 
 /** Max stacked regional-condition margin swing (percentage points). */
 export const REGIONAL_CONDITION_MARGIN_CAP = 3;
@@ -12,7 +12,7 @@ export function defaultMarginEffectForApproval(approvalEffect: number): number {
 }
 
 /** Per-modifier margin weight (1 = default 0.75× approval; 0 = approval-only). */
-export const MODIFIER_MARGIN_FACTOR: Record<string, number> = {
+const MODIFIER_MARGIN_FACTOR: Record<string, number> = {
   // Strong economic / business climate
   economic_boom: 1.33,
   recession: 1.33,

@@ -9,7 +9,7 @@ import { openingChoice1991 } from "@/lib/resetLegislation/rules/reviewCatalog";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 import type { PovertyProgram } from "./poverty";
 
-export const POVERTY_FAMILY_IDS = resetLawFamilies
+const POVERTY_FAMILY_IDS = resetLawFamilies
   .filter((family) => family.primaryMetricIds.includes("03"))
   .map((family) => family.id);
 const positions = ["far_left", "center_left", "center", "center_right", "far_right"];

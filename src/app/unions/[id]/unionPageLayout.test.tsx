@@ -74,8 +74,11 @@ const SECTORS = [
 ];
 
 let fetchMock: ReturnType<typeof vi.fn>;
+/** `Character.unionLeaderOf` as /api/character/me reports it; tests drift it from Union.ownerId. */
+let meUnionLeaderOf: string | null = "u1";
 
 beforeEach(() => {
+  meUnionLeaderOf = "u1";
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const path = String(url);
     if (path.endsWith("/organize-sectors") && init?.method === "POST") {
@@ -106,7 +109,9 @@ beforeEach(() => {
     if (path.includes("/api/character/me")) {
       return {
         ok: true,
-        json: async () => ({ character: { _id: "c1", actions: 10, unionLeaderOf: "u1" } }),
+        json: async () => ({
+          character: { _id: "c1", actions: 10, unionLeaderOf: meUnionLeaderOf },
+        }),
       } as Response;
     }
     if (path.includes("/leader/vote")) {
@@ -146,6 +151,17 @@ describe("union page, corp-style tabs", () => {
     expect(within(rival).getByText("This union: 60%")).toBeTruthy();
     expect(within(rival).getByText("Current edge: 5 points (needs 5)")).toBeTruthy();
     expect(within(rival).getByText("Meets current raid edge")).toBeTruthy();
+  });
+
+  it("keeps the head's actions and resign control when the unionLeaderOf cache is stale", async () => {
+    // The reset could leave a head cached to a union id that no longer exists,
+    // or a crashed claim could cache nothing at all. Union.ownerId still names
+    // them, so the page must not hide the only way out of the union.
+    meUnionLeaderOf = null;
+    render(<UnionPage params={PARAMS} />);
+    await screen.findByText("Steelworkers United");
+    expect(screen.getByRole("heading", { name: "Leader actions" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Resign leadership" })).toBeTruthy();
   });
 
   it("keeps every key figure's tooltip in the masthead", async () => {

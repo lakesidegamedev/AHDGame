@@ -48,7 +48,7 @@ import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } 
  * single-turn swings were -39 and -37, which this bounds without touching
  * ordinary campaigning.
  */
-export const MAX_NET_FAVORABILITY_SWING_PER_TURN = 12;
+const MAX_NET_FAVORABILITY_SWING_PER_TURN = 12;
 
 /**
  * Net player-driven favorability already applied to `targetId` this turn.
@@ -61,7 +61,7 @@ export const MAX_NET_FAVORABILITY_SWING_PER_TURN = 12;
  * so attacks that failed the infamy roll contribute 0 and correctly do not
  * consume the target's budget.
  */
-export async function netFavorabilitySwingThisTurn(
+async function netFavorabilitySwingThisTurn(
   db: Db,
   targetId: ObjectId,
   targetType: TargetType,

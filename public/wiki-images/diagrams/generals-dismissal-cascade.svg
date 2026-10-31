@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="370" viewBox="0 0 740 370" role="img" font-family="system-ui, sans-serif">
+<title>Dismissal cascade</title>
+<desc>When the defence seat holder dismisses a general, or the general moves abroad, the general leaves every Command roster, any Command they led loses its lead, postings are dropped, assigned units return to reserve, and a Theater Commander seat is vacated.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="739" height="369" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">What dismissal unwinds</text>
+<rect x="20" y="100" width="210" height="110" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="125.0" y="133.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Defence seat holder</text>
+<text x="125.0" y="150.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">dismisses a general</text>
+<text x="125.0" y="167.0" font-size="13" fill="#18181b" text-anchor="middle">Or the general moves to</text>
+<text x="125.0" y="184.0" font-size="13" fill="#18181b" text-anchor="middle">another country</text>
+<rect x="20" y="250" width="210" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="125.0" y="266.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Record survives</text>
+<text x="125.0" y="283.0" font-size="13" fill="#18181b" text-anchor="middle">Level, XP and trained</text>
+<text x="125.0" y="300.0" font-size="13" fill="#18181b" text-anchor="middle">traits stay. Shown as</text>
+<text x="125.0" y="317.0" font-size="13" fill="#18181b" text-anchor="middle">Former</text>
+<rect x="330" y="40" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="520.0" y="67.5" font-size="13" fill="#18181b" text-anchor="middle">Leaves every Command roster</text>
+<rect x="330" y="100" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="520.0" y="127.5" font-size="13" fill="#18181b" text-anchor="middle">Any Command they led loses its lead</text>
+<rect x="330" y="160" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="520.0" y="187.5" font-size="13" fill="#18181b" text-anchor="middle">All conflict postings are dropped</text>
+<rect x="330" y="220" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="520.0" y="247.5" font-size="13" fill="#18181b" text-anchor="middle">Assigned units return to General Staff and reserve</text>
+<rect x="330" y="280" width="380" height="48" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="520.0" y="299.0" font-size="13" fill="#18181b" text-anchor="middle">Theater Commander: front vacated, authority returns</text>
+<text x="520.0" y="316.0" font-size="13" fill="#18181b" text-anchor="middle">to the defence seat holder</text>
+<line x1="280" y1="64" x2="280" y2="304" stroke="#a1a1aa" stroke-width="1.5"/>
+<line x1="230" y1="155" x2="280" y2="155" stroke="#a1a1aa" stroke-width="1.5"/>
+<path d="M280 64 L330 64" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M280 124 L330 124" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M280 184 L330 184" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M280 244 L330 244" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M280 304 L330 304" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+</svg>

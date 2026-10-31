@@ -6,6 +6,8 @@ import type {
   CountryHistoryEventType,
 } from "@/lib/db/types/countryHistoryEvent";
 import type { CountryId } from "@/lib/constants/countries";
+import type { PoliticalParty } from "@/lib/db/types/party";
+import { unrecordedHistoricalParty } from "@/lib/wiki/rules/executiveIdentity";
 
 export interface RecordCountryEventInput {
   countryId: CountryId;
@@ -38,6 +40,29 @@ export async function recordCountryEvent(
   const gameState = await getGameState(db);
   const iteration = gameState?.iteration;
   const iterationStartingYear = gameState?.startingYear;
+  let details = input.details;
+  if (input.eventType === "leader_change") {
+    // One projected read per executive handover, never on an ordinary turn.
+    // Keep the label in the event itself so party/profile edits cannot rewrite it.
+    const party =
+      input.party && /^\d+$/.test(input.party)
+        ? await db
+            .collection<PoliticalParty>("politicalParties")
+            .findOne(
+              { countryId: input.countryId, sequentialId: Number(input.party) },
+              { projection: { name: 1, abbreviation: 1 } }
+            )
+        : null;
+    const partyLabel = party
+      ? party.abbreviation
+        ? `${party.name} (${party.abbreviation})`
+        : party.name
+      : unrecordedHistoricalParty(input.party);
+    details = {
+      ...input.details,
+      officeIdentitySnapshot: { name: input.characterName, party: input.party, partyLabel },
+    };
+  }
   const doc: Omit<CountryHistoryEvent, "_id"> = {
     countryId: input.countryId,
     turn: input.turn,
@@ -50,7 +75,7 @@ export async function recordCountryEvent(
     party: input.party,
     billId: input.billId,
     billScope: input.billScope,
-    details: input.details,
+    details,
     ...(iteration ? { iteration } : {}),
     ...(iterationStartingYear != null ? { iterationStartingYear } : {}),
   };

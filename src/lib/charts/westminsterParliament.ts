@@ -38,7 +38,7 @@ function sortLR<T extends { economicPosition: number | null }>(rows: T[]): T[] {
  * - Additional opposition (1-2 largest parties) sit on left or crossbenches
  * - Remaining parties and vacant seats on crossbenches
  */
-export function buildWestminsterParliament(
+function buildWestminsterParliament(
   seats: WestminsterPartySeat[],
   totalChamberSeats: number,
   vacantColor: string,

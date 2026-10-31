@@ -21,19 +21,19 @@ import type { ConflictType } from "@/lib/db/types/conflict";
  * DEFCON, procurement demand, detente goodwill.
  */
 
-export const COLD_WAR_TENSION_COLLECTION = "coldWarTension";
-export const COLD_WAR_TENSION_ID = "current";
+const COLD_WAR_TENSION_COLLECTION = "coldWarTension";
+const COLD_WAR_TENSION_ID = "current";
 
 export const TENSION_BASELINE = 12;
-export const NUCLEAR_WAR_MINIMUM_TENSION = 60;
-export const WAR_ACCLIMATION_GRACE_TURNS = 12;
-export const WAR_ACCLIMATION_MAX_REDUCTION = 0.4;
-export const WAR_ACCLIMATION_TURNS_TO_MAX = 40;
-export const WAR_ACCLIMATION_FULL_INTENSITY = 70;
+const NUCLEAR_WAR_MINIMUM_TENSION = 60;
+const WAR_ACCLIMATION_GRACE_TURNS = 12;
+const WAR_ACCLIMATION_MAX_REDUCTION = 0.4;
+const WAR_ACCLIMATION_TURNS_TO_MAX = 40;
+const WAR_ACCLIMATION_FULL_INTENSITY = 70;
 export const WAR_ACCLIMATION_HOT_INTENSITY = 85;
-export const NUCLEAR_WAR_RESIDUAL_PRESSURE = 30;
+const NUCLEAR_WAR_RESIDUAL_PRESSURE = 30;
 /** Fraction of the gap to the floor closed each turn. */
-export const TENSION_RELAXATION = 0.08;
+const TENSION_RELAXATION = 0.08;
 
 export type TensionEventKind =
   | "nuclear-test"
@@ -274,7 +274,7 @@ export function stepTension(value: number, p: TensionPressures): number {
   return clampTension(Math.max(floor, value + (floor - value) * TENSION_RELAXATION));
 }
 
-export function emptyTensionState(): ColdWarTensionState {
+function emptyTensionState(): ColdWarTensionState {
   return {
     value: TENSION_BASELINE,
     pressureFloor: TENSION_BASELINE,

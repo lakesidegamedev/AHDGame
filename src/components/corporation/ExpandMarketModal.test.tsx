@@ -10,6 +10,7 @@ import {
   within,
 } from "@testing-library/react";
 import type { ComponentProps, ReactElement } from "react";
+import { Profiler } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../messages/en/corporations.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -56,6 +57,9 @@ const marketResponse = {
       headroomUnits: 543_000,
       starterBuildCostAnchor: 1_100,
       foundingTotalAnchor: 1_600,
+      entry: { canEnter: true, reason: null, message: null },
+      roomToBuildUnits: 543_000,
+      roomScope: "state",
     },
   ],
   availableCountries: ["US"],
@@ -113,15 +117,17 @@ describe("ExpandMarketModal plants market finder", () => {
     const optionEls = within(sectorTypeSelect).getAllByRole("option");
     expect(optionEls).toHaveLength(OPERATING_SECTOR_TYPES.length);
     expect(optionEls.map((option) => option.textContent)).toContain("Retail (secondary)");
-    expect(screen.getByText("Demand estimate")).toBeTruthy();
+    expect(screen.getByText("Room to build")).toBeTruthy();
+    // Room is counted in farms (60 units each), with the units on hover.
     expect(screen.getByText("9,050")).toBeTruthy();
-    expect(screen.getByText("facility equivalents")).toBeTruthy();
+    expect(screen.getByText("9,050").getAttribute("title")).toBe("543k units/day of unmet demand");
+    expect(screen.getAllByText("Can enter now").length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         "Some demand is local to each state. Other demand is shared across reachable markets in the same country, so state estimates can overlap. These estimates are not a sales guarantee."
       )
     ).toBeTruthy();
-    expect(screen.getByText(/Estimated output-mix demand:/)).toBeTruthy();
+    expect(screen.getByText(/Room to build: about 9,050 farms/)).toBeTruthy();
     expect(screen.queryByText(/units\/day open/)).toBeNull();
     expect(screen.getByText("Best fit")).toBeTruthy();
 
@@ -177,7 +183,9 @@ describe("ExpandMarketModal plants market finder", () => {
           ok: true,
           json: async () => ({
             ...marketResponse,
-            suggestions: [{ ...marketResponse.suggestions[0], headroomUnits: 0 }],
+            suggestions: [
+              { ...marketResponse.suggestions[0], headroomUnits: 0, roomToBuildUnits: 0 },
+            ],
           }),
         } as Response)
       )
@@ -244,12 +252,13 @@ describe("ExpandMarketModal plants market finder", () => {
           countrySharedDemand: true,
           countryDemandEstimates: [{ countryId: "US", headroomUnits: 543_000 }],
           suggestions: [
-            { ...marketResponse.suggestions[0], headroomUnits: undefined },
+            { ...marketResponse.suggestions[0], headroomUnits: undefined, roomScope: "country" },
             {
               ...marketResponse.suggestions[0],
               stateId: "NY",
               stateName: "New York",
               headroomUnits: undefined,
+              roomScope: "country",
               foundingTotalAnchor: 1_800,
             },
           ],
@@ -269,9 +278,9 @@ describe("ExpandMarketModal plants market finder", () => {
     );
 
     await screen.findByText("New York");
-    expect(screen.getAllByText("543k")).toHaveLength(1);
-    expect(screen.getByText(/shared demand, not guaranteed sales/)).toBeTruthy();
-    expect(screen.queryByText("facility equivalents")).toBeNull();
+    expect(screen.getAllByText("9,050")).toHaveLength(1);
+    expect(screen.getByText(/new farms, shared across/)).toBeTruthy();
+    expect(screen.getByText("shared above")).toBeTruthy();
 
     const newYorkRow = screen.getAllByRole("button", { name: /New York/ })[0];
     fireEvent.click(newYorkRow);
@@ -291,7 +300,153 @@ describe("ExpandMarketModal plants market finder", () => {
       />
     );
 
-    await screen.findByText("facility equivalents");
-    expect(screen.getByText("Demand estimate")).toBeTruthy();
+    await screen.findByText("9,050");
+    expect(screen.queryByText(/new farms, shared across/)).toBeNull();
+  });
+
+  it("groups markets by whether they can be entered now and explains the refusal", async () => {
+    const pausedMessage =
+      "New Retail sectors are paused while consumer demand is rebalanced (40 turns remaining).";
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          ...marketResponse,
+          suggestions: [
+            marketResponse.suggestions[0],
+            {
+              ...marketResponse.suggestions[0],
+              stateId: "NY",
+              stateName: "New York",
+              canAfford: true,
+              entry: { canEnter: false, reason: "retail_paused", message: pausedMessage },
+            },
+          ],
+        }),
+      } as Response)
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ExpandMarketModal
+        corpId="corp-1"
+        primaryType="agriculture"
+        liquidCapital={25_400}
+        plantsMode
+        onClose={() => undefined}
+      />
+    );
+
+    await screen.findByText("New York");
+    expect(screen.getAllByText("Can enter now").length).toBeGreaterThan(0);
+    expect(screen.getByText("Not available now")).toBeTruthy();
+    expect(screen.getByText("Retail paused")).toBeTruthy();
+
+    const newYorkRow = screen.getAllByRole("button", { name: /New York/ })[0];
+    fireEvent.click(newYorkRow);
+    expect(newYorkRow.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
+    await screen.findByText("Review New York");
+    const buildButton = screen.getByRole("button", { name: "Build it" }) as HTMLButtonElement;
+    expect(buildButton.disabled).toBe(true);
+    expect(screen.getAllByText(pausedMessage).length).toBeGreaterThan(0);
+    fireEvent.click(buildButton);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["NY", "New York"],
+    ["missing", "California"],
+  ])(
+    "selects deep-linked state %s once and resets for a new sector type",
+    async (stateId, name) => {
+      const renderedSelections: string[] = [];
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            ...marketResponse,
+            suggestions: [
+              marketResponse.suggestions[0],
+              { ...marketResponse.suggestions[0], stateId: "NY", stateName: "New York" },
+            ],
+          }),
+        })
+        .mockImplementation(suggestionReply);
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(
+        <Profiler
+          id="market-selection"
+          onRender={() => {
+            const selected = screen.queryByRole("button", { pressed: true });
+            if (selected) renderedSelections.push(selected.textContent ?? "");
+          }}
+        >
+          <ExpandMarketModal
+            corpId="corp-1"
+            primaryType="agriculture"
+            liquidCapital={25_400}
+            plantsMode
+            initialStateId={stateId}
+            onClose={() => undefined}
+          />
+        </Profiler>
+      );
+
+      await screen.findAllByText("New York");
+      // The linked market must already be selected when the fetched rows first
+      // appear, before any passive effect could reset a player's next click.
+      expect(renderedSelections[0]).toContain(name);
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`&state=${stateId}`));
+      expect(
+        screen.getAllByRole("button", { name: new RegExp(name) })[0].getAttribute("aria-pressed")
+      ).toBe("true");
+      fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
+      expect(await screen.findByText(`Review ${name}`)).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: "Back to markets" }));
+      fireEvent.change(screen.getByLabelText("Sector type"), { target: { value: "retail" } });
+      await waitFor(() => expect(screen.queryByText("New York")).toBeNull());
+      expect(
+        screen.getAllByRole("button", { name: /California/ })[0].getAttribute("aria-pressed")
+      ).toBe("true");
+      fireEvent.click(screen.getByRole("button", { name: "Review store" }));
+      expect(await screen.findByText("Review California")).toBeTruthy();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    }
+  );
+
+  it("names a leftover pool as unclaimed legacy revenue, apart from room to build", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: async () => ({
+            ...marketResponse,
+            suggestions: [
+              { ...marketResponse.suggestions[0], unownedRevenue: 2_400, roomToBuildUnits: 0 },
+            ],
+          }),
+        } as Response)
+      )
+    );
+
+    render(
+      <ExpandMarketModal
+        corpId="corp-1"
+        primaryType="agriculture"
+        liquidCapital={25_400}
+        plantsMode
+        onClose={() => undefined}
+      />
+    );
+
+    await screen.findByText("Best fit");
+    expect(screen.getByText(/Room to build: none right now/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
+    expect(await screen.findByText(/Unclaimed legacy revenue here: \$2,400\/day/)).toBeTruthy();
   });
 });

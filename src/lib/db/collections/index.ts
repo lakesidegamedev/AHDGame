@@ -4,6 +4,7 @@ export { getPendingTreasuryTransactionsCollection } from "./pendingTreasuryTrans
 export { getUsersCollection } from "./users";
 export { getCharactersCollection } from "./characters";
 export { getGameStateCollection } from "./gameState";
+export { getGameConfigCollection } from "./gameConfig";
 export { getRetiredCharactersCollection } from "./retiredCharacters";
 export { getCharacterAchievementsCollection } from "./characterAchievements";
 export { getRegionalBudgetsCollection } from "./regionalBudgets";

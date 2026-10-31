@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   consent: null as "accepted" | "rejected" | null,
   optedOut: true,
+  distinctId: "anonymous",
   init: vi.fn(),
   capture: vi.fn(),
   optIn: vi.fn(),
@@ -26,8 +27,13 @@ vi.mock("posthog-js", () => ({
       state.optedOut = true;
     }),
     has_opted_out_capturing: () => state.optedOut,
-    reset: state.reset,
-    identify: state.identify,
+    reset: state.reset.mockImplementation(() => {
+      state.distinctId = "anonymous";
+    }),
+    identify: state.identify.mockImplementation((id: string) => {
+      state.distinctId = id;
+    }),
+    get_distinct_id: () => state.distinctId,
     set_config: state.setConfig,
     on: vi.fn(),
   },
@@ -40,6 +46,7 @@ describe("PostHog consent boundary", () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "phc_test");
     state.consent = null;
     state.optedOut = true;
+    state.distinctId = "anonymous";
     const storage = new Map<string, string>();
     vi.stubGlobal("window", {
       localStorage: {
@@ -72,7 +79,9 @@ describe("PostHog consent boundary", () => {
         disable_surveys: true,
       })
     );
-    expect(state.setConfig).not.toHaveBeenCalledWith({ disable_surveys: false });
+    expect(state.setConfig).not.toHaveBeenCalledWith(
+      expect.objectContaining({ disable_surveys: false })
+    );
   });
 
   it("enables surveys only after identifying the stable user ID", async () => {
@@ -82,10 +91,53 @@ describe("PostHog consent boundary", () => {
     expect(client).not.toBeNull();
     identifyPostHogUser(client!, "stable-user-id");
     expect(state.identify).toHaveBeenCalledWith("stable-user-id", { is_player: true });
-    expect(state.setConfig).toHaveBeenCalledWith({ disable_surveys: false });
+    // Forced on: the init-time remote config was ignored while surveys were off.
+    expect(state.setConfig).toHaveBeenCalledWith({
+      disable_surveys: false,
+      advanced_enable_surveys: true,
+    });
     expect(state.identify.mock.invocationCallOrder[0]).toBeLessThan(
       state.setConfig.mock.invocationCallOrder[0]
     );
+  });
+
+  it("keeps the same player's survey history across page loads", async () => {
+    const { getPostHogClient, identifyPostHogUser } = await import("./posthogClient");
+    state.consent = "accepted";
+    state.distinctId = "stable-user-id";
+    identifyPostHogUser((await getPostHogClient())!, "stable-user-id");
+    expect(state.reset).not.toHaveBeenCalled();
+    expect(state.identify).toHaveBeenCalledWith("stable-user-id", { is_player: true });
+  });
+
+  it("resets a different stored identity and re-opts in before identifying", async () => {
+    const { getPostHogClient, identifyPostHogUser } = await import("./posthogClient");
+    state.consent = "accepted";
+    const client = (await getPostHogClient())!;
+    state.distinctId = "previous-user-id";
+    state.reset.mockImplementationOnce(() => {
+      state.distinctId = "anonymous";
+      state.optedOut = true;
+    });
+    identifyPostHogUser(client, "stable-user-id");
+    expect(state.reset).toHaveBeenCalledTimes(1);
+    expect(state.optedOut).toBe(false);
+    const optInAfterReset = state.optIn.mock.invocationCallOrder.at(-1)!;
+    expect(state.reset.mock.invocationCallOrder[0]).toBeLessThan(optInAfterReset);
+    expect(optInAfterReset).toBeLessThan(state.identify.mock.invocationCallOrder[0]);
+  });
+
+  it("turns forced survey loading back off on logout", async () => {
+    const { getPostHogClient, identifyPostHogUser, resetPostHogUser } =
+      await import("./posthogClient");
+    state.consent = "accepted";
+    const client = (await getPostHogClient())!;
+    identifyPostHogUser(client, "stable-user-id");
+    resetPostHogUser(client);
+    expect(state.setConfig).toHaveBeenLastCalledWith({
+      disable_surveys: true,
+      advanced_enable_surveys: false,
+    });
   });
 
   it("drops unauthenticated events instead of attaching them to a later account", async () => {
@@ -134,7 +186,9 @@ describe("PostHog consent boundary", () => {
     state.consent = "accepted";
     identifyPostHogUser((await getPostHogClient())!, "stable-user-id");
     await captureProductEvent("character_created");
-    expect(state.optIn).toHaveBeenCalledTimes(2);
+    expect(state.optIn.mock.invocationCallOrder.at(-1)).toBeGreaterThan(
+      state.optOut.mock.invocationCallOrder[0]
+    );
     expect(state.capture).toHaveBeenCalledTimes(2);
   });
 

@@ -17,7 +17,7 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   OPERATING_SECTOR_TYPES,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { ExchangeFilter } from "../types";
 import type { ExchangeMetaEntry } from "../stockMarketRouting";

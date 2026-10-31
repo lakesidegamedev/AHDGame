@@ -505,7 +505,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       }
       const carved = {
         capitalStock: units,
-        ...seedPlantLedger(sectorType, units, industryModel, mediaDiscriminator),
+        ...seedPlantLedger({ sectorType, industryModel, mediaDiscriminator }, units),
         // System-funded: no paid basis, so a later exit never salvages cash
         // against capacity nobody bought.
         capacityBookAnchor: 0,

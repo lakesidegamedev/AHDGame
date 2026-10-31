@@ -1,3 +1,5 @@
+import { isGovernmentContractsEnabled } from "@/lib/governmentContracts/featureFlag";
+import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "@/lib/governmentContracts/rules/featureGate";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
@@ -48,6 +50,8 @@ export async function acceptContractOffer(
   now: Date,
   treasuryCashLedgerEnabled = false
 ): Promise<AcceptContractResult> {
+  if (contract.status === "offered" && !(await isGovernmentContractsEnabled(db)))
+    return { ok: false, status: 503, error: GOVERNMENT_CONTRACTS_DISABLED_MESSAGE };
   const existingAttempt = contract.signingFeeAttemptKey;
   const feeAnchor = contract.signingFeeAnchor ?? 0;
   const corpCode = resolveCorpLiquidCurrencyCode(corporation) ?? "USD";

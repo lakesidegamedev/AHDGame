@@ -45,7 +45,7 @@ export interface PoliticalCabinetContributionSnapshot {
   sources: Record<string, CabinetSourceContribution>;
 }
 
-const COLLECTION = "politicalCabinetContribution";
+export const COLLECTION = "politicalCabinetContribution";
 
 /** Latest per-country cabinet contribution snapshot; empty maps when none stored. */
 export async function getPoliticalCabinetContribution(

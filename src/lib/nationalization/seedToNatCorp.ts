@@ -141,10 +141,8 @@ export async function incrementNatCorpSectorRevenue(
         $set: {
           ...(capacityUnitsDelta > 0
             ? seedPlantLedger(
-                params.sectorType,
-                (existing.capitalStock ?? 0) + capacityUnitsDelta,
-                params.industryModel,
-                params.mediaDiscriminator
+                { ...params, strategyId: existing.strategyId },
+                (existing.capitalStock ?? 0) + capacityUnitsDelta
               )
             : {}),
           updatedAt: now,
@@ -164,14 +162,7 @@ export async function incrementNatCorpSectorRevenue(
     ...(params.mediaDiscriminator ? { mediaDiscriminator: params.mediaDiscriminator } : {}),
     revenue: revenueDeltaLocal,
     ...(capacityUnitsDelta > 0 ? { capitalStock: capacityUnitsDelta } : {}),
-    ...(capacityUnitsDelta > 0
-      ? seedPlantLedger(
-          params.sectorType,
-          capacityUnitsDelta,
-          params.industryModel,
-          params.mediaDiscriminator
-        )
-      : {}),
+    ...(capacityUnitsDelta > 0 ? seedPlantLedger(params, capacityUnitsDelta) : {}),
     workers: 0,
     profitMargin: DEFAULT_PROFIT_MARGIN,
     targetGrowthRate: DEFAULT_GROWTH_RATE,

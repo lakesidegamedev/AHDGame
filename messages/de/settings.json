@@ -121,6 +121,10 @@
       },
       "security": { "label": "Sicherheit", "summary": "Passwort" },
       "apiKeys": { "label": "API-Schlüssel", "summary": "API-Zugriff & Automatisierung" },
+      "experimental": {
+        "label": "Experimentelle Funktionen",
+        "summary": "Funktionen vorab testen"
+      },
       "danger": { "label": "Gefahrenzone", "summary": "Konto löschen" },
       "profile": { "label": "Charakterprofil", "summary": "Name, Bio, Avatar, Titelbild" },
       "demographics": { "label": "Hintergrund", "summary": "Ethnie, Geschlecht, Bildung" },
@@ -349,6 +353,51 @@
       "unlinkFailed": "Trennen fehlgeschlagen.",
       "unlinked": "{provider} erfolgreich getrennt.",
       "avatarAlt": "{provider}-Avatar"
+    },
+    "experimental": {
+      "intro": "Teste Funktionen, die noch in Arbeit sind. Sie können sich ändern, ausfallen oder wieder verschwinden. Wenn du dies ausschaltest, sind sie sofort weg. Derzeit schaltet das den ASCII-Seitenaufbau ein: Jede Seite setzt sich aus einem Zeichenraster zusammen.",
+      "toggleLabel": "Experimentelle Funktionen einschalten",
+      "toggleHint": "Standardmäßig aus. Ändert nur etwas für dich.",
+      "saveError": "Speichern fehlgeschlagen. Versuche es erneut.",
+      "desktopNavigation": {
+        "title": "Desktop-Navigation",
+        "hint": "Wähle das Layout der Desktop-Menüs. Die Auswahl wird in deinem Konto gespeichert.",
+        "classicHint": "Diese Layouts gelten für die moderne Oberfläche. Deine klassische Oberfläche bleibt gleich.",
+        "options": {
+          "cards": {
+            "title": "Gruppierte Karten (Standard)",
+            "hint": "Alle Bereiche auf einen Blick, mit deinen Verknüpfungen daneben."
+          },
+          "standard": {
+            "title": "Bisherige Menüs",
+            "hint": "Die aktuellen Dropdown-Listen beibehalten."
+          }
+        }
+      },
+      "mobileNavigation": {
+        "title": "Navigation am Handy",
+        "hint": "Wähle, wie du dich am Handy bewegst. Wird in deinem Konto gespeichert.",
+        "classicHint": "Diese Layouts gelten für die moderne Oberfläche. Deine klassische Oberfläche bleibt gleich.",
+        "options": {
+          "dock": {
+            "title": "A · Leiste unten (Standard)",
+            "hint": "Tabs unten für dein Unternehmen, deinen Heimatstaat, deine Nation, Aktionen und alles andere. Deine Werte stehen direkt darüber."
+          },
+          "standard": {
+            "title": "Standardmenü",
+            "hint": "Behalte die bisherige Menütaste oben."
+          }
+        }
+      }
+    },
+    "askDrawer": {
+      "showLabel": "Ask Keir anzeigen",
+      "title": "Ask-Keir-Seitenleiste",
+      "body": "Ask Keir sitzt am Rand der meisten Seiten. Öffne die Leiste, um Fragen zum Spiel oder zur aktuellen Seite zu stellen. Sie ist mit deinem Spielkonto angemeldet und teilt Verlauf und Tageslimits mit der Ask-Keir-Seite. Auf dem Handy öffnet sie sich über den runden Keir-Knopf in der Ecke.",
+      "sideLabel": "Seitenleiste andocken",
+      "sideLeft": "Links",
+      "sideRight": "Rechts",
+      "saveError": "Speichern fehlgeschlagen. Versuche es erneut."
     },
     "apiKeys": {
       "intro": "Mit API-Schlüsseln können externe Anwendungen mit deinem Konto interagieren.",

@@ -12,9 +12,7 @@
  * because cookie-only clearing is the common evasion path.
  */
 
-const DEVICE_KEY_STORAGE_KEY = "__ahd_device";
-
-export const DEVICE_KEY_LENGTH = 36; // canonical UUID length
+const DEVICE_KEY_STORAGE_KEY = "__ahd_device"; // canonical UUID length
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);

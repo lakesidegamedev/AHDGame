@@ -1,134 +1,67 @@
 export const congressLeadershipContent = `# Congress Leadership
 
-Congressional leadership positions - Speaker, floor leaders, committee chairs - sit at the top of the legislative hierarchy. This page covers what each role does, how elections work, who votes, and what happens when a seat goes vacant.
+Winning the Speaker's gavel is worth +3 actions every turn and a 2.0 national influence tier, and the House picks the Speaker by plurality in a single day. Congressional leadership (Speaker, floor leaders, whips) sits at the top of the US legislature, and holding a role also gives you the authority to whip your party's votes. This page covers who can run, who votes, and what happens when a seat goes empty.
 
-## Leadership positions
+## The ballot
 
-### House of Representatives (US)
+Leadership elections are separate from constituency races. They are 24 hour plurality ballots: the candidate with the most votes when the window closes wins, with no majority needed. A tie goes to the candidate who declared first.
 
-| Position | Role |
+1. **A ballot opens** automatically after a House or Senate general election resolves, for each office that is vacant or whose holder's party is no longer the party that should hold it. An office whose holder still fits the new chamber is not reopened. The sitting holder is nominated automatically if they still hold a seat and still qualify. A resolved [general election](/wiki/general-elections) is what opens each new set of ballots.
+2. **Members declare candidacy** during the window and members of the chamber vote. Declare from the Congress page, Leadership tab, which shows whether your party qualifies for each office and the voting deadline.
+3. **The ballot closes** after 24 hours. The top vote-getter takes the office; the rest are marked failed.
+
+U.S. congressional leadership races are player-only. NPPs do not run for, or vote in, Speaker, Majority Leader, Minority Leader or Pro Tempore ballots.
+
+## Who can run and vote
+
+| Office | Chamber | Who may declare and vote |
+| --- | --- | --- |
+| **Speaker of the House** | House | Any seated member of any party |
+| **President Pro Tempore** | Senate | Members of the Senate's single largest party |
+| **Majority Leader** | House and Senate | Members of the chamber's single largest party |
+| **Minority Leader** | House and Senate | Members of parties outside the majority bloc |
+| **Majority Whip** | House and Senate | Members of the chamber's single largest party |
+| **Minority Whip** | House and Senate | Members of parties outside the majority bloc |
+
+The **majority bloc** is the largest coalition or single party in the chamber; the minority bloc is the second largest. Coalition seats (see [Coalitions](/wiki/coalitions)) set that bloc, which decides who qualifies for majority and minority offices. Presiding-officer rules in other countries are on [Chamber Leadership](/wiki/chamber-leadership), which runs the same ballot framework.
+
+![Eligibility tree for Speaker, Majority Leader and Minority Leader with a 435 seat example.](/wiki-images/diagrams/congress-leadership-eligibility.svg)
+
+The Speaker belongs to the whole chamber, so every member votes. Majority offices belong to the party that controls the floor, so only that party picks them. Minority offices go to those who oppose it. Party-gated offices are also party-gated **tenure**: a sitting Pro Tempore, Majority Leader or Majority Whip who leaves the majority party loses the seat on the spot and a fresh 24 hour election opens. The same goes if your party is simply overtaken as the largest: the check runs every turn, so the seat is vacated within the hour and a fresh election opens for the new largest party.
+
+Tips: win the Speaker race by being acceptable to both sides, since everyone votes; to hold a majority office keep your party the largest in the chamber, because losing that status can cost you the seat.
+
+## What the offices pay
+
+| Item | Value |
 | --- | --- |
-| **Speaker of the House** | Presides over the House, controls the legislative agenda, second in presidential line of succession |
-| **House Majority Leader** | Floor leader for the chamber's single largest party, manages day-to-day scheduling |
-| **House Minority Leader** | Leads the opposition in the House |
+| Ballot length | 24 hours (24 turns), plurality, ties go to the earlier declaration |
+| Motion to vacate the Speaker | Needs For votes from an absolute majority of all House seats: 218 of 435 |
+| Extra actions per turn | Speaker +3; Majority and Minority Leaders +2; Pro Tempore +1; Whips +1 |
+| National influence tier | Speaker, Majority Leader, Pro Tempore 2.0; Minority Leader 1.5; Whips none |
 
-### Senate (US)
+You get the highest single leadership action bonus you qualify for, not the sum. Influence tiers also do not stack with your other offices: you get your highest one (see [Elections Player Guide](/wiki/elections-player-guide)).
 
-| Position | Role |
-| --- | --- |
-| **Senate President Pro Tempore** | Formal presiding officer; largely ceremonial, third in presidential line of succession |
-| **Senate Majority Leader** | Most powerful Senate position - controls the Senate floor agenda |
-| **Senate Minority Leader** | Leads the opposition in the Senate |
+Whips can be issued by party chairs, vice chairs and chamber leaders; see [Voting & Whips](/wiki/voting-and-whips), where the leaders you elect here gain the authority to whip their party's members and NPPs. Senate floor leaders also organise the count and the abstention strategy on a [filibuster](/wiki/cloture-and-filibuster), and the Senate holds the [confirmation votes](/wiki/confirmation-process).
 
-### UK Commons
+## A 435 seat House
 
-The Commons has its own leadership structure. See the [United Kingdom](/wiki/uk-overview) hub for details on the Speaker of the House of Commons and party leadership there.
+Party A holds 230 seats, Party B holds 205. A is the single largest party, so A is the majority.
 
-### JP Diet
+- **Speaker:** every seated member of A and B can run and vote.
+- **Majority Leader:** only A's members can run and vote. B's members cannot.
+- **Minority Leader:** only members of parties outside the majority bloc, here B, can run and vote.
+- A Speaker who wins gets +3 actions per turn and a 2.0 influence tier. If B's members file a motion to vacate, 218 For votes are needed. B's 205 seats are not enough on their own, so they need 13 members from A or from NPP blocs that vote to remove the Speaker.
 
-The Shugiin and Sangiin each elect a President (Speaker-equivalent). See the [Japan](/wiki/jp-overview) hub.
+## Removing a Speaker
 
-### DE Bundestag, NG National Assembly, CN legislature
+Any House member can file a motion to vacate, and any House member can vote For or Against. If it passes, the Speaker is removed immediately and a fresh Speaker election opens. If it fails, the Speaker stays. NPP blocs are given a vote when the window closes, and a seat that does not vote counts the same as a vote to keep the Speaker.
 
-Presiding-officer elections use the same shared framework across countries, not just the US: DE elects a Bundestagspräsident, NG elects presiding officers for its National Assembly chambers, and CN elects a CPPCC Chairman and an NPCSC Chairman. All of these resolve top-vote-getter-wins on a fixed-duration ballot, differing only in electorate and eligibility gate. See the country hubs for details.
+## When a chamber flips
 
-## How leadership elections work
+When the largest party changes, the majority offices (Majority Leader, Majority Whip and, in the Senate, Pro Tempore) reopen for the new largest party. After every House or Senate election, each office is checked the same way: majority offices against the largest party, minority offices against the largest party in the minority bloc, and only an office that is vacant or held by the wrong party reopens. Senate election classes make no difference.
 
-Leadership elections run on their own election system, separate from constituency races.
+Live in the United States in every era. Other countries use the shared presiding-officer ballot described on [Chamber Leadership](/wiki/chamber-leadership); the UK, Japan and Germany add their own parliamentary offices on their country pages ([United Kingdom](/wiki/uk-overview), [Japan](/wiki/jp-overview)). Whips are elected on the same 24 hour ballots as the leaders.
 
-### Declaring candidacy
-
-Any eligible member of the relevant chamber can declare candidacy for a leadership position during the open declaration window. Eligibility typically requires:
-
-- Being an elected member of the chamber (not just a candidate)
-- Meeting the office's current party or bloc gate
-
-### Voting
-
-Leadership votes are cast by chamber members. The structure differs by position:
-
-- **Speaker** - any seated House member may declare candidacy and vote, regardless of party
-- **Bundestagspräsident (DE)** - any seated MdB may declare candidacy and vote, regardless of party
-- **President Pro Tempore** - elected only by members of the Senate's single largest party
-- **Majority Leaders and Whips** - elected only by members of the chamber's single largest party
-- **Minority Leaders and Whips** - elected only by non-majority parties outside the majority bloc
-- **Committee chairs** - assigned or elected within the relevant committee
-
-U.S. congressional leadership races are player-only. NPPs do not run for or vote in Speaker, Majority Leader, Minority Leader, or Pro Tempore elections.
-
-### Coalitions and the majority bloc
-
-In the US, coalitions aggregate party seats into blocs. The **majority bloc** is the largest coalition or single party controlling the most seats; the **minority bloc** is the second largest. This matters for leadership:
-
-- Speaker and Bundestagspräsident are open to **any seated chamber member**: bloc and party affiliation do not gate candidacy or voting.
-- President Pro Tempore, and House and Senate Majority Leader (and Whip), are party-gated: only the single national party with the most seats in that chamber may declare or vote.
-- Minority-side leadership (Leader and Whip) remains open to non-majority parties outside the majority bloc.
-
-A party-gated office is also a party-gated **tenure**. A sitting President Pro Tempore, Majority Leader or Majority Whip who leaves the majority party is vacated on the spot and the seat goes to a fresh 24-turn election. Losing the majority is not the same thing: if your party is displaced as the chamber's largest, the seat reopens at the next chamber-changing vote rather than immediately.
-
-## Vacancies and succession
-
-When a leadership position goes vacant - through electoral defeat, resignation, or administrative removal - the turn processor runs a leadership vacancy phase.
-
-- A new leadership election spawns automatically.
-- Interim leadership may be handled by the next most senior member until a new election completes.
-- The specific rules for each position (succession order, interim holder) vary; the turn system enforces the correct sequence.
-
-### Motion to Vacate the Speaker
-
-A sitting House member can force the Speaker out mid-term without waiting for the next general election, by filing a motion to vacate. Any House member may file, and any House member may vote For or Against. The motion needs an absolute majority of the House to pass, not a plurality. If it passes, the Speaker is vacated immediately and a fresh Speaker election opens right away. If it fails, the sitting Speaker stays in place.
-
-## What leadership members do each turn
-
-Leadership positions are not purely honorary - they affect game mechanics:
-
-- **Speaker:** Future mechanic - controls which bills reach the floor for a vote (currently all eligible bills proceed automatically).
-- **Majority/Minority Leaders:** Set the whip apparatus for their party's floor strategy.
-- **Committee Chairs:** Control committee assignments (future mechanic).
-
-Leadership also pays, on top of the holder's seat:
-
-| Role | Extra actions per turn | National influence tier |
-| --- | ---: | ---: |
-| Speaker of the House | +3 | +2.0 |
-| House and Senate Majority Leaders | +2 | +2.0 |
-| House and Senate Minority Leaders | +2 | +1.5 |
-| Senate President Pro Tempore | +1 | +2.0 |
-| Whips | +1 | none from the role |
-
-Only your highest single leadership action bonus counts. National influence tiers do not stack with your other offices: you get your highest one. See [Chamber Leadership](/wiki/chamber-leadership) for the presiding officers in other countries.
-
-## Leadership election timeline
-
-Leadership elections run concurrently with regular congressional cycles but on shorter timelines than constituency races:
-
-- Leadership elections use a single 24-hour plurality window rather than separate primary and general phases.
-- Because leadership races cover the full chamber rather than a state or district, the vote accumulation math uses chamber-wide rather than regional demographics.
-
-## Tracking leadership
-
-The current leadership roster is visible on the Congress page. Each position shows the current holder's name, party, and tenure. Upcoming leadership elections appear alongside regular elections in the elections list.
-
-## Strategic notes
-
-### Why pursue leadership?
-
-- **Agenda control** - future mechanics will let the Speaker and Majority Leader gate which bills reach the floor.
-- **Visibility** - leadership positions increase your national profile faster than a backbench seat.
-- **Coalition leverage** - holding the Majority Leader seat in a closely divided chamber makes you a mandatory negotiating partner for any bill.
-
-### Building a leadership coalition
-
-To win a leadership race, you typically need:
-
-1. **Strong personal favorability** with fellow chamber members - player votes and political alliances still matter even without NPP ballots.
-2. **Party alignment** - Speaker and Bundestagspräsident are open to any seated member; Pro Tempore and Majority Leader require your party to be the chamber's single largest party, both to win the seat and to keep it.
-3. **Active campaigning** - use influence actions to raise your profile before the declaration window opens.
-
-## Related pages
-
-- [Bills & Legislation](/wiki/bills-legislation) - How the Speaker's future agenda powers affect bill flow
-- [Committees](/wiki/committees) - Committee chairs and how they relate to leadership
-- [Voting & Whips](/wiki/voting-and-whips) - How whip directives flow from leadership to members
-- [Government Formation](/wiki/government-formation) - Parliamentary equivalent for UK/JP/DE
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Congress leadership design doc](https://docs.lakesidegames.net/design/congress-leadership.html)
 `;

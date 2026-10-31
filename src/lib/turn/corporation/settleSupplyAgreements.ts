@@ -104,7 +104,10 @@ export type {
  * booked under `commodity@stateId`, which is the ceiling a state contract
  * delivers against.
  */
-export { computeSupplyAgreementBuyerDemand } from "@/lib/corporations/groups/rules/inputDemand";
+export {
+  computeSupplyAgreementBuyerDemand,
+  computeSupplyAgreementSectorDemand,
+} from "@/lib/corporations/groups/rules/inputDemand";
 
 /**
  * Pure settlement computation — no I/O. Given the active agreements, the units

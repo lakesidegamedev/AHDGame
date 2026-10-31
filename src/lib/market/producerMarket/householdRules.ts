@@ -1,6 +1,7 @@
 /** Household orders spend a named cash wallet, using the shared consumption basket. */
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { PurchaseOrder } from "./rules";
+import { laneKeyOf } from "./laneKey";
 
 export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> = {
   food: 0.2,
@@ -49,7 +50,7 @@ export function householdPurchaseOrders(input: {
   let totalWeight = 0;
   const seen = new Set<string>();
   for (const p of input.products) {
-    const key = JSON.stringify([p.commodity, p.book]);
+    const key = laneKeyOf(p.commodity, p.book);
     if (
       !p.commodity ||
       !p.book ||

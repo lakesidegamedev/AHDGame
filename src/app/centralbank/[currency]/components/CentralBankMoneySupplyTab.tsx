@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
 import { MONEY_ACCOUNTING_VERSION } from "@/lib/moneySupply/calculate";
 import { useRef, useState, type FormEvent } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { Button } from "@/components/ui";
 import { formatNativeCurrency } from "./centralBankUtils";
 import type { MoneySupplyView } from "./centralBankTypes";

@@ -21,7 +21,9 @@ export function PlayerIncomeTaxStatement({ statement }: { statement: PlayerTaxSt
                 <th>{t("taxType")}</th>
                 <th>{t("gross")}</th>
                 <th>{t("tax")}</th>
-                <th>{t("net")}</th>
+                <th>{t("paidAmount")}</th>
+                <th>{t("remaining")}</th>
+                <th>{t("collectedTurn")}</th>
                 <th>{t("status")}</th>
               </tr>
             </thead>
@@ -35,8 +37,12 @@ export function PlayerIncomeTaxStatement({ statement }: { statement: PlayerTaxSt
                     <td>{t(row.taxKind === "capitalGains" ? "capitalGains" : "tax")}</td>
                     <td>{format(row.gross)}</td>
                     <td>{format(row.tax)}</td>
-                    <td>{format(row.net)}</td>
-                    <td>{t(row.pending ? "pending" : "paid")}</td>
+                    <td>{format(row.paidTax)}</td>
+                    <td>{format(row.remainingTax)}</td>
+                    <td>{row.collectedTurn ?? ""}</td>
+                    <td>
+                      {t(row.withheldAtSource ? "withheld" : row.pending ? "pending" : "paid")}
+                    </td>
                   </tr>
                 );
               })}

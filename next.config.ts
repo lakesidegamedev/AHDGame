@@ -196,13 +196,16 @@ const nextConfig: NextConfig = {
       {
         // Corp-detail and elections APIs return large JSON fetched client-side
         // after the page shell renders. They set no Cache-Control of their own,
-        // so Cloudflare re-compresses them with zstd — whose Content-Encoding
-        // some Android System WebView builds cannot decode, surfacing to the
-        // client fetch() as a thrown "Network error" (works on desktop / newer
-        // WebViews). `no-transform` makes Cloudflare fall back to Brotli/gzip,
-        // which every WebView decodes. Scoped to these header-less trees on
-        // purpose — a blanket /api/:path* rule could clash with the s-maxage
-        // edge caching on public endpoints. Routes that build their own
+        // so without a directive Cloudflare re-compresses them with zstd —
+        // whose Content-Encoding some Android System WebView builds cannot
+        // decode, surfacing to the client fetch() as a thrown "Network error"
+        // (works on desktop / newer WebViews). `no-transform` prevents that
+        // re-encoding. Measured 2026-10-24: `no-transform` also suppresses all
+        // compression, at the origin (Next skips no-transform responses) and at
+        // Cloudflare, so these bodies are compressed by the route handler
+        // instead — see lib/api/jsonCompression.ts. Scoped to these header-less
+        // trees on purpose — a blanket /api/:path* rule could clash with the
+        // s-maxage edge caching on public endpoints. Routes that build their own
         // Cache-Control already carry no-transform via the shared helpers
         // (withNoStore / conditionalJson / publicApi middleware).
         source: "/api/corporations/:path*",

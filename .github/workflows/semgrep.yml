@@ -36,8 +36,11 @@ jobs:
 
   # Advisory scan against maintained community rulesets. Findings surface as
   # code-scanning alerts, they do not block merges (the rulesets are broad and
-  # will have false positives until tuned).
+  # will have false positives until tuned). Not on pull requests: it gates
+  # nothing there, and its runner slot is shared with the required checks.
+  # Every change is still scanned when it lands on a branch.
   registry:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -68,6 +68,10 @@ import {
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
 import {
+  fundedSectorTotalCost,
+  plantlessSectorView,
+} from "@/lib/corporations/rules/plantlessSector";
+import {
   computeSectorCommodityUnits,
   type CorpCommodityFlowContext,
   type FlowSector,
@@ -308,7 +312,10 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   let buildingSectorCount = 0;
   let totalUnitsOnOrder = 0;
 
-  const sectorDetails = sectors.map((sector) => {
+  const sectorDetails = sectors.map((storedSector) => {
+    // A plants sector with no plants yet carries its opening stamps (a
+    // nameplate revenue and a starting crew) until its first turn zeroes them.
+    const sector = plantsMode ? plantlessSectorView(storedSector) : storedSector;
     const st = getOperatingSectorType(
       sector.sectorType,
       sector.industryModel,
@@ -482,6 +489,10 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       sector.dominanceMarginPenaltyPp ?? null
     );
 
+    // See the spread site below: the corporation-detail payload deliberately
+    // omits the per-metric rationale list, which only the sector sub-page uses.
+    const { stateMetricContributions: _stateMetricContributions, ...modsForApi } = mods;
+
     // Realized revenue for this sector (#3001/#3002). Keep the CEO statement
     // and settings cap on one basis: exact per-sector realization when present,
     // otherwise the history-derived corp ratio, plus freight credits. Every
@@ -544,12 +555,27 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     // profit includes. The inversion stays as the fallback for rows that
     // predate the field. See `plantsPnlBasis.ts`.
     const enginePnl = readPlantsPnl(sector);
+    // A funded row books compliance beside its total cost but carries no full
+    // engine P&L; its own line keeps it out of maintenance.
+    const fundedCompliance =
+      !enginePnl &&
+      sector.plantsPnl?.source === "funded" &&
+      typeof sector.plantsPnl.compliance === "number" &&
+      Number.isFinite(sector.plantsPnl.compliance)
+        ? sectorFieldToCorpCcy(sector.plantsPnl.compliance, sector)
+        : null;
     // The corporation pays the full physical bill, not only the operating-margin
     // subset. Compliance and stored growth have their own statement lines.
+    // A funded row's own bill when it has one: rebuilding it from the margin
+    // gives zero for a sector that sold nothing, and its stock then read as profit.
+    const fundedTotalCost = enginePnl ? null : fundedSectorTotalCost(sector.plantsPnl);
     const maintenance = enginePnl
       ? sectorFieldToCorpCcy(enginePnl.totalCost - enginePnl.compliance, sector) -
         sectorGrowthCostLocal
-      : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100);
+      : fundedTotalCost != null
+        ? sectorFieldToCorpCcy(fundedTotalCost, sector) - (fundedCompliance ?? 0)
+        : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100) -
+          (fundedCompliance ?? 0);
     // Funded market: the owner's result counts transition support received and
     // output sent to stock at cost, both written beside the booked profit.
     const fundedResultAdjust = sectorFieldToCorpCcy(
@@ -559,7 +585,11 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const profit =
       (enginePnl
         ? sectorFieldToCorpCcy(enginePnl.profit, sector)
-        : financialRevenue - freightIncome - maintenance - sectorGrowthCostLocal) +
+        : financialRevenue -
+          freightIncome -
+          maintenance -
+          sectorGrowthCostLocal -
+          (fundedCompliance ?? 0)) +
       freightIncome -
       freightCost +
       fundedResultAdjust;
@@ -639,7 +669,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const regulatoryBurdenRate = getDominanceRegulatoryBurden(sectorMarketSharePct);
     const sectorRegulatoryBurden = enginePnl
       ? sectorFieldToCorpCcy(enginePnl.compliance, sector)
-      : financialRevenue * regulatoryBurdenRate;
+      : (fundedCompliance ?? financialRevenue * regulatoryBurdenRate);
     // Freight settles alongside plantsPnl, so neither leg is in its totals.
     totalRevenue += financialRevenue;
     totalFreightCosts += freightCost;
@@ -693,12 +723,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       plantsMode && Number.isInteger(sector.plantCount) && (sector.plantCount ?? 0) >= 0
         ? (sector.plantCount as number)
         : plantsMode
-          ? seedPlantLedger(
-              sector.sectorType,
-              sector.capitalStock,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ).plantCount
+          ? seedPlantLedger(sector, sector.capitalStock).plantCount
           : null;
     const producedUnits =
       plantsMode && Number.isFinite(sector.producedUnits) ? (sector.producedUnits as number) : null;
@@ -816,7 +841,12 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       physicalCosts,
       fillAdjustedMarginPct,
       marketSharePercent: sectorMarketSharePct,
-      ...mods,
+      // The per-metric rationale list (`stateMetricContributions`) is computed
+      // above for the sector sub-page's margins payload, but it is ~188 entries
+      // and ~54 KB per sector on a live corporation — 94% of this response —
+      // and nothing that consumes the corporation detail payload reads it.
+      // MarginsPanel gets its own copy from GET /api/corporations/:id/sectors/:sectorId.
+      ...modsForApi,
       ...roundOwnershipTerms(ownershipTerms),
       commoditySupplyDemandBlendPct,
       profit: Math.round(profit),

@@ -16,11 +16,26 @@
  * The header is only set when the handler didn't already send its own
  * `Cache-Control` — so routes that deliberately opt into caching (e.g. a
  * public `s-maxage` response) are left untouched.
+ *
+ * JSON bodies are also compressed at the origin (`jsonCompression.ts`).
+ * `no-transform` is deliberately kept: it is what stops Cloudflare re-encoding
+ * with zstd, which old Android WebViews cannot decode. Because `no-transform`
+ * also suppresses Next's and Cloudflare's own compression, encoding the body
+ * here (Brotli/gzip, chosen by `Accept-Encoding`) is the only way these
+ * payloads stop travelling uncompressed.
  */
+import { compressJsonResponse } from "@/lib/api/jsonCompression";
+
 type RouteHandler<A extends unknown[]> = (...args: A) => Promise<Response> | Response;
 
+export interface WithNoStoreOptions {
+  /** Set false for handlers that return binary or pre-encoded bodies. */
+  compress?: boolean;
+}
+
 export function withNoStore<A extends unknown[]>(
-  handler: RouteHandler<A>
+  handler: RouteHandler<A>,
+  options: WithNoStoreOptions = {}
 ): (...args: A) => Promise<Response> {
   return async (...args: A): Promise<Response> => {
     const response = await handler(...args);
@@ -31,6 +46,8 @@ export function withNoStore<A extends unknown[]>(
       // (universally supported) are used instead. Orthogonal to cacheability.
       response.headers.set("Cache-Control", "no-store, no-transform");
     }
-    return response;
+    if (options.compress === false) return response;
+    const request = args[0] instanceof Request ? args[0] : undefined;
+    return compressJsonResponse(response, request);
   };
 }

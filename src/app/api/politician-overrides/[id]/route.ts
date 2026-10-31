@@ -40,7 +40,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/politician-overrides/[id]:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     if (!auth.user.isAdmin) {
       return errorResponse(403, "Admin only");
@@ -94,7 +98,11 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimitDel = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimitDel = checkRateLimit(
+      `api/politician-overrides/[id]:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimitDel.ok) return rateLimitResponse(rateLimitDel.retryAfter);
     if (!auth.user.isAdmin) {
       return errorResponse(403, "Admin only");

@@ -22,6 +22,11 @@ vi.mock("@/lib/lineOfCredit/currencyIncomeEstimate", () => ({
   estimatePerTurnCurrencyIncomeHomeFace: vi.fn(),
 }));
 
+vi.mock("@/lib/lineOfCredit/controlledEquity", () => ({
+  computeControlledEquityHaircutInternal: vi.fn(),
+  controlledEquityCollateralNote: vi.fn().mockReturnValue("collateral note"),
+}));
+
 vi.mock("@/lib/currency/characterFunds", () => ({
   getHomeCurrency: vi.fn().mockReturnValue("EUR"),
 }));
@@ -117,6 +122,70 @@ describe("buildLocSnapshot", () => {
     expect(snapshot!.netWorthLimitInternal).toBe(500);
     expect(snapshot!.perPlayerLimitInternal).toBe(500);
     expect(snapshot!.perPlayerAvailableInternal).toBe(400);
+  });
+
+  describe("equity cashout limits", () => {
+    async function snapshotAtStage(stage: number | null, haircutInternal = 60_000) {
+      const { computePlayerGrossNetLocInternal, loadExchangeRatesMap } = await import("./netWorth");
+      const { estimatePerTurnCurrencyIncomeHomeFace } = await import("./currencyIncomeEstimate");
+      const { computeControlledEquityHaircutInternal } = await import("./controlledEquity");
+      vi.mocked(loadExchangeRatesMap).mockResolvedValue({ EUR: 1 } as never);
+      vi.mocked(computePlayerGrossNetLocInternal).mockResolvedValue({
+        grossInternal: 100_000,
+        locDebtInternal: 10_000,
+        netInternal: 90_000,
+      });
+      vi.mocked(estimatePerTurnCurrencyIncomeHomeFace).mockResolvedValue(0);
+      vi.mocked(computeControlledEquityHaircutInternal).mockResolvedValue({
+        haircutInternal,
+        controlledCompanies: 1,
+        recentPurchasesExcluded: false,
+      });
+      db.collection("gameConfig").findOne.mockResolvedValue(
+        stage === null ? null : { equityCashoutLimitsStage: stage }
+      );
+      const { buildLocSnapshot } = await import("./buildSnapshot");
+      return buildLocSnapshot(
+        db as unknown as Db,
+        {
+          _id: new ObjectId(),
+          countryId: "DE",
+          lineOfCredit: {
+            balances: { EUR: 10_000 },
+            arrears: {},
+            accountsOpened: { EUR: true },
+            drawFrozen: false,
+          },
+        } as never
+      );
+    }
+
+    it("lowers the equity cap by the controlled-share haircut and explains it", async () => {
+      const snapshot = await snapshotAtStage(1);
+      expect(snapshot!.netWorthLimitInternal).toBe(30_000);
+      expect(snapshot!.perPlayerLimitInternal).toBe(30_000);
+      expect(snapshot!.perPlayerAvailableInternal).toBe(20_000);
+      expect(snapshot!.controlledEquityHaircutInternal).toBe(60_000);
+      expect(snapshot!.collateralNote).toBe("collateral note");
+      // The borrower's score still reads the full net worth.
+      expect(snapshot!.netWorthInternal).toBe(90_000);
+    });
+
+    it("never forces repayment: a limit below the balance only leaves nothing to draw", async () => {
+      const snapshot = await snapshotAtStage(1, 85_000);
+      expect(snapshot!.perPlayerLimitInternal).toBe(5_000);
+      expect(snapshot!.outstandingInternal).toBe(10_000);
+      expect(snapshot!.perPlayerAvailableInternal).toBe(0);
+    });
+
+    it.each([null, 0])("leaves the snapshot unchanged at stage %s", async (stage) => {
+      const { computeControlledEquityHaircutInternal } = await import("./controlledEquity");
+      const snapshot = await snapshotAtStage(stage);
+      expect(snapshot!.netWorthLimitInternal).toBe(90_000);
+      expect(snapshot).not.toHaveProperty("controlledEquityHaircutInternal");
+      expect(snapshot).not.toHaveProperty("collateralNote");
+      expect(computeControlledEquityHaircutInternal).not.toHaveBeenCalled();
+    });
   });
 
   it("selects the euro bank pool for a 2027 French borrower", async () => {

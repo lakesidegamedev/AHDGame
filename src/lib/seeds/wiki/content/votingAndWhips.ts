@@ -1,93 +1,74 @@
 export const votingAndWhipsContent = `# Voting & whips
 
-Every legislator, player or NPP, votes on every bill that passes through their chamber. This page covers how votes work, how whip directives influence them, and how party discipline affects your NPPs.
+Your own vote is a free choice, but most of a chamber is usually non-player politicians (NPPs), and a whip is how you move them. A whip is a party directive that tells members how to vote. Every legislator, player or NPP, can vote on every bill in their chamber, and the tally decides whether each bill passes, fails or goes on (see [Bills & Legislation](/wiki/bills-legislation)).
 
-## Casting your vote
+## One bill, one day
 
-While a bill is in your chamber and its status is \`active\` or \`active_other\`, you can vote from the bill's detail page at \`/congress/bills/[id]\`.
+A bill opens in a chamber and stays open for 24 hours. Members of that chamber vote For, Against or Abstain. Only your latest vote counts and you can change it until the window closes. Changing your vote is free, and you vote from the bill's detail page.
 
-**Options:** For, Against, or Abstain.
+The chamber then tallies For and Against. Abstentions are neutral. For must exceed Against for a simple-majority bill. There is no minimum turnout: a bill can pass on one For vote if nobody votes Against. In the US Senate, a [filibuster](/wiki/cloture-and-filibuster) changes how many For votes a bill needs, and the For, Against and Abstain counts are what the 60 percent bar is tested against.
 
-**Re-voting:** You can change your vote any time while the 24-hour voting window is still open. Only your most recent vote counts.
+![Bill vote panel with For, Against and Abstain buttons, the vote by party table and the whip count](/wiki-images/screens/voting-and-whips-vote-panel.webp)
 
-**Your vote moves your positions.** Voting is a statement of where you stand, so each bill can shift your own economic and social positions by up to **0.25 per axis, once per bill**. An Aye pulls you toward the bill's average position and never past it (if you already hold the bill's position on an axis you do not move); a Nay pushes you 0.25 away. The Aye and Nay buttons show the exact move before you click, computed by the same code that applies it. Changing a vote is measured from where you stood before that bill first moved you, so flipping Aye and Nay cannot stack, and switching to Abstain reverts the shift. A vote written onto you by a party whip never moves you and does not count as your own vote. Bills with no ideology (a war declaration, a tariff-only bill) move nobody.
+Each bill page shows live For, Against and Abstain totals for each chamber and your own vote.
 
-**Eligibility:** Only members of the current voting chamber can vote. If a bill is in the Senate, House members cannot vote, and vice versa.
+**Your vote moves your own positions.** An Aye pulls you toward the bill's average position on each axis by up to 0.25, never past it (see [Party Ideology](/wiki/party-ideology)). A Nay pushes you 0.25 away. The buttons show the exact move first. Flipping votes does not stack, and switching to Abstain reverts the shift. A vote written onto you by a party whip never moves you and is not counted as your own. Bills with no ideology, such as a war declaration or a tariff-only bill, move nobody.
 
-## What determines the outcome
+Tips: abstaining on a bill you cannot stop keeps your record clean; give swing-seat NPPs a soft whip rather than a hard one if a forced vote could cost them next election.
 
-Bills pass by simple majority: For votes must exceed Against votes. Abstentions are neutral: they count toward participation records but do not help either side.
+## How an NPP decides
 
-- **No quorum requirement** currently. A bill can pass with just one For vote if no one else votes Against.
-
-## How NPPs vote
-
-Non-Player Politicians vote automatically using a **cross-pressure model**. Every NPP's vote is the deterministic sum of four signed forces, each clamped to [-100, +100]. Positive pulls FOR, negative pulls AGAINST.
+Players choose for themselves. NPPs vote automatically, using four forces that push them For (positive) or Against (negative). See [NPPs Overview](/wiki/npps-overview) for loyalty, stubbornness, donors and home state, and [npp-behavior](/wiki/npp-behavior) for the full picture; whip pressure is one of the forces that decide an NPP's vote.
 
 | Force | What it measures |
 | --- | --- |
-| **Ideology** | How well the bill's policy direction aligns with the NPP's recorded stance on that issue, plus a small economic-tint bonus. |
-| **Whip** | Party whip directive, gated by the NPP's loyalty and stubbornness. |
-| **District** | How the NPP's home-state demographics feel about the bill's selected policy option. |
-| **Donors** | Whether the NPP's donor base and stance align with the bill's direction. |
+| **Ideology** | How well the bill's direction matches the NPP's own stance on that issue. |
+| **Whip** | Party and caucus whips, scaled by the NPP's loyalty and stubbornness. |
+| **District** | How the NPP's home-state population feels about the selected policy option. |
+| **Donors** | The NPP's donor base (level 0 to 5) times the same policy alignment as ideology. |
 
-**Verdict rule:**
+The compliance scale is loyalty x 0.7 plus (1 minus stubbornness) x 0.3, so a fully loyal, unstubborn NPP feels the whole whip and a stubborn, disloyal one feels little of it. Only a near tie produces an abstention, so most NPPs vote decisively.
 
-- Sum > +5 → **For**
-- Sum < -5 → **Against**
-- Otherwise → **Abstain**
+![Four clamped forces sum into For, Against or Abstain for an NPP bloc, and a successful hard whip roll writes the vote directly.](/wiki-images/diagrams/voting-and-whips-four-forces.svg)
 
-Only near-tied cross-pressure produces abstain. Most NPPs vote decisively one way or the other.
+Votes are a sum of forces, not a dice roll, so you can read a chamber in advance and a whip matters most when the other forces are close. A whip that fights ideology, district and donors together will usually lose.
 
-**Multi-seat blocs:** An NPP holding multiple seats contributes their full \`seatsHeld\` weight to the tally. A bloc of 7 seats voting For adds 7 to the For count.
+### Reading a bloc
 
-**Catch-up:** Every turn, the system checks for NPPs that haven't voted yet on open bills and auto-assigns their vote. NPPs that gained seats after a bill opened will still vote before the bill closes.
+A 100 seat chamber. A bloc of 7 NPP seats has forces ideology +20, whip +30, district -10 and donors +5. The sum is +45, so the bloc votes For and adds 7 to the For count (a bloc counts its full seats). A second bloc has ideology -40, whip +30 (party hard whip), district -15, donors 0: sum -25, so it votes Against despite the whip. A third has +3, -4, +1, 0: sum 0, so it abstains.
 
-## Whip directives
+## Whipping
 
-Party whips can issue a directive telling members how to vote on a specific bill. Whip directives are set on the Congress or Parliament page by the party's designated whip.
+Whips come from leaders: your party's Chair or Vice Chair, or chamber leadership such as Speaker, majority or minority leader, or whip (see [Party Leadership](/wiki/party-leadership), where chair, vice chair and chamber leaders hold the seats that can issue the whips). State and regional party leaders whip NPPs in their own geography, and caucus leaders whip their own members. Leaders are elected as described on [Congress Leadership](/wiki/congress-leadership) and [Chamber Leadership](/wiki/chamber-leadership); in the US Congress the majority and minority whips are elected in the same leadership elections. At autonomy level 6, NPP-led governments whip their own members on bills that serve their goals (see [npp-autonomy](/wiki/npp-autonomy)).
 
-### How directives affect NPP votes
+- **Pick hard or soft.** A hard whip rolls once for each NPP and writes the vote immediately when the roll succeeds. A soft whip leaves the NPP deciding with extra pressure.
+- **Read the defiance watch** to see which members currently vote against your whip. It shows only live defiance and clears when the member comes back into line.
 
-**Hard whips** trigger an immediate hidden roll when issued:
+| Item | Value |
+| --- | --- |
+| Voting window | 24 hours |
+| Position shift per vote | Up to 0.25 per axis, once per bill |
+| Each force | Clamped to -100 to +100 |
+| NPP verdict | Sum above +5 is For, below -5 is Against, otherwise Abstain |
+| Hard whip base chance | 55%, plus mode bonus 15, loyalty and Statecraft bonuses, minus stubbornness |
+| Soft whip roll bonus | 6 (used only for votes beyond bills, such as leadership, nomination, confidence and impeachment votes) |
+| Whip success chance limits | 40% to 95% |
+| Whip pressure on NPP decision | Party hard 60, party soft 30, caucus 40, caucus core-position bonus 20, then scaled by the NPP's compliance |
+| Party-line lean (same party as sponsor, no whip) | 20, scaled by compliance |
 
-- The NPP has a base compliance chance of 55%, plus a loyalty bonus and a mode bonus (hard = +15, soft = +6), plus a small bonus from the whipping character's Statecraft, minus a stubbornness penalty.
-- Final chance is clamped between 40% and 95%.
-- If the roll succeeds, the NPP votes exactly as directed.
-- If the roll fails, the vote falls back to the deterministic **cross-pressure verdict** (ideology + district + donors).
+\`\`\`wiki-chart
+whip-success-by-loyalty
+\`\`\`
 
-**Soft whips** are advisory only. They do not immediately cast votes. Instead, the directive persists so that future autonomous NPP bill votes (including catch-up votes each turn) can see the whip as part of their cross-pressure calculation. Soft whips are weaker in magnitude than hard whips.
+For hard whip rolls: an NPP with loyalty 80 and stubbornness 40 scores 55 + round(80 x 0.35) - round(40 x 0.18) + 15 = 55 + 28 - 7 + 15 = 91%. Under a soft whip the roll does not decide the vote, so the same NPP just feels a 30-point pull scaled by compliance 0.8 x 0.7 plus 0.6 x 0.3 = 0.74.
 
-**Leadership votes** (leadership and speaker elections, cabinet and Supreme Court nominations, PM appointment votes, and confidence/no-confidence motions) are binding under a **hard** whip: same-party NPPs always fall in line and cannot defy the leadership directive. Only bill whips allow defiance. Under a **soft** whip these votes still use the hidden loyalty/stubbornness roll, and a resisting NPP falls back to a same-party / same-state heuristic.
+**Whips and players.** A whip never takes away a player's choice. A hard whip can write a vote for you, but you can change it. There is no automatic penalty for defying your party's whip: no infamy, no stat loss. The cost is political, through the trust of your leadership and your standing in your party.
 
-### Whipping player members
+## Votes beyond bills
 
-Whip directives don't force player members to vote any particular way: players always retain full choice. However, breaking from the whip when you're in leadership can affect your standing with the party.
+For votes on leadership elections, cabinet and Supreme Court nominations, prime minister appointment and confidence motions, a hard whip is binding on same-party NPPs. Under a soft whip they use the loyalty and stubbornness roll. Whips shape senators' votes on nominees for the [Supreme Court](/wiki/scotus), decide cabinet and court confirmations (see [Confirmation Process](/wiki/confirmation-process)), shape how NPP blocs vote at each [impeachment](/wiki/impeachment) stage, and on a confidence motion decide whether a government falls (see [No Confidence Votes](/wiki/no-confidence-votes)).
 
-## Party discipline
+Live in every world with a national legislature and parties. Leadership whips for the US Speaker and chamber leaders apply to player votes only; NPPs do not vote in US congressional leadership elections. German chambers do not use leadership election whips and use prime minister appointment and no-confidence whips instead.
 
-Party discipline in A House Divided is shaped by whip mechanics and NPP personality traits:
-
-1. **Whip directives** guide NPPs and signal players.
-2. **NPP loyalty and stubbornness** determine how reliably the bloc follows the whip. High-loyalty, low-stubbornness NPPs usually comply; stubborn NPPs are more likely to resist and fall back to their own cross-pressure verdict.
-
-There is no direct penalty for a player voting against their party's whip: no infamy, no stat deduction. The consequences play out through leadership trust and, if you drift from the platform through your votes, through your own primary alignment.
-
-## Abstentions and strategic voting
-
-Abstaining is sometimes the optimal play:
-
-- **Avoid a bad vote record.** Abstaining on a bill you oppose but can't afford to visibly fight leaves your record cleaner than a For vote you'd have to explain.
-- **Don't feed the opposition.** If a bill is going to fail anyway, voting Against adds nothing strategically and exposes your position.
-- **Protect swing-district NPPs.** If your party's NPP bloc holds marginal seats, consider a permissive directive (abstain-allowed) rather than forcing a hard For/Against that could cost them seats next election.
-
-## Viewing vote records
-
-Each bill's detail page shows live For / Against / Abstain percentages for both chambers. Individual vote choices are not shown publicly, only aggregate totals. Your own vote is always visible to you.
-
-## Related pages
-
-- [Bills & Legislation](/wiki/bills-legislation): full bill lifecycle from proposal to signature
-- [Congress Leadership](/wiki/congress-leadership): who controls the whip apparatus
-- [Committees](/wiki/committees): national party committees, chamber chairs, and the future bill-committee stage
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Party Whips design page](https://docs.lakesidegames.net/design/party-whips.html)
 `;

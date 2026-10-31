@@ -147,6 +147,8 @@ export interface StateBill {
   proposalNpiCost?: number;
   /** Action points spent to propose — refunded if bill passes */
   proposalActionCost?: number;
+  /** Requesting chair pays for an NPP-sponsored bill; absent on legacy bills. */
+  proposalPayerId?: ObjectId;
 
   // Veto messaging — set when the governor vetoes via the governor-action endpoint.
   /** Public message attached to a veto; 10-280 chars. */
@@ -155,7 +157,7 @@ export interface StateBill {
   vetoedAtTurn?: number;
 
   // Governor-queued bills — set when a bill was introduced via the legislation queue.
-  /** NPP that introduced this bill via the governor's legislation queue. */
+  /** NPP that introduced this bill through a governor or party chair. */
   sponsorNppId?: ObjectId;
   /** When set, this bill originated from the named governor's queue. */
   proposedByGovernor?: { characterId: ObjectId; name: string };

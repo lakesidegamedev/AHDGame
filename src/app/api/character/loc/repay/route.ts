@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `api/character/loc/repay:${auth.user.userId}`,
       SAVINGS_WALLET_LIMITS.maxRequests,
       SAVINGS_WALLET_LIMITS.windowMs
     );

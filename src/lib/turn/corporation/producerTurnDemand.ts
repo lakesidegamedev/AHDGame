@@ -638,29 +638,102 @@ export function legacyPnlBySectorId(
 /**
  * Plant preparation records labour demand, wage and automation indexes and
  * strike events into the environment it is given. The live turn persists those
- * collectors later, so the shadow must never write into them: it works on deep
- * copies and starts with no pending strikes.
+ * collectors later, so the shadow must never write into them: it works on
+ * copies of the collectors it mutates and starts with no pending strikes.
+ * Copying a collector is a shallow copy of its per-state accumulators, which is
+ * the whole of their state, and is cheaper than a generic deep clone.
  */
 export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv {
   return {
     ...env,
-    labourDemandByState: structuredClone(env.labourDemandByState),
-    labourDemandWageIndexByState: structuredClone(env.labourDemandWageIndexByState),
-    wageIndexByState: structuredClone(env.wageIndexByState),
-    automationIndexByState: structuredClone(env.automationIndexByState),
+    labourDemandByState: new Map(env.labourDemandByState),
+    labourDemandWageIndexByState: copyStateAccumulators(env.labourDemandWageIndexByState),
+    wageIndexByState: copyStateAccumulators(env.wageIndexByState),
+    automationIndexByState: copyStateAccumulators(env.automationIndexByState),
     pendingStrikeEvents: [],
     // The shadow measures the funded world, which buys advertising as an input.
     advertisingInput: true,
   };
 }
 
+/** A new map holding a copy of each state's accumulator, never the live one. */
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T>
+): Map<string, T>;
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T> | undefined
+): Map<string, T> | undefined;
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T> | undefined
+): Map<string, T> | undefined {
+  // structuredClone(undefined) was undefined; an absent collector stays absent.
+  if (!source) return undefined;
+  const copy = new Map<string, T>();
+  for (const [stateId, accumulator] of source) copy.set(stateId, { ...accumulator });
+  return copy;
+}
+
 /**
  * The live world has not had the producer opening conversion, so its sectors
  * carry no producer generation or inventory. For the shadow only, give each a
- * copy with an opening stamped on last turn: the stock and receipt the previous
+ * view with an opening stamped on last turn: the stock and receipt the previous
  * shadow turn left, or on a new run its existing stock carried as sellable
  * output. Never written back.
+ *
+ * The view is the projection plant preparation reads, not a copy of the whole
+ * document: a live sector also carries the telemetry of every prior turn, and
+ * copying all of that per sector was most of the shadow's document cost. Keep
+ * this list in step with `prepareProducerPhysicalSector` and the rules it
+ * calls; anything preparation reads that is not here arrives as undefined.
  */
+function preparationView(
+  sector: CorporateSector,
+  opening: Pick<
+    CorporateSector,
+    "capacityBookAnchor" | "buildQueue" | "producerCapacity" | "producerInventory"
+  > &
+    Partial<Pick<CorporateSector, "producerSettlement">>
+): CorporateSector {
+  return {
+    _id: sector._id,
+    corporationId: sector.corporationId,
+    countryId: sector.countryId,
+    stateId: sector.stateId,
+    sectorType: sector.sectorType,
+    industryModel: sector.industryModel,
+    mediaDiscriminator: sector.mediaDiscriminator,
+    strategyId: sector.strategyId,
+    transitionFromStrategyId: sector.transitionFromStrategyId,
+    transitionStartTurn: sector.transitionStartTurn,
+    retoolRescaleApplied: sector.retoolRescaleApplied,
+    capitalStock: sector.capitalStock,
+    capacityBookAnchor: opening.capacityBookAnchor,
+    buildQueue: opening.buildQueue,
+    mothballed: sector.mothballed,
+    activeCapacityPercent: sector.activeCapacityPercent,
+    producerCapacity: opening.producerCapacity,
+    producerInventory: opening.producerInventory,
+    producerQuotes: sector.producerQuotes,
+    pricingPosture: sector.pricingPosture,
+    pricingMode: sector.pricingMode,
+    producerSettlement: opening.producerSettlement ?? sector.producerSettlement,
+    labourStaffingFactor: sector.labourStaffingFactor,
+    wageLevel: sector.wageLevel,
+    unionization: sector.unionization,
+    workerExpectationIndex: sector.workerExpectationIndex,
+    representingUnionId: sector.representingUnionId,
+    strikeStartedAtTurn: sector.strikeStartedAtTurn,
+    strikeCooldownUntilTurn: sector.strikeCooldownUntilTurn,
+    soeMandate: sector.soeMandate,
+    nationalizedAtTurn: sector.nationalizedAtTurn,
+    nationalizationTransitionMultiplier: sector.nationalizationTransitionMultiplier,
+    productionPolicy: sector.productionPolicy,
+    productionPolicyLevel: sector.productionPolicyLevel,
+    cutoverTransition: sector.cutoverTransition,
+    cutoverStruggling: sector.cutoverStruggling,
+  } as CorporateSector;
+}
+
 export function shadowOpeningSector(
   sector: CorporateSector,
   worldEpoch: string,
@@ -669,8 +742,7 @@ export function shadowOpeningSector(
 ): CorporateSector {
   const opening = emptyProducerSectorOpening(worldEpoch, Math.max(0, turn - 1));
   if (carried)
-    return {
-      ...sector,
+    return preparationView(sector, {
       capacityBookAnchor: sector.capacityBookAnchor ?? 0,
       buildQueue: Array.isArray(sector.buildQueue) ? sector.buildQueue : [],
       producerCapacity: opening.producerCapacity,
@@ -679,8 +751,11 @@ export function shadowOpeningSector(
         inputStock: carried.inputStock,
         outputStock: carried.outputStock,
       },
-      producerSettlement: { ...carried.receipt, turn: turn - 1 },
-    } as CorporateSector;
+      producerSettlement: {
+        ...carried.receipt,
+        turn: turn - 1,
+      } as CorporateSector["producerSettlement"],
+    });
   if (sector.producerCapacity && sector.producerInventory) return sector;
   const outputStock = Object.entries(sector.inventoryUnits ?? {})
     .filter(([, units]) => typeof units === "number" && Number.isFinite(units) && units > 0)
@@ -691,11 +766,10 @@ export function shadowOpeningSector(
         ? `state:${sector.stateId}`
         : "world",
     }));
-  return {
-    ...sector,
+  return preparationView(sector, {
     capacityBookAnchor: sector.capacityBookAnchor ?? 0,
     buildQueue: Array.isArray(sector.buildQueue) ? sector.buildQueue : [],
     producerCapacity: opening.producerCapacity,
     producerInventory: { ...opening.producerInventory, outputStock },
-  };
+  });
 }

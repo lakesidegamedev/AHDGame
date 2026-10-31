@@ -8,6 +8,10 @@
  * resolves the Electoral College.
  */
 
+import {
+  PRESIDENTIAL_APPROVAL_VOTE_SLOPE,
+  approvalVoteMultiplier,
+} from "@/lib/electionEngine/approvalVoteMultiplier";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 /**
@@ -938,7 +942,8 @@ export async function accumulatePresidentVoteTurn(
     // result toward any party (see the homogeneity of distributeVotesBySwingFlow);
     // the incumbent's directional advantage comes from the approval-scaled
     // incumbency driver wired via `incumbentPartyId`/`incumbentApproval` below.
-    const strengthMultiplier = (1 + (approvalDecimal - 0.5) * 0.5) * officeStrength;
+    const strengthMultiplier =
+      approvalVoteMultiplier(approvalDecimal, PRESIDENTIAL_APPROVAL_VOTE_SLOPE) * officeStrength;
     // Cumulative ceiling per unit: the approval multiplier sits outside the
     // registered gate, so the closing surge could carry a state past its
     // registered electorate. Ballots already cast in this unit plus this

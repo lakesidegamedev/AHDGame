@@ -273,4 +273,35 @@ describe("POST /api/bonds/[bondId]/buyback", () => {
       }
     );
   });
+  it("refuses a buyback while a turn is settling bonds", async () => {
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    const { requireBasicAuth } = await import("@/lib/api/requireAuth");
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: true,
+      user: { userId: "user-1" },
+    } as never);
+    const now = new Date();
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      isProcessing: true,
+      processingStartedAt: now,
+      processingHeartbeatAt: now,
+      updatedAt: now,
+    });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/bonds/x/buyback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ units: 3 }),
+      }),
+      { params: Promise.resolve({ bondId: new ObjectId().toString() }) }
+    );
+
+    expect(response.status).toBe(409);
+    expect(db.collectionMocks.bonds.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+  });
 });

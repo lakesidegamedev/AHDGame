@@ -151,14 +151,14 @@ describe("regional employment accounting", () => {
   it("fills company openings within a few turns when jobseekers are plentiful (ticket 1628)", () => {
     const settled = project(input({ matchingFriction: 12, corporateDemand: 20_000 }), 480);
     let result = settled;
-    for (let i = 0; i < 8; i++)
+    for (let i = 0; i < 2; i++)
       result = advanceEmployment({
         ...input({ matchingFriction: 12, corporateDemand: 60_000 }),
         turn: settled.state.lastTurn + 1 + i,
         unemployment: result.unemployment,
         previous: result.state,
       });
-    // Half of the gap closes every two turns at average skill.
+    // Half of the gap closes every half turn at average skill.
     expect(result.state.corporateEmployed / 60_000).toBeGreaterThan(0.9);
   });
 

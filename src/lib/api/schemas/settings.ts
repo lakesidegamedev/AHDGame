@@ -1,3 +1,12 @@
+import { DESKTOP_NAVIGATION_LAYOUTS } from "@/lib/navigation/desktopNavigationLayout";
+import { MOBILE_NAVIGATION_LAYOUTS } from "@/lib/navigation/mobileNavigationLayout";
+import {
+  MAX_TRAY_WIDGETS,
+  WIDGET_KEY_PATTERN,
+  WIDGET_MENUS,
+} from "@/lib/sidebarWidgets/widgetCatalog";
+import { MAX_WATCHLIST, WATCH_ID_PATTERNS } from "@/lib/sidebarWidgets/watchlist";
+import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
 import { getAllDemographicCategoryKeys } from "@/lib/demographics/countryDemographics";
@@ -143,6 +152,78 @@ export const campaignSongSchema = z.object({
 export const experimentalUiSchema = z.object({
   enableExperimentalUI: z.boolean(),
 });
+
+const NAV_ID = /^[A-Za-z0-9._:-]+$/;
+
+export const experimentalFeaturesSchema = z
+  .object({
+    experimentalFeatures: z.boolean().optional(),
+    desktopNavigationLayout: z.enum(DESKTOP_NAVIGATION_LAYOUTS).optional(),
+    mobileNavigationLayout: z.enum(MOBILE_NAVIGATION_LAYOUTS).optional(),
+    widgetLayout: z
+      .object({
+        tray: z.array(z.string().regex(WIDGET_KEY_PATTERN).max(40)).max(MAX_TRAY_WIDGETS),
+        nav: z
+          .object(
+            Object.fromEntries(
+              WIDGET_MENUS.map((menu) => [
+                menu,
+                z.string().regex(WIDGET_KEY_PATTERN).max(40).optional(),
+              ])
+            )
+          )
+          .strict(),
+      })
+      .optional(),
+    widgetTrayOpen: z.boolean().optional(),
+    widgetWatchlist: z
+      .array(
+        z.discriminatedUnion("kind", [
+          z
+            .object({
+              kind: z.literal("corporation"),
+              id: z.string().regex(WATCH_ID_PATTERNS.corporation),
+            })
+            .strict(),
+          z
+            .object({
+              kind: z.literal("commodity"),
+              id: z.string().regex(WATCH_ID_PATTERNS.commodity),
+            })
+            .strict(),
+        ])
+      )
+      .max(MAX_WATCHLIST)
+      .optional(),
+    askDrawerSide: z.enum(["left", "right"]).optional(),
+    askDrawerHidden: z.boolean().optional(),
+    navCustomization: z
+      .object({
+        pinned: z.array(z.string().regex(NAV_ID).max(80)).max(MAX_NAV_PINS),
+        order: z
+          .record(
+            z.string().regex(NAV_ID).max(80),
+            z.array(z.string().regex(NAV_ID).max(80)).max(60)
+          )
+          .refine((order) => Object.keys(order).length <= 40, "Too many groups"),
+      })
+      .optional(),
+  })
+  .refine(
+    (v) =>
+      v.experimentalFeatures !== undefined ||
+      v.askDrawerSide !== undefined ||
+      v.askDrawerHidden !== undefined ||
+      v.navCustomization !== undefined ||
+      v.desktopNavigationLayout !== undefined ||
+      v.mobileNavigationLayout !== undefined ||
+      v.widgetLayout !== undefined ||
+      v.widgetTrayOpen !== undefined ||
+      v.widgetWatchlist !== undefined,
+    {
+      message: "Nothing to update",
+    }
+  );
 
 export const autoRunForReelectionSchema = z.object({
   autoRunForReelection: z.boolean(),

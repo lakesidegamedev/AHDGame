@@ -1,3 +1,7 @@
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+} from "@/lib/budget/stockSaleWithholding";
 import { ObjectId } from "mongodb";
 import {
   holdingCostBasis,
@@ -798,6 +802,11 @@ export async function fillPendingShareOrders(
       .project<{ _id: ObjectId; countryId: string }>({ _id: 1, countryId: 1 })
       .toArray();
     const charCountryMap = new Map(adjChars.map((c) => [c._id.toString(), c.countryId]));
+    const withholdingContexts = await loadStockWithholdingContexts(
+      db,
+      adjCharIds.map((id) => ({ id, collection: "characters" as const })),
+      turn
+    );
     const receiptsByCharacter = new Map<string, PendingStockTaxReceipt[]>();
     if (holdingTaxActive)
       for (const fill of historyEmits) {
@@ -809,17 +818,20 @@ export async function fillPendingShareOrders(
         const proceedsAnchor = fill.shares * fill.pricePerShareAnchor;
         const receipts = receiptsByCharacter.get(id) ?? [];
         receipts.push(
-          pendingStockTaxReceipt({
-            id: fill.taxCreditId,
-            currencyCode: currency,
-            holdingTerms: fill.sellerHoldingTerms,
-            proceedsAnchor,
-            proceedsCredited: forexEnabled
-              ? proceedsAnchor * (fxByCurrency.get(currency) ?? 1)
-              : proceedsAnchor,
-            saleTurn: turn,
-            assessmentTurn: turn,
-          })
+          withholdStockReceipt(
+            pendingStockTaxReceipt({
+              id: fill.taxCreditId,
+              currencyCode: currency,
+              holdingTerms: fill.sellerHoldingTerms,
+              proceedsAnchor,
+              proceedsCredited: forexEnabled
+                ? proceedsAnchor * (fxByCurrency.get(currency) ?? 1)
+                : proceedsAnchor,
+              saleTurn: turn,
+              assessmentTurn: turn,
+            }),
+            withholdingContexts.get("characters:" + id)
+          )
         );
         receiptsByCharacter.set(id, receipts);
       }
@@ -832,13 +844,19 @@ export async function fillPendingShareOrders(
         COUNTRY_CURRENCY_MAP[countryId as keyof typeof COUNTRY_CURRENCY_MAP] ?? "USD";
       const rate = fxByCurrency.get(currency) ?? 1.0;
       const amountInCurrency = forexEnabled ? amountAnchor * rate : amountAnchor;
+      const receipts = receiptsByCharacter.get(charIdStr);
+      const netAmount =
+        amountInCurrency -
+        (receipts ?? []).reduce(
+          (sum, receipt) => sum + (receipt.withholding?.walletAmount ?? 0),
+          0
+        );
       const operation = buildPersonalBalanceBulkOp(
         new ObjectId(charIdStr),
-        amountInCurrency,
+        netAmount,
         currency,
         forexEnabled
       );
-      const receipts = receiptsByCharacter.get(charIdStr);
       return {
         updateOne: {
           ...operation.updateOne,

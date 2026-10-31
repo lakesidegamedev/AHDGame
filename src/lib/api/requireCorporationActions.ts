@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Db } from "mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { errorResponse } from "@/lib/api/errors";
+import { corporationActionsPause } from "@/lib/corporations/corporationActionsPause";
 
 /**
  * Full-game pause gate (`gameState.isActive === false`): admin stop, auto-drift
@@ -41,13 +42,6 @@ export async function requireCorporationActionsEnabled(db: Db): Promise<NextResp
     { projection: { corporationActionsPaused: 1, processingKind: 1 } }
   );
 
-  if (gameState?.processingKind === "stockTaxMigration")
-    return errorResponse(409, "Stock holding maintenance is in progress, try again shortly.");
-  if (gameState?.processingKind === "economyReset")
-    return errorResponse(409, "Economy maintenance is in progress, try again shortly.");
-  if (gameState?.corporationActionsPaused) {
-    return errorResponse(403, "Corporation actions are currently paused by an admin");
-  }
-
-  return null;
+  const pause = corporationActionsPause(gameState);
+  return pause ? errorResponse(pause.status, pause.message) : null;
 }

@@ -5,21 +5,28 @@
  *  A. NPP senator votes on active nominations (party-line preference)
  *  B. Close expired votes and resolve confirmed/rejected
  */
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
+
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
 import { isDirectAppointmentSeat } from "@/lib/constants/cabinetMechanics";
 import { didPass } from "@/lib/billLifecycleHelpers";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getGameState } from "@/lib/gameState";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { expireLapsedActingAppointments } from "@/lib/cabinet/actingExpiry";
+import {
+  CABINET_NOMINATION_CHOICE_TURNS,
+  expireUnansweredCabinetNominationChoices,
+} from "@/lib/cabinetNominationChoice";
 import type {
   CabinetNomination,
+  CabinetNominationRejectionReason,
   CabinetMember,
   ElectedOfficial,
   NPP,
@@ -284,6 +291,10 @@ export async function processCabinetNominationLifecycle(
   const gameState = await getGameState();
   const currentTurn = gameState?.currentTurn ?? 1;
 
+  // Offers the nominee did not answer return the seat to the President. Run
+  // before the expiry pass so a lapsed offer is final before anything seats.
+  await expireUnansweredCabinetNominationChoices(db, now, currentTurn);
+
   // Pre-fetch US NPP officials and NPPs once. This preload is US-scoped and is
   // ONLY reused for US nominations below; non-US nominations (e.g. NG) resolve
   // their own country-scoped NPP officials/president inside castNPPCabinetVotes
@@ -386,7 +397,16 @@ export async function processCabinetNominationLifecycle(
       .map((member) => [`${member.countryId}:${member.characterId!.toString()}`, member])
   );
 
+  const bankHolders = await getIncompatibleOfficeHolders(
+    db,
+    "cabinet",
+    expired
+      .filter((n) => n.positionId !== "vicePresident")
+      .flatMap((n) => (n.nomineeCharacterId ? [n.nomineeCharacterId] : []))
+  );
   const notificationInputs: NotificationInput[] = [];
+
+  const nominationUpdates: AnyBulkWriteOperation<CabinetNomination>[] = [];
 
   for (const nom of expired) {
     // Decide from the seat-weighted recompute scoped to the country's current
@@ -418,7 +438,76 @@ export async function processCabinetNominationLifecycle(
       passed = didPass(reTally.votesFor, reTally.votesAgainst);
     }
 
-    if (passed) {
+    const blockedByBankOffice =
+      !isVpNomination &&
+      !!nom.nomineeCharacterId &&
+      bankHolders.has(nom.nomineeCharacterId.toString());
+    // Remember the ballot result: a winner blocked only by a bank office is
+    // offered the seat instead of being rejected outright (ticket #1713).
+    const votePassed = passed;
+    if (blockedByBankOffice) passed = false;
+
+    // Both branches notify the same two people, so read each once per
+    // nomination and share the call site: a duplicated read here counts as a
+    // new per-row Mongo operation in the turn-code architecture review.
+    const presidentChar = await db
+      .collection<Character>("characters")
+      .findOne({ _id: nom.proposedByPresidentId });
+    const nomineeChar = nom.nomineeCharacterId
+      ? await db.collection<Character>("characters").findOne({ _id: nom.nomineeCharacterId })
+      : null;
+    const posName = isVpNomination
+      ? "Vice President"
+      : (getCabinetPositionById(nom.positionId)?.name ?? nom.positionId);
+    const isSameAsPresident =
+      !!nomineeChar && nomineeChar._id.toString() === nom.proposedByPresidentId.toString();
+    const offerSeatTo = votePassed && blockedByBankOffice ? nomineeChar : null;
+
+    if (offerSeatTo?.userId) {
+      // The Senate passed it, but the nominee holds a bank office. Offer the
+      // choice rather than voiding the appointment behind their back.
+      nominationUpdates.push({
+        updateOne: {
+          filter: { _id: nom._id },
+          update: {
+            $set: {
+              status: "awaiting_choice",
+              choiceOfferedAt: now,
+              choiceExpiresOnTurn: currentTurn + CABINET_NOMINATION_CHOICE_TURNS,
+              updatedAt: now,
+              votesFor: reTally.votesFor,
+              votesAgainst: reTally.votesAgainst,
+              votesAbstain: reTally.votesAbstain,
+            },
+          },
+        },
+      });
+
+      notificationInputs.push({
+        userId: offerSeatTo.userId,
+        type: "system",
+        title: "Cabinet Seat Offered",
+        message: `The Senate passed your nomination for ${posName}, but you hold a central bank office that cannot be combined with a cabinet seat. Choose whether to take the seat and give up that office, or stay where you are.`,
+        metadata: {
+          nominationId: nom._id.toString(),
+          type: "cabinet_choice_offered",
+          recipientCharacterId: offerSeatTo._id.toString(),
+        },
+      });
+      if (presidentChar?.userId && !isSameAsPresident) {
+        notificationInputs.push({
+          userId: presidentChar.userId,
+          type: "system",
+          title: "Cabinet Seat Offered",
+          message: `${nom.nomineeCharacterName} won the Senate vote for ${posName} but holds a central bank office, so they have been asked to choose between the seat and that office.`,
+          metadata: {
+            nominationId: nom._id.toString(),
+            type: "cabinet_choice_offered",
+            recipientCharacterId: presidentChar._id.toString(),
+          },
+        });
+      }
+    } else if (passed) {
       // VP nominations seat the character as VP; all other positions create a CabinetMember.
       if (nom.positionId === "vicePresident") {
         await seatConfirmedVicePresident(db, nom, now, currentTurn);
@@ -568,16 +657,6 @@ export async function processCabinetNominationLifecycle(
       );
 
       // Notify President and nominee
-      const presidentChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: nom.proposedByPresidentId });
-      const nomineeChar = nom.nomineeCharacterId
-        ? await db.collection<Character>("characters").findOne({ _id: nom.nomineeCharacterId })
-        : null;
-      const isVpNomination = nom.positionId === "vicePresident";
-      const posName = isVpNomination
-        ? "Vice President"
-        : (getCabinetPositionById(nom.positionId)?.name ?? nom.positionId);
       const confirmTitle = isVpNomination ? "VP Confirmed" : "Cabinet Confirmed";
       if (presidentChar?.userId) {
         notificationInputs.push({
@@ -592,7 +671,7 @@ export async function processCabinetNominationLifecycle(
           },
         });
       }
-      if (nomineeChar?.userId && !nomineeChar._id.equals(nom.proposedByPresidentId)) {
+      if (nomineeChar?.userId && !isSameAsPresident) {
         notificationInputs.push({
           userId: nomineeChar.userId,
           type: "system",
@@ -606,47 +685,76 @@ export async function processCabinetNominationLifecycle(
         });
       }
     } else {
-      // Rejected
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
-        { _id: nom._id },
-        {
-          $set: {
-            status: "rejected",
-            rejectedAt: now,
-            updatedAt: now,
-            votesFor: reTally.votesFor,
-            votesAgainst: reTally.votesAgainst,
-            votesAbstain: reTally.votesAbstain,
-            ...(nom.positionId === "vicePresident" && {
-              houseVotesFor: reTally.houseVotesFor,
-              houseVotesAgainst: reTally.houseVotesAgainst,
-              houseVotesAbstain: reTally.houseVotesAbstain,
-            }),
+      // Rejected — either at the ballot or because the nominee took an office
+      // that cannot be held with a cabinet seat while the vote was open. The
+      // reason is recorded and sent to the nominee as well as the president:
+      // a nominee who won the vote must not learn of the outcome from an empty
+      // seat and no notice (ticket #1713).
+      const rejectionReason: CabinetNominationRejectionReason = blockedByBankOffice
+        ? "incompatible_bank_office"
+        : "senate_vote";
+      nominationUpdates.push({
+        updateOne: {
+          filter: { _id: nom._id },
+          update: {
+            $set: {
+              status: "rejected",
+              rejectedAt: now,
+              updatedAt: now,
+              rejectionReason,
+              votesFor: reTally.votesFor,
+              votesAgainst: reTally.votesAgainst,
+              votesAbstain: reTally.votesAbstain,
+              ...(nom.positionId === "vicePresident" && {
+                houseVotesFor: reTally.houseVotesFor,
+                houseVotesAgainst: reTally.houseVotesAgainst,
+                houseVotesAbstain: reTally.houseVotesAbstain,
+              }),
+            },
           },
-        }
-      );
+        },
+      });
 
-      const isVpRejection = nom.positionId === "vicePresident";
-      const posName = isVpRejection
-        ? "Vice President"
-        : (getCabinetPositionById(nom.positionId)?.name ?? nom.positionId);
-      const presidentChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: nom.proposedByPresidentId });
+      const rejectionTitle = isVpNomination
+        ? "VP Nomination Rejected"
+        : "Cabinet Nomination Rejected";
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
           type: "system",
-          title: isVpRejection ? "VP Nomination Rejected" : "Cabinet Nomination Rejected",
-          message: `${nom.nomineeCharacterName} was not confirmed for ${posName}.`,
+          title: rejectionTitle,
+          message: blockedByBankOffice
+            ? `${nom.nomineeCharacterName} was not confirmed for ${posName}: the Senate vote passed, but they held a central bank office at the time, which cannot be combined with a cabinet seat.`
+            : `${nom.nomineeCharacterName} was not confirmed for ${posName}.`,
           metadata: {
             nominationId: nom._id.toString(),
-            type: isVpRejection ? "vp_rejected" : "cabinet_rejected",
+            type: isVpNomination ? "vp_rejected" : "cabinet_rejected",
             recipientCharacterId: presidentChar._id.toString(),
+            rejectionReason,
+          },
+        });
+      }
+      if (nomineeChar?.userId && !isSameAsPresident) {
+        notificationInputs.push({
+          userId: nomineeChar.userId,
+          type: "system",
+          title: rejectionTitle,
+          message: blockedByBankOffice
+            ? `You were not confirmed for ${posName}: the Senate vote passed, but chairing a central bank or holding a Federal Reserve board seat cannot be combined with a cabinet office.`
+            : `You were not confirmed for ${posName}.`,
+          metadata: {
+            nominationId: nom._id.toString(),
+            type: isVpNomination ? "vp_rejected" : "cabinet_rejected",
+            recipientCharacterId: nomineeChar._id.toString(),
+            rejectionReason,
           },
         });
       }
     }
+  }
+
+  if (nominationUpdates.length > 0) {
+    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(nominationUpdates);
   }
 
   await createNotifications(notificationInputs);

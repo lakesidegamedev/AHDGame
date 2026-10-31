@@ -1,4 +1,3 @@
-import { getAllVoterArchetypeOptions } from "@/lib/demographics/countryDemographics";
 import { getAllTurnoutTargetOptions } from "@/lib/demographics/turnoutTargets";
 
 export const POLICY_DOMAINS = [
@@ -95,13 +94,6 @@ export const METRIC_OPTIONS: Record<string, string[]> = {
     "stateMediaControl",
   ],
 };
-
-/**
- * Voter archetypes, kept ONLY to resolve a display name for data already
- * authored against them (`archetypeApprovals` on existing bills). Nothing new
- * is authored against this list. See `DEMOGRAPHIC_BUCKETS` below.
- */
-export const DEMOGRAPHIC_GROUPS = getAllVoterArchetypeOptions();
 
 /**
  * Census buckets for demographic targeting: the vocabulary the electorate is

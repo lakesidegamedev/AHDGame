@@ -16,7 +16,7 @@ import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { resignExecutiveOffice } from "@/lib/elections/resignExecutiveOffice";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { vacateCommonsSeat } from "@/lib/uk/elections/commonsVacancyShell";
 import { preserveSurvivingCabinetRow } from "@/lib/uk/dualMinistry/survivor";

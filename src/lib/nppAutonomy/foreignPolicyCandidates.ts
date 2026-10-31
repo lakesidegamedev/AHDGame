@@ -20,7 +20,7 @@ import {
   type ForeignPolicyContext,
 } from "./foreignPolicyShared";
 
-export function candidate(
+function candidate(
   type: ForeignPolicyActionType,
   score: number,
   reasons: string[],

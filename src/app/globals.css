@@ -1655,3 +1655,91 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   --corp-cat-5: #eda100;
   --corp-cat-6: #e87ba4;
 }
+
+/* Ask drawer research deck: the last three steps fanned like cards. */
+.ask-deck-card {
+  position: absolute;
+  inset: 4px auto auto 8px;
+  display: flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transform-origin: bottom left;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+.ask-deck-card[data-pos="0"] {
+  z-index: 3;
+  animation: ask-deck-in 0.35s ease-out;
+}
+.ask-deck-card[data-pos="1"] {
+  z-index: 2;
+  opacity: 0.7;
+  transform: rotate(-11deg);
+}
+.ask-deck-card[data-pos="2"] {
+  z-index: 1;
+  opacity: 0.45;
+  transform: rotate(-20deg);
+}
+.ask-deck-running::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  border-top-color: currentColor;
+  animation: ask-deck-spin 1.1s linear infinite;
+}
+.ask-shimmer {
+  animation: ask-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes ask-deck-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) rotateX(-70deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ask-deck-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ask-shimmer {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ask-deck-card,
+  .ask-deck-running::after,
+  .ask-shimmer {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Experimental page decode (`Settings > Experimental features`).
+   ascii-reveal reads these custom properties from the wrapper it draws into,
+   so the glyph grid uses the site's monospace face and red accent instead of
+   the library defaults. */
+.ascii-reveal-host {
+  --ascii-font: var(--font-geist-mono), ui-monospace, monospace;
+  --ascii-accent: var(--primary);
+}
+
+/* Phone navigation dock (MobileDock): the fixed StatusBar rides directly above
+   it. The dock already pads for the home indicator, so the bar drops its own. */
+@media (max-width: 1023.98px) {
+  html[data-mobile-dock] [data-statusbar] {
+    bottom: var(--mobile-dock-height, 0px);
+    padding-bottom: 0;
+  }
+}

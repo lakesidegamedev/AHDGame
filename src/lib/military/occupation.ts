@@ -163,7 +163,7 @@ export interface ShiftInput {
  * dated. Clamped at both ends: a negative age (clock skew, a repaired document)
  * reads as turn zero rather than reversing the front.
  */
-export function mobilizationFactor(turnsElapsed?: number): number {
+function mobilizationFactor(turnsElapsed?: number): number {
   // NON-FINITE IS "UNKNOWN", and the guard is not theoretical. `startTurn` is typed
   // required on `ConflictDoc`, but a document written before it existed does not have
   // one, and `currentTurn - undefined` is NaN. That NaN multiplied straight through

@@ -14,7 +14,7 @@ import Image from "next/image";
 import { UniversalSearch } from "@/components/UniversalSearch";
 import { Avatar } from "@/components/Avatar";
 import { CountryFlag } from "@/components/CountryFlag";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import {
   countryUrl,

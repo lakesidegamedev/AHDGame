@@ -3,28 +3,13 @@
 import dynamic from "next/dynamic";
 import { RegionTabNav, type SuperTabId } from "./state/RegionTabNav";
 import type { StatePageTabsProps } from "./state/StatePageTabsTypes";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import { partiesUrl } from "@/lib/urls";
 import { makeUSPartyFlavor, compareUSParties } from "@/components/region/regionPartiesUSFlavor";
-import { CardSkeleton, Skeleton, StatGridSkeleton } from "@/components/ui";
+import { TabFallback } from "@/components/state/TabFallback";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
-
-// Generic tab-chunk fallback: stat grid + content card silhouette, sized to
-// roughly the shortest loaded tab so the page doesn't collapse then jump.
-const TabFallback = () => (
-  <div className="min-h-[24rem] space-y-4">
-    <StatGridSkeleton cols={2} count={4} />
-    <CardSkeleton>
-      <Skeleton className="h-5 w-48 mb-4" />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-5/6" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-    </CardSkeleton>
-  </div>
-);
 
 const OverviewTab = dynamic(
   () => import("./state/StatePageTabsOverview").then((m) => ({ default: m.OverviewTab })),
@@ -153,7 +138,8 @@ export function StatePageTabs({
       }
       if (subTab === "parties") {
         const stateCountryId = state.countryId as CountryId;
-        const regionNoun = COUNTRY_CONFIGS[stateCountryId]?.regionLabel.toLowerCase() ?? "region";
+        const regionNoun =
+          getCountryRegionLabels(stateCountryId)?.singular.toLowerCase() ?? "region";
         const sharedConfig = {
           regionNoun,
           emptyStateLink: {
@@ -251,6 +237,7 @@ export function StatePageTabs({
             countryId={state.countryId}
             regionParties={regionParties}
             bucketProfile={bucketProfile}
+            isAdmin={isAdmin}
           />
         );
       }

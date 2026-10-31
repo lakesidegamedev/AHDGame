@@ -66,8 +66,8 @@ export async function POST(request: Request) {
     if (!minister.ok) return minister.response;
 
     // Charge one cabinet action when a seated trade minister acts (not for an
-    // admin override or a head-of-government fallback on a vacant seat — neither
-    // draws on a ministerial action pool). Refunded if the embargo is rejected.
+    // admin override, which does not draw on a ministerial action pool). Refunded
+    // if the embargo is rejected.
     const seatPositionId = TRADE_MINISTER_POSITION_BY_COUNTRY[sourceCountry];
     const charging = seatPositionId != null && minister.auth.positionId === seatPositionId;
     const membersCol = getCabinetMembersCollection(db);

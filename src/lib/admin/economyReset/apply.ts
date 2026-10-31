@@ -21,6 +21,7 @@ import { collectBalances } from "@/lib/ledger/balanceSnapshot";
 import { LEDGER_ENTRIES_COLLECTION, finalizeLedgerEntry } from "@/lib/ledger/emit";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "@/lib/banking/fundedSovereignCoupons";
+import { seedOutputTrend } from "@/lib/metricEngine/outputTrend";
 import { MIGRATIONS } from "@/lib/migrations/registry";
 import { runMigrations } from "@/lib/migrations/runner";
 import {
@@ -34,6 +35,11 @@ import {
   captureEconomyResetPlan,
 } from "./census";
 import { economyResetObjectId } from "./digest";
+import {
+  CENTRAL_BANK_HISTORY_RESET,
+  FRESH_PLANTS_GAME_STATE_TURN_ANCHORS,
+  freshPlantsGameConfigUpdate,
+} from "./freshWorldConfig";
 import { loadEconomyResetPlan, storeEconomyResetPlan } from "./planStore";
 import { isPrivateMaturityLeg, keptCouponHolders } from "./rules/bonds";
 import { primaryLegTotals, witnessDeltas, witnessEntry } from "./rules/ledger";
@@ -42,6 +48,7 @@ import {
   ECONOMY_RESET_FUND_MIGRATIONS,
   ECONOMY_RESET_INDEX_MIGRATIONS,
   reseedCountryOwnedCorporations,
+  loadDissolvedFederations,
 } from "./reseed";
 import {
   ECONOMY_RESET_PHASES,
@@ -52,8 +59,11 @@ import {
 
 type Log = (message: string) => void;
 
-/** Sector-derived region caches; the macro state (capitalStock, outputGap) is kept. */
-export const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
+/**
+ * Sector-derived region caches. The macro level (gdp, capitalStock) is kept;
+ * the output trend is re-seeded in the unset phase.
+ */
+const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
   "sectorRealizedRevenue",
   "sectorRealizedRevenueTurn",
   "sectorRealizedRevenueUnit",
@@ -64,18 +74,8 @@ export const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
   "corpGrowthInvestmentAnchor",
   "corpGrowthInvestmentTurn",
   "topSectorsCache",
-]);
-
-/** Market stamps anchored to the wiped producer economy. Configuration knobs stay. */
-export const GAME_CONFIG_MARKET_UNSET_FIELDS: readonly string[] = Object.freeze([
-  "producerMarketLiveFromTurn",
-  "marketGuardReferenceMcap",
-  "marketGuardReferenceFundamentalMcap",
-  "marketGuardReferenceTurn",
-  "marketGuardTrippedAt",
-  "marketGovernorGlideStartTurn",
-  "marketGovernorGlideMode",
-  "marketGovernorGlideFloor",
+  // Legacy potential-anchored gap kept for the measured-growth blend.
+  "legacyOutputGap",
 ]);
 
 const WRITE_CHUNK = 1000;
@@ -162,6 +162,11 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
     },
     { $unset: { ...NPP_MONEY_UNSET } }
   );
+  // Executive track records are the margins of companies the reset deletes;
+  // they set NPP CEO pay demands and who is picked as CEO.
+  await db
+    .collection("npps")
+    .updateMany({ ceoTrackRecord: { $exists: true } }, { $unset: { ceoTrackRecord: "" } });
   await db
     .collection("npps")
     .updateMany(
@@ -356,6 +361,9 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
     });
   }
   await bulk(db, "federalBudget", ops);
+  // The fiscal scale measured the economy the reset deletes; it restarts from
+  // the rebuilt economy's first funded turn.
+  await db.collection("federalBudget").updateMany({}, { $unset: { fiscalScale: "" } });
   await db.collection("playerIncomeTaxAssessments").deleteMany(VOIDED_INCOME_TAX_FILTER);
 }
 
@@ -388,20 +396,134 @@ async function phaseWipe(db: Db): Promise<void> {
   }
 }
 
-async function phaseUnset(db: Db): Promise<void> {
-  await gameState(db).updateOne(
-    { _id: "current" },
-    { $unset: { producerOpening: "", lastMarketTickAt: "" } }
-  );
+async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
+  await gameState(db).updateOne({ _id: "current" }, {
+    $unset: { producerOpening: "", lastMarketTickAt: "" },
+    $set: Object.fromEntries(
+      FRESH_PLANTS_GAME_STATE_TURN_ANCHORS.map((field) => [field, plan.currentTurn])
+    ),
+  } as never);
+  // The rebuilt plants start from fresh-world configuration: gameplay flags on,
+  // and no governor, recovery stage, funded lever or turn stamp from the old economy.
   await db
-    .collection("gameConfig")
-    .updateOne(
-      { _id: "default" as never },
-      { $unset: Object.fromEntries(GAME_CONFIG_MARKET_UNSET_FIELDS.map((f) => [f, ""])) }
-    );
+    .collection<Document>("gameConfig")
+    .updateOne({ _id: "default" as never }, freshPlantsGameConfigUpdate() as never);
   await db
     .collection("states")
     .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
+  await reseedOutputTrends(db);
+  // Pension schemes are on the owner keep-list, but each belongs to a union and
+  // the unions are wiped. The holders phase has already converted every
+  // scheme's fund units to cash, so an empty scheme left pointing at a deleted
+  // union only keeps cutting benefits and piling up unpaid claims every turn.
+  await db.collection("pensionSchemes").deleteMany({ assetsAnchor: { $lte: 0 } });
+  // Cumulative extraction by the old economy's mines. Kept, it shortens every
+  // reserve's life for plants that never extracted from it.
+  await db
+    .collection("stateResourceCapacity")
+    .updateMany({ extractedUnits: { $exists: true } }, { $unset: { extractedUnits: "" } });
+  // Unions are wiped and reseeded vacant, so no character can still cache
+  // leadership of a union that no longer exists. Leaving it set would also
+  // block them from founding or taking another union (`foundUnion` 409s while
+  // `unionLeaderOf` is non-null) until a later read path repaired it.
+  await db
+    .collection("characters")
+    .updateMany({ unionLeaderOf: { $ne: null } }, { $set: { unionLeaderOf: null } });
+  // Each region's employment ledger fixes its corporate job share the first
+  // time corporate demand is measured and never revisits it. Kept across a
+  // reset, the old economy's share (up to 99% of a state's workforce) stays
+  // reserved for jobs the rebuilt plants do not offer, and those workers sit
+  // unemployed indefinitely. Marking demand unknown makes the next metric pass
+  // re-baseline the share from the rebuilt plants' real demand.
+  await db
+    .collection("macroMetrics")
+    .updateMany(
+      { "labourEmployment.corporateDemandKnown": true },
+      { $set: { "labourEmployment.corporateDemandKnown": false } }
+    );
+}
+
+/**
+ * Each region's output trend restarts where a fresh region's does
+ * (`seedOutputTrend`): at its current measured growth, with no gap. The old
+ * economy's trend (up to 13% a year) would otherwise read the rebuilt plants
+ * as a deep slump, which feeds unemployment, migration, inflation and rates.
+ */
+async function reseedOutputTrends(db: Db): Promise<void> {
+  const states = await db
+    .collection<Document>("states")
+    .find({}, { projection: { _id: 1 } })
+    .toArray();
+  const metrics = await db
+    .collection<Document>("macroMetrics")
+    .find(
+      { _id: { $in: states.map((state) => state._id) } },
+      { projection: { "economic.sectorGrowth.value": 1, "economic.gdpGrowth.value": 1 } }
+    )
+    .toArray();
+  const growthById = new Map<string, number>();
+  for (const m of metrics) {
+    const growth = m.economic?.sectorGrowth?.value ?? m.economic?.gdpGrowth?.value;
+    if (typeof growth === "number" && Number.isFinite(growth))
+      growthById.set(String(m._id), growth);
+  }
+  await bulk(
+    db,
+    "states",
+    states.map((state) => {
+      const growth = growthById.get(String(state._id));
+      if (growth === undefined)
+        return {
+          updateOne: {
+            filter: { _id: state._id },
+            update: { $set: { outputGap: 0 }, $unset: { outputTrendGrowth: "" } },
+          },
+        };
+      const trend = seedOutputTrend(growth);
+      return {
+        updateOne: {
+          filter: { _id: state._id },
+          update: { $set: { outputGap: trend.gap, outputTrendGrowth: trend.trendGrowth } },
+        },
+      };
+    })
+  );
+}
+
+/**
+ * Current prices and exchange rates back to their seed values, and the central
+ * banks' per-turn series cleared. Chairs, boards, policy rates, reserves and
+ * the external money baseline stay. Runs after the witness so the revaluation
+ * of kept local balances is never written up as created or destroyed money.
+ */
+async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Promise<void> {
+  const { seedCommodityPrices } = await import("@/lib/admin/seed/seedCommodityPrices");
+  await seedCommodityPrices(db, true, log, plan.preset);
+  // A federation that dissolved may have moved to a new currency; the seed
+  // table only knows the preset's opening one, so the live code is kept.
+  const dissolved = await loadDissolvedFederations(db, plan.preset);
+  const liveCodes = await db
+    .collection<{ _id: string; currencyCode: string }>("exchangeRates")
+    .find({ _id: { $in: dissolved } }, { projection: { currencyCode: 1 } })
+    .toArray();
+  await db.collection("exchangeRates").deleteMany({});
+  await db
+    .collection("centralBanks")
+    .updateMany({}, { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } });
+  const { seedForex } = await import("@/lib/admin/seed/seedForex");
+  await seedForex(db, log, plan.preset);
+  if (liveCodes.length > 0)
+    await db.collection<{ _id: string; currencyCode: string }>("exchangeRates").bulkWrite(
+      liveCodes.map((row) => ({
+        updateOne: {
+          filter: { _id: row._id },
+          update: { $set: { currencyCode: row.currencyCode } },
+        },
+      }))
+    );
+  // seedForex writes a turn-0 money supply row; the cleared economy was
+  // measured at the current turn by the moneySupply phase, so only that stays.
+  await db.collection("moneySupplySnapshots").deleteMany({ turn: { $lt: plan.currentTurn } });
 }
 
 async function phaseWitness(
@@ -509,7 +631,7 @@ async function runPhase(
     case "wipe":
       return phaseWipe(db).then(() => ({}));
     case "unset":
-      return phaseUnset(db).then(() => ({}));
+      return phaseUnset(db, plan).then(() => ({}));
     case "indexes": {
       const marketIndexes = MIGRATIONS.filter((m) => ECONOMY_RESET_INDEX_MIGRATIONS.includes(m.id));
       if (marketIndexes.length > 0)
@@ -546,6 +668,15 @@ async function runPhase(
       const { seedNpcBanks } = await import("@/lib/admin/seed/seedNpcBanks");
       const result = await seedNpcBanks(db, log);
       log(`Economy reset: ${result.created} NPC banks`);
+      return {};
+    }
+    case "reseedUnions": {
+      const { seedUnions } = await import("@/lib/admin/seed/seedUnions");
+      // Idempotent upsert, not reset=true: the wipe phase already cleared the
+      // union collections, and a resumed apply must keep the same union ids so
+      // the representingUnionId pointers written into the rebuilt sectors stay
+      // valid.
+      await seedUnions(db, log, plan.preset, false);
       return {};
     }
     case "currencyTopology": {
@@ -595,6 +726,8 @@ async function runPhase(
     }
     case "witness":
       return { witnessEntries: await phaseWitness(db, plan, digest, marker.startedAt) };
+    case "reseedPrices":
+      return phaseReseedPrices(db, plan, log).then(() => ({}));
     case "diagnostic":
       return { diagnosticFailures: await phaseDiagnostic(db, plan, log) };
   }

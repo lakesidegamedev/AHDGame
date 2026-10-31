@@ -19,8 +19,8 @@ import type { Db } from "mongodb";
 import { readGameState } from "./guards";
 import type { HealEnv, HealPlan, TouchedDocs } from "./types";
 
-export const HEAL_TOKENS_COLLECTION = "healTokens";
-export const TOKEN_TTL_MS = 10 * 60 * 1000;
+const HEAL_TOKENS_COLLECTION = "healTokens";
+const TOKEN_TTL_MS = 10 * 60 * 1000;
 
 export interface HealToken {
   _id: string;

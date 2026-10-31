@@ -6,24 +6,14 @@
 
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Crisis, CrisisEffect } from "@/lib/db/types/crisis";
+import type { Crisis } from "@/lib/db/types/crisis";
 import { METRIC_TO_DOMAIN } from "@/lib/nppAutonomy/selectNppBill";
 import {
   crisisAgendaSignalsFromCrises,
-  crisisSignalsFromEffects as mapCrisisSignalsFromEffects,
-  type MetricDomainMap,
   type CrisisAgendaIntake,
 } from "./rules/crisisAgendaSignals";
 
 export type { CrisisAgendaIntake };
-
-/** Preserve the existing convenience API while the rules accept their vocabulary as data. */
-export function crisisSignalsFromEffects(
-  effects: readonly CrisisEffect[],
-  metricToDomain: MetricDomainMap = METRIC_TO_DOMAIN
-): Record<string, number> {
-  return mapCrisisSignalsFromEffects(effects, metricToDomain);
-}
 
 /** Load the active crisis subset once and pass plain data into the rules core. */
 export async function loadCrisisAgendaSignals(

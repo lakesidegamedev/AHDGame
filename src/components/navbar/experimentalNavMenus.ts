@@ -117,22 +117,3 @@ export function buildElectionsSubNavItems(countryId: CountryId): ExperimentalSub
 
   return items;
 }
-
-/** Primary nav tab label/href for the legislature section. */
-export function getLegislatureNavTab(countryId: CountryId): {
-  label: string;
-  labelKey?: string;
-  href: string;
-} {
-  const config = getCountryConfig(countryId);
-  const usesLegacyCongressRoutes = config.legislature.path === "/country/us/legislature";
-  if (usesLegacyCongressRoutes) {
-    return { label: "Congress", labelKey: "menus.legislature.congress", href: "/congress" };
-  }
-  return { label: config.legislature.name, href: config.legislature.path };
-}
-
-/** Map path from country config (nation details "map" item uses the same path). */
-export function getMapNavHref(countryId: CountryId): string {
-  return getCountryConfig(countryId).mapPath;
-}

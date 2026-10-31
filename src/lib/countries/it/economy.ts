@@ -66,7 +66,7 @@ const treasuryPsRate = {
  * ⚠ 1953 ONLY. `GDP_DENOMINATION_1953` is an era table and holds no other
  * preset, so this says nothing about any later era.
  */
-export const IT_GDP_DENOMINATION_1953 = "usd";
+const IT_GDP_DENOMINATION_1953 = "usd";
 
 export const IT_ECONOMY: CountryEconomy = {
   currencyCode,

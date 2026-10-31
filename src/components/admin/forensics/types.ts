@@ -162,7 +162,7 @@ export interface CategoryMeta {
   dot: string;
 }
 
-export const CATEGORY_META: Record<AuditCategory, CategoryMeta> = {
+const CATEGORY_META: Record<AuditCategory, CategoryMeta> = {
   money: { label: "Money", badge: "bg-amber-500/10 text-amber-400", dot: "bg-amber-500" },
   market: { label: "Market", badge: "bg-teal-500/10 text-teal-400", dot: "bg-teal-500" },
   governance: {
@@ -266,7 +266,7 @@ export function describeActor(actor: AuditActor | undefined): string {
 }
 
 /** Last 6 chars of an id, for compact display. */
-export function shortId(id: string): string {
+function shortId(id: string): string {
   if (!id) return "";
   return id.length <= 8 ? id : `…${id.slice(-6)}`;
 }

@@ -6,7 +6,7 @@
  * the same digest.
  */
 
-export const ECONOMY_RESET_PLAN_VERSION = 1;
+export const ECONOMY_RESET_PLAN_VERSION = 2;
 
 /** Migration-only store of approved plans, one document per digest. */
 export const ECONOMY_RESET_PLANS_COLLECTION = "economyResetPlans";
@@ -24,6 +24,7 @@ export const ECONOMY_RESET_PHASES = [
   "reseedUnownedSectors",
   "reseedNppCorporations",
   "reseedNpcBanks",
+  "reseedUnions",
   "currencyTopology",
   "verifyCommandEconomy",
   "sovereignBonds",
@@ -31,6 +32,9 @@ export const ECONOMY_RESET_PHASES = [
   "fundMigrations",
   "exchangeSnapshot",
   "witness",
+  // After the witness: the rate reseed revalues kept local balances in anchor
+  // terms, which the ledger handles as revaluation, not as a money change.
+  "reseedPrices",
   "diagnostic",
 ] as const;
 export type EconomyResetPhase = (typeof ECONOMY_RESET_PHASES)[number];
@@ -150,6 +154,8 @@ export interface EconomyResetPlan {
   treasuryCashLedgerEnabled: boolean;
   wipe: { collection: string; count: number }[];
   partialWipe: { collection: string; count: number }[];
+  /** Reference rows replaced by their seeders: current prices and exchange rates at seed values. */
+  reseed: { collection: string; count: number }[];
   characters: CharacterEndowmentPatch[];
   imperialCharacterIds: string[];
   nppIdsWithMoney: string[];

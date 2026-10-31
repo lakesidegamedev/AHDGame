@@ -7,6 +7,20 @@ import {
 } from "@/lib/corporations/buildDelivery";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+
+/**
+ * Whole-plant counters (gameConfig.wholePlantsStage on). Present only when the
+ * stage is on; absent keeps today's continuous stock exactly.
+ */
+export interface ProducerWholePlants {
+  /** Units in one plant of this sector. */
+  plantUnits: number;
+  /** Construction credit toward the next plant; does not produce. */
+  creditUnits: number;
+  /** Wear toward the next plant coming off. */
+  wearUnits: number;
+}
 
 export interface ProducerCapacityState {
   completedTurn: number;
@@ -15,6 +29,7 @@ export interface ProducerCapacityState {
   /** Actual acquisition cost remaining on the owned stock, never its selling value. */
   paidBookAnchor: number;
   buildQueue: readonly SectorBuildOrder[];
+  wholePlants?: ProducerWholePlants;
 }
 
 function nonNegative(value: number, label: string): number {
@@ -78,14 +93,45 @@ export function advanceProducerCapacity(input: {
     0
   );
   const retention = (1 - CAPITAL_DEPRECIATION_PER_TURN) * input.recessionCapacityFactor;
-  const ownedDailyUnits = nonNegative(
-    (state.ownedDailyUnits + deliveredDailyUnits) * retention,
-    "closing owned capacity"
-  );
-  const paidBookAnchor = nonNegative(
-    (state.paidBookAnchor + deliveredPaidCostAnchor) * retention,
-    "closing paid capacity basis"
-  );
+  let ownedDailyUnits: number;
+  let paidBookAnchor: number;
+  let wholePlants: ProducerWholePlants | undefined;
+  if (state.wholePlants) {
+    // Whole plants: depreciation, recession and idle retirement fill the wear
+    // counter; a plant comes off only when it reaches one plant, never the
+    // last one. The paid basis falls with the plants that came off.
+    const gross = state.ownedDailyUnits + deliveredDailyUnits;
+    const change = applyPlantChange(
+      {
+        capitalStock: gross,
+        plantUnitRemainder: state.wholePlants.creditUnits,
+        plantWearUnits: state.wholePlants.wearUnits,
+      },
+      state.wholePlants.plantUnits,
+      { lossUnits: gross * (1 - retention) }
+    );
+    ownedDailyUnits = nonNegative(change.capitalStock, "closing owned capacity");
+    paidBookAnchor = nonNegative(
+      ownedDailyUnits > 0
+        ? (state.paidBookAnchor + deliveredPaidCostAnchor) * change.bookRetention
+        : 0,
+      "closing paid capacity basis"
+    );
+    wholePlants = {
+      plantUnits: state.wholePlants.plantUnits,
+      creditUnits: change.plantUnitRemainder,
+      wearUnits: change.plantWearUnits,
+    };
+  } else {
+    ownedDailyUnits = nonNegative(
+      (state.ownedDailyUnits + deliveredDailyUnits) * retention,
+      "closing owned capacity"
+    );
+    paidBookAnchor = nonNegative(
+      (state.paidBookAnchor + deliveredPaidCostAnchor) * retention,
+      "closing paid capacity basis"
+    );
+  }
   const buildQueue = state.buildQueue.filter((order) => order.onlineTurn > turn);
   const constructionInProgressAnchor = nonNegative(
     queueUndeliveredCost(buildQueue, turn),
@@ -96,7 +142,13 @@ export function advanceProducerCapacity(input: {
     "per-turn operating capacity"
   );
   return {
-    state: { completedTurn: turn, ownedDailyUnits, paidBookAnchor, buildQueue },
+    state: {
+      completedTurn: turn,
+      ownedDailyUnits,
+      paidBookAnchor,
+      buildQueue,
+      ...(wholePlants ? { wholePlants } : {}),
+    },
     capacityUnits,
     activeUnits: capacityUnits * input.activeFraction,
     deliveredDailyUnits,

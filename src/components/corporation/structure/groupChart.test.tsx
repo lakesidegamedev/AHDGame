@@ -59,6 +59,18 @@ describe("GroupChart", () => {
     expect(screen.queryByRole("button", { name: /Spin off a subsidiary/ })).toBeNull();
   });
 
+  it("counts the spin off cooldown down on the slot without hiding it", () => {
+    const onSpinOff = vi.fn();
+    const { rerender } = render(
+      <GroupChart corporation={corp()} onSpinOff={onSpinOff} spinOffCooldownTurns={168} />
+    );
+    expect(screen.getByText("Available again in 168 turns.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Spin off a subsidiary/ }));
+    expect(onSpinOff).toHaveBeenCalled();
+    rerender(<GroupChart corporation={corp()} onSpinOff={onSpinOff} spinOffCooldownTurns={1} />);
+    expect(screen.getByText("Available again in 1 turn.")).toBeTruthy();
+  });
+
   it("draws nothing for a corporation with no group", () => {
     const { container } = render(<GroupChart corporation={corp()} />);
     expect(container.innerHTML).toBe("");

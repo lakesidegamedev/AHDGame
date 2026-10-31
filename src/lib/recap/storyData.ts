@@ -69,7 +69,7 @@ export function turnOfDate(date: Date | string | undefined, clock: RecapClock): 
 
 // ── Activity ───────────────────────────────────────────────────────────────────
 
-export function binLayout(startTurn: number, endTurn: number): { binTurns: number; n: number } {
+function binLayout(startTurn: number, endTurn: number): { binTurns: number; n: number } {
   const span = Math.max(1, endTurn - startTurn + 1);
   const binTurns = Math.max(1, Math.ceil(span / MAX_BINS));
   return { binTurns, n: Math.ceil(span / binTurns) };

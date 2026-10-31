@@ -11,7 +11,7 @@
  */
 
 /** Top-two polling margin, in percentage points, at or under which a race is close. */
-export const CLOSE_RACE_MARGIN_PTS = 15;
+const CLOSE_RACE_MARGIN_PTS = 15;
 
 /** Human copy for tooltips and filter titles. */
 export const CLOSE_RACE_RULE_TEXT = `Top two within ${CLOSE_RACE_MARGIN_PTS} points in general-election polling`;
@@ -23,9 +23,7 @@ export interface CloseRaceInput {
 }
 
 /** Margin between the top two finite shares, or null with fewer than two. */
-export function topTwoMarginPts(
-  sharesPct: Record<string, number> | null | undefined
-): number | null {
+function topTwoMarginPts(sharesPct: Record<string, number> | null | undefined): number | null {
   const pcts = Object.values(sharesPct ?? {}).filter((v) => Number.isFinite(v));
   if (pcts.length < 2) return null;
   const sorted = [...pcts].sort((a, b) => b - a);

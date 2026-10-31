@@ -26,7 +26,7 @@ const ELECTRONIC_LINES = [
   "home_appliance",
 ] as const;
 
-export const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
+const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
   {
     id: "media_lead_walks",
     domain: "media",
@@ -319,7 +319,7 @@ export const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
   },
 ];
 
-export const MANUFACTURING_VENTURE_EVENTS: readonly VentureEventDef[] = [
+const MANUFACTURING_VENTURE_EVENTS: readonly VentureEventDef[] = [
   {
     id: "mfg_supplier_defect",
     domain: "manufacturing",

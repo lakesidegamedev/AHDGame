@@ -23,6 +23,7 @@
  */
 
 import type { SectorBuildOrder } from "@/lib/db/types";
+import { steppedDeliveredFraction } from "@/lib/corporations/wholePlants/rules";
 
 /** True when the order should ramp in rather than land all at once. */
 function isSmooth(order: SectorBuildOrder): boolean {
@@ -33,12 +34,17 @@ function isSmooth(order: SectorBuildOrder): boolean {
  * Fraction of the order delivered as of `turn`, in [0, 1].
  *
  * Legacy / degenerate orders are a step: 0 until `onlineTurn`, then 1. Smooth
- * orders ramp linearly across `[startTurn, onlineTurn]`.
+ * orders ramp linearly across `[startTurn, onlineTurn]`. A smooth order
+ * stamped with `plantUnits` (whole plants) ramps in whole-plant steps: plant k
+ * of p lands on the first turn the linear ramp passes k/p.
  */
 export function deliveredFraction(order: SectorBuildOrder, turn: number): number {
   if (!isSmooth(order)) return turn >= order.onlineTurn ? 1 : 0;
   const f = (turn - order.startTurn) / (order.onlineTurn - order.startTurn);
-  return f <= 0 ? 0 : f >= 1 ? 1 : f;
+  const linear = f <= 0 ? 0 : f >= 1 ? 1 : f;
+  return order.plantUnits != null && order.plantUnits > 0
+    ? steppedDeliveredFraction(linear, order.unitsOrdered, order.plantUnits)
+    : linear;
 }
 
 function safeUnits(order: SectorBuildOrder): number {

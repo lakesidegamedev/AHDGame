@@ -21,7 +21,7 @@ type MandateGovernment = Pick<
 >;
 
 /** Governing party seat share, or null when no chamber result is recorded. */
-export function governingSeatShare(gov: MandateGovernment): number | null {
+function governingSeatShare(gov: MandateGovernment): number | null {
   const partyId = gov.governingPartyId;
   if (!partyId) return null;
   const total = gov.totalSeats;

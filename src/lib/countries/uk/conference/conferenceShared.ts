@@ -29,7 +29,7 @@ export async function countPartyMembers(db: Db, party: PoliticalParty): Promise<
 }
 
 /** Live electorate: player-member characters plus the committee voter set. */
-export async function computeEligibleRoll(db: Db, party: PoliticalParty): Promise<EligibleRoll> {
+async function computeEligibleRoll(db: Db, party: PoliticalParty): Promise<EligibleRoll> {
   const rows = await db
     .collection<Character>("characters")
     .find({ party: partySeqIdOf(party), userId: { $exists: true } }, { projection: { _id: 1 } })

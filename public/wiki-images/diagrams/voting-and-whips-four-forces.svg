@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" font-family="system-ui, sans-serif">
+<title>How an NPP bloc decides its vote</title>
+<desc>Four forces, each clamped to minus 100 to plus 100, are summed to give For, Against or Abstain; a hard whip that succeeds writes the vote directly.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<text x="24" y="28" font-size="15" text-anchor="start" fill="#18181b" font-weight="700">How a non-player bloc votes</text>
+<rect x="24" y="50" width="190" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="119.0" y="66.2" font-size="12" text-anchor="middle" font-weight="700">Ideology</text>
+<text x="119.0" y="82.2" font-size="12" text-anchor="middle">bill vs own stance</text>
+<polyline points="214,70 270,130" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="100" width="190" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="119.0" y="116.2" font-size="12" text-anchor="middle" font-weight="700">Whip</text>
+<text x="119.0" y="132.2" font-size="12" text-anchor="middle">party and caucus</text>
+<polyline points="214,120 270,130" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="150" width="190" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="119.0" y="166.2" font-size="12" text-anchor="middle" font-weight="700">District</text>
+<text x="119.0" y="182.2" font-size="12" text-anchor="middle">home-state opinion</text>
+<polyline points="214,170 270,130" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="200" width="190" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="119.0" y="216.2" font-size="12" text-anchor="middle" font-weight="700">Donors</text>
+<text x="119.0" y="232.2" font-size="12" text-anchor="middle">donor base x alignment</text>
+<polyline points="214,220 270,130" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="24" y="260" font-size="12" text-anchor="start" fill="#52525b">each force clamped to -100 to +100</text>
+<rect x="270" y="100" width="130" height="70" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="335.0" y="131.1" font-size="13" text-anchor="middle" font-weight="700">Sum of the</text>
+<text x="335.0" y="148.1" font-size="13" text-anchor="middle">four forces</text>
+<rect x="500" y="60" width="190" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="595.0" y="78.0" font-size="13" text-anchor="middle" font-weight="700">For</text>
+<text x="595.0" y="95.0" font-size="13" text-anchor="middle">sum above +5</text>
+<rect x="500" y="117" width="190" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="595.0" y="135.1" font-size="13" text-anchor="middle" font-weight="700">Against</text>
+<text x="595.0" y="152.1" font-size="13" text-anchor="middle">sum below -5</text>
+<rect x="500" y="174" width="190" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="595.0" y="192.1" font-size="13" text-anchor="middle" font-weight="700">Abstain</text>
+<text x="595.0" y="209.1" font-size="13" text-anchor="middle">otherwise</text>
+<polyline points="400,135 450,135 450,82 500,82" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="400,135 500,139" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="400,135 450,135 450,196 500,196" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="24" y="300" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">Hard whip, rolled once for each NPP</text>
+<rect x="24" y="318" width="190" height="52" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="119.0" y="340.1" font-size="13" text-anchor="middle" font-weight="700">Hard whip issued</text>
+<text x="119.0" y="357.1" font-size="13" text-anchor="middle">roll against each NPP</text>
+<rect x="300" y="310" width="200" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="400.0" y="336.6" font-size="13" text-anchor="middle">Vote is set by the whip</text>
+<rect x="300" y="366" width="200" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="400.0" y="384.2" font-size="12" text-anchor="middle" font-weight="700">Falls back to the sum</text>
+<text x="400.0" y="400.2" font-size="12" text-anchor="middle">of the four forces</text>
+<polyline points="214,332 300,332" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="222" y="324" font-size="12" text-anchor="start" fill="#52525b">succeeds</text>
+<polyline points="214,358 257,358 257,388 300,388" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="224" y="378" font-size="12" text-anchor="start" fill="#52525b">fails</text>
+</g>
+</svg>

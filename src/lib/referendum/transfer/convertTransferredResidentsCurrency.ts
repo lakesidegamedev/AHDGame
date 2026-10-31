@@ -89,26 +89,66 @@ export async function convertTransferredResidentsCurrency(
     .updateMany({ stateId: regionId }, { $mul: { treasury: scale }, $set: { updatedAt: now } });
 
   // Resident players' home-currency wallet converts; other currencies stay as forex.
-  const players = await db
-    .collection<Character>("characters")
-    .find({ homeState: regionId, userId: { $ne: null } } as unknown as Filter<Character>)
-    .toArray();
-  for (const p of players) {
-    const cb = p.currencyBalances;
-    if (!cb) continue;
-    const set: Record<string, unknown> = {
-      "currencyBalances.campaign": (cb.campaign ?? 0) * scale,
-      updatedAt: now,
-    };
-    for (const bucket of ["personal", "savings"] as const) {
-      const wallet: Partial<Record<CurrencyCode, number>> = { ...(cb[bucket] ?? {}) };
-      const old = wallet[oldCurrency] ?? 0;
-      if (old) {
-        wallet[newCurrency] = (wallet[newCurrency] ?? 0) + old * scale;
-        delete wallet[oldCurrency];
-      }
-      set[`currencyBalances.${bucket}`] = wallet;
-    }
-    await db.collection<Character>("characters").updateOne({ _id: p._id }, { $set: set });
-  }
+  // One pipeline update computed from each document's live balances: players act
+  // while the turn runs, so a wallet read earlier and written back whole would
+  // erase any spend, trade or credit that landed in between.
+  await db.collection<Character>("characters").updateMany(
+    {
+      homeState: regionId,
+      userId: { $ne: null },
+      currencyBalances: { $type: "object" },
+    } as unknown as Filter<Character>,
+    [
+      {
+        $set: {
+          "currencyBalances.campaign": {
+            $multiply: [{ $ifNull: ["$currencyBalances.campaign", 0] }, scale],
+          },
+          "currencyBalances.personal": convertWalletExpr(
+            "personal",
+            oldCurrency,
+            newCurrency,
+            scale
+          ),
+          "currencyBalances.savings": convertWalletExpr("savings", oldCurrency, newCurrency, scale),
+          updatedAt: now,
+        },
+      },
+    ]
+  );
+}
+
+/**
+ * Aggregation expression for one wallet bucket: the old-currency balance moves
+ * to the new currency at `scale` and its key is dropped; every other currency is
+ * kept as a forex position. A bucket with no old-currency balance is unchanged.
+ */
+export function convertWalletExpr(
+  bucket: "personal" | "savings",
+  oldCurrency: CurrencyCode,
+  newCurrency: CurrencyCode,
+  scale: number
+): Record<string, unknown> {
+  const wallet = { $ifNull: [`$currencyBalances.${bucket}`, {}] };
+  const oldBalance = { $ifNull: [`$currencyBalances.${bucket}.${oldCurrency}`, 0] };
+  const newBalance = { $ifNull: [`$currencyBalances.${bucket}.${newCurrency}`, 0] };
+  return {
+    $cond: [
+      { $ne: [oldBalance, 0] },
+      {
+        $mergeObjects: [
+          {
+            $arrayToObject: {
+              $filter: {
+                input: { $objectToArray: wallet },
+                cond: { $ne: ["$$this.k", oldCurrency] },
+              },
+            },
+          },
+          { [newCurrency]: { $add: [newBalance, { $multiply: [oldBalance, scale] }] } },
+        ],
+      },
+      wallet,
+    ],
+  };
 }

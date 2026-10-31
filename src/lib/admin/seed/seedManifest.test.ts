@@ -24,6 +24,10 @@ const COLLECTIONS_DIR = join(process.cwd(), "src/lib/db/collections");
  * module declares must carry a manifest classification.
  */
 describe("seed manifest classification coverage", () => {
+  it("classifies persisted county stocks for reseeding on every bootstrap", () => {
+    expect(getCollectionCategory("counties")).toBe("reference");
+    expect(getReferenceCollectionNames()).toContain("counties");
+  });
   it("clears population receipts and frozen projections on reset", () => {
     for (const name of ["demographicFlowReceipts", "demographicFlowProjections"]) {
       expect(getCollectionCategory(name)).toBe("runtime");
@@ -72,7 +76,10 @@ describe("seed manifest classification coverage", () => {
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
     .flatMap((f) => {
       const src = readFileSync(join(COLLECTIONS_DIR, f), "utf8");
-      return [...src.matchAll(/export const [A-Z0-9_]*COLLECTION[A-Z0-9_]* = "([^"]+)"/g)].map(
+      // Module-private names count too: un-exporting a constant because no other
+      // module imports it does not stop that module writing to the collection,
+      // and the reset sweep still has to know about it.
+      return [...src.matchAll(/(?:export )?const [A-Z0-9_]*COLLECTION[A-Z0-9_]* = "([^"]+)"/g)].map(
         (m) => ({ file: f, name: m[1] })
       );
     });
@@ -123,6 +130,7 @@ describe("runtime lifecycle category determines reset selection", () => {
     "wikiTemplates",
     "wikiReports",
     "manualOfficeHistory",
+    "officeHistoryArchive",
     "politicianOverrides",
     "eventDefinitions",
     // Accounts, sessions, bans

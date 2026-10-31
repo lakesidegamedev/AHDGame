@@ -74,7 +74,12 @@ export interface ActionExecutionActor {
 export interface ExecuteCharacterActionParams {
   /** The resolved actor document used for the first iteration. */
   character: Character;
-  /** Filter used to re-read the character between batch iterations. */
+  /**
+   * Filter the route used to resolve the character before this call. Kept in the
+   * interface because every caller already builds it; batch iterations now reuse
+   * the document the previous atomic update returned instead of re-reading
+   * through this filter.
+   */
   characterQuery: Filter<Character>;
   actionType: ActionType;
   targetState?: string | null;
@@ -131,7 +136,6 @@ async function executeCharacterActionImpl(
 ): Promise<ExecuteCharacterActionResult> {
   const {
     character,
-    characterQuery,
     actionType,
     targetState,
     convertAmount,
@@ -233,10 +237,11 @@ async function executeCharacterActionImpl(
   let stoppedReason: string | null = null;
 
   for (let i = 0; i < count; i++) {
-    dbStartedAt = Date.now();
-    const current =
-      i === 0 ? character : await db.collection<Character>("characters").findOne(characterQuery);
-    if (i > 0) timing.dbReadMs += Date.now() - dbStartedAt;
+    // Reuse the document the previous iteration's atomic update returned: it is
+    // already the post-action state, so re-reading it only buys a remote round
+    // trip. The update filter below still guards the AP and funds checks
+    // atomically against another request landing mid-batch.
+    const current = i === 0 ? character : updatedCharacter;
 
     if (!current) {
       if (completed > 0) {
@@ -563,23 +568,12 @@ async function executeCharacterActionImpl(
         countryId: current.countryId,
       };
 
-      // Achievement triggers expect anchor units. Compute newFunds in anchor
-      // from local stored balance + the original anchor fundsChange.
-      const balanceLocal = current.currencyBalances?.campaign ?? current.funds ?? 0;
-      const balanceAnchor = forexEnabled ? balanceLocal / campaignRate : balanceLocal;
-      const newFunds = balanceAnchor + actionFundsChange;
+      // Achievement triggers move to one check after the loop: they read
+      // cumulative counts, so checking per iteration repeated the same
+      // actionLogs scans and award lookups for every action in a batch.
       const userOid = actor.userId;
       dbStartedAt = Date.now();
-      const [actionLogResult] = await Promise.all([
-        db.collection("actionLogs").insertOne(actionLog),
-        checkActionAchievements(userOid, current._id, actionType, gameState?.currentTurn).catch(
-          (e) => console.error("Achievement check failed:", e)
-        ),
-        checkFundsAchievements(userOid, current._id, newFunds).catch((e) =>
-          console.error("Achievement check failed:", e)
-        ),
-      ]);
-
+      const actionLogResult = await db.collection("actionLogs").insertOne(actionLog);
       timing.actionLogMs += Date.now() - dbStartedAt;
       auditEntries.push({
         source: "api",
@@ -603,6 +597,28 @@ async function executeCharacterActionImpl(
         },
       });
     }
+  }
+
+  // One achievement pass per request, on the committed final state. An empty
+  // batch (every iteration refused) has nothing new to award, and a partial
+  // batch still counts the iterations it did commit.
+  if (completed > 0 && actor.userId && updatedCharacter) {
+    const finalBalanceLocal =
+      updatedCharacter.currencyBalances?.campaign ?? updatedCharacter.funds ?? 0;
+    const finalBalanceAnchor = forexEnabled ? finalBalanceLocal / campaignRate : finalBalanceLocal;
+    dbStartedAt = Date.now();
+    await Promise.all([
+      checkActionAchievements(
+        actor.userId,
+        updatedCharacter._id,
+        actionType,
+        gameState?.currentTurn
+      ).catch((e) => console.error("Achievement check failed:", e)),
+      checkFundsAchievements(actor.userId, updatedCharacter._id, finalBalanceAnchor).catch((e) =>
+        console.error("Achievement check failed:", e)
+      ),
+    ]);
+    timing.actionLogMs += Date.now() - dbStartedAt;
   }
 
   if (auditEntries.length > 0) recordAuditBulk(auditEntries);

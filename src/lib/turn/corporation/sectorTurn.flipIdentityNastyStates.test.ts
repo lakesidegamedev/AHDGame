@@ -9,6 +9,7 @@ import { GROWTH_RATE_TURNS_PER_YEAR, TURNS_PER_DAY } from "@/lib/constants/corpo
 import type { CorporationLookups } from "./types";
 import { costPlusPriceFactor } from "@/lib/market/costPlusPricing/rules";
 import { processSector, type SectorTurnEnv } from "./sectorTurn";
+import { fundedSectorResult } from "@/lib/market/producerMarket/fundedSectorRules";
 
 /**
  * Composed nasty-state FLIP IDENTITY regression suite.
@@ -316,6 +317,24 @@ describe("plants flip identity: composed nasty states", () => {
       run("capital", s(), { marketSharePct: 70 }, 1000, true),
       run("plants", s(), { marketSharePct: 70 }, 1000, true)
     );
+  });
+});
+
+describe("funded dominance legs", () => {
+  it("charges a dominant sector no running toll on a funded turn while the flip ramp is in progress", () => {
+    // Flip turn: plants ramp lambda 0, so the legacy pass keeps the full toll.
+    const { result } = run("plants", makeSector({ capitalStock: STOCK }), { marketSharePct: 70 });
+    expect(result.regulatoryBurden ?? 0).toBeGreaterThan(0);
+    expect(result.fundedRegulatoryBurdenRate).toBe(0);
+    expect(result.fundedSizeCostPp ?? 0).toBe(0);
+    const funded = fundedSectorResult(result, {
+      revenue: 1000,
+      profit: 400,
+      producedUnits: 10,
+      soldUnits: 10,
+    });
+    expect(funded.costs).toBeCloseTo(600 + funded.hourlyGrowthCost, 6);
+    expect(funded.regulatoryBurden).toBe(0);
   });
 });
 

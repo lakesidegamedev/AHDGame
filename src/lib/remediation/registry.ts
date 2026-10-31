@@ -26,6 +26,8 @@ import { defect as tinkyStaleVoteExcess } from "./defects/AHD-tinky-stale-vote-e
 import { defect as usMarineLotProgress } from "./defects/AHD-1171-us-marine-lot-progress";
 import { defect as defenceSupplierWindfall } from "./defects/AHD-defence-supplier-windfall";
 import { defect as vfBankRestitution } from "./defects/AHD-1267-vf-bank-restitution";
+import { defect as injectedBankRestoration } from "./defects/AHD-1694-injected-bank-restoration";
+import { defect as greenbaumRestoration } from "./defects/AHD-1694-greenbaum-restoration";
 import { defect as mergedStateExtraction } from "./defects/AHD-1271-merged-state-extraction";
 import { defect as poolCountryAttribution } from "./defects/AHD-1271-pool-country-attribution";
 import { defect as natCorpSplitSectorType } from "./defects/AHD-1271-natcorp-split-sector-type";
@@ -33,6 +35,8 @@ import { defect as mergedPartyOrg } from "./defects/AHD-1372-merged-party-org";
 import { defect as freightOverbillingRestitution } from "./defects/AHD-1448-freight-overbilling-restitution";
 import { defect as dissolutionNppSuccessors } from "./defects/AHD-dissolution-npp-successors";
 import { defect as sovereignMaturityStrandedPayout } from "./defects/AHD-sovereign-maturity-stranded-payout";
+import { defect as sovereignMaturityUnfundedRollover } from "./defects/AHD-sovereign-maturity-unfunded-rollover";
+import { defect as wholePlantsConversion } from "./defects/AHD-whole-plants-conversion";
 import type { Defect } from "./types";
 
 export const DEFECTS: Defect[] = [
@@ -62,6 +66,16 @@ export const DEFECTS: Defect[] = [
   // with the shell. Restitutes Hunt Oil's owner residual and the household
   // book stranded out of the money supply.
   vfBankRestitution,
+  // Incident #1694: central bank liquidity injections booked interest-bearing
+  // debt on banks that never asked for it; the interest failed or revoked
+  // them. Refunds the interest and reopens the closed banks. Applied to prod
+  // 2026-10-27 (run_2026-10-27044343_c9ba214a).
+  injectedBankRestoration,
+  // Incident #1694, Greenbaum Group: a solvent bond-heavy bank failed the
+  // cash-only run test (code fix #5062). Owner-approved 2026-10-27: return the
+  // 3.005B posted capital from the USD insurance fund and reopen the bank.
+  // Applied to prod 2026-10-27 (run_2026-10-27224005_552bfcf6).
+  greenbaumRestoration,
   // Ticket #1271: extraction is the one SOE sector gated on a per-state
   // `country:state` capacity key, so a country merge strands every state it
   // absorbs. Reunification left the eleven western Laender with no extraction
@@ -87,6 +101,13 @@ export const DEFECTS: Defect[] = [
   // central bank by country id or a deleted holder stayed partial forever.
   // #4754 resolves legs to live targets; this re-points any that still strand.
   sovereignMaturityStrandedPayout,
+  // Matured sovereign bonds a short Treasury neither repaid nor refinanced.
+  // The fixed bond turn sells a refunding issue and pays every holder; this
+  // reports the overdue backlog and stamps the approved figures.
+  sovereignMaturityUnfundedRollover,
+  // Whole plants: one-time recount of every sector to whole plants before
+  // gameConfig.wholePlantsStage is switched on; part-plants are credited.
+  wholePlantsConversion,
 ];
 
 export function getDefect(id: string): Defect | undefined {

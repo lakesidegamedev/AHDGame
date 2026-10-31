@@ -8,7 +8,7 @@ import { SUCCESSOR_STATE_METRICS_1991 } from "@/lib/seeds/reference/successorMet
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 
 /** Obsolete regional rows left by earlier seed passes, excluding national summaries. */
-export function obsoleteSuccessorMetricFilter1991(): Filter<MacroMetricsDoc> {
+function obsoleteSuccessorMetricFilter1991(): Filter<MacroMetricsDoc> {
   return {
     countryId: {
       $in: [

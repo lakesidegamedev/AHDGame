@@ -46,7 +46,7 @@ export type CabinetSourceId = (typeof CABINET_SOURCE_IDS)[number];
  * Holding pen for residual that predates the per-source split. It receives no
  * new contribution, so it only ever decays. See `seedBySourceFromLegacy`.
  */
-export const CABINET_LEGACY_SOURCE = "legacy";
+const CABINET_LEGACY_SOURCE = "legacy";
 
 /**
  * Saturation asymptote PER SOURCE. Unchanged in value from the single global cap
@@ -74,7 +74,7 @@ export const CABINET_RESIDUAL_CAP_PER_SOURCE = 8;
 export const CABINET_RESIDUAL_TOTAL_CEILING =
   CABINET_RESIDUAL_CAP_PER_SOURCE * CABINET_SOURCE_IDS.length;
 /** Scales the tiny StateMetrics deltas (~0.02–0.08) up to a meaningful political nudge. */
-export const CABINET_POLITICAL_GAIN = 20;
+const CABINET_POLITICAL_GAIN = 20;
 
 /**
  * StateMetrics bare key → political families with SIGNED weights. Sign inverts

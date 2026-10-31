@@ -16,12 +16,19 @@ const EPOCH = "economy-reset-test-epoch";
 const characterId = new ObjectId();
 const userId = new ObjectId();
 const playerCorpId = new ObjectId();
+const playerUnionId = new ObjectId();
 
 const before: Record<string, Document[]> = {};
 let freshCorporations = 0;
 let freshSectors = 0;
+let freshUnions = 0;
 let sovereignFaceBefore = 0;
 let heldBondId: ObjectId;
+let labourRegionId: string;
+let trendStateId: string;
+let trackRecordNppId: unknown;
+let resourceRowId: unknown;
+let basePriceBefore = 0;
 let plan: EconomyResetPlan;
 let digest: string;
 let first: ApplyEconomyResetResult;
@@ -53,11 +60,54 @@ beforeAll(async () => {
       },
     }
   );
+  // The old economy's steering: recovery ladder, governor glide, funded levers,
+  // nominal index and a drifted price and rate. None of it may survive.
+  await db.collection("gameConfig").updateOne(
+    { _id: "default" as never },
+    {
+      $set: {
+        ledgerShadow: true,
+        marketRecoveryStage: 4,
+        commodityFixStage: 6,
+        marketGovernorCap: 0.3,
+        marketGovernorRampTurns: 240,
+        marketGovernorGlideStartTurn: 203,
+        marketGovernorGlideMode: "proportional",
+        producerHouseholdIncomeFloor: 95_000_000,
+        producerFundedBookStage: 1,
+        commodityNominalPriceIndex: 1.54,
+        countryRecessions: [{ countryId: "JP", startTurn: 216, turns: 12 }],
+      },
+    }
+  );
+  const seededPrice = await db.collection("commodityPrices").findOne({ commodity: "steel" });
+  basePriceBefore = seededPrice!.basePrice;
   await db
-    .collection("gameConfig")
-    .updateOne({ _id: "default" as never }, { $set: { ledgerShadow: true } });
+    .collection("commodityPrices")
+    .updateOne(
+      { commodity: "steel" },
+      { $set: { globalPrice: basePriceBefore * 2.07, turn: 412 } }
+    );
+  await db.collection("commodityPriceHistory").insertOne({ commodity: "steel", turn: 412 });
+  const seededRate = await db.collection("exchangeRates").findOne({ _id: "UK" as never });
+  await db
+    .collection("exchangeRates")
+    .updateOne({ _id: "UK" as never }, { $set: { rate: seededRate!.rate * 1.3 } });
+  await db.collection("centralBanks").updateOne(
+    { countryId: "US" },
+    {
+      $set: {
+        chairCharacterId: characterId,
+        chairCharacterName: "Test Player",
+        rateHistory: [{ previousRate: 5, newRate: 6, changedBy: "x", changedAt: new Date() }],
+        forexRevenue: 1234,
+        householdSavingsLiability: 5_413_734_632,
+      },
+    }
+  );
   freshCorporations = await db.collection("corporations").countDocuments({});
   freshSectors = await db.collection("corporateSectors").countDocuments({});
+  freshUnions = await db.collection("unions").countDocuments({});
 
   // A played world: a rich player with savings, credit, a company and bonds.
   await db
@@ -82,6 +132,7 @@ beforeAll(async () => {
     },
     lineOfCredit: { balances: { USD: 250 }, arrears: { USD: 5 } },
     ceoNiTenure: { corporationId: playerCorpId.toHexString(), sinceTurn: 1 },
+    unionLeaderOf: playerUnionId,
   });
   await db.collection("corporations").insertOne({
     _id: playerCorpId,
@@ -97,6 +148,46 @@ beforeAll(async () => {
     countryId: "US",
     stateId: "CA",
     sectorType: "retail",
+  });
+
+  // A played world's organized labour: a founded union with a head, an
+  // organizer, a leadership vote and a bill endorsement. All of it is tied to
+  // the corporations the reset wipes, so none of it may survive.
+  const now = new Date();
+  await db.collection("unions").insertOne({
+    _id: playerUnionId,
+    countryId: "US",
+    sectorType: "manufacturing",
+    name: "Test Workers United",
+    ownerId: characterId,
+    ownerType: "character",
+    foundedByCharacterId: characterId,
+    treasury: 500_000,
+    approval: 55,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.collection("unionOrganizers").insertOne({
+    unionId: playerUnionId,
+    characterId,
+    organizeCount: 3,
+    strength: 40,
+    totalSpent: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.collection("unionLeaderVotes").insertOne({
+    unionId: playerUnionId,
+    voterCharacterId: characterId,
+    candidateCharacterId: characterId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.collection("unionEndorsements").insertOne({
+    unionId: playerUnionId,
+    billId: new ObjectId(),
+    stance: "endorse",
+    createdAt: now,
   });
   const bond = await db.collection("bonds").findOne({
     issuerType: "sovereign",
@@ -164,13 +255,89 @@ beforeAll(async () => {
     ],
   });
 
+  // The old economy's employment ledger: a corporate job share measured
+  // against plants the reset removes.
+  const region = (await db.collection("macroMetrics").findOne({}))!;
+  labourRegionId = String(region._id);
+  await db.collection("macroMetrics").updateOne(
+    { _id: labourRegionId as never },
+    {
+      $set: {
+        labourEmployment: {
+          version: 1,
+          lastTurn: 0,
+          laborForce: 1000,
+          corporateEmployed: 400,
+          backgroundEmployed: 550,
+          backgroundDemand: 550,
+          referenceCorporateShare: 0.4,
+          corporateDemand: 400,
+          corporateDemandKnown: true,
+          structuralRate: 5,
+          vacancies: 0,
+          vacancyToUnemployment: 0,
+          hires: 0,
+          separations: 0,
+        },
+      },
+    }
+  );
+
+  // Old-economy leftovers on kept rows: a region's output trend learned from
+  // the deleted plants, an NPP executive's record at deleted companies, an
+  // orphaned union pension and cumulative extraction by deleted mines.
+  const stateIds = new Set((await all("states")).map((row) => String(row._id)));
+  const trendRegion = (await all("macroMetrics")).find((row) => stateIds.has(String(row._id)))!;
+  trendStateId = String(trendRegion._id);
+  await db
+    .collection("macroMetrics")
+    .updateOne({ _id: trendStateId as never }, { $set: { "economic.sectorGrowth.value": 1.25 } });
+  await db
+    .collection("states")
+    .updateOne(
+      { _id: trendStateId as never },
+      { $set: { outputTrendGrowth: 12.8, outputGap: -5.07, legacyOutputGap: 2.1 } }
+    );
+  const npp = (await db.collection("npps").findOne({}))!;
+  trackRecordNppId = npp._id;
+  await db.collection("npps").updateOne(
+    { _id: npp._id },
+    {
+      $set: {
+        ceoTrackRecord: { real_estate: { turns: 336, relMarginPp: -12.02, lastTurn: 504 } },
+      },
+    }
+  );
+  await db.collection("pensionSchemes").insertOne({
+    unionId: playerUnionId,
+    countryId: "US",
+    assetsAnchor: 0,
+    liabilitiesAnchor: 1_924_245,
+    benefitsInPaymentAnchor: 1_854_129,
+    lastBenefitCutFraction: 1,
+  });
+  const resource = await db.collection("stateResourceCapacity").findOne({});
+  if (resource) {
+    resourceRowId = resource._id;
+    await db
+      .collection("stateResourceCapacity")
+      .updateOne({ _id: resource._id }, { $set: { extractedUnits: 58_840 } });
+  } else {
+    resourceRowId = (
+      await db.collection("stateResourceCapacity").insertOne({
+        stateId: "CA",
+        resource: "oil",
+        extractedUnits: 58_840,
+      })
+    ).insertedId;
+  }
+
   for (const name of [
     "federalBudget",
     "enactedLaws",
     "politicalParties",
     "macroMetrics",
     "stateBudgets",
-    "unions",
   ])
     before[name] = await all(name);
   sovereignFaceBefore = sovereignFace(await all("bonds"));
@@ -211,18 +378,121 @@ describe("economy-only reset end to end", () => {
     expect(await db.collection("stockExchangeSnapshots").countDocuments({})).toBeGreaterThan(0);
   });
 
+  it("rebuilds organized labour as a vacant roster on the rebuilt sectors", async () => {
+    // The player-founded union, its organizer, vote and endorsement are gone.
+    expect(await db.collection("unions").findOne({ _id: playerUnionId })).toBeNull();
+    expect(await db.collection("unionOrganizers").countDocuments({})).toBe(0);
+    expect(await db.collection("unionLeaderVotes").countDocuments({})).toBe(0);
+    expect(await db.collection("unionEndorsements").countDocuments({})).toBe(0);
+    // The same world slots come back, every one unmanned.
+    expect(await db.collection("unions").countDocuments({})).toBe(freshUnions);
+    expect(await db.collection("unions").countDocuments({ ownerId: { $ne: null } })).toBe(0);
+    // The head's cache cleared with the union, so founding or leading another
+    // union is not blocked by a pointer at a deleted document.
+    expect((await db.collection("characters").findOne({ _id: characterId }))!.unionLeaderOf).toBe(
+      null
+    );
+    // The rebuilt shops are represented by the reseeded roster again.
+    expect(
+      await db.collection("corporateSectors").countDocuments({ representingUnionId: { $ne: null } })
+    ).toBeGreaterThan(0);
+  });
+
   it("leaves politics, budgets and macro state untouched", async () => {
-    for (const name of [
-      "enactedLaws",
-      "politicalParties",
-      "macroMetrics",
-      "stateBudgets",
-      "unions",
-    ])
+    for (const name of ["enactedLaws", "politicalParties", "stateBudgets"])
       expect(await all(name), name).toEqual(before[name]);
+    // Macro state is kept apart from the employment re-baseline flag below.
+    const demandKnownCleared = (rows: Document[]) =>
+      rows.map((row) =>
+        row.labourEmployment
+          ? { ...row, labourEmployment: { ...row.labourEmployment, corporateDemandKnown: false } }
+          : row
+      );
+    expect(await all("macroMetrics")).toEqual(demandKnownCleared(before.macroMetrics));
     const strip = (rows: Document[]) =>
       rows.map(({ economyResetDigest: _d, updatedAt: _u, ...rest }) => rest);
     expect(strip(await all("federalBudget"))).toEqual(strip(before.federalBudget));
+  });
+
+  it("re-baselines each region's corporate job share against the rebuilt plants", async () => {
+    const region = (await db.collection("macroMetrics").findOne({ _id: labourRegionId as never }))!;
+    // Unknown demand makes the next metric pass take the share from the
+    // rebuilt plants instead of reserving the old economy's 40% of workers.
+    expect(region.labourEmployment.corporateDemandKnown).toBe(false);
+    expect(region.labourEmployment.backgroundEmployed).toBe(550);
+  });
+
+  it("clears the old economy's leftovers on kept rows", async () => {
+    const state = (await db.collection("states").findOne({ _id: trendStateId as never }))!;
+    // The trend restarts at the region's current measured growth, with no gap.
+    expect(state.outputTrendGrowth).toBe(1.25);
+    expect(state.outputGap).toBe(0);
+    expect(state.legacyOutputGap).toBeUndefined();
+    const npp = (await db.collection("npps").findOne({ _id: trackRecordNppId as never }))!;
+    expect(npp.ceoTrackRecord).toBeUndefined();
+    expect(await db.collection("pensionSchemes").countDocuments({})).toBe(0);
+    const resource = (await db
+      .collection("stateResourceCapacity")
+      .findOne({ _id: resourceRowId as never }))!;
+    expect(resource.extractedUnits).toBeUndefined();
+    const bank = (await db.collection("centralBanks").findOne({ countryId: "US" }))!;
+    expect(bank.householdSavingsLiability).toBe(0);
+  });
+
+  it("starts the rebuilt plants from fresh-world configuration with no legacy steering", async () => {
+    const config = (await db.collection("gameConfig").findOne({ _id: "default" as never }))!;
+    for (const name of [
+      "marketRecoveryStage",
+      "marketGovernorCap",
+      "marketGovernorGlideStartTurn",
+      "marketGovernorGlideMode",
+      "producerHouseholdIncomeFloor",
+      "producerFundedBookStage",
+      "producerMarketLiveFromTurn",
+      "commodityNominalPriceIndex",
+      "countryRecessions",
+    ])
+      expect(config[name], name).toBeUndefined();
+    expect(config).toMatchObject({
+      commodityFixStage: 6,
+      marketGovernorRampTurns: 1,
+      marketSystemMode: "plants",
+      ledgerShadow: true,
+      centralBankPricingPhaseIn: {},
+      marketGuardEnabled: false,
+      equityLiquidityFacilityEnabled: false,
+      indexFundBondLiquidityEnabled: false,
+      nppMarketCoverageEnabled: false,
+      nppFragileMarketSupplyEnabled: false,
+    });
+    const state = (await db.collection("gameState").findOne({ _id: "current" as never }))!;
+    expect(state.hardwareInputReliefStartTurn).toBe(plan.currentTurn);
+    expect(state.stockHoldingTaxStartTurn).toBe(plan.currentTurn);
+    expect(plan.reseed).toEqual([
+      { collection: "commodityPrices", count: expect.any(Number) },
+      { collection: "exchangeRates", count: expect.any(Number) },
+    ]);
+  });
+
+  it("reseeds prices and exchange rates and clears the price, trade and wealth series", async () => {
+    const steel = (await db.collection("commodityPrices").findOne({ commodity: "steel" }))!;
+    expect(steel).toMatchObject({
+      basePrice: basePriceBefore,
+      globalPrice: basePriceBefore,
+      turn: 0,
+    });
+    const uk = (await db.collection("exchangeRates").findOne({ _id: "UK" as never }))!;
+    expect(uk.rate).toBe(uk.baseRate);
+    expect(uk.rateHistory).toEqual([]);
+    for (const name of ["commodityPriceHistory", "tradeHistory", "wealthListSnapshots"])
+      expect(await db.collection(name).countDocuments({}), name).toBe(0);
+    const bank = (await db.collection("centralBanks").findOne({ countryId: "US" }))!;
+    expect(bank.chairCharacterId).toEqual(characterId);
+    expect(bank.rateHistory).toEqual([]);
+    expect(bank.forexRevenue).toBe(0);
+    expect(typeof bank.primeRate).toBe("number");
+    const snapshots = await db.collection("moneySupplySnapshots").distinct("turn");
+    expect(snapshots).toEqual([plan.currentTurn]);
   });
 
   it("resets the character's cash to the creation endowment and keeps identity and campaign funds", async () => {

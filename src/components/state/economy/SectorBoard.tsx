@@ -1,6 +1,6 @@
 "use client";
 
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { avgGrowthTone, formatAvgGrowth } from "@/lib/economy/sectorGrowth";
 
 const TONE_CLASS = {

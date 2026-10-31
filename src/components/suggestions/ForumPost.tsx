@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AuthorAvatar } from "./AuthorAvatar";
 import { PlayerBadge } from "./PlayerBadge";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 export interface ForumAuthor {
   name: string | null;

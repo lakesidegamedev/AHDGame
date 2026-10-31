@@ -279,11 +279,6 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
   };
 }
 
-export const SECTOR_REVENUE_TAX_PROVIDER: ExternalAggregateProvider<SectorRevenueTax> = {
-  name: "sectorRevenueTax",
-  run: sectorRevenueTaxProvider,
-};
-
 /**
  * Provider #2 (P4): the sitting government's stored national approval per
  * country (`governmentApprovals` — the canonical store). Read LAST turn's
@@ -305,11 +300,6 @@ export async function governmentApprovalProvider(db: Db): Promise<Map<string, nu
   }
   return byCountry;
 }
-
-export const GOVERNMENT_APPROVAL_PROVIDER: ExternalAggregateProvider<Map<string, number>> = {
-  name: "governmentApproval",
-  run: governmentApprovalProvider,
-};
 
 const clampRange = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -408,11 +398,6 @@ export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRa
   return byCountry;
 }
 
-export const FISCAL_RATIOS_PROVIDER: ExternalAggregateProvider<Map<string, FiscalRatios>> = {
-  name: "fiscalRatios",
-  run: fiscalRatiosProvider,
-};
-
 /**
  * Organizations whose membership confers an *economic* bloc (common market /
  * four freedoms) — members trade more freely with each other → higher
@@ -509,13 +494,6 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
   }
   return byCountry;
 }
-
-export const FISCAL_TRADE_INPUTS_PROVIDER: ExternalAggregateProvider<
-  Map<string, FiscalTradeInputs>
-> = {
-  name: "fiscalTradeInputs",
-  run: fiscalTradeInputsProvider,
-};
 
 /**
  * War damage per country, for the infrastructure nodes.

@@ -28,7 +28,7 @@ export type PxPoint = [number, number];
 export type PxRing = PxPoint[];
 
 /** Grid step, in px, for the land sample. Matches the design's `LAND.step`. */
-export const LAND_STEP = 10;
+const LAND_STEP = 10;
 
 /**
  * Compass words for a px direction: "west → east" and so on.

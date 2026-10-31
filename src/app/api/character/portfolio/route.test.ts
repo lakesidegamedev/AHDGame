@@ -51,7 +51,7 @@ describe("GET /api/character/portfolio", () => {
     } as never);
 
     const { GET } = await import("./route");
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/character/portfolio"));
     expect(res.status).toBe(401);
   });
 
@@ -67,7 +67,7 @@ describe("GET /api/character/portfolio", () => {
     db.collectionMocks.characters.findOne.mockResolvedValue(null);
 
     const { GET } = await import("./route");
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/character/portfolio"));
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -124,7 +124,7 @@ describe("GET /api/character/portfolio", () => {
     });
 
     const { GET } = await import("./route");
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/character/portfolio"));
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -197,7 +197,7 @@ describe("GET /api/character/portfolio", () => {
     });
 
     const { GET } = await import("./route");
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/character/portfolio"));
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -261,7 +261,7 @@ describe("GET /api/character/portfolio", () => {
     });
 
     const { GET } = await import("./route");
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/character/portfolio"));
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -320,7 +320,7 @@ describe("GET /api/character/portfolio", () => {
     });
 
     const { GET } = await import("./route");
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/character/portfolio"));
     const data = await res.json();
 
     expect(res.status).toBe(200);

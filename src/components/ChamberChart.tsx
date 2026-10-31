@@ -6,7 +6,7 @@
  */
 import { PartyLogo } from "@/components/PartyLogo";
 import type { CoalitionViewData } from "@/components/legislature/useCoalitionView";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { computeRowRadii, getParliamentSizing } from "@/lib/charts/parliamentSizing";
 
 export interface PartySeatsDisplay {

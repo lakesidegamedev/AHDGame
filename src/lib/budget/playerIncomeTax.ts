@@ -33,14 +33,12 @@ import {
   annualizedIncome,
 } from "./rules/incomeTaxTiers";
 
-export const PLAYER_TAX_KIND = "player_income_tax";
-
 /**
  * Pass-through distributions already taxed at source (the owner tax on
  * pass-through profit) are not taxed again. The exempt amount comes off the
  * income portion first, then the capital portion.
  */
-export function excludeTaxedAtSource<
+function excludeTaxedAtSource<
   T extends { income: number; capital: number; assessmentTurn?: number },
 >(entry: { type: string; meta?: Record<string, unknown> }, taxable: T): T {
   if (entry.type !== "corp_dividend") return taxable;
@@ -343,6 +341,49 @@ export async function processPlayerIncomeTax(
       { currency: string; path: string; gross: number; taxKind: "income" | "capitalGains" }
     >();
     for (const entry of current) {
+      const receipt =
+        entry.type === "stock_trade_sell"
+          ? (entry.meta?.stockTax as
+              import("./rules/capitalGainsTax").PendingStockTaxReceipt | undefined)
+          : undefined;
+      if (receipt?.withholding) {
+        const held = receipt.withholding;
+        const {
+          nationalRates: _nationalRates,
+          regionalRates: _regionalRates,
+          taxStartTurn: _taxStartTurn,
+          ...terms
+        } = held.context;
+        for (const taxKind of ["income", "capitalGains"] as const) {
+          const tax = taxKind === "income" ? held.income : held.capital;
+          if (!(tax.gross > 0)) continue;
+          actorAssessments.push({
+            ...terms,
+            ...tax,
+            taxKind,
+            withheldAtSource: true,
+            _id:
+              "stock-withholding:" +
+              worldId +
+              ":" +
+              ownerCollection +
+              ":" +
+              character._id.toHexString() +
+              ":" +
+              receipt.id +
+              ":" +
+              taxKind,
+            characterId: character._id,
+            ownerCollection,
+            turn: receipt.saleTurn,
+            worldId,
+            name: character.name,
+            status: tax.federal + tax.regional > 0 ? "unpaid" : "paid",
+            createdAt: now,
+          });
+        }
+        continue;
+      }
       const conversionSource =
         entry.type === "corp_dividend"
           ? "auto_dividend"

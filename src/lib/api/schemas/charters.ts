@@ -14,7 +14,7 @@ const moderatedName = (label: string, min: number, max: number) =>
 
 const axisSchema = z.coerce.number().min(PLATFORM_AXIS_MIN).max(PLATFORM_AXIS_MAX);
 
-export const platformSchema = z.object({
+const platformSchema = z.object({
   economic: axisSchema,
   social: axisSchema,
 });
@@ -68,8 +68,6 @@ export const draftCharterSchema = z.object({
    */
   foundingCohort: z.tuple([foundingCohortPickSchema, foundingCohortPickSchema]).optional(),
 });
-
-export const signCharterSchema = z.object({}).strict();
 
 export const rejectCharterSchema = z.object({
   reason: z.string().trim().max(500).optional(),

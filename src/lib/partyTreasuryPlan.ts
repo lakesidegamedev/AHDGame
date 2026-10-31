@@ -27,7 +27,7 @@ function coerceNonNegative(value: number | null | undefined): number {
   return Number.isFinite(value) && (value ?? 0) > 0 ? Number((value as number).toFixed(6)) : 0;
 }
 
-export function getTreasuryReserveTargets(source: TreasuryPlanSource): TreasuryReserveTargets {
+function getTreasuryReserveTargets(source: TreasuryPlanSource): TreasuryReserveTargets {
   return {
     transferReserveAmount: coerceNonNegative(source?.transferReserveAmount),
     memberSupportReserveAmount: coerceNonNegative(source?.memberSupportReserveAmount),

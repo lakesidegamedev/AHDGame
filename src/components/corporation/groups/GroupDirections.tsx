@@ -1,5 +1,6 @@
 "use client";
 import { useId, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Compass, Pencil } from "lucide-react";
 import { CorporationLogo } from "../CorporationLogo";
@@ -152,10 +153,20 @@ function DirectionCard({ member: m, data, busy, save }: Props & { member: Member
         </div>
       )}
       {data.canManage && !editing && (
-        <button className={button} disabled={busy} onClick={() => setEditing(true)}>
-          <Pencil size={14} aria-hidden="true" />
-          {t(npp ? "directionUI.edit" : "directionUI.editSuggestion")}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className={button} disabled={busy} onClick={() => setEditing(true)}>
+            <Pencil size={14} aria-hidden="true" />
+            {t(npp ? "directionUI.edit" : "directionUI.editSuggestion")}
+          </button>
+          {npp && (
+            <Link
+              className={button}
+              href={"/corporation/" + m.pathId + "?tab=operations&sub=sectors"}
+            >
+              {t("directionUI.manageSectors")}
+            </Link>
+          )}
+        </div>
       )}
       {data.canManage && editing && (
         <DirectionEditor

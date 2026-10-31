@@ -177,6 +177,8 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
    * module. This finds that case by walking the registries that client code
    * imports and checking what they pull out of the folder.
    */
+  // This scans the entire client import graph. Give the repository-wide walk
+  // its own budget when other suites are also compiling modules.
   it("does not change the exact legacy transitive heavy-module boundary", () => {
     const CLIENT_ROOTS = ["src/app", "src/components", "src/hooks", "src/contexts"];
     const clientEntries = CLIENT_ROOTS.flatMap(sourceFiles)
@@ -224,5 +226,5 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
         `\n\nIf an edge was removed, update the exact baseline. If one was added,\n` +
         `move the value to a client-safe leaf or stop the client from reaching it.\n`
     ).toEqual(LEGACY_TRANSITIVE_COUNTRY_BOUNDARY);
-  });
+  }, 60_000);
 });

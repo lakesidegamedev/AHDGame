@@ -1,3 +1,5 @@
+import { NATIONAL_PARTY_NPP_INDEX } from "@/lib/legislature/nationalPartyNppIndex";
+import { STATE_BILL_PARTY_NPP_INDEX } from "@/lib/legislature/stateBillPartyNppIndex";
 import type { Db } from "mongodb";
 import { ensureIndex } from "./helpers";
 
@@ -5,6 +7,20 @@ import { ensureIndex } from "./helpers";
 // primary snapshots, politician sorts, and the unread-mail counter hit on every auth/me.
 export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
   log("Performance indexes:");
+  await ensureIndex(
+    db,
+    "bills",
+    NATIONAL_PARTY_NPP_INDEX.key,
+    NATIONAL_PARTY_NPP_INDEX.options,
+    log
+  );
+  await ensureIndex(
+    db,
+    "stateBills",
+    STATE_BILL_PARTY_NPP_INDEX.key,
+    STATE_BILL_PARTY_NPP_INDEX.options,
+    log
+  );
   await ensureIndex(
     db,
     "checkpointRuns",

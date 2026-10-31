@@ -1,3 +1,4 @@
+import { requiresDiscordForNewCharacter } from "@/lib/auth/rules/discordCharacterGate";
 import { NEW_CHARACTER_STARTING_INFLUENCE } from "@shared/constants/formulas";
 import {
   campaignAnchorToLocal,
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;
 
-    const rateLimit = checkRateLimit(userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/auth/character:${userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, createCharacterSchema);
@@ -217,6 +218,16 @@ export async function POST(request: Request) {
       return errorResponse(
         503,
         "Character creation is disabled during maintenance. Please try again later."
+      );
+    }
+
+    if (
+      requiresDiscordForNewCharacter(gameConfig.discordLinkRequiredForCharacter, userDoc?.discordId)
+    ) {
+      return errorResponse(
+        403,
+        "Link your Discord account before creating a new character. Your existing characters remain playable.",
+        { code: "DISCORD_LINK_REQUIRED" }
       );
     }
 
@@ -628,10 +639,13 @@ export async function POST(request: Request) {
 }
 
 // GET /api/auth/character — Returns the current user's character document.
+// `?include=homeState` adds the GDP and population the action cost quotes need,
+// so /actions can price its cards from its first character request instead of
+// following it with a state round trip.
 // Auth: requireBasicAuth
 // Errors: 401, 404
 // GET endpoint to fetch current user's character
-async function handleGET() {
+async function handleGET(request?: Request) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -653,7 +667,28 @@ async function handleGET() {
       return errorResponse(404, "Character not found");
     }
 
-    return NextResponse.json(character);
+    const includeHomeState = request
+      ? new URL(request.url).searchParams.get("include")?.split(",").includes("homeState")
+      : false;
+    if (!includeHomeState || !character.homeState) {
+      return NextResponse.json(character);
+    }
+
+    // Only the economics the cost quotes read, projected out of the state doc.
+    const state = await db
+      .collection<State>("states")
+      .findOne(
+        { _id: character.homeState, countryId: character.countryId },
+        { projection: { gdp: 1, population: 1 } }
+      );
+
+    return NextResponse.json({
+      ...character,
+      homeStateEconomics:
+        state && typeof state.gdp === "number" && typeof state.population === "number"
+          ? { gdp: state.gdp, population: state.population }
+          : null,
+    });
   } catch (error) {
     return handleRouteError(error);
   }

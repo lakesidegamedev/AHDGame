@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { economyUrl } from "@/lib/urls";
 
 interface StateMacroHeaderProps {
@@ -36,7 +37,7 @@ export function StateMacroHeader({
   nationalGdpGrowth,
   topSectorLabel,
 }: StateMacroHeaderProps) {
-  const config = COUNTRY_CONFIGS[(countryId as string).toUpperCase() as CountryId];
+  const config = COUNTRY_CLIENT_CONFIGS[(countryId as string).toUpperCase() as CountryId];
   const regionLabel = config?.regionLabel ?? "State";
   const vsNational =
     stateGdpGrowth != null && nationalGdpGrowth != null

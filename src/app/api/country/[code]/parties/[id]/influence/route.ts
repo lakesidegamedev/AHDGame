@@ -4,7 +4,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { partyInfluenceQueueSchema, partyInfluenceSchema } from "@/lib/api/schemas/influence";
-import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { NPP_MANAGEMENT_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
@@ -68,7 +68,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(`party-influence:${auth.user.userId}`, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `party-influence:${auth.user.userId}`,
+      NPP_MANAGEMENT_LIMITS.maxRequests,
+      NPP_MANAGEMENT_LIMITS.windowMs
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();

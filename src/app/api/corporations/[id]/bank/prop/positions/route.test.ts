@@ -32,7 +32,6 @@ beforeEach(() => {
       _id: "default",
       privateBankingEnabled: true,
       bankPropTradingEnabled: true,
-      bankPropForexFeesEnabled: true,
     },
   ]);
   memory.seed("gameState", [{ _id: "current", currentTurn: 100 }]);

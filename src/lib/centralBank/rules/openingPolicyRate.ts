@@ -25,7 +25,7 @@ export const HISTORICAL_POLICY_RATES_1991: Partial<Record<CountryId, number>> = 
 };
 
 /** Gameplay opening rates, percent per year. Historic debt keeps its own coupons. */
-export const OPENING_POLICY_RATES_1991: Partial<Record<CountryId, number>> = {
+const OPENING_POLICY_RATES_1991: Partial<Record<CountryId, number>> = {
   US: 4,
   UK: 4.5,
   JP: 3,
@@ -33,7 +33,7 @@ export const OPENING_POLICY_RATES_1991: Partial<Record<CountryId, number>> = {
   IE: 4.5,
 };
 
-export const OPENING_POLICY_RATE_CEILING_1991 = 5;
+const OPENING_POLICY_RATE_CEILING_1991 = 5;
 
 export function getOpeningPolicyRate(
   countryId: CountryId,

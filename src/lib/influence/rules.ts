@@ -4,7 +4,7 @@
  * round down and anchor-fund costs round to the nearest unit.
  */
 
-export const EXTERNAL_BOOST_PREMIUM = 1.25;
+const EXTERNAL_BOOST_PREMIUM = 1.25;
 export const EXTERNAL_ATTACK_PREMIUM = 1.5;
 
 export interface ExternalBoostPrice {

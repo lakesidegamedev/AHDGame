@@ -42,6 +42,7 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
+import { fundedDemandThrottle } from "@/lib/market/producerMarket/fundedSectorRules";
 import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
@@ -78,9 +79,11 @@ import {
   type CaptiveProduct,
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { bookPressure, plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
-import { recipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
+import { fundedShortageBuildOps } from "./sectorTurn/shortageBuildSpeedup";
+import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
+import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
 import {
   createProducerWallets,
   producerWalletId,
@@ -615,6 +618,26 @@ export async function runFundedProducerTurn(
     };
   };
 
+  // State companies hold almost no cash of their own (profit is remitted, the
+  // treasury backs losses), so on their own cash they would plan nothing and
+  // leave their plants, workers and wages idle. The owning treasury advances
+  // their full run before the market plans; what they do not spend goes back
+  // right after settlement (see stateRunAdvanceRules).
+  const stateCorpIds = new Set(
+    [...demand.ownerKindByCompany].flatMap(([id, kind]) => (kind === "state" ? [id] : []))
+  );
+  const advanceCtx = {
+    worldEpoch,
+    turn,
+    now: new Date(),
+    rates,
+    treasuryCurrency: (countryId: string) => countryCurrency.get(countryId),
+  };
+  const stateAdvances = await advanceStateRuns(db, advanceCtx, {
+    plans: demand.preparedSectors.map((p) => p.plan),
+    stateCorpIds,
+  });
+
   const settled = await runCorporationProducerMarket(db, {
     worldEpoch,
     turn,
@@ -630,6 +653,15 @@ export async function runFundedProducerTurn(
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
       stockCoverTurns: input.env.stockCoverTurns,
+      // Private companies (player and AI) may owe wages and site bills to keep
+      // running; state companies run on the treasury advance above instead.
+      credit: {
+        accountIds: [...demand.ownerKindByCompany]
+          .flatMap(([id, kind]) => (kind === "state" ? [] : [id]))
+          .sort(),
+        ...(input.env.creditRunTurns != null ? { runTurns: input.env.creditRunTurns } : {}),
+        ...(input.env.creditStuckTurns != null ? { stuckTurns: input.env.creditStuckTurns } : {}),
+      },
       ...((input.env.fundedBookStage ?? 0) >= 1
         ? {
             countryOfProducer: (id: string) => demand.planCountry.get(id),
@@ -639,6 +671,14 @@ export async function runFundedProducerTurn(
     },
     close: closeAtSettlement,
   });
+
+  // Unspent advance returns now, before the remittance sweep later in the turn
+  // reads this cash as profit. Keep the in-memory cash the legacy pass reads in step.
+  const returned = await returnStateRunAdvances(db, advanceCtx, stateAdvances);
+  for (const [id, local] of returned) {
+    const corp = corpById.get(id);
+    if (corp) corp.liquidCapital = (corp.liquidCapital ?? 0) - local;
+  }
 
   const supportBySector =
     (settled.result.close?.meta?.supportBySector as Record<string, number> | undefined) ?? {};
@@ -666,17 +706,30 @@ export async function runFundedProducerTurn(
       { ordered: false }
     );
   const receiptsBySectorId = new Map<string, FundedReceipt>();
+  // AI saturation reads `demandThrottleFactor`; funded turns write it here.
+  const throttleBySectorId = new Map<string, number>();
   // Sectors whose plant delivered to its own company's sites (captiveDeliveryStage).
   const captiveOn = (input.env.captiveDeliveryStage ?? 0) >= 1;
   const offtakeBySectorId = new Map<string, number>();
+  // A plant whose run short inputs cut was billed wages on the share it made;
+  // its reported crew is that share of the planned crew.
+  const headcountBySectorId = new Map(demand.headcountBySectorId);
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
+    const billed =
+      r && r.worldEpoch === worldEpoch && r.turn === turn ? r.billedRunShare : undefined;
+    const planned = headcountBySectorId.get(sector._id.toHexString());
+    if (billed != null && planned)
+      headcountBySectorId.set(sector._id.toHexString(), {
+        desiredWorkers: Math.round(planned.desiredWorkers * billed),
+        workers: Math.round(planned.workers * billed),
+      });
     if (captiveOn && r && r.worldEpoch === worldEpoch && r.turn === turn)
       offtakeBySectorId.set(
         sector._id.toHexString(),
         offtakeUnits(r as { soldUnits?: number; products?: CaptiveProduct[] })
       );
-    if (r && r.worldEpoch === worldEpoch && r.turn === turn)
+    if (r && r.worldEpoch === worldEpoch && r.turn === turn) {
       receiptsBySectorId.set(sector._id.toHexString(), {
         revenue: r.revenue,
         profit: r.profit,
@@ -685,26 +738,42 @@ export async function runFundedProducerTurn(
         unsoldProductionCost: r.unsoldProductionCost ?? 0,
         transitionSupport: supportBySector[sector._id.toHexString()] ?? 0,
       });
+      throttleBySectorId.set(
+        sector._id.toHexString(),
+        fundedDemandThrottle(r.soldUnits, r.offeredUnits)
+      );
+    }
   }
-  // Consecutive zero-sales turns per settled sector (AI mothballing reads it).
-  const zeroSales: ObjectId[] = [];
-  const sold: ObjectId[] = [];
-  for (const [id, r] of receiptsBySectorId)
-    ((captiveOn ? (offtakeBySectorId.get(id) ?? r.soldUnits) : r.soldUnits) > 0
-      ? sold
-      : zeroSales
-    ).push(new ObjectId(id));
+  // Consecutive zero-sales turns per settled sector (AI mothballing reads it),
+  // and the funded demand throttle (AI saturation reads it, and the legacy pass
+  // would otherwise leave it stale), in one write per sector rather than a
+  // second round trip.
   const sectorDocs = db.collection<CorporateSector>("corporateSectors");
-  if (zeroSales.length > 0)
-    await sectorDocs.updateMany(
-      { _id: { $in: zeroSales } },
-      { $inc: { producerZeroSalesTurns: 1 } }
-    );
-  if (sold.length > 0)
-    await sectorDocs.updateMany(
-      { _id: { $in: sold }, producerZeroSalesTurns: { $gt: 0 } },
-      { $set: { producerZeroSalesTurns: 0 } }
-    );
+  const sectorUpdates: AnyBulkWriteOperation<CorporateSector>[] = [];
+  for (const [id, receipt] of receiptsBySectorId) {
+    const soldUnits = captiveOn
+      ? (offtakeBySectorId.get(id) ?? receipt.soldUnits)
+      : receipt.soldUnits;
+    const throttle = throttleBySectorId.get(id) ?? 1;
+    // Only output that found no buyer is a demand signal. A plant that made
+    // nothing (no cash, no inputs, capacity not landed yet) holds its streak,
+    // so AI mothballing does not park plants that were never able to sell.
+    sectorUpdates.push({
+      updateOne: {
+        filter: { _id: new ObjectId(id) },
+        update:
+          soldUnits > 0
+            ? { $set: { demandThrottleFactor: throttle, producerZeroSalesTurns: 0 } }
+            : receipt.producedUnits > 0
+              ? {
+                  $inc: { producerZeroSalesTurns: 1 },
+                  $set: { demandThrottleFactor: throttle },
+                }
+              : { $set: { demandThrottleFactor: throttle } },
+      },
+    });
+  }
+  if (sectorUpdates.length > 0) await sectorDocs.bulkWrite(sectorUpdates, { ordered: false });
   for (const sectorId of idleSectorIds)
     if (!receiptsBySectorId.has(sectorId))
       receiptsBySectorId.set(sectorId, { revenue: 0, profit: 0, producedUnits: 0, soldUnits: 0 });
@@ -761,8 +830,13 @@ export async function runFundedProducerTurn(
   });
   // Measured shortage per book (shortage growth) and per recipe (AI restarts).
   const restartOn = (input.env.fundedRestartStage ?? 0) >= 1;
+  const buildFactor = input.env.shortageBuildFactor;
+  const buildSpeedupOn = typeof buildFactor === "number" && buildFactor > 0 && buildFactor < 1;
   const pressureNow =
-    shortageOn || restartOn ? bookPressure(settled.result.orderOutcomes ?? []) : undefined;
+    shortageOn || restartOn || buildSpeedupOn
+      ? bookPressure(settled.result.orderOutcomes ?? [])
+      : undefined;
+  const pressureByBookNow = pressureNow ? new Map(Object.entries(pressureNow)) : undefined;
   // World-book clearing price per commodity, for next turn's buyer references.
   const clearingPrices: Record<string, number> = {};
   for (const row of settled.result.prices)
@@ -806,8 +880,9 @@ export async function runFundedProducerTurn(
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
       ...(restartOn && pressureNow
         ? {
-            recipePressure: recipePressure(
-              settled.closingSectors.flatMap((s) => {
+            recipePressure: fundedRecipePressure({
+              // Running plants publish the shortage each reads on its main line.
+              running: settled.closingSectors.flatMap((s) => {
                 const r = s.producerSettlement;
                 if (s.mothballed === true || !r || r.turn !== turn) return [];
                 const products = (r as { products?: Parameters<typeof plantPressure>[0] }).products;
@@ -815,13 +890,27 @@ export async function runFundedProducerTurn(
                   {
                     sectorType: s.sectorType,
                     strategyId: s.strategyId,
-                    pressure: plantPressure(products, new Map(Object.entries(pressureNow))),
+                    pressure: plantPressure(products, pressureByBookNow),
                     deliveredUnits:
                       (r as { deliveredUnits?: number }).deliveredUnits ?? r.soldUnits ?? 0,
                   },
                 ];
-              })
-            ),
+              }),
+              // A recipe with no running plant publishes nothing, so a fully
+              // mothballed one reads its own output lanes instead.
+              mothballed: settled.closingSectors.flatMap((s) => {
+                const r = s.producerSettlement;
+                if (s.mothballed !== true || !r || r.turn !== turn) return [];
+                return [
+                  {
+                    sectorType: s.sectorType,
+                    strategyId: s.strategyId,
+                    products: (r as { products?: Parameters<typeof plantPressure>[0] }).products,
+                  },
+                ];
+              }),
+              pressureByBook: pressureByBookNow,
+            }),
           }
         : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
@@ -923,6 +1012,33 @@ export async function runFundedProducerTurn(
       )
     )
   );
+  // Faster construction where the funded book is short (fresh worlds start far
+  // short of real demand; gameConfig.producerShortageBuildFactor).
+  if (buildSpeedupOn && pressureNow) {
+    const pressureByBook = pressureByBookNow!;
+    const ops = fundedShortageBuildOps({
+      sectors: settled.closingSectors.map((s) => {
+        const r = s.producerSettlement;
+        return {
+          _id: s._id,
+          buildQueue: s.buildQueue,
+          mothballed: s.mothballed,
+          pressure:
+            r && r.turn === turn
+              ? plantPressure(
+                  (r as { products?: Parameters<typeof plantPressure>[0] }).products,
+                  pressureByBook
+                )
+              : undefined,
+        };
+      }),
+      currentTurn: turn,
+      factor: buildFactor,
+      now: new Date(),
+    });
+    if (ops.length > 0)
+      await db.collection("corporateSectors").bulkWrite(ops as never, { ordered: false });
+  }
   await apply(
     batchProducerMoves(
       worldEpoch,
@@ -950,7 +1066,7 @@ export async function runFundedProducerTurn(
   return {
     receiptsBySectorId,
     settledProfitByCorp,
-    headcountBySectorId: demand.headcountBySectorId,
+    headcountBySectorId,
   };
 }
 

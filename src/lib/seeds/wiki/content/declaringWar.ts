@@ -1,154 +1,152 @@
 export const declaringWarContent = `# Declaring War
 
-You do not click a button and start a war. You **file a bill**, and your legislature decides.
+You do not click a button and start a war. You **file a bill**, and your legislature decides. A declaration needs a two-thirds vote, so a president or prime minister who cannot carry two-thirds of their chamber cannot go to war at all. Before you file, know who can, what it costs if you lose the vote, and what is already stacked against you.
 
-This is the single most important thing to understand about war in A House Divided: a declaration is an act of the legislature, held to a higher bar than almost anything else in the game, and a president or prime minister who cannot carry two-thirds of their chamber cannot go to war at all.
+## From filing to war
 
-## Who may file
+1. **File.** The head of government or the defence seat holder files a declaration of war naming a target country and a war goal.
+2. **Checks.** The server refuses the filing, at no cost to you, if any check in the list below fails.
+3. **Vote.** Each chamber that votes on bills gets a 24-turn vote. In a two-chamber legislature such as the US Congress the second chamber votes after the first, so the bill takes at least 48 turns. It needs two-thirds of the votes cast (For plus Against, abstentions excluded) in every chamber. Any signing step your country has comes last: the US President has 10 turns to sign or veto, and the UK Lords can hold a bill for up to 2 turns.
+4. **Outcome.** Once the last step clears, the war starts and your 10 action points come back. If it fails, the points are gone and your cooldown keeps running.
 
-Exactly two offices, with no precedence between them:
+![Flow from filing the bill and server checks to a 24 turn vote needing two thirds, then passing to start or join a war or failing and losing the action points.](/wiki-images/diagrams/declaring-war-flow.svg)
 
-- **The head of government**: President, Prime Minister, Chancellor, General Secretary, whichever your country has. This is resolved from whichever office actually runs your government, so a US President and a UK Prime Minister both qualify by different routes.
-- **The defence seat holder**: Secretary of Defense, Defence Secretary, Minister of Defence, and equivalents.
+### The numbers to plan around
 
-Nobody else. Not the foreign minister, not the legislature itself, not a general.
-
-**Where to click:**
-
-| If you are… | Go to |
+| What | Value |
 | --- | --- |
-| Head of government | Your executive shell → **Foreign Affairs** tab |
-| Defence seat holder | Your cabinet office → **Commands** tab → *Declaration of war* |
+| Cost to file | 10 action points, refunded if the bill passes |
+| Voting window | 24 turns (one real day) per chamber vote |
+| Bar to pass | Two-thirds of For plus Against, in every government type |
+| Cooldown between filings | 120 turns (five real days), counted from your last filing |
+| Truce after any war ends | 240 turns (ten real days), per pair of enemy countries |
+| Opening forces | About a fifth of the weaker side's uncommitted reserve strength, per side |
+| Selectable war goals | Regime Change, Punitive, Liberation (Conquest is locked) |
 
-Both surfaces post to the same place and behave identically.
+One turn is one real hour, so these timers run in real time even when nobody is logged in.
 
-## The cost of filing
+## Who can file, and what refuses you
 
-Filing a declaration costs **10 action points**, exactly like any other bill. If the legislature **passes** it, the points are **refunded**. If the chambers throw it out, you have spent them.
+**Who may file:** the head of government (President, Prime Minister, Chancellor, General Secretary, whichever your country has) or the defence seat holder (Secretary of Defense, Minister of Defence and equivalents). Neither office outranks the other. Nobody else can: not the foreign minister, not a general, not a legislator.
 
-That refund shapes the strategy: a declaration you are confident of is nearly free, while a speculative one you expect to lose is a real cost. Do not file to "test the water."
+| If you are | Go to |
+| --- | --- |
+| Head of government | Your executive shell, **Foreign Affairs** tab |
+| Defence seat holder | Your cabinet office, **Commands** tab, **Declaration of war** panel |
 
-## The two-thirds bar
+Both places show the same form and post the same bill. It greys out the countries you cannot target (truced or allied), shows the turn each truce ends, and states the 120-turn cooldown rule. If you file inside the cooldown, the server tells you how many turns remain.
 
-A declaration of war must carry a **two-thirds supermajority of votes cast** in every chamber it passes through. Abstentions are excluded: the bar is two-thirds of For plus Against.
+**Everything that can refuse a declaration:**
 
-**There is no exemption for anyone.** Ordinary nationalisation and privatisation bills give one-party states a simple-majority carve-out, on the reasoning that a single-party legislature rubber-stamps economic policy anyway. That carve-out is deliberately **not** extended to war. A one-party state's rubber-stamp legislature must still deliver two-thirds.
+1. The target must exist and be open to players in your world. Scotland and Wales cannot be declared on. A country nobody currently plays is fine: it is run by its autonomous government.
+2. It cannot be yourself.
+3. The war goal must be a selectable one.
+4. The target cannot be a fellow member of your alliance. Withdraw from the alliance first.
+5. You cannot already be at war with the target. That includes facing them on opposite sides of a war someone else started.
+6. Your 120-turn cooldown must have run out.
+7. No truce can be in force between you and the target.
+8. No declaration against that same country can already be before your chambers.
 
-The bill sits open for **24 turns** (one real day). A declaration is not a rush job, and the delay is a real strategic window in which your target can see the debate happening and prepare.
+**Tips:**
 
-Because it is an ordinary bill in every other respect, it appears on the legislature floor, it can be whipped, it can be argued against, and it can be killed. Opposition to a war is a legitimate and effective play.
+- Count your votes before you file. A declaration you are sure of is free, because the points come back. A speculative one costs 10 action points and a five-day cooldown.
+- Check the truce list before you plan a campaign, not after.
+- The debate is public. Your target sees the bill on your legislature floor for at least a full day, so surprise lives at the offensive level (see [Fighting a Battle](/wiki/fighting-a-battle)), not here.
+
+## Counting the vote
+
+The two-thirds bar and the 24-turn window are ordinary bill rules from [Bills & Legislation](/wiki/bills-legislation).
+
+A chamber of 90 voters casts 61 For, 29 Against and 0 abstentions. 61 is 67.8% of 90, so it passes. The same chamber at 59 For and 31 Against is 65.6%, which fails. Exactly 60 For and 30 Against is 66.7% and passes, because the rule is "at least two-thirds". If 20 members abstain from a 90-seat chamber, only the 70 who voted count, so 47 For and 23 Against passes (67.1%).
+
+**A failed bill, step by step.** You file on turn 1000 and the chamber rejects it. The 10 action points are spent. The next time you may file is turn 1120. If you win a war later and it ends on turn 1300, a truce with each enemy runs to turn 1540.
+
+### Why two-thirds, and why no exemptions
+
+Ordinary nationalisation bills give one-party states a simple-majority carve-out, because a single-party legislature rubber-stamps economic policy. That carve-out deliberately does not apply to war. A one-party state must still deliver two-thirds. The point is that going to war should be the hardest thing a government can pass.
+
+### Edge cases
+
+- **Two chambers.** Both chambers must pass the bill. If either votes it down, it fails. Where both chambers vote at once, each is counted separately.
+- **The filer leaves office.** The bill belongs to the country, not to the person who filed it. The vote carries on.
+- **Alliances change while your bill is open.** The alliance rule is re-checked when the bill passes. If you and the target have become fellow alliance members in the meantime, a passed bill is dropped and no war starts.
+- **The pair got into a war meanwhile.** The one-war-per-pair rule is also re-checked at passage.
 
 ## Choosing a war goal
 
-Every declaration names what the war is *for*. The goal is recorded on the conflict permanently and is what peace terms are negotiated against.
+Every declaration names what the war is for. The goal is recorded on the conflict and is what peace terms are negotiated against.
 
-| Goal | What it means | Available? |
+| Goal | What it means | Available |
 | --- | --- | --- |
 | **Regime Change** | Force a change of government in the defending country. | Yes |
 | **Punitive** | Extract concessions by force, then withdraw. | Yes |
 | **Liberation** | Free territory or an ally held by the defender. | Yes |
-| **Conquest** | Take and hold enemy territory. | **Not yet** |
+| **Conquest** | Take and hold enemy territory. | No |
 
-**Conquest is reserved and cannot be selected.** Nothing in the game transfers territory between countries yet, so a war fought for conquest could not actually be won on its own terms. The option is visible but disabled, and the server refuses it too: you cannot slip it past the interface by hand-crafting a request. It will be switched on when annexation exists.
-
-## Every check your declaration must clear
-
-The declaration is refused, before it costs you anything, if any of these fail:
-
-1. **The target exists and is open to players.** Sub-national entities like Scotland and Wales, and countries an admin has not switched on, cannot be declared on, since there would be nobody able to play the other side.
-2. **It is not yourself.**
-3. **The war goal is one of the selectable three.**
-4. **You are not already at war with them.** This includes the indirect case: if you and your target are already facing each other on opposite sides of a war *someone else* started, you are at war and cannot open a second one.
-5. **Your declaration cooldown has lapsed.** See below.
-6. **No truce is in force between you.** See below.
-7. **No declaration against that same country is already before the chambers.** One at a time.
+Conquest cannot be selected. Nothing in the game transfers territory between countries yet, so a conquest war could not be won on its own terms. The server refuses it as well as the form, so a hand-built request will not get it through.
 
 ## The 120-turn cooldown
 
-A country may file a declaration of war only once every **120 turns** (about five real days).
+A country may file a declaration only once every 120 turns. The clock runs from your last **filing**, not your last passage. A declaration your chambers threw out still spent your cooldown. If a rejected declaration could be re-filed at once, the vote would mean nothing, because an executive could keep tabling it until attendance favoured them.
 
-The clock runs from your **last proposal, not your last passage.** A declaration your chambers threw out still spent your cooldown. This is deliberate: if a rejected declaration could be re-filed immediately, the vote would mean nothing, and an executive could simply keep tabling it until attendance favoured them.
+\`\`\`wiki-chart
+war-declaration-timers
+\`\`\`
 
-The panel tells you how many turns remain rather than making you discover it by refusal.
+Joining an existing war through your own declaration also uses your cooldown, because it still goes through a full bill. Being pulled in by a treaty uses none.
 
 ## The 240-turn truce
 
-When **any** war between two countries ends, whether negotiated, conceded, or won outright, a **240-turn truce** (about ten real days) is recorded between them. Neither may declare on the other until it lapses.
+A finished war leaves this truce, which blocks re-declaring (see [Peace, Indemnities & Truces](/wiki/peace-and-truces)). When any war between two countries ends, whether negotiated, conceded or won outright, a 240-turn truce starts between them. Neither can declare on the other until it lapses. It is not a peace term, and neither side can trade it away.
 
-This is not a negotiated term. Neither side can trade it away in a peace deal.
+It closes an exploit. Without it, a country you conquered on turn 100 could be re-declared on the moment your 120-turn cooldown ran out, when it is least able to resist. The truce outlasts the cooldown by 120 turns on purpose.
 
-It exists to close an obvious exploit: without it, a country you conquered on turn 100 could be re-declared on the moment your 120-turn cooldown lapsed, at precisely the point it is least able to resist. The truce outlasts the cooldown by design.
-
-Truces are recorded for **every cross-side pair**, not just the two principals. If four countries fought, all cross-side combinations are truced, so an ally who did the actual fighting is not left free to re-declare while the principal waits.
-
-Your defence office's declaration panel lists your live truces and greys out the countries you cannot target, so you see the bar in the picker rather than after committing.
+Truces are recorded for every pair on opposite sides, not only the two principals. If four countries fought, every cross-side pairing is truced, so an ally who did the fighting cannot re-declare while the principal waits. This is the answer to "why can't I attack a country I just fought?"
 
 ## Treaty allies come in with the defender
 
-Ratification is not the only way into a war. **A mutual-defence pact is enforced by the engine.** Any Security or Bloc organization at the Article 5 alert posture is one, and so are NATO and the Warsaw Pact in worlds that begin in the Cold War, whatever their posture. The moment a declaration against a member is enacted, every other member of that alliance that holds a ballot is enrolled on the defender's side, automatically, with no vote and no bill. The alliance is named in the war's belligerent roll ("Warsaw Pact → DD"), and the countries pulled in are notified. The pact is also checked every turn, so an alliance that moves to Article 5 during a member's war, or a country that joins it during one, brings its members in on the next turn.
+A mutual-defence pact is enforced by the engine. Any Security or Bloc organization at the Article 5 alert posture counts as one, and so do NATO and the Warsaw Pact in worlds that start in the Cold War, whatever their posture. When a declaration against a member is enacted, every other member that holds a ballot is enrolled on the defender's side with no vote and no bill. The war's belligerent roll names the alliance, for example "Warsaw Pact → DD", and the countries pulled in are notified.
 
-Three things follow from that:
+The pact is also checked every turn, so an alliance that moves to Article 5 during a member's war brings its members in on the next turn, and a country that joins an alliance while a fellow member is under attack is enrolled on the next turn. Joining an alliance mid-war does not bring that alliance into a war you were already fighting.
 
-- **It is defensive only.** The trigger is a declaration *against* a member, never "a member is at war". An ally dragged in to defend has declared on nobody, so its own alliances never fire in turn. Chains cannot happen.
-- **A truce still holds.** A member truced with the declarer is not pulled in against it, and neither is a member that shares a bloc or a binding alliance with the declarer. If the declarer is itself a member of the alliance, the alliance takes no side.
-- **The ally is a full belligerent.** Its troops defend the front automatically if posted there, its approval carries the war, and it is judged on what it fields against what its co-belligerents field. It can also negotiate its own way out (see [Peace, Indemnities & Truces](/wiki/peace-and-truces)).
+- **Defensive only.** The trigger is a declaration *against* a member, never "a member is at war". An ally dragged in has declared on nobody, so its own alliances do not fire in turn. Chains cannot happen.
+- **A truce still holds.** A member truced with the declarer is not pulled in against it. Neither is a member that shares a bloc or a binding alliance with the declarer. If the declarer is itself a member, the alliance takes no side.
+- **The ally is a full belligerent.** Its troops defend the front automatically if posted there, its approval carries the war, and it can negotiate its own way out. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 
-There is a second route in for a bloc: a member can table a resolution calling the whole organization into a conflict. That needs **unanimous consent** from every member entitled to vote, because it commits allies' soldiers. If the bloc is joining the side that holds the war's territory, the call is collective defence and passing the organization vote enrolls eligible allies immediately without national legislation. This includes extending protection to a new member whose war began before admission. Joining the attacking side remains an offensive coalition choice and produces a join-conflict bill in each eligible member's legislature. The membership ballot warns the bloc when an applicant is already at war or is the target of a pending declaration. See [International Organizations](/wiki/international-organizations).
+### Blocs calling members in
 
-A Bloc can also vote to begin a new war against a player nation. Only player nations hold ballots on that resolution, and all of them must vote yes. Passage puts a declaration before every eligible player nation's legislature, with both chambers voting concurrently where both have a vote. Each declaration still needs two-thirds in every required chamber. NPP-governed members enter automatically when the bloc resolution passes. If one player nation's declaration fails, only that nation stays out; the NPP members and every country whose legislature passed remain in the coalition.
+A member can table a resolution calling the whole organization into an existing conflict. It needs unanimous consent from every member entitled to vote, because it commits allies' soldiers. If the bloc joins the side that holds the war's territory, the call is collective defence, and passing the organization vote enrols eligible allies at once without national legislation. If it joins the attacking side, each eligible member's legislature gets a join-conflict bill instead.
 
-Autonomous governments use these roads too. A country nobody plays can ratify a war-entry bill on its own, provided its public approval, readiness, treasury and alliance all support it, and it deploys real forces when it does.
+A bloc can also vote to begin a new war against a player nation. Only player nations hold ballots, and all must vote yes. Passage puts a declaration before each eligible player nation's legislature, and each still needs two-thirds in every required chamber. Members run by autonomous governments enter automatically. If one player nation's declaration fails, only that nation stays out. The rest remain in the coalition. See [International Organizations](/wiki/international-organizations).
+
+An autonomous government can also ratify a war-entry bill on its own, if its public approval, readiness, treasury and alliance all support it, and it deploys real forces when it does.
 
 ## What happens the moment it passes
 
-Ratification fires immediately on enactment. One of two things happens:
+**No live war in the defender.** A new conflict opens, hosted in the defending country and named after the two belligerents. Side A is you and side B is the defender. Region, terrain and infrastructure come from the defender's home region. Territorial control opens at the defender's own pole, so they hold all of their own soil and you start from nothing. The one exception is a war the German Question attaches to, which opens on an even front. The war gets the next conflict number and its own page.
 
-### There is no live war in the defender
+**A live war already exists in the defender.** You do not open a second war over the same ground. You are enrolled on the side opposing the defender in the existing conflict. That is not always side B, because the defender may already be on side A of a war someone else started against them.
 
-A **new conflict** is created, hosted in the defending country:
+### Opening forces
 
-- Named after the two belligerents.
-- Side A is you; side B is the defender.
-- Region, terrain and infrastructure are derived from the defender's home region.
-- **Territorial control opens at the defender's own pole**: they hold 100% of their own soil. You are starting from nothing, which is exactly right for an invasion. (The one exception is a war the German Question attaches to, which is fought over both Germanies and opens on an even front.)
-- It is assigned the next sequential conflict number and gets its own page.
+A new war does not start with two empty fronts. A matched slice of both sides' uncommitted reserve (the units you own and have not posted anywhere; see [Units, Recruitment & Procurement](/wiki/military-units)) is deployed to it automatically: each side commits the same share, measured against the weaker side's reserve (about a fifth), and the smallest formations are chosen first so one huge unit does not turn a token commitment into an all-in deployment.
 
-### There is already a live war in the defender
+It never invents units. If either side has no uncommitted reserve, nothing moves. Those units stay fully yours to reassign or withdraw on the next turn. The point is to avoid a first battle decided by whoever logged in first.
 
-You do **not** open a second war over the same ground. You are **enrolled on the side opposing the defender** in the existing conflict.
+## What a passed declaration changes
 
-This keeps one war per besieged country and one pin per map location, and it matches how coalitions work. Note the subtlety: the side you join is the one *opposing the defender*, which is not automatically side B, since the defender may already be sitting on side A of a war somebody else started against them.
+Legislators decide whether a war happens and can whip or argue against it. The target has the whole window to prepare. Everyone in the declarer's country feels the approval effects below.
 
-## Opening forces
+**Declaring rallies the public, once.** A war declared from peace opens with a wave of support. It falls by one point per game year (48 turns) into war exhaustion, which is carried across a peace and heals slowly. A country that goes straight from one war into the next gets no fresh rally. See [Government Approval](/wiki/government-approval).
 
-A brand-new war does not begin with two empty fronts.
+**A war you start is not a war you can end.** Peace is negotiated by the head of government or the foreign minister. A defence secretary who filed the declaration needs somebody else's signature to end it. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 
-When a conflict is created, a **small, matched slice of both sides' uncommitted reserve** is deployed to it automatically. Both sides commit the same share, measured against whichever side's reserve pool is smaller, and the smallest formations are picked first so one oversized unit does not turn a token commitment into an all-in deployment.
+Three more systems feel the new war at once. The conflict it creates or joins is covered in [Conflicts & the Military System](/wiki/conflicts-overview), the host country and starting pole it sets decide how far a campaign has to go (see [Occupation, Territory & Victory](/wiki/occupation-and-victory)), every war on the board pushes the world gauge in [Cold War Tension](/wiki/cold-war-tension), and a war is what lets a fleet run a [blockade](/wiki/blockades).
 
-Two things this deliberately does **not** do:
-
-- **It never invents units.** If either side has no uncommitted reserve, nothing moves at all. A country with no army does not get handed one to make the opening look fair.
-- **It does not take over.** Those units remain fully yours to manage, reassign, or withdraw on the very next turn.
-
-The point is only to remove the degenerate opening where the first battle is decided by whichever player happened to log in first and deploy.
-
-## Strategic notes
-
-**The 24-turn debate is public.** Your target sees a declaration bill on your legislature floor before the war starts. Surprise attacks are not really available to you at the declaration level: surprise lives at the *offensive* level instead, once a war is already running.
-
-**Filing is cheap, losing is not.** The 10 AP refund means a well-whipped declaration costs nothing. Count your votes first.
-
-**Joining someone else's war by declaration has no cooldown advantage.** Enrolling in an existing conflict through your own declaration still consumes your 120-turn cooldown, because it still goes through a full declaration bill. Being pulled in by a treaty is different: no bill, no cooldown, and no choice.
-
-**Declaring rallies the public, once.** A war declared from peace opens with a wave of support that turns into war exhaustion after about a year of fighting, and that exhaustion is carried across a peace and heals only slowly. A country that goes straight from one war into the next gets no fresh rally at all. See [Government Approval](/wiki/government-approval).
-
-**Check the truce list before you plan a campaign.** Ten real days is a long time to discover you cannot attack the country your whole build-up was aimed at.
-
-**A war you start is not a war you can end.** Peace is negotiated by the head of government or the **foreign** minister. If you are the defence secretary who filed the declaration, ending it is somebody else's signature.
-
-## Next
+## See also
 
 - [Fighting a Battle](/wiki/fighting-a-battle): what to do once the war exists.
-- [Peace, Indemnities & Truces](/wiki/peace-and-truces): how to get back out.
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): a full worked example.
+
+Same in every world, era and government type; NATO and the Warsaw Pact count automatically only in worlds that begin in the Cold War, and the target must be open to players. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

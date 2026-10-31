@@ -9,7 +9,7 @@ function formatWarningDate(value: string): string {
   }).format(new Date(value));
 }
 
-export function getBillAutoFailWarningConfirmText(warning: BillProposalAutoFailWarning): string {
+function getBillAutoFailWarningConfirmText(warning: BillProposalAutoFailWarning): string {
   return [
     `Warning: The next ${warning.electionName} is expected to finalize on ${formatWarningDate(warning.electionEndsAt)}.`,
     `Bills still in the ${warning.lowerChamberName} at that time automatically fail.`,

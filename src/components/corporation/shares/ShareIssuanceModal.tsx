@@ -123,10 +123,16 @@ export default function ShareIssuanceModal({
           setError(apiErrorText(data, "Failed to issue shares"));
           return;
         }
+        const notice = typeof data.placementNotice === "string" ? ` ${data.placementNotice}` : "";
         if (typeof data.underwritingFeeLocal === "number") {
           setResultMessage(
-            `Gross funded ${fmtLocalFull(data.grossPlacedLocal)}, underwriting fee ${fmtLocalFull(data.underwritingFeeLocal)}, net proceeds ${fmtLocalFull(data.issuerNetLocal)}.`
+            `Gross funded ${fmtLocalFull(data.grossPlacedLocal)}, underwriting fee ${fmtLocalFull(data.underwritingFeeLocal)}, net proceeds ${fmtLocalFull(data.issuerNetLocal)}.${notice}`
           );
+          onSuccess();
+          return;
+        }
+        if (notice) {
+          setResultMessage(notice.trim());
           onSuccess();
           return;
         }

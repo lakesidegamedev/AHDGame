@@ -152,8 +152,6 @@ describe("reset adopts the reference market tier", () => {
       campaignEraPriceLevelEnabled: true,
       privateBankingEnabled: true,
       bankPropTradingEnabled: true,
-      playerAdvancedBankChartersEnabled: true,
-      bankPropForexFeesEnabled: true,
       treasuryCashLedgerEnabled: true,
     });
     // A top-up never writes a gate on a running world, in either direction.

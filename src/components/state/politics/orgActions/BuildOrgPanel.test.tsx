@@ -2,8 +2,9 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { quoteOrganizationBatch } from "@/lib/parties/rules/repeatedOrganization";
 import { BuildOrgPanel } from "./BuildOrgPanel";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -421,4 +422,49 @@ describe("BuildOrgPanel", () => {
 
     await waitFor(() => expect(screen.getByText(/cannot afford to organize here/i)).toBeTruthy());
   });
+});
+
+it("quotes repeated state and national builds separately for dual-role officers", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string) => ({
+      json: async () =>
+        input.includes("/ps-spend-scope")
+          ? {
+              ok: true,
+              eligibleScopes: { state: true, national: true },
+              statePoolPS: 100,
+              nationalPoolPS: 100,
+            }
+          : {
+              ok: true,
+              effectiveCost: 1,
+              pressureValue: 0,
+              projectedGain: 1,
+              contributionUnits: 1,
+              projectedOrganizationUnits: 21,
+              scope: "state",
+              sizeMultiplier: 1,
+            },
+    }))
+  );
+  renderPanel();
+  await screen.findByRole("button", { name: /state PS/ });
+  fireEvent.click(screen.getByRole("button", { name: "x5" }));
+  for (const scope of ["state", "national-targeted"] as const) {
+    const quote = quoteOrganizationBatch({
+      countryId: "US",
+      scope,
+      pressure: 0,
+      count: 5,
+      sizeMultiplier: 1,
+    });
+    const label = scope === "state" ? "state" : "national";
+    expect(
+      screen.getByText(
+        `Estimated ${label} batch: ${quote.psCost} PS and $${Math.round(quote.cashPrice).toLocaleString("en-US")}.`
+      )
+    ).toBeTruthy();
+  }
+  expect(screen.getByRole("button", { name: "x5" }).getAttribute("aria-pressed")).toBe("true");
 });

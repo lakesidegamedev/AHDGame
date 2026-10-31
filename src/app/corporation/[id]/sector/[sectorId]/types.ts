@@ -1,7 +1,9 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { PlantSectorSplitQuote } from "@/lib/corporations/plantSectorSplit";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
+import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 
 export interface SectorData {
   _id: string;
@@ -9,6 +11,8 @@ export interface SectorData {
   countryId?: string;
   stateName: string;
   sectorType: OperatingSectorType;
+  /** Manufacturing production model, e.g. "vehicles", which sets the facility size. */
+  industryModel?: ManufacturingIndustryModel | null;
   mediaDiscriminator?: "entertainment" | null;
   /** Authoritative news-media advertising output factor from commodity accounting. */
   mediaAdvertisingCampaignFactor?: number;
@@ -25,6 +29,11 @@ export interface SectorData {
   workers: number;
   workersDesired?: number;
   labourStaffingFactor?: number;
+  /**
+   * The sector's state labour pool: workers available there against workers
+   * every employer there wants. Null when the state has no readings yet.
+   */
+  stateLabourMarket?: StateLabourPoolView | null;
   productionPolicy: number;
   productionPolicyLevel: number;
   /** Labour system: CEO wage-level lever (1.0 = baseline). */
@@ -585,6 +594,7 @@ export type PlantIdleCauseKey =
   | "inputs"
   | "demand"
   | "ramping"
+  | "cash"
   | "strike"
   | "disaster"
   | "policy"
@@ -620,6 +630,8 @@ export interface PlantBuildOrderView {
 export interface PlantsData {
   /** Persisted whole facilities owned by this sector. */
   plantCount?: number;
+  /** The strategy the sector runs; with the lane it decides plant size. */
+  strategyId?: string | null;
   capacityUnits: number | null;
   producedUnits: number | null;
   soldUnits: number | null;
@@ -627,6 +639,12 @@ export interface PlantsData {
   idleUnits: number | null;
   fillRate: number | null;
   idleCauses: PlantIdleCause[];
+  /**
+   * Labels of this sector's outputs that sell only in the state where they are
+   * made (construction, freight, healthcare, real estate). A shortage
+   * elsewhere cannot lift demand for these (ticket 1700).
+   */
+  localMarketOutputs?: string[];
   mothballed: boolean;
   buildQueue: PlantBuildOrderView[];
   constructionInProgressAnchor: number;

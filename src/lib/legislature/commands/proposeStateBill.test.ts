@@ -208,6 +208,73 @@ describe("proposeStateBill — custom (flavor) bills", () => {
     expect(db.collection("regionalBudgets").updateOne).not.toHaveBeenCalled();
   });
 
+  it("keeps subsidy provisions proposable in a reviewed v2 world", async () => {
+    const { getGameState } = await import("@/lib/gameState");
+    const v2State = {
+      currentTurn: 100,
+      resetWorldId: "world-1",
+      metricsSystemVersion: "v2",
+      legislationSystemVersion: "v2",
+      resetVersionSeeds: Object.fromEntries(
+        (["metrics", "legislation"] as const).map((system) => [
+          system,
+          {
+            worldId: "world-1",
+            revision: RESET_V2_SEED_REVISION[system],
+            sourceTurn: 1,
+            completedAt: "2026-10-11T00:00:00.000Z",
+            verificationHash: system,
+          },
+        ])
+      ),
+    } as never;
+    db.collection("politicalParties").findOne.mockResolvedValue({
+      sequentialId: 1,
+      countryId: "UK",
+      _id: "test-party",
+    });
+    db.collection("electedOfficials").findOne.mockResolvedValue({
+      countryId: "UK",
+      state: "SCO",
+      officeType: "regionalCouncil",
+      characterId,
+    });
+    const { proposeStateBill } = await import("./proposeStateBill");
+    const subsidies = [
+      {
+        type: "subsidy",
+        scopeType: "sector",
+        targetSectorType: "manufacturing",
+        domesticOnly: true,
+      },
+      { type: "end_subsidy", scopeType: "economy_wide" },
+    ];
+
+    for (const category of ["industry", "custom"]) {
+      vi.mocked(getGameState).mockResolvedValueOnce(v2State);
+      db.collection("stateBills").insertOne.mockClear();
+      const result = await proposeStateBill(db as unknown as Db, "UK", "SCO", authUser(), {
+        title: "Scottish Steel Support",
+        summary: "Supports Scottish steelworks.",
+        category,
+        provisions: subsidies,
+      });
+      expect(result.status).toBe(200);
+      expect(db.collection("stateBills").insertOne).toHaveBeenCalledWith(
+        expect.objectContaining({ category, provisions: subsidies })
+      );
+    }
+
+    vi.mocked(getGameState).mockResolvedValueOnce(v2State);
+    const wrongCategory = await proposeStateBill(db as unknown as Db, "UK", "SCO", authUser(), {
+      title: "Scottish Steel Support",
+      summary: "Supports Scottish steelworks.",
+      category: "healthcare",
+      provisions: subsidies,
+    });
+    expect(wrongCategory.status).toBe(400);
+  });
+
   it("stores a custom state bill with empty provisions, stripping client input", async () => {
     const { proposeStateBill } = await import("./proposeStateBill");
     const res = await proposeStateBill(db as unknown as Db, "CN", "xb", authUser(), {

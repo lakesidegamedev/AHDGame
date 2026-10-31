@@ -14,6 +14,7 @@ export type TradeSource =
   | "direct" // P2P direct-fill (accepting an open offer)
   | "limit_order" // limit order executed (now or during turn processing)
   | "auto_purchase" // auto-convert triggered by share/bond purchase shortfall
+  | "auto_purchase_reversal" // undo of an auto_purchase whose purchase then failed
   | "auto_dividend" // auto-convert of a dividend credit to player's home currency
   | "auto_coupon" // auto-convert of a bond coupon credit to player's home currency
   | "api"; // trade initiated via user API key

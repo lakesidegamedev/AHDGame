@@ -1,4 +1,4 @@
-import { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
+import { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 
 /**
  * The one place that converts a stored money figure into a display period.

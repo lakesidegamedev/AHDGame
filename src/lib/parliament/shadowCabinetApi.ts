@@ -94,7 +94,7 @@ export async function appointShadowCabinetHandler(request: Request, countryId: C
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/parliament/shadowCabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -161,7 +161,7 @@ export async function clearShadowCabinetHandler(request: Request, countryId: Cou
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/parliament/shadowCabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );

@@ -1,7 +1,5 @@
 "use client";
 
-import { BgFoundingConstituencyPicker } from "./BgFoundingConstituencyPicker";
-import { Hu1991ConstituencyPicker } from "./Hu1991ConstituencyPicker";
 import Link from "next/link";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,27 +9,47 @@ import { resolveElectionYear } from "@/lib/utils/formatters";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
 import { ElectionNavigation } from "./ElectionNavigation";
-import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
 import { ElectionHeader } from "./ElectionHeader";
 import { AdminSection } from "./AdminSection";
 import { ElectionScheduleCard } from "./ElectionScheduleCard";
 import { PrimaryPhaseNote } from "./PrimaryPhaseNote";
-import { UpcomingElectionView } from "./UpcomingElectionView";
-import { GeneralPhaseView } from "./GeneralPhaseView";
-import { PrimaryPhaseView } from "./PrimaryPhaseView";
+import dynamic from "next/dynamic";
+// Mutually exclusive phase bodies: an election is upcoming, in a primary, or in
+// its general phase, and the country pickers only exist for their own country.
+// They are loaded on demand so a presidential race in the US never downloads
+// the Hungarian constituency picker.
+const PhaseFallback = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const UpcomingElectionView = dynamic(
+  () => import("./UpcomingElectionView").then((m) => m.UpcomingElectionView),
+  { loading: PhaseFallback }
+);
+const GeneralPhaseView = dynamic(
+  () => import("./GeneralPhaseView").then((m) => m.GeneralPhaseView),
+  { loading: PhaseFallback }
+);
+const PrimaryPhaseView = dynamic(
+  () => import("./PrimaryPhaseView").then((m) => m.PrimaryPhaseView),
+  { loading: PhaseFallback }
+);
+const BgFoundingConstituencyPicker = dynamic(
+  () => import("./BgFoundingConstituencyPicker").then((m) => m.BgFoundingConstituencyPicker),
+  { loading: PhaseFallback }
+);
+const Hu1991ConstituencyPicker = dynamic(
+  () => import("./Hu1991ConstituencyPicker").then((m) => m.Hu1991ConstituencyPicker),
+  { loading: PhaseFallback }
+);
 import { PrimaryMapPills } from "./PrimaryMapPills";
 import { ElectionDetailSkeleton } from "./ElectionDetailSkeleton";
-import { StateOrganizationTab } from "@/app/political-operations/components/StateOrganizationTab";
 import type { ElectionDetail } from "./ElectionDetailTypes";
 import BackButton from "@/components/BackButton";
-import { PrimaryBlendView } from "../blend/PrimaryBlendView";
-import { GeneralBlendView } from "../blend/GeneralBlendView";
-import { presidentialTitle } from "../blend/PresidentialStage";
+import { presidentialTitle } from "../blend/presidentialTitle";
 import { presidentialResultsLive } from "../blend/liveState";
-import { ResultsBlendView } from "../blend/ResultsBlendView";
 import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types";
 import { BLEND } from "@/components/blend/tokens";
-import { NightBroadcast } from "../night/NightBroadcast";
 import { useNightWatch } from "../night/useNightBroadcast";
 import { isNightWindow } from "../night/nightModel";
 import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning";
@@ -40,6 +58,41 @@ import { getStoredConsent } from "@/components/CookieConsent";
 import { huDistrictIds } from "@/lib/countries/hu/rules/constituencies2014";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+
+// The stage screens are mutually exclusive: a race is concluded, in its general
+// phase, in its primary, or in the final-night broadcast, and exactly one of
+// them renders. Each gets its own chunk behind the same skeleton the page
+// already shows while results load, so a reader only downloads the screen they
+// are looking at instead of all four (about 130 KB of source). The state
+// organisation panel is likewise only reached from the US presidential
+// upcoming view.
+const StageFallback = () => <ElectionDetailSkeleton />;
+
+const ResultsBlendView = dynamic(
+  () => import("../blend/ResultsBlendView").then((m) => m.ResultsBlendView),
+  { loading: StageFallback }
+);
+const GeneralBlendView = dynamic(
+  () => import("../blend/GeneralBlendView").then((m) => m.GeneralBlendView),
+  { loading: StageFallback }
+);
+const PrimaryBlendView = dynamic(
+  () => import("../blend/PrimaryBlendView").then((m) => m.PrimaryBlendView),
+  { loading: StageFallback }
+);
+const NightBroadcast = dynamic(
+  () => import("../night/NightBroadcast").then((m) => m.NightBroadcast),
+  { loading: StageFallback }
+);
+const StateOrganizationTab = dynamic(
+  () =>
+    import("@/app/political-operations/components/StateOrganizationTab").then(
+      (m) => m.StateOrganizationTab
+    ),
+  {
+    loading: () => <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />,
+  }
+);
 
 interface ElectionDetailClientProps {
   id: string;
@@ -313,6 +366,10 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
       constituencyId = districts[number - 1];
     }
     if (japanMixed) {
+      // Only the 1994 Shugiin flow reads the statutory constituency table
+      // (~72 KB). Loading it here keeps it out of every other election page.
+      const { JP_SHUGIIN_1994_CONSTITUENCIES } =
+        await import("@/lib/countries/jp/data/jpShugiinConstituencies1994");
       const districts = JP_SHUGIIN_1994_CONSTITUENCIES.filter(
         (district) => district.regionId === election.state
       );

@@ -6,7 +6,7 @@
 
 // Source: ONS Westminster Parliamentary Constituencies (July 2024) boundaries, UK BFE.
 // English constituencies are grouped into the game's NUTS1-style UK regions by BNG centroid, balanced to official regional seat counts.
-export const UK_WESTMINSTER_2024_CONSTITUENCIES: WestminsterConstituency[] = [
+const UK_WESTMINSTER_2024_CONSTITUENCIES: WestminsterConstituency[] = [
   { id: "E14001069", name: "Ashford", regionId: "EAE" },
   { id: "E14001077", name: "Basildon and Billericay", regionId: "EAE" },
   { id: "E14001084", name: "Bedford", regionId: "EAE" },

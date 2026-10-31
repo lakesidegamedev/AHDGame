@@ -18,7 +18,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
  *     built from the prior turn's commodityPrices docs), breaking the
  *     price → revenue → supply → price circularity.
  */
-export const PRICE_REALIZATION_EXPONENT = 0.5;
+const PRICE_REALIZATION_EXPONENT = 0.5;
 export const PRICE_REALIZATION_MIN = 0.7;
 export const PRICE_REALIZATION_MAX = 2.0;
 
