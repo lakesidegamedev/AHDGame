@@ -139,6 +139,14 @@ export function createTurnPhaseRuntime(input: {
   turn?: number;
   /** Sandbox tooling hook. Omitted by production turn execution. */
   onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
+  /**
+   * Where phase status lives. `processingLock` (the default) mirrors every
+   * transition onto `gameState` under the processing lock and renews the lock's
+   * heartbeat. `memory` keeps statuses in `phaseStatuses` only and never touches
+   * `gameState`: it is for the reporting phases that run after the lock is
+   * released, where there is no lock to renew and none to guard the writes.
+   */
+  statusPersistence?: "processingLock" | "memory";
 }): TurnPhaseRuntime {
   const {
     db,
@@ -150,6 +158,7 @@ export function createTurnPhaseRuntime(input: {
     resumed,
     onPhaseCompleted,
   } = input;
+  const lockless = input.statusPersistence === "memory";
   const resumeOutcomes = new Map<string, ResumeResultOutcome>();
   const turn = input.turn ?? 0;
   let lastFlushAtMs = 0;
@@ -231,7 +240,11 @@ export function createTurnPhaseRuntime(input: {
     // and result land together. Otherwise a later whole-map write (the failure
     // path) could persist "completed" with no result (#3429).
     const stagedCompletion = phaseRequiresResumeResult(phase) && status === "completed";
-    if (!stagedCompletion) phaseStatuses[phase] = next;
+    if (!stagedCompletion || lockless) phaseStatuses[phase] = next;
+    if (lockless) {
+      if (status === "running") currentPhaseRef.current = phase;
+      return;
+    }
 
     // Every start must land before the callback can mutate. A coalesced start
     // leaves a pending phase eligible for duplicate execution after a crash.
@@ -350,6 +363,7 @@ export function createTurnPhaseRuntime(input: {
       // a terminal status write and must never revive that phase as running.
       // Substeps are written as nested fields rather than replacing the status,
       // so the progress overlay gains live detail without creating that race.
+      if (lockless) return;
       const now = new Date();
       const substeps = peekPhaseSubsteps(name);
       const setFields: Record<string, unknown> = { processingHeartbeatAt: now };
@@ -382,6 +396,7 @@ export function createTurnPhaseRuntime(input: {
     function beginDrain(): Promise<void> {
       clearInterval(heartbeatTimer);
       heartbeatTimer = setInterval(() => {
+        if (lockless) return;
         const now = new Date();
         const substeps = peekPhaseSubsteps(name);
         const setFields: Record<string, unknown> = { processingHeartbeatAt: now };

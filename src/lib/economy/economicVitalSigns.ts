@@ -11,7 +11,6 @@ import type {
   EconomicVitalSigns,
   ExchangeRate,
   GameConfig,
-  GameHealthSnapshot,
   IndexFund,
   MoneySupplySnapshot,
   ShareOrder,
@@ -73,7 +72,13 @@ type Inputs = {
   bonds: Bond[];
   globalWealth: WealthListSnapshot | null;
   money: MoneySupplySnapshot[];
-  health: GameHealthSnapshot | null;
+  /**
+   * Per-country inflation, keyed by country. Shaped like the health snapshot's
+   * economy block it used to be read from; built from national budgets now,
+   * so vital signs no longer wait on the health snapshot (which runs after
+   * the turn lock is released).
+   */
+  health: { economy: { byCountry: Partial<Record<string, { inflation: number }>> } } | null;
   reconciliation: LedgerReconciliation | null;
   balanceSnapshot: BalanceSnapshot | null;
   /** Per-account primary-leg turnover over the window (see summarizeLedgerTurnover). */
@@ -1641,7 +1646,6 @@ export async function snapshotEconomicVitalSigns(
     bonds,
     globalWealth,
     money,
-    health,
     reconciliation,
     balanceSnapshot,
     ledgerTurnover,
@@ -1732,7 +1736,6 @@ export async function snapshotEconomicVitalSigns(
     db.collection<Bond>("bonds").find({ matured: false }).toArray(),
     db.collection<WealthListSnapshot>("wealthListSnapshots").findOne({ _id: "global" }),
     db.collection<MoneySupplySnapshot>("moneySupplySnapshots").find({ turn }).toArray(),
-    db.collection<GameHealthSnapshot>("gameHealthSnapshots").findOne({ turn }),
     db.collection<LedgerReconciliation>("ledgerReconciliations").findOne({ turn }),
     db.collection<BalanceSnapshot>("balanceSnapshots").findOne({ turn }),
     loadLedgerTurnover(db, windowStart, turn),
@@ -1803,8 +1806,12 @@ export async function snapshotEconomicVitalSigns(
       )
       .toArray(),
     db
-      .collection<{ _id: string; creditRating?: string }>("federalBudget")
-      .find({}, { projection: { creditRating: 1 } })
+      .collection<{
+        _id: string;
+        creditRating?: string;
+        economicFactors?: { inflationRate?: number };
+      }>("federalBudget")
+      .find({}, { projection: { creditRating: 1, "economicFactors.inflationRate": 1 } })
       .toArray(),
     db
       .collection<GameConfig>("gameConfig")
@@ -1870,6 +1877,7 @@ export async function snapshotEconomicVitalSigns(
     exchangeRates,
     demandLiquidity?.indexFundBondLiquidityEnabled === true
   );
+  const health = nationalInflationByCountry(demandRatings);
   const snapshot = computeEconomicVitalSigns({
     turn,
     now: new Date(),
@@ -1906,4 +1914,20 @@ export async function snapshotEconomicVitalSigns(
     .collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION)
     .replaceOne({ _id: snapshot._id }, snapshot, { upsert: true });
   return snapshot;
+}
+
+/**
+ * Per-country inflation from the national budgets, the same source and default
+ * the health snapshot's economy block uses: the US budget is the legacy
+ * `federal` document and every other national budget is keyed by country code.
+ */
+export function nationalInflationByCountry(
+  budgets: ReadonlyArray<{ _id: string; economicFactors?: { inflationRate?: number } }>
+): NonNullable<Inputs["health"]> {
+  const byCountry: Partial<Record<string, { inflation: number }>> = {};
+  for (const budget of budgets) {
+    const countryId = budget._id === "federal" ? "US" : budget._id;
+    byCountry[countryId] = { inflation: budget.economicFactors?.inflationRate ?? 0 };
+  }
+  return { economy: { byCountry } };
 }
