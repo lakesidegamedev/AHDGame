@@ -116,6 +116,9 @@ it("returns a fair acquisition's float payout to its funding pool exactly once",
   const before = await readBalances(w);
   const result = await executeAgreedAcquisition({ db: w.db, offer: w.offer, currentTurn: 200 });
   expect(result.ok).toBe(true);
+  if (original.publicFloat == null || original.publicFloat <= 0) {
+    throw new Error("The acquisition fixture must include a positive public float.");
+  }
   const expected = Math.floor((w.price * original.publicFloat) / original.totalShares);
   const pool = await w.db.collection("equityMarketPools").findOne({ _id: "USD" as never });
   expect(pool?.cashLocal).toBe(1000 + expected);
