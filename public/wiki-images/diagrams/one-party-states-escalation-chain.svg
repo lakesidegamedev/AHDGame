@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="440" viewBox="0 0 800 440" role="img" font-family="system-ui, sans-serif">
+<title>One-party state escalation chain</title>
+<desc>Five regime stages from Stable to Forced Collapse with the trigger and dwell turns for each, plus the reform and constitutional convention off-ramps and the conversion at the end.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="439" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="17" y="30" width="134" height="140" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="84.0" y="104.2" font-size="12" text-anchor="middle"> </text>
+<text x="84" y="54" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Stable</text>
+<text x="84" y="79" font-size="12" text-anchor="middle" fill="#18181b">Regime holds</text>
+<text x="84" y="95" font-size="12" text-anchor="middle" fill="#18181b">and recovers</text>
+<rect x="175" y="30" width="134" height="140" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="242.0" y="104.2" font-size="12" text-anchor="middle"> </text>
+<text x="242" y="54" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Public</text>
+<text x="242" y="71" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Discontent</text>
+<text x="242" y="96" font-size="12" text-anchor="middle" fill="#18181b">Popular legitimacy</text>
+<text x="242" y="112" font-size="12" text-anchor="middle" fill="#18181b">60 or below</text>
+<text x="242" y="128" font-size="12" text-anchor="middle" fill="#18181b">for 12 turns</text>
+<rect x="333" y="30" width="134" height="140" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="400.0" y="104.2" font-size="12" text-anchor="middle"> </text>
+<text x="400" y="54" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Mass</text>
+<text x="400" y="71" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Unrest</text>
+<text x="400" y="96" font-size="12" text-anchor="middle" fill="#18181b">Popular 35 or below</text>
+<text x="400" y="112" font-size="12" text-anchor="middle" fill="#18181b">for 36 turns in a row,</text>
+<text x="400" y="128" font-size="12" text-anchor="middle" fill="#18181b">or 48 within 168</text>
+<rect x="491" y="30" width="134" height="140" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="558.0" y="104.2" font-size="12" text-anchor="middle"> </text>
+<text x="558" y="54" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Internal</text>
+<text x="558" y="71" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Challenge</text>
+<text x="558" y="96" font-size="12" text-anchor="middle" fill="#18181b">Party confidence</text>
+<text x="558" y="112" font-size="12" text-anchor="middle" fill="#18181b">below 15 for 24</text>
+<text x="558" y="128" font-size="12" text-anchor="middle" fill="#18181b">turns; a faction</text>
+<text x="558" y="144" font-size="12" text-anchor="middle" fill="#18181b">splits off</text>
+<rect x="649" y="30" width="134" height="140" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="716.0" y="104.2" font-size="12" text-anchor="middle"> </text>
+<text x="716" y="54" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Forced</text>
+<text x="716" y="71" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Collapse</text>
+<text x="716" y="96" font-size="12" text-anchor="middle" fill="#18181b">Popular below 15</text>
+<text x="716" y="112" font-size="12" text-anchor="middle" fill="#18181b">for 72 turns, only</text>
+<text x="716" y="128" font-size="12" text-anchor="middle" fill="#18181b">from Internal</text>
+<text x="716" y="144" font-size="12" text-anchor="middle" fill="#18181b">Challenge</text>
+<polyline points="151,100 175,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="309,100 333,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="467,100 491,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="625,100 649,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="24" y="376" font-size="12" text-anchor="start" fill="#52525b">The chain only moves forward.</text>
+<text x="24" y="392" font-size="12" text-anchor="start" fill="#52525b">Internal Challenge can fire from</text>
+<text x="24" y="408" font-size="12" text-anchor="start" fill="#52525b">any earlier stage.</text>
+<rect x="170" y="236" width="300" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="320.0" y="257.2" font-size="12" text-anchor="middle" font-weight="700">Leader reforms</text>
+<text x="320.0" y="273.2" font-size="12" text-anchor="middle">Trade party confidence for popular</text>
+<text x="320.0" y="289.2" font-size="12" text-anchor="middle">legitimacy and ease the counters</text>
+<polyline points="242,236 242,170" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="400,236 400,170" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="262" y="214" font-size="12" text-anchor="start" fill="#52525b">pull back</text>
+<rect x="498" y="236" width="134" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="565.0" y="257.2" font-size="12" text-anchor="middle" font-weight="700">Constitutional</text>
+<text x="565.0" y="273.2" font-size="12" text-anchor="middle">convention</text>
+<text x="565.0" y="289.2" font-size="12" text-anchor="middle">(voluntary)</text>
+<polyline points="565,236 565,170" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="573" y="208" font-size="12" text-anchor="start" fill="#52525b">freezes the</text>
+<text x="573" y="222" font-size="12" text-anchor="start" fill="#52525b">Stage 4 counter</text>
+<rect x="656" y="236" width="128" height="66" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="720.0" y="257.2" font-size="12" text-anchor="middle" font-weight="700">Forced</text>
+<text x="720.0" y="273.2" font-size="12" text-anchor="middle">conversion</text>
+<text x="720.0" y="289.2" font-size="12" text-anchor="middle">accept, or resist</text>
+<polyline points="716,170 716,236" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="498" y="360" width="286" height="52" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="641.0" y="382.2" font-size="12" text-anchor="middle" font-weight="700">Regime converts</text>
+<text x="641.0" y="398.2" font-size="12" text-anchor="middle">legislature dissolved, election held</text>
+<polyline points="565,302 565,360" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="720,302 720,360" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+</g>
+</svg>

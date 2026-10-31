@@ -2,7 +2,8 @@
 
 import { describeMediaPull } from "@/lib/mediaEditorial/opinionPullCopy";
 import { useState, type ReactNode } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { REGION_CENSUS_LABELS } from "@/lib/constants/regionCensusLabels";
 import { LocalTime } from "@/components/time/LocalTime";
 import { LivePopulationPanel } from "@/components/demographics/LivePopulationPanel";
@@ -430,7 +431,7 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
   );
 }
 
-// ─── voter groups collapsible ────────────────────────────────────────────────
+// ─── electorate buckets collapsible ──────────────────────────────────────────
 
 function leanBarColor(v: number) {
   if (v < -0.4) return "#60a5fa";
@@ -584,6 +585,7 @@ export function DemographicsAndTurnoutTab({
   countryId,
   regionParties = [],
   bucketProfile = null,
+  isAdmin = false,
 }: {
   stateId: string;
   demographics: SerializedStateDemographics | null;
@@ -595,6 +597,7 @@ export function DemographicsAndTurnoutTab({
    * in which case the archetype fallback below still renders.
    */
   bucketProfile?: BucketProfileSection[] | null;
+  isAdmin?: boolean;
   turnoutData: TurnoutResponse | null;
   countryId?: string;
   regionParties?: RegionPartyPosition[];
@@ -606,7 +609,7 @@ export function DemographicsAndTurnoutTab({
   // caller has to pass a per-country boolean.
   const upperCountryId = countryId?.toUpperCase() as CountryId | undefined;
   const profileId = upperCountryId
-    ? COUNTRY_CONFIGS[upperCountryId]?.demographicProfileId
+    ? COUNTRY_CLIENT_CONFIGS[upperCountryId]?.demographicProfileId
     : undefined;
   const isArchetypeBased = /^[a-z]{2}_archetypes$/.test(profileId ?? "");
 
@@ -697,7 +700,13 @@ export function DemographicsAndTurnoutTab({
         <KpiStrip {...kpi} />
         {/* ── electorate dossier (read-only flagship) ── */}
         {bucketProfile && bucketProfile.length > 0 && (
-          <ElectorateDossier profile={bucketProfile} regionParties={regionParties} />
+          <ElectorateDossier
+            profile={bucketProfile}
+            regionParties={regionParties}
+            isAdmin={isAdmin}
+            countryId={countryId}
+            regionId={stateId}
+          />
         )}
         {/* ── toolbar ── */}
         <div className="flex items-center justify-between gap-2">
@@ -891,7 +900,13 @@ export function DemographicsAndTurnoutTab({
         <KpiStrip {...kpi} />
         {/* ── electorate dossier (read-only flagship) ── */}
         {bucketProfile && bucketProfile.length > 0 && (
-          <ElectorateDossier profile={bucketProfile} regionParties={regionParties} />
+          <ElectorateDossier
+            profile={bucketProfile}
+            regionParties={regionParties}
+            isAdmin={isAdmin}
+            countryId={countryId}
+            regionId={stateId}
+          />
         )}
         {/* ── toolbar ── */}
         <div className="flex items-center justify-between gap-2">
@@ -1020,7 +1035,13 @@ export function DemographicsAndTurnoutTab({
         {countryId && <LivePopulationPanel stateId={stateId} countryId={countryId} />}
         <KpiStrip {...kpi} />
         {bucketProfile && bucketProfile.length > 0 && (
-          <ElectorateDossier profile={bucketProfile} regionParties={regionParties} />
+          <ElectorateDossier
+            profile={bucketProfile}
+            regionParties={regionParties}
+            isAdmin={isAdmin}
+            countryId={countryId}
+            regionId={stateId}
+          />
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {bucketProfile && bucketProfile.length > 0 ? (

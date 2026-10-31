@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { ALL_CRISIS_TEMPLATES, getTemplateDuration } from "@/lib/crises/templates";
 
@@ -146,7 +146,7 @@ export function CreateFromTemplateModal({
                       )
                     }
                   />
-                  {COUNTRY_CONFIGS[countryId].name}
+                  {COUNTRY_CLIENT_CONFIGS[countryId].name}
                 </label>
               ))}
             </div>

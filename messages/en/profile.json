@@ -355,7 +355,11 @@
       "none": "No income-tax assessments yet.",
       "turn": "Turn",
       "status": "Status",
-      "paid": "Paid"
+      "paid": "Paid",
+      "paidAmount": "Paid / withheld",
+      "remaining": "Still owed",
+      "collectedTurn": "Last collection turn",
+      "withheld": "Withheld at sale"
     }
   }
 }

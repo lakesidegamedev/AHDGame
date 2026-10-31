@@ -163,9 +163,18 @@ describe("CeoBudgetPanel: zero-revenue overhead rule (ticket #1237)", () => {
 });
 
 describe("CeoBudgetPanel: marketing growth note", () => {
-  it("labels the marketing estimate as gross growth before decay", () => {
+  it("shows the net change after decay and the resting level (ticket 1695)", () => {
+    renderBudget({
+      corporation: { marketingBudget: 100, marketingStrength: 175.41, marketingDecayRate: 0.015 },
+    });
+    expect(screen.getByText(/^-\d+\.\d{2}\/turn \(now 175, settles near \d+\)$/)).toBeTruthy();
+  });
+
+  it("shows plain growth before decay is switched on", () => {
     renderBudget({ corporation: { marketingBudget: 100, marketingStrength: 175.41 } });
-    expect(screen.getByText(/gross growth before decay/i)).toBeTruthy();
+    expect(
+      screen.getByText(/^\+\d+\.\d{2}\/turn \(now 175, diminishing above 100\)$/)
+    ).toBeTruthy();
   });
 });
 
@@ -224,5 +233,27 @@ describe("CeoBudgetPanel: currency symbol", () => {
   it("falls back to the game dollar, never ₳, with neither code nor country", () => {
     renderBudget({ corporation: { liquidCurrencyCode: undefined, countryId: undefined } });
     expect(document.body.textContent).not.toContain("₳");
+  });
+});
+
+describe("CeoBudgetPanel: group payment disclosure (#1669)", () => {
+  it("says the logistics forecast leaves out the strength paid to subsidiaries", () => {
+    renderBudget({
+      corporation: {
+        logisticsBudget: 72_000_000,
+        logisticsStrength: 153,
+        groupStrengthTransfer: { subsidiaryCount: 3 },
+      },
+    });
+    expect(document.body.textContent).toMatch(/hands strength to its\s+3 subsidiaries/);
+    expect(document.body.textContent).not.toMatch(/settles near/);
+  });
+
+  it("keeps the settled-strength note when no group payment applies", () => {
+    renderBudget({
+      corporation: { logisticsBudget: 72_000_000, logisticsStrength: 153 },
+    });
+    expect(document.body.textContent).toMatch(/settles near/);
+    expect(document.body.textContent).not.toMatch(/hands strength to/);
   });
 });

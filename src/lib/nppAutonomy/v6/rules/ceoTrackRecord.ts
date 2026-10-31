@@ -32,11 +32,11 @@ export const CEO_RECORD_CADENCE_TURNS = TURNS_PER_DAY;
 /** Stored tenure cap, so `turns` stays bounded. */
 export const CEO_RECORD_MAX_TURNS = 20 * TURNS_PER_YEAR;
 /** Older history counts at most this many turns against a new sample. */
-export const CEO_RECORD_WEIGHT_CAP_TURNS = 4 * TURNS_PER_YEAR;
+const CEO_RECORD_WEIGHT_CAP_TURNS = 4 * TURNS_PER_YEAR;
 /** A record shorter than this is not a record yet. */
 export const CEO_RECORD_MIN_TURNS = TURNS_PER_YEAR / 2;
 /** Shrinks a short record toward zero: score = rel x turns / (turns + this). */
-export const CEO_RECORD_CONFIDENCE_TURNS = TURNS_PER_YEAR;
+const CEO_RECORD_CONFIDENCE_TURNS = TURNS_PER_YEAR;
 /** Sample and stored relative margin bound, percentage points. */
 export const CEO_RECORD_REL_CLAMP_PP = 50;
 /** Sector margin bound, percent, so one collapsed sector cannot swamp a sample. */

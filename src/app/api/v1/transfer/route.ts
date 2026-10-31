@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       return errorResponse(status, `API key ${apiAuth.reason.replace("_", " ")}`);
     }
 
-    const rateLimit = checkRateLimit(apiAuth.ownerUserId, 20, 60000);
+    const rateLimit = checkRateLimit(`api/v1/transfer:${apiAuth.ownerUserId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, apiTransferSchema);

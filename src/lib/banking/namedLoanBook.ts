@@ -2,9 +2,10 @@
  * Named loan servicing: the per-loan path and the bank-level batch.
  *
  * A bank services its plain loan book in one journaled move per turn (N
- * borrower debits, one summed credit, one projection per loan); construction
- * receipts and dead-bank recoveries keep the per-loan path because they own
- * their own locks and credit targets.
+ * borrower debits, one summed credit, one projection per loan), and its
+ * construction book in a second one held under a single bank lease. Loans
+ * another receipt still owns keep the per-loan path because they own their own
+ * locks.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation } from "@/lib/db/types";
@@ -12,7 +13,6 @@ import type { BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
 import { loanServiceTransition, loanServiceKey } from "@/lib/banking/rules/loanServicing";
-import type { TransitionLeg } from "@/lib/banking/rules/boundary";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import {
   acquireConstructionLoanLock,
@@ -25,6 +25,12 @@ import {
 import { emitTx, emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loanCharterEpochFilter } from "@/lib/banking/loanEpoch";
+import {
+  batchedLoanServiceMove,
+  loanRepaymentTxEntry,
+  recordLoanServiceBatch,
+  type LoanServiceBatchRow,
+} from "@/lib/banking/loanServiceBatch";
 
 export type LoanServiceResult = {
   interestCollected: number;
@@ -39,32 +45,6 @@ export type LoanServiceResult = {
   /** Some legs landed but the move did not finish; the preload may be stale. */
   partial: boolean;
 };
-
-function loanRepaymentTxEntry(args: {
-  loan: BankLoan;
-  turn: number;
-  currency: CurrencyCode;
-  bankCorporationId: ObjectId;
-  bankName: string;
-  borrowerName: string;
-  payment: number;
-  settlementId: string;
-}): TxInput {
-  return {
-    type: "bank_loan_repayment",
-    turn: args.turn,
-    createdAt: new Date(),
-    subjectType: args.loan.borrowerType === "character" ? "character" : "corporation",
-    subjectId: args.loan.borrowerId,
-    subjectName: args.borrowerName,
-    amount: -args.payment,
-    currencyCode: args.currency,
-    counterpartyType: "corporation",
-    counterpartyId: args.bankCorporationId,
-    counterpartyName: args.bankName,
-    meta: { loanId: args.loan._id.toString(), settlementId: args.settlementId },
-  };
-}
 
 export async function servicePlayerLoan(
   db: Db,
@@ -398,160 +378,247 @@ export async function serviceNamedLoanBook(
   // summed bank credit, one loan projection per loan. Decisions still use the
   // running balance a borrower's previous loan left, exactly as the serial
   // per-loan pass did. Construction receipts (one lender epoch, their own
-  // locks) keep the per-loan path below.
+  // locks) run their own batch below.
   const plainLoans = loans.filter((loan) => !loan.constructionCollateral);
   const batchable = plainLoans.filter(
     (loan) => !!loan.borrowerId && loan.lastProcessedTurn !== turn
   );
-  const decisions: Array<{
-    loan: (typeof loans)[number];
-    decision: ReturnType<typeof loanServiceTransition>["decision"];
-    transition: ReturnType<typeof loanServiceTransition>["transition"];
-    borrowerKey: string;
-  }> = [];
-  const creditTarget = {
-    collection: "corporations" as const,
+  const creditTarget: MoneyTarget = {
+    collection: "corporations",
     filter: { _id: corp._id },
     path: "bankCharter.cashReserves",
     note: "instalment reaches the lending bank",
   };
-  for (const loan of batchable) {
-    const key = borrowerKeyOf(loan);
-    const preloaded = borrowerState.get(key);
-    const available =
-      preloaded?.available ?? (await readBorrowerAvailable(db, loan, currency)).available;
-    const { decision, transition } = loanServiceTransition({
-      loan,
-      borrowerAvailable: available,
-      turn,
-      creditTarget,
-      bankId: corp._id.toString(),
-    });
-    if (preloaded) preloaded.available = Math.max(0, preloaded.available - decision.payment);
-    decisions.push({ loan, decision, transition, borrowerKey: key });
-  }
-
-  if (decisions.length > 0) {
-    const totalPayment = decisions.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0);
-    // One debit per borrower (and currency) rather than one per loan: the
-    // decisions already capped each payment against the running balance, so
-    // the sum is what the serial per-loan debits would have taken. Unique
-    // targets are what lets the journal deliver the whole run in a batch.
-    const debitByTarget = new Map<string, TransitionLeg>();
-    for (const row of decisions) {
-      for (const leg of row.transition.legs) {
-        if (leg.kind !== "debit") continue;
-        const key = `${leg.collection}\u0000${String(leg.filter?._id)}\u0000${leg.path}`;
-        const existing = debitByTarget.get(key);
-        if (existing) existing.amount += leg.amount;
-        else debitByTarget.set(key, { ...leg });
-      }
-    }
-    const legs: TransitionLeg[] = [...debitByTarget.values()];
-    // Stable sort by collection so the batched delivery can group whole runs.
-    legs.sort((a, b) => String(a.collection).localeCompare(String(b.collection)));
-    if (totalPayment > 0) legs.push({ kind: "credit", amount: totalPayment, ...creditTarget });
-    const projections = decisions.flatMap((row) =>
-      row.transition.projections.filter((projection) => {
-        if (projection.collection !== "corporations") return true;
-        const update = "update" in projection ? projection.update : undefined;
-        if (!update || typeof update !== "object") return true;
-        const inc = (update as { $inc?: Record<string, unknown> }).$inc;
-        return !inc || !("bankCharter.totalLoans" in inc);
-      })
-    );
-    const totalLoansDelta = decisions.reduce((sum, row) => sum + row.decision.totalLoansDelta, 0);
-    if (totalLoansDelta !== 0)
-      projections.push({
-        collection: "corporations",
-        filter: { _id: corp._id, "bankCharter.charteredTurn": charteredTurn },
-        update: { $inc: { "bankCharter.totalLoans": totalLoansDelta } },
-        note: "Advance the named loan book under the batch servicing receipt",
+  const decide = async (batchLoans: readonly BankLoan[], target: MoneyTarget) => {
+    const decisions: LoanServiceBatchRow[] = [];
+    for (const loan of batchLoans) {
+      const key = borrowerKeyOf(loan);
+      const preloaded = borrowerState.get(key);
+      const available =
+        preloaded?.available ?? (await readBorrowerAvailable(db, loan, currency)).available;
+      const { decision, transition } = loanServiceTransition({
+        loan,
+        borrowerAvailable: available,
+        turn,
+        creditTarget: target,
+        bankId: corp._id.toString(),
       });
+      if (preloaded) preloaded.available = Math.max(0, preloaded.available - decision.payment);
+      decisions.push({ loan, decision, transition, borrowerKey: key });
+    }
+    return decisions;
+  };
+  // Counts and ledger rows for a batch whose journal applied.
+  const recordApplied = (decisions: readonly LoanServiceBatchRow[], settlementId: string) => {
+    const recorded = recordLoanServiceBatch({
+      db,
+      rows: decisions,
+      turn,
+      currency,
+      bankName: corp.name,
+      settlementId,
+      borrowerName: (row) => borrowerState.get(row.borrowerKey)?.name ?? "Borrower",
+    });
+    total.interestCollected += recorded.totals.interestCollected;
+    total.principalRepaid += recorded.totals.principalRepaid;
+    total.writtenOff += recorded.totals.writtenOff;
+    total.totalLoansDelta += recorded.totals.totalLoansDelta;
+    total.bankCredit += recorded.totals.bankCredit;
+    txEntries.push(...recorded.txEntries);
+  };
+  // A refused batch moved nothing: each loan retries on its own key and guard.
+  const servicePerLoan = async (decisions: readonly LoanServiceBatchRow[]) => {
+    for (const row of decisions) {
+      const loanResult = await servicePlayerLoan(
+        db,
+        turn,
+        corp._id,
+        row.loan,
+        currency,
+        corp.name,
+        undefined,
+        false,
+        txEntries
+      );
+      total.interestCollected += loanResult.interestCollected;
+      total.principalRepaid += loanResult.principalRepaid;
+      total.writtenOff += loanResult.writtenOff;
+      total.bankCredit += loanResult.bankCredit;
+      total.totalLoansDelta += loanResult.totalLoansDelta;
+      borrowerState.delete(row.borrowerKey);
+    }
+  };
+
+  const decisions = await decide(batchable, creditTarget);
+  if (decisions.length > 0) {
     const batchKey = `loan-service-batch:${corp._id.toString()}:${turn}`;
     const settled = await settleTransition(db, {
+      ...batchedLoanServiceMove(decisions, creditTarget, {
+        totalLoansFilter: {
+          _id: corp._id,
+          "bankCharter.charteredTurn": charteredTurn,
+        },
+      }),
       key: batchKey,
       kind: "loan_service_batch",
       turn,
       currency,
-      legs,
-      projections,
       batchIndependentDebits: true,
       event: {
         kind: "monetary.executed",
         command: "turn.loanService.batch",
         subjectType: "corporation",
         subjectId: corp._id.toString(),
-        amount: totalPayment,
+        amount: decisions.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0),
         meta: { loans: decisions.length },
       },
     });
-    if (settled.status === "applied") {
-      for (const row of decisions) {
-        total.interestCollected += row.decision.interestPaid;
-        total.principalRepaid += row.decision.principalPaid;
-        total.writtenOff += row.decision.writtenOff;
-        total.totalLoansDelta += row.decision.totalLoansDelta;
-        total.bankCredit += Math.max(0, row.decision.payment);
-        if (row.decision.payment > 0) {
-          txEntries.push(
-            loanRepaymentTxEntry({
-              loan: row.loan,
-              turn,
-              currency,
-              bankCorporationId: row.loan.bankCorporationId,
-              bankName: corp.name,
-              borrowerName: borrowerState.get(row.borrowerKey)?.name ?? "Borrower",
-              payment: row.decision.payment,
-              settlementId: batchKey,
-            })
-          );
-        }
-        emitBankingAuditEvent(
-          {
-            ...row.transition.event,
-            turn,
-            outcome: "ok",
-            currency,
-            bankId: corp._id.toString(),
-            settlementId: batchKey,
-          },
-          db
-        );
-      }
-    } else if (settled.status === "partial") {
-      total.partial = true;
-    } else if (settled.status === "rejected") {
-      // The batch was refused before any money moved (an unbalanced or
-      // malformed plan). Service these loans on their own keys instead of
-      // dropping the turn; each still runs its own guard.
-      for (const row of decisions) {
-        const loanResult = await servicePlayerLoan(
-          db,
-          turn,
-          corp._id,
-          row.loan,
-          currency,
-          corp.name,
-          undefined,
-          false,
-          txEntries
-        );
-        total.interestCollected += loanResult.interestCollected;
-        total.principalRepaid += loanResult.principalRepaid;
-        total.writtenOff += loanResult.writtenOff;
-        total.bankCredit += loanResult.bankCredit;
-        total.totalLoansDelta += loanResult.totalLoansDelta;
-        borrowerState.delete(row.borrowerKey);
-      }
-    }
+    if (settled.status === "applied") recordApplied(decisions, batchKey);
+    else if (settled.status === "partial") total.partial = true;
+    else if (settled.status === "rejected") await servicePerLoan(decisions);
     // replayed: the batch key already owns this turn's servicing. The loan
     // records carry lastProcessedTurn, so there is nothing further to write.
   }
 
-  // Construction receipts hold one lender epoch. Keep their borrower groups
-  // serial so parallel admission cannot repeatedly starve all but one loan.
-  for (const group of constructionGroups) await serviceBorrower(group);
+  // Construction loans: one bank lease and one journaled move for the whole
+  // book, instead of a lease, a settlement and a release per loan. The lease
+  // still holds the lender's epoch for the batch, and every loan the batch
+  // owns is locked under the batch key. A loan another receipt still owns
+  // (an unfinished build, an older instalment) keeps the per-loan path, which
+  // knows how to recover it.
+  // Only the collateralised loans: a construction borrower's plain loans were
+  // serviced by the plain batch above, and must not be charged again here.
+  const constructionLoans = constructionGroups
+    .flat()
+    .filter((loan) => !!loan.constructionCollateral);
+  const leftovers = constructionLoans.length
+    ? await serviceConstructionBatch(constructionLoans)
+    : [];
+  const leftoverGroups = new Map<string, BankLoan[]>();
+  for (const loan of leftovers) {
+    const key = `${loan.borrowerType}:${String(loan.borrowerId)}`;
+    leftoverGroups.set(key, [...(leftoverGroups.get(key) ?? []), loan]);
+  }
+  for (const group of leftoverGroups.values()) await serviceBorrower(group);
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, await loadTxThresholds(db));
   return total;
+
+  async function serviceConstructionBatch(candidates: readonly BankLoan[]): Promise<BankLoan[]> {
+    const key = `loan-service-construction-batch:${corp._id.toString()}:${turn}`;
+    const bankLoans = db.collection<BankLoan>("bankLoans");
+    // The lease is taken first and names every candidate, and the locks are
+    // released before it. Recovery finds a batch only through its lease, so no
+    // crash between the two can leave a batch-key lock nobody can clear.
+    const anchor = candidates.find((loan) => loan.charteredTurn === charteredTurn);
+    if (!anchor) return [...candidates];
+    const leased = await acquireConstructionServiceLease(
+      db,
+      anchor,
+      key,
+      turn,
+      "servicing",
+      candidates.map((loan) => String(loan._id))
+    );
+    // The bank is busy with another funding move this turn, which would have
+    // refused every per-loan lease too.
+    if (!leased) return [];
+    // Every candidate, the anchor included, so even a one-loan batch releases
+    // its locks before its lease.
+    const batchIds = candidates.map((loan) => loan._id);
+    const releaseLease = () =>
+      releaseConstructionServiceLease(db, corp._id, anchor._id, key, "servicing", batchIds);
+
+    await bankLoans.updateMany(
+      {
+        _id: { $in: batchIds },
+        $or: [
+          { constructionSettlementOwner: { $exists: false } },
+          { constructionSettlementOwner: key },
+        ],
+      },
+      { $set: { constructionSettlementOwner: key } }
+    );
+    const ownedById = new Map(
+      (
+        await bankLoans.find({ _id: { $in: batchIds }, constructionSettlementOwner: key }).toArray()
+      ).map((loan) => [String(loan._id), loan])
+    );
+    // The original book order, not the store's: payments draw each borrower's
+    // running balance down in exactly the order the serial path used.
+    const owned = candidates.flatMap((loan) => ownedById.get(String(loan._id)) ?? []);
+    const foreign = candidates.filter((loan) => !ownedById.has(String(loan._id)));
+    // The per-loan path skips these too: a settled turn, a closed loan, no
+    // borrower to charge, or an epoch the bank's lease cannot name.
+    const serviceable = (loan: BankLoan) =>
+      ["current", "arrears"].includes(loan.status) && loan.lastProcessedTurn !== turn;
+    const due = owned.filter(
+      (loan) => serviceable(loan) && !!loan.borrowerId && loan.charteredTurn === charteredTurn
+    );
+    // Another defined epoch keeps the per-loan path, which leases it on its own.
+    const otherEpoch = owned.filter(
+      (loan) =>
+        serviceable(loan) &&
+        loan.charteredTurn !== undefined &&
+        loan.charteredTurn !== charteredTurn
+    );
+    if (due.length === 0) {
+      await releaseLease();
+      return [...foreign, ...otherEpoch];
+    }
+    const dueIds = new Set(due.map((loan) => String(loan._id)));
+    const idle = owned.filter((loan) => !dueIds.has(String(loan._id)));
+    if (idle.length > 0)
+      await bankLoans.updateMany(
+        { _id: { $in: idle.map((loan) => loan._id) }, constructionSettlementOwner: key },
+        { $unset: { constructionSettlementOwner: "" } }
+      );
+    const target: MoneyTarget = {
+      ...creditTarget,
+      filter: {
+        _id: corp._id,
+        "bankCharter.charteredTurn": charteredTurn,
+        "bankConstructionFunding.kind": "servicing",
+        "bankConstructionFunding.service.key": key,
+      },
+    };
+    const rows = await decide(due, target);
+    const settled = await settleTransition(db, {
+      ...batchedLoanServiceMove(rows, target, { totalLoansFilter: target.filter }),
+      key,
+      kind: "loan_service_construction_batch",
+      turn,
+      currency,
+      batchIndependentDebits: true,
+      event: {
+        kind: "monetary.executed",
+        command: "turn.loanService.constructionBatch",
+        subjectType: "corporation",
+        subjectId: corp._id.toString(),
+        amount: rows.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0),
+        meta: { loans: rows.length },
+      },
+    });
+    // Released exactly as the per-loan path released its lease: on a clean
+    // landing, or on a refusal that moved nothing. A replay that reports an
+    // error means another attempt owns the key with legs still outstanding;
+    // the lease guards that move's credit, so it stays for recovery.
+    const landed =
+      !settled.error && (settled.status === "applied" || settled.status === "replayed");
+    const refused =
+      settled.status === "rejected" &&
+      settled.appliedLegs.length === 0 &&
+      settled.appliedProjections.length === 0;
+    if (landed) {
+      if (settled.status === "applied") recordApplied(rows, key);
+      await releaseLease();
+    } else if (refused) {
+      await releaseLease();
+      await servicePerLoan(rows);
+    } else {
+      // Partial: the lease and the loan locks stay with the journal, and the
+      // next turn's recovery resumes it before anything else touches them.
+      total.partial = true;
+    }
+    return [...foreign, ...otherEpoch];
+  }
 }

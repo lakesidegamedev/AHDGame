@@ -9,12 +9,8 @@ import { parseNppId } from "@/lib/utils/profileUrls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import type { NPP, State, PoliticalParty, Corporation } from "@/lib/db/types";
 import { deriveCeoArchetype } from "@/lib/npp/ceoArchetype";
-import {
-  getOfficeLabel,
-  getPartyColor,
-  getPartyHex,
-  ensureReadableOnDark,
-} from "@/lib/utils/politics";
+import { getPartyColor, getPartyHex, ensureReadableOnDark } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { PolicyDisplay } from "@/components/PolicyDisplay";
 import { regionUrl, partyUrl } from "@/lib/urls";
 import { getSiteUrl } from "@/lib/siteMetadata";

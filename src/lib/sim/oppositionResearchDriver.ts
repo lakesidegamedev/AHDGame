@@ -46,7 +46,7 @@ export const OPPO_DRIVER_TURNS = 12;
 /** Turns of post-purchase favorability effects the driver retains. */
 export const OPPO_DRIVER_EFFECT_TURNS = 4;
 /** Registry version stamped into retained evidence; bump on shape changes. */
-export const OPPO_DRIVER_VERSION = 1;
+const OPPO_DRIVER_VERSION = 1;
 
 /**
  * Exact rejection the purchase command throws when no target resolves.

@@ -2,8 +2,8 @@
 
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { PlantIdleCause } from "../types";
-import { idleCauseMeta, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { idleCauseMeta, IDLE_CAUSE_FILL, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 
 interface RunMeterProps {
@@ -17,6 +17,8 @@ interface RunMeterProps {
   idleCauses: PlantIdleCause[];
   /** Drives the facility noun in the segment help text. */
   sectorType: OperatingSectorType;
+  /** Outputs that sell only in this state; explains a demand limit beside a wider shortage. */
+  localMarketOutputs?: string[];
   /** Dim the whole meter (mothballed plants). */
   dimmed?: boolean;
 }
@@ -46,12 +48,14 @@ export default function RunMeter({
   soldUnits,
   idleCauses,
   sectorType,
+  localMarketOutputs = [],
   dimmed = false,
 }: RunMeterProps) {
   const sites = facilityPlural(sectorType);
   const causeMeta = idleCauseMeta(
     sectorType,
-    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare
+    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare,
+    localMarketOutputs
   );
   const capacity = capacityUnits > 0 ? capacityUnits : 0;
   const sold = Math.max(0, Math.min(producedUnits, soldUnits));
@@ -78,7 +82,9 @@ export default function RunMeter({
         key: `idle-${c.cause}`,
         label: meta.label,
         units: c.units,
-        fill: TONE_FILL[c.cause] ?? TONE_FILL[meta.tone],
+        // Per cause, not per tone: the bar segment and the legend dot below
+        // share this one value, so a cause can never carry two colours.
+        fill: IDLE_CAUSE_FILL[c.cause] ?? TONE_FILL[meta.tone],
         help: meta.help,
       };
     }),

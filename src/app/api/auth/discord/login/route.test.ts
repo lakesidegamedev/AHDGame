@@ -78,7 +78,6 @@ describe("GET /api/auth/discord/login: Android app state marker", () => {
     process.env.DISCORD_CLIENT_ID = "client";
     process.env.DISCORD_REDIRECT_URI = "https://ahousedividedgame.com/api/auth/discord/callback";
   });
-
   it("prefixes the state for the Android app and not for browsers", async () => {
     const { GET } = await import("./route");
     const stateFor = async (ua: string) => {
@@ -95,6 +94,28 @@ describe("GET /api/auth/discord/login: Android app state marker", () => {
     );
     expect(await stateFor("Mozilla/5.0 (Linux; Android 16) SamsungBrowser/28.0")).toMatch(
       /^[0-9a-f]{64}$/
+    );
+  });
+});
+
+describe("GET /api/auth/discord/login: redirect host", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.DISCORD_CLIENT_ID = "client";
+    // Production registers the www host; it must reach Discord unchanged.
+    process.env.DISCORD_REDIRECT_URI =
+      "https://www.ahousedividedgame.com/api/auth/discord/callback";
+  });
+
+  it("sends the configured www redirect unchanged", async () => {
+    const { getDiscordOAuthUrl } = await import("@/lib/discord");
+    const { GET } = await import("./route");
+    await GET(new Request("https://ahousedividedgame.com/api/auth/discord/login"));
+
+    expect(getDiscordOAuthUrl).toHaveBeenCalledWith(
+      expect.any(String),
+      "https://www.ahousedividedgame.com/api/auth/discord/callback",
+      "client"
     );
   });
 });

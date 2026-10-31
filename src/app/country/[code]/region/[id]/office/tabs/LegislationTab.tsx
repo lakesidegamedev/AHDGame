@@ -47,6 +47,7 @@ export type LegislationActivity =
   | null;
 
 interface Props {
+  legislationVersion: "v1" | "v2";
   countryId: string;
   stateId: string;
   awaitingAssentBills: AwaitingAssentBill[];
@@ -62,6 +63,7 @@ interface Props {
 }
 
 export function LegislationTab({
+  legislationVersion,
   countryId,
   stateId,
   awaitingAssentBills,
@@ -159,6 +161,7 @@ export function LegislationTab({
       </section>
 
       <QueueBillModal
+        legislationVersion={legislationVersion}
         open={queueModalOpen}
         countryId={countryId}
         stateId={stateId}

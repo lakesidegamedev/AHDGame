@@ -27,6 +27,11 @@ import {
   RD_INNOVATION_SCORE_THRESHOLD,
   SPRAWL_SECTOR_THRESHOLD,
 } from "@/lib/constants/corporations";
+import {
+  genericResearchDailyAnchor,
+  marketingStrengthEquilibrium,
+  remainingDevelopmentAnchor,
+} from "@/lib/corporations/strengthProjection";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationDetail, Financials } from "../CorporationPageTypes";
 import {
@@ -153,12 +158,31 @@ export default function CeoBudgetPanel({
   const anchor = (local: number) => money.toAnchor(local);
   const currentMs = corporation.marketingStrength ?? 0;
   const msGain = calcMarketingGrowth(anchor(daily.marketing), currentMs);
+  // Ticket 1695: since marketing decay went live the gross gain alone read as a
+  // rise while strength was falling. Show the net change, as for logistics.
+  const msDecayRate = corporation.marketingDecayRate ?? 0;
+  const msNet = msGain - currentMs * msDecayRate;
+  const msEquilibrium = marketingStrengthEquilibrium(anchor(daily.marketing), msDecayRate);
   const currentLs = corporation.logisticsStrength ?? 0;
   const lsNet = calcLogisticsGrowth(anchor(daily.logistics)) - currentLs * LOGISTICS_DECAY_RATE;
+  // #1669: a group leader pays its formalized subsidiaries part of the strength
+  // they gain, which comes off this corporation's own total. The figure above
+  // counts only the budget's growth and the decay, so say so rather than
+  // promising a rise the turn will not deliver.
+  const groupTransfer = corporation.groupStrengthTransfer ?? null;
   const lsEquilibrium =
     daily.logistics > 0 ? calcLogisticsGrowth(anchor(daily.logistics)) / LOGISTICS_DECAY_RATE : 0;
   const currentRd = corporation.rdScore ?? 0;
-  const rdNet = calcRdGrowth(anchor(daily.rd), currentRd) - currentRd * RD_DECAY_RATE;
+  // While a product is in development the turn pays it from the R&D budget
+  // first; only the leftover earns points (#1724).
+  const rdProjects = corporation.rdDevelopmentProjects ?? [];
+  const rdFundedProject = rdProjects.find((project) => project.stage === "development");
+  const rdGenericAnchor = genericResearchDailyAnchor(anchor(daily.rd), rdProjects);
+  const rdNet = calcRdGrowth(rdGenericAnchor, currentRd) - currentRd * RD_DECAY_RATE;
+  const rdGoesToProduct = rdFundedProject != null && daily.rd > 0 && rdGenericAnchor <= 0;
+  const anchorPerLocal = money.toAnchor(1);
+  const rdRemainingCost =
+    anchorPerLocal > 0 ? remainingDevelopmentAnchor(rdProjects) / anchorPerLocal : 0;
   const sprawlCap =
     SPRAWL_SECTOR_THRESHOLD +
     SPRAWL_SECTOR_THRESHOLD * (Math.max(0, currentLs) / LOGISTICS_MAX_SPRAWL_EFFECT);
@@ -317,8 +341,10 @@ export default function CeoBudgetPanel({
           pct={pctOfRevenue(daily.marketing)}
           note={
             daily.marketing > 0
-              ? `+${msGain.toFixed(3)} gross growth before decay/turn (now ${Math.round(currentMs)}, diminishing above ${MARKETING_DIMINISHING_THRESHOLD})`
-              : `Strength ${Math.round(currentMs)}, no spend`
+              ? `${msNet >= 0 ? "+" : ""}${msNet.toFixed(2)}/turn (now ${Math.round(currentMs)}${msEquilibrium !== null ? `, settles near ${Math.round(msEquilibrium)}` : `, diminishing above ${MARKETING_DIMINISHING_THRESHOLD}`})`
+              : msDecayRate > 0 && currentMs > 0
+                ? `Decaying ${(currentMs * msDecayRate).toFixed(2)}/turn, no spend`
+                : `Strength ${Math.round(currentMs)}, no spend`
           }
         />
         <StatementLine
@@ -331,7 +357,19 @@ export default function CeoBudgetPanel({
               {daily.logistics > 0 ? (
                 <>
                   {lsNet >= 0 ? "+" : ""}
-                  {lsNet.toFixed(2)}/turn, settles near {Math.round(lsEquilibrium)}
+                  {lsNet.toFixed(2)}/turn
+                  {groupTransfer ? (
+                    <>
+                      {" "}
+                      before the group payment. Your company also hands strength to its{" "}
+                      {groupTransfer.subsidiaryCount === 1
+                        ? "subsidiary"
+                        : `${groupTransfer.subsidiaryCount} subsidiaries`}{" "}
+                      each turn, which is not counted here.
+                    </>
+                  ) : (
+                    <>, settles near {Math.round(lsEquilibrium)}</>
+                  )}
                 </>
               ) : currentLs > 0 ? (
                 <span className="text-warning">
@@ -361,7 +399,15 @@ export default function CeoBudgetPanel({
           amount={budgetInput("rd", "R&D")}
           pct={pctOfRevenue(daily.rd)}
           note={
-            daily.rd > 0 ? (
+            rdGoesToProduct ? (
+              <span className="text-warning">
+                +0/turn, R&amp;D budget is funding {rdFundedProject.label} development (
+                {money.fmt(rdRemainingCost)} still to pay)
+                {currentRd > 0
+                  ? `. Points decay ${(currentRd * RD_DECAY_RATE).toFixed(2)}/turn`
+                  : ""}
+              </span>
+            ) : daily.rd > 0 ? (
               `${rdNet >= 0 ? "+" : ""}${rdNet.toFixed(2)}/turn (now ${Math.round(currentRd)}). Innovation ${innovationPct.toFixed(0)}% every ${RD_INNOVATION_INTERVAL} turns; diminishing above ${RD_DIMINISHING_THRESHOLD}`
             ) : currentRd > 0 ? (
               <span className="text-warning">

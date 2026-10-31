@@ -72,6 +72,8 @@ function finite(n: number | undefined): number {
 
 export function buildRiskReadout(input: {
   cashReserves: number;
+  /** Marked sovereign treasuries, counted with cash as the engine does. */
+  liquidSecurities?: number;
   /** Cash-backed deposits only; player pointer deposits are excluded. */
   cashBackedDeposits: number;
   totalLoans: number;
@@ -81,7 +83,8 @@ export function buildRiskReadout(input: {
   confidence: number;
   band: "green" | "amber" | "red";
 }): BankRiskReadout {
-  const cash = Math.max(0, finite(input.cashReserves));
+  const cash =
+    Math.max(0, finite(input.cashReserves)) + Math.max(0, finite(input.liquidSecurities));
   const deposits = Math.max(0, finite(input.cashBackedDeposits));
   const loans = Math.max(0, finite(input.totalLoans));
   const ratio = Math.max(0, finite(input.reserveRatioRequired));

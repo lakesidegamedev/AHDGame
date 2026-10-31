@@ -12,7 +12,7 @@ import { fromInternalUnits, toInternalUnits } from "./locMath";
  * LOC underwriting uses a rolling income average instead of a one-turn snapshot.
  * This keeps short-lived income spikes from instantly inflating the credit limit.
  */
-export const LOC_INCOME_AVERAGING_TURNS = 48;
+const LOC_INCOME_AVERAGING_TURNS = 48;
 
 const LOC_RECURRING_INCOME_TX_TYPES: FinancialTxLogEntry["type"][] = [
   ...TAXABLE_PLAYER_INCOME_TYPES,

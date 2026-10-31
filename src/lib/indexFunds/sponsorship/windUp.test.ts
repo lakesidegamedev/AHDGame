@@ -12,7 +12,10 @@ vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
   creditCorpLiquidCapital: vi.fn().mockResolvedValue(0),
 }));
 vi.mock("@/lib/currency/corporationCapital", () => ({
+  anchorToCorpCapital: (a: number) => a,
   anchorToCorpLiquidCapital: (a: number) => a,
+  corpCapitalToAnchor: (a: number) => a,
+  loadFxRatesRecord: vi.fn().mockResolvedValue({}),
   getCorpFxRate: vi.fn().mockResolvedValue(1),
   resolveCorpLiquidCurrencyCode: () => "USD",
 }));
@@ -21,6 +24,14 @@ vi.mock("@/lib/indexFunds/fundRedemptionLiquidity", () => ({
     cashRaisedAnchor: 0,
     sharesSold: 0,
     salesExecuted: 0,
+  }),
+}));
+vi.mock("@/lib/indexFunds/fundHoldingWriteOff", () => ({
+  writeOffDeadConstituentHoldings: vi.fn().mockResolvedValue({
+    writtenOffCount: 0,
+    writtenOffValueAnchor: 0,
+    unsellableCount: 0,
+    unsellableValueAnchor: 0,
   }),
 }));
 vi.mock("@/lib/bonds/sellFundBondUnits", () => ({
@@ -36,22 +47,60 @@ vi.mock("@/lib/indexFunds/fundValuation", () => ({
   loadOpenOrdersEscrowByFundId: vi.fn().mockResolvedValue(new Map()),
 }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
-// Mirrors the real contract: a fund_reserve position is the fund's own units
-// and is never paid out.
-vi.mock("./holderPayout", () => ({
-  payFundHolderCash: vi.fn(
-    async (_db: unknown, _fund: unknown, position: { holderKind: string }) =>
-      position.holderKind !== "fund_reserve"
-  ),
+vi.mock("@/lib/indexFunds/fundShareOrders", () => ({
+  cancelFundShareOrder: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/indexFunds/subscriptions", () => ({
+  refundQueuedSubscriptionsForFund: vi.fn().mockResolvedValue(0),
+}));
+// Mirrors the real contract: a fund_reserve position is the fund's own units
+// and is never paid out. `payFundHoldersCash` settles a whole book in one call
+// in production; the shim below keeps this suite's per-holder assertions valid.
+vi.mock("./holderPayout", async () => {
+  const payFundHolderCash = vi.fn(
+    async (
+      _db: unknown,
+      _fund: unknown,
+      position: { holderKind: string },
+      _payoutAnchor?: number
+    ) => position.holderKind !== "fund_reserve"
+  );
+  return {
+    payFundHolderCash,
+    payFundHoldersCash: vi.fn(
+      async (
+        db: unknown,
+        fund: unknown,
+        payouts: Array<{
+          position: { holderKind: string };
+          payoutAnchor: number;
+        }>
+      ) => {
+        const paid: Array<{ holderKind: string }> = [];
+        const unpaid: Array<{ holderKind: string }> = [];
+        let distributedAnchor = 0;
+        for (const { position, payoutAnchor } of payouts) {
+          if (await payFundHolderCash(db, fund, position, payoutAnchor)) {
+            paid.push(position);
+            distributedAnchor += payoutAnchor;
+          } else if (position.holderKind !== "fund_reserve") unpaid.push(position);
+        }
+        return { paid, unpaid, distributedAnchor };
+      }
+    ),
+  };
+});
 
 import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
+import { writeOffDeadConstituentHoldings } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
+import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
+import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
 
 const SPONSOR = new ObjectId();
 
@@ -85,14 +134,17 @@ function makeDb(opts: {
   positions?: Partial<IndexFundPosition>[];
   windingDown?: IndexFund[];
   sponsorExists?: boolean;
+  corporations?: Array<{ _id: ObjectId; name: string }>;
   claimed?: boolean;
   fund?: IndexFund;
   bondsRemaining?: () => number;
   queuedRedemptions?: () => number;
+  openFundOrders?: Array<{ _id: ObjectId }>;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
   const txInsert = vi.fn().mockResolvedValue({ acknowledged: true });
+  const centralBanksUpdate = vi.fn().mockResolvedValue({ matchedCount: 1 });
   const db = {
     collection: vi.fn((name: string) => {
       if (name === "indexFunds")
@@ -120,6 +172,11 @@ function makeDb(opts: {
       if (name === "indexFundTransactions") return { insertOne: txInsert };
       if (name === "indexFundRedemptionQueue")
         return { countDocuments: vi.fn(async () => opts.queuedRedemptions?.() ?? 0) };
+      if (name === "shareOrders")
+        return {
+          find: () => ({ toArray: async () => opts.openFundOrders ?? [] }),
+          countDocuments: vi.fn(async () => (opts.openFundOrders ?? []).length),
+        };
       if (name === "corporations")
         return {
           findOne: vi
@@ -127,11 +184,14 @@ function makeDb(opts: {
             .mockResolvedValue(
               opts.sponsorExists === false ? null : { _id: SPONSOR, name: "Sponsor Co" }
             ),
+          find: () => ({ toArray: async () => opts.corporations ?? [] }),
+          bulkWrite: vi.fn().mockResolvedValue({ matchedCount: 0 }),
         };
+      if (name === "centralBanks") return { updateOne: centralBanksUpdate };
       return { countDocuments: vi.fn().mockResolvedValue(0) };
     }),
   } as unknown as Db;
-  return { db, fundUpdate, positionsUpdateMany, txInsert };
+  return { db, fundUpdate, positionsUpdateMany, txInsert, centralBanksUpdate };
 }
 
 describe("beginWindUp", () => {
@@ -218,6 +278,138 @@ describe("completeWindUp", () => {
   });
 });
 
+describe("wind-up when a corporation no longer exists", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("escheats the sponsor residual to the central bank reserve instead of freezing", async () => {
+    // The sponsor corporation was deleted while the fund was winding down.
+    // Nothing is owed to anyone, so the residual follows unowned equity to the
+    // country's central bank reserve instead of throwing every turn.
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 250_000,
+      unitSupply: 0,
+      countryId: "US",
+    });
+    const { db, fundUpdate, centralBanksUpdate } = makeDb({
+      positions: [],
+      fund,
+      sponsorExists: false,
+    });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(centralBanksUpdate).toHaveBeenCalledTimes(1);
+    expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBe(250_000);
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+  });
+
+  it("escheats a dead corporate holder's slice without gifting it to the sponsor", async () => {
+    const missing = new ObjectId();
+    const positions = [
+      { _id: new ObjectId(), units: 500, holderKind: "character" as const },
+      {
+        _id: new ObjectId(),
+        units: 500,
+        holderKind: "corporation" as const,
+        corporationId: missing,
+      },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 100_000,
+      unitSupply: 1_000,
+      countryId: "US",
+    });
+    const { db, centralBanksUpdate } = makeDb({ positions, fund, corporations: [] });
+
+    await completeWindUp(db, fund, 200);
+
+    // NAV = 100. The character takes their 50,000; the dead holder's 50,000
+    // goes to the reserve, so it never falls through to the sponsor.
+    expect(vi.mocked(payFundHolderCash)).toHaveBeenCalledWith(db, fund, positions[0], 50_000);
+    expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBe(50_000);
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+  });
+
+  it("ignores a dead holder whose units are worth nothing", async () => {
+    const positions = [
+      {
+        _id: new ObjectId(),
+        units: 10,
+        holderKind: "corporation" as const,
+        corporationId: new ObjectId(),
+      },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 0,
+      unitSupply: 10,
+      countryId: "US",
+    });
+    const { db, centralBanksUpdate, fundUpdate } = makeDb({ positions, fund, corporations: [] });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(centralBanksUpdate).not.toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+  });
+
+  it("keeps the paid_units fraction when escheating a dead holder's slice", async () => {
+    const positions = [
+      { _id: new ObjectId(), units: 1, holderKind: "character" as const },
+      {
+        _id: new ObjectId(),
+        units: 2,
+        holderKind: "corporation" as const,
+        corporationId: new ObjectId(),
+      },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 10,
+      unitSupply: 3,
+      seedAccounting: "paid_units",
+      countryId: "US",
+    });
+    const { db, centralBanksUpdate } = makeDb({ positions, fund, corporations: [] });
+
+    await completeWindUp(db, fund, 200);
+
+    // NAV = 10/3; the dead holder's 2 units are worth 20/3, not a floored 6.
+    expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBeCloseTo(20 / 3, 9);
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+  });
+
+  it("floors a legacy seed slice the same way live holders are paid", async () => {
+    const positions = [
+      { _id: new ObjectId(), units: 1, holderKind: "character" as const },
+      {
+        _id: new ObjectId(),
+        units: 2,
+        holderKind: "corporation" as const,
+        corporationId: new ObjectId(),
+      },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 10,
+      unitSupply: 3,
+      seedAccounting: "legacy_residual",
+      countryId: "US",
+    });
+    const { db, centralBanksUpdate } = makeDb({ positions, fund, corporations: [] });
+
+    await completeWindUp(db, fund, 200);
+
+    // NAV = 10/3. Character 3 + dead holder 6 = 9 distributed; the 1 left over
+    // is the sponsor's legacy residual.
+    expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBe(6);
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 1);
+  });
+});
+
 describe("advanceWindDowns", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -232,6 +424,23 @@ describe("advanceWindDowns", () => {
     expect(r.fundsCompleted).toBe(0);
     expect(vi.mocked(sellFundHoldingsForRedemptionCash)).toHaveBeenCalled();
     expect(vi.mocked(payFundHolderCash)).not.toHaveBeenCalled();
+  });
+
+  it("writes off a holding whose corporation is gone so the wind-up can finish", async () => {
+    const deadCorp = new ObjectId();
+    const fund = makeFund({
+      status: "winding_down",
+      holdings: [{ corporationId: deadCorp, shares: 10, lastValueAnchor: 50_000 }],
+    });
+    const { db } = makeDb({ windingDown: [fund], positions: [] });
+    const r = await advanceWindDowns(db, 200);
+    expect(vi.mocked(writeOffDeadConstituentHoldings)).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ _id: fund._id }),
+      fund.holdings
+    );
+    expect(payFundHolderCash).not.toHaveBeenCalled();
+    expect(r.fundsCompleted).toBe(0);
   });
 
   it("sells bonds before completing and pays out the fresh cash balance", async () => {
@@ -341,5 +550,42 @@ describe("advanceWindDowns", () => {
     const r = await advanceWindDowns(db, 356, { forexEnabled: true });
     expect(processQueuedRedemptions).not.toHaveBeenCalled();
     expect(r.errors).toEqual([]);
+  });
+});
+
+describe("#4219 wind-up clears settlement blockers", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("cancels resting fund orders and refunds queued subscriptions before completing", async () => {
+    const orderId = new ObjectId();
+    const openOrders = [{ _id: orderId }];
+    const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
+    const { db, fundUpdate } = makeDb({
+      windingDown: [fund],
+      positions: [],
+      openFundOrders: openOrders,
+    });
+
+    // First pass: the order is still on the book, so completion must wait. The
+    // helpers are the only things that can clear it.
+    const blocked = await advanceWindDowns(db, 356, { forexEnabled: true });
+    expect(cancelFundShareOrder).toHaveBeenCalledWith(db, orderId, 356);
+    expect(refundQueuedSubscriptionsForFund).toHaveBeenCalledWith(db, fund._id, 356);
+    expect(blocked.fundsCompleted).toBe(0);
+
+    // Cancelling (mocked) removes the order; the next pass finishes the fund
+    // instead of repeating the warning forever.
+    openOrders.length = 0;
+    const done = await advanceWindDowns(db, 357, { forexEnabled: true });
+    expect(done.fundsCompleted).toBe(1);
+    expect(done.errors).toEqual([]);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+  });
+
+  it("does not repeat the warning when the blockers are gone", async () => {
+    const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
+    const { db } = makeDb({ windingDown: [fund], positions: [], openFundOrders: [] });
+    const r = await advanceWindDowns(db, 356, { forexEnabled: true });
+    expect(r.errors).not.toContain("NIT: Fund settlement must finish before wind-up");
   });
 });

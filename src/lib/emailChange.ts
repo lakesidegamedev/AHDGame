@@ -11,8 +11,8 @@ import { createHash, randomBytes } from "crypto";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 
-export const EMAIL_CHANGES_COLLECTION = "emailChanges";
-export const EMAIL_CHANGE_TTL_MS = 60 * 60 * 1000;
+const EMAIL_CHANGES_COLLECTION = "emailChanges";
+const EMAIL_CHANGE_TTL_MS = 60 * 60 * 1000;
 const TOKEN_PREFIX = "ahde_";
 
 export interface EmailChangeDoc {
@@ -27,7 +27,7 @@ export interface EmailChangeDoc {
   usedAt: Date | null;
 }
 
-export function hashEmailChangeToken(rawToken: string): string {
+function hashEmailChangeToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 

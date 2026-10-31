@@ -47,8 +47,3 @@ export async function isAuditLogEnabled(
   cached = { value, at: now };
   return value;
 }
-
-/** Test/hot-reload helper — clears the cached flag value. */
-export function resetAuditLogFlagCache(): void {
-  cached = null;
-}

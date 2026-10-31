@@ -1,46 +1,71 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { regionUrl } from "@/lib/urls";
-import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 import { HeroImage } from "@/components/HeroImage";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { GUBERNATORIAL_ACTION_CAP } from "@/lib/constants/governorOffice";
 import type { OfficePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { OfficePoolTopUpButton } from "@/components/officials/OfficePoolTopUpButton";
 import ImpeachmentPanel from "@/app/whitehouse/ImpeachmentPanel";
 import { OverviewTab } from "./tabs/OverviewTab";
-import {
-  LegislationTab,
-  type AwaitingAssentBill,
-  type LegislationActivity,
-} from "./tabs/LegislationTab";
+import type { AwaitingAssentBill, LegislationActivity } from "./tabs/LegislationTab";
 import type { EligibleNpp } from "./tabs/legislation/QueueBillModal";
-import {
-  OrdersTab,
-  type ActiveOrder,
-  type LegTypeOpt,
-  type OrderHistoryEntry,
-} from "./tabs/OrdersTab";
-import { AddressTab, type MostRecentAddressSummary } from "./tabs/AddressTab";
-import { EndorsementsTab, type ActiveEndorsement } from "./tabs/EndorsementsTab";
-import { DevolutionTab, type DevolutionDriverSnapshot } from "./tabs/DevolutionTab";
+import type { ActiveOrder, LegTypeOpt, OrderHistoryEntry } from "./tabs/OrdersTab";
+import type { MostRecentAddressSummary } from "./tabs/AddressTab";
+import type { ActiveEndorsement } from "./tabs/EndorsementsTab";
+import type { DevolutionDriverSnapshot } from "./tabs/DevolutionTab";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
 import type { Race } from "./tabs/endorsements/RaceList";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import { isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { TabFallback } from "@/components/state/TabFallback";
+
+// Only the Overview tab is open on arrival; the others are one click away and
+// each pulls its own heavy tree (the legislation tab drags the metric catalog
+// and the demographic weights in with its bill queue). Same skeleton the
+// region tab shells use, so a tab swap reserves its space before the chunk
+// lands instead of collapsing the page.
+const LegislationTab = dynamic(
+  () => import("./tabs/LegislationTab").then((m) => ({ default: m.LegislationTab })),
+  { loading: TabFallback }
+);
+const OrdersTab = dynamic(
+  () => import("./tabs/OrdersTab").then((m) => ({ default: m.OrdersTab })),
+  { loading: TabFallback }
+);
+const AddressTab = dynamic(
+  () => import("./tabs/AddressTab").then((m) => ({ default: m.AddressTab })),
+  { loading: TabFallback }
+);
+const EndorsementsTab = dynamic(
+  () => import("./tabs/EndorsementsTab").then((m) => ({ default: m.EndorsementsTab })),
+  { loading: TabFallback }
+);
+const DevolutionTab = dynamic(
+  () => import("./tabs/DevolutionTab").then((m) => ({ default: m.DevolutionTab })),
+  { loading: TabFallback }
+);
 
 type TabKey = "overview" | "devolution" | "legislation" | "orders" | "address" | "endorsements";
 
 interface Props {
+  legislationVersion: "v1" | "v2";
   countryId: CountryId;
   stateId: string;
   stateName: string;
-  stateBannerImage: string | null;
+  /**
+   * Resolved on the server: the banner depends on the country registry and every
+   * country's region image map, which is not worth shipping for one <img src>.
+   */
+  bannerSrc: string | null;
   regionalTitle: string;
+  /** Plural for the regional executive's orders ("Executive Orders", "Orders in Council"). */
+  ordersLabel: string;
   officeHolderName: string | null;
   officeHolderAvatarUrl: string | null;
   officeHolderPartyName: string | null;
@@ -96,9 +121,7 @@ function buildTabs(showDevolution: boolean): Array<{ key: TabKey; label: string 
 
 export function GovernorOfficeClient(props: Props) {
   const showDevolution =
-    props.countryId === COUNTRY_CONFIGS.UK.id &&
-    isUKDevolutionRegion(props.stateId) &&
-    props.devolution != null;
+    props.countryId === "UK" && isUKDevolutionRegion(props.stateId) && props.devolution != null;
   const tabs = buildTabs(showDevolution);
   const [active, setActive] = useState<TabKey>("overview");
   const router = useRouter();
@@ -114,11 +137,7 @@ export function GovernorOfficeClient(props: Props) {
     ? `${props.regionalTitle}'s Office`
     : `${props.stateName} ${props.regionalTitle}'s Office`;
 
-  const bannerSrc = resolveRegionOfficeBannerImage(
-    props.countryId,
-    props.stateId,
-    props.stateBannerImage
-  );
+  const bannerSrc = props.bannerSrc;
 
   return (
     <div className="min-h-screen bg-background">
@@ -269,6 +288,7 @@ export function GovernorOfficeClient(props: Props) {
           )}
           {active === "legislation" && (
             <LegislationTab
+              legislationVersion={props.legislationVersion}
               countryId={props.countryId}
               stateId={props.stateId}
               awaitingAssentBills={props.awaitingAssentBills}

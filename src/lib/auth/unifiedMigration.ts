@@ -15,6 +15,7 @@ import { getDb, getMongoClient } from "@/lib/mongodb";
 import { createSourceFenceRedriver } from "@/lib/auth/sourceFenceRedrive";
 import { createSourceFenceWriter } from "@/lib/auth/sourceFenceWriter";
 import { createSourceOwnershipProofStore } from "@/lib/auth/sourceOwnershipProof";
+import { createDisabledTargetProvisioner } from "@/lib/auth/unifiedProvisioning";
 import { recoverCredentialImport } from "@/lib/auth/credentialImportRecovery";
 
 const SOURCE_ISSUER = "urn:lakeside:legacy:ahd:production";
@@ -77,6 +78,32 @@ function cohort(): ReadonlyMap<string, CohortTarget> {
   return new Map(entries);
 }
 
+/**
+ * Explicit general bridge cohort. Each entry is an exact source Mongo ObjectId
+ * admitted to the same proof-backed ceremony as the canary. The list is empty
+ * by default and is never inferred from traffic or email.
+ */
+function generalCohort(): ReadonlySet<string> {
+  const raw = process.env.AHD_UNIFIED_GENERAL_COHORT;
+  if (raw === undefined || raw === "") return new Set();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid general unified cohort");
+  }
+  if (!Array.isArray(parsed) || parsed.length > 1000)
+    throw new Error("Invalid general unified cohort");
+  const sources = new Set<string>();
+  for (const sourceId of parsed) {
+    if (typeof sourceId !== "string" || !HEX24.test(sourceId) || sources.has(sourceId)) {
+      throw new Error("Invalid general unified cohort");
+    }
+    sources.add(sourceId);
+  }
+  return sources;
+}
+
 function databasePool(user: string, passwordName: string, database: string): Pool {
   return new Pool({
     host: required("LAKESIDE_IDENTITY_DB_HOST"),
@@ -129,16 +156,34 @@ async function postAuthority(
 
 export function isUnifiedMigrationCohort(sourceAccountId: string): boolean {
   try {
-    return cohort().has(sourceAccountId);
+    if (cohort().has(sourceAccountId)) return true;
+  } catch {
+    // Fall through to the general list; the canary map is not the only cohort.
+  }
+  try {
+    return generalCohort().has(sourceAccountId);
   } catch {
     return false;
   }
 }
 
 export async function migratePasswordLoginToUnified(sourceAccountId: string, password: string) {
-  const targets = cohort();
+  let targets = new Map<string, CohortTarget>();
+  try {
+    targets = new Map(cohort());
+  } catch {
+    // An invalid canary map must not disable an explicitly listed general source.
+  }
+  let general = false;
+  try {
+    general = generalCohort().has(sourceAccountId);
+  } catch {
+    general = false;
+  }
   const target = targets.get(sourceAccountId);
-  if (!target) throw new Error("Account is not in the unified migration cohort");
+  if (!target && !general) throw new Error("Account is not in the unified migration cohort");
+  const sourceIds = target ? [...targets.keys()] : [sourceAccountId];
+  const privilegedSourceIds = target ? sourceIds : [];
 
   const coordinator = databasePool(
     "lakeside_enrollment_runtime",
@@ -155,17 +200,23 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
     "LAKESIDE_PROVISION_READER_PASSWORD",
     "railway"
   );
+  const provisionCoordinator = general
+    ? databasePool(
+        "lakeside_registry_runtime",
+        "LAKESIDE_REGISTRY_RUNTIME_PASSWORD",
+        "lakeside_coordinator"
+      )
+    : null;
   try {
     const db = await getDb();
     const mongo = await getMongoClient();
     const targetIssuer = required("UNIFIED_OIDC_ISSUER");
     const realmId = required("UNIFIED_OIDC_REALM_ID");
-    const sourceIds = [...targets.keys()];
     const proofStore = createSourceOwnershipProofStore({
       sourceIssuer: SOURCE_ISSUER,
       client: mongo,
       databaseName: db.databaseName,
-      privilegedCohortSourceAccountIds: sourceIds,
+      privilegedCohortSourceAccountIds: privilegedSourceIds,
     });
     const reservations = createEnrollmentReservationStore(coordinator, {
       allowedSourceIssuers: [SOURCE_ISSUER],
@@ -174,7 +225,7 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
       sourceIdentity: { issuer: SOURCE_ISSUER, subject: sourceAccountId },
       provenance: PROVENANCE,
     });
-    if (reservation.canonicalAccountId !== target.canonicalAccountId)
+    if (target && reservation.canonicalAccountId !== target.canonicalAccountId)
       throw new Error("Canonical cohort mapping changed");
     const sourceProofReader = createSourceOwnershipProofReader({
       sourceIssuer: SOURCE_ISSUER,
@@ -212,8 +263,17 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
       clockSkewEvidence: "Production databases use provider synchronized clocks",
       loadSourceProof: ({ proofId }: { proofId: string }) => proofStore.loadProof({ proofId }),
       loadCentralFenceAttestation,
-      privilegedCohortSourceAccountIds: sourceIds,
+      privilegedCohortSourceAccountIds: privilegedSourceIds,
     });
+    const provisioner = provisionCoordinator
+      ? createDisabledTargetProvisioner({
+          coordinatorPool: provisionCoordinator,
+          receiptReaderPool,
+          issuer: targetIssuer,
+          realmId,
+          obtainAccessToken: tokenProvider("LAKESIDE_PROVISION_COORDINATOR").obtainAccessToken,
+        })
+      : null;
     const sourceUser = await db
       .collection("users")
       .findOne({ _id: new ObjectId(sourceAccountId) }, { projection: { authMigrationFence: 1 } });
@@ -234,6 +294,7 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
       [reservation.canonicalAccountId, reservation.enrollmentOperationId]
     );
     let progress = await enrollment.getEnrollment(reservation.enrollmentOperationId);
+    let targetUserId = target?.userId;
     if (!sourceFence && centralFence.rowCount === 0) {
       const proof = await proofStore.issuePasswordProof({
         sourceAccountId,
@@ -263,6 +324,17 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
         leaseToken: claimed.lease.leaseToken,
         leaseGeneration: claimed.lease.leaseGeneration,
       };
+      if (general) {
+        if (!provisioner) throw new Error("Disabled target provisioning is unavailable");
+        const provisioned = await provisioner.provisionDisabledTarget({
+          accountId: reservation.canonicalAccountId,
+          provenance: PROVENANCE,
+        });
+        if (!provisioned || !UUID.test(provisioned.userId)) {
+          throw new Error("Disabled target provisioning did not commit");
+        }
+        targetUserId = provisioned.userId;
+      }
       await enrollment.fenceEnrollment({
         ...lease,
         idempotencyKey: createIdempotencyKey(),
@@ -308,6 +380,17 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
       };
     }
     if (!sourceFence) throw new Error("Source fence is unavailable");
+    if (!targetUserId) {
+      const attestation = await loadCentralFenceAttestation({
+        canonicalAccountId: reservation.canonicalAccountId,
+        enrollmentOperationId: reservation.enrollmentOperationId,
+      });
+      if (!attestation || !UUID.test(attestation.targetSubject)) {
+        throw new Error("Committed target subject is unavailable");
+      }
+      targetUserId = attestation.targetSubject;
+    }
+    if (!targetUserId) throw new Error("Committed target subject is unavailable");
     const material = await fenceWriter.loadCredentialImportMaterial({
       proofId: sourceFence.proofId,
       receiptId: sourceFence.receiptId,
@@ -364,7 +447,7 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
             attemptId: attempt.attemptId,
             attemptGeneration: attempt.attemptGeneration,
             leaseToken: attempt.leaseToken,
-            targetIdentity: { issuer: targetIssuer, realmId, subject: target.userId },
+            targetIdentity: { issuer: targetIssuer, realmId, subject: targetUserId },
             digestFingerprint: createHash("sha256").update(material.credentialDigest).digest("hex"),
             provenance: PROVENANCE,
           });
@@ -386,7 +469,7 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
     }
     progress = await enrollment.getEnrollment(reservation.enrollmentOperationId);
     if (progress?.status === "unified")
-      return Object.freeze({ accountId: target.canonicalAccountId, userId: target.userId });
+      return Object.freeze({ accountId: reservation.canonicalAccountId, userId: targetUserId });
     if (progress?.status !== "credentialed") throw new Error("Credential import did not reconcile");
     const activation = await enrollment.bindTargetActivation({
       operationId: reservation.enrollmentOperationId,
@@ -403,8 +486,13 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
       provenance: PROVENANCE,
     });
     if (unified.status !== "unified") throw new Error("Unified activation did not commit");
-    return Object.freeze({ accountId: target.canonicalAccountId, userId: target.userId });
+    return Object.freeze({ accountId: reservation.canonicalAccountId, userId: targetUserId });
   } finally {
-    await Promise.allSettled([coordinator.end(), fenceReaderPool.end(), receiptReaderPool.end()]);
+    await Promise.allSettled([
+      coordinator.end(),
+      fenceReaderPool.end(),
+      receiptReaderPool.end(),
+      ...(provisionCoordinator ? [provisionCoordinator.end()] : []),
+    ]);
   }
 }

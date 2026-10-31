@@ -75,7 +75,7 @@ export interface PlantsBuildOrderInput {
  * at once — a ~10% world supply shock on a single turn, which will move every
  * commodity price. That is the number these thresholds exist to catch.
  */
-export const PLANTS_SUPPLY_STEP_WARN_PCT = 0.02;
+const PLANTS_SUPPLY_STEP_WARN_PCT = 0.02;
 export const PLANTS_SUPPLY_STEP_BLOCK_PCT = 0.05;
 
 /**
@@ -88,12 +88,12 @@ export const PLANTS_SUPPLY_STEP_BLOCK_PCT = 0.05;
  * whose drift jumps double digits inside a handful of turns is not diverging,
  * it is broken.
  */
-export const PLANTS_SHADOW_DRIFT_WARN_PCT = 0.1;
-export const PLANTS_SHADOW_DRIFT_ALARM_PCT = 0.25;
+const PLANTS_SHADOW_DRIFT_WARN_PCT = 0.1;
+const PLANTS_SHADOW_DRIFT_ALARM_PCT = 0.25;
 
 /** Fraction of sectors producing nothing before the world is considered stalled. */
-export const PLANTS_ZERO_PRODUCTION_WARN_PCT = 0.05;
-export const PLANTS_ZERO_PRODUCTION_ALARM_PCT = 0.15;
+const PLANTS_ZERO_PRODUCTION_WARN_PCT = 0.05;
+const PLANTS_ZERO_PRODUCTION_ALARM_PCT = 0.15;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Preflight — per sector
@@ -1059,7 +1059,7 @@ export interface PlantsRollbackVerifyReport {
 }
 
 /** Divergence below this (in ₳) is rounding, not a real loss. */
-export const PLANTS_ROLLBACK_DIVERGENCE_EPSILON = 1;
+const PLANTS_ROLLBACK_DIVERGENCE_EPSILON = 1;
 
 export function verifyPlantsRollback(
   sectors: readonly PlantsRollbackVerifySectorInput[],

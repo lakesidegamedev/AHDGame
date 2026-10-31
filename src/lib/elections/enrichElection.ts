@@ -3,7 +3,8 @@
  * _enrichElection retains Russian national list nominees together and uses the
  * same primary advance limit as the resolver.
  */
-import { computeSeatMargins } from "@/lib/elections/seatMargins";
+import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
+import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
 import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
 import { hu1991PrimaryAdvanceLimit } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianAssemblyPrimaryAdvanceLimit } from "@/lib/countries/ru/assemblyPrimaryProgression";
@@ -85,7 +86,7 @@ import {
 } from "@/lib/elections/candidateEnrichment";
 import { getOrCreateVoteTally } from "@/lib/elections/voteTallyService";
 import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
-import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
+import { projectDistrictedSeats } from "@/lib/redistricting/districtedHouseResolution";
 import { buildPrimaryShareMap } from "@/lib/turn/election/generalResolutionHelpers";
 import { selectEndedDisplayCandidates } from "@/lib/elections/endedResultsCandidates";
 import { selectGeneralPhaseDisplayCandidates } from "@/lib/elections/generalPhaseCandidates";
@@ -496,52 +497,69 @@ export async function _enrichElection(
         ));
 
   // US House with redistricting on: project seats district-by-district using the
-  // SAME engine that decides the final result (districtedHouseResolution on the
-  // current tally), instead of the statewide proportional estimate above — so
-  // the live "Projected Seats" panel matches how the race will actually resolve.
-  // Falls back to the proportional estimate for states with no districts drawn.
-  // Read-only: `persist` is left off, so this projection cannot write holders.
-  // It used to, which meant opening a live House race rewrote that state's
-  // sitting members from an in-progress tally, and wrote `npps` ids into
-  // `holderCharacterId` because this path has no NPP id map.
-  if (
-    !seatedAllocation &&
+  // SAME engine that decides the final result, instead of the statewide
+  // proportional estimate above — so the live "Projected Seats" panel matches
+  // how the race will actually resolve. Falls back to the proportional estimate
+  // for states with no districts drawn.
+  const redistrictedHouseRace =
     election.electionType === "house" &&
     (countryId ?? "US") === "US" &&
-    isRedistrictingEnabled(gameState) &&
-    tally
-  ) {
+    isRedistrictingEnabled(gameState);
+  let districtsForState: CongressionalDistrict[] | null = null;
+  let districtedMarginProjection: SeatProjection | null = null;
+  if (redistrictedHouseRace && !seatedAllocation && tally) {
     const candidateVotes: Record<string, number> = {};
     const candidateParty: Record<string, string> = {};
-    const candidateCharacterId: Record<string, string | null> = {};
     for (const c of activeCandidates) {
       const id = c._id.toString();
       candidateVotes[id] = tally.totalVotes?.[id] ?? 0;
       candidateParty[id] = c.party ?? tally.candidateParties?.[id] ?? "";
-      candidateCharacterId[id] = c.characterId ? c.characterId.toString() : null;
     }
-    const districted = await districtedHouseResolution(db, {
-      countryId: "US",
-      stateId: election.state as string,
-      candidateVotes,
-      candidateParty,
-      candidateCharacterId,
-      primaryShares: buildPrimaryShareMap(tally.primaryResults ?? null),
-      districtBoosts: (
-        election as { districtCampaignBoosts?: Record<string, Record<string, number>> }
-      ).districtCampaignBoosts,
-      now: new Date(),
-      ...(deps.preloadedDistricts
-        ? {
-            preloadedDistricts: deps.preloadedDistricts.filter((d) => d.stateId === election.state),
-          }
-        : {}),
-      preloadedParties: parties,
-    });
-    if (districted?.seatsEstimate && Object.keys(districted.seatsEstimate).length > 0) {
-      seatsEstimate = districted.seatsEstimate;
+    const districts = deps.preloadedDistricts
+      ? deps.preloadedDistricts.filter((d) => d.stateId === election.state)
+      : await db
+          .collection<CongressionalDistrict>("congressionalDistricts")
+          .find({ countryId: "US", stateId: election.state as string })
+          .toArray();
+    districtsForState = districts;
+    if (districts.length > 0) {
+      const projectionInput = {
+        countryId: "US",
+        candidateParty,
+        primaryShares: buildPrimaryShareMap(tally.primaryResults ?? null),
+        districtBoosts: (
+          election as { districtCampaignBoosts?: Record<string, Record<string, number>> }
+        ).districtCampaignBoosts,
+        districts,
+        parties,
+      };
+      const projection = projectDistrictedSeats({ ...projectionInput, candidateVotes });
+      if (
+        projection?.result.seatsEstimate &&
+        Object.keys(projection.result.seatsEstimate).length > 0
+      ) {
+        seatsEstimate = projection.result.seatsEstimate;
+        // The same engine answers the votes-to-next-seat line, so the margin
+        // reflects the seats this race will actually resolve with.
+        districtedMarginProjection = (votes) =>
+          projectDistrictedSeats({ ...projectionInput, candidateVotes: votes })?.result
+            .seatsEstimate ?? null;
+      }
     }
   }
+
+  // The resolver falls back to the statewide allocator when a state has no
+  // districts drawn, so the race page must not claim district seats there. Ended
+  // races skip the projection above; a one-document check settles those without
+  // loading the whole state's districts.
+  if (redistrictedHouseRace && districtsForState === null && isFull) {
+    districtsForState = await db
+      .collection<CongressionalDistrict>("congressionalDistricts")
+      .find({ countryId: "US", stateId: election.state as string })
+      .limit(1)
+      .toArray();
+  }
+  const seatsDecidedByDistrict = redistrictedHouseRace && (districtsForState?.length ?? 0) > 0;
 
   // National Front chambers: project with the SAME quota the resolver will use,
   // for the same reason the districted branch above exists. `computeSeatEstimates`
@@ -581,36 +599,35 @@ export async function _enrichElection(
     }
   }
 
-  // Votes to gain or lose a seat, for live races projected through the
-  // standard allocator only. Seated, districted and bloc-list figures come
-  // from other engines, so a margin against this projection would mislead.
+  // Votes to gain or lose a seat. Standard-allocator races project through the
+  // same allocator the page shows; districted US House races use the district
+  // engine, so the line reflects the seats actually at stake there too.
   const projectedByAllocator =
+    !districtedMarginProjection &&
     !seatedAllocation &&
     !isBgOrdinary &&
     !isHu1991Pending &&
     !(blocQuota && election.totalSeats) &&
     seatsEstimate != null &&
-    tally != null &&
-    !tally.finalized &&
-    tally.countingMethod !== "pr_stv" &&
-    !(
-      election.electionType === "house" &&
-      (countryId ?? "US") === "US" &&
-      isRedistrictingEnabled(gameState)
-    );
+    tally != null;
+  const marginProjection: SeatProjection | null = districtedMarginProjection
+    ? districtedMarginProjection
+    : projectedByAllocator && tally
+      ? (votes) =>
+          computeSeatEstimates(
+            election.electionType,
+            election.totalSeats,
+            { ...tally, totalVotes: votes },
+            activeCandidateIdSet,
+            election.countryId ?? "US",
+            election.allocationMethod,
+            election.state
+          )
+      : null;
   const seatMargins =
-    projectedByAllocator && tally
+    marginProjection && tally && !tally.finalized && tally.countingMethod !== "pr_stv"
       ? computeSeatMargins(
-          (votes) =>
-            computeSeatEstimates(
-              election.electionType,
-              election.totalSeats,
-              { ...tally, totalVotes: votes },
-              activeCandidateIdSet,
-              election.countryId ?? "US",
-              election.allocationMethod,
-              election.state
-            ),
+          marginProjection,
           Object.fromEntries(
             [...activeCandidateIdSet].map((id) => [id, tally.totalVotes?.[id] ?? 0])
           )
@@ -1279,6 +1296,7 @@ export async function _enrichElection(
     byParty,
     polling,
     seatsEstimate,
+    seatsDecidedByDistrict: isFull ? seatsDecidedByDistrict : false,
     incumbent: incumbentDisplay,
 
     // Full-view fields

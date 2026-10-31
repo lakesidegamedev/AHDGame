@@ -30,8 +30,12 @@ export function CentralBankPolicyStrip({ rates, currentTurn }: Props) {
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{r.currencyCode}</span>
-                {band.defending ? (
+                {band.unreachable ? (
                   <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">
+                    Out of reach
+                  </span>
+                ) : band.defending ? (
+                  <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
                     Defending
                   </span>
                 ) : (
@@ -48,6 +52,13 @@ export function CentralBankPolicyStrip({ rates, currentTurn }: Props) {
                   ? "Posting turn unknown"
                   : `Posted ${turnsSince} turn${turnsSince === 1 ? "" : "s"} ago`}
               </p>
+              {band.defending && band.turnsToReach != null && (
+                <p className={`text-xs ${band.unreachable ? "text-red-400" : "text-muted"}`}>
+                  {band.unreachable
+                    ? `The corridor is ${(Math.round((band.gapPct ?? 0) * 1000) / 10).toFixed(1)}% away. Even a game year of maximum-strength defence would not close it.`
+                    : `${(Math.round((band.gapPct ?? 0) * 1000) / 10).toFixed(1)}% away, about ${band.turnsToReach} turn${band.turnsToReach === 1 ? "" : "s"} at maximum-strength defence.`}
+                </p>
+              )}
             </div>
           );
         })}

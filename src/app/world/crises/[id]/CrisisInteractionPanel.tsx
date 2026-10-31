@@ -12,7 +12,7 @@ import { buildDecisionHistory } from "@/lib/crises/decisionHistory";
 import { computeFiscalImpact } from "@/lib/budget/fiscalImpact";
 import { computeAidOutcome } from "@/lib/crises/aidScaling";
 import { AID_MAX_PCT_GDP, AID_DEFAULT_PCT_GDP } from "@/lib/constants/crises";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { Tooltip } from "@/components/ui/Tooltip";

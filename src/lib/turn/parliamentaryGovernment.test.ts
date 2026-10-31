@@ -1295,6 +1295,74 @@ describe("checkAppointmentEligibility minority bids vs an existing majority", ()
 
     expect(result).toMatchObject({ eligible: true, formationType: "majority" });
   });
+
+  it("a party chair who also chairs a qualifying coalition nominates for the whole coalition", async () => {
+    // SNP (2) clears the minority floor alone, but its chair also chairs the
+    // SNP + Plaid Cymru (3) + Sinn Fein (4) coalition: partner MPs must be
+    // nominable, so the coalition path wins over the party-only one.
+    withCommonsSeats({ "1": 300, "2": 200, "3": 20, "4": 10 });
+    db.collectionMocks["politicalParties"] = {
+      ...db.collection("politicalParties"),
+      findOne: vi.fn().mockResolvedValue({ sequentialId: 2, countryId: "UK", chairId }),
+    } as MockDb["collectionMocks"][string];
+    db.collectionMocks["coalitions"] = {
+      ...db.collection("coalitions"),
+      findOne: vi.fn().mockResolvedValue({
+        sequentialId: 9,
+        countryId: "UK",
+        chairCharacterId: chairId,
+        members: [{ partySequentialId: 2 }, { partySequentialId: 3 }, { partySequentialId: 4 }],
+      }),
+    } as MockDb["collectionMocks"][string];
+
+    const result = await checkAppointmentEligibility(
+      db as unknown as Db,
+      "UK",
+      chairId,
+      UK_MAJORITY_THRESHOLD
+    );
+
+    expect(result).toEqual({
+      eligible: true,
+      formationType: "minority",
+      coalitionId: 9,
+      coalitionPartyIds: ["2", "3", "4"],
+      qualifyingPartyIds: [2, 3, 4],
+    });
+  });
+
+  it("a party chair whose chaired coalition does not qualify falls back to the party-only bid", async () => {
+    withCommonsSeats({ "1": 300, "2": 200, "3": 0 });
+    db.collectionMocks["politicalParties"] = {
+      ...db.collection("politicalParties"),
+      findOne: vi.fn().mockResolvedValue({ sequentialId: 2, countryId: "UK", chairId }),
+    } as MockDb["collectionMocks"][string];
+    db.collectionMocks["coalitions"] = {
+      ...db.collection("coalitions"),
+      findOne: vi.fn().mockResolvedValue({
+        sequentialId: 9,
+        countryId: "UK",
+        chairCharacterId: chairId,
+        // Lead party is not the chair's own and holds no seats.
+        members: [{ partySequentialId: 3 }],
+      }),
+    } as MockDb["collectionMocks"][string];
+
+    const result = await checkAppointmentEligibility(
+      db as unknown as Db,
+      "UK",
+      chairId,
+      UK_MAJORITY_THRESHOLD
+    );
+
+    expect(result).toEqual({
+      eligible: true,
+      formationType: "minority",
+      coalitionId: null,
+      coalitionPartyIds: null,
+      qualifyingPartyIds: [2],
+    });
+  });
 });
 
 describe("appointPrimeMinister — same-holder announce guard", () => {

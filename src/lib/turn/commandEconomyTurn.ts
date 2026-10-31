@@ -46,7 +46,8 @@ import {
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { capacityPricePerUnit, CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { plantCapacityDeltaPipeline } from "@/lib/corporations/plantLedger";
+import { plantChangePipeline } from "@/lib/corporations/plantLedger";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import {
   loadFxRatesByCurrency,
@@ -771,7 +772,7 @@ async function buildCapacityFromDirectedCredit(
   const valueAddedByCorp = new Map<string, number>();
   const { ObjectId } = await import("mongodb");
   const corpIds = [...creditByCorp.keys()].map((id) => new ObjectId(id));
-  const [corps, sectors, fxByCurrency] = await Promise.all([
+  const [corps, sectors, fxByCurrency, wholePlants] = await Promise.all([
     db
       .collection<Corporation>("corporations")
       .find({ _id: { $in: corpIds } }, { projection: { _id: 1, liquidCurrencyCode: 1 } })
@@ -785,6 +786,10 @@ async function buildCapacityFromDirectedCredit(
             _id: 1,
             corporationId: 1,
             sectorType: 1,
+            // Plant size: lane, operating model and recipe.
+            industryModel: 1,
+            mediaDiscriminator: 1,
+            strategyId: 1,
             capitalStock: 1,
             capacityBookAnchor: 1,
             revenue: 1,
@@ -793,6 +798,7 @@ async function buildCapacityFromDirectedCredit(
       )
       .toArray(),
     loadFxRatesByCurrency(db),
+    loadWholePlantsOn(db),
   ]);
   const corpById = new Map(corps.map((c) => [String(c._id), c]));
   const sectorsByCorp = new Map<string, CorporateSector[]>();
@@ -849,12 +855,11 @@ async function buildCapacityFromDirectedCredit(
       ops.push({
         updateOne: {
           filter: { _id: sector._id },
-          update: plantCapacityDeltaPipeline(
-            sector.sectorType,
+          update: plantChangePipeline(
+            sector,
             unitsAdded,
             { capacityBookAnchor: priorBook + unitsAdded * unitPrice },
-            sector.industryModel,
-            sector.mediaDiscriminator
+            { wholePlants }
           ),
         },
       });

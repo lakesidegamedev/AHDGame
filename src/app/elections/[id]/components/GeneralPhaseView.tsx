@@ -24,7 +24,7 @@ import { buildGeneralColors } from "@/lib/utils/politics";
 import { states as referenceStates } from "@/lib/seeds/reference/states";
 import { getSubdivisionMode } from "@/lib/maps/subdivisionConfig";
 import { UK_REGION_NAMES, RU_REGION_NAMES } from "@/lib/constants/states";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useGameClock } from "@/contexts/useGameClock";
 import { buildBlendClock } from "@/lib/elections/blendDetailViewModel";
 import type { ElectionDetail } from "./ElectionDetailTypes";
@@ -454,6 +454,7 @@ export function GeneralPhaseView({
             isEnded={localIsEnded}
             totalSeats={election.totalSeats}
             electionType={election.electionType}
+            districted={election.seatsDecidedByDistrict === true}
             cycle={election.cycle}
             electionId={election.id}
             myCharId={election.myCharId}

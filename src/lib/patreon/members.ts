@@ -146,3 +146,31 @@ export async function listPatreonMembers(): Promise<PatreonMemberRecord[]> {
 
   return out;
 }
+
+export interface PatreonTierListing {
+  tierId: string;
+  title: string;
+  amountCents: number;
+  published: boolean;
+}
+
+/** Every tier on the campaign with its current price. Throws like listPatreonMembers. */
+export async function listPatreonTiers(): Promise<PatreonTierListing[]> {
+  const token = getToken();
+  const campaignId = await resolveCampaignId(token);
+  const data = await api(
+    `/campaigns/${encodeURIComponent(campaignId)}?include=tiers&fields%5Btier%5D=title,amount_cents,published`,
+    token
+  );
+  const out: PatreonTierListing[] = [];
+  for (const inc of data.included || []) {
+    if (inc.type !== "tier" || !inc.attributes) continue;
+    out.push({
+      tierId: String(inc.id),
+      title: String(inc.attributes.title || ""),
+      amountCents: Number(inc.attributes.amount_cents) || 0,
+      published: inc.attributes.published !== false,
+    });
+  }
+  return out;
+}

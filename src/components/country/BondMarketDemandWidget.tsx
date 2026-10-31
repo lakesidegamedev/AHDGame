@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui";
 import type { SovereignDemandResult, SovereignDemandSnapshot } from "@/lib/sovereignDefault/types";
 import type { DsaResult } from "@/lib/sovereignDefault/debtSustainability";
+import { fetchSovereignStatus } from "./sovereignStatusRequest";
 
 interface SovereignStatusResponse {
   countryCode: string;
@@ -31,21 +32,15 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      try {
-        const res = await fetch(`/api/country/${countryCode}/sovereign-status`);
-        if (!res.ok) {
-          if (!cancelled) setState({ kind: "error", message: "Demand signal not available" });
-          return;
-        }
-        const data = (await res.json()) as SovereignStatusResponse;
-        if (!cancelled) setState({ kind: "ready", data });
-      } catch (err) {
-        if (!cancelled)
-          setState({
-            kind: "error",
-            message: err instanceof Error ? err.message : "Failed to load",
-          });
+      // Shared with the other sovereign panels on the page: one request.
+      const result = await fetchSovereignStatus(countryCode);
+      if (cancelled) return;
+      if (!result.ok || !result.data) {
+        setState({ kind: "error", message: result.error || "Demand signal not available" });
+        return;
       }
+      const data = result.data as unknown as SovereignStatusResponse;
+      setState({ kind: "ready", data });
     }
     void load();
     return () => {

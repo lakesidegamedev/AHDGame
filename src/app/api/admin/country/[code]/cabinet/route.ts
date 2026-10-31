@@ -27,7 +27,7 @@ import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { getCountryState } from "@/lib/countryState";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import type { Character, ElectedOfficial, CareerEvent } from "@/lib/db/types";
 import type { OfficeType } from "@/lib/db/types/character";
 import { getUKCabinetCooldownsCollection } from "@/lib/db/collections/ukGovernment";

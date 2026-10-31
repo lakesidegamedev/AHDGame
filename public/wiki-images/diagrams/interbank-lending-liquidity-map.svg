@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="430" viewBox="0 0 800 430" role="img" font-family="system-ui, sans-serif">
+<title>Interbank liquidity map</title>
+<desc>A retail or universal bank lends to an investment or universal bank at its own rate; the borrower can also draw a central bank margin line against its trading book; missed interest leads to a write-off.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="429" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="50" width="210" height="90" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="125.0" y="82.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Lender</text>
+<text x="125.0" y="99.5" text-anchor="middle" font-size="13" fill="#18181b">retail or universal bank</text>
+<text x="125.0" y="116.5" text-anchor="middle" font-size="13" fill="#18181b">with spare deposits</text>
+<rect x="560" y="50" width="220" height="90" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="670.0" y="91.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Borrower</text>
+<text x="670.0" y="108.0" text-anchor="middle" font-size="13" fill="#18181b">investment or universal bank</text>
+<path d="M230,92 L560,92" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="395" y="62" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">interbank loan: up to half of the lender's</text>
+<text x="395" y="76" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">headroom, at a rate the lender chooses</text>
+<path d="M560,122 L230,122" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="395" y="140" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">interest each turn; repay any amount any time</text>
+<rect x="20" y="270" width="230" height="90" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="135.0" y="294.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Write-off</text>
+<text x="135.0" y="311.0" text-anchor="middle" font-size="13" fill="#18181b">after 8 missed interest turns</text>
+<text x="135.0" y="328.0" text-anchor="middle" font-size="13" fill="#18181b">in a row, the lender loses</text>
+<text x="135.0" y="345.0" text-anchor="middle" font-size="13" fill="#18181b">the remaining principal</text>
+<path d="M125,140 L125,270" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="133" y="215" text-anchor="start" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">borrower</text>
+<text x="133" y="229" text-anchor="start" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">cannot pay</text>
+<rect x="530" y="270" width="250" height="90" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="655.0" y="294.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Central bank</text>
+<text x="655.0" y="311.0" text-anchor="middle" font-size="13" fill="#18181b">margin line at prime plus 1.5</text>
+<text x="655.0" y="328.0" text-anchor="middle" font-size="13" fill="#18181b">points, limited to half of the</text>
+<text x="655.0" y="345.0" text-anchor="middle" font-size="13" fill="#18181b">borrower's trading book</text>
+<path d="M600,140 L600,270" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="592" y="205" text-anchor="end" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">margin draw</text>
+<text x="592" y="219" text-anchor="end" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">creates money</text>
+<path d="M710,270 L710,140" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="718" y="205" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">repaying</text>
+<text x="718" y="219" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">destroys it</text>
+</svg>

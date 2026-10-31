@@ -24,6 +24,8 @@ export interface ShareListing {
   marketPriceAtCreation: number;
   status: "open" | "cancelled" | "filled";
   createdAt: Date;
+  /** Last write; settlement stamps it, so a filled listing's completion time. */
+  updatedAt?: Date;
   /** 24 turns after creation — turn processing expires when now >= expiresAt. */
   expiresAt: Date;
   /**
@@ -32,6 +34,20 @@ export interface ShareListing {
    * and doesn't drift with the game clock. Absent on legacy rows → Date fallback.
    */
   expiresAtTurn?: number;
+  /**
+   * Negotiated private sale: reserved for one named buyer at a price the two
+   * players agreed, outside the 50%-200% offer band. The buyer pays and takes
+   * every listed share in one step. Shown publicly on the company page.
+   */
+  negotiated?: NegotiatedSaleTerms;
+}
+
+export interface NegotiatedSaleTerms {
+  buyerCharacterId: ObjectId;
+  /** Agreed total in the listed corporation's liquid currency. */
+  totalPrice: number;
+  /** totalPrice / sharesListed, same currency. */
+  pricePerShare: number;
 }
 
 export interface ShareOffer {

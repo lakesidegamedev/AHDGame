@@ -72,6 +72,20 @@ function physicalInput(over: Partial<PhysicalCostsInput> = {}): PhysicalCostsInp
 }
 
 describe("computeGrowthAndRegulatory — realized-revenue growth + burden (#588)", () => {
+  it("gives a funded turn the faded-out compliance rate while the legacy ramp is in progress", () => {
+    const r = computeGrowthAndRegulatory(
+      growthInput({
+        sectorMarketSharePct: DOMINANT_SHARE,
+        plantsEnabled: true,
+        plantsRampLambda: 0.15,
+      })
+    );
+    expect(r.regulatoryBurdenRate).toBeGreaterThan(0);
+    expect(r.fundedRegulatoryBurdenRate).toBe(0);
+    expect(r.nameplateHourlyGrowthCost).toBeCloseTo(NEW_GROWTH_COST / TURNS_PER_DAY, 10);
+    expect(r.nominalHourlyRevenue).toBeCloseTo(NOMINAL_HOURLY, 10);
+  });
+
   it("charges the full daily cost when revenue is fully realized", () => {
     const r = computeGrowthAndRegulatory(growthInput());
     expect(r.realizationRatio).toBe(1);

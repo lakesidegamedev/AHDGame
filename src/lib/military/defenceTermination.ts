@@ -101,8 +101,8 @@ export function terminationFee(input: {
  * minister holds a stake in a DIFFERENT domestic defence supplier, which is what cancelling a
  * rival's contract usually is when it is not a change of mind.
  */
-export const TERMINATION_BASE_PENALTY = 1;
-export const TERMINATION_MAX_PENALTY = 6;
+const TERMINATION_BASE_PENALTY = 1;
+const TERMINATION_MAX_PENALTY = 6;
 export const TERMINATION_CONFLICTED_MULTIPLIER = 2;
 
 export function terminationFavorabilityPenalty(input: {

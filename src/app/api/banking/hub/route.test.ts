@@ -44,6 +44,16 @@ vi.mock("@/lib/monetaryPolicy/centralBankPricing", () => ({
   loadCentralBankPricingAdjustment: vi.fn().mockResolvedValue({ depositBonusPercentPoints: 0 }),
 }));
 vi.mock("@/lib/currency/gdpAnchorRate", () => ({ loadWorldEraUnitScale: vi.fn() }));
+vi.mock("@/lib/banking/lending", () => ({
+  averageCorpIncomePerTurn: vi.fn().mockResolvedValue(0),
+  characterIncomeInLoanCurrency: vi.fn().mockResolvedValue(0),
+  listBorrowerFacingLoans: vi.fn().mockResolvedValue([]),
+}));
+vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/currency/corporationCapital")>()),
+  loadFxRatesByCurrency: vi.fn().mockResolvedValue(new Map()),
+  loadValuationFxRates: vi.fn().mockResolvedValue(new Map()),
+}));
 vi.mock("@/lib/banking/reserves", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/banking/reserves")>()),
   // Echo the reserve ratio so the payload shows which ratio each row used.
@@ -51,9 +61,11 @@ vi.mock("@/lib/banking/reserves", async (importOriginal) => ({
 }));
 
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { requireAuth } from "@/lib/api/requireAuth";
+import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { GET } from "./route";
 
-function charteredCorp(name: string, currency: string) {
+function charteredCorp(name: string, currency: string, depositOffset = -1) {
   return {
     _id: new ObjectId(),
     name,
@@ -65,7 +77,7 @@ function charteredCorp(name: string, currency: string) {
       status: "active",
       type: "retail",
       currency,
-      depositOffset: -1,
+      depositOffset,
       lendingOffset: 2,
       totalDeposits: 0,
     },
@@ -105,6 +117,87 @@ describe("GET /api/banking/hub private-bank table", () => {
     expect(byName.B.lendableHeadroom).toBe(0.12);
     expect(byName.C.lendableHeadroom).toBe(0.1);
     expect(byName.D.lendableHeadroom).toBe(0.1);
+  });
+
+  it("quotes central-bank savings at half the real prime, as the turn pays it", async () => {
+    state.centralBanks = [
+      {
+        _id: "US",
+        countryId: "US",
+        name: "Fed",
+        primeRate: 20.75,
+        inflationHistory: [
+          { turn: 3, rate: 5 },
+          { turn: 4, rate: 19.75 },
+        ],
+      },
+      { _id: "UK", countryId: "UK", name: "BoE", primeRate: 3 },
+    ];
+    const body = await (await GET()).json();
+    const byCurrency = Object.fromEntries(
+      body.centralBanks.map((b: Record<string, unknown>) => [b.currency, b])
+    );
+    expect(byCurrency.USD.savingsApyPercent).toBe(0.5);
+    expect(byCurrency.GBP.savingsApyPercent).toBeCloseTo(1.5, 6);
+  });
+
+  it("prices each savings holder option at what the saver earns there, as the desk does", async () => {
+    // Prime 10, inflation 4: base = 3, CB APY = 3 + 0.25 bonus = 3.25.
+    state.centralBanks = [
+      {
+        _id: "US",
+        countryId: "US",
+        name: "Fed",
+        primeRate: 10,
+        inflationHistory: [{ turn: 4, rate: 4 }],
+      },
+      { _id: "UK", countryId: "UK", name: "BoE", primeRate: 3 },
+    ];
+    state.corporations = [charteredCorp("A", "USD"), charteredCorp("Low", "USD", -9.5)];
+    vi.mocked(loadCentralBankPricingAdjustment).mockResolvedValueOnce({
+      depositBonusPercentPoints: 0.25,
+    } as Awaited<ReturnType<typeof loadCentralBankPricingAdjustment>>);
+    vi.mocked(requireAuth).mockResolvedValueOnce({
+      ok: true,
+      user: {
+        isAdmin: false,
+        character: {
+          _id: new ObjectId(),
+          userId: new ObjectId(),
+          countryId: "US",
+          currencyBalances: { savings: { USD: 100 } },
+        },
+      },
+    } as unknown as Awaited<ReturnType<typeof requireAuth>>);
+
+    const body = await (await GET()).json();
+    const usd = body.savings.find((row: { currency: string }) => row.currency === "USD");
+    const rateBy = Object.fromEntries(
+      usd.options.map((o: { label: string; depositRatePercent: number }) => [
+        o.label,
+        o.depositRatePercent,
+      ])
+    );
+    expect(rateBy["Fed (central bank)"]).toBe(3.25);
+    // Posted 9: premium 9 - 3 = 6, plus the 3.25 CB APY that still accrues.
+    expect(rateBy.A).toBe(9.25);
+    // Posted 0.5 sits below base: no premium, but the CB APY still accrues.
+    expect(rateBy.Low).toBe(3.25);
+    // Each row still carries the bank's posted rate beside what the saver earns.
+    const posted = Object.fromEntries(
+      body.privateBanks.map((b: { name: string; depositRatePercent: number }) => [
+        b.name,
+        b.depositRatePercent,
+      ])
+    );
+    expect(posted).toMatchObject({ A: 9, Low: 0.5 });
+    const saver = Object.fromEntries(
+      body.privateBanks.map((b: { name: string; saverApyPercent: number }) => [
+        b.name,
+        b.saverApyPercent,
+      ])
+    );
+    expect(saver).toMatchObject({ A: 9.25, Low: 3.25 });
   });
 
   it("skips the era lookup when every charter's bank sets its own requirement", async () => {

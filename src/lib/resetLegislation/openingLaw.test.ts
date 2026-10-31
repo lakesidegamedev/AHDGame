@@ -11,8 +11,8 @@ import { ieRegions1991 } from "@/lib/countries/ie/data/ieRegions1991";
 
 describe("1991 current-law references", () => {
   it("covers every family and tax type for all four opening countries at both scopes", () => {
-    expect(openingLawReferences).toHaveLength(480);
-    expect(new Set(openingLawReferences.map((row) => row.key)).size).toBe(480);
+    expect(openingLawReferences).toHaveLength(488);
+    expect(new Set(openingLawReferences.map((row) => row.key)).size).toBe(488);
     const ids = [
       ...resetLawFamilies.map((family) => family.id),
       ...new Set(resetTaxes.map((tax) => tax.id)),

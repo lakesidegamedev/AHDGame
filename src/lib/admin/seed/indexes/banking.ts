@@ -57,6 +57,19 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // Settlement recovery and the LOC/arrears/coupon turn paths ask for "the
+  // unfinished moves under this key prefix". Leading with status bounds that
+  // to the small unfinished set and keeps `_id` in the same index, so the
+  // prefix becomes one range instead of a walk of every move ever written
+  // under it.
+  await ensureIndex(
+    db,
+    MONEY_MOVE_COLLECTION,
+    { status: 1, _id: 1 },
+    { name: "bankMoneyMoves_status_id", background: true },
+    log
+  );
+
   // The recovery queue's applied-but-unprojected branch, read every banking
   // turn. The status index cannot narrow it; this makes it one null bound.
   await ensureIndex(
@@ -99,6 +112,30 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     SOVEREIGN_COUPON_CLAIMS_COLLECTION,
     { budgetId: 1, settledTurn: 1 },
     { name: "sovereignCouponClaims_budget_settled", background: true },
+    log
+  );
+
+  // The Treasury phase groups the open queue once per turn: oldest due turn,
+  // smallest claim, and which countries still owe one. Leading with
+  // `settledTurn` lets that grouping walk only the open entries, covered by
+  // the index instead of fetching every open claim document.
+  await ensureIndex(
+    db,
+    SOVEREIGN_COUPON_CLAIMS_COLLECTION,
+    { settledTurn: 1, budgetId: 1, "claim.dueTurn": 1, "claim.amountLocal": 1 },
+    { name: "sovereignCouponClaims_open_queue", background: true },
+    log
+  );
+
+  // The cash bound is what decides which claims a Treasury pass can act on.
+  // Without it in the index, the bound is a filter applied after fetching every
+  // open claim the budget owns, which on a long unpaid backlog is the whole
+  // collection every turn.
+  await ensureIndex(
+    db,
+    SOVEREIGN_COUPON_CLAIMS_COLLECTION,
+    { budgetId: 1, settledTurn: 1, "claim.amountLocal": 1 },
+    { name: "sovereignCouponClaims_budget_settled_amount", background: true },
     log
   );
 

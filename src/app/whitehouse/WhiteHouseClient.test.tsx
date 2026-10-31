@@ -6,6 +6,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { ToastProvider } from "@/contexts/ToastContext";
 import WhiteHouseClient, { deskDeadlineLabel } from "./WhiteHouseClient";
 import { formatRemainingTurns } from "@/lib/time/formatRemainingTurns";
+import { getExecutiveIdentity } from "@/lib/constants/institutionIdentity";
 
 // Fixed game clock at turn 100 so desk deadlines render deterministically.
 vi.mock("@/contexts/useGameClock", () => ({
@@ -24,6 +25,27 @@ vi.mock("next/navigation", () => ({
   // below opens on the overview exactly as it did before.
   useSearchParams: () => new URLSearchParams(tabParam),
 }));
+
+const usChrome = {
+  countryName: "United States",
+  isUs: true,
+  governmentType: "presidential" as const,
+  executiveIdentity: getExecutiveIdentity("US"),
+  executiveTermLimit: 2,
+  legislatureName: "Congress",
+  legislaturePath: "/country/us/legislature",
+  upperChamberShort: "Senate",
+};
+const ngChrome = {
+  countryName: "Nigeria",
+  isUs: false,
+  governmentType: "presidential" as const,
+  executiveIdentity: getExecutiveIdentity("NG"),
+  executiveTermLimit: 2,
+  legislatureName: "National Assembly",
+  legislaturePath: "/country/ng/legislature",
+  upperChamberShort: "Senate",
+};
 
 const conflictsSpy = vi.fn().mockReturnValue(true);
 vi.mock("@/contexts/AuthDataContext", async (importOriginal) => ({
@@ -89,7 +111,7 @@ describe("WhiteHouseClient admin tab", () => {
     mockWhiteHouseFetch(adminData);
     render(
       <ToastProvider>
-        <WhiteHouseClient />
+        <WhiteHouseClient chrome={usChrome} />
       </ToastProvider>
     );
     await waitFor(() => expect(screen.getByText("Jed Bartlet")).toBeTruthy());
@@ -129,7 +151,7 @@ describe("WhiteHouseClient admin tab", () => {
     });
     render(
       <ToastProvider>
-        <WhiteHouseClient countryId="NG" />
+        <WhiteHouseClient countryId="NG" chrome={ngChrome} />
       </ToastProvider>
     );
     await waitFor(() => expect(screen.getByText("Dapo Olatunji")).toBeTruthy());
@@ -141,7 +163,7 @@ describe("WhiteHouseClient admin tab", () => {
     mockWhiteHouseFetch({ ...adminData, isAdmin: false, isPresident: true });
     render(
       <ToastProvider>
-        <WhiteHouseClient />
+        <WhiteHouseClient chrome={usChrome} />
       </ToastProvider>
     );
     await waitFor(() => expect(screen.getByText("Jed Bartlet")).toBeTruthy());
@@ -166,7 +188,7 @@ describe("WhiteHouseClient foreign affairs tab", () => {
     });
     return render(
       <ToastProvider>
-        <WhiteHouseClient />
+        <WhiteHouseClient chrome={usChrome} />
       </ToastProvider>
     );
   }
@@ -219,7 +241,7 @@ describe("WhiteHouseClient desk deadlines and explainers", () => {
     ]);
     render(
       <ToastProvider>
-        <WhiteHouseClient />
+        <WhiteHouseClient chrome={usChrome} />
       </ToastProvider>
     );
     await waitFor(() => expect(screen.getByText("Highway Act")).toBeTruthy());

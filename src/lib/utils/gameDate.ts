@@ -1,4 +1,4 @@
-import { MS_PER_TURN, STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { MS_PER_TURN, STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/calendar";
 
 export interface GameDateAnchor {
   currentTurn: number;

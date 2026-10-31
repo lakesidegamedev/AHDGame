@@ -400,44 +400,6 @@ interface LoadingSpinnerProps {
 }
 ```
 
-### PageLoader
-
-Full-page loading state. Source: `src/components/ui/PageLoader.tsx`
-
-Props: see `src/components/ui/PageLoader.tsx` (no <Name>Props block).
-
-### PageError
-
-Full-page error states. Source: `src/components/ui/PageError.tsx`
-
-```ts
-interface PageErrorProps {
-  code?: PageErrorCode;
-  /** Raw error message shown only to admins */
-  adminDetail?: string | null;
-  isAdmin?: boolean;
-  /** Override the default action buttons */
-  backHref?: string;
-  backLabel?: string;
-}
-```
-
-### PageErrorBoundary
-
-Error boundary wrapper for pages. Source: `src/components/ui/PageErrorBoundary.tsx`
-
-```ts
-interface PageErrorBoundaryProps {
-  children: ReactNode;
-  /** Page name for the error log (e.g., "Bill page") */
-  pageName: string;
-  /** Custom error message shown to users */
-  errorMessage?: string;
-  /** Navigation links to show in the error UI */
-  navigationLinks?: NavigationLink[];
-}
-```
-
 ### ErrorPageContent
 
 Shared error page body. Source: `src/components/ui/ErrorPageContent.tsx`
@@ -506,29 +468,6 @@ interface TooltipProps {
   label?: string;
   /** A date footnote uses an asterisk instead of the default info icon. */
   variant?: "info" | "footnote";
-}
-```
-
-### GlossaryTerm
-
-Source: `src/components/ui/GlossaryTerm.tsx`
-
-```ts
-type GlossaryTermProps =
-  | { term: WikiGlossaryKey; label?: string; definition?: never }
-  | { term: string; label?: string; definition: string };
-
-/**
- * An abbreviation or game term with a hover/tap definition, for places where
- * the short form has to stay short (table headers, stat labels). Glossary keys
- * pull the shared wiki definition; anything else passes its own.
- *
- * Spell terms out in prose and button labels instead. The trigger is itself a
- * button, so never nest this inside a button or link.
- */
-export function GlossaryTerm({ term, label, definition }: GlossaryTermProps) {
-  const text = definition ?? WIKI_GLOSSARY[term as WikiGlossaryKey].definition;
-  return <WikiGlossaryTerm term={term} definition={text} label={label} />;
 }
 ```
 

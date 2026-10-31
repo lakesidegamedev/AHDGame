@@ -194,6 +194,12 @@ export interface ElectionResponse {
   polling: PollingData | null;
   /** Seat estimates for multi-seat races (house/stateSenate/commons/regionalCouncil). Always computed. */
   seatsEstimate: Record<string, number> | null;
+  /**
+   * True when this US House race has redistricting enabled AND the state's
+   * districts are drawn, so seats are decided district by district rather than
+   * apportioned from the statewide share. Full view only; false in summary.
+   */
+  seatsDecidedByDistrict?: boolean;
   /** Current officeholder for single-seat races (senate, governor, president, primeMinister). Null for multi-seat races. */
   incumbent: { name: string; party: string; partyColor: string | null } | null;
 

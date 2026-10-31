@@ -1,8 +1,10 @@
 export const faqContent = `# Frequently Asked Questions
 
+The questions players ask most, grouped by what they were doing when they got stuck. If your question is about a word rather than a rule, the [Glossary](/wiki/glossary) is faster, and new players should start with [Tips for Beginners](/wiki/tips-for-beginners).
+
 ---
 
-## Elections & candidacy
+## Why I can't run, or why I lost
 
 **Why can't I run for Senate?**
 
@@ -19,7 +21,7 @@ Down-ballot primaries are decided by **ballots**, not by a single score at the d
 - You overtook the field on the last turn. Ballots accumulate, so a rival who led through the closing window keeps most of the count.
 - An NPP outscored you without the penalty (NPPs only get the 0.5× penalty if at least one player is in the primary).
 
-Run a Quick Poll before declaring: it shows your projected standing before you commit, and the race page shows the live cumulative shares once ballots start counting.
+A Quick Poll shows your topline appeal and your best and worst voter groups in your home state; it only adds race standings once you are a candidate. The race page shows the live cumulative ballot counts once ballots start counting.
 
 ---
 
@@ -33,7 +35,7 @@ Canvassing targets one state at a time. For most characters that state is your h
 
 Base actions: 4 per turn (your Energy stat can raise the cap and the banked amount). Actions increase by holding offices with action bonuses:
 
-- President / PM / Chancellor (executive): +4. Ceremonial heads of state get +0.
+- President / PM / Chancellor (executive): +4. Most ceremonial heads of state get +0 (Ireland's elected President gets +3).
 - Vice President: +2
 - Senator (US): +2
 - Governor (US): +2
@@ -68,7 +70,7 @@ When at least one player is in a party's primary, all NPP candidates in that sam
 
 ---
 
-## Game time & turns
+## When things happen
 
 **What is a game turn? What is a game year?**
 
@@ -76,27 +78,27 @@ One real-world hour = one game turn = one game week. 48 turns = one game year. E
 
 **What happens when turn 48 ends?**
 
-The year counter increments (e.g., year 1 to year 2) and turn counting restarts at turn 1. The fiscal year processes at turn 40 (the game-year equivalent of October). There is no game reset: the simulation continues indefinitely.
+The year counter increments (e.g., year 1 to year 2) and the week of the year starts again at 1. The overall turn number keeps counting up. The fiscal year processes at turn 40 (the game-year equivalent of October). Nothing resets at year end: the simulation keeps running until the world itself is reset for a new iteration.
 
 ---
 
 **When does the next turn fire?**
 
-Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can see the countdown timer on the game dashboard. In fast mode, turns fire at :00 and :30.
+Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can see the countdown timer in the status bar at the top of every page. In fast mode turns fire every 30 minutes instead, but each one is still a single turn (one game week).
 
 ---
 
-## Legislation
+## Getting a bill through
 
 **How do I propose a bill?**
 
-Go to the Congress or legislature page for your country. Use the "Propose Bill" action. Bills cost actions to introduce and may require a character with a legislative seat (House/Senate/Commons/etc.) to sponsor them. You set the bill's policy effects and choose which chamber it starts in.
+Go to the Congress or legislature page for your country and use the **Propose** button on the bills tab. You must hold a seat in the legislature (House/Senate/Commons/etc.), and the bill starts in your own chamber (US members can also file a joint resolution). Proposing costs 10 actions plus national influence for each policy provision. You pick the law and the policy option it sets. A national party chair can instead direct one of the party's NPP legislators to sponsor a bill.
 
 ---
 
 **Why is my bill not moving?**
 
-There is no committee stage: a bill goes straight to a 24-hour floor vote in its origin chamber (see [Committees](/wiki/committees)). If it is sitting still, the usual causes are a pending parliamentary government (legislation freezes until a PM is seated), a chamber where the NPP cross-pressure runs against your policy option, or a filibuster in the US Senate. Check the ideology breakdown of the chamber and adjust the bill's policy direction, or use whip directives if you control party leadership.
+There is no committee stage: a bill goes straight to a 24-hour floor vote in its origin chamber (see [Committees](/wiki/committees)). If it is sitting still, the usual causes are a pending parliamentary government (bill votes pause until a PM is seated) or a filibuster in the US Senate (it adds 12 hours to the vote and raises the bar to 3/5 of votes cast). If it keeps failing, the NPP cross-pressure in the chamber is probably running against your policy option: check the chamber's ideology breakdown and adjust the bill's policy direction, or use whip directives if you control party leadership.
 
 ---
 
@@ -106,27 +108,27 @@ In presidential systems, the executive can veto a bill after the required chambe
 
 ---
 
-## Parties & organizations
+## Parties, org and whips
 
 **How do I start a new political party?**
 
-You draft a **Party Charter** on the new-charter page: name, abbreviation, four-axis platform, and three human founders (yourself plus two others). Your two co-founders must live in your home state or a state adjacent to it, since a new party's founding trio is geographically anchored, just like its founding NPP cohort. Once all three founders sign on the charter's page, the charter ratifies, the party is created, and all three founders are joined to it as members. The party starts with **vacant leadership**: its first leadership elections open immediately and end on the same shared cycle as every other party's, so declare your candidacy on the party page. Your new party has zero state org, so building that from zero takes time. See [Political Parties](/wiki/political-parties) for the full charter lifecycle (rejections, founder replacement, expiry).
+You draft a **Party Charter** on the new-charter page: name, abbreviation, an economic and social platform, and three human founders (yourself plus two others). Your two co-founders must live in your home state or a state adjacent to it, since a new party's founding trio is geographically anchored, just like its founding NPP cohort. Once all three founders sign on the charter's page, the charter ratifies, the party is created, and all three founders are joined to it as members. You (the proposer) are seated as the party's first chair; the **vice-chair and treasurer seats start vacant**. Those leadership elections open immediately and end on the same shared cycle as every other party's, so your co-founders can declare on the party page. Your new party has zero state org, so building that from zero takes time. See [Political Parties](/wiki/political-parties) for the full charter lifecycle (rejections, founder replacement, expiry).
 
 ---
 
 **What is Party Organization (Org)?**
 
-Party organization (Org) is a 0 to 100 metric per state that represents your party's ground-level infrastructure. General-election weight uses your party's share of all Org in the state raised to the 0.2 exponent, which gives diminishing returns. Presidential primaries use party influence and national reach, not home-state Org. The party chair controls Org investment.
+Party organization (Org) is a 0 to 100 metric per state that represents your party's ground-level infrastructure. General-election weight uses your party's share of all Org in the state raised to the 0.2 exponent, which gives diminishing returns. Presidential primaries use party influence and national reach, not home-state Org. Org is built by the party's national or state chair, vice chair, or an appointed campaigner.
 
 ---
 
 **What are whip directives?**
 
-Whip directives are instructions the party leadership sends to NPP legislators on how to vote on specific bills. If the whip says "aye," NPP party members will vote yes on that bill. If "nay," they vote no. This is how party chairs influence legislative outcomes even when they don't hold every seat.
+Whip directives are instructions the party leadership sends to NPP legislators on how to vote on specific bills. If the whip says "aye," each NPP party member rolls to fall in line and vote yes; if "nay," to vote no. Compliance is likely but not certain: it depends on the NPP's loyalty and stubbornness, whether the whip is soft or hard, and the whip's Statecraft. NPPs who balk vote their own ideology. This is how party chairs influence legislative outcomes even when they don't hold every seat.
 
 ---
 
-## Economy & finance
+## Money: corporations, bonds and currencies
 
 **What do corporations do?**
 
@@ -142,34 +144,31 @@ Governments issue bonds to raise capital. As a player, you can buy these bonds t
 
 **What is the Forex system?**
 
-When Forex is enabled, you can trade every active country's currency. A full modern map includes USD, GBP, JPY, EUR or IEP, CNY, BRL, NGN, and the rest of the live set. Exchange rates shift based on inflation, trade balance, and interest-rate differentials. Planned economies use a fixed official rate rather than the floating path. Limit orders allow automatic buy/sell prices.
+When Forex is enabled, you can trade every active country's currency. A full modern map includes USD, GBP, JPY, EUR or IEP, CNY, BRL, NGN, and the rest of the live set. Exchange rates drift toward a target set by the policy rate, inflation, GDP growth and trade growth, with a push from trading volume and central-bank intervention. Planned economies use a fixed official rate rather than the floating path. Limit orders allow automatic buy/sell prices.
 
 ---
 
-## Characters
+## Moving, infamy and influence
 
 **Can I change my home state or UK constituency?**
 
-Yes. Open the state or UK constituency you want to move to, then choose **Relocate here** in its header. Relocating costs actions and funds, and there is a cooldown period. Your home state or constituency updates for canvassing and future elections. Relocation can also move you to a different country. That resets your national influence and makes you independent in the new country, so treat it as a fresh start there, not a free jump.
+Yes. Open the state or UK constituency you want to move to, then choose **Relocate here** in its header. Relocating costs no actions or money, but there is a cooldown of 72 turns (3 real days) between moves, and your regional standing starts over: your political influence, donor base and group favorability reset to 0. Active candidacies are withdrawn and state or regional seats are resigned. Your home state or constituency updates for canvassing and future elections. Relocation can also move you to a different country. That also resets your national influence and resigns national offices, so treat it as a fresh start there, not a free jump. Your party membership is only dropped if the move takes you outside the party's reach.
 
 ---
 
 **What is infamy?**
 
-Infamy increases when you take certain negative actions: attacking another politician, converting large sums of personal cash into campaign funds, and some random-event choices. Defying a whip does not add infamy. Higher infamy trims your vote weight and primary standing slightly and reduces NPP endorsement success. It decays by 5% each turn, so a quiet stretch gradually fades it.
+Infamy increases when you take certain negative actions: attacking another politician, converting large sums of personal cash into campaign funds, and some random-event choices. Defying a whip does not add infamy. Higher infamy trims your vote weight and primary standing slightly (up to 5% at 100 infamy), drains favorability each turn above 20 infamy, slows party influence gain, and makes your attacks on other politicians more likely to fail. It decays by 5% each turn, so a quiet stretch gradually fades it.
 
 ---
 
 **What is NPI (National Political Influence)?**
 
-NPI is your national-level reputation, distinct from state-level Political Influence (PI). Each turn NPI decays by 1%, then grows from your state PI and your highest office or party role, so it settles at 100 times your per-turn gain. See [Elections Player Guide](/wiki/elections-player-guide) for the tiers. NPI is the primary influence stat for presidential primary scoring and national vote accumulation in presidential races.
+NPI is your national-level reputation, distinct from state-level Political Influence (PI). Each turn NPI decays by 1%, then grows from your state PI and your highest office or party role, so it settles at 100 times your per-turn gain. See [Elections Player Guide](/wiki/elections-player-guide) for the tiers. In presidential races NPI replaces state PI as your reach stat: it sets the national reach part of presidential primary scoring (15 of 100 points, behind party influence at 20) and your vote reach in the presidential general.
 
 ---
 
-## Related
+## Still stuck
 
-- [Tips for Beginners](/wiki/tips-for-beginners): Practical new player advice.
-- [Glossary](/wiki/glossary): Definitions of all game terms.
-- [Getting Started](/wiki/getting-started): First steps guide.
-- [Reference: Formulas](/wiki/reference-formulas): Complete formula reference.
+[Getting Started](/wiki/getting-started) covers first steps, and [Reference: Formulas](/wiki/reference-formulas) has the complete formulas behind the numbers quoted above.
 `;

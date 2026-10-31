@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
-import type { CommodityType } from "@/lib/constants/commodities";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import type { TariffScopeType } from "@/lib/db/types/tariff";
 import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
 import { formatEmbargoProvisionLabel } from "@/lib/legislature/embargoProvisionLabel";

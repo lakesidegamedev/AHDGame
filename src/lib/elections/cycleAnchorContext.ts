@@ -16,7 +16,7 @@
  * back-compat behavior.
  */
 
-import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/calendar";
 import type { GameState } from "@/lib/db/types/gameState";
 
 export interface CycleAnchorContext {

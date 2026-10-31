@@ -6,8 +6,11 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
-import { spinOffCostAnchor } from "@/lib/corporations/subsidiaries/constants";
+} from "@/lib/constants/corporationsClient";
+import {
+  spinOffCostAnchor,
+  SPIN_OFF_COOLDOWN_TURNS,
+} from "@/lib/corporations/subsidiaries/constants";
 import { PlayerSelector } from "@/components/PlayerSelector";
 import { useDialogA11y } from "@/components/ui";
 
@@ -15,6 +18,8 @@ interface SpinOffModalProps {
   corporationId: string;
   /** The parent's sector types and how many sectors of each it operates. */
   sectorOptions: { type: string; count: number }[];
+  /** Turns left on the parent's spin-off cooldown; 0 when a spin-off is ready. */
+  cooldownTurnsRemaining?: number;
   onClose: () => void;
   onSpunOff: (newCorporationId: string) => void;
 }
@@ -26,6 +31,7 @@ interface SpinOffModalProps {
 export function SpinOffModal({
   corporationId,
   sectorOptions,
+  cooldownTurnsRemaining = 0,
   onClose,
   onSpunOff,
 }: SpinOffModalProps) {
@@ -42,6 +48,7 @@ export function SpinOffModal({
 
   const selectedCount = sectorOptions.find((o) => o.type === sectorType)?.count ?? 0;
   const estimatedCostAnchor = spinOffCostAnchor(selectedCount);
+  const onCooldown = cooldownTurnsRemaining > 0;
 
   async function handleSubmit() {
     setBusy(true);
@@ -90,6 +97,20 @@ export function SpinOffModal({
             </>
           )}
           .
+        </p>
+
+        <p
+          className={`rounded-lg border px-3 py-2 text-xs ${
+            onCooldown
+              ? "border-error/40 bg-error/10 text-error"
+              : "border-warning/40 bg-warning/10 text-warning"
+          }`}
+        >
+          {onCooldown
+            ? `Spin-off is on cooldown for ${cooldownTurnsRemaining} more turn${
+                cooldownTurnsRemaining === 1 ? "" : "s"
+              }.`
+            : `A spin-off starts a ${SPIN_OFF_COOLDOWN_TURNS} turn cooldown, about a week, before you can spin off again.`}
         </p>
 
         <div className="flex flex-col gap-1">
@@ -181,13 +202,18 @@ export function SpinOffModal({
             onClick={handleSubmit}
             disabled={
               busy ||
+              onCooldown ||
               !sectorType ||
               name.trim().length === 0 ||
               (ceoType === "character" && !selected)
             }
             className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
           >
-            {busy ? "Working…" : "Spin off"}
+            {busy
+              ? "Working…"
+              : onCooldown
+                ? `Cooldown: ${cooldownTurnsRemaining} turns`
+                : "Spin off"}
           </button>
         </div>
       </div>

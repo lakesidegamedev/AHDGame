@@ -5,7 +5,7 @@ import { Avatar } from "@/components/Avatar";
 import { PartyChip, formatPartyState } from "./CongressShared";
 import { ElectionDropdown, type CandidacyLike } from "./LeadershipShared";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 type LeaderDisplay = {
   characterId: string | null;

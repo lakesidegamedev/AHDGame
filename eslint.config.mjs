@@ -9,6 +9,7 @@ import noImplicitLocaleDatetime from "./eslint-rules/no-implicit-locale-datetime
 import noUnawaitedAuthGuard from "./eslint-rules/no-unawaited-auth-guard.js";
 import noDottedBoardPath from "./eslint-rules/no-dotted-board-path.js";
 import noUncodedErrorResponse from "./eslint-rules/no-uncoded-error-response.js";
+import noUnscopedRateLimitKey from "./eslint-rules/no-unscoped-rate-limit-key.js";
 
 const require = createRequire(import.meta.url);
 
@@ -75,6 +76,7 @@ const eslintConfig = defineConfig([
           "no-unawaited-auth-guard": noUnawaitedAuthGuard,
           "no-dotted-board-path": noDottedBoardPath,
           "no-uncoded-error-response": noUncodedErrorResponse,
+          "no-unscoped-rate-limit-key": noUnscopedRateLimitKey,
         },
       },
     },
@@ -134,6 +136,8 @@ const eslintConfig = defineConfig([
       // Error bodies must carry the shared { error, code, ref } envelope so a
       // player-quoted code maps to an event. Use errorResponse/statusResponse.
       "local/no-uncoded-error-response": "error",
+      // A bare user-id key shares one counter across every route; scope it.
+      "local/no-unscoped-rate-limit-key": "error",
       // The political board's values/residuals maps are keyed by literal dotted
       // strings, so a dotted Mongo path silently creates a nested object instead
       // of touching the key — the write is lost, or the projection matches

@@ -1,5 +1,5 @@
-import { compactRegionCode, type CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
+import { compactRegionCode, type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencyCodes";
 
 // ── Internal helpers ──
 // Defensive coercions so URL builders never throw when a caller hands in an

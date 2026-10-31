@@ -1,4 +1,5 @@
-import type { Character, State } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
+import type { ActionStateEconomics } from "@/lib/actions";
 import type { ActionImageSlug } from "@/lib/images/actionImages";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
@@ -50,7 +51,7 @@ export interface ActionCardProps {
   index: number;
   viewMode: ActionsViewMode;
   character: Character;
-  homeState: State | null;
+  homeState: ActionStateEconomics | null;
   executing: string | null;
   flash: { type: string; msg: string; ok: boolean } | null;
   flipflopStep: "axis" | "direction" | null;

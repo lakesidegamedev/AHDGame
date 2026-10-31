@@ -3,6 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useId } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatSignedPercent } from "@/lib/utils/formatters";
 import type { PortfolioStockHolding, PortfolioBondHolding } from "./CorporationPageTypes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { useDialogA11y } from "@/components/ui";
@@ -189,8 +190,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                         : "n/a"}
                       {props.holding.unrealizedPnlPct !== null && (
                         <span className="text-xs ml-1">
-                          ({props.holding.unrealizedPnlPct >= 0 ? "+" : ""}
-                          {props.holding.unrealizedPnlPct}%)
+                          ({formatSignedPercent(props.holding.unrealizedPnlPct)})
                         </span>
                       )}
                     </div>

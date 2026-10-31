@@ -1,12 +1,137 @@
-import * as icons from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import {
+  AudioLines,
+  Award,
+  Badge,
+  BadgeDollarSign,
+  Banknote,
+  Bed,
+  Bird,
+  BookOpen,
+  Briefcase,
+  Building2,
+  ChartNoAxesColumnIncreasing,
+  CircleCheck,
+  CircleDollarSign,
+  ClipboardCheck,
+  Coins,
+  Crown,
+  Dumbbell,
+  Eye,
+  FilePenLine,
+  FileText,
+  Flag,
+  FlagTriangleRight,
+  FlaskConical,
+  Gem,
+  Gift,
+  GraduationCap,
+  HandCoins,
+  HandHeart,
+  Handshake,
+  Heart,
+  History,
+  Hourglass,
+  House,
+  Landmark,
+  Medal,
+  Megaphone,
+  MessageCircle,
+  Moon,
+  Newspaper,
+  PiggyBank,
+  RefreshCw,
+  Rocket,
+  Scale,
+  ScrollText,
+  Shield,
+  Sparkles,
+  Sprout,
+  Star,
+  Target,
+  Tornado,
+  Triangle,
+  Trophy,
+  Tv,
+  Users,
+  Vote,
+  type LucideIcon,
+} from "lucide-react";
 
-const fallback = icons.Award;
+/**
+ * Achievement icons, resolved from an explicit map.
+ *
+ * This used to be `import * as icons from "lucide-react"` with a dynamic
+ * `icons[name]` lookup, which defeats tree-shaking: every icon in the library
+ * shipped to the browser. Measured 2026-10-24, that was an 835 KB chunk
+ * (218 KB gzipped) on `/profile` alone, and it loaded on every route that can
+ * render an achievement badge (`/profile`, `/character/[id]`, `/settings`).
+ *
+ * The achievement catalog uses the 55 icons below. Anything outside the map
+ * renders the fallback, so a hand-edited achievement in the database cannot
+ * break the page, and `achievementIcons.test.ts` fails if a seeded achievement
+ * starts using an icon that is not here.
+ */
+export const ACHIEVEMENT_ICONS: Record<string, LucideIcon> = {
+  AudioLines,
+  Award,
+  Badge,
+  BadgeDollarSign,
+  Banknote,
+  Bed,
+  Bird,
+  BookOpen,
+  Briefcase,
+  Building2,
+  ChartNoAxesColumnIncreasing,
+  CircleCheck,
+  CircleDollarSign,
+  ClipboardCheck,
+  Coins,
+  Crown,
+  Dumbbell,
+  Eye,
+  FilePenLine,
+  FileText,
+  Flag,
+  FlagTriangleRight,
+  FlaskConical,
+  Gem,
+  Gift,
+  GraduationCap,
+  HandCoins,
+  HandHeart,
+  Handshake,
+  Heart,
+  History,
+  Hourglass,
+  House,
+  Landmark,
+  Medal,
+  Megaphone,
+  MessageCircle,
+  Moon,
+  Newspaper,
+  PiggyBank,
+  RefreshCw,
+  Rocket,
+  Scale,
+  ScrollText,
+  Shield,
+  Sparkles,
+  Sprout,
+  Star,
+  Target,
+  Tornado,
+  Triangle,
+  Trophy,
+  Tv,
+  Users,
+  Vote,
+};
+
+const FALLBACK_ICON: LucideIcon = Award;
 
 export function AchievementIcon({ name, className }: { name: string; className?: string }) {
-  const candidate = icons[name as keyof typeof icons];
-  const Icon = (
-    typeof candidate === "object" || typeof candidate === "function" ? candidate : fallback
-  ) as LucideIcon;
+  const Icon = ACHIEVEMENT_ICONS[name] ?? FALLBACK_ICON;
   return <Icon aria-hidden="true" className={className} />;
 }

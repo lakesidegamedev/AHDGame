@@ -222,7 +222,7 @@ describe("union industrial-relations dashboard", () => {
         json: async () => ({
           union: {
             ...BASE_UNION,
-            ownerId: null,
+            ownerId: "c1",
             electionOpen: true,
           },
           sectors: [],

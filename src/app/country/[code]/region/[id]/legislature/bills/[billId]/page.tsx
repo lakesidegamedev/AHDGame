@@ -12,11 +12,11 @@ import { BillTimeline } from "@/components/bills/BillTimeline";
 import { BillDiscussionPanel } from "@/components/bills/BillDiscussionPanel";
 import { VoteBar } from "@/app/congress/bills/[id]/components/VoteBar";
 import { VoteTallyTable } from "@/app/congress/bills/[id]/components/VoteTallyTable";
+import { type CountryId, canonicalRegionId } from "@/lib/constants/countriesCore";
 import {
-  getCountryConfig,
+  getCountryClientConfig,
   getRegionalBillAssentTitleForState,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 import { getStateBillStatusDisplayLabel } from "@/lib/legislature/stateBillUiLabels";
 import { regionApiSubUrl, regionLegislatureUrl } from "@/lib/urls";
 import { BillEffectsSection } from "../../components/BillEffectsSection";
@@ -24,7 +24,6 @@ import { BillProvisionsSection } from "@/components/legislature/BillProvisionsSe
 import type { StateBillDetail } from "@/lib/legislature/dto/stateBillDetail";
 import { mapStateStatusToBillStatus } from "@/lib/legislature/mapStateBillToBillDisplay";
 import { useGameClock } from "@/contexts/useGameClock";
-import { canonicalRegionId } from "@/lib/constants/countries";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { VetoMessageModal } from "@/app/country/[code]/region/[id]/office/tabs/legislation/VetoMessageModal";
 import { VoteSeatingChart } from "@/components/legislature/dispatch/VoteSeatingChart";
@@ -421,7 +420,8 @@ function StateBillDetailContent() {
         <BillDiscussionPanel
           apiBase={`${apiBase}/${billId}`}
           chamberLabel={
-            getCountryConfig(bill.countryId as CountryId).subNationalChamber?.name ?? "legislature"
+            getCountryClientConfig(bill.countryId as CountryId).subNationalChamber?.name ??
+            "legislature"
           }
         />
       </main>

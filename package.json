@@ -1,6 +1,6 @@
 {
   "name": "a-house-divided",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "private": true,
   "engines": {
     "node": ">=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0"
@@ -9,6 +9,8 @@
     "dev": "next dev",
     "design:build": "node scripts/build-design-md.mjs",
     "design:check": "node scripts/build-design-md.mjs --check",
+    "export:lore-corpus": "tsx scripts/exportLoreCorpus.ts",
+    "export:seed-audit-reference": "tsx scripts/exportSeedAuditReference.ts",
     "build": "node scripts/build-with-cache-recovery.mjs && tsx scripts/postbuild-quality.ts",
     "start": "next start",
     "start:turn-worker": "NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=3072 --max-semi-space-size=64\" tsx scripts/turn-worker.ts",
@@ -120,8 +122,9 @@
     "@types/node-cron": "^3.0.11",
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-specification": "^1.0.5",
+    "ascii-reveal": "^0.3.0",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^18.0.6",
+    "dotenv": "^18.0.9",
     "hast-util-to-html": "^9.0.5",
     "html2canvas": "^1.4.1",
     "jose": "^6.2.9",
@@ -134,7 +137,7 @@
     "pg": "^8.23.1",
     "polygon-clipping": "^0.15.7",
     "posthog-js": "1.434.16",
-    "posthog-node": "^5.54.1",
+    "posthog-node": "^5.56.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-markdown": "^10.1.0",
@@ -175,11 +178,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/topojson-server": "^3.0.4",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "braces": "file:vendor/braces-depth-guard-3.0.3-ahd.1.tgz",
     "concurrently": "^10.0.5",
     "d3-geo": "^3.1.1",
-    "eslint": "^10.12.0",
+    "eslint": "^10.13.0",
     "eslint-config-next": "16.4.2",
     "eslint-config-prettier": "^10.1.8",
     "happy-dom": "^21.0.1",
@@ -191,7 +194,7 @@
     "topojson-server": "^3.0.1",
     "typescript": "6.0.2",
     "vite": "^8.3.4",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.5"
   },
   "license": "PolyForm-Noncommercial-1.0.0"
 }

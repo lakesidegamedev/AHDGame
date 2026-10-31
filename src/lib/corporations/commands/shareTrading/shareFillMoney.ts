@@ -1,4 +1,9 @@
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+} from "@/lib/budget/stockSaleWithholding";
 import { ObjectId, type Db, type Filter } from "mongodb";
+import { validatePendingStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import {
   claimMoneyFlowReceipt,
   deriveMoneyFlowKey,
@@ -284,6 +289,41 @@ export async function executeShareFillMoneyFlow(
   plan: ShareFillMoneyPlan,
   fingerprint?: string
 ): Promise<ShareFillMoneyOutcome> {
+  const existingPlan = await receiptsEx(db).findOne(
+    { _id: buildShareFillMoneyKey(plan.fillKey) },
+    { projection: { shareFillMoneyPlan: 1 } }
+  );
+  if (!existingPlan) {
+    const cashLegs = [plan.fillerCredit, plan.sellerProceeds].filter(
+      (leg): leg is NonNullable<typeof leg> =>
+        !!leg?.stockTaxReceipt &&
+        !leg.stockTaxReceipt.withholding &&
+        (leg.collection === "characters" || leg.collection === "imperialCharacters")
+    );
+    const contexts = await loadStockWithholdingContexts(
+      db,
+      cashLegs.map((leg) => ({
+        id: new ObjectId(leg.idHex),
+        collection: leg.collection as "characters" | "imperialCharacters",
+      })),
+      plan.turn
+    );
+    for (const leg of cashLegs)
+      leg.stockTaxReceipt = withholdStockReceipt(
+        leg.stockTaxReceipt!,
+        contexts.get(leg.collection + ":" + leg.idHex)
+      );
+  }
+  for (const leg of [plan.fillerCredit, plan.sellerProceeds])
+    if (leg?.stockTaxReceipt) {
+      validatePendingStockTaxReceipt(leg.stockTaxReceipt);
+      if (
+        leg.stockTaxReceipt.withholding &&
+        (leg.field !== leg.stockTaxReceipt.withholding.context.sourcePath ||
+          leg.amount !== leg.stockTaxReceipt.amount)
+      )
+        throw new Error("Stock withholding does not match the cash credit");
+    }
   const moneyKey = buildShareFillMoneyKey(plan.fillKey);
   const print = fingerprint ?? buildShareFillMoneyFingerprint(plan);
   const claim = await claimMoneyFlowReceipt(receipts(db), moneyKey, print);

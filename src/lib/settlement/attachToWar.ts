@@ -45,7 +45,7 @@ import {
 } from "@/lib/constants/settlementCrisis";
 
 /** What an attached war is renamed to. Player-facing: no dashes. */
-export const WAR_FOR_GERMANY_NAME = "The War for Germany";
+const WAR_FOR_GERMANY_NAME = "The War for Germany";
 
 /** Both Germanies, in the order a widened host roster lists them. */
 const GERMANIES: readonly SettlementGermanAnchor[] = [
@@ -231,7 +231,7 @@ export interface QualifyingWarMatch {
  * `openSettlementCrisis` uses it to warn an operator that the question they are
  * about to open will freeze on the next tick.
  */
-export async function findQualifyingWar(db: Db): Promise<QualifyingWarMatch | null> {
+async function findQualifyingWar(db: Db): Promise<QualifyingWarMatch | null> {
   const candidates = await getConflictsCollection(db)
     .find({
       // Mirrors `qualifyWar`'s own gate; that one is authoritative, this one just
@@ -543,7 +543,7 @@ export async function endWarAttachment(
  * Put an attached war back the way the sweep found it. Idempotent, so replaying
  * it after a crash costs nothing.
  */
-export async function restoreAttachedWar(
+async function restoreAttachedWar(
   db: Db,
   conflictId: string,
   attachment: SettlementConflictAttachment

@@ -5,7 +5,7 @@ import { fetchJson } from "@/lib/observability/fetchJson";
 import { BudgetSummaryPanel } from "@/components/budget/BudgetSummaryPanel";
 import { regionApiSubUrl, approvalUrl } from "@/lib/urls";
 import type { StateMetrics } from "@/lib/db/types";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { getStatsIdentity } from "@/lib/constants/nationalStatsIdentity";
 import { RegionalMetricsHeader } from "@/components/metrics/RegionalMetricsHeader";
 import { RegionalStatBoards } from "@/components/metrics/RegionalStatBoards";
@@ -143,7 +143,7 @@ export function UKRegionPageTabsMetrics({ regionId }: { regionId: string }) {
   }
 
   const identity = getStatsIdentity("UK");
-  const dossier = `${COUNTRY_CONFIGS.UK.name} · ${COUNTRY_CONFIGS.UK.regionLabel}`;
+  const dossier = `${COUNTRY_CLIENT_CONFIGS.UK.name} · ${COUNTRY_CLIENT_CONFIGS.UK.regionLabel}`;
 
   return (
     <div className="space-y-6">

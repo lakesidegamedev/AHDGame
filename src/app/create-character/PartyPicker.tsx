@@ -1,7 +1,7 @@
 "use client";
 
 import { PartyLogo } from "@/components/PartyLogo";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   ALIGNMENT_META,
   alignmentBand,

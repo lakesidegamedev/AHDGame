@@ -411,7 +411,9 @@ function collectSourceFiles(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
-      if (entry !== "node_modules") collectSourceFiles(full, acc);
+      // Test fixtures and benchmarks seed documents; they are not game writers.
+      if (entry !== "node_modules" && entry !== "__fixtures__" && entry !== "__perf__")
+        collectSourceFiles(full, acc);
     } else if (/\.(ts|tsx)$/.test(entry) && !/\.test\.(ts|tsx)$/.test(entry)) {
       // POSIX separators regardless of host: ALLOWED_WRITERS is keyed with "/",
       // and on Windows `join` yields "\" — which made every file read as an

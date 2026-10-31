@@ -30,10 +30,6 @@ export interface LeadershipData {
   holder: LeadershipHolder;
 }
 
-export async function getAllLeadershipSlugs(): Promise<{ role: LeadershipRole }[]> {
-  return LEADERSHIP_ROLES.map((r) => ({ role: r.role }));
-}
-
 export async function getLeadershipData(role: string): Promise<LeadershipData | null> {
   const entry = LEADERSHIP_ROLES.find((r) => r.role === role);
   if (!entry) return null;

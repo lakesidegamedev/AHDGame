@@ -1,6 +1,6 @@
 import type { NotificationType } from "@/lib/db/types/notifications";
 import { centralBankUrl } from "@/lib/urls";
-import { getRepresentativeCentralBankCountry } from "@/lib/centralBank/helpers";
+import { getRepresentativeCentralBankCountry } from "@/lib/centralBank/intorgRepresentative";
 
 export type InboxSource = { label: string; hint?: string; href: string };
 
@@ -233,7 +233,7 @@ export function resolveSourceLink(
   }
 
   // ── Crisis ────────────────────────────────────────────────────────────────
-  if (type === "crisis") {
+  if (type === "crisis" || type === "crisis_resolved") {
     const crisisId = asString(m.crisisId);
     if (crisisId) {
       return { label: "View crisis", href: `/world/crises/${crisisId}` };

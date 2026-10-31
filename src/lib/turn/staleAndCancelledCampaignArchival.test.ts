@@ -34,6 +34,8 @@ describe("stale / cancelled election sweeps — campaign archival", () => {
     db.collection("elections");
     db.collection("electionCandidates");
     db.collection("campaigns");
+    db.collection("bgFoundingAssemblyCounts");
+    stubFind("bgFoundingAssemblyCounts", []);
     db.collectionMocks.campaigns!.updateMany.mockResolvedValue({ modifiedCount: 1 });
 
     const { getDb } = await import("@/lib/mongodb");
@@ -52,6 +54,21 @@ describe("stale / cancelled election sweeps — campaign archival", () => {
     expect(filter.electionId).toEqual(electionId);
     expect(filter.candidateId.$in.map(String)).toContain(characterId.toString());
     expect(update.$set.status).toBe("archived");
+  });
+
+  it("cleanupStaleElectionCandidates leaves unseated Bulgarian founding races and runoffs alone", async () => {
+    const runoffId = new ObjectId();
+    stubFind("bgFoundingAssemblyCounts", [
+      { electionIds: [electionId.toHexString()], runoffElectionIds: [runoffId.toHexString()] },
+    ]);
+    stubFind("elections", [{ _id: electionId }, { _id: runoffId }]);
+    stubElectionCandidates(db, [{ _id: candidacyId, electionId, characterId, status: "active" }]);
+
+    const { cleanupStaleElectionCandidates } = await import("./perpetualElections/engine");
+    await cleanupStaleElectionCandidates(NOW);
+
+    expect(db.collectionMocks.electionCandidates!.updateMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks.campaigns!.updateMany).not.toHaveBeenCalled();
   });
 
   // snapElection's cancellation sweep deliberately has no campaign archival:

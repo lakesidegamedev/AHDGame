@@ -1,12 +1,10 @@
 export const conflictsOverviewContent = `# Conflicts & the Military System
 
-Wars in A House Divided are not a side game. They run on the same turn clock, the same treasury, the same legislature and the same character progression as everything else: a war is something your **parliament votes for**, your **treasury pays for**, your **generals fight**, and your **foreign minister eventually negotiates out of**.
+No single player can run a war here. Your **parliament votes for it**, your **treasury pays for it**, your **generals fight it**, and your **foreign minister eventually negotiates out of it**, all on the same hourly clock as the rest of the game.
 
-This page is the map. Read it first; every other page in this category is a zoom-in on one box of the diagram below.
+This page is the map. Every other page in the military category zooms in on one box of the chain below, so the numbers live there, not here.
 
-> **The Conflicts system is an admin-toggled subsystem.** If your world has it switched off you will see no Conflicts entry in the World menu and no Commands or Doctrine tabs in the defence office. Everything on these pages assumes it is on.
-
-## The chain of command
+## Unit, general, command, conflict
 
 Almost every mistake new players make comes from not understanding this one chain:
 
@@ -26,6 +24,8 @@ That last rule is the one that surprises people. There is no "send this division
 
 A unit with no general sits in **reserve**, the homeland garrison. Reserve is always a valid place to be; every other location is a live conflict.
 
+![Chain from unit to general to command to conflict with who acts on each link, plus the four steps of each war turn.](/wiki-images/diagrams/conflicts-overview-chain-of-command.svg)
+
 ## What a conflict is
 
 A **conflict** is a first-class battleground created during play. The world starts with **none**. There are no pre-seeded wars waiting on the map at a 1953 or 1979 reset: every conflict on the board was started by a player declaration or a world event.
@@ -42,7 +42,7 @@ Each conflict carries:
 | **Region & terrain** | Derived from the host country. Terrain shapes how the fighting goes. |
 | **Status** | Active, escalating, winding down, terms pending, or resolved. A war whose front has run to a pole sits at *terms pending* while the victor names a settlement; see [Peace, Indemnities & Truces](/wiki/peace-and-truces). |
 
-A resolved conflict keeps its page forever. That is the point of the numbering: conflict #1 is a permanent historical record, browsable long after the shooting stops.
+A resolved conflict keeps its page until the world resets. That is the point of the numbering: conflict #1 stays a historical record for the rest of the iteration, browsable long after the shooting stops.
 
 ## Where everything lives
 
@@ -64,7 +64,7 @@ Authority is deliberately split. No single office runs a war.
 
 | Decision | Who may take it |
 | --- | --- |
-| **Declare war** | Head of government **or** the defence seat holder, then the legislature must ratify it. A country can also be brought in without declaring: a mutual-defence pact (an alliance at the Article 5 posture, or NATO and the Warsaw Pact in Cold War worlds) pulls every member into a war declared **against** one of them, and a bloc can vote to enter a war at its own call. See [Declaring War](/wiki/declaring-war). |
+| **Declare war** | Head of government **or** the defence seat holder, then the legislature must ratify it. A country can also be brought in without declaring: a mutual-defence pact (an alliance at the Article 5 posture, or NATO and the Warsaw Pact in Cold War worlds) pulls the other members into a war declared **against** one of them (members not open to players, or allied with the attacker, stay out), and a bloc can vote to enter a war at its own call. See [Declaring War](/wiki/declaring-war). |
 | **Recruit, upgrade, set posture, assign units to generals** | The defence seat holder |
 | **Commission and dismiss generals** | The defence seat holder |
 | **Adopt national doctrine** | The defence seat holder |
@@ -92,10 +92,12 @@ Era gating narrows this further. West Germany has **no armed forces at all in 19
 
 A conflict shows you different things depending on who you are. This is enforced on the server: the information you are not entitled to never reaches your browser at all.
 
+![Matrix of what the Public, Command and Archive tiers can see: territory and casualties for all, own order of battle and enemy band from command level, enemy order of battle only in the archive.](/wiki-images/diagrams/conflicts-overview-fog-tiers.svg)
+
 | Tier | Who gets it | What you see |
 | --- | --- | --- |
 | **Public** | Everyone else | Territory held, cumulative casualties, per-battle verdicts and loss totals. No force composition, either side. |
-| **Command** | A belligerent country's posted general, defence seat holder, or head of government | Everything public, **plus** your own live order of battle at that front, plus a coarse read of the enemy ("Stronger force", never a number). |
+| **Command** | A belligerent country's posted general, Commanding General, defence seat holder, or head of government | Everything public, **plus** your own live order of battle at that front, plus a coarse read of the enemy ("Stronger force", never a number). |
 | **Archive** | Everyone, 480 turns after the war is **resolved** | Everything, both sides, per engagement: who fought, what they lost. The fog lifts entirely for history. |
 
 Note the shape of that: **territory and casualties are public in every tier.** The world always knows how a war is going and how many have died. Only *force composition* is secret, and it stays secret for 480 turns after the war ends, because the day a war ends its order of battle is still a live picture of an army that may fight again. A resolved war reads exactly as it did while it ran until that window lapses; then the record opens for everyone.
@@ -121,17 +123,45 @@ The one-turn gap between declaring and resolving is the **defender's window**. I
 
 ## The Cold War layer
 
-Above all the boards on [/world/conflicts](/world/conflicts) sits the world's shared **tension gauge**: one 0 to 100 reading of how close the standoff is to boiling over, with a feed of the events that moved it and a strip of the world's nuclear powers. Nuclear tests, escalation, and crises push it up; time and detente bring it down, and its band drives readiness, procurement demand, and diplomatic goodwill across every country at once. See [Cold War Tension](/wiki/cold-war-tension) for the gauge itself and [The Nuclear Programme](/wiki/nuclear-programme) for the tree that puts the warheads behind it.
+Above all the boards on [/world/conflicts](/world/conflicts) sits the world's shared **tension gauge**: one 0 to 100 reading of how close the standoff is to boiling over, with a feed of the events that moved it and a strip of the world's nuclear powers. Nuclear tests, escalation, and crises push it up; time and detente bring it down, and its band drives readiness, procurement demand, and diplomatic goodwill across every country at once. See [Cold War Tension](/wiki/cold-war-tension) for the gauge itself and [The Nuclear Programme](/wiki/nuclear-programme) for the tree that puts the warheads behind it. Wars between nuclear-armed countries raise tension at once.
 
-## Where to go next
+The link runs both ways with the crisis system. High escalation in a campaign can open a real shooting war (see [Global Response Crises](/wiki/global-response-crises)), and while shooting wars are active they hold the tension floor up, which is what unlocks wartime crises in [World Events](/wiki/world-events).
 
-**Prefer a guided route?** The [**War College**](/wiki/paths/war-college) learning path walks these pages in order (this overview, then units, generals, battle, and the full worked campaign) in about 51 minutes.
+Each declared war is also where it starts: a passed declaration, covered in [Declaring War](/wiki/declaring-war), is what creates or joins a conflict, and the front's movement decides when it ends (see [Occupation, Territory & Victory](/wiki/occupation-and-victory)).
 
-Otherwise, pick your entry point:
+## One war, turn by turn
 
-- New to all of this? → [Units, Recruitment & Procurement](/wiki/military-units), then [Generals & the Officer Corps](/wiki/generals).
-- Want to start a war? → [Declaring War](/wiki/declaring-war).
-- Want to win one? → [Fighting a Battle](/wiki/fighting-a-battle) and [Occupation, Territory & Victory](/wiki/occupation-and-victory).
-- Want to end one? → [Peace, Indemnities & Truces](/wiki/peace-and-truces).
-- Want to see it all put together? → [A War, Start to Finish](/wiki/a-war-start-to-finish).
+Here is how the pieces meet, with turn numbers. One turn is one real hour.
+
+| Turn | What happens |
+| --- | --- |
+| 1000 | The defence secretary of country X files a declaration against country Y. It costs 10 action points. |
+| 1024 | The 24-turn vote closes. X has a single chamber (a second chamber would vote next), and it returns 61 For and 29 Against, which clears two-thirds of votes cast, so the war opens as conflict #4 and the 10 points come back. Each side automatically commits an opening force worth a fifth of the weaker side's reserve. |
+| 1030 | The secretary assigns a division to General Ward. The Commanding General posts Ward to conflict #4, and the division goes with Ward. |
+| 1040 | The Theater Commander declares an offensive. |
+| 1041 | The battle resolves. The defender had the turn between to reinforce or withdraw. |
+| 1200 | The front reaches a pole. The war moves to terms pending and X has 24 turns to name a settlement. |
+| 1210 | X names its terms and the war resolves. A 240-turn truce starts for every pair on opposite sides, so no one can re-declare before turn 1450. |
+| 1690 | 480 turns after the end, the fog lifts and the full order of battle becomes public. |
+
+## Where you fit
+
+- **Every player:** read the public record, and watch the world gauge. If you sit in a legislature, vote on the declaration and whip for or against it. Your country's approval answers to the war whether or not you hold a military role.
+- **Defence seat holder:** recruit, assign, set posture, adopt doctrine, commission generals, and file the declaration. See [Units, Recruitment & Procurement](/wiki/military-units) and [National Doctrine](/wiki/national-doctrine).
+- **Commanding General or Theater Commander:** post generals and name offensives. See [Commands & Command Structure](/wiki/military-commands).
+- **Head of government or foreign seat holder:** negotiate the way out. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
+
+**Questions that come up.** *How do I assign stuff to a conflict?* You assign units to a general, and your Commanding General posts that general. *Who declares and who ends it?* The head of government or the defence seat files, and the head of government or the foreign seat negotiates peace. *Why can't I see the enemy's units?* Force composition is hidden behind the fog tiers above. *Can we declare war on non-playable nations?* The target must be open to players in your world, though a country nobody currently plays qualifies. See [Declaring War](/wiki/declaring-war).
+
+**Tip:** the [War College](/wiki/paths/war-college) learning path walks the military pages in order in 93 minutes.
+
+## See also
+
+- New to all of this? [Units, Recruitment & Procurement](/wiki/military-units), then [Generals & the Officer Corps](/wiki/generals).
+- Want to start a war? [Declaring War](/wiki/declaring-war).
+- Want to win one? [Fighting a Battle](/wiki/fighting-a-battle) and [Occupation, Territory & Victory](/wiki/occupation-and-victory).
+- Want to end one? [Peace, Indemnities & Truces](/wiki/peace-and-truces).
+- Want to see it all put together? [A War, Start to Finish](/wiki/a-war-start-to-finish).
+
+Live in every world. West Germany has no armed forces in 1953, and Scotland and Wales have no defence seat. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

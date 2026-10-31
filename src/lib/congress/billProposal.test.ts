@@ -17,6 +17,64 @@ beforeEach(() => {
 });
 
 describe("validateBillProvisions: reset version isolation", () => {
+  it.each(["US", "UK", "JP"] as const)(
+    "accepts national v2 embargoes and repeal in %s",
+    async (country) => {
+      db.collectionMocks.gameState.findOne.mockResolvedValue({
+        _id: "current",
+        resetWorldId: "world-1",
+        legislationSystemVersion: "v2",
+        metricsSystemVersion: "v2",
+        resetVersionSeeds: {
+          metrics: {
+            worldId: "world-1",
+            revision: 3,
+            sourceTurn: 1,
+            completedAt: "2026-10-04T00:00:00.000Z",
+            verificationHash: "metrics",
+          },
+          legislation: {
+            worldId: "world-1",
+            revision: 6,
+            sourceTurn: 1,
+            completedAt: "2026-10-04T00:00:00.000Z",
+            verificationHash: "legislation",
+          },
+        },
+      });
+      const targetCountry = country === "JP" ? "US" : "JP";
+      const provisions = [
+        {
+          type: "embargo",
+          targetCountry,
+          commodity: "energy",
+          direction: "export",
+          mode: "cap",
+          cap: 1000,
+        },
+        { type: "end_embargo", targetCountry, commodity: "energy", direction: "import" },
+      ];
+      const result = await validateBillProvisions(
+        db as unknown as Db,
+        provisions,
+        "trade",
+        country
+      );
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.embargoProvisions).toEqual(provisions);
+      expect(
+        await validateBillProvisions(db as unknown as Db, provisions, "economy", country)
+      ).toMatchObject({ ok: false, status: 400 });
+      expect(
+        await validateBillProvisions(
+          db as unknown as Db,
+          [{ ...provisions[0], targetCountry: country }],
+          "trade",
+          country
+        )
+      ).toMatchObject({ ok: false, status: 400 });
+    }
+  );
   it("rejects legacy provisions when legislation v2 is active", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
@@ -50,6 +108,72 @@ describe("validateBillProvisions: reset version isolation", () => {
 
     expect(result).toMatchObject({ ok: false, status: 409 });
     if (!result.ok) expect(result.error).toMatch(/only reviewed legislation v2/i);
+  });
+
+  it("keeps subsidies proposable when legislation v2 is active, including in a mixed draft", async () => {
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      resetWorldId: "world-1",
+      metricsSystemVersion: "v2",
+      legislationSystemVersion: "v2",
+      resetVersionSeeds: {
+        metrics: {
+          worldId: "world-1",
+          revision: 3,
+          sourceTurn: 1,
+          completedAt: "2026-10-04T00:00:00.000Z",
+          verificationHash: "metrics",
+        },
+        legislation: {
+          worldId: "world-1",
+          revision: 6,
+          sourceTurn: 1,
+          completedAt: "2026-10-04T00:00:00.000Z",
+          verificationHash: "legislation",
+        },
+      },
+    });
+    const provisions = [
+      {
+        type: "subsidy",
+        scopeType: "sector",
+        targetSectorType: "manufacturing",
+        domesticOnly: true,
+      },
+      { type: "end_subsidy", scopeType: "economy_wide" },
+    ];
+
+    for (const category of ["industry", "custom"]) {
+      const result = await validateBillProvisions(db as unknown as Db, provisions, category, "US");
+      expect(result).toMatchObject({ ok: true });
+      if (result.ok) {
+        expect(result.subsidyProvisions).toEqual([
+          {
+            type: "subsidy",
+            scopeType: "sector",
+            targetSectorType: "manufacturing",
+            domesticOnly: true,
+          },
+          { type: "end_subsidy", scopeType: "economy_wide" },
+        ]);
+      }
+    }
+
+    const wrongCategory = await validateBillProvisions(
+      db as unknown as Db,
+      provisions,
+      "healthcare",
+      "US"
+    );
+    expect(wrongCategory).toMatchObject({ ok: false, status: 400 });
+
+    const unknownSector = await validateBillProvisions(
+      db as unknown as Db,
+      [{ type: "subsidy", scopeType: "sector", targetSectorType: "steel", domesticOnly: false }],
+      "industry",
+      "US"
+    );
+    expect(unknownSector).toMatchObject({ ok: false, status: 400 });
   });
 
   it("rejects a null reviewed provision without throwing", async () => {

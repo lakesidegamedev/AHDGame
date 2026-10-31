@@ -16,7 +16,14 @@ import { creditBondPool, loadBondQuote, advanceBondPoolSnapshot } from "@/lib/bo
 import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 
 export type PurchaseBondUnitsForFundResult =
-  | { ok: true; units: number; costAnchor: number; markedValueAnchor: number; bondId: ObjectId }
+  | {
+      ok: true;
+      units: number;
+      costAnchor: number;
+      markedValueAnchor: number;
+      pricePerUnit: number;
+      bondId: ObjectId;
+    }
   | { ok: false; reason: string };
 
 function resolveBondCurrency(bond: Bond): CurrencyCode {
@@ -233,7 +240,14 @@ export async function purchaseBondUnitsForFund(
         });
     }
 
-    return { ok: true, units: affordableUnits, costAnchor, markedValueAnchor, bondId: bond._id };
+    return {
+      ok: true,
+      units: affordableUnits,
+      costAnchor,
+      markedValueAnchor,
+      pricePerUnit,
+      bondId: bond._id,
+    };
   } catch (err) {
     await refundFundCashAnchor(db, fund._id, costAnchor);
     throw err;

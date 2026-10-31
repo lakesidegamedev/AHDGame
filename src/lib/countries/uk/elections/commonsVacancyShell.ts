@@ -140,13 +140,6 @@ export async function vacateCommonsSeat(
   });
 }
 
-/** Open vacancies in a region that a new by-election may claim. */
-export async function listClaimableVacancies(db: Db, state: string): Promise<UkCommonsVacancy[]> {
-  return await getUkCommonsVacanciesCollection(db)
-    .find({ countryId: "UK", state, status: "open" })
-    .toArray();
-}
-
 /**
  * Claim open vacancies for a spawned by-election. Only `open` rows move, so
  * a retried spawn with the same election id converges instead of double
@@ -196,24 +189,6 @@ export async function markVacanciesFilled(
   const result = await getUkCommonsVacanciesCollection(db).updateMany(
     { electionId, status: "scheduled" },
     { $set: { status: "filled", resolvedTurn, updatedAt: now } }
-  );
-  return result.modifiedCount ?? 0;
-}
-
-/**
- * A regular Commons sweep (general or snap) fills the whole regional
- * delegation, so vacancies it overtakes are subsumed, not filled. Only rows
- * still claimed by a live election move; already-filled rows are untouched.
- */
-export async function markVacanciesSubsumed(
-  db: Db,
-  state: string,
-  resolvedTurn: number,
-  now: Date
-): Promise<number> {
-  const result = await getUkCommonsVacanciesCollection(db).updateMany(
-    { countryId: "UK", state, status: { $in: LIVE_STATUSES } },
-    { $set: { status: "subsumed", resolvedTurn, updatedAt: now } }
   );
   return result.modifiedCount ?? 0;
 }

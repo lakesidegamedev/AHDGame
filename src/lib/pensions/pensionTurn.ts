@@ -72,7 +72,7 @@ export interface PensionTurnResult {
 }
 
 /** The scheme for a union, created on first use. */
-export async function ensurePensionScheme(
+async function ensurePensionScheme(
   db: Db,
   union: Pick<Union, "_id" | "countryId" | "name">,
   currentTurn: number
@@ -343,7 +343,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
  * pensions they already owe. A scheme with liabilities and no live agreement is
  * the ordinary end state of a workplace that closed.
  */
-export async function runPensionPostContributionPasses(
+async function runPensionPostContributionPasses(
   db: Db,
   currentTurn: number,
   result: PensionTurnResult

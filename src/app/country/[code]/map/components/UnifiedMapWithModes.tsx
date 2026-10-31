@@ -4,10 +4,10 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import { SectionLabel } from "@/components/ui";
-import { getCountryConfig } from "@/lib/constants/countries";
+import type { CountryMapViewConfig } from "../mapViewConfig";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import { EXTRACTABLE_RESOURCES, COMMODITY_LABELS } from "@/lib/constants/commodities";
-import type { ExtractableResource } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
+import type { ExtractableResource } from "@/lib/constants/commoditiesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -17,21 +17,24 @@ import { StateLeanPanel } from "./StateLeanPanel";
 import { useResourceMapData } from "./useResourceMapData";
 import { useFreightDemandData } from "./useFreightDemandData";
 import { freightHaulLoadCaption } from "./freightHaulLoadCopy";
-import type { CountryMapConfig, MapGameTime } from "./countryMapConfigs";
+import { COUNTRY_MAP_CONFIGS, type CountryMapConfig, type MapGameTime } from "./countryMapConfigs";
 
 interface UnifiedMapWithModesProps {
   mapData: MapOverviewResponse | null;
-  config: ReturnType<typeof getCountryConfig>;
-  countryConfig: CountryMapConfig;
+  config: CountryMapViewConfig;
+  /** Optional so the dispatcher can load this chunk without the config table. */
+  countryConfig?: CountryMapConfig;
   onRegionClick: (id: string) => void;
 }
 
 export function UnifiedMapWithModes({
   mapData,
   config,
-  countryConfig,
+  countryConfig: countryConfigProp,
   onRegionClick,
 }: UnifiedMapWithModesProps) {
+  const countryConfig =
+    countryConfigProp ?? COUNTRY_MAP_CONFIGS[config.id as CountryMapConfig["countryId"]];
   // Era-aware display name (e.g. "West Germany Map" in 1979), and runtime
   // renames with it (a reunified Germany is not "East Germany Map").
   const displayName = useCountryDisplayName()(countryConfig.countryId);

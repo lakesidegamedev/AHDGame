@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { MetricLegislationInfo } from "@/lib/politicalMetrics/queries/countryPoliticalMetrics";
 import { formatLocalAmount } from "@/lib/utils/formatters";
 import { legislatureUrl } from "@/lib/urls";

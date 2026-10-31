@@ -1,3 +1,4 @@
+import { loadSovereignRiskDisclosures } from "@/lib/bonds/sovereignRiskDisclosure";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
@@ -137,6 +138,10 @@ export async function GET(request: Request) {
     // can format per-bond correctly. (A24 + supports B10)
     let totalOutstandingAnchor = 0;
 
+    const sovereignRisks = await loadSovereignRiskDisclosures(
+      db,
+      filteredBonds.filter(isSovereignBond).map((b) => getBondCountryId(b))
+    );
     const bondListings = filteredBonds.map((bond) => {
       const corp = corpMap.get(bond.corporationId.toString());
       const turnsRemaining = Math.max(0, bond.maturityTurn - currentTurn);
@@ -156,6 +161,10 @@ export async function GET(request: Request) {
       return {
         _id: bond._id.toString(),
         issuerType: bond.issuerType ?? "corporation",
+        sovereignRisk:
+          bond.issuerType === "sovereign"
+            ? (sovereignRisks.get(bond.countryId ?? "") ?? null)
+            : null,
         countryId,
         currencyCode: bondCcy ?? null,
         corporationId: bond.corporationId.toString(),

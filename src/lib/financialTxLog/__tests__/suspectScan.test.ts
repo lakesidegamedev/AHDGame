@@ -407,10 +407,13 @@ describe("runFinancialSuspectScan — Phase 6 detectors", () => {
 
     expect(db.collectionMocks.financialTxLog.updateMany).toHaveBeenCalledTimes(1);
     const [filter, update] = db.collectionMocks.financialTxLog.updateMany.mock.calls[0];
+    // Only the rows about to be flagged are normalized, not the whole window.
     expect(filter).toEqual({
-      turn: { $gte: 382 },
+      _id: { $in: expect.any(Array) },
       $expr: { $eq: [{ $isArray: "$suspectFlags" }, false] },
     });
+    expect((filter as { _id: { $in: unknown[] } })._id.$in.length).toBeGreaterThan(0);
+    expect(filter).not.toHaveProperty("turn");
     expect(update).toEqual([{ $set: { suspectFlags: [] } }]);
     expect(db.collectionMocks.financialTxLog.bulkWrite).toHaveBeenCalled();
   });

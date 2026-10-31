@@ -9,18 +9,12 @@
  * directly comparable without any rescaling.
  */
 
-import { getCompassPositionLabel, POLICY_INTEGER_AXIS_RANGE } from "@/lib/utils/politics";
+import { getCompassPositionLabel } from "@/lib/utils/politics";
 
 export interface CompassPoint {
   economic: number;
   social: number;
 }
-
-/** Longest possible separation on the plane — corner to corner. */
-export const MAX_COMPASS_DISTANCE = Math.hypot(
-  POLICY_INTEGER_AXIS_RANGE * 2,
-  POLICY_INTEGER_AXIS_RANGE * 2
-);
 
 /** Euclidean distance between two points in policy space. */
 export function compassDistance(a: CompassPoint, b: CompassPoint): number {

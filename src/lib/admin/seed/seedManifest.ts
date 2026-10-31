@@ -50,6 +50,13 @@ export type { CollectionCategory, CollectionEntry } from "./seedManifestTypes";
 // Seeded every fresh start; idempotent re-runs.
 
 const REFERENCE: CollectionEntry[] = [
+  {
+    name: "counties",
+    category: "reference",
+    seededBy: "seedCountyPopulations",
+    notes:
+      "US county population stocks. Bootstrap replaces stocks from current state totals; migration inserts missing records only.",
+  },
   { name: "states", category: "reference", seededBy: "runCoreSeed" },
   { name: "policies", category: "reference", seededBy: "runCoreSeed" },
   { name: "demographicCategories", category: "reference", seededBy: "runCoreSeed" },
@@ -198,6 +205,12 @@ const REFERENCE: CollectionEntry[] = [
     category: "runtime",
     notes:
       "Settled funded supply and demand per turn (requested and offered units by commodity and state), read by the price phase on funded turns.",
+  },
+  {
+    name: "producerHouseholdSource",
+    category: "runtime",
+    notes:
+      "One document per world: each country's plant-economy share at its first funded turn, read every turn to hold household transfers steady. Wiped on reset.",
   },
   {
     name: "producerPublicCarry",

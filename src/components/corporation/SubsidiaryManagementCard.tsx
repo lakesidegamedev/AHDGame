@@ -3,7 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import Link from "next/link";
-import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporations";
+import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporationsClient";
 import type { CorporationDetail } from "./CorporationPageTypes";
 import { AppointSubsidiaryCeoModal } from "./AppointSubsidiaryCeoModal";
 import { FormalizeSubsidiaryModal } from "./FormalizeSubsidiaryModal";
@@ -82,6 +82,7 @@ export function SubsidiaryManagementCard({
       <GroupChart
         corporation={corporation}
         onSpinOff={showSpinOffAction ? () => setShowSpinOff(true) : undefined}
+        spinOffCooldownTurns={corporation.spinOffCooldownTurnsRemaining ?? 0}
       />
       {overheadPp > 0 && (
         <div className="max-w-md">
@@ -217,6 +218,7 @@ export function SubsidiaryManagementCard({
         <SpinOffModal
           corporationId={corporation._id}
           sectorOptions={sectorOptions}
+          cooldownTurnsRemaining={corporation.spinOffCooldownTurnsRemaining ?? 0}
           onClose={() => setShowSpinOff(false)}
           onSpunOff={() => {
             setShowSpinOff(false);

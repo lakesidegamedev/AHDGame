@@ -2,8 +2,6 @@ import { ObjectId, type Collection, type Document } from "mongodb";
 import { OAUTH_REFERRAL_CODE_COOKIE } from "@/lib/auth/oauthFingerprint";
 import { normalizeReferralCode } from "@/lib/auth/normalizeReferralCode";
 
-export { normalizeReferralCode };
-
 type CookieReader = {
   get: (name: string) => { value: string } | undefined;
   delete: (name: string) => void;

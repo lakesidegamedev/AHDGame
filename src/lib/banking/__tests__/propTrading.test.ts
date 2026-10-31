@@ -95,6 +95,7 @@ describe("propTrading open/close/mark", () => {
     db.collection("exchangeRates");
     db.collection("indexFunds");
     db.collection("bonds");
+    db.collection("centralBanks");
 
     corpId = new ObjectId();
     const targetId = new ObjectId();
@@ -133,10 +134,10 @@ describe("propTrading open/close/mark", () => {
     liveCorp = db.collection("corporations").docs[0] as unknown as Corporation;
     equityCorp = db.collection("corporations").docs[1] as unknown as Corporation;
     db.seed("exchangeRates", fxDocs);
+    db.seed("centralBanks", [{ _id: "US", forexRevenue: 0, spreadFeeReserveBalances: { USD: 0 } }]);
   });
 
   it("refuses new player stock risk before pricing or cash while retaining forex", async () => {
-    db.collection("gameConfig").docs[0].playerAdvancedBankChartersEnabled = true;
     const before = liveCorp.bankCharter!.cashReserves;
     const refused = await openPosition(db as unknown as Db, corpId, {
       asset: "equity",
@@ -156,7 +157,6 @@ describe("propTrading open/close/mark", () => {
   it.each(["npp", "imperial"] as const)(
     "keeps %s stock opening available in the advanced player cohort",
     async (ceoType) => {
-      db.collection("gameConfig").docs[0].playerAdvancedBankChartersEnabled = true;
       liveCorp.ceoType = ceoType;
       expect(
         await openPosition(db as unknown as Db, corpId, {
@@ -168,7 +168,6 @@ describe("propTrading open/close/mark", () => {
     }
   );
   it("refuses an NPP stock purchase when player control resumes before the cash write", async () => {
-    db.collection("gameConfig").docs[0].playerAdvancedBankChartersEnabled = true;
     liveCorp.ceoType = "npp";
     const initialCash = liveCorp.bankCharter!.cashReserves;
     const collection = db.collection("corporations");
@@ -187,21 +186,33 @@ describe("propTrading open/close/mark", () => {
     expect(liveCorp.bankCharter!.cashReserves).toBe(initialCash);
     expect(liveCorp.bankCharter!.propBook).toEqual([]);
   });
-  it("allows existing player stock positions to close after the new opening cohort is enabled", async () => {
-    const initialCash = liveCorp.bankCharter!.cashReserves;
+  it("lets an existing player stock position close even though new risk is refused", async () => {
+    // Player-controlled banks may not open equity any more, but a book they
+    // already hold keeps every exit rail.
+    const initialCash = liveCorp.bankCharter!.cashReserves ?? 0;
     const ref = equityCorp._id.toHexString();
+    liveCorp.ceoType = "character";
+    liveCorp.bankCharter!.propBook = [
+      { asset: "equity", ref, units: 1, costBasis: 10, markValue: 10 },
+    ];
+    liveCorp.bankCharter!.propBookMarkValue = 10;
     expect(
       await openPosition(db as unknown as Db, corpId, { asset: "equity", ref, units: 1 })
-    ).toMatchObject({ ok: true });
-    db.collection("gameConfig").docs[0].playerAdvancedBankChartersEnabled = true;
-    expect(
-      await closePosition(db as unknown as Db, corpId, { asset: "equity", ref, units: 1 })
-    ).toMatchObject({ ok: true });
-    expect(liveCorp.bankCharter!.cashReserves).toBe(initialCash);
+    ).toMatchObject({ ok: false });
+    const closed = await closePosition(db as unknown as Db, corpId, {
+      asset: "equity",
+      ref,
+      units: 1,
+    });
+    expect(closed).toMatchObject({ ok: true });
+    // The seeded position was never bought, so its proceeds are the only move.
+    expect(liveCorp.bankCharter!.cashReserves).toBe(initialCash + 10);
     expect(liveCorp.bankCharter!.propBook).toEqual([]);
   });
 
   it("enforces leverage cap on open", async () => {
+    // An NPP-controlled bank keeps the legacy asset set.
+    liveCorp.ceoType = "npp";
     // True equity stays ~300k once debt is netted; max mark = 900k.
     // Buy 901k of equity while holding enough cash → leverage breach.
     liveCorp.bankCharter!.cashReserves = 950_000;
@@ -233,6 +244,7 @@ describe("propTrading open/close/mark", () => {
   });
 
   it("conserves cash on open and close (market counterparty)", async () => {
+    liveCorp.ceoType = "npp";
     const targetId = equityCorp._id.toString();
     const before = liveCorp.bankCharter!.cashReserves ?? 0;
     const opened = await openPosition(db as unknown as Db, corpId, {
@@ -262,6 +274,7 @@ describe("propTrading open/close/mark", () => {
   });
 
   it("opens an equity position by the corporation's displayed name", async () => {
+    liveCorp.ceoType = "npp";
     const opened = await openPosition(db as unknown as Db, corpId, {
       asset: "equity",
       ref: "Target",

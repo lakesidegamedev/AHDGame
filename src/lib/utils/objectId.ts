@@ -1,7 +1,5 @@
 import { ObjectId } from "mongodb";
 
-export { HEX_OBJECT_ID_REGEX, isHexObjectIdString } from "./objectIdHex";
-
 /**
  * Safely parse a string into a MongoDB ObjectId.
  * Returns the ObjectId if valid, or null if the string is invalid.

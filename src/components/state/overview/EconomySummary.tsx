@@ -7,7 +7,7 @@ import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 
 /**
  * Economy summary for the State Overview tab's side column.

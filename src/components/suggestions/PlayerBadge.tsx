@@ -3,8 +3,8 @@
 import Image from "next/image";
 import { getCountryFlagUrlForEra } from "@/lib/constants";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
-import { getCountryConfig } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 
 interface PlayerBadgeProps {
@@ -23,7 +23,7 @@ export function PlayerBadge({ partyAbbrev, stateCode, countryId, size = "sm" }: 
   const textSize = size === "sm" ? "text-[10px]" : "text-xs";
   const flagH = size === "sm" ? "h-3 max-h-3" : "h-3.5 max-h-3.5";
 
-  const cfg = countryId ? getCountryConfig(countryId) : null;
+  const cfg = countryId ? getCountryClientConfig(countryId) : null;
 
   return (
     <span className={`inline-flex items-center gap-0.5 ${textSize}`}>

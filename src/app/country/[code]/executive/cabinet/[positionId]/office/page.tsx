@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { useCabinetOffice } from "./useCabinetOffice";
 import { useMergerReviewQueue } from "./useMergerReviewQueue";
-import IntelligenceTab from "./components/IntelligenceTab";
-import { MergerReviewQueuePanel } from "./components/MergerReviewQueuePanel";
-import { IndexListingQueuePanel } from "./components/IndexListingQueuePanel";
 import { CabinetOfficeLayout } from "./components/CabinetOfficeLayout";
 import { RestrictedOfficeNotice } from "./components/RestrictedOfficeNotice";
 import { CabinetStatStrip } from "./components/CabinetStatStrip";
 import { CabinetPositionRail } from "./components/CabinetPositionRail";
-import { FlagshipRouter } from "./components/FlagshipRouter";
 import { CabinetForceStrip } from "./components/CabinetForceStrip";
 import { CabinetEstateStrip } from "./components/CabinetEstateStrip";
 import { CabinetEnergyStrip } from "./components/CabinetEnergyStrip";
@@ -28,15 +25,8 @@ import { AdvocacyTogglePanel } from "./components/AdvocacyTogglePanel";
 import { MinisterialOrderPanel } from "./components/MinisterialOrderPanel";
 import { EmergencyMechanicPanel } from "./components/EmergencyMechanicPanel";
 import { ChancellorFundingPanel } from "./components/ChancellorFundingPanel";
-import { ForeignSecPanels } from "./components/ForeignSecPanels";
-import { StateEnterprisesPanel } from "./components/StateEnterprisesPanel";
-import { TradeEmbargoPanel } from "./components/TradeEmbargoPanel";
-import { GeologicalSurveyPanel } from "./components/GeologicalSurveyPanel";
-import { DoctrineTab } from "./components/military/DoctrineTab";
-import { CommandsTab } from "./components/military/CommandsTab";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { useConflictsEnabled } from "@/contexts/AuthDataContext";
-import { latestEraIndex } from "@/lib/military/doctrineTree";
 import {
   resolveCabinetTabs,
   isFinanceMinister,
@@ -46,8 +36,6 @@ import {
   isCompetitionSeat,
   type CabinetTabId,
 } from "./cabinetTabs";
-import { DeclareWarPanel } from "./components/military/DeclareWarPanel";
-import { PeacePanel } from "./components/PeacePanel";
 import { FOREIGN_AFFAIRS_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
 import {
   getCabinetMechanics,
@@ -60,14 +48,102 @@ import { resolveInfraPosition } from "@/lib/constants/cabinetInfra";
 import { resolveFinancePosition } from "@/lib/constants/cabinetMonetary";
 import { getCabinetIdentity } from "@/lib/constants/cabinetIdentity";
 import { TRADE_MINISTER_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
-import { Skeleton } from "@/components/ui";
-import type { CountryId } from "@/lib/constants/countries";
+import { CardSkeleton, Skeleton } from "@/components/ui";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { DepartmentProgramPanel } from "./components/DepartmentProgramPanel";
-import { DepartmentFinancePanel } from "./components/DepartmentFinancePanel";
-import { CabinetContractsPanel } from "@/components/governmentContracts/CabinetContractsPanel";
 import { ResetCabinetActionPanel } from "./components/ResetCabinetActionPanel";
+
+// Only the Overview tab is open on arrival. Every other tab, and the panels that
+// only a trade or finance seat can see, pull their own heavy tree (the contracts
+// board drags the whole country client registry in with it, the flagship router
+// the metric catalog). Same card skeleton the party hub panels use, so the tab
+// body keeps its height while the chunk lands.
+const PanelFallback = () => (
+  <CardSkeleton className="min-h-[240px] space-y-4">
+    <Skeleton className="h-5 w-36" />
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-3/4" />
+    <Skeleton className="h-4 w-1/2" />
+  </CardSkeleton>
+);
+
+const FlagshipRouter = dynamic(
+  () => import("./components/FlagshipRouter").then((m) => ({ default: m.FlagshipRouter })),
+  { loading: PanelFallback }
+);
+const CabinetContractsPanel = dynamic(
+  () =>
+    import("@/components/governmentContracts/CabinetContractsPanel").then((m) => ({
+      default: m.CabinetContractsPanel,
+    })),
+  { loading: PanelFallback }
+);
+
+const ForeignSecPanels = dynamic(
+  () => import("./components/ForeignSecPanels").then((m) => ({ default: m.ForeignSecPanels })),
+  { loading: PanelFallback }
+);
+const MergerReviewQueuePanel = dynamic(
+  () =>
+    import("./components/MergerReviewQueuePanel").then((m) => ({
+      default: m.MergerReviewQueuePanel,
+    })),
+  { loading: PanelFallback }
+);
+const IndexListingQueuePanel = dynamic(
+  () =>
+    import("./components/IndexListingQueuePanel").then((m) => ({
+      default: m.IndexListingQueuePanel,
+    })),
+  { loading: PanelFallback }
+);
+const IntelligenceTab = dynamic(() => import("./components/IntelligenceTab"), {
+  loading: PanelFallback,
+});
+const DeclareWarPanel = dynamic(
+  () =>
+    import("./components/military/DeclareWarPanel").then((m) => ({ default: m.DeclareWarPanel })),
+  { loading: PanelFallback }
+);
+const CommandsTab = dynamic(
+  () => import("./components/military/CommandsTab").then((m) => ({ default: m.CommandsTab })),
+  { loading: PanelFallback }
+);
+const DoctrineTab = dynamic(
+  () => import("./components/military/DoctrineTab").then((m) => ({ default: m.DoctrineTab })),
+  { loading: PanelFallback }
+);
+const StateEnterprisesPanel = dynamic(
+  () =>
+    import("./components/StateEnterprisesPanel").then((m) => ({
+      default: m.StateEnterprisesPanel,
+    })),
+  { loading: PanelFallback }
+);
+const GeologicalSurveyPanel = dynamic(
+  () =>
+    import("./components/GeologicalSurveyPanel").then((m) => ({
+      default: m.GeologicalSurveyPanel,
+    })),
+  { loading: PanelFallback }
+);
+const DepartmentFinancePanel = dynamic(
+  () =>
+    import("./components/DepartmentFinancePanel").then((m) => ({
+      default: m.DepartmentFinancePanel,
+    })),
+  { loading: PanelFallback }
+);
+const TradeEmbargoPanel = dynamic(
+  () => import("./components/TradeEmbargoPanel").then((m) => ({ default: m.TradeEmbargoPanel })),
+  { loading: PanelFallback }
+);
+const PeacePanel = dynamic(
+  () => import("./components/PeacePanel").then((m) => ({ default: m.PeacePanel })),
+  { loading: PanelFallback }
+);
 
 export default function CabinetOfficePage() {
   const translateActions = useTranslations("worldOrganizations.cabinetActions");
@@ -675,7 +751,7 @@ export default function CabinetOfficePage() {
 
               {activeTab === "doctrine" && isDefense && conflictsEnabled && (
                 <DoctrineTab
-                  currentEra={data.doctrineEra ?? latestEraIndex()}
+                  currentEra={data.doctrineEra}
                   doctrine={data.doctrine ?? { adopted: {}, points: 0 }}
                   countryCode={countryCode}
                   positionId={positionId}

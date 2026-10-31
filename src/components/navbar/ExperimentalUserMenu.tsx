@@ -22,7 +22,7 @@ import type {
   NavLinkRef,
 } from "./experimentalNavTypes";
 
-export function getSandboxToggleInfo() {
+function getSandboxToggleInfo() {
   const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
   const isSandbox =

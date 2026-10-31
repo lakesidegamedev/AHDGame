@@ -1,0 +1,512 @@
+{
+  "kind": "deterministic fixed-input confidence replay",
+  "countries": ["UK", "DE", "JP", "IE", "SCO", "WAL", "IT", "ES", "SE", "TR", "GR", "AT", "FI"],
+  "cases": 78,
+  "startingCases": [
+    {
+      "country": "UK",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "UK",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "UK",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "UK",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "UK",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "UK",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "DE",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "DE",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "DE",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "DE",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "DE",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "DE",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "JP",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "JP",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "JP",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "JP",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "JP",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "JP",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IE",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IE",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IE",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IE",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IE",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IE",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SCO",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SCO",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SCO",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SCO",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SCO",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SCO",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "WAL",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "WAL",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "WAL",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "WAL",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "WAL",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "WAL",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IT",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IT",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IT",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IT",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IT",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "IT",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "ES",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "ES",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "ES",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "ES",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "ES",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "ES",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SE",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SE",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SE",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SE",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SE",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "SE",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "TR",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "TR",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "TR",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "TR",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "TR",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "TR",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "GR",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "GR",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "GR",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "GR",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "GR",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "GR",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "AT",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "AT",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "AT",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "AT",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "AT",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "AT",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "FI",
+      "before": 0,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "FI",
+      "before": 10,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "FI",
+      "before": 49.9,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "FI",
+      "before": 50,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "FI",
+      "before": 90,
+      "after": 50,
+      "after48Turns": 2
+    },
+    {
+      "country": "FI",
+      "before": 100,
+      "after": 50,
+      "after48Turns": 2
+    }
+  ],
+  "horizonTurns": 96,
+  "resetValue": 50,
+  "retryReplays": 3744,
+  "allAssertionsPassed": true,
+  "formationFromReset": 55,
+  "trajectories": [
+    {
+      "approval": 0,
+      "confidenceAtTurn96": 0,
+      "firstZeroAfterReset": 25
+    },
+    {
+      "approval": 25,
+      "confidenceAtTurn96": 0,
+      "firstZeroAfterReset": 50
+    },
+    {
+      "approval": 50,
+      "confidenceAtTurn96": 50,
+      "firstZeroAfterReset": null
+    },
+    {
+      "approval": 75,
+      "confidenceAtTurn96": 100,
+      "firstZeroAfterReset": null
+    },
+    {
+      "approval": 100,
+      "confidenceAtTurn96": 100,
+      "firstZeroAfterReset": null
+    }
+  ],
+  "limits": [
+    "This reset prevents immediate dissolution caused by inherited zero confidence; it does not prevent later legitimate confidence loss.",
+    "Budget defeats and the separate PM vacancy deadline retain their rules.",
+    "These are synthetic constant-input trajectories, not forecasts for a live country."
+  ]
+}

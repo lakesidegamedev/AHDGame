@@ -9,6 +9,7 @@ import { executeCharacterAction } from "@/lib/actions/commands/executeAction";
 import type { ActionType, Character, User } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { recordApiRequestTimingSafely } from "@/lib/observability/requestTimings";
 
 // POST /api/actions/execute — Executes a political action (optionally in batch) and applies its effects to the character
 // Auth: requireHumanSession (bot tokens rejected)
@@ -32,6 +33,16 @@ export async function POST(request: Request) {
       ...(requestedCount != null ? { requestedCount } : {}),
       ...timings,
     });
+    recordApiRequestTimingSafely({
+      at: new Date(startedAt),
+      route: "/api/actions/execute",
+      durationMs: Date.now() - startedAt,
+      status: response.status,
+      result: response.status < 400 ? "success" : response.status >= 500 ? "error" : "rejected",
+      stages: timings,
+      ...(actionType ? { actionType } : {}),
+      ...(requestedCount != null ? { requestedCount } : {}),
+    });
     return response;
   };
   try {
@@ -42,7 +53,7 @@ export async function POST(request: Request) {
     const user = auth.user;
 
     stageStartedAt = Date.now();
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/actions/execute:${user.userId}`, 60, 60000);
     timings.authMs += Date.now() - stageStartedAt;
     if (!rateLimit.ok) return finish(rateLimitResponse(rateLimit.retryAfter));
 

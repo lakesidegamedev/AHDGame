@@ -14,6 +14,22 @@ import type { CurrencyCode } from "./currencies";
 import { RU_NATIONALITIES_SEATS } from "./ruSeats";
 
 import type { EraSeedModels } from "./economicModels";
+import { getRegionalExecutiveOfficeKey, getSubNationalLegislatureKey } from "./countryClientConfig";
+import {
+  SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES,
+  getApprovalSourceForGovernmentType,
+  getExecutiveFormationForGovernmentType,
+  getPrimaryWinnersForGovernmentType,
+  isDirectElection,
+  type ApprovalSource,
+  type CountryId,
+  type CountryStatus,
+  type ElectionMethod,
+  type ElectionPosition,
+  type ExecutiveFormation,
+  type GovernmentType,
+  type OpsVoteMultipliers,
+} from "./countriesCore";
 import { JP_IDENTITY } from "@/lib/countries/jp/identity";
 import { JP_ERAS } from "@/lib/countries/jp/eras";
 import { AT_ERAS } from "@/lib/countries/at/eras";
@@ -105,46 +121,8 @@ import { BLR_CONFIG } from "@/lib/countries/blr/institutionsFacts";
 import { UKR_CONFIG } from "@/lib/countries/ukr/institutionsFacts";
 import { BAL_CONFIG } from "@/lib/countries/bal/institutionsFacts";
 
-export type CountryId =
-  | "US"
-  | "UK"
-  | "DE"
-  | "JP"
-  | "IE"
-  | "BR"
-  | "CN"
-  | "NG"
-  | "HU"
-  | "PL"
-  | "RO"
-  | "YU"
-  | "BG"
-  | "BLR"
-  | "UKR"
-  | "CS"
-  | "BAL"
-  | "RU"
-  | "FR"
-  | "IT"
-  | "ES"
-  | "SE"
-  | "TR"
-  | "GR"
-  | "AT"
-  | "FI"
-  | "DD"
-  | "SCO"
-  | "WAL";
-
-/**
- * Discrete government system enum driving executive / election mechanics.
- * Mirrors the inline union previously declared on {@link CountryConfig.governmentType}.
- * Promoted to a named export so other modules (countryState runtime collection,
- * regime-conversion code paths) can reference it without re-declaring.
- */
-export type GovernmentType =
-  "presidential" | "parliamentaryMonarchy" | "parliamentaryRepublic" | "onePartyState";
-export type CountryStatus = "active" | "beta" | "coming-soon";
+// Re-export the client-safe core so every existing import from this module works.
+export * from "./countriesCore";
 
 export interface ChamberConfig {
   /** Internal key used in APIs, URLs, and BillChamber values */
@@ -238,28 +216,6 @@ export interface OfficeTypeConfig {
    */
   partyStrengthWeight: number;
 }
-
-/** Vote-to-seat/office allocation method for one political position.
- *  See docs/superpowers/specs/2026-06-27-election-systems-field-design.md. */
-export type ElectionMethod =
-  | "fptp" // single-seat plurality
-  | "pr_hareQuota" // multi-seat Largest Remainder (Hare quota)
-  | "pr_dhondt" // national highest-averages party allocation
-  | "sntv" // candidate plurality in a multi-member constituency; at most one seat each
-  | "pr_sainteLague" // odd-divisor proportional (DE Landtag)
-  | "ams" // additional-member system (DE Bundestag)
-  | "electoralCollege" // per-unit FPTP aggregated to a majority (US President)
-  | "parliamentary" // head of gov via coalition/confidence vote (no popular ballot)
-  | "ceremonial"; // head of state not contested in-system (monarch / appointed)
-
-/** Political positions whose election method a country can configure. */
-export type ElectionPosition =
-  | "lowerChamber"
-  | "upperChamber"
-  | "subNationalChamber"
-  | "subNationalExecutive"
-  | "headOfGovernment"
-  | "headOfState";
 
 /**
  * Electoral system definition for one chamber.
@@ -947,85 +903,6 @@ export const COUNTRY_CONFIGS: Record<CountryId, CountryConfig> = {
   DD: DD_CONFIG,
 };
 
-/** Ordered list of countries for the world map (active first, then beta, then coming-soon). */
-/**
- * The canonical registered-country list — every country that "exists" for players,
- * the base set the access layer (`getEnabledCountryIds`, `getAllCountryAccess`,
- * `getEconomyVisibleCountryIds`) filters from. Iterate THIS, not
- * `Object.keys(COUNTRY_CONFIGS)`, at any site that drives pickers, seeding, turn
- * processing, or data APIs — so latent secession countries (SCO/WAL), which are in
- * `COUNTRY_CONFIGS` for type safety but absent here, stay invisible and stateless
- * until the secession actuation (SP2) registers them.
- *
- * The 1979 Cold-War countries (HU/PL/RO/YU/BG/BLR/CS/BAL/SU/FR/IT/ES/SE/TR/DD) ARE
- * registered (real configs + seed data, gated per-preset by countryGameStates),
- * so they belong here — unlike the latent SCO/WAL.
- */
-export const COUNTRY_ORDER: CountryId[] = [
-  "US",
-  "UK",
-  "JP",
-  "DE",
-  "IE",
-  "BR",
-  "CN",
-  "NG",
-  "HU",
-  "PL",
-  "RO",
-  "YU",
-  "BG",
-  "CS",
-  "RU",
-  "FR",
-  "IT",
-  "ES",
-  "SE",
-  "TR",
-  "GR",
-  "AT",
-  "FI",
-  "DD",
-];
-
-/**
- * Presidential countries that run their own bespoke presidential-election engine
- * (national popular vote + spread + run-off) rather than the US electoral-college
- * engine. Once such a country is active, its President is ELECTED, so the
- * NPP-autonomy appointment fallback (`appointNppPresident`) must skip it.
- * While still `coming-soon` the appointment fallback still supplies a governing
- * brain (the election cycle is gated off until activation).
- */
-export const COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS = new Set<CountryId>(["NG"]);
-
-/**
- * Countries whose President is chosen by a LIVE election cycle rather than by
- * appointment. Superset of the bespoke set above: the US president is elected
- * through the electoral-college engine — `ensurePerpetualElections` anchors the
- * national president race to the preset's `president` cycle year (see
- * `CANONICAL_REAL_ELECTION_YEARS_BY_PRESET`) and writes `countryId: "US"`.
- *
- * The NPP-autonomy appointment fallback (`appointNppPresident`) must skip these
- * countries once active: a presidential vacancy there belongs to the election
- * engine, not to a party-blind favorability appointment. This matches prod,
- * where the US executive is only ever seated by `seatPresidentialExecutive`
- * (election resolution) — the appointment fallback never runs for the US on
- * prod because the v1 autonomy gate is false in player-enabled countries.
- */
-export const COUNTRIES_WITH_PRESIDENTIAL_ELECTION_CYCLES = new Set<CountryId>([
-  "US",
-  "BR",
-  ...COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS,
-]);
-
-/**
- * Countries that hold all national + regional offices in ONE concurrent general
- * election on a single multi-year cycle (vs the US staggered calendar). Their
- * president/house/senate/governor races all anchor to `ngGeneral` (see
- * `canonicalTurnsForCycle`), matching Nigeria's real concurrent 4-year cycle.
- */
-export const COUNTRIES_WITH_CONCURRENT_GENERAL_ELECTIONS = new Set<CountryId>(["NG"]);
-
 /**
  * Every configured CountryId, including latent secession countries (SCO/WAL).
  * This is the VALIDATION universe — request schemas accept any structurally-valid
@@ -1045,76 +922,8 @@ export const ZOD_COUNTRY_ENUM = ALL_COUNTRY_IDS as unknown as [
   ...CountryId[],
 ];
 
-/**
- * The two originally shipped countries — used for admin tools that are not yet generalized
- * (dual seed scope, sovereign debt issuer, some legacy cabinet flows). Prefer these constants
- * over string literals `"US"` / `"UK"` in application code.
- */
-/** Narrow literal pair — `CountryConfig.id` is typed as `CountryId`, so we name the subset explicitly. */
-export type UsUkCountryId = Extract<CountryId, "US" | "UK">;
-
-export const US_UK_COUNTRY_IDS: readonly UsUkCountryId[] = ["US", "UK"];
-
-/** Countries participating in the Eurozone currency union.
- *  All members must enact an EuroAdoptionProvision bill for
- *  gameState.eurozoneEnabled to flip true. UK is excluded — it never
- *  historically adopted EUR. */
-export const EU_EUROZONE_MEMBERS: CountryId[] = ["DE", "IE"];
-
 /** Default `countryId` when legacy documents omit it (historically US-only Congress). */
 export const DEFAULT_LEGACY_COUNTRY_ID = COUNTRY_CONFIGS.US.id;
-
-/**
- * Countries whose region `_id`s are country-prefixed (`HU_BUD`, `FR_IDF`, …).
- *
- * Region ids live in ONE global namespace — `states._id` is the primary key of
- * a shared collection, and stateMetrics/stateBaselines/macroMetrics/seat
- * records key by the same scalar — so the 1979-era countries encode the
- * composite {country, region} identity into the id itself (ISO-3166-2 style:
- * "US-AL", "HU-BU"). The legacy countries (US/UK/DE/JP/…) predate the
- * collision problem and keep bare codes ("AL", "SCO", "BW").
- *
- * Player-facing URLs hide the prefix (`/country/hu/region/BUD`):
- * {@link compactRegionCode} strips it when building links and
- * {@link canonicalRegionId} restores it when resolving route params. Both are
- * no-ops for legacy countries and for already-canonical input, so full-id URLs
- * keep working.
- */
-const PREFIXED_REGION_ID_COUNTRIES: ReadonlySet<CountryId> = new Set<CountryId>([
-  "FR",
-  "IT",
-  "ES",
-  "SE",
-  "TR",
-  "GR",
-  "AT",
-  "FI",
-  "HU",
-  "PL",
-  "RO",
-  "YU",
-  "BG",
-  "CS",
-  "BLR",
-  "UKR",
-  "BAL",
-]);
-
-/** The short, player-facing form of a region id ("HU_BUD" → "BUD"). */
-export function compactRegionCode(countryId: CountryId | string, regionId: string): string {
-  const prefix = `${countryId}_`;
-  return PREFIXED_REGION_ID_COUNTRIES.has(countryId as CountryId) && regionId.startsWith(prefix)
-    ? regionId.slice(prefix.length)
-    : regionId;
-}
-
-/** The canonical stored region id for a URL param ("BUD" → "HU_BUD"). */
-export function canonicalRegionId(countryId: CountryId | string, regionParam: string): string {
-  const prefix = `${countryId}_`;
-  return PREFIXED_REGION_ID_COUNTRIES.has(countryId as CountryId) && !regionParam.startsWith(prefix)
-    ? `${prefix}${regionParam}`
-    : regionParam;
-}
 
 /**
  * Institutional fields that may diverge by historical era for the same
@@ -1440,17 +1249,6 @@ export const ERA_COUNTRY_NAMES: Record<string, Partial<Record<CountryId, string>
   },
 };
 
-/** Country name for display, honoring per-era overrides when a preset is known. */
-export function getCountryDisplayName(id: CountryId, preset?: string): string {
-  const override = preset ? ERA_COUNTRY_NAMES[preset]?.[id] : undefined;
-  // Callers (ShortageHeatMap, commodity scope) sometimes pass an empty or
-  // stale id via `as CountryId`. Indexing COUNTRY_CONFIGS blindly threw
-  // "Cannot read properties of undefined (reading 'name')" and crashed the
-  // commodities tab (ticket #1115; same class as #1101).
-  const config = Object.hasOwn(COUNTRY_CONFIGS, id) ? COUNTRY_CONFIGS[id] : undefined;
-  return override ?? config?.name ?? id;
-}
-
 /**
  * Returns the top-level executive office key for a country
  * (e.g. "primeMinister" for UK/JP, "chancellor" for DE, "president" for US).
@@ -1476,52 +1274,6 @@ export function getHeadOfGovernmentOfficeKey(countryId: CountryId, preset?: stri
   return office?.key ?? getExecutiveOfficeKey(countryId, preset);
 }
 
-const COUNTRY_NAME_TO_ID: Record<string, CountryId> = Object.fromEntries(
-  COUNTRY_ORDER.map((id) => [COUNTRY_CONFIGS[id].name, id])
-);
-
-/**
- * Reverse lookup: full country name ("United Kingdom") → ISO `CountryId` ("UK").
- * Returns null when the name doesn't match a configured country, so callers can
- * decide whether to fall back (e.g. pass the name through to a flag API that
- * understands ISO codes and will 404 gracefully).
- */
-export function getCountryIdByName(name: string): CountryId | null {
-  return COUNTRY_NAME_TO_ID[name] ?? null;
-}
-
-/**
- * Number of candidates that advance from a party primary to the general
- * election, keyed by {@link CountryConfig.governmentType}. This mapping is the
- * single source of truth — countries no longer carry a per-config
- * `primaryWinners` field — so when a country's government type changes at
- * runtime, the primary cap follows automatically.
- *
- * - `presidential` → 1: one nominee per party (US-style single-winner race).
- * - `parliamentaryMonarchy` / `parliamentaryRepublic` → 3: top-3 advance
- *   (UK, JP, DE, IE) so the general phase has genuine intra-party
- *   competition for multi-seat allocations.
- * - `onePartyState` → 7: lets up to 7 same-party candidates advance so the
- *   general's PR allocation distributes seats across the dominant party's
- *   caucus instead of collapsing every regional seat onto one nominee.
- */
-export const PRIMARY_WINNERS_BY_GOVERNMENT_TYPE: Record<CountryConfig["governmentType"], number> = {
-  presidential: 1,
-  parliamentaryMonarchy: 3,
-  parliamentaryRepublic: 3,
-  onePartyState: 7,
-};
-
-/**
- * Resolve the primary-winner cap from a government type directly. Prefer this
- * when you already have a {@link CountryConfig.governmentType} value in hand.
- */
-export function getPrimaryWinnersForGovernmentType(
-  governmentType: CountryConfig["governmentType"]
-): number {
-  return PRIMARY_WINNERS_BY_GOVERNMENT_TYPE[governmentType];
-}
-
 /**
  * Resolve the primary-winner cap for a country by reading its current
  * {@link CountryConfig.governmentType}. Use this from election engines /
@@ -1533,39 +1285,6 @@ export function getPrimaryWinnersForCountry(countryId: CountryId): number {
   if (!config) return 1;
   return getPrimaryWinnersForGovernmentType(config.governmentType);
 }
-
-/**
- * Election types that elect a single office-holder via a directly-contested
- * ballot, so exactly one candidate per party may advance from the primary —
- * no matter the country's government type. These are the executive offices:
- * - `president` — national head of state (US/NG; 1 already under presidential
- *   govType, guarded here so parliamentary/one-party presidencies match).
- * - `governor` — the direct-elected regional executive across every country
- *   that has one (US/JP/CN state governors, UK First Ministers & Mayor of
- *   London, IE Cathaoirleach/Lord Mayors, SCO/WAL leaders — all typed
- *   `"governor"`).
- * - `uachtaran` — Ireland's directly-elected presidency.
- * - `ministerPresident` — a German Land's Minister-President (single-seat,
- *   `totalSeats: 1`, spawned with a primary window that mirrors its Landtag).
- *
- * The {@link PRIMARY_WINNERS_BY_GOVERNMENT_TYPE} table models *legislative*
- * multi-seat allocation (parliamentary → 3, onePartyState → 7). Applying that
- * cap to a single-seat executive race would let several same-party candidates
- * advance and split the office's single general-election vote — which is the
- * bug this set guards against. Multi-seat legislative types (`house`, `commons`,
- * `sangiin`, `bundestag`, `landtag`, `npcDelegate`, `dail`, `seanad`, …) are
- * deliberately absent so they keep the government-type cap. `senate` is
- * likewise excluded: single-seat in the US (already 1 via presidential
- * govType) but a multi-seat proportional chamber elsewhere (e.g. JP Sangiin).
- * `primeMinister` is confidence-based (no candidate primary), so it never
- * reaches this cap and is not listed.
- */
-export const SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES: ReadonlySet<string> = new Set([
-  "president",
-  "governor",
-  "uachtaran",
-  "ministerPresident",
-]);
 
 /**
  * Resolve the primary-winner cap for a specific (country, electionType).
@@ -1592,68 +1311,6 @@ export function getPrimaryWinnersForElection(countryId: CountryId, electionType:
 }
 
 /**
- * Per-regime vote-weight multipliers for one-party-state legislative
- * general elections. Multiplies the per-candidate weight in
- * `voteDistribution.ts`. `ruling = 3.0` and `approved = 0.375` together
- * produce ~80% ruling seat share with CN's typical primary output (7
- * ruling vs ~14 approved candidates). `independent` is treated the same
- * as `banned` — only recognised ruling/approved parties may field
- * legislative candidates in a one-party state.
- *
- * See `docs/plans/archive/2026-05/2026-05-27-ops-general-elections-design.md`
- * for the math and rationale.
- */
-export const DEFAULT_OPS_VOTE_MULTIPLIERS = {
-  ruling: 3.0,
-  approved: 0.375,
-  independent: 0.0,
-  banned: 0.0,
-} as const;
-
-export interface OpsVoteMultipliers {
-  ruling: number;
-  approved: number;
-  independent: number;
-  banned: number;
-}
-
-/**
- * How the executive is chosen after an election, keyed by
- * {@link CountryConfig.governmentType}.
- *
- * - `presidential` → `"direct_election"`: voters choose the executive directly.
- * - `parliamentaryMonarchy` / `parliamentaryRepublic` / `onePartyState` →
- *   `"confidence_of_legislature"`: the executive emerges from a legislative
- *   majority (or, in CN's case, from internal party confidence).
- *
- * Derived from `governmentType` so a future runtime regime change carries
- * executive-formation semantics along with it — no per-country override
- * needed.
- */
-export const EXECUTIVE_FORMATION_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  "direct_election" | "confidence_of_legislature"
-> = {
-  presidential: "direct_election",
-  parliamentaryMonarchy: "confidence_of_legislature",
-  parliamentaryRepublic: "confidence_of_legislature",
-  onePartyState: "confidence_of_legislature",
-};
-
-export type ExecutiveFormation =
-  (typeof EXECUTIVE_FORMATION_BY_GOVERNMENT_TYPE)[CountryConfig["governmentType"]];
-
-/**
- * Resolve the executive-formation mode from a government type directly.
- * Prefer this when you already have a {@link CountryConfig.governmentType} value.
- */
-export function getExecutiveFormationForGovernmentType(
-  governmentType: CountryConfig["governmentType"]
-): ExecutiveFormation {
-  return EXECUTIVE_FORMATION_BY_GOVERNMENT_TYPE[governmentType];
-}
-
-/**
  * Resolve the executive-formation mode for a country by reading its current
  * {@link CountryConfig.governmentType}. Falls back to `"direct_election"` when
  * the country is unknown.
@@ -1665,106 +1322,6 @@ export function getExecutiveFormationForCountry(countryId: CountryId): Executive
 }
 
 /**
- * True when the country's executive is directly elected by voters (presidential
- * systems). Convenience inverse of {@link isParliamentarySystem} for code that
- * specifically cares about election mechanics rather than regime type.
- */
-export function isDirectElection(
-  config: Pick<CountryConfig, "governmentType"> | null | undefined
-): boolean {
-  return config?.governmentType === "presidential";
-}
-
-/**
- * Pure-field variant of {@link isPresidentialCountry} / {@link isDirectElection}
- * for callers that have pre-resolved `governmentType` from the runtime
- * `countryState` collection (Phase 1b migration target).
- */
-export function isPresidentialGovernmentType(
-  governmentType: GovernmentType | null | undefined
-): boolean {
-  return governmentType === "presidential";
-}
-
-/**
- * Whether the executive can make acting (unconfirmed) cabinet appointments,
- * keyed by {@link CountryConfig.governmentType}.
- *
- * - `presidential` → `true`: legislatures confirm cabinet picks, so the
- *   executive needs an acting-appointment escape hatch for vacancies. Each
- *   acting appointment carries a national-approval penalty.
- * - `parliamentaryMonarchy` / `parliamentaryRepublic` / `onePartyState` →
- *   `false`: cabinet posts are filled directly by the PM/Premier from
- *   legislators of the governing party, so there's no confirmation gap to
- *   bridge with an acting appointment.
- */
-export const SUPPORTS_ACTING_APPOINTMENTS_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  boolean
-> = {
-  presidential: true,
-  parliamentaryMonarchy: false,
-  parliamentaryRepublic: false,
-  onePartyState: false,
-};
-
-/**
- * True when the country's executive can make acting (unconfirmed) cabinet
- * appointments. Derived from {@link CountryConfig.governmentType} so a
- * future regime change carries acting-appointment semantics with it.
- */
-export function supportsActingAppointments(
-  config: Pick<CountryConfig, "governmentType"> | null | undefined
-): boolean {
-  if (!config) return false;
-  return SUPPORTS_ACTING_APPOINTMENTS_BY_GOVERNMENT_TYPE[config.governmentType];
-}
-
-/**
- * Pure-field variant of {@link supportsActingAppointments} for callers that
- * have pre-resolved `governmentType` from the runtime `countryState`
- * collection (Phase 1b migration target).
- */
-export function supportsActingAppointmentsForGovernmentType(
-  governmentType: GovernmentType | null | undefined
-): boolean {
-  if (!governmentType) return false;
-  return SUPPORTS_ACTING_APPOINTMENTS_BY_GOVERNMENT_TYPE[governmentType];
-}
-
-/**
- * How country-level approval is derived each turn, keyed by
- * {@link CountryConfig.governmentType}.
- *
- * - `presidential` → `"president_favorability"`: approval tracks the
- *   directly-elected President character's favorability.
- * - `parliamentaryMonarchy` / `parliamentaryRepublic` / `onePartyState` →
- *   `"pm_favorability"`: approval tracks the head-of-government character
- *   (PM / Chancellor / Taoiseach / Premier).
- */
-export const APPROVAL_SOURCE_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  "president_favorability" | "pm_favorability"
-> = {
-  presidential: "president_favorability",
-  parliamentaryMonarchy: "pm_favorability",
-  parliamentaryRepublic: "pm_favorability",
-  onePartyState: "pm_favorability",
-};
-
-export type ApprovalSource =
-  (typeof APPROVAL_SOURCE_BY_GOVERNMENT_TYPE)[CountryConfig["governmentType"]];
-
-/**
- * Resolve the approval-derivation source from a government type directly.
- */
-export function getApprovalSourceForGovernmentType(
-  governmentType: CountryConfig["governmentType"]
-): ApprovalSource {
-  return APPROVAL_SOURCE_BY_GOVERNMENT_TYPE[governmentType];
-}
-
-/**
  * Resolve the approval-derivation source for a country by reading its current
  * {@link CountryConfig.governmentType}. Falls back to `"president_favorability"`
  * when the country is unknown.
@@ -1773,252 +1330,6 @@ export function getApprovalSourceForCountry(countryId: CountryId): ApprovalSourc
   const config = COUNTRY_CONFIGS[countryId];
   if (!config) return "president_favorability";
   return getApprovalSourceForGovernmentType(config.governmentType);
-}
-
-/**
- * Default for {@link CountryConfig.confidenceVoteMechanism} when a country
- * does not explicitly set the field, keyed by
- * {@link CountryConfig.governmentType}.
- *
- * - `parliamentaryMonarchy` / `parliamentaryRepublic` → `true`: government
- *   sits on legislative confidence and can fall to a VONC.
- * - `presidential` → `false`: the executive has a fixed term; impeachment
- *   is a separate mechanism handled outside the VONC flow.
- * - `onePartyState` → `false`: one-party systems block VONCs at runtime
- *   (e.g. CN's `onePartyConstraints.canTriggerNoConfidence()`) so the
- *   generic VONC path stays skipped rather than fired-and-rejected.
- */
-export const CONFIDENCE_VOTE_MECHANISM_DEFAULTS_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  boolean
-> = {
-  presidential: false,
-  parliamentaryMonarchy: true,
-  parliamentaryRepublic: true,
-  onePartyState: false,
-};
-
-/**
- * True when the country has an active no-confidence mechanism. Returns the
- * country's explicit override if set, otherwise the governmentType-derived
- * default. Use this in preference to reading `config.confidenceVoteMechanism`
- * directly so a country that hasn't bothered to set the field still gets
- * the right answer for its regime.
- */
-export function hasConfidenceVoteMechanism(
-  config: Pick<CountryConfig, "governmentType" | "confidenceVoteMechanism"> | null | undefined
-): boolean {
-  if (!config) return false;
-  if (typeof config.confidenceVoteMechanism === "boolean") {
-    return config.confidenceVoteMechanism;
-  }
-  return CONFIDENCE_VOTE_MECHANISM_DEFAULTS_BY_GOVERNMENT_TYPE[config.governmentType];
-}
-
-/**
- * Pure-field variant of {@link hasConfidenceVoteMechanism} for callers that
- * have pre-resolved `governmentType` from the runtime `countryState`
- * collection (Phase 1b migration target). The `override` parameter takes
- * the country's explicit `confidenceVoteMechanism` setting from
- * COUNTRY_CONFIGS (immutable seed data), with `undefined` deferring to the
- * governmentType-derived default.
- */
-export function hasConfidenceVoteMechanismForGovernmentType(
-  governmentType: GovernmentType | null | undefined,
-  override: boolean | undefined
-): boolean {
-  if (!governmentType) return false;
-  if (typeof override === "boolean") return override;
-  return CONFIDENCE_VOTE_MECHANISM_DEFAULTS_BY_GOVERNMENT_TYPE[governmentType];
-}
-
-/**
- * Default for {@link CountryConfig.snapElectionsAllowed} when a country does
- * not explicitly set the field, keyed by {@link CountryConfig.governmentType}.
- *
- * - `parliamentaryMonarchy` / `parliamentaryRepublic` → `true`: the governing
- *   party can call an early dissolution.
- * - `presidential` → `false`: fixed terms; no mid-term dissolution.
- * - `onePartyState` → `false`: dominant party doesn't need a strategic snap.
- */
-export const SNAP_ELECTIONS_ALLOWED_DEFAULTS_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  boolean
-> = {
-  presidential: false,
-  parliamentaryMonarchy: true,
-  parliamentaryRepublic: true,
-  onePartyState: false,
-};
-
-/**
- * True when the country can call snap elections mid-term. Returns the
- * country's explicit override if set, otherwise the governmentType-derived
- * default. Mirrors {@link hasConfidenceVoteMechanism}: parliamentary regimes
- * default to allowing snaps; presidential and one-party states do not.
- */
-export function supportsSnapElections(
-  config: Pick<CountryConfig, "governmentType" | "snapElectionsAllowed"> | null | undefined
-): boolean {
-  if (!config) return false;
-  if (typeof config.snapElectionsAllowed === "boolean") {
-    return config.snapElectionsAllowed;
-  }
-  return SNAP_ELECTIONS_ALLOWED_DEFAULTS_BY_GOVERNMENT_TYPE[config.governmentType];
-}
-
-/**
- * Pure-field variant of {@link supportsSnapElections} for callers that
- * have pre-resolved `governmentType` from the runtime `countryState`
- * collection (Phase 1b migration target).
- */
-export function supportsSnapElectionsForGovernmentType(
-  governmentType: GovernmentType | null | undefined,
-  override: boolean | undefined
-): boolean {
-  if (!governmentType) return false;
-  if (typeof override === "boolean") return override;
-  return SNAP_ELECTIONS_ALLOWED_DEFAULTS_BY_GOVERNMENT_TYPE[governmentType];
-}
-
-/**
- * Chamber keys whose seated members are eligible for direct cabinet
- * appointment, resolved against the country's governmentType and legislature.
- *
- * - Returns the country's explicit `cabinetEligibleChamberKeys` override if
- *   set (e.g. JP includes both `["shugiin", "sangiin"]`).
- * - Returns `[]` for presidential countries — cabinet appointments don't
- *   draw from a chamber in those systems.
- * - Otherwise returns `[lowerChamber.key]` (parliamentary monarchies,
- *   parliamentary republics, and one-party states pull cabinet ministers
- *   from the lower chamber by default).
- *
- * The presence/absence of a cabinet-chamber concept follows
- * {@link CountryConfig.governmentType} so a future regime change carries
- * cabinet-eligibility semantics with it; the specific chamber-key value
- * tracks the country's actual lower-chamber config.
- */
-export function getCabinetEligibleChamberKeys(
-  config:
-    | Pick<CountryConfig, "governmentType" | "cabinetEligibleChamberKeys" | "legislature">
-    | null
-    | undefined
-): string[] {
-  if (!config) return [];
-  if (config.cabinetEligibleChamberKeys) return config.cabinetEligibleChamberKeys;
-  if (!isParliamentarySystem(config)) return [];
-  return [config.legislature.lowerChamber.key];
-}
-
-/**
- * Default for {@link CountryConfig.hasImperialRole} when a country does not
- * explicitly set the field, keyed by {@link CountryConfig.governmentType}.
- *
- * - `parliamentaryMonarchy` → `true`: constitutional monarchies always have a
- *   ceremonial monarch / emperor (UK, JP).
- * - All other types → `false`: presidential / one-party / parliamentary
- *   republic systems may or may not have a ceremonial head of state, so the
- *   default is conservative. Countries with a ceremonial figurehead override
- *   explicitly (e.g. DE for Bundespräsident).
- */
-export const HAS_IMPERIAL_ROLE_DEFAULTS_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  boolean
-> = {
-  presidential: false,
-  parliamentaryMonarchy: true,
-  parliamentaryRepublic: false,
-  onePartyState: false,
-};
-
-/**
- * True when the country has a ceremonial imperial head of state (monarch,
- * emperor, or non-executive president). Returns the country's explicit
- * override if set, otherwise the governmentType-derived default. Renamed
- * from the field name to avoid shadowing `config.hasImperialRole`.
- */
-export function isImperialCountry(
-  config: Pick<CountryConfig, "governmentType" | "hasImperialRole"> | null | undefined
-): boolean {
-  if (!config) return false;
-  if (typeof config.hasImperialRole === "boolean") {
-    return config.hasImperialRole;
-  }
-  return HAS_IMPERIAL_ROLE_DEFAULTS_BY_GOVERNMENT_TYPE[config.governmentType];
-}
-
-/**
- * Pure-field variant of {@link isImperialCountry} for callers that have
- * pre-resolved `governmentType` from the runtime `countryState`
- * collection (Phase 1b migration target).
- */
-export function isImperialForGovernmentType(
-  governmentType: GovernmentType | null | undefined,
-  override: boolean | undefined
-): boolean {
-  if (!governmentType) return false;
-  if (typeof override === "boolean") return override;
-  return HAS_IMPERIAL_ROLE_DEFAULTS_BY_GOVERNMENT_TYPE[governmentType];
-}
-
-/**
- * Default for {@link CountryConfig.headOfStateTitle} when a country does not
- * explicitly set the field, keyed by {@link CountryConfig.governmentType}.
- *
- * - `parliamentaryMonarchy` → `"Monarch"`: generic constitutional-monarch
- *   term. Countries with culturally-specific titles override (JP uses
- *   `"Emperor"`).
- * - All other types → `"President"`: presidential systems (where head of
- *   state = executive), parliamentary republics (ceremonial president), and
- *   one-party states (ceremonial president) all use "President".
- */
-export const HEAD_OF_STATE_TITLE_DEFAULTS_BY_GOVERNMENT_TYPE: Record<
-  CountryConfig["governmentType"],
-  string
-> = {
-  presidential: "President",
-  parliamentaryMonarchy: "Monarch",
-  parliamentaryRepublic: "President",
-  onePartyState: "President",
-};
-
-/**
- * Resolve the head-of-state title for a country. Returns the explicit
- * override if set, otherwise the governmentType-derived default.
- */
-export function getHeadOfStateTitle(
-  config: Pick<CountryConfig, "governmentType" | "headOfStateTitle"> | null | undefined
-): string {
-  if (!config) return "President";
-  if (config.headOfStateTitle) return config.headOfStateTitle;
-  return HEAD_OF_STATE_TITLE_DEFAULTS_BY_GOVERNMENT_TYPE[config.governmentType];
-}
-
-/**
- * Office-type key of a country's ceremonial head of state (the office marked
- * `isHeadOfState`), or null when none exists. Used to resolve the office-based
- * head of state for non-monarchy systems (CN President of the PRC, IE Uachtarán).
- * Monarchies (parliamentaryMonarchy) render via the imperial-character system
- * and return null here.
- */
-export function getHeadOfStateOfficeType(
-  config: Pick<CountryConfig, "officeTypes"> | null | undefined
-): string | null {
-  return config?.officeTypes.find((o) => o.isHeadOfState)?.key ?? null;
-}
-
-/**
- * Pure-field variant of {@link getHeadOfStateTitle} for callers that have
- * pre-resolved `governmentType` from the runtime `countryState`
- * collection (Phase 1b migration target).
- */
-export function getHeadOfStateTitleForGovernmentType(
-  governmentType: GovernmentType | null | undefined,
-  override: string | undefined
-): string {
-  if (!governmentType) return "President";
-  if (override) return override;
-  return HEAD_OF_STATE_TITLE_DEFAULTS_BY_GOVERNMENT_TYPE[governmentType];
 }
 
 /**
@@ -2048,53 +1359,6 @@ export const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>>
 };
 
 /**
- * State-aware regional-executive label. Overrides the country-level title
- * for regions whose executive has a distinct title (UK LON → "Mayor of
- * London"); falls back to {@link getRegionalBillAssentTitle} otherwise.
- *
- * Mirrors the per-state branching in `getRegionalExecutive` so bill-flow
- * UI (sponsor notifications, office page titles, bill-detail headers)
- * renders the right executive name for each region.
- */
-export function getRegionalBillAssentTitleForState(
-  countryId: CountryId,
-  stateId: string | undefined | null
-): string {
-  if (countryId === "UK" && stateId && stateId.toUpperCase() === "LON") {
-    return "Mayor of London";
-  }
-  if (countryId === "IE" && stateId) {
-    const upper = stateId.toUpperCase();
-    if (upper === "DUB") return "Lord Mayor of Dublin";
-    if (upper === "COR") return "Lord Mayor of Cork";
-    if (upper === "LIM") return "Mayor of Limerick";
-    if (upper === "GAL") return "Mayor of Galway";
-    // Other IE regions fall through to default "Cathaoirleach" via
-    // regionalBillAssentTitle on the country config.
-  }
-  return getRegionalBillAssentTitle(countryId);
-}
-
-/**
- * Short label for the regional chief executive who signs or vetoes sub-national bills
- * (filters, timeline, status badges). Uses {@link CountryConfig.regionalBillAssentTitle} when set.
- *
- * For per-region UI surfaces, prefer {@link getRegionalBillAssentTitleForState} so
- * regions with distinct executive titles (e.g. UK LON's Mayor of London)
- * render the right label.
- */
-export function getRegionalBillAssentTitle(countryId: CountryId): string {
-  const cfg = COUNTRY_CONFIGS[countryId];
-  if (cfg.regionalBillAssentTitle) return cfg.regionalBillAssentTitle;
-  const key = REGIONAL_BILL_ASSENT_OFFICE_KEY[countryId];
-  if (key) {
-    const office = getOfficeTypeConfig(countryId, key);
-    if (office) return office.label;
-  }
-  return "Governor";
-}
-
-/**
  * Returns the `officeType` key used on `electedOfficials` for the country's
  * regional chief executive — "governor" for US / UK / JP, "ministerPresident"
  * for DE. UK and JP recycle the "governor" key for their devolved executives
@@ -2103,10 +1367,6 @@ export function getRegionalBillAssentTitle(countryId: CountryId): string {
  * Display labels diverge per-country (and per-state for UK) and are resolved
  * by `getRegionalExecutive` in `src/lib/states/regionalExecutive.ts`.
  */
-export function getRegionalExecutiveOfficeKey(countryId: CountryId): string {
-  return REGIONAL_BILL_ASSENT_OFFICE_KEY[countryId] ?? "governor";
-}
-
 /**
  * Returns the set of major party IDs for FPTP spoiler modelling.
  * For the UK, the set is region-dependent (SNP/Labour in Scotland, etc.).
@@ -2153,21 +1413,6 @@ export function getMajorPartiesForRegion(
  */
 export function getPartyStrengthWeight(countryId: CountryId, officeKey: string): number {
   return getOfficeTypeConfig(countryId, officeKey)?.partyStrengthWeight ?? 0.9;
-}
-
-/**
- * Returns the office-type key for the sub-national legislature (e.g. "stateSenate" for US,
- * "regionalCouncil" for UK/JP). Uses the explicit `subNationalChamber` config when
- * available; otherwise falls back to "stateSenate".
- *
- * Why: the naïve `officeTypes.find(o => o.isSubNational && !o.isExecutive)` picks up
- * sub-national *executive* roles (governor, premier) first because `isExecutive` only
- * tracks national-level executives.
- */
-export function getSubNationalLegislatureKey(countryId: CountryId): string {
-  const config = getCountryConfig(countryId);
-  if (config.subNationalChamber) return config.subNationalChamber.key;
-  return "stateSenate";
 }
 
 /** Behavioral shape of a region-appointable seat in the admin seat appointer. */
@@ -2359,64 +1604,11 @@ export function getExecutiveEndorseableElectionTypes(countryId: CountryId): stri
 }
 
 /**
- * Returns the locale code for user-facing text rendered for the given country.
- * UK → en-GB; everything else defaults to en-US.
- */
-export function getCountryLocale(countryId: CountryId): "en-US" | "en-GB" {
-  return countryId === "UK" ? "en-GB" : "en-US";
-}
-
-/**
- * True when the country runs on the parliamentary code path — executive
- * emerges from legislative confidence rather than a direct election.
- *
- * Covers `"parliamentaryMonarchy"`, `"parliamentaryRepublic"`, and
- * `"onePartyState"`. One-party states use the parliamentary mechanics for
- * now (PM appointment, regional budgets, legislation freeze, etc.) and will
- * diverge in a future one-party subsystem.
- *
- * Use this in preference to comparing against a single enum literal so
- * future enum additions keep the same shared-behaviour surface area.
- */
-export function isParliamentarySystem(
-  config: Pick<CountryConfig, "governmentType"> | null | undefined
-): boolean {
-  return isParliamentarySystemForGovernmentType(config?.governmentType);
-}
-
-/**
- * Pure-field variant of {@link isParliamentarySystem} for callers that
- * have pre-resolved `governmentType` from the runtime `countryState`
- * collection (Phase 1b migration target).
- */
-export function isParliamentarySystemForGovernmentType(
-  governmentType: GovernmentType | null | undefined
-): boolean {
-  return (
-    governmentType === "parliamentaryMonarchy" ||
-    governmentType === "parliamentaryRepublic" ||
-    governmentType === "onePartyState"
-  );
-}
-
-const REGIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
-  DE: "Government Statement",
-};
-
-/**
- * User-facing name of the regional "State of the State" analogue.
- * Defaults to "State of the State" when no country-specific override exists.
- */
-export function getRegionalAddressName(countryId: CountryId): string {
-  return REGIONAL_ADDRESS_NAME[countryId] ?? "State of the State";
-}
-
-/**
  * ⚠️ `?.` IS LOAD-BEARING, NOT DEFENSIVE NOISE. The registry is `Partial`, and
  * `addressNames` is optional in the country contract because China has no row
- * here at all -- its reader below falls back to "Address to the Nation". A
- * country that omits the field therefore stays omitted rather than acquiring
- * someone else's phrase.
+ * here at all -- `getNationalAddressName` falls back to "Address to the
+ * Nation". A country that omits the field therefore stays omitted rather than
+ * acquiring someone else's phrase.
  */
 export const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
   US: US_IDENTITY.addressNames?.national,
@@ -2427,50 +1619,18 @@ export const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
 };
 
 /**
- * User-facing name of the national-level address (head of government's
- * equivalent to the governor's State of the State). Defaults to "Address
- * to the Nation" when no country-specific override exists.
+ * Display and label helpers now live in `countryClientConfig.ts` (generated,
+ * client-safe). They are re-exported here so every existing server import keeps
+ * working, and the two this module still uses are imported above.
  */
-export function getNationalAddressName(countryId: CountryId): string {
-  return NATIONAL_ADDRESS_NAME[countryId] ?? "Address to the Nation";
-}
-
-/**
- * User-facing name for the head-of-government order at the national scope.
- * Presidential systems use "Executive Order"; parliamentary systems use
- * "Order in Council" (the historical British constitutional term, applied
- * across all parliamentary countries in the sim for consistency).
- */
-export function getExecutiveOrderName(countryId: CountryId): string {
-  const config = COUNTRY_CONFIGS[countryId];
-  return getExecutiveOrderNameForGovernmentType(config?.governmentType);
-}
-
-/**
- * Pure-field variant of {@link getExecutiveOrderName} for callers that have
- * pre-resolved `governmentType` from the runtime `countryState` collection
- * (Phase 1b migration target).
- */
-export function getExecutiveOrderNameForGovernmentType(
-  governmentType: GovernmentType | null | undefined
-): string {
-  return governmentType === "presidential" ? "Executive Order" : "Order in Council";
-}
-
-/**
- * Plural form for headers ("Executive Orders" vs "Orders in Council") — the
- * naive `+ "s"` would produce "Order in Councils" which is grammatically wrong.
- */
-export function getExecutiveOrderNamePlural(countryId: CountryId): string {
-  const config = COUNTRY_CONFIGS[countryId];
-  return getExecutiveOrderNamePluralForGovernmentType(config?.governmentType);
-}
-
-/**
- * Pure-field variant of {@link getExecutiveOrderNamePlural}.
- */
-export function getExecutiveOrderNamePluralForGovernmentType(
-  governmentType: GovernmentType | null | undefined
-): string {
-  return governmentType === "presidential" ? "Executive Orders" : "Orders in Council";
-}
+export {
+  getCountryDisplayName,
+  getCountryIdByName,
+  getExecutiveOrderName,
+  getExecutiveOrderNamePlural,
+  getNationalAddressName,
+  getRegionalBillAssentTitle,
+  getRegionalBillAssentTitleForState,
+  getRegionalExecutiveOfficeKey,
+  getSubNationalLegislatureKey,
+} from "./countryClientConfig";

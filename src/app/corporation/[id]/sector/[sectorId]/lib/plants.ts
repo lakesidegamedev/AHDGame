@@ -43,9 +43,24 @@ export interface IdleCauseMeta {
  * it did not do it in a plant. `facilityVocabulary` supplies both nouns, so
  * this stays one source of copy instead of seventeen.
  */
+/**
+ * State-scoped outputs (construction, freight, healthcare, real estate) sell
+ * only where they are made, so a shortage on the world or national market
+ * does not lift this sector's demand (ticket 1700).
+ */
+function localMarketNote(outputs: string[]): string {
+  if (outputs.length === 0) return "";
+  const names =
+    outputs.length === 1
+      ? outputs[0]
+      : `${outputs.slice(0, -1).join(", ")} and ${outputs[outputs.length - 1]}`;
+  return ` ${names} ${outputs.length === 1 ? "sells" : "sell"} only in this state, so a shortage elsewhere does not raise demand here.`;
+}
+
 export function idleCauseMeta(
   sectorType: OperatingSectorType | string | null | undefined,
-  bankCapacityShare?: number
+  bankCapacityShare?: number,
+  localMarketOutputs: string[] = []
 ): Record<PlantIdleCauseKey, IdleCauseMeta> {
   const v = facilityVocabulary(sectorType);
   const sites = v.plural;
@@ -59,12 +74,17 @@ export function idleCauseMeta(
     demand: {
       label: "Demand limited",
       tone: "warning",
-      help: "Recent sales did not support a full run, so your plants are producing less to avoid making more unsold goods. Output rises as buyers take more.",
+      help: `Recent sales did not support a full run, so your plants are producing less to avoid making more unsold goods. Output rises as buyers take more.${localMarketNote(localMarketOutputs)}`,
     },
     ramping: {
       label: "Ramping up",
       tone: "info",
       help: `You sold everything you made last turn, so your ${sites} are stepping back up toward a full run. Output rises each turn while buyers keep taking it, faster when the market is short.`,
+    },
+    cash: {
+      label: "Short of cash",
+      tone: "warning",
+      help: `Your company could not pay the full bill for ${run}, so part of it stopped. Add cash to the company or cut costs to run more.`,
     },
     strike: {
       label: "Strike",
@@ -84,7 +104,7 @@ export function idleCauseMeta(
     staffing: {
       label: "Short of workers",
       tone: "warning",
-      help: `Your ${sites} did not have enough workers for a full run. Hire or raise pay until staffing catches up.`,
+      help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is.`,
     },
     bank: {
       label: "Reserved for your bank network",
@@ -109,17 +129,47 @@ export function idleCauseMeta(
   };
 }
 
-/** Tailwind classes per tone, for meter fills and legend dots. */
-export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> &
-  Partial<Record<PlantIdleCauseKey, string>> = {
+/**
+ * Tailwind classes per tone, for meter fills and legend dots.
+ *
+ * Tones carry severity, not identity. A capacity meter needs identity: several
+ * causes can share a severity while asking the player to do different things,
+ * so each cause takes its own swatch from `IDLE_CAUSE_FILL`. Chart swatches are
+ * the documented exception to the semantic-token rule (docs/DESIGN.md): a
+ * capacity meter needs more hues than the status tokens provide.
+ */
+export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> = {
   sold: "bg-success",
   unsold: "bg-warning",
   warning: "bg-warning/50",
-  inputs: "bg-warning/50",
-  staffing: "bg-orange-500/50",
   error: "bg-error/60",
   info: "bg-info/50",
   muted: "bg-muted/40",
+};
+
+/**
+ * One swatch per idle cause, used for both the meter segment and its legend
+ * dot so the two can always be matched.
+ *
+ * The hues are deliberately spread around the wheel rather than grouped by
+ * severity: "waiting on inputs" and "demand limited" are both warnings, but one
+ * is solved by buying and the other by waiting, so they must not look alike.
+ * Keep every entry unique; `plants.test.ts` fails the build if two causes
+ * collide, because a legend with two identical dots teaches nothing.
+ */
+export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
+  inputs: "bg-amber-500/60",
+  demand: "bg-rose-500/50",
+  ramping: "bg-sky-400/60",
+  cash: "bg-yellow-300/60",
+  strike: "bg-error/80",
+  disaster: "bg-fuchsia-600/55",
+  policy: "bg-indigo-400/55",
+  staffing: "bg-orange-600/60",
+  bank: "bg-teal-400/55",
+  deposits: "bg-lime-500/55",
+  mothballed: "bg-muted/45",
+  other: "bg-slate-500/30",
 };
 
 /**

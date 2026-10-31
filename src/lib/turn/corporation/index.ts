@@ -1,4 +1,5 @@
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
@@ -25,6 +26,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getDb } from "@/lib/mongodb";
 import { refreshNationalBudgetRevenue } from "@/lib/budget/revenue";
 import { buildCorporationLookups } from "./buildLookups";
+import { deferAfterTurn, drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import { buildFreightBillingBySector } from "./freightBillingTurn";
 import { USE_GROWTH_INCREMENT, businessAcumenGrowthMultiplier } from "@/lib/stats/statsConstants";
 import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
@@ -46,6 +48,7 @@ import { processAdvertisingTurn } from "@/lib/advertising/settlementTurn";
 import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
 import type { CoverageSectorInput } from "@/lib/advertising/rules/coverage";
 import type { CorporationTurnOptions } from "./corporationTurnOptions";
+import { transitionAnchorTurn } from "@/lib/market/producerMarket/transitionRules";
 import { persistNppManufacturingProjects } from "./persistManufacturingProjects";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
@@ -117,14 +120,16 @@ import { placePendingShareIssuances } from "@/lib/equities/primaryMarket";
 import { creditEquityPoolsBatch } from "@/lib/equities/marketPool";
 import { partitionedBulkWrite } from "./partitionedBulkWrite";
 import {
-  applyPoliticalMediaOrderEffect,
   loadPoliticalMediaOrdersForClearing,
-  savePoliticalMediaSettlementPlan,
-  settlePoliticalMediaOrder,
+  savePoliticalMediaSettlementPlans,
   type PoliticalMediaOrderForClearing,
 } from "@/lib/politicalMedia/journal";
+import { settlePoliticalMediaOrdersTurn } from "./politicalMediaSettlement";
 import { applyMediaEditorialEffects } from "@/lib/mediaEditorial/applyEffects";
-import { addSettledPoliticalAttention } from "@/lib/mediaOperatingModels/reach";
+import {
+  addSettledPoliticalAttention,
+  type SettledPoliticalAttentionOrder,
+} from "@/lib/mediaOperatingModels/reach";
 import { applyOperatingCashThenDevelopmentCash } from "./manufacturingDevelopmentCashSettlement";
 import { loadVentureBoostBySectorId, processProductVentures } from "@/lib/products/venture/turn";
 import { ventureDomainsEnabled } from "@/lib/products/venture/access";
@@ -137,7 +142,6 @@ import {
 } from "@/lib/products/mediaProductPersistence";
 import {
   attributeMediaProductSales,
-  paidPoliticalMediaSellerReceipts,
   reconcileMediaProductDelivery,
   type PaidPoliticalMediaSellerAmount,
 } from "@/lib/products/rules/mediaProductSales";
@@ -201,7 +205,7 @@ export async function processCorporationTurn(
     getLabourSystemMode(),
   ]);
   mark("preamble");
-  if (marketGovernorConfig?.bankUnderwritingEnabled === true) {
+  if (marketGovernorConfig?.privateBankingEnabled === true) {
     await resumeFoundingUnderwritingPlans(db, now);
   }
   const equityPoolTurn = await processEquityMarketPoolTurn(
@@ -458,7 +462,6 @@ export async function processCorporationTurn(
   market.marketRecoveryStage = normalizeMarketRecoveryStage(
     marketGovernorConfig?.marketRecoveryStage
   );
-  market.shortageBuildSpeedupEnabled = marketGovernorConfig?.shortageBuildSpeedupEnabled === true;
   market.mediaRegulationEnabled = mediaRegulationEnabled;
   market.mediaEditorialEnabled = mediaEditorialEnabled;
   if (mediaRegulationEnabled) {
@@ -531,12 +534,14 @@ export async function processCorporationTurn(
     treasuryCashLedgerEnabled,
     fundedProducerTurn: producerPath === "funded",
   });
+  // One read, one guarded bulk write and one re-read for the whole turn's
+  // plans, instead of two round trips per order. The map below stays keyed by
+  // THIS turn's clearing output, exactly as before; the durable copy the saver
+  // returns is what a replay settles from.
+  await savePoliticalMediaSettlementPlans(db, politicalMediaSettlementPlans);
   const plannedPoliticalMediaOrders = new Map(
     politicalMediaSettlementPlans.map(({ orderId, plan }) => [orderId, plan])
   );
-  for (const { orderId, plan } of politicalMediaSettlementPlans) {
-    await savePoliticalMediaSettlementPlan(db, orderId, plan);
-  }
   contractedByCorpCommodity = clearingContractedByCorpCommodity;
   if (mediaEditorialEnabled && !mediaOperatingModelsEnabled && market.editorialOutletsByState) {
     await applyMediaEditorialEffects({
@@ -772,6 +777,12 @@ export async function processCorporationTurn(
     if (market.marketRecoveryStage)
       throw new Error("marketRecoveryStage must be 0 on a funded producer turn");
     const worldEpoch = gameState!.worldEpochId!;
+    const transitionAnchor = transitionAnchorTurn(
+      gameState?.producerOpening?.worldEpoch === worldEpoch
+        ? gameState.producerOpening.turn + 1
+        : undefined,
+      marketGovernorConfig?.producerTransitionPackageEnabled
+    );
     const earlier = await db
       .collection("producerEconomyTurns")
       .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
@@ -796,16 +807,10 @@ export async function processCorporationTurn(
         privateBankingEnabled,
         advertisingInput: true,
         ...producerStageEnv(marketGovernorConfig),
-        transitionFirstFundedTurn:
-          gameState?.producerOpening?.worldEpoch === worldEpoch
-            ? gameState.producerOpening.turn + 1
-            : undefined,
+        transitionFirstFundedTurn: transitionAnchor,
       } as unknown as ProducerPhysicalEnv,
       seedHouseholds: earlier == null,
-      firstFundedTurn:
-        gameState?.producerOpening?.worldEpoch === worldEpoch
-          ? gameState.producerOpening.turn + 1
-          : undefined,
+      firstFundedTurn: transitionAnchor,
     }).catch((error: unknown) => {
       throw new TurnMustStopError("corporationTurn", error);
     });
@@ -860,6 +865,8 @@ export async function processCorporationTurn(
     funded
   );
   mark("processSectors(CPU)");
+  // The previous turn's deferred shadow must land before this one reads it.
+  await drainDeferredTurnWork();
   await runProducerMarketShadowPhase(db, {
     // Never measure a shadow beside the live funded market in the same turn.
     // The shadow is telemetry inside this phase's timeout. Skip it when the
@@ -874,6 +881,8 @@ export async function processCorporationTurn(
     lookups,
     env: sectorTurnEnv,
     sectorOps,
+    // Telemetry only: the market run, close and evidence finish after the turn.
+    defer: deferAfterTurn,
   });
 
   // Phase 2b: NPP corporation AI decisions, budgets, expansion, dividends
@@ -1151,62 +1160,29 @@ export async function processCorporationTurn(
     mark("advertisingSettlement");
   }
 
-  const settledPoliticalMediaOrders = [];
   const currentTurnNumber = turn ?? gameState?.currentTurn ?? 0;
-  const plannedPoliticalUnitsBySectorId = new Map<string, number>();
-  if (mediaProductSlatesEnabled) {
-    for (const order of politicalMediaOrders) {
-      const plan = order.settlementPlan ?? plannedPoliticalMediaOrders.get(order.orderId);
-      if (plan?.plannedTurn !== currentTurnNumber) continue;
-      for (const seller of plan.sellers) {
-        plannedPoliticalUnitsBySectorId.set(
-          seller.sectorId,
-          (plannedPoliticalUnitsBySectorId.get(seller.sectorId) ?? 0) + seller.units
-        );
-      }
-    }
-  }
-  const paidPoliticalSellerBySectorId = new Map<string, PaidPoliticalMediaSellerAmount>();
-  if (politicalMediaMarketEnabled) {
-    for (const order of politicalMediaOrders) {
-      // New plans were already durably saved before sector P&L writes. The
-      // loaded order is an opening snapshot, so do not issue the same plan
-      // read/CAS a second time after bulk writes.
-      if (!order.settlementPlan && !plannedPoliticalMediaOrders.has(order.orderId)) continue;
-      const results = await settlePoliticalMediaOrder(db, order.orderId, turn ?? 0);
-      const plan = order.settlementPlan ?? plannedPoliticalMediaOrders.get(order.orderId);
-      if (mediaProductSlatesEnabled && plan?.plannedTurn === currentTurnNumber) {
-        for (const seller of paidPoliticalMediaSellerReceipts({
-          orderId: order.orderId,
-          sellers: plan.sellers,
-          results,
-          orderAlreadySettled: order.status === "settled",
-        })) {
-          const prior = paidPoliticalSellerBySectorId.get(seller.sectorId) ?? {
-            units: 0,
-            amountAnchor: 0,
-          };
-          paidPoliticalSellerBySectorId.set(seller.sectorId, {
-            units: prior.units + seller.units,
-            amountAnchor: prior.amountAnchor + seller.amountAnchor,
-          });
-        }
-      }
-      const settled =
-        order.status === "settled" ||
-        (results.length > 0 &&
-          results.every((result) => result.status === "applied" || result.status === "replayed"));
-      if (settled && plan?.plannedTurn === (turn ?? gameState?.currentTurn ?? 0)) {
-        settledPoliticalMediaOrders.push({
-          orderId: order.orderId,
-          status: "settled" as const,
-          identity: order.identity,
-          settlementPlan: plan,
-        });
-      }
-      await applyPoliticalMediaOrderEffect(db, order.orderId);
-    }
-  }
+  // One journaled move per order, one bulk receipt write for the cohort, and
+  // every settled order's effect applied in bulk. See the module for the move
+  // shape and the refusal path.
+  const {
+    plannedUnitsBySectorId: plannedPoliticalUnitsBySectorId,
+    paidSellerBySectorId: paidPoliticalSellerBySectorId,
+    settledOrders: settledPoliticalMediaOrders,
+  } = politicalMediaMarketEnabled
+    ? await settlePoliticalMediaOrdersTurn({
+        db,
+        orders: politicalMediaOrders,
+        turn: turn ?? 0,
+        currentTurnNumber,
+        plannedByOrderId: plannedPoliticalMediaOrders,
+        mediaProductSlatesEnabled,
+      })
+    : {
+        plannedUnitsBySectorId: new Map<string, number>(),
+        paidSellerBySectorId: new Map<string, PaidPoliticalMediaSellerAmount>(),
+        settledOrders: [] as SettledPoliticalAttentionOrder[],
+      };
+  if (politicalMediaMarketEnabled) mark("politicalMediaOrders");
 
   if (mediaProductSlatesEnabled && lookups.mediaProductProjectsBySectorId) {
     const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
@@ -1275,10 +1251,8 @@ export async function processCorporationTurn(
     });
   }
 
-  // Contracts and surveys read the post-bulkWrite snapshot so this turn's
-  // mothball / production-policy / cash writes are visible. Matching before
-  // the write would lock volume against a plant this pass just idled, and
-  // a survey debit would lose to the reinvestment `$set liquidCapital`.
+  // Contracts read the post-bulkWrite snapshot, so this turn's mothball and
+  // production-policy writes are visible to matching.
   await processNppSupplyAgreements(db, turn ?? 0, now, market.plantsEnabled);
   mark("nppSupplyAgreements");
 
@@ -1333,7 +1307,7 @@ export async function processCorporationTurn(
           type: "extraction_capacity_bound" as const,
           title: `Extraction capacity limit: ${resourceLabel}`,
           message:
-            `Your extraction operations in ${ev.stateId} are constrained to ` +
+            `Your extraction operations in ${getStateDisplayName(corp.countryId, ev.stateId)} are constrained to ` +
             `${Math.round(ev.utilization * 100)}% of potential output by ${resourceLabel} ` +
             `capacity. Realized resource revenue is being throttled, acquire capacity, ` +
             `adopt a focused extraction strategy, or expand into states with headroom.`,

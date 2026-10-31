@@ -74,7 +74,7 @@ export const FUNDING_COST: Record<CovertFunding, number> = {
 };
 
 /** Per-turn suspicion movement: funded levels add, an idle programme cools. */
-export const FUNDING_SUSPICION: Record<CovertFunding, number> = {
+const FUNDING_SUSPICION: Record<CovertFunding, number> = {
   none: -0.3,
   trickle: 0.15,
   steady: 0.5,
@@ -106,7 +106,7 @@ export function emptyCovertProgram(): CovertProgramState {
   };
 }
 
-export function clampSuspicion(v: number): number {
+function clampSuspicion(v: number): number {
   return Math.max(0, Math.min(100, Math.round(v * 100) / 100));
 }
 

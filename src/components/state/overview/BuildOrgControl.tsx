@@ -41,6 +41,7 @@ export function BuildOrgControl({
   const router = useRouter();
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [count, setCount] = useState(1);
   const [bumpKey, setBumpKey] = useState(0);
   // Authoritative next-click estimate returned by the last successful spend.
   // Applied immediately so the estimate line can't lag the escalating pressure
@@ -122,8 +123,8 @@ export function BuildOrgControl({
     try {
       const r = await fetch(buildOrgUrl, {
         method: "POST",
-        headers: psPool ? { "Content-Type": "application/json" } : undefined,
-        body: psPool ? JSON.stringify({ psPool }) : undefined,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ psPool, count }),
       });
       const d = await r.json();
       if (!r.ok) {
@@ -136,7 +137,7 @@ export function BuildOrgControl({
           ? ` and ${CURRENCY_SYMBOLS[buildOrgCurrency as keyof typeof CURRENCY_SYMBOLS] ?? "$"}${Math.round(cashCost).toLocaleString("en-US")}`
           : "";
       showToast(
-        `Organization ${(d.orgGain as number) >= 0 ? "+" : ""}${(d.orgGain as number).toFixed(2)}% for ${(d.psCost as number).toFixed(0)} PS${cash}`,
+        `${d.completed != null ? `${d.completed} of ${count} builds completed. ` : ""}Organization ${(d.orgGain as number) >= 0 ? "+" : ""}${(d.orgGain as number).toFixed(2)}% for ${(d.psCost as number).toFixed(0)} PS${cash}${d.stopReason ? ` Stopped: ${d.stopReason}` : ""}`,
         "success"
       );
       // Apply the server's next-click estimate immediately so the line reflects
@@ -169,6 +170,26 @@ export function BuildOrgControl({
     <div className="mt-4 space-y-3">
       <p className="text-body text-muted">{standingLine}</p>
 
+      <fieldset disabled={busy} className="flex gap-2">
+        <legend className="text-xs text-muted">Builds per click</legend>
+        {[1, 5, 10].map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={count === value}
+            onClick={() => setCount(value)}
+            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+          >
+            x{value}
+          </button>
+        ))}
+      </fieldset>
+      {count > 1 && (
+        <p className="text-xs text-muted">
+          Prices rise with each build. The batch stops when the next build is blocked. Completed
+          builds remain charged.
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {eligibleScopes?.state || eligibleScopes?.national ? (
           <>

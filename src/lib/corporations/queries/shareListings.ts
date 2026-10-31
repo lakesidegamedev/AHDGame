@@ -12,6 +12,24 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+function negotiatedView(
+  listing: ShareListing,
+  names: Map<string, { name: string; sequentialId?: number }>,
+  myCharacterId: string | undefined
+) {
+  const terms = listing.negotiated!;
+  const buyer = names.get(terms.buyerCharacterId.toString());
+  return {
+    buyerCharacterId: terms.buyerCharacterId.toString(),
+    buyerName: buyer?.name ?? "Unknown",
+    buyerSequentialId: buyer?.sequentialId,
+    totalPrice: terms.totalPrice,
+    pricePerShare: terms.pricePerShare,
+    marketPriceAtCreation: listing.marketPriceAtCreation,
+    isForMe: myCharacterId === terms.buyerCharacterId.toString(),
+  };
+}
+
 /**
  * GET /api/corporations/[id]/shares/listings
  * Returns all open listings for this corporation, including their pending offers.
@@ -52,8 +70,17 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
       .sort({ createdAt: -1 })
       .toArray();
 
-    if (listings.length === 0) {
-      return NextResponse.json({ listings: [] });
+    // Public record of completed negotiated sales: these settle outside the
+    // normal price band, so who paid what stays visible to everyone.
+    const negotiatedDeals = await db
+      .collection<ShareListing>("shareListings")
+      .find({ corporationId: corporation._id, status: "filled", negotiated: { $exists: true } })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(10)
+      .toArray();
+
+    if (listings.length === 0 && negotiatedDeals.length === 0) {
+      return NextResponse.json({ listings: [], negotiatedDeals: [] });
     }
 
     const listingIds = listings.map((listing) => listing._id);
@@ -66,6 +93,13 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
     const charIds = [
       ...listings.map((listing) => listing.sellerCharacterId),
       ...offers.map((offer) => offer.buyerCharacterId),
+      ...listings.flatMap((listing) =>
+        listing.negotiated ? [listing.negotiated.buyerCharacterId] : []
+      ),
+      ...negotiatedDeals.flatMap((deal) => [
+        deal.sellerCharacterId,
+        ...(deal.negotiated ? [deal.negotiated.buyerCharacterId] : []),
+      ]),
     ];
     const charNameMap = await bulkFetchCharacterNames(db, charIds);
 
@@ -100,6 +134,9 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
         priceCeiling: listing.marketPriceAtCreation * 2.0,
         expiresAt: listing.expiresAt,
         isMySelling: !!isMySelling,
+        ...(listing.negotiated
+          ? { negotiated: negotiatedView(listing, charNameMap, myCharacterId) }
+          : {}),
         offerCount: listingOffers.length,
         offers: listingOffers.map((offer) => {
           const buyerInfo = charNameMap.get(offer.buyerCharacterId.toString());
@@ -118,7 +155,20 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
       };
     });
 
-    return NextResponse.json({ listings: result });
+    return NextResponse.json({
+      listings: result,
+      negotiatedDeals: negotiatedDeals.map((deal) => {
+        const seller = charNameMap.get(deal.sellerCharacterId.toString());
+        return {
+          _id: deal._id.toString(),
+          sellerName: seller?.name ?? "Unknown",
+          sellerSequentialId: seller?.sequentialId,
+          shares: deal.sharesListed,
+          completedAt: deal.updatedAt ?? deal.createdAt,
+          ...negotiatedView(deal, charNameMap, myCharacterId),
+        };
+      }),
+    });
   } catch (error) {
     return handleRouteError(error);
   }

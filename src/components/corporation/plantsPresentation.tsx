@@ -17,14 +17,25 @@
  * the same period.
  */
 
-import {
-  FILL_RATE_BAND_LABEL,
-  FILL_RATE_BAND_SHORT,
-  type FillRateBand,
-} from "@/lib/corporations/financialFogOfWar";
+import { type FillRateBand } from "@/lib/corporations/financialFogOfWar";
+import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
+
+export { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 import type { BuildQueueSummary } from "@/lib/corporations/sectorBuildQueue";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
-import { capitalizeFacility, facilityPlural } from "@/lib/constants/facilityVocabulary";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
+import {
+  capitalizeFacility,
+  facilityPlural,
+  facilitySingular,
+} from "@/lib/constants/facilityVocabulary";
+import {
+  plantSizeForSector,
+  sectorPlantCount,
+  type PlantReadingSector,
+  type PlantSizingSector,
+} from "@/lib/constants/facilityQuantum";
+
+export { sectorPlantCount, type PlantReadingSector } from "@/lib/constants/facilityQuantum";
 import {
   FREIGHT_CLASS_LABELS,
   freightClassAction,
@@ -49,35 +60,6 @@ export function formatUnits(value: number | null | undefined): string {
   if (abs >= 10_000) return `${(value / 1_000).toFixed(0)}k`;
   if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
   return Math.round(value).toLocaleString("en-US");
-}
-
-/** Fill rate as a whole-percent string. "n/a" when there is no fill rate. */
-export function formatFillPercent(fill: number | null | undefined): string {
-  if (fill == null || !Number.isFinite(fill)) return "n/a";
-  return `${Math.round(fill * 100)}%`;
-}
-
-/**
- * Text colour per fill band.
- *
- * This is where the surface spends its colour: across twenty rows the band is
- * the only thing a CEO needs to scan to find the plant that is making things
- * nobody is buying. Everything else on the row stays neutral so this reads.
- */
-export const FILL_BAND_TEXT: Record<FillRateBand, string> = {
-  high: "text-success",
-  medium: "text-warning",
-  low: "text-error",
-};
-
-/** Explanatory sentence for a band, for tooltips and the rival view. */
-export function fillBandSentence(band: FillRateBand): string {
-  return FILL_RATE_BAND_LABEL[band];
-}
-
-/** Short band word for a chip that has no room for a number. */
-export function fillBandShort(band: FillRateBand): string {
-  return FILL_RATE_BAND_SHORT[band];
 }
 
 /**
@@ -194,15 +176,87 @@ export function buildQueueBadgeLabel(queue: BuildQueueSummary): string {
   );
 }
 
+/** Plants (or fractions of a plant) for a count of capacity units. */
+function formatPlantCount(plants: number): string {
+  if (plants >= 10) return Math.round(plants).toLocaleString("en-US");
+  const rounded = Math.round(plants * 10) / 10;
+  return rounded.toLocaleString("en-US", { maximumFractionDigits: 1 });
+}
+
+/**
+ * Build progress in plants: how many are on order, how many already arrived,
+ * and (for smooth orders) how many land each turn. `plantUnits` is the
+ * sector's fixed plant size in capacity units.
+ */
+export function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: number) {
+  const size = Math.max(1, plantUnits);
+  const ordered = queue.unitsOrdered / size;
+  const remaining = queue.unitsRemaining / size;
+  return {
+    ordered,
+    remaining,
+    delivered: Math.max(0, ordered - remaining),
+    perTurn: queue.unitsPerTurn > 0 ? queue.unitsPerTurn / size : null,
+  };
+}
+
+export function buildProgressLabel(
+  queue: BuildQueueSummary,
+  plantUnits: number,
+  singular: string,
+  plural: string
+): string {
+  const p = buildProgressInPlants(queue, plantUnits);
+  const noun = p.ordered === 1 ? singular : plural;
+  const done =
+    queue.lastOnlineTurn != null ? ` Last one is done on turn ${queue.lastOnlineTurn}.` : "";
+  const rate =
+    p.perTurn != null
+      ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
+      : "";
+  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done} Capacity is added a slice at a time, so the capacity figure rises each turn until then.`;
+}
+
 export function BuildQueueBadge({
   queue,
   className = "",
+  plantUnits,
+  plantSingular = "plant",
+  plantPlural = "plants",
 }: {
   queue: BuildQueueSummary | null | undefined;
   className?: string;
+  /** Capacity units in one plant. When given, the badge counts plants, not units. */
+  plantUnits?: number;
+  plantSingular?: string;
+  plantPlural?: string;
 }) {
   if (!queue || queue.unitsOrdered <= 0) return null;
   const turns = queue.turnsRemaining;
+  if (plantUnits != null) {
+    const p = buildProgressInPlants(queue, plantUnits);
+    const label = buildProgressLabel(queue, plantUnits, plantSingular, plantPlural);
+    return (
+      <span
+        className={`flex flex-col text-[11px] font-medium tabular-nums text-primary ${className}`.trim()}
+        aria-label={label}
+        title={label}
+      >
+        <span>
+          +{formatPlantCount(p.remaining)} building
+          {queue.lastOnlineTurn != null && (
+            <span className="font-normal opacity-80"> · done turn {queue.lastOnlineTurn}</span>
+          )}
+        </span>
+        {p.perTurn != null && (
+          <span className="font-normal opacity-80">
+            {formatPlantCount(p.delivered)} of {formatPlantCount(p.ordered)} in · about{" "}
+            {formatPlantCount(p.perTurn)} a turn
+          </span>
+        )}
+      </span>
+    );
+  }
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-primary ${className}`.trim()}
@@ -221,6 +275,164 @@ export function BuildQueueBadge({
           {"T"}
         </span>
       )}
+    </span>
+  );
+}
+
+/**
+ * Share of capacity actually used last turn (produced over capacity). Fill only
+ * says how much of the OUTPUT sold, so a plant making a sliver of its capacity
+ * can still read 100% fill. Returns null when it cannot be known.
+ */
+export function capacityUsedFraction(
+  producedUnits: number | null | undefined,
+  capacityUnits: number | null | undefined
+): number | null {
+  if (producedUnits == null || capacityUnits == null) return null;
+  if (!Number.isFinite(producedUnits) || !Number.isFinite(capacityUnits) || capacityUnits <= 0) {
+    return null;
+  }
+  return Math.max(0, Math.min(1, producedUnits / capacityUnits));
+}
+
+/** "14 plants", "1 farm", or "No stores yet" for a sector with none. */
+export function plantCountLabel(count: number, sectorType: string | null | undefined): string {
+  if (count <= 0) return `No ${facilityPlural(sectorType)} yet`;
+  const noun = count === 1 ? facilitySingular(sectorType) : facilityPlural(sectorType);
+  return `${count.toLocaleString("en-US")} ${noun}`;
+}
+
+/** Tooltip for a plant count: the plants, then what they can make in units. */
+export function plantCountTitle(sector: PlantReadingSector): string {
+  const count = sectorPlantCount(sector);
+  if (count <= 0) {
+    return `No ${facilityPlural(sector.sectorType)} built yet. Anything under construction is shown below.`;
+  }
+  const size = plantSizeForSector(sector);
+  return `${plantCountLabel(count, sector.sectorType)}. At full run they make about ${formatUnits(sector.capacityUnits)} units of output a day, about ${formatUnits(size)} each.`;
+}
+
+/**
+ * The plant count a table cell leads with. Raw capacity units are an engine
+ * measure, so they live in the tooltip only.
+ */
+export function PlantCount({
+  sector,
+  className = "",
+}: {
+  sector: PlantReadingSector;
+  className?: string;
+}) {
+  const count = sectorPlantCount(sector);
+  return (
+    <span
+      className={`tabular-nums ${count <= 0 ? "text-muted" : ""} ${className}`.trim()}
+      title={plantCountTitle(sector)}
+    >
+      {plantCountLabel(count, sector.sectorType)}
+    </span>
+  );
+}
+
+/**
+ * Plants' worth of capacity, for "room to build" figures: how many new plants
+ * of this sector's size the unmet demand would keep busy. Floored, because a
+ * build is whole plants; a sliver under one plant reads as under one.
+ */
+export function plantsOfRoom(units: number | null | undefined, sector: PlantSizingSector): number {
+  if (units == null || !Number.isFinite(units) || units <= 0) return 0;
+  return Math.floor(units / Math.max(1, plantSizeForSector(sector)));
+}
+
+/** "about 3 plants", "about 1 store", "under 1 store", "none right now". */
+export function roomInPlantsLabel(
+  units: number | null | undefined,
+  sector: PlantSizingSector
+): string {
+  if (units == null || !Number.isFinite(units) || units <= 0) return "none right now";
+  const plants = plantsOfRoom(units, sector);
+  if (plants < 1) return `under 1 ${facilitySingular(sector.sectorType)}`;
+  const noun =
+    plants === 1 ? facilitySingular(sector.sectorType) : facilityPlural(sector.sectorType);
+  return `about ${plants.toLocaleString("en-US")} ${noun}`;
+}
+
+/** Column heading and its tooltip for the one running and sold reading. */
+export const RUNNING_SOLD_HEADING = "Running / sold";
+export const RUNNING_SOLD_HEADING_TITLE =
+  "Running: how much of what these plants could make they actually made last turn. Sold: how much of what they made found buyers.";
+
+/**
+ * The one reading of how a sector's plants did last turn, used by every table:
+ * "Running 55%" (made over what the plants could make) and "Sold 45%" (sold
+ * over made). Each figure carries its own label, because two bare percentages
+ * side by side read as one number over another.
+ *
+ * `fill` is null and `band` set for a viewer without the exact rate (rivals):
+ * the sold line then shows the band word, as the fill chip does.
+ */
+export function RunningSoldReading({
+  produced,
+  capacity,
+  fill,
+  band,
+  plantCount,
+  className = "",
+}: {
+  produced: number | null | undefined;
+  capacity: number | null | undefined;
+  fill: number | null | undefined;
+  band: FillRateBand | null | undefined;
+  /** Zero reads as "not running yet" instead of two empty figures. */
+  plantCount?: number | null;
+  className?: string;
+}) {
+  if (plantCount === 0) {
+    return (
+      <span
+        className={`text-[11px] text-muted ${className}`.trim()}
+        title="No plants are built yet, so nothing was made or sold."
+      >
+        Not running yet
+      </span>
+    );
+  }
+  const used = capacityUsedFraction(produced, capacity);
+  const exactFill = fill != null && Number.isFinite(fill);
+  return (
+    <span className={`inline-flex flex-col text-[11px] leading-tight ${className}`.trim()}>
+      {used != null && (
+        <span
+          className="tabular-nums"
+          title="Share of what these plants could make that they actually made last turn. Low running means buyers, staff or inputs are holding them back."
+        >
+          <span className="text-muted">Running </span>
+          <span
+            className={`font-mono font-medium ${used < 0.5 ? "text-warning" : "text-foreground"}`}
+          >
+            {Math.round(used * 100)}%
+          </span>
+        </span>
+      )}
+      <span
+        className="tabular-nums"
+        title={
+          band == null
+            ? "Nothing was made last turn, so nothing could be sold."
+            : exactFill
+              ? `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+              : `${fillBandSentence(band)}. You do not have access to this corporation's exact sales.`
+        }
+      >
+        <span className="text-muted">Sold </span>
+        {band == null ? (
+          <span className="text-muted">n/a</span>
+        ) : (
+          <span className={`font-mono font-medium ${FILL_BAND_TEXT[band]}`}>
+            {exactFill ? formatFillPercent(fill) : fillBandShort(band)}
+          </span>
+        )}
+      </span>
     </span>
   );
 }

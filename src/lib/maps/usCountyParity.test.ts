@@ -6,6 +6,7 @@ import legacyFixtures from "./__fixtures__/usCountyParity.legacy.json";
 // The county leans the legacy outputs were captured against. The committed
 // county data has since been refreshed; this test checks the engine, so it
 // pins its inputs rather than following the data.
+import legacyPopulations from "./__fixtures__/usCountyParity.populations.json";
 import legacyLeans from "./__fixtures__/usCountyParity.leans.json";
 
 // Byte-identical outputs captured from the legacy distributeCountyVotes engine
@@ -44,7 +45,7 @@ describe("US county parity: generic engine === captured legacy outputs", () => {
         counties.map((c) => ({
           id: c.fips,
           name: c.name,
-          electorate: c.population,
+          electorate: (legacyPopulations as Record<string, Record<string, number>>)[st][c.fips],
           leanScalar: (legacyLeans as Record<string, Record<string, number>>)[st][c.fips],
         })),
         { ...TALLIES[i] },

@@ -1890,6 +1890,51 @@
     ]
   },
   {
+    "id": "L52",
+    "title": "Labour migration",
+    "domain": "Households, opportunity, and demography",
+    "scope": "N only; national work visas and employer sponsorship for jobs local workers cannot fill; no regional entry power or LTS",
+    "ownerCode": "LAB",
+    "primaryMetricIds": ["05", "54", "56"],
+    "availability": {
+      "national": ["US", "UK", "JP"],
+      "regional": []
+    },
+    "leaveToStates": false,
+    "review": {
+      "legalComponents": "required",
+      "allocation": "required",
+      "outcomeCalibration": "required"
+    },
+    "levels": [
+      {
+        "position": "far_left",
+        "title": "Open Labour Market Act",
+        "description": "Any employer with an unfilled job can sponsor a work visa with no annual cap, fast processing and a route to settlement."
+      },
+      {
+        "position": "center_left",
+        "title": "Expanded Work Visa Act",
+        "description": "Raise work visa caps well above demand, fast-track shortage occupations and let visa holders change employer."
+      },
+      {
+        "position": "center",
+        "title": "Managed Work Visa Compact",
+        "description": "Admit sponsored workers for shortage occupations within annual caps, with labour market tests and employer checks."
+      },
+      {
+        "position": "center_right",
+        "title": "Resident Workers First Act",
+        "description": "Tighten caps and labour market tests so employers recruit and train resident workers before sponsoring visas."
+      },
+      {
+        "position": "far_right",
+        "title": "Work Visa Moratorium",
+        "description": "Suspend new work visas; existing holders keep their status until it expires."
+      }
+    ]
+  },
+  {
     "id": "L40",
     "title": "Equal opportunity and mobility",
     "domain": "Households, opportunity, and demography",

@@ -61,7 +61,7 @@ export const PENSION_TOPUP_FRACTION = 0.05;
 /** Funding ratio bands, for the surface and for the bargaining argument. */
 export type PensionFundingBand = "surplus" | "funded" | "deficit" | "critical";
 
-export const PENSION_CRITICAL_RATIO = 0.6;
+const PENSION_CRITICAL_RATIO = 0.6;
 
 /**
  * Phase 2: what a scheme owns, all of it.
@@ -101,7 +101,7 @@ export function pensionSchemeAssetsAnchor(scheme: {
  * off. Roughly one in a hundred accrued claims falling into payment per turn is
  * a working lifetime measured in the game's turn cadence.
  */
-export const PENSION_RETIREMENT_RATE = 0.01;
+const PENSION_RETIREMENT_RATE = 0.01;
 
 /**
  * Share of the in-payment stock paid out per turn. A pensioner draws a pension
@@ -109,7 +109,7 @@ export const PENSION_RETIREMENT_RATE = 0.01;
  * receiving contributions still owes benefits for a long time. That lag is what
  * makes underfunding a slow, visible problem rather than a one-turn event.
  */
-export const PENSION_BENEFIT_DRAWDOWN_RATE = 0.02;
+const PENSION_BENEFIT_DRAWDOWN_RATE = 0.02;
 
 /**
  * How many turns of benefits a scheme keeps in cash before it may invest.
@@ -132,10 +132,10 @@ export const PENSION_LIQUIDITY_BUFFER_TURNS = 8;
  * and would let it invest every ₳ it holds. This keeps a tenth back regardless,
  * so a scheme always has something liquid the turn its first pensioners appear.
  */
-export const PENSION_CASH_FLOOR_FRACTION = 0.1;
+const PENSION_CASH_FLOOR_FRACTION = 0.1;
 
 /** Below this, investing is not worth a fund transaction. */
-export const PENSION_MIN_INVESTMENT_ANCHOR = 1000;
+const PENSION_MIN_INVESTMENT_ANCHOR = 1000;
 
 export function pensionFundingRatio(assetsAnchor: number, liabilitiesAnchor: number): number {
   // A scheme with no liabilities is trivially funded rather than dividing by

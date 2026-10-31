@@ -47,6 +47,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import {
   resolveSovereignMaturityPayoutLegs,
   type SovereignMaturityCashLeg,
+  type SovereignMaturityLiveTargets,
 } from "./sovereignMaturityPayoutTargets";
 
 export { sovereignMaturityCentralBankId } from "./sovereignMaturityPayoutTargets";
@@ -88,10 +89,16 @@ import { loadDemocraticHealth } from "@/lib/governanceStyle/loadDemocraticHealth
 import { democraticHealthSovereignSpread } from "@/lib/governanceStyle/rules/democraticConsequences";
 import { settleSovereignPublicFloatDisposition } from "./publicFloatSovereignNovation";
 import {
+  sovereignMaturityBondRetireProjection,
+  sovereignMaturityBudgetRetirementInc,
+  sovereignMaturityRetirementFigures,
+} from "./sovereignMaturityRetirement";
+import {
   FORCED_ROLLOVER_MATURITY,
   rollOverUnfundedSovereignPoolFloat,
 } from "./forcedSovereignRollover";
 import { publicFloatNovationShare } from "./rules/publicFloatNovation";
+import { refundSovereignMaturityShortfall } from "./sovereignMaturityRefunding";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
 export const SOVEREIGN_BOND_MATURITY_TURNS: BondMaturityTurns = 48;
@@ -1028,7 +1035,7 @@ export async function settleSovereignBondMaturity(
 }
 
 /** Coupon a fresh sovereign bond would carry now: prime, term, rating, credibility, democracy. */
-async function marketSovereignRolloverCoupon(db: Db, countryId: CountryId): Promise<number> {
+export async function marketSovereignRolloverCoupon(db: Db, countryId: CountryId): Promise<number> {
   const [budget, centralBank, democraticSpreadPp] = await Promise.all([
     db
       .collection<FederalBudget>("federalBudget")
@@ -1179,6 +1186,15 @@ export async function freezeFundedSovereignBondMaturityQuote(
 }
 
 /**
+ * A funded settlement, plus the face a forced rollover moved to a replacement
+ * bond instead of paying from Treasury cash. Callers subtract it from the cash
+ * they book without re-reading the retired bond's claim.
+ */
+export type SovereignMaturitySettlement = SettlementResult & {
+  forcedRolloverFaceLocal?: number;
+};
+
+/**
  * Settle the non-bank holders of one matured sovereign bond from actual
  * spendable Treasury cash. The due-turn key freezes the original holder and
  * FX snapshot across retries. The budget's signed fiscal position and debt
@@ -1197,10 +1213,12 @@ export async function settleFundedSovereignBondMaturity(
     nonBankRepaymentLocal: number;
     holderLegs: readonly SovereignMaturityCashLeg[];
     now: Date;
+    /** Payee existence for the whole maturity wave, so this bond need not read it. */
+    liveTargets?: SovereignMaturityLiveTargets;
     /** Test seam for the isolated native-Mongo settlement fixture. */
     transactionClient?: import("mongodb").MongoClient;
   }
-): Promise<SettlementResult | null> {
+): Promise<SovereignMaturitySettlement | null> {
   const {
     bond,
     turn,
@@ -1232,10 +1250,19 @@ export async function settleFundedSovereignBondMaturity(
   // Finish a previous attempt before opening another generation. A rejected
   // insufficient-cash attempt has no applied legs and is terminal by design;
   // its stable claim quote allows a new turn-keyed attempt without changing
-  // payees, amounts, or FX.
-  const pendingFunding = await db
+  // payees, amounts, or FX. An unfinished funding attempt and an unfinished
+  // payout receipt are answered by one read, not one lookup each.
+  const priorReceipts = await db
     .collection<{ _id: string; status?: string }>("bankMoneyMoves")
-    .find({ _id: { $regex: `^${claimId}:fund:` }, status: "partial" })
+    .find(
+      // Two plain branches, not `^id:(fund:|payout$)`: an alternation is not a
+      // simple prefix, so the server would walk the whole `_id` index for it.
+      {
+        $or: [{ _id: { $regex: `^${claimId}:fund:` } }, { _id: `${claimId}:payout` }],
+        status: "partial",
+      },
+      { projection: { _id: 1, status: 1 } }
+    )
     .toArray();
   const currentBond = await db
     .collection<Bond>("bonds")
@@ -1248,8 +1275,14 @@ export async function settleFundedSovereignBondMaturity(
     const completedPayout = await db
       .collection<{ _id: string }>("bankMoneyMoves")
       .findOne({ _id: `${claimId}:payout` }, { projection: { _id: 1 } });
-    return completedPayout ? resumeSettlement(db, completedPayout._id) : null;
+    if (!completedPayout) return null;
+    return {
+      ...(await resumeSettlement(db, completedPayout._id)),
+      forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0,
+    };
   }
+  const pendingFunding = priorReceipts.filter((row) => row._id !== `${claimId}:payout`);
+  const previousPayoutReceipt = priorReceipts.find((row) => row._id === `${claimId}:payout`);
 
   const sourceCountryId =
     quote.publicFloatDisposition?.mode === "novation"
@@ -1323,26 +1356,12 @@ export async function settleFundedSovereignBondMaturity(
     quote.publicFloatDisposition?.mode === "novation"
       ? quote.publicFloatDisposition.acceptedUnits
       : 0;
-  const originalTotalIssued =
-    quote.publicFloatDisposition?.mode === "novation"
-      ? quote.publicFloatDisposition.sourceTotalIssued
-      : bond.totalIssued;
-  const originalCouponRate =
-    quote.publicFloatDisposition?.mode === "novation"
-      ? quote.publicFloatDisposition.sourceCouponRate
-      : bond.couponRate;
-  const originalHaircut =
-    quote.publicFloatDisposition?.mode === "novation"
-      ? (quote.publicFloatDisposition.sourceRestructureHaircutPercent ?? null)
-      : (bond.restructureHaircutPercent ?? null);
   const cashAmountLocal =
     quote.publicFloatDisposition?.mode === "novation"
       ? (quote.publicFloatDisposition.residualAmountLocal ?? 0)
       : quote.amountLocal;
 
-  const previousPayout = await db
-    .collection<{ _id: string; status?: string }>("bankMoneyMoves")
-    .findOne({ _id: `${claimId}:payout`, status: "partial" });
+  const previousPayout = previousPayoutReceipt;
   if (previousPayout) {
     const recovered = await resumeSettlement(db, previousPayout._id);
     if (recovered.status === "applied" || (recovered.status === "replayed" && !recovered.error))
@@ -1357,23 +1376,55 @@ export async function settleFundedSovereignBondMaturity(
         { _id: budgetId, ...frozenBudgetIdentity },
         { projection: { treasuryCashLocal: 1 } }
       );
-    if ((currentBudget?.treasuryCashLocal ?? 0) < cashAmountLocal) {
-      // An unfundable maturity rolls its pool holding into a par replacement
-      // bond rather than sitting unpaid forever. Retry once on the rebased claim.
-      if (quote.forcedRollover || !bond.countryId) return null;
-      const rolled = await rollOverUnfundedSovereignPoolFloat(db, {
-        bond: (await db.collection<Bond>("bonds").findOne({ _id: bond._id })) ?? bond,
-        claim: quote,
+    const cashOnHand = currentBudget?.treasuryCashLocal ?? 0;
+    if (cashOnHand < cashAmountLocal) {
+      // An unfundable maturity first rolls its pool holding into a par
+      // replacement bond: the pool takes new paper, not cash. Retry once on
+      // the rebased claim.
+      if (!quote.forcedRollover && bond.countryId) {
+        const rolled = await rollOverUnfundedSovereignPoolFloat(db, {
+          bond: (await db.collection<Bond>("bonds").findOne({ _id: bond._id })) ?? bond,
+          claim: quote,
+          turn,
+          now,
+          couponRate: await marketSovereignRolloverCoupon(db, bond.countryId),
+          budgetId,
+          client: transactionClient,
+        });
+        if (rolled) {
+          const rebased = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+          if (!rebased?.sovereignMaturityClaim?.forcedRollover) return null;
+          return settleFundedSovereignBondMaturity(db, { ...input, bond: rebased });
+        }
+      }
+      // Every other holder is paid in cash. The Treasury refinances what it
+      // lacks by selling a refunding issue to the market, never by defaulting.
+      if (!budget.countryId || getNationalBudgetId(budget.countryId as CountryId) !== budgetId)
+        return null;
+      const refunded = await refundSovereignMaturityShortfall(db, {
+        sourceBond: bond,
+        claimId,
+        // Bounded by the cash this claim owes its non-bank holders, so the
+        // total ever raised for them cannot exceed what they are paid.
+        scopeOwedLocal: cashAmountLocal,
+        scopeRefundedLocal: quote.refundedHolderFaceLocal ?? 0,
+        shortfallLocal: cashAmountLocal - cashOnHand,
+        countryId: budget.countryId,
+        budgetId,
+        currencyCode: quote.currencyCode,
+        couponRate: await marketSovereignRolloverCoupon(db, budget.countryId as CountryId),
+        scope: "holders",
         turn,
         now,
-        couponRate: await marketSovereignRolloverCoupon(db, bond.countryId),
-        budgetId,
-        client: transactionClient,
       });
-      if (!rolled) return null;
-      const rebased = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
-      if (!rebased?.sovereignMaturityClaim?.forcedRollover) return null;
-      return settleFundedSovereignBondMaturity(db, { ...input, bond: rebased });
+      if (refunded.status === "refused") return null;
+      const refinanced = await db
+        .collection<FederalBudget>("federalBudget")
+        .findOne(
+          { _id: budgetId, ...frozenBudgetIdentity },
+          { projection: { treasuryCashLocal: 1 } }
+        );
+      if ((refinanced?.treasuryCashLocal ?? 0) < cashAmountLocal) return null;
     }
     if (quote.fundingAttemptTurn !== turn) {
       const priorAttemptTurn = quote.fundingAttemptTurn;
@@ -1473,16 +1524,7 @@ export async function settleFundedSovereignBondMaturity(
     quote = fundedQuote;
   }
 
-  const remainingIssued = Math.max(0, originalTotalIssued - novatedUnits * BOND_UNIT_FACE_VALUE);
-  const remainingPublicFloat = Math.max(0, quote.sourcePublicFloat - novatedUnits);
-  const maturedFace = sovereignBondOutstanding({
-    issuerType: "sovereign",
-    matured: false,
-    defaulted: false,
-    totalIssued: remainingIssued,
-    restructureHaircutPercent: originalHaircut,
-  });
-  const annualCouponCost = (originalCouponRate / 100) * remainingIssued;
+  const retirement = sovereignMaturityRetirementFigures(bond, quote);
   const payoutQuote =
     novatedUnits > 0
       ? {
@@ -1512,11 +1554,16 @@ export async function settleFundedSovereignBondMaturity(
         }
       : {};
   const payoutKey = `${claimId}:payout`;
-  const payoutHolderLegs = await resolveSovereignMaturityPayoutLegs(db, payoutQuote.holderLegs, {
-    currencyCode: payoutQuote.currencyCode,
-    localPerAnchor: payoutQuote.treasuryLocalPerAnchor,
-  });
-  return settleTransition(db, {
+  const payoutHolderLegs = await resolveSovereignMaturityPayoutLegs(
+    db,
+    payoutQuote.holderLegs,
+    {
+      currencyCode: payoutQuote.currencyCode,
+      localPerAnchor: payoutQuote.treasuryLocalPerAnchor,
+    },
+    input.liveTargets
+  );
+  const settled = await settleTransition(db, {
     key: payoutKey,
     kind: "sovereign_maturity_payout",
     turn,
@@ -1537,50 +1584,22 @@ export async function settleFundedSovereignBondMaturity(
           // Delta projection preserves concurrent issuance and maturity
           // changes on the same country's budget. A stale $set here could
           // overwrite a second bond's newly issued or retired principal.
-          $inc: {
-            "debt.principal": -maturedFace,
-            "spending.debtInterest": -annualCouponCost,
-            "spending.total": -annualCouponCost,
-            surplus: annualCouponCost,
-          },
+          $inc: sovereignMaturityBudgetRetirementInc(retirement),
           $set: { updatedAt: now },
         },
         note: "Retire matured sovereign debt after funded payouts",
       },
-      {
-        collection: "bonds",
-        filter: {
-          _id: bond._id,
-          issuerType: "sovereign",
-          countryId: sourceCountryId,
-          ...frozenSourceIdentity,
-          maturityTurn: dueTurn,
-          matured: false,
-          defaulted: false,
-          "sovereignMaturityClaim.id": claimId,
-          "sovereignMaturityClaim.escrowLocal": 0,
-          holders: quote.sourceHolders,
-          publicFloat: remainingPublicFloat,
-          totalIssued: remainingIssued,
-          ...(quote.sourceCentralBankHoldings === undefined
-            ? { centralBankHoldings: { $exists: false } }
-            : { centralBankHoldings: quote.sourceCentralBankHoldings }),
-        },
-        update: {
-          $set: {
-            "sovereignMaturityClaim.escrowLocal": 0,
-            "sovereignMaturityClaim.paid": true,
-            matured: true,
-            redeemedAtTurn: turn,
-            marketPrice: 1,
-            publicFloat: 0,
-            holders: [],
-            centralBankHoldings: 0,
-            updatedAt: now,
-          },
-        },
-        note: "Retire sovereign bond after every funded holder leg lands",
-      },
+      sovereignMaturityBondRetireProjection({
+        bond,
+        quote,
+        claimId,
+        dueTurn,
+        sourceCountryId,
+        figures: retirement,
+        turn,
+        now,
+        frozenSourceIdentity,
+      }),
     ],
     event: {
       kind: "monetary.executed",
@@ -1591,6 +1610,7 @@ export async function settleFundedSovereignBondMaturity(
       meta: { bondId: bond._id.toHexString(), dueTurn },
     },
   });
+  return { ...settled, forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0 };
 }
 
 export interface SovereignPrincipalResync {

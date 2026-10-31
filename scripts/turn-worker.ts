@@ -37,6 +37,8 @@ import { isCronWorkerProcess } from "@/lib/startupMode";
 import { markTurnWorkerProcess, TURN_WORKER_TICK_MS } from "@/lib/turn/turnWorkerHandoff";
 
 const SHUTDOWN_TIMEOUT_MS = 2500;
+/** The prod worker container stops after 30s; leave room for the lock release. */
+const DEFERRED_WORK_SHUTDOWN_MS = 25_000;
 
 async function main(): Promise<void> {
   if (!isCronWorkerProcess(process.env)) {
@@ -142,6 +144,14 @@ async function main(): Promise<void> {
       ]);
     } catch (err) {
       console.error("[turn-worker] lock release failed:", err);
+    }
+    // Post-turn telemetry (the producer-market shadow) gets what is left of
+    // the container's stop timeout. Losing it only starts a new shadow run.
+    const { drainDeferredTurnWorkWithin, pendingDeferredTurnWork } =
+      await import("@/lib/turn/deferredTurnWork");
+    if (pendingDeferredTurnWork() > 0) {
+      const finished = await drainDeferredTurnWorkWithin(DEFERRED_WORK_SHUTDOWN_MS);
+      console.log(`[turn-worker] deferred turn work ${finished ? "finished" : "abandoned"}`);
     }
     process.exit(0);
   };

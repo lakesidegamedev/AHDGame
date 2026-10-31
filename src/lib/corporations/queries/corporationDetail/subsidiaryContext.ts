@@ -7,7 +7,10 @@ import {
   HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT,
   SUBSIDIARY_OWNERSHIP_THRESHOLD_PERCENT,
 } from "@/lib/corporations/corporateOwnership";
-import { canActOnCorporationAsParent } from "@/lib/corporations/subsidiaries/authorization";
+import {
+  canActOnCorporationAsParent,
+  isAiRunCorporation,
+} from "@/lib/corporations/subsidiaries/authorization";
 import {
   activeParentDividendFloorPct,
   isEligibleAsSubsidiary,
@@ -24,6 +27,12 @@ import {
   loadReservedPositionsPlacedBy,
 } from "@/lib/corporations/reservedCorporateHoldings";
 import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporations";
+import {
+  STRENGTH_UPKEEP_STAGE,
+  loadStrengthUpkeepStage,
+  strengthUpkeepActive,
+} from "@/lib/corporations/strengthUpkeep";
+import { spinOffCooldownTurnsRemaining } from "@/lib/corporations/subsidiaries/constants";
 
 async function buildHostileTakeoverEligibility(
   db: Db,
@@ -101,9 +110,20 @@ export interface SubsidiaryContextResult {
   isFormalizedSub: boolean;
   activeFloorPct: number;
   canManageAsParent: boolean;
+  /** The viewer, as controlling parent CEO, may retool and rebrand this AI-run subsidiary. */
+  canDirectAsParent: boolean;
   canFormalizeAsSubsidiary: boolean;
   canSpinOff: boolean;
+  /** Turns left before this corporation may spin off again; 0 when ready. */
+  spinOffCooldownTurnsRemaining: number;
   hostileTakeoverEligibility: Awaited<ReturnType<typeof buildHostileTakeoverEligibility>>;
+  /**
+   * #1669: present only for the CEO of a group leader whose group runs under
+   * strength upkeep. The leader pays each formalized subsidiary part of the
+   * strength it gains, so the CEO tab's own projection (which counts only the
+   * budget's growth and the decay) is incomplete without saying so.
+   */
+  groupStrengthTransfer: { subsidiaryCount: number } | null;
 }
 
 /**
@@ -119,7 +139,8 @@ export async function loadSubsidiaryContext(
   db: Db,
   corporationForControl: Corporation,
   corporation: Corporation,
-  viewerUserId: string | null | undefined
+  viewerUserId: string | null | undefined,
+  currentTurn: number
 ): Promise<SubsidiaryContextResult> {
   const controllingParent = getControllingCorporateParent(corporationForControl);
   // The parent-corp lookup, the subsidiary-candidates query, and the hostile-
@@ -156,6 +177,7 @@ export async function loadSubsidiaryContext(
             | "totalShares"
             | "shareholders"
             | "superShareMultiplier"
+            | "subsidiaryFormalizedAtTurn"
           >
         >({
           _id: 1,
@@ -164,6 +186,7 @@ export async function loadSubsidiaryContext(
           totalShares: 1,
           shareholders: 1,
           superShareMultiplier: 1,
+          subsidiaryFormalizedAtTurn: 1,
         })
         .toArray(),
       buildHostileTakeoverEligibility(db, corporation, viewerUserId),
@@ -181,6 +204,9 @@ export async function loadSubsidiaryContext(
   }
 
   const subsidiariesPayload: SubsidiaryPayload[] = [];
+  // Counted for the group payment disclosure below: only formalized
+  // subsidiaries are group members that the leader pays for.
+  let formalizedSubsidiaryCount = 0;
   const reservedSharesByTarget = new Map(
     reservedPlacedByThisCorp.map((r) => [r.targetCorpId.toString(), r.shares])
   );
@@ -195,7 +221,13 @@ export async function loadSubsidiaryContext(
       .project<
         Pick<
           Corporation,
-          "_id" | "name" | "sequentialId" | "totalShares" | "shareholders" | "superShareMultiplier"
+          | "_id"
+          | "name"
+          | "sequentialId"
+          | "totalShares"
+          | "shareholders"
+          | "superShareMultiplier"
+          | "subsidiaryFormalizedAtTurn"
         >
       >({
         _id: 1,
@@ -204,6 +236,7 @@ export async function loadSubsidiaryContext(
         totalShares: 1,
         shareholders: 1,
         superShareMultiplier: 1,
+        subsidiaryFormalizedAtTurn: 1,
       })
       .toArray();
     subsidiaryCandidates.push(...extraSubs);
@@ -222,6 +255,7 @@ export async function loadSubsidiaryContext(
     // disagreed. Same helper the takeover path uses.
     const pct = acquirerOwnershipPercent(corporation._id, subForControl);
     if (pct > SUBSIDIARY_OWNERSHIP_THRESHOLD_PERCENT) {
+      if (sub.subsidiaryFormalizedAtTurn != null) formalizedSubsidiaryCount += 1;
       subsidiariesPayload.push({
         _id: sub._id.toString(),
         sequentialId: sub.sequentialId,
@@ -239,6 +273,22 @@ export async function loadSubsidiaryContext(
     .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
   const subsidiaryCorporationsEnabled = subsidiaryGs?.subsidiaryCorporationsEnabled === true;
   const isFormalizedSub = isFormalizedSubsidiaryHelper(corporation, controllingParent);
+  // #1669: the budget line on the CEO tab shows the growth a budget buys less
+  // the 5% decay, and never the strength the group leader hands to its
+  // subsidiaries. Show the CEO that the figure is incomplete rather than
+  // letting a rising forecast sit next to a falling total. Only the group
+  // leader pays, so only its CEO needs the note.
+  const viewerIsCeoOfThisCorp =
+    !!viewerUserId &&
+    corporation.ceoVacant !== true &&
+    corporation.userId?.toString() === viewerUserId;
+  const groupStrengthTransfer =
+    viewerIsCeoOfThisCorp &&
+    !isFormalizedSub &&
+    formalizedSubsidiaryCount > 0 &&
+    strengthUpkeepActive(await loadStrengthUpkeepStage(db), STRENGTH_UPKEEP_STAGE.SYNERGY_TRANSFER)
+      ? { subsidiaryCount: formalizedSubsidiaryCount }
+      : null;
   const activeFloorPct = activeParentDividendFloorPct({
     enabled: subsidiaryCorporationsEnabled,
     parentDividendFloorPct: corporation.parentDividendFloorPct,
@@ -256,6 +306,12 @@ export async function loadSubsidiaryContext(
     corporation.ceoVacant !== true &&
     corporation.userId?.toString() === viewerUserId &&
     isEligibleAsSubsidiaryParent(corporation);
+  // The command enforces this cooldown, so the page counts it down from the
+  // same helper instead of showing a button that is guaranteed to fail.
+  const spinOffCooldownRemaining = spinOffCooldownTurnsRemaining(
+    corporation.lastSpinOffTurn,
+    currentTurn
+  );
   if (subsidiaryCorporationsEnabled && viewerUserId) {
     canManageAsParent = await canActOnCorporationAsParent(
       db,
@@ -298,8 +354,11 @@ export async function loadSubsidiaryContext(
     isFormalizedSub,
     activeFloorPct,
     canManageAsParent,
+    canDirectAsParent: canManageAsParent && isAiRunCorporation(corporation),
     canFormalizeAsSubsidiary,
     canSpinOff,
+    spinOffCooldownTurnsRemaining: spinOffCooldownRemaining,
     hostileTakeoverEligibility,
+    groupStrengthTransfer,
   };
 }

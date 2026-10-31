@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="478" viewBox="0 0 720 478" role="img" font-family="system-ui, sans-serif">
+<title>Can this senator filibuster this bill</title>
+<desc>A decision tree: US Senate seat, bill on the Senate floor alone, ordinary bill, filibuster still in force, not already used; then the cost, delay and three-fifths bar.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="477" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="30" y="24" width="360" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="51.5" font-size="13" text-anchor="middle">Do you hold a US Senate seat?</text>
+<rect x="440" y="24" width="250" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="565.0" y="51.2" font-size="12" text-anchor="middle">Senators only</text>
+<polyline points="390,47 440,47" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="415" y="40" font-size="12" text-anchor="middle" fill="#52525b">no</text>
+<polyline points="210,70 210,92" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="218" y="86" font-size="12" text-anchor="start" fill="#52525b">yes</text>
+<rect x="30" y="92" width="360" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="111.0" font-size="13" text-anchor="middle">Is the bill being voted on in the Senate alone,</text>
+<text x="210.0" y="128.1" font-size="13" text-anchor="middle">not before both chambers at once?</text>
+<rect x="440" y="92" width="250" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="565.0" y="111.2" font-size="12" text-anchor="middle">Not allowed: each chamber</text>
+<text x="565.0" y="127.2" font-size="12" text-anchor="middle">votes on its own clock</text>
+<polyline points="390,115 440,115" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="415" y="108" font-size="12" text-anchor="middle" fill="#52525b">no</text>
+<polyline points="210,138 210,160" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="218" y="154" font-size="12" text-anchor="start" fill="#52525b">yes</text>
+<rect x="30" y="160" width="360" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="187.6" font-size="13" text-anchor="middle">Is it an ordinary bill (not two-thirds)?</text>
+<rect x="440" y="160" width="250" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="565.0" y="179.2" font-size="12" text-anchor="middle">Skipped: a two-thirds bill is</text>
+<text x="565.0" y="195.2" font-size="12" text-anchor="middle">already above cloture</text>
+<polyline points="390,183 440,183" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="415" y="176" font-size="12" text-anchor="middle" fill="#52525b">no</text>
+<polyline points="210,206 210,228" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="218" y="222" font-size="12" text-anchor="start" fill="#52525b">yes</text>
+<rect x="30" y="228" width="360" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="255.6" font-size="13" text-anchor="middle">Is the filibuster still in force?</text>
+<rect x="440" y="228" width="250" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="565.0" y="247.2" font-size="12" text-anchor="middle">Abolished by Senate rules:</text>
+<text x="565.0" y="263.2" font-size="12" text-anchor="middle">simple majority applies</text>
+<polyline points="390,251 440,251" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="415" y="244" font-size="12" text-anchor="middle" fill="#52525b">no</text>
+<polyline points="210,274 210,296" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="218" y="290" font-size="12" text-anchor="start" fill="#52525b">yes</text>
+<rect x="30" y="296" width="360" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="323.6" font-size="13" text-anchor="middle">Have you not filibustered this bill yet?</text>
+<rect x="440" y="296" width="250" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="565.0" y="323.2" font-size="12" text-anchor="middle">Once per senator per bill</text>
+<polyline points="390,319 440,319" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="415" y="312" font-size="12" text-anchor="middle" fill="#52525b">no</text>
+<polyline points="210,342 210,364" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="218" y="358" font-size="12" text-anchor="start" fill="#52525b">yes</text>
+<rect x="30" y="364" width="360" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="210.0" y="390.2" font-size="12" text-anchor="middle" font-weight="700">Invoke the filibuster</text>
+<text x="210.0" y="406.2" font-size="12" text-anchor="middle">Pay 25 action points and 5 NPI.</text>
+<text x="210.0" y="422.2" font-size="12" text-anchor="middle">Senate deadline moves back about 12 hours.</text>
+<text x="210.0" y="438.2" font-size="12" text-anchor="middle">The bill now needs 60% of votes cast.</text>
+</g>
+</svg>

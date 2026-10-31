@@ -8,7 +8,8 @@ import { regionApiSubUrl, partyApiUrl } from "@/lib/urls";
 import { NppRecruitSegment } from "@/components/influence/NppRecruitSegment";
 import { NppSlotTierTable } from "@/components/influence/NppSlotTierTable";
 import { formatLocalFunds } from "@/lib/actions";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 interface NppRecruitmentPanelProps {
@@ -80,7 +81,8 @@ export function NppRecruitmentPanel({
   stateId,
   isNational,
 }: NppRecruitmentPanelProps) {
-  const currencyCode = COUNTRY_CONFIGS[countryId.toUpperCase() as CountryId]?.currencyCode ?? "USD";
+  const currencyCode =
+    COUNTRY_CLIENT_CONFIGS[countryId.toUpperCase() as CountryId]?.currencyCode ?? "USD";
   const { showToast } = useToast();
   const clock = useGameClock();
 

@@ -74,7 +74,6 @@ describe("banking separation legislation", () => {
       _id: "default",
       commandEconomyEnabled: false,
       // Advanced charters gated open so these tests exercise the separation law.
-      playerAdvancedBankChartersEnabled: true,
     });
     db.collectionMocks.bankingLaws!.findOne.mockResolvedValue(null);
 

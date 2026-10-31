@@ -19,7 +19,7 @@ import { ElectionDatesLine } from "./ElectionDatesLine";
 import { tierPrimaryRoute } from "@/lib/urls";
 import { useSignedIn } from "@/contexts/AuthDataContext";
 import { PartyLogo } from "@/components/PartyLogo";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { PresidentialMap } from "./presMap/PresidentialMap";
 import type { PresMapModel, PresMapState } from "./presMap/presMapModel";
 import { STATE_NAMES } from "./presMap/usStates";

@@ -44,6 +44,9 @@ function projectionWrites(
   });
 }
 import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
+import { openingFertilityPolicyInputs1991 } from "@/lib/resetMetrics/openingSeed1991";
+import { inheritedCalibrationRegion } from "@/lib/resetMetrics/rules/conversionCalibration";
+import { fertilityPolicyIndex } from "@/lib/resetMetrics/rules/fertilityPolicy";
 
 function vec(pop: number) {
   // simple vector summing to `pop`: spread across working ages 20-59 (40 ages),
@@ -240,6 +243,61 @@ describe("runDemographicFlows", () => {
         populationBefore: expect.any(Number),
         populationAfter: expect.any(Number),
       });
+      // The health board is intentionally from turn 1. Treasury has already
+      // settled turn 2: using the health turn for delivery drops real funding.
+      const calibration = inheritedCalibrationRegion(countryId, regionId);
+      const opening = openingFertilityPolicyInputs1991();
+      const seededIndex =
+        opening[calibration.countryId as keyof typeof opening]![calibration.regionId]!;
+      const baselineBirths = plannedRegions(
+        db
+      )[0]!.resetCohortReadingAfter!.fertility!.births.reduce((sum, births) => sum + births, 0);
+      db.collection("resetLawPrograms").find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          {
+            _id: "family-policy",
+            country: countryId,
+            scope: "national",
+            familyId: "L38",
+            fundingAccountId: "family-account",
+            effectiveTurn: 2,
+            choice: "far_left",
+            primaryMetricEffects: [{ metricId: "55", favorableNormalizedPoints: 0.9 }],
+          },
+        ]),
+      });
+      for (const [receiptTurn, implementation] of [
+        [2, 1],
+        [1, 1],
+        [3, 1],
+        [2, 0],
+      ]) {
+        db.collection("resetDepartmentAccounts").find.mockReturnValue({
+          toArray: vi.fn().mockResolvedValue([
+            {
+              _id: "family-account",
+              countryId,
+              accruedThroughTurn: receiptTurn,
+              lastProgramDelivery: {
+                L38: {
+                  requested: 10,
+                  outlaid: implementation * 10,
+                  implementationFactor: implementation,
+                },
+              },
+            },
+          ]),
+        });
+        await runDemographicFlows(db as unknown as Db, 2, undefined, { metrics: true });
+        const reading = plannedRegions(db)[0]!.resetCohortReadingAfter!;
+        const funded = receiptTurn === 2 && implementation === 1;
+        expect(reading.fertilityPolicyIndex).toBeCloseTo(
+          fertilityPolicyIndex(seededIndex, undefined, funded ? 0.9 : 0)
+        );
+        const births = reading.fertility!.births.reduce((sum, n) => sum + n, 0);
+        if (funded) expect(births).toBeGreaterThan(baselineBirths);
+        else expect(births).toBeCloseTo(baselineBirths);
+      }
     }
   );
 

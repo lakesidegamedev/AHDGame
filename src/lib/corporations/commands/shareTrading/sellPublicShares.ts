@@ -1,3 +1,10 @@
+import { stockSaleDeductions } from "@/lib/budget/rules/stockWithholding";
+import {
+  loadStockWithholdingContexts,
+  stockSellerKey,
+  withholdStockReceipt,
+  netStockProceeds,
+} from "@/lib/budget/stockSaleWithholding";
 import { NextResponse } from "next/server";
 import {
   availableHoldingShares,
@@ -105,7 +112,11 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
     const basicAuth = await requireBasicAuth();
     if (!basicAuth.ok) return basicAuth.response;
 
-    const rateLimit = checkRateLimit(basicAuth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/sellPublicShares:${basicAuth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -530,12 +541,24 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
             success: true,
             sharesSold: orderFill.shares,
             proceeds: Math.round(orderFill.proceedsAnchor * 100) / 100,
+            withheldTax: orderFill.withheldTaxAnchor,
+            netProceeds: orderFill.netProceedsAnchor,
             pricePerShare: orderFill.pricePerShareLocal,
             execution: "order_book",
           });
         }
       }
 
+      const withholdingContexts = await loadStockWithholdingContexts(
+        db,
+        [{ id: imperial._id, collection: "imperialCharacters" }],
+        saleTurn
+      );
+      const withholdingContext = withholdingContexts.get(
+        stockSellerKey({ id: imperial._id, collection: "imperialCharacters" })
+      );
+      if (withholdingContext && withholdingContext.currency !== imperialHomeCurrency)
+        return errorResponse(409, "Your home currency changed. Refresh before selling shares.");
       const buybackGate = await gateIssuerBuyback();
       if (buybackGate) return buybackGate;
 
@@ -552,7 +575,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
         return errorResponse(409, "Shares were already sold or reserved by another action");
       }
 
-      const stockTax = holdingChange.tracked
+      const grossStockTax = holdingChange.tracked
         ? pendingStockTaxReceipt({
             id: new ObjectId().toHexString(),
             currencyCode: imperialHomeCurrency,
@@ -563,11 +586,23 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
             assessmentTurn: saleTurn + 1,
           })
         : undefined;
+      const stockTax = grossStockTax
+        ? withholdStockReceipt(
+            grossStockTax,
+            withholdingContexts.get(
+              stockSellerKey({ id: imperial._id, collection: "imperialCharacters" })
+            )
+          )
+        : undefined;
       const sellerCredit = await db.collection<ImperialCharacter>("imperialCharacters").updateOne(
         { _id: imperial._id },
         {
           $inc: {
-            ...buildPersonalBalanceInc(proceedsInImperialHome, imperialHomeCurrency, forexEnabled),
+            ...buildPersonalBalanceInc(
+              netStockProceeds(proceedsInImperialHome, stockTax),
+              imperialHomeCurrency,
+              forexEnabled
+            ),
           },
           $set: { updatedAt: now },
           ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
@@ -682,6 +717,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
         success: true,
         sharesSold: shares,
         proceeds,
+        ...stockSaleDeductions(proceeds, proceedsInImperialHome, stockTax),
         pricePerShare: executionPrice,
       });
     }
@@ -845,12 +881,24 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
           success: true,
           sharesSold: orderFill.shares,
           proceeds: Math.round(orderFill.proceedsAnchor * 100) / 100,
+          withheldTax: orderFill.withheldTaxAnchor,
+          netProceeds: orderFill.netProceedsAnchor,
           pricePerShare: orderFill.pricePerShareLocal,
           execution: "order_book",
         });
       }
     }
 
+    const withholdingContexts = await loadStockWithholdingContexts(
+      db,
+      [{ id: charDoc._id, collection: "characters" }],
+      saleTurn
+    );
+    const withholdingContext = withholdingContexts.get(
+      stockSellerKey({ id: charDoc._id, collection: "characters" })
+    );
+    if (withholdingContext && withholdingContext.currency !== homeCurrency)
+      return errorResponse(409, "Your home currency changed. Refresh before selling shares.");
     const buybackGate = await gateIssuerBuyback();
     if (buybackGate) return buybackGate;
 
@@ -867,7 +915,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
       return errorResponse(409, "Shares were already sold or reserved by another action");
     }
 
-    const stockTax = holdingChange.tracked
+    const grossStockTax = holdingChange.tracked
       ? pendingStockTaxReceipt({
           id: new ObjectId().toHexString(),
           currencyCode: homeCurrency,
@@ -878,10 +926,22 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
           assessmentTurn: saleTurn + 1,
         })
       : undefined;
+    const stockTax = grossStockTax
+      ? withholdStockReceipt(
+          grossStockTax,
+          withholdingContexts.get(stockSellerKey({ id: charDoc._id, collection: "characters" }))
+        )
+      : undefined;
     const sellerCredit = await db.collection<Character>("characters").updateOne(
       { _id: charDoc._id },
       {
-        $inc: { ...buildPersonalBalanceInc(proceedsInHome, homeCurrency, forexEnabled) },
+        $inc: {
+          ...buildPersonalBalanceInc(
+            netStockProceeds(proceedsInHome, stockTax),
+            homeCurrency,
+            forexEnabled
+          ),
+        },
         $set: { updatedAt: now },
         ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
       }
@@ -995,6 +1055,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
       success: true,
       sharesSold: shares,
       proceeds,
+      ...stockSaleDeductions(proceeds, proceedsInHome, stockTax),
       pricePerShare: executionPrice,
     });
   } catch (error) {

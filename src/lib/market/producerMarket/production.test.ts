@@ -2,6 +2,8 @@ import { producerPayableId } from "./payablesRules";
 import { producerTrades } from "./rules";
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
+import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
+import { MINOR_INPUT_SHORTFALL_PREMIUM } from "./makeDoRules";
 
 const plant = (changes: Partial<ProductionPlan> = {}): ProductionPlan => ({
   id: "plant",
@@ -259,8 +261,9 @@ describe("receipt-backed production", () => {
       ),
       producers: [plant({ inputs: [] })],
     });
-    expect(first.producers[0]).toMatchObject({ profit: -30, cashFlow: 0, closingArrears: 30 });
-    expect(first.payables.reduce((sum, claim) => sum + claim.amount, 0)).toBe(30);
+    // No cash: the plant staffs nothing, so only the fixed site bill is owed.
+    expect(first.producers[0]).toMatchObject({ profit: -10, cashFlow: 0, closingArrears: 10 });
+    expect(first.payables.reduce((sum, claim) => sum + claim.amount, 0)).toBe(10);
     const transfer = (rows: typeof first.accounts, amount: number) =>
       rows.map((account) => ({
         ...account,
@@ -276,10 +279,10 @@ describe("receipt-backed production", () => {
     });
     expect(second.producers[0]).toMatchObject({
       producedUnits: 0,
-      profit: -30,
+      profit: -10,
       cashFlow: -15,
-      arrearsPaid: 15,
-      closingArrears: 45,
+      arrearsPaid: 10,
+      closingArrears: 5,
     });
     const third = advanceProducerEconomy({
       turn: 3,
@@ -289,12 +292,12 @@ describe("receipt-backed production", () => {
     });
     expect(third.producers[0]).toMatchObject({
       profit: -30,
-      cashFlow: -75,
-      arrearsPaid: 45,
+      cashFlow: -35,
+      arrearsPaid: 5,
       closingArrears: 0,
     });
     expect(third.payables).toEqual([]);
-    expect(third.accounts.find((account) => account.id === "corp")!.cash).toBe(5);
+    expect(third.accounts.find((account) => account.id === "corp")!.cash).toBe(45);
   });
 
   it("reserves received cash for an unpaid creditor before allowing discretionary purchases", () => {
@@ -460,6 +463,40 @@ describe("receipt-backed production", () => {
     });
   });
 
+  it("writes down over-cover finished stock without expensing its production again", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      stockCoverTurns: 2,
+      producers: [
+        plant({
+          capacityUnits: 0,
+          labourCost: 0,
+          otherOperatingCost: 0,
+          inputs: [],
+          recentSoldUnits: 1,
+          outputs: [
+            {
+              commodity: "steel",
+              book: "world",
+              unitsPerOutput: 1,
+              policy: { kind: "manual", unitPrice: 3 },
+              referenceUnitPrice: 3,
+              storable: true,
+            },
+          ],
+          outputStock: [{ commodity: "steel", book: "world", units: 100, quoteUnitCost: 2 }],
+        }),
+      ],
+      externalOrders: [],
+    });
+    const producer = result.producers[0];
+    const kept = producer.outputStock.reduce((n, s) => n + s.units, 0);
+    expect(kept).toBeLessThan(100);
+    expect(producer.inventoryWriteOff).toBe(0);
+    expect(producer.profit).toBe(0);
+  });
+
   it("reports paid unit prices separately from internal site deliveries", () => {
     const energy = {
       commodity: "energy",
@@ -529,7 +566,10 @@ describe("receipt-backed production", () => {
       plannedUnits: 50,
       purchases: 0,
       inputsConsumed: 40,
-      cashFlow: -30,
+      // Half the run was made, so half the wages; no idle floor given, site unchanged.
+      labourPaid: 10,
+      billedRunShare: 0.5,
+      cashFlow: -20,
     });
   });
 
@@ -558,12 +598,117 @@ describe("receipt-backed production", () => {
       producedUnits: 0,
       revenue: 0,
       purchases: 0,
-      labourPaid: 20,
+      // Nothing made, no wages owed; without an idle floor the site bill is unchanged.
+      labourPaid: 0,
       otherOperatingPaid: 10,
-      profit: -30,
-      cashFlow: -30,
+      profit: -10,
+      cashFlow: -10,
     });
     expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBe(2000);
+  });
+
+  it("bills wages and site running costs on the run actually made, keeping cold upkeep", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ otherOperatingCost: 10, idleOperatingCost: 2 })],
+      externalOffers: [
+        {
+          id: "power",
+          accountId: "supplier",
+          commodity: "energy",
+          book: "world",
+          units: 50,
+          unitPrice: 1,
+        },
+      ],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeCloseTo(25);
+    expect(r.billedRunShare).toBeCloseTo(0.25);
+    // Wages: a quarter of 20. Site: cold floor 2 plus a quarter of the running 8.
+    expect(r.labourPaid).toBeCloseTo(5);
+    expect(r.otherOperatingPaid).toBeCloseTo(4);
+    expect(r.idleOperatingCost).toBeCloseTo(2);
+    expect(r.labourArrears).toBeCloseTo(0);
+    expect(r.profit).toBeCloseTo(r.revenue - 50 - 5 - 4);
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    // Households keep only the wages earned (minus what they spent), services the trued bill.
+    expect(cashOf("services")).toBeCloseTo(4);
+    expect(cashOf("corp")).toBeCloseTo(1000 - 50 - 5 - 4 + r.revenue);
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(2000, 9);
+  });
+
+  it("a sold-out plant starved of inputs holds its plan next turn; one under materials brakes", () => {
+    const settle = (price: number) =>
+      advanceProducerEconomy({
+        turn: 1,
+        accounts,
+        producers: [
+          plant({
+            idleOperatingCost: 2,
+            plannedRunShare: 1,
+            outputs: [
+              {
+                commodity: "financial_services",
+                unitsPerOutput: 1,
+                book: "world",
+                policy: { kind: "manual", unitPrice: price },
+                referenceUnitPrice: price,
+                storable: false,
+              },
+            ],
+          }),
+        ],
+        externalOffers: [
+          {
+            id: "power",
+            accountId: "supplier",
+            commodity: "energy",
+            book: "world",
+            units: 50,
+            unitPrice: 1,
+          },
+        ],
+        externalOrders: [
+          {
+            id: "buyer",
+            accountId: "households",
+            commodity: "financial_services",
+            book: "world",
+            units: 100,
+            maximumUnitPrice: 5,
+          },
+        ],
+      }).producers[0];
+    // Sells all 25 it could make at 3: revenue 75 against materials 50, wages 5, site 4.
+    // Billed for the planned run (wages 20, site 10) the same run read as a loss.
+    const held = settle(3);
+    expect(held.soldUnits).toBeCloseTo(25);
+    expect(demandPlanRunShare(held)).toBeCloseTo(1, 12);
+    // Selling at 1.5 does not cover 2 of materials per unit: the brake still cuts.
+    const braked = settle(1.5);
+    expect(braked.soldUnits).toBeCloseTo(25);
+    expect(demandPlanRunShare(braked)).toBeCloseTo(0.25 * (1 - OUTPUT_CUT_STEP), 12);
+  });
+
+  it("does not credit households with wages for output the plant never made", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ idleOperatingCost: 2 })],
+    });
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    expect(result.producers[0]).toMatchObject({
+      producedUnits: 0,
+      billedRunShare: 0,
+      labourPaid: 0,
+      otherOperatingPaid: 2,
+      profit: -2,
+    });
+    expect(cashOf("households")).toBe(1000);
+    expect(cashOf("services")).toBe(2);
+    expect(cashOf("corp")).toBe(998);
   });
 
   it("buys only available inputs and produces only the supported recipe quantity", () => {
@@ -586,8 +731,10 @@ describe("receipt-backed production", () => {
       producedUnits: 25,
       purchases: 50,
       inputsConsumed: 50,
-      profit: -80,
-      cashFlow: -80,
+      // A quarter of the run was made: wages 5 of 20, site 10 (no idle floor given).
+      labourPaid: 5,
+      profit: -65,
+      cashFlow: -65,
     });
     expect(result.producers[0].outputStock[0].units).toBe(0);
     expect([...producerTrades(result.tradeReceipt)][0]).toMatchObject({ units: 50, amount: 50 });
@@ -682,6 +829,13 @@ describe("receipt-backed production", () => {
     expect(result.producers[0].outputStock[0].units).toBe(0);
   });
 
+  it("echoes the planned run share on the receipt so a later turn can grow from it", () => {
+    const run = (p: ProductionPlan) =>
+      advanceProducerEconomy({ turn: 1, accounts, producers: [p] }).producers[0];
+    expect(run(plant({ plannedRunShare: 0.75 })).plannedRunShare).toBe(0.75);
+    expect(run(plant())).not.toHaveProperty("plannedRunShare");
+  });
+
   it("does not pay wages or buy inputs from bank deposits or anticipated revenue", () => {
     const result = advanceProducerEconomy({
       turn: 1,
@@ -692,11 +846,11 @@ describe("receipt-backed production", () => {
       producedUnits: 0,
       labourPaid: 0,
       otherOperatingPaid: 0,
-      operatingArrears: 30,
-      labourArrears: 20,
+      operatingArrears: 10,
+      labourArrears: 0,
       otherOperatingArrears: 10,
       inventoryWriteOff: 100,
-      profit: -130,
+      profit: -110,
       cashFlow: 0,
     });
     expect(result.producers[0].inputStock[0].units).toBe(0);
@@ -708,8 +862,10 @@ describe("receipt-backed production", () => {
       accounts: accounts.map((a) => (a.id === "corp" ? { ...a, cash: 30 } : a)),
       producers: [plant({ id: "b", inputs: [] }), plant({ id: "a", inputs: [] })],
     });
-    expect(result.producers.map((p) => p.producedUnits)).toEqual([50, 50]);
-    expect(result.producers.map((p) => p.operatingArrears)).toEqual([15, 15]);
+    // 30 cash pays both site bills (20) and staffs a quarter of the wages (40),
+    // so each site runs a quarter and nothing is owed.
+    expect(result.producers.map((p) => p.producedUnits)).toEqual([25, 25]);
+    expect(result.producers.map((p) => p.operatingArrears)).toEqual([0, 0]);
     expect(result.accounts.find((a) => a.id === "corp")!.cash).toBe(0);
   });
 
@@ -950,5 +1106,79 @@ describe("same-turn spillover", () => {
       r.prices.find((p) => p.commodity === commodity)!.unitPrice;
     expect(price(on, "food")).toBeCloseTo(price(off, "food"), 12);
     expect(price(on, "steel")).toBeCloseTo(price(off, "steel"), 12);
+  });
+});
+
+describe("minor inputs in make-do", () => {
+  // Energy is 2 per unit at 1; construction 0.001 per unit at 10 is 0.5% of input cost.
+  const recipe = [
+    { commodity: "energy", unitsPerOutput: 2, book: "world", maximumUnitPrice: 1 },
+    {
+      commodity: "construction_services",
+      unitsPerOutput: 0.001,
+      book: "world",
+      maximumUnitPrice: 10,
+    },
+  ];
+  const offer = (commodity: string, units: number, unitPrice: number) => ({
+    id: commodity,
+    accountId: "supplier",
+    commodity,
+    book: "world",
+    units,
+    unitPrice,
+  });
+
+  it("a plant missing only a minor input runs its plan and pays the premium", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ inputs: recipe })],
+      externalOffers: [offer("energy", 200, 1), offer("construction_services", 0.01, 10)],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeCloseTo(100, 9);
+    // Needed 0.1, had 0.01: 0.09 missing at 10 times the premium.
+    const premium = 0.09 * 10 * MINOR_INPUT_SHORTFALL_PREMIUM;
+    expect(r.minorInputPremium).toBeCloseTo(premium, 9);
+    expect(r.profit).toBeCloseTo(r.revenue - r.inputsConsumed - premium - 20 - 10, 9);
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    expect(cashOf("services")).toBeCloseTo(10 + premium, 9);
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(2000, 9);
+    expect(result.payables).toEqual([]);
+  });
+
+  it("owes the premium it cannot pay instead of minting it", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts: accounts.map((a) => (a.id === "corp" ? { ...a, cash: 230 } : a)),
+      producers: [plant({ inputs: recipe })],
+      externalOffers: [offer("energy", 200, 1)],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeGreaterThan(99);
+    // No construction at all: every needed unit is improvised.
+    const premium = r.producedUnits * 0.001 * 10 * MINOR_INPUT_SHORTFALL_PREMIUM;
+    expect(r.minorInputPremium).toBeCloseTo(premium, 9);
+    const owed = result.payables
+      .filter((c) => c.kind === "operating")
+      .reduce((n, c) => n + c.amount, 0);
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    expect(owed).toBeGreaterThan(0);
+    expect(cashOf("corp")).toBeCloseTo(0, 9);
+    expect(cashOf("services") - r.otherOperatingPaid + owed).toBeCloseTo(premium, 9);
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(1230, 9);
+  });
+
+  it("a plant missing a major input is still cut", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ inputs: recipe })],
+      externalOffers: [offer("energy", 50, 1), offer("construction_services", 1, 10)],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeCloseTo(25, 9);
+    expect(r.minorInputPremium).toBeUndefined();
   });
 });

@@ -10,6 +10,7 @@ import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
+import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
 import {
   householdTransferFunding,
   publicBuyerFunding,
@@ -73,6 +74,12 @@ export async function buildProducerTurnDemand(
     investmentAccountId?: (countryId: string) => string;
     /** Last turn's unspent public funding kept per budget line, by country (funded turn only). */
     publicCarryIn?: ReadonlyMap<string, LineCarry>;
+    /** Optional timing hook, called at the end of each numbered step. */
+    stage?: (name: string) => void;
+    /** gameConfig.producerHouseholdIncomeFloor: target household income per turn (anchor); 0 or absent = off. */
+    householdIncomeFloor?: number;
+    /** Each country's plant-economy share at its first funded turn (see heldShares). */
+    openingShareByCountry?: ReadonlyMap<string, number>;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -86,6 +93,10 @@ export async function buildProducerTurnDemand(
     [];
   const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
   const env = isolatedShadowEnv(input.env);
+  // Country tags exist only for the funded book (see fundedBookRules); with the
+  // stage off they are omitted so a receipt is byte-identical to before.
+  const tagCountry = (countryId: string | undefined) =>
+    (env.fundedBookStage ?? 0) >= 1 && countryId ? { countryId } : {};
   const { lookups } = input;
   const base = eraScaledBasePrices(lookups.eraUnitScale);
   const refPrice = (commodity: CommodityType, stateId: string): number | null => {
@@ -204,6 +215,7 @@ export async function buildProducerTurnDemand(
     }
   }
 
+  input.stage?.("demand.plants");
   // 2. Households: carried savings, or a new run's opening of a few turns of
   //    the wages they are paid (owner decision 2026-10-18). Income-derived;
   //    no GDP or population sizing.
@@ -219,6 +231,7 @@ export async function buildProducerTurnDemand(
     }
   }
 
+  input.stage?.("demand.households");
   // 3. Public buyers: the existing budget outlay times the plant economy's
   //    share of GDP, so only the plant market's slice of a budget is spent here.
   const states = await db
@@ -302,20 +315,66 @@ export async function buildProducerTurnDemand(
   const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
   // Transfer lines of the same budgets (social security, welfare, pensions)
   // are household income; the treasury deducts them already.
+  const transferBudgets = lookups.federalBudgets.map((b) => {
+    const code = resolveCountryCurrencyCode(b);
+    const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+    return {
+      countryId: String(b.countryId),
+      byCategory: Object.fromEntries(
+        Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
+      ),
+    };
+  });
+  const currentShares = new Map(
+    Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])
+  );
+  // Steady household income (producerHouseholdIncomeFloor > 0): hold each
+  // country's opening share and top up to the income floor from its own
+  // transfer lines. Off: transfers follow the live plant share as before.
+  let transferShares: ReadonlyMap<string, number> = currentShares;
+  let householdSource: {
+    floorAnchor: number;
+    plannedIncomeAnchor: number;
+    topUpAnchor: number;
+    shortfallAnchor: number;
+    currentShares: Record<string, number>;
+  } | null = null;
+  const incomeFloor = input.householdIncomeFloor ?? 0;
+  if (incomeFloor > 0) {
+    const held = heldShares(currentShares, input.openingShareByCountry);
+    const lineAnchorByCountry = new Map<string, number>();
+    for (const t of householdTransferFunding(
+      transferBudgets,
+      [...householdWallets.values()],
+      stateWeightsByCountry,
+      new Map([...held.keys()].map((id) => [id, 1])),
+      TURNS_PER_YEAR
+    ))
+      lineAnchorByCountry.set(t.countryId, (lineAnchorByCountry.get(t.countryId) ?? 0) + t.amount);
+    const plannedIncomeAnchor = preparedSectors.reduce(
+      (sum, p) => sum + (p.plan.labourCost ?? 0) + (p.plan.otherOperatingCost ?? 0),
+      0
+    );
+    const floored = incomeFloorShares({
+      shares: held,
+      lineAnchorByCountry,
+      plannedIncomeAnchor,
+      floorAnchor: incomeFloor,
+    });
+    transferShares = floored.shares;
+    householdSource = {
+      floorAnchor: incomeFloor,
+      plannedIncomeAnchor,
+      topUpAnchor: floored.topUpAnchor,
+      shortfallAnchor: floored.shortfallAnchor,
+      currentShares: Object.fromEntries(currentShares),
+    };
+  }
   const householdTransfers = householdTransferFunding(
-    lookups.federalBudgets.map((b) => {
-      const code = resolveCountryCurrencyCode(b);
-      const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
-      return {
-        countryId: String(b.countryId),
-        byCategory: Object.fromEntries(
-          Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
-        ),
-      };
-    }),
+    transferBudgets,
     [...householdWallets.values()],
     stateWeightsByCountry,
-    new Map(Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])),
+    transferShares,
     TURNS_PER_YEAR
   );
   const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
@@ -342,6 +401,7 @@ export async function buildProducerTurnDemand(
     }));
   const investmentFundingTotal = investmentFunding.reduce((s, f) => s + f.fundingLocal, 0);
 
+  input.stage?.("demand.public");
   // 4. Accounts: company cash, households, funded public buyers, payees (empty at open).
   const roles: ShadowAccountRole[] = [];
   const accounts: MarketAccount[] = [];
@@ -375,6 +435,7 @@ export async function buildProducerTurnDemand(
     }
   const openingById = new Map(accounts.map((a) => [a.id, a.cash]));
 
+  input.stage?.("demand.accounts");
   // 5. Orders and trade routes: world-book buyers only reach sellers in their
   //    own country or on routes the live trade matrix leaves open.
   const walletCountry = new Map(
@@ -386,18 +447,27 @@ export async function buildProducerTurnDemand(
     priceHeadroom: PRICE_HEADROOM,
   }).map((h) => ({
     ...h,
+    ...tagCountry(walletCountry.get(h.accountId)),
     products: h.products.map((p) => ({
       ...p,
       book: shadowBook(p.book, p.commodity, walletCountry.get(h.accountId) ?? ""),
     })),
   }));
   const publicBuyerOrders = publicOrders(
-    carriedFunding.map((f) => ({ accountId: publicAccountId(f.countryId), lines: f.lines })),
+    carriedFunding.map((f) => ({
+      accountId: publicAccountId(f.countryId),
+      ...tagCountry(f.countryId),
+      lines: f.lines,
+    })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
   const investmentBuyerOrders = publicOrders(
-    investmentFunding.map((f) => ({ accountId: investmentAccountId(f.countryId), lines: f.lines })),
+    investmentFunding.map((f) => ({
+      accountId: investmentAccountId(f.countryId),
+      ...tagCountry(f.countryId),
+      lines: f.lines,
+    })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
@@ -423,7 +493,10 @@ export async function buildProducerTurnDemand(
     ];
   });
   const marketingOrders = publicOrders(
-    marketingBuyerLines(marketingBudgets, TURNS_PER_DAY),
+    marketingBuyerLines(marketingBudgets, TURNS_PER_DAY).map((b) => ({
+      ...b,
+      ...tagCountry(corpCountry.get(b.accountId)),
+    })),
     (c) => refPrice(c as CommodityType, ""),
     PRICE_HEADROOM
   ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));
@@ -506,8 +579,10 @@ export async function buildProducerTurnDemand(
     householdSeed,
     householdTransfers,
     householdTransferTotal,
+    householdSource,
     householdWallets,
     households,
+    wageBillByWallet,
     investmentBuyerOrders,
     investmentFunding,
     investmentFundingTotal,
@@ -563,29 +638,102 @@ export function legacyPnlBySectorId(
 /**
  * Plant preparation records labour demand, wage and automation indexes and
  * strike events into the environment it is given. The live turn persists those
- * collectors later, so the shadow must never write into them: it works on deep
- * copies and starts with no pending strikes.
+ * collectors later, so the shadow must never write into them: it works on
+ * copies of the collectors it mutates and starts with no pending strikes.
+ * Copying a collector is a shallow copy of its per-state accumulators, which is
+ * the whole of their state, and is cheaper than a generic deep clone.
  */
 export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv {
   return {
     ...env,
-    labourDemandByState: structuredClone(env.labourDemandByState),
-    labourDemandWageIndexByState: structuredClone(env.labourDemandWageIndexByState),
-    wageIndexByState: structuredClone(env.wageIndexByState),
-    automationIndexByState: structuredClone(env.automationIndexByState),
+    labourDemandByState: new Map(env.labourDemandByState),
+    labourDemandWageIndexByState: copyStateAccumulators(env.labourDemandWageIndexByState),
+    wageIndexByState: copyStateAccumulators(env.wageIndexByState),
+    automationIndexByState: copyStateAccumulators(env.automationIndexByState),
     pendingStrikeEvents: [],
     // The shadow measures the funded world, which buys advertising as an input.
     advertisingInput: true,
   };
 }
 
+/** A new map holding a copy of each state's accumulator, never the live one. */
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T>
+): Map<string, T>;
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T> | undefined
+): Map<string, T> | undefined;
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T> | undefined
+): Map<string, T> | undefined {
+  // structuredClone(undefined) was undefined; an absent collector stays absent.
+  if (!source) return undefined;
+  const copy = new Map<string, T>();
+  for (const [stateId, accumulator] of source) copy.set(stateId, { ...accumulator });
+  return copy;
+}
+
 /**
  * The live world has not had the producer opening conversion, so its sectors
  * carry no producer generation or inventory. For the shadow only, give each a
- * copy with an opening stamped on last turn: the stock and receipt the previous
+ * view with an opening stamped on last turn: the stock and receipt the previous
  * shadow turn left, or on a new run its existing stock carried as sellable
  * output. Never written back.
+ *
+ * The view is the projection plant preparation reads, not a copy of the whole
+ * document: a live sector also carries the telemetry of every prior turn, and
+ * copying all of that per sector was most of the shadow's document cost. Keep
+ * this list in step with `prepareProducerPhysicalSector` and the rules it
+ * calls; anything preparation reads that is not here arrives as undefined.
  */
+function preparationView(
+  sector: CorporateSector,
+  opening: Pick<
+    CorporateSector,
+    "capacityBookAnchor" | "buildQueue" | "producerCapacity" | "producerInventory"
+  > &
+    Partial<Pick<CorporateSector, "producerSettlement">>
+): CorporateSector {
+  return {
+    _id: sector._id,
+    corporationId: sector.corporationId,
+    countryId: sector.countryId,
+    stateId: sector.stateId,
+    sectorType: sector.sectorType,
+    industryModel: sector.industryModel,
+    mediaDiscriminator: sector.mediaDiscriminator,
+    strategyId: sector.strategyId,
+    transitionFromStrategyId: sector.transitionFromStrategyId,
+    transitionStartTurn: sector.transitionStartTurn,
+    retoolRescaleApplied: sector.retoolRescaleApplied,
+    capitalStock: sector.capitalStock,
+    capacityBookAnchor: opening.capacityBookAnchor,
+    buildQueue: opening.buildQueue,
+    mothballed: sector.mothballed,
+    activeCapacityPercent: sector.activeCapacityPercent,
+    producerCapacity: opening.producerCapacity,
+    producerInventory: opening.producerInventory,
+    producerQuotes: sector.producerQuotes,
+    pricingPosture: sector.pricingPosture,
+    pricingMode: sector.pricingMode,
+    producerSettlement: opening.producerSettlement ?? sector.producerSettlement,
+    labourStaffingFactor: sector.labourStaffingFactor,
+    wageLevel: sector.wageLevel,
+    unionization: sector.unionization,
+    workerExpectationIndex: sector.workerExpectationIndex,
+    representingUnionId: sector.representingUnionId,
+    strikeStartedAtTurn: sector.strikeStartedAtTurn,
+    strikeCooldownUntilTurn: sector.strikeCooldownUntilTurn,
+    soeMandate: sector.soeMandate,
+    nationalizedAtTurn: sector.nationalizedAtTurn,
+    nationalizationTransitionMultiplier: sector.nationalizationTransitionMultiplier,
+    productionPolicy: sector.productionPolicy,
+    productionPolicyLevel: sector.productionPolicyLevel,
+    cutoverTransition: sector.cutoverTransition,
+    cutoverStruggling: sector.cutoverStruggling,
+  } as CorporateSector;
+}
+
 export function shadowOpeningSector(
   sector: CorporateSector,
   worldEpoch: string,
@@ -594,8 +742,7 @@ export function shadowOpeningSector(
 ): CorporateSector {
   const opening = emptyProducerSectorOpening(worldEpoch, Math.max(0, turn - 1));
   if (carried)
-    return {
-      ...sector,
+    return preparationView(sector, {
       capacityBookAnchor: sector.capacityBookAnchor ?? 0,
       buildQueue: Array.isArray(sector.buildQueue) ? sector.buildQueue : [],
       producerCapacity: opening.producerCapacity,
@@ -604,8 +751,11 @@ export function shadowOpeningSector(
         inputStock: carried.inputStock,
         outputStock: carried.outputStock,
       },
-      producerSettlement: { ...carried.receipt, turn: turn - 1 },
-    } as CorporateSector;
+      producerSettlement: {
+        ...carried.receipt,
+        turn: turn - 1,
+      } as CorporateSector["producerSettlement"],
+    });
   if (sector.producerCapacity && sector.producerInventory) return sector;
   const outputStock = Object.entries(sector.inventoryUnits ?? {})
     .filter(([, units]) => typeof units === "number" && Number.isFinite(units) && units > 0)
@@ -616,11 +766,10 @@ export function shadowOpeningSector(
         ? `state:${sector.stateId}`
         : "world",
     }));
-  return {
-    ...sector,
+  return preparationView(sector, {
     capacityBookAnchor: sector.capacityBookAnchor ?? 0,
     buildQueue: Array.isArray(sector.buildQueue) ? sector.buildQueue : [],
     producerCapacity: opening.producerCapacity,
     producerInventory: { ...opening.producerInventory, outputStock },
-  };
+  });
 }

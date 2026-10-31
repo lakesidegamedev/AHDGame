@@ -1,9 +1,7 @@
 import { rollInt, type Rng } from "../rng";
 
 /** Single-zero (European) wheel. The zero is the whole house edge: 1/37, about 2.7%. */
-export const ROULETTE_RED = new Set([
-  1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36,
-]);
+const ROULETTE_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 
 export const ROULETTE_BETS = [
   "red",
@@ -23,7 +21,7 @@ export const ROULETTE_BETS = [
 export type RouletteBet = (typeof ROULETTE_BETS)[number];
 
 /** Total return on a straight-up hit. */
-export const ROULETTE_MAX_MULTIPLIER = 36;
+const ROULETTE_MAX_MULTIPLIER = 36;
 
 export interface RouletteSpin {
   pocket: number;
@@ -32,7 +30,7 @@ export interface RouletteSpin {
   multiplier: number;
 }
 
-export function rouletteColor(pocket: number): RouletteSpin["color"] {
+function rouletteColor(pocket: number): RouletteSpin["color"] {
   if (pocket === 0) return "green";
   return ROULETTE_RED.has(pocket) ? "red" : "black";
 }

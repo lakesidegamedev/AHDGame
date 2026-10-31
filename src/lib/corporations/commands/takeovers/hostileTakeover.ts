@@ -1,7 +1,13 @@
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+  netStockProceeds,
+  type StockSeller,
+} from "@/lib/budget/stockSaleWithholding";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { assertForeignControlAllowed } from "@/lib/mechanicalLaws/guards";
 import { NextResponse } from "next/server";
-import { positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import type { ObjectId } from "mongodb";
@@ -373,6 +379,18 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         return errorResponse(409, "Resolve secured construction before completing this takeover");
       }
 
+      const takeoverTurn = await getCurrentTurn(db);
+      const withholdingContexts = await loadStockWithholdingContexts(
+        db,
+        minority.flatMap<StockSeller>((sh) =>
+          sh.characterId
+            ? [{ id: sh.characterId, collection: "characters" as const }]
+            : sh.imperialCharacterId
+              ? [{ id: sh.imperialCharacterId, collection: "imperialCharacters" as const }]
+              : []
+        ),
+        takeoverTurn
+      );
       const debitResult = await db.collection<Corporation>("corporations").updateOne(
         {
           _id: parent._id,
@@ -418,7 +436,6 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           throw new BankCharterRaceError(bankTransfer.error);
         }
 
-        const takeoverTurn = await getCurrentTurn(db);
         const parentParty: ShareTradeParty = { corporationId: parent._id, name: parent.name };
         for (const sh of minority) {
           const payoutAnchor = sh.shares * pricePerShareAnchor;
@@ -430,39 +447,53 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               .collection<Character>("characters")
               .findOne({ _id: sh.characterId });
             if (!ch) continue;
-            const home = getHomeCurrency(ch);
+            const home =
+              (withholdingContexts.get("characters:" + sh.characterId.toHexString())?.currency as
+                CurrencyCode | undefined) ?? getHomeCurrency(ch);
             let amountLocal = payoutAnchor;
             if (forexEnabled) {
               const fx = await loadCharacterFxRate(db, home);
               if (!fx.ok) throw new Error("RATE_UNAVAILABLE");
               amountLocal = payoutAnchor * fx.rate;
             }
+            const grossStockTax =
+              stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
+              takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
+                ? pendingStockTaxReceipt({
+                    id:
+                      target._id.toHexString() +
+                      ":" +
+                      takeoverTurn +
+                      ":" +
+                      sh.characterId.toHexString(),
+                    currencyCode: home,
+                    holdingTerms: positionHoldingTerms(
+                      anchorHoldingPosition(sh, targetFxPre),
+                      takeoverTurn,
+                      pricePerShareAnchor
+                    ),
+                    proceedsAnchor: payoutAnchor,
+                    proceedsCredited: amountLocal,
+                    saleTurn: takeoverTurn,
+                    assessmentTurn: takeoverTurn + 1,
+                  })
+                : undefined;
+            const stockTax = grossStockTax
+              ? withholdStockReceipt(
+                  grossStockTax,
+                  withholdingContexts.get("characters:" + sh.characterId!.toHexString())
+                )
+              : undefined;
             await db.collection<Character>("characters").updateOne(
               { _id: sh.characterId },
               {
-                $inc: buildPersonalBalanceInc(amountLocal, home, forexEnabled),
+                $inc: buildPersonalBalanceInc(
+                  netStockProceeds(amountLocal, stockTax),
+                  home,
+                  forexEnabled
+                ),
                 $set: { updatedAt: now },
-                ...(stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
-                takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
-                  ? {
-                      $push: {
-                        pendingStockTaxReceipts: pendingStockTaxReceipt({
-                          id:
-                            target._id.toHexString() +
-                            ":" +
-                            takeoverTurn +
-                            ":" +
-                            sh.characterId.toHexString(),
-                          currencyCode: home,
-                          holdingTerms: positionHoldingTerms(sh, takeoverTurn, pricePerShareAnchor),
-                          proceedsAnchor: payoutAnchor,
-                          proceedsCredited: amountLocal,
-                          saleTurn: takeoverTurn,
-                          assessmentTurn: takeoverTurn + 1,
-                        }),
-                      },
-                    }
-                  : {}),
+                ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
               }
             );
             holderParty = { characterId: sh.characterId, name: ch.name };
@@ -482,39 +513,56 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               .collection<ImperialCharacter>("imperialCharacters")
               .findOne({ _id: sh.imperialCharacterId });
             if (!ich) continue;
-            const home = getHomeCurrency(ich as PersonalWealthHolder);
+            const home =
+              (withholdingContexts.get("imperialCharacters:" + sh.imperialCharacterId.toHexString())
+                ?.currency as CurrencyCode | undefined) ??
+              getHomeCurrency(ich as PersonalWealthHolder);
             let amountLocal = payoutAnchor;
             if (forexEnabled) {
               const fx = await loadCharacterFxRate(db, home);
               if (!fx.ok) throw new Error("RATE_UNAVAILABLE");
               amountLocal = payoutAnchor * fx.rate;
             }
+            const grossStockTax =
+              stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
+              takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
+                ? pendingStockTaxReceipt({
+                    id:
+                      target._id.toHexString() +
+                      ":" +
+                      takeoverTurn +
+                      ":" +
+                      sh.imperialCharacterId.toHexString(),
+                    currencyCode: home,
+                    holdingTerms: positionHoldingTerms(
+                      anchorHoldingPosition(sh, targetFxPre),
+                      takeoverTurn,
+                      pricePerShareAnchor
+                    ),
+                    proceedsAnchor: payoutAnchor,
+                    proceedsCredited: amountLocal,
+                    saleTurn: takeoverTurn,
+                    assessmentTurn: takeoverTurn + 1,
+                  })
+                : undefined;
+            const stockTax = grossStockTax
+              ? withholdStockReceipt(
+                  grossStockTax,
+                  withholdingContexts.get(
+                    "imperialCharacters:" + sh.imperialCharacterId!.toHexString()
+                  )
+                )
+              : undefined;
             await db.collection<ImperialCharacter>("imperialCharacters").updateOne(
               { _id: sh.imperialCharacterId },
               {
-                $inc: buildPersonalBalanceInc(amountLocal, home, forexEnabled),
+                $inc: buildPersonalBalanceInc(
+                  netStockProceeds(amountLocal, stockTax),
+                  home,
+                  forexEnabled
+                ),
                 $set: { updatedAt: now },
-                ...(stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
-                takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
-                  ? {
-                      $push: {
-                        pendingStockTaxReceipts: pendingStockTaxReceipt({
-                          id:
-                            target._id.toHexString() +
-                            ":" +
-                            takeoverTurn +
-                            ":" +
-                            sh.imperialCharacterId.toHexString(),
-                          currencyCode: home,
-                          holdingTerms: positionHoldingTerms(sh, takeoverTurn, pricePerShareAnchor),
-                          proceedsAnchor: payoutAnchor,
-                          proceedsCredited: amountLocal,
-                          saleTurn: takeoverTurn,
-                          assessmentTurn: takeoverTurn + 1,
-                        }),
-                      },
-                    }
-                  : {}),
+                ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
               }
             );
             holderParty = { imperialCharacterId: sh.imperialCharacterId, name: ich.name };

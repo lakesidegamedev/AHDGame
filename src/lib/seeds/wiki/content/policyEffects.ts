@@ -1,122 +1,96 @@
 export const policyEffectsContent = `# Policy Effects
 
-Every signed bill changes the law, and the law changes the country. This page explains how enacted policies affect national and state metrics each turn, how multiple policies stack, and what the long-run equilibrium looks like.
+Pass a law today and the numbers will only start to move tomorrow. A policy does not move a metric instantly: it moves the metric's target, and the metric closes the gap a little every turn. A strong law starts working at once but takes a few days of real time to show most of its effect, so plan for the election after next, not the next one.
 
-## Two levels of policy
+## What a signed law does each turn
 
-The game tracks policy at two separate levels:
+In the US, the UK, Russia and East Germany every program law has a level from 0 (fully repealed) to 4. An enacted [bill](/wiki/bills-legislation) that changes a law's level is what starts a policy moving a metric. Each turn (one real hour) the game rebuilds every region's targets from the current levels and moves each metric one step toward its target.
+
+1. **Points from the law book.** A law aimed at one metric adds 12.5 points to that metric's target per level, so a full swing from level 0 to level 4 is worth 50 points. A broader law touches two to five metrics, at 5 points per level times a weight between 0.25 and 0.6 for each. National laws apply in full to every region. A regional law adds half its points, and only in its own region.
+2. **The region's own starting point.** Each region keeps the part of its score that its laws do not explain, so a region that starts above or below the law book stays above or below it.
+3. **Bends from the rest of the game.** The state of the economy, the services the government actually funds, cabinet work, strikes and living conflicts each bend the target up or down a little.
+4. **One step toward the target.** The metric closes 2% of the remaining gap every turn, and always at least 0.01 points, so a small gap does close instead of crawling forever.
+
+The target is kept between 0 and 100. Policy moves scores like public safety, health and education each turn, starting from the values held in [National Metrics](/wiki/national-metrics).
+
+![Per-turn pipeline from active laws to a weighted target, pull toward the target, direct push, drift to baseline and clamp.](/wiki-images/diagrams/policy-effects-turn-pipeline.svg)
+
+Slow movement keeps one bill from rewriting the country overnight, and it gives opponents time to answer. A law that is repealed takes its points off the target, so its effect fades out rather than snapping back.
+
+## How long until it shows
+
+| Item | Value |
+| --- | --- |
+| Gap closed per turn | 2%, and at least 0.01 points |
+| Half-life of the gap | About 34 turns, about 0.7 game years, about 1.4 real days |
+| Turn length | 1 real hour; 48 turns = 1 game year = 2 real days |
+| Target shift per level, one-metric law | 12.5 points (50 points from level 0 to level 4) |
+| Target shift per level, broader law | 5 points times the weight (0.25 to 0.6) on each metric |
+| Regional law | Half strength, own region only |
+| Population shift from a max-strength law | Up to 0.1% of a group per turn |
+
+The one formula that matters: \`new value = current + (target - current) x 0.02\`.
+
+Take a one-metric law raised by one level, so its target moves by **12.5 points**. The metric gets there like this:
+
+| Turns since enactment | Real time | Share of the gap closed | Metric has moved |
+| --- | --- | --- | --- |
+| 24 | 1 day | 38% | 4.8 |
+| 48 | 2 days | 62% | 7.76 |
+| 96 | 4 days | 86% | 10.7 |
+| 210 | about 9 days | 100% | 12.5 |
+
+Expect the first visible move within the first few turns, and most of the effect within about four days of real time. Pass the law early if you want to see it before the next election, and remember a regional law is half as strong in its own region as the same law passed nationally.
+
+### Countries without a law book
+
+Laws in other countries work on the older option ladder. When such a bill is enacted, a law aimed at a metric gives that metric a one-off shift of 0.5 in the chosen direction, and on the political scores that shift moves the equilibrium for good rather than fading.
+
+Regions of a country with no political board at all (today only an independent Scotland or Wales) still run the oldest model: the metric closes about 0.72% of the gap to its policy target each turn (time constant 139 turns, half-life about 96 turns or 2 game years), the strongest option on a weight 1 law moves the target by 12 points, some options add a small flat push of up to about 0.06 per turn, and a metric slowly returns toward its baseline when no law pushes it.
+
+\`\`\`wiki-chart
+policy-effect-over-time
+\`\`\`
+
+In that older model some effects also fade as the economy adjusts. A target with an adaptation half-life keeps only \`0.5^(turns / half-life)\` of its effect. With a half-life of 24 turns, 25% remains after 48 turns; with 48, 50% remains; with 96, about 71% remains.
+
+\`\`\`wiki-chart
+policy-adaptation-decay
+\`\`\`
+
+## Reading and changing the current laws
+
+- **Check before you vote.** Each provision on a bill shows where its option sits on the two axes (economic left to right, social progressive to conservative).
+- **Read the current picture.** The **National Policy** page lists all national policies by domain with the current option. The **Laws & Policy** tab on a state page shows the state's own laws. Your character profile shows your personal positions, which are separate from enacted law.
+- **Stack different laws.** Laws on different legislation types that target the same metric add together.
+- **Replace a law.** Enacting a bill on the same legislation type in the same place overwrites the old record, and the metric starts moving toward the new target. Two opposing bills on the same type do not cancel: the last one enacted wins. Subsidies, embargoes and union bans have explicit repeal provisions (see [Bills & Legislation](/wiki/bills-legislation)).
+- **Be patient.** Policy is a slow lever.
+
+![National Policy page listing statutes grouped by domain with their enacted dates](/wiki-images/screens/policy-effects-national-policy.webp)
+
+Two policy scales are in play, and they are not the same thing:
 
 | Level | Scale | What it drives |
 | --- | --- | --- |
-| Character positions | −5 to +5 | Electoral appeal to demographic groups |
-| Enacted law | −3 to +3 | Per-turn metric effects on states and nation |
+| Character positions | -5 to +5 | Electoral appeal to demographic groups |
+| Enacted law | Level 0 to 4, or a graded ladder of options | Per-turn metric effects on states and nation |
 
-Your personal policy positions (set at character creation or via the Policy Shift action) determine how well your ideology matches demographic groups in elections. Enacted legislation (bills that have been signed into law) determines what actually changes in the world.
+Voting on a bill can also nudge your own positions (see [Voting & Whips](/wiki/voting-and-whips)).
 
-## How enacted policy changes metrics
+## Effects on people
 
-Every turn, the game recalculates the effects of every active piece of legislation. For each one, it applies three layers in sequence:
+Active laws also shift the make-up of demographic groups (see [Demographics](/wiki/demographics)): up to 0.1% of a group's population per turn at full strength, and group leanings by up to 0.035 per turn, with a cap of 1.5 total from the seeded baseline. This builds over game years. Changing conditions in turn feed how people judge the government (see [Government Approval](/wiki/government-approval)).
 
-### 1. Exponential decay toward target
+## Why a metric did not move
 
-Each legislation type has a set of weighted effect targets: the metric values that policy "wants" the world to reach. Metrics don't jump to the target instantly; they close the remaining gap at a fixed rate of about **0.72% per turn** (a decay time constant of 139 turns, giving a roughly 96-turn / 2-in-game-year half-life):
+- The bill was not enacted yet, or it was signed but the first turns have only started to close the gap.
+- The law has no weight on that metric.
+- Another law pulls it the other way, or the economy, funded services or unrest bend the target back.
+- The law was passed regionally, so it counts at half strength and only in that region.
+- The metric is a computed budget figure. Those follow the budget, not policy (see [National Budget](/wiki/national-budget)).
+- The law does not exist yet in the current era.
 
-\`\`\`
-newValue = current + (target - current) x (1 / 139)
-\`\`\`
+Live in every world. The US, the UK, Russia and East Germany use the law book described above; other countries use the older option ladder. Which laws exist depends on the era, so a law cannot be passed before its time.
 
-A metric that is 10 points away from its target closes about 0.072 points per turn initially, then slows as it converges. This asymptotic approach means extreme legislation has immediate visible impact but takes many turns to fully manifest.
-
-### 2. Direct tick rates
-
-Policy options also carry flat additive per-turn changes, applied on top of the decay toward target:
-
-- **Extreme policies:** approximately ±0.06 per turn
-- **Moderate policies:** approximately ±0.02-0.04 per turn
-- **Center policy:** 0 (no tick effect)
-
-The tick-rate design targets approximately a 10-game-year full reversal from one extreme to the other. With 48 turns per game year, an extreme policy would take roughly 480 turns to shift a metric from floor to ceiling, without opposition.
-
-### 3. Natural metric decay
-
-When no active policy is pushing a metric, it drifts back toward its historical baseline at **0.25% per turn**. A metric fully deviated from baseline takes approximately 20 game years (~960 turns) to return with no opposing policy. This prevents the world from permanently freezing at whatever extreme legislation last pushed it to.
-
-## Federal vs. state scope
-
-Federal (national) bills affect every state, but each state receives only a fraction of the total effect:
-
-| Country | Division factor | Per-region effect |
-| --- | --- | --- |
-| US | ÷ 50 | 1/50th of the full national effect |
-| UK | ÷ 12 | 1/12th of the full national effect |
-
-This means the sum of all state-level effects from a federal bill equals the intended national total. It prevents a single federal bill from dominating any one state's metrics while still mattering at the national level.
-
-State-level legislation (US state laws, UK regional council acts) applies its full effect only to that state or region.
-
-## Time-based decay (half-life)
-
-Some legislation types model economic adaptation. A policy that disrupts the economy delivers its largest metric hit early, then fades as the economy adjusts:
-
-| Half-life (turns) | Effect remaining after 1 game year (48 turns) |
-| --- | --- |
-| 24 turns | ~25% of original |
-| 48 turns | ~50% of original |
-| 96 turns | ~75% of original |
-
-For example, a sudden defense-spending cut might hit GDP hard initially, but the private sector adapts. This is modelled by giving the defense legislation type a shorter adaptation half-life.
-
-## Stacking multiple policies
-
-The engine sums contributions from all active policies targeting the same metric:
-
-\`\`\`
-target = baseline + sum of contributions from each active policy
-\`\`\`
-
-Two bills pulling in opposite directions partially cancel each other. A healthcare spending increase and a healthcare spending cut enacted simultaneously would produce a net contribution somewhere between the two extremes, depending on their respective weights and current policy option values.
-
-There is no artificial cap on how many policies can target the same metric, but the metric itself is clamped to a valid range.
-
-## Demographic shifts
-
-Active policies also slowly shift the composition of demographic groups within each state. This is a slower, longer-run effect:
-
-- **Max shift rate:** 0.1% of the demographic group's population per turn
-- **Extreme policy (±3):** Full 0.1%/turn shift rate
-- **Moderate policy (±1):** ~0.033%/turn
-
-Federal policies also apply at the divided rate (÷50 or ÷12) before computing demographic shifts. These shifts accumulate over game years, gradually making states more or less friendly to certain ideological profiles.
-
-## Viewing current policy
-
-- **National Policy page**: lists all federal policies grouped by domain, showing the current policy option name and economic/social positions.
-- **State page, State Laws & Policy tab**: shows state-level base policy for a single state. Each row shows the policy area, current base option name, and positions.
-- **Character profile**: shows your personal policy positions on the −5 to +5 scale, separate from enacted law.
-
-## Strategic implications
-
-### Pushing a metric in one direction
-
-If you want to move, for example, the uninsured rate down:
-
-1. Pass a strong federal healthcare spending bill (extreme-left option on the relevant legislation type).
-2. Each turn, the metric ticks down by ~0.06 and approaches a lower target via exponential decay.
-3. Opposing legislation (from opponents) partially cancels your effect. Net direction depends on the sum of all active policies.
-
-### Long-run vs. short-run effects
-
-- **Short run:** The exponential decay component creates visible movement in the first dozen turns after a bill passes.
-- **Long run:** Tick rates compound over many turns. Extreme legislation held in place for 5+ game years produces structural changes that take decades of in-game time to reverse.
-- **Adaptation half-life:** For legislation types with adaptation decay, the short-run spike fades but the steady-state component remains until the law is repealed.
-
-### Repealing bad policy
-
-There is no explicit repeal mechanic. To reverse a policy, pass a bill selecting the opposite option on the same legislation type. The new bill overwrites the old enacted-law record, and the metric begins tracking toward the new target.
-
-## Related pages
-
-- [Bills & Legislation](/wiki/bills-legislation): how to propose and pass bills
-- [Voting & Whips](/wiki/voting-and-whips): influencing how the chamber votes
-- [Congress Leadership](/wiki/congress-leadership): who controls the legislative agenda
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Policy system design page](https://docs.lakesidegames.net/design/policy-system.html)
 `;

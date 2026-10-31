@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { ObjectId, type Db } from "mongodb";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
@@ -17,7 +18,11 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
-import { EXTRACTABLE_RESOURCES, COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
+import {
+  EXTRACTABLE_RESOURCES,
+  COMMODITY_BASE_PRICES,
+  COMMODITY_LABELS,
+} from "@/lib/constants/commodities";
 import type { ExtractableResource, CommodityType } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
 import { CONTRACT_DEFAULT_MISSED_PAYMENTS } from "@/lib/constants/prospecting";
@@ -244,15 +249,17 @@ export async function settleExtractionContracts(
     .find({ status: "offered", offerExpiresTurn: { $lte: turn }, revokedTurn: { $exists: false } })
     .toArray();
   if (expiredOffers.length > 0) {
-    await contractsCol.bulkWrite(
+    // The filter repeats the selection: an offer accepted or revoked after the
+    // read keeps that outcome instead of being stamped expired over it.
+    const expiry = await contractsCol.bulkWrite(
       expiredOffers.map((c) => ({
         updateOne: {
-          filter: { _id: c._id },
+          filter: { _id: c._id, status: "offered", revokedTurn: { $exists: false } },
           update: { $set: { status: "expired", revokedTurn: turn, updatedAt: now } },
         },
       }))
     );
-    result.offersExpired = expiredOffers.length;
+    result.offersExpired = expiry.matchedCount;
   }
 
   // ── Active contracts: term expiry + royalty settlement. ─────────────────────
@@ -822,18 +829,20 @@ function contractNotification(
     resource: contract.resource,
     ...extra,
   };
+  const resource = COMMODITY_LABELS[contract.resource] ?? contract.resource;
+  const where = getStateDisplayName(contract.countryId, contract.stateId);
   const copy: Record<ContractNotifType, { title: string; message: string }> = {
     contract_royalty_missed: {
       title: "Missed Extraction Royalty",
-      message: `Your company could not cover the royalty on its ${contract.resource} contract in ${contract.stateId}. Add funds before the contract defaults.`,
+      message: `Your company could not cover the royalty on its ${resource} contract in ${where}. Add funds before the contract defaults.`,
     },
     contract_defaulted: {
       title: "Extraction Contract Defaulted",
-      message: `Your ${contract.resource} extraction contract in ${contract.stateId} defaulted after too many missed royalty payments and has been terminated.`,
+      message: `Your ${resource} extraction contract in ${where} defaulted after too many missed royalty payments and has been terminated.`,
     },
     contract_expired: {
       title: "Extraction Contract Expired",
-      message: `Your ${contract.resource} extraction contract in ${contract.stateId} reached the end of its term and has expired.`,
+      message: `Your ${resource} extraction contract in ${where} reached the end of its term.`,
     },
   };
   return { userId, type, title: copy[type].title, message: copy[type].message, metadata };

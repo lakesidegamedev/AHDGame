@@ -15,7 +15,7 @@ let loadPromise: Promise<SentryClient> | null = null;
 let loaded: SentryClient | null = null;
 
 /** Start (or reuse) loading the browser Sentry SDK. Safe to call repeatedly. */
-export function loadSentryClient(): Promise<SentryClient> {
+function loadSentryClient(): Promise<SentryClient> {
   if (loaded) return Promise.resolve(loaded);
   if (!loadPromise) {
     loadPromise = import("@sentry/nextjs").then((mod) => {

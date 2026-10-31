@@ -297,6 +297,7 @@ export default function CeoOfficeTab({
         onSetWage={(sectorId, wageLevel) => sectorLever(sectorId, "wage", { wageLevel })}
         onBulkOperations={handleBulkOperations}
         onSectorGrowth={handleSectorGrowth}
+        onCapacityBuilt={onRefresh}
       />
 
       <IndustrialRelationsSection corpId={corpId} />

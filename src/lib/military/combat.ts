@@ -12,7 +12,7 @@
 import type { NatMods } from "./doctrineTree";
 import type { GenMods } from "./generals";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import { VETM, eqAvg, computeEffectivePower } from "@/lib/constants/military";
+import { VETM, eqAvg, computeEffectivePower } from "@/lib/constants/militaryCore";
 import { NAVAL_REACH, FRONT_CAPACITY_BASE, TERRAIN_CAPACITY } from "./config";
 
 // VETM + eqAvg live canonically in constants/military.ts (the one power model);
@@ -33,17 +33,6 @@ export const POSTURES: Posture[] = [
   { id: "forward", label: "Forward-Deployed", up: 1.25, pw: 1.12 },
   { id: "alert", label: "High Alert", up: 1.5, pw: 1.22 },
 ];
-
-export const VET = ["Green", "Regular", "Seasoned", "Veteran", "Elite"];
-export const VETC = ["#8a8a9a", "#7ba3ec", "#86d978", "#4fd1c5", "#e0a3f5"];
-export const TECH = ["Legacy", "Standard", "Modernized", "Cutting-Edge"];
-export const TECHC = ["#8a8a9a", "#7ba3ec", "#86d978", "#4fd1c5"];
-export const EQ = [
-  { key: "firepower", label: "Firepower / weapons" },
-  { key: "protection", label: "Protection / platforms" },
-  { key: "support", label: "C4ISR & logistics" },
-] as const;
-export const CAP = 4;
 
 export interface Archetype {
   type: string;
@@ -469,7 +458,7 @@ export function terrainFamilyOf(terrain: string | undefined): TerrainFamily | nu
   return null;
 }
 
-export const TERRAIN: Record<TerrainFamily, TerrainDef> = {
+const TERRAIN: Record<TerrainFamily, TerrainDef> = {
   highland: {
     note: "high passes slow armor; cover rewards light infantry, special forces & recon",
     domain: { air: 0.92, naval: 0.55, marine: 0.95 },
@@ -638,22 +627,10 @@ export const RESERVE_FRONT: Front = {
   terr: 1.0,
   infra: 100,
 };
-export const DSPEED: Record<string, number> = {
-  air: 0.6,
-  rocket: 0.6,
-  marine: 0.8,
-  naval: 0.9,
-  ground: 1.2,
-  space: 0.5,
-};
 
 // The Conflicts suite operates on the one unified persisted unit model.
 // `CombatUnit` is retained as an alias so combat-suite consumers keep their imports.
 export type CombatUnit = MilitaryUnit;
-
-export function arche(domain: string, type: string): Archetype | Record<string, never> {
-  return (ARCHES[domain] || []).find((a) => a.type === type) || {};
-}
 export function posDef(id: string): Posture {
   return POSTURES.find((p) => p.id === id) || POSTURES[1];
 }

@@ -56,12 +56,12 @@ export function isInAppWebViewUserAgent(userAgent: string): boolean {
  * True when site chrome (navbar, footer) is suppressed.
  * Matches NavbarWrapper / SiteFooter: `displayMode === "focused"`.
  */
-export function isFocusedDisplayMode(displayMode?: DisplayMode | null): boolean {
+function isFocusedDisplayMode(displayMode?: DisplayMode | null): boolean {
   return displayMode === "focused";
 }
 
 /** Client-side read of display mode injected by root layout. */
-export function readClientDisplayMode(): DisplayMode | null {
+function readClientDisplayMode(): DisplayMode | null {
   if (typeof window === "undefined") return null;
   const mode = window.__AHD_DISPLAY_MODE;
   return mode === "focused" || mode === "classic" ? mode : null;

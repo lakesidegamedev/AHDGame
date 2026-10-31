@@ -4,11 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
-import { PanelState, pctText, toneClass } from "./marketUi";
-
-export function vsBasePct(c: Pick<CommodityData, "globalPrice" | "basePrice">): number | null {
-  return c.basePrice > 0 ? (c.globalPrice / c.basePrice - 1) * 100 : null;
-}
+import { PanelState, pctText, toneClass, vsBasePct } from "./marketUi";
 
 function balance(c: CommodityData): { label: string; tone: string } {
   if (c.globalDemand <= 0 && c.globalSupply <= 0) return { label: "No trade", tone: "text-muted" };

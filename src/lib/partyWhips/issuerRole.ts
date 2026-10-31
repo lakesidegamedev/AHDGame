@@ -1,7 +1,7 @@
 import type { ObjectId } from "mongodb";
 import type { BillWhip, WhipIssuerRole } from "@/lib/db/types";
 
-export const WHIP_ISSUER_ROLE_LABELS: Record<WhipIssuerRole, string> = {
+const WHIP_ISSUER_ROLE_LABELS: Record<WhipIssuerRole, string> = {
   chair: "Chair",
   viceChair: "Vice Chair",
   admin: "Admin",

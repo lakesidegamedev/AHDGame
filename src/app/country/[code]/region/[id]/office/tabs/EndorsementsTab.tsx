@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RaceList, type Race } from "./endorsements/RaceList";
 import { PartyChip } from "@/app/congress/components/CongressShared";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 export interface ActiveEndorsement {
   _id: string;

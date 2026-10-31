@@ -14,7 +14,7 @@ import type { LawCountryId } from "./types";
 /** §2 ruling: primary 12.5 pts/level — a full L0→L4 swing commands 50 points. */
 export const PRIMARY_POINTS_PER_LEVEL = 12.5;
 /** §2 ruling: secondary 5 pts/level × weight. */
-export const SECONDARY_POINTS_PER_LEVEL = 5;
+const SECONDARY_POINTS_PER_LEVEL = 5;
 /** §2 ruling: regional enactments supplement at half strength. */
 export const REGIONAL_SUPPLEMENT_FACTOR = 0.5;
 /**
@@ -28,7 +28,7 @@ export const REGIONAL_SUPPLEMENT_FACTOR = 0.5;
  */
 export const DRIFT_RATE_PER_TURN = 0.02;
 /** §2.1 ruling: minimum per-turn movement while a gap exists. */
-export const DRIFT_FLOOR = 0.01;
+const DRIFT_FLOOR = 0.01;
 
 function lawPoints(kind: "primary" | "secondary", level: number, weight: number): number {
   return kind === "primary"

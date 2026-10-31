@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { natMoney } from "@/components/national/natMoney";
 import { formatCompactNumber } from "@/lib/utils/formatters";
 import { apiErrorText } from "@/lib/errors/catalog";

@@ -1,45 +1,52 @@
 export const scotusContent = `# Supreme Court (SCOTUS)
 
-The US Supreme Court is 9 seats. It is US-only. Holding a justice seat does **not** occupy your current office: you can sit on the Court and still be a Senator, governor, or private citizen.
+Nine seats, appointed by the President and confirmed by the Senate, and a Court dominated by one ideological bloc costs the country democratic health. The Supreme Court exists only in the United States. A justice seat gives you extra actions, a national influence tier and two court-only actions, and it does **not** use up your other office: you can sit on the Court and still be a Senator, governor or private citizen.
 
-## Seats
+## Who sits on the bench
 
-Each seat has a current occupant (a player, an NPP, or a scripted historical justice) or is vacant.
+Each seat is held by a player, an NPP or a scripted historical justice, or is vacant. Each era with a Court begins with its Original Roster. When an original justice reaches their authored departure year, the seat becomes vacant. Replacements are not automatic: the President nominates and the Senate confirms every one, by simple majority with the same seat-weighted vote as cabinet confirmation (see [Confirmation Process](/wiki/confirmation-process)). Whips shape NPP senators' votes on nominees (see [Voting & Whips](/wiki/voting-and-whips)).
 
-Each preset begins with its **Original Roster**. When an original justice reaches their authored departure year, the seat becomes vacant. Historical successors are not appointed automatically: the President nominates and the Senate confirms every replacement.
+After the first appointment, a sitting justice can leave mid-term, whether player or NPP. The President and the occupant are notified when a seat opens. The Court does not keep a confirmed player forever.
 
-## Nomination and confirmation
+![A Supreme Court seat cycles from vacant to nominated, Senate vote, seated, and back to vacant on departure.](/wiki-images/diagrams/scotus-seat-lifecycle.svg)
 
-The President nominates. The Senate confirms by **simple majority**, using the same seat-weighted Senate vote machinery as cabinet confirmation. See [Confirmation Process](/wiki/confirmation-process).
+- **As President:** nominate a justice to any vacant seat.
+- **As a senator:** vote to confirm or reject, and whip your party's NPPs.
+- **As a candidate for a seat:** there is no application. The President chooses, so build relationships with the President and senators, as for any cabinet post. You become a justice by being nominated and confirmed.
 
-A Court packed by one party hurts **democratic health** on a sliding scale. A 5-4 split is normal and costs nothing. From about 6-3 of the seated bench upward, one-party control subtracts from the country's Governance Style health score. Filling every vacancy from the same party is the most expensive. Vacant seats do not count.
+## The docket
 
-A justice seat is not a cabinet office and is not gated by year the way HUD or Homeland Security are.
-
-## Docket
-
-Curated historical cases resolve against the sitting Court on the calendar year the world actually shows, not the raw turn counter. A majority on the case's tagged axis can diverge from the historical outcome; a divergence can enact policy through the same bill-enactment pipeline as legislation. An evenly split bench (4-4, or no seated majority at all) reaches no decision: the case affirms the existing outcome and history is unchanged.
-
-**Surprise cases** can also fire: non-historical docket items that resolve the same turn they spawn. They still produce a ruling from the sitting majority.
+Curated historical cases resolve against the sitting Court, on the calendar year the world shows rather than the raw turn counter. A majority on the case's tagged axis can diverge from the historical outcome, and a divergence can enact policy through the same pipeline as a bill (see [Bills & Legislation](/wiki/bills-legislation)). The racial equal-protection cases, such as Brown v. Board, always keep their historical outcome whatever the bench looks like. An evenly split bench (4-4, or no seated majority) reaches no decision: the case affirms the existing outcome. Surprise cases can also fire. They are non-historical and resolve the turn they appear, using the sitting majority.
 
 ## What a seat gives you
 
-- **+2 actions per turn**, stacking on any other office you hold.
-- **National influence at the cabinet tier, +1.5 per turn.** Position tiers do not stack: if your other office pays more, you get that instead.
-- **Justice actions** from the justice office page, each spending one action from the justice pool:
-
-| Action | Effect |
+| Item | Value |
 | --- | --- |
-| Write an Opinion | +0.5 national influence |
-| Public Address | +2 favorability |
+| Seats | 9 |
+| Confirmation | Simple majority of the Senate, 24 hour vote |
+| Extra actions per turn | +2, stacking on any other office |
+| National influence tier | 1.5 (the cabinet tier; tiers do not stack, you get the highest) |
+| Justice action pool | Cap 2, regain 1 every 12 turns |
+| Buy one extra action | 10 action points, once per turn, never above the cap |
+| Write an Opinion | 1 justice action, +0.5 national influence |
+| Public Address | 1 justice action, +2 favorability |
+| Court-concentration penalty | 0 at 6-3; about 4 at 7-2; 8 at 8-1; 12 at 9-0 (needs 5 or more seated) |
 
-Once per turn you can spend 10 actions to buy 1 justice action, up to the pool's cap.
+Use the **Write an Opinion** or **Public Address** actions from the justice office page. Each spends one justice action. A seat is an excellent second job since it stacks with other offices; the 12 turn accrual means one action every half day, so use the two-action pool before it fills. A justice's appointment is recorded in their career history. Two achievements recognise the Court: being confirmed to it, and dying in office as a sitting justice.
 
-A confirmed justice's appointment is recorded in their career history. Two achievements recognise the Court: one for being confirmed to the Supreme Court, and one for dying in office as a sitting justice.
+## Packing the Court
 
-## Tenure
+A Court filled by one side removes a check on the other branches. The penalty makes packing a trade-off instead of a free win.
 
-Original historical occupants leave when their authored departure is reached, opening a live appointment. After that first appointment, a sitting justice (player or NPP) can leave mid-term; the President and occupant are notified when a seat opens. The Court does not keep a confirmed player forever.
+Each seated justice is scored by their average lean on the economic and social axes: below -1 is liberal, above +1 is conservative, in between is a swing justice. Swing justices still count in the total, so neither bloc can claim them. If a justice's lean is unknown, their appointing party is used instead. The penalty to the country's democratic health score is 0 until one bloc passes two-thirds of the bench, then grows to a cap of 12 points for a bench of one bloc. A Court with fewer than 5 seated justices is too empty to score. Vacant seats do not count.
 
-See also: [Bills & Legislation](/wiki/bills-legislation), [Cabinet](/wiki/cabinet), [Impeachment](/wiki/impeachment).
+\`\`\`wiki-chart
+court-concentration-penalty
+\`\`\`
+
+The bench has 9 seated justices and a conservative bloc of 7. That is 7/9 = 77.8% of the bench. The penalty is ((0.778 - 0.667) / 0.333) x 12 = 4.0 points. The President nominates an eighth conservative to fill the last liberal seat: the bloc is 8/9 = 88.9%, and the penalty rises to 8.0. A 6-3 bench costs nothing because 6/9 is exactly two-thirds, not over it.
+
+Live in the United States in the 1953, 1979, 1991, 2019 and 2027 eras; the 1999, 2007 and 2023 starts seed no Court. A justice seat is not a cabinet office and is not gated by year the way HUD or Homeland Security are. No other country has an equivalent Court.
+
+Last checked 2026-10-29, version 1.18.0. Exact rules: the numbers on this page are the full rule set; the nomination vote shares its rules with the cabinet vote on the [Cabinet design page](https://docs.lakesidegames.net/design/cabinet.html)
 `;

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Label, Slider } from "@/components/ui";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { FoundingCohortPick } from "@/lib/db/types";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 

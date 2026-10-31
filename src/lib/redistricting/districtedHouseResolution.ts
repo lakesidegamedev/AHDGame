@@ -47,6 +47,88 @@ export interface SeatResult {
   losers: string[];
 }
 
+export interface DistrictedProjection {
+  result: SeatResult;
+  /** District index -> winning candidate id. */
+  assignment: Map<number, string>;
+}
+
+export interface DistrictedProjectionInput {
+  countryId: string;
+  candidateVotes: Record<string, number>;
+  candidateParty: Record<string, string>;
+  primaryShares: Record<string, number> | null;
+  districtBoosts?: Record<string, Record<string, number>>;
+  districts: CongressionalDistrict[];
+  parties: PoliticalParty[];
+}
+
+/**
+ * Pure seat projection over already-loaded district and party records.
+ *
+ * Split out of {@link districtedHouseResolution} so the race page can reuse
+ * the exact same engine for the votes-to-next-seat line without another
+ * database round-trip per projected vote total. Returns null when the state
+ * has no districts drawn.
+ */
+export function projectDistrictedSeats(
+  input: DistrictedProjectionInput
+): DistrictedProjection | null {
+  const docs = input.districts;
+  if (docs.length === 0) return null;
+
+  // Build a party→pool lookup keyed by the identifier forms candidate.party may use.
+  const parties = input.parties;
+  const poolByKey = new Map<string, Pool>();
+  for (const p of parties) {
+    const pool = getPartyPool({
+      economicPosition: p.economicPosition,
+      pool: (p as { pool?: Pool }).pool,
+    });
+    poolByKey.set(String(p.sequentialId), pool);
+    poolByKey.set(String(p._id), pool);
+    if (p.abbreviation) poolByKey.set(p.abbreviation.toLowerCase(), pool);
+    if (p.name) poolByKey.set(p.name.toLowerCase(), pool);
+  }
+  const partyPool: Record<string, Pool> = {};
+  for (const party of new Set(Object.values(input.candidateParty))) {
+    partyPool[party] = poolByKey.get(String(party)) ?? poolByKey.get(party.toLowerCase()) ?? "grey";
+  }
+
+  const baselines = computePartyBaselines(input.candidateVotes, input.candidateParty);
+
+  // Pass 1: proportional party seat quotas from the statewide vote, then place
+  // each party's quota into the districts where it is strongest (lean + boost).
+  // Quotas are proportional so a statewide plurality — or a lean-invariant
+  // centrist party — can no longer sweep every district; gerrymandering shifts
+  // WHICH districts each party holds, not HOW MANY. (ticket 926)
+  const quotas = computePartySeatQuotas(
+    baselines,
+    docs.length,
+    getMultiSeatMinShare("house", docs.length, input.countryId)
+  );
+  const districtWinners = assignPartiesToDistrictsByQuota(
+    docs.map((d) => ({ index: d.index, netLean: d.netLean })),
+    baselines,
+    partyPool,
+    quotas,
+    input.districtBoosts
+  );
+
+  // Pass 2: assign nominees to won districts by primary share.
+  const nomineesByParty = buildNomineesByParty(
+    input.candidateParty,
+    input.candidateVotes,
+    input.primaryShares
+  );
+  const assignment = assignDistrictsToNominees(districtWinners, nomineesByParty);
+
+  return {
+    result: buildSeatResult(assignment, Object.keys(input.candidateVotes), docs.length),
+    assignment,
+  };
+}
+
 /**
  * Resolve a US House election per-district by shifting the statewide tally by
  * each district's square lean. Returns null when the state's congressionalDistricts
@@ -88,37 +170,20 @@ export async function districtedHouseResolution(
     partyPool[party] = poolByKey.get(String(party)) ?? poolByKey.get(party.toLowerCase()) ?? "grey";
   }
 
-  const baselines = computePartyBaselines(args.candidateVotes, args.candidateParty);
-
-  // Pass 1: proportional party seat quotas from the statewide vote, then place
-  // each party's quota into the districts where it is strongest (lean + boost).
-  // Quotas are proportional so a statewide plurality — or a lean-invariant
-  // centrist party — can no longer sweep every district; gerrymandering shifts
-  // WHICH districts each party holds, not HOW MANY. (ticket 926)
-  const quotas = computePartySeatQuotas(
-    baselines,
-    docs.length,
-    getMultiSeatMinShare("house", docs.length, args.countryId)
-  );
-  const districtWinners = assignPartiesToDistrictsByQuota(
-    docs.map((d) => ({ index: d.index, netLean: d.netLean })),
-    baselines,
-    partyPool,
-    quotas,
-    args.districtBoosts
-  );
-
-  // Pass 2: assign nominees to won districts by primary share.
-  const nomineesByParty = buildNomineesByParty(
-    args.candidateParty,
-    args.candidateVotes,
-    args.primaryShares
-  );
-  const assignment = assignDistrictsToNominees(districtWinners, nomineesByParty);
+  const projection = projectDistrictedSeats({
+    countryId: args.countryId,
+    candidateVotes: args.candidateVotes,
+    candidateParty: args.candidateParty,
+    primaryShares: args.primaryShares,
+    districtBoosts: args.districtBoosts,
+    districts: docs,
+    parties,
+  });
+  if (!projection) return null;
 
   // Stamp holders onto the district docs. Resolution only — see `persist`.
   const docByIndex = new Map(docs.map((d) => [d.index, d]));
-  for (const [index, candidateId] of args.persist ? assignment : []) {
+  for (const [index, candidateId] of args.persist ? projection.assignment : []) {
     const d = docByIndex.get(index);
     if (!d) continue;
     const nppIdRaw = args.candidateNppId?.[candidateId] ?? null;
@@ -138,5 +203,5 @@ export async function districtedHouseResolution(
     );
   }
 
-  return buildSeatResult(assignment, Object.keys(args.candidateVotes), docs.length);
+  return projection.result;
 }

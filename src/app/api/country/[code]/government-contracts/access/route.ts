@@ -1,3 +1,4 @@
+import { isGovernmentContractsEnabled } from "@/lib/governmentContracts/featureFlag";
 import { maxTechTierForPreset } from "@/lib/admin/seed/seedMilitaryUnits";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { ObjectId } from "mongodb";
@@ -22,6 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   try {
     const { code } = await params;
     const { db, countryId, turn, game } = await contractContext(code);
+    const enabled = await isGovernmentContractsEnabled(db);
     const user = await getAuthUserWithCharacter();
     const currency = await contractCurrencyQuotes(
       db,
@@ -152,6 +154,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           .toArray()
       : [];
     return privateJson({
+      enabled,
       currentTurn: turn,
       currencyQuote: currency.government,
       defence,

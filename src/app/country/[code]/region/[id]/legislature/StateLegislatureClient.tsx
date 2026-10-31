@@ -1,21 +1,29 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { UK_NATIONS, UK_REGIONS, getUKCouncilName } from "@/lib/constants/uk";
 import { regionUrl, regionApiSubUrl } from "@/lib/urls";
-import {
-  COUNTRY_CONFIGS,
-  getSubNationalLegislatureKey,
-  isParliamentarySystem,
-  type CountryId,
-} from "@/lib/constants/countries";
+import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
+import { getCountryOfficeConfig } from "@/lib/constants/countryOfficesClient";
 import type { BillChamber } from "@/lib/db/types/legislation";
 import { LegislatureData, StateBillDisplay } from "./legislatureTypes";
 import { BillsTab } from "./components/BillsTab";
-import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
+import { TabFallback } from "@/components/state/TabFallback";
 import { CardSkeleton, ListRowSkeleton, Skeleton } from "@/components/ui";
 import type { LegislatureCompositionData, LegislatureMember } from "@/components/legislature/types";
+
+// Composition is the second tab; only opened on a click. The seat chart and its
+// party logos stay out of the bills chunk, with the shared tab skeleton holding
+// the panel's height while it loads.
+const LegislatureCompositionSection = dynamic(
+  () =>
+    import("@/components/legislature/LegislatureCompositionSection").then((m) => ({
+      default: m.LegislatureCompositionSection,
+    })),
+  { loading: TabFallback }
+);
 
 type TabId = "composition" | "bills";
 
@@ -66,6 +74,9 @@ export function StateLegislatureClient({
   isLoggedIn: _isLoggedIn,
   characterId,
   isAdmin = false,
+  legislationVersion,
+  canProposeViaPartyNpp = false,
+  partyNppUnavailable = false,
 }: {
   stateId: string;
   countryId: string;
@@ -74,6 +85,9 @@ export function StateLegislatureClient({
   isLoggedIn: boolean;
   characterId?: string;
   isAdmin?: boolean;
+  legislationVersion: "v1" | "v2";
+  canProposeViaPartyNpp?: boolean;
+  partyNppUnavailable?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("bills");
   const [data, setData] = useState<LegislatureData | null>(null);
@@ -160,8 +174,10 @@ export function StateLegislatureClient({
     { id: "composition", label: "Composition" },
   ];
 
-  const countryConfig = COUNTRY_CONFIGS[countryId as CountryId];
-  const billChamber = getSubNationalLegislatureKey(countryId as CountryId) as BillChamber;
+  const countryConfig = getCountryOfficeConfig(countryId as CountryId);
+  // Sub-national chamber key, defaulting to the US-style "stateSenate" when the
+  // country has no configured chamber.
+  const billChamber = (countryConfig?.subNationalChamber?.key ?? "stateSenate") as BillChamber;
   const subChamber = countryConfig?.subNationalChamber;
   // UK uses per-region council names (Scottish Parliament, Senedd, etc.); other
   // countries with a sub-national chamber use the chamber name directly (US →
@@ -269,6 +285,9 @@ export function StateLegislatureClient({
           </CardSkeleton>
         ) : (
           <BillsTab
+            legislationVersion={legislationVersion}
+            canProposeViaPartyNpp={canProposeViaPartyNpp}
+            partyNppUnavailable={partyNppUnavailable}
             bills={bills}
             canPropose={canPropose}
             canVote={canPropose}

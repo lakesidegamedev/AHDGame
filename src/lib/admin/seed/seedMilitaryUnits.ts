@@ -19,7 +19,7 @@ import { resolveOrderOfBattle } from "@/lib/seeds/reference/ordersOfBattle";
  * stealth aircraft, and network-centric warfare systems appearing in historical worlds.
  * Tier 0–1 = WWII/early Cold War conventional; 2 = guided-missile era; 3 = modern.
  */
-export const MAX_TECH_TIER_BY_ERA: Partial<Record<string, number>> = {
+const MAX_TECH_TIER_BY_ERA: Partial<Record<string, number>> = {
   "1953": 1,
   "1979": 2,
   "1991": 2,

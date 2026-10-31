@@ -7,6 +7,7 @@ import {
   getMediaOperatingModelStrategies,
   getSectorStrategies,
   getStrategy,
+  getStrategyForOperatingModel,
   SECTOR_STRATEGIES,
 } from "./sectorStrategies";
 import { COMMODITY_TYPES } from "./commodities";
@@ -75,9 +76,35 @@ describe("unknown persisted sector types", () => {
     });
   });
 
-  it("preserves the first-strategy fallback for a known type with an unknown strategy", () => {
-    expect(getStrategy("media", "removed_strategy")).toBe(SECTOR_STRATEGIES.media[0]);
+  it("falls back to the named standard recipe, not the catalog's first entry", () => {
+    const standard = SECTOR_STRATEGIES.media.find((s) => s.id === "standard");
+    expect(getStrategy("media", "removed_strategy")).toBe(standard);
+    // Several catalogs prepend future recipes, so index 0 can be a locked
+    // recipe. The fallback must never be positional (#4244).
+    expect(SECTOR_STRATEGIES.media[0]?.id).not.toBe("standard");
   });
+
+  it("resolves the obsolete media strategy reproduction to an eligible fallback", () => {
+    const strategy = getStrategyForOperatingModel(
+      "media",
+      "legacy_broadcast",
+      undefined,
+      "entertainment",
+      "1991-default"
+    );
+    expect(strategy.id).toBe("standard");
+    expect(strategy.minDecade).toBeUndefined();
+    expect(strategy.requiresTechUnlock).toBeUndefined();
+  });
+
+  it.each(["media", "media_entertainment", "manufacturing", "extraction", "financial"])(
+    "keeps a valid explicit strategy unchanged in %s",
+    (sectorType) => {
+      for (const strategy of SECTOR_STRATEGIES[sectorType as keyof typeof SECTOR_STRATEGIES]) {
+        expect(getStrategy(sectorType, strategy.id, "1991-default").id).toBe(strategy.id);
+      }
+    }
+  );
 });
 
 describe("media operating model strategies", () => {

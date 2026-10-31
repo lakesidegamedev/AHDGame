@@ -26,7 +26,7 @@ import { BalanceSheetRings } from "./finance/BalanceSheetRings";
 import { CountryRevenueRing } from "./finance/CountryRevenueRing";
 import { CountryStatement } from "./finance/CountryStatement";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   buildAllocation,
   cashAfterContracts,

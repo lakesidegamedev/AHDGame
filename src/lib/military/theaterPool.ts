@@ -1,5 +1,5 @@
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import { computeEffectivePower } from "@/lib/constants/military";
+import { computeEffectivePower } from "@/lib/constants/militaryCore";
 import { computeCard, navalReach } from "@/lib/military/combat";
 
 /**

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" role="img" font-family="system-ui, sans-serif">
+<title>What a party switch does</title>
+<desc>A timeline of joining party A, leaving to be independent and joining party B after the 24 hour delay, and how races move when you switch or join from independent.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="359" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<text x="24" y="28" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">The 24 hour join delay</text>
+<rect x="80" y="48" width="320" height="30" rx="4" fill="#fef2f2" stroke="#dc2626"/>
+<text x="240" y="68" font-size="13" text-anchor="middle" fill="#18181b">cannot join another party yet</text>
+<polyline points="40,104 690,104" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<circle cx="80" cy="104" r="6" fill="#2563eb"/>
+<text x="80" y="130" font-size="12" text-anchor="middle" fill="#18181b">Join party A</text>
+<text x="80" y="146" font-size="12" text-anchor="middle" fill="#18181b">24 hour delay starts</text>
+<circle cx="260" cy="104" r="6" fill="#2563eb"/>
+<text x="260" y="130" font-size="12" text-anchor="middle" fill="#18181b">Leave to be an</text>
+<text x="260" y="146" font-size="12" text-anchor="middle" fill="#18181b">independent</text>
+<text x="260" y="162" font-size="12" text-anchor="middle" fill="#18181b">no new delay; the</text>
+<text x="260" y="178" font-size="12" text-anchor="middle" fill="#18181b">old one keeps running</text>
+<circle cx="400" cy="104" r="6" fill="#2563eb"/>
+<text x="400" y="130" font-size="12" text-anchor="middle" fill="#18181b">Delay ends</text>
+<text x="400" y="146" font-size="12" text-anchor="middle" fill="#18181b">24 hours after</text>
+<text x="400" y="162" font-size="12" text-anchor="middle" fill="#18181b">joining A</text>
+<circle cx="580" cy="104" r="6" fill="#2563eb"/>
+<text x="580" y="130" font-size="12" text-anchor="middle" fill="#18181b">Join party B</text>
+<text x="580" y="146" font-size="12" text-anchor="middle" fill="#18181b">allowed now</text>
+<line x1="80" y1="78" x2="80" y2="98" stroke="#dc2626" stroke-dasharray="3 3"/><line x1="400" y1="78" x2="400" y2="98" stroke="#dc2626" stroke-dasharray="3 3"/>
+<text x="24" y="224" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">What happens to your races</text>
+<rect x="24" y="240" width="230" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="139.0" y="266.6" font-size="13" text-anchor="middle">Switch party mid-campaign</text>
+<rect x="314" y="240" width="260" height="44" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="444.0" y="266.2" font-size="12" text-anchor="middle">Old-party primaries are withdrawn</text>
+<polyline points="254,262 314,262" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="24" y="296" width="230" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="139.0" y="322.6" font-size="13" text-anchor="middle">Join from independent</text>
+<rect x="314" y="296" width="380" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="504.0" y="322.2" font-size="12" text-anchor="middle">Primaries and races you entered move to the new party</text>
+<polyline points="254,318 314,318" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+</g>
+</svg>

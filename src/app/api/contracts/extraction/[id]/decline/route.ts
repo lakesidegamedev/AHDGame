@@ -21,7 +21,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rate = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rate = checkRateLimit(
+      `api/contracts/extraction/[id]/decline:${auth.user.userId}`,
+      20,
+      60_000
+    );
     if (!rate.ok) return rateLimitResponse(rate.retryAfter);
 
     if (!(await isContractIssuanceEnabled())) {

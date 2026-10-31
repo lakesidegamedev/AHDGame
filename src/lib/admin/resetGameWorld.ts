@@ -102,7 +102,7 @@ export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
  * Moderators carry `role: "moderator"` without `isAdmin`, so `isAdmin` alone
  * deleted the moderation team.
  */
-export const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
+const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
   isAdmin: { $ne: true },
   role: { $nin: ["admin", "moderator"] },
   isBanned: { $ne: true },
@@ -621,6 +621,10 @@ export async function resetGameWorld(
         ...STALE_MARKET_MODE_STAMP_UNSET,
         fresh1991VehicleModelSeed: "",
         fresh1991MediaTaxonomySeed: "",
+        // A scheduled economy pause is anchored to the outgoing world's turn
+        // counter. Kept, it would freeze the new world (back at turn 1) until
+        // the old world's resume turn arrived.
+        economyPauseUntilTurn: "",
       },
     }
   );
@@ -738,6 +742,8 @@ export async function resetGameWorld(
   gameStateUnset.demographicFlowAttempt = "";
   // The outgoing world's producer opening marker; a new world needs its own.
   gameStateUnset.producerOpening = "";
+  // An economy-only reset marker belongs to the outgoing world.
+  gameStateUnset.economyReset = "";
   // The outgoing world's last market tick; the fresh world has none yet.
   gameStateUnset.lastMarketTickAt = "";
   gameStateUpdate.preIterationTurns = 0;

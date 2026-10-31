@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui";
 import type { PartyData, PartyMember } from "./types";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { getNationalPartyTransferTargets } from "@/lib/constants/transferTargets";
 import type { TreasuryAction } from "./treasuryReducer";
 import { fmt } from "./helpers";
@@ -33,7 +34,7 @@ export function TreasuryTransferControls({
   onTransfer,
   onSendToMember,
 }: TreasuryTransferControlsProps) {
-  const countryConfig = getCountryConfig(countryId as CountryId);
+  const countryConfig = getCountryClientConfig(countryId as CountryId);
 
   const regions = useMemo(
     () =>

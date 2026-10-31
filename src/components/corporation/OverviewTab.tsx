@@ -20,10 +20,21 @@ import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { corpIncomeBasis, netMarginPct } from "./financials/financialsModel";
 import { buildOwnershipSlices } from "./OwnershipDonut";
-import { CAPACITY_UNIT_LABEL, formatUnits } from "./plantsPresentation";
+import {
+  BuildQueueBadge,
+  CAPACITY_UNIT_LABEL,
+  PlantCount,
+  RUNNING_SOLD_HEADING,
+  RUNNING_SOLD_HEADING_TITLE,
+  RunningSoldReading,
+  capacityUsedFraction,
+  formatUnits,
+  sectorPlantCount,
+} from "./plantsPresentation";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
+import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import {
   DenseSection,
-  FillText,
   KVList,
   KVRow,
   Segmented,
@@ -80,6 +91,14 @@ interface OverviewTabProps {
   myCharacterId: string | null;
   /** Opens the trade ticket; omitted when the viewer cannot trade here. */
   onTrade?: () => void;
+  /**
+   * Open votes for this corporation, when the page has already asked for them.
+   *
+   * The page starts the request with its first paint, in parallel with the
+   * corporation payload, so the docket does not wait a second round trip after
+   * the page's own data arrives. Omitted, the tab fetches them itself.
+   */
+  openVotes?: OpenVote[];
 }
 
 const PERIOD_OPTIONS = MONEY_PERIODS.map((p) => ({ value: p, label: MONEY_PERIOD_LABEL[p] }));
@@ -205,10 +224,16 @@ function SectorTable({
                 )}
                 {plantsMode ? (
                   <>
-                    <Th align="right" className="hidden md:table-cell">
-                      Capacity
+                    <Th
+                      align="right"
+                      className="hidden md:table-cell"
+                      title="Plants built, and plants paid for and still being built."
+                    >
+                      Plants
                     </Th>
-                    <Th align="right">Fill</Th>
+                    <Th align="right" title={RUNNING_SOLD_HEADING_TITLE}>
+                      {RUNNING_SOLD_HEADING}
+                    </Th>
                   </>
                 ) : (
                   <Th align="right" title="Revenue growth rate per turn.">
@@ -292,11 +317,25 @@ function SectorTable({
                     )}
                     {plantsMode ? (
                       <>
-                        <Td align="right" className="hidden text-muted md:table-cell">
-                          {formatUnits(s.capacityUnits)}
+                        <Td align="right" className="hidden md:table-cell">
+                          <PlantCount sector={s} className="block" />
+                          <BuildQueueBadge
+                            queue={s.buildQueueSummary}
+                            plantUnits={plantSizeForSector(s)}
+                            plantSingular={facilitySingular(s.sectorType)}
+                            plantPlural={facilityPlural(s.sectorType)}
+                            className="items-end"
+                          />
                         </Td>
                         <Td align="right">
-                          <FillText fill={s.fillRate} band={s.fillRateBand} />
+                          <RunningSoldReading
+                            produced={s.producedUnits}
+                            capacity={s.capacityUnits}
+                            fill={s.fillRate}
+                            band={s.fillRateBand}
+                            plantCount={sectorPlantCount(s)}
+                            className="items-end"
+                          />
                         </Td>
                       </>
                     ) : (
@@ -380,28 +419,33 @@ export default function OverviewTab({
   isCeo,
   myCharacterId,
   onTrade,
+  openVotes: seededOpenVotes,
 }: OverviewTabProps) {
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const { fmt, fmtSigned, fmtPrice } = money;
   const fogged = financialFogOfWar != null;
   const scale = (daily: number) => Math.round(scaleMoney(daily, periodView));
 
-  const [openVotes, setOpenVotes] = useState<OpenVote[]>([]);
+  const [fetchedVotes, setFetchedVotes] = useState<OpenVote[]>([]);
+  const openVotes = seededOpenVotes ?? fetchedVotes;
   useEffect(() => {
+    // The page already asked for these with its first paint; fetching again
+    // would be the second round trip this prop exists to remove.
+    if (seededOpenVotes !== undefined) return;
     let cancelled = false;
     fetchJson<unknown>(
       `/api/corporations/${corporation.sequentialId ?? corporation._id}/votes?status=open`,
       { feature: "corp-open-votes" }
     )
       .then((data) => {
-        if (!cancelled && Array.isArray(data)) setOpenVotes(data as OpenVote[]);
+        if (!cancelled && Array.isArray(data)) setFetchedVotes(data as OpenVote[]);
       })
       // fetchJson has already reported the failure; the list just stays empty.
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [corporation._id, corporation.sequentialId]);
+  }, [corporation._id, corporation.sequentialId, seededOpenVotes]);
 
   const basis = financials ? corpIncomeBasis(financials) : null;
   const netMargin = financials ? netMarginPct(financials) : null;
@@ -454,6 +498,10 @@ export default function OverviewTab({
     corporation.brandLoyaltyLabel ??
     (corporation.brandLoyalty != null ? loyaltyLabel(corporation.brandLoyalty) : undefined);
   const physical = corporation.physical ?? null;
+  const totalPlants = sectors.reduce((sum, s) => sum + sectorPlantCount(s), 0);
+  const runningShare = physical
+    ? capacityUsedFraction(physical.producedUnits, physical.capacityUnits)
+    : null;
 
   const { mode, setMode } = useCorpOverviewMode();
   const leverageRating = corporation.creditRatingSnapshot ?? bondInfo?.creditRating.rating ?? null;
@@ -679,7 +727,7 @@ export default function OverviewTab({
             title="Operations"
             summary={
               physical?.fillRate != null
-                ? `${Math.round(physical.fillRate * 100)}% fill`
+                ? `${Math.round(physical.fillRate * 100)}% sold`
                 : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
             }
           >
@@ -718,12 +766,16 @@ export default function OverviewTab({
                 {physical && (
                   <>
                     <KVRow
-                      label="Capacity"
-                      value={formatUnits(physical.capacityUnits)}
-                      hint={CAPACITY_UNIT_LABEL}
+                      label="Plants"
+                      value={totalPlants.toLocaleString("en-US")}
+                      hint={
+                        runningShare != null
+                          ? `${Math.round(runningShare * 100)}% running`
+                          : `${formatUnits(physical.capacityUnits)} ${CAPACITY_UNIT_LABEL}`
+                      }
                     />
                     <KVRow
-                      label="Fill"
+                      label="Output sold"
                       mark={
                         physical.fillRate != null ? (
                           <Meter pct={physical.fillRate * 100} className="w-10" />
@@ -783,7 +835,9 @@ export default function OverviewTab({
                 {corporation.parentCorporation && (
                   <KVRow
                     mono={false}
-                    label="Parent"
+                    label={
+                      corporation.isFormalizedSubsidiary ? "Parent" : "Controlling shareholder"
+                    }
                     value={
                       <Link
                         href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
@@ -792,7 +846,11 @@ export default function OverviewTab({
                         {corporation.parentCorporation.name}
                       </Link>
                     }
-                    hint={`${corporation.parentCorporation.ownershipPct.toFixed(1)}%`}
+                    hint={
+                      corporation.isFormalizedSubsidiary
+                        ? `${corporation.parentCorporation.ownershipPct.toFixed(1)}%`
+                        : `${corporation.parentCorporation.ownershipPct.toFixed(1)}% of votes, no management control`
+                    }
                   />
                 )}
                 {(corporation.subsidiaries ?? []).map((sub) => (

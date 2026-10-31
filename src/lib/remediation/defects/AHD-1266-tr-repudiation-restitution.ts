@@ -71,7 +71,7 @@ export const DEFECT_ID = "AHD-1266-tr-repudiation-restitution";
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
 
 /** Turn Turkey repudiated: all 32 series share this `defaultedAtTurn`. */
-export const REPUDIATION_TURN = 568;
+const REPUDIATION_TURN = 568;
 
 /** Repudiate severity: market price 0.05 → 95% charged twice. */
 export const REPUDIATION_SEVERITY = 0.95;

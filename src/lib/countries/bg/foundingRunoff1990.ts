@@ -19,7 +19,7 @@ import { planBgFoundingRenewedNpcSlates } from "./foundingRenewedNpcSlates1990";
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
-export async function materializeBgFoundingRunoffOpening(input: {
+async function materializeBgFoundingRunoffOpening(input: {
   db: Db;
   session: ClientSession;
   cycle: number;
@@ -214,7 +214,7 @@ export async function materializeBgFoundingRunoffOpening(input: {
   return ids;
 }
 
-export async function materializeBgFoundingRunoffCount(input: {
+async function materializeBgFoundingRunoffCount(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

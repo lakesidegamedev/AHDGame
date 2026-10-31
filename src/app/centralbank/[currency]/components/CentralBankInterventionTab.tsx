@@ -9,7 +9,8 @@ import {
 } from "@/lib/currency/intervention/rules/preview";
 import { InterventionPreview } from "./InterventionPreview";
 import { defenceBounds } from "@/lib/currency/intervention/rules/defence";
-import type { CountryId } from "@/lib/constants/countries";
+import { bandDefenceStatus } from "@/lib/currency/interventionBandStatus";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { Button } from "@/components/ui";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { ForexSpreadStrengthControl } from "@/components/forex/ForexSpreadStrengthControl";
@@ -110,6 +111,10 @@ export function CentralBankInterventionTab({
     turnsSinceAdjusted !== null && turnsSinceAdjusted < COOLDOWN_TURNS
       ? COOLDOWN_TURNS - turnsSinceAdjusted
       : 0;
+  const bandStatus =
+    data.policy && data.currentRate != null
+      ? bandDefenceStatus(data.currentRate, data.policy.floor, data.policy.ceiling)
+      : { defending: false, turnsToReach: 0, unreachable: false, gapPct: 0 };
 
   const desiredFloor = parseFloat(floor);
   const desiredCeiling = parseFloat(ceiling);
@@ -229,6 +234,13 @@ export function CentralBankInterventionTab({
                 <span className="font-medium text-error">Defending (outside band)</span>
               )}
             </p>
+            {bandStatus.defending && (
+              <p className={bandStatus.unreachable ? "text-error" : "text-muted"}>
+                {bandStatus.unreachable
+                  ? `Corridor is ${(bandStatus.gapPct * 100).toFixed(1)}% away. Maximum-strength defence would need ${bandStatus.turnsToReach} turns, beyond a game year.`
+                  : `Corridor is ${(bandStatus.gapPct * 100).toFixed(1)}% away, about ${bandStatus.turnsToReach} turn${bandStatus.turnsToReach === 1 ? "" : "s"} at maximum-strength defence.`}
+              </p>
+            )}
             <p className="text-muted">
               Set by {data.policy.setByCharacterName ?? "Unknown"}
               {data.policy.setAtTurn != null

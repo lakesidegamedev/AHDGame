@@ -651,6 +651,14 @@ export interface FederalBudget {
   treasuryBalance: number;
   /** Feature-gated spendable native cash. Missing legacy value means zero when enabled. */
   treasuryCashLocal?: number;
+  /**
+   * Real money per unit of book money for this country, measured each turn
+   * while `gameConfig.fiscalScaleStage` is 1 or more. See
+   * budget/rules/fiscalScale.ts. Absent until the first measured turn.
+   */
+  fiscalScale?: import("@/lib/budget/rules/fiscalScale").FiscalScaleState;
+  /** Digest of the economy-only reset whose treasury credits this budget already received. */
+  economyResetDigest?: string;
   /** Applied automatic disaster crisis IDs; keeps fiscal debits replay-safe. */
   disasterFiscalReceipts?: string[];
   /**

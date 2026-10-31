@@ -15,6 +15,8 @@ const QUEUE = {
   orders: 1,
   unitsOrdered: 6900,
   unitsRemaining: 6900,
+  unitsPerTurn: 0,
+  lastOnlineTurn: 288,
   nextOnlineTurn: 288,
   turnsRemaining: 38,
 };
@@ -46,11 +48,35 @@ describe("BuildQueueBadge", () => {
           orders: 0,
           unitsOrdered: 0,
           unitsRemaining: 0,
+          unitsPerTurn: 0,
+          lastOnlineTurn: null,
           nextOnlineTurn: null,
           turnsRemaining: null,
         }}
       />
     );
     expect(container.textContent).toBe("");
+  });
+
+  it("counts plants and shows per-turn arrival when given a plant size", () => {
+    // 3.4 plants of 25 units on order, half still to land, ramping in 2 a turn.
+    render(
+      <BuildQueueBadge
+        queue={{
+          orders: 1,
+          unitsOrdered: 86,
+          unitsRemaining: 43,
+          unitsPerTurn: 12.5,
+          lastOnlineTurn: 539,
+          nextOnlineTurn: 539,
+          turnsRemaining: 6,
+        }}
+        plantUnits={25}
+      />
+    );
+    expect(screen.getByText(/\+1\.7 building/)).toBeTruthy();
+    expect(screen.getByText(/done turn 539/)).toBeTruthy();
+    expect(screen.getByText(/1\.7 of 3\.4 in/)).toBeTruthy();
+    expect(screen.getByText(/about 0\.5 a turn/)).toBeTruthy();
   });
 });

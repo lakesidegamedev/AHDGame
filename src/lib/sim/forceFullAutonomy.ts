@@ -201,14 +201,6 @@ export async function forceFullAutonomy(
         // long run should actually cross the Nixon Shock rather than hold a gold
         // peg into the mid-70s. Gated on a gold-cover pressure model and an
         // era-earliest year, so it fires on its own terms or not at all.
-        // Sovereignty transitions. Fail-safe off by default (see the flag doc);
-        // a 1953 world is exactly the era they describe.
-        worldTransitionsEnabled: true,
-        worldTransitionsEnabledBy: "sim-harness",
-        worldTransitionsEnabledAt: new Date().toISOString(),
-        brettonWoodsExitEnabled: true,
-        brettonWoodsExitEnabledBy: "sim-harness",
-        brettonWoodsExitEnabledAt: new Date().toISOString(),
         extractionOutputScaleEnabled: true,
         commodityScarcityDriftEnabled: true,
         qualityPremiumPricingEnabled: true,
@@ -219,7 +211,6 @@ export async function forceFullAutonomy(
         prospectingEnabled: true,
         brandLoyaltyEnabled: true,
         brandLoyaltySliceEnabled: true,
-        nppCorporateAttacksEnabled: true,
         // Uncalibrated — see the note above.
         // These are two competing consumer-demand channels and the type doc is
         // explicit that householdConsumptionEnabled SUPERSEDES the demographics

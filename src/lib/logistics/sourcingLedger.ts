@@ -19,7 +19,7 @@ import type { PurchaseExposure, PurchaseUse } from "./rules/purchaseExposure";
 export const SOURCING_FLOW_RETENTION_TURNS = 48;
 
 /** Itemized flows per commodity doc are capped largest-first; totals stay exact. */
-export const SOURCING_FLOW_MAX_ITEMIZED = 200;
+const SOURCING_FLOW_MAX_ITEMIZED = 200;
 
 export interface CommoditySourcingDoc {
   /**

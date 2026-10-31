@@ -53,16 +53,3 @@ export const wikiReportSchema = z.object({
   reason: z.enum(["stale", "incorrect", "update-request", "other"]),
   note: z.string().max(2000).optional().default(""),
 });
-
-export const createSystemTagSchema = z.object({
-  id: z
-    .string()
-    .min(2)
-    .max(50)
-    .regex(/^[a-z0-9-]+$/),
-  name: z.string().min(2).max(100),
-  description: z.string().min(10).max(500),
-  icon: z.string().min(1).max(10),
-  color: z.string().min(5).max(50), // Tailwind class
-  order: z.number().int().min(1),
-});

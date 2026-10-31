@@ -16,7 +16,6 @@ import type { CorporateSector } from "@/lib/db/types";
 import { getSectorHostFxRate } from "@/lib/currency/corporationCapital";
 import { computeSectorListingValuation } from "@/lib/corporations/sectorValuation";
 import { getGameState } from "@/lib/gameState";
-import { sectorNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
@@ -29,7 +28,11 @@ export async function listSectorForSale(_request: Request, { params }: RoutePara
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/sectorOperations/listSectorForSale:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, sectorId } = await params;
@@ -115,8 +118,7 @@ export async function listSectorForSale(_request: Request, { params }: RoutePara
             currentTurn: listingTurn,
             eraUnitScale: await loadWorldEraUnitScale(db),
           }
-        : undefined,
-      sectorNpvBoostMultiplier(listingTurn)
+        : undefined
     );
 
     if (valuation.priceAnchor <= 0) {

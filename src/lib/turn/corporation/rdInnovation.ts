@@ -1,4 +1,5 @@
 import { extractionRdTargetIndex } from "./rules/rdTarget";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import type { UpdateOneModel } from "mongodb";
 import type { CorporationLookups } from "./types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/constants/corporations";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { createNotifications } from "@/lib/notifications";
-import { plantCapacityDeltaPipeline } from "@/lib/corporations/plantLedger";
+import { plantChangePipeline } from "@/lib/corporations/plantLedger";
 
 // PLANTS-GATED: under plants a breakthrough raises `capitalStock` by the same
 // proportion the legacy path raised `revenue`; the revenue write below runs only
@@ -203,12 +204,11 @@ export function processRdInnovations(
       sectorBoostOps.push({
         updateOne: {
           filter: { _id: sector._id },
-          update: plantCapacityDeltaPipeline(
-            sector.sectorType,
+          update: plantChangePipeline(
+            sector,
             Math.round(deltaCapacity * 100) / 100,
             { updatedAt: now },
-            sector.industryModel,
-            sector.mediaDiscriminator
+            { wholePlants: lookups.wholePlantsOn === true }
           ),
         },
       });
@@ -261,10 +261,11 @@ export function processRdInnovations(
     // convention — transfers update both together).
     if (corp.ceoId && !corp.ceoVacant) {
       const boostDisplayPercent = Math.round(boostPercent * 100);
-      const title = "R&D Breakthrough!";
+      const where = getStateDisplayName(corp.countryId, sector.stateId);
+      const title = `R&D breakthrough at ${corp.name}`;
       const message = isExtraction
-        ? `Your R&D investment has led to a technological breakthrough! A sector in ${sector.stateId} saw a ${boostDisplayPercent}% revenue increase and expanded state resource capacity.`
-        : `Your R&D investment has led to an innovation! A sector in ${sector.stateId} saw a ${boostDisplayPercent}% revenue boost.`;
+        ? `Research paid off in ${where}: revenue there is up ${boostDisplayPercent}% and the state's resource capacity grew.`
+        : `Research paid off in ${where}: revenue there is up ${boostDisplayPercent}%.`;
 
       void createNotifications([
         {

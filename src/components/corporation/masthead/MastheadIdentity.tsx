@@ -151,7 +151,7 @@ export function MastheadIdentity({
           )}
         </Fact>
         {corporation.parentCorporation && (
-          <Fact label="Subsidiary of">
+          <Fact label={corporation.isFormalizedSubsidiary ? "Subsidiary of" : "Majority owner"}>
             <Link
               href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
               className="truncate hover:underline"

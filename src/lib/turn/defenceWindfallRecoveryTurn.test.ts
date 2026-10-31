@@ -13,6 +13,7 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
   loadTxThresholds: vi.fn().mockResolvedValue({}),
 }));
 
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { processDefenceWindfallRecoveryTurn } from "./defenceWindfallRecoveryTurn";
 
 function database(corporations: unknown[]) {
@@ -54,6 +55,17 @@ describe("defence windfall recovery turn", () => {
   beforeEach(() => {
     applyMoneyMove.mockReset().mockResolvedValue({ status: "applied", applied: [0, 1] });
     emitTxBulk.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("projects the settlement stamps out of the corporations it sweeps", async () => {
+    const db = database([corporation()]);
+    await processDefenceWindfallRecoveryTurn(db as never, 330);
+    const corporations = db.collection.mock.results[0]?.value as {
+      find: { mock: { calls: unknown[][] } };
+    };
+    expect(corporations.find.mock.calls[0]?.[1]).toEqual({
+      projection: SETTLEMENT_HISTORY_EXCLUDED,
+    });
   });
 
   it("collects only cash above reserve and writes the next liability state in the debit leg", async () => {

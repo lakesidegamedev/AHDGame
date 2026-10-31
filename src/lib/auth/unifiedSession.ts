@@ -3,7 +3,7 @@ import type { UserPayload } from "@/lib/auth";
 
 type UnifiedSessionClaims = Pick<UserPayload, "userId" | "authSource" | "sid">;
 
-export function isUnifiedPayload(payload: UnifiedSessionClaims): boolean {
+function isUnifiedPayload(payload: UnifiedSessionClaims): boolean {
   return payload.authSource === "unified" && typeof payload.sid === "string";
 }
 

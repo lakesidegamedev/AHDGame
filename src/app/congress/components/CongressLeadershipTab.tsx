@@ -16,7 +16,7 @@ import type {
   HouseLeadershipResponse,
 } from "@/lib/congress/types";
 import type { ChamberTab } from "./CongressConstants";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { CardSkeleton, ListRowSkeleton, Skeleton } from "@/components/ui";
 import { WhipTabs } from "@/components/party/WhipTabs";
 

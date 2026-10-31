@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { type CountryId } from "@/lib/constants/countries";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
 import type { PoliticianData } from "@/lib/politicians/types";
 

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { Skeleton } from "@/components/ui";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useVicePresidentOffice, type VpOfficeHolder } from "./useVicePresidentOffice";
 import { VpActionPanel } from "./components/VpActionPanel";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";

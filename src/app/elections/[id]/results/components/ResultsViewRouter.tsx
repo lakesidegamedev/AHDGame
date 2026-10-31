@@ -1,11 +1,32 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types";
-import { NightBroadcast } from "../../night/NightBroadcast";
 import { hasNight } from "../../night/nightModel";
-import { PresidentialResultsView } from "./PresidentialResultsView";
-import { ParliamentaryResultsView } from "./ParliamentaryResultsView";
-import { SingleWinnerResultsView } from "./SingleWinnerResultsView";
+
+// Exactly one of these four boards renders for a given election, so they are
+// code-split: /elections/[id] is the fourth-largest route family (10.3k views /
+// 30 days) and used to ship all four result layouts in its first load.
+const ResultsFallback = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const NightBroadcast = dynamic(
+  () => import("../../night/NightBroadcast").then((m) => m.NightBroadcast),
+  { loading: ResultsFallback }
+);
+const PresidentialResultsView = dynamic(
+  () => import("./PresidentialResultsView").then((m) => m.PresidentialResultsView),
+  { loading: ResultsFallback }
+);
+const ParliamentaryResultsView = dynamic(
+  () => import("./ParliamentaryResultsView").then((m) => m.ParliamentaryResultsView),
+  { loading: ResultsFallback }
+);
+const SingleWinnerResultsView = dynamic(
+  () => import("./SingleWinnerResultsView").then((m) => m.SingleWinnerResultsView),
+  { loading: ResultsFallback }
+);
 
 /**
  * Picks the layout by what the data supports: president gets the electoral

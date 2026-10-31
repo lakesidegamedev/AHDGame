@@ -11,14 +11,14 @@
  */
 
 /** Same band the shared nominal commodity price index uses for its inflation input. */
-export const DEFLATOR_INFLATION_BOUND: readonly [number, number] = [-2, 25];
+const DEFLATOR_INFLATION_BOUND: readonly [number, number] = [-2, 25];
 
 /**
  * Annualized nominal growth (%) above which the reading is sector formation.
  * Real expansions and busts sit far below it; only a base growing from near
  * nothing exceeds it.
  */
-export const SECTOR_FORMATION_GROWTH_PCT = 100;
+const SECTOR_FORMATION_GROWTH_PCT = 100;
 
 /** Neutral reading for a sector base still forming: the unowned background rate. */
 export const SECTOR_FORMATION_NEUTRAL_PCT = 0.5;

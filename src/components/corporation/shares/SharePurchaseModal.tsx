@@ -1,4 +1,5 @@
 "use client";
+import { SaleTaxPreview } from "./SaleTaxPreview";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -24,7 +25,7 @@ import {
   estimateCorpMaxSpendableTargetAmount,
   estimateCorpWalletSpend,
 } from "@/lib/currency/corpWalletSpend";
-import { MAIN_MODES } from "./sharePurchaseModalTypes";
+import { mainModesFor } from "./sharePurchaseModalTypes";
 import type { PurchaseMode, OrderSide } from "./sharePurchaseModalTypes";
 import { SharePurchaseAtMarketView } from "./SharePurchaseAtMarketView";
 import { SharePurchaseLimitView } from "./SharePurchaseLimitView";
@@ -91,6 +92,7 @@ export default function SharePurchaseModal({
   const corpCurrencyCode = corporation.liquidCurrencyCode as CurrencyCode | undefined;
 
   const [mode, setMode] = useState<PurchaseMode>("float");
+  const modes = mainModesFor(corporation.isPrivate === true);
   const myHoldingTerms = corporation.shareholders.find(
     (holder) => holder.characterId === myCharacterId
   )?.holdingTerms;
@@ -728,7 +730,13 @@ export default function SharePurchaseModal({
           ...(confirmVacate ? { confirmCeoVacate: true } : {}),
         }),
       });
-      const data = (await res.json()) as { error?: string; requiresCeoVacateConfirm?: boolean };
+      const data = (await res.json()) as {
+        error?: string;
+        requiresCeoVacateConfirm?: boolean;
+        proceeds?: number;
+        withheldTax?: number;
+        netProceeds?: number;
+      };
       if (!res.ok) {
         if (res.status === 409 && data.requiresCeoVacateConfirm) {
           setCeoVacateConfirm({
@@ -745,7 +753,13 @@ export default function SharePurchaseModal({
       setCeoVacateConfirm(null);
       onSuccess();
       requestCharacterStatsRefetch();
-      onClose();
+      if (sellAsCorp) onClose();
+      else {
+        setSuccessMsg(
+          `Sold ${quantity.toLocaleString("en-US")} shares. Gross ${formatAmount(data.proceeds ?? 0)}; tax withheld ${formatAmount(data.withheldTax ?? 0)}; cash received ${formatAmount(data.netProceeds ?? data.proceeds ?? 0)}.`
+        );
+        resetQuantity(0);
+      }
     } catch {
       setError("Network error");
     } finally {
@@ -779,6 +793,8 @@ export default function SharePurchaseModal({
         filled?: boolean;
         cost?: number;
         proceeds?: number;
+        netProceeds?: number;
+        withheldTax?: number;
         escrowAmount?: number;
       };
       if (!res.ok) {
@@ -789,7 +805,7 @@ export default function SharePurchaseModal({
         const detail =
           orderSide === "buy"
             ? `Filled immediately: bought ${quantity.toLocaleString("en-US")} shares for ${formatAmount(data.cost ?? 0)}`
-            : `Filled immediately: sold ${quantity.toLocaleString("en-US")} shares for ${formatAmount(data.proceeds ?? 0)}`;
+            : `Filled immediately: sold ${quantity.toLocaleString("en-US")} shares. Gross ${formatAmount(data.proceeds ?? 0)}; tax withheld ${formatAmount(data.withheldTax ?? 0)}; cash received ${formatAmount(data.netProceeds ?? data.proceeds ?? 0)}.`;
         setSuccessMsg(detail);
         onSuccess();
         requestCharacterStatsRefetch();
@@ -897,7 +913,7 @@ export default function SharePurchaseModal({
           {mode !== "orders" && (
             <div className="shrink-0 border-b border-card-border px-6 py-4">
               <div className="flex overflow-hidden rounded-lg border border-card-border text-sm">
-                {MAIN_MODES.map((m, i) => (
+                {modes.map((m, i) => (
                   <button
                     key={m.id}
                     type="button"
@@ -942,6 +958,18 @@ export default function SharePurchaseModal({
                   }}
                 />
               )}
+            {((mode === "float" &&
+              atMarketSide === "sell" &&
+              !sellAsCorp &&
+              !sellAsInvestmentBank) ||
+              (mode === "limit" && orderSide === "sell" && !limitAsCorp)) && (
+              <SaleTaxPreview
+                corpId={corpId}
+                shares={quantity}
+                holdingTerm={holdingTerm}
+                pricePerShare={mode === "limit" ? limitPriceLocal : undefined}
+              />
+            )}
             {mode === "float" && (
               <SharePurchaseAtMarketView
                 atMarketSide={atMarketSide}

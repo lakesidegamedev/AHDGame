@@ -53,6 +53,7 @@ import {
   primaryDocumentId,
 } from "@/lib/bonds/sovereignPrimarySettlement";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
 
 export const BANK_TREASURY_TRADES_COLLECTION = "bankTreasuryTrades";
 
@@ -223,7 +224,8 @@ async function bankCashFloor(
     playerDeposits: charter.playerDeposits ?? 0,
     playerDepositsAreLiabilities,
     discountWindowDebt: charter.discountWindowDebt ?? 0,
-    cbMarginDebt: charter.cbMarginDebt ?? 0,
+    // Interest floor counts only the interest-bearing margin line (#1694).
+    cbMarginDebt: interestBearingCbMarginDebt(charter),
     interbankLoans: interbankLoans.map((loan) => ({
       outstanding: loan.outstanding ?? 0,
       ratePercent: loan.ratePercent,
@@ -1734,6 +1736,12 @@ export async function liquidateFailedBankTreasury(
       issuerType: "sovereign",
       matured: { $ne: true },
       defaulted: { $ne: true },
+      // A due bond is being redeemed at par through the bank maturity claim,
+      // which pays this estate's vault while it is open and deposit insurance
+      // once it closes. Its frozen quote refuses holder trades, so selling it
+      // here would only fail and hold the whole waterfall.
+      maturityTurn: { $gt: turn },
+      sovereignMaturityClaim: { $exists: false },
       holders: {
         $elemMatch: {
           bankId,

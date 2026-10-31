@@ -12,6 +12,7 @@ const { getMongoClientMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/mongodb", () => ({
   getMongoClient: getMongoClientMock,
+  resolveMongoDbName: () => "barrier-test-db",
 }));
 
 type FakeSession = Pick<ClientSession, "withTransaction" | "endSession">;
@@ -23,6 +24,54 @@ function makeClient(session: FakeSession): {
   const startSession = vi.fn(() => session);
   return { client: { startSession } as unknown as MongoClient, startSession };
 }
+
+describe("majority barrier before a transaction", () => {
+  const sessionThatCommits = () =>
+    ({
+      withTransaction: vi.fn(async (callback: (s: ClientSession) => Promise<string>) =>
+        callback({} as ClientSession)
+      ),
+      endSession: vi.fn().mockResolvedValue(undefined),
+    }) as unknown as FakeSession;
+
+  it("writes one w:majority barrier first when the client acknowledges at w:1", async () => {
+    const order: string[] = [];
+    const updateOne = vi.fn(async () => void order.push("barrier"));
+    const collection = vi.fn(() => ({ updateOne }));
+    const db = vi.fn(() => ({ collection }));
+    const session = sessionThatCommits();
+    const startSession = vi.fn(() => {
+      order.push("session");
+      return session;
+    });
+    const client = { startSession, db, writeConcern: { w: 1 } } as unknown as MongoClient;
+    const { runRequiredTransaction } = await import("./runRequiredTransaction");
+    await expect(runRequiredTransaction(async () => "ok", { client })).resolves.toBe("ok");
+    expect(order).toEqual(["barrier", "session"]);
+    expect(db).toHaveBeenCalledWith("barrier-test-db");
+    expect(collection).toHaveBeenCalledWith("turnWorkerControl");
+    expect(updateOne).toHaveBeenCalledWith(
+      { _id: "transactionMajorityBarrier" },
+      { $set: { at: expect.any(Date) } },
+      { upsert: true, writeConcern: { w: "majority" } }
+    );
+  });
+
+  it.each([undefined, { w: "majority" }])(
+    "skips the barrier for a client at the server default (%o)",
+    async (writeConcern) => {
+      const db = vi.fn();
+      const client = {
+        startSession: vi.fn(() => sessionThatCommits()),
+        db,
+        writeConcern,
+      } as unknown as MongoClient;
+      const { runRequiredTransaction } = await import("./runRequiredTransaction");
+      await expect(runRequiredTransaction(async () => "ok", { client })).resolves.toBe("ok");
+      expect(db).not.toHaveBeenCalled();
+    }
+  );
+});
 
 describe("runRequiredTransaction", () => {
   beforeEach(() => {

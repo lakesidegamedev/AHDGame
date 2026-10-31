@@ -349,6 +349,110 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
     expect(data.nationalSectorTotals.energy).toBe(1000);
   });
 
+  it("nets a country-shared room to build off plants under construction anywhere in the country", async () => {
+    db.collection("gameConfig");
+    db.collection("gameState");
+    db.collection("commodityPrices");
+    db.collection("tradeFlowSnapshots");
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+      _id: "default",
+      marketSystemMode: "plants",
+    });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 10,
+      currentYear: 1953,
+    });
+    db.collectionMocks.states.findOne.mockResolvedValue({
+      _id: "CA",
+      countryId: "US",
+      name: "California",
+      gdp: 0,
+    });
+    db.collectionMocks.states.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({
+        toArray: async () => [{ _id: "CA", name: "California", gdp: 0, population: 30 }],
+      }),
+      toArray: async () => [
+        { _id: "CA", countryId: "US" },
+        { _id: "NV", countryId: "US" },
+      ],
+    });
+    db.collectionMocks.stateMetrics.findOne.mockResolvedValue(null);
+    db.collectionMocks.macroMetrics.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({ toArray: async () => [] }),
+    });
+    db.collectionMocks.tariffs.find.mockReturnValue({ toArray: async () => [] });
+    db.collectionMocks.stateResourceCapacity.findOne.mockResolvedValue(null);
+    db.collectionMocks.unownedSectors.find.mockReturnValue({ toArray: async () => [] });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({ toArray: async () => [] }),
+    });
+    db.collectionMocks.exchangeRates.find.mockReturnValue({
+      toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+    });
+    db.collectionMocks.tradeFlowSnapshots.findOne.mockResolvedValue({
+      books: {
+        US: {
+          energy: {
+            supply: 100,
+            demand: 1000,
+            domesticDemand: 1000,
+            imports: 0,
+            exports: 0,
+            blockedSupply: 0,
+            untradedSupply: 0,
+          },
+        },
+      },
+    });
+    db.collectionMocks.commodityPrices.find.mockReturnValue({
+      toArray: async () => [
+        {
+          commodity: "energy",
+          globalSupply: 100,
+          globalDemand: 1000,
+          stateSupply: {},
+          stateDemand: {},
+        },
+      ],
+    });
+    // A plant under construction in Nevada, not in the viewed state.
+    let nevadaQueue: unknown[] = [];
+    db.collectionMocks.corporateSectors.find.mockImplementation(
+      (query: Record<string, unknown> = {}) => ({
+        toArray: async () => ("buildQueue.0" in query ? nevadaQueue : []),
+      })
+    );
+
+    const { GET } = await import("./route");
+    const read = async () => {
+      const data = await (
+        await GET(new Request("http://localhost/api/country/US/region/CA/economy"), ctx())
+      ).json();
+      return new Map(
+        (data.sectors as Array<{ type: string; headroomUnits: number; headroomScope: string }>).map(
+          (s) => [s.type, s]
+        )
+      );
+    };
+
+    const before = await read();
+    expect(before.get("energy")?.headroomScope).toBe("country");
+    expect(before.get("real_estate")?.headroomScope).toBe("state");
+    expect(before.get("energy")?.headroomUnits).toBeGreaterThan(1);
+
+    nevadaQueue = [
+      {
+        stateId: "NV",
+        sectorType: "energy",
+        buildQueue: [{ unitsOrdered: 1, costPaidAnchor: 1, startTurn: 9, onlineTurn: 50 }],
+      },
+    ];
+    const after = await read();
+    expect(after.get("energy")?.headroomUnits).toBe((before.get("energy")?.headroomUnits ?? 0) - 1);
+  });
+
   it("exposes the sector's production level on each owner row", async () => {
     const corpId = new ObjectId();
     const sectorId = new ObjectId();

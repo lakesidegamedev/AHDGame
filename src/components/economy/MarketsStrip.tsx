@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { forexUrl, stockmarketUrl } from "@/lib/urls";

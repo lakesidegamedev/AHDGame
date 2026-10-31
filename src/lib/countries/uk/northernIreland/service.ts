@@ -8,7 +8,7 @@ import type { State, Election, GameState, ElectionCandidate } from "@/lib/db/typ
 import type { LivingConflictState } from "@/lib/livingConflict/types";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { readUKDevolutionState, vacateUKRegionalExecutives } from "../devolution/service";
-import type { UKDevolutionState } from "../devolution/rules";
+import { UK_EXECUTIVE_FOUNDING_TURNS, type UKDevolutionState } from "../devolution/rules";
 import {
   northernIrelandPosture,
   reconcileNorthernIrelandInstitution,
@@ -70,9 +70,9 @@ export async function reconcileNorthernIrelandGovernance(
     conflict,
     turn,
     latest("governor"),
-    24 + DEFAULT_DURATIONS.governor.generalDurationHours,
+    UK_EXECUTIVE_FOUNDING_TURNS,
     latest("regionalCouncil"),
-    24 + DEFAULT_DURATIONS.regionalCouncil.generalDurationHours
+    DEFAULT_DURATIONS.regionalCouncil.durationHours
   );
   if (!next.regions.NIR.active) {
     const now = new Date();

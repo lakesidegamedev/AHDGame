@@ -46,6 +46,7 @@ import {
 } from "@/lib/admin/spawnNppCorporation";
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ESSENTIAL_SHORTAGE_SCORE } from "@/lib/turn/npp/marketSignals";
+import { isParentDirectedStrategyProtected } from "@/lib/turn/npp/rules/parentDirectedStrategy";
 
 const NPC_CORPORATION_USER_ID = new ObjectId("000000000000000000000000");
 
@@ -463,6 +464,7 @@ export async function processExtractionAutoStrategy(
     | "revenue"
     | "transitionFromStrategyId"
     | "transitionCooldownUntilTurn"
+    | "parentDirectedStrategy"
     | "capitalStock"
     | "buildQueue"
     | "otherOpexPerUnitAnchor"
@@ -478,6 +480,7 @@ export async function processExtractionAutoStrategy(
       revenue: 1,
       transitionFromStrategyId: 1,
       transitionCooldownUntilTurn: 1,
+      parentDirectedStrategy: 1,
       capitalStock: 1,
       buildQueue: 1,
       otherOpexPerUnitAnchor: 1,
@@ -513,6 +516,7 @@ export async function processExtractionAutoStrategy(
     if (s.transitionFromStrategyId != null) continue;
     if (s.transitionCooldownUntilTurn != null && currentTurn < s.transitionCooldownUntilTurn)
       continue;
+    if (isParentDirectedStrategyProtected(s, currentTurn)) continue;
     const stateRes = capByState.get(s.stateId);
     if (!stateRes) continue; // uncapped/legacy state — leave alone
     let best: StrategyPick | null = null;
@@ -597,6 +601,7 @@ export async function processExtractionAutoStrategy(
       | "strategyId"
       | "soldFraction"
       | "transitionCooldownUntilTurn"
+      | "parentDirectedStrategy"
       | "capitalStock"
       | "buildQueue"
       | "otherOpexPerUnitAnchor"
@@ -619,6 +624,7 @@ export async function processExtractionAutoStrategy(
         strategyId: 1,
         soldFraction: 1,
         transitionCooldownUntilTurn: 1,
+        parentDirectedStrategy: 1,
         capitalStock: 1,
         buildQueue: 1,
         otherOpexPerUnitAnchor: 1,
@@ -653,6 +659,7 @@ export async function processExtractionAutoStrategy(
       if (alreadyChosen.has(s._id.toString())) continue;
       if (s.transitionCooldownUntilTurn != null && currentTurn < s.transitionCooldownUntilTurn)
         continue;
+      if (isParentDirectedStrategyProtected(s, currentTurn)) continue;
       const countryId = s.countryId ?? nppCountryById.get(s.corporationId?.toString() ?? "");
       const priceRatioOf: LaggedPriceRatioFn = (commodity) =>
         laggedPriceRatioForCountry(priceByCommodity.get(commodity), countryId);

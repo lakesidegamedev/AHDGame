@@ -25,7 +25,7 @@ export function emptyProducerSectorOpening(worldEpoch: string, turn: number) {
 }
 
 /** A new corporation has no producer creditors until its first settled trade. */
-export function emptyProducerPayables(worldEpoch: string, turn: number): ProducerPayablesState {
+function emptyProducerPayables(worldEpoch: string, turn: number): ProducerPayablesState {
   return { ...validateStamp(worldEpoch, turn), claims: [] };
 }
 

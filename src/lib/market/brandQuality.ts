@@ -26,13 +26,13 @@ import { EXTRACTABLE_RESOURCES, type CommodityType } from "@/lib/constants/commo
  */
 
 // ── Weights (sum to 1; tech-led) and bounds ──────────────────────────────────
-export const QUALITY_WEIGHT_TECH = 0.4;
-export const QUALITY_WEIGHT_INPUTS = 0.2;
-export const QUALITY_WEIGHT_WAGES = 0.2;
-export const QUALITY_WEIGHT_OPERATIONS = 0.2;
+const QUALITY_WEIGHT_TECH = 0.4;
+const QUALITY_WEIGHT_INPUTS = 0.2;
+const QUALITY_WEIGHT_WAGES = 0.2;
+const QUALITY_WEIGHT_OPERATIONS = 0.2;
 
 /** Sub-score floor — no single pillar can drive quality below this share of its term. */
-export const QUALITY_SUBSCORE_FLOOR = 0.1;
+const QUALITY_SUBSCORE_FLOOR = 0.1;
 
 /**
  * rdScore that reads as "par" tech. Calibrated to the live distribution
@@ -48,7 +48,7 @@ export const QUALITY_TECH_REF = 25;
  */
 export const QUALITY_OPS_REF = 15;
 /** How strongly wageLevel above/below 1.0 moves the wage sub-score. */
-export const QUALITY_WAGE_SLOPE = 0.6;
+const QUALITY_WAGE_SLOPE = 0.6;
 /** Neutral input quality (0–100) used when a sector has no measurable inputs. */
 export const QUALITY_NEUTRAL_INPUT = 50;
 

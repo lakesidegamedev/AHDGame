@@ -400,6 +400,80 @@ interface BuildSectorMarketShareInputs {
 }
 
 /**
+ * One sector's anchor-denominated revenue and its host country. Both share
+ * builders read exactly these two facts; resolving them once per sector in a
+ * shared pass keeps the FX lookup, the country fallback and the id string off
+ * the per-bucket path.
+ */
+interface SectorAnchorIndex {
+  /** ₳ revenue per sector, in `sectors` order. */
+  anchors: number[];
+  /** Host country per sector (absent when neither the row nor its state names one). */
+  countries: (CountryId | undefined)[];
+}
+
+function sectorAnchorIndex(
+  sectors: readonly CorporateSector[],
+  stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>,
+  exchangeRatesByCurrency: ReadonlyMap<CurrencyCode, number>
+): SectorAnchorIndex {
+  const anchors = new Array<number>(sectors.length);
+  const countries = new Array<CountryId | undefined>(sectors.length);
+  for (let i = 0; i < sectors.length; i++) {
+    const sector = sectors[i]!;
+    const hostCountryId =
+      (sector.countryId as CountryId | undefined) ??
+      (stateById.get(sector.stateId)?.countryId as CountryId | undefined);
+    countries[i] = hostCountryId;
+    const hostCode = resolveSectorHostCurrencyCode({ countryId: hostCountryId }, null);
+    const hostRate = fxRateForSectorHostFromMap(
+      { countryId: hostCountryId },
+      null,
+      exchangeRatesByCurrency
+    );
+    anchors[i] = readCorpEconomicAnchor(sector.revenue, hostCode, hostRate);
+  }
+  return { anchors, countries };
+}
+
+/** One string per sector: the (state, operating lane) cell its revenue belongs to. */
+function localBucketKeys(sectors: readonly CorporateSector[]): string[] {
+  const keys = new Array<string>(sectors.length);
+  for (let i = 0; i < sectors.length; i++) {
+    const sector = sectors[i]!;
+    keys[i] =
+      `${sector.stateId}::${sector.sectorType}::${sector.industryModel ?? ""}` +
+      `::${sector.mediaDiscriminator ?? ""}`;
+  }
+  return keys;
+}
+
+function localShareFromIndex(
+  sectors: readonly CorporateSector[],
+  index: SectorAnchorIndex
+): Map<string, number> {
+  // Market share is a sector's revenue over the TOTAL real revenue produced in
+  // its (state, sectorType) cell — its slice of the actual market, not of an
+  // "unowned pool" of demand nobody earns (ticket #1145). Cell revenue sums
+  // across every producer (player AND NPP), so shares in a cell add to 100%.
+  const bucketKeyBySector = localBucketKeys(sectors);
+  const ownedRevenueByBucket = new Map<string, number>();
+  for (let i = 0; i < sectors.length; i++) {
+    const key = bucketKeyBySector[i]!;
+    ownedRevenueByBucket.set(key, (ownedRevenueByBucket.get(key) ?? 0) + index.anchors[i]!);
+  }
+  const marketShareBySectorId = new Map<string, number>();
+  for (let i = 0; i < sectors.length; i++) {
+    const market = ownedRevenueByBucket.get(bucketKeyBySector[i]!) ?? 0;
+    marketShareBySectorId.set(
+      sectors[i]!._id.toString(),
+      computeMarketSharePercent(index.anchors[i]!, market)
+    );
+  }
+  return marketShareBySectorId;
+}
+
+/**
  * Build a sectorId → marketSharePercent map across every sector. Used by the
  * turn processor so per-sector growth-cost dominance penalties can be applied
  * consistently with what the player-facing routes display.
@@ -408,75 +482,10 @@ export function buildMarketShareBySectorId(
   inputs: BuildSectorMarketShareInputs
 ): Map<string, number> {
   const { sectors, stateById, exchangeRatesByCurrency } = inputs;
-
-  // Anchor-normalize each sector's revenue once so we can sum and ratio against
-  // it. Sector fields are stored in the sector's HOST-state currency (the market
-  // it operates in), not the owning corp's — resolve the FX rate from the
-  // sector's country (with the state's country as fallback), not per owning corp.
-  const sectorRevenueAnchorById = new Map<string, number>();
-  for (const sector of sectors) {
-    const hostCountryId =
-      (sector.countryId as CountryId | undefined) ??
-      (stateById.get(sector.stateId)?.countryId as CountryId | undefined);
-    const hostCode = resolveSectorHostCurrencyCode({ countryId: hostCountryId }, null);
-    const hostRate = fxRateForSectorHostFromMap(
-      { countryId: hostCountryId },
-      null,
-      exchangeRatesByCurrency
-    );
-    sectorRevenueAnchorById.set(
-      sector._id.toString(),
-      readCorpEconomicAnchor(sector.revenue, hostCode, hostRate)
-    );
-  }
-
-  // Group sectors by (stateId, sectorType) and sum owned revenue.
-  type BucketKey = string;
-  const bucketKey = (
-    stateId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: MediaDiscriminator | null
-  ): BucketKey =>
-    `${stateId}::${marketIdentityKey(marketIdentity(sectorType, industryModel, mediaDiscriminator))}`;
-  const ownedRevenueByBucket = new Map<BucketKey, number>();
-  for (const sector of sectors) {
-    const key = bucketKey(
-      sector.stateId,
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
-    const rev = sectorRevenueAnchorById.get(sector._id.toString()) ?? 0;
-    ownedRevenueByBucket.set(key, (ownedRevenueByBucket.get(key) ?? 0) + rev);
-  }
-
-  const marketShareBySectorId = new Map<string, number>();
-  for (const sector of sectors) {
-    const sectorId = sector._id.toString();
-    const key = bucketKey(
-      sector.stateId,
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
-    // Market share is a sector's revenue over the TOTAL real revenue produced in
-    // its (state, sectorType) cell — its slice of the actual market, not of an
-    // "unowned pool" of demand nobody earns (ticket #1145). The former
-    // denominator (owned + a GDP-compounded unowned stock, or a capacity-units
-    // twin) was a phantom: it grew with the economy, was never drawn down when a
-    // corp built capacity, and read "60% unowned" in a market where every unit
-    // already cleared. Cell revenue sums across every producer (player AND NPP —
-    // both are corporateSectors rows), so shares in a cell add to 100% and a sole
-    // producer honestly reads 100% (the dominance density factor keeps a lone
-    // pioneer from being over-tolled). The unownedSectors revenue leg is left
-    // intact for its other consumers (GDP-growth weighting, the metric-engine
-    // adequacy terms, recommendations, the split-attack pool).
-    const market = ownedRevenueByBucket.get(key) ?? 0;
-    const rev = sectorRevenueAnchorById.get(sectorId) ?? 0;
-    marketShareBySectorId.set(sectorId, computeMarketSharePercent(rev, market));
-  }
-  return marketShareBySectorId;
+  return localShareFromIndex(
+    sectors,
+    sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency)
+  );
 }
 
 /**
@@ -502,121 +511,83 @@ export function buildNationalDominanceShareBySectorId(
   inputs: BuildSectorMarketShareInputs
 ): Map<string, number> {
   const { sectors, stateById, exchangeRatesByCurrency } = inputs;
+  return nationalShareFromIndex(
+    sectors,
+    sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency),
+    stateById
+  );
+}
 
-  const natKey = (
-    countryId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: MediaDiscriminator | null
-  ): string =>
-    `${countryId}::${marketIdentityKey(marketIdentity(sectorType, industryModel, mediaDiscriminator))}`;
-
-  // Sector revenue → ₳ anchor, host-state currency (same resolution as the
-  // local map so the two shares are on one basis).
-  const anchorById = new Map<string, number>();
-  const sectorCountryById = new Map<string, CountryId>();
-  for (const sector of sectors) {
-    const hostCountryId =
-      (sector.countryId as CountryId | undefined) ??
-      (stateById.get(sector.stateId)?.countryId as CountryId | undefined);
-    const hostCode = resolveSectorHostCurrencyCode({ countryId: hostCountryId }, null);
-    const hostRate = fxRateForSectorHostFromMap(
-      { countryId: hostCountryId },
-      null,
-      exchangeRatesByCurrency
-    );
-    anchorById.set(
-      sector._id.toString(),
-      readCorpEconomicAnchor(sector.revenue, hostCode, hostRate)
-    );
-    if (hostCountryId) sectorCountryById.set(sector._id.toString(), hostCountryId);
-  }
-
+function nationalShareFromIndex(
+  sectors: readonly CorporateSector[],
+  index: SectorAnchorIndex,
+  stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>
+): Map<string, number> {
   // National market = Σ over the country's states of each (state, sectorType)
   // cell's TOTAL real revenue (ticket #1145). Same definition as the local
   // builder: the denominator is what every producer actually earns, not an
   // unowned pool of unclaimed demand. A national champion's share is its revenue
   // over the sum of real revenue in that sector across the country.
   const nationalMarketByKey = new Map<string, number>();
-  for (const sector of sectors) {
-    const state = stateById.get(sector.stateId);
-    if (!state) continue;
-    const identity = marketIdentity(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
-    const countryId = (sector.countryId as CountryId | undefined) ?? (state.countryId as CountryId);
-    const nKey = natKey(
-      countryId,
-      identity.sectorType,
-      identity.industryModel,
-      identity.mediaDiscriminator
-    );
-    nationalMarketByKey.set(
-      nKey,
-      (nationalMarketByKey.get(nKey) ?? 0) + (anchorById.get(sector._id.toString()) ?? 0)
-    );
+  for (let i = 0; i < sectors.length; i++) {
+    const sector = sectors[i]!;
+    if (!stateById.has(sector.stateId)) continue;
+    const countryId = index.countries[i];
+    if (!countryId) continue;
+    const key =
+      `${countryId}::${sector.sectorType}::${sector.industryModel ?? ""}` +
+      `::${sector.mediaDiscriminator ?? ""}`;
+    nationalMarketByKey.set(key, (nationalMarketByKey.get(key) ?? 0) + index.anchors[i]!);
   }
 
   // Corp's national revenue per (corp, country, sectorType).
   const corpNatRevByKey = new Map<string, number>();
-  const corpNatKey = (
-    corpId: string,
-    countryId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: MediaDiscriminator | null
-  ): string =>
-    `${corpId}::${countryId}::${marketIdentityKey(marketIdentity(sectorType, industryModel, mediaDiscriminator))}`;
-  for (const sector of sectors) {
+  for (let i = 0; i < sectors.length; i++) {
+    const sector = sectors[i]!;
     const corpId = sector.corporationId?.toString();
     if (!corpId) continue;
-    const countryId = sectorCountryById.get(sector._id.toString());
+    const countryId = index.countries[i];
     if (!countryId) continue;
-    const key = corpNatKey(
-      corpId,
-      countryId,
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
-    corpNatRevByKey.set(
-      key,
-      (corpNatRevByKey.get(key) ?? 0) + (anchorById.get(sector._id.toString()) ?? 0)
-    );
+    const key =
+      `${corpId}::${countryId}::${sector.sectorType}::${sector.industryModel ?? ""}` +
+      `::${sector.mediaDiscriminator ?? ""}`;
+    corpNatRevByKey.set(key, (corpNatRevByKey.get(key) ?? 0) + index.anchors[i]!);
   }
 
   const nationalShareBySectorId = new Map<string, number>();
-  for (const sector of sectors) {
+  for (let i = 0; i < sectors.length; i++) {
+    const sector = sectors[i]!;
+    const sectorId = sector._id.toString();
     const corpId = sector.corporationId?.toString();
-    const countryId = sectorCountryById.get(sector._id.toString());
+    const countryId = index.countries[i];
     if (!corpId || !countryId) {
-      nationalShareBySectorId.set(sector._id.toString(), 0);
+      nationalShareBySectorId.set(sectorId, 0);
       continue;
     }
-    const identity = marketIdentity(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
-    const corpRev =
-      corpNatRevByKey.get(
-        corpNatKey(
-          corpId,
-          countryId,
-          identity.sectorType,
-          identity.industryModel,
-          identity.mediaDiscriminator
-        )
-      ) ?? 0;
-    const market =
-      nationalMarketByKey.get(
-        natKey(countryId, identity.sectorType, identity.industryModel, identity.mediaDiscriminator)
-      ) ?? 0;
-    nationalShareBySectorId.set(sector._id.toString(), computeMarketSharePercent(corpRev, market));
+    const identity = `${sector.sectorType}::${sector.industryModel ?? ""}::${sector.mediaDiscriminator ?? ""}`;
+    const corpRev = corpNatRevByKey.get(`${corpId}::${countryId}::${identity}`) ?? 0;
+    const market = nationalMarketByKey.get(`${countryId}::${identity}`) ?? 0;
+    nationalShareBySectorId.set(sectorId, computeMarketSharePercent(corpRev, market));
   }
   return nationalShareBySectorId;
+}
+
+/**
+ * Both share maps from one sector pass. The turn needs the local and national
+ * share together and they read the same per-sector anchor and host country, so
+ * building them separately resolved the FX rate, the id string and the bucket
+ * key twice over every sector.
+ */
+export function buildSectorShareMaps(inputs: BuildSectorMarketShareInputs): {
+  marketShareBySectorId: Map<string, number>;
+  nationalDominanceShareBySectorId: Map<string, number>;
+} {
+  const { sectors, stateById, exchangeRatesByCurrency } = inputs;
+  const index = sectorAnchorIndex(sectors, stateById, exchangeRatesByCurrency);
+  return {
+    marketShareBySectorId: localShareFromIndex(sectors, index),
+    nationalDominanceShareBySectorId: nationalShareFromIndex(sectors, index, stateById),
+  };
 }
 
 /**

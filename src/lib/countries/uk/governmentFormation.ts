@@ -25,8 +25,10 @@ import {
   tickConfidenceForGov,
 } from "@/lib/uk/confidence/confidenceGaugeStore";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
+import { loadUkBrokenPromiseMeter } from "@/lib/countries/uk/manifesto/deliveryMeter";
 import { tickNhsFromBudget } from "@/lib/uk/nhs/nhsStore";
 import { triggerSnapElection } from "@/lib/turn/snapElection";
+import { canDissolveOnConfidence } from "@/lib/turn/rules/snapElection";
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
@@ -96,9 +98,10 @@ export async function updateGovernmentSeats(): Promise<void> {
  */
 export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
   const nhsGameState = await getGameState(db);
-  const approvalDoc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ _id: "UK" });
+  const [approvalDoc, brokenPromiseMeter] = await Promise.all([
+    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: "UK" }),
+    loadUkBrokenPromiseMeter(db),
+  ]);
   if (approvalDoc) {
     const erosionScale = getUkConfidenceErosionScale(
       approvalDoc.headOfGovernmentSinceTurn,
@@ -107,11 +110,27 @@ export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
     );
     const gauge = await tickConfidenceForGov(db, {
       approval: approvalDoc.approvalRating,
+      // Broken manifesto pledges bleed confidence every turn. Omitted when the
+      // government has no judgeable manifesto, so silence is not read as total
+      // failure.
+      brokenPromiseMeter,
       erosionScale,
       now,
       turn: nhsGameState?.currentTurn,
     });
-    if (gauge.dissolutionEnabled) {
+    const government = gauge.dissolutionEnabled
+      ? await getGovernmentFormationsCollection(db).findOne(
+          { _id: "UK" },
+          { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
+        )
+      : null;
+    if (
+      gauge.dissolutionEnabled &&
+      canDissolveOnConfidence(
+        government?.status,
+        !!(government?.pmCharacterId || government?.pmNppId)
+      )
+    ) {
       try {
         await triggerSnapElection(db, "UK", now, {
           reason: "auto-snap",

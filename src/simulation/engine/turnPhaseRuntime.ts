@@ -139,6 +139,14 @@ export function createTurnPhaseRuntime(input: {
   turn?: number;
   /** Sandbox tooling hook. Omitted by production turn execution. */
   onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
+  /**
+   * Where phase status lives. `processingLock` (the default) mirrors every
+   * transition onto `gameState` under the processing lock and renews the lock's
+   * heartbeat. `memory` keeps statuses in `phaseStatuses` only and never touches
+   * `gameState`: it is for the reporting phases that run after the lock is
+   * released, where there is no lock to renew and none to guard the writes.
+   */
+  statusPersistence?: "processingLock" | "memory";
 }): TurnPhaseRuntime {
   const {
     db,
@@ -150,6 +158,7 @@ export function createTurnPhaseRuntime(input: {
     resumed,
     onPhaseCompleted,
   } = input;
+  const lockless = input.statusPersistence === "memory";
   const resumeOutcomes = new Map<string, ResumeResultOutcome>();
   const turn = input.turn ?? 0;
   let lastFlushAtMs = 0;
@@ -231,7 +240,11 @@ export function createTurnPhaseRuntime(input: {
     // and result land together. Otherwise a later whole-map write (the failure
     // path) could persist "completed" with no result (#3429).
     const stagedCompletion = phaseRequiresResumeResult(phase) && status === "completed";
-    if (!stagedCompletion) phaseStatuses[phase] = next;
+    if (!stagedCompletion || lockless) phaseStatuses[phase] = next;
+    if (lockless) {
+      if (status === "running") currentPhaseRef.current = phase;
+      return;
+    }
 
     // Every start must land before the callback can mutate. A coalesced start
     // leaves a pending phase eligible for duplicate execution after a crash.
@@ -335,6 +348,7 @@ export function createTurnPhaseRuntime(input: {
     const invocationChain = [...(phaseInvocationChain.getStore() ?? []), invocationId];
     // Set by the timeout once it fires; settles when the timed-out function does.
     let drained: Promise<void> | null = null;
+    const lateCompletion: { value?: { result: T } } = {};
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
@@ -349,6 +363,7 @@ export function createTurnPhaseRuntime(input: {
       // a terminal status write and must never revive that phase as running.
       // Substeps are written as nested fields rather than replacing the status,
       // so the progress overlay gains live detail without creating that race.
+      if (lockless) return;
       const now = new Date();
       const substeps = peekPhaseSubsteps(name);
       const setFields: Record<string, unknown> = { processingHeartbeatAt: now };
@@ -381,6 +396,7 @@ export function createTurnPhaseRuntime(input: {
     function beginDrain(): Promise<void> {
       clearInterval(heartbeatTimer);
       heartbeatTimer = setInterval(() => {
+        if (lockless) return;
         const now = new Date();
         const substeps = peekPhaseSubsteps(name);
         const setFields: Record<string, unknown> = { processingHeartbeatAt: now };
@@ -400,7 +416,8 @@ export function createTurnPhaseRuntime(input: {
       }, TURN_LOCK_HEARTBEAT_MS);
       const settled = work
         .then(
-          () => {
+          (result) => {
+            lateCompletion.value = { result };
             console.warn(`[Turn] Timed-out phase "${name}" finished after its timeout`);
           },
           (lateErr) => {
@@ -443,8 +460,7 @@ export function createTurnPhaseRuntime(input: {
       )
     );
 
-    try {
-      const result = await Promise.race([work, timeoutPromise]);
+    async function completePhase(result: T): Promise<T> {
       const phaseDurationMs = Date.now() - phaseStart;
       if (onPhaseCompleted) await onPhaseCompleted({ name, result });
       Sentry.addBreadcrumb({
@@ -541,6 +557,10 @@ export function createTurnPhaseRuntime(input: {
         console.warn(`[Turn] Failed to mark phase "${name}" completed`, err)
       );
       return result;
+    }
+
+    try {
+      return await completePhase(await Promise.race([work, timeoutPromise]));
     } catch (err) {
       if (err instanceof TurnPhaseCompletionPersistError) {
         // Writes landed, so this is not a phase failure to log and continue past.
@@ -583,6 +603,22 @@ export function createTurnPhaseRuntime(input: {
         // the phase status. Serialize them so a slow first write cannot land
         // last and overwrite substeps recorded while the callback drained.
         await initialFailureWrite;
+        if (lateCompletion.value && phaseRequiresResumeResult(name)) {
+          // A timeout cannot cancel writes. Once this exact invocation returns
+          // successfully, retain its real flows rather than stranding treasury
+          // settlement or replaying the bond phase. Persist completion and its
+          // validated result atomically, after the prompt failure marker.
+          // Rejection, missing output and an unavailable primary still fail
+          // closed; elapsed time alone never establishes committed flows.
+          try {
+            return await completePhase(lateCompletion.value.result);
+          } catch (completionErr) {
+            if (completionErr instanceof TurnPhaseCompletionPersistError) {
+              warnings.push(`${name}: ${completionErr.message}`);
+            }
+            throw completionErr;
+          }
+        }
         const finalSubsteps = takePhaseSubsteps(name);
         if (finalSubsteps) await persistFailure(finalSubsteps);
       } else {
@@ -614,6 +650,7 @@ export function createTurnPhaseRuntime(input: {
     markPhaseSkipped,
     drainTimedOutPhases: waitForDrainingPhases,
     requirePhaseResult,
+    isPhaseEligible: (phase: string) => !shouldRunPhase || shouldRunPhase(phase),
     resumeResultOutcome: (phase: string) => resumeOutcomes.get(phase) ?? null,
   };
 }

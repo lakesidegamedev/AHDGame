@@ -1,3 +1,10 @@
+import { stockSaleDeductions } from "@/lib/budget/rules/stockWithholding";
+import {
+  loadStockWithholdingContexts,
+  stockSellerKey,
+  withholdStockReceipt,
+  netStockProceeds,
+} from "@/lib/budget/stockSaleWithholding";
 /**
  * Share orders reserve funding for purchases and expose shares for sale.
  * placeShareOrder prices corporate currency conversion using the source authority.
@@ -104,7 +111,11 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/placeShareOrder:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -123,6 +134,18 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+
+    // Private companies trade through Private sale only (#4461). A limit order
+    // on a private company leaves a resting bid that the only holders able to
+    // fill it cannot see, and the private-sale band cannot match an order-book
+    // price. Refuse at the source so the asymmetry cannot be created.
+    if (corporation.isPrivate === true) {
+      return errorResponse(
+        400,
+        `${corporation.name} is a private company. Private shares change hands through a private sale, not the order book.`
+      );
+    }
+
     const marketQuote = await loadEquityQuote(db, corporation);
     const executionPrice = type === "buy" ? marketQuote.askPriceLocal : marketQuote.bidPriceLocal;
     const orderFlowEligible = isOrderFlowPriceEligible(
@@ -1031,6 +1054,16 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
         );
         const proceedsInHome = proceeds * charFxRate;
 
+        const contexts = await loadStockWithholdingContexts(
+          db,
+          [{ id: character._id, collection: "characters" }],
+          currentTurn
+        );
+        const withholdingContext = contexts.get(
+          stockSellerKey({ id: character._id, collection: "characters" })
+        );
+        if (withholdingContext && withholdingContext.currency !== homeCurrency)
+          return errorResponse(409, "Your home currency changed. Refresh before selling shares.");
         const buybackGate = await gateIssuerBuyback();
         if (buybackGate) return buybackGate;
 
@@ -1055,7 +1088,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           });
           return errorResponse(409, "Shares were already sold or reserved by another action");
         }
-        const stockTax = holdingChange.tracked
+        const grossStockTax = holdingChange.tracked
           ? pendingStockTaxReceipt({
               id: new ObjectId().toHexString(),
               currencyCode: homeCurrency,
@@ -1066,12 +1099,22 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
               assessmentTurn: currentTurn + 1,
             })
           : undefined;
+        const stockTax = grossStockTax
+          ? withholdStockReceipt(
+              grossStockTax,
+              contexts.get(stockSellerKey({ id: character._id, collection: "characters" }))
+            )
+          : undefined;
         let sellerCredited = false;
         try {
           const sellerCredit = await db.collection<Character>("characters").updateOne(
             { _id: character._id },
             {
-              $inc: buildPersonalBalanceInc(proceedsInHome, homeCurrency, forexEnabled),
+              $inc: buildPersonalBalanceInc(
+                netStockProceeds(proceedsInHome, stockTax),
+                homeCurrency,
+                forexEnabled
+              ),
               $set: { updatedAt: now },
               ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
             }
@@ -1117,7 +1160,11 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
             await db.collection<Character>("characters").updateOne(
               { _id: character._id },
               {
-                $inc: buildPersonalBalanceInc(-proceedsInHome, homeCurrency, forexEnabled),
+                $inc: buildPersonalBalanceInc(
+                  -netStockProceeds(proceedsInHome, stockTax),
+                  homeCurrency,
+                  forexEnabled
+                ),
                 $set: { updatedAt: new Date() },
                 ...(stockTax ? { $pull: { pendingStockTaxReceipts: { id: stockTax.id } } } : {}),
               }
@@ -1170,6 +1217,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           filled: true,
           sharesSold: shares,
           proceeds: Math.round(proceeds * 100) / 100,
+          ...stockSaleDeductions(proceeds, proceedsInHome, stockTax),
         });
       }
 

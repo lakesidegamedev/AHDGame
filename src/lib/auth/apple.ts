@@ -10,7 +10,7 @@ import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } from "jose";
  * never from the unsigned `user` form field.
  */
 
-export const APPLE_ISSUER = "https://appleid.apple.com";
+const APPLE_ISSUER = "https://appleid.apple.com";
 const APPLE_AUTHORIZE_URL = "https://appleid.apple.com/auth/authorize";
 const APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token";
 const APPLE_REVOKE_URL = "https://appleid.apple.com/auth/revoke";

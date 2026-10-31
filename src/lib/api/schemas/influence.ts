@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { schemas } from "@/lib/api/validate";
+import { INFLUENCE_QUEUE_BATCH_SIZE } from "@/lib/parties/influenceQueueLimits";
 
 export const characterInfluenceActionSchema = z.object({
   action: z.enum(["raise", "lower", "barnstorm"]),
@@ -32,7 +33,7 @@ export const partyInfluenceSchema = z.object({
   context: influenceContextSchema.default({}),
 });
 
-/** Batch queue of party influence actions — max 20 items per request */
+/** Batch queue of party influence actions, capped per request */
 export const partyInfluenceQueueSchema = z.object({
   queue: z
     .array(
@@ -54,21 +55,5 @@ export const partyInfluenceQueueSchema = z.object({
       })
     )
     .min(1)
-    .max(20),
-});
-
-export const nppInfluenceSchema = z.object({
-  influenceType: z.enum([
-    "boost_favorability",
-    "boost_influence",
-    "boost_loyalty",
-    "reduce_stubbornness",
-    "relocate_state",
-    "endorse_candidate",
-    "withdraw_election",
-    "oppose_candidate",
-    "support_leadership",
-  ]),
-  fundAmount: z.number().min(0).optional().default(0),
-  context: influenceContextSchema.default({}),
+    .max(INFLUENCE_QUEUE_BATCH_SIZE),
 });

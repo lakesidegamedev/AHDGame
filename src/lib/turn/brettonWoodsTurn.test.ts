@@ -25,22 +25,16 @@ function bankDoc(countryId: string, overrides: Record<string, unknown> = {}) {
 }
 
 function seed(opts: {
-  flag?: boolean;
   commandEconomyEnabled?: boolean;
   rates?: Record<string, unknown>[];
   banks?: Record<string, unknown>[];
   usInflation?: number | null;
 }) {
   db.collection("gameConfig");
-  db.collectionMocks.gameConfig.findOne.mockResolvedValue(
-    opts.flag === true
-      ? {
-          _id: "default",
-          brettonWoodsExitEnabled: true,
-          ...(opts.commandEconomyEnabled === true ? { commandEconomyEnabled: true } : {}),
-        }
-      : { _id: "default" }
-  );
+  db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+    _id: "default",
+    ...(opts.commandEconomyEnabled === true ? { commandEconomyEnabled: true } : {}),
+  });
   db.collection("exchangeRates");
   db.collectionMocks.exchangeRates.find.mockReturnValue({
     toArray: vi.fn().mockResolvedValue(opts.rates ?? []),
@@ -80,33 +74,8 @@ beforeEach(() => {
 });
 
 describe("processBrettonWoodsTurn gate", () => {
-  it("flag off: single config read, zero writes, disabled result", async () => {
-    db.collection("gameConfig");
-    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ _id: "default" });
-    const res = await processBrettonWoodsTurn(db as unknown as Db, 720, 1960);
-    expect(res).toEqual({
-      enabled: false,
-      goldCover: null,
-      suspended: [],
-      floated: [],
-      currenciesProcessed: 0,
-    });
-    // Nothing past gameConfig was even loaded, let alone written.
-    expect(db.collectionMocks["centralBanks"]).toBeUndefined();
-    expect(db.collectionMocks["federalBudget"]).toBeUndefined();
-    expect(db.collectionMocks["exchangeRates"]).toBeUndefined();
-  });
-
-  it("absent flag behaves as off", async () => {
-    db.collection("gameConfig");
-    db.collectionMocks.gameConfig.findOne.mockResolvedValue(null);
-    const res = await processBrettonWoodsTurn(db as unknown as Db, 720, 1960);
-    expect(res.enabled).toBe(false);
-    expect(db.collectionMocks["exchangeRates"]).toBeUndefined();
-  });
-
-  it("flag on with no exchange rows: enabled, null cover, no writes", async () => {
-    seed({ flag: true, rates: [] });
+  it("with no exchange rows: enabled, null cover, no writes", async () => {
+    seed({ rates: [] });
     const res = await processBrettonWoodsTurn(db as unknown as Db, 720, 1960);
     expect(res).toEqual({
       enabled: true,
@@ -121,7 +90,7 @@ describe("processBrettonWoodsTurn gate", () => {
 
 describe("gold cover tracking", () => {
   it("holds full cover in a calm world and re-persists it on the USD row", async () => {
-    seed({ flag: true, rates: calmRates(), banks: calmBanks(), usInflation: null });
+    seed({ rates: calmRates(), banks: calmBanks(), usInflation: null });
     const res = await processBrettonWoodsTurn(db as unknown as Db, 720, 1960);
     expect(res.enabled).toBe(true);
     expect(res.goldCover).toBe(1);
@@ -132,7 +101,6 @@ describe("gold cover tracking", () => {
 
   it("drains cover under sustained foreign-claims pressure", async () => {
     seed({
-      flag: true,
       rates: calmRates(),
       banks: [
         bankDoc("US", { reserveBalance: 100, forexRevenue: 0 }),
@@ -149,7 +117,6 @@ describe("gold cover tracking", () => {
 describe("suspend and float transitions", () => {
   it("suspends every participating currency once eligible with exhausted cover", async () => {
     seed({
-      flag: true,
       rates: [rateDoc("US", "USD", { goldCover: 0.2 }), rateDoc("UK", "GBP"), rateDoc("JP", "JPY")],
       banks: calmBanks(),
       usInflation: null,
@@ -167,7 +134,6 @@ describe("suspend and float transitions", () => {
 
   it("does not suspend before the era window even with cover exhausted", async () => {
     seed({
-      flag: true,
       rates: [rateDoc("US", "USD", { goldCover: 0.1 }), rateDoc("UK", "GBP")],
       banks: calmBanks(),
       usInflation: null,
@@ -179,7 +145,6 @@ describe("suspend and float transitions", () => {
 
   it("floats suspended currencies after the transition and never re-suspends", async () => {
     seed({
-      flag: true,
       rates: [
         rateDoc("US", "USD", {
           goldCover: 0.1,
@@ -204,7 +169,6 @@ describe("suspend and float transitions", () => {
 
   it("a floating world writes no transitions (idempotent re-run)", async () => {
     seed({
-      flag: true,
       rates: [
         rateDoc("US", "USD", {
           goldCover: 0.1,
@@ -226,7 +190,6 @@ describe("suspend and float transitions", () => {
 
   it("never drags command economies into the float", async () => {
     seed({
-      flag: true,
       commandEconomyEnabled: true,
       rates: [rateDoc("US", "USD", { goldCover: 0.2 }), rateDoc("UK", "GBP"), rateDoc("RU", "RUB")],
       banks: calmBanks(),
@@ -239,7 +202,6 @@ describe("suspend and float transitions", () => {
 
   it("no USD row and no transitions: nothing to persist, no write call", async () => {
     seed({
-      flag: true,
       rates: [rateDoc("UK", "GBP"), rateDoc("JP", "JPY")],
       banks: [],
       usInflation: null,

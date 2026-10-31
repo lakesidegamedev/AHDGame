@@ -6,7 +6,7 @@
  */
 
 /** Principal / ceiling at or above which the legislature raises the limit at fiscal close. */
-export const DEBT_CEILING_RAISE_TRIGGER = 0.95;
+const DEBT_CEILING_RAISE_TRIGGER = 0.95;
 
 /** New ceiling as a multiple of principal, the same headroom the 1991 seeds open with. */
 export const DEBT_CEILING_RAISE_HEADROOM = 1.1;

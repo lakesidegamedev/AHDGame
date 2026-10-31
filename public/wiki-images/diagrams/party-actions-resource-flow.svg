@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="446" viewBox="0 0 760 446" role="img" font-family="system-ui, sans-serif">
+<title>Party resource flow</title>
+<desc>How party money and Political Strength move: member taxes fill the treasury, the treasury buys Political Strength and pays Build Org and budgets, and NPP Action Points are a separate pool for NPP management.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="445" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">Where party resources go</text>
+<g transform="translate(0,22)">
+<rect x="20" y="116" width="130" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="85.0" y="132.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Member taxes</text>
+<text x="85.0" y="149.5" font-size="13" fill="#18181b" text-anchor="middle">tax rate 0 to</text>
+<text x="85.0" y="166.5" font-size="13" fill="#18181b" text-anchor="middle">33%</text>
+<rect x="200" y="116" width="140" height="60" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="270.0" y="149.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Treasury</text>
+<rect x="200" y="28" width="140" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="270.0" y="48.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Passive PS</text>
+<text x="270.0" y="65.0" font-size="13" fill="#18181b" text-anchor="middle">each turn</text>
+<rect x="410" y="28" width="150" height="50" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="485.0" y="48.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Political</text>
+<text x="485.0" y="65.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Strength</text>
+<rect x="610" y="28" width="130" height="50" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="675.0" y="56.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Build Org</text>
+<path d="M150 146 L200 146" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M340 53 L410 53" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M340 130 L375 130 L375 68 L410 68" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="377" y="101" width="43.8" height="15" fill="#ffffff"/>
+<text x="380" y="112" font-size="12" fill="#52525b" text-anchor="start">invest</text>
+<path d="M560 53 L610 53" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="575.7" y="34" width="18.6" height="15" fill="#ffffff"/>
+<text x="585" y="45" font-size="12" fill="#52525b" text-anchor="middle">PS</text>
+<path d="M340 160 L675 160 L675 78" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="501.2" y="143" width="37.5" height="15" fill="#ffffff"/>
+<text x="520" y="154" font-size="12" fill="#52525b" text-anchor="middle">money</text>
+<rect x="410" y="236" width="150" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="485.0" y="255.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Budgets</text>
+<text x="485.0" y="272.0" font-size="13" fill="#18181b" text-anchor="middle">share of income</text>
+<path d="M300 176 L300 260 L410 260" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="610" y="204" width="130" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="675.0" y="227.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">GOTV</text>
+<path d="M560 260 L585 260 L585 223 L610 223" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="610" y="254" width="130" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="675.0" y="277.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Suppression</text>
+<path d="M560 260 L585 260 L585 273 L610 273" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="610" y="304" width="130" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="675.0" y="319.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Registration</text>
+<text x="675.0" y="336.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">drive</text>
+<path d="M560 260 L585 260 L585 323 L610 323" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="20" y="346" width="160" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="100.0" y="369.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">NPP Action Points</text>
+<text x="100.0" y="386.0" font-size="13" fill="#18181b" text-anchor="middle">own pool</text>
+<rect x="260" y="346" width="190" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="355.0" y="360.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">NPP management</text>
+<text x="355.0" y="377.5" font-size="13" fill="#18181b" text-anchor="middle">slates, boosts,</text>
+<text x="355.0" y="394.5" font-size="13" fill="#18181b" text-anchor="middle">recruiting</text>
+<path d="M180 374 L260 374" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<path d="M230 176 L230 318 L355 318 L355 346" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="259" y="301" width="24.9" height="15" fill="#ffffff"/>
+<text x="262" y="312" font-size="12" fill="#52525b" text-anchor="start">fee</text>
+</g>
+</svg>
