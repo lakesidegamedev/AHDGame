@@ -21,3 +21,7 @@ areas: [backend]
 - Bond interest owed to players is paid at full value and before anyone
   else. Interest owed to the market and to funds is paid at the scale of the
   real economy, oldest first, so long unpaid interest starts clearing.
+- Countries without a real economy of their own use the middle value of the
+  other countries' scales for their debts.
+- Clearing old unpaid interest is limited per turn so the hourly turn stays
+  fast, and interest owed to companies is paid in one combined payment.
