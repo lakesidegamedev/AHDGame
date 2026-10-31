@@ -10,7 +10,10 @@ import {
   createIdempotencyKey,
   createSourceOwnershipProofReader,
 } from "@lakeside/auth-enrollment";
-import { createProvisionAccessTokenProvider } from "@lakeside/account-registry";
+import {
+  createAccountRegistry,
+  createProvisionAccessTokenProvider,
+} from "@lakeside/account-registry";
 import { getDb, getMongoClient } from "@/lib/mongodb";
 import { createSourceFenceRedriver } from "@/lib/auth/sourceFenceRedrive";
 import { createSourceFenceWriter } from "@/lib/auth/sourceFenceWriter";
@@ -221,6 +224,20 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
     const reservations = createEnrollmentReservationStore(coordinator, {
       allowedSourceIssuers: [SOURCE_ISSUER],
     });
+    if (general) {
+      if (!provisionCoordinator) throw new Error("Registry runtime is unavailable");
+      const registry = createAccountRegistry(provisionCoordinator, {
+        allowedIssuers: [SOURCE_ISSUER],
+        allowedApplications: [],
+      });
+      // The login route has already verified the source password. This creates
+      // the authoritative canonical account and exact issuer/subject mapping;
+      // the proof store verifies ownership again before admission.
+      await registry.resolveOrCreateVerifiedIdentity(
+        { issuer: SOURCE_ISSUER, subject: sourceAccountId },
+        PROVENANCE
+      );
+    }
     const reservation = await reservations.reserve({
       sourceIdentity: { issuer: SOURCE_ISSUER, subject: sourceAccountId },
       provenance: PROVENANCE,
