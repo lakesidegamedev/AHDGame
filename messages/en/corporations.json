@@ -51,6 +51,7 @@
         "statePlaceholder": "e.g. TX",
         "selectState": "Select a state",
         "noLocalServicePlants": "No plants producing this service",
+        "noBuyerPlantsForService": "None of your plants use this service",
         "localServiceHelp": "This service is supplied within one state. The contract reserves the supplier's plants there for the buyer's plants in the same state.",
         "buyerFreightHelp": "The supplier's capacity is checked when they review the offer.",
         "volumeLabel": "Volume cap (per turn)",
@@ -93,6 +94,22 @@
         "priceBand": "Price must be within ±{band}% of market",
         "termRange": "Term must be {min} to {max} turns",
         "localServiceState": "Select the state this service contract is fulfilled from"
+      },
+      "delivery": {
+        "buyer": {
+          "cannotReceiveLocal": "This supplier can't deliver to your sites: {commodity} only reaches plants in the same state, and none of your plants in {state} used it last turn.",
+          "cannotReceive": "Nothing was delivered: none of your plants used {commodity} last turn.",
+          "supplierProducedNone": "Nothing was delivered: the supplier produced none of this last turn.",
+          "supplierProducedLess": "Supplier produced only {achievable} of {cap} {unit} last turn.",
+          "buyerUsedLess": "Your plants used only {used} of {cap} {unit} last turn, so the rest was not delivered."
+        },
+        "supplier": {
+          "cannotReceiveLocal": "The buyer can't receive this: {commodity} only reaches plants in the same state, and the buyer had no plant in {state} using it last turn.",
+          "cannotReceive": "Nothing was delivered: none of the buyer's plants used {commodity} last turn.",
+          "supplierProducedNone": "Nothing was delivered: your plants produced none of this last turn.",
+          "supplierProducedLess": "Your plants produced only {achievable} of {cap} {unit} last turn.",
+          "buyerUsedLess": "The buyer's plants used only {used} of {cap} {unit} last turn, so the rest was not delivered."
+        }
       }
     },
     "sectorInvestment": {
