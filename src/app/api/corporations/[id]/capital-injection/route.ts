@@ -1,3 +1,4 @@
+import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -93,6 +94,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!character) {
       return errorResponse(404, "Character not found");
     }
+
+    const barrier = await newCharacterTransferBarrierResponse(character);
+    if (barrier) return barrier;
 
     const forexEnabled = await isForexEnabled();
     const homeCurrency = getHomeCurrency(character);

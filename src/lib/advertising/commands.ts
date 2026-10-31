@@ -1,3 +1,4 @@
+import { controllerTransferBarrierError } from "@/lib/corporations/commands/acquisitions/controllerTransferBarrier";
 /**
  * Advertising agreement command shell (issue #2235 slice).
  *
@@ -197,6 +198,14 @@ export async function proposeAdvertisingAgreement(request: Request, initiatingCo
       return errorResponse(400, "Advertising suppliers need an operating model");
     }
     const turn = await getCurrentTurn(db);
+    const transferRestriction = await controllerTransferBarrierError(
+      db,
+      initiator,
+      turn,
+      new Date()
+    );
+    if (transferRestriction) return errorResponse(403, transferRestriction);
+
     const now = new Date();
     const proposed = await proposeAdvertisingAgreementPersistent(db, {
       enabled: true,
@@ -262,6 +271,11 @@ export async function updateAdvertisingAgreement(
 
     const body = parsed.data;
     const turn = await getCurrentTurn(db);
+    if (body.action === "accept" || body.action === "counter") {
+      const transferRestriction = await controllerTransferBarrierError(db, corp, turn, new Date());
+      if (transferRestriction) return errorResponse(403, transferRestriction);
+    }
+
     const buyerCommittedShareBps =
       body.action === "accept"
         ? await getBuyerCommittedShareBps(db, agreement.buyerCorpId, turn)

@@ -1,3 +1,5 @@
+import { referenceValuation } from "../acquisitions/referenceValuation";
+import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
 import {
@@ -64,6 +66,14 @@ export async function openPrivatizationVote(
   input: OpenPrivatizationVoteInput
 ): Promise<OpenPrivatizationVoteResult> {
   const { db, corporation, character, currentTurn, forexEnabled } = input;
+
+  const transferRestriction = await controllerTransferBarrierError(
+    db,
+    corporation,
+    currentTurn,
+    new Date()
+  );
+  if (transferRestriction) return { ok: false, error: transferRestriction, status: 403 };
 
   if (corporation.isPrivate) {
     return { ok: false, error: "Corporation is already private", status: 400 };
@@ -222,6 +232,18 @@ export async function openPrivatizationVote(
     } catch {
       // Floor infra unavailable: proceed at the market locked price.
     }
+  }
+  const assetFloor = await referenceValuation(db, corporation);
+  if (assetFloor.minimumPriceAnchor > 0) {
+    const assetFloorFx = await loadFxRatesByCurrency(db);
+    lockedBuyoutPrice = Math.max(
+      lockedBuyoutPrice,
+      anchorToCorpCapital(
+        assetFloor.minimumPriceAnchor / Math.max(1, corporation.totalShares),
+        lockedCurrency,
+        fxRateForCorpFromMap(corporation, assetFloorFx)
+      )
+    );
   }
   const totalReservedCash = Math.ceil(nonCeoShares * lockedBuyoutPrice);
 

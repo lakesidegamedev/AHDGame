@@ -1,3 +1,4 @@
+import { creditEquityPool } from "@/lib/equities/marketPool";
 import type { Db, UpdateFilter, AnyBulkWriteOperation } from "mongodb";
 import {
   holdingCostBasis,
@@ -50,8 +51,8 @@ export type ResolveResult =
  * Pass condition: yes voting power > no voting power AND some voting power cast
  * (no votes = fail). Weighted by voting power (supershares count), not raw shares.
  *
- * On pass: pay each non-CEO character/corp holder, pay corp treasury for the
- * float chunk (corporate buyback semantics), consolidate cap table, flip
+ * On pass: pay each non-CEO character/corp holder, pay the equity market pool for the
+ * float chunk, consolidate cap table, flip
  * isPrivate=true, retire publicFloat shares.
  *
  * On fail: refund CEO's reserved cash, set 96-turn cooldown.
@@ -281,26 +282,16 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   if (personalPayoutOps.length)
     await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
 
-  // Public float buyback: pay corp treasury for the retired float shares.
+  // The float belongs to the equity market pool, not the issuer being taken private.
   const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice);
   if (floatPayout > 0) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corp._id }, { $inc: { liquidCapital: floatPayout } });
-    void emitTx(db, {
-      type: "share_buyout_buyback",
-      turn: currentTurn,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: corp._id,
-      subjectName: corp.name,
-      amount: floatPayout,
-      currencyCode: vote.lockedBuyoutCurrency,
-      counterpartyType: "corporation",
-      counterpartyId: corp._id,
-      counterpartyName: corp.name,
-      meta: { side: "float_retired" },
-    });
+    await creditEquityPool(
+      db,
+      vote.lockedBuyoutCurrency as CurrencyCode,
+      floatPayout,
+      "purchasesIn",
+      now
+    );
   }
 
   // Consolidate cap table: CEO absorbs all non-CEO character/corp shares; float retires.
