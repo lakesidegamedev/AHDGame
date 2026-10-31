@@ -113,3 +113,15 @@ describe("dueSoonRemaining", () => {
     expect(dueSoonRemaining({ dueTurn: null, dueAt: null }, 10, now)).toBeNull();
   });
 });
+
+describe("Due soon urgency", () => {
+  it("grades rows by how soon they close", async () => {
+    const { urgencyOf } = await import("./DueSoonBody");
+    expect(urgencyOf({ unit: "turns", count: 1 })).toBe("now");
+    expect(urgencyOf({ unit: "turns", count: 3 })).toBe("soon");
+    expect(urgencyOf({ unit: "turns", count: 6 })).toBe("later");
+    expect(urgencyOf({ unit: "hours", count: 1 })).toBe("now");
+    expect(urgencyOf({ unit: "hours", count: 5 })).toBe("soon");
+    expect(urgencyOf(null)).toBe("later");
+  });
+});

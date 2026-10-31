@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { ChamberFloorWidgetData, FloorVote } from "@/lib/sidebarWidgets/data/chamberFloor";
-import { WidgetEmpty } from "./common";
+import { Empty } from "./shared";
 
 const VOTE_TONE: Record<FloorVote, string> = {
   for: "text-success",
@@ -21,7 +21,7 @@ export function ChamberFloorBody({
   onNavigate?: () => void;
 }) {
   const t = useTranslations("nav.widgets.chamberFloor");
-  if (data.bills.length === 0) return <WidgetEmpty>{t("empty")}</WidgetEmpty>;
+  if (data.bills.length === 0) return <Empty>{t("empty")}</Empty>;
   const voteLabel: Record<FloorVote, string> = {
     for: t("for"),
     against: t("against"),
