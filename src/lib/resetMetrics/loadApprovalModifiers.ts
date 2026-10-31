@@ -40,6 +40,15 @@ export const RESET_APPROVAL_BOARD_PROJECTION = {
   ),
 };
 
+/**
+ * A board one failed refresh behind is still the latest owned reading. Approval
+ * reads it rather than failing every approval consumer (corporations, votes,
+ * share prices) until the refresh catches up; on 2026-10-31 a strict match
+ * turned one failed refresh into a turn with no economy. Matches the health
+ * input lag the demographic phase accepts. Future boards still fail closed.
+ */
+export const APPROVAL_BOARD_MAX_LAG_TURNS = 6;
+
 export async function loadResetApprovalModifiers(
   db: Db,
   countryId: string,
@@ -67,6 +76,16 @@ export async function loadResetApprovalModifiers(
       .toArray());
   const byId = new Map(boards.map((board) => [board._id, board]));
   const expectedTurn = turn ?? gameState!.currentTurn;
+  // A whole country one failed refresh behind reads its last refresh. A mix of
+  // refreshed and unrefreshed boards is a write in progress and still fails.
+  const boardTurns = new Set(boards.map((board) => board.asOfTurn));
+  const uniformLagTurn = boardTurns.size === 1 ? [...boardTurns][0] : undefined;
+  const lagging = (asOfTurn: number) =>
+    asOfTurn === expectedTurn ||
+    (asOfTurn === uniformLagTurn &&
+      Number.isSafeInteger(asOfTurn) &&
+      asOfTurn < expectedTurn &&
+      asOfTurn >= expectedTurn - APPROVAL_BOARD_MAX_LAG_TURNS);
   const read = (regionId?: string) => {
     const board = byId.get(`${countryId}:${regionId ?? "national"}`);
     if (
@@ -76,7 +95,7 @@ export async function loadResetApprovalModifiers(
       board.regionId !== regionId ||
       board.scope !== (regionId === undefined ? "national" : "regional") ||
       !(
-        board.asOfTurn === expectedTurn ||
+        lagging(board.asOfTurn) ||
         (turn === undefined &&
           gameState!.isProcessing === true &&
           gameState!.processingKind === "turn" &&

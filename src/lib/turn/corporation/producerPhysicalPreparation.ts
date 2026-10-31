@@ -143,6 +143,8 @@ export type ProducerPhysicalEnv = Pick<
   lowUseCostStage?: number;
   /** gameConfig.wholePlantsStage on: capacity moves in whole plants. */
   wholePlants?: boolean;
+  /** Last settled funded producer turn when missed turns leave it behind the previous turn. */
+  producerOpeningTurn?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -223,6 +225,8 @@ export function prepareProducerPhysicalSector(input: {
 }) {
   const { env, corporation: corp, sector } = input;
   const { lookups, currentTurn, currentYear } = env;
+  // The last settled receipt steers this run, even when missed turns sit between.
+  const openingTurn = env.producerOpeningTurn ?? currentTurn - 1;
   const countryId = sector.countryId ?? corp.countryId;
   const currency = resolveSectorHostCurrencyCode(sector, corp);
   if (!countryId || !currency) throw new Error("Producer location requires a reconciled currency");
@@ -337,6 +341,7 @@ export function prepareProducerPhysicalSector(input: {
   const prepared = prepareProducerSector({
     worldEpoch: input.worldEpoch,
     turn: currentTurn,
+    openingTurn: env.producerOpeningTurn,
     sector: withStateBooks(sector),
     // A site with no accessible resource still retains its recipe for selling
     // old goods. Its current physical output is zero, never a fallback yield.
@@ -392,7 +397,7 @@ export function prepareProducerPhysicalSector(input: {
         };
       }
     ).producerSettlement;
-    const current = last && last.turn === currentTurn - 1 ? last : null;
+    const current = last && last.turn === openingTurn ? last : null;
     plan.recentSoldUnits = current?.soldUnits ?? 0;
     // A product the last receipt did not list sold nothing; plants without product rows fall back to the plant total.
     if (current?.products)
@@ -413,7 +418,7 @@ export function prepareProducerPhysicalSector(input: {
     .producerSettlement;
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
-  const settledLast = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  const settledLast = priorReceipt && priorReceipt.turn === openingTurn ? priorReceipt : null;
   // Last turn's realized prices and sell-through let this run borrow against its own sales.
   const unitRevenue = expectedUnitRevenue(
     plan.outputs,
