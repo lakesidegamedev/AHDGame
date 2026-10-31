@@ -8,7 +8,11 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { resetAndBootstrapGameWorld } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { ensureSingleplayerUser, setSingleplayerConfig } from "@/lib/singleplayerServer";
+import {
+  applyStartupRepairsAfterReset,
+  ensureSingleplayerUser,
+  setSingleplayerConfig,
+} from "@/lib/singleplayerServer";
 import type { SingleplayerDifficulty, SingleplayerMode } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +78,7 @@ export async function POST(request: Request) {
       log: (line) => logs.push(line),
     });
 
+    await applyStartupRepairsAfterReset(db, (line) => logs.push(line));
     await ensureSingleplayerUser(db, body.displayName);
     const config = await setSingleplayerConfig(db, {
       mode: body.mode,

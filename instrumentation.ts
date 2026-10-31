@@ -1,5 +1,9 @@
 import * as Sentry from "@sentry/nextjs";
-import { shouldStartHostedBackgroundServices, shouldRunCronInWebProcess } from "@/lib/startupMode";
+import {
+  shouldStartHostedBackgroundServices,
+  shouldRunCronInWebProcess,
+  shouldRunRequiredStartupMigrations,
+} from "@/lib/startupMode";
 
 /**
  * Log a heap+rss snapshot under [boot] so we can correlate boot-time
@@ -59,7 +63,7 @@ export async function register() {
     // scheduler / seeder against the configured DB while inspecting the UI.
     const hostedBackgroundEnabled = shouldStartHostedBackgroundServices(process.env);
     if (!hostedBackgroundEnabled) {
-      console.log("[boot] local mode: skipping hosted auto-seed, migrations and cron init");
+      console.log("[boot] local mode: skipping hosted auto-seed and cron init");
     }
 
     // Auto-seed on startup if the database is empty
@@ -91,8 +95,9 @@ export async function register() {
     // with their runtime code. This is deliberately separate from auto-seed:
     // an already-populated world returns early from runSeed, and a seed error
     // must not silently prevent a required repair. The full migration registry
-    // remains an explicit operator action (`npm run migrate`).
-    if (hostedBackgroundEnabled) {
+    // remains an explicit operator action (`npm run migrate`). Singleplayer
+    // runs them too: a client update opens an existing save with new code.
+    if (shouldRunRequiredStartupMigrations(process.env)) {
       try {
         const { getDb } = await import("@/lib/mongodb");
         const { runRequiredStartupMigrations } = await import("@/lib/migrations/startupMigrations");

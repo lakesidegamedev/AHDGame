@@ -15,6 +15,7 @@ import type {
 } from "@/lib/db/types";
 import { reconcileSingleplayerHeadOfState } from "@/lib/singleplayerHeadOfState";
 import { promoteSingleplayerOwnerIfNoAdmin } from "@/lib/singleplayerOwnerAdmin";
+import { runRequiredStartupMigrations } from "@/lib/migrations/startupMigrations";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -213,4 +214,23 @@ export async function getSingleplayerConfig(db: Db): Promise<SingleplayerConfig 
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } });
   return state?.singleplayerConfig ?? null;
+}
+
+/**
+ * Runs the required startup migrations after a local world reset.
+ *
+ * A hosted reset is followed by a server restart, and startup applies these
+ * (the opening 1991 bond pools only exist at turn 1 of a fresh 1991 world, and
+ * index metadata can disappear on reset). A local "New game" keeps the same
+ * server running, so it applies them here before the first turn.
+ */
+export async function applyStartupRepairsAfterReset(
+  db: Db,
+  log: (line: string) => void = () => {}
+): Promise<string[]> {
+  const summary = await runRequiredStartupMigrations(db);
+  for (const id of summary.ranIds) {
+    log(`[startup-migrations] ${id}`);
+  }
+  return summary.ranIds;
 }
