@@ -540,3 +540,11 @@ describe("openPrivatizationVote — bank-NAV floor (issue #1750)", () => {
     expect(updateOne.mock.calls[0][1].$unset.pendingShareIssuance).toBe("");
   });
 });
+
+// Isolate the existing payout/atomicity cases from balance-sheet loading.
+vi.mock("../acquisitions/referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({ minimumPriceAnchor: 0 }),
+}));
+vi.mock("../acquisitions/controllerTransferBarrier", () => ({
+  controllerTransferBarrierError: vi.fn().mockResolvedValue(null),
+}));

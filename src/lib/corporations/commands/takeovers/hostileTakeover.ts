@@ -1,3 +1,5 @@
+import { referenceValuation } from "../acquisitions/referenceValuation";
+import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import {
   loadStockWithholdingContexts,
   withholdStockReceipt,
@@ -202,12 +204,38 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       );
     }
 
+    const unplacedFloat =
+      target.pendingShareIssuance?.issuedUpfront && target.pendingShareIssuance.source === "ipo"
+        ? target.pendingShareIssuance.remainingShares
+        : 0;
+    if ((target.publicFloat ?? 0) > unplacedFloat) {
+      return errorResponse(
+        400,
+        "Buy the outstanding public float before merging, or use an agreed acquisition that pays public investors."
+      );
+    }
+
+    if ((target.imfFacilityPrincipalOutstanding ?? 0) > 0 || (target.liquidCapital ?? 0) < 0) {
+      return errorResponse(
+        400,
+        "Repay the subsidiary's financing liabilities before merging so those obligations remain accounted for."
+      );
+    }
+
     // Merger review (C3). The squeeze-out is the moment the two firms become
     // one, so it is the moment competition policy gets a say. Checked before
     // any money moves; a referral leaves both corporations untouched and the
     // player retries once the authority clears it (clearance is durable per
     // pair, so the retry sails straight through).
     const reviewTurn = await getCurrentTurn(db);
+    const transferRestriction = await controllerTransferBarrierError(
+      db,
+      parent,
+      reviewTurn,
+      new Date()
+    );
+    if (transferRestriction) return errorResponse(403, transferRestriction);
+
     const barred = acquisitionsBarredByDivestiture(parent, reviewTurn);
     if (barred) return errorResponse(403, barred);
     const clearance = await assertMergerClearance(
@@ -311,6 +339,18 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       pricePerShareAnchor = floored.pricePerShareAnchor;
       bankNavFloorApplied = floored.floorApplied;
     }
+
+    const balanceSheetFloor = await referenceValuation(db, target);
+    if (balanceSheetFloor.portfolioAnchor > 0) {
+      return errorResponse(
+        400,
+        "Sell or transfer the subsidiary's investment holdings before merging so those assets are not discarded."
+      );
+    }
+    pricePerShareAnchor = Math.max(
+      pricePerShareAnchor,
+      (target.totalShares ?? 0) > 0 ? balanceSheetFloor.minimumPriceAnchor / target.totalShares : 0
+    );
 
     const fundHeld = (target.shareholders ?? []).filter((sh) => sh.fundId && (sh.shares ?? 0) > 0);
 

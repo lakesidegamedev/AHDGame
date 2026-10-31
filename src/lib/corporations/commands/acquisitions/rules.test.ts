@@ -74,3 +74,29 @@ describe("player-run acquisition guards", () => {
     expect(acquisitionBlockedAsNewThisTurn({}, 536)).toBe(false);
   });
 });
+
+describe("net asset acquisition floor", () => {
+  it("keeps the same floor when cash is moved into investments", () => {
+    expect(
+      playerAcquisitionMinimumPrice({
+        cashAnchor: 0,
+        otherAssetsAnchor: 0,
+        portfolioAnchor: 20_000_000,
+      })
+    ).toBe(20_000_000);
+  });
+  it("deducts assumed liabilities and includes bank residual equity", () => {
+    expect(
+      playerAcquisitionMinimumPrice({
+        cashAnchor: 5_000_000,
+        otherAssetsAnchor: 3_000_000,
+        portfolioAnchor: 2_000_000,
+        bankEquityAnchor: 4_000_000,
+        debtAnchor: 12_000_000,
+      })
+    ).toBe(2_000_000);
+    expect(
+      playerAcquisitionMinimumPrice({ cashAnchor: 1_000, otherAssetsAnchor: 0, debtAnchor: 2_000 })
+    ).toBe(0);
+  });
+});

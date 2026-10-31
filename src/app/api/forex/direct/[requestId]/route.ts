@@ -199,7 +199,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Accepting moves value between the two characters. New characters cannot do so
-    // for their first 24 turns (anti-abuse). Declining is allowed above so escrow
+    // for their first 48 turns (anti-abuse). Declining is allowed above so escrow
     // can always be returned to the counterparty.
     const gameTime = await getGameTime();
     const barrier = getNewCharacterTransferBarrier(

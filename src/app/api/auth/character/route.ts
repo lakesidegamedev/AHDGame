@@ -415,7 +415,7 @@ export async function POST(request: Request) {
           // Sequential ID for stable URLs
           sequentialId: await getNextSequentialId(db, "character"),
           createdAt: new Date(),
-          // Turn-first anchor for the 24-turn new-character transfer barrier.
+          // Turn-first anchor for the 48-turn new-character transfer barrier.
           createdTurn: gameTime.currentTurn,
           updatedAt: new Date(),
         };
