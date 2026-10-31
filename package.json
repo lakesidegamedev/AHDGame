@@ -178,7 +178,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/topojson-server": "^3.0.4",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "braces": "file:vendor/braces-depth-guard-3.0.3-ahd.1.tgz",
     "concurrently": "^10.0.5",
     "d3-geo": "^3.1.1",

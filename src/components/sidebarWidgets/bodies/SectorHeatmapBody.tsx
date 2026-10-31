@@ -11,6 +11,27 @@ import {
 import { heatColor } from "../MiniCharts";
 import { Empty } from "./shared";
 
+/** Pixel size of the box the tiles share, for deciding which tiles have room for text. */
+const BOX_WIDTH = { tray: 350, menu: 234 };
+/** Tiles shown in a menu column; the rest fold into Other so labels stay readable. */
+const MENU_TILES = 5;
+
+type Tile = SectorHeatmapWidgetData["tiles"][number];
+
+/** Keep the largest tiles and fold the rest into one cap-weighted Other tile. */
+export function foldTiles(tiles: Tile[], keep: number): Tile[] {
+  if (tiles.length <= keep) return tiles;
+  const head = tiles.slice(0, keep - 1);
+  const tail = tiles.slice(keep - 1);
+  const marketCap = tail.reduce((sum, tile) => sum + tile.marketCap, 0);
+  const change =
+    marketCap > 0
+      ? tail.reduce((sum, tile) => sum + tile.change * tile.marketCap, 0) / marketCap
+      : 0;
+  const listings = tail.reduce((sum, tile) => sum + tile.listings, 0);
+  return [...head, { type: OTHER_SECTOR, label: OTHER_SECTOR, marketCap, change, listings }];
+}
+
 function signed(change: number): string {
   return `${change >= 0 ? "▲" : "▼"}${Math.abs(change).toFixed(1)}%`;
 }
@@ -28,16 +49,18 @@ export function SectorHeatmapBody({
   const { formatAmount } = useCurrency();
   if (data.tiles.length === 0) return <Empty>{t("empty")}</Empty>;
   const height = compact ? 112 : 148;
+  const boxWidth = compact ? BOX_WIDTH.menu : BOX_WIDTH.tray;
+  const tiles = compact ? foldTiles(data.tiles, MENU_TILES) : data.tiles;
   const rects = treemapLayout(
-    data.tiles.map((tile) => tile.marketCap),
+    tiles.map((tile) => tile.marketCap),
     // Width over height of the box, so splits follow its longer side.
-    compact ? 234 / height : 350 / height
+    boxWidth / height
   );
   const href = `/stockmarket/${data.exchange}`;
   return (
     <div className="space-y-1.5">
       <ul className="relative w-full" style={{ height }}>
-        {data.tiles.map((tile, i) => {
+        {tiles.map((tile, i) => {
           const rect = rects[i]!;
           const label = tile.type === OTHER_SECTOR ? t("other") : tile.label;
           const summary = t("tile", {
@@ -46,8 +69,10 @@ export function SectorHeatmapBody({
             cap: formatAmount(tile.marketCap),
             count: tile.listings,
           });
-          // Room for text depends on the tile's share of the box.
-          const roomy = rect.w * rect.h > 0.05 && rect.w > 0.2;
+          // Text only where it fits whole; every tile keeps its tooltip and label.
+          const px = { w: rect.w * boxWidth, h: rect.h * height };
+          const showName = px.w >= 64 && px.h >= 34;
+          const showChange = px.w >= 38 && px.h >= 18;
           return (
             <li
               key={tile.type}
@@ -67,9 +92,11 @@ export function SectorHeatmapBody({
                 className="flex h-full w-full flex-col justify-between overflow-hidden rounded px-1.5 py-1 text-[11px] leading-tight text-foreground outline-offset-1 hover:outline hover:outline-1 hover:outline-foreground/40"
                 style={{ background: heatColor(tile.change) }}
               >
-                {roomy && <span className="truncate font-medium">{label}</span>}
-                {rect.w > 0.12 && rect.h > 0.14 && (
-                  <span className="tabular-nums">{signed(tile.change)}</span>
+                {showName && <span className="truncate font-medium">{label}</span>}
+                {showChange && (
+                  <span className={`tabular-nums ${showName ? "" : "m-auto"}`}>
+                    {signed(tile.change)}
+                  </span>
                 )}
               </Link>
             </li>
