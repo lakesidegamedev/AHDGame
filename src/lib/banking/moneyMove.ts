@@ -731,6 +731,9 @@ async function deliverCashLegsInBatch(
   );
   for (const i of indices) {
     const leg = legs[i];
+    // Mint and burn touch no document, so one between two cash legs does not
+    // end the run. The caller still marks it, in order, from the journal loop.
+    if (leg.kind === "mint" || leg.kind === "burn") continue;
     if (
       leg.kind !== kind ||
       !leg.collection ||
@@ -978,12 +981,16 @@ async function executeMoneyMove(
       const rest = order.slice(n);
       batched = await deliverCashLegsInBatch(db, key, rest, record.legs, leg.kind);
       batchThrough = n;
-      while (
-        batchThrough + 1 < order.length &&
-        record.legs[order[batchThrough + 1]].kind === leg.kind &&
-        record.legs[order[batchThrough + 1]].collection === leg.collection
-      )
+      while (batchThrough + 1 < order.length) {
+        const next = record.legs[order[batchThrough + 1]];
+        if (
+          next.kind !== "mint" &&
+          next.kind !== "burn" &&
+          (next.kind !== leg.kind || next.collection !== leg.collection)
+        )
+          break;
         batchThrough++;
+      }
     }
     if (batched.has(i)) continue;
     if (leg.kind === "mint" || leg.kind === "burn") {

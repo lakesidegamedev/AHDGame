@@ -12,6 +12,7 @@ import { producerPayableReceiptKeys, type ProducerPayable } from "./payablesRule
 import { advanceProducerCapacity, type ProducerCapacityState } from "./capacityRules";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { advanceProducerEconomy } from "./production";
+import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
 
 type EconomyInput = Parameters<typeof advanceProducerEconomy>[0];
@@ -219,11 +220,27 @@ function inventoryImages(frozen: FrozenProducerTurn, closing: boolean) {
   );
 }
 
+/** An inventory image as JSON, with country-scoped books made comparable (scopeNeutralBook). */
+function comparableInventory(image: unknown): string {
+  return JSON.stringify(image, (key, value) =>
+    key === "book" || !value || typeof value !== "object" || Array.isArray(value)
+      ? value
+      : typeof value.book === "string" && typeof value.commodity === "string"
+        ? { ...value, book: scopeNeutralBook(value.book, value.commodity) }
+        : value
+  );
+}
+
 interface PhysicalVerification {
   /** Deterministic turn warnings for sectors whose owner drifted after the plan froze. */
   turnWarnings: string[];
   /** Frozen corporation account -> the corporation account that receives its cash. */
   cashRedirect: Map<string, string>;
+  /**
+   * The stored opening inventory of a producer whose image matched the plan's
+   * only after scopeNeutralBook. The receipt write must match what is stored.
+   */
+  storedOpeningInventory: Map<string, unknown>;
 }
 
 async function verifyPhysicalTargets(
@@ -275,6 +292,7 @@ async function verifyPhysicalTargets(
   const openingInventories = inventoryImages(frozen, false);
   const closingInventories = inventoryImages(frozen, true);
   const turnWarnings: string[] = [];
+  const storedOpeningInventory = new Map<string, unknown>();
   const ownersByFrozenOwner = new Map<string, Set<string>>();
   for (const target of frozen.targets) {
     const sector = byId.get(target.sectorId);
@@ -309,12 +327,18 @@ async function verifyPhysicalTargets(
     )
       throw new Error("Producer physical opening changed or was not reconciled");
     if (
-      JSON.stringify(sector.producerInventory) !==
-      JSON.stringify(
+      comparableInventory(sector.producerInventory) !==
+      comparableInventory(
         (prior?.turn === turn ? closingInventories : openingInventories).get(target.producerId)
       )
     )
       throw new Error("Producer inventory opening changed or was not reconciled");
+    if (
+      prior?.turn !== turn &&
+      JSON.stringify(sector.producerInventory) !==
+        JSON.stringify(openingInventories.get(target.producerId))
+    )
+      storedOpeningInventory.set(target.producerId, sector.producerInventory);
     if (
       sector.sectorType !== target.plantType.sectorType ||
       (sector.industryModel ?? null) !== (target.plantType.industryModel ?? null) ||
@@ -344,7 +368,7 @@ async function verifyPhysicalTargets(
       throw new Error(`Dissolved producer owner ${frozenOwner} has nowhere to book its cash`);
     if (frozenBinding) cashRedirect.set(frozenBinding.accountId, currentBinding.accountId);
   }
-  return { turnWarnings, cashRedirect };
+  return { turnWarnings, cashRedirect, storedOpeningInventory };
 }
 
 /**
@@ -645,7 +669,9 @@ export async function settleProducerTurn(
                 "producerCapacity.worldEpoch": frozen.worldEpoch,
                 "producerCapacity.turn": target.capacity.completedTurn,
                 ...physicalImage(target.capacity),
-                producerInventory: openingInventories.get(target.producerId),
+                producerInventory:
+                  verification.storedOpeningInventory.get(target.producerId) ??
+                  openingInventories.get(target.producerId),
                 $or: [
                   { producerSettlement: { $exists: false } },
                   {

@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import type { OfficeDashboardWidgetData } from "@/lib/sidebarWidgets/data/officeDashboard";
 import { approvalUrl, budgetUrl, countryUrl, economyUrl, regionUrl } from "@/lib/urls";
-import { money, percent, toneClass, WidgetLinks } from "./common";
+import { Meter } from "../MiniCharts";
+import { money, percent, toneClass, WidgetLinks } from "./shared";
 
 /** The place the office runs: its region page or its nation page. */
 export function officeDashboardHref(data: OfficeDashboardWidgetData): string {
@@ -30,13 +31,7 @@ export function OfficeDashboardBody({
         { href: economyUrl(data.countryId), label: t("economy") },
         { href: budgetUrl(data.countryId), label: t("budget") },
       ];
-  const rows = [
-    {
-      id: "approval",
-      label: t("approval"),
-      value: data.approval === null ? null : percent(data.approval),
-      tone: "text-foreground",
-    },
+  const stats = [
     {
       id: "budget",
       label: t("budgetBalance"),
@@ -46,7 +41,10 @@ export function OfficeDashboardBody({
     {
       id: "growth",
       label: t("growth"),
-      value: data.gdpGrowth === null ? null : percent(data.gdpGrowth, true),
+      value:
+        data.gdpGrowth === null
+          ? null
+          : `${data.gdpGrowth > 0 ? "▲" : data.gdpGrowth < 0 ? "▼" : ""}${percent(Math.abs(data.gdpGrowth))}`,
       tone: toneClass(data.gdpGrowth),
     },
     {
@@ -55,18 +53,40 @@ export function OfficeDashboardBody({
       value: data.unemployment === null ? null : percent(data.unemployment),
       tone: "text-foreground",
     },
-  ].filter((row) => row.value !== null);
+  ].filter((stat) => stat.value !== null);
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <span className="block truncate text-sm font-semibold text-foreground">{data.name}</span>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        {rows.map((row) => (
-          <div key={row.id} className="contents">
-            <dt className="text-muted">{row.label}</dt>
-            <dd className={`text-right font-medium tabular-nums ${row.tone}`}>{row.value}</dd>
+      {data.approval !== null && (
+        <div className="space-y-1 text-xs">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-muted">{t("approval")}</span>
+            <span className="font-semibold tabular-nums text-foreground">
+              {percent(data.approval)}
+            </span>
           </div>
-        ))}
-      </dl>
+          <Meter
+            value={data.approval}
+            mark={50}
+            label={`${t("approval")}: ${percent(data.approval)}`}
+          />
+        </div>
+      )}
+      {stats.length > 0 && (
+        <dl className="grid grid-cols-3 gap-1.5">
+          {stats.map((stat) => (
+            <div
+              key={stat.id}
+              className="min-w-0 rounded-md border border-card-border bg-background/40 px-2 py-1.5"
+            >
+              <dt className="truncate text-[10px] text-muted">{stat.label}</dt>
+              <dd className={`truncate text-[13px] font-semibold tabular-nums ${stat.tone}`}>
+                {stat.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <WidgetLinks links={links} onNavigate={onNavigate} />
     </div>
   );
