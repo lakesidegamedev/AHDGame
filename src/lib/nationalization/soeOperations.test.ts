@@ -261,9 +261,11 @@ describe("processSoeOperations", () => {
     const result = await processSoeOperations(db as unknown as Db, NOW);
 
     expect(result.soeCorps).toBe(1);
-    // Treasury covered the loss → liquidCapital set to 0.
+    // Treasury covered the loss: the loaded hole (-1000) is credited back as a
+    // delta, so liquidCapital lands at 0 without zeroing a concurrent movement.
     const corpWrite = db.collectionMocks.corporations.bulkWrite.mock.calls[0][0];
-    expect(corpWrite[0].updateOne.update.$set.liquidCapital).toBe(0);
+    expect(corpWrite[0].updateOne.update.$inc.liquidCapital).toBe(1000);
+    expect(corpWrite[0].updateOne.update.$set.liquidCapital).toBeUndefined();
     // Treasury was debited to cover the loss.
     expect(db.collectionMocks.federalBudget.updateOne).toHaveBeenCalled();
     // The healthcare mandate LANDED on the board family `healthcare.physicianRate`

@@ -6,6 +6,7 @@ import { requireCron } from "@/lib/api/requireCron";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { runIndexFundCron } from "@/lib/indexFunds/fundCron";
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 
 // GET /api/cron/index-fund — Manual/debug index-fund engine (not scheduled in lib/cron.ts).
 // Recompute NAV, absorb float, rebalance constituents, process queued redemptions, snapshot.
@@ -33,6 +34,12 @@ export async function GET(req: Request) {
     }
 
     const db = await getDb();
+    // The turn runs the same fund engine; two passes over the same holdings
+    // would overwrite each other.
+    if (await rejectDuringTurn(db)) {
+      logRequest("GET", "/api/cron/index-fund", 200, Date.now() - start);
+      return NextResponse.json({ skipped: true, message: "A turn is processing" });
+    }
     const result = await runIndexFundCron(db, { currentTurn: gameState.currentTurn });
 
     const durationMs = Date.now() - start;

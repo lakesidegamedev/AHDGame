@@ -17,15 +17,6 @@ describe("fundedSectorValueAnchor", () => {
     expect(high).toBe(2 * low);
   });
 
-  it("boosts the earnings value only, never the book floor", () => {
-    expect(fundedSectorValueAnchor({ ...base, profitPerTurn: 0, npvBoostMultiplier: 1.3 })).toBe(
-      1_000_000
-    );
-    expect(
-      fundedSectorValueAnchor({ ...base, profitPerTurn: 10_000, npvBoostMultiplier: 1.3 })
-    ).toBe(Math.round(((10_000 * 48) / 0.15) * 1.3));
-  });
-
   it("fails closed on bad inputs", () => {
     expect(
       fundedSectorValueAnchor({ ...base, profitPerTurn: Number.NaN, bookFloorAnchor: -1 })

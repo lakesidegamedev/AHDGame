@@ -75,6 +75,10 @@ describe("country-wide freight", () => {
     expect(shadowBook("state:ca", "healthcare_services", "us")).toBe("state:ca");
     expect(shadowBook("world", "freight", "us")).toBe("world");
   });
+  it("moves construction services to the country book too", () => {
+    expect(shadowBook("state:ny", "construction_services", "us")).toBe("country:us");
+    expect(shadowBook("state:ny", "real_estate_services", "us")).toBe("state:ny");
+  });
 });
 
 describe("cohort check", () => {

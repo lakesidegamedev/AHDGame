@@ -27,18 +27,26 @@ const cases = [
   { currency: "USD" as const, rate: 1 },
   { currency: "GBP" as const, rate: 0.5 },
 ];
-it.each(cases)("reconciles actual modeled upkeep in $currency", async ({ currency, rate }) => {
+it.each(cases)("leaves a short pool untouched in $currency", async ({ currency, rate }) => {
   const memory = createInMemoryDb(),
     db = memory as unknown as Db;
   vi.mocked(getDb).mockResolvedValue(db);
   memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true }]);
   memory.seed("gameState", [{ _id: "current", currentTurn: TURN - 1, preset: "1991-default" }]);
   memory.seed("exchangeRates", [{ currencyCode: currency, rate }]);
+  // Target 5% of 10,000 = 500; the pool is 400 short and nothing tops it up.
   memory.seed("bondMarketPools", [{ _id: currency, cashLocal: 100, targetCashLocal: 500 }]);
   memory.seed("moneySupplySnapshots", [{ currencyCode: currency, m2: 10000, turn: 24 }]);
   const opening = await collectBalances(db);
   const result = await processBondMarketPoolTurn(db, TURN, NOW);
-  expect(result.inflowLocalByCurrency[currency]).toBe(8);
+  expect(result.sweptLocalByCurrency[currency]).toBeUndefined();
+  expect(
+    (
+      await db
+        .collection<{ _id: string; cashLocal: number }>("bondMarketPools")
+        .findOne({ _id: currency })
+    )?.cashLocal
+  ).toBe(100);
   const closing = await collectBalances(db);
   const entries = await db.collection<LedgerEntry>("ledgerEntries").find({ turn: TURN }).toArray();
   const report = reconcileLedger({
@@ -191,7 +199,7 @@ it("does not emit for failed, stamped-repeat or zero gated debits and invalid cr
 });
 
 it("preserves cash outcomes with shadow disabled", async () => {
-  const { db } = fixture("USD", 1, 100, false);
+  const { db } = fixture("USD", 1, 1200, false);
   await processBondMarketPoolTurn(db, TURN, NOW);
   await creditBondPool(db, "USD", 2.345, "couponsIn", NOW);
   expect(
@@ -200,7 +208,7 @@ it("preserves cash outcomes with shadow disabled", async () => {
         .collection<{ _id: string; cashLocal: number }>("bondMarketPools")
         .findOne({ _id: "USD" })
     )?.cashLocal
-  ).toBe(110.35);
+  ).toBe(752.35);
   expect(await db.collection("ledgerEntries").countDocuments()).toBe(0);
 });
 
@@ -213,7 +221,7 @@ it("keeps primary placement journal-owned while witnessing secondary trades", as
 });
 
 it("uses the processing turn rather than a stale game clock", async () => {
-  const { memory, db } = fixture();
+  const { memory, db } = fixture("USD", 1, 1200);
   memory.seed("gameState", [{ _id: "current", currentTurn: TURN - 1 }]);
   await processBondMarketPoolTurn(db, TURN, NOW);
   expect(await db.collection("ledgerEntries").countDocuments({ turn: TURN })).toBe(1);
@@ -288,10 +296,10 @@ it("uses the cash writer's session for the witness", async () => {
 });
 
 it("publishes one shadow insert for all currency pools in upkeep", async () => {
-  const { db } = fixture();
+  const { db } = fixture("USD", 1, 1200);
   await db
     .collection<{ _id: string; cashLocal: number; targetCashLocal: number }>("bondMarketPools")
-    .insertOne({ _id: "GBP", cashLocal: 100, targetCashLocal: 500 });
+    .insertOne({ _id: "GBP", cashLocal: 1200, targetCashLocal: 500 });
   await db.collection("exchangeRates").insertOne({ currencyCode: "GBP", rate: 0.5 });
   await db
     .collection("moneySupplySnapshots")

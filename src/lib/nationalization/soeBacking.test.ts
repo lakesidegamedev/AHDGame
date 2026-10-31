@@ -159,6 +159,25 @@ describe("processSoeOperations — realized-loss backing", () => {
     expect(corpLiquidInc(written.corpBulk[0])).toBe(500_000);
   });
 
+  it("below plants, closes the loaded hole with a delta instead of zeroing cash", async () => {
+    const corpId = new ObjectId();
+    const { db, written } = makeDb(
+      [makeCorp(corpId, { liquidCapital: -500_000 })],
+      [makeSector(corpId)],
+      { marketMode: "capital" }
+    );
+
+    await processSoeOperations(db, NOW, 1953, new Map([[corpId.toString(), -500_000]]));
+
+    // A $set to 0 would erase any cash that moved after the corporations were
+    // read; the delta lands exactly the loaded hole and keeps the rest.
+    expect(written.corpBulk).toHaveLength(1);
+    expect(corpLiquidInc(written.corpBulk[0])).toBe(500_000);
+    const update = (written.corpBulk[0] as { updateOne: { update: { $set?: object } } }).updateOne
+      .update;
+    expect(update.$set).not.toHaveProperty("liquidCapital");
+  });
+
   it("leaves an exact capex residual: residual equals held CIP, CIP never covered", async () => {
     const corpId = new ObjectId();
     // 700k hole = 500k of realized operating loss + 200k of outstanding builds.

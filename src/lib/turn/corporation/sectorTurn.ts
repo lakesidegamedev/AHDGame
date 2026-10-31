@@ -71,10 +71,6 @@ export type { SectorTurnEnv, SectorTurnResult } from "./sectorTurnTypes";
 
 import { computeIdleUpkeep } from "./sectorTurn/idleUpkeep";
 import { contributionShare, nextLossRun } from "./rules/lossRun";
-import {
-  sectorNpvBoostMultiplier,
-  sectorRevenueBoostMultiplier,
-} from "@/lib/corporations/rules/marketBoost";
 import { isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
 import { liftedThrottleBalance } from "./demandThrottle";
 import { nppOperatingCapacityTarget } from "./rules/nppOperatingCapacity";
@@ -756,18 +752,12 @@ export function processSector(
     : idleRetirement.retireFraction > 0
       ? seedPlantLedger(sector, persistedOwnedCapacity)
       : plantLedger;
-  // Phased stock-market boost, phase A: lift realized operating revenue AFTER
+  // A released product venture lifts realized revenue for a few days, after
   // every market-microstructure leg (governor, clearing, embargo) has run, so
   // those legs keep pricing what the market actually cleared. Nameplate
-  // revenue above (the headcount basis) is deliberately unboosted: this is a
-  // price/realization lift, not extra workers. Maintenance, growth realization
-  // and regulatory legs below all scale with the boosted figure, so margins
-  // are preserved and the lift lands in profit, then NPV, then share price.
-  // A released product venture lifts revenue the same way, for a few days.
+  // revenue above (the headcount basis) is deliberately unboosted.
   const hourlyRevenue =
-    realizedHourlyRevenue *
-    sectorRevenueBoostMultiplier(currentTurn, operatingSectorType) *
-    (lookups.productVentureBoostBySectorId?.get(sectorId) ?? 1);
+    realizedHourlyRevenue * (lookups.productVentureBoostBySectorId?.get(sectorId) ?? 1);
   // (moved to resolvePlantsRevenue: trade-exposure embargo legs)
   // (moved to resolvePlantsRevenue: P3b extraction hard min)
   // (moved to resolvePlantsRevenue: pre-plants counterfactual baseline)
@@ -1046,7 +1036,6 @@ export function processSector(
     otherOpexAnchorMarginBasis: sector.otherOpexAnchorMarginBasis,
     capitalEnabled: market.capitalEnabled,
     prevCapitalBookAnchor: sector.capitalBookAnchor,
-    npvBoostMultiplier: sectorNpvBoostMultiplier(currentTurn),
     freightNetHourly: freightBilling.credit - freightBilling.charge,
   };
   const {

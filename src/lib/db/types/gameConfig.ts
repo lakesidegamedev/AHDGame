@@ -650,6 +650,12 @@ export interface GameConfig {
    */
   marketRecoveryStage?: number;
   /**
+   * Dynamic fiscal scale stage, advanced one per turn by an operator after a
+   * one-turn health check; lowering it rolls a stage back. See
+   * src/lib/budget/rules/fiscalScale.ts. Unset or 0 changes nothing.
+   */
+  fiscalScaleStage?: number;
+  /**
    * Run the unified producer market in memory each turn beside the live engine
    * and record a per-industry comparison in `producerMarketShadows`. Telemetry
    * only: moves no money and writes no sector or corporation.
@@ -1030,6 +1036,11 @@ export interface GameConfig {
   contractIssuanceEnabledUpdatedBy?: string;
   /** When contract issuance was last toggled (ISO 8601). */
   contractIssuanceEnabledUpdatedAt?: string;
+
+  /** Global government-contract kill switch. Missing means enabled. Only new
+   * tenders, bids, awards and offer acceptance are gated; existing settlement,
+   * delivery, expiry and cancellation continue. Preserved with gameConfig. */
+  governmentContractsEnabled?: boolean;
 
   /**
    * Unified action audit spine master flag (forensics/alt-detection rework

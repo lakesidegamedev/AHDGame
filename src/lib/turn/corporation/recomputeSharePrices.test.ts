@@ -121,6 +121,12 @@ describe("recomputeSharePricesAfterBondTurn", () => {
     db.collectionMocks.corporations.find.mockReturnValue(makeCursor([corp]));
     db.collectionMocks.bonds.find.mockReturnValue(makeCursor([heldBond]));
     db.collectionMocks.corporationHistory.find.mockReturnValue(makeCursor([histDoc]));
+    // Every price write carries a fundamentalSharePrice guard; with no
+    // concurrent writer each guarded op matches its corp.
+    db.collectionMocks.corporations.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+      modifiedCount: ops.length,
+    }));
 
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
@@ -536,6 +542,21 @@ describe("recomputeSharePricesAfterBondTurn", () => {
       intraHour: true,
     });
     expect(tick).toEqual({ corpsRepriced: 0, corpsSkipped: 1 });
+  });
+
+  it("turn pass guards each price write so a mid-phase IPO or share issue wins", async () => {
+    const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+    const live = { ...corp, fundamentalSharePrice: 101.5 } as unknown as Corporation;
+    db.collectionMocks.corporations.find.mockReturnValue(makeCursor([live]));
+    db.collectionMocks.corporations.bulkWrite.mockResolvedValueOnce({ matchedCount: 0 });
+
+    const result = await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+
+    const [ops] = db.collectionMocks.corporations.bulkWrite.mock.calls[0] as [
+      Array<{ updateOne: { filter: Record<string, unknown> } }>,
+    ];
+    expect(ops[0].updateOne.filter).toMatchObject({ _id: live._id, fundamentalSharePrice: 101.5 });
+    expect(result).toEqual({ corpsRepriced: 0, corpsSkipped: 1 });
   });
 
   describe("recomputeTurnSharePrices", () => {

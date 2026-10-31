@@ -36,6 +36,17 @@ capacity share times resource price, even when production or sales are lower.
 Existing royalty
 and default mechanisms apply after award.
 
+## Admin kill switch
+
+`gameConfig.governmentContractsEnabled` defaults to enabled when absent. The
+Admin Panel kill-switch board controls new tender publication, bids and awards
+across all countries, including acceptance of legacy defence and extraction
+offers. Existing signed contracts, settlement recovery, delivery, expiration,
+withdrawal and cancellation remain available. Type-specific extraction and
+defence procurement gates still apply when the global switch is enabled.
+The setting follows the existing reference `gameConfig` lifecycle and is
+preserved with other admin feature settings; no new collection or index is used.
+
 ## Lifecycle
 
 1. Publishing persists a recoverable tender before reserving resources.

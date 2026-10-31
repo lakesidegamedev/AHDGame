@@ -127,7 +127,9 @@ export async function prepareQueuedRedemptionPass(
   if (forexEnabled && currencies.length > 0) {
     const rows = await db
       .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
-      .find({ currencyCode: { $in: currencies } }, { projection: { rate: 1 } })
+      // Keep currencyCode: the map below is keyed by it, and a projection
+      // without it returns rows that cannot be keyed (#5083).
+      .find({ currencyCode: { $in: currencies } }, { projection: { currencyCode: 1, rate: 1 } })
       .toArray();
     const byCurrency = new Map(rows.map((row) => [row.currencyCode, row.rate]));
     for (const currency of currencies) {

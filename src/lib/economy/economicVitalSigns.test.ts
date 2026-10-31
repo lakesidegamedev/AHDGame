@@ -2,7 +2,11 @@ import { ObjectId } from "mongodb";
 import { describe, expect, it } from "vitest";
 import { MONEY_ACCOUNTING_VERSION } from "@/lib/moneySupply/calculate";
 import type { Bond } from "@/lib/db/types";
-import { computeEconomicVitalSigns, summarizeLedgerTurnover } from "./economicVitalSigns";
+import {
+  computeEconomicVitalSigns,
+  nationalInflationByCountry,
+  summarizeLedgerTurnover,
+} from "./economicVitalSigns";
 import type { VitalSignsHistoryRow } from "./economicVitalSigns";
 import type { LedgerReconciliation } from "@/lib/ledger/types";
 
@@ -351,60 +355,7 @@ describe("computeEconomicVitalSigns", () => {
           createdAt: new Date(),
         },
       ],
-      health: {
-        _id: new ObjectId(),
-        turn: 100,
-        year: 1955,
-        timestamp: new Date(),
-        health: {
-          severity: "ok",
-          warningCount: 0,
-          errorCount: 0,
-          processingWarningCount: 0,
-          processingErrorCount: 0,
-          integrityWarningCount: 0,
-          integrityErrorCount: 0,
-          integrityChecked: false,
-          qualification: "unverified",
-        },
-        turnProcessing: {
-          durationMs: 1,
-          success: true,
-          phaseCount: 1,
-          phasesSkipped: 0,
-          warningCount: 0,
-          errorCount: 0,
-          warnings: [],
-          errors: [],
-          phaseStatuses: {},
-        },
-        dataIntegrity: null,
-        population: {
-          activePlayers: 0,
-          totalCharacters: 0,
-          totalNPPs: 0,
-          emptySeats: 0,
-          totalSeats: 0,
-          partiesCount: 0,
-          activeElections: 0,
-          averagePartySize: 0,
-          byCountry: {},
-        },
-        economy: {
-          byCountry: {
-            US: {
-              gdpGrowth: 2,
-              gdp: 1,
-              inflation: 3,
-              interestRate: 4,
-              bondDefaultRate: 0,
-              totalCorporationRevenue: 0,
-              averagePlayerFunds: 0,
-              fundCirculation: 0,
-            },
-          },
-        },
-      },
+      health: { economy: { byCountry: { US: { inflation: 3 } } } },
       reconciliation: null,
       balanceSnapshot: {
         _id: new ObjectId(),
@@ -1688,5 +1639,21 @@ describe("ring-fenced bank and escrow money", () => {
     expect(snapshot.securities.activeTradedListingShare.value).toBeNull();
     expect(snapshot.securities.twoSidedListingShare.value).toBeNull();
     expect(snapshot.securities.organicTwoSidedListingShare.value).toBeNull();
+  });
+});
+
+describe("nationalInflationByCountry", () => {
+  it("keys budgets by country the way the health snapshot does, defaulting a missing rate to zero", () => {
+    expect(
+      nationalInflationByCountry([
+        { _id: "federal", economicFactors: { inflationRate: 3.2 } },
+        { _id: "UK", economicFactors: { inflationRate: 5 } },
+        { _id: "PL" },
+      ])
+    ).toEqual({
+      economy: {
+        byCountry: { US: { inflation: 3.2 }, UK: { inflation: 5 }, PL: { inflation: 0 } },
+      },
+    });
   });
 });

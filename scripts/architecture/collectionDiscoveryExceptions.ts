@@ -115,9 +115,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "608a3dc47d387e0099f3f2cc608ffa2d702e27450012aae433411a6e4a91e999",
+    scopeHash: "27f3566cbb8fc76753fcb05e57506cae0ee4898ff0bdc9df613b147596e914fd",
     count: 1,
-    reason: "Repository-owned seed and index registries select the collection.",
+    reason:
+      "Reviewed county reseed compatibility: only the literal states update now preserves live population. The existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",
   },
   {
     file: "src/lib/admin/seed/seedRegionMetrics.ts",
