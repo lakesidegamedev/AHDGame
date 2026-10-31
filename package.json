@@ -124,7 +124,7 @@
     "@types/topojson-specification": "^1.0.5",
     "ascii-reveal": "^0.3.0",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^18.0.6",
+    "dotenv": "^18.0.9",
     "hast-util-to-html": "^9.0.5",
     "html2canvas": "^1.4.1",
     "jose": "^6.2.9",
