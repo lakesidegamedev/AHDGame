@@ -296,10 +296,19 @@
         "saveError": "Deine Widgets konnten nicht gespeichert werden. Versuch es noch einmal."
       },
       "names": {
+        "keirPet": "Keir",
+        "dueSoon": "Bald fällig",
         "myCompany": "Mein Unternehmen",
         "stockTicker": "Börsenticker",
         "staffQueues": "Prüfwarteschlangen",
-        "watchlist": "Beobachtungsliste"
+        "watchlist": "Beobachtungsliste",
+        "myRace": "Mein Wahlkampf",
+        "chamberFloor": "Plenum",
+        "officeDashboard": "Mein Amt",
+        "sinceAway": "Seit der letzten Runde",
+        "sectorHeatmap": "Sektorkarte",
+        "netWorth": "Nettovermögen",
+        "commodityBoard": "Rohstoffpreise"
       },
       "tickerScopes": {
         "global": "Weltmarkt",
@@ -312,18 +321,80 @@
         "help": "Hilfemenü",
         "staff": "Teammenü"
       },
+      "keirPet": {
+        "title": "Keir",
+        "pat": "Keir streicheln",
+        "wake": "Keir wecken",
+        "tea": "Tee kochen",
+        "teaIn": "Tee in {time}",
+        "showMe": "Zeig mir",
+        "streak": "{days, plural, one {# Tag} other {# Tage}}",
+        "hearts": "{count, plural, one {# Herz} other {# Herzen}}",
+        "bond": "Bindung zu Keir"
+      },
+      "dueSoon": {
+        "title": "Bald fällig",
+        "empty": "Gerade wartet nichts auf dich.",
+        "turnsLeft": "{count, plural, one {Endet nächste Runde} other {Noch # Runden}}",
+        "hoursLeft": "{count, plural, one {Noch # Stunde} other {Noch # Stunden}}",
+        "closingNow": "Endet jetzt",
+        "more": "{count, plural, one {# weiterer Punkt} other {# weitere Punkte}}",
+        "positions": {
+          "chair": "Vorsitz",
+          "viceChair": "Stellvertretender Vorsitz",
+          "treasurer": "Schatzmeister"
+        },
+        "kinds": {
+          "billVote": "Abstimmung über Gesetz",
+          "overrideVote": "Abstimmung über Veto",
+          "billSign": "Unterzeichnen oder Veto",
+          "stateBillVote": "Abstimmung im Land",
+          "stateOverrideVote": "Veto-Abstimmung im Land",
+          "stateBillSign": "Landesgesetz unterzeichnen oder Veto",
+          "corpVote": "Unternehmensabstimmung",
+          "privatizationVote": "Abstimmung zur Privatisierung",
+          "debate": "Antworten für die Debatte",
+          "partyElection": "Parteiwahl",
+          "confirmation": "Bestätigungsabstimmung"
+        }
+      },
       "myCompany": {
         "title": "Mein Unternehmen",
         "cash": "Bargeld",
         "sharePrice": "Aktienkurs",
         "revenue": "Umsatz letzte Runde",
         "income": "Gewinn letzte Runde",
-        "cashTrend": "Bargeld, letzte Runden",
-        "empty": "Du leitest gerade kein Unternehmen."
+        "empty": "Du leitest gerade kein Unternehmen.",
+        "recentTurns": "Letzte {count} Runden",
+        "incomeTrend": "Gewinn je Runde",
+        "trendLabel": "{name} in den letzten {count} Runden"
       },
       "stockTicker": {
         "title": "Börsenticker",
-        "empty": "Noch keine börsennotierten Unternehmen."
+        "empty": "Noch keine börsennotierten Unternehmen.",
+        "trendLabel": "Aktienkurs von {name} in den letzten {count} Runden"
+      },
+      "sectorHeatmap": {
+        "title": "Sektoren",
+        "empty": "Noch keine börsennotierten Unternehmen.",
+        "other": "Sonstige",
+        "legendDown": "Fallend",
+        "legendUp": "Steigend",
+        "hint": "Die Größe zeigt den Börsenwert. Die Farbe zeigt die Kursänderung seit der letzten Runde.",
+        "tile": "{sector}: {change} seit der letzten Runde, {cap} Börsenwert, {count, plural, one {# Unternehmen} other {# Unternehmen}}"
+      },
+      "netWorth": {
+        "title": "Nettovermögen",
+        "empty": "Noch keine Vermögensdaten. Sie werden nach jeder Runde aktualisiert.",
+        "sinceLastTurn": "seit der letzten Runde",
+        "overTurns": "in den letzten {count} Runden",
+        "trendLabel": "Nettovermögen in den letzten {count} Runden",
+        "point": "Runde {turn}: {value}"
+      },
+      "commodityBoard": {
+        "title": "Rohstoffpreise",
+        "empty": "Noch keine Rohstoffpreise.",
+        "trendLabel": "Preis von {commodity} in den letzten {count} Runden"
       },
       "staffQueues": {
         "title": "Prüfwarteschlangen",
@@ -341,6 +412,60 @@
         "private": "Privat",
         "full": "Deine Beobachtungsliste ist voll ({max} Einträge). Entferne zuerst einen.",
         "saveError": "Deine Beobachtungsliste konnte nicht gespeichert werden. Versuche es erneut."
+      },
+      "myRace": {
+        "title": "Mein Wahlkampf",
+        "opensIn": "{turns, plural, =0 {Beginnt diese Runde} one {Beginnt in # Runde} other {Beginnt in # Runden}}",
+        "closesIn": "{turns, plural, =0 {Endet diese Runde} one {Noch # Runde} other {Noch # Runden}}",
+        "you": "Dein Anteil",
+        "place": "Platz",
+        "placeValue": "{rank} von {count}",
+        "leader": "Vorne",
+        "seats": "Erwartete Sitze",
+        "noVotes": "Noch keine Stimmen erwartet.",
+        "election": "Wahlseite",
+        "campaign": "Kampagne",
+        "empty": "Du kandidierst gerade nicht."
+      },
+      "chamberFloor": {
+        "title": "Im Plenum",
+        "empty": "In deiner Kammer steht kein Gesetz zur Abstimmung.",
+        "for": "Dafür",
+        "against": "Dagegen",
+        "abstain": "Enthaltung",
+        "notVoted": "Offen",
+        "turnsLeft": "{turns, plural, =0 {letzte Runde} one {# Runde} other {# Runden}}",
+        "more": "{count, plural, one {# weiteres Gesetz} other {# weitere Gesetze}} in deiner Kammer"
+      },
+      "officeDashboard": {
+        "title": "Mein Amt",
+        "approval": "Zustimmung",
+        "budgetBalance": "Haushaltssaldo",
+        "growth": "Wachstum",
+        "unemployment": "Arbeitslosigkeit",
+        "office": "Amt",
+        "economy": "Wirtschaft",
+        "budget": "Haushalt"
+      },
+      "sinceAway": {
+        "title": "Seit der letzten Runde",
+        "netWorth": "Vermögen",
+        "cash": "Bargeld und Ersparnisse",
+        "stocks": "Deine Aktien",
+        "bonds": "Deine Anleihen",
+        "funds": "Deine Fonds",
+        "noHistory": "Änderungen erscheinen hier nach deiner nächsten Runde.",
+        "unread": "{count, plural, one {#{more} ungelesene Benachrichtigung} other {#{more} ungelesene Benachrichtigungen}}",
+        "noUnread": "Keine ungelesenen Benachrichtigungen.",
+        "categories": {
+          "crisis": "Krise",
+          "legislation": "Gesetzgebung",
+          "election": "Wahl",
+          "party": "Partei",
+          "standing": "Ansehen",
+          "treasury": "Finanzen",
+          "system": "System"
+        }
       }
     },
     "desktop": {

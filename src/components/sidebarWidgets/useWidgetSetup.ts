@@ -12,6 +12,8 @@ import {
 } from "@/lib/constants/exchangeRegistry";
 import {
   effectiveWidgetLayout,
+  SERVER_CHECKED_WIDGETS,
+  EXCHANGE_SCOPED_WIDGETS,
   TICKER_HOME_SCOPE,
   WIDGETS,
   type WidgetAudience,
@@ -19,6 +21,7 @@ import {
   type WidgetMenu,
 } from "@/lib/sidebarWidgets/widgetCatalog";
 import type { WidgetOption } from "./WidgetEditor";
+import { useSidebarWidgetData } from "./useSidebarWidgetData";
 
 export interface WidgetSetup {
   enabled: boolean;
@@ -55,9 +58,17 @@ export function useWidgetSetup(): WidgetSetup {
   const navData = auth?.navData ?? null;
   const user = navData?.user ?? auth?.user ?? null;
   const enabled = user?.experimentalFeatures === true && navData?.hasCharacter === true;
+  // Seats and offices the nav payload does not carry: one read, no polling.
+  // A role widget that does not apply comes back null and stays hidden.
+  const roleCheck = useSidebarWidgetData(enabled ? [...SERVER_CHECKED_WIDGETS] : [], {
+    poll: false,
+  });
   const audience: WidgetAudience = {
     hasCorporation: navData?.myCorporationId != null,
     isStaff: user?.isAdmin === true || user?.isModerator === true,
+    isCandidate: navData?.activeElection != null,
+    isLegislator: roleCheck.data.chamberFloor != null,
+    holdsOffice: roleCheck.data.officeDashboard != null,
   };
   const homeCountry = navData?.characterCountryId ?? null;
   const homeExchange = homeCountry ? getExchangeApiKey(homeCountry) : undefined;
@@ -73,10 +84,20 @@ export function useWidgetSetup(): WidgetSetup {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const options = useMemo<WidgetOption[]>(() => {
-    const list: WidgetOption[] = [];
+    const list: WidgetOption[] = [
+      { key: "keirPet", label: t("names.keirPet") },
+      { key: "dueSoon", label: t("names.dueSoon") },
+    ];
+    if (WIDGETS.officeDashboard.available(audience))
+      list.push({ key: "officeDashboard", label: t("names.officeDashboard") });
+    if (WIDGETS.myRace.available(audience)) list.push({ key: "myRace", label: t("names.myRace") });
+    if (WIDGETS.chamberFloor.available(audience))
+      list.push({ key: "chamberFloor", label: t("names.chamberFloor") });
     if (WIDGETS.myCompany.available(audience))
       list.push({ key: "myCompany", label: t("names.myCompany") });
     list.push({ key: "watchlist", label: t("names.watchlist") });
+    list.push({ key: "sinceAway", label: t("names.sinceAway") });
+    list.push({ key: "netWorth", label: t("names.netWorth") });
     list.push({ key: "stockTicker:global", label: t("tickerScopes.global") });
     if (homeExchange)
       list.push({
@@ -84,16 +105,41 @@ export function useWidgetSetup(): WidgetSetup {
         label: `${t("tickerScopes.home")} · ${getExchangeLabel(homeExchange)}`,
       });
     const enabledSet = new Set<string>(enabledCountries);
-    for (const exchange of ALL_EXCHANGES) {
-      if (exchange.apiKey === homeExchange || !enabledSet.has(exchange.countryId)) continue;
+    const otherExchanges = ALL_EXCHANGES.filter(
+      (exchange) => exchange.apiKey !== homeExchange && enabledSet.has(exchange.countryId)
+    );
+    for (const exchange of otherExchanges) {
       list.push({ key: `stockTicker:${exchange.apiKey}`, label: exchange.exchangeName });
     }
+    const sectors = t("names.sectorHeatmap");
+    list.push({ key: "sectorHeatmap:global", label: `${sectors} · ${t("tickerScopes.global")}` });
+    if (homeExchange)
+      list.push({
+        key: `sectorHeatmap:${TICKER_HOME_SCOPE}`,
+        label: `${sectors} · ${t("tickerScopes.home")} · ${getExchangeLabel(homeExchange)}`,
+      });
+    for (const exchange of otherExchanges) {
+      list.push({
+        key: `sectorHeatmap:${exchange.apiKey}`,
+        label: `${sectors} · ${exchange.exchangeName}`,
+      });
+    }
+    list.push({ key: "commodityBoard", label: t("names.commodityBoard") });
     if (WIDGETS.staffQueues.available(audience))
       list.push({ key: "staffQueues", label: t("names.staffQueues") });
     return list;
-    // audience is derived from the two flags below each render.
+    // audience is derived from the flags below each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, homeExchange, enabledCountries, audience.hasCorporation, audience.isStaff]);
+  }, [
+    t,
+    homeExchange,
+    enabledCountries,
+    audience.hasCorporation,
+    audience.isStaff,
+    audience.isCandidate,
+    audience.isLegislator,
+    audience.holdsOffice,
+  ]);
 
   const menus: WidgetMenu[] = [
     ...(navData?.homeState ? (["state"] as const) : []),
@@ -104,8 +150,13 @@ export function useWidgetSetup(): WidgetSetup {
   ];
 
   const resolveKey = useCallback(
-    (key: string) =>
-      key === `stockTicker:${TICKER_HOME_SCOPE}` ? `stockTicker:${homeExchange ?? "global"}` : key,
+    (key: string) => {
+      const [id, param] = key.split(":");
+      return param === TICKER_HOME_SCOPE &&
+        (EXCHANGE_SCOPED_WIDGETS as readonly string[]).includes(id ?? "")
+        ? `${id}:${homeExchange ?? "global"}`
+        : key;
+    },
     [homeExchange]
   );
 
