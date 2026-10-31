@@ -1,3 +1,4 @@
+import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import type { CountryOperatingTotals } from "./countryStatements";
 import {
   freeTransitionConversion,
@@ -891,6 +892,11 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       // band) for a viewer without insider access — see financialFogOfWar.
       fillRate: sectorFillRate,
       fillRateBand: fillRateBand(sectorFillRate),
+      // Share of output handed to the company's own other sites (no sale, no
+      // revenue). Null when none, or not last turn's receipt.
+      ownSiteShare: plantsMode
+        ? (ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? null)
+        : null,
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
       mothballed,

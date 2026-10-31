@@ -84,6 +84,7 @@ const PRIVATE_REDACTED_SECTOR_FIELDS = [
   "mediaAdvertisingCampaignFactor",
   "fillRate",
   "fillRateBand",
+  "ownSiteShare",
   // Share of output a rival could not get to market. Same class of intel as the
   // exact fill rate: it tells an attacker which of this corp's plants cannot
   // defend their market and why.
