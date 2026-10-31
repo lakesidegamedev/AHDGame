@@ -7,7 +7,11 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { resetAndBootstrapGameWorld } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
-import { ensureSingleplayerUser, setSingleplayerConfig } from "@/lib/singleplayerServer";
+import {
+  applyStartupRepairsAfterReset,
+  ensureSingleplayerUser,
+  setSingleplayerConfig,
+} from "@/lib/singleplayerServer";
 import type { SingleplayerDifficulty, SingleplayerMode } from "@/lib/db/types";
 import {
   noteSingleplayerSetupWork,
@@ -80,6 +84,7 @@ export async function POST(request: Request) {
         noteSingleplayerSetupWork(line);
       },
     });
+    await applyStartupRepairsAfterReset(db, (line) => logs.push(line));
     setSingleplayerSetupProgress({
       phase: "finalizing",
       label: "Opening your world",
