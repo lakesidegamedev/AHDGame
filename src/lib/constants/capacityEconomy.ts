@@ -522,7 +522,9 @@ const CAPACITY_BUILD_TURNS_TABLE: Record<OperatingSectorType, number> = {
   construction: 48,
   healthcare: 48,
   agriculture: 48,
-  logistics: 36,
+  // Trucks and depots, not a refinery. At 36 turns a freight shortage after a
+  // reset ran a game day and a half before any new fleet could help.
+  logistics: 15,
   media_entertainment: 24,
   media: 24,
   financial: 24,

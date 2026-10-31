@@ -139,6 +139,25 @@ describe("capacity decision telemetry rules", () => {
     expect(firstRejectingGate(FOUNDING_GATE_PRECEDENCE, {})).toBeNull();
   });
 
+  it("holds builds after a cash-cut run ahead of sizing and cash", () => {
+    expect(
+      firstRejectingGate(FOUNDING_GATE_PRECEDENCE, {
+        cash_cut_run: true,
+        facility_size: true,
+        insufficient_cash: true,
+      })
+    ).toBe("cash_cut_run");
+    expect(
+      firstRejectingGate(FOUNDING_GATE_PRECEDENCE, { glutted_market: true, cash_cut_run: true })
+    ).toBe("glutted_market");
+    expect(
+      firstRejectingGate(REINVEST_GATE_PRECEDENCE, {
+        cash_cut_run: true,
+        below_minimum_order: true,
+      })
+    ).toBe("cash_cut_run");
+  });
+
   it("selects the first reinvestment gate in precedence order", () => {
     // Demand evidence is evaluated before the state-controlled exclusion.
     expect(
