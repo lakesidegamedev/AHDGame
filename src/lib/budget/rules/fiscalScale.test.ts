@@ -244,3 +244,60 @@ describe("stage 3: debt service split", () => {
     expect(fiscalScaleClaimLoadBound(-1, 0.5)).toBe(0);
   });
 });
+
+describe("median fallback", () => {
+  const observed = (scale: number, source: "observed" | "carried" | "median" = "observed") => ({
+    turn: 10,
+    scale,
+    rawScale: scale,
+    capped: false,
+    source,
+    fundedOutputLocal: null,
+    smoothedFundedOutputLocal: 1,
+    bookGdpPerTurnLocal: 1,
+    history: [],
+  });
+
+  it("takes the median of countries with their own scale, ignoring borrowed ones", async () => {
+    const { medianFiscalScale } = await import("./fiscalScale");
+    expect(medianFiscalScale([observed(1e-5), observed(3e-5), observed(2e-5)])).toBe(2e-5);
+    expect(
+      medianFiscalScale([observed(1e-5), observed(3e-5, "carried"), observed(9, "median")])
+    ).toBeCloseTo(2e-5);
+    expect(medianFiscalScale([observed(9, "median")])).toBeNull();
+  });
+
+  it("stamps a borrowed state, idempotent within a turn", async () => {
+    const { medianFallbackFiscalScale } = await import("./fiscalScale");
+    const s = medianFallbackFiscalScale(null, { turn: 10, median: 2e-5, bookGdpAnnualLocal: BOOK });
+    expect(s).toMatchObject({
+      turn: 10,
+      scale: 2e-5,
+      source: "median",
+      bookGdpPerTurnLocal: 1_000,
+    });
+    expect(medianFallbackFiscalScale(s, { turn: 10, median: 5e-5, bookGdpAnnualLocal: BOOK })).toBe(
+      s
+    );
+    const next = medianFallbackFiscalScale(s, { turn: 11, median: 3e-5, bookGdpAnnualLocal: BOOK });
+    expect(next?.history.map((h) => h.scale)).toEqual([2e-5, 3e-5]);
+    expect(
+      medianFallbackFiscalScale(null, { turn: 10, median: 0, bookGdpAnnualLocal: 1 })
+    ).toBeNull();
+  });
+
+  it("leaves a borrowed scale to the caller until funded output appears, then caps the move", () => {
+    const borrowed = { ...observed(0.01, "median"), smoothedFundedOutputLocal: 0 };
+    expect(
+      nextFiscalScale(borrowed, { turn: 11, fundedOutputLocal: null, bookGdpAnnualLocal: BOOK })
+    ).toBeNull();
+    const own = nextFiscalScale(borrowed, {
+      turn: 11,
+      fundedOutputLocal: 1,
+      bookGdpAnnualLocal: BOOK,
+    });
+    // Raw 1/1000 is below the borrowed 0.01; the cap walks it down 10%.
+    expect(own).toMatchObject({ source: "observed", smoothedFundedOutputLocal: 1, capped: true });
+    expect(own!.scale).toBeCloseTo(0.01 / (1 + FISCAL_SCALE_MAX_MOVE));
+  });
+});

@@ -62,6 +62,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { collectFiscalTaxes, measureFiscalScales } from "@/lib/budget/fiscalScaleTurn";
 import {
+  FISCAL_SCALE_CLAIM_LOAD_LIMIT,
   FISCAL_SCALE_STAGE,
   fiscalScaleClaimLoadBound,
   normalizeFiscalScaleStage,
@@ -465,6 +466,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           prefetch: couponPrefetch,
           cashBounds: couponCashBounds,
           budgets: passableBudgets,
+          ...(fiscalScaleStage >= FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT
+            ? { claimLoadLimit: FISCAL_SCALE_CLAIM_LOAD_LIMIT }
+            : {}),
         })
       : undefined;
   const pruneCouponBudgets: string[] = [];
@@ -516,6 +520,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               prefetch: couponPrefetch,
               prepared: preparedCoupons,
               fiscalScale: debtSplitScale(String(b._id)),
+              ...(debtSplitScale(String(b._id)) !== undefined
+                ? { claimLoadLimit: FISCAL_SCALE_CLAIM_LOAD_LIMIT }
+                : {}),
             });
             if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);
             if (preparedCoupons && coupons.completed) pruneCouponBudgets.push(String(b._id));
@@ -713,6 +720,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               prefetch: couponPrefetch,
               prepared: preparedCoupons,
               fiscalScale: debtSplitScale(String(b._id)),
+              ...(debtSplitScale(String(b._id)) !== undefined
+                ? { claimLoadLimit: FISCAL_SCALE_CLAIM_LOAD_LIMIT }
+                : {}),
             }
           );
           if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);

@@ -60,8 +60,12 @@ export interface FiscalScaleState {
   rawScale: number;
   /** True when the move cap held the scale back this turn. */
   capped: boolean;
-  /** "observed": this turn's funded output fed the average. "carried": it was missing. */
-  source: "observed" | "carried";
+  /**
+   * "observed": this turn's funded output fed the average. "carried": it was
+   * missing, so the last value holds. "median": the country has never had
+   * funded output, so it borrows the median scale of the countries that do.
+   */
+  source: "observed" | "carried" | "median";
   /** Funded value added this turn in local currency; null when none was settled. */
   fundedOutputLocal: number | null;
   smoothedFundedOutputLocal: number;
@@ -109,6 +113,8 @@ export function nextFiscalScale(
       ? prior
       : null;
   if (usable && usable.turn === input.turn) return usable;
+  // A borrowed median carries no funded history to smooth from.
+  const smoothingBase = usable && usable.source !== "median" ? usable : null;
 
   const observed =
     typeof input.fundedOutputLocal === "number" && Number.isFinite(input.fundedOutputLocal)
@@ -118,22 +124,23 @@ export function nextFiscalScale(
     ? input.bookGdpAnnualLocal / TURNS_PER_YEAR
     : 0;
 
-  // Nothing new to learn: keep the last value, stamped for this turn.
+  // Nothing new to learn: keep the last value, stamped for this turn. A
+  // country that only ever borrowed the median gets it again from the caller.
   if (observed === null || bookGdpPerTurnLocal <= 0) {
-    if (!usable) return null;
+    if (!smoothingBase) return null;
     return {
-      ...usable,
+      ...smoothingBase,
       turn: input.turn,
       capped: false,
       source: "carried",
       fundedOutputLocal: observed,
-      history: appendHistory(usable.history, input.turn, usable.scale),
+      history: appendHistory(smoothingBase.history, input.turn, smoothingBase.scale),
     };
   }
 
-  const smoothed = usable
-    ? usable.smoothedFundedOutputLocal +
-      (observed - usable.smoothedFundedOutputLocal) / FISCAL_SCALE_SMOOTHING_TURNS
+  const smoothed = smoothingBase
+    ? smoothingBase.smoothedFundedOutputLocal +
+      (observed - smoothingBase.smoothedFundedOutputLocal) / FISCAL_SCALE_SMOOTHING_TURNS
     : observed;
   const rawScale = Math.min(FISCAL_SCALE_CEILING, Math.max(0, smoothed / bookGdpPerTurnLocal));
   const { scale, capped } = usable
@@ -149,6 +156,53 @@ export function nextFiscalScale(
     smoothedFundedOutputLocal: smoothed,
     bookGdpPerTurnLocal,
     history: appendHistory(usable?.history, input.turn, scale),
+  };
+}
+
+/**
+ * Median of the scales measured from a country's own funded output this turn
+ * (observed or carried, never a borrowed median). Null when there are none.
+ */
+export function medianFiscalScale(states: Iterable<FiscalScaleState>): number | null {
+  const scales = [...states]
+    .filter((state) => state.source !== "median" && finitePositive(state.scale))
+    .map((state) => state.scale)
+    .sort((a, b) => a - b);
+  if (scales.length === 0) return null;
+  const mid = Math.floor(scales.length / 2);
+  return scales.length % 2 === 1 ? scales[mid] : (scales[mid - 1] + scales[mid]) / 2;
+}
+
+/**
+ * The stored state of a country with no funded output of its own: it borrows
+ * the world median scale for debt service and placement. It has no funded
+ * payers, so the tax stage collects nothing from it. Once the country settles
+ * funded output, `nextFiscalScale` starts its own average and the move cap
+ * walks the scale away from the median.
+ */
+export function medianFallbackFiscalScale(
+  prior: FiscalScaleState | null | undefined,
+  input: { turn: number; median: number; bookGdpAnnualLocal: number }
+): FiscalScaleState | null {
+  if (!finitePositive(input.median)) return null;
+  if (prior && prior.turn === input.turn) return prior;
+  const scale = Math.min(FISCAL_SCALE_CEILING, input.median);
+  return {
+    turn: input.turn,
+    scale,
+    rawScale: scale,
+    capped: false,
+    source: "median",
+    fundedOutputLocal: null,
+    smoothedFundedOutputLocal: 0,
+    bookGdpPerTurnLocal: finitePositive(input.bookGdpAnnualLocal)
+      ? input.bookGdpAnnualLocal / TURNS_PER_YEAR
+      : 0,
+    history: appendHistory(
+      prior && prior.turn < input.turn ? prior.history : undefined,
+      input.turn,
+      scale
+    ),
   };
 }
 
@@ -189,7 +243,7 @@ export function fiscalScaleLogLine(
     .map(
       ({ countryId, state }) =>
         `${countryId}=${state.scale.toExponential(2)}${state.capped ? "^" : ""}${
-          state.source === "carried" ? "~" : ""
+          state.source === "carried" ? "~" : state.source === "median" ? "*" : ""
         }`
     );
   return `[fiscalScale] t${turn} stage=${stage} n=${states.length} ${parts.join(" ")}`;
@@ -275,6 +329,18 @@ export function fiscalScaleClaimLoadBound(
   if (!usableScale(scale)) return cashLocal;
   return cashLocal / Math.min(FISCAL_SCALE_CEILING, scale);
 }
+
+/**
+ * Oldest open claims one budget loads per turn under the split, on top of every
+ * claim owed to a player and every claim a receipt already owns. The scaled
+ * bound reaches far past the cash a starved Treasury holds, which pulled its
+ * whole backlog into the phase every turn; this keeps the load near what the
+ * phase reads with the split off, and the backlog drains oldest first.
+ */
+export const FISCAL_SCALE_CLAIM_LOAD_LIMIT = 500;
+
+/** Holder kinds paid at full face under the split, for a server-side filter. */
+export const FISCAL_SCALE_PLAYER_HOLDER_KINDS: readonly string[] = [...PLAYER_COUPON_HOLDER_KINDS];
 
 // Stage 2: tax and spend in real money.
 

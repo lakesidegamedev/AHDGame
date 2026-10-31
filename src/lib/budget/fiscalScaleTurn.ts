@@ -20,6 +20,8 @@ import {
   bookNonCorporateRevenuePerTurn,
   fiscalScaleLogLine,
   fiscalTaxCollection,
+  medianFallbackFiscalScale,
+  medianFiscalScale,
   nextFiscalScale,
   type FiscalScaleState,
 } from "@/lib/budget/rules/fiscalScale";
@@ -73,7 +75,8 @@ export interface FiscalScaleMeasurement {
 /**
  * Measure and store every budget's scale for this turn. A budget whose
  * currency has no quote, or whose country settled nothing, carries its last
- * value. Returns the states by budget id so later stages read the same numbers.
+ * value; one that has never measured a scale borrows the median of the rest.
+ * Returns the states by budget id so later stages read the same numbers.
  */
 export async function measureFiscalScales(
   db: Db,
@@ -89,6 +92,7 @@ export async function measureFiscalScales(
   const states = new Map<string, FiscalScaleState>();
   const logged: { countryId: string; state: FiscalScaleState }[] = [];
   const ops: AnyBulkWriteOperation<FederalBudget>[] = [];
+  const measured: Array<{ budget: ScaleBudget; next: FiscalScaleState | null }> = [];
   for (const budget of input.budgets) {
     const countryId = String(budget.countryId ?? budget._id);
     const currency = resolveCountryCurrencyCode(budget) ?? "USD";
@@ -99,11 +103,30 @@ export async function measureFiscalScales(
         ? anchor * rate
         : null;
     const prior = budget.fiscalScale ?? null;
-    const next = nextFiscalScale(prior, {
-      turn: input.turn,
-      fundedOutputLocal,
-      bookGdpAnnualLocal: budget.gdp ?? 0,
+    measured.push({
+      budget,
+      next: nextFiscalScale(prior, {
+        turn: input.turn,
+        fundedOutputLocal,
+        bookGdpAnnualLocal: budget.gdp ?? 0,
+      }),
     });
+  }
+  // A country with no funded output of its own borrows the median scale of
+  // the countries that have one, so its debt service and placement still scale.
+  const median = medianFiscalScale(measured.flatMap((row) => (row.next ? [row.next] : [])));
+  for (const { budget, next: own } of measured) {
+    const countryId = String(budget.countryId ?? budget._id);
+    const prior = budget.fiscalScale ?? null;
+    const next =
+      own ??
+      (median === null
+        ? null
+        : medianFallbackFiscalScale(prior, {
+            turn: input.turn,
+            median,
+            bookGdpAnnualLocal: budget.gdp ?? 0,
+          }));
     if (!next) continue;
     states.set(String(budget._id), next);
     logged.push({ countryId, state: next });
