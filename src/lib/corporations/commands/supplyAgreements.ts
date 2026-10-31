@@ -31,6 +31,7 @@ import {
 } from "@/lib/market/commodityMarketScope";
 import type { State } from "@/lib/db/types/state";
 import {
+  checkSupplyAgreementReach,
   checkSupplyContractParties,
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
@@ -262,6 +263,13 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
     const buyer = isSupplierInitiated ? counterparty : initiator;
     const partiesError = await checkSupplyContractParties(db, { supplier, buyer, commodity });
     if (partiesError) return errorResponse(403, partiesError);
+    const reachError = await checkSupplyAgreementReach(db, {
+      buyer,
+      commodity,
+      stateId,
+      readerIsBuyer: !isSupplierInitiated,
+    });
+    if (reachError) return errorResponse(400, reachError);
 
     let volumeCapValidated = false;
     let currentTurn = 0;
@@ -421,6 +429,13 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         commodity: agreement.commodity,
       });
       if (partiesError) return errorResponse(403, partiesError);
+      const reachError = await checkSupplyAgreementReach(db, {
+        buyer: parties.buyer,
+        commodity: agreement.commodity,
+        stateId: agreement.stateId,
+        readerIsBuyer: isBuyer,
+      });
+      if (reachError) return errorResponse(409, reachError);
       const gameState = await db
         .collection<GameState>("gameState")
         .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
@@ -512,6 +527,13 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         commodity: agreement.commodity,
       });
       if (partiesError) return errorResponse(403, partiesError);
+      const reachError = await checkSupplyAgreementReach(db, {
+        buyer: parties.buyer,
+        commodity: agreement.commodity,
+        stateId: agreement.stateId,
+        readerIsBuyer: isBuyer,
+      });
+      if (reachError) return errorResponse(409, reachError);
       let capacity: { volumeCapValidated: boolean; currentTurn: number };
       try {
         capacity = await validateCapacity(db, supplier, {

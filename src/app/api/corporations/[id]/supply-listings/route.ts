@@ -12,14 +12,20 @@ import {
 } from "@/lib/api/schemas/supplyListings";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
-import { COMMODITY_TYPES } from "@/lib/constants/commodities";
-import type { Corporation, GameConfig, State } from "@/lib/db/types";
+import { COMMODITY_LABELS, COMMODITY_TYPES } from "@/lib/constants/commodities";
+import type { CorporateSector, Corporation, GameConfig, State } from "@/lib/db/types";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
   PUBLISHER_PROJECTION,
   toListingView,
   type PublisherFields,
 } from "@/lib/corporations/supplyExchange/listingView";
+import { REACH_SECTOR_PROJECTION } from "@/lib/corporations/supplyExchange/guards";
+import {
+  buyerCommodityUse,
+  supplyAgreementReachProblem,
+  supplyReachMessage,
+} from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -55,7 +61,7 @@ export async function GET(request: Request, context: Context) {
     if (!query.success) return errorResponse(400, "Invalid listing filter");
     const turn = await getCurrentTurn(a.db);
     const collection = a.db.collection<SupplyListing>("supplyListings");
-    const [rows, own] = await Promise.all([
+    const [rows, own, viewerSectors] = await Promise.all([
       collection
         .find({
           expiresAtTurn: { $gt: turn },
@@ -69,6 +75,10 @@ export async function GET(request: Request, context: Context) {
         .find({ corporationId: a.corp._id, expiresAtTurn: { $gt: turn } })
         .limit(10)
         .toArray(),
+      a.db
+        .collection<CorporateSector>("corporateSectors")
+        .find({ corporationId: a.corp._id }, { projection: REACH_SECTOR_PROJECTION })
+        .toArray(),
     ]);
     const corps = await a.db
       .collection<Corporation>("corporations")
@@ -77,8 +87,27 @@ export async function GET(request: Request, context: Context) {
       .toArray();
     const byId = new Map(corps.map((c) => [c._id.toString(), c]));
     const viewer = new Set([a.corp._id.toString()]);
-    const serialize = (row: SupplyListing): SupplyListingView | null =>
-      toListingView(row, byId.get(row.corporationId.toString()), viewer);
+    // Taking a sell offer makes this corporation the buyer. Say up front when
+    // its plants could never receive the goods instead of failing at take.
+    const unreachableReason = (row: SupplyListing): string | undefined => {
+      if (row.side !== "sell" || row.corporationId.equals(a.corp._id)) return undefined;
+      const problem = supplyAgreementReachProblem({
+        commodity: row.commodity,
+        stateId: row.stateId,
+        buyerUse: buyerCommodityUse(viewerSectors, row.commodity, turn),
+      });
+      return problem
+        ? supplyReachMessage(problem, {
+            commodityLabel: COMMODITY_LABELS[row.commodity],
+            readerIsBuyer: true,
+          })
+        : undefined;
+    };
+    const serialize = (row: SupplyListing): SupplyListingView | null => {
+      const view = toListingView(row, byId.get(row.corporationId.toString()), viewer);
+      const reason = view ? unreachableReason(row) : undefined;
+      return view && reason ? { ...view, unreachableReason: reason } : view;
+    };
     return NextResponse.json(
       {
         listings: rows.slice(0, 30).map(serialize).filter(Boolean),
