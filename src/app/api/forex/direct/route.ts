@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       .findOne({ _id: new ObjectId(targetCharacterId) });
     if (!target) throw notFound("Target character not found");
 
-    // New characters cannot move money via direct trades for their first 24 turns
+    // New characters cannot move money via direct trades for their first 48 turns
     // (anti-abuse — a skewed-rate direct trade is otherwise a disguised transfer).
     const gameTime = await getGameTime();
     const barrier = getNewCharacterTransferBarrier(

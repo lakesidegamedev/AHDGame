@@ -1,3 +1,5 @@
+import { creditEquityPool } from "@/lib/equities/marketPool";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -341,12 +343,70 @@ describe("resolvePrivatizationVote — atomic claim", () => {
     });
 
     expect(result).toMatchObject({ resolved: true, status: "passed" });
-    expect(corpUpdateOne.mock.calls[0][1]).toMatchObject({
-      $inc: { liquidCapital: 1_100_000 },
-    });
-    expect(corpUpdateOne.mock.calls[1][1].$set).toMatchObject({
+    expect(creditEquityPool).toHaveBeenCalledWith(
+      expect.anything(),
+      "USD",
+      1_100_000,
+      "purchasesIn",
+      expect.any(Date)
+    );
+    expect(corpUpdateOne.mock.calls[0][1].$set).toMatchObject({
       totalShares: 10_000_000,
       publicFloat: 0,
     });
   });
+});
+
+vi.mock("@/lib/equities/marketPool", () => ({
+  creditEquityPool: vi.fn().mockResolvedValue(undefined),
+}));
+it("pays retired public float to the funding pool rather than the issuer", async () => {
+  vi.clearAllMocks();
+  const memory = createInMemoryDb();
+  const ceoId = new ObjectId(),
+    voterId = new ObjectId(),
+    corpId = new ObjectId();
+  const vote = makeVote({
+    corporationId: corpId,
+    openedByCharacterId: ceoId,
+    lockedBuyoutPrice: 10,
+    totalReservedCash: 1000,
+    votes: [{ characterId: voterId, voteShares: 50, vote: "yes", castAt: new Date() }],
+  });
+  memory.seed("corporations", [
+    {
+      _id: corpId,
+      ceoId,
+      name: "ExampleCo",
+      totalShares: 1000,
+      publicFloat: 50,
+      liquidCapital: 5000,
+      shareholders: [
+        { characterId: ceoId, shares: 900 },
+        { characterId: voterId, shares: 50 },
+      ],
+    },
+  ]);
+  memory.seed("characters", [
+    { _id: ceoId, cashOnHand: 0 },
+    { _id: voterId, cashOnHand: 0 },
+  ]);
+  memory.seed("corporationPrivatizationVotes", [vote]);
+  const result = await resolvePrivatizationVote({
+    db: memory as unknown as Db,
+    vote: vote as never,
+    currentTurn: 125,
+    forexEnabled: false,
+  });
+  expect(result).toMatchObject({ resolved: true, status: "passed" });
+  expect(creditEquityPool).toHaveBeenCalledWith(
+    expect.anything(),
+    "USD",
+    500,
+    "purchasesIn",
+    expect.any(Date)
+  );
+  expect((await memory.collection("corporations").findOne({ _id: corpId }))?.liquidCapital).toBe(
+    5000
+  );
 });

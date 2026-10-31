@@ -1,3 +1,4 @@
+import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/buy
  * Buy a sector that the seller corp has listed for sale.
@@ -124,6 +125,16 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       securedClaim.sale?.buyerId === String(buyer._id);
     if (!sector || (!sector.corporationId.equals(seller._id) && !saleRetry)) {
       return errorResponse(404, "Sector not found");
+    }
+
+    if (!saleRetry) {
+      const transferRestriction = await controllerTransferBarrierError(
+        db,
+        buyer,
+        await getCurrentTurn(db),
+        new Date()
+      );
+      if (transferRestriction) return errorResponse(403, transferRestriction);
     }
 
     if (

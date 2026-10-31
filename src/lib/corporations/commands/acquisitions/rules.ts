@@ -61,9 +61,21 @@ export function meetsNppAcquisitionThreshold(
 export function playerAcquisitionMinimumPrice(input: {
   cashAnchor: number;
   otherAssetsAnchor: number;
+  portfolioAnchor?: number;
+  bankEquityAnchor?: number;
+  debtAnchor?: number;
 }): number {
   const part = (value: number) => (Number.isFinite(value) && value > 0 ? value : 0);
-  return Math.ceil(part(input.cashAnchor) + part(input.otherAssetsAnchor));
+  return Math.max(
+    0,
+    Math.ceil(
+      (Number.isFinite(input.cashAnchor) ? input.cashAnchor : 0) +
+        part(input.otherAssetsAnchor) +
+        part(input.portfolioAnchor ?? 0) +
+        (Number.isFinite(input.bankEquityAnchor) ? input.bankEquityAnchor! : 0) -
+        part(input.debtAnchor ?? 0)
+    )
+  );
 }
 
 /** Minimal shape for the same-turn guard. */
@@ -82,4 +94,56 @@ export function acquisitionBlockedAsNewThisTurn(
   currentTurn: number
 ): boolean {
   return target.foundedAtTurn === currentTurn || target.lastIpoTurn === currentTurn;
+}
+
+/** Portable investment/debt accounting. All FX rates are local units per anchor. */
+export function acquisitionBalanceSheet(input: {
+  cashAnchor: number;
+  sectorsAnchor: number;
+  bankEquityAnchor: number;
+  fundsAnchor: number;
+  receivablesAnchor: number;
+  facilityDebtLocal: number;
+  facilityFxRate: number;
+  heldBonds: { units: number; faceValue: number; marketPrice: number; fxRate: number }[];
+  heldShares: { shares: number; sharePrice: number; fxRate: number }[];
+  issuedBonds: { principalLocal: number; fxRate: number }[];
+}): { portfolioAnchor: number; debtAnchor: number; minimumPriceAnchor: number } {
+  const convert = (local: number, rate: number) => {
+    if (!Number.isFinite(local) || !Number.isFinite(rate) || rate <= 0)
+      throw new Error("Cannot price an acquisition with incomplete financial values.");
+    return local / rate;
+  };
+  const portfolioAnchor =
+    input.fundsAnchor +
+    input.receivablesAnchor +
+    input.heldBonds.reduce(
+      (sum, p) => sum + convert(p.units * p.faceValue * p.marketPrice, p.fxRate),
+      0
+    ) +
+    input.heldShares.reduce((sum, p) => sum + convert(p.shares * p.sharePrice, p.fxRate), 0);
+  const debtAnchor =
+    convert(input.facilityDebtLocal, input.facilityFxRate) +
+    input.issuedBonds.reduce((sum, p) => sum + convert(p.principalLocal, p.fxRate), 0);
+  if (
+    ![
+      input.cashAnchor,
+      input.sectorsAnchor,
+      input.bankEquityAnchor,
+      portfolioAnchor,
+      debtAnchor,
+    ].every(Number.isFinite)
+  )
+    throw new Error("Cannot price an acquisition with incomplete balance-sheet values.");
+  return {
+    portfolioAnchor,
+    debtAnchor,
+    minimumPriceAnchor: playerAcquisitionMinimumPrice({
+      cashAnchor: input.cashAnchor,
+      otherAssetsAnchor: input.sectorsAnchor,
+      portfolioAnchor,
+      bankEquityAnchor: input.bankEquityAnchor,
+      debtAnchor,
+    }),
+  };
 }

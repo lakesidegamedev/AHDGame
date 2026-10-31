@@ -372,6 +372,9 @@
       "saveBio": "Save Bio"
     },
     "identity": {
+      "discordRequirementFailed": "Unable to check Discord linking requirements. Reload settings to try again.",
+      "discordRequirementLoading": "Checking Discord linking requirement.",
+      "discordUnlinkRequired": "Discord cannot be unlinked while Discord for new characters is enabled.",
       "intro": "Link your social accounts so other players can contact you.",
       "comingSoon": "Coming Soon",
       "googleDev": "Google sign-in is under development",

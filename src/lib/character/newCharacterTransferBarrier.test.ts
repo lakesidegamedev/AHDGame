@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getNewCharacterTransferBarrier,
+  getNewCorporationFoundingBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "./newCharacterTransferBarrier";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
@@ -8,14 +9,14 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 const now = new Date("2026-05-30T16:00:00Z").getTime();
 
 describe("getNewCharacterTransferBarrier — turn-first", () => {
-  it("blocked: currentTurn within the 24-turn window", () => {
+  it("blocked: currentTurn within the 48-turn window", () => {
     const s = getNewCharacterTransferBarrier({ createdTurn: 100 }, 110, now);
     expect(s.blocked).toBe(true);
-    expect(s.remainingTurns).toBe(14); // 100 + 24 - 110
+    expect(s.remainingTurns).toBe(38); // 100 + 48 - 110
   });
 
   it("not blocked: currentTurn exactly at the window end", () => {
-    const s = getNewCharacterTransferBarrier({ createdTurn: 100 }, 124, now);
+    const s = getNewCharacterTransferBarrier({ createdTurn: 100 }, 148, now);
     expect(s.blocked).toBe(false);
     expect(s.remainingTurns).toBe(0);
   });
@@ -39,11 +40,11 @@ describe("getNewCharacterTransferBarrier — Date fallback (legacy docs)", () =>
     const createdAt = new Date(now - 10 * MS_PER_TURN); // 10 turns ago
     const s = getNewCharacterTransferBarrier({ createdAt }, 0, now);
     expect(s.blocked).toBe(true);
-    expect(s.remainingTurns).toBe(14); // ceil((24 - 10) turns)
+    expect(s.remainingTurns).toBe(38); // ceil((48 - 10) turns)
   });
 
   it("not blocked when the full window has elapsed", () => {
-    const createdAt = new Date(now - 24 * MS_PER_TURN);
+    const createdAt = new Date(now - 48 * MS_PER_TURN);
     const s = getNewCharacterTransferBarrier({ createdAt }, 0, now);
     expect(s.blocked).toBe(false);
     expect(s.remainingTurns).toBe(0);
@@ -63,7 +64,22 @@ describe("getNewCharacterTransferBarrier — neither field", () => {
     expect(s.remainingTurns).toBe(0);
   });
 
-  it("exposes the 24-turn constant", () => {
-    expect(NEW_CHARACTER_TRANSFER_BARRIER_TURNS).toBe(24);
+  it("exposes the 48-turn constant", () => {
+    expect(NEW_CHARACTER_TRANSFER_BARRIER_TURNS).toBe(48);
+  });
+});
+
+describe("corporation founding grace period", () => {
+  it("waives only creation while the world founding period is active", () => {
+    expect(getNewCorporationFoundingBarrier({ createdTurn: 100 }, 100, now, true).blocked).toBe(
+      false
+    );
+    expect(
+      getNewCorporationFoundingBarrier({ createdTurn: 100 }, 147, now, false).remainingTurns
+    ).toBe(1);
+    expect(getNewCorporationFoundingBarrier({ createdTurn: 100 }, 148, now, false).blocked).toBe(
+      false
+    );
+    expect(getNewCharacterTransferBarrier({ createdTurn: 100 }, 100, now).blocked).toBe(true);
   });
 });

@@ -336,7 +336,7 @@ export function FoundCorporationModal({
 
           {onFoundingCooldown && (
             <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-              You can found another corporation in {foundingCooldownTurnsRemaining} turns.
+              You can found a corporation in {foundingCooldownTurnsRemaining} turns.
             </div>
           )}
 

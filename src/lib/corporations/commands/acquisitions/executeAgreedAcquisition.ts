@@ -1,3 +1,5 @@
+import { referenceValuation } from "./referenceValuation";
+import { controllerTransferBarrierError } from "./controllerTransferBarrier";
 import type { Db } from "mongodb";
 import {
   assertForeignControlAllowed,
@@ -170,6 +172,38 @@ async function runAgreedAcquisition(
   const outcome = acquisitionOutcomeOf(offer);
   const subsidiary = outcome === "subsidiary";
   const priorSettlement = await loadAcquisitionSettlement(db, offer._id);
+  if (!priorSettlement) {
+    for (const corporation of [acquirer, target]) {
+      const restriction = await controllerTransferBarrierError(
+        db,
+        corporation,
+        currentTurn,
+        new Date()
+      );
+      if (restriction) return { ok: false, error: restriction, status: 403 };
+    }
+    const floor = await referenceValuation(db, target);
+    if (offer.priceAnchor < floor.minimumPriceAnchor)
+      return {
+        ok: false,
+        error: `The acquisition price must be at least ₳${floor.minimumPriceAnchor.toLocaleString("en-US")} to cover the target's net assets.`,
+        status: 400,
+      };
+    if (!subsidiary && (floor.debtAnchor > 0 || (target.liquidCapital ?? 0) < 0))
+      return {
+        ok: false,
+        error:
+          "The target has outstanding bonds or financing liabilities. Repay them before merging, or acquire it as a subsidiary.",
+        status: 400,
+      };
+    if (!subsidiary && floor.portfolioAnchor > 0)
+      return {
+        ok: false,
+        error:
+          "Sell or transfer the target's investment holdings before merging, or acquire it as a subsidiary.",
+        status: 400,
+      };
+  }
 
   // Subsidiary resume: the structural write of an interrupted run already
   // landed (flag set, or the cap table is the acquirer's alone with a live
@@ -407,7 +441,11 @@ async function runAgreedAcquisition(
   // A subsidiary keeps its own cash: nothing relocates to the acquirer.
   const targetCashAnchor = subsidiary
     ? 0
-    : corpLiquidCapitalToAnchor(target.liquidCapital ?? 0, target, targetFxRate);
+    : corpLiquidCapitalToAnchor(
+        (target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0),
+        target,
+        targetFxRate
+      );
   const shellCashInAcquirerCapital =
     targetCashAnchor > 0
       ? Math.round(anchorToCorpLiquidCapital(targetCashAnchor, acquirer, acquirerFxRate))
@@ -472,7 +510,9 @@ async function runAgreedAcquisition(
     forexEnabled,
     shellCashAnchor: targetCashAnchor,
     shellCashInAcquirerCapital,
-    shellCashTargetLocal: subsidiary ? 0 : Math.round(target.liquidCapital ?? 0),
+    shellCashTargetLocal: subsidiary
+      ? 0
+      : Math.round((target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0)),
     targetCurrency: targetCurrency ?? "USD",
     ...(subsidiary ? { outcome } : {}),
   });
@@ -486,7 +526,9 @@ async function runAgreedAcquisition(
     priceAnchor: offer.priceAnchor,
     priceInAcquirerCapital,
     acquirerCurrency: acquirerCurrency ?? "USD",
-    shellCashTargetLocal: subsidiary ? 0 : Math.round(target.liquidCapital ?? 0),
+    shellCashTargetLocal: subsidiary
+      ? 0
+      : Math.round((target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0)),
     targetCurrency: targetCurrency ?? "USD",
     ...(subsidiary ? { outcome } : {}),
     // First-attempt sector count: this read precedes every move, so on the

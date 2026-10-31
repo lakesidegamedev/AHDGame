@@ -1,3 +1,4 @@
+import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import { NextResponse } from "next/server";
 import { stockSaleDeductions } from "@/lib/budget/rules/stockWithholding";
 import {
@@ -121,6 +122,9 @@ export async function acceptShareOffer(request: Request, { params }: RouteParams
 
     const character = await getCharacterByUserId(db, auth.user.userId);
     if (!character) return errorResponse(404, "Character not found");
+
+    const transferBarrier = await newCharacterTransferBarrierResponse(character);
+    if (transferBarrier) return transferBarrier;
 
     const tradeLock = await assertCeoTradeNotBlocked(db, corporation, character._id);
     if (tradeLock.blocked) {
