@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   ensureSingleplayerUser: vi.fn(),
   resetAndBootstrapGameWorld: vi.fn(),
   setSingleplayerConfig: vi.fn(),
+  applyStartupRepairsAfterReset: vi.fn(),
 }));
 
 vi.mock("@/lib/api/requireSingleplayer", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/lib/mongodb", () => ({ getDb: mocks.getDb }));
 vi.mock("@/lib/singleplayerServer", () => ({
   ensureSingleplayerUser: mocks.ensureSingleplayerUser,
   setSingleplayerConfig: mocks.setSingleplayerConfig,
+  applyStartupRepairsAfterReset: mocks.applyStartupRepairsAfterReset,
 }));
 vi.mock("@/lib/admin/resetAndBootstrapGameWorld", () => ({
   resetAndBootstrapGameWorld: mocks.resetAndBootstrapGameWorld,
@@ -129,5 +131,17 @@ describe("POST /api/singleplayer/setup", () => {
       expect.anything(),
       expect.objectContaining({ nppAutonomyLevel: "v6" })
     );
+  });
+  it("applies the startup repairs after the reset, before the world opens", async () => {
+    expect((await POST(request({ preset: "1991-default", mode: "normal" }))).status).toBe(200);
+    expect(mocks.applyStartupRepairsAfterReset).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Function)
+    );
+    const [resetOrder] = mocks.resetAndBootstrapGameWorld.mock.invocationCallOrder;
+    const [repairOrder] = mocks.applyStartupRepairsAfterReset.mock.invocationCallOrder;
+    const [configOrder] = mocks.setSingleplayerConfig.mock.invocationCallOrder;
+    expect(repairOrder).toBeGreaterThan(resetOrder);
+    expect(repairOrder).toBeLessThan(configOrder);
   });
 });
