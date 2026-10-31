@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { InboxCategory } from "@/lib/inbox/categories";
 import type { HoldingMove, SinceAwayWidgetData } from "@/lib/sidebarWidgets/data/sinceAway";
-import { percent, signedMoney, toneClass, WidgetEmpty } from "./common";
+import { percent, signedMoney, toneClass, Empty } from "./shared";
 
 export function SinceAwayBody({
   data,
@@ -59,11 +59,11 @@ export function SinceAwayBody({
           ))}
         </dl>
       ) : (
-        <WidgetEmpty>{t("noHistory")}</WidgetEmpty>
+        <Empty>{t("noHistory")}</Empty>
       )}
       <div className="border-t border-card-border pt-2">
         {data.unreadTotal === 0 ? (
-          <WidgetEmpty>{t("noUnread")}</WidgetEmpty>
+          <Empty>{t("noUnread")}</Empty>
         ) : (
           <Link
             href="/notifications"

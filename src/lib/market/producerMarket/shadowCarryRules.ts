@@ -99,6 +99,17 @@ const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set([
   "construction_services",
 ]);
 
+/**
+ * A stock row's book with a country-scoped commodity's state or country book
+ * collapsed to one token. Stock carried before construction services moved to
+ * the country book still names a state book; this lets that opening image be
+ * compared with the plan's country-book image without a data migration.
+ */
+export function scopeNeutralBook(book: string, commodity: string): string {
+  if (!COUNTRY_SCOPED_SHADOW_COMMODITIES.has(commodity)) return book;
+  return book.startsWith("state:") || book.startsWith("country:") ? "country-scoped" : book;
+}
+
 export function shadowBook(book: string, commodity: string, countryId: string): string {
   if (!COUNTRY_SCOPED_SHADOW_COMMODITIES.has(commodity) || !book.startsWith("state:")) return book;
   return `country:${countryId}`;

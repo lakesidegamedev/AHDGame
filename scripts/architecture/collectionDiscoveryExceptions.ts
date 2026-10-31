@@ -230,7 +230,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "deliverCashLegsInBatch",
     argument: "collection",
-    scopeHash: "1266e9e88f0746aa9ae40b71ffe3c8d49ec7a7139e0627aefd9863a4f4f01754",
+    scopeHash: "6a16c7ecf19bccd9610b8a110b8a35fdc9fcda3d86f2e11fc235f5764d36c9fc",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },

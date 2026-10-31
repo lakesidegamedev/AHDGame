@@ -54,6 +54,12 @@ export interface PriorReceipt {
   plannedRunShare?: number;
   /** Cold upkeep on idle capacity inside the site bill; owed whether or not the line runs. */
   idleOperatingCost?: number;
+  /**
+   * Why the run fell short of its plan: the company's cash could not fund it,
+   * or short inputs cut it. Absent when the run was not cut, or on receipts
+   * settled before it was recorded.
+   */
+  runCutBy?: readonly string[];
 }
 
 /** One product row of a settled receipt, as the run signals read it. */
@@ -239,7 +245,15 @@ export function demandPlanRunShare(
   }
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
   const heldStock = Math.max(0, offered - sold);
-  const planned = Math.max(0, expectedSales - heldStock);
+  // A run the game cut (no cash, short inputs) is a stoppage, not lost demand:
+  // read demand from the sell-through of what the plant did make, at the run it
+  // planned, so a cut output does not cap the next plan and lose its customers.
+  const plannedShare = Math.min(1, Math.max(0, finite(prior.plannedRunShare ?? 0)));
+  const cutSales =
+    (prior.runCutBy?.length ?? 0) > 0 && plannedShare * active > produced
+      ? plannedShare * active * sellThrough * (1 + DEMAND_PLAN_PROBE)
+      : 0;
+  const planned = Math.max(0, Math.max(expectedSales, cutSales) - heldStock);
   return Math.max(floor, Math.min(1, planned / active));
 }
 
