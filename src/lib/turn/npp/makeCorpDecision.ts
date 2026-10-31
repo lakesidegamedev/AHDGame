@@ -94,6 +94,7 @@ import {
   autopilotCapexBudgetLocal,
   evaluateAutopilotGrowthGate,
 } from "./rules/autopilotReinvest";
+import { inputCutRunShare, isInputStarved } from "./rules/inputAvailability";
 import {
   allowsNppIndustryInvestment,
   isNppDivestmentProtected,
@@ -1684,6 +1685,26 @@ export function makeNppCorpDecision(
           null
         );
       }
+      // Neither an NPP nor autopilot adds capacity a plant cannot feed: last
+      // turn short inputs cut its run below half (rules/inputAvailability).
+      // More plant would sit idle and deepen the shortage starving it; the
+      // replacement leg still goes through.
+      let inputGate = false;
+      if (
+        growthUnits > 0 &&
+        isInputStarved(inputCutRunShare(sector.producerSettlement, ctx.fundedWorldEpoch))
+      ) {
+        growthUnits = 0;
+        inputGate = true;
+        observeReinvestCandidate(
+          "growth_inputs_starved",
+          sector,
+          capitalStock,
+          headroomUnits,
+          replacementUnits,
+          null
+        );
+      }
       // Autopilot builds only where the plant already earns, the market has
       // room and the order repays itself; a refused growth leg still lets the
       // replacement leg through.
@@ -1722,7 +1743,7 @@ export function makeNppCorpDecision(
             )
           : rawUnits;
       if (!(units > 0)) {
-        if (!autopilotGate && !throttleGate) {
+        if (!autopilotGate && !throttleGate && !inputGate) {
           observeReinvestCandidate(
             "below_minimum_order",
             sector,

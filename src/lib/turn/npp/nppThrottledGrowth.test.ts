@@ -13,6 +13,8 @@ const EPOCH = "epoch-1";
 interface FundedRun {
   /** Share of nameplate the plant made this turn. */
   runShare: number;
+  /** Short inputs cut the funded run to this share (receipt billedRunShare). */
+  inputCutShare?: number;
   /** Share of offered units that sold. */
   sellThrough: number;
   /** Units offered per unit made: above 1 when held stock is also put up. */
@@ -115,6 +117,9 @@ function fundedFields(plantUnits: number, run: FundedRun) {
       producedUnits: producedPerTurn,
       offeredUnits: offeredPerTurn,
       soldUnits: soldPerTurn,
+      ...(run.inputCutShare != null
+        ? { billedRunShare: run.inputCutShare, runCutBy: ["inputs"] }
+        : {}),
     },
   };
 }
@@ -144,7 +149,7 @@ describe("NPP growth in a throttled market", () => {
 });
 
 describe("NPP growth on a funded world", () => {
-  it("grows a sold-out plant that inputs hold at a quarter of nameplate", () => {
+  it("grows a sold-out plant running at a quarter of nameplate", () => {
     // Throttle reads 0.25 (sold / capacity), which the legacy gate took for a glut.
     const d = decide(null, 80, { runShare: 0.25, sellThrough: 1 });
     expect(growthOf(d)).toBeGreaterThan(1);
@@ -165,5 +170,28 @@ describe("NPP growth on a funded world", () => {
     expect(legacy.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(
       true
     );
+  });
+});
+
+describe("NPP and autopilot growth with starved inputs", () => {
+  const outcomes = (d: ReturnType<typeof decide>) =>
+    (d.capacityObservations ?? []).map((o) => o.outcome);
+
+  it("refuses growth when short inputs cut last turn's run below half", () => {
+    const d = decide(null, 80, { runShare: 0.3, sellThrough: 1, inputCutShare: 0.3 });
+    expect(growthOf(d)).toBeLessThan(1);
+    expect(outcomes(d)).toContain("growth_inputs_starved");
+  });
+
+  it("still grows when inputs only trimmed the run", () => {
+    const d = decide(null, 80, { runShare: 0.8, sellThrough: 1, inputCutShare: 0.8 });
+    expect(growthOf(d)).toBeGreaterThan(1);
+    expect(outcomes(d)).not.toContain("growth_inputs_starved");
+  });
+
+  it("keeps replacing worn capacity on a starved plant", () => {
+    const d = decide(null, 100_000, { runShare: 0.3, sellThrough: 1, inputCutShare: 0.3 });
+    expect(outcomes(d)).toContain("growth_inputs_starved");
+    expect(growthOf(d)).toBeGreaterThan(0);
   });
 });

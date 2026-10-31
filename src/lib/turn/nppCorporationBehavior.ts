@@ -68,7 +68,10 @@ import {
 } from "@/lib/nationalization/stateControlledBuckets";
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type { FoundingRecipeWorld } from "@/lib/turn/npp/foundingRecipeChoice";
+import {
+  foundingInputAvailability,
+  type FoundingRecipeWorld,
+} from "@/lib/turn/npp/foundingRecipeChoice";
 
 import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDominanceSectors";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
@@ -274,10 +277,12 @@ export async function processNppCorporationDecisions(
     allSectors,
     commodityPriceDocs
   );
-  const { priceRatioOf, statePriceRatioOf, stateDemandOf } = buildNppPriceSignals(priceByCommodity);
+  const { priceRatioOf, statePriceRatioOf, stateDemandOf, stateInputAvailabilityOf } =
+    buildNppPriceSignals(priceByCommodity);
 
   const placementSignals = await loadNppPlacementSignals(db, turn, allSectors, statePriceRatioOf);
   placementSignals.stateDemandOf = stateDemandOf;
+  placementSignals.stateInputAvailabilityOf = stateInputAvailabilityOf;
   // The whole cohort ranks the same unowned snapshot, so the price-derived
   // shortage scores are resolved once for the turn instead of per corp. Market
   // size stays live inside the scan: founding draws move it during the pass.
@@ -570,6 +575,30 @@ export async function processNppCorporationDecisions(
           techTreesEnabled,
         }
       : undefined;
+  // Founding never lands a plant its state cannot supply: the recipe it would
+  // build is read against last turn's delivered input fill there. One value
+  // per state and lane for the whole cohort; nothing in the pass moves it.
+  const foundingInputByCell = new Map<string, number | null>();
+  placementSignals.foundingInputAvailabilityOf = (candidate) => {
+    const lane = getOperatingSectorType(
+      candidate.sectorType,
+      candidate.industryModel,
+      candidate.mediaDiscriminator
+    );
+    const key = `${candidate.stateId}|${lane}`;
+    const cached = foundingInputByCell.get(key);
+    if (cached !== undefined) return cached;
+    const value = foundingInputAvailability(
+      lane,
+      candidate.countryId,
+      (commodity, countryId) =>
+        statePriceRatioOf(commodity, candidate.stateId) ?? priceRatioOf(commodity, countryId),
+      fundedRecipeWorld,
+      { stateId: candidate.stateId, availabilityOf: stateInputAvailabilityOf }
+    );
+    foundingInputByCell.set(key, value);
+    return value;
+  };
   // Shortage per recipe from the latest funded settlement, for AI restarts.
   const recipePressureByKey =
     fundedRestartStage >= 1 && transitionFirstFundedTurn != null && strategyGate?.worldEpochId
