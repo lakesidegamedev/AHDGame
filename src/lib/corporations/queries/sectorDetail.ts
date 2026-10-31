@@ -852,6 +852,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       capital,
       throughput,
     } = await buildSectorCommoditySections({
+      currentTurn,
       sector,
       // Commodity flows run in ₳; normalize the sector's host-currency revenue
       // to ₳ at its host rate before passing in.

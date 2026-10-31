@@ -155,6 +155,12 @@ export interface CommodityFlow {
    */
   soldFraction?: number;
   /**
+   * Supply rows, CEO only: output this plant handed to the company's own other
+   * sites last turn. Not a sale, so no revenue; `valueAnchor` is the units at
+   * the plant's asking price, in ₳.
+   */
+  ownSite?: { units: number; share: number; valueAnchor: number };
+  /**
    * Market clearing, supply rows only: this output's share of last turn's
    * realized revenue (0-1, summing to ~1 across outputs). Splits the blended
    * average sale price into a price per product on a multi-output sector.

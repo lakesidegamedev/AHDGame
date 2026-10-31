@@ -331,6 +331,7 @@ function OperationsRow({
                 capacity={sector.capacityUnits}
                 fill={sector.fillRate}
                 band={sector.fillRateBand}
+                ownSiteShare={sector.ownSiteShare}
                 plantCount={sectorPlantCount(sector)}
                 className="items-end"
               />
