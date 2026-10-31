@@ -9,6 +9,7 @@ import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import {
   couponBatchKey,
   firstOpenSovereignCouponDueTurn,
+  loadCappedSettleableOpenSovereignCouponClaims,
   loadSettleableOpenSovereignCouponClaims,
   loadSovereignCouponPriorPayouts,
   loadSovereignCouponSettlementPrefetch,
@@ -252,6 +253,59 @@ describe("funded sovereign coupon claims", () => {
       claim!.holders[1].amountAnchor
     );
     expect(openClaims(db)).toEqual([]);
+  });
+
+  it("groups corporate claims into one receipt under the debt service split", async () => {
+    const corpId = new ObjectId("650000000000000000000015");
+    const db = world(0);
+    db.seed("corporations", [
+      { _id: corpId, countryId: "US", liquidCurrencyCode: "USD", liquidCapital: 0 },
+    ]);
+    const corporateBond = {
+      ...bond(),
+      holders: [{ corporationId: corpId, units: 2 }],
+    } as unknown as Bond;
+    const corporateQuotes = new Map([
+      [
+        corpId.toHexString(),
+        {
+          id: corpId.toHexString(),
+          countryId: "US",
+          currencyCode: "USD" as CurrencyCode,
+          localPerAnchor: 1,
+          currencyFieldPresent: true,
+          currencyFieldValue: "USD",
+          currencyUsesCountryFallback: false,
+        },
+      ],
+    ]);
+    const args = { bonds: [corporateBond], anchorRate: 1, forexEnabled: true, corporateQuotes };
+    await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), { ...args, turn: 12 });
+    await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), { ...args, turn: 13 });
+    const owed = openClaims(db);
+    expect(owed).toHaveLength(2);
+    savedBudget(db).treasuryCashLocal = 1_000;
+    await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), {
+      ...args,
+      turn: 14,
+      bonds: [],
+      corporateQuotes: new Map(),
+      fiscalScale: 0.5,
+      claimLoadLimit: 10,
+    });
+    expect(openClaims(db)).toEqual([]);
+    const moves = db.collection("bankMoneyMoves").docs.map((move) => String(move._id));
+    expect(moves).toContain(couponBatchKey("US", 14));
+    expect(moves.some((id) => id.includes(":attempt:"))).toBe(false);
+    // The corporation is paid at face, the bond pool at half.
+    const corpFace = owed.reduce((sum, claim) => sum + claim.holders[1].amountAnchor, 0);
+    expect((db.collection("corporations").docs[0] as { liquidCapital: number }).liquidCapital).toBe(
+      corpFace
+    );
+    const poolFace = owed.reduce((sum, claim) => sum + claim.holders[0].amountLocal, 0);
+    expect(
+      (db.collection("bondMarketPools").docs[0] as { cashLocal: number }).cashLocal
+    ).toBeCloseTo(poolFace * 0.5);
   });
 
   it("guards country-derived corporate currency and batches recipient lookups across claims", async () => {
@@ -1017,6 +1071,37 @@ describe("bounded open-claim load", () => {
     ]);
     expect(await firstOpenSovereignCouponDueTurn(db as unknown as Db, "US")).toBe(10);
     expect(await openSovereignCouponPoolCurrencies(db as unknown as Db, "US")).toEqual([]);
+  });
+
+  it("caps the oldest claims but always loads player and receipt-owned claims", async () => {
+    const db = world(100);
+    const synthetic = (id: string, dueTurn: number) => {
+      const record = claimRecord(id, dueTurn, 10);
+      record.claim.holders = [
+        { ...record.claim.holders[0], kind: "publicFloat", id: undefined },
+      ] as unknown as FundedSovereignCouponClaim["holders"];
+      return record;
+    };
+    db.seed("sovereignCouponClaims", [
+      synthetic("sovereign-coupon:s:1", 1),
+      synthetic("sovereign-coupon:s:2", 2),
+      synthetic("sovereign-coupon:s:3", 3),
+      claimRecord("sovereign-coupon:p:9", 9, 10),
+      synthetic("sovereign-coupon:s:8", 8),
+    ] as unknown as Array<Record<string, unknown>>);
+    const loaded = await loadCappedSettleableOpenSovereignCouponClaims(
+      db as unknown as Db,
+      "US",
+      1_000,
+      new Set(["sovereign-coupon:s:8"]),
+      2
+    );
+    expect(loaded.map((claim) => claim.id)).toEqual([
+      "sovereign-coupon:s:1",
+      "sovereign-coupon:s:2",
+      "sovereign-coupon:s:8",
+      "sovereign-coupon:p:9",
+    ]);
   });
 
   it("leaves an unaffordable claim open identically under the full and bounded load", async () => {

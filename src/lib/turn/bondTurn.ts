@@ -2,6 +2,7 @@
  * Bond turns settle coupons and principal while preserving holder denominations.
  * processBondTurn shares one monetary quote snapshot across payout conversions.
  */
+import { loadPoolCashPerFaceByCountry } from "@/lib/bonds/sovereignPrimarySettlement";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { euroSettlementRates } from "@/lib/currency/euro/rules";
 import { purchaseSpreadRate } from "@/lib/currency/rules/purchaseConversion";
@@ -116,7 +117,7 @@ export type { BondTurnResult } from "./bondTurnTypes";
  */
 export async function processBondTurn(
   turn: number,
-  config?: Pick<GameConfig, "treasuryCashLedgerEnabled"> & {
+  config?: Pick<GameConfig, "treasuryCashLedgerEnabled" | "fiscalScaleStage"> & {
     captureSovereignCashProceeds?: boolean;
   }
 ): Promise<BondTurnResult> {
@@ -1128,6 +1129,12 @@ export async function processBondTurn(
   );
   const maturityWave = await loadSovereignMaturityWave(db, dueSovereignBonds);
   const budgetsWithBankClaims = maturityWave.budgetsWithBankClaims;
+  // Under the fiscal scale split the pool float is repaid at book face times
+  // the country's scale, the same rate the pool pays for a placement.
+  const poolCashPerFaceByCountry =
+    dueSovereignBonds.length > 0
+      ? await loadPoolCashPerFaceByCountry(db, config?.fiscalScaleStage)
+      : new Map<string, number>();
   const lock = new KeyedQueue();
   const buildSovereignMaturityPlan = (bond: Bond): SovereignMaturityPlan | null => {
     if (!bond.countryId) return null;
@@ -1156,7 +1163,10 @@ export async function processBondTurn(
       (bond.holders ?? []).reduce((sum, holder) => sum + Math.max(0, holder.units), 0) +
       Math.max(0, bond.publicFloat) +
       Math.max(0, bond.centralBankHoldings ?? 0);
-    const totalRepaymentLocal = totalUnits * BOND_UNIT_FACE_VALUE;
+    const poolCashPerFace = poolCashPerFaceByCountry.get(countryId) ?? 1;
+    const poolFloatFaceLocal = Math.max(0, bond.publicFloat) * BOND_UNIT_FACE_VALUE;
+    const totalRepaymentLocal =
+      totalUnits * BOND_UNIT_FACE_VALUE - poolFloatFaceLocal * (1 - poolCashPerFace);
     const nonBankRepaymentLocal = Math.max(0, totalRepaymentLocal - bankAmountLocal);
 
     const holderLegs: Array<{
@@ -1318,7 +1328,7 @@ export async function processBondTurn(
         "bondMarketPools",
         bondPoolCurrency(bond),
         "cashLocal",
-        bond.publicFloat * BOND_UNIT_FACE_VALUE,
+        poolFloatFaceLocal * poolCashPerFace,
         bondCcy,
         bondFxRate,
         "Redeem public sovereign bond float to its funded pool"

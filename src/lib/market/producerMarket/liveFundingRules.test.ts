@@ -3,6 +3,7 @@ import { legsNet } from "@/lib/banking/moneyMove";
 import {
   batchProducerMoves,
   closeTransferMoves,
+  fiscalTaxMove,
   householdOpeningMoves,
   householdTransferMoves,
   investmentFundingMoves,
@@ -196,5 +197,29 @@ describe("household transfer moves", () => {
     const batch = batchProducerMoves("w", 7, moves);
     expect(batch).toHaveLength(1);
     expect(batch[0].kind).toBe("producer_household_transfer");
+  });
+});
+
+describe("fiscal scale tax move", () => {
+  it("debits each wallet once into the Treasury and lands the debits as one batch", () => {
+    const move = fiscalTaxMove({
+      turn: 9,
+      countryId: "US",
+      budgetId: "budget-us",
+      currencyCode: "USD",
+      localPerAnchor: 1,
+      byPayer: [
+        { id: "hh-1", amount: 4 },
+        { id: "hh-2", amount: 0 },
+        { id: "hh-3", amount: 6 },
+      ],
+    })!;
+    expect(move.record).toEqual({ batchIndependentDebits: true });
+    expect(move.legs.map((leg) => [leg.kind, leg.filter?._id, leg.amount])).toEqual([
+      ["debit", "hh-1", 4],
+      ["debit", "hh-3", 6],
+      ["credit", "budget-us", 10],
+    ]);
+    expect(legsNet(move.legs)).toBeCloseTo(0);
   });
 });

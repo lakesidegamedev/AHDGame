@@ -138,6 +138,126 @@ export function publicReturnMoves(
     }));
 }
 
+/**
+ * Fiscal scale stage 2: the public buyer's funding is paid from the Treasury's
+ * real cash instead of minted. One move per country (never batched: each has
+ * its own guarded Treasury debit), keyed apart from the minted move.
+ */
+export function treasuryPublicFundingMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string; budgetId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-public-treasury:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_public_treasury_funding",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: "federalBudget",
+          filter: { _id: r.budgetId, treasuryCashLocal: { $gte: r.amountLocal } },
+          path: "treasuryCashLocal",
+          note: "public purchases paid from Treasury cash",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "public buyer funding",
+        },
+      ],
+    }));
+}
+
+/** Fiscal scale stage 2: unspent public funding returns to Treasury cash instead of being burned. */
+export function treasuryPublicReturnMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string; budgetId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-public-treasury-return:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_public_treasury_return",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId, cash: { $gte: r.amountLocal } },
+          path: "cash",
+          note: "unspent public funding",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: "federalBudget",
+          filter: { _id: r.budgetId },
+          path: "treasuryCashLocal",
+          note: "unspent public funding returns to Treasury cash",
+        },
+      ],
+    }));
+}
+
+/**
+ * Fiscal scale stage 2: one country's tax collected from its household
+ * wallets into Treasury cash. Each wallet debit is guarded by its own cash.
+ */
+export function fiscalTaxMove(input: {
+  turn: number;
+  countryId: string;
+  budgetId: string;
+  currencyCode: string;
+  localPerAnchor: number;
+  byPayer: readonly { id: string; amount: number }[];
+}): MoneyMove | null {
+  const rows = input.byPayer.filter((row) => positive(row.amount) > 0);
+  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+  if (!(total > 0)) return null;
+  const v = { currencyCode: input.currencyCode, localPerAnchor: input.localPerAnchor };
+  return {
+    key: `fiscal-scale-tax:${input.turn}:${input.countryId}`,
+    kind: "fiscal_scale_tax",
+    turn: input.turn,
+    legs: [
+      ...rows.map((row) => ({
+        kind: "debit" as const,
+        amount: row.amount,
+        valuation: v,
+        collection: PRODUCER_ACCOUNTS,
+        filter: { _id: row.id, cash: { $gte: row.amount } },
+        path: "cash",
+        note: "household taxes",
+      })),
+      {
+        kind: "credit" as const,
+        amount: total,
+        valuation: v,
+        collection: "federalBudget",
+        filter: { _id: input.budgetId },
+        path: "treasuryCashLocal",
+        note: "household taxes into Treasury cash",
+      },
+    ],
+    // Every wallet is a distinct document, so the debits land in one batch
+    // instead of a guarded write each.
+    record: { batchIndependentDebits: true },
+  };
+}
+
 /** Mints each construction buyer's funding: the turn's work on already-paid build orders. */
 export function investmentFundingMoves(
   worldEpoch: string,
@@ -376,7 +496,9 @@ export function producerMoveLedgerLegs(move: MoneyMove): LedgerLeg[] | null {
         ? "corporation"
         : leg.collection === PRODUCER_ACCOUNTS
           ? "economy_wallet"
-          : null;
+          : leg.collection === "federalBudget"
+            ? "government_cash"
+            : null;
     const ref = leg.filter?._id;
     if (!kind || ref == null) return null;
     const sign = leg.kind === "debit" ? -1 : 1;

@@ -17,6 +17,7 @@ import {
 } from "@/lib/bonds/rules/publicFloatNovation";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
+import { frozenClaimPoolCashPerFace } from "./sovereignMaturityPayoutTargets";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 type Disposition = NonNullable<MaturityClaim["publicFloatDisposition"]>;
@@ -130,7 +131,8 @@ async function freezeDisposition(
         replacementCouponRate: couponRate,
         residualAmountLocal: Math.max(
           0,
-          claim.amountLocal - plan.acceptedUnits * BOND_UNIT_FACE_VALUE
+          claim.amountLocal -
+            plan.acceptedUnits * BOND_UNIT_FACE_VALUE * frozenClaimPoolCashPerFace(claim)
         ),
       }
     : refusedPublicFloatDisposition(plan, allowNovation);

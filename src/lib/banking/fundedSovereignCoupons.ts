@@ -24,6 +24,12 @@ import {
  * and put the document on course for the 16 MB limit. The claim, its id and its
  * frozen quotes are unchanged; only where it is kept moved.
  */
+import {
+  FISCAL_SCALE_PLAYER_HOLDER_KINDS,
+  claimAtFiscalScale,
+  fiscalScaleCouponOrder,
+} from "@/lib/budget/rules/fiscalScale";
+
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
 export interface SovereignCouponClaimRecord {
@@ -255,6 +261,48 @@ export async function loadSettleableOpenSovereignCouponClaims(
     .sort({ "claim.dueTurn": 1, order: 1 })
     .toArray();
   return rows.map((row) => row.claim);
+}
+
+/**
+ * The settleable claims of one budget with a per-turn cap: the `limit` oldest
+ * claims within the bound, every claim within the bound owed to a player, and
+ * every claim a receipt already owns. Two keyed reads. The fiscal scale's debt
+ * service split uses it, because its bound reaches far past the cash held.
+ */
+export async function loadCappedSettleableOpenSovereignCouponClaims(
+  db: Db,
+  budgetId: string,
+  maxAmountLocal: number,
+  alsoClaimIds: ReadonlySet<string>,
+  limit: number
+): Promise<FundedSovereignCouponClaim[]> {
+  const cap = Number.isFinite(maxAmountLocal) ? Math.max(0, maxAmountLocal) : 0;
+  const base = { budgetId, ...OPEN_CLAIM };
+  const ids = [...alsoClaimIds];
+  const owed: Array<Record<string, unknown>> = [
+    {
+      "claim.amountLocal": { $lte: cap },
+      "claim.holders.kind": { $in: [...FISCAL_SCALE_PLAYER_HOLDER_KINDS] },
+    },
+  ];
+  if (ids.length > 0) owed.push({ _id: { $in: ids } });
+  const store = sovereignCouponClaimStore(db);
+  const [oldest, named] = await Promise.all([
+    store
+      .find(
+        { ...base, "claim.amountLocal": { $lte: cap } },
+        { projection: SOVEREIGN_COUPON_CLAIM_PROJECTION }
+      )
+      .sort({ "claim.dueTurn": 1, order: 1 })
+      .limit(Math.max(0, Math.trunc(limit)))
+      .toArray(),
+    store
+      .find({ $and: [base, { $or: owed }] }, { projection: SOVEREIGN_COUPON_CLAIM_PROJECTION })
+      .toArray(),
+  ]);
+  const byId = new Map<string, FundedSovereignCouponClaim>();
+  for (const row of [...oldest, ...named]) byId.set(row.claim.id, row.claim);
+  return [...byId.values()].sort((a, b) => a.dueTurn - b.dueTurn);
 }
 
 /** Due turn of the oldest unpaid claim, or null when the budget owes none. */
@@ -899,6 +947,18 @@ export async function settleFundedSovereignCoupons(
      * the settlement moves money only and none of the queue reads happen here.
      */
     prepared?: PreparedSovereignCouponSettlement;
+    /**
+     * This country's fiscal scale when the debt service split is on (fiscal
+     * scale stage 3). Claims without a journaled attempt settle synthetic
+     * holders at book times the scale and player holders at face, player
+     * claims first. Omitted, every claim settles at book, oldest first.
+     */
+    fiscalScale?: number;
+    /**
+     * Oldest claims the per-budget load may read this turn, on top of player
+     * and receipt-owned claims. Set with `fiscalScale`; omitted, no cap.
+     */
+    claimLoadLimit?: number;
   }
 ): Promise<{ completed: boolean; batchClose?: CouponBatchCloseOp[] }> {
   const budgetId = String(budget._id);
@@ -1010,7 +1070,15 @@ export async function settleFundedSovereignCoupons(
     : skipSettlementWork
       ? []
       : cashBound !== undefined
-        ? await loadSettleableOpenSovereignCouponClaims(db, budgetId, cashBound, alsoClaimIds)
+        ? input.claimLoadLimit !== undefined
+          ? await loadCappedSettleableOpenSovereignCouponClaims(
+              db,
+              budgetId,
+              cashBound,
+              alsoClaimIds,
+              input.claimLoadLimit
+            )
+          : await loadSettleableOpenSovereignCouponClaims(db, budgetId, cashBound, alsoClaimIds)
         : await loadOpenSovereignCouponClaims(db, budgetId);
   for (const claim of loadedClaims) claimById.set(claim.id, claim);
 
@@ -1117,7 +1185,23 @@ export async function settleFundedSovereignCoupons(
   // so a replayed turn never falls back to one journal receipt per claim.
   const batchOpen = !batches.some((batch) => batch._id === couponBatchKey(budgetId, input.turn));
   const grouped: FundedSovereignCouponClaim[] = [];
-  for (const claim of claims) {
+  // Under the debt service split a claim is priced at the scale when it is
+  // first attempted; a journaled attempt resumes with the legs it recorded.
+  const hasAttempt = (claim: FundedSovereignCouponClaim) =>
+    priorMoves.some(
+      (move) =>
+        move._id.startsWith(`${claim.id}:attempt:`) &&
+        (move.status === "partial" || move.status === "applied")
+    );
+  const payable =
+    input.fiscalScale === undefined
+      ? claims
+      : fiscalScaleCouponOrder(
+          claims.map((claim) =>
+            hasAttempt(claim) ? claim : claimAtFiscalScale(claim, input.fiscalScale)
+          )
+        );
+  for (const claim of payable) {
     if (batched.has(claim.id)) continue;
     const attempt = Math.max(input.turn, claim.dueTurn);
     const prior =
@@ -1134,7 +1218,7 @@ export async function settleFundedSovereignCoupons(
     // attempt, a corporate holder, or a second currency keeps its own receipt.
     if (
       !prior &&
-      isBatchable(claim, budgetId, attempt) &&
+      isBatchable(claim, budgetId, attempt, input.fiscalScale !== undefined) &&
       claim.currencyCode === (grouped[0]?.currencyCode ?? claim.currencyCode)
     ) {
       if (batchOpen && grouped.length < MAX_BATCH_CLAIMS) {
@@ -1325,10 +1409,20 @@ export const MAX_BATCH_CLAIMS = 2000;
 /**
  * A claim may join a grouped receipt when every credit targets a document by id
  * alone and its own per-claim receipt balances. Corporate credits carry a payee
- * currency guard per claim, so they keep the per-claim receipt.
+ * currency guard per claim, so they keep the per-claim receipt, except under
+ * the fiscal scale's debt service split: there every claim owed to a player is
+ * loaded each turn, and one receipt per claim would cost tens of round trips
+ * each. The grouped receipt keeps each distinct guard as its own credit leg,
+ * and the target readiness probe has already dropped a claim whose guard fails.
  */
-function isBatchable(claim: FundedSovereignCouponClaim, budgetId: string, attempt: number) {
-  if (claim.holders.some((holder) => holder.kind === "corporation")) return false;
+function isBatchable(
+  claim: FundedSovereignCouponClaim,
+  budgetId: string,
+  attempt: number,
+  allowCorporate = false
+) {
+  if (!allowCorporate && claim.holders.some((holder) => holder.kind === "corporation"))
+    return false;
   try {
     return checkBalancedTransfer(payoutTransition(claim, budgetId, attempt).legs).length === 0;
   } catch {
@@ -1361,7 +1455,10 @@ function batchPayoutTransition(
     const single = payoutTransition(claim, budgetId, Math.max(turn, claim.dueTurn));
     for (const leg of single.legs) {
       if (leg.kind !== "credit" || !leg.valuation) continue;
-      const target = `${leg.collection}|${String((leg.filter as { _id?: unknown })._id)}|${leg.path}|${leg.valuation.currencyCode}`;
+      // A corporate credit's guard is part of its target: two claims frozen
+      // under different payee currency guards keep separate legs.
+      const guard = leg.collection === "corporations" ? `|${JSON.stringify(leg.filter)}` : "";
+      const target = `${leg.collection}|${String((leg.filter as { _id?: unknown })._id)}|${leg.path}|${leg.valuation.currencyCode}${guard}`;
       const row = credits.get(target) ?? {
         leg,
         currencyCode: leg.valuation.currencyCode,
