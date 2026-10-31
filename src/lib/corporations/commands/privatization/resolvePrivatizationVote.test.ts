@@ -157,6 +157,9 @@ describe("resolvePrivatizationVote — atomic claim", () => {
     // Atomic claim transitioned to "failed" first
     const claimCall = updateOne.mock.calls[0];
     expect(claimCall[1].$set.status).toBe("failed");
+    // The claim pins the tallied casts, so a vote cast after the tally keeps
+    // the vote open instead of being dropped from the count.
+    expect(claimCall[0]).toMatchObject({ status: "open", votes: vote.votes });
 
     // Then refund happened
     const refundMock = await import("@/lib/financialTxLog/atomicCashGuard");
