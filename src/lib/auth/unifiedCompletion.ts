@@ -222,6 +222,9 @@ export async function completeAdmittedMigration(
       provenance: input.provenance,
     });
   }
+  if (sourceFence?.status === "COMMIT_UNKNOWN") {
+    throw new CompletionError("completion_source_fence_unknown");
+  }
   if (!sourceFence || !TERMINAL_SOURCE_FENCE.has(sourceFence.status)) {
     throw new CompletionError("completion_source_fence_not_committed");
   }

@@ -18,16 +18,19 @@ traffic percentage.
 For a listed account, the existing password login runs the full ceremony:
 
 1. verify the source password and security snapshot;
-2. reserve the canonical account and operation;
-3. issue and admit a fresh source proof;
-4. claim the lease;
-5. provision a disabled Keycloak target through the provision workflow and
+2. create or reuse the canonical account and exact source mapping through the
+   authoritative registry (the login route has already verified the password;
+   the proof store verifies it again before admission);
+3. reserve the canonical account and operation;
+4. issue and admit a fresh source proof;
+5. claim the lease;
+6. provision a disabled Keycloak target through the provision workflow and
    require a committed receipt;
-6. write the central fence;
-7. write the source Mongo fence, proof consumption and immutable receipt;
-8. import and reconcile the retained credential;
-9. activate and reconcile the target;
-10. issue the unified AHD game session.
+7. write the central fence;
+8. write the source Mongo fence, proof consumption and immutable receipt;
+9. import and reconcile the retained credential;
+10. activate and reconcile the target;
+11. issue the unified AHD game session.
 
 The target `userId` comes from the committed provision receipt, not a hardcoded
 map. The canonical account comes from the registry reservation.
