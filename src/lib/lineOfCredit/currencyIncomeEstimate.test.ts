@@ -158,4 +158,49 @@ describe("estimatePerTurnCurrencyIncomeHomeFace", () => {
     );
     expect(result).toBeCloseTo(120);
   });
+
+  it("ignores income paid at or before the last economy reset and averages over turns since", async () => {
+    // Turn 506 is the reset turn: its old-economy salary must not back credit.
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 515,
+      economyReset: { turn: 506, completedAt: new Date() },
+    });
+    installFinancialTxFindMock(db, [
+      { type: "corp_salary", turn: 506, amount: 1_000_000, anchorAmount: 1_000_000 },
+      { type: "corp_salary", turn: 510, amount: 90, anchorAmount: 90 },
+    ]);
+
+    const { estimatePerTurnCurrencyIncomeHomeFace } = await import("./currencyIncomeEstimate");
+    const result = await estimatePerTurnCurrencyIncomeHomeFace(
+      db as unknown as Db,
+      { _id: new ObjectId() } as never,
+      { USD: 1 }
+    );
+
+    // Nine turns observed since the reset (507 to 515), not 48.
+    expect(result).toBe(10);
+  });
+
+  it("reads the reset turn from the stock holding tax anchor on markers without a turn", async () => {
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 553,
+      stockHoldingTaxStartTurn: 506,
+      economyReset: { completedAt: new Date() },
+    });
+    installFinancialTxFindMock(db, [
+      { type: "corp_salary", turn: 506, amount: 747_000_000, anchorAmount: 747_000_000 },
+      { type: "corp_salary", turn: 550, amount: 470, anchorAmount: 470 },
+    ]);
+
+    const { estimatePerTurnCurrencyIncomeHomeFace } = await import("./currencyIncomeEstimate");
+    const result = await estimatePerTurnCurrencyIncomeHomeFace(
+      db as unknown as Db,
+      { _id: new ObjectId() } as never,
+      { USD: 1 }
+    );
+
+    expect(result).toBe(10);
+  });
 });

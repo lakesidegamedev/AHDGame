@@ -1,5 +1,5 @@
 import { TAXABLE_PLAYER_INCOME_TYPES } from "@/lib/budget/rules/incomeTaxTiers";
-import { recurringIncomePerTurn } from "./rules/income";
+import { incomeWindow, recurringIncomePerTurn, type IncomeWindowClock } from "./rules/income";
 import type { Db } from "mongodb";
 import type { Character } from "@/lib/db/types";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
@@ -23,19 +23,23 @@ const LOC_RECURRING_INCOME_TX_TYPES: FinancialTxLogEntry["type"][] = [
  * Average recurring personal income per turn in home-currency face units.
  * Uses actual paid recurring-income tx rows over the recent underwriting window
  * rather than live holdings, so LOC limits reflect demonstrated income history.
+ * The window starts after the world's last economy reset.
  */
 export async function estimatePerTurnCurrencyIncomeHomeFace(
   db: Db,
   character: Character,
   rates: Partial<Record<CurrencyCode, number>>,
-  gameState?: { preset?: string; currentTurn?: number }
+  gameState?: IncomeWindowClock & { preset?: string }
 ): Promise<number> {
   const state = gameState ?? (await getGameState(db));
   const home = getHomeCurrency(character, state?.preset);
   const rateHome = rates[home] ?? 1;
-  const currentTurn = Math.max(1, state?.currentTurn ?? 1);
-  const observationTurns = Math.min(LOC_INCOME_AVERAGING_TURNS, currentTurn);
-  const windowStartTurn = currentTurn - observationTurns + 1;
+  const {
+    startTurn: windowStartTurn,
+    endTurn: currentTurn,
+    observationTurns,
+  } = incomeWindow(state ?? {}, LOC_INCOME_AVERAGING_TURNS);
+  if (observationTurns === 0) return 0;
 
   const rows = await db
     .collection<FinancialTxLogEntry>("financialTxLog")

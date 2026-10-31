@@ -15,6 +15,7 @@ vi.mock("@/lib/lineOfCredit/featureFlag", () => ({
 
 vi.mock("@/lib/lineOfCredit/netWorth", () => ({
   computePlayerGrossNetLocInternal: vi.fn(),
+  computeBankLoanDebtInternal: vi.fn().mockResolvedValue(0),
   loadExchangeRatesMap: vi.fn(),
 }));
 
@@ -122,6 +123,36 @@ describe("buildLocSnapshot", () => {
     expect(snapshot!.netWorthLimitInternal).toBe(500);
     expect(snapshot!.perPlayerLimitInternal).toBe(500);
     expect(snapshot!.perPlayerAvailableInternal).toBe(400);
+  });
+
+  it("takes outstanding bank loans off the net worth that backs the credit line", async () => {
+    const { computePlayerGrossNetLocInternal, computeBankLoanDebtInternal, loadExchangeRatesMap } =
+      await import("./netWorth");
+    const { estimatePerTurnCurrencyIncomeHomeFace } = await import("./currencyIncomeEstimate");
+
+    vi.mocked(loadExchangeRatesMap).mockResolvedValue({ EUR: 1 } as never);
+    // Gross assets include the cash a bank loan just paid out.
+    vi.mocked(computePlayerGrossNetLocInternal).mockResolvedValue({
+      grossInternal: 60_000,
+      locDebtInternal: 0,
+      netInternal: 60_000,
+    });
+    vi.mocked(computeBankLoanDebtInternal).mockResolvedValueOnce(50_000);
+    vi.mocked(estimatePerTurnCurrencyIncomeHomeFace).mockResolvedValue(0);
+
+    const { buildLocSnapshot } = await import("./buildSnapshot");
+    const snapshot = await buildLocSnapshot(
+      db as unknown as Db,
+      {
+        _id: new ObjectId(),
+        countryId: "DE",
+        lineOfCredit: { balances: {}, arrears: {}, accountsOpened: {}, drawFrozen: false },
+      } as never
+    );
+
+    expect(snapshot!.netWorthInternal).toBe(10_000);
+    expect(snapshot!.netWorthLimitInternal).toBe(10_000);
+    expect(snapshot!.perPlayerAvailableInternal).toBe(10_000);
   });
 
   describe("equity cashout limits", () => {

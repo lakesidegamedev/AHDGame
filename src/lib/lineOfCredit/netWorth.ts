@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
 import type { Bond, Corporation, BondHolder } from "@/lib/db/types";
+import type { BankLoan } from "@/lib/db/types/bank";
 import type { Shareholder } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
@@ -111,6 +112,37 @@ export function computeLocDebtInternal(
       ? rates
       : { ...rates, [homeCurrency]: 1 };
   return sumObligationInternal(loc.balances ?? {}, loc.arrears ?? {}, effectiveRates);
+}
+
+/** Bank loan statuses the borrower still owes on. */
+const OWED_BANK_LOAN_STATUSES: BankLoan["status"][] = ["current", "arrears"];
+
+/**
+ * Outstanding named bank loan principal in internal units. Borrowed cash sits
+ * in the borrower's balances, so the debt behind it has to come off net worth
+ * or the same loan counts as wealth that backs more credit.
+ */
+export async function computeBankLoanDebtInternal(
+  db: Db,
+  characterId: ObjectId,
+  rates: Partial<Record<CurrencyCode, number>>
+): Promise<number> {
+  const loans = await db
+    .collection<BankLoan>("bankLoans")
+    .find({
+      borrowerType: "character",
+      borrowerId: characterId,
+      status: { $in: OWED_BANK_LOAN_STATUSES },
+    })
+    .project<Pick<BankLoan, "outstanding" | "currency">>({ outstanding: 1, currency: 1 })
+    .toArray();
+  let debtInternal = 0;
+  for (const loan of loans) {
+    const rate = rates[loan.currency];
+    if (!(loan.outstanding > 0) || !rate || rate <= 0) continue;
+    debtInternal += toInternalUnits(loan.outstanding, rate);
+  }
+  return debtInternal;
 }
 
 /**

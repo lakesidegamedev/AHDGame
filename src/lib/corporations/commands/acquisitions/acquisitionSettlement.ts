@@ -72,6 +72,7 @@ export async function loadAcquisitionSettlement(
 
 function storedFilter(collection: string, id: string): Record<string, unknown> {
   if (collection === "federalBudget") return { countryId: id };
+  if (collection === "equityMarketPools") return { _id: id };
   if (!ObjectId.isValid(id)) throw new AcquisitionSettlementConflictError(`bad leg id ${id}`);
   return { _id: new ObjectId(id) };
 }
