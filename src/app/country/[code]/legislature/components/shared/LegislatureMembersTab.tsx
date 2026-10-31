@@ -2,7 +2,7 @@
 
 import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
 import type { LegislatureCompositionSectionProps } from "@/components/legislature/types";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { MembersData } from "./useLegislatureData";
 import { legislatureCompositionData } from "./legislaturePresentation";
 import { LegislatureRowsSkeleton } from "./LegislaturePageShell";

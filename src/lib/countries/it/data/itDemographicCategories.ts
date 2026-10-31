@@ -1,21 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * Italy Voter Archetypes — 7 groups across the 1979 First-Republic spectrum.
- *   defaultEconomicLean: -5 (statist/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (secular/liberal) … +5 (traditional/Catholic)
- * demographicProfileId "it_archetypes"; category _id "it_voterGroups".
- */
-export const IT_VOTER_GROUP_BASELINES: Record<string, number> = {
-  catholic_dc: 90,
-  industrial_north: 90,
-  communist_worker: 90,
-  socialist: 88,
-  southern_client: 86,
-  secular_liberal: 90,
-  youth_radical: 78,
-};
-
 export const itDemographicCategories: DemographicCategory[] = [
   {
     _id: "it_voterGroups",

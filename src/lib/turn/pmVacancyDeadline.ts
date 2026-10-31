@@ -45,11 +45,11 @@ export async function processPMVacancyDeadlines(
     if (currentTurn < gov.pmVacancyDeadlineTurn) continue;
 
     try {
-      await triggerSnapElection(db, countryId, gameNow, {
+      const snap = await triggerSnapElection(db, countryId, gameNow, {
         reason: "auto-snap",
         bypassLimits: true,
       });
-      autoSnapsFired.push(countryId);
+      if (snap.electionsSpawned > 0) autoSnapsFired.push(countryId);
     } catch (err) {
       logger.error("Turn", `Auto-snap failed for ${countryId}`, err);
     }

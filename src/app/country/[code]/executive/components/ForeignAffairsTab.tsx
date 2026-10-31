@@ -1,6 +1,6 @@
 "use client";
 
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { DeclareWarPanel } from "../cabinet/[positionId]/office/components/military/DeclareWarPanel";
 import { PeacePanel } from "../cabinet/[positionId]/office/components/PeacePanel";
 

@@ -212,6 +212,18 @@ export interface GameConfig {
    */
   producerStockCover?: number;
   /**
+   * Funded producer market: a private company short of cash may owe wages and
+   * site bills until its payables reach this many turns of its full wage and
+   * site bill (producerCreditRules). Absent = the rule's default (2); 0 = no
+   * credit, companies run on cash only.
+   */
+  producerCreditRunTurns?: number;
+  /**
+   * Funded producer market: credit stops once a company's payables have gone
+   * this many turns without shrinking. Absent = the rule's default (4).
+   */
+  producerCreditStuckTurns?: number;
+  /**
    * Funded producer market: >= 1 floors each buyer's reference price for a
    * reachable good at the last funded clearing price (capped at 3x), so a country
    * whose lagged price signal is stale can still compete in a short market.
@@ -247,6 +259,16 @@ export interface GameConfig {
    */
   producerCaptiveDeliveryStage?: number;
   /**
+   * Funded producer market: >= 1 plans each product of a multi-product plant
+   * on its own and runs the plant at the highest product plan whose sold lines
+   * pay the plant's running cost per unit, never below the summed plan, so a
+   * glut in a cheap product no longer cuts a sold-out dear one. One-product
+   * plants are unchanged. >= 2 weighs that run against its marginal cost:
+   * the idle upkeep a plant owes at any run is left out of the test. 0 or
+   * absent = off.
+   */
+  producerJointRunStage?: number;
+  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price
@@ -260,6 +282,32 @@ export interface GameConfig {
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
   producerIdleRetireStage?: number;
+  /**
+   * Whole plants: >= 1 keeps every sector's capacity at a whole number of
+   * plants (wear and credit counters, whole-plant build steps). Flip between
+   * turns, after the conversion has run. 0 or absent = off.
+   */
+  wholePlantsStage?: number;
+  /**
+   * Funded producer market transition package (classification of over-built
+   * sectors at the opening, struggling marks, support and free conversion for
+   * 48 turns after the switch). Absent or true = on. False = no package: an
+   * economy rebuilt from the seed has nothing to land softly, so its window is
+   * treated as already closed and idle retirement runs from the first turn.
+   */
+  producerTransitionPackageEnabled?: boolean;
+  /**
+   * Funded producer market: between 0 and 1, the remaining build time of each
+   * outstanding order in a plant whose output is short (measured on the
+   * funded book) is multiplied by this once. Absent or 1 = off. A fresh world
+   * starts far short of real demand, and 24 to 96 turn builds leave it short
+   * for days; the economy-only reset sets this.
+   */
+  producerShortageBuildFactor?: number;
+  /** Funded-turn price pace: largest per-turn move of a scarcity multiplier. Absent = 0.06. */
+  producerPriceMaxMove?: number;
+  /** Funded-turn price ceiling: largest scarcity multiplier. Absent = 10. */
+  producerPriceMaxMultiplier?: number;
   /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
@@ -309,6 +357,22 @@ export interface GameConfig {
    */
   fundedHeadcountStage?: number;
   /**
+   * Equity cashout limits: 1 caps the price the system equity pool pays for new
+   * shares (no sentiment premium, no more than book or 15x trailing earnings per
+   * share), caps one company's pool placements at its book equity per 48 turns,
+   * and counts a borrower's shares in a company they control at the lower of
+   * book and half the quote toward their credit line. 0 or absent = off.
+   */
+  equityCashoutLimitsStage?: number;
+  /**
+   * Funded producer path: 1 values each funded sector for the share price and
+   * credit rating on its settled earnings (floored at the paid basis of its
+   * capacity) instead of the legacy nameplate P&L, and reads the share price
+   * growth premium from real output sold rather than nominal value. 0 or
+   * absent = off.
+   */
+  fundedValuationStage?: number;
+  /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.
    */
@@ -321,27 +385,6 @@ export interface GameConfig {
   mediaOperatingModelsEnabled?: boolean;
   /** Media ownership limits and censorship effects in the advertising market. Default off. */
   mediaRegulationEnabled?: boolean;
-  /**
-   * Sovereignty transitions (decolonization). Absent/false ⇒ the phase is a
-   * no-op, which is the required default: the evaluator returns a "strong
-   * default to resolve" score once a rule is PAST its historical window, so an
-   * ungated phase in a modern-era world would immediately re-apply every
-   * independence that already happened. Only meaningful in a world whose
-   * in-game year is inside the decolonization era.
-   */
-  worldTransitionsEnabled?: boolean;
-  worldTransitionsEnabledBy?: string;
-  worldTransitionsEnabledAt?: string;
-  /**
-   * Bretton Woods exit: gold-convertibility suspension and the managed float that
-   * follows (see src/lib/monetary/brettonWoods.ts). Absent/false is byte-identical
-   * to the pegged world — no gold cover is tracked, no regime is written, band and
-   * drift keep their current constants. Only meaningful in a world that actually
-   * reaches ~1971 in game-time.
-   */
-  brettonWoodsExitEnabled?: boolean;
-  brettonWoodsExitEnabledBy?: string;
-  brettonWoodsExitEnabledAt?: string;
   /** Who last toggled the command-economy regime. */
   commandEconomyEnabledBy?: string;
   /** When the command-economy regime was last toggled. */
@@ -376,35 +419,12 @@ export interface GameConfig {
   bankConstructionAdmissions?: import("@/lib/banking/constructionAdmission").ConstructionAdmission[];
   bankConstructionAdmissionClosing?: boolean;
   bankConstructionAdmissionClosingToken?: string;
-  /** Enable funded sovereign-bill holdings for private bank treasuries. Default off. */
-  bankTreasuryEnabled?: boolean;
-  /** Fund unplaced sovereign units from investment-bank vault cash. Default off. */
-  bankSovereignPrimaryEnabled?: boolean;
   /** Experimental funded spendable government-cash ledger. Absent means off. */
   treasuryCashLedgerEnabled?: boolean;
-  /**
-   * Gate on player-chartered ADVANCED bank types. When absent/false, players may
-   * only charter (or switch to) a RETAIL bank; investment and universal charters
-   * are withheld until this is turned on. Existing charters are grandfathered —
-   * this only gates creation and type switches.
-   */
-  playerAdvancedBankChartersEnabled?: boolean;
-  /**
-   * Gate on players SPONSORING their own index funds. When absent/false, the
-   * default (system) funds still trade normally, but a corporation cannot
-   * charter a new sponsored fund. Independent of `indexFundsMode`.
-   */
-  playerFundSponsorshipEnabled?: boolean;
   /** Kill switch: investment-bank proprietary trading (incl. leveraged forex). Default on when banking is on. */
   bankPropTradingEnabled?: boolean;
-  /** Size-priced forex prop orders and their fee journal. Default off. */
-  bankPropForexFeesEnabled?: boolean;
-  /** Funded corporate primary-market underwriting fees. Default off. */
-  bankUnderwritingEnabled?: boolean;
   /** Kill switch: bank-failure contagion cascade. Default on when banking is on. */
   bankContagionEnabled?: boolean;
-  /** Funded bank failures affect approval and consumer confidence. Default off. */
-  bankFailurePoliticsEnabled?: boolean;
   /** Funded plant construction loans. Off unless explicitly enabled. */
   bankConstructionFinanceEnabled?: boolean;
   /**
@@ -566,6 +586,16 @@ export interface GameConfig {
   freightSettlementRampStartTurn?: number;
   freightSettlementRampTurns?: number;
   /**
+   * Timed economy-only pause, for the stretch right after an economy reset.
+   * Economy phases are skipped on every turn number strictly below it (see
+   * `getEconomyPausePredicate` in src/lib/turn/economyPause.ts): politics,
+   * elections, campaigns, parties and legislation keep running while prices,
+   * corporations, banking and the ledger hold. The window ends by itself, since
+   * the turn numbered `economyPauseUntilTurn` runs the economy normally. Absent
+   * or null means no pause.
+   */
+  economyPauseUntilTurn?: number | null;
+  /**
    * SIM-ONLY turn-phase profile (headless worldsim; never set in prod).
    * "elections-only" makes processTurn() skip the economy/finance/ledger
    * phases (see ELECTIONS_SKIP_PHASES in src/simulation/phases/simTurnProfiles.ts)
@@ -620,6 +650,12 @@ export interface GameConfig {
    */
   marketRecoveryStage?: number;
   /**
+   * Dynamic fiscal scale stage, advanced one per turn by an operator after a
+   * one-turn health check; lowering it rolls a stage back. See
+   * src/lib/budget/rules/fiscalScale.ts. Unset or 0 changes nothing.
+   */
+  fiscalScaleStage?: number;
+  /**
    * Run the unified producer market in memory each turn beside the live engine
    * and record a per-industry comparison in `producerMarketShadows`. Telemetry
    * only: moves no money and writes no sector or corporation.
@@ -637,12 +673,6 @@ export interface GameConfig {
    * (migrateEntertainmentRemoval). Present means later turns skip it.
    */
   entertainmentCommodityRemovedAtTurn?: number;
-  /**
-   * When true, outstanding build orders in sectors whose output is in deep
-   * shortage have their remaining build time halved, once per order. See
-   * turn/corporation/sectorTurn/shortageBuildSpeedup.ts.
-   */
-  shortageBuildSpeedupEnabled?: boolean;
   /**
    * Money wiring (interstate-logistics plan step 5, phase A): when true, a
    * sector's input bill adds the landed-price premium for out-of-state
@@ -824,15 +854,6 @@ export interface GameConfig {
    */
   nppCorpsAttackable?: boolean;
   /**
-   * Whether NPP-run corporations may launch SECTOR ATTACKS against owned
-   * sectors (economic aggression). DEFAULT OFF — decoupled from the political
-   * NPP-autonomy tier so raising autonomy (e.g. v3 for government formation)
-   * does NOT also unleash corporate attacks. At the current stage NPP corps
-   * only expand into UNOWNED market; flip this on to allow aggression (the
-   * per-country nppAutonomyAtLeast(v2) gate still applies on top).
-   */
-  nppCorporateAttacksEnabled?: boolean;
-  /**
    * Launch guard (automated kill switch, opt-in). When `marketGuardEnabled` and
    * the mode is clearing/capital, the turn stamps a reference market cap and
    * auto-reverts to `ledger` if aggregate mcap falls more than `marketGuardDropPct`
@@ -956,6 +977,8 @@ export interface GameConfig {
    * manual IP bans apply.
    */
   ipCollisionCheckEnabled?: boolean;
+  /** Ops gate for future character creation. Absent means off; existing characters stay playable. Preserved across world resets. */
+  discordLinkRequiredForCharacter?: boolean;
   /** Username of the admin who last flipped the collision check. */
   ipCollisionCheckEnabledBy?: string;
   /** When the collision check was last enabled (ISO 8601). */
@@ -1013,6 +1036,11 @@ export interface GameConfig {
   contractIssuanceEnabledUpdatedBy?: string;
   /** When contract issuance was last toggled (ISO 8601). */
   contractIssuanceEnabledUpdatedAt?: string;
+
+  /** Global government-contract kill switch. Missing means enabled. Only new
+   * tenders, bids, awards and offer acceptance are gated; existing settlement,
+   * delivery, expiry and cancellation continue. Preserved with gameConfig. */
+  governmentContractsEnabled?: boolean;
 
   /**
    * Unified action audit spine master flag (forensics/alt-detection rework

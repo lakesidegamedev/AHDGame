@@ -1,3 +1,8 @@
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+  netStockProceeds,
+} from "@/lib/budget/stockSaleWithholding";
 /**
  * Durable, crash-aware execution of an agreed-acquisition payout (shell: loads
  * documents, calls the pinned plan in `rules/acquisitionPayoutPlan.ts`, writes
@@ -152,6 +157,42 @@ export async function claimAcquisitionSettlement(
   spec: ClaimSpec
 ): Promise<{ settlement: AcquisitionSettlement; fresh: boolean }> {
   const now = new Date();
+  const taxableLegs = spec.plan.legs.filter(
+    (leg) =>
+      leg.stockTaxReceipt &&
+      (leg.collection === "characters" || leg.collection === "imperialCharacters")
+  );
+  const contexts = await loadStockWithholdingContexts(
+    db,
+    taxableLegs.map((leg) => ({
+      id: new ObjectId(leg.id),
+      collection: leg.collection as "characters" | "imperialCharacters",
+    })),
+    taxableLegs[0]?.stockTaxReceipt?.saleTurn ?? 0
+  );
+  const storedLegs = spec.plan.legs.map((leg) => {
+    const stored = toStoredLeg(leg);
+    if (stored.stockTaxReceipt) {
+      const receipt = withholdStockReceipt(
+        stored.stockTaxReceipt,
+        contexts.get(leg.collection + ":" + leg.id)
+      );
+      stored.stockTaxReceipt = receipt;
+      const path = receipt.withholding?.context.sourcePath;
+      if (path) {
+        if (stored.inc[path] !== receipt.amount)
+          throw new AcquisitionSettlementConflictError(
+            "Stock withholding does not match the payout wallet"
+          );
+        stored.inc[path] = netStockProceeds(stored.inc[path], receipt);
+      }
+      stored.ledgers = stored.ledgers.map((entry) => ({
+        ...entry,
+        meta: { ...entry.meta, stockTax: receipt },
+      }));
+    }
+    return stored;
+  });
   const doc: AcquisitionSettlement = {
     _id: spec.offerId,
     key: spec.plan.key,
@@ -167,7 +208,7 @@ export async function claimAcquisitionSettlement(
     priceAnchor: spec.priceAnchor,
     priceInAcquirerCapital: spec.priceInAcquirerCapital,
     acquirerCurrency: spec.acquirerCurrency,
-    legs: spec.plan.legs.map(toStoredLeg),
+    legs: storedLegs,
     refundTotal: 0,
     sectorTotal: spec.sectorTotal,
     sectorsMoved: 0,

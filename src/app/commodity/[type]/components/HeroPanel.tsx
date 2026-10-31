@@ -1,14 +1,14 @@
 "use client";
 
 import { HeroImage } from "@/components/HeroImage";
-import { COMMODITY_HERO_SLUGS, COMMODITY_HERO_ALTS } from "@/lib/constants/commodities";
-import type { CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_HERO_SLUGS, COMMODITY_HERO_ALTS } from "@/lib/constants/commoditiesCore";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { formatCurrencyPrecise } from "@/lib/utils/formatters";
 import BackButton from "@/components/BackButton";
 import { formatUnits } from "../lib/helpers";
 import type { CommodityDetail } from "../types";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { isStateRegister } from "@/lib/constants/exchangeRegistry";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -19,6 +19,7 @@ import {
 import { postImportBalance } from "@/lib/trade/postImportGap";
 import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
+import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 
 interface HeroPanelProps {
   data: CommodityDetail;
@@ -47,10 +48,10 @@ export default function HeroPanel({
   const exchangeTabs = useMemo<{ countryId: CountryId; label: string }[]>(
     () =>
       registered
-        .filter((id) => !!COUNTRY_CONFIGS[id]?.exchangeName && !isStateRegister(id))
+        .filter((id) => !!COUNTRY_DISPLAY_LABELS[id]?.exchangeName && !isStateRegister(id))
         .map((id) => ({
           countryId: id,
-          label: (COUNTRY_CONFIGS[id]?.exchangeName ?? id).toUpperCase(),
+          label: (COUNTRY_DISPLAY_LABELS[id]?.exchangeName ?? id).toUpperCase(),
         })),
     [registered]
   );
@@ -145,6 +146,9 @@ export default function HeroPanel({
                 {data.label}
               </h1>
             </div>
+            <div className="ml-auto">
+              <WatchButton kind="commodity" id={data.commodity} tone="image" />
+            </div>
           </div>
         </div>
       </div>
@@ -177,7 +181,7 @@ export default function HeroPanel({
                 {marketScope.regionCount}
               </span>
               <span className="text-xs text-muted">
-                {COUNTRY_CONFIGS[activeCountry].regionLabelPlural}
+                {COUNTRY_DISPLAY_LABELS[activeCountry].regionLabelPlural}
               </span>
             </>
           ) : (

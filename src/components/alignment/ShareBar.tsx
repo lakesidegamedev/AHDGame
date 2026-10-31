@@ -7,7 +7,7 @@ import { alignmentColor } from "@/lib/constants/alignmentColors";
  * Static token → class maps. Tailwind scans source text, so an interpolated
  * `bg-${token}` would be purged and the bar would render colourless.
  */
-export const POLE_BG: Record<AlignmentPoleToken, string> = {
+const POLE_BG: Record<AlignmentPoleToken, string> = {
   info: "bg-info",
   error: "bg-error",
   warning: "bg-warning",

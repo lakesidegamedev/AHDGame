@@ -68,6 +68,125 @@ const OPERATING_CASH_LANES = 8;
 /** Corporations per batched net receipt; bounds one journal document. */
 const NET_BATCH_SIZE = 64;
 
+/** One corporation in an operating-loss wave, decided from this turn's snapshot. */
+type OperatingLossMember = {
+  corpId: string;
+  quote: OperatingCashQuote;
+  /** Loss this turn's available cash pays. */
+  paidLoss: number;
+  /** Loss this turn's cash cannot cover, recorded as a payable. */
+  shortfall: number;
+};
+
+/**
+ * The book that replaces one loss receipt and one tax-arrears receipt per
+ * corporation with a single move.
+ *
+ * A corporation whose cash cannot fund its net never reaches the net batch.
+ * For it the withholding guard can only fail: once the loss takes the cash it
+ * has, it cannot also hold the tax, so the per-corporation protocol wrote a
+ * refused withholding and then a payable. The balances are the same whether
+ * the loss and the payable are one receipt or three, so the wave pays each
+ * loss and states each payable as a projection on the same receipt.
+ *
+ * Each corporation appears in exactly one leg, which is what lets the journal
+ * write the whole book's cash in one pass: `batchIndependentDebits` refuses a
+ * repeated target. A corporation whose cash covers only part of its loss pays
+ * what it has, and the remainder is the projection the serial path recorded.
+ * The book carries no Treasury leg: every member's withholding is unfunded by
+ * construction, so nothing reaches the Treasury from this move.
+ */
+function operatingLossBatchTransition(args: {
+  members: readonly OperatingLossMember[];
+  key: string;
+  turn: number;
+  now: Date;
+}): BankingTransition {
+  const { members, key, turn, now } = args;
+  const sourceCurrency = members[0].quote.sourceCurrency;
+  const valuation = {
+    currencyCode: sourceCurrency,
+    localPerAnchor: members[0].quote.sourceLocalPerAnchor,
+  };
+  const legs: BankingTransition["legs"] = [];
+  const projections: BankingTransition["projections"] = [];
+  const corporationIds: string[] = [];
+  let paidTotal = 0;
+  for (const member of members) {
+    const { corpId, quote } = member;
+    corporationIds.push(corpId);
+    // The payables this corporation owes land in the same write as the cash it
+    // pays, which is the journal's own contract for a balance and its counters:
+    // one write, or neither. A corporation with no cash to pay has no debit to
+    // carry them, so its payables keep a projection of their own.
+    const inc: Record<string, number> = {};
+    const set: Record<string, unknown> = {};
+    if (member.shortfall > 0) {
+      inc[`operatingCashArrearsByCurrency.${sourceCurrency}`] = member.shortfall;
+      set[`operatingCashArrearsLastTurnByCurrency.${sourceCurrency}`] = turn;
+    }
+    // Withholding this cash cannot fund becomes the same payable the refused
+    // withholding receipt used to record.
+    for (const [country, amountAnchor] of quote.taxByCountryAnchor) {
+      if (!(amountAnchor > 0)) continue;
+      inc[`federalTaxArrearsAnchorByCountry.${country}`] = amountAnchor;
+      set[`federalTaxArrearsLastTurnByCountry.${country}`] = turn;
+    }
+    if (member.paidLoss > 0) {
+      paidTotal += member.paidLoss;
+      legs.push({
+        kind: "debit",
+        amount: member.paidLoss,
+        valuation,
+        collection: "corporations",
+        filter: { _id: oid(corpId), liquidCapital: { $gte: member.paidLoss } },
+        path: "liquidCapital",
+        ...(Object.keys(inc).length > 0 ? { inc } : {}),
+        ...(Object.keys(set).length > 0 ? { set: { ...set, updatedAt: now } } : {}),
+        note: "Pay modeled operating costs from available corporation cash",
+      });
+      continue;
+    }
+    if (Object.keys(inc).length > 0) {
+      projections.push({
+        collection: "corporations",
+        filter: { _id: oid(corpId) },
+        update: { $inc: inc, $set: { ...set, updatedAt: now } },
+        note: "Record this turn's operating shortfall and unfunded withholding as payables",
+      });
+    }
+  }
+  if (paidTotal > 0) {
+    legs.push({
+      kind: "burn",
+      amount: paidTotal,
+      valuation,
+      note: "Settle funded operating costs outside the corporations",
+    });
+  }
+  return {
+    key,
+    kind: "corporate_operating_loss_batch",
+    turn,
+    currency: sourceCurrency,
+    legs,
+    // One debit per corporation and no shared target, so the journal delivers
+    // the book's guarded debits in fixed round trips.
+    batchIndependentDebits: true,
+    projections,
+    event: {
+      kind: "monetary.executed",
+      command: "turn.corporation.operatingLossBatch",
+      subjectType: "corporation",
+      subjectId: corporationIds[0],
+      amount: paidTotal,
+      // A comma-joined list: event meta holds scalars, and the next pass reads
+      // it back to fence the members of a claimed book.
+      meta: { corporationIds: corporationIds.join(","), sourceCurrency },
+    },
+  };
+}
+
 /**
  * Settle modeled gross operating receipts before federal withholding. These
  * are separate durable receipts because the settlement journal applies
@@ -883,6 +1002,106 @@ async function settleCorporateOperatingCashBatched(
     );
     if (settled.status !== "applied" && settled.status !== "replayed") {
       throw new Error(settled.error ?? `Corporate net operating batch ${key} is incomplete`);
+    }
+  });
+
+  // The other large cohort: corporations whose cash cannot fund their net. The
+  // serial protocol gives each of them a loss receipt, a withholding receipt
+  // that its own guard refuses, and a tax-arrears receipt, so a downturn costs
+  // a dozen round trips per corporation. Claimed waves resume first and fence
+  // their members out, exactly as the net batches do above.
+  const lossBatchPrefix = `corp-operating-loss-batch:${turn}:`;
+  const claimedLossBatches = await journals
+    .find({ _id: { $regex: `^${lossBatchPrefix}` } }, { projection: { _id: 1, event: 1 } })
+    .toArray();
+  const lossBatchedCorpIds = new Set<string>();
+  for (const row of claimedLossBatches as unknown as {
+    _id: string;
+    event?: { meta?: { corporationIds?: string | string[] } };
+  }[]) {
+    // The members are fenced like the net batch's, so a resumed wave is the
+    // only receipt they ever get this turn.
+    const members = row.event?.meta?.corporationIds;
+    const ids = Array.isArray(members) ? members : (members ?? "").split(",").filter(Boolean);
+    for (const id of ids) {
+      lossBatchedCorpIds.add(id);
+      batchedCorpIds.add(id);
+    }
+  }
+  await runInLanes(
+    claimedLossBatches.map((row) => row._id),
+    lanes,
+    async (key) => {
+      const resumed = await treasuryLock.run(allTreasuryKeys, () => resumeSettlement(db, key));
+      if (resumed.status !== "applied" && resumed.status !== "replayed") {
+        throw new Error(resumed.error ?? `Corporate operating loss batch ${key} is incomplete`);
+      }
+    }
+  );
+
+  const lossBatchable = new Map<string, OperatingLossMember[]>();
+  for (const snapshot of snapshots) {
+    const id = snapshot.corpId.toString();
+    if (snapshotCount.get(id) !== 1 || batchedCorpIds.has(id) || lossBatchedCorpIds.has(id))
+      continue;
+    const baseKey = `corp-operating-cash:${turn}:${id}`;
+    if (
+      [baseKey, `${baseKey}:net`, `${baseKey}:gross`, `${baseKey}:tax`, `${baseKey}:arrears`].some(
+        (key) => existingKeys.has(key)
+      )
+    )
+      continue;
+    const corp = corporationById.get(id);
+    // Prior payables settle before this turn's loss, so those keep their own
+    // ordered receipts.
+    if (
+      Object.values(corp?.operatingCashArrearsByCurrency ?? {}).some((amount) => amount > 0) ||
+      Object.values(corp?.federalTaxArrearsAnchorByCountry ?? {}).some((amount) => amount > 0)
+    )
+      continue;
+    let quote: OperatingCashQuote;
+    try {
+      quote = freshQuote(snapshot);
+    } catch {
+      // The corporation's own receipts below report the missing quote.
+      continue;
+    }
+    // Only the loss shape: this turn's receipts do not cover the withheld tax,
+    // so the corporation's whole operating cash figure is a cost. A corporation
+    // whose gross is positive first receives that gross through a credit
+    // receipt, which cannot share a move with another corporation's debit.
+    if (!(Number.isFinite(quote.grossLocal) && quote.grossLocal < 0)) continue;
+    const cash = cashByCorpId.get(id) ?? 0;
+    if (!(cash >= 0)) continue;
+    if (!quote.taxByCountryAnchor.every(([, amount]) => amount >= 0)) continue;
+    const loss = -quote.grossLocal;
+    const paidLoss = Math.min(loss, cash);
+    const member: OperatingLossMember = {
+      corpId: id,
+      quote,
+      paidLoss,
+      shortfall: loss - paidLoss,
+    };
+    // One wave per source currency and rate: the book's valuation and its burn
+    // are shared, and its debits are all in that currency.
+    const group = `${quote.sourceCurrency}|${quote.sourceLocalPerAnchor}`;
+    lossBatchable.set(group, [...(lossBatchable.get(group) ?? []), member]);
+  }
+  const lossWaves = [...lossBatchable.values()].flatMap((members) =>
+    Array.from({ length: Math.ceil(members.length / NET_BATCH_SIZE) }, (_, i) =>
+      members.slice(i * NET_BATCH_SIZE, (i + 1) * NET_BATCH_SIZE)
+    )
+  );
+  for (const members of lossWaves) for (const member of members) batchedCorpIds.add(member.corpId);
+  await runInLanes(lossWaves, lanes, async (members) => {
+    const ids = members.map((member) => member.corpId);
+    const key = `${lossBatchPrefix}${createHash("sha256").update(ids.join(",")).digest("hex").slice(0, 32)}`;
+    const settled = await settleTransition(
+      db,
+      operatingLossBatchTransition({ members, key, turn, now })
+    );
+    if (settled.status !== "applied" && settled.status !== "replayed") {
+      throw new Error(settled.error ?? `Corporate operating loss batch ${key} is incomplete`);
     }
   });
 

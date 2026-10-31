@@ -4,7 +4,7 @@ import { ContractBoardLink } from "@/components/governmentContracts/ContractBoar
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";

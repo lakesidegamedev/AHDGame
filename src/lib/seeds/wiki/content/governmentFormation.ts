@@ -1,126 +1,69 @@
 export const governmentFormationContent = `# Government Formation
 
-In parliamentary countries (UK, JP, DE, and IE), elections don't automatically produce a government. After the lower chamber results are in, parties must negotiate and win a confidence vote to seat a Prime Minister, Chancellor in DE, or Taoiseach in IE. This page covers that process from election night through a functioning government.
+In parliamentary countries (UK, Japan, Germany, Ireland) an election does not hand anyone a government. Until a Prime Minister (Chancellor in Germany, Taoiseach in Ireland) is seated, no bills can be proposed, and if nobody wins within 96 turns a snap election is called. A party or coalition chair nominates, and the lower chamber votes on it for 24 hours.
 
-## Which countries use this
+## After the count
 
-| Country | Government type | Formation process |
-| --- | --- | --- |
-| US | Presidential | President elected directly; no formation vote |
-| UK | Parliamentary | PM must hold confidence of Commons |
-| JP | Parliamentary | PM must hold confidence of Shūgiin |
-| DE | Parliamentary | Chancellor must hold confidence of Bundestag |
-| IE | Parliamentary | Taoiseach must hold confidence of Dáil |
+Each country's government is either **formed** (a PM is seated and legislation proceeds) or **pending** (no PM, legislation frozen). The route from one to the other:
 
-These mechanics apply to any parliamentary-style country (parliamentary monarchies, parliamentary republics, and one-party states) that uses a confidence-vote mechanism. Parliamentary monarchies and republics use one by default; one-party states don't, so the freeze does not apply to CN.
+1. **Election resolves.** The turn processor updates each party's seat count. A snap election unseats the PM when it is called, so the government is already pending when the results come in (see [Snap Elections](/wiki/snap-elections)). After a scheduled election a sitting PM stays in office and faces a confidence motion.
+2. **Confidence motion for the incumbent.** If the sitting PM kept their seat, a confidence motion is filed automatically and runs 24 hours while the PM stays in office. It passes if Aye is at least Nay, so a tie keeps the PM. If it fails, the PM is removed and the government goes pending. If the incumbent lost their seat, no motion is filed.
+3. **Nominations.** A qualifying chair files a PM appointment vote. Each vote runs 24 hours, and several can run at once (one per party or coalition). All lower-chamber members can vote Aye or Nay, or stay out of it.
+4. **Seating.** The first appointment vote to finish with more Aye than Nay seats its nominee and cancels the others. Government becomes formed, the freeze lifts the next turn, and the vacancy clock clears. The new PM then appoints ministers directly and the old cabinet is cleared (see [Cabinet](/wiki/cabinet)).
 
-## Government status
+![Government formation from the election result through the confidence motion or appointment votes to a seated PM or a snap election after 96 turns.](/wiki-images/diagrams/government-formation-flow.svg)
 
-Each country's government is tracked as either formed or pending:
+| Item | Value |
+| --- | --- |
+| Appointment or confidence vote | 24 hours |
+| Appointment pass rule | More Aye than Nay among votes cast |
+| Confidence motion pass rule | Aye at least equal to Nay |
+| Majority of the chamber | Half the seats, rounded down, plus one (326 of 650) |
+| Minimum seats to nominate | 15.38% of lower-chamber seats, rounded up (100 of 650 in the UK, 72 of 465 in Japan) |
+| Vacancy clock | 96 turns (96 real hours, 4 days), then a snap election |
+| Legislation freeze | From pending until the turn after a PM is seated |
 
-- **Formed**: A PM is seated and the government is active. Legislation proceeds normally.
-- **Pending**: No PM is seated. The government is in formation. Legislation is **fully frozen**.
+## Who can nominate
 
-## The legislation freeze
+Only a **party chair** (or vice chair when the chair seat is empty) or a **coalition chair** can file an appointment vote, and only if their party or coalition holds at least the minimum seats and has at least one player MP. Coalition chairs can nominate and bring partner seats to the vote (see [Coalitions](/wiki/coalitions)). The nominee must be a player character who sits in the lower chamber for the nominating party or one of the coalition's parties. A party with a majority files a majority government; one with fewer than half but above the minimum files a minority bid. Minority bids are allowed even when another bloc holds a majority, and the chamber simply votes them down if it wants to.
 
-While the government is pending:
+In [one-party states](/wiki/one-party-states) only the ruling party's chair, or the chair of a coalition led by the ruling party, can nominate a head of government. Presidential countries such as the US have no formation vote.
 
-- No new bills can be proposed in the lower chamber
-- Cabinet bills cannot be proposed or voted on
-- Bills already in progress stay paused in their current status
-- The freeze lifts automatically the turn after a PM is seated
+NPP MPs in the nominee's party, or in the nominee's coalition, vote Aye automatically. A party whip on the vote overrides that. NPPs in other parties cast no vote on an ordinary appointment, so they do not count against the bid. On a confidence motion, NPPs outside the PM's side vote Nay by default. NPPs do not weigh the nominee's ideology or favorability here. In countries closed to players, NPP autonomy fills a stalled prime minister seat from level 0, and from level 1 NPP heads of government form their own cabinets (see [npp-autonomy](/wiki/npp-autonomy)). Player countries always seat a PM through the vote.
 
-This freeze is intentional: governments don't legislate without a mandate.
+## Counting seats in a 650 seat Commons
 
-## How formation works after an election
+After an election: Party A 300 seats, Party B 280, Party C 70. Majority is 326, and the minimum to nominate is 100.
 
-When a lower-chamber general election resolves:
+- A's chair can nominate and B's chair can nominate. C (70) cannot nominate alone.
+- A files a vote for its leader. A's 300 seats vote Aye (its NPP seats automatically; its players by choice). B's players vote Nay, but B's NPP seats cast nothing. A leads and wins if Aye beats Nay, even with only 300 seats in favour, because abstaining and silent seats do not count.
+- A better bid is a coalition: if A and C agree, the coalition chair files for 370 seats, a clear majority. The PM's coalition and partner parties are recorded.
 
-### Step 1: seat count update
+Tips: count to 326 (or your chamber's majority) before you file; a bid with more Aye than Nay wins even without a chamber majority, so keep opponents' players from turning out.
 
-The turn processor reads the election results and updates each party's seat count. This determines who has the numbers to form a government.
+## What you can do
 
-### Step 2: confidence motion for incumbent PM (if applicable)
+- **File a PM appointment vote** from the executive page (10 Downing Street in the UK, under the Nation menu) if you chair a qualifying party or coalition.
+- **Vote** on any open appointment vote if you are a lower-chamber member.
+- **Whip** your party's NPP seats on the vote, if you are its chair, vice chair or chamber leader.
+- **Negotiate** a coalition with other party chairs before filing. Coalition terms are agreed between players, in game or out of it.
+- **Watch** the executive page for status, the sitting PM, open votes with live tallies and time left, and the seat distribution.
 
-If the current PM **retained their seat** in the election, the system automatically files a **Confidence Motion**, a special PM appointment vote tied to the incumbent. The PM stays in office during the 24-hour vote window.
+## While there is no PM
 
-- If the motion **passes**, the PM continues. Sibling appointment votes are cancelled.
-- If the motion **fails** (and no alternative PM has been seated), the PM is removed, government status returns to pending, and the legislation freeze activates. The 96-turn vacancy clock arms.
-- If the incumbent **lost their seat**, no confidence motion is filed. The government enters a pending state and the vacancy clock arms.
+While pending, no new bills or cabinet bills can be proposed and cabinet bill votes are blocked. This applies to every parliamentary country, including one-party states that seat a head of government through the same route. In the UK, Japan and most other parliamentary countries, bills already in progress also stay paused in their current status; in Germany, Ireland and the one-party states they keep moving through their votes (see [Bills & Legislation](/wiki/bills-legislation)).
 
-### Step 3: PM appointment votes
+- **Why is the country stuck with no PM?** No qualifying chair has filed, or the bids keep losing. After 96 turns a snap election is called.
+- **How do I become PM?** Be nominated by a qualifying party or coalition chair, then win the vote.
+- **What can I do while legislation is frozen?** Negotiate, nominate, vote and whip. Everything else waits for a PM.
 
-Any eligible character can be nominated as PM by filing a PM appointment vote. Appointment votes:
+### The 96-turn clock
 
-- Last 24 hours each
-- Are voted on by all lower-chamber members (Commons MPs, Shūgiin members, Bundestag members, or TDs)
-- Require a simple majority of votes cast to pass
+Whenever the government goes pending (a snap election being called, the PM losing their seat, a passed [no-confidence vote](/wiki/no-confidence-votes), a failed confidence motion or a resignation) the deadline is set to the current turn plus 96. If no PM is seated by then, a snap election is triggered and the normal limits on PMs calling elections are bypassed. One-party states, which have no snap elections, get no automatic election. A passed appointment vote clears the clock.
 
-Multiple appointment votes can be open simultaneously. The first candidate to reach a majority wins. When one passes, all others are cancelled.
+Appointment votes can also be filed while a no-confidence vote is active against the sitting PM, so the opposition can name a replacement first. A formed government with a sitting PM is what a motion targets. If the no-confidence vote passes, the appointment votes carry on in the new pending period. If it fails, all active appointment votes are cancelled.
 
-### Step 4: PM seated
+Runs in every parliamentary country, including the UK, Japan, Germany and Ireland.
 
-When a PM appointment vote passes:
-
-- The character is installed as PM
-- Their officeholder record is updated
-- Government status becomes formed
-- The legislation freeze lifts next turn
-- The vacancy clock clears
-
-The new PM then builds their cabinet by appointing ministers directly (no Senate confirmation equivalent in parliamentary systems).
-
-## Coalition governments
-
-If no single party holds a Commons or Shūgiin majority, a PM candidate typically needs coalition backing. Coalition formation in the game is an informal negotiation between player party chairs:
-
-1. Party chairs discuss coalition terms in-game or out-of-band
-2. A player from the coalition's leading party files the PM appointment vote
-3. Coalition partner MPs (player and NPP) vote For to provide the majority
-4. If passed, the PM's coalition affiliation and coalition partner parties are recorded
-
-NPP coalition partner MPs vote For based on ideology alignment and favorability toward the nominee: they aren't automatically yes votes just because their chair agreed.
-
-## VONC-parallel nominations
-
-PM appointment votes can also be filed while a Vote of No Confidence (VONC) is active against the sitting PM. This allows the opposition to nominate an alternative before the existing PM is removed:
-
-- Both the VONC and the appointment votes run concurrently
-- If the VONC passes, the incumbent is removed and the appointment votes continue in the new pending window
-- If the VONC fails, all active appointment votes are cancelled
-
-See [No-Confidence Votes](/wiki/no-confidence-votes) for details.
-
-## The 96-turn vacancy clock
-
-Any time the government enters a pending state, post-election, VONC pass, or PM resignation, a 96-turn clock arms: the deadline is set to the current turn plus 96.
-
-96 turns = 96 real hours = approximately 2 game years.
-
-If no PM is seated by the deadline, the game auto-triggers a snap election, bypassing normal PM limits. This is the system's safety valve against indefinite political paralysis.
-
-The clock clears when:
-- A PM appointment vote passes
-- An admin directly appoints a PM
-
-## Post-formation cabinet
-
-After seating as PM, the character can appoint cabinet members directly from the government page. There is no Senate equivalent: parliamentary cabinets are appointed by the PM without a confirmation vote.
-
-## Watching formation in real time
-
-Each parliamentary country's government page shows:
-
-- Current government status (formed or pending)
-- The sitting PM name and party (if formed)
-- Active PM appointment votes and their current tallies
-- Time remaining on appointment votes
-- Seat distribution by party
-
-## Related pages
-
-- [No-Confidence Votes](/wiki/no-confidence-votes): How to trigger and vote on a VONC
-- [Snap Elections](/wiki/snap-elections): What happens when the vacancy clock expires or the PM calls a snap
-- [Bills & Legislation](/wiki/bills-legislation): How the legislation freeze works and when it lifts
-- [Cabinet](/wiki/cabinet): Cabinet positions and how the PM appoints them in parliamentary systems
+Last checked 2026-10-29, version 1.18.0. Exact rules and data: [Parliamentary government design doc](https://docs.lakesidegames.net/design/parliamentary-government.html)
 `;

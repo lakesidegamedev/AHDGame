@@ -2,10 +2,6 @@ import type { GameState } from "@/lib/db/types";
 import { getLatestCompletedTurnRealTime } from "@/lib/turn/turnLogQueries";
 import { resolveTurnCronMinute, turnHourBucket, type TurnCronMinute } from "./turnCronMinute";
 
-export function clockHourBucket(date: Date): number {
-  return turnHourBucket(date, 0);
-}
-
 /**
  * Determines whether the backup turn, half an hour after the scheduled turn, should fire.
  * In normal mode, the backup only fires if no turn completed in the current turn hour.

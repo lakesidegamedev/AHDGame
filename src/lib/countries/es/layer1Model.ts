@@ -17,7 +17,7 @@ import { esRegionCensusData, type ESRegionLayer1 } from "@/lib/seeds/es/esRegion
 import { esRegionCensusData1953 } from "@/lib/seeds/es/esRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const ES_GROUP_IDS = [
+const ES_GROUP_IDS = [
   "conservative_catholic",
   "centrist",
   "socialist_worker",
@@ -205,6 +205,3 @@ export function getEsModel(era: EraId): CountryLayer1Model {
     census: convertCensus(census),
   };
 }
-
-export const esLayer1Model: CountryLayer1Model = getEsModel("1979");
-export const esGroupIds = [...ES_GROUP_IDS];

@@ -555,6 +555,8 @@ export interface Corporation {
   brandColor?: string;
   /** URL to corporation logo (Vercel Blob or local) */
   logoUrl?: string;
+  /** Audit: the controlling parent's CEO last set this AI-run subsidiary's logo. */
+  logoSetByParent?: { byCorporationId: ObjectId; byUserId: ObjectId; at: Date };
   /** Wide banner image for the corporation page hero (CEO-set; Vercel Blob or /api/uploads/... ) */
   headerImageUrl?: string;
   /** Sequential ID for stable URLs (e.g., /corporation/1) */
@@ -847,6 +849,12 @@ export interface Corporation {
    * dilution is applied when the share count changes.
    */
   shareIssuanceProceeds?: number;
+  /**
+   * What the system equity pool paid for this company's new shares, per turn,
+   * over the last 48 turns. Written only while
+   * gameConfig.equityCashoutLimitsStage is on; bounds cumulative placements.
+   */
+  primaryPoolPlacements?: { turn: number; paidLocal: number }[];
   /** When the CEO last sent a shareholder address (12-hour cooldown). */
   lastShareholderAddressAt?: Date;
   /** Guards the CEO quick-dissolve route against duplicate payout submits. */
@@ -1090,6 +1098,13 @@ export interface SectorBuildOrder {
    * `src/lib/corporations/buildDelivery.ts`.
    */
   smooth?: boolean;
+  /**
+   * Whole plants: units in one plant of this order's sector, stamped when the
+   * order was placed or recounted under `gameConfig.wholePlantsStage`. A smooth
+   * order with this set delivers whole plants, never a part-plant slice.
+   * Absent = today's linear slices.
+   */
+  plantUnits?: number;
   /** Paid, secured construction loan. Absent on ordinary cash-funded orders. */
   constructionLoanId?: string;
   constructionClaimId?: string;
@@ -1194,8 +1209,9 @@ export interface CorporateSector {
    * Plants-tier telemetry: the deliberate market-demand run-rate multiplier
    * applied to this sector's production last turn. 1 means no demand cap;
    * lower values mean the plant was held below its physical plan because
-   * recent sales did not support a full run. Display-only, never read back
-   * into the economy.
+   * recent sales did not support a full run. The legacy clearing pass writes
+   * it, or the funded settlement on a funded turn; AI placement and
+   * mothballing read it as physical market saturation.
    */
   demandThrottleFactor?: number | null;
   /**
@@ -1535,6 +1551,13 @@ export interface CorporateSector {
    */
   plantUnitRemainder?: number;
   /**
+   * Whole plants (gameConfig.wholePlantsStage on): wear toward the next plant
+   * coming off, in capacity units, always below one plant. With the stage on,
+   * `plantUnitRemainder` is construction credit that does not produce and
+   * `capitalStock` is always `plantCount` whole plants.
+   */
+  plantWearUnits?: number;
+  /**
    * Plants tier (marketSystemMode >= "plants"): anchors the launch-safety
    * governor's fade-in from the sector's first plants turn, exactly like
    * `clearingStartTurn` does for the clearing leg. Stamped once, on the turn
@@ -1687,6 +1710,8 @@ export interface CorporateSector {
     inventoryRevenue: number;
     /** Inventory carrying cost inside `totalCost`. */
     inventoryCarry: number;
+    /** "funded" when a funded producer receipt wrote the row (only the summary lines are set). */
+    source?: "funded";
     /** Funded market: inputs in output that went to stock unsold this turn, at cost (reported beside profit). */
     stockAddedAtCost?: number;
     /** Funded market: transition floor support received this turn (reported beside profit). */
@@ -1823,6 +1848,18 @@ export interface CorporateSector {
   entertainmentRemovalRescaleApplied?: boolean;
   /** Turn after which a new strategy change is allowed (transition end + cooldown) */
   transitionCooldownUntilTurn?: number | null;
+  /**
+   * Last strategy change made by a controlling parent's CEO on an AI-run
+   * subsidiary (audit). The AI manager does not retool the sector while
+   * `currentTurn < untilTurn`.
+   */
+  parentDirectedStrategy?: {
+    byCorporationId: ObjectId;
+    byUserId: ObjectId;
+    strategyId: string;
+    atTurn: number;
+    untilTurn: number;
+  } | null;
   /** Turn the extraction auto-strategy phase adopted a focused mining strategy here (audit trail). */
   autoStrategyAdoptedAtTurn?: number;
   /** True when transition is running backward toward original strategy (cancel in progress) */

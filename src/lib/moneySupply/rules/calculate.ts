@@ -10,7 +10,8 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
  * both sides inside M2, so they net to zero) with legs that have no M2
  * counterparty at all: sovereign maturities/coupons credit the pool without
  * debiting the treasury, sovereign underwriting debits it without crediting
- * one, `inflowIn` mints toward the target, and `sweepOut` burns back down.
+ * one, and `sweepOut` burns hoarded cash back down. (`inflowIn`, a target
+ * top-up with no payer, is retired; old pools still carry it in `lifetime`.)
  * Counting the raw pool balance therefore turns every 48-turn sovereign
  * maturity wave into explosive money creation followed by near-total
  * destruction (HU 6.36M% then -99.9% at raw turn 96), while the real
@@ -19,7 +20,7 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
  * Netting rule: observed M2 keeps `min(poolCash, max(0, qeIn - qtOut))` —
  * the QE-parked portion, which IS created base money awaiting transmission —
  * and reports the rest as `excludedBondPoolCash`. Under this rule every
- * pool-only leg (maturity/coupon mint, issuance burn, inflow, sweep) leaves
+ * pool-only leg (maturity/coupon mint, issuance burn, sweep) leaves
  * observed M2 exactly unchanged, and QE/QT still move it once. Conserved
  * legs move observed M2 at the holder side instead of netting inside it: a
  * bond purchase lowers observed M2 at once (deposits became a security) and

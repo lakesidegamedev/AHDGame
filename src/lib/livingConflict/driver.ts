@@ -35,7 +35,7 @@ import { advanceCampaignTurn, normalizeCampaignState } from "./campaign";
  * over the pure engine so its logic is testable with a fake db.
  */
 
-export const LIVING_CONFLICT_COLLECTION = "livingConflicts";
+const LIVING_CONFLICT_COLLECTION = "livingConflicts";
 
 /** Who is playing which role in a given conflict, assembled by the caller. */
 export interface ConflictParticipants {

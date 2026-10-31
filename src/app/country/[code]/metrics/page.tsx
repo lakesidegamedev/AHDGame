@@ -18,7 +18,8 @@ import {
   economyUrl,
   politicalMetricsUrl,
 } from "@/lib/urls";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRuntimeCountryConfig } from "@/hooks/useRuntimeCountryConfig";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
@@ -152,7 +153,9 @@ export default function MetricsPage() {
   const { code } = useParams<{ code: string }>();
   const rawCode = code?.toUpperCase() ?? "US";
   const config =
-    rawCode in COUNTRY_CONFIGS ? COUNTRY_CONFIGS[rawCode as CountryId] : COUNTRY_CONFIGS.US;
+    rawCode in COUNTRY_CLIENT_CONFIGS
+      ? COUNTRY_CLIENT_CONFIGS[rawCode as CountryId]
+      : COUNTRY_CLIENT_CONFIGS.US;
   const country = config.id;
   const { config: runtime } = useRuntimeCountryConfig(country);
   const runtimeGovType = runtime?.governmentType ?? config.governmentType;

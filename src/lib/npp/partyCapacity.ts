@@ -8,7 +8,7 @@ import type { CountryId } from "@/lib/constants/countries";
  * rate so one player cannot field an army. Tiers apply in order: `upTo` is the
  * last member count in a tier.
  */
-export const NPP_CAPACITY_TIERS: ReadonlyArray<{ upTo: number; slotsPerMember: number }> = [
+const NPP_CAPACITY_TIERS: ReadonlyArray<{ upTo: number; slotsPerMember: number }> = [
   { upTo: 5, slotsPerMember: 5 },
   { upTo: 10, slotsPerMember: 4 },
   { upTo: 20, slotsPerMember: 3 },
@@ -18,11 +18,11 @@ export const NPP_CAPACITY_TIERS: ReadonlyArray<{ upTo: number; slotsPerMember: n
  * The party-wide ceiling scales with the size of the country, so a big party in
  * the US is not held to the same total as one in a 12-region country.
  */
-export const NPP_CEILING_PER_REGION = 6;
+const NPP_CEILING_PER_REGION = 6;
 /** No country's ceiling falls below this, so small countries keep today's limit. */
-export const NPP_CEILING_FLOOR = 25;
+const NPP_CEILING_FLOOR = 25;
 /** Activity must be recent enough to count toward NPP capacity. */
-export const NPP_ACTIVE_MEMBER_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const NPP_ACTIVE_MEMBER_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 /** A member needs more than a login or a single click to support NPP capacity. */
 export const NPP_ACTIVE_MEMBER_MIN_ACTIONS = 2;
 

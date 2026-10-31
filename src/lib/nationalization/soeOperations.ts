@@ -3,6 +3,8 @@
  * to state metrics and back operating losses from the treasury. Builders are
  * pure (testable without DB); `processSoeOperations` orchestrates the writes.
  */
+import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type {
   Corporation,
@@ -25,7 +27,8 @@ import { sumCorporateSectorConstructionInProgress } from "@/lib/bonds/corporateC
 import type { CorpSnapshot, SoeBackingSnapshot } from "@/lib/turn/corporation/types";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { isStateOwned } from "./nationalCorporation";
-import { plantCapacityDeltaPipeline } from "@/lib/corporations/plantLedger";
+import { plantChangePipeline } from "@/lib/corporations/plantLedger";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
 import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffectBridge";
@@ -111,7 +114,7 @@ type MetricBulkOp = {
  * once the sector is sold or shut down. A residual would instead bank every
  * turn's contribution permanently and never let go.
  */
-export function buildMandateBoardDeltas(
+function buildMandateBoardDeltas(
   contributions: MandateContribution[]
 ): Array<{ familyId: string; scoreDelta: number }> {
   const out: Array<{ familyId: string; scoreDelta: number }> = [];
@@ -676,19 +679,21 @@ export async function processSoeOperations(
       treasuryCurrencyByCountry.get(b.countryId),
       `soe-loss-backing:${cashLedger.context?.turn ?? 0}:${b.countryId}:${b.corpId.toString()}`
     );
+    const corp = corpById.get(b.corpId.toString());
+    const liquid = corp && Number.isFinite(corp.liquidCapital) ? corp.liquidCapital : 0;
     // Credit only what the treasury actually paid. Below plants that is the
-    // whole hole (liquidCapital → 0, as before); under plants an over-built SOE
-    // is left negative by the residual it spent on capacity.
+    // whole loaded hole (liquidCapital → 0, as before); under plants an
+    // over-built SOE is left negative by the residual it spent on capacity.
+    // Both are deltas so a concurrent cash movement is kept, not zeroed.
     backingOps.push({
       updateOne: {
         filter: { _id: b.corpId },
-        update: plantsEnabled
-          ? { $inc: { liquidCapital: b.coveredLocal }, $set: { updatedAt: now } }
-          : { $set: { liquidCapital: 0, updatedAt: now } },
+        update: {
+          $inc: { liquidCapital: plantsEnabled ? b.coveredLocal : -liquid },
+          $set: { updatedAt: now },
+        },
       },
     });
-    const corp = corpById.get(b.corpId.toString());
-    const liquid = corp && Number.isFinite(corp.liquidCapital) ? corp.liquidCapital : 0;
     backingCredits.push({
       corpId: b.corpId.toString(),
       currency: snapshotCorporationCurrency(corp ?? {}),
@@ -851,6 +856,8 @@ export interface SoeCapexSectorBuy {
   sectorType: CorporateSector["sectorType"];
   industryModel?: CorporateSector["industryModel"];
   mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
+  /** Decides plant size with the lane. */
+  strategyId?: CorporateSector["strategyId"];
   capitalStock: number;
   /** Capacity units bought back — exactly this turn's depreciation. */
   unitsAdded: number;
@@ -913,6 +920,7 @@ export function buildSoeCapexGrant(
       sectorType: sector.sectorType,
       industryModel: sector.industryModel,
       mediaDiscriminator: sector.mediaDiscriminator,
+      strategyId: sector.strategyId,
       capitalStock: stock,
       unitsAdded,
       costAnchor,
@@ -961,13 +969,13 @@ async function applyStateCapexGrants(
   if (grantByCountry.size === 0) return;
   const cashLedger = await treasuryLedger();
   const turn = cashLedger.context?.turn ?? 0;
+  const wholePlants = await loadWholePlantsOn(db);
   const capacityUpdate = (buy: SoeCapexSectorBuy) =>
-    plantCapacityDeltaPipeline(
-      buy.sectorType,
+    plantChangePipeline(
+      buy,
       buy.unitsAdded,
       { capacityBookAnchor: buy.nextBookAnchor, updatedAt: now },
-      buy.industryModel,
-      buy.mediaDiscriminator
+      { wholePlants }
     );
 
   if (cashLedger.context?.treasuryCashLedgerEnabled) {
@@ -1131,6 +1139,7 @@ async function applyStateCapexGrowth(
     budgetAnchor
   );
   if (orders.length === 0) return;
+  const wholePlantsGrowth = await loadWholePlantsOn(db);
 
   const outcome = await settleFundedSoeCapexGrant(db, {
     countryId,
@@ -1142,13 +1151,19 @@ async function applyStateCapexGrowth(
     key: `soe-capex-growth:${turn}:${countryId}`,
     capacity: orders.map((o) => {
       const sector = byId.get(o.sectorId)!;
+      // Whole plants: the grant buys whole plants, at least one, and the order
+      // keeps the cash it was granted (per-plant cost rises when rounded up).
+      const plantUnits = plantSizeForSector(sector);
       const buildOrder: SectorBuildOrder = {
-        unitsOrdered: o.units,
+        unitsOrdered: wholePlantsGrowth
+          ? Math.max(plantUnits, floorUnitsToPlants(o.units, plantUnits))
+          : o.units,
         strategyId: sector.strategyId ?? null,
         costPaidAnchor: o.costAnchor,
         startTurn: turn,
         onlineTurn: turn + Math.max(1, CAPACITY_BUILD_TURNS(sector.sectorType)),
         smooth: true,
+        ...(wholePlantsGrowth ? { plantUnits } : {}),
       };
       return {
         collection: "corporateSectors",

@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 30, 60_000);
+    const rateLimit = checkRateLimit(`api/npps/[id]/direct-action:${auth.user.userId}`, 60, 60_000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, bodySchema);

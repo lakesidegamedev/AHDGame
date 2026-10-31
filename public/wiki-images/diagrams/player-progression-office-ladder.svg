@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="414" viewBox="0 0 760 414" role="img" font-family="system-ui, sans-serif">
+<title>Office ladder</title>
+<desc>A typical US climb from State Senate to House, Senate, Governor and President, with the extra actions and funds each office pays per turn, and the parliamentary route from a seat through party leadership to Prime Minister or Chancellor.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="413" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="20" y="26" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">A typical US climb, lowest to highest</text>
+<rect x="20" y="178" width="130" height="90" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="85.0" y="211.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">State Senate</text>
+<text x="85.0" y="227.6" font-size="12" text-anchor="middle" fill="#3f3f46">+1 action</text>
+<text x="85.0" y="243.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳3k a turn</text>
+<rect x="164" y="156" width="130" height="112" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="229.0" y="200.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">House</text>
+<text x="229.0" y="216.6" font-size="12" text-anchor="middle" fill="#3f3f46">+1 action</text>
+<text x="229.0" y="232.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳5k a turn</text>
+<rect x="308" y="134" width="130" height="134" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="373.0" y="189.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Senate</text>
+<text x="373.0" y="205.6" font-size="12" text-anchor="middle" fill="#3f3f46">+2 actions</text>
+<text x="373.0" y="221.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳15k a turn</text>
+<rect x="452" y="112" width="130" height="156" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="517.0" y="178.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Governor</text>
+<text x="517.0" y="194.6" font-size="12" text-anchor="middle" fill="#3f3f46">+2 actions</text>
+<text x="517.0" y="210.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳15k a turn</text>
+<rect x="596" y="90" width="130" height="178" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="661.0" y="167.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">President</text>
+<text x="661.0" y="183.6" font-size="12" text-anchor="middle" fill="#3f3f46">+4 actions</text>
+<text x="661.0" y="199.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳50k a turn</text>
+<text x="20" y="300" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">Parliamentary countries</text>
+<rect x="20" y="312" width="200" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="120.0" y="336.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Win a seat</text>
+<text x="120.0" y="352.6" font-size="12" text-anchor="middle" fill="#3f3f46">MP: +1 action, ₳5k a turn</text>
+<path d="M222 340 L268 340" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="270" y="312" width="200" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="370.0" y="336.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Party leadership</text>
+<text x="370.0" y="352.6" font-size="12" text-anchor="middle" fill="#3f3f46">leadership races</text>
+<path d="M472 340 L518 340" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="520" y="312" width="220" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="630.0" y="336.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">PM or Chancellor</text>
+<text x="630.0" y="352.6" font-size="12" text-anchor="middle" fill="#3f3f46">+4 actions, ₳50k a turn</text>
+<text x="20" y="386" font-size="12" text-anchor="start" fill="#52525b">The PM or Chancellor step comes after the chamber result and a confidence vote.</text>
+<text x="20" y="404" font-size="12" text-anchor="start" fill="#52525b">Bonuses stack on top of the base 4 actions per turn.</text>
+</svg>

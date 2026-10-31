@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { findStagingQualification } from "./staging-qualification.mjs";
+import {
+  findDevelopmentQualification,
+  findStagingQualification,
+} from "./staging-qualification.mjs";
 
 const sha = (letter) => letter.repeat(40);
 const repo = "example/game";
@@ -187,6 +190,7 @@ function fixture() {
       },
     },
     now,
+    sleep: async () => {},
   };
   return { input, state, calls, head, merge, tree };
 }
@@ -432,3 +436,315 @@ for (const file of ["semgrep.yml", "dependency-review.yml"])
       f.state.security[file].run.conclusion = kind;
       assert.equal((await findStagingQualification(f.input)).reuse, false);
     });
+
+function developmentFixture() {
+  const devHead = sha("a"),
+    merge = sha("b"),
+    tree = sha("c"),
+    trusted = sha("e");
+  const repository = { id: 9, full_name: repo, default_branch: "development" };
+  const side = (ref, commit) => ({ ref, sha: commit, repo: repository });
+  const promotion = {
+    number: 40,
+    state: "open",
+    head: side("development", devHead),
+    base: side("staging", sha("f")),
+    merge_commit_sha: merge,
+  };
+  const run = {
+    id: 500,
+    run_attempt: 1,
+    workflow_id: 50,
+    path: ".github/workflows/ci.yml",
+    event: "push",
+    head_branch: "development",
+    head_sha: devHead,
+    status: "completed",
+    conclusion: "success",
+    check_suite_id: 600,
+    updated_at: "2026-10-14T11:00:00Z",
+    repository,
+    head_repository: repository,
+  };
+  const jobs = {
+    total_count: 1,
+    jobs: [
+      {
+        id: 700,
+        name: "verify",
+        status: "completed",
+        conclusion: "success",
+        check_run_url: `https://api.github.com/repos/${repo}/check-runs/700`,
+        steps: [
+          {
+            name: `qualified-development-development-tree-${tree}`,
+            status: "completed",
+            conclusion: "success",
+          },
+        ],
+      },
+    ],
+  };
+  const check = {
+    id: 700,
+    name: "verify",
+    head_sha: devHead,
+    status: "completed",
+    conclusion: "success",
+    check_suite: { id: 600 },
+    app: { id: 15368, slug: "github-actions" },
+    details_url: `https://github.com/${repo}/actions/runs/500/job/700`,
+  };
+  const commits = Object.fromEntries(
+    [devHead, merge, trusted].map((id) => [id, { sha: id, commit: { tree: { sha: tree } } }])
+  );
+  const blobs = {
+    ".github/workflows/ci.yml": sha("1"),
+    "scripts/ci/staging-qualification.mjs": sha("2"),
+  };
+  const state = {
+    promotion,
+    run,
+    jobs,
+    check,
+    commits,
+    blobs,
+    repository,
+    rules: [
+      {
+        type: "required_status_checks",
+        parameters: {
+          required_status_checks: ["verify", "custom-rules", "dependency-review"].map(
+            (context) => ({ context })
+          ),
+        },
+      },
+    ],
+  };
+  const calls = [];
+  const api = async (path) => {
+    calls.push(path);
+    if (path === "") return state.repository;
+    if (path === "rules/branches/staging") return state.rules;
+    if (path === "pulls/40") return state.promotion;
+    if (path === "actions/workflows/ci.yml")
+      return { id: 50, path: ".github/workflows/ci.yml", state: "active" };
+    if (path.startsWith("contents/")) return { sha: state.blobs[path.slice(9).split("?ref=")[0]] };
+    if (path === "commits/development") return { sha: trusted };
+    if (path.startsWith("commits/")) return state.commits[path.slice(8)];
+    if (path.startsWith("actions/workflows/ci.yml/runs?")) return { workflow_runs: [state.run] };
+    if (path === "actions/runs/500/attempts/1/jobs?per_page=100") return state.jobs;
+    if (path === "check-runs/700") return state.check;
+    throw new Error(`unexpected API ${path}`);
+  };
+  const input = {
+    api,
+    repository: repo,
+    eventName: "pull_request",
+    event: { number: 40, pull_request: structuredClone(promotion), repository },
+    checkout: {
+      commit: merge,
+      tree,
+      workflowBlob: blobs[".github/workflows/ci.yml"],
+      scriptBlob: blobs["scripts/ci/staging-qualification.mjs"],
+    },
+    now,
+    sleep: async () => {},
+  };
+  return { input, state, calls, devHead, merge, tree };
+}
+
+test("a development promotion reuses development's own full push qualification", async () => {
+  const f = developmentFixture();
+  const result = await findDevelopmentQualification(f.input);
+  assert.equal(result.reuse, true);
+  assert.equal(result.qualificationRun, 500);
+  assert.equal(result.tree, f.tree);
+  assert.ok(
+    f.calls.some((p) => p.includes("event=push&branch=development&head_sha=" + f.devHead)),
+    "looks up the push run for the exact development commit"
+  );
+});
+
+test("the staging finder ignores development promotions", async () => {
+  const f = developmentFixture();
+  assert.equal((await findStagingQualification(f.input)).promotion, false);
+});
+
+const developmentInvalid = {
+  "merge tree differs from development": (f) => {
+    f.state.commits[f.merge].commit.tree.sha = sha("0");
+  },
+  "development moved after the event": (f) => {
+    f.state.promotion.head.sha = sha("0");
+  },
+  "fork source": (f) => {
+    f.state.promotion.head.repo = { id: 10, full_name: "other/game" };
+  },
+  "wrong base": (f) => {
+    f.state.promotion.base.ref = "main";
+  },
+  "failed push run": (f) => {
+    f.state.run.conclusion = "failure";
+  },
+  "stale push run": (f) => {
+    f.state.run.updated_at = "2026-10-12T00:00:00Z";
+  },
+  "pull request run instead of push": (f) => {
+    f.state.run.event = "pull_request";
+  },
+  "run for another commit": (f) => {
+    f.state.run.head_sha = sha("0");
+  },
+  "receipt for another tree": (f) => {
+    f.state.jobs.jobs[0].steps[0].name = `qualified-development-development-tree-${sha("0")}`;
+  },
+  "content-only run without a receipt": (f) => {
+    f.state.jobs.jobs[0].steps = [];
+  },
+  "receipt from a non-native check": (f) => {
+    f.state.check.app = { id: 1, slug: "impostor" };
+  },
+  "check from another suite": (f) => {
+    f.state.check.check_suite = { id: 601 };
+  },
+  "workflow changed on the promotion": (f) => {
+    f.state.blobs[".github/workflows/ci.yml"] = sha("9");
+  },
+  "proof script changed on the promotion": (f) => {
+    f.state.blobs["scripts/ci/staging-qualification.mjs"] = sha("9");
+  },
+  "extra required gate on staging": (f) => {
+    f.state.rules[0].parameters.required_status_checks.push({ context: "e2e" });
+  },
+};
+for (const [name, mutate] of Object.entries(developmentInvalid)) {
+  test(`development promotion falls back to full checks: ${name}`, async () => {
+    const f = developmentFixture();
+    mutate(f);
+    const result = await findDevelopmentQualification(f.input);
+    assert.equal(result.reuse, false);
+    assert.equal(result.promotion, true);
+  });
+}
+
+test("development promotion falls back when the API fails", async () => {
+  const f = developmentFixture();
+  f.input.api = async () => {
+    throw new Error("down");
+  };
+  assert.equal((await findDevelopmentQualification(f.input)).reuse, false);
+});
+
+test("feature pull requests are not development promotions", async () => {
+  const f = developmentFixture();
+  f.input.event.pull_request.head.ref = "feat/x";
+  const result = await findDevelopmentQualification(f.input);
+  assert.equal(result.reuse, false);
+  assert.equal(result.promotion, false);
+});
+
+test("a promotion opened before GitHub indexes the previous merge still reuses", async () => {
+  const f = fixture();
+  const real = f.input.api;
+  let lookups = 0;
+  let sleeps = 0;
+  f.input.sleep = async () => {
+    sleeps++;
+  };
+  f.input.api = async (path) => {
+    if (path === `commits/${f.head}/pulls?per_page=30` && ++lookups <= 2) return [];
+    return real(path);
+  };
+  const result = await findStagingQualification(f.input);
+  assert.equal(result.reuse, true);
+  assert.equal(lookups, 3);
+  assert.equal(sleeps, 2);
+});
+
+test("a promotion whose previous merge never indexes falls back after bounded retries", async () => {
+  const f = fixture();
+  const real = f.input.api;
+  let lookups = 0;
+  f.input.api = async (path) => {
+    if (path === `commits/${f.head}/pulls?per_page=30`) {
+      lookups++;
+      return [];
+    }
+    return real(path);
+  };
+  const result = await findStagingQualification(f.input);
+  assert.equal(result.reuse, false);
+  assert.equal(result.promotion, true);
+  assert.equal(lookups, 6);
+});
+
+// Drives the development finder with a push run that changes state per poll.
+function waitingFixture(states, { waitUntil = now + 30 * 60 * 1000 } = {}) {
+  const f = developmentFixture();
+  let time = now;
+  let polls = 0;
+  const real = f.input.api;
+  f.input.clock = () => time;
+  f.input.waitUntil = waitUntil;
+  f.input.sleep = async (ms) => {
+    time += ms;
+  };
+  f.input.api = async (path) => {
+    if (path.startsWith("actions/workflows/ci.yml/runs?")) {
+      const next = states[Math.min(polls++, states.length - 1)];
+      if (next === null) return { workflow_runs: [] };
+      return {
+        workflow_runs: [{ ...f.state.run, ...next, updated_at: new Date(time).toISOString() }],
+      };
+    }
+    return real(path);
+  };
+  return { f, polls: () => polls };
+}
+
+test("a development promotion waits for the in-progress push run, then reuses it", async () => {
+  const { f, polls } = waitingFixture([
+    { status: "queued", conclusion: null },
+    { status: "in_progress", conclusion: null },
+    {},
+  ]);
+  const result = await findDevelopmentQualification(f.input);
+  assert.equal(result.reuse, true);
+  assert.equal(polls(), 3);
+});
+
+test("a development promotion waits for a push run that has not been created yet", async () => {
+  const { f } = waitingFixture([null, null, {}]);
+  assert.equal((await findDevelopmentQualification(f.input)).reuse, true);
+});
+
+const waitingInvalid = {
+  "push run fails after waiting": [
+    { status: "in_progress", conclusion: null },
+    { conclusion: "failure" },
+  ],
+  "push run is cancelled after waiting": [
+    { status: "in_progress", conclusion: null },
+    { conclusion: "cancelled" },
+  ],
+  "push run never finishes before the deadline": [{ status: "in_progress", conclusion: null }],
+  "push run never appears": [null],
+};
+for (const [name, states] of Object.entries(waitingInvalid)) {
+  test(`development promotion falls back to full checks: ${name}`, async () => {
+    const { f, polls } = waitingFixture(states);
+    const result = await findDevelopmentQualification(f.input);
+    assert.equal(result.reuse, false);
+    assert.equal(result.promotion, true);
+    assert.ok(polls() < 200, "the wait is bounded");
+  });
+}
+
+test("without a wait budget a development promotion does not wait", async () => {
+  const { f, polls } = waitingFixture([{ status: "in_progress", conclusion: null }, {}], {
+    waitUntil: 0,
+  });
+  assert.equal((await findDevelopmentQualification(f.input)).reuse, false);
+  assert.equal(polls(), 1);
+});

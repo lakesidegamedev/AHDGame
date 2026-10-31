@@ -38,7 +38,7 @@ function takingFromProvision(p: NationalizeProvision): EnactedSectorTaking | nul
 }
 
 /** Latest enacted sector-wide taking per (countryId, sectorType) from signed bills. */
-export async function loadEnactedSectorWideTakingsFromBills(
+async function loadEnactedSectorWideTakingsFromBills(
   db: Db
 ): Promise<Map<string, EnactedSectorTaking>> {
   const bills = await db
@@ -74,7 +74,7 @@ export async function loadEnactedSectorWideTakingsFromBills(
 }
 
 /** Scope stamped on nat-corp sectors at enactment (fallback when bill query misses). */
-export async function loadSectorWideTakingsFromNatCorpSectors(
+async function loadSectorWideTakingsFromNatCorpSectors(
   db: Db,
   nationalCorpIds: ReadonlySet<string>
 ): Promise<Map<string, EnactedSectorTaking>> {

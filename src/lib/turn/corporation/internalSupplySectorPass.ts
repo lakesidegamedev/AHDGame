@@ -10,6 +10,11 @@ import {
 import { settleConsumedInternalDiscounts } from "@/lib/market/internalSupply/rules";
 import { settleGroupDiscounts } from "@/lib/corporations/groups/rules/discounts";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import type { CommodityType } from "@/lib/constants/commodities";
+
+/** Shared empty maps: most sectors consume no internal supply and no group output. */
+const NO_INPUT_UNITS: ReadonlyMap<CommodityType, number> = new Map();
+const NO_OUTPUT_UNITS: ReadonlyMap<string, number> = new Map();
 
 export function prepareInternalSupplySectorResults(
   env: SectorTurnEnv
@@ -36,11 +41,27 @@ export function prepareInternalSupplySectorResults(
         )
       );
   }
-  const consumption = new Map(
-    [...results].map(([id, r]) => [id, r.internalSupplyInputUnits ?? new Map<string, number>()])
-  );
+  // Both settlement passes look sectors up by the ids their trades and receipts
+  // name, so only those ids need a row. Building the full map allocated one
+  // entry per sector in the world for a handful of consumers.
+  const trades = env.market.internalSupplyTrades ?? [];
+  const consumption = new Map<string, ReadonlyMap<CommodityType, number>>();
+  const groupOutputs = new Map<string, ReadonlyMap<string, number>>();
+  const consumptionFor = (id: string) => {
+    if (!consumption.has(id))
+      consumption.set(id, results.get(id)?.internalSupplyInputUnits ?? NO_INPUT_UNITS);
+  };
+  const outputFor = (id: string) => {
+    if (!groupOutputs.has(id))
+      groupOutputs.set(id, results.get(id)?.groupSupplyOutputUnits ?? NO_OUTPUT_UNITS);
+  };
+  for (const trade of trades) consumptionFor(trade.buyerSectorId);
+  for (const receipt of groupReceipts) {
+    consumptionFor(receipt.buyerSectorId);
+    outputFor(receipt.supplierSectorId);
+  }
   const costs = settleConsumedInternalDiscounts(
-    env.market.internalSupplyTrades ?? [],
+    trades,
     consumption,
     TURNS_PER_DAY,
     env.market.internalSupplyCommittedInputsBySectorId
@@ -49,9 +70,7 @@ export function prepareInternalSupplySectorResults(
     groupReceipts,
     consumption,
     env.market.groupSupplyCommittedInputsBySector,
-    new Map(
-      [...results].map(([id, r]) => [id, r.groupSupplyOutputUnits ?? new Map<string, number>()])
-    ),
+    groupOutputs,
     env.market.groupSupplyCommittedOutputsBySector
   ))
     costs.set(id, (costs.get(id) ?? 0) + cost);

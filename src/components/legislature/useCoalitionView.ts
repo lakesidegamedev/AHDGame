@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { PartySeatsDisplay } from "@/components/ChamberChart";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 
 /** A coalition group with its member parties' seat data */
 export interface CoalitionGroup {

@@ -16,6 +16,7 @@ export type FinancialTxType =
   | "soe_capex_grant"
   | "nationalization_compensation" // treasury compensation for a taken sector, both legs
   | "corp_starting_grant" // system-granted treasury of a spawned corporation
+  | "economy_reset" // admin economy-only reset witness for a rewritten balance
   | "nationalization_held_equity_credit" // cash credited for shares a seized corporation held
   | "privatization_ipo_proceeds" // IPO float proceeds credited to the treasury
   | "privatization_bid_escrow" // privatization auction bid moved into escrow
@@ -110,6 +111,7 @@ export type FinancialTxType =
   | "corp_capacity_build" // corp cash → capitalized construction in progress (debit)
   | "corp_capacity_build_refund" // cancelled build returns unspent CIP to corp cash (credit)
   | "corp_sector_split_cost" // PvP campaign spend, paid whether the plant split succeeds or fails
+  | "corp_union_busting_cost" // CEO union-busting attempt, paid whether it succeeds or backfires
   | "stock_trade_buy"
   | "stock_trade_sell"
 

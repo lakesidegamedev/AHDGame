@@ -23,7 +23,17 @@ import {
 } from "@/lib/corporations/shareholderOps";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
+import type {
+  Character,
+  Corporation,
+  NegotiatedSaleTerms,
+  Notification,
+  ShareListing,
+  ShareOrder,
+} from "@/lib/db/types";
+import { checkNegotiatedSale } from "@/lib/corporations/negotiatedSaleGuards";
+import { getGameTime } from "@/lib/time/gameTime";
+import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 
@@ -70,14 +80,22 @@ export async function createShareListing(request: Request, { params }: RoutePara
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/createShareListing:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
     const parsed = await parseJsonBody(request, createListingSchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    const { shares, sellAsCorporation, sellerCorporationId, confirmCeoVacate } = parsed.data;
+    const { shares, sellAsCorporation, sellerCorporationId, confirmCeoVacate, negotiated } =
+      parsed.data;
+    if (negotiated && sellAsCorporation) {
+      return errorResponse(400, "Negotiated sales are made from your personal shares");
+    }
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
@@ -227,6 +245,35 @@ export async function createShareListing(request: Request, { params }: RoutePara
       return errorResponse(400, `Only ${available.toLocaleString()} shares available`);
     }
 
+    let negotiatedTerms: NegotiatedSaleTerms | undefined;
+    let negotiatedBuyer: Pick<Character, "_id" | "userId" | "name"> | null = null;
+    if (negotiated) {
+      const buyer = await db
+        .collection<Character>("characters")
+        .findOne(
+          { _id: new ObjectId(negotiated.buyerCharacterId) },
+          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+        );
+      if (!buyer) return errorResponse(404, "Buyer not found");
+      const gameTime = await getGameTime();
+      const guard = await checkNegotiatedSale(
+        db,
+        character,
+        buyer,
+        gameTime.currentTurn,
+        gameTime.effectiveNow.getTime()
+      );
+      if (!guard.ok) return errorResponse(guard.status, guard.error);
+      const totalPrice = Math.round(negotiated.totalPrice * 100) / 100;
+      if (totalPrice <= 0) return errorResponse(400, "Agreed price must be positive");
+      negotiatedTerms = {
+        buyerCharacterId: buyer._id,
+        totalPrice,
+        pricePerShare: totalPrice / shares,
+      };
+      negotiatedBuyer = buyer;
+    }
+
     // Listing every unreserved share removes the CEO's effective control immediately.
     const shouldVacateCeo = character._id.equals(corporation.ceoId) && available === shares;
     if (shouldVacateCeo && !confirmCeoVacate) {
@@ -281,6 +328,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
         // Mirror the corp-listing path (line 194): set the turn anchor so
         // character listings freeze on pause and read/submit/expiry all agree.
         expiresAtTurn: nowTurn + LISTING_TTL_TURNS,
+        ...(negotiatedTerms ? { negotiated: negotiatedTerms } : {}),
       });
       listingInserted = true;
 
@@ -316,6 +364,26 @@ export async function createShareListing(request: Request, { params }: RoutePara
       }
 
       throw error;
+    }
+
+    if (negotiatedTerms && negotiatedBuyer) {
+      const sym =
+        CURRENCY_SYMBOLS[(corporation.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
+      void db
+        .collection<Omit<Notification, "_id">>("notifications")
+        .insertOne({
+          userId: negotiatedBuyer.userId,
+          type: "share_listing_offer_received",
+          title: "A player offered you a negotiated share sale",
+          message: `${character.name} will sell you ${shares.toLocaleString()} shares of ${corporation.name} for ${sym}${negotiatedTerms.totalPrice.toLocaleString()}. Accept it on the company's Shares tab within 24 turns.`,
+          read: false,
+          metadata: {
+            listingId: listingId.toString(),
+            corporationId: corporation._id.toString(),
+          },
+          createdAt: now,
+        } as Omit<Notification, "_id">)
+        .catch(() => undefined);
     }
 
     return NextResponse.json({ success: true, sharesReserved: shares });

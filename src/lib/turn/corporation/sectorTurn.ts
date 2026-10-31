@@ -10,7 +10,11 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 import type { CommodityType } from "@/lib/constants/commodities";
-import { commodityMixWeight, eraScaledBasePrices } from "@/lib/constants/commodities";
+import { eraScaledBasePrices } from "@/lib/constants/commodities";
+import {
+  commodityMixWeights,
+  mixWeightFor as mixWeightFrom,
+} from "@/lib/market/rules/commodityMixWeights";
 import { trendProductionPolicy, getRevenueMultiplier } from "@/lib/utils/productionPolicy";
 import {
   calculateDailyGrowthCost,
@@ -67,10 +71,6 @@ export type { SectorTurnEnv, SectorTurnResult } from "./sectorTurnTypes";
 
 import { computeIdleUpkeep } from "./sectorTurn/idleUpkeep";
 import { contributionShare, nextLossRun } from "./rules/lossRun";
-import {
-  sectorNpvBoostMultiplier,
-  sectorRevenueBoostMultiplier,
-} from "@/lib/corporations/rules/marketBoost";
 import { isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
 import { liftedThrottleBalance } from "./demandThrottle";
 import { nppOperatingCapacityTarget } from "./rules/nppOperatingCapacity";
@@ -84,6 +84,8 @@ import {
   PLANT_CREW_SUSTAINED_GLUT_THROTTLE,
 } from "@/lib/constants/capacityEconomy";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
   inputBasketCostIndex,
   recordCostPlusBasis,
@@ -122,6 +124,9 @@ export function processSector(
     pendingCapacityBindingEvents,
     sectorOps,
   } = env;
+  // The ids are read by a dozen map lookups below; convert once per sector.
+  const sectorId = sector._id.toString();
+  const corpId = corp._id.toString();
   const operatingSectorType = getOperatingSectorType(
     sector.sectorType,
     sector.industryModel,
@@ -163,6 +168,10 @@ export function processSector(
   const useTradeExposureEmbargo = lookups.embargoTradeExposureEnabled === true;
   const plantsEnabled = market.plantsEnabled;
   const explicitPlantCostsEnabled = plantsEnabled && market.explicitPlantCostsEnabled === true;
+  // The era-scaled base price table depends only on the world's unit scale, so
+  // this sector builds it once and every leg below reads the same object
+  // instead of rebuilding all 27 rows per reader.
+  const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
   const {
     brakedTargetRate,
     newCurrentGrowthRate,
@@ -194,7 +203,7 @@ export function processSector(
   const primeRate =
     lookups.primeRateByCountry.get(sectorCountryId) ??
     getCountryConfig(sectorCountryId).centralBank.defaultPrimeRate;
-  const sectorMarketSharePct = lookups.marketShareBySectorId.get(sector._id.toString()) ?? 0;
+  const sectorMarketSharePct = lookups.marketShareBySectorId.get(sectorId) ?? 0;
   // The owning corp's aggregate share of this (country, sectorType) across every
   // state. The per-cell share above is a LOCAL contest (50% threshold); a corp
   // can command a whole nation's sector while sitting under 50% in each state.
@@ -203,15 +212,14 @@ export function processSector(
   // at all. Each toll is charged at the HARSHER of its local and national leg:
   // min() for the negative margin penalty, max() for the positive growth-cost
   // multiplier and regulatory burden. Absent lookup → national 0 → local-only.
-  const nationalDominanceSharePct =
-    lookups.nationalDominanceShareBySectorId?.get(sector._id.toString()) ?? 0;
+  const nationalDominanceSharePct = lookups.nationalDominanceShareBySectorId?.get(sectorId) ?? 0;
   const dominanceGrowthMult = Math.max(
     getDominanceGrowthCostMultiplier(sectorMarketSharePct),
     getNationalDominanceGrowthCostMultiplier(nationalDominanceSharePct)
   );
   // Business Acumen: a player CEO's stat makes growth cheaper and dampens the
   // prime-rate penalty. Absent (NPP/imperial/vacant) → neutral.
-  const ceoAcumen = lookups.ceoBusinessAcumenByCorpId.get(corp._id.toString()) ?? NEUTRAL_STAT;
+  const ceoAcumen = lookups.ceoBusinessAcumenByCorpId.get(corpId) ?? NEUTRAL_STAT;
   // A state monopoly is exempt from the private-firm dominance growth toll:
   // applying it alongside the command-economy soft budget creates an unchecked
   // growth-cost ratchet because a state firm cannot go bankrupt. We pass share 0
@@ -361,45 +369,49 @@ export function processSector(
     !corp.suspended &&
     !corp.ceoVacant &&
     corp.subsidiaryFormalizedAtTurn == null;
-  const operatingCapacityTarget = operatingCapacityEligible
-    ? nppOperatingCapacityTarget({
-        eligible: true,
-        mothballed: sector.mothballed === true,
-        activePercent: originalActivePercent,
-        demandThrottle: sector.demandThrottleFactor,
-        measuredProfit: sector.plantsPnl?.profit,
-        measuredTurn: sector.plantsPnl?.turn,
-        currentTurn,
-        contractDemand:
-          market.contractProductionTargetBySectorId?.get(sector._id.toString()) ??
-          (market.contractProductionTargetBySectorId ? 0 : undefined),
-        outputBooks: Object.entries(strategyRates.supply)
-          .filter(([, rate]) => (rate ?? 0) > 0)
-          .map(([rawCommodity]) => {
-            const commodity = rawCommodity as CommodityType;
-            // The book the throttle leg reads, so parking and throttling agree on demand.
-            return liftedThrottleBalance(
-              isStateScopedCommodity(commodity)
-                ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
-                : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
-                    lookups.globalCommodityBalances?.get(commodity)),
-              lookups.latentDemandFactorByCommodity?.get(commodity),
-              isStateScopedCommodity(commodity) ||
-                !lookups.countryClearingBooks?.has(sectorCountryId)
-                ? 0
-                : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
-            );
-          }),
-        physicalConstraintsClear:
-          throughputRaw.throughput >= 1 &&
-          labourOutputFactor >= 1 &&
-          capacityUtil.utilization >= 1 &&
-          !lookups.activeDisasterEffectsByState.has(sector.stateId),
-        constructionOrRetool: strategyRates.isTransitioning || (sector.buildQueue?.length ?? 0) > 0,
-      })
-    : null;
-  if (operatingCapacityTarget != null) {
-    sector = { ...sector, activeCapacityPercent: operatingCapacityTarget };
+  let operatingCapacityTarget: number | null = null;
+  if (operatingCapacityEligible) {
+    // One book per positive output leg. Built with a loop: the filter/map chain
+    // this replaced allocated an entries array, a pair per commodity and a
+    // filtered array per sector.
+    const supplyRates = strategyRates.supply ?? {};
+    const outputBooks: ({ supply: number; demand: number } | null | undefined)[] = [];
+    for (const rawCommodity in supplyRates) {
+      const commodity = rawCommodity as CommodityType;
+      if (!((supplyRates[commodity] ?? 0) > 0)) continue;
+      // The book the throttle leg reads, so parking and throttling agree on demand.
+      outputBooks.push(
+        liftedThrottleBalance(
+          isStateScopedCommodity(commodity)
+            ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
+            : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
+                lookups.globalCommodityBalances?.get(commodity)),
+          lookups.latentDemandFactorByCommodity?.get(commodity),
+          isStateScopedCommodity(commodity) || !lookups.countryClearingBooks?.has(sectorCountryId)
+            ? 0
+            : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
+        )
+      );
+    }
+    operatingCapacityTarget = nppOperatingCapacityTarget({
+      eligible: true,
+      mothballed: sector.mothballed === true,
+      activePercent: originalActivePercent,
+      demandThrottle: sector.demandThrottleFactor,
+      measuredProfit: sector.plantsPnl?.profit,
+      measuredTurn: sector.plantsPnl?.turn,
+      currentTurn,
+      contractDemand:
+        market.contractProductionTargetBySectorId?.get(sectorId) ??
+        (market.contractProductionTargetBySectorId ? 0 : undefined),
+      outputBooks,
+      physicalConstraintsClear:
+        throughputRaw.throughput >= 1 &&
+        labourOutputFactor >= 1 &&
+        capacityUtil.utilization >= 1 &&
+        !lookups.activeDisasterEffectsByState.has(sector.stateId),
+      constructionOrRetool: strategyRates.isTransitioning || (sector.buildQueue?.length ?? 0) > 0,
+    });
   }
   // (moved to computeMarketTiers: throughput coupling + downside floor)
   // (moved to computeMarketTiers: capital tier + P1 nameplate units)
@@ -454,6 +466,7 @@ export function processSector(
     mothballed,
     activeFraction,
     plantLedger,
+    plantWearUnits,
     plantsOwnedCapacity,
     capacityBookAnchor,
     plantsMixPrice,
@@ -468,6 +481,7 @@ export function processSector(
   } = computePlantsCapacity({
     sector,
     corp,
+    activeCapacityPercent: operatingCapacityTarget,
     plantsEnabled,
     isFlipTurn,
     preFlipNameplateRevenue,
@@ -483,6 +497,7 @@ export function processSector(
     governorGlide: market.governorGlide,
     embargoLegacyMothball,
     recessionCapacityFactor: lookups.recessionCapacityFactorByCountry?.get(sector.countryId ?? ""),
+    wholePlants: lookups.wholePlantsOn === true,
   });
   // (moved to computePlantsCapacity: plant ledger + owned-capacity advance)
   // (moved to computePlantsCapacity: P5 paid basis of capacity)
@@ -511,15 +526,14 @@ export function processSector(
     effectiveMargin,
     sprawlMod,
     dominanceMarginPenalty,
-    managementOverheadMod,
+    fundedSizeLegs,
   } = accumulateMarginModifiers({
     corp,
     sector,
     // Market recovery stage 2 lowers the flat margin trim (marketRecoveryStages.ts).
-    lookups: {
-      ...lookups,
-      marginLevelTrimPp: stagedMarginTrimPp(lookups.marginLevelTrimPp, market.marketRecoveryStage),
-    },
+    // Resolved here, once per sector, instead of copying the whole lookups object.
+    lookups,
+    marginLevelTrimPp: stagedMarginTrimPp(lookups.marginLevelTrimPp, market.marketRecoveryStage),
     strategySupply: strategyRates.supply,
     strategyDemand: strategyRates.demand,
     strategyIsTransitioning: strategyRates.isTransitioning,
@@ -558,6 +572,8 @@ export function processSector(
   const restarting =
     plantsEnabled && !mothballed && plantsCapacity > 0 && sector.producedUnits === 0;
   const restartRunShare = restarting ? RESTART_RUN_SHARE : 1;
+  // Per-sector output mix weights, built on first use by the throttle legs.
+  let throttleMixWeights: Map<CommodityType, number> | undefined;
   // A cold plant (no crew on site last turn) hires straight to its run; one
   // whose crew stayed through an outage keeps the gradual-layoff path.
   const coldRestart = restarting && (sector.workers ?? 0) <= 1;
@@ -677,12 +693,12 @@ export function processSector(
           ? 0
           : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
       ),
-    throttleLegMixWeight: (commodity) =>
-      commodityMixWeight(
-        strategyRates.supply,
-        eraScaledBasePrices(lookups.eraUnitScale),
-        commodity
-      ),
+    throttleLegMixWeight: (commodity) => {
+      // One mix total for the whole sector, built only when a sold-out plant
+      // asks for a leg weight.
+      throttleMixWeights ??= commodityMixWeights(strategyRates.supply, basePrices);
+      return mixWeightFrom(throttleMixWeights, commodity);
+    },
   });
   if (capacityBindingEvent) {
     pendingCapacityBindingEvents.push(capacityBindingEvent);
@@ -705,30 +721,43 @@ export function processSector(
       corp.ceoType === "npp" && lookups.engineSixCountries?.has(corp.countryId) === true,
   });
   const retainedCapacityShare = 1 - idleRetirement.retireFraction;
-  const persistedOwnedCapacity = plantsOwnedCapacity * retainedCapacityShare;
-  const idleCapacityRetiredUnits = plantsOwnedCapacity - persistedOwnedCapacity;
-  const persistedCapacityBookAnchor = capacityBookAnchor * retainedCapacityShare;
-  const persistedPlantLedger =
-    idleRetirement.retireFraction > 0
-      ? seedPlantLedger(
-          sector.sectorType,
-          persistedOwnedCapacity,
-          sector.industryModel,
-          sector.mediaDiscriminator
+  // Whole plants: retirement is wear too, and it is the one path that may take
+  // the last plant (a plant nobody buys from closes).
+  const idleWholePlants =
+    plantWearUnits != null && plantLedger
+      ? applyPlantChange(
+          {
+            capitalStock: plantsOwnedCapacity,
+            plantUnitRemainder: plantLedger.plantUnitRemainder,
+            plantWearUnits,
+          },
+          plantSizeForSector(sector),
+          {
+            lossUnits: plantsOwnedCapacity * idleRetirement.retireFraction,
+            protectLastPlant: false,
+          }
         )
+      : null;
+  const persistedOwnedCapacity = idleWholePlants
+    ? idleWholePlants.capitalStock
+    : plantsOwnedCapacity * retainedCapacityShare;
+  const idleCapacityRetiredUnits = plantsOwnedCapacity - persistedOwnedCapacity;
+  const persistedCapacityBookAnchor =
+    capacityBookAnchor * (idleWholePlants ? idleWholePlants.bookRetention : retainedCapacityShare);
+  const persistedPlantLedger = idleWholePlants
+    ? {
+        plantCount: idleWholePlants.plantCount,
+        plantUnitRemainder: idleWholePlants.plantUnitRemainder,
+      }
+    : idleRetirement.retireFraction > 0
+      ? seedPlantLedger(sector, persistedOwnedCapacity)
       : plantLedger;
-  // Phased stock-market boost, phase A: lift realized operating revenue AFTER
+  // A released product venture lifts realized revenue for a few days, after
   // every market-microstructure leg (governor, clearing, embargo) has run, so
   // those legs keep pricing what the market actually cleared. Nameplate
-  // revenue above (the headcount basis) is deliberately unboosted: this is a
-  // price/realization lift, not extra workers. Maintenance, growth realization
-  // and regulatory legs below all scale with the boosted figure, so margins
-  // are preserved and the lift lands in profit, then NPV, then share price.
-  // A released product venture lifts revenue the same way, for a few days.
+  // revenue above (the headcount basis) is deliberately unboosted.
   const hourlyRevenue =
-    realizedHourlyRevenue *
-    sectorRevenueBoostMultiplier(currentTurn, operatingSectorType) *
-    (lookups.productVentureBoostBySectorId?.get(sector._id.toString()) ?? 1);
+    realizedHourlyRevenue * (lookups.productVentureBoostBySectorId?.get(sectorId) ?? 1);
   // (moved to resolvePlantsRevenue: trade-exposure embargo legs)
   // (moved to resolvePlantsRevenue: P3b extraction hard min)
   // (moved to resolvePlantsRevenue: pre-plants counterfactual baseline)
@@ -786,7 +815,7 @@ export function processSector(
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
     fundedHeadcount: env.fundedHeadcountBySectorId
-      ? (env.fundedHeadcountBySectorId.get(sector._id.toString()) ?? {
+      ? (env.fundedHeadcountBySectorId.get(sectorId) ?? {
           desiredWorkers: 0,
           workers: 0,
         })
@@ -853,7 +882,13 @@ export function processSector(
   const maintenance = maintenanceBeforeSpecialization - operatingSaving;
   // ─── Growth cost (on realized revenue) + regulatory burden ────────────────
   // Pure computation in `sectorTurn/sectorCosts.ts`; names are unchanged.
-  const { hourlyGrowthCost, regulatoryBurden } = computeGrowthAndRegulatory({
+  const {
+    hourlyGrowthCost,
+    regulatoryBurden,
+    fundedRegulatoryBurdenRate,
+    nameplateHourlyGrowthCost,
+    nominalHourlyRevenue,
+  } = computeGrowthAndRegulatory({
     corp,
     newGrowthCost,
     preFlipNameplateRevenue,
@@ -919,6 +954,7 @@ export function processSector(
   const { plantsUpkeepCost, plantsUpkeepMarginBasisLive, plantsUpkeepMarginBasisAnchor } =
     computeIdleUpkeep({
       sector,
+      activeCapacityPercent: operatingCapacityTarget,
       plantsEnabled,
       mothballed,
       effectiveMargin,
@@ -958,11 +994,9 @@ export function processSector(
   // ─── P3.5: physical cost decomposition (plants only) ──────────────────────
   // Pure computation in `sectorTurn/sectorCosts.ts`; names are unchanged.
   const physicalCostInput = {
-    groupAllocations: market.groupSupplyInputsBySector?.get(sector._id.toString()),
+    groupAllocations: market.groupSupplyInputsBySector?.get(sectorId),
     plantsEnabled,
-    internalSupplyDiscountCost: market.internalSupplyDiscountCostBySectorId?.get(
-      sector._id.toString()
-    ),
+    internalSupplyDiscountCost: market.internalSupplyDiscountCostBySectorId?.get(sectorId),
     explicitPlantCostsEnabled,
     embargoLegacyMothball,
     profitMargin: sector.profitMargin,
@@ -1002,7 +1036,6 @@ export function processSector(
     otherOpexAnchorMarginBasis: sector.otherOpexAnchorMarginBasis,
     capitalEnabled: market.capitalEnabled,
     prevCapitalBookAnchor: sector.capitalBookAnchor,
-    npvBoostMultiplier: sectorNpvBoostMultiplier(currentTurn),
     freightNetHourly: freightBilling.credit - freightBilling.charge,
   };
   const {
@@ -1017,10 +1050,10 @@ export function processSector(
   } = decomposePhysicalCosts(physicalCostInput);
 
   const productProject = lookups.productLinesV2Enabled
-    ? lookups.manufacturingProductByCorpId?.get(corp._id.toString())
+    ? lookups.manufacturingProductByCorpId?.get(corpId)
     : undefined;
   const productAllocation = productProject?.allocations.find(
-    (allocation) => allocation.sectorId === sector._id.toString()
+    (allocation) => allocation.sectorId === sectorId
   );
   const productKind = productProject
     ? getManufacturingProductKind(productProject.kindId)
@@ -1031,8 +1064,8 @@ export function processSector(
     productKind &&
     productAllocation &&
     isLegalManufacturingProductForPlant(productProject.kindId, {
-      sectorId: sector._id.toString(),
-      corporationId: corp._id.toString(),
+      sectorId,
+      corporationId: corpId,
       sectorType: sector.sectorType,
       industryModel: sector.industryModel,
       strategyId: sector.strategyId,
@@ -1046,14 +1079,11 @@ export function processSector(
           allocationShare: productAllocation.share,
           stage: productProject.stage,
           outputCommodity: productKind.outputCommodity,
-          basePrices: eraScaledBasePrices(lookups.eraUnitScale),
+          basePrices,
           currentSectorQualityByCommodity: Object.fromEntries(
             [
               ...new Set([...Object.keys(strategyRates.supply ?? {}), productKind.outputCommodity]),
-            ].map((commodity) => [
-              commodity,
-              lookups.productSectorQualityById?.get(sector._id.toString()),
-            ])
+            ].map((commodity) => [commodity, lookups.productSectorQualityById?.get(sectorId)])
           ) as Partial<Record<CommodityType, number>>,
           paidDevelopmentAnchor: productProject.developmentPaidAnchor,
           paidThresholdAnchor: productProject.paidThresholdAnchor,
@@ -1220,6 +1250,7 @@ export function processSector(
       sectorUpdate.capacityBookAnchor = persistedCapacityBookAnchor;
       sectorUpdate.plantCount = persistedPlantLedger?.plantCount ?? 0;
       sectorUpdate.plantUnitRemainder = persistedPlantLedger?.plantUnitRemainder ?? 0;
+      if (idleWholePlants) sectorUpdate.plantWearUnits = idleWholePlants.plantWearUnits;
     }
   }
   // Plants ramp anchor (stamped once, on the flip turn).
@@ -1301,12 +1332,12 @@ export function processSector(
   // Only settlement worlds populate the map, so a world with settlement off
   // writes nothing new, except to clear a value it wrote while settlement was
   // on, which would otherwise sit stale on the sector forever.
-  const deliveryLimited = market.deliveryLimitedBySectorId?.get(sector._id.toString());
+  const deliveryLimited = market.deliveryLimitedBySectorId?.get(sectorId);
   if (deliveryLimited != null || typeof sector.deliveryLimitedFraction === "number") {
     sectorUpdate.deliveryLimitedFraction = Math.round((deliveryLimited ?? 0) * 1000) / 1000;
     sectorUpdate.deliveryLimitedFreightClass =
       deliveryLimited != null && deliveryLimited > 0
-        ? (market.deliveryLimitedClassBySectorId?.get(sector._id.toString()) ?? null)
+        ? (market.deliveryLimitedClassBySectorId?.get(sectorId) ?? null)
         : null;
   }
   // Canonical freight billing: persist both legs as named daily lines (or
@@ -1358,7 +1389,7 @@ export function processSector(
       otherOpexUncapped: daily(physicalPnl.otherOpexUncapped),
       financialLegs: daily(physicalPnl.financialLegs),
       internalSupplyDiscountCost: daily(
-        market.internalSupplyDiscountCostBySectorId?.get(sector._id.toString()) ?? 0
+        market.internalSupplyDiscountCostBySectorId?.get(sectorId) ?? 0
       ),
       policyCredit: daily(physicalPnl.policyCredit),
       policyPp: Math.round(plantsPolicyPp * 100) / 100,
@@ -1379,14 +1410,13 @@ export function processSector(
     physicalPnl && hourlyRevenue > 0 ? physicalPnl.derivedMarginPct : effectiveMargin;
   if (market.plantsEnabled)
     sectorUpdate.internalSupplyReceipt = {
-      ...(market.internalSupplyReceiptsBySectorId?.get(sector._id.toString()) ?? {
+      ...(market.internalSupplyReceiptsBySectorId?.get(sectorId) ?? {
         turn: currentTurn,
         received: {},
         reserved: {},
       }),
       discountCostAnchor:
-        (market.internalSupplyDiscountCostBySectorId?.get(sector._id.toString()) ?? 0) *
-        TURNS_PER_DAY,
+        (market.internalSupplyDiscountCostBySectorId?.get(sectorId) ?? 0) * TURNS_PER_DAY,
     };
   sectorUpdate.effectiveProfitMargin = Math.round(reportedEffectiveMargin * 100) / 100;
   // P3.5: stamp the solved calibration residual and the margin basis it was
@@ -1417,7 +1447,7 @@ export function processSector(
         physicalPnl.upkeep +
         physicalPnl.complianceCost +
         physicalPnl.financialLegs -
-        (market.internalSupplyDiscountCostBySectorId?.get(sector._id.toString()) ?? 0) +
+        (market.internalSupplyDiscountCostBySectorId?.get(sectorId) ?? 0) +
         Math.max(0, -physicalPnl.policyCredit),
       nominalProducedRevenue:
         plantsCapacity > 0
@@ -1517,7 +1547,6 @@ export function processSector(
   if (plantsEnabled) {
     sectorOps.push(
       ...(shortageBuildSpeedupOps({
-        enabled: market.shortageBuildSpeedupEnabled === true,
         sectorId: sector._id,
         outstanding: existingQueue.filter((o) => o.onlineTurn > currentTurn),
         currentTurn,
@@ -1575,6 +1604,7 @@ export function processSector(
     /** P3a: ₳ of paid-but-not-yet-delivered build orders after this turn. */
     constructionInProgressAnchor,
     npvContribution: market.capitalEnabled ? Math.round(capitalBookAnchor) : sectorNPV,
+    ...(plantsMixPrice > 0 ? { outputMixPriceAnchor: plantsMixPrice } : {}),
     // P3.5: under plants these two modifiers no longer drive cost (input costs
     // are billed physically, surplus is priced on the revenue side). Reporting
     // them as 0 keeps the corp margin diagnostic honest about what actually
@@ -1588,13 +1618,19 @@ export function processSector(
     stateMetricsLegacyTotal: stateMetricMargin.legacyTotal,
     hourlyGrowthCost,
     regulatoryBurden: embargoLegacyMothball ? 0 : regulatoryBurden,
+    // Funded turns charge the size and regulatory legs on the revenue the plant
+    // sold, with the plants fade complete (dominance is tolled at build time).
     fundedSizeCostPp: fundedSizeCostPp({
       stateOwned: isStateOwned(corp),
       overheadStage: lookups.fundedOverheadStage ?? 0,
-      overheadMod: managementOverheadMod,
-      sprawlMod,
-      dominancePenalty: dominanceMarginPenalty,
+      overheadMod: fundedSizeLegs.overhead,
+      sprawlMod: fundedSizeLegs.sprawl,
+      dominancePenalty: fundedSizeLegs.dominance,
     }),
+    fundedRegulatoryBurdenRate: embargoLegacyMothball ? 0 : fundedRegulatoryBurdenRate,
+    fundedDominancePenaltyPp: fundedSizeLegs.dominance,
+    nameplateHourlyGrowthCost: embargoLegacyMothball ? 0 : nameplateHourlyGrowthCost,
+    nameplateHourlyRevenue: nominalHourlyRevenue,
     // O1c: paid growth cost this turn (0 only under legacy mothball — froze, paid
     // nothing; the trade-exposure model keeps investing on the domestic remainder).
     growthInvestmentAnchor: embargoLegacyMothball ? 0 : hourlyGrowthCost,
@@ -1602,24 +1638,22 @@ export function processSector(
     countryId: sectorCountryId,
   };
   if ((market.internalSupplyTrades?.length || market.groupSupplyDiscountsEnabled) && physicalPnl) {
-    if (market.groupSupplyDiscountsEnabled)
+    if (market.groupSupplyDiscountsEnabled) {
+      // One mix table for every output leg instead of one full mix total per
+      // commodity.
+      const outputMixWeights = commodityMixWeights(strategyRates.supply ?? {}, basePrices);
+      const outputUnits = Math.max(0, mothballed ? 0 : producedUnits);
       result.groupSupplyOutputUnits = new Map(
         Object.keys(strategyRates.supply ?? {}).map((commodity) => [
           commodity,
-          Math.max(0, mothballed ? 0 : producedUnits) *
-            commodityMixWeight(
-              strategyRates.supply ?? {},
-              eraScaledBasePrices(lookups.eraUnitScale),
-              commodity as CommodityType
-            ),
+          outputUnits * mixWeightFrom(outputMixWeights, commodity as CommodityType),
         ])
       );
-    result.internalSupplyInputUnits = new Map(
-      [...inputUnitsByCommodity].map(([commodity, units]) => [
-        commodity,
-        units * TURNS_PER_DAY * lookups.eraUnitScale,
-      ])
-    );
+    }
+    const internalInputUnits = new Map<CommodityType, number>();
+    for (const [commodity, units] of inputUnitsByCommodity)
+      internalInputUnits.set(commodity, units * TURNS_PER_DAY * lookups.eraUnitScale);
+    result.internalSupplyInputUnits = internalInputUnits;
     result.applyInternalSupplyDiscount = (cost) => {
       const recalculated = decomposePhysicalCosts({
         ...physicalCostInput,

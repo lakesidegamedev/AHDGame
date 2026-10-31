@@ -1,9 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 
-export const REGIONAL_CONDITIONS_DISABLED_MESSAGE =
-  "Regional conditions on the state overview are not enabled yet.";
-
 /**
  * Whether the state overview tab surfaces active approval modifiers
  * (Economic Boom, Population Decline, etc.) in a dedicated card.

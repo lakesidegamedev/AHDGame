@@ -22,6 +22,38 @@ type PayoutJournalRecord = {
   status: string;
   legs: { applied: boolean; refusal?: string }[];
 };
+
+/**
+ * The balance one queued payout credits, and its path. NPP investment cash is
+ * ₳-denominated; a character's wallet is native, so the anchor amount is
+ * multiplied by the fund's rate before it lands (the A0 defect that mispriced
+ * every non-USD fund).
+ */
+export interface HolderCreditTarget {
+  collection: string;
+  path: string;
+}
+
+export function holderCreditTarget(
+  fund: IndexFund,
+  entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">,
+  credit: number,
+  forexEnabled: boolean
+): HolderCreditTarget | null {
+  if (entry.characterId)
+    return {
+      collection: "characters",
+      path: Object.keys(buildPersonalBalanceInc(credit, fund.anchorCurrencyCode, forexEnabled))[0],
+    };
+  if (entry.imperialCharacterId)
+    return {
+      collection: "imperialCharacters",
+      path: Object.keys(buildPersonalBalanceInc(credit, fund.anchorCurrencyCode, forexEnabled))[0],
+    };
+  if (entry.nppId) return { collection: "npps", path: "nppInvestmentCashAnchor" };
+  return null;
+}
+
 export type ClaimedRedemption = IndexFundRedemptionQueueEntry & {
   settlementClaimId?: string;
   processingTurn?: number;
@@ -341,18 +373,12 @@ export async function settleQueuedPayout(
     input;
   const holderId = entry.characterId ?? entry.imperialCharacterId ?? entry.nppId;
   if (!holderId) return false;
-  const collection = entry.characterId
-    ? "characters"
-    : entry.imperialCharacterId
-      ? "imperialCharacters"
-      : "npps";
   const holder = input.holder;
   if (!holder) return false;
-  const npp = collection === "npps";
-  const credit = npp ? paidAmount : paidNative;
-  const path = npp
-    ? "nppInvestmentCashAnchor"
-    : Object.keys(buildPersonalBalanceInc(credit, fund.anchorCurrencyCode, input.forexEnabled))[0];
+  const credit = entry.characterId || entry.imperialCharacterId ? paidNative : paidAmount;
+  const target = holderCreditTarget(fund, entry, credit, input.forexEnabled);
+  if (!target) return false;
+  const { collection, path } = target;
   const now = new Date(),
     key = `fund-redemption:${entry._id}:${claimId}`;
   const receipts = payoutReceiptDocs({

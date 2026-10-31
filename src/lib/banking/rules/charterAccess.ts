@@ -40,8 +40,6 @@ export function playerInvestmentBankingSeedFlags(seedYear: number) {
     ? {
         privateBankingEnabled: true,
         bankPropTradingEnabled: true,
-        playerAdvancedBankChartersEnabled: true,
-        bankPropForexFeesEnabled: true,
       }
     : {};
 }

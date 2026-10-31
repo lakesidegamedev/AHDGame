@@ -44,9 +44,19 @@ describe("idle cause meter colors", () => {
   it("gives every idle cause a unique swatch so no two legend dots collide", () => {
     const entries = Object.entries(IDLE_CAUSE_FILL);
 
-    expect(entries).toHaveLength(11);
+    expect(entries).toHaveLength(12);
     const fills = new Set(entries.map(([, fill]) => fill));
     expect(fills.size).toBe(entries.length);
     for (const fill of fills) expect(fill).toMatch(/^bg-/);
+  });
+
+  it("says local-market outputs cannot sell into a shortage elsewhere (ticket 1700)", () => {
+    expect(idleCauseMeta("manufacturing").demand.help).not.toMatch(/only in this state/);
+    expect(idleCauseMeta("construction", undefined, ["Construction Services"]).demand.help).toMatch(
+      /Construction Services sells only in this state, so a shortage elsewhere does not raise demand here\.$/
+    );
+    expect(
+      idleCauseMeta("construction", undefined, ["Freight", "Construction Services"]).demand.help
+    ).toMatch(/Freight and Construction Services sell only in this state/);
   });
 });

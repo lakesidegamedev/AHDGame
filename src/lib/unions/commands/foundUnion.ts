@@ -34,7 +34,7 @@ import {
 import { rejectIfTurnProcessing } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
 
-export { MAX_UNION_NAME_LENGTH, MIN_UNION_NAME_LENGTH, UNION_FOUNDING_ACTION_COST };
+export { MAX_UNION_NAME_LENGTH, MIN_UNION_NAME_LENGTH };
 
 export interface FoundUnionInput {
   countryId: CountryId;

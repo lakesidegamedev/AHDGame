@@ -1,20 +1,69 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { RegionTabNav, type SuperTabId } from "@/components/state/RegionTabNav";
-import { UKRegionPageTabsPolitics } from "./UKRegionPageTabsPolitics";
-import { RegionPartiesTab } from "@/components/region/RegionPartiesTab";
 import { countryUrl } from "@/lib/urls";
-import { UKRegionPageTabsMetrics } from "./UKRegionPageTabsMetrics";
-import { RegionMetricsTab } from "@/components/state/RegionMetricsTab";
-import { DemographicsAndTurnoutTab } from "@/components/state/StatePageTabsDemographicsAndTurnout";
-import { StateElections } from "@/components/StateElections";
-import { StateEconomy } from "@/components/state/StateEconomy";
-import { ResourcesTab } from "@/components/state/StatePageTabsResources";
-import { StateBudgetSection } from "@/components/budget/StateBudgetSection";
-import { LawsTab } from "@/components/state/StatePageTabsLaws";
-import { AdminTab } from "@/components/state/StatePageTabsAdmin";
 import { RegionReferendumCampaign } from "./RegionReferendumCampaign";
 import { OverviewTab } from "@/components/state/StatePageTabsOverview";
+import { TabFallback } from "@/components/state/TabFallback";
+
+// Every tab below the default Overview is its own chunk, the same way the
+// country-region shell does it. Importing them statically here shipped all of
+// them on a first paint that renders one, and only for the UK branch of a page
+// most visitors reach as a US state.
+const UKRegionPageTabsPolitics = dynamic(
+  () => import("./UKRegionPageTabsPolitics").then((m) => ({ default: m.UKRegionPageTabsPolitics })),
+  { loading: TabFallback }
+);
+const RegionPartiesTab = dynamic(
+  () =>
+    import("@/components/region/RegionPartiesTab").then((m) => ({ default: m.RegionPartiesTab })),
+  { loading: TabFallback }
+);
+const StateElections = dynamic(
+  () => import("@/components/StateElections").then((m) => ({ default: m.StateElections })),
+  { loading: TabFallback }
+);
+const StateEconomy = dynamic(
+  () => import("@/components/state/StateEconomy").then((m) => ({ default: m.StateEconomy })),
+  { loading: TabFallback }
+);
+const StateBudgetSection = dynamic(
+  () =>
+    import("@/components/budget/StateBudgetSection").then((m) => ({
+      default: m.StateBudgetSection,
+    })),
+  { loading: TabFallback }
+);
+const ResourcesTab = dynamic(
+  () =>
+    import("@/components/state/StatePageTabsResources").then((m) => ({ default: m.ResourcesTab })),
+  { loading: TabFallback }
+);
+const RegionMetricsTab = dynamic(
+  () =>
+    import("@/components/state/RegionMetricsTab").then((m) => ({ default: m.RegionMetricsTab })),
+  { loading: TabFallback }
+);
+const DemographicsAndTurnoutTab = dynamic(
+  () =>
+    import("@/components/state/StatePageTabsDemographicsAndTurnout").then((m) => ({
+      default: m.DemographicsAndTurnoutTab,
+    })),
+  { loading: TabFallback }
+);
+const UKRegionPageTabsMetrics = dynamic(
+  () => import("./UKRegionPageTabsMetrics").then((m) => ({ default: m.UKRegionPageTabsMetrics })),
+  { loading: TabFallback }
+);
+const LawsTab = dynamic(
+  () => import("@/components/state/StatePageTabsLaws").then((m) => ({ default: m.LawsTab })),
+  { loading: TabFallback }
+);
+const AdminTab = dynamic(
+  () => import("@/components/state/StatePageTabsAdmin").then((m) => ({ default: m.AdminTab })),
+  { loading: TabFallback }
+);
 import type { StateOverviewResult } from "@/lib/states/overview/types";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import type { UKRegion } from "@/lib/constants/uk";

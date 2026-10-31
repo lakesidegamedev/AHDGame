@@ -1,3 +1,4 @@
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
@@ -57,6 +58,9 @@ export async function GET(
     // County leans follow the world's era (a 1991 world starts from 1984/1988).
     const data = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
       preset: await getGameStatePresetOrDefault(db),
+      ...(modeEntry.config.dataDir === "counties" && election.status === "active"
+        ? { countyPopulations: await loadCountyPopulationMap(db, regionId) }
+        : {}),
     });
     if (!data) {
       return errorResponse(404, "Subdivision data not available for this region");

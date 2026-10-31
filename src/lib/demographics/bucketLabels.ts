@@ -45,7 +45,7 @@ export const BUCKET_LABELS: Record<GranularDim, Record<string, string>> = {
 };
 
 /** Player-facing name for a dimension itself, for grouping headers. */
-export const DIMENSION_LABELS: Record<GranularDim, string> = {
+const DIMENSION_LABELS: Record<GranularDim, string> = {
   race: "Background",
   age: "Age",
   education: "Education",

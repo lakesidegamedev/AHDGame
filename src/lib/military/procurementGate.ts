@@ -1,3 +1,5 @@
+import { isGovernmentContractsEnabled } from "@/lib/governmentContracts/featureFlag";
+import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "@/lib/governmentContracts/rules/featureGate";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { activeProcurementRestriction } from "@/lib/db/collections/procurementRestrictions";
@@ -35,7 +37,7 @@ export const DEFENCE_PROCUREMENT_PAUSED_MESSAGE =
  * can plan around, while one that only says "no" is a wall. Player-facing copy, so
  * no em or en dashes.
  */
-export function procurementRestrictedMessage(until: number): string {
+function procurementRestrictedMessage(until: number): string {
   return (
     "This country cannot award new defence contracts under the terms of a peace settlement. " +
     `The restriction lapses on turn ${until}. Existing contracts continue to deliver, and ` +
@@ -64,6 +66,9 @@ export async function isProcurementBlocked(
 ): Promise<ProcurementGateResult> {
   if (await isDefenceProcurementPaused(db)) {
     return { blocked: true, reason: DEFENCE_PROCUREMENT_PAUSED_MESSAGE, until: null };
+  }
+  if (!(await isGovernmentContractsEnabled(db))) {
+    return { blocked: true, reason: GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, until: null };
   }
   const until = await activeProcurementRestriction(db, countryId, currentTurn);
   if (until != null) {

@@ -3,17 +3,21 @@ import { POLICY_DRIFT_RATE_PER_TURN } from "./policyDrift";
 import { birthRateIndexToTFR } from "@/lib/demographics/flows/fertility";
 import { tfrToBirthRateIndex } from "./fertilityOpening";
 
-/** Conservative game calibration, not an empirical causal estimate: max +/-0.24 children at capped pressure. */
-export const FERTILITY_CHILDREN_PER_PRESSURE = 0.2;
+/** Game calibration, not an empirical causal estimate. Negative pressure keeps its existing bound. */
+export const FERTILITY_POLICY_MAX_BOOST = 0.4;
+const FERTILITY_POLICY_MAX_REDUCTION = 0.24;
+const MAX_POLICY_PRESSURE = 1.2;
 
 export function fertilityPolicyIndex(
   opening: number,
   prior: number | undefined,
   pressure: number,
-  replacementTfr = 2.06
+  replacementTfr = 2.06,
+  maxBoost = FERTILITY_POLICY_MAX_BOOST
 ): number {
   if (
-    ![opening, prior ?? opening, pressure, replacementTfr].every(Number.isFinite) ||
+    ![opening, prior ?? opening, pressure, replacementTfr, maxBoost].every(Number.isFinite) ||
+    maxBoost < 0 ||
     replacementTfr <= 0 ||
     opening < 0 ||
     opening > 100 ||
@@ -26,7 +30,9 @@ export function fertilityPolicyIndex(
     Math.min(
       3.4 * replacementTfr,
       birthRateIndexToTFR(opening, replacementTfr) +
-        Math.max(-1.2, Math.min(1.2, pressure)) * FERTILITY_CHILDREN_PER_PRESSURE
+        (Math.max(-MAX_POLICY_PRESSURE, Math.min(MAX_POLICY_PRESSURE, pressure)) /
+          MAX_POLICY_PRESSURE) *
+          (pressure < 0 ? FERTILITY_POLICY_MAX_REDUCTION : maxBoost)
     )
   );
   const target = tfrToBirthRateIndex(targetTfr, replacementTfr);

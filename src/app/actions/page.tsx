@@ -1,11 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { CampaignActionModal } from "./components/CampaignActionModal";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { Character, State } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { calculatePoliticalInfluenceDecay } from "@shared/constants/formulas";
 import {
   getCampaignActionCost,
@@ -16,6 +17,7 @@ import {
   quoteCampaignAction,
   quoteAdvertiseAction,
   quoteBuildDonorBaseAction,
+  type ActionStateEconomics,
 } from "@/lib/actions";
 import { getHomeCurrency, getTotalPersonalLiquidWealth } from "@/lib/currency/characterFunds";
 import { notifyCharacterStatsUpdated } from "@/lib/characterStatsSync";
@@ -27,10 +29,25 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import ActionCard from "./components/ActionCard";
 import ActionCardCompact from "./components/ActionCardCompact";
 import ActionsHero from "./components/ActionsHero";
-import PlayerEventCard from "./components/PlayerEventCard";
-import DebateCard from "./components/DebateCard";
-import CrisisActionCard from "./components/CrisisActionCard";
-import EndorsePresidentCard from "./components/EndorsePresidentCard";
+import { EventsPanel } from "./components/EventsPanel";
+
+// Conditional banners: each renders nothing unless the player has a pending
+// event, a live debate, an active crisis or an unendorsed home presidential
+// race. The first three render as items inside `EventsPanel`. They are code-split so the action grid's first load does not carry
+// them or the metric catalogue behind the crisis card. Each still
+// server-renders when it has something to show, so nothing reserves space and
+// then moves.
+const NullFallback = () => null;
+const PlayerEventCard = dynamic(() => import("./components/PlayerEventCard"), {
+  loading: NullFallback,
+});
+const DebateCard = dynamic(() => import("./components/DebateCard"), { loading: NullFallback });
+const CrisisActionCard = dynamic(() => import("./components/CrisisActionCard"), {
+  loading: NullFallback,
+});
+const EndorsePresidentCard = dynamic(() => import("./components/EndorsePresidentCard"), {
+  loading: NullFallback,
+});
 import CategoryFilter from "./components/CategoryFilter";
 import ViewToggle from "./components/ViewToggle";
 import CategoryHeading from "./components/CategoryHeading";
@@ -52,7 +69,7 @@ export default function ActionsPage() {
   const router = useRouter();
   const worldFlags = useWorldFlags();
   const [character, setCharacter] = useState<Character | null>(null);
-  const [homeState, setHomeState] = useState<State | null>(null);
+  const [homeState, setHomeState] = useState<ActionStateEconomics | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [flash, setFlash] = useState<{
     type: string;
@@ -101,7 +118,10 @@ export default function ActionsPage() {
     try {
       const [meRes, charRes] = await Promise.all([
         fetch("/api/auth/me"),
-        fetch("/api/auth/character"),
+        // The GDP and population the cost quotes need ride the character
+        // response, so the grid paints at final prices without a second,
+        // serial state round trip.
+        fetch("/api/auth/character?include=homeState"),
       ]);
       if (meRes.status === 401 || meRes.status === 403) {
         router.push("/login");
@@ -119,25 +139,17 @@ export default function ActionsPage() {
         localStorage.setItem("actionsViewMode", meData.user.actionsViewMode);
       }
       if (charRes.ok) {
-        const char: Character = await charRes.json();
+        const char: Character & { homeStateEconomics?: ActionStateEconomics | null } =
+          await charRes.json();
         setCharacter(char);
-        // State data is needed to compute accurate GDP-scaled action costs.
-        if (char.homeState) {
-          try {
-            const stateRes = await fetch(
-              `/api/state/${encodeURIComponent(char.homeState)}?country=${encodeURIComponent(char.countryId)}`
-            );
-            if (stateRes.ok) {
-              const data = await stateRes.json();
-              if (data) setHomeState(data);
-            }
-          } catch {
-            // State data failed — page will use fallback costs
-          }
-        }
+        if (char.homeStateEconomics) setHomeState(char.homeStateEconomics);
+        setLoading(false);
+      } else {
+        setLoading(false);
       }
     } catch (err) {
       console.error("Failed to fetch character:", err);
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -176,7 +188,9 @@ export default function ActionsPage() {
   useEffect(() => {
     const fetchPortfolio = async () => {
       try {
-        const res = await fetch("/api/character/portfolio");
+        // Four scalar totals are all this page renders; `summary=1` skips the
+        // 500-row history chart (and its per-row FX snapshots).
+        const res = await fetch("/api/character/portfolio?summary=1");
         if (res.ok) {
           const data = await res.json();
           setPortfolioData({
@@ -393,6 +407,10 @@ export default function ActionsPage() {
     return map;
   }, [era, countryId]);
   const heroImage = useMemo(() => getActionImage("hero", { era, countryId }), [era, countryId]);
+  const debateImage = useMemo(
+    () => getActionImage("debatePrep", { era, countryId }),
+    [era, countryId]
+  );
 
   const influence = character?.politicalInfluence ?? 0;
   const infamy = character?.infamy ?? 0;
@@ -727,14 +745,13 @@ export default function ActionsPage() {
           portfolioData={portfolioData}
         />
 
-        {/* Pending random event — renders nothing when there is none */}
-        <PlayerEventCard />
-
-        {/* Active election debate — renders nothing when there is none */}
-        <DebateCard />
-
-        {/* Active crises — renders nothing when there are none */}
-        <CrisisActionCard />
+        {/* Random events, debates and crises share one panel. It hides itself
+            until one of them has something to show. */}
+        <EventsPanel>
+          <PlayerEventCard />
+          <DebateCard imageUrl={debateImage} />
+          <CrisisActionCard />
+        </EventsPanel>
 
         {/* Presidential endorsement nudge: renders nothing when the player has
             no live presidential race at home or has already endorsed someone */}

@@ -2,6 +2,7 @@
  * Seated deputies propose bills in their active national legislature.
  * proposeNationalBill resolves current offices, preserves proposal costs and rejects a dissolved chamber.
  */
+import { resolveNationalPartyNppAccess } from "../queries/nationalPartyNppAccess";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUser } from "@/lib/auth";
@@ -65,6 +66,7 @@ export interface ProposeNationalBillInput {
   fullText?: string;
   provisions: unknown[];
   confirmElectionRisk?: boolean;
+  proposeViaPartyNpp?: boolean;
 }
 
 export async function proposeNationalBill(
@@ -124,12 +126,40 @@ export async function proposeNationalBill(
   const {
     title,
     summary,
-    chamber,
+    chamber: requestedChamber,
     category,
     fullText,
     provisions: clientProvisions,
     confirmElectionRisk,
   } = input;
+
+  const partyAccess = input.proposeViaPartyNpp
+    ? await resolveNationalPartyNppAccess(
+        db,
+        countryId,
+        character,
+        memberOriginKeys.map((chamber) => ({
+          chamber,
+          officeType: getOfficeTypeForChamber(countryId, chamber, preset, config),
+        }))
+      )
+    : null;
+  if (partyAccess && !partyAccess.authorized)
+    return {
+      status: 403,
+      body: { error: "Only your national party chair may direct a national party legislator." },
+    };
+  if (partyAccess?.blocked)
+    return {
+      status: 409,
+      body: {
+        error: "Your party already has an NPP bill in progress in this national legislature.",
+      },
+    };
+  if (partyAccess && !partyAccess.sponsor)
+    return { status: 409, body: { error: "No eligible national party legislator is available." } };
+  const partySponsor = partyAccess?.sponsor;
+  const chamber = partySponsor?.chamber ?? requestedChamber;
 
   if (!allowedOriginKeys.includes(chamber)) {
     return {
@@ -161,7 +191,7 @@ export async function proposeNationalBill(
     };
   }
 
-  const isAdmin = authUser.isAdmin === true;
+  const isAdmin = authUser.isAdmin === true && !input.proposeViaPartyNpp;
   const officialFilter: Record<string, unknown> = {
     characterId: character._id,
     officeType: { $in: allowedOriginOfficeTypes },
@@ -169,9 +199,11 @@ export async function proposeNationalBill(
       ? { $or: [{ countryId: usCountryId }, { countryId: { $exists: false } }] }
       : { countryId }),
   };
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(officialFilter);
+  const official = partySponsor
+    ? null
+    : await db.collection<ElectedOfficial>("electedOfficials").findOne(officialFilter);
   const usingAdminOverride = isAdmin && !official;
-  const usingSovereignOverride = mayRuleByDecree(character, countryId);
+  const usingSovereignOverride = !input.proposeViaPartyNpp && mayRuleByDecree(character, countryId);
 
   // Origin/current chamber is stored as the *chamber key* (e.g. "npc"), which is
   // what every read path — bills list, active-bill guard, turn lifecycle — filters
@@ -181,7 +213,8 @@ export async function proposeNationalBill(
   // NPC page and wedged sponsors (Bug #0734).
   let sponsorChamberKey: string = lowerKey;
   if (usingAdminOverride || usingSovereignOverride) sponsorChamberKey = chamber;
-  if (!isAdmin && !usingSovereignOverride) {
+  if (partySponsor) sponsorChamberKey = partySponsor.chamber;
+  if (!partySponsor && !isAdmin && !usingSovereignOverride) {
     if (!official) {
       const chamberLabels =
         allowedOriginKeys.length > 1 && upperKey
@@ -233,7 +266,7 @@ export async function proposeNationalBill(
     }
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !partySponsor) {
     // Player suggestion #77 — bicameral relief: once a sponsor's bill has
     // cleared its FIRST chamber (passed_origin, or active_other = now being
     // voted on in the second chamber), the first chamber is free, so let them
@@ -347,8 +380,9 @@ export async function proposeNationalBill(
       ...(fullText?.trim() ? { fullText: fullText.trim() } : {}),
       originChamber: chamberKey,
       currentChamber: isUsCongress && chamberKey === "joint" ? "house" : chamberKey,
-      sponsorId: character._id,
-      sponsorName: character.name,
+      sponsorId: partySponsor?.npp._id ?? character._id,
+      sponsorName: partySponsor?.npp.name ?? character.name,
+      ...(partySponsor ? { nppSponsored: true, proposalPayerId: character._id } : {}),
       sponsorParty: character.party ?? undefined,
       ...(usingAdminOverride ? { adminProposed: true } : {}),
       status: "active",
@@ -369,7 +403,8 @@ export async function proposeNationalBill(
     };
     try {
       const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(natBill);
-      if (!usingAdminOverride) await awardBillSponsored(authUser.userId, character._id);
+      if (!partySponsor && !usingAdminOverride)
+        await awardBillSponsored(authUser.userId, character._id);
       if (usingSovereignOverride) {
         await enactSingleplayerDecree(db, { ...natBill, _id: result.insertedId } as Bill);
       }
@@ -396,6 +431,11 @@ export async function proposeNationalBill(
           }
         );
       }
+      if (partySponsor && (error as { code?: number }).code === 11000)
+        return {
+          status: 409,
+          body: { error: "Your party already has an NPP bill in progress. Please refresh." },
+        };
       throw error;
     }
   }
@@ -662,8 +702,9 @@ export async function proposeNationalBill(
     ...(fullText?.trim() ? { fullText: fullText.trim() } : {}),
     originChamber: chamberKey,
     currentChamber: isUsCongress && chamberKey === "joint" ? "house" : chamberKey,
-    sponsorId: character._id,
-    sponsorName: character.name,
+    sponsorId: partySponsor?.npp._id ?? character._id,
+    sponsorName: partySponsor?.npp.name ?? character.name,
+    ...(partySponsor ? { nppSponsored: true, proposalPayerId: character._id } : {}),
     sponsorParty: character.party ?? undefined,
     ...(usingAdminOverride ? { adminProposed: true } : {}),
     status: "active",
@@ -689,7 +730,8 @@ export async function proposeNationalBill(
 
   try {
     const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
-    if (!usingAdminOverride) await awardBillSponsored(authUser.userId, character._id);
+    if (!partySponsor && !usingAdminOverride)
+      await awardBillSponsored(authUser.userId, character._id);
     if (usingSovereignOverride) {
       await enactSingleplayerDecree(db, { ...bill, _id: result.insertedId } as Bill);
     }
@@ -716,6 +758,11 @@ export async function proposeNationalBill(
         }
       );
     }
+    if (partySponsor && (error as { code?: number }).code === 11000)
+      return {
+        status: 409,
+        body: { error: "Your party already has an NPP bill in progress. Please refresh." },
+      };
     throw error;
   }
 }

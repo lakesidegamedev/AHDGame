@@ -16,7 +16,6 @@
  * applied transition is recorded and skipped thereafter.
  */
 import type { Db } from "mongodb";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { DECOLONIZATION_ROSTER_RULE_IDS, runTransition } from "@/lib/world/transitions";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
@@ -52,17 +51,10 @@ export async function processDecolonizationTurn(
   // Year boundary only.
   if (currentTurn % TURNS_PER_YEAR !== 0) return EMPTY;
 
-  // Fail-safe gate. `historicalPrior` returns 0.95 — "strong default to
-  // resolve" — for any year PAST a rule's window, so an ungated phase in a
-  // 1991 or 2019 world would fire every decolonization rule on its first year
-  // boundary and re-apply independences that are already historical fact.
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { worldTransitionsEnabled: 1 } });
-  if (config?.worldTransitionsEnabled !== true) return EMPTY;
-
-  // Second belt: even with the flag on, refuse to run past the era these rules
-  // describe. The roster's latest window closes in the mid-1970s.
+  // Era gate. `historicalPrior` returns 0.95 ("strong default to resolve") for
+  // any year PAST a rule's window, so a phase running beyond this era would fire
+  // every decolonization rule at once and re-apply independences that are
+  // already historical fact. The roster's latest window closes in the mid-1970s.
   if (currentYear > DECOLONIZATION_ERA_LAST_YEAR) return EMPTY;
 
   const applied = await db

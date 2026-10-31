@@ -19,8 +19,8 @@ export const VENTURE_BOOST_TURNS = 3 * TURNS_PER_DAY;
 /** Time a CEO has to answer an event before the default choice applies. */
 export const VENTURE_EVENT_RESPONSE_TURNS = TURNS_PER_DAY;
 /** Investment target as turns of the matching sectors' revenue. */
-export const VENTURE_TARGET_TURNS_OF_REVENUE = 1.5;
-export const VENTURE_MIN_TARGET_ANCHOR = 1_000;
+const VENTURE_TARGET_TURNS_OF_REVENUE = 1.5;
+const VENTURE_MIN_TARGET_ANCHOR = 1_000;
 /** Per-turn funding tiers as multiples of target / development turns. */
 export const VENTURE_FUNDING_TIERS = [
   { id: "lean", label: "Lean", multiple: 0.5 },
@@ -28,8 +28,8 @@ export const VENTURE_FUNDING_TIERS = [
   { id: "heavy", label: "Heavy", multiple: 1.5 },
   { id: "all_in", label: "All in", multiple: 2 },
 ] as const;
-export const VENTURE_MAX_FUNDING_MULTIPLE = 2;
-export const VENTURE_MIN_FUNDING_MULTIPLE = 0.25;
+const VENTURE_MAX_FUNDING_MULTIPLE = 2;
+const VENTURE_MIN_FUNDING_MULTIPLE = 0.25;
 /** Several hits cannot lift one sector by more than this. */
 export const VENTURE_MAX_STACKED_BOOST = 0.25;
 export const VENTURE_MIN_BOOST = 0.1;
@@ -107,7 +107,7 @@ export function boostFractionForQuality(quality: number): number {
   return VENTURE_MIN_BOOST + (VENTURE_MAX_BOOST - VENTURE_MIN_BOOST) * scale;
 }
 
-export function finalQuality(
+function finalQuality(
   venture: Pick<ProductVenture, "investedAnchor" | "targetAnchor" | "qualityShift">,
   brandBonus: number
 ): number {
@@ -164,10 +164,7 @@ export function scheduleEvents(input: {
   });
 }
 
-export function eventChoice(
-  event: VentureEventDef,
-  choiceId: string
-): VentureEventChoice | undefined {
+function eventChoice(event: VentureEventDef, choiceId: string): VentureEventChoice | undefined {
   return event.choices.find((choice) => choice.id === choiceId);
 }
 
@@ -332,16 +329,6 @@ export function advanceBoost(
     upliftToDateAnchor: (venture.upliftToDateAnchor ?? 0) + uplift,
     lastUpliftAnchor: uplift,
   };
-}
-
-/** Extra revenue a boost produced, given the revenue the sector reported while lifted. */
-export function upliftFromRevenue(
-  revenueAnchor: number,
-  boostFraction: number,
-  priorTotalBoost: number
-): number {
-  const revenue = Math.max(0, finite(revenueAnchor));
-  return (revenue * Math.max(0, boostFraction)) / (1 + Math.max(0, priorTotalBoost));
 }
 
 export function stackedBoostMultiplier(boosts: readonly number[]): number {

@@ -96,6 +96,11 @@ export const ACKNOWLEDGED_OUTSIDE: ReadonlyArray<{
     country: "RU",
     why: "The shared conflict outcome resolver combines Ukrainian, Russian and coalition choices into a joint campaign result; it contains no Russia-only reference data.",
   },
+  {
+    file: "src/lib/constants/calendar.ts",
+    country: "UK",
+    why: "The shared game calendar holds the global turn-1 year; UK_STARTING_YEAR is an alias of it kept for callers, not UK reference data.",
+  },
   // ⚠ NO SHIM ENTRIES HERE. Japan leaves twelve forwarders behind and they used
   // to be listed one by one. They are now RECOGNISED instead: `isCountryFolderShim`
   // in the test accepts a file whose every statement, comments stripped, is an

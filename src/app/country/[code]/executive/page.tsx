@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCountryState } from "@/lib/countryState";
+import { getExecutiveIdentity } from "@/lib/constants/institutionIdentity";
+import { getExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { getDb } from "@/lib/mongodb";
 import WhiteHouseClient from "@/app/whitehouse/WhiteHouseClient";
 import { ParliamentaryExecutiveHub } from "./ParliamentaryExecutiveHub";
@@ -66,5 +68,21 @@ export default async function ExecutivePage({ params }: PageProps) {
   }
 
   // presidential — the only remaining government type.
-  return <WhiteHouseClient countryId={countryId} />;
+  return (
+    <WhiteHouseClient
+      countryId={countryId}
+      // The shell no longer imports the registry: the page already holds the
+      // full config, so the four display strings ride in as props instead.
+      chrome={{
+        countryName: config.name,
+        governmentType: config.governmentType,
+        executiveIdentity: getExecutiveIdentity(countryId),
+        executiveTermLimit: getExecutiveTermLimit(countryId),
+        isUs: config.id === "US",
+        legislatureName: config.legislature.name,
+        legislaturePath: config.legislature.path,
+        upperChamberShort: config.legislature.upperChamber?.shortName ?? "Senate",
+      }}
+    />
+  );
 }

@@ -6,9 +6,9 @@ export type TradeMinisterAuth = MinisterAuth;
 export type TradeMinisterResult = MinisterResult;
 
 /**
- * Authorize the trade minister, or the head of government when the seat is vacant/NPP-held.
- * Admins may act for any trade ministry; routes handle the action-charge exemption.
- * Returns the existing 403 response on failure.
+ * Authorize the seated (or acting) trade minister. The head of government has no
+ * substitution over the seat. Admins may act for any trade ministry; routes
+ * handle the action-charge exemption. Returns the existing 403 response on failure.
  */
 export async function requireTradeMinister(
   countryId: CountryId,

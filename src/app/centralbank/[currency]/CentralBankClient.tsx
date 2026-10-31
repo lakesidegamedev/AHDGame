@@ -5,17 +5,17 @@ import { useGameEvents } from "@/hooks/useGameEvents";
 import { MonetaryAuthorityNotice } from "./components/MonetaryAuthorityNotice";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { InfoTooltip } from "@/components/InfoTooltip";
-import { getBankIdentity } from "@/lib/constants/institutionIdentity";
-import { getBankId } from "@/lib/centralBank/helpers";
+import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { RateCorridor } from "./components/RateCorridor";
 import { formatNativeCurrency } from "./components/centralBankUtils";
 import { EconomicTrendsChart } from "@/components/charts/EconomicTrendsChart";
-import { Button } from "@/components/ui";
+import { Button, Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { centralBankApiUrl } from "@/lib/urls";
 import { CREDIT_RATINGS } from "@/lib/db/types/centralBank";
 import {
@@ -24,13 +24,7 @@ import {
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import { formatCompactNumber } from "@/lib/utils/formatters";
-import { CentralBankSavingsTab } from "./components/CentralBankSavingsTab";
-import { CentralBankLoanTab } from "./components/CentralBankLoanTab";
-import { CentralBankAdminTab } from "./components/CentralBankAdminTab";
-import { CentralBankInterventionTab } from "./components/CentralBankInterventionTab";
 import { CentralBankLoadingState } from "./components/CentralBankLoadingState";
-import { CentralBankFinancialsTab } from "./components/CentralBankFinancialsTab";
-import { CentralBankMoneySupplyTab } from "./components/CentralBankMoneySupplyTab";
 import { InflationBreakdownTooltip } from "./components/InflationBreakdownTooltip";
 import { ChairCard } from "./components/ChairCard";
 import { DismissChairPanel } from "./components/DismissChairPanel";
@@ -38,11 +32,8 @@ import { CurrencyRegimePanel } from "./components/CurrencyRegimePanel";
 import { PrimeRateCard } from "./components/PrimeRateCard";
 import { NominationsPanel } from "./components/NominationsPanel";
 import { LobbyingPanel } from "./components/LobbyingPanel";
-import { CentralBankMembersTab, type CentralBankMember } from "./components/CentralBankMembersTab";
-import { FomcCommitteeTab } from "./components/FomcCommitteeTab";
-import { CentralBankReserveTab } from "./components/CentralBankReserveTab";
-import { CentralBankInsuranceTab } from "./components/CentralBankInsuranceTab";
 import type { BankData } from "./components/centralBankTypes";
+import type { CentralBankMember } from "./components/CentralBankMembersTab";
 import { CentralBankHeader } from "./components/CentralBankHeader";
 import { CB_TH, CentralBankFigure, CentralBankSection } from "./components/CentralBankSection";
 
@@ -133,14 +124,95 @@ function displayPreferenceDiffersFromBankHome(
   return preference !== bankHomeCurrency;
 }
 
+/** Bank copy the server page already resolved from the country registry. */
+export interface CentralBankChrome {
+  countryName: string;
+  executiveLabel: string;
+  centralBankHeroImage?: string;
+  centralBankHeroAlt?: string;
+  identity: InstitutionIdentity;
+}
+
+// Overview is the tab the page opens on. Every other body is one click away and
+// carries its own tree (the admin tab the heal forms, the balance-sheet tab the
+// figure tables). The skeleton keeps the body height while a chunk lands.
+const TabFallback = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-12 w-full rounded-lg" />
+    <Skeleton className="h-64 w-full rounded-xl" />
+  </div>
+);
+const CentralBankSavingsTab = dynamic(
+  () =>
+    import("./components/CentralBankSavingsTab").then((m) => ({
+      default: m.CentralBankSavingsTab,
+    })),
+  { loading: TabFallback }
+);
+const CentralBankLoanTab = dynamic(
+  () => import("./components/CentralBankLoanTab").then((m) => ({ default: m.CentralBankLoanTab })),
+  { loading: TabFallback }
+);
+const CentralBankAdminTab = dynamic(
+  () =>
+    import("./components/CentralBankAdminTab").then((m) => ({ default: m.CentralBankAdminTab })),
+  { loading: TabFallback }
+);
+const CentralBankInterventionTab = dynamic(
+  () =>
+    import("./components/CentralBankInterventionTab").then((m) => ({
+      default: m.CentralBankInterventionTab,
+    })),
+  { loading: TabFallback }
+);
+const CentralBankFinancialsTab = dynamic(
+  () =>
+    import("./components/CentralBankFinancialsTab").then((m) => ({
+      default: m.CentralBankFinancialsTab,
+    })),
+  { loading: TabFallback }
+);
+const CentralBankMoneySupplyTab = dynamic(
+  () =>
+    import("./components/CentralBankMoneySupplyTab").then((m) => ({
+      default: m.CentralBankMoneySupplyTab,
+    })),
+  { loading: TabFallback }
+);
+const CentralBankMembersTab = dynamic(
+  () =>
+    import("./components/CentralBankMembersTab").then((m) => ({
+      default: m.CentralBankMembersTab,
+    })),
+  { loading: TabFallback }
+);
+const FomcCommitteeTab = dynamic(
+  () => import("./components/FomcCommitteeTab").then((m) => ({ default: m.FomcCommitteeTab })),
+  { loading: TabFallback }
+);
+const CentralBankReserveTab = dynamic(
+  () =>
+    import("./components/CentralBankReserveTab").then((m) => ({
+      default: m.CentralBankReserveTab,
+    })),
+  { loading: TabFallback }
+);
+const CentralBankInsuranceTab = dynamic(
+  () =>
+    import("./components/CentralBankInsuranceTab").then((m) => ({
+      default: m.CentralBankInsuranceTab,
+    })),
+  { loading: TabFallback }
+);
+
 interface Props {
   countryId: CountryId;
   apiBasePath?: string;
   members: CentralBankMember[];
+  chrome: CentralBankChrome;
 }
 
-export default function CentralBankClient({ countryId, apiBasePath, members }: Props) {
-  const config = COUNTRY_CONFIGS[countryId];
+export default function CentralBankClient({ countryId, apiBasePath, members, chrome }: Props) {
   const bankApiBasePath = apiBasePath ?? centralBankApiUrl(countryId);
   const {
     currencyCode: viewerHomeCurrency,
@@ -287,7 +359,7 @@ export default function CentralBankClient({ countryId, apiBasePath, members }: P
       })()
     : "-";
 
-  const executiveLabel = config.officeTypes.find((o) => o.isExecutive)?.label ?? "executive";
+  const executiveLabel = chrome.executiveLabel;
   const inflation = data.currentInflation ?? 0;
   const savingsFlow = data.currentSavingsPressure ?? 0;
 
@@ -295,19 +367,19 @@ export default function CentralBankClient({ countryId, apiBasePath, members }: P
     <div className="pb-16">
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
         <BackButton
-          fallbackLabel={`Back to ${config.name}`}
+          fallbackLabel={`Back to ${chrome.countryName}`}
           fallbackHref={`/country/${countryId.toLowerCase()}`}
         />
 
         {/* Bank-keyed identity (DE/IE share the ECB record via getBankId). */}
         <div className="mb-8 mt-3">
           <CentralBankHeader
-            identity={getBankIdentity(getBankId(countryId))}
+            identity={chrome.identity}
             heroImage={
-              config.centralBank.heroImage
+              chrome.centralBankHeroImage
                 ? {
-                    src: config.centralBank.heroImage,
-                    alt: config.centralBank.heroAlt || data.bankName,
+                    src: chrome.centralBankHeroImage,
+                    alt: chrome.centralBankHeroAlt || data.bankName,
                   }
                 : null
             }

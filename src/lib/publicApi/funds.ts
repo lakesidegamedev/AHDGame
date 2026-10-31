@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
 
-export const INDEX_FUNDS_COLLECTION = "indexFunds";
+const INDEX_FUNDS_COLLECTION = "indexFunds";
 
 function fundSummary(f: IndexFund) {
   return {

@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { ELECTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { CAMPAIGN_ACTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
 import { getElectoralVoteUnits, getTravelActionCost } from "@/lib/constants/states";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
@@ -42,8 +42,8 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const limit = checkRateLimit(
       `election:${auth.user.userId}`,
-      ELECTION_LIMITS.maxRequests,
-      ELECTION_LIMITS.windowMs
+      CAMPAIGN_ACTION_LIMITS.maxRequests,
+      CAMPAIGN_ACTION_LIMITS.windowMs
     );
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);
 

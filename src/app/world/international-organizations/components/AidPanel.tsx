@@ -3,7 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
 import { Button } from "@/components/ui";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";

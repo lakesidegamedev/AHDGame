@@ -1,3 +1,4 @@
+import { netStockProceeds } from "@/lib/budget/stockSaleWithholding";
 import { ObjectId, type Collection, type Db, type Filter } from "mongodb";
 import type { PendingStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import {
@@ -126,7 +127,7 @@ export function buildShareFillMoneyFingerprint(plan: ShareFillMoneyPlan): string
   const cents = (n: number): string => String(Math.round(n * 100) / 100);
   const cash = (leg: ShareFillCashLeg | null): string =>
     leg
-      ? `${leg.collection}:${leg.idHex}:${leg.field}:${cents(leg.amount)}${leg.stockTaxReceipt ? ":stockTax:" + JSON.stringify(leg.stockTaxReceipt) : ""}`
+      ? `${leg.collection}:${leg.idHex}:${leg.field}:${cents(leg.amount)}${leg.stockTaxReceipt ? ":stockTax:" + JSON.stringify({ ...leg.stockTaxReceipt, withholding: undefined }) : ""}`
       : "none";
   const cap = (leg: ShareFillCapLeg | null): string =>
     leg
@@ -755,7 +756,7 @@ export function makeCashStep(
             collection,
             filter: { _id: new ObjectId(leg.idHex) },
             update: {
-              $inc: { [leg.field]: leg.amount },
+              $inc: { [leg.field]: netStockProceeds(leg.amount, receipt) },
               $push: { pendingStockTaxReceipts: receipt },
               $set: { updatedAt: now },
             },
@@ -769,7 +770,7 @@ export function makeCashStep(
             collection,
             filter: { _id: new ObjectId(leg.idHex) },
             update: {
-              $inc: { [leg.field]: -leg.amount },
+              $inc: { [leg.field]: -netStockProceeds(leg.amount, receipt) },
               $pull: { pendingStockTaxReceipts: { id: receipt.id } },
               $set: { updatedAt: now },
             },

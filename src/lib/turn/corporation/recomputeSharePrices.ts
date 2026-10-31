@@ -14,12 +14,11 @@ import { formalizedSubsidiaryCountByParentId } from "@/lib/corporations/subsidia
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Corporation, CorporationHistory } from "@/lib/db/types";
-import { STOCK_SPLIT_PRICE_SMOOTHING_TURNS } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
-  bankNpvBoostMultiplier,
-  sectorRiskPremiumAtTurn,
-} from "@/lib/corporations/rules/marketBoost";
+  getSectorRiskPremium,
+  STOCK_SPLIT_PRICE_SMOOTHING_TURNS,
+} from "@/lib/constants/corporations";
+import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { buildCorporationLookups } from "./buildLookups";
 import {
@@ -47,6 +46,7 @@ import { ceoOwnershipFraction } from "@/lib/corporations/ceoOwnership";
 import { bankEquity } from "@/lib/banking/balanceSheet";
 import { bankNpvFromPerTurnIncome } from "@/lib/banking/valuation";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
+import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers";
 
 export interface RecomputeSharePricesResult {
   corpsRepriced: number;
@@ -99,6 +99,9 @@ export async function recomputeSharePricesAfterBondTurn(
   ]);
   const currentYear = gameState?.currentYear;
   const plantsEnabled = marketAtLeast(marketMode, "plants");
+  // Funded valuation: growth is read from real output sold, so a price climb
+  // on the same sales (or on no sales) earns no growth premium.
+  const realGrowth = (lookups.fundedValuationStage ?? 0) >= 1;
 
   if (lookups.corporations.length === 0) {
     return { corpsRepriced: 0, corpsSkipped: 0 };
@@ -116,22 +119,53 @@ export async function recomputeSharePricesAfterBondTurn(
   // the plants trailing-growth estimator (sectorNPV history); still one query,
   // no per-corp reads.
   const [histRows, prevHistRows] = await Promise.all([
-    database.collection<CorporationHistory>("corporationHistory").find({ turn }).toArray(),
+    database
+      .collection<CorporationHistory>("corporationHistory")
+      .find({ turn })
+      // Snapshot rows carry the full shareholder register and the SOE backing
+      // breakdown; this pass prices off four numbers from each. Projected, the
+      // read is a few hundred bytes per corp instead of the whole snapshot.
+      .project<
+        Pick<
+          CorporationHistory,
+          | "corporationId"
+          | "sharePrice"
+          | "sectorNPV"
+          | "realOutputAnchor"
+          | "perTurnBondCouponIncome"
+          | "perTurnBondDragOnNetIncome"
+        >
+      >({
+        corporationId: 1,
+        sharePrice: 1,
+        sectorNPV: 1,
+        realOutputAnchor: 1,
+        perTurnBondCouponIncome: 1,
+        perTurnBondDragOnNetIncome: 1,
+      })
+      .toArray(),
     database
       .collection<CorporationHistory>("corporationHistory")
       .find({ turn: { $gte: turn - TRAILING_GROWTH_WINDOW_TURNS, $lt: turn } })
-      .project<{ corporationId: ObjectId; turn: number; sharePrice: number; sectorNPV: number }>({
+      .project<{
+        corporationId: ObjectId;
+        turn: number;
+        sharePrice: number;
+        sectorNPV: number;
+        realOutputAnchor?: number;
+      }>({
         corporationId: 1,
         turn: 1,
         sharePrice: 1,
         sectorNPV: 1,
+        realOutputAnchor: 1,
       })
       .toArray(),
   ]);
   const histByCorpId = new Map(histRows.map((h) => [h.corporationId.toString(), h]));
   const priorsByCorpId = new Map<
     string,
-    { turn: number; sharePrice: number; sectorNPV: number }[]
+    { turn: number; sharePrice: number; sectorNPV: number; realOutputAnchor?: number }[]
   >();
   for (const h of prevHistRows) {
     const key = h.corporationId.toString();
@@ -198,8 +232,7 @@ export async function recomputeSharePricesAfterBondTurn(
       : 0;
     const bankNpvAnchor = activeBankCharter
       ? bankNpvFromPerTurnIncome(
-          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate,
-          bankNpvBoostMultiplier(turn)
+          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate
         )
       : 0;
 
@@ -226,10 +259,15 @@ export async function recomputeSharePricesAfterBondTurn(
       growthNumer += (gr / 100) * rev;
       growthDenom += rev;
     }
+    const growthSeries = realGrowth ? "realOutputAnchor" : "sectorNPV";
+    const currentGrowthBasis = hist[growthSeries];
     const sectorGrowthRate = plantsEnabled
       ? annualizedTrailingGrowthRate(
-          typeof hist.sectorNPV === "number" ? hist.sectorNPV : 0,
-          (priorsByCorpId.get(id) ?? []).map((p) => ({ turn: p.turn, sectorNpv: p.sectorNPV })),
+          typeof currentGrowthBasis === "number" ? currentGrowthBasis : 0,
+          (priorsByCorpId.get(id) ?? []).map((p) => ({
+            turn: p.turn,
+            sectorNpv: p[growthSeries] ?? 0,
+          })),
           turn,
           TURNS_PER_YEAR
         )
@@ -261,13 +299,8 @@ export async function recomputeSharePricesAfterBondTurn(
       (lookups.primeRateSmoothedByCountry.get(corp.countryId) ??
         lookups.primeRateByCountry.get(corp.countryId) ??
         countryPrimeRate) / 100;
-    const riskPremium = sectorRiskPremiumAtTurn(
-      getOperatingSectorType(
-        corp.type,
-        corp.industryModel,
-        corp.mediaDiscriminator
-      ) as Corporation["type"],
-      turn
+    const riskPremium = getSectorRiskPremium(
+      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
     );
 
     // hist.sectorNPV is stored in local currency (converted by marketCapSnapshot);
@@ -365,12 +398,10 @@ export async function recomputeSharePricesAfterBondTurn(
     const localPrice = writeCorpEconomicLocal(anchorPrice, code, rate);
     corpOps.push({
       updateOne: {
-        // Between turns there is no turn lock: an IPO, share issue or vote
-        // effect may write fundamentalSharePrice concurrently. Its write wins;
-        // this tick skips that corp until the next one.
-        filter: intraHour
-          ? { _id: oid, fundamentalSharePrice: corp?.fundamentalSharePrice }
-          : { _id: oid },
+        // An IPO, share issue or vote effect may write fundamentalSharePrice
+        // between this pass's read and its write, between turns and during a
+        // turn alike. Its write wins; this pass skips that corp until the next.
+        filter: { _id: oid, fundamentalSharePrice: corp?.fundamentalSharePrice },
         update: {
           $set: { sharePrice: localPrice, fundamentalSharePrice: localPrice, updatedAt: now },
         },
@@ -406,15 +437,34 @@ export async function recomputeSharePricesAfterBondTurn(
         ? database.collection<CorporationHistory>("corporationHistory").bulkWrite(histOps)
         : null,
     ]);
-    if (intraHour) {
-      return {
-        corpsRepriced: corpResult.matchedCount,
-        corpsSkipped: skipped + corpOps.length - corpResult.matchedCount,
-      };
-    }
+    return {
+      corpsRepriced: corpResult.matchedCount,
+      corpsSkipped: skipped + corpOps.length - corpResult.matchedCount,
+    };
   }
 
-  return { corpsRepriced: corpOps.length, corpsSkipped: skipped };
+  return { corpsRepriced: 0, corpsSkipped: skipped };
+}
+
+/**
+ * Turn-time share price pass: re-run the fundamental formula against the
+ * post-bondTurn state, then apply investor sentiment and order flow so the
+ * turn's live prices and exchange snapshot already include them. Without this
+ * the :15 market tick was the first to apply the multipliers, so the index and
+ * every price dropped at each turn and recovered fifteen minutes later.
+ *
+ * Only corporations.sharePrice is multiplied. The corporationHistory row keeps
+ * the raw formula price because the next turn's rate limiter and split-cooldown
+ * smoothing read turn-1 history as `previousSharePrice`.
+ */
+export async function recomputeTurnSharePrices(
+  turn: number,
+  db?: Db
+): Promise<RecomputeSharePricesResult> {
+  const database = db ?? (await getDb());
+  const result = await recomputeSharePricesAfterBondTurn(turn, database);
+  await applyPriceMultipliers(database);
+  return result;
 }
 
 /**

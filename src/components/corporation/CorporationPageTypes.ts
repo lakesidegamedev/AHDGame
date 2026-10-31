@@ -197,6 +197,8 @@ export interface CorporationDetail {
   marketingStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   marketingStrengthGrowth?: number;
+  /** Share of marketing strength lost per turn (0 before decay is on). Redacted like growth. */
+  marketingDecayRate?: number;
   /**
    * Brand loyalty (Package A) player-facing 5-label scale. Present for everyone
    * when the feature is on for this corp; absent ⇒ hide the indicator. The RAW
@@ -219,6 +221,14 @@ export interface CorporationDetail {
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   rdScoreNetChange?: number;
+  /** Active product projects paid from the R&D budget before generic research. */
+  rdDevelopmentProjects?: {
+    id: string;
+    stage: string;
+    paidAnchor: number;
+    thresholdAnchor: number;
+    label: string;
+  }[];
   marketCapitalization: number;
   logoUrl?: string;
   headerImageUrl?: string;
@@ -390,6 +400,8 @@ export interface CorporationDetail {
   canFormalizeAsSubsidiary?: boolean;
   /** Viewer is CEO of the corp controlling this formalized subsidiary (may appoint CEO, inject capital, set floor, release). */
   canManageAsParent?: boolean;
+  /** Viewer is the controlling parent's CEO of this AI-run subsidiary: may retool and set the logo. */
+  canDirectAsParent?: boolean;
   /** Viewer is CEO of this (parent-eligible) corp and may spin off a sector into a new subsidiary. */
   canSpinOff?: boolean;
   /**

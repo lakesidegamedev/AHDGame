@@ -57,6 +57,13 @@ describe("mongoMonitorWanted", () => {
   it("stays off the singleplayer critical path", () => {
     expect(mongoMonitorWanted({ SINGLEPLAYER: "1" })).toBe(false);
   });
+
+  it("stays off in the turn worker unless explicitly asked for", () => {
+    expect(mongoMonitorWanted({ AHD_TURN_WORKER_PROCESS: "1" })).toBe(false);
+    expect(
+      mongoMonitorWanted({ AHD_TURN_WORKER_PROCESS: "1", OBSERVABILITY_DB_MONITOR: "true" })
+    ).toBe(true);
+  });
 });
 
 /**

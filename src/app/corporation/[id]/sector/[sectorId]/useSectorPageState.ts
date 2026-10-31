@@ -20,6 +20,12 @@ import type {
   FinancialVisibility,
 } from "./types";
 
+export interface ParentDirection {
+  parentName: string;
+  parentPathId: string;
+  protectedUntilTurn: number | null;
+}
+
 export interface ForSaleMessage {
   type: "error" | "success";
   text: string;
@@ -43,6 +49,8 @@ export interface SectorPageState {
   /** True when this world runs the plants market tier (drives the whole layout). */
   plantsEnabled: boolean;
   isCeo: boolean;
+  /** Set when the viewer is the controlling parent's CEO of this AI-run subsidiary. */
+  parentDirection: ParentDirection | null;
   labourEnabled: boolean;
   labourFullEnabled: boolean;
   /** gameConfig.prospectingEnabled — gates the CEO Prospect action on extraction sectors. */
@@ -100,6 +108,7 @@ export type SectorPageAction =
   | { type: "SET_PLANTS"; value: PlantsData | null }
   | { type: "SET_PLANTS_ENABLED"; value: boolean }
   | { type: "SET_IS_CEO"; value: boolean }
+  | { type: "SET_PARENT_DIRECTION"; value: ParentDirection | null }
   | { type: "SET_STRATEGY"; value: StrategyData | null }
   | { type: "SET_LOADING"; value: boolean }
   | { type: "SET_ERROR"; value: string }
@@ -153,6 +162,7 @@ const initialState: SectorPageState = {
   plants: null,
   plantsEnabled: false,
   isCeo: false,
+  parentDirection: null,
   labourEnabled: false,
   labourFullEnabled: false,
   prospectingEnabled: false,
@@ -227,6 +237,8 @@ export function sectorPageReducer(
       return { ...state, commodities: action.value };
     case "SET_IS_CEO":
       return { ...state, isCeo: action.value };
+    case "SET_PARENT_DIRECTION":
+      return { ...state, parentDirection: action.value };
     case "SET_STRATEGY":
       return { ...state, strategy: action.value };
     case "SET_LOADING":

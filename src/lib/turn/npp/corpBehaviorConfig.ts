@@ -49,6 +49,11 @@ export function pickBestNppTechNode(
     }))
     .filter(
       ({ node, cashCost }) =>
+        // The two affordability gates are the cheapest ones and reject most of
+        // the tree, while `canUnlock` re-derives the decade set and the lane
+        // topology per node. Same rule, checked before paying for the rest.
+        rdScore >= node.cost &&
+        cashAvailable >= cashCost &&
         canUnlock(corp, node.id, currentYear, { rdScore, cashAvailable, cashCost }).ok
     )
     .sort((a, b) => {

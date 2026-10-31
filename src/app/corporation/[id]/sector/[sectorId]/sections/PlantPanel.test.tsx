@@ -38,6 +38,95 @@ const plants = {
 
 function noop() {}
 
+describe("PlantPanel facility sizing", () => {
+  it("sizes a vehicle production sector at one unit per plant, not the generic manufacturing size", () => {
+    const vehiclePlants = {
+      ...plants,
+      capacityUnits: 250,
+      plantCount: undefined,
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 100,
+          onlineTurn: 140,
+          turnsRemaining: 40,
+          smooth: true,
+          unitsOrdered: 40,
+          unitsDelivered: 0,
+          costPaidAnchor: 1_000_000,
+          progress: 0,
+        },
+      ],
+    } as unknown as PlantsData;
+
+    render(
+      <PlantPanel
+        plants={vehiclePlants}
+        sectorType="manufacturing"
+        industryModel="vehicles"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    // 40 units ordered is 40 assembly plants, not floor(40 / 25) = 1.
+    expect(screen.getByText("0 of 40 plants built")).toBeTruthy();
+    expect(screen.queryByText(/0 of 1 plant built/)).toBeNull();
+  });
+});
+
+describe("PlantPanel vehicle recipe without a vehicle model", () => {
+  it("counts vehicle plants for a manufacturing sector on a vehicle strategy", () => {
+    const vehicleRecipePlants = {
+      ...plants,
+      capacityUnits: 41.7,
+      plantCount: undefined,
+      strategyId: "vehicle_assembly",
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 531,
+          onlineTurn: 551,
+          turnsRemaining: 14,
+          smooth: true,
+          unitsOrdered: 40,
+          unitsDelivered: 12.4,
+          costPaidAnchor: 1_000_000,
+          progress: 0.31,
+        },
+      ],
+    } as unknown as PlantsData;
+
+    render(
+      <PlantPanel
+        plants={vehicleRecipePlants}
+        sectorType="manufacturing"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    // Same size as the ledger and the build dialog: one vehicle unit per plant.
+    expect(screen.getByText("12 of 40 plants built")).toBeTruthy();
+    expect(screen.getByText(/about 2 plants arriving each turn · done on turn 551/)).toBeTruthy();
+    expect(screen.getByText("41")).toBeTruthy();
+    expect(screen.getByText(/28 more being built/)).toBeTruthy();
+    expect(screen.queryByText(/units per day/)).toBeNull();
+  });
+});
+
 describe("PlantPanel workforce", () => {
   it("shows the sector's one-hop freight estimate at installed capacity", () => {
     render(
@@ -112,6 +201,79 @@ describe("PlantPanel workforce", () => {
         (image.getAttribute("src") ?? "").includes("United_Steelworkers")
       )
     ).toBe(true);
+  });
+
+  it("shows the state labour pool against every employer's wanted workers", () => {
+    render(
+      <PlantPanel
+        plants={plants}
+        sectorType="manufacturing"
+        averageWageLevel={1.5}
+        stateName="Ohio"
+        stateLabourMarket={{
+          labourForce: 1_000_000,
+          labourDemand: 2_000_000,
+          corporateEmployed: null,
+          tightness: 2,
+          stateWageIndex: 1.2,
+          sectorRelativeBid: 1.25,
+          targetStaffingFactor: 0.625,
+        }}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(screen.getByText("Workers available in Ohio")).toBeTruthy();
+    expect(screen.getByText("1,000,000")).toBeTruthy();
+    expect(screen.getByText("Workers all employers in Ohio want")).toBeTruthy();
+    expect(screen.getByText("2,000,000")).toBeTruthy();
+    expect(screen.getByText("Your pay vs the Ohio average")).toBeTruthy();
+    expect(screen.getByText("1.25×")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Raising pay only wins you a bigger share compared with other employers here; it does not add workers\./
+      )
+    ).toBeTruthy();
+    expect(screen.getByText(/At this pay you can fill about 63% of your jobs/)).toBeTruthy();
+    expect(screen.queryByText(/Higher pay can win a larger share/)).toBeNull();
+  });
+
+  it("says the pool is large enough when only this sector's staffing is catching up", () => {
+    render(
+      <PlantPanel
+        plants={plants}
+        sectorType="manufacturing"
+        averageWageLevel={1}
+        stateName="Ohio"
+        stateLabourMarket={{
+          labourForce: 1_000_000,
+          labourDemand: 400_000,
+          corporateEmployed: null,
+          tightness: 0.4,
+          stateWageIndex: null,
+          sectorRelativeBid: null,
+          targetStaffingFactor: 1,
+        }}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(
+      screen.getByText(/There are enough workers in this state for every employer/)
+    ).toBeTruthy();
+    expect(screen.queryByText(/Your pay vs/)).toBeNull();
   });
 
   it("separates a media sector's audience run from contractable ledger output", () => {

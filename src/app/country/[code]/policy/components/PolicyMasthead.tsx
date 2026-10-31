@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { InstitutionMasthead, MastheadChip } from "@/components/national/InstitutionMasthead";
 import { getPolicyIdentity } from "@/lib/constants/institutionIdentity";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { NationalAxes } from "@/lib/policy/nationalAxes";
 import { PositionLabel } from "@/components/PositionLabel";
 import { formatLeanValue } from "@/lib/utils/demographics";

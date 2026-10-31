@@ -1,8 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import {
-  getCountryArchetypeBuckets,
-  clearCountryArchetypeBucketCache,
-} from "./countryArchetypeBuckets";
+import { describe, it, expect } from "vitest";
+import { getCountryArchetypeBuckets } from "./countryArchetypeBuckets";
 import { archetypeValuesToBuckets, ARCHETYPE_BUCKET_MAP } from "./archetypeBucketMap";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
@@ -19,8 +16,6 @@ function realBuckets(cc: string): Set<string> {
 }
 
 describe("per-country archetype→bucket projection", () => {
-  beforeEach(() => clearCountryArchetypeBucketCache());
-
   // The bug this replaced: weights authored in the US vocabulary projected onto
   // buckets the country does not have, so 70-80% of every effect vanished.
   it.each(INTL)("%s: every projected bucket exists in that country's model", (cc) => {

@@ -10,9 +10,7 @@ import { join } from "path";
  * so a 1991 world starts from the 1988 and 1984 county map rather than
  * today's. Build script: `scripts/geo/build-county-leans.py`.
  */
-export const COUNTY_LEAN_ERAS = [
-  1953, 1968, 1979, 1991, 1999, 2007, 2019, 2020, 2023, 2027,
-] as const;
+const COUNTY_LEAN_ERAS = [1953, 1968, 1979, 1991, 1999, 2007, 2019, 2020, 2023, 2027] as const;
 
 /**
  * Era for a world preset ("1991-default" → 1991): the latest era at or before

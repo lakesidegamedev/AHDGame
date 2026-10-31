@@ -1,4 +1,5 @@
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
+import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rules";
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
@@ -116,6 +117,11 @@ describe("physical producer preparation", () => {
       );
     expect(plan.labourCost).toBeCloseTo(outputValue * getSectorLaborShare("financial", 1991), 8);
     expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.04, 8);
+    // Cold upkeep alone: the floor the site bill keeps when short inputs cut the run.
+    expect(plan.idleOperatingCost).toBeCloseTo(
+      outputValue * 0.04 * COLD_CAPACITY_UPKEEP_FRACTION,
+      8
+    );
     env.lookups.priceRatioByCommodity.set("financial_services", 2);
     const changed = prepareProducerPhysicalSector(input).prepared.plan;
     expect(changed.capacityUnits).toBe(plan.capacityUnits);
@@ -154,6 +160,167 @@ describe("physical producer preparation", () => {
     };
     const bad = prepareProducerPhysicalSector(input).prepared.plan.outputMultiplier;
     expect(good / bad).toBeCloseTo((0.5 * 1.15) / (0.5 * 0.9), 10);
+  });
+
+  it("plans from the line it makes, not leftover stock of a line it no longer makes", () => {
+    const { input, env, sector } = fixture();
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    const turn = env.currentTurn - 1;
+    const live = { commodity: "financial_services", book: "world", offeredUnits: 1, soldUnits: 1 };
+    const base = { activeUnits: 100, producedUnits: 1, inputsConsumed: 1, turn };
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      ...base,
+      offeredUnits: 1,
+      soldUnits: 1,
+      revenue: 50,
+      products: [{ ...live, revenue: 50 }],
+    };
+    const clean = prepareProducerPhysicalSector(input).prepared.plan;
+    // Same sale plus unsold steel the recipe no longer makes.
+    sector.producerInventory!.outputStock = [
+      { commodity: "steel", book: "world", units: 2, quoteUnitCost: 2 },
+    ];
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      ...base,
+      offeredUnits: 3,
+      soldUnits: 1.2,
+      revenue: 54,
+      products: [
+        { ...live, revenue: 50 },
+        { commodity: "steel", book: "world", offeredUnits: 2, soldUnits: 0.2, revenue: 4 },
+      ],
+    };
+    const retooled = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(retooled.outputs.find((o) => o.commodity === "steel")?.unitsPerOutput).toBe(0);
+    expect(retooled.outputMultiplier).toBeCloseTo(clean.outputMultiplier, 12);
+    expect(retooled.plannedRunShare).toBeCloseTo(0.01 * 1.15, 12);
+  });
+
+  it("prices the sales advance at last turn's realized price and sell-through", () => {
+    const { input, env, sector } = fixture();
+    const turn = env.currentTurn - 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.expectedUnitRevenue).toBeUndefined();
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 10,
+      soldUnits: 8,
+      revenue: 400,
+      inputsConsumed: 1,
+      turn,
+      products: [
+        {
+          commodity: "financial_services",
+          book: "world",
+          offeredUnits: 10,
+          soldUnits: 8,
+          revenue: 400,
+        },
+      ],
+    };
+    const plan = prepareProducerPhysicalSector(input).prepared.plan;
+    const made = plan.outputs.find((o) => o.commodity === "financial_services")!;
+    // 400 over 10 offered: 40 a unit offered.
+    expect(plan.expectedUnitRevenue).toBeCloseTo(made.unitsPerOutput * 40, 12);
+  });
+
+  it("runs a two-product plant at its sold-out dear line, not its glutted cheap one, under the joint run stage", () => {
+    const { input, env, sector } = fixture();
+    Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    // Chemicals: old stock on the book, a fraction sold. Plastics: sold out at a high price.
+    const plastics = 0.62;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: env.currentTurn - 1,
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 60 + plastics,
+      soldUnits: 9 + plastics,
+      revenue: 9 * 170 + plastics * 3000,
+      inputsConsumed: 1500,
+      plannedRunShare: 0.1,
+      products: [
+        {
+          commodity: "chemicals",
+          book: "world",
+          producedUnits: 10 - plastics,
+          offeredUnits: 60,
+          soldUnits: 9,
+          revenue: 9 * 170,
+        },
+        {
+          commodity: "plastics",
+          book: "world",
+          producedUnits: plastics,
+          offeredUnits: plastics,
+          soldUnits: plastics,
+          revenue: plastics * 3000,
+        },
+      ],
+    };
+    const summed = prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare;
+    expect(summed).toBe(0.01);
+    env.jointRunStage = 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeCloseTo(
+      0.1 * 1.15,
+      12
+    );
+  });
+
+  it("lifts a two-product plant for its sold-out line on marginal cost under joint run stage 2", () => {
+    const { input, env, sector } = fixture();
+    Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    // Shaped like an oil and gas well: the cheap line glutted, the dear one sold out
+    // at 50 (32 per unit of output). Marginal cost 30 a unit, average 34.
+    const gas = 0.64;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: env.currentTurn - 1,
+      activeUnits: 100,
+      producedUnits: 1,
+      offeredUnits: 20 + gas,
+      soldUnits: gas,
+      revenue: gas * 50,
+      inputsConsumed: 22,
+      labourPaid: 5,
+      otherOperatingPaid: 7,
+      idleOperatingCost: 4,
+      plannedRunShare: 0.01,
+      products: [
+        {
+          commodity: "plastics",
+          book: "world",
+          producedUnits: gas,
+          offeredUnits: gas,
+          soldUnits: gas,
+          revenue: gas * 50,
+        },
+        {
+          commodity: "chemicals",
+          book: "world",
+          producedUnits: 1 - gas,
+          offeredUnits: 20,
+          soldUnits: 0,
+        },
+      ],
+    };
+    env.jointRunStage = 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(0.01);
+    env.jointRunStage = 2;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeCloseTo(
+      0.01 * 1.15,
+      12
+    );
+  });
+
+  it("records the planned run share only under the demand plan", () => {
+    const { input, env } = fixture();
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeUndefined();
+    env.demandPlanStage = 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(1);
   });
 
   it("low-use cost stage zeroes the bill on a parked plant and cuts the probe run of a dead one", () => {

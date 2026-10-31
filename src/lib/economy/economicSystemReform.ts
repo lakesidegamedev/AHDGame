@@ -26,7 +26,7 @@ import {
 } from "./economicSystemReformRules";
 
 /** Leader-confidence and popular-legitimacy deltas, by direction and size. */
-export const REFORM_REGIME_EFFECTS = {
+const REFORM_REGIME_EFFECTS = {
   /** Toward the market, per full 100-point move. Scaled by the distance moved. */
   liberalize: { leaderConfidence: -20, popularLegitimacy: 12 },
   /** Back toward the plan, per full 100-point move. */

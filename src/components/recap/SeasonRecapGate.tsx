@@ -1,10 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { CharacterRecap } from "@/lib/recap/types";
-import { SeasonRecapStory } from "./SeasonRecapStory";
+// The story is a full-screen overlay only the handful of players with a pending
+// recap ever see. Its slides and charts used to sit in the layout chunk for
+// every page load.
+const SeasonRecapStory = dynamic(
+  () => import("./SeasonRecapStory").then((module) => module.SeasonRecapStory),
+  { ssr: false }
+);
 
 /**
  * Global gate that surfaces the end-of-season Season Recap ("Wrapped") on the

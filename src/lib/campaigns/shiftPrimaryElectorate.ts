@@ -30,14 +30,14 @@
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
 
 /** Minimum fraction of general turnout any group retains (prevents zero-division). */
-export const PRIMARY_TURNOUT_FLOOR = 0.05;
+const PRIMARY_TURNOUT_FLOOR = 0.05;
 
 /**
  * Baseline retention at "zero alignment" (perfect centrist voter). Higher values
  * make the primary electorate less different from the general — centrists still
  * matter. 0.5 means a centrist group turns out at half its general rate.
  */
-export const PRIMARY_CENTRIST_RETENTION = 0.5;
+const PRIMARY_CENTRIST_RETENTION = 0.5;
 
 export interface PartyPositionInput {
   economicPosition: number;

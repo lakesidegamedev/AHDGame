@@ -3,6 +3,8 @@
  * makeNppCorpDecision uses the corporation, market signals and CEO strategy to
  * return planned sector and cash changes for the turn processor to apply.
  */
+import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
@@ -12,6 +14,7 @@ import {
   commodityDominanceRatio,
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
+import { supplierCommoditySupplyMix } from "@/lib/corporations/supplyAgreementCapacity";
 import { groupOperator } from "@/lib/corporations/groups/operator";
 import {
   activeGroupDirection,
@@ -70,6 +73,11 @@ import {
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { foundingUnmetSizing, isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
+import {
+  fundedSellThrough,
+  nppDemandThrottle,
+  nppOperatingCapacityUnits,
+} from "@/lib/turn/npp/rules/fundedSellThrough";
 import type {
   NppCorpDecision,
   NppCorpDecisionContext,
@@ -161,6 +169,7 @@ import {
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import type { ObjectId } from "mongodb";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 
 export function makeNppCorpDecision(
   ctx: NppCorpDecisionContext,
@@ -223,6 +232,22 @@ export function makeNppCorpDecision(
   // corp's potential output (owned plus queued plus the order) of each
   // commodity the sector makes, over world demand. 0 when demand is unknown.
   let dominanceSectorsCache: CommodityDominanceSector[] | undefined;
+  // One mix per sector per decision: the toll prices every sector the corp might
+  // build on, and the recipe behind each term does not change across those
+  // calls. Resolving it per call made the toll quadratic with a strategy lookup
+  // in every term.
+  let dominanceSupplyMixes:
+    WeakMap<CommodityDominanceSector, Partial<Record<CommodityType, number>>> | undefined;
+  const dominanceSupplyMixOf = (
+    sector: CommodityDominanceSector
+  ): Partial<Record<CommodityType, number>> => {
+    dominanceSupplyMixes ??= new WeakMap();
+    const cached = dominanceSupplyMixes.get(sector);
+    if (cached) return cached;
+    const mix = supplierCommoditySupplyMix(sector, ctx.turn);
+    dominanceSupplyMixes.set(sector, mix);
+    return mix;
+  };
   const commodityRatioFor = (sector: CorporateSector, extraUnits: number): number => {
     const demandOf = plants?.commodityDemandOf;
     if (!plants || !demandOf) return 0;
@@ -239,6 +264,7 @@ export function makeNppCorpDecision(
       turn: ctx.turn,
       currentYear: plants.year,
       commandEconomyEnabled: plants.commandEconomyEnabled === true,
+      supplyMixOf: dominanceSupplyMixOf,
     }).ratio;
   };
   const capacityObservations: CapacityDecisionObservation[] = [];
@@ -454,6 +480,11 @@ export function makeNppCorpDecision(
       .filter(
         (sp) =>
           (sp.sector.lowFillTurns ?? 0) >= STRANDED_DIVEST_TURNS &&
+          // lowFillTurns counts the legacy clearing shadow. On a funded world a
+          // plant is stranded only if its own settlement left output unsold:
+          // deleting a sold-out plant destroys capacity in a short market.
+          (!ctx.fundedWorldEpoch ||
+            (fundedSellThrough(sp.sector, ctx.fundedWorldEpoch) ?? 1) < 0.5) &&
           !isCoreSector(sp.sector) &&
           !hasProtectedConstructionProperty(sp.sector) &&
           !isNppDivestmentProtected(sp.sector, ctx.turn) &&
@@ -638,6 +669,7 @@ export function makeNppCorpDecision(
     divestedSectorIds,
     priceRatioOf,
     marketSaturationOf: placementSignals?.marketSaturationOf,
+    fundedWorldEpoch: ctx.fundedWorldEpoch,
   });
   sectorUpdates.push(...mothballUpdates);
   const newlyMothballedIds = new Set(
@@ -913,6 +945,7 @@ export function makeNppCorpDecision(
     criticalLogisticsShortageEligible: ctx.criticalLogisticsShortageEligible,
     retailExpansionPaused: ctx.retailExpansionPaused,
     entryCapReached: newSectors.length >= NPP_SHORTAGE_ENTRIES_PER_TURN,
+    fundedRecipeWorld: ctx.fundedRecipeWorld,
   });
   const {
     entryCandidate,
@@ -1051,13 +1084,18 @@ export function makeNppCorpDecision(
         ? starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES
         : Math.min(headroomUnits * NPP_FOUNDING_HEADROOM_SHARE, unmetSizing.sizeCap);
       const unmetBlocksEntry = unmetSizing.blocksEntry;
-      const buildUnits =
+      const sizedUnits =
         starterUnits > 0
           ? Math.max(
               starterUnits,
               Math.floor(Math.min(sizeCap, affordableUnits, MAX_BUILD_UNITS_PER_ORDER))
             )
           : 0;
+      // Whole plants: the founding order is a whole number of starter plants.
+      const buildUnits =
+        plants?.wholePlants && starterUnits > 0
+          ? Math.max(starterUnits, floorUnitsToPlants(sizedUnits, starterUnits))
+          : sizedUnits;
       const buildAnchor = perUnitFoundingAnchor * buildUnits;
       const foundingCost = toCorpLocal(entryFeeAnchor + buildAnchor);
       entryDiagnostic = {
@@ -1140,6 +1178,7 @@ export function makeNppCorpDecision(
             startTurn: ctx.turn,
             onlineTurn: ctx.turn + buildTurns,
             smooth: true,
+            ...(plants?.wholePlants ? { plantUnits: starterUnits } : {}),
           },
         });
         unownedDraws.push({
@@ -1295,8 +1334,10 @@ export function makeNppCorpDecision(
   // carry `countryOwnerId` and no `ownershipState`, so the old local check saw
   // them as private.
   if (plants?.enabled && !isStateOwned(corp) && groupDirection?.allowInvestment !== false) {
-    // Shared-snapshot pool lookup; see reinvestCandidatePool.
-    const poolFor = createReinvestPoolLookup(unownedByCountry);
+    // Shared-snapshot pool lookup; see reinvestCandidatePool. The shell builds
+    // one for the cohort: the index is a pure function of the pool snapshot, so
+    // rebuilding it per corporation walked every unowned row again per corp.
+    const poolFor = ctx.reinvestPoolFor ?? createReinvestPoolLookup(unownedByCountry);
 
     const candidates: ReinvestCandidate[] = [];
     // Autopilot commits at most a fixed share of cash above the floor to new
@@ -1422,7 +1463,9 @@ export function makeNppCorpDecision(
       // share back every turn in perpetuity; replacing the RUN capacity lets it
       // depreciate away and the plant converges on the size it can actually
       // sell.
-      const productionCapacity = sector.operatingCapacityUnits ?? capitalStock;
+      // A funded world takes the settled capacity from the receipt.
+      const productionCapacity =
+        nppOperatingCapacityUnits(sector, ctx.fundedWorldEpoch) ?? capitalStock;
       const utilizationOfOwnedCapacity =
         productionCapacity > 0
           ? Math.max(0, Math.min(1, (sector.producedUnits ?? 0) / productionCapacity))
@@ -1622,12 +1665,12 @@ export function makeNppCorpDecision(
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
       // NPP-run plants do not add growth where the market already throttles
-      // them; replacement of worn capacity still goes through below.
+      // them; replacement of worn capacity still goes through below. On a
+      // funded world the reading is sell-through, so a plant held down by
+      // missing inputs while selling all it makes is not a throttled market.
+      const demandReading = nppDemandThrottle(sector, ctx.fundedWorldEpoch);
       const throttledMarket =
-        !autopilot &&
-        typeof sector.demandThrottleFactor === "number" &&
-        Number.isFinite(sector.demandThrottleFactor) &&
-        sector.demandThrottleFactor < NPP_GROWTH_MIN_THROTTLE;
+        !autopilot && demandReading != null && demandReading < NPP_GROWTH_MIN_THROTTLE;
       let throttleGate = false;
       if (throttledMarket && growthUnits > 0) {
         growthUnits = 0;
@@ -1669,7 +1712,15 @@ export function makeNppCorpDecision(
           );
         }
       }
-      const units = replacementUnits + growthUnits;
+      const rawUnits = replacementUnits + growthUnits;
+      // Whole plants: an NPP orders whole plants, at least one.
+      const units =
+        plants?.wholePlants && rawUnits > 0
+          ? Math.max(
+              plantSizeForSector(sector),
+              floorUnitsToPlants(rawUnits, plantSizeForSector(sector))
+            )
+          : rawUnits;
       if (!(units > 0)) {
         if (!autopilotGate && !throttleGate) {
           observeReinvestCandidate(
@@ -1804,6 +1855,7 @@ export function makeNppCorpDecision(
         startTurn: ctx.turn,
         onlineTurn: ctx.turn + buildTurns,
         smooth: true,
+        ...(plants?.wholePlants ? { plantUnits: plantSizeForSector(sector) } : {}),
       };
       if (!affordable) {
         const cashContributionLimitLocal =

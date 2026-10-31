@@ -10,6 +10,8 @@ export interface LocSnapshot {
   availableBorrowInternal: number;
   dtiLimitInternal: number;
   netWorthLimitInternal: number;
+  /** Why shares in a company you control count for less toward the limit. */
+  collateralNote?: string;
   perPlayerLimitInternal: number;
   perPlayerAvailableInternal: number;
   effectiveRatePercent: number;
@@ -141,6 +143,7 @@ export function LoansPane({
                 </span>
               </span>
             </div>
+            {s.collateralNote && <p className="mt-1 text-[10px] text-muted">{s.collateralNote}</p>}
           </div>
         )}
 

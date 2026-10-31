@@ -97,7 +97,7 @@ async function cancelByElection(
       { session }
     );
 }
-export async function materializeHu1991ByElectionOpening(input: {
+async function materializeHu1991ByElectionOpening(input: {
   db: Db;
   session: ClientSession;
   turn: number;
@@ -384,7 +384,7 @@ export async function openHu1991ByElections(db: Db, turn: number, now: Date): Pr
   );
 }
 
-export async function materializeHu1991ByElectionResolution(input: {
+async function materializeHu1991ByElectionResolution(input: {
   db: Db;
   session: ClientSession;
   receiptId: string;

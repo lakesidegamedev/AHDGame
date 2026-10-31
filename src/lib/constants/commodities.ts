@@ -8,6 +8,17 @@ import { eraForPreset } from "@/lib/seeds/presetSelector";
  * demand over supply on a log curve (COMMODITY_PRICE_LOG_SCALE), blended 50%
  * global, 25% national, 25% state.
  */
+export * from "./commoditiesCore";
+import {
+  COMMODITY_LABELS,
+  COMMODITY_PRESSURE_SOFT_KNEE,
+  COMMODITY_TYPES,
+  EXTRACTABLE_RESOURCES,
+  computeEffectiveCommodityPressureRatio,
+  type CommodityType,
+  type ExtractableResource,
+} from "./commoditiesCore";
+
 /**
  * Commodity system constants.
  * Maps sector types to the commodities they supply and demand.
@@ -47,49 +58,6 @@ import {
   effectiveInputDemandRealPhase,
   inputDemandDeflator,
 } from "@/lib/market/inputDemandRealPhase";
-
-export const COMMODITY_TYPES = [
-  "steel",
-  "electronics",
-  "energy",
-  "chemicals",
-  "pharmaceuticals",
-  "fertilizers",
-  "food",
-  "building_materials",
-  "construction_services",
-  "healthcare_services",
-  "real_estate_services",
-  "software",
-  "financial_services",
-  "advertising",
-  "vehicles",
-  "retail",
-  "freight",
-  "consulting_services",
-  "iron",
-  "coal",
-  "oil",
-  "rare_earth",
-  "timber",
-  "natural_gas",
-  "ordnance",
-  "plastics",
-  "network_services",
-] as const;
-
-export type CommodityType = (typeof COMMODITY_TYPES)[number];
-
-export const EXTRACTABLE_RESOURCES = [
-  "oil",
-  "coal",
-  "iron",
-  "natural_gas",
-  "timber",
-  "rare_earth",
-] as const;
-
-export type ExtractableResource = (typeof EXTRACTABLE_RESOURCES)[number];
 
 /**
  * Per-country, per-commodity NATIONAL demand multiplier — the demand half of the
@@ -207,129 +175,6 @@ export const COMMODITIES_NATIONAL_REGIONAL_PRICE_BLEND: ReadonlySet<CommodityTyp
   "real_estate_services",
 ]);
 
-export const COMMODITY_LABELS: Record<CommodityType, string> = {
-  steel: "Steel & Metals",
-  electronics: "Electronics & Semiconductors",
-  energy: "Electricity",
-  chemicals: "Industrial Chemicals",
-  pharmaceuticals: "Pharmaceuticals",
-  fertilizers: "Fertilizers",
-  food: "Food Products",
-  building_materials: "Building Materials",
-  construction_services: "Construction Services",
-  healthcare_services: "Healthcare Services",
-  real_estate_services: "Real Estate Services",
-  software: "Software & IT Services",
-  financial_services: "Financial Services",
-  advertising: "Advertising & Media",
-  vehicles: "Vehicles & Machinery",
-  retail: "Consumer Goods",
-  freight: "Freight & Transportation",
-  consulting_services: "Consulting Services",
-  iron: "Iron Ore",
-  coal: "Coal",
-  oil: "Crude Oil",
-  rare_earth: "Rare Earth Minerals",
-  timber: "Timber & Lumber",
-  natural_gas: "Natural Gas",
-  ordnance: "Ordnance & Weapons Systems",
-  plastics: "Plastics & Polymers",
-  network_services: "Network Services",
-};
-
-export const COMMODITY_ICONS: Record<CommodityType, string> = {
-  steel: "Fe",
-  electronics: "Si",
-  energy: "kW",
-  chemicals: "Ch",
-  pharmaceuticals: "Rx",
-  fertilizers: "NPK",
-  food: "Ag",
-  building_materials: "BM",
-  construction_services: "Cn",
-  healthcare_services: "HC",
-  real_estate_services: "RE",
-  software: "SW",
-  financial_services: "Fi",
-  advertising: "Ad",
-  vehicles: "Ve",
-  retail: "CG",
-  freight: "Fr",
-  consulting_services: "Cs",
-  iron: "Fe",
-  coal: "Co",
-  oil: "Oi",
-  rare_earth: "RE",
-  timber: "Ti",
-  natural_gas: "NG",
-  ordnance: "Ord",
-  plastics: "Pl",
-  network_services: "NS",
-};
-
-/** Hero image slug for each commodity (served by /api/images/hero/[slug]) */
-export const COMMODITY_HERO_SLUGS: Record<CommodityType, string> = {
-  steel: "commodity-steel",
-  electronics: "commodity-electronics",
-  energy: "commodity-energy",
-  chemicals: "commodity-chemicals",
-  pharmaceuticals: "commodity-pharmaceuticals",
-  fertilizers: "commodity-fertilizers",
-  food: "commodity-food",
-  building_materials: "commodity-building-materials",
-  construction_services: "commodity-construction-services",
-  healthcare_services: "commodity-healthcare-services",
-  real_estate_services: "commodity-real-estate-services",
-  software: "commodity-software",
-  financial_services: "commodity-financial-services",
-  advertising: "commodity-advertising",
-  vehicles: "commodity-vehicles",
-  retail: "commodity-retail",
-  freight: "commodity-freight",
-  consulting_services: "commodity-consulting-services",
-  iron: "commodity-iron",
-  coal: "commodity-coal",
-  oil: "commodity-oil",
-  rare_earth: "commodity-rare-earth",
-  timber: "commodity-timber",
-  natural_gas: "commodity-natural-gas",
-  ordnance: "commodity-ordnance",
-  plastics: "commodity-plastics",
-  network_services: "commodity-network-services",
-};
-
-/** Alt text for commodity hero images */
-export const COMMODITY_HERO_ALTS: Record<CommodityType, string> = {
-  steel: "Showa Steel Works industrial facility",
-  electronics: "TSMC semiconductor fabrication plant",
-  energy: "High-voltage power lines at sunset",
-  chemicals: "BASF chemical plant in Ludwigshafen",
-  pharmaceuticals: "Pharmaceutical manufacturing line with packaged medicines",
-  fertilizers: "Agricultural fertilizer spreader in a crop field",
-  food: "Combine harvester gathering wheat",
-  building_materials: "Construction site with building materials",
-  construction_services: "Construction crews working on a high-rise project",
-  healthcare_services: "Modern hospital ward providing patient care",
-  real_estate_services: "Residential and commercial real estate skyline",
-  software: "Wikimedia Foundation server room",
-  financial_services: "New York Stock Exchange building on Wall Street",
-  advertising: "Broadway and Times Square lit up at night",
-  vehicles: "Hyundai car assembly line",
-  retail: "Macy's department store at Herald Square",
-  freight: "Sovereign Maersk container ship at sea",
-  consulting_services: "Booz Allen Hamilton office in Washington D.C.",
-  iron: "Iron ore factory in Karnataka, India",
-  coal: "North Antelope Rochelle coal mine, Wyoming",
-  oil: "Petrobras P-51 offshore oil platform, Brazil",
-  rare_earth:
-    "Rare earth oxide samples: praseodymium, cerium, lanthanum, neodymium, samarium, gadolinium",
-  timber: "Timber logging operation in the Pacific Northwest",
-  natural_gas: "Natural gas processing plant and pipeline infrastructure",
-  ordnance: "Ordnance assembly line at a weapons manufacturing facility",
-  plastics: "Industrial polymer extrusion and plastics manufacturing plant",
-  network_services: "Fiber optic data center network infrastructure",
-};
-
 /**
  * Base price per unit for each commodity (in dollars).
  * Used to convert dollar-equivalent flows into unit quantities.
@@ -416,13 +261,6 @@ export const COMMODITY_UNITS: Record<CommodityType, string> = {
   plastics: "tons",
   network_services: "subscriptions",
 };
-
-/**
- * Small unit floor for commodity markets and sector modifiers.
- * Prevents divide-by-zero while still letting no-supply / no-demand scenarios
- * keep moving as the opposite side grows.
- */
-export const MIN_COMMODITY_FLOW_UNITS = 0.01;
 
 /**
  * Base supply and demand added to every commodity at the global level.
@@ -609,27 +447,6 @@ function applyUnownedCommodityDrift(
     balance.demand += stab * UNOWNED_DRIFT_AMPLITUDE * Math.sin(angle + Math.PI);
   }
 }
-
-/**
- * How strongly log supply/demand pressure moves market prices away from base.
- * Higher values make shortages and surpluses bite harder, while still applying
- * diminishing returns via the logarithm.
- */
-export const COMMODITY_PRICE_LOG_SCALE = 0.7;
-
-/**
- * Soft-knee for commodity pressure. Raw D/S remains visible in displays and
- * diagnostics, but price and margin math compress the tail beyond 3x shortage
- * or 3x oversupply so extreme markets still worsen without dominating balance.
- */
-export const COMMODITY_PRESSURE_SOFT_KNEE = 3;
-
-/**
- * Tail slope applied in log space after COMMODITY_PRESSURE_SOFT_KNEE.
- * At 0.25, each 4x increase in raw tail pressure acts like a 1.41x increase
- * in effective pressure. This is symmetric for shortages and oversupply.
- */
-export const COMMODITY_PRESSURE_TAIL_SLOPE = 0.25;
 
 /**
  * Wider soft-knee for the six EXTRACTABLE resources in PRICE math.
@@ -821,11 +638,6 @@ export const CONSTRUCTION_SERVICES_GDP_DEMAND_FRACTION = 5e-7;
  * balance pass wants a state-inefficiency discount (e.g. 0.85).
  */
 export const NATCORP_COMMODITY_MULTIPLIER = 1.0;
-
-/** Blend weights: 50% global / 25% national (country-aggregate) / 25% regional (state). */
-export const GLOBAL_PRICE_WEIGHT = 0.5;
-export const NATIONAL_PRICE_WEIGHT = 0.25;
-export const REGIONAL_PRICE_WEIGHT = 0.25;
 
 /**
  * Per-turn drift rate for commodity prices toward supply/demand equilibrium.
@@ -1028,48 +840,6 @@ export function commodityMixWeight(
   const rate = supplyRates[commodity] ?? 0;
   if (!(total > 0) || !(base > 0) || rate <= 0) return 0;
   return rate / base / total;
-}
-
-/**
- * Calculate market price from effective supply/demand pressure with
- * logarithmic diminishing returns and no hard cap.
- *
- * If one side of the market is empty, the other side can keep pushing price
- * further as it grows; the soft-knee and log curve slow the rate of change.
- * If both are 0, returns base price.
- */
-export function computeMarketPrice(
-  basePrice: number,
-  supplyUnits: number,
-  demandUnits: number,
-  softKnee?: number
-): number {
-  const ratio = computeEffectiveCommodityPressureRatio(supplyUnits, demandUnits, softKnee);
-  const logPressure = Math.log(ratio);
-  const multiplier =
-    logPressure >= 0
-      ? 1 + COMMODITY_PRICE_LOG_SCALE * logPressure
-      : 1 / (1 + COMMODITY_PRICE_LOG_SCALE * -logPressure);
-  return Math.round(basePrice * multiplier * 100) / 100;
-}
-
-/**
- * Blend global, national, and regional prices.
- * blendedPrice = 0.5 * globalPrice + 0.25 * nationalPrice + 0.25 * regionalPrice
- */
-export function blendPrice(
-  globalPrice: number,
-  nationalPrice: number,
-  regionalPrice: number
-): number {
-  return (
-    Math.round(
-      (GLOBAL_PRICE_WEIGHT * globalPrice +
-        NATIONAL_PRICE_WEIGHT * nationalPrice +
-        REGIONAL_PRICE_WEIGHT * regionalPrice) *
-        100
-    ) / 100
-  );
 }
 
 // ─── Retail consumer demand GDP scaling ──────────────────────────────────────
@@ -1321,44 +1091,6 @@ export const COMMODITY_AGGREGATE_SURPLUS_CAP = 30;
 export const COMMODITY_COMBINED_FLOOR = 15;
 
 /**
- * Convert raw supply/demand into a stable pressure ratio.
- * When one side is near zero, the floor keeps the ratio finite without
- * introducing a hard cap — pressure can still keep growing as the opposite
- * side increases.
- */
-export function computeCommodityPressureRatio(supplyUnits: number, demandUnits: number): number {
-  if (supplyUnits <= 0 && demandUnits <= 0) return 1;
-  const supply = Math.max(supplyUnits, MIN_COMMODITY_FLOW_UNITS);
-  const demand = Math.max(demandUnits, MIN_COMMODITY_FLOW_UNITS);
-  return demand / supply;
-}
-
-/**
- * Convert raw supply/demand pressure into the effective pressure used by price
- * and margin math. Ratios within the soft-knee (default 3x; callers pass
- * EXTRACTABLE_PRESSURE_SOFT_KNEE (8) for extractable prices) are unchanged.
- * Beyond that soft-knee, the log-pressure tail keeps increasing at a steeply
- * diminishing rate. The transform is symmetric around 1x.
- */
-export function computeEffectiveCommodityPressureRatio(
-  supplyUnits: number,
-  demandUnits: number,
-  softKnee: number = COMMODITY_PRESSURE_SOFT_KNEE
-): number {
-  const rawRatio = computeCommodityPressureRatio(supplyUnits, demandUnits);
-  if (rawRatio <= 0 || !Number.isFinite(rawRatio)) return 1;
-
-  const logPressure = Math.log(rawRatio);
-  const absLogPressure = Math.abs(logPressure);
-  const kneeLogPressure = Math.log(softKnee);
-  if (absLogPressure <= kneeLogPressure) return rawRatio;
-
-  const compressedLogPressure =
-    kneeLogPressure + (absLogPressure - kneeLogPressure) * COMMODITY_PRESSURE_TAIL_SLOPE;
-  return Math.exp(Math.sign(logPressure) * compressedLogPressure);
-}
-
-/**
  * Compute commodity margin modifier for a sector that BUYS commodities (input costs).
  * Uses logarithmic scaling: penalty = -K × Σ(rate_i × ln(effectivePressure_i))
  *
@@ -1474,6 +1206,76 @@ export function applyRetailPenaltyFactor(
   return commodityInputMod;
 }
 
+type CommodityBalanceMap = Map<CommodityType, { supply: number; demand: number }>;
+
+interface BlendedMarginModifiers {
+  inputMod: number;
+  surplusMod: number;
+}
+
+/**
+ * A stabilised state book is a pure function of the raw state book. One turn
+ * reads one raw book per state and hands that same map to every sector in it,
+ * so caching the 27-commodity stabilised copy by map identity keeps it out of
+ * the per-sector path. Entries die with the turn's lookups, which are rebuilt
+ * every turn; a caller must not mutate a book map after passing it in.
+ */
+const stabilizedStateBooks = new WeakMap<object, CommodityBalanceMap>();
+
+/**
+ * A blended result is a pure function of the sector type, the three books, the
+ * blend weights and the two flow sequences. Hundreds of sectors share all of
+ * that (same state, strategy, tech and tariff posture), so the answer is
+ * computed once and shared instead of rebuilt per sector. Same immutability
+ * contract as the stabilised books above.
+ */
+const blendedResultCache = new WeakMap<
+  object,
+  WeakMap<object, WeakMap<object, Map<string, BlendedMarginModifiers>>>
+>();
+
+/** The exact flow sequence a leg loop reads, so equal rate objects share one answer. */
+function commodityFlowKey(
+  flows: Partial<Record<CommodityType, number>> | readonly CommodityFlow[]
+): string {
+  let key = "";
+  if (Array.isArray(flows)) {
+    for (const flow of flows) key += `${flow.commodity}:${flow.rate};`;
+    return key;
+  }
+  // `for in` over the record keeps the signature allocation-free on the hot
+  // path; own properties enumerated in the same order as Object.entries, which
+  // is what normalizeFlows reads.
+  for (const commodity in flows) {
+    if (!Object.hasOwn(flows, commodity)) continue;
+    const rate = (flows as Partial<Record<CommodityType, number>>)[commodity as CommodityType];
+    if (typeof rate === "number" && rate > 0) key += `${commodity}:${rate};`;
+  }
+  return key;
+}
+
+/** The state book with its stabiliser added to both sides, built once per book. */
+function stabilizedStateBook(stateBalances: CommodityBalanceMap): CommodityBalanceMap {
+  const cached = stabilizedStateBooks.get(stateBalances);
+  if (cached) return cached;
+  // Extractable resources use a larger stabilizer because they are globally
+  // traded: a state without local iron/oil/gas can import it, so pure
+  // zero-supply local penalties over-penalise sectors in resource-poor states.
+  const stabilized = new Map<CommodityType, { supply: number; demand: number }>();
+  for (const c of COMMODITY_TYPES) {
+    const s = stateBalances.get(c) ?? { supply: 0, demand: 0 };
+    const stab = (EXTRACTABLE_RESOURCES as readonly string[]).includes(c)
+      ? EXTRACTABLE_RESOURCE_STATE_STABILIZER
+      : STATE_COMMODITY_SUPPLY_DEMAND;
+    stabilized.set(c, {
+      supply: s.supply + stab,
+      demand: s.demand + stab,
+    });
+  }
+  stabilizedStateBooks.set(stateBalances, stabilized);
+  return stabilized;
+}
+
 /**
  * Compute blended commodity margin modifiers using the output-blend approach.
  * Computes modifiers at global, national, and state level independently, then blends
@@ -1503,38 +1305,46 @@ export function computeBlendedMarginModifiers(
    */
   supplyOverride?: Partial<Record<CommodityType, number>> | readonly CommodityFlow[],
   demandOverride?: Partial<Record<CommodityType, number>> | readonly CommodityFlow[]
-): { inputMod: number; surplusMod: number } {
-  // Add state stabilizer to state balances for margin calculation.
-  // Extractable resources use a larger stabilizer because they are globally
-  // traded — a state without local iron/oil/gas can import it, so pure
-  // zero-supply local penalties over-penalise sectors in resource-poor states.
-  const stabilizedState = new Map<CommodityType, { supply: number; demand: number }>();
-  for (const c of COMMODITY_TYPES) {
-    const s = stateBalances.get(c) ?? { supply: 0, demand: 0 };
-    const stab = (EXTRACTABLE_RESOURCES as readonly string[]).includes(c)
-      ? EXTRACTABLE_RESOURCE_STATE_STABILIZER
-      : STATE_COMMODITY_SUPPLY_DEMAND;
-    stabilizedState.set(c, {
-      supply: s.supply + stab,
-      demand: s.demand + stab,
-    });
+): BlendedMarginModifiers {
+  // The default flows depend only on the sector type, which is already in the
+  // key, so a missing override needs no signature of its own.
+  const cacheKey =
+    `${sectorType}|${globalWeight}|${nationalWeight}|${localWeight}` +
+    `|d${demandOverride == null ? "" : `o${commodityFlowKey(demandOverride)}`}` +
+    `|s${supplyOverride == null ? "" : `o${commodityFlowKey(supplyOverride)}`}`;
+
+  let byState = blendedResultCache.get(stateBalances);
+  if (!byState) {
+    byState = new WeakMap();
+    blendedResultCache.set(stateBalances, byState);
   }
+  let byNational = byState.get(nationalBalances);
+  if (!byNational) {
+    byNational = new WeakMap();
+    byState.set(nationalBalances, byNational);
+  }
+  let byGlobal = byNational.get(globalBalances);
+  if (!byGlobal) {
+    byGlobal = new Map();
+    byNational.set(globalBalances, byGlobal);
+  }
+  const cached = byGlobal.get(cacheKey);
+  if (cached) return cached;
+
+  // Normalise once, not once per level: the three levels read the same flows.
+  const demandFlows =
+    demandOverride != null ? normalizeFlows(demandOverride) : (SECTOR_DEMAND[sectorType] ?? []);
+  const supplyFlows =
+    supplyOverride != null ? normalizeFlows(supplyOverride) : (SECTOR_SUPPLY[sectorType] ?? []);
+  const stabilizedState = stabilizedStateBook(stateBalances);
 
   // Compute modifiers at each level
-  const globalInput = computeCommodityMarginModifier(sectorType, globalBalances, demandOverride);
-  const nationalInput = computeCommodityMarginModifier(
-    sectorType,
-    nationalBalances,
-    demandOverride
-  );
-  const stateInput = computeCommodityMarginModifier(sectorType, stabilizedState, demandOverride);
-  const globalSurplus = computeCommoditySurplusBonus(sectorType, globalBalances, supplyOverride);
-  const nationalSurplus = computeCommoditySurplusBonus(
-    sectorType,
-    nationalBalances,
-    supplyOverride
-  );
-  const stateSurplus = computeCommoditySurplusBonus(sectorType, stabilizedState, supplyOverride);
+  const globalInput = computeCommodityMarginModifier(sectorType, globalBalances, demandFlows);
+  const nationalInput = computeCommodityMarginModifier(sectorType, nationalBalances, demandFlows);
+  const stateInput = computeCommodityMarginModifier(sectorType, stabilizedState, demandFlows);
+  const globalSurplus = computeCommoditySurplusBonus(sectorType, globalBalances, supplyFlows);
+  const nationalSurplus = computeCommoditySurplusBonus(sectorType, nationalBalances, supplyFlows);
+  const stateSurplus = computeCommoditySurplusBonus(sectorType, stabilizedState, supplyFlows);
 
   // Blend outputs using caller-supplied weights (default 50/25/25).
   const rawInput =
@@ -1556,15 +1366,18 @@ export function computeBlendedMarginModifiers(
   // inputMod + surplusMod is below -COMMODITY_COMBINED_FLOOR so stacked
   // scarcity plus glut cannot exceed the floor that each leg's own cap misses.
   const combined = inputMod + surplusMod;
-  if (combined < -COMMODITY_COMBINED_FLOOR) {
-    const scale = COMMODITY_COMBINED_FLOOR / Math.abs(combined);
-    return {
-      inputMod: Math.round(inputMod * scale * 100) / 100,
-      surplusMod: Math.round(surplusMod * scale * 100) / 100,
-    };
-  }
-
-  return { inputMod, surplusMod };
+  const result: BlendedMarginModifiers =
+    combined < -COMMODITY_COMBINED_FLOOR
+      ? {
+          inputMod:
+            Math.round(inputMod * (COMMODITY_COMBINED_FLOOR / Math.abs(combined)) * 100) / 100,
+          surplusMod:
+            Math.round(surplusMod * (COMMODITY_COMBINED_FLOOR / Math.abs(combined)) * 100) / 100,
+        }
+      : { inputMod, surplusMod };
+  const shared = Object.freeze(result);
+  byGlobal.set(cacheKey, shared);
+  return shared;
 }
 
 export const COMMODITY_COLORS: Record<CommodityType, string> = {

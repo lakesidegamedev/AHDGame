@@ -749,6 +749,17 @@ export function fundingDef(level: EstateFundingLevel): FundingLevelDef {
   return FUNDING_LEVELS.find((f) => f.id === level) ?? FUNDING_LEVELS[1];
 }
 
+/** Condition points an estate moves per turn toward its funding baseline. */
+export const CONDITION_DRIFT_STEP = 4;
+
+/** Move condition one bounded step toward its funding-level baseline. */
+export function driftCondition(current: number, fundingLevel: EstateFundingLevel): number {
+  const target = fundingDef(fundingLevel).conditionBaseline;
+  if (current < target) return Math.min(target, current + CONDITION_DRIFT_STEP);
+  if (current > target) return Math.max(target, current - CONDITION_DRIFT_STEP);
+  return current;
+}
+
 export const TIER_MULTIPLIER = [1.0, 1.5, 2.0, 2.5] as const;
 export const TIER_LABELS = ["Basic", "Established", "Expanded", "Flagship"] as const;
 

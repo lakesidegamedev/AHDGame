@@ -43,9 +43,24 @@ export interface IdleCauseMeta {
  * it did not do it in a plant. `facilityVocabulary` supplies both nouns, so
  * this stays one source of copy instead of seventeen.
  */
+/**
+ * State-scoped outputs (construction, freight, healthcare, real estate) sell
+ * only where they are made, so a shortage on the world or national market
+ * does not lift this sector's demand (ticket 1700).
+ */
+function localMarketNote(outputs: string[]): string {
+  if (outputs.length === 0) return "";
+  const names =
+    outputs.length === 1
+      ? outputs[0]
+      : `${outputs.slice(0, -1).join(", ")} and ${outputs[outputs.length - 1]}`;
+  return ` ${names} ${outputs.length === 1 ? "sells" : "sell"} only in this state, so a shortage elsewhere does not raise demand here.`;
+}
+
 export function idleCauseMeta(
   sectorType: OperatingSectorType | string | null | undefined,
-  bankCapacityShare?: number
+  bankCapacityShare?: number,
+  localMarketOutputs: string[] = []
 ): Record<PlantIdleCauseKey, IdleCauseMeta> {
   const v = facilityVocabulary(sectorType);
   const sites = v.plural;
@@ -59,12 +74,17 @@ export function idleCauseMeta(
     demand: {
       label: "Demand limited",
       tone: "warning",
-      help: "Recent sales did not support a full run, so your plants are producing less to avoid making more unsold goods. Output rises as buyers take more.",
+      help: `Recent sales did not support a full run, so your plants are producing less to avoid making more unsold goods. Output rises as buyers take more.${localMarketNote(localMarketOutputs)}`,
     },
     ramping: {
       label: "Ramping up",
       tone: "info",
       help: `You sold everything you made last turn, so your ${sites} are stepping back up toward a full run. Output rises each turn while buyers keep taking it, faster when the market is short.`,
+    },
+    cash: {
+      label: "Short of cash",
+      tone: "warning",
+      help: `Your company could not pay the full bill for ${run}, so part of it stopped. Add cash to the company or cut costs to run more.`,
     },
     strike: {
       label: "Strike",
@@ -84,7 +104,7 @@ export function idleCauseMeta(
     staffing: {
       label: "Short of workers",
       tone: "warning",
-      help: `Your ${sites} did not have enough workers for a full run. Hire or raise pay until staffing catches up.`,
+      help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is.`,
     },
     bank: {
       label: "Reserved for your bank network",
@@ -141,6 +161,7 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
   inputs: "bg-amber-500/60",
   demand: "bg-rose-500/50",
   ramping: "bg-sky-400/60",
+  cash: "bg-yellow-300/60",
   strike: "bg-error/80",
   disaster: "bg-fuchsia-600/55",
   policy: "bg-indigo-400/55",

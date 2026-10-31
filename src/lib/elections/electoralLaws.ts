@@ -29,8 +29,8 @@ export const REGISTRATION_ACCESS_MAX = 50;
  * validated here too so a malformed bill is rejected at enactment rather than
  * silently clamped several phases later.
  */
-export const VOTING_AGE_MIN = 16;
-export const VOTING_AGE_MAX = 25;
+const VOTING_AGE_MIN = 16;
+const VOTING_AGE_MAX = 25;
 
 export function clampRegistrationAccess(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -58,7 +58,7 @@ export function isValidVotingAge(value: unknown): value is number {
  * organization as the thing that actually builds a partisan base — Org is the
  * player's lever, and law should tilt the board, not replace it.
  */
-export const REGISTRATION_ACCESS_MAX_SWING = 0.5;
+const REGISTRATION_ACCESS_MAX_SWING = 0.5;
 
 /**
  * Multiplier on the passive Org→Reg drift rate. Expanded access pulls voters

@@ -4,6 +4,7 @@ import { canSupply, applyDefenceDeliveries } from "./defenceDeliveryTurn";
 import { lotsFromSector, rawLotsFromSector } from "@/lib/military/arsenal";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 
@@ -278,6 +279,20 @@ describe("applyDefenceDeliveries", () => {
       stalled: 0,
       productionCost: 0,
     });
+  });
+
+  it("reads the supplier's cash without decoding its settlement stamps", async () => {
+    const w = world();
+    const db = stubDb(w);
+    const corporations = db.collection("corporations") as unknown as {
+      findOne: (filter: Record<string, unknown>, options?: Record<string, unknown>) => unknown;
+    };
+    const findOne = vi.spyOn(corporations, "findOne");
+    await applyDefenceDeliveries(db, "US", 1953, 3, 42);
+    expect(findOne).toHaveBeenCalledWith(
+      { _id: CORP_ID },
+      { projection: SETTLEMENT_HISTORY_EXCLUDED }
+    );
   });
 
   it("delivers into the arsenal and pays the corporation", async () => {

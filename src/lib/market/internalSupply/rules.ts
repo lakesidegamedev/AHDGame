@@ -152,15 +152,43 @@ export function allocateInternalSupply(args: {
   ownRouteCaps?: ReadonlyMap<string, number>;
 }): { trades: InternalSupplyTrade[]; availabilityBySector: Map<string, number> } {
   const trades: InternalSupplyTrade[] = [];
-  const sellers = [...args.sellers].sort((a, b) => a.sectorId.localeCompare(b.sectorId));
-  const buyers = [...args.buyers].sort((a, b) => a.sectorId.localeCompare(b.sectorId));
-  const remaining = new Map(
-    buyers.map((b) => [b.sectorId, Math.max(0, positive(b.demand) - positive(b.committed))])
-  );
-  const supplied = new Map<string, number>();
-  const offers = new Map(
-    sellers.map((s) => [s.sectorId, Math.max(0, positive(s.units) - positive(s.committed))])
-  );
+  // Deterministic order, by code unit: the ids are object-id hex or plain
+  // test strings, where this is the same order `localeCompare` gives, and it
+  // is the hot path of a country book (one sort of every seller and buyer in
+  // the world, per commodity).
+  const bySectorId = (a: { sectorId: string }, b: { sectorId: string }): number =>
+    a.sectorId < b.sectorId ? -1 : a.sectorId > b.sectorId ? 1 : 0;
+  const sellers = args.sellers
+    .filter((s) => {
+      const setting = args.policies.get(s.corporationId);
+      return setting !== undefined && setting.policy.priority !== "market";
+    })
+    .sort(bySectorId);
+  // Sellers without an own-supply policy are skipped by both passes below, so
+  // filtering here keeps the sort and the passes proportional to the sellers
+  // that can actually reserve instead of to the whole book.
+  const buyers = [...args.buyers].sort(bySectorId);
+  // Room is decremented as units are allocated, but only participants ever
+  // read it: the book holds every buyer in the world, and building two maps
+  // over all of them per call was most of this pass's cost. Entries are
+  // created on first use and decremented exactly as before, so the running
+  // float values are identical.
+  const buyerRoom = new Map<string, number>();
+  const roomOf = (b: InternalSupplyBuyer): number => {
+    const cached = buyerRoom.get(b.sectorId);
+    if (cached !== undefined) return cached;
+    const initial = Math.max(0, positive(b.demand) - positive(b.committed));
+    buyerRoom.set(b.sectorId, initial);
+    return initial;
+  };
+  const sellerOffer = new Map<string, number>();
+  const offerOf = (s: InternalSupplySeller): number => {
+    const cached = sellerOffer.get(s.sectorId);
+    if (cached !== undefined) return cached;
+    const initial = Math.max(0, positive(s.units) - positive(s.committed));
+    sellerOffer.set(s.sectorId, initial);
+    return initial;
+  };
   let room = Math.min(positive(args.reservationRoom), positive(args.supply), positive(args.demand));
   const routeLeft = new Map(args.ownRouteCaps ?? []);
   const routeFor = (s: InternalSupplySeller, b: InternalSupplyBuyer) => {
@@ -184,20 +212,49 @@ export function allocateInternalSupply(args: {
 
   // Own-plant and group eligibility are necessary conditions, so index the
   // buyers once instead of scanning every buyer for every seller (the books
-  // are both O(1,000), which made this pass quadratic).
+  // are both O(1,000), which made this pass quadratic). Only the corporations
+  // and roots that own one of the sellers can ever be looked up, so the
+  // indexes hold those alone: a country book is every buyer in the world, and
+  // indexing all of them for every commodity was pure allocation.
+  const sellerCorporations = new Set<string>();
+  const sellerRoots = new Set<string>();
+  for (const s of sellers) {
+    sellerCorporations.add(s.corporationId);
+    const root = args.policies.get(s.corporationId)?.root;
+    if (root) sellerRoots.add(root);
+  }
   const buyersByCorporation = new Map<string, InternalSupplyBuyer[]>();
   const buyersByRoot = new Map<string, InternalSupplyBuyer[]>();
   for (const b of buyers) {
-    const byCorp = buyersByCorporation.get(b.corporationId) ?? [];
-    byCorp.push(b);
-    buyersByCorporation.set(b.corporationId, byCorp);
+    if (sellerCorporations.has(b.corporationId)) {
+      const byCorp = buyersByCorporation.get(b.corporationId) ?? [];
+      byCorp.push(b);
+      buyersByCorporation.set(b.corporationId, byCorp);
+    }
+    if (sellerRoots.size === 0) continue;
     const root = args.policies.get(b.corporationId)?.root;
-    if (!root) continue;
+    if (!root || !sellerRoots.has(root)) continue;
     const byRoot = buyersByRoot.get(root) ?? [];
     byRoot.push(b);
     buyersByRoot.set(root, byRoot);
   }
   const stateOf = (sectorId: string) => args.deliveryStateBySector?.get(sectorId);
+  // Those two indexes are still filtered per seller by the seller's state, and
+  // a group root's candidate list can be the whole book. The predicate reads
+  // only the seller's corporation/root and its state, so each filtered list is
+  // resolved once per pass and reused by every seller that shares the pair.
+  const eligibleBySellerScope = new Map<string, InternalSupplyBuyer[]>();
+  const eligibleFor = (
+    candidates: readonly InternalSupplyBuyer[],
+    scope: string,
+    match: (b: InternalSupplyBuyer) => boolean
+  ): InternalSupplyBuyer[] => {
+    const cached = eligibleBySellerScope.get(scope);
+    if (cached) return cached;
+    const eligible = candidates.filter(match);
+    eligibleBySellerScope.set(scope, eligible);
+    return eligible;
+  };
 
   // Own plants go first across ALL suppliers. Group plants follow, with
   // proportional allocation so array order never gives one buyer a monopoly.
@@ -217,8 +274,12 @@ export function allocateInternalSupply(args: {
         !args.deliveryStateBySector ||
         (sellerState !== undefined && sellerState === stateOf(b.sectorId));
       const eligible = ownOnly
-        ? ownCandidates.filter(sameState)
-        : rootCandidates.filter((b) => b.corporationId !== s.corporationId && sameState(b));
+        ? eligibleFor(ownCandidates, `own|${s.corporationId}|${sellerState}`, sameState)
+        : eligibleFor(
+            rootCandidates,
+            `group|${setting.root}|${s.corporationId}|${sellerState}`,
+            (b) => b.corporationId !== s.corporationId && sameState(b)
+          );
       const groupCrossState =
         !ownOnly &&
         setting.policy.priority === "group" &&
@@ -237,7 +298,7 @@ export function allocateInternalSupply(args: {
           : [];
       const allocate = (group: InternalSupplyBuyer[], capped: boolean) => {
         const needOf = (b: InternalSupplyBuyer) => {
-          const left = remaining.get(b.sectorId) ?? 0;
+          const left = roomOf(b);
           return capped ? Math.min(left, routeLeft.get(routeFor(s, b)!) ?? 0) : left;
         };
         const needs = group.map(needOf);
@@ -255,7 +316,7 @@ export function allocateInternalSupply(args: {
           if (total > cap && total > 0) needs[i] = (needs[i]! * cap) / total;
         });
         const need = needs.reduce((n, u) => n + u, 0);
-        const take = Math.min(room, offers.get(s.sectorId) ?? 0, need);
+        const take = Math.min(room, offerOf(s), need);
         if (!(take > 0)) return;
         group.forEach((b, i) => {
           const units = (take * needs[i]!) / need;
@@ -272,11 +333,10 @@ export function allocateInternalSupply(args: {
             units,
             discount: Math.min(0.2, positive(setting.policy.discount)),
           });
-          remaining.set(b.sectorId, Math.max(0, (remaining.get(b.sectorId) ?? 0) - units));
-          supplied.set(b.sectorId, (supplied.get(b.sectorId) ?? 0) + units);
+          buyerRoom.set(b.sectorId, Math.max(0, (buyerRoom.get(b.sectorId) ?? 0) - units));
         });
         room -= take;
-        offers.set(s.sectorId, Math.max(0, (offers.get(s.sectorId) ?? 0) - take));
+        sellerOffer.set(s.sectorId, Math.max(0, (sellerOffer.get(s.sectorId) ?? 0) - take));
       };
       allocate(eligible, false);
       if (crossState.length) allocate(crossState, true);
@@ -348,13 +408,16 @@ export function settleConsumedInternalDiscounts(
   turnsPerDay: number,
   committedInputs?: ReadonlyMap<string, ReadonlyMap<string, number>>
 ): Map<string, number> {
+  const costs = new Map<string, number>();
+  if (!(Number.isFinite(turnsPerDay) && turnsPerDay > 0)) return costs;
   const reserved = new Map<string, number>();
   for (const t of trades) {
     const key = `${t.buyerSectorId}:${t.commodity}`;
     reserved.set(key, (reserved.get(key) ?? 0) + t.units);
   }
-  const costs = new Map<string, number>();
   for (const t of trades) {
+    // The same per-call guard `internalSupplyDiscounts` applies.
+    if (!(Number.isFinite(t.marketPrice) && t.marketPrice > 0)) continue;
     const key = `${t.buyerSectorId}:${t.commodity}`;
     const actual = Math.max(
       0,
@@ -362,8 +425,12 @@ export function settleConsumedInternalDiscounts(
         positive(committedInputs?.get(t.buyerSectorId)?.get(t.commodity))
     );
     const units = t.units * Math.min(1, actual / (reserved.get(key) ?? 1));
-    for (const [id, cost] of internalSupplyDiscounts([{ ...t, units }], t.marketPrice, turnsPerDay))
-      costs.set(id, (costs.get(id) ?? 0) + cost);
+    // The equal-and-opposite legs `internalSupplyDiscounts` would produce for
+    // this single trade, without a one-element array and two maps per trade.
+    const rebate =
+      (positive(units) * t.marketPrice * Math.min(0.2, positive(t.discount))) / turnsPerDay;
+    costs.set(t.supplierSectorId, (costs.get(t.supplierSectorId) ?? 0) + rebate);
+    costs.set(t.buyerSectorId, (costs.get(t.buyerSectorId) ?? 0) - rebate);
   }
   return costs;
 }

@@ -15,7 +15,7 @@
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import { SECTOR_TYPE_BRIEFING } from "@/lib/constants/sectorTypeDossier";
 import { getOperatingSectorLabel } from "@/lib/constants/sectorStrategies";

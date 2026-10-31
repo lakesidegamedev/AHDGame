@@ -22,7 +22,7 @@ import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assembly
 import { settleHuModernAssembly } from "./rules/modernAssembly2011";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 
-export const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
+const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
   _id: string;
   countryId: "HU";
@@ -34,7 +34,7 @@ function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
 
-export async function materializeHu2011AssemblySeating(input: {
+async function materializeHu2011AssemblySeating(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

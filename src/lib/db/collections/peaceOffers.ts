@@ -3,7 +3,7 @@ import type { PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import type { CountryId } from "@/lib/constants/countries";
 import { isOfferLive } from "@/lib/military/peaceOffer";
 
-const COLLECTION = "peaceOffers";
+export const COLLECTION = "peaceOffers";
 
 export function getPeaceOffersCollection(db: Db) {
   return db.collection<PeaceOfferDoc>(COLLECTION);

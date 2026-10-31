@@ -22,7 +22,7 @@ import {
   type FederationSettlementApplicationRecord,
 } from "./runtimeEntities";
 
-export const FEDERATION_SETTLEMENT_INTENTS_COLLECTION = "federationSettlementIntents";
+const FEDERATION_SETTLEMENT_INTENTS_COLLECTION = "federationSettlementIntents";
 
 type LiveActivationInput = Omit<SuccessionActivationInput, "sourceRegions" | "custodyAssets">;
 

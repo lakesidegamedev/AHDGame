@@ -1,23 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * Austria Voter Archetypes — 7 groups built around the three postwar Lager
- * (socialist, Catholic-conservative, national-liberal) plus the
- * Sozialpartnerschaft milieus that cut across them.
- *   defaultEconomicLean: -5 (socialist/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (progressive/secular) … +5 (Catholic/traditional)
- * demographicProfileId "at_archetypes"; category _id "at_voterGroups".
- */
-export const AT_VOTER_GROUP_BASELINES: Record<string, number> = {
-  socialist_lager: 92,
-  catholic_conservative: 92,
-  national_liberal: 88,
-  rural_farmer: 90,
-  urban_worker: 91,
-  business_professional: 90,
-  communist_left: 84,
-};
-
 export const atDemographicCategories: DemographicCategory[] = [
   {
     _id: "at_voterGroups",

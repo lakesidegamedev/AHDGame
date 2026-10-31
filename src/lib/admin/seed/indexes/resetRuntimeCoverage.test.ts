@@ -37,6 +37,15 @@ const PRIMARY_KEY_ONLY = [
 const BOUNDED_RETENTION_SCAN = ["nppOperatorDiagnostics", "capacityDecisionFunnels"] as const;
 
 describe("fresh-reset index coverage for newly classified runtime collections", () => {
+  it("restores the county country/state lookup after reset", async () => {
+    const plan = await collectSeedIndexPlan();
+    expect(
+      plan.find(
+        (entry) =>
+          entry.collection === "counties" && entry.options.name === "counties_country_state"
+      )
+    ).toMatchObject({ key: { countryId: 1, stateId: 1 } });
+  });
   it("plans indexes for every collection with a secondary-index query path", async () => {
     const plan = await collectSeedIndexPlan();
     const plannedCollections = new Set(

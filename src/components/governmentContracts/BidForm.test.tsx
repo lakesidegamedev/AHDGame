@@ -87,3 +87,17 @@ it("blocks new bids when rates are unavailable while preserving canonical withdr
     JSON.parse((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)
   ).toMatchObject({ amount: 1000, expectedRevision: 2, withdraw: true });
 });
+
+it("blocks new bids under the global switch but keeps withdrawal available", async () => {
+  const fetcher = show({ ...access, enabled: false });
+  const revise = screen.getByRole("button", { name: "Revise bid" }) as HTMLButtonElement;
+  expect(revise.disabled).toBe(true);
+  fireEvent.submit(revise.closest("form")!);
+  await screen.findByRole("alert");
+  expect(fetcher).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Withdraw bid" }));
+  await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+  expect(
+    JSON.parse((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)
+  ).toMatchObject({ withdraw: true, corporationId: "a" });
+});

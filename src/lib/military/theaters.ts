@@ -3,10 +3,10 @@
 // the theater set with Combat Command. The UI persists commitment state to the
 // per-country `theaterState` collection via the gated theaters PUT.
 
-import type { Db } from "mongodb";
 import type { Posture } from "@/lib/db/types/militaryUnit";
+import { isAtConflict } from "./theaterConstants";
 import type { WorldBloc } from "@/lib/world/bloc";
-import { conflictExists } from "@/lib/db/collections/conflicts";
+
 import { US_IDENTITY } from "@/lib/countries/us/identity";
 import { UK_IDENTITY } from "@/lib/countries/uk/identity";
 import { IE_IDENTITY } from "@/lib/countries/ie/identity";
@@ -107,26 +107,7 @@ export const BLOC_BOARD_NAME: Record<WorldBloc, string> = {
   nonAligned: "NON-ALIGNED",
 };
 
-/**
- * Homeland / reserve — the always-valid location a unit sits at when not committed
- * to a conflict. The one location constant that survives the dynamic-conflict move;
- * every other location is a live conflict id (see `conflicts` collection).
- */
-export const RESERVE_THEATER_ID = "reserve";
-
-/** A unit deployed to a Conflict (any non-reserve theater) is engaged, not garrisoned. */
-export function isAtConflict(theaterId: string): boolean {
-  return theaterId !== RESERVE_THEATER_ID;
-}
-
-/**
- * A valid location for a unit or a general posting: homeland reserve (always) or a
- * live conflict. The dynamic replacement for `isValidTheaterId`'s static-set check —
- * conflicts are created during play, so validity is a DB question, not a constant.
- */
-export async function isValidUnitLocation(db: Db, id: string): Promise<boolean> {
-  return id === RESERVE_THEATER_ID || (await conflictExists(db, id));
-}
+export { RESERVE_THEATER_ID, isAtConflict } from "./theaterConstants";
 
 /**
  * The posture a unit must hold given where it sits: a unit deployed to a Conflict

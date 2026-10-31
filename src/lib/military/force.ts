@@ -2,7 +2,7 @@
 // formations come from live gameState (the `militaryUnits` / `militaryFormations`
 // collections); the synthetic formation scaffold has been retired (WIRE W6).
 import type { CountryId } from "@/lib/constants/countries";
-import { MILITARY_COUNTRY_SCALE } from "@/lib/constants/military";
+import { MILITARY_COUNTRY_SCALE } from "@/lib/constants/militaryCore";
 
 /**
  * Per-country military scale for the Combat Command engine (upkeep + supply demand).

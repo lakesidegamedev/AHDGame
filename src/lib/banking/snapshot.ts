@@ -50,6 +50,7 @@ export function charterSnapshotFrom(
     discountWindowDebt: charter.discountWindowDebt,
     discountWindowArrears: charter.discountWindowArrears,
     cbMarginDebt: charter.cbMarginDebt,
+    cbLiquidityAdvanceDebt: charter.cbLiquidityAdvanceDebt,
     cbMarginArrears: charter.cbMarginArrears,
     interbankDebt: charter.interbankDebt,
     propBookMarkValue: charter.propBookMarkValue,

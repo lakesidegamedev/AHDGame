@@ -56,7 +56,11 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const rate = checkRateLimit(String(characterId), 20, 60000);
+    const rate = checkRateLimit(
+      `api/country/[code]/command-economy/soe/[corpId]:${String(characterId)}`,
+      20,
+      60000
+    );
     if (!rate.ok) return rateLimitResponse(rate.retryAfter);
 
     const parsed = await parseJsonBody(request, schema);

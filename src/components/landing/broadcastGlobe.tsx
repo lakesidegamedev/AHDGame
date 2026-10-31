@@ -86,7 +86,7 @@ const GHOST_PULSE_PERIOD_S = 6;
 /** A dateline nearer the limb than this share of the radius is too foreshortened to land on. */
 const BEAM_MAX_INSET = 0.9;
 
-export function broadcastZoomTransform(translate: readonly [number, number], zoom: number): string {
+function broadcastZoomTransform(translate: readonly [number, number], zoom: number): string {
   return `translate(${translate[0]} ${translate[1]}) scale(${zoom})`;
 }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import {
+  formatSignedPercent,
   formatCompactNumber,
   formatCurrency,
   formatPartyCountryMoney,
@@ -643,5 +644,14 @@ describe("endTimeToGameYear founding-phase offset (#1208)", () => {
   it("still credits a Week 1 finish to the year that just ended", () => {
     // Calendar turn 49 is week 1 of 1954; the rule hands it back to 1953.
     expect(endTimeToGameYear(ref, 97, ref, 1953, { preIterationTurns: 48 })).toBe(1953);
+  });
+});
+
+describe("formatSignedPercent (ticket 1701)", () => {
+  it("rounds to one decimal with a sign and thousands separators", () => {
+    expect(formatSignedPercent(874.2634715315954)).toBe("+874.3%");
+    expect(formatSignedPercent(110067.17852128079)).toBe("+110,067.2%");
+    expect(formatSignedPercent(-12.04)).toBe("-12.0%");
+    expect(formatSignedPercent(0)).toBe("+0.0%");
   });
 });

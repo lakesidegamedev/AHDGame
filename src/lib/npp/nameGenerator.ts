@@ -108,15 +108,7 @@ import {
 
 // Name suffixes (rare but add variety)
 const SUFFIXES = ["Jr.", "Sr.", "III", "IV"];
-const SUFFIX_PROBABILITY = 0.05; // 5% chance
-
-/**
- * Generate a random NPP name
- * @returns A full name string
- */
-export function generateNPPName(): string {
-  return generateNPPNameAndGender().name;
-}
+const SUFFIX_PROBABILITY = 0.05;
 
 // ─── JP Name Pools ──────────────────────────────────────────────────────────
 // Japanese names use family name first, given name second (Western order for display).
@@ -600,28 +592,10 @@ export function generateNPPNameAndGender(year?: number | null): {
 }
 
 /**
- * Generate multiple unique NPP names
- * @param count Number of names to generate
- * @returns Array of unique name strings
- */
-export function generateNPPNames(count: number): string[] {
-  const names = new Set<string>();
-  let attempts = 0;
-  const maxAttempts = count * 10; // Prevent infinite loops
-
-  while (names.size < count && attempts < maxAttempts) {
-    names.add(generateNPPName());
-    attempts++;
-  }
-
-  return Array.from(names);
-}
-
-/**
  * Check if a name is already used (for collision detection)
  * This is a utility for when we need to ensure uniqueness against existing NPPs
  */
-export function isNameUnique(name: string, existingNames: string[]): boolean {
+function isNameUnique(name: string, existingNames: string[]): boolean {
   const normalized = name.toLowerCase().trim();
   return !existingNames.some((existing) => existing.toLowerCase().trim() === normalized);
 }

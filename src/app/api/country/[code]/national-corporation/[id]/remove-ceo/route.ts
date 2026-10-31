@@ -1,5 +1,5 @@
 // POST /api/country/[code]/national-corporation/[id]/remove-ceo
-// Finance-minister-equivalent (fallback head of government) removes ("fires")
+// Finance-minister-equivalent removes ("fires")
 // the seated CEO of one of the country's National Corporations, vacating the
 // seat for a fresh SoT appointment. Spec §24.3.
 // Auth: requireAuthWithCharacter + assertTreasuryAuthority
@@ -25,7 +25,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/national-corporation/[id]/remove-ceo:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code, id } = await params;
@@ -40,12 +44,12 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    // Authority: seated finance minister, or head of government if vacant.
+    // Authority: the seated finance minister only.
     const authorized = await assertTreasuryAuthority(db, countryId, auth.user.character._id);
     if (!authorized) {
       return errorResponse(
         403,
-        "Only the Secretary of the Treasury (or equivalent), or the head of government if that seat is vacant, may remove a National Corporation CEO."
+        "Only the Secretary of the Treasury (or equivalent) may remove a National Corporation CEO."
       );
     }
 

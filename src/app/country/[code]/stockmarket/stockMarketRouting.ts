@@ -1,5 +1,6 @@
 import { ALL_EXCHANGES, getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 export interface ExchangeMetaEntry {
   title: string;
@@ -16,7 +17,7 @@ const GLOBAL_EXCHANGE_META: ExchangeMetaEntry = {
 /**
  * How a country is named in an exchange subtitle.
  *
- * Takes a resolver rather than reading `COUNTRY_CONFIGS` directly, because the
+ * Takes a resolver rather than reading `COUNTRY_CLIENT_CONFIGS` directly, because the
  * compiled name is wrong for a country renamed at runtime — the reunified
  * German exchange read "VVB - East Germany". Callers pass
  * `useCountryDisplayName()`; the default keeps this module usable (and its unit
@@ -24,7 +25,7 @@ const GLOBAL_EXCHANGE_META: ExchangeMetaEntry = {
  */
 export type CountryNameResolver = (id: CountryId) => string;
 
-const compiledName: CountryNameResolver = (id) => COUNTRY_CONFIGS[id]?.name ?? id;
+const compiledName: CountryNameResolver = (id) => COUNTRY_CLIENT_CONFIGS[id]?.name ?? id;
 
 function metaFor(
   countryId: CountryId,
@@ -48,7 +49,7 @@ function baseExchangeMeta(countryName: CountryNameResolver): Record<string, Exch
     global: GLOBAL_EXCHANGE_META,
     ...Object.fromEntries(
       ALL_EXCHANGES.filter((ex) => {
-        const status = COUNTRY_CONFIGS[ex.countryId as CountryId]?.status;
+        const status = COUNTRY_CLIENT_CONFIGS[ex.countryId as CountryId]?.status;
         return status === "active" || status === "beta";
       }).map((ex) => [
         ex.countryId,
@@ -69,7 +70,7 @@ export function buildRuntimeExchangeMeta(
     // `exchangeName.toLowerCase()` would skip the whitespace-to-hyphen step in
     // `toApiKey`, producing "gosplan ssr" instead of "gosplan-ssr" — a key that
     // matches nothing in EXCHANGE_API_KEYS.
-    const currentName = COUNTRY_CONFIGS[currentCountryId]?.exchangeName;
+    const currentName = COUNTRY_CLIENT_CONFIGS[currentCountryId]?.exchangeName;
     const currentApiKey = getExchangeApiKey(currentCountryId);
 
     return {

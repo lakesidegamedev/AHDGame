@@ -3,7 +3,7 @@ import {
   assertForeignControlAllowed,
   assertSubsidiaryWithinCap,
 } from "@/lib/mechanicalLaws/guards";
-import { positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
 import type {
@@ -419,7 +419,7 @@ async function runAgreedAcquisition(
                       [
                         owner,
                         positionHoldingTerms(
-                          holder,
+                          anchorHoldingPosition(holder, targetFxRate),
                           currentTurn,
                           corpLiquidCapitalToAnchor(target.sharePrice ?? 0, target, targetFxRate)
                         ),

@@ -54,13 +54,13 @@ import { ventureSector } from "./turn";
 import type { ProductVenture, VentureDomain } from "./types";
 
 /** Share of eligible NPP companies with a product in development at steady state. */
-export const NPP_VENTURE_STEADY_SHARE = 1 / 3;
+const NPP_VENTURE_STEADY_SHARE = 1 / 3;
 /** Per-turn start hazard for an idle, eligible company: f / (D x (1 - f)). */
 export const NPP_VENTURE_START_HAZARD =
   NPP_VENTURE_STEADY_SHARE / (VENTURE_DEVELOPMENT_TURNS * (1 - NPP_VENTURE_STEADY_SHARE));
 /** Same shape as NPP founding: a short output weighs as the square of its price ratio. */
-export const NPP_VENTURE_SHORTAGE_EXPONENT = 2;
-export const NPP_VENTURE_MIN_SHORTAGE_SCORE = 0.5;
+const NPP_VENTURE_SHORTAGE_EXPONENT = 2;
+const NPP_VENTURE_MIN_SHORTAGE_SCORE = 0.5;
 /**
  * NPP companies pay out spare cash, so they never hold a long cash runway.
  * They fund a product from income instead: the lifted sectors' last settled
@@ -105,7 +105,7 @@ export interface NppVentureSelectionArgs {
   hazard?: number;
 }
 
-export function isNppRun(corp: Corporation): boolean {
+function isNppRun(corp: Corporation): boolean {
   return corp.ceoType === "npp" && !!corp.ceoId && corp.ownershipState !== "stateOwned";
 }
 
@@ -156,7 +156,7 @@ function pickWeighted(weights: readonly number[], roll: number): number {
   return weights.length - 1;
 }
 
-export function nppVentureName(label: string, corporationId: string, turn: number): string {
+function nppVentureName(label: string, corporationId: string, turn: number): string {
   const series = 1 + Math.floor(seededUnit(`npp-venture-name:${corporationId}:${turn}`) * 9);
   return `${label} Series ${series}`.slice(0, 60);
 }

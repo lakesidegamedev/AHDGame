@@ -1,3 +1,4 @@
+import { rejectWhileTurnProcessing } from "./turnGuard";
 import { NextResponse } from "next/server";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -150,7 +151,13 @@ export async function convertSectorIndustry(request: Request, { params }: RouteP
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/sectorOperations/convertSectorIndustry:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, sectorId } = await params;

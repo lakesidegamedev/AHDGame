@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { RegionalHeroActions } from "./RegionalHeroActions";
 import { ApprovalTooltip } from "@/components/ApprovalTooltip";
 import { Avatar } from "@/components/Avatar";
 import BackButton from "@/components/BackButton";
@@ -48,6 +49,8 @@ export interface RegionHeaderProps {
   executive: RegionHeaderExecutive | null;
   /** Link to the executive's office, for the holder, officers of an NPP-held office and admins. */
   officeHref: string | null;
+  /** Public shortcut to this region's configured legislative chamber. */
+  legislature?: { href: string; label: string } | null;
   motto: string | null;
   /** Irish regions list the councils they are made of. */
   comprising: string[] | null;
@@ -123,6 +126,7 @@ export function RegionHeader(props: RegionHeaderProps) {
     executiveLabel,
     executive,
     officeHref,
+    legislature,
     motto,
     comprising,
     relocate,
@@ -287,7 +291,7 @@ export function RegionHeader(props: RegionHeaderProps) {
         </Fact>
         <Fact label={executiveLabel} wide>
           {executive && executiveName && holderHref ? (
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
               <Avatar
                 url={executive.avatarUrl}
                 name={executiveName}
@@ -314,26 +318,10 @@ export function RegionHeader(props: RegionHeaderProps) {
                   {executive.partyAbbreviation}
                 </span>
               )}
-              {officeHref && (
-                <Link
-                  href={officeHref}
-                  className="shrink-0 text-body-sm font-medium text-foreground underline decoration-card-border underline-offset-4 hover:decoration-foreground"
-                >
-                  Office
-                </Link>
-              )}
             </span>
           ) : (
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <span className="text-body-lg text-muted">Vacant</span>
-              {officeHref && (
-                <Link
-                  href={officeHref}
-                  className="text-body-sm font-medium text-foreground underline decoration-card-border underline-offset-4 hover:decoration-foreground"
-                >
-                  Office
-                </Link>
-              )}
             </span>
           )}
         </Fact>
@@ -346,6 +334,7 @@ export function RegionHeader(props: RegionHeaderProps) {
           </div>
         )}
       </dl>
+      <RegionalHeroActions officeHref={officeHref} legislature={legislature} />
     </header>
   );
 }

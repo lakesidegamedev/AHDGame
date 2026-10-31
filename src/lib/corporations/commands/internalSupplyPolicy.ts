@@ -32,7 +32,11 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    const rate = checkRateLimit(auth.user.userId, 20, 60000);
+    const rate = checkRateLimit(
+      `lib/corporations/commands/internalSupplyPolicy:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rate.ok) return rateLimitResponse(rate.retryAfter);
     const db = await getDb();
     const resolved = await resolveCorporation(db, (await params).id);

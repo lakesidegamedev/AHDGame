@@ -219,7 +219,7 @@ export async function addRecallDeclaration(
 }
 
 /** Record one favorability sample for the current support-check turn. */
-export async function recordRecallSupportSample(
+async function recordRecallSupportSample(
   db: Db,
   petitionId: ObjectId,
   currentTurn: number,

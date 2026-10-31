@@ -66,7 +66,11 @@ import {
   worldMigrationScale,
   ECON_PULL_NEUTRAL,
   labourShortageMigrationBonusPct,
+  entryAccessMigrationPct,
+  labourMigrationPct,
+  LABOUR_MIGRATION_RULES,
 } from "./flows/internationalMigration";
+import { loadMigrationLawPositions } from "./migrationLaws";
 import { planBilateralMigration, transferBilateralCohorts } from "./flows/rules/bilateralMigration";
 import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { labourMigrationWageFactor } from "@/lib/labour/laborCost";
@@ -308,6 +312,10 @@ export async function runDemographicFlows(
   // Building the historical crosswalk is relatively expensive. V1 worlds
   // must not pay for it on every turn or merely by importing this phase.
   const v2Opening = v2Countries.size > 0 ? await resetCohortOpeningCalibration() : null;
+  const migrationLaws =
+    v2Countries.size > 0 && typeof gameState?.resetWorldId === "string"
+      ? await loadMigrationLawPositions(db, gameState.resetWorldId, [...v2Countries])
+      : null;
   const metricsById = new Map<string, MetricsDoc>(macroMetrics.map((m) => [m._id, m]));
   const real = demos.filter((d) => !NATIONAL_SCOPE_IDS.has(d._id));
   if (real.length === 0) return { regionsProcessed: 0, circuitBreakerTrips: 0 };
@@ -368,7 +376,9 @@ export async function runDemographicFlows(
       ? await loadResetPolicyPressure(db, {
           worldId: gameState.resetWorldId,
           boards: [...v2HealthByRegion.values()],
-          turn: turn - 1,
+          // Fiscal settlement precedes demographics. Health observations stay
+          // lagged, but law delivery must use this turn's payment receipts.
+          turn,
         })
       : new Map<string, Record<string, number>>();
 
@@ -406,8 +416,9 @@ export async function runDemographicFlows(
     // economy / missing metrics → ×1.0 (parity). Capped per-region at ±MAX%/yr (design
     // 2026-06-16) AFTER the pull so a high-growth boom can't push net past the ceiling.
     // Bridge A — same shape as birthRate: the seeded rate is authored per
-    // region, but no law moves it for playables. society.integration shifts it
-    // ±1.5 annual percentage points at the board extremes, unchanged at 50.
+    // region. For legacy countries society.integration shifts it ±1.5 annual
+    // percentage points at the board extremes, unchanged at 50. Playables read
+    // the enacted migration laws below instead.
     const useResetMetrics = v2Countries.has(demo.countryId as "US" | "UK" | "JP");
     const seededMigrationPct = useResetMetrics
       ? (() => {
@@ -423,19 +434,31 @@ export async function runDemographicFlows(
     const integrationScore = useResetMetrics
       ? null
       : politicalInputs.score(demo._id, "society.integration");
-    const migrationRatePct =
-      integrationScore == null
+    // V2 playables: the enacted Entry and residence law scales the policy
+    // inflow and the Labour migration law sets work-visa intake for jobs the
+    // state cannot staff. V1 keeps its legacy shortage pull.
+    const lawPositions = useResetMetrics ? migrationLaws?.get(demo.countryId) : undefined;
+    const migrationRatePct = useResetMetrics
+      ? entryAccessMigrationPct(seededMigrationPct, lawPositions?.entry)
+      : integrationScore == null
         ? seededMigrationPct
         : modulateByPoliticalScore(seededMigrationPct, integrationScore, 1.5);
-    const labourMigrationBonusPct = labourMacroEnabled
-      ? labourShortageMigrationBonusPct(
-          val(m?.economic?.labourTightness, 0),
-          val(m?.economic?.labourWageIndex, 1)
-        )
-      : 0;
-    const policyGatedLabourMigrationBonusPct = migrationRatePct > 0 ? labourMigrationBonusPct : 0;
-    const baseNet =
-      (((migrationRatePct + policyGatedLabourMigrationBonusPct) / 100) * popNow) / TURNS_PER_YEAR;
+    const labourVisaPct = !labourMacroEnabled
+      ? 0
+      : useResetMetrics
+        ? labourMigrationPct(
+            lawPositions?.labour,
+            val(m?.economic?.labourTightness, 0),
+            val(m?.economic?.labourWageIndex, 1),
+            migrationRatePct
+          )
+        : migrationRatePct > 0
+          ? labourShortageMigrationBonusPct(
+              val(m?.economic?.labourTightness, 0),
+              val(m?.economic?.labourWageIndex, 1)
+            )
+          : 0;
+    const baseNet = (((migrationRatePct + labourVisaPct) / 100) * popNow) / TURNS_PER_YEAR;
     const gdpGrowthVal = val(m?.economic?.gdpGrowth, ECON_PULL_NEUTRAL.gdpGrowth);
     let econPull = economicPullFactor({
       gdpGrowth: gdpGrowthVal,
@@ -455,7 +478,17 @@ export async function runDemographicFlows(
       const wageFactor = labourMigrationWageFactor(val(m?.economic?.labourWageIndex, 1));
       econPull = Math.max(0.5, Math.min(1.5, econPull * wageFactor));
     }
-    const cappedNet = capNetMigrants(applyEconomicPull(baseNet, econPull), popNow, TURNS_PER_YEAR);
+    const cappedNet = capNetMigrants(
+      applyEconomicPull(baseNet, econPull),
+      popNow,
+      TURNS_PER_YEAR,
+      // Only the open labour-migration rows lift the ceiling; every other
+      // setting keeps the general cap exactly as before.
+      useResetMetrics &&
+        LABOUR_MIGRATION_RULES[lawPositions?.labour ?? "center"].recruitsIntoEmigration
+        ? labourVisaPct
+        : 0
+    );
 
     // Conscription (§4.5): resolve the country's policy and withdraw the serving
     // slice — serving women leave the childbearing pool (fertility ↓); the total

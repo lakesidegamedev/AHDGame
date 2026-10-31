@@ -16,22 +16,23 @@ vi.mock("./SingleWinnerResultsView", () => ({ SingleWinnerResultsView: () => nul
 afterEach(cleanup);
 
 describe("ResultsViewRouter election night switchover", () => {
-  it("shows the broadcast for a US president race while the night is present", () => {
+  it("shows the broadcast for a US president race while the night is present", async () => {
     render(<ResultsViewRouter data={nightFixture()} />);
-    expect(screen.getByTestId("broadcast")).toBeTruthy();
+    // The boards load on demand now; only the chosen one is fetched.
+    expect(await screen.findByTestId("broadcast")).toBeTruthy();
     expect(screen.queryByTestId("normal-president")).toBeNull();
   });
 
-  it("shows the normal presidential results when no night is present", () => {
+  it("shows the normal presidential results when no night is present", async () => {
     render(<ResultsViewRouter data={settledFixture()} />);
-    expect(screen.getByTestId("normal-president")).toBeTruthy();
+    expect(await screen.findByTestId("normal-president")).toBeTruthy();
     expect(screen.queryByTestId("broadcast")).toBeNull();
   });
 
-  it("leaves non-US presidential races on the normal view", () => {
+  it("leaves non-US presidential races on the normal view", async () => {
     const data = nightFixture();
     data.election.countryId = "UK";
     render(<ResultsViewRouter data={data} />);
-    expect(screen.getByTestId("normal-president")).toBeTruthy();
+    expect(await screen.findByTestId("normal-president")).toBeTruthy();
   });
 });

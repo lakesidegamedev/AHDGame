@@ -1,3 +1,4 @@
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 /**
  * Central Bank Chair Selection Phase
@@ -177,9 +178,18 @@ async function selectChairCandidate(
     lobbyTotals.set(key, (lobbyTotals.get(key) ?? 0) + entry.amount);
   }
 
+  const cabinetHolders = await getIncompatibleOfficeHolders(
+    db,
+    "bank",
+    (bank.nominations ?? []).map((n) => n.characterId)
+  );
   const politicalCandidates: PoolCandidate[] = [];
   for (const nom of bank.nominations ?? []) {
-    if (excludedCharacterIds.has(nom.characterId.toString())) continue;
+    if (
+      excludedCharacterIds.has(nom.characterId.toString()) ||
+      cabinetHolders.has(nom.characterId.toString())
+    )
+      continue;
 
     const char = await db.collection<Character>("characters").findOne({
       _id: new ObjectId(nom.characterId),
@@ -494,6 +504,17 @@ export async function acceptCentralBankChairSelection(
     return {
       ok: false,
       error: "Executive office-holders cannot also serve as central bank chair.",
+    };
+  }
+
+  if (
+    (await getIncompatibleOfficeHolders(db, "bank", [acceptingCharacterId])).has(
+      acceptingCharacterId.toString()
+    )
+  ) {
+    return {
+      ok: false,
+      error: "Leave cabinet before accepting the central bank chair appointment",
     };
   }
 

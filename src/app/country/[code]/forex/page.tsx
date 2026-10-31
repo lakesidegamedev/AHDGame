@@ -3,6 +3,7 @@
 import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { useState, useEffect, use, Suspense, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
@@ -11,13 +12,8 @@ import { ExchangeRatesTable } from "@/components/forex/ExchangeRatesTable";
 import { ReserveLeaders } from "@/components/forex/ReserveLeaders";
 import { CentralBankPolicyStrip } from "@/components/forex/CentralBankPolicyStrip";
 import { RateChart } from "@/components/forex/RateChart";
-import { GlobalMonetaryPolicyChart } from "@/components/forex/GlobalMonetaryPolicyChart";
 import { OrderBook } from "@/components/forex/OrderBook";
-import { MyOrders } from "@/components/forex/MyOrders";
 import { CurrencyWallet } from "@/components/forex/CurrencyWallet";
-import { TradeHistory } from "@/components/forex/TradeHistory";
-import { PublicTradeHistory } from "@/components/forex/PublicTradeHistory";
-import { CurrencyTradeModal } from "@/components/forex/CurrencyTradeModal";
 import type {
   ExchangeRateDisplay,
   OrderDisplay,
@@ -33,12 +29,52 @@ import {
   partitionForexRates,
   type ForexCountryAccess,
 } from "@/components/forex/partitionForexCurrencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 const HERO_IMAGE_URL =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/NY_stock_exchange_traders_floor_LC-U9-10548-6.jpg/960px-NY_stock_exchange_traders_floor_LC-U9-10548-6.jpg";
 
 const VALID_TABS: ForexTab[] = ["rates", "policy", "orders", "history", "feed"];
+
+// Only the rates tab is open on arrival. The other tab bodies and the trade
+// modal load on demand; the modal in particular drags the spread-fee rules and
+// the central-bank helper barrel in with it. The tab body keeps its reserved
+// height while a chunk lands, so switching tabs does not collapse the page.
+const PanelFallback = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-12 w-full rounded-lg" />
+    <Skeleton className="h-64 w-full rounded-xl" />
+  </div>
+);
+const GlobalMonetaryPolicyChart = dynamic(
+  () =>
+    import("@/components/forex/GlobalMonetaryPolicyChart").then((m) => ({
+      default: m.GlobalMonetaryPolicyChart,
+    })),
+  { loading: PanelFallback }
+);
+const MyOrders = dynamic(
+  () => import("@/components/forex/MyOrders").then((m) => ({ default: m.MyOrders })),
+  { loading: PanelFallback }
+);
+const TradeHistory = dynamic(
+  () => import("@/components/forex/TradeHistory").then((m) => ({ default: m.TradeHistory })),
+  { loading: PanelFallback }
+);
+const PublicTradeHistory = dynamic(
+  () =>
+    import("@/components/forex/PublicTradeHistory").then((m) => ({
+      default: m.PublicTradeHistory,
+    })),
+  { loading: PanelFallback }
+);
+const CurrencyTradeModal = dynamic(
+  () =>
+    import("@/components/forex/CurrencyTradeModal").then((m) => ({
+      default: m.CurrencyTradeModal,
+    })),
+  { ssr: false }
+);
 
 export default function ForexPage({ params }: { params: Promise<{ code: string }> }) {
   return (

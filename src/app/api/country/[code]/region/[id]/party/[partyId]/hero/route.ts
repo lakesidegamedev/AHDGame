@@ -40,7 +40,11 @@ export async function POST(
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/region/[id]/party/[partyId]/hero:${auth.user.userId}`,
+      60,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const authData = auth.user;
 

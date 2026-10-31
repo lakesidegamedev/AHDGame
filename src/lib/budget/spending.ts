@@ -494,20 +494,3 @@ export async function syncFederalBudgetSpending(db: Db, countryId: CountryId): P
     .collection<FederalBudget>("federalBudget")
     .updateOne({ _id: budgetId }, { $set: { spending, surplus, updatedAt: new Date() } });
 }
-
-export async function getEnactedLawsSpendingTotal(
-  db: Db,
-  scope: "national" | "state",
-  stateId?: string
-): Promise<number> {
-  const query: Record<string, unknown> = {
-    scope,
-    repealedAt: { $exists: false },
-  };
-  if (stateId) query.stateId = stateId;
-
-  const laws = keepLatestActiveLawPerType(
-    await db.collection<EnactedLaw>("enactedLaws").find(query).toArray()
-  );
-  return laws.reduce((sum, law) => sum + law.budgetCost, 0);
-}

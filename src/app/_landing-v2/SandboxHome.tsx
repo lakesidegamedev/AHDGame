@@ -38,7 +38,7 @@ import { CrtCountdown, useCrtCountdown } from "./CrtCountdown";
 import { BroadcastBackdrop, BroadcastHeadline, BroadcastTierKey } from "./BroadcastHero";
 import { EraExplainerLink } from "./EraExplainerLink";
 import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "./publicLinks";
-import type { GovernmentType } from "@/lib/constants/countries";
+import type { GovernmentType } from "@/lib/constants/countriesCore";
 import type { EraNation, EraTileKey } from "@/components/landing/eraThemes";
 import type { DiscordInviteStats } from "@/lib/discord/inviteStats";
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { describeApprovalEffects } from "@/lib/demographics/effectAudience";
-import { DEMOGRAPHIC_GROUPS } from "@/components/admin/lawtype/constants";
 import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { isMetricActive } from "@/lib/era/metricCatalog";
@@ -336,8 +335,8 @@ export function PolicyEffectIndicators({
   let approvals: Record<string, number> | undefined;
 
   if (policyDomain && currentPolicyIndex !== undefined && proposedPolicyIndex !== undefined) {
-    // Use shift-based calculation; billCountry selects UK/JP archetype tables
-    // (falls back to US DOMAIN_AFFINITIES when undefined). Pass the curated per-option
+    // Use shift-based calculation; billCountry selects the country's bucket table
+    // (falls back to the US table when undefined). Pass the curated per-option
     // position scores so the shift direction is correct even for right→left-ordered
     // option sets (all tax brackets, some CN/DE/JP types) — without them the bare index
     // runs opposite the affinity convention and flips every approval sign.
@@ -371,9 +370,9 @@ export function PolicyEffectIndicators({
     year: eraSystemEnabled ? currentYear : null,
   });
 
-  // Compute archetype approvals
+  // Compute per-bucket approval effects
   // Track magnitude to determine major (double arrow) vs minor (single arrow)
-  const archetypeEffects: {
+  const approvalEffects: {
     name: string;
     direction: "up" | "down";
     isGood: boolean;
@@ -381,16 +380,11 @@ export function PolicyEffectIndicators({
   }[] = [];
 
   if (hasApprovals) {
-    // Described in Layer-1 buckets where the projection lands in the country's
-    // own electorate model, and in archetypes where it does not — see
-    // `describeApprovalEffects`. Naming a group the player's world does not have
-    // would be worse than the archetype label it replaced.
-    for (const row of describeApprovalEffects(
-      approvals!,
-      billCountry,
-      (id) => DEMOGRAPHIC_GROUPS.find((g) => g.id === id)?.name || id
-    )) {
-      archetypeEffects.push({
+    // Described in Layer-1 buckets in the country's own electorate vocabulary.
+    // Naming a group the player's world does not have would be worse than the
+    // raw bucket key.
+    for (const row of describeApprovalEffects(approvals!, billCountry)) {
+      approvalEffects.push({
         name: row.label,
         direction: row.value > 0 ? "up" : "down",
         isGood: row.value > 0,
@@ -399,7 +393,7 @@ export function PolicyEffectIndicators({
     }
   }
 
-  if (metricEffects.length === 0 && archetypeEffects.length === 0) {
+  if (metricEffects.length === 0 && approvalEffects.length === 0) {
     return null;
   }
 
@@ -434,12 +428,12 @@ export function PolicyEffectIndicators({
       )}
 
       {/* Archetype Approvals */}
-      {archetypeEffects.length > 0 && (
+      {approvalEffects.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           <span className="text-body-sm font-medium text-muted w-full mb-0.5">
             Archetype approvals
           </span>
-          {archetypeEffects.map(({ name, direction, isGood, isMajor }) => (
+          {approvalEffects.map(({ name, direction, isGood, isMajor }) => (
             <span
               key={name}
               className={`inline-flex items-center gap-0.5 text-xs ${

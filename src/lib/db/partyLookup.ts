@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
-import { ALL_COUNTRY_IDS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 
 /**
  * Look up a party by its sequential ID and country.
@@ -81,15 +81,4 @@ export async function findStatePartyOrgRow(
   return col.findOne({ _id: getStatePartyOrgDocumentId(stateId, party as PoliticalParty) });
 }
 
-/**
- * Parse country from URL parameter or character context.
- * Case-insensitive: accepts "us", "US", "Us", etc.
- */
-export function parseCountryParam(param: string | null): CountryId | null {
-  if (!param) return null;
-  const upper = param.toUpperCase();
-  // Validate against ALL configured countries (incl. runtime-activated SCO/WAL),
-  // not just COUNTRY_ORDER — otherwise a seceded country's `?country=` is dropped
-  // and callers fall back to a wrong-country match (e.g. party logos by seqId).
-  return (ALL_COUNTRY_IDS as readonly string[]).includes(upper) ? (upper as CountryId) : null;
-}
+export { parseCountryParam } from "@/lib/country/parseCountryParam";

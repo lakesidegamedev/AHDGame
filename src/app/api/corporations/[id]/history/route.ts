@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
+import { compressedJson } from "@/lib/api/jsonCompression";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getAuthUser } from "@/lib/auth";
 import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCorporateHoldings";
@@ -94,8 +95,38 @@ export async function GET(request: Request, { params }: RouteParams) {
     // requests `?full=1` for the full history back to game start, downsampled to
     // ~MAX_CHART_POINTS evenly-spaced points so the payload stays bounded
     // without dropping the early years.
+    //
+    // The masthead asks for `?sparkline=1`: 20 points of (turn, sharePrice)
+    // only. It used to call this route unqualified and discard 97% of a 430 KB
+    // body on every corporation page view.
     const fullRange = new URL(request.url).searchParams.get("full") === "1";
+    const sparkline = new URL(request.url).searchParams.get("sparkline") === "1";
     const MAX_CHART_POINTS = 500;
+    const SPARKLINE_POINTS = 20;
+    const historyCacheControl = corporation.isPrivate
+      ? "private, no-store, no-transform"
+      : "public, s-maxage=120, stale-while-revalidate=300, no-transform";
+
+    if (sparkline) {
+      const sparkPoints = await db
+        .collection<CorporationHistory>("corporationHistory")
+        .aggregate<{ turn: number; sharePrice: number }>([
+          { $match: { corporationId: corporation._id } },
+          { $sort: { turn: -1, createdAt: -1, _id: -1 } },
+          { $group: { _id: "$turn", sharePrice: { $first: "$sharePrice" } } },
+          { $sort: { _id: -1 } },
+          { $limit: SPARKLINE_POINTS },
+          { $sort: { _id: 1 } },
+          { $project: { _id: 0, turn: "$_id", sharePrice: 1 } },
+        ])
+        .toArray();
+
+      return compressedJson(
+        request,
+        { history: sparkPoints },
+        { headers: { "Cache-Control": historyCacheControl } }
+      );
+    }
 
     // Per-turn snapshot count drives the downsample stride for the full view.
     let stride = 1;
@@ -206,13 +237,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       latestPoint.marketCapCurrencyCode = corporation.liquidCurrencyCode ?? null;
     }
 
-    return NextResponse.json(
+    return compressedJson(
+      request,
       { history: responseHistory },
       {
         headers: {
-          "Cache-Control": corporation.isPrivate
-            ? "private, no-store, no-transform"
-            : "public, s-maxage=120, stale-while-revalidate=300, no-transform",
+          "Cache-Control": historyCacheControl,
         },
       }
     );

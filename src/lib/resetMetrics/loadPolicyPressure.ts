@@ -9,7 +9,7 @@ import { loadMetricLawDelivery } from "./loadLawDelivery";
 import { deliveredMetricEffects, metricLawApplies } from "./rules/lawDelivery";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 
-export const MAX_COMBINED_POLICY_PRESSURE = 1.2;
+const MAX_COMBINED_POLICY_PRESSURE = 1.2;
 
 export function cabinetActionApplies(
   scope: string,

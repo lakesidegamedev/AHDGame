@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getNationalIdentity } from "@/lib/constants/nationalIdentity";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 import { Meter, StackBar, type StackSegment } from "./primitives";

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="450" viewBox="0 0 780 450" role="img" font-family="system-ui, sans-serif">
+<title>What a central bank chair controls</title>
+<desc>The chair has five levers: prime rate, reserve requirement, QE and QT, FX band, and independence; each moves a direct target first and then reaches other systems.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="449" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="150" width="120" height="120" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="80.0" y="197.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Chair</text>
+<text x="80.0" y="214.5" text-anchor="middle" font-size="13" fill="#18181b">sets five</text>
+<text x="80.0" y="231.5" text-anchor="middle" font-size="13" fill="#18181b">levers</text>
+<rect x="190" y="30" width="160" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="270.0" y="65.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Prime rate</text>
+<rect x="390" y="30" width="370" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="575.0" y="57.0" text-anchor="middle" font-size="13" fill="#18181b">Moves first: bond coupons, savings, loans</text>
+<text x="575.0" y="74.0" text-anchor="middle" font-size="13" fill="#18181b">Then: inflation, exchange rate, margins</text>
+<path d="M350,61 L390,61" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M140,210 L190,61" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="112" width="160" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="270.0" y="139.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Reserve</text>
+<text x="270.0" y="156.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">requirement</text>
+<rect x="390" y="112" width="370" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="575.0" y="139.0" text-anchor="middle" font-size="13" fill="#18181b">Moves first: how much banks can lend</text>
+<text x="575.0" y="156.0" text-anchor="middle" font-size="13" fill="#18181b">Then: loans and credit growth</text>
+<path d="M350,143 L390,143" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M140,210 L190,143" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="194" width="160" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="270.0" y="229.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">QE and QT</text>
+<rect x="390" y="194" width="370" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="575.0" y="221.0" text-anchor="middle" font-size="13" fill="#18181b">Moves first: money supply and bond demand</text>
+<text x="575.0" y="238.0" text-anchor="middle" font-size="13" fill="#18181b">Then: bond prices and inflation</text>
+<path d="M350,225 L390,225" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M140,210 L190,225" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="276" width="160" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="270.0" y="311.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">FX band</text>
+<rect x="390" y="276" width="370" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="575.0" y="303.0" text-anchor="middle" font-size="13" fill="#18181b">Moves first: the exchange rate and reserves</text>
+<text x="575.0" y="320.0" text-anchor="middle" font-size="13" fill="#18181b">Then: currency; policy rate can be lost</text>
+<path d="M350,307 L390,307" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M140,210 L190,307" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="358" width="160" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="270.0" y="393.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Independence</text>
+<rect x="390" y="358" width="370" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="575.0" y="385.0" text-anchor="middle" font-size="13" fill="#18181b">Moves first: who sets the rate, and scrutiny</text>
+<text x="575.0" y="402.0" text-anchor="middle" font-size="13" fill="#18181b">Then: how much rate moves are believed</text>
+<path d="M350,389 L390,389" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M140,210 L190,389" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+</svg>

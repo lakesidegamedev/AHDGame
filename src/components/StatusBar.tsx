@@ -8,10 +8,10 @@ import {
   formatCurrencyFull,
   formatRealTimeCountdown,
   rawTurnToLarpDate,
-} from "@/lib/utils/formatters";
-import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
+} from "@/lib/utils/formattersCore";
+import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { useRefetchNav, useSignedIn } from "@/contexts/AuthDataContext";
+import { useRefetchNav, useHasSession } from "@/contexts/AuthDataContext";
 import { CHARACTER_STATS_UPDATED, CHARACTER_STATS_REFETCH } from "@/lib/characterStatsSync";
 import {
   useCharacterStats,
@@ -20,7 +20,11 @@ import {
 } from "@/contexts/CharacterStatsContext";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
-import { buildClientStatusUrl } from "@/lib/statusBar/clientStatusRequest";
+import {
+  buildClientStatusUrl,
+  clientStatusUnauthorized,
+  fetchClientStatusJson,
+} from "@/lib/statusBar/clientStatusRequest";
 import {
   ACTION_CAP,
   ACTION_HOARDING_PENALTY,
@@ -99,8 +103,10 @@ export function StatusBar({
   const gameState = useGameTurnStatus(!isExcludedPath);
   const isProcessing = gameState?.isProcessing ?? false;
   const { layout, layoutSynced } = useStatusBarLayout();
-  // Stats are per character; a signed-out visitor would only collect 401s.
-  const signedIn = useSignedIn();
+  // Stats are per character; a visitor with no session cookie would only collect
+  // 401s. The cookie hint answers that at mount, so the first fetch does not sit
+  // behind the auth bootstrap.
+  const hasSession = useHasSession();
   const previousLayoutRef = useRef<StatusBarLayout | null>(null);
 
   // Track personal cash changes triggered by actions (e.g. fundraise)
@@ -193,25 +199,28 @@ export function StatusBar({
   // endpoint's private ETag lets an unchanged poll return a body-less 304,
   // cutting egress on this large, every-session payload.
   const refetchStats = useCallback(async () => {
-    if (!signedIn) return;
-    try {
-      const res = await fetch(buildClientStatusUrl(layout), {
-        signal: AbortSignal.timeout(10_000),
-        cache: "no-cache",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.status === "no-character") return;
-      if (typeof data.cashOnHand === "number" && prevCashRef.current != null) {
-        const delta = data.cashOnHand - prevCashRef.current;
-        if (delta !== 0) setCashDelta(delta);
-        prevCashRef.current = data.cashOnHand;
-      }
-      patchStats(buildStatusPatch(data));
-    } catch {
-      /* network/timeout — chips stay as-is until the next trigger */
+    if (!hasSession) return;
+    // The cookie hint can be stale (expired token). One 401 is the whole cost of
+    // starting the request early, and it also stops the 60s poll from repeating
+    // it for the rest of the visit.
+    if (clientStatusUnauthorized()) return;
+    // Shared with the navbar, which needs the same payload in the same commit:
+    // whichever mounts first issues one request and both map the result.
+    const result = await fetchClientStatusJson(buildClientStatusUrl(layout), {
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-cache",
+    });
+    if (!result.ok) return;
+    const data = result.data;
+    if (!data) return;
+    if (data.status === "no-character") return;
+    if (typeof data.cashOnHand === "number" && prevCashRef.current != null) {
+      const delta = data.cashOnHand - prevCashRef.current;
+      if (delta !== 0) setCashDelta(delta);
+      prevCashRef.current = data.cashOnHand;
     }
-  }, [layout, patchStats, signedIn]);
+    patchStats(buildStatusPatch(data));
+  }, [hasSession, layout, patchStats]);
 
   // Trade flows (bonds/shares/forex/savings/transfers) that mutate wallet state
   // but don't echo the new character dispatch CHARACTER_STATS_REFETCH.
@@ -472,6 +481,15 @@ export function StatusBar({
                 )}
               </div>
             </div>
+          )}
+
+          {/* Timed economy-only pause (gameConfig.economyPauseUntilTurn): the
+              political world keeps turning, prices and corporations hold. Only
+              rendered while the window is open. */}
+          {gameState?.economyPause?.paused && gameState.economyPause.resumesAtTurn !== null && (
+            <span className="shrink-0 text-xs text-yellow-500">
+              Economy paused, resumes turn {gameState.economyPause.resumesAtTurn}
+            </span>
           )}
 
           {/* Corp/elections/minimal: compact online count inline */}

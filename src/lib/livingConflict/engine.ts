@@ -1,9 +1,7 @@
 import { triggerMatches } from "./rules/eventTriggers";
-import type { CrisisEffect } from "@/lib/db/types/crisis";
+
 import type {
-  ConflictEvent,
   ConflictPhase,
-  ConflictRole,
   FiredEvent,
   LivingConflictDef,
   LivingConflictState,
@@ -225,7 +223,7 @@ export function phaseFor(def: LivingConflictDef, level: number): ConflictPhase |
   return def.phases.find((p) => p.level === level) ?? null;
 }
 
-export function nextPhaseOf(def: LivingConflictDef, level: number): ConflictPhase | null {
+function nextPhaseOf(def: LivingConflictDef, level: number): ConflictPhase | null {
   return def.phases.find((p) => p.level === level + 1) ?? null;
 }
 
@@ -367,20 +365,6 @@ export function tickConflict(state: LivingConflictState): LivingConflictState {
 
 export function adjustIntensity(state: LivingConflictState, delta: number): LivingConflictState {
   return { ...state, intensity: clamp01to100(state.intensity + delta), updatedAt: new Date() };
-}
-
-/** The passive per-turn effects a nation in the given role takes right now. */
-export function passiveEffectsForRole(
-  def: LivingConflictDef,
-  level: number,
-  role: ConflictRole
-): CrisisEffect[] {
-  return phaseFor(def, level)?.passiveEffects?.[role] ?? [];
-}
-
-/** The effects an event applies to a nation in the given role. */
-export function eventEffectsForRole(event: ConflictEvent, role: ConflictRole): CrisisEffect[] {
-  return event.effects?.[role] ?? [];
 }
 
 /**

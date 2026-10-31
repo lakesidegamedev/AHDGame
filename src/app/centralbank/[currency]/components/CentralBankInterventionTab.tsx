@@ -10,7 +10,7 @@ import {
 import { InterventionPreview } from "./InterventionPreview";
 import { defenceBounds } from "@/lib/currency/intervention/rules/defence";
 import { bandDefenceStatus } from "@/lib/currency/interventionBandStatus";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { Button } from "@/components/ui";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { ForexSpreadStrengthControl } from "@/components/forex/ForexSpreadStrengthControl";

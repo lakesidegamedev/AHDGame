@@ -1,21 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * Greece Voter Archetypes — 7 groups across the post-junta spectrum.
- *   defaultEconomicLean: -5 (socialist/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (progressive/anti-establishment) … +5 (royalist/traditional)
- * demographicProfileId "gr_archetypes"; category _id "gr_voterGroups".
- */
-export const GR_VOTER_GROUP_BASELINES: Record<string, number> = {
-  conservative_right: 82,
-  centrist_liberal: 80,
-  socialist_left: 82,
-  communist_left: 80,
-  rural_farmer: 78,
-  urban_worker: 80,
-  shipping_business: 84,
-};
-
 export const grDemographicCategories: DemographicCategory[] = [
   {
     _id: "gr_voterGroups",

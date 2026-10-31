@@ -99,7 +99,7 @@ export const UNION_BAN_EXECUTIVE_COSTS: Record<
 export const RIDE_OUT_EFFECT_RETENTION = 0.5;
 export const RIDE_OUT_MAX_UNDERGROUND_RESISTANCE = 0.25;
 export const NEGOTIATION_MAX_UNDERGROUND_COST_MULTIPLIER = 2;
-export const ARMY_UNDERGROUND_SYMPATHY_GAIN = 4;
+const ARMY_UNDERGROUND_SYMPATHY_GAIN = 4;
 
 /** Cells can keep a wildcat strike alive for six extra turns, one per turn. */
 export const UNDERGROUND_CRISIS_EXTENSION_LIMIT = 6;
@@ -118,7 +118,7 @@ export function negotiationCostMultiplier(intensity: number): number {
 }
 
 /** Share of GDP a failed round of negotiation costs the treasury. */
-export const NEGOTIATION_ATTEMPT_COST_PCT_GDP = 0.0005;
+const NEGOTIATION_ATTEMPT_COST_PCT_GDP = 0.0005;
 
 /** Floor and ceiling on the per-attempt chance that negotiation settles it. */
 export const NEGOTIATE_MIN_CHANCE = 0.2;
@@ -146,7 +146,7 @@ export function diminishEffects(effects: CrisisEffect[], factor: number): Crisis
 }
 
 /** Mean `Union.approval` across a country's unions; 50 when it has none. */
-export async function countryLabourApproval(db: Db, countryId: string): Promise<number> {
+async function countryLabourApproval(db: Db, countryId: string): Promise<number> {
   const unions = await db
     .collection<Union>("unions")
     .find({ countryId: countryId as CountryId }, { projection: { approval: 1 } })
@@ -165,7 +165,7 @@ async function countryHasUnions(db: Db, countryId: string): Promise<boolean> {
 }
 
 /** The live wildcat strike in a country, if one is running. */
-export async function getActiveUnionBanStrike(db: Db, countryId: string): Promise<Crisis | null> {
+async function getActiveUnionBanStrike(db: Db, countryId: string): Promise<Crisis | null> {
   return db.collection<Crisis>("crises").findOne({
     templateKey: UNION_BAN_STRIKE_TEMPLATE_KEY,
     countryIds: countryId,
@@ -269,7 +269,7 @@ export async function triggerUnionBanStrike(
  * per-turn ticks stop the moment this lands. Nothing needs to be reversed,
  * because nothing was written into the sectors that outlives the crisis.
  */
-export async function endUnionBanStrike(
+async function endUnionBanStrike(
   db: Db,
   crisis: Crisis,
   currentTurn: number,
@@ -296,7 +296,7 @@ export async function endUnionBanStrike(
  * `targetType: "approval"` effects, which is a different thing from what the
  * President personally is now worth to a steelworker.
  */
-export async function chargeExecutive(
+async function chargeExecutive(
   db: Db,
   characterId: ObjectId,
   countryId: string,

@@ -13,7 +13,7 @@ import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
 import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
 
 /** marketAdjustmentStage at which the unemployment term counts. */
-export const UNEMPLOYMENT_TERM_STAGE = 2;
+const UNEMPLOYMENT_TERM_STAGE = 2;
 
 interface Point {
   turn: number;

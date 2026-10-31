@@ -407,14 +407,22 @@ describe("corporate operating cash settlement", () => {
       liquidCapital: 0,
       operatingCashArrearsByCurrency: { USD: 95 },
     });
-    expect(db.collection("bankMoneyMoves").docs).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          _id: `corp-operating-cash:4:${corpId.toHexString()}:gross`,
-          status: "applied",
-        }),
-      ])
-    );
+    // One loss book per currency pays each loss from the cash it has; the
+    // debit carries the payable the serial loss receipt projected.
+    const [receipt] = db.collection("bankMoneyMoves").docs;
+    expect(receipt).toMatchObject({
+      _id: expect.stringMatching(/^corp-operating-loss-batch:4:/),
+      kind: "corporate_operating_loss_batch",
+      status: "applied",
+    });
+    expect(receipt.legs).toEqual([
+      expect.objectContaining({
+        kind: "debit",
+        amount: 5,
+        inc: { "operatingCashArrearsByCurrency.USD": 95 },
+      }),
+      expect.objectContaining({ kind: "burn", amount: 5 }),
+    ]);
   });
 
   it("records tax that cannot be withheld after an unfunded loss without aborting the turn", async () => {

@@ -1,120 +1,87 @@
 export const brOverviewContent = `# Brazil
 
-Brazil is a **federal presidential republic**: South America's largest democracy, with a directly elected President, a bicameral National Congress, and a fragmented multi-party system. The President serves a fixed 4-year term with a 2-term limit per character. Brazil's open-list proportional representation produces a highly fragmented legislature where coalition-building is essential despite the presidential system.
+Winning the presidency in Brazil does not mean you can pass a bill. The President is elected directly and serves a fixed 4 years, but the National Congress is split among many parties, so a President whose own party falls short of 257 Chamber seats has to bargain for every vote. Brazil is a **federal presidential republic**, South America's largest democracy, with a 2-term limit per character and chamber seats shared out by party vote share.
 
----
+## A President facing Congress
 
-## Government structure
+The President is both head of state and head of government, **directly elected** by nationwide popular vote (no electoral college). From the 1991 preset on, a candidate needs a majority of the vote or the top two go to a runoff. Era rules differ: the 1953 preset elects by plurality for 5-year terms, and the 1979 preset picks the President indirectly for 6-year terms. There is no parliamentary confidence vote, and the President serves the full term regardless of congressional composition. **Divided government is the default**: one party holds the presidency while a rival coalition controls one or both chambers.
 
-| Office | How Filled | Term | Seats |
+Bills require passage in both chambers, each by more ayes than nays, and then go to the President, who has 10 turns to sign or veto; a bill left alone is signed automatically. A veto opens a 2/3 override vote, but Brazil's bill cycle currently has no step that counts it, so in practice a veto stands. Both chambers have equal legislative weight, with no upper-chamber override asymmetry.
+
+The **coalition threshold is 257 seats** (a bare majority of the 513-seat Chamber: 513 / 2 + 1; 153 of 304 in the 1953 preset). It does **not** determine who governs. It is the size of a dependable floor majority: a bloc that holds it can carry Chamber votes on its own. A President's party often falls short of 257, so even a unified presidential party may need allied blocs to pass legislation.
+
+Say a bloc holds 150 Chamber seats. It needs 107 more, so it has to bring in allied parties with at least that many seats between them. The two major parties are **PT** (Workers' Party, centre-left) and **PL** (Liberal Party, centre-right), but smaller parties can hold the swing votes.
+
+| Office | How filled | Term | Seats |
 | --- | --- | --- | --- |
 | President | Direct election | 4 years | 1 |
 | Vice President | Elected on presidential ticket | 4 years | 1 |
-| Senator | FPTP statewide election (staggered) | 8 years (staggered) | 81 |
-| Federal Deputy | Open-list PR from 5 multi-member macro-regional constituencies | 4 years | 513 |
-| Governor | FPTP statewide election | 4 years | 1 per state (5) |
-| Governor of the BCB | Appointed action | 4 years | 1 |
+| Senator | Proportional (Hare largest remainder) macro-region election | Configured as 8 years; every seat is re-elected every 4 years | 81 |
+| Federal Deputy | Proportional (Hare largest remainder) from 5 macro-regional constituencies | 4 years | 513 (304 in 1953) |
+| Governor | FPTP macro-region election | 4 years | 1 per macro-region (5) |
+| Governor of the BCB | Nominated by the President, then drawn | 4 years | 1 |
 
-The **President** is both head of state and head of government: directly elected for a fixed 4-year term. There is no parliamentary confidence vote. A 2-term limit per character applies, and a second-term run blocks running-mate selection (the VP cannot be changed on a re-election bid).
+### The two-term limit and the running mate
 
-The **National Congress** is bicameral and **both chambers participate in the player legislative loop**: bills require passage in both the Chamber of Deputies and the Federal Senate.
+A character cannot serve more than two terms as President. The limit is per-character, not per-party. It also reaches the running mate: a character who has already served two presidential terms cannot be picked as Vice President. See [Executive Term Limits](/wiki/executive-term-limits).
 
----
+## Seats by macro-region
 
-## National congress
+The game models Brazil as five macro-regional states (Norte, Nordeste, Centro-Oeste, Sudeste, Sul), each electing a block of deputies sized by population. The Senate has 81 senators (three for each of Brazil's 27 states), grouped into the five macro-regions.
 
-Brazil's legislature has two chambers:
+| Macro-region | Chamber seats | Senate seats |
+| --- | --- | --- |
+| Norte | 75 | 21 |
+| Nordeste | 144 | 27 |
+| Centro-Oeste | 42 | 12 |
+| Sudeste | 179 | 12 |
+| Sul | 73 | 9 |
+| **Total** | **513** | **81** |
 
-- **Chamber of Deputies**: 513 Federal Deputies elected by **open-list proportional representation** from 5 multi-member constituencies: the game models Brazil as five macro-regional states (Norte, Nordeste, Centro-Oeste, Sudeste, Sul), each electing a block of deputies sized by population. 4-year terms. **All seats are contested** each cycle. The Chamber is the primary legislative body and the source of the coalition threshold.
-- **Federal Senate**: 81 senators, allocated across the five macro-regional states by population and serving **8-year staggered terms**. One-third and two-thirds of seats alternate per cycle (2 classes). The Senate reviews legislation from the Chamber and can amend or reject bills.
+\`\`\`wiki-chart
+br-seats-by-region
+\`\`\`
 
----
+## Winning a Chamber seat
 
-## Coalition threshold
-
-The **coalition threshold is 257 seats** (a bare majority of the 513-seat Chamber of Deputies: 513 / 2 + 1). A party or coalition holding 257+ seats controls the Chamber.
-
-Unlike parliamentary systems, the threshold does **not** determine who governs: the President is directly elected and serves a fixed term regardless of legislative composition. Instead, the 257-seat threshold matters for **legislative agenda control**: which party chairs committees, drives floor votes, and can override a presidential veto (a 2/3 supermajority in both chambers).
-
-Brazil's open-list PR system produces **extreme party fragmentation**: no single party has won an outright Chamber majority in modern history. Governing coalitions typically span 5 to 10 parties. The two major parties are **PT** (Workers' Party, centre-left) and **PL** (Liberal Party, centre-right), but dozens of smaller parties hold decisive swing votes.
-
----
-
-## How Brazilian elections work
-
-Brazil uses **two different electoral systems** for its two chambers:
-
-### Chamber of Deputies: open-list PR (D'Hondt)
-
-Federal Deputies are elected by **open-list proportional representation** using the D'Hondt divisor method. Each of the five macro-regional constituencies elects a block of deputies proportional to the state's population. Voters cast a vote for an individual candidate, and seats are allocated to parties by vote share, then ordered by individual candidate vote totals within each party list.
+Federal Deputies (513, 4-year terms of 192 turns, 8 real days) are elected by **proportional representation** using the **Hare quota with largest remainders**. Each party sends one candidate per macro-region to the general election, and that candidate holds the party's whole block of the region's seats. The Chamber is the primary legislative body and the source of the coalition threshold.
 
 - **All 513 seats are contested** each 4-year cycle.
-- **No 5% threshold**: Brazil has no formal vote-share threshold to enter the Chamber, unlike Germany's Sperrklausel. Fragmentation is the natural outcome.
-- **Primaries advance the top 3 candidates** per party per region.
+- **A party needs at least 20% of the pooled vote in a macro-region** to win seats there. Parties under that line get none in that region.
+- **Primaries advance one candidate** per party per region, as in other presidential countries.
 
-### Federal Senate: FPTP staggered
+Centro-Oeste elects 42 deputies. With 4,200,000 votes cast, one seat costs a quota of 100,000 votes. Party A has 2,100,000 votes (50%), B has 1,260,000 (30%) and C has 840,000 (20%). A gets 21 seats, B gets 12 and C gets 8, which is 41 of 42. The leftover votes are A 0, B 60,000 and C 40,000, so B takes the last seat. Final result: A 21, B 13, C 8.
 
-Senators are elected by **First Past the Post (FPTP)** from statewide constituencies: each state's block of senators splits across two alternating 8-year classes, so only part of the chamber is up in any cycle.
+For the shared primary and general rules see [Election Mechanics](/wiki/election-mechanics), and for fundraising, ads and canvassing see [Campaign Strategy](/wiki/campaign-strategy). [Multi-Country Play](/wiki/multi-country-play) compares PR with FPTP and covers cross-border investments.
 
-- **Partial seats contested**: only one class of Senate seats is up per cycle (2 classes).
-- **Single-member constituencies** for each contested seat.
-- **No snap elections**: the Senate cannot be dissolved.
+## Winning a Senate seat
 
----
+Senators are elected the same way as deputies: each macro-region elects its whole block of senators at once (Norte 21, Nordeste 27, Centro-Oeste 12, Sudeste 12, Sul 9), shared out by the Hare quota with largest remainders and the same 20% entry bar. The real Senate's staggered 8-year classes are not modeled yet, so every seat comes up every 4 years.
 
-## Presidential elections
+The Senate reviews legislation from the Chamber and can reject bills. Both chambers participate in the player legislative loop. The Senate cannot be dissolved, and neither can the Chamber: the President cannot dissolve Congress, there are no snap elections and no-confidence votes do not exist.
 
-The President is **directly elected** by nationwide popular vote (no electoral college). A 2-term limit per character applies. A character who has served two full terms cannot run again. A second-term run blocks VP running-mate selection: the incumbent VP is locked onto the ticket.
-
-Brazil has no parliamentary confidence vote. The President serves the full 4-year term regardless of congressional composition. **Divided government is the default**: one party holds the presidency while a rival coalition controls one or both chambers of Congress. Bills require passage in both chambers and presidential signature. The President can veto legislation; Congress can override with a 2/3 supermajority.
-
----
-
-## Key Brazilian mechanics
-
-**Two-term presidential limit.** A character cannot serve more than two terms as President. The limit is per-character, not per-party. A second-term run locks the VP running mate: the incumbent VP cannot be swapped.
-
-**Bicameral legislative loop.** Both the Chamber and the Senate are player-contestable. Bills must pass both chambers to enact. There is no upper-chamber override asymmetry: both chambers have equal legislative weight.
-
-**Fragmented legislature.** Open-list PR with no threshold produces 20+ parties in the Chamber. Coalition management is the central strategic challenge: even a unified presidential party needs allied blocs to pass legislation.
-
-**Staggered Senate.** Only one class of Senate seats is up per cycle (2 classes, 8-year terms). Plan your Senate run for the correct class in your home state.
-
-**No snap elections.** Both chambers have fixed terms. The President cannot dissolve Congress. No-confidence votes do not exist: the President serves the full term.
-
-**Party creation routes through a charter.** Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. Brazil requires 3 states + locked home = 4 states × 2 NPPs = 8 NPPs spawned on creation.
-
-**Social axis baseline 0.** Brazil starts at the center of the −5…+5 social axis. Drifts toward the social stance of enacted national laws over time.
-
----
-
-## Career path for Brazilian players
+## Climbing the ladder
 
 | Stage | Target | Why |
 | --- | --- | --- |
 | Entry | Federal Deputy | +1 action/turn; national legislature access from the start |
-| Parallel | Senator | +2 actions/turn; 8-year terms; staggered classes |
+| Parallel | Senator | +2 actions/turn; re-elected every 4 years |
 | Mid-game | Governor | +2 actions/turn; controls state executive; 4-year term |
 | Top | President | +4 actions/turn; heads state and government; 2-term cap |
 
-Brazil has no sub-national legislature. The first rung of national play is a Federal Deputy seat, contested via open-list PR in your home state.
+Brazil has no sub-national legislature. The first rung is a Federal Deputy seat, contested in your home macro-region. See [Player Progression](/wiki/player-progression).
 
----
+Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. A ratified charter seeds 3 founding NPPs (non-player politicians run by the game): one in the lead founder's home region and two in regions the founders pick.
 
-## Currency and economy
+The social axis runs from libertarian (−5) to authoritarian (+5). Brazil starts at the center (baseline 0) and drifts toward the social stance of enacted national laws over time.
 
-| Item | Detail |
-| --- | --- |
-| Currency | BRL |
-| Central Bank | Banco Central do Brasil (BCB) |
-| Chair title | Governor of the BCB |
-| Default prime rate | 8.0% |
-| Stock exchange | B3 |
-| Finance Minister | Minister of Finance |
+## Four starting economies
 
-### Economic model
+Brazil appears in every preset, with **four authored metric baselines**: 1953, 1979, 1991, and 2019 (the default). Each authors its own national baseline and per-region tilts for Brazil's tracked economic, education, healthcare, infrastructure, and social metrics, so the starting economy looks materially different depending on which era you launch into:
 
-Brazil has **four seeded start years**: 1953, 1979, 1991, and 2019 (the default). Each start authors its own national baseline and per-region tilts for the full set of Brazil's tracked economic, education, healthcare, infrastructure, and social metrics, so the starting economy looks materially different depending on which era you launch into:
+\`\`\`wiki-chart
+br-monetary-targets-by-era
+\`\`\`
 
 | Era | Character |
 | --- | --- |
@@ -125,25 +92,35 @@ Brazil has **four seeded start years**: 1953, 1979, 1991, and 2019 (the default)
 
 A 1953 or 1979 start begins earlier in Brazil's industrialization arc; a 1991 start begins in hyperinflation and opens up over time through play; a 2019 start begins as a resource-extraction economy already integrated into modern global trade.
 
-Brazil's monetary baseline also shifts by era: the game tracks a target inflation rate and a neutral prime rate per country, and Brazil's central bank Taylor rule reacts to the gap between actual and target inflation. The default (modern) target is 4% inflation with an 8% neutral prime rate. Earlier starts use different era-appropriate anchors: the 1953 anchor holds Brazil's target at 4%/8% (same as default, since 1953 Brazil is authored as running policy-target inflation rather than the historical Vargas-era CPI spike), while the 1979 anchor moves the target to 12% inflation with a 15% neutral prime rate, reflecting the military-regime "miracle" hangover. These anchors set what the BCB's Taylor rule treats as "on target," not a fixed rate that never moves: actual in-game inflation and the prime rate still respond to real conditions each turn.
+Brazil's monetary baseline also shifts by era. The game tracks a **target inflation** rate and a **neutral prime rate** (the interest rate that neither speeds up nor slows down the economy). The central bank's rate rule reacts to the gap between actual and target inflation.
 
----
+| Era | Target inflation | Neutral prime rate |
+| --- | --- | --- |
+| Modern (2019 and later) | 4% | 8% |
+| 1953 | 4% | 8% |
+| 1979 | 12% | 15% |
+| 1991 | 12% | 15% |
 
-## Key Brazil links
+The 1953 anchor matches the modern one because 1953 Brazil is authored as running policy-target inflation rather than the historical price spike. The 1979 and 1991 anchors are high, which is why inflation starts high in those worlds. These anchors set what the central bank treats as "on target". They are not fixed rates: actual inflation and the prime rate still respond to real conditions each turn.
 
-- [Election Mechanics](/wiki/election-mechanics): Primary and general election rules
-- [Multi-Country Play](/wiki/multi-country-play): PR vs FPTP, cross-border investments
-- [Core Systems](/wiki/core-systems): Turn structure, action economy
-- [Player Progression](/wiki/player-progression): Career ladder details
-- [Campaign Strategy](/wiki/campaign-strategy): Fundraising, ads, canvassing
-
----
+| Item | Detail |
+| --- | --- |
+| Currency | BRL (shown as Cr$ in 1953 and BRL eq. in 1979 and 1991) |
+| Central Bank | Banco Central do Brasil (BCB) |
+| Chair title | Governor of the BCB |
+| Default prime rate | 8.0% (5.0% opening rate in the 1991 preset) |
+| Stock exchange | B3 |
+| Finance Minister | Minister of Finance |
 
 ## Living history
 
-The timeline below is written by the turn processor whenever a presidential transition or national-scope bill enactment happens in-game. Each entry is a real event from this save.
+The timeline below is written by the turn processor whenever a national event happens in-game: a change of leader, a national law enacted, an alliance joined or left, or a region transferred. Each entry is a real event from this save.
 
 \`\`\`country-history
 BR
 \`\`\`
+
+See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
+
+Brazil runs as an economy preview in every preset: its economy is simulated, but its offices are closed to players. Authored 1953, 1979, 1991 and 2019 economies. Last checked 2026-10-30, version 1.18.0.
 `;

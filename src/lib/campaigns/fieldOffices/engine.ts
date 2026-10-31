@@ -18,6 +18,7 @@ const ENGINE_PROJECTION = {
   candidateId: 1,
   countryId: 1,
   regionId: 1,
+  subdivisionId: 1,
   electorateShare: 1,
   yieldFactor: 1,
   openedTurn: 1,

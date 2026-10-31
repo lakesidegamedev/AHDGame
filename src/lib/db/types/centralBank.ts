@@ -55,7 +55,7 @@ export const NPP_CHAIR_RATE_FLOOR = 0.25;
  * ordinary 0.75pp cap a 60% inflation economy needs ~85 moves, over a decade of
  * game time, to reach its own Taylor target.
  */
-export const NPP_CHAIR_HIGH_INFLATION_GAP = 5;
+const NPP_CHAIR_HIGH_INFLATION_GAP = 5;
 /** Per-move hike cap (pp) for Taylor-driven moves while inflation is that far over target. */
 export const NPP_CHAIR_HIGH_INFLATION_HIKE_DELTA = 3;
 /** Highest policy rate a Taylor-driven move may reach (the ceiling every other rate writer already honours). */

@@ -378,6 +378,7 @@ async function evaluateOneBank(
   const postedCapital = Math.max(0, charter.postedCapital ?? 0);
   const { confidence, band } = computeConfidence({
     cashReserves,
+    liquidSecurities: Math.max(0, charter.sovereignTreasuryMarkValue ?? 0),
     postedCapital,
     // The cash-backed base. Player pointer deposits are excluded for the same
     // reason they are excluded from the reserve requirement; once the
@@ -408,10 +409,14 @@ async function evaluateOneBank(
       if (outflow === 0) {
         const unfinished = await db
           .collection<{ _id: string; status?: string }>(MONEY_MOVE_COLLECTION)
-          .findOne({
-            _id: flightKey,
-            status: "partial",
-          });
+          .findOne(
+            {
+              _id: flightKey,
+              status: "partial",
+            },
+            // Existence only: recovery loads the record it needs.
+            { projection: { _id: 1 } }
+          );
         if (unfinished) return null;
       }
       const cbDocId = getBankId(getCountryIdForCurrency(currency));
@@ -495,6 +500,7 @@ async function evaluateOneBank(
         ) + Math.max(0, charter.propBookMarkValue ?? 0),
       priorBand,
       cashReserves,
+      liquidSecurities: Math.max(0, charter.sovereignTreasuryMarkValue ?? 0),
       requiredLiquidity:
         reserveRatioRequired *
         (npcDeposits +

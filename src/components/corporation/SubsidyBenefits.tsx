@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getCountryConfig } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import type { SectorDetail } from "./CorporationPageTypes";
 
 interface SubsidyEntry {
@@ -122,7 +122,7 @@ export function SubsidyBenefits({ corpHqState, corpHqCountryId, sectors }: Subsi
           <tr key={s.id}>
             <td className="border-b border-card-border/60 py-1.5 pr-2 text-xs text-muted">
               {[
-                getCountryConfig(s.countryId as CountryId).name,
+                getCountryClientConfig(s.countryId as CountryId).name,
                 s.scope === "state" && s.stateId ? s.stateId : null,
                 SCOPE_LABELS[s.scopeType] ?? s.scopeType,
                 s.targetSectorType

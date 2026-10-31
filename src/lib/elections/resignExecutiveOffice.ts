@@ -5,7 +5,7 @@ import {
   getExecutiveOfficialFilter,
   type ExecutiveOfficeType,
 } from "@/lib/elections/executiveOfficeFilters";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import type { GameState } from "@/lib/db/types";
 

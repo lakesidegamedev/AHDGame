@@ -8,7 +8,7 @@ import {
   EXTRACTABLE_RESOURCES,
   type ExtractableResource,
 } from "@/lib/constants/commodities";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { Button } from "@/components/ui";
 import { apiErrorText } from "@/lib/errors/catalog";

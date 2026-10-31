@@ -393,3 +393,134 @@ it("funds external purchases with the common anchor's spread setting", async () 
   const update = db.collection("characters").updateOne.mock.calls[0][1];
   expect(update.$inc["currencyBalances.personal.USD"]).toBeGreaterThanOrEqual(100000);
 });
+
+describe("explicit-pay sizing and reversal", () => {
+  const rate = 199.64422498404926;
+  const target = 1_056_600_000;
+
+  function wallet(initial: Record<string, number>) {
+    initCollections("exchangeRates", "characters", "tradeHistory", "centralBanks", "gameState");
+    const balances = { ...initial };
+    db.collectionMocks.exchangeRates.findOne.mockImplementation(async ({ _id }: { _id: string }) =>
+      _id === "US"
+        ? { _id: "US", currencyCode: "USD", rate: 1 }
+        : { _id: "GR", currencyCode: "GRD", rate }
+    );
+    db.collectionMocks.characters.findOne.mockImplementation(async () => ({
+      currencyBalances: { personal: { ...balances } },
+    }));
+    db.collectionMocks.characters.updateOne.mockImplementation(async (filter, update) => {
+      for (const [key, min] of Object.entries(filter as Record<string, unknown>)) {
+        const m = key.match(/^currencyBalances\.personal\.(\w+)$/);
+        const gte = (min as { $gte?: number } | undefined)?.$gte;
+        if (m && gte !== undefined && (balances[m[1]] ?? 0) < gte)
+          return { modifiedCount: 0, matchedCount: 0 };
+      }
+      for (const [key, delta] of Object.entries(
+        (update as { $inc?: Record<string, number> }).$inc ?? {}
+      )) {
+        const m = key.match(/^currencyBalances\.personal\.(\w+)$/);
+        if (m) balances[m[1]] = (balances[m[1]] ?? 0) + delta;
+      }
+      return { modifiedCount: 1, matchedCount: 1 };
+    });
+    db.collectionMocks.tradeHistory.insertOne.mockResolvedValue({ insertedId: new ObjectId() });
+    db.collectionMocks.centralBanks.updateOne.mockResolvedValue({ modifiedCount: 1 });
+    return balances;
+  }
+
+  it("delivers at least the target at the rate that stranded a bond order", async () => {
+    const balances = wallet({ USD: 6_000_000, GRD: 0 });
+    const character = {
+      _id: new ObjectId(),
+      countryId: "US",
+      currencyBalances: { campaign: 0, personal: { ...balances } },
+    };
+    const { convertForExplicitPay } = await import("./autoConvert");
+    const result = await convertForExplicitPay(db as unknown as Db, {
+      character: character as never,
+      payCurrency: "USD",
+      requiredCurrency: "GRD",
+      requiredAmount: target,
+      turn: 542,
+      forexEnabled: true,
+    });
+    expect(result.success).toBe(true);
+    expect(balances.GRD).toBeGreaterThanOrEqual(target);
+    expect(result.conversion?.received).toBe(balances.GRD);
+  });
+
+  it("converts only what the wallet is missing in the target currency", async () => {
+    const balances = wallet({ USD: 6_000_000, GRD: 1_000_000_000 });
+    const character = {
+      _id: new ObjectId(),
+      countryId: "US",
+      currencyBalances: { campaign: 0, personal: { ...balances } },
+    };
+    const { convertForExplicitPay } = await import("./autoConvert");
+    const covered = await convertForExplicitPay(db as unknown as Db, {
+      character: character as never,
+      payCurrency: "USD",
+      requiredCurrency: "GRD",
+      requiredAmount: 105_660_000,
+      turn: 542,
+      forexEnabled: true,
+    });
+    expect(covered.needed).toBe(false);
+    expect(balances.USD).toBe(6_000_000);
+
+    const partial = await convertForExplicitPay(db as unknown as Db, {
+      character: character as never,
+      payCurrency: "USD",
+      requiredCurrency: "GRD",
+      requiredAmount: target,
+      turn: 542,
+      forexEnabled: true,
+    });
+    expect(partial.success).toBe(true);
+    expect(partial.conversion!.paid).toBeLessThan(300_000);
+    expect(balances.GRD).toBeGreaterThanOrEqual(target);
+  });
+
+  it("reversal puts the wallet back exactly, spread included", async () => {
+    const balances = wallet({ USD: 6_000_000, GRD: 0 });
+    const character = {
+      _id: new ObjectId(),
+      countryId: "US",
+      currencyBalances: { campaign: 0, personal: { ...balances } },
+    };
+    const { convertForExplicitPay, reverseExplicitPayConversion } = await import("./autoConvert");
+    const result = await convertForExplicitPay(db as unknown as Db, {
+      character: character as never,
+      payCurrency: "USD",
+      requiredCurrency: "GRD",
+      requiredAmount: target,
+      turn: 542,
+      forexEnabled: true,
+    });
+    expect(result.spreadCharged).toBeGreaterThan(0);
+    expect(await reverseExplicitPayConversion(db as unknown as Db, result.conversion)).toBe(true);
+    expect(balances.GRD).toBe(0);
+    expect(balances.USD).toBeCloseTo(6_000_000, 6);
+    expect(db.collectionMocks.tradeHistory.insertOne).toHaveBeenLastCalledWith(
+      expect.objectContaining({ source: "auto_purchase_reversal", fromCurrency: "GRD" })
+    );
+  });
+
+  it("reversal refuses when the converted balance is already gone", async () => {
+    const balances = wallet({ USD: 0, GRD: 10 });
+    const { reverseExplicitPayConversion } = await import("./autoConvert");
+    const ok = await reverseExplicitPayConversion(db as unknown as Db, {
+      characterId: new ObjectId(),
+      collectionName: "characters",
+      payCurrency: "USD",
+      requiredCurrency: "GRD",
+      paid: 100,
+      received: 19_000,
+      spread: 1,
+      turn: 1,
+    });
+    expect(ok).toBe(false);
+    expect(balances).toEqual({ USD: 0, GRD: 10 });
+  });
+});

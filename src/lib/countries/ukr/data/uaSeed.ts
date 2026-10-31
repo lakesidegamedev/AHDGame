@@ -119,5 +119,5 @@ export function getUaSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const uaSeedConfig: EasternBlocSeedConfig = getUaSeedConfig("2019-default");
+const uaSeedConfig: EasternBlocSeedConfig = getUaSeedConfig("2019-default");
 export default uaSeedConfig;

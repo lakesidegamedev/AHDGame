@@ -1,5 +1,6 @@
 import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType } from "@/lib/constants/corporations";
 import type { SectorDetail } from "./CorporationPageTypes";
+import { sectorPlantCount } from "@/lib/constants/facilityQuantum";
 
 /**
  * The revenue basis every player-facing sector surface must use: realized
@@ -62,7 +63,7 @@ export const SORT_OPTIONS: { value: SectorSortKey; label: string }[] = [
 export const PLANTS_SORT_OPTIONS: { value: SectorSortKey; label: string }[] = [
   { value: "location", label: "Location" },
   { value: "type", label: "Sector type" },
-  { value: "capacity", label: "Capacity (units/day)" },
+  { value: "capacity", label: "Plants" },
   { value: "fill", label: "Fill %" },
   { value: "revenue", label: "Revenue / day" },
   { value: "margin", label: "Effective margin %" },
@@ -90,7 +91,7 @@ function compareNullable(a: number | null | undefined, b: number | null | undefi
   return av < bv ? -1 : 1;
 }
 
-export function compareSectors(
+function compareSectors(
   a: SectorDetail,
   b: SectorDetail,
   key: SectorSortKey,
@@ -126,7 +127,9 @@ export function compareSectors(
     case "workers":
       return (a.workers - b.workers) * sign;
     case "capacity":
-      return compareNullable(a.capacityUnits, b.capacityUnits) * sign;
+      // Sort on the plants the column shows. Plant sizes differ by sector
+      // type, so raw capacity units would order the column out of step.
+      return (sectorPlantCount(a) - sectorPlantCount(b)) * sign;
     case "fill":
       // Sorts on the exact rate the viewer holds. A rival without it sorts all
       // such rows together at the bottom rather than by band — banding is a

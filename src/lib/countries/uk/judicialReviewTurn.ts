@@ -38,7 +38,7 @@ export interface UkJrSurpriseTurnResult {
  * Resolve proxy court lean from the UK ruling party (or Labour/Con defaults).
  * Negative = left, positive = right — same convention as SCOTUS surprise.
  */
-export async function resolveUkProxyCourtLean(db: Db, axis: JrCaseAxis): Promise<-1 | 0 | 1> {
+async function resolveUkProxyCourtLean(db: Db, axis: JrCaseAxis): Promise<-1 | 0 | 1> {
   const formation = await db
     .collection("governmentFormations")
     .findOne(

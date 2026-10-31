@@ -53,7 +53,7 @@ import {
   type FreightClass,
 } from "./freightClass";
 
-export { FREIGHT_TEU_PER_UNIT_HOP, freightTeuPerUnitHop } from "./freightClass";
+export { FREIGHT_TEU_PER_UNIT_HOP } from "./freightClass";
 
 // ── Tuning constants (dark-ledger calibrated; money wiring still off) ────────
 
@@ -154,7 +154,7 @@ export const FREIGHT_CONGESTION_SURCHARGE = 0.35;
  * charges the surcharge only on the overflow units, so this is the price the
  * ceiling test uses to decide whether overflow may happen at all.
  */
-export function congestedLandedPrice(landed: number, shippingPerUnit: number): number {
+function congestedLandedPrice(landed: number, shippingPerUnit: number): number {
   return landed + shippingPerUnit * FREIGHT_CONGESTION_SURCHARGE;
 }
 
@@ -167,10 +167,7 @@ export function congestedLandedPrice(landed: number, shippingPerUnit: number): n
  * symmetry with other plants helpers (and for money-wiring rates later).
  */
 /** Freight-price weight per commodity unit per hop on the era unit basis. */
-export function freightPriceTeuPerUnitHop(
-  freightClass: FreightClass,
-  eraUnitScale: number = 1
-): number {
+function freightPriceTeuPerUnitHop(freightClass: FreightClass, eraUnitScale: number = 1): number {
   void eraUnitScale;
   return FREIGHT_PRICE_TEU_PER_UNIT_HOP[freightClass];
 }
@@ -186,7 +183,7 @@ export const SEA_FREIGHT_HOP_EQUIV = 6;
  * Fallback hop distance when two same-country states have no adjacency route
  * (e.g. HI): treated like a sea leg.
  */
-export const UNREACHABLE_HOP_EQUIV = SEA_FREIGHT_HOP_EQUIV;
+const UNREACHABLE_HOP_EQUIV = SEA_FREIGHT_HOP_EQUIV;
 
 /**
  * Buyer tolerance ceiling = local state price × (1 + slack). Above it, demand
@@ -200,7 +197,7 @@ export const BUYER_TOLERANCE_SLACK = 0.35;
  * rises linearly to 40 percentage points when no local supply exists. The
  * feature remains dark unless the caller opts in.
  */
-export const SHORTAGE_TOLERANCE_TRIGGER_FILL = 0.5;
+const SHORTAGE_TOLERANCE_TRIGGER_FILL = 0.5;
 export const SHORTAGE_TOLERANCE_MAX_EXTRA = 0.4;
 
 export function shortageResponsiveToleranceSlack(args: {
@@ -218,7 +215,7 @@ export function shortageResponsiveToleranceSlack(args: {
 }
 
 /** Flows below this many units are summed into the doc totals but not itemized. */
-export const FLOW_RECORD_FLOOR_UNITS = 1;
+const FLOW_RECORD_FLOOR_UNITS = 1;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

@@ -42,7 +42,7 @@ export const DD_PARTY_TREASURY_1953 = {
   dbd: 15_000,
 };
 
-export const DD_PARTY_TREASURY_1979 = {
+const DD_PARTY_TREASURY_1979 = {
   sed: 250_000,
   cdu: 30_000,
   ldpd: 30_000,

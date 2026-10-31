@@ -15,7 +15,6 @@
  *
  * Constraints encoded here:
  * - at most one entrant per eligible state-country cohort per turn
- *   (FRONTIER_ENTRY_MAX_ENTRANTS_PER_COHORT_PER_TURN)
  * - no duplicate common-control entities masquerading as entry: one entrant
  *   per controlling entity per turn
  * - real financing and real founding costs: eligibility requires a priced
@@ -36,9 +35,6 @@
  *   is a required input, not something this module re-derives
  * - no aggregate concentration cap: none is defined here, per the issue
  */
-
-/** At most one entrant per eligible state-country cohort per turn. */
-export const FRONTIER_ENTRY_MAX_ENTRANTS_PER_COHORT_PER_TURN = 1;
 
 export type FrontierEntryRelaxableReason = "unprofitable" | "margin_below_floor" | "cash_floor";
 

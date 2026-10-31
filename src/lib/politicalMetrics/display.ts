@@ -1,7 +1,7 @@
 import type { PoliticalLean } from "./types";
 
 /** Lean describes political ASSOCIATION, never quality (spec §2.2). */
-export const LEAN_LABELS: Record<PoliticalLean, string> = {
+const LEAN_LABELS: Record<PoliticalLean, string> = {
   [-5]: "Strong Left",
   [-3]: "Left",
   [-1]: "Center-Left",
@@ -16,7 +16,7 @@ export function leanLabelFor(lean: PoliticalLean): string {
 }
 
 /** Performance bands (0–100 objective score), highest threshold first. */
-export const STATUS_BANDS = [
+const STATUS_BANDS = [
   { min: 85, label: "Exceptional" },
   { min: 70, label: "Strong" },
   { min: 55, label: "Stable" },

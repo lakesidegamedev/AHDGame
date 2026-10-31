@@ -35,7 +35,7 @@ import {
   planContinuingDebtService,
 } from "./rules/continuingService";
 
-export const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
+const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
   _id: string;
   applicationId: string;

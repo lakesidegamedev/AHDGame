@@ -7,7 +7,7 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
-import { getEnabledCountryIds } from "@/lib/countryAccess";
+import { getEconomyVisibleCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type {
@@ -287,7 +287,7 @@ export async function getCommodityDetailData(
     const isAdmin = authUser?.isAdmin === true;
     let allowedStateIds: Set<string> | null = null;
     if (includeHeavy && !isAdmin) {
-      const enabledCountries = await getEnabledCountryIds();
+      const enabledCountries = await getEconomyVisibleCountryIds();
       allowedStateIds = new Set(
         Object.entries(stateCountryMap)
           .filter(([, countryId]) => enabledCountries.includes(countryId as CountryId))

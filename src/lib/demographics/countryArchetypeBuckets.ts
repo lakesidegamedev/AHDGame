@@ -35,9 +35,3 @@ export function getCountryArchetypeBuckets(
 ): Record<string, ArchetypeBucketWeight[]> | null {
   return COMPOSITION_WEIGHTS[countryId.toUpperCase()] ?? null;
 }
-
-/**
- * Retained as a no-op seam. The table is a static import now, so there is
- * nothing to invalidate; tests that cleared a cache keep working.
- */
-export function clearCountryArchetypeBucketCache(): void {}

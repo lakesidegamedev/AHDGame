@@ -12,7 +12,7 @@ export function compareVersionsDesc(a: string, b: string): number {
   return 0;
 }
 
-export function monthKey(date: string): string {
+function monthKey(date: string): string {
   return date.slice(0, 7);
 }
 

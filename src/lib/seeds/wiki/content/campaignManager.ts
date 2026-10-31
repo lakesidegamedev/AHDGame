@@ -1,232 +1,114 @@
 export const campaignManagerContent = `# Campaign Manager
 
-Eligible candidacies get a dedicated **campaign page** at \`/campaign/[id]\`. This is where your candidate's campaign lives: budget, upgrades, operations, activity log, endorsements, and manager assignments. It's separate from your character's profile and has its own action and money pools.
+Once you declare, a campaign page is where money and actions turn into votes. Every eligible candidacy gets its own: budget, upgrades, field offices, activity log, endorsements and manager assignments. It is separate from your character's profile and has its own action and money pools.
 
-**Eligibility:** US president, senate, governor, house, and state senate races run the Campaign Manager, as do UK Commons races and Japanese House of Representatives, House of Councillors, and governor races. German and Irish races still use the lighter election-detail page until their list and STV systems are mapped onto per-candidate campaigns.
+**Eligibility.** US president, Senate, governor, House and state senate races have a campaign page, as do UK Commons races and Japanese House of Representatives, House of Councillors and governor races. Presidential races in other countries with a directly elected president, such as Brazil, Nigeria and Russia, get one too. German and Irish races use the lighter election-detail page for now.
 
-This page describes what the campaign page does and how to use it. For upgrade tables, maintenance math, and tactical priorities see [Campaign Strategy](/wiki/campaign-strategy).
+For upgrade tables, maintenance math and tactical priorities see [Campaign Strategy](/wiki/campaign-strategy), whose trees and costs are what you buy on this page.
 
-## Access tiers
+## Budget and actions
 
-The campaign page shows different amounts of information depending on who's viewing:
+The campaign has a **budget**: passive income and donations in (funds raised through [Fundraising and Ads](/wiki/fundraising-ads) can be donated in, see [Core Systems](/wiki/core-systems)), upgrade purchases, maintenance and field office upkeep out. Targeted Ads bought from the page are paid from the buyer's own Campaign Funds and actions, not the campaign budget. It also has an **action pool** of its own, earned each turn, that pays for upgrades and field offices rather than your character's actions. It also pays for Campaign Presence in [Political Operations](/wiki/political-operations). Three rules matter:
+
+1. **Campaign actions** per turn = 4 + floor(sqrt(endorsements) x 3), so 0 endorsements give 4, 4 give 10, 9 give 13, 16 give 16 and 25 give 19. Governor and executive endorsements count 1.5 each (a governor's only outside presidential races), and player endorsements count only in presidential races. The base of 4 is the world's base actions per turn, halved for an NPP-run campaign. A campaign banks at most 48 turns of its own income (480 actions at 10 per turn). Actions already over the cap are kept.
+2. **Upgrades** cost 1.5 times as much once the general election phase starts, so buy early.
+3. **Maintenance** on some upgrades comes out of funds each turn. If funds plus this turn's income cannot cover it, upgrades downgrade automatically.
+
+### The numbers
+
+| Item | Value |
+| --- | --- |
+| Campaign managers | Up to 3 |
+| Baseline campaign actions | 4 per turn |
+| Action bank limit | 48 turns of income |
+| General-phase upgrade cost | 1.5x funds and actions |
+| Opposition Research retarget cooldown | 6 turns |
+| Field office ramp | 3 turns to full strength |
+| UK and Japan field offices | Up to 3 per region |
+| Fog of war on upgrade levels | public plus or minus 3, party plus or minus 1 |
+| Briefing viewers | Nominee and managers only |
+
+### Who sees what
 
 | Viewer | What they see |
 | --- | --- |
-| **Campaign owner** (candidate) | Full management UI: budget, upgrades, activity log, manager, endorsements, fog-of-war settings |
-| **Party members** (same party, not the candidate) | Intelligence view: strategy, polling, spending (fog ±1 level) |
-| **Public** (anyone else) | Basic summary: candidate name, office, party, active status (fog ±3 levels) |
+| Campaign owner (candidate) | Everything: budget, upgrades, activity log, managers, endorsements |
+| Campaign manager (appointed) | The same pages as the candidate, and can run upgrades and actions |
+| Party members | The public summary, with upgrade levels fogged to plus or minus 1 |
+| Public | Summary: candidate, party, managers, campaign strength and field offices, with upgrade levels fogged to plus or minus 3. No funds, actions, activity, endorsements or briefing |
 
-Fog of war is automatic. Opponents can see your upgrade levels, but only through a ±3-level uncertainty band.
+Fog of war is automatic and refreshes every turn. An estimate never shows below 0 or above the lever's maximum. It is drawn from the old single-level upgrade fields, which Strategic Ops tree purchases do not change, so it does not reflect a rival's trees. Your own display is always exact.
 
-## The sections
+## Walking the page
 
-### Overview
+- **Vitals.** Across the top: war chest with net per turn and turns of runway, campaign actions against the bank cap, support, and campaign strength with its vote boost.
+- **Overview.** Every section below on one page.
+- **Money.** Fundraising income, upkeep for each lever and for field offices, total upkeep, the per-turn net, lifetime funds and actions generated and spent, and boxes to contribute from your own funds or a party treasury.
+- **Strategic Ops.** Four branch trees: Fundraising, Media Spending, Ground Game and Opposition Research. Each card shows the starter node, its branches, the next cost in funds and campaign actions, and the current effect per turn. Ground Game moves votes in every race type, not only the presidency, and with Media and field offices it adds votes and turnout in [General Elections](/wiki/general-elections). See [Campaign Strategy](/wiki/campaign-strategy) for what each does.
+- **Field offices.** Staff on the ground (below).
+- **Ledger.** Activity and Endorsements tabs, ten rows per page. Activity lists upgrade purchases (with their cost in funds and actions), automatic downgrades and their reason, Opposition Research resets, and suspending the campaign to endorse someone else. It keeps the last 200 entries, normally the campaign's whole life. Endorsements lists the players and politicians backing the campaign, and the panel says "Politicians" where the rest of the wiki says NPPs. Both tabs are visible only to the campaign's own side.
+- **Campaign Managers.** Appointment panel (below).
+- **Campaign room briefing.** Below the main page (below).
 
-- Candidate name, party, office, election details.
-- Current fundraising level and passive income/turn.
-- Active upgrade tiers.
-- Current endorsement count (NPP + player for presidential).
-- Campaign funds balance and per-turn net income.
-- Estimated vote share (live poll-style projection).
+## Field offices
 
-### Budget
+- **United States:** pick a county on the state map and open an office. The map shades counties by partisan lean; switch to Opportunity to shade by what a new office would add.
+- An office raises turnout in its county, weighted by the county's size and how strong your side is there, and adds a smaller boost across the whole state. The statewide part has diminishing returns, so the tenth office in a state adds much less than the first.
+- **UK and Japan:** offices work by region rather than county, up to three per region, each adding a smaller boost.
+- Offices take 3 turns to reach full strength, so early ground beats late ground.
+- Each office costs funds and campaign actions to open, and funds each turn in upkeep. If the war chest cannot cover upkeep, the newest offices close first.
+- A presidential campaign can run dozens of offices, a House campaign only a handful.
+- Office locations are public.
 
-- Income vs spending over time (chart).
-- Per-turn net calculation.
-- Category breakdown: which upgrade maintenance / party tax / ad spend is taking what percentage of your spend.
-- Negative-funds warning if you've overspent.
-- Auto-downgrade warning if projected maintenance > projected income.
+These effects enter the vote model of every race with a campaign page, see [Election Mechanics](/wiki/election-mechanics). County leans start from the real county results of your world's era, then shift with your world's own presidential elections.
 
-### Strategic Ops
+## Campaign managers
 
-Four **branch trees**, each with its own card, replacing the old flat-level upgrade model:
+The candidate appoints up to **three** managers by searching for a character by name. A manager must live in your country and cannot be a candidate managing their own campaign. A manager can read the whole campaign page, buy upgrades, spend campaign actions and change Opposition Research targets. A manager cannot withdraw the candidate or change the manager list. Removing a manager takes their access away and does not change the campaign's funds or upgrades. This lets one player run the operations while the candidate plays the character.
 
-- **Fundraising**: starter passive income, then branches (Grassroots, Bundlers, Direct Mail) that add more.
-- **Media Spending**: starter passive Favorability gain, then Broadcast and Television branches that add more, plus a Rapid Response branch.
-- **Ground Game**: starter turnout bonus in your race's competitive areas (swing states for president, swing counties for senate / gov, swing precincts for house / state senate), then Swing Canvassing, Get-Out-The-Vote, and Volunteer Corps branches. Ground Game now moves votes in every race type, not just the presidency.
-- **Opposition Research**: starter drain to one target, then Dossier, Scandal Leak, and Counter-Intel branches that add or amplify drain. Retargetable.
+## The campaign room briefing
 
-Each card shows the starter node and its branches, next-branch cost (both money and campaign actions), and current per-turn effect.
+A campaign gets a private briefing that turns the current race into a plan. It only reads numbers the engine already computed. The nominee and managers see it while the campaign is active. A running mate, party viewers and the public do not, because the coalition read is exactly what an opponent should not see. Its cards are filled in presidential races only; other races show no path data yet.
 
-**General-phase cost multiplier:** All upgrade costs are **1.5× higher** once the election enters the general phase. Front-load upgrades in the primary.
+- **Path to victory.** In the primary, your delegates won, the majority you need, how many remain and the top five delegate leaders. In the general, the electoral votes you hold, the majority you need and the five closest states by margin.
+- **Coalition weaknesses.** The five voter groups where your share of the field is lowest, weakest first.
+- **Turnout plan.** Expected turnout, what campaign contact adds and what repeated contact gives back, with a Canvass or Targeted Ads suggestion for your three weakest groups.
 
-### Field offices
+Cash runway sits on the war chest vital, and lever levels and next-tier costs sit in the Operations section, not in the briefing.
 
-The **Field offices** tab is where the campaign puts staff on the ground.
+The [Vote Factor Ledger](/wiki/vote-factor-ledger) tells you why you have the votes you have, and its factors feed the briefing's plan. The briefing tells you what to do about it. Weak segments from [granular polling](/wiki/granular-polling) guide where to spend effort.
 
-- **United States:** pick a county on the state map and open an office. The map shades each county by its partisan lean; switch to **Opportunity** to shade by what a new office there would add.
-- An office raises your turnout in its county, weighted by how big the county is and how strong your side is there, and adds a smaller boost across the whole state. The statewide part has diminishing returns, so the tenth office in a state adds much less than the first.
-- **United Kingdom and Japan:** offices work by region rather than county. Up to three per region, each adding a smaller turnout boost.
-- Offices take three turns to reach full strength, so early ground beats late ground.
-- Each office costs money to open (plus campaign actions) and upkeep every turn. If the war chest cannot cover upkeep, the newest offices close first.
-- How many offices a campaign can hold depends on the race: a presidential campaign can run dozens, a House campaign only a handful.
-- Office locations are public. Anyone viewing the campaign can see where it is organising.
+## When the money runs out
 
-County leans start from the real county results of your world's era: a 1991 world uses 1984 and 1988, a 1953 world uses 1948 and 1952, and a 2027 world uses 2020 and 2024 plus the 2025 governor races. As your world holds its own presidential elections, every county shifts with its state's swing from one election to the next, damped so one wild cycle cannot erase the era's map.
+If funds plus this turn's income cannot cover maintenance, the turn processor downgrades upgrades one step at a time, always the maintenance-bearing branch tier with the highest upkeep first, until maintenance is affordable.
 
-### The ledger
-
-Two tabs at the foot of the campaign page, ten rows to a page.
-
-**Activity** is a record of what the campaign has done, newest first:
-
-- Upgrade purchases, with what they cost in funds and actions
-- Auto-downgrades, with the reason
-- Suspending the campaign to endorse someone else
-
-A campaign keeps its whole run of these rather than only the most recent, so
-the pager reaches back to its first purchase.
-
-**Endorsements** lists the players and politicians currently backing the
-campaign, and can be narrowed to either. The panel says "Politicians" where the
-rest of the wiki says NPPs; they are the same people. Withdrawn endorsements
-drop off the list. Rows carry no date: the records store no turn number.
-
-Both tabs are visible only to the campaign's own side. Party and public viewers
-see the panel but not its contents.
-
-### Endorsements
-
-- List of NPPs and players who have endorsed the candidate.
-- Contribution to campaign actions (via the \`baseline + floor(sqrt(endorsements) × 3)\` formula).
-
-Player endorsements only count toward the action bonus in **presidential** races. NPP endorsements count in all races.
-
-### Campaign Managers
-
-The candidate (or an admin) appoints managers from the **Campaign Managers** panel on the campaign page: search for a character by name, add them, remove them, up to **three**. A manager must be in your country and cannot be a candidate managing their own campaign. A manager's owning player has:
-
-- Read access to the full campaign page (same as the candidate).
-- Ability to trigger upgrades, allocate campaign actions, and change opposition research targets.
-- No power to withdraw the candidate or change the manager list.
-
-This is designed for multi-player coordination: a campaign manager can run the operational details while the candidate focuses on character actions. Everyone else sees the panel read-only.
-
-### Campaign room briefing (owner-only)
-
-Presidential campaigns get a private briefing panel that turns the current race state into a plan. It only reads numbers the engine and tally already produced, so it never invents vote math. It is visible to the nominee and the campaign's managers only: a running mate, a party viewer and the public do not see it, because the coalition read is exactly the intelligence an opponent should not have. It has:
-
-- **Path to victory.** In the primary, your **delegate path**: delegates won, the majority you need, how many remain, and the top delegate leaders in your party. In the general, your **tipping-point path**: the electoral votes you hold, the majority you need, and the 5 closest states by popular-vote margin, the ones that actually decide the race.
-- **Cash runway.** How many turns your funds last at the current burn rate, or unbounded if you are net positive.
-- **Coalition weaknesses.** Your weakest voter buckets, weakest first, so you know where your support is thin.
-- **Ops saturation and tradeoffs.** How far you have invested each operations lever, and what the next upgrade tier would cost in funds and actions and what it does.
-
-The [Vote Factor Ledger](/wiki/vote-factor-ledger) tells you why you have the votes you have; the briefing tells you what to do about it.
-
-## Campaign actions (separate from character actions)
-
-Your campaign generates its own per-turn action pool:
-
-- **Baseline:** the player's own base action rate (4 per turn from game config), so every campaign earns at least 4 actions a turn.
-- **Endorsement bonus:** \`baseline + floor(sqrt(endorsements) × 3)\` campaign actions per turn. Governor and executive endorsements count at their own weight.
-  - 0 endorsements → 4/turn
-  - 4 endorsements → 10/turn
-  - 9 endorsements → 13/turn
-  - 16 endorsements → 16/turn
-  - 25 endorsements → 19/turn
-
-Campaign actions are consumed by **upgrades and field offices** (not regular actions like Campaign or Fundraise). Opening a field office charges both funds and campaign actions; ongoing upkeep is charged in funds each turn.
-
-A campaign can bank at most **48 turns of its own per-turn income** (for example, 480 actions at 10 per turn). At the cap the turn adds nothing until you spend below it. Actions already above the cap are kept, not taken away.
-
-## Budget math
-
-Campaign funds flow:
-
-\`\`\`
-+ Fundraising tier passive income       (each turn)
-+ Donations (personal cash donations)
-+ Party chair donations from treasury
-
-− Ground Game maintenance (if purchased)
-− Media Spending maintenance (if purchased)
-− Field office upkeep (per open office)
-− New upgrade purchases (when made)
-− Ad campaigns (when initiated)
-\`\`\`
-
-Net balance updates each turn. The Budget tab visualises this over time.
-
-### Insolvency and auto-downgrade
-
-If \`projected_funds (= funds + income) < maintenance\`:
-
-1. The turn processor drops levels until maintenance is affordable.
-2. **Priority.** The tier with the higher marginal (most recent level) maintenance drops first.
-3. **Tie-breaker.** Media Spending drops before Ground Game.
-4. **Passive effects** still fire this turn using pre-downgrade levels (one last gasp).
-5. **Maintenance** is deducted using post-downgrade levels.
-6. **No refund.** Money paid for the level is gone.
-7. An \`activityHistory\` entry logs the downgrade with \`reason: "insolvency"\`.
-
-Existing negative funds are **not healed**: the campaign keeps the debt, but stops bleeding.
-
-## Fog of war details
-
-Opponent-visible upgrade levels are fuzzed each turn:
-
-- **Public:** Random offset in ±3. If you're at level 5, public sees anywhere from 2 to 8.
-- **Party members:** Random offset in ±1. If you're at level 5, party sees 4, 5, or 6.
-
-Update frequency: every turn during Group 6 (campaign processing).
-
-Your own display is always accurate.
-
-## Candidate-only operations
-
-Actions only the candidate (or an appointed manager) can perform:
-
-- Purchase upgrades
-- Change Opposition Research target (6-hour cooldown between retargets)
-- Withdraw candidacy (manager cannot)
-- Accept or reject donations via party chair (automatic acceptance)
+**An example.** A presidential campaign holds ₳1,000 in funds with the base ₳20,000 income this turn and runs the Ground Game starter (₳11,000 upkeep) and the Media Spending starter (₳12,000 upkeep). Funds plus income is ₳21,000 against ₳23,000 of upkeep. Neither tree has upkeep branches, so a starter can go, and Media's has the higher upkeep and is dropped, leaving ₳11,000, which ₳21,000 covers. The ₳60,000 paid for Media is gone with no refund. This turn's passive effects still fire at their old levels, and the Activity tab logs the downgrade as insolvency. Existing negative funds are not healed: the campaign keeps the debt but stops bleeding.
 
 ## Donations
 
-Anyone can donate:
+Anyone in the campaign's country can donate any whole amount of 1 or more from their own Campaign Funds. The campaign receives the same amount in its own currency. The party chair, vice chair and treasurer ([Political Parties](/wiki/political-parties)) can also disburse from the party treasury to any campaign of their party. Donations are kept in their own record with attribution, not in the Activity tab, and the page does not list them.
 
-- **Player-to-candidate donations.** Personal Cash on Hand converted to campaign funds at 100% (to the campaign, not to a character's Campaign Funds). All donations are logged publicly.
-- **Party-chair donations.** National or regional chair can disburse from the party treasury to any candidate in their party.
-- **Party-treasurer donations.** Treasurer has equivalent authority to chair for party-fund disbursements.
+## Candidate-only operations
 
-Donations show up in the Budget tab with attribution. They are kept in their own donation record, not in the ledger's Activity tab.
+Only the candidate or an appointed manager can buy upgrades and change the Opposition Research target. In a presidential general election the running mate can also buy Fundraising upgrades. Only the candidate can withdraw.
 
-## Strategic use of the campaign page
+## Your first turns on the page
 
-### In the build phase
+- **Open the campaign** from the race page (View Campaign) once you have declared.
+- **Plan the first turns:** Fundraising starter, then Media or Ground Game depending on the race. Media upgrades here raise the favorability behind primary scores in [Primaries](/wiki/primaries).
+- **Appoint managers** if you want help with operations.
+- **Open field offices** early.
+- **Read the Money section** daily: if upkeep is above funds plus income, a downgrade is coming.
 
-- Start the Fundraising tree early for the passive income boost. Primary-phase costs are lower than general-phase.
+Common mistakes:
 
-### Entering a primary
+- Upgrading in the general instead of the primary, when everything costs 1.5 times as much.
+- Buying high-maintenance branches you cannot afford, then losing them to a downgrade.
+- Forgetting that Opposition Research retargets have a 6-turn cooldown.
+- Over-reacting to a fogged opponent estimate.
+- Ignoring endorsements. Nine endorsements give 13 actions a turn.
 
-- Decide on initial strategy: ads-heavy (Media Spending tree), turnout-heavy (Ground Game tree), or damage-opponent (Opposition Research tree).
-- Most candidates pick one emphasis plus Fundraising.
+In the closing sprint, do not start new branches. Run the existing ones at full tilt, since media, research and canvassing effects double in the last 4 turns, and retarget Opposition Research at the current frontrunner.
 
-### Early general
-
-- Push the Fundraising tree further if you can.
-- Invest in Media or Ground Game branches depending on race.
-- Start Opposition Research on the leading opponent.
-
-### Closing sprint (final 4 turns)
-
-- Everything doubles. Don't start new branches (expensive, no time for effect): run existing trees at full tilt.
-- Use campaign actions from endorsement bonuses.
-- Retarget Opposition Research at the leading opponent if your original target isn't the current frontrunner.
-
-## Common mistakes
-
-- **Upgrading in general instead of primary.** You pay more. Front-load.
-- **Buying high-maintenance branches you can't afford.** Auto-downgrade kicks in, you lose the investment.
-- **Ignoring Opposition Research retarget cooldown.** Plan retargets ahead of time.
-- **Not checking fog-adjusted opponent investment.** A fogged opponent estimate could be well off. Don't over-react.
-- **Forgetting endorsement action bonuses.** If you have 9 NPP endorsements, your campaign has 13 actions/turn, worth real upgrade velocity.
-
-## Related
-
-- [Campaign Strategy](/wiki/campaign-strategy): Upgrade tables, phase-by-phase allocation, all the numbers.
-- [Fundraising & Ads](/wiki/fundraising-ads): Personal Campaign Funds and ad mechanics.
-- [Election Mechanics](/wiki/election-mechanics): Where campaign-page effects enter vote math.
-- [Political Parties](/wiki/political-parties): Party chair donations and treasury disbursement.
-- [NPPs Overview](/wiki/npps-overview): Requesting NPP endorsements.
+Live for the offices listed under Eligibility. German and Irish races do not have a campaign page yet. Last checked 2026-10-30, version 1.18.0. Exact rules: [Campaign Manager (design)](https://docs.lakesidegames.net/design/campaign-manager.html). See also [NPPs Overview](/wiki/npps-overview) for requesting NPP endorsements.
 `;

@@ -84,12 +84,6 @@ export const adminStatePartyAppointSchema = z.object({
   characterId: z.union([schemas.objectId, z.null()]),
 });
 
-// admin/state-party-elections POST
-export const adminStatePartyElectionsSchema = z.object({
-  action: z.enum(["batch-resolve", "batch-create"]),
-  durationTurns: z.number().int().positive().optional(),
-});
-
 // admin/users/reset-password POST
 export const adminResetPasswordSchema = z.object({
   userId: schemas.objectId,

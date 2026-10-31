@@ -75,14 +75,32 @@ describe("GET /api/supply-offers", () => {
       expiresAtTurn: { $gt: 10 },
     });
     await get("?kind=npp");
-    expect(countDocuments).toHaveBeenLastCalledWith({
+    expect(countDocuments).toHaveBeenCalledWith({
       commodity: { $in: [...COMMODITY_TYPES] },
       aiListed: true,
       expiresAtTurn: { $gt: 10 },
     });
   });
 
+  it("passes the sort direction and counts every offer in scope for the 'of' total", async () => {
+    countDocuments.mockResolvedValueOnce(12).mockResolvedValueOnce(40);
+    const body = await (await get("?commodity=oil&kind=player&sort=commodity&dir=desc")).json();
+    expect(loadOpenOffers.mock.calls[0][1]).toMatchObject({ sort: "commodity", dir: "desc" });
+    expect(countDocuments).toHaveBeenLastCalledWith({
+      commodity: "oil",
+      expiresAtTurn: { $gt: 10 },
+    });
+    expect(body).toMatchObject({ total: 12, totalAll: 40 });
+  });
+
+  it("skips the second count when nothing is filtered out", async () => {
+    const body = await (await get("?kind=all")).json();
+    expect(countDocuments).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({ total: 42, totalAll: 42 });
+  });
+
   it("rejects an unknown commodity and bad paging", async () => {
+    expect((await get("?dir=sideways")).status).toBe(400);
     expect((await get("?commodity=nope")).status).toBe(400);
     expect((await get("?kind=bots")).status).toBe(400);
     expect((await get("?sort=random")).status).toBe(400);

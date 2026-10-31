@@ -30,7 +30,7 @@ import {
   operatingSectorTypeFor,
   type ManufacturingIndustryModel,
   type OperatingSectorType,
-} from "./corporations";
+} from "./corporationsClient";
 import type { CommodityType } from "./commodities";
 import {
   MEDIA_OPERATING_MODELS,
@@ -43,6 +43,7 @@ import { DEFAULT_DEMAND_1991 } from "./sectorStrategyDefinitions1991";
 import { SECTOR_STRATEGIES } from "./sectorStrategyDefinitions";
 import {
   CANCEL_COST_FRACTION,
+  PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS,
   STRATEGY_COOLDOWN_TURNS,
   STRATEGY_RETOOL_COST_FRACTION,
   STRATEGY_TRANSITION_MARGIN_PENALTY,
@@ -53,6 +54,7 @@ import {
 
 export {
   CANCEL_COST_FRACTION,
+  PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS,
   SECTOR_STRATEGIES,
   STRATEGY_COOLDOWN_TURNS,
   STRATEGY_RETOOL_COST_FRACTION,

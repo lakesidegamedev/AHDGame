@@ -1,128 +1,92 @@
 export const relocationContent = `# Relocation
 
-You can change your character's **home state** (US), **region** (UK: England / Scotland / Wales / Northern Ireland; Japan's eight regions; Ireland, China, Brazil, Nigeria and the bloc countries likewise), or **Land** (Germany, East Germany). Your home anchors where you run for office, campaign cheaply, and appear in regional player lists. Moving is supported but expensive: not a button to press casually.
+Moving house in this game costs you everything you built locally. Your home is a **state** (US), a **region** (UK nations, Japan, Ireland, China, Brazil, Nigeria and the bloc countries) or a **Land** (Germany, East Germany), and it decides where you can run, where you campaign and canvass, what your campaign actions cost and which regional player list you appear in. The home you picked in [Create a Character](/wiki/create-a-character) is the one you can later move away from. A move is allowed, but it wipes your local political standing and clears your regional offices, so treat it as a planned reset, not a button to press casually.
 
-## Cooldown
+## Pressing Relocate
 
-- **72 turns** (3 real days) between relocations. This applies across all relocation types: state move, country move, and the combined CEO-and-character move all share the same cooldown.
+1. Open the page of the state or region you want and press **Relocate here**.
+2. The game checks the move is allowed (see the table and "When the button does nothing" below).
+3. If the move would take you outside your [party's](/wiki/political-parties) reach, you are asked to confirm that you will become Independent.
+4. The move resolves at once: local standing is wiped, regional offices are vacated, open candidacies are withdrawn, and a 72-turn cooldown starts.
 
-## What always resets (any relocation)
+**Why it works this way:** your Political Influence and donor network are earned in one place. Letting them follow you for free would make it painless to hop to the weakest race every cycle.
 
-Every relocation, even within the same country:
+![What a move always resets, what resets only on a country change, what is kept, and the corporation branch for CEOs.](/wiki-images/diagrams/relocation-what-resets.svg)
 
-- **Political Influence** → 0 (in all states; you start fresh in your new home).
-- **Donor Base** → 0 (level 1, no accumulated donors).
-- **Group Favorability** (any state-specific demographic favorability tracks) → cleared.
-- **State / regional party leadership** in the region you left (chair, vice chair, treasurer) → vacated; party replaces you via the next election.
-- **Any active candidacy** (general election, primary, state-party leadership, national-party leadership, committee) → withdrawn.
-- **State / regional offices** (governor, house, senate, state legislature, …) → auto-resigned. The seat is vacated in \`electedOfficials\` and the perpetual-election system will spawn a replacement race.
-- **National / country-scoped offices** (President, Vice President, cabinet, chancellor, …) → **kept** on an in-country move. They only auto-resign when you change country (same rule as Central Bank Chair).
-- **CEO of a corporation** → removed unless you use the combined relocate-with-corp flow (see below).
-- **Military command** (country change only) → a commissioned general leaves every Command roster, vacates any Command they led, drops their conflict postings, and hands their units back to the old country's General Staff, the same cascade a dismissal runs. The relocation summary tells you when a move cost you a command.
-- **Career history** → a \`"relocated"\` entry is appended with \`fromState\` / \`toState\` (and \`fromCountry\` / \`toCountry\` if the country changed).
+| Rule | Value |
+| --- | --- |
+| Cooldown between moves | 72 turns (3 real days), shared by every kind of move |
+| Political Influence after any move | 0 |
+| Donor Base level after any move | 0 |
+| National Influence after a move | Kept in your country, 0 if you change country |
+| Moving a corporation with you, same country | 7% of its market cap |
+| Moving a corporation with you, other country | 14% of its market cap (twice the base rate) |
 
-## What only resets on country change
+\`\`\`wiki-chart
+relocation-cooldown
+\`\`\`
 
-Changing country is more expensive than changing state:
+## What a move wipes, even within your country
 
-- **National Political Influence (NPI)** → 0.
-- **Party Influence** → 0.
-- **Party membership** → Independent (you must re-join in the new country).
-- **National party leadership positions** (chair, vice chair, treasurer) → vacated; party \`memberCount\` decrements.
-- **National committee memberships** → cleared.
-- **Coalition chair** (if your party led one) → cleared.
-- **Central Bank Chair** → auto-resigned.
-- **National / country-scoped elected offices** (President, VP, cabinet, …) → auto-resigned.
+- **Political Influence** goes to 0 in every state, and **Donor Base** level goes to 0 (the meters from [Stats & Actions](/wiki/stats-actions)), so **Fundraise is locked until you build a donor network again**. Group favorability for demographics is cleared too.
+- **Regional party posts** (chair, vice chair, treasurer) in the state you left are vacated. Moving to a new state also starts a 24 turn wait before you can stand for state party leadership ([Party Leadership & Authority](/wiki/party-leadership-authority)).
+- **Every open candidacy** (general, primary, party leadership, committee) is withdrawn ([Election Mechanics](/wiki/election-mechanics)).
+- **State and regional offices** such as governor, House, state senate and state legislature are resigned and the seat opens. A governor's seat (and a UK Commons seat) gets a by-election; other seats wait for their next regular race.
+- **National offices** (President, Vice President, cabinet, chancellor) are **kept** on a move inside your country.
+- **CEO roles** are removed, unless you use the combined move with your corporation (below) or you run a national corporation and stay in its country. See [Corporations](/wiki/corporations).
+- **Party membership** ends only if the destination is outside your party's reach. You get a warning first. Any party-join cooldown you already had still applies, and leaving does not start a new one. If you keep a national office after leaving the party, it shows as Independent.
 
-After a cross-country move you're effectively starting your political career over. You keep your money, your corporate holdings, and your personal history, but your political network is gone.
+## What only a change of country wipes
 
-## What is preserved
+- **National Influence** and **Party Influence** go to 0, and you become **Independent**.
+- **National party posts**, committee seats and any coalition chair are cleared.
+- **Central Bank Chair** ([Central Banks](/wiki/central-banks)) and **national offices** are resigned.
+- **Military commands** ([Military Commands](/wiki/military-commands)): a commissioned general leaves every command roster, gives up any command they led and hands units back to the old country. The move summary tells you if it cost you a command.
+- Campaign manager roles, caucus seats and cabinet records tied to the old country are cleared.
 
-Regardless of relocation type:
+After a cross-country move you start a political career from scratch. Your money, corporate holdings and personal history come with you.
 
-- **Campaign Funds and Cash on Hand** (all currencies held).
-- **Savings** (all accounts, all currencies).
-- **Accumulated actions.**
-- **Favorability, Infamy, policy positions.**
-- **Earlier career history entries** (the new \`"relocated"\` event is appended, not replacing).
-- **Avatars, news posts, achievements.**
-- **Stock holdings and bonds** (including sovereign and corporate).
-- **Line-of-credit balances and arrears.**
+## What you keep
 
-Money is **not** currency-converted. If you held ₳500,000 USD and relocate to the UK, your \₳500,000 USD balance is preserved; you just start earning GBP in the new country going forward.
+Campaign Funds and Cash on Hand in every currency, savings, accumulated actions, Favorability, Infamy, policy positions, shares and bonds, credit balances, avatars, news posts, achievements and your earlier career history (a "relocated" entry is added). Your home state also sets your Campaign Funds income rate ([Core Systems](/wiki/core-systems)), and state and regional races are open only from your home ([Player Progression](/wiki/player-progression)). Money is not converted: ₳500,000 held in US dollars stays as US dollars after a move to the UK, and you earn the new currency from then on.
 
-## Blocking conditions
+## Moving with a corporation
 
-You cannot relocate if:
+Press **Relocate here** on any state or region page you are eligible for. If you are a CEO, the button opens a three-choice dialog:
 
-- Target state / region doesn't exist or is the same as your current home.
-- You relocated within the last 72 turns (3 real days).
-- The destination country is disabled for players (admins bypass this).
+1. **Cancel**.
+2. **Relocate & Abandon Corporation**: you move, and your CEO seat is left vacant.
+3. **Relocate & Move Corporation**: you and the corporation's headquarters move together and you stay CEO. It costs 7% of market cap, or 14% across countries. Imperial CEOs pay nothing.
 
-There is **no** block for holding office or being an active candidate: those get auto-vacated.
+The third option is greyed out if the corporation cannot afford the chosen payment method (not enough Liquid Capital for cash, or a bond cooldown or the leverage cap for bonds). The other two stay available. A CEO must live in the corporation's headquarters state, so a plain move costs you the CEO seat (a national corporation's CEO only has to stay in its country).
 
-## CEO and corporation rules
+## When the button does nothing
 
-Corporations have a headquarters state, and the CEO must reside in that state:
+- You moved less than 72 turns ago. The button counts down in hours or days.
+- You picked your current home.
+- The destination country is not open to players in this world.
+- You have not yet confirmed the party warning.
+- The move would cut your party's territory in two (leave another member, active NPP or officeholder in a connecting region first).
 
-- **Standard relocation** removes you as CEO if you hold the role. The corporation enters CEO vacancy; the board eventually appoints a replacement.
-- **To accept a CEO role**, your home state must match the corporation's HQ state. See [Corporations](/wiki/corporations).
+Holding an office or running in a race does **not** block a move. Those are cleared for you.
 
-## Combined character + corporation relocation
+## A move from Ohio to Michigan
 
-When you're a CEO and click **Relocate here** from a region page, the dialog offers three choices:
+You are a state legislator in Ohio with Political Influence 45, donor level 12, and a primary race open. You move to Michigan.
 
-1. **Cancel**: dismiss, no action.
-2. **Relocate & Abandon Corporation**: standard character relocation; your CEO role is auto-vacated.
-3. **Relocate & Move Corporation**: character and corporation HQ move in a single transaction via \`POST /api/character/relocate-with-corp\`. You remain CEO.
+- Your Ohio seat is vacated, your primary candidacy is withdrawn, and Political Influence and donor level drop to 0.
+- You keep your party if it operates in Michigan. National Influence is untouched.
+- Rebuilding Political Influence from 0 to 40 with Campaign costs about 60 actions: 1 action per use below 20, then 2 per use from 20 to 39. At a state with average GDP per person that is roughly ₳1,360,000 in Campaign funds: 20 uses at ₳20,000, then 20 uses at ₳48,000.
+- Rebuilding donor level 12 costs about 53 actions and ₳138,000 at average GDP and a neutral Fundraising stat.
 
-**Cross-country corporate relocations cost 2× the base 7% of market cap** (so 14%). Imperial CEOs' corporations move at no additional cost: they receive a 2-button dialog with an info line instead of the chooser.
+That is more than a day of funds for most players, which is why the advice is to move right after a cycle ends, not before a primary.
 
-The "Relocate & Move Corporation" button is disabled if the corporation can't afford the selected payment method (insufficient Liquid Capital, bond cooldown still active, or leverage cap reached). The other two options remain available.
+## When to move
 
-**CEO headquarters moves from the CEO Office** (not the combined flow) also auto-vacate the CEO if they don't reside at the destination. The UI warns before submission but doesn't block.
+- **Move between cycles**, early in a build phase, so you have weeks to rebuild before the next primary.
+- **Do not move to chase donor income** unless the gain is large. Per-level donor income is ₳100, ₳200, ₳400 or ₳800 for small, medium, large and mega states, so a small-to-large move multiplies it by four, but you start at level 0.
+- **Cross-country moves are heavy.** Check the country is open to players before you commit.
+- Pair a move with a party check: if the destination is outside your party's reach, plan to rejoin or switch.
 
-## Strategy
-
-### When to relocate within your country
-
-- You misjudged your home state's political landscape and can't build a viable candidacy.
-- You want to switch from a small state to a population-tier multiplier for donor-base income (moving from a small state to a large one boosts per-level donor income 4×).
-- You want to contest a specific race that's only open to residents of a different state.
-- Your target party's strongest wing is anchored in another state and you want better alignment.
-
-Expect to lose your PI and donor base: don't relocate mid-cycle.
-
-### When to relocate across countries
-
-- You've wrapped up what you want to do in country A and want a full-career reset in country B.
-- You're moving with a corporation in a single transaction to a strategic market.
-- You want to leave behind a damaging political reputation (Favorability is preserved, but the local infrastructure isn't).
-
-Cross-country moves are **heavy**. Plan for weeks of rebuild. Verify your target country is open to players before initiating.
-
-### Timing around elections
-
-- **Don't relocate during a candidacy**: your candidacy is withdrawn, handing the race to opponents.
-- **Don't relocate during a state/region term of office**: those seats auto-resign.
-- **National offices (President, VP, cabinet)** survive an in-country move; they are only vacated when you change country.
-- **Do relocate between cycles**, early in a build phase, so you have weeks to rebuild PI before the next primary.
-
-## Admin and moderator overrides
-
-These endpoints run the **full** relocation pipeline: they never bypass cleanup.
-
-- \`PATCH /api/admin/characters/update-country\`
-- \`PATCH /api/admin/characters/update-state\`
-- \`PATCH /api/moderator/characters/update-country\`
-- \`PATCH /api/moderator/characters/update-state\`
-
-The only difference from the player flow: cooldown, country-availability gates, and rate limits are skipped.
-
-## Related
-
-- [Getting Started](/wiki/getting-started): Creating a character and first steps.
-- [Corporations](/wiki/corporations): Founding, HQ, CEO residency.
-- [United Kingdom](/wiki/uk-overview): UK regions as "home state."
-- [Germany](/wiki/de-overview) · [Japan](/wiki/jp-overview): Länder and prefectures.
+Relocation works in every world; a destination country only appears if it is open to players in that world, and moving within your country is always allowed, subject to the cooldown. Last checked 2026-10-29, version 1.18.0. Exact rules: [Relocation (design)](https://docs.lakesidegames.net/design/relocation.html)
 `;

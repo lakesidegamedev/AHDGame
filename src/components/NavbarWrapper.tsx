@@ -3,22 +3,34 @@
 import { useReducer, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname, useRouter } from "next/navigation";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useToast } from "@/contexts/ToastContext";
 import { useCharacterStats } from "@/contexts/CharacterStatsContext";
 import { ACTION_CAP, ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
-import { useAuthMe } from "@/contexts/AuthDataContext";
+import { useAuthMe, useHasSession } from "@/contexts/AuthDataContext";
+import { useStatusBarLayout } from "./statusbar/useStatusBarLayout";
 import { useInterface } from "@/contexts/InterfaceContext";
-import { buildClientStatusUrl } from "@/lib/statusBar/clientStatusRequest";
+import { buildClientStatusUrl, fetchClientStatusJson } from "@/lib/statusBar/clientStatusRequest";
 import { Navbar } from "./Navbar";
-import { ExperimentalNavbar } from "./ExperimentalNavbar";
+import dynamic from "next/dynamic";
+// Only one navbar variant renders at a time. Code-splitting the new one means
+// a legacy-interface player never downloads it (and vice versa) while both stay
+// server-rendered, so there is no layout shift on first paint.
+const ExperimentalNavbar = dynamic(() =>
+  import("./ExperimentalNavbar").then((m) => m.ExperimentalNavbar)
+);
 import { Wordmark } from "./Wordmark";
 import { NavbarTopFlair } from "./NavbarTopFlair";
-import { FeedbackModal } from "./FeedbackModal";
+const FeedbackModal = dynamic(
+  () => import("./FeedbackModal").then((module) => module.FeedbackModal),
+  { ssr: false }
+);
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import { getPostHogClient } from "@/lib/analytics/posthogClient";
+import { experimentalDesktopLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { experimentalMobileLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { navigationVariantForAssignment } from "@/lib/analytics/navigationVariant";
 import { CONSENT_EVENT, CONSENT_RESET_EVENT, getStoredConsent } from "@/components/CookieConsent";
 
@@ -279,7 +291,14 @@ export function NavbarWrapper({
     !!navData?.hasCharacter &&
     interfaceMode === "modern";
   const demographicsToastShown = useRef(false);
-  const statusLoadedRef = useRef(false);
+  /** The bar layout the status payload was fetched for; null until it is fetched. */
+  const statusLayoutFetchedRef = useRef<string | null>(null);
+  const statusOwnerRef = useRef<string | null>(null);
+  // The status request's URL carries the bar layout. Both consumers (this and
+  // the status bar) take it from the same hook, so they ask for the same URL and
+  // the shared request module collapses them into one.
+  const { layout: statusLayout, layoutSynced: statusLayoutSynced } = useStatusBarLayout();
+  const hasSession = useHasSession();
   const [state, dispatch] = useReducer(navbarWrapperReducer, initialState);
   const [navigationVariant, setNavigationVariant] = useState<"a" | "b">("a");
 
@@ -323,21 +342,19 @@ export function NavbarWrapper({
   const fetchStatusData = useCallback(
     async (layout: string | null | undefined, retryCount = 0) => {
       let shouldRetry = false;
-      try {
-        const res = await fetch(buildClientStatusUrl(layout), {
-          signal: AbortSignal.timeout(10_000),
-          credentials: "same-origin",
-          cache: "no-store",
-        });
+      // Shared with StatusBar, which needs the same payload: one request and one
+      // set of Mongo reads per page view instead of two.
+      const result = await fetchClientStatusJson(buildClientStatusUrl(layout), {
+        signal: AbortSignal.timeout(10_000),
+        cache: "no-store",
+      });
 
-        if (!res.ok) {
-          if (res.status >= 500 && retryCount === 0) {
-            shouldRetry = true;
-          }
-          return;
+      if (!result.ok) {
+        if ((result.status >= 500 || result.status === 0) && retryCount === 0) {
+          shouldRetry = true;
         }
-
-        const data = await res.json();
+      } else {
+        const data = result.data ?? {};
 
         if (data.status === "no-character") {
           setCharacterStats(null);
@@ -370,16 +387,12 @@ export function NavbarWrapper({
           bondIncome: data.bondIncome ?? 0,
           electionStats: data.electionStats ?? null,
         });
-      } catch {
-        if (retryCount === 0) {
-          shouldRetry = true;
-        }
-      } finally {
-        if (shouldRetry) {
-          setTimeout(() => {
-            void fetchStatusData(layout, 1);
-          }, 2_000);
-        }
+      }
+
+      if (shouldRetry) {
+        setTimeout(() => {
+          void fetchStatusData(layout, 1);
+        }, 2_000);
       }
     },
     [setCharacterStats]
@@ -468,30 +481,48 @@ export function NavbarWrapper({
 
   useEffect(() => {
     if (!singleplayer) return;
-    const refresh = () => void fetchStatusData(navData?.user?.statusBarLayout);
+    const refresh = () => void fetchStatusData(statusLayout);
     window.addEventListener("ahd:turn-complete", refresh);
     return () => window.removeEventListener("ahd:turn-complete", refresh);
-  }, [singleplayer, fetchStatusData, navData?.user?.statusBarLayout]);
+  }, [singleplayer, fetchStatusData, statusLayout]);
 
+  // A different account owns different stats. Ignore the first resolution of the
+  // bootstrap (no owner yet) so loading the page does not look like a switch and
+  // refetch the payload the mount below already asked for.
   useEffect(() => {
-    statusLoadedRef.current = false;
-  }, [navData?.user?.id, navData?.user?.character?.id]);
+    const owner = navData?.user?.id ?? null;
+    if (owner === null) return;
+    if (statusOwnerRef.current === null) {
+      statusOwnerRef.current = owner;
+      return;
+    }
+    if (statusOwnerRef.current === owner) return;
+    statusOwnerRef.current = owner;
+    statusLayoutFetchedRef.current = null;
+  }, [navData?.user?.id]);
 
   useEffect(() => {
     if (useLightweightNav || isExcludedPath) return;
-    if (authBootstrapLoading || !navData) return;
-    // Character stats are per user; a signed-out visitor would only get a 401.
-    // Singleplayer has no account user and always has its local character.
-    if (!navData.user && !singleplayer) return;
-    if (statusLoadedRef.current) return;
-    statusLoadedRef.current = true;
-    void fetchStatusData(navData.user?.statusBarLayout);
+    // Character stats are per user; a visitor with no session cookie would only
+    // get a 401. The cookie hint answers that at mount rather than after the auth
+    // bootstrap, so the payload lands one round trip earlier. Singleplayer has no
+    // account user and always has its local character.
+    if (!hasSession && !singleplayer) return;
+    // One render, not one round trip: the device layout has to be known before
+    // the URL is built, and it is read after mount.
+    if (!statusLayoutSynced) return;
+    // One fetch per layout: a layout the account preference changes still needs
+    // its own (narrower or wider) payload.
+    if (statusLayoutFetchedRef.current === statusLayout) return;
+    statusLayoutFetchedRef.current = statusLayout;
+    void fetchStatusData(statusLayout);
   }, [
-    authBootstrapLoading,
     fetchStatusData,
+    hasSession,
     isExcludedPath,
-    navData,
     singleplayer,
+    statusLayout,
+    statusLayoutSynced,
     useLightweightNav,
   ]);
 
@@ -623,6 +654,15 @@ export function NavbarWrapper({
           {useExperimentalNav ? (
             <ExperimentalNavbar
               navigationVariant={navigationVariant}
+              desktopLayout={experimentalDesktopLayout(
+                navData?.user?.experimentalFeatures,
+                navData?.user?.desktopNavigationLayout
+              )}
+              mobileLayout={experimentalMobileLayout(
+                navData?.user?.experimentalFeatures,
+                navData?.user?.mobileNavigationLayout
+              )}
+              navCustomization={navData?.user?.navCustomization}
               clientShell={clientShell}
               typedWordmark={typedWordmark}
               user={
@@ -694,12 +734,14 @@ export function NavbarWrapper({
               initialPageCountry={initialPageCountry}
             />
           )}
-          <FeedbackModal
-            isOpen={state.feedbackOpen}
-            onClose={handleCloseFeedback}
-            initialScreenshotDataUrl={state.screenshotDataUrl}
-            autoCaptureFailed={state.screenshotCaptureFailed}
-          />
+          {state.feedbackOpen && (
+            <FeedbackModal
+              isOpen
+              onClose={handleCloseFeedback}
+              initialScreenshotDataUrl={state.screenshotDataUrl}
+              autoCaptureFailed={state.screenshotCaptureFailed}
+            />
+          )}
         </>
       )}
     </>

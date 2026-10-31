@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_OPS_VOTE_MULTIPLIERS } from "@/lib/constants/countries";
+import { DEFAULT_OPS_VOTE_MULTIPLIERS } from "@/lib/constants/countriesCore";
 import { blocListQuota } from "@/lib/constants/blocList";
 
 /**

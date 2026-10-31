@@ -314,4 +314,4 @@ export function RegionTabNav({
 // ── Re-export types for consumers ──
 
 export type { SuperTabDef, SubTabDef };
-export { SUPER_TABS, LEGACY_MAP, resolveTabs };
+export { resolveTabs };

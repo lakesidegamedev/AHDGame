@@ -1,3 +1,4 @@
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { NextResponse } from "next/server";
@@ -21,7 +22,7 @@ import type { Db } from "mongodb";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Character, ElectedOfficial, CareerEvent, PoliticalParty } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
@@ -199,7 +200,7 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -244,6 +245,12 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
     if (!targetChar) {
       throw notFound("Character");
+    }
+
+    if (
+      (await getIncompatibleOfficeHolders(db, "cabinet", [characterId])).has(characterId.toString())
+    ) {
+      throw forbidden("Leave the central bank role before joining cabinet");
     }
 
     if (!targetChar.userId) {
@@ -501,7 +508,7 @@ export async function fireCabinetMemberHandler(request: Request, countryId: Coun
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -621,7 +628,7 @@ export async function resignCabinetMemberHandler(request: Request, countryId: Co
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -742,7 +749,7 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -791,6 +798,11 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
       lowerOfficial: ElectedOfficial | null;
     }
     const validated: ValidatedAppointment[] = [];
+    const bankHolders = await getIncompatibleOfficeHolders(
+      db,
+      "cabinet",
+      parsed.data.appointments.map((a) => new ObjectId(a.characterId))
+    );
 
     const runtime = await getCountryState(db, countryId);
     const isOps = runtime.governmentType === "onePartyState";
@@ -824,6 +836,9 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
       const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
       if (!targetChar) {
         throw notFound("Character");
+      }
+      if (bankHolders.has(characterIdStr)) {
+        throw forbidden("Leave the central bank role before joining cabinet");
       }
       if (!targetChar.userId) {
         throw forbidden("Can only appoint player characters to cabinet");
@@ -1039,21 +1054,4 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
   } catch (error) {
     return handleRouteError(error);
   }
-}
-
-// ── Legacy UK-specific wrappers (for backward compat) ──────────────────────
-
-/** @deprecated Use getCabinetCharactersHandler with countryId */
-export function getUKCabinetCharactersHandler(request: Request) {
-  return getCabinetCharactersHandler(request, "UK");
-}
-
-/** @deprecated Use appointCabinetMemberHandler with countryId */
-export function appointUKCabinetMemberHandler(request: Request) {
-  return appointCabinetMemberHandler(request, "UK");
-}
-
-/** @deprecated Use fireCabinetMemberHandler with countryId */
-export function fireUKCabinetMemberHandler(request: Request) {
-  return fireCabinetMemberHandler(request, "UK");
 }

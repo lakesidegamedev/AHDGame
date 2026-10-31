@@ -13,7 +13,7 @@ import {
   IPO_MIN_FLOAT_PCT,
   IPO_MAX_FLOAT_PCT,
 } from "@/lib/constants/corporations";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { computeIpoIssuance } from "@/lib/corporations/ipoIssuance";
 import {
   SUPERSHARE_MIN_MULTIPLIER,

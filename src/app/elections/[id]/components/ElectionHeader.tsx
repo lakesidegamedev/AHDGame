@@ -3,9 +3,18 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import { PhaseTag, electionPageTitle } from "./ElectionDetailHelpers";
 import type { ElectionDetail } from "./ElectionDetailTypes";
-import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
+
+// The statutory map inside the collapsed details is Japan-only and reads the
+// 72 KB 1994 constituency table, so it loads after the header paints.
+const JpStatutoryConstituencyList = dynamic(
+  () => import("./JpStatutoryConstituencyList").then((m) => m.JpStatutoryConstituencyList),
+  {
+    loading: () => <div className="mt-2 h-24 animate-pulse rounded bg-muted" aria-hidden="true" />,
+  }
+);
 
 interface ElectionHeaderProps {
   election: ElectionDetail;
@@ -80,18 +89,7 @@ export function ElectionHeader({
               <summary className="cursor-pointer font-medium">
                 1994 statutory constituency map
               </summary>
-              <ol className="mt-2 max-h-72 list-decimal space-y-1 overflow-y-auto pl-6">
-                {JP_SHUGIIN_1994_CONSTITUENCIES.filter(
-                  (district) => district.regionId === election.state
-                ).map((district, index) => (
-                  <li key={district.id}>
-                    <span className="font-medium">
-                      {index + 1}. {district.prefecture}
-                    </span>{" "}
-                    {district.statutoryBoundary}
-                  </li>
-                ))}
-              </ol>
+              <JpStatutoryConstituencyList regionId={election.state} />
             </details>
           </div>
         )}

@@ -107,24 +107,6 @@ export const TREASURY_PS_RATE_BY_COUNTRY: Record<CountryId, { national: number; 
   WAL: WAL_ECONOMY.tax.treasuryPsRate, // mirrors UK (sterling zone)
 } as const;
 
-// ─── Soft-cap slowdown bands ────────────────────────────────────────────────
-
-/**
- * Soft-cap slowdown multiplier applied to **treasury-driven** gain only.
- * Disabled 2026-06-28: flat 1.0 multiplier at all levels so treasury-driven
- * PS gain is never throttled before the hard cap.
- */
-export const SOFT_CAP_BANDS = [{ upTo: 1.0, mult: 1.0 }] as const;
-
-/**
- * Effective treasury multiplier given current PS as a fraction of cap.
- * Returns `0` when at or above cap; otherwise always 1.0 (soft cap disabled).
- */
-export function softCapMultiplier(currentPctOfCap: number): number {
-  if (currentPctOfCap >= 1) return 0;
-  return 1.0;
-}
-
 // ─── Pressure ladder ────────────────────────────────────────────────────────
 
 /**
@@ -323,7 +305,7 @@ export const PRIORITY_REGION_GOVERNOR_ANCHOR_BONUS = 1 as const;
  * Retained purely as part of the rate derivation; the removed phantom stream it
  * was once a "premium over" no longer exists.
  */
-export const PS_INVESTMENT_PREMIUM_VS_PHANTOM = 250_000 / 75_000;
+const PS_INVESTMENT_PREMIUM_VS_PHANTOM = 250_000 / 75_000;
 
 /**
  * Spend-rate discount (2026-06-25 rebalance). The explicit `+1 PS` cost is `5%`
@@ -332,7 +314,7 @@ export const PS_INVESTMENT_PREMIUM_VS_PHANTOM = 250_000 / 75_000;
  * (different) base rate, just 20× cheaper. Makes the spend lever materially
  * useful instead of a token nudge.
  */
-export const PS_INVESTMENT_RATE_FRACTION = 0.05 as const;
+const PS_INVESTMENT_RATE_FRACTION = 0.05 as const;
 
 /**
  * Maximum PS/turn from the explicit investment budget. Raised `4 → 20`
