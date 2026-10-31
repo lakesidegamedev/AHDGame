@@ -5,7 +5,6 @@
 import type { CorporateSector } from "@/lib/db/types";
 import { NPV_ANNUAL_DISCOUNT_RATE } from "@/lib/constants/corporations";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { sectorNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import {
   BOOK_DEPRECIATION_FACTOR,
   sectorCapacityBookAnchor,
@@ -35,7 +34,6 @@ export function fundedSectorValuation(args: {
         BOOK_DEPRECIATION_FACTOR,
       turnsPerYear: TURNS_PER_YEAR,
       annualDiscountRate: NPV_ANNUAL_DISCOUNT_RATE,
-      npvBoostMultiplier: sectorNpvBoostMultiplier(args.currentTurn),
     }),
     realOutputAnchor: fundedRealOutputAnchor(receipt.soldUnits, result.outputMixPriceAnchor ?? 0),
   };
