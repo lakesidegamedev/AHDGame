@@ -106,7 +106,10 @@
     },
     "sections": {
       "accountProfile": { "label": "Profil", "summary": "Benutzername & E-Mail" },
-      "identity": { "label": "Verknüpfte Konten", "summary": "Discord, Google" },
+      "identity": {
+        "label": "Verknüpfte Konten",
+        "summary": "Discord, Google"
+      },
       "appearance": { "label": "Darstellung", "summary": "Design und Oberflächenstil" },
       "patreon": { "label": "Patreon", "summary": "Unterstützervorteile" },
       "supporterPerks": {
@@ -342,6 +345,9 @@
       "saveBio": "Bio speichern"
     },
     "identity": {
+      "discordRequirementFailed": "Die Discord-Anforderung konnte nicht geprüft werden. Lade die Einstellungen erneut.",
+      "discordRequirementLoading": "Discord-Verknüpfung wird geprüft.",
+      "discordUnlinkRequired": "Discord kann nicht getrennt werden, solange Discord für neue Charaktere erforderlich ist.",
       "intro": "Verknüpfe deine Social-Konten, damit andere Spieler dich kontaktieren können.",
       "comingSoon": "Bald verfügbar",
       "googleDev": "Google-Anmeldung ist in Entwicklung",

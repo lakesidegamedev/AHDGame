@@ -1,3 +1,5 @@
+import { getNewCorporationFoundingBarrier } from "@/lib/character/newCharacterTransferBarrier";
+import { getGameTime } from "@/lib/time/gameTime";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { NextResponse } from "next/server";
 import { purchasedHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
@@ -367,6 +369,21 @@ export async function POST(request: Request) {
     // corporation ends. currentTurnAtFounding is reused below for founding records.
     const foundingGameState = await getGameState();
     const currentTurnAtFounding = foundingGameState?.currentTurn ?? 0;
+    const foundingClock = await getGameTime();
+    const newFounderBarrier = getNewCorporationFoundingBarrier(
+      character,
+      currentTurnAtFounding,
+      foundingClock.effectiveNow.getTime(),
+      foundingGameState?.preIteration?.active === true
+    );
+    if (newFounderBarrier.blocked) {
+      return errorResponse(
+        403,
+        `New characters can found a corporation after 48 turns. You can found in ${newFounderBarrier.remainingTurns} turn(s).`,
+        { extra: { remainingTurns: newFounderBarrier.remainingTurns } }
+      );
+    }
+
     const founderUser = await db
       .collection<User>("users")
       .findOne(

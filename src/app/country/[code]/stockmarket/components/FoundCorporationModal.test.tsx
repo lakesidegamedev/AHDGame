@@ -70,7 +70,7 @@ describe("FoundCorporationModal — founding cooldown (Bug #0728)", () => {
         foundingCooldownTurnsRemaining={42}
       />
     );
-    expect(screen.getByText(/found another corporation in 42 turns/i)).toBeTruthy();
+    expect(screen.getByText(/found a corporation in 42 turns/i)).toBeTruthy();
     const foundButton = screen.getByRole("button", { name: /Found Corporation/i });
     expect((foundButton as HTMLButtonElement).disabled).toBe(true);
   });
@@ -86,7 +86,7 @@ describe("FoundCorporationModal — founding cooldown (Bug #0728)", () => {
         foundingCooldownTurnsRemaining={0}
       />
     );
-    expect(screen.queryByText(/found another corporation in/i)).toBeNull();
+    expect(screen.queryByText(/found a corporation in/i)).toBeNull();
   });
 });
 

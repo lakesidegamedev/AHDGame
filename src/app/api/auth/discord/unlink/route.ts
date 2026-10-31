@@ -12,11 +12,11 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { withNoStore } from "@/lib/api/withNoStore";
-import type { User } from "@/lib/db/types";
+import type { GameConfig, User } from "@/lib/db/types";
 
-// POST /api/auth/discord/unlink — Removes the Discord account link from the authenticated user's profile.
+// POST /api/auth/discord/unlink - Removes the Discord account link from the authenticated user's profile.
 // Auth: requireBasicAuth
-// Errors: 400, 401, 404, 409, 429, 503
+// Errors: 400, 401, 403, 404, 409, 429, 503
 // Every path is per-account: withNoStore stamps the early rate-limit and
 // outer error responses that carry no explicit Cache-Control header.
 export const POST = withNoStore(async function POST() {
@@ -61,6 +61,17 @@ export const POST = withNoStore(async function POST() {
       return errorResponse(
         400,
         "Cannot remove your last sign-in method. Set a password or link another account first.",
+        { headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
+    const config = await db
+      .collection<GameConfig>("gameConfig")
+      .findOne({ _id: "default" }, { projection: { discordLinkRequiredForCharacter: 1 } });
+    if (config?.discordLinkRequiredForCharacter === true) {
+      return errorResponse(
+        403,
+        "Discord cannot be unlinked while Discord for new characters is enabled.",
         { headers: { "Cache-Control": "private, no-store" } }
       );
     }

@@ -499,3 +499,35 @@ describe("updateSupplyAgreement", () => {
     expect(db.collectionMocks.supplyAgreements.updateOne).not.toHaveBeenCalled();
   });
 });
+
+it("blocks a negotiated supply commitment funded by a new character", async () => {
+  const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+  vi.mocked(resolveCorporation).mockResolvedValue({
+    ok: true,
+    corporation: {
+      _id: supplierId,
+      ceoId: new ObjectId(),
+      ceoType: "character",
+      userId: new ObjectId(),
+    },
+  } as never);
+  db.collection("characters").findOne.mockResolvedValue({ createdTurn: 100 });
+  db.collection("gameState").findOne.mockResolvedValue({ currentTurn: 147 });
+  const { proposeSupplyAgreement } = await import("./supplyAgreements");
+  const response = await proposeSupplyAgreement(
+    new Request("http://localhost/api/supply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        buyerCorpId: buyerId.toString(),
+        commodity: "freight",
+        volumeCap: 100,
+        pricePremium: 0,
+      }),
+    }),
+    supplierId.toString()
+  );
+  expect(response.status).toBe(403);
+  expect((await response.json()).error).toContain("48 turns");
+  expect(db.collection("supplyAgreements").insertOne).not.toHaveBeenCalled();
+});

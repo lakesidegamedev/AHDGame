@@ -1,28 +1,24 @@
+import { controllerTransferBarrierError } from "./controllerTransferBarrier";
+import { referenceValuation, type ReferenceValuation } from "./referenceValuation";
+export {
+  referenceValuation,
+  referenceValuationAnchor,
+  type ReferenceValuation,
+} from "./referenceValuation";
 import { ObjectId, type Db } from "mongodb";
-import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type {
   AcquisitionOffer,
   AcquisitionOfferStatus,
   AcquisitionOutcome,
 } from "@/lib/db/types/acquisitionOffer";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
-import { buildPrimeRateMap } from "@/lib/bonds/corporateBondDefault";
-import { sectorExitValueAnchor } from "@/lib/bonds/sectorExitBasis";
-import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import { getGameState } from "@/lib/gameState";
-import { computeWholeCorpValuation } from "@/lib/nationalization/compensation";
-import {
-  corpLiquidCapitalToAnchor,
-  getCorpFxRate,
-  loadFxRatesByCurrency,
-} from "@/lib/currency/corporationCapital";
 import { createNotification } from "@/lib/notifications";
 import { executeAgreedAcquisition } from "./executeAgreedAcquisition";
 import {
   compensateAcquisitionSettlement,
   loadAcquisitionSettlement,
 } from "./acquisitionSettlement";
-import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { acquisitionsBarredByDivestiture } from "@/lib/corporations/mergerReview/gate";
 import { checkSubsidiaryAcquisition } from "./subsidiaryOutcome";
 import { acquisitionOutcomeOf } from "./rules/subsidiaryOutcome";
@@ -31,7 +27,6 @@ import {
   isNppAutoResolvableTarget,
   meetsNppAcquisitionThreshold,
   nppAcquisitionMinimumPrice,
-  playerAcquisitionMinimumPrice,
 } from "./rules";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
@@ -39,66 +34,11 @@ const OFFERS = "acquisitionOffers";
 
 type Result<T = object> = { ok: false; error: string; status: number } | ({ ok: true } & T);
 
-export interface ReferenceValuation {
-  /** Canonical whole-corp reference valuation (₳). */
-  valuationAnchor: number;
-  /** The target's cash (₳). */
-  liquidCapitalAnchor: number;
-  /** Exit value of the target's sectors (₳). */
-  sectorNpvAnchor: number;
-}
-
-/** Canonical whole-corp reference valuation (₳) for display + a fair-value anchor. */
-export async function referenceValuationAnchor(db: Db, target: Corporation): Promise<number> {
-  return (await referenceValuation(db, target)).valuationAnchor;
-}
-
-/** The reference valuation with the balance-sheet parts it was built from. */
-export async function referenceValuation(db: Db, target: Corporation): Promise<ReferenceValuation> {
-  const [sectors, centralBanks, fxByCurrency, targetFxRate, marketMode, gameState] =
-    await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: target._id })
-        .toArray(),
-      db.collection<CentralBank>("centralBanks").find({}).toArray(),
-      loadFxRatesByCurrency(db),
-      getCorpFxRate(db, target),
-      getMarketSystemModeForDb(db),
-      getGameState(db),
-    ]);
-  const primeMap = buildPrimeRateMap(centralBanks);
-  // D11 — the sector leg of balance-sheet equity is replacement-cost BOOK under
-  // plants. An acquirer buying a corp whose value is its plants must be quoted
-  // the plants, not a capitalized earnings stream that the same tier already
-  // stopped using for every other exit (dissolution, restructuring, taking).
-  const sectorNpvAnchor = sectorExitValueAnchor(sectors, primeMap, target, fxByCurrency, {
-    plantsEnabled: marketAtLeast(marketMode, "plants"),
-    currentYear: gameState?.currentYear,
-    currentTurn: gameState?.currentTurn,
-    eraUnitScale: await loadWorldEraUnitScale(db),
-    excludeGrowthCost: true,
-  });
-  const liquidCapitalAnchor = corpLiquidCapitalToAnchor(
-    target.liquidCapital ?? 0,
-    target,
-    targetFxRate
-  );
-  const sharePriceAnchor = corpLiquidCapitalToAnchor(target.sharePrice ?? 0, target, targetFxRate);
-  const valuationAnchor = computeWholeCorpValuation({
-    sharePrice: sharePriceAnchor,
-    totalShares: target.totalShares ?? 0,
-    balanceSheetEquity: liquidCapitalAnchor + sectorNpvAnchor,
-    debt: 0, // v1 blocks bonded targets, so no debt to net out
-  });
-  return { valuationAnchor, liquidCapitalAnchor, sectorNpvAnchor };
-}
-
 /**
  * Refuses a player-run deal that would move a company's money to the buyer
  * for less than it holds, or that buys a company founded or floated this turn.
  */
-function playerTargetDealError(
+export function playerTargetDealError(
   target: Corporation,
   valuation: ReferenceValuation,
   priceAnchor: number,
@@ -106,11 +46,7 @@ function playerTargetDealError(
 ): string | null {
   if (acquisitionBlockedAsNewThisTurn(target, currentTurn))
     return "A corporation founded or floated this turn cannot be acquired until next turn.";
-  const { liquidCapitalAnchor, sectorNpvAnchor } = valuation;
-  const minimum = playerAcquisitionMinimumPrice({
-    cashAnchor: liquidCapitalAnchor,
-    otherAssetsAnchor: sectorNpvAnchor,
-  });
+  const minimum = valuation.minimumPriceAnchor;
   if (priceAnchor < minimum)
     return (
       `The price must be at least ₳${minimum.toLocaleString("en-US")}, ` +
@@ -206,6 +142,15 @@ export async function proposeAcquisitionOffer(
     if (!eligibility.ok) return { ok: false, error: eligibility.error, status: eligibility.status };
   }
 
+  for (const corporation of [acquirer, freshTarget]) {
+    const restriction = await controllerTransferBarrierError(
+      db,
+      corporation,
+      currentTurn,
+      new Date()
+    );
+    if (restriction) return { ok: false, error: restriction, status: 403 };
+  }
   const valuation = await referenceValuation(db, freshTarget);
   const valuationAnchor = Math.round(valuation.valuationAnchor);
   if (!isNppAutoResolvableTarget(freshTarget)) {

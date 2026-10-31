@@ -1,3 +1,4 @@
+import { referenceValuation } from "./referenceValuation";
 /**
  * Offer-layer guard over the durable acquisition settlement (issue #2017).
  *
@@ -279,6 +280,7 @@ describe("acceptAcquisitionOffer settlement close-out", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("refuses to accept once the target holds more cash than the price, moving nothing", async () => {
+    vi.mocked(referenceValuation).mockResolvedValueOnce({ minimumPriceAnchor: 5_000_000 } as never);
     // Default world: the target holds 5M and the pending offer pays 1M.
     const w = buildAcquisitionWorld({});
     const r = await acceptAcquisitionOffer(w.db, { offer: w.offer as never, currentTurn: 200 });
@@ -337,3 +339,18 @@ describe("acceptAcquisitionOffer settlement close-out", () => {
     expect((await loadAcquisitionSettlement(w.db, w.offerId))?.status).toBe("applied");
   });
 });
+
+// These fixtures exercise settlement/recovery, including legacy negotiated prices.
+// The independent safeguards suite exercises real valuation and first-run rejection.
+vi.mock("./referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({
+    valuationAnchor: 0,
+    minimumPriceAnchor: 0,
+    liquidCapitalAnchor: 0,
+    sectorNpvAnchor: 0,
+    portfolioAnchor: 0,
+    bankEquityAnchor: 0,
+    debtAnchor: 0,
+  }),
+  referenceValuationAnchor: vi.fn().mockResolvedValue(0),
+}));

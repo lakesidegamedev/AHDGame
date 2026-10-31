@@ -87,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You cannot transfer funds to politicians from other countries");
     }
 
-    // New characters cannot send money for their first 24 turns (anti-abuse).
+    // New characters cannot send money for their first 48 turns (anti-abuse).
     const gameTime = await getGameTime();
     const barrier = getNewCharacterTransferBarrier(
       sender,
