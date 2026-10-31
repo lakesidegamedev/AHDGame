@@ -8,6 +8,11 @@ vi.mock("@/lib/mechanicalLaws/guards", () => ({
   assertSubsidiaryWithinCap: vi.fn().mockResolvedValue(null),
   wouldGainControl: vi.fn().mockReturnValue(false),
 }));
+// This suite isolates charter transfer and compensation. Net-asset pricing is
+// exercised with real accounting in acquisitionSafeguards.test.ts.
+vi.mock("@/lib/corporations/commands/acquisitions/referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({ minimumPriceAnchor: 0, portfolioAnchor: 0 }),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireCorporationActions", () => ({
   requireCorporationActionsEnabled: vi.fn(),
