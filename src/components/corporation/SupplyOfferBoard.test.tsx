@@ -102,3 +102,36 @@ it("takes a listed offer for a chosen quantity", async () => {
   expect(call![0]).toBe("/api/corporations/self/supply-listings/take");
   expect(JSON.parse(call![1].body)).toEqual({ listingId: "other:0", volume: 40 });
 });
+it("explains an offer this corporation could never receive and hides its take controls", async () => {
+  const reason =
+    "Real estate services only reaches plants in the same state. Your corporation has no active plant in DC that uses it, so this contract could never deliver.";
+  const listing = {
+    id: "other:0",
+    corporationId: "other",
+    corporationName: "Other Co",
+    slot: 0,
+    own: false,
+    side: "sell",
+    commodity: "real_estate_services",
+    stateId: "DC",
+    volumeCap: 30,
+    pricePremium: 0,
+    expiresAtTurn: 200,
+    unreachableReason: reason,
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ listings: [listing], ownListings: [], hasMore: false }),
+    })
+  );
+  render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <SupplyOfferBoard corpId="self" onRespond={vi.fn()} />
+    </NextIntlClientProvider>
+  );
+  await waitFor(() => expect(screen.getByText(reason)).toBeTruthy());
+  expect(screen.queryByText("Take offer")).toBeNull();
+  expect(screen.queryByText("Negotiate")).toBeNull();
+});

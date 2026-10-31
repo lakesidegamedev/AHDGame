@@ -66,6 +66,7 @@ export const PRESERVED: CollectionEntry[] = [
     notes: "Registry of which deploy migrations have run. MUST NOT be reset.",
   },
   { name: "bannedIps", category: "preserved" },
+  { name: "bannedDevices", category: "preserved" },
   { name: "botApiKeys", category: "preserved" },
   { name: "botApiRequestLog", category: "preserved" },
   { name: "userApiKeys", category: "preserved" },

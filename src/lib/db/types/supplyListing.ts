@@ -46,4 +46,6 @@ export interface SupplyListingView {
   pricePremium: number;
   durationTurns?: number;
   expiresAtTurn: number;
+  /** Why the viewing corporation's plants could never receive this offer, when they could not. */
+  unreachableReason?: string;
 }

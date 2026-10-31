@@ -345,6 +345,7 @@ export type {
 } from "./activityLog";
 export type { SiteTrafficPageview } from "./siteTrafficPageview";
 export type { BannedIp } from "./bannedIp";
+export type { BannedDevice, BannedDeviceKind } from "./bannedDevice";
 export type { StateResourceCapacity } from "./stateResourceCapacity";
 export type { CountryHistoryEvent, CountryHistoryEventType } from "./countryHistoryEvent";
 export type { AlignmentCrisis } from "./alignmentCrisis";

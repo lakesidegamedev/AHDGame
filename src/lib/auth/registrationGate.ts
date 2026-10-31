@@ -3,7 +3,7 @@ import { forbidden } from "@/lib/api/errors";
 import { getRegistrationIpMatchCandidates, normalizeIp } from "@/lib/utils/ipNormalize";
 import { LEGACY_FINGERPRINT_LENGTH } from "@/lib/utils/fingerprint";
 import { isCgnatProneDevice, type DeviceClass } from "@/lib/utils/userAgent";
-import type { BannedIp, GameConfig, User } from "@/lib/db/types";
+import type { BannedDevice, BannedIp, GameConfig, User } from "@/lib/db/types";
 
 interface RegistrationSignals {
   clientIp: string;
@@ -54,6 +54,8 @@ function fingerprintMatchCandidates(fingerprint: string | null | undefined): str
  *   2. IP normalization — "unknown"/unparseable values allow through (we
  *      cannot match them against any rule).
  *   3. Manual ban row → block (always applies, regardless of toggle).
+ *   3b. Banned device row (deviceKey / trackingId / fingerprint) → block
+ *      (always applies, regardless of toggle; survives account deletion).
  *   4. If gameConfig.ipCollisionCheckEnabled !== true, allow.
  *   5. Block exact browser-cookie / fingerprint / device-key reuse against
  *      existing users. Always blocks — these are stable per-browser signals,
@@ -98,6 +100,22 @@ export async function assertRegistrationAllowed(
     throw forbidden("Registration is not available from this location.");
   }
 
+  const fingerprintCandidates = fingerprintMatchCandidates(fingerprint);
+  const bannedDeviceClauses: Record<string, unknown>[] = [];
+  if (deviceKey) bannedDeviceClauses.push({ kind: "deviceKey", value: deviceKey });
+  if (trackingId) bannedDeviceClauses.push({ kind: "trackingId", value: trackingId });
+  if (fingerprintCandidates.length > 0) {
+    bannedDeviceClauses.push({ kind: "fingerprint", value: { $in: fingerprintCandidates } });
+  }
+  if (bannedDeviceClauses.length > 0) {
+    const bannedDevice = await db
+      .collection<BannedDevice>("bannedDevices")
+      .findOne({ $or: bannedDeviceClauses }, { projection: { _id: 1 } });
+    if (bannedDevice) {
+      throw forbidden("Registration is not available from this device.");
+    }
+  }
+
   if (config?.ipCollisionCheckEnabled !== true) return {};
 
   const browserCollisionClauses: Record<string, unknown>[] = [];
@@ -107,7 +125,6 @@ export async function assertRegistrationAllowed(
   if (deviceKey) {
     browserCollisionClauses.push({ deviceKey });
   }
-  const fingerprintCandidates = fingerprintMatchCandidates(fingerprint);
   if (fingerprintCandidates.length > 0) {
     browserCollisionClauses.push(
       { registrationFingerprint: { $in: fingerprintCandidates } },

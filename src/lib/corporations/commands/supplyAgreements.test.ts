@@ -72,6 +72,8 @@ describe("proposeSupplyAgreement", () => {
           productionPolicyLevel: 0,
           stateId: "TX",
         },
+        // A buyer plant that consumes the commodity, so delivery is possible.
+        { sectorType: "manufacturing", capitalStock: 0, strategyId: "standard", stateId: "TX" },
       ])
     );
     db.collection("gameState").findOne.mockResolvedValue({ currentTurn: 10, currentYear: 1953 });
@@ -178,6 +180,8 @@ describe("proposeSupplyAgreement", () => {
           productionPolicyLevel: 0,
           stateId: "TX",
         },
+        // A buyer plant that consumes the commodity, so delivery is possible.
+        { sectorType: "construction", capitalStock: 0, strategyId: "standard", stateId: "TX" },
       ])
     );
     db.collection("gameState").findOne.mockResolvedValue({ currentTurn: 12, currentYear: 1953 });
@@ -243,6 +247,8 @@ describe("proposeSupplyAgreement", () => {
           strategyId: "standard",
           stateId: "TX",
         },
+        // A buyer plant that consumes the commodity, so delivery is possible.
+        { sectorType: "construction", capitalStock: 0, strategyId: "standard", stateId: "TX" },
       ])
     );
     const response = await propose({
@@ -257,6 +263,58 @@ describe("proposeSupplyAgreement", () => {
       stateId?: string;
     };
     expect(doc.stateId).toBeUndefined();
+  });
+
+  it("refuses a local service contract in a state where the buyer has no plant", async () => {
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: { _id: buyerId, userId: new ObjectId() },
+    } as never);
+    seedFreightSupplier();
+    db.collection("states").findOne.mockResolvedValue({ _id: "DC" });
+    db.collection("corporations").findOne.mockResolvedValue({ _id: supplierId, name: "Estates" });
+    // The supplier leases offices in DC; the buyer's clinics are in TX and OH.
+    db.collection("corporateSectors").find.mockImplementation(
+      (filter: { corporationId: ObjectId }) =>
+        createAsyncIterableCursor(
+          filter.corporationId.equals(supplierId)
+            ? [
+                {
+                  sectorType: "real_estate",
+                  capitalStock: 10_000,
+                  strategyId: "standard",
+                  stateId: "DC",
+                },
+              ]
+            : [
+                { sectorType: "healthcare", strategyId: "standard", stateId: "TX" },
+                { sectorType: "healthcare", strategyId: "standard", stateId: "OH" },
+              ]
+        )
+    );
+    const { proposeSupplyAgreement } = await import("./supplyAgreements");
+    const response = await proposeSupplyAgreement(
+      new Request("http://localhost/api/corporations/buyer/supply-agreements", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          supplierCorpId: supplierId.toString(),
+          commodity: "real_estate_services",
+          stateId: "DC",
+          volumeCap: 10,
+          pricePremium: 0,
+          exclusive: true,
+        }),
+      }),
+      buyerId.toString()
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("only reaches plants in the same state");
+    expect(body.error).toContain("OH, TX");
+    expect(db.collectionMocks.supplyAgreements.insertOne).not.toHaveBeenCalled();
   });
 
   it("rejects freight because corporation-wide agreements have no state identity", async () => {
@@ -350,6 +408,8 @@ describe("updateSupplyAgreement", () => {
           productionPolicyLevel: 0,
           stateId: "TX",
         },
+        // A buyer plant that consumes the commodity, so delivery is possible.
+        { sectorType: "construction", capitalStock: 0, strategyId: "standard", stateId: "TX" },
       ])
     );
     db.collection("gameState").findOne.mockResolvedValue({ currentTurn: 20, currentYear: 1953 });
