@@ -137,6 +137,7 @@ describe("runtime lifecycle category determines reset selection", () => {
     "users",
     "unifiedSessions",
     "bannedIps",
+    "bannedDevices",
     "userApiKeys",
     "userSubscriptions",
     // Identity and moderation evidence

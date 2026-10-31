@@ -11,6 +11,7 @@ describe("assertRegistrationAllowed", () => {
     // Eagerly instantiate the mocks for the collections the gate touches.
     db.collection("gameConfig");
     db.collection("bannedIps");
+    db.collection("bannedDevices");
     db.collection("users");
   });
 
@@ -23,6 +24,53 @@ describe("assertRegistrationAllowed", () => {
   const setUserCount = (n: number) => {
     db.collectionMocks.users.countDocuments.mockResolvedValue(n);
   };
+
+  describe("banned devices", () => {
+    const refuse = (signals: Record<string, unknown>) =>
+      assertRegistrationAllowed(db as unknown as Db, { clientIp: "1.2.3.4", ...signals });
+
+    it.each([
+      ["deviceKey", { deviceKey: "dk-1" }],
+      ["trackingId", { trackingId: "tid-1" }],
+      ["fingerprint", { fingerprint: "fp-1" }],
+    ])("refuses a banned %s even with the collision check off", async (_kind, signals) => {
+      setConfig({ registrationEnabled: true, ipCollisionCheckEnabled: false });
+      setBannedIp(null);
+      db.collectionMocks.bannedDevices.findOne.mockResolvedValue({ _id: "row" });
+      await expect(refuse(signals)).rejects.toMatchObject({
+        status: 403,
+        message: "Registration is not available from this device.",
+      });
+    });
+
+    it("queries every provided signal, including the legacy fingerprint prefix", async () => {
+      setConfig({ registrationEnabled: true, ipCollisionCheckEnabled: false });
+      setBannedIp(null);
+      db.collectionMocks.bannedDevices.findOne.mockResolvedValue(null);
+      const fingerprint = "a".repeat(64);
+      await refuse({ deviceKey: "dk-1", trackingId: "tid-1", fingerprint });
+      const [filter] = db.collectionMocks.bannedDevices.findOne.mock.calls[0];
+      expect(filter.$or).toEqual([
+        { kind: "deviceKey", value: "dk-1" },
+        { kind: "trackingId", value: "tid-1" },
+        { kind: "fingerprint", value: { $in: [fingerprint, "a".repeat(16)] } },
+      ]);
+    });
+
+    it("allows when no banned device matches", async () => {
+      setConfig({ registrationEnabled: true, ipCollisionCheckEnabled: false });
+      setBannedIp(null);
+      db.collectionMocks.bannedDevices.findOne.mockResolvedValue(null);
+      await expect(refuse({ deviceKey: "dk-1", trackingId: "tid-1" })).resolves.toEqual({});
+    });
+
+    it("skips the lookup when no device signal is provided", async () => {
+      setConfig({ registrationEnabled: true, ipCollisionCheckEnabled: false });
+      setBannedIp(null);
+      await expect(refuse({})).resolves.toEqual({});
+      expect(db.collectionMocks.bannedDevices.findOne).not.toHaveBeenCalled();
+    });
+  });
 
   it("throws 403 when registration is closed", async () => {
     setConfig({ registrationEnabled: false });
