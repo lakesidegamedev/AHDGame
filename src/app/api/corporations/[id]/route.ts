@@ -395,6 +395,8 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
             // Also a ratio, and the same class of intel as the exact fill rate:
             // it names which of this corp's plants cannot reach their market.
             row.deliveryLimitedFraction = null;
+            // Same class of intel: who a rival's output goes to.
+            row.ownSiteShare = null;
           }
         }
         const corpPhysical = corpObj?.physical as Record<string, unknown> | null | undefined;

@@ -592,6 +592,7 @@ export function SectorRow({
               capacity={sector.capacityUnits}
               fill={sector.fillRate}
               band={sector.fillRateBand}
+              ownSiteShare={sector.ownSiteShare}
               plantCount={plantCount}
               className="items-end"
             />
@@ -773,6 +774,7 @@ export function SectorRow({
                     capacity={sector.capacityUnits}
                     fill={sector.fillRate}
                     band={sector.fillRateBand}
+                    ownSiteShare={sector.ownSiteShare}
                     plantCount={plantCount}
                   />
                 </dd>
