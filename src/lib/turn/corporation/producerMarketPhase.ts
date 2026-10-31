@@ -80,6 +80,7 @@ export async function runCorporationProducerMarket(
       | "eligibleOffersByOrder"
       | "spilloverShare"
       | "stockCoverTurns"
+      | "clearingPriceByLane"
       | "countryOfProducer"
       | "trackCountryBooks"
       | "credit"

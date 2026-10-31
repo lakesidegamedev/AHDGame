@@ -8,6 +8,48 @@ export interface CountyPopulation {
   population: number;
 }
 
+export type CountyBaselineYear = 1950 | 1979 | 1991 | 1999 | 2007 | 2019 | 2023 | 2025;
+export type CountyPopulationBaseline = "census-vintage-2019" | `census-${CountyBaselineYear}`;
+
+/** Use a preceding census for 1953 and the latest completed estimate for 2027. */
+export function countyBaselineYear(preset?: string | null): CountyBaselineYear {
+  const years: Readonly<Record<string, CountyBaselineYear>> = {
+    "1953-default": 1950,
+    "1979-default": 1979,
+    "1991-default": 1991,
+    "1999-default": 1999,
+    "2007-default": 2007,
+    "2023-default": 2023,
+    "2027-default": 2025,
+  };
+  return (Object.hasOwn(years, preset ?? "") ? years[preset ?? ""] : undefined) ?? 2019;
+}
+
+/** Never mix raw counts from different eras or double-count unmatched county boundaries.
+ * A partial/incompatible state roster uses the complete proportional baseline instead.
+ */
+export function selectCountyPopulationBaseline(
+  reference: readonly CountyPopulation[],
+  historical: readonly CountyPopulation[],
+  year: CountyBaselineYear
+): { weights: CountyPopulation[]; populationBaseline: CountyPopulationBaseline } {
+  countyPopulationTotal(reference);
+  const historicalTotal = countyPopulationTotal(historical);
+  const byId = new Map(historical.map((row) => [row.id, row.population]));
+  const complete =
+    year !== 2019 &&
+    historicalTotal > 0 &&
+    historical.length === reference.length &&
+    reference.every((row) => byId.has(row.id));
+  return {
+    weights: reference.map((row) => ({
+      id: row.id,
+      population: complete ? byId.get(row.id)! : row.population,
+    })),
+    populationBaseline: complete ? `census-${year}` : "census-vintage-2019",
+  };
+}
+
 function assertPopulation(value: number): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error("Invalid county population");
 }
