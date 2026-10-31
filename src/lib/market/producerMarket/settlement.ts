@@ -207,12 +207,17 @@ function physicalWrite(
 
 function inventoryImages(frozen: FrozenProducerTurn, closing: boolean) {
   const producers = closing ? frozen.result.producers : frozen.request.producers;
+  // A plant opens at its own generation: the previous turn, or an earlier
+  // settled turn when the economy step missed turns in between.
+  const opening = new Map(
+    frozen.targets.map((target) => [target.producerId, target.capacity.completedTurn])
+  );
   return new Map(
     producers.map((producer) => [
       producer.id,
       {
         worldEpoch: frozen.worldEpoch,
-        turn: frozen.request.turn - (closing ? 0 : 1),
+        turn: closing ? frozen.request.turn : (opening.get(producer.id) ?? frozen.request.turn - 1),
         inputStock: [...producer.inputStock],
         outputStock: [...producer.outputStock],
       },

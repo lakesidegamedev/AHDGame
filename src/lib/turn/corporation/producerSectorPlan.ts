@@ -5,7 +5,10 @@ import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import { clampPricingPosture } from "@/lib/market/costPlusPricing/rules";
 import { isStorable } from "@/lib/market/inventory";
-import { advanceProducerCapacity } from "@/lib/market/producerMarket/capacityRules";
+import {
+  advanceProducerCapacity,
+  PRODUCER_CATCH_UP_TURNS,
+} from "@/lib/market/producerMarket/capacityRules";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import type { ProductionPlan } from "@/lib/market/producerMarket/production";
 import type { ProducerQuotePolicy } from "@/lib/market/producerMarket/rules";
@@ -77,16 +80,27 @@ export function prepareProducerSector(input: {
   operatingRecipientAccountId: string;
   /** gameConfig.wholePlantsStage on: capacity moves in whole plants. */
   wholePlants?: boolean;
+  /**
+   * Last settled producer turn when it lags the previous turn because an
+   * economy step failed. A plant may open anywhere from it to the previous
+   * turn; absent means the previous turn exactly.
+   */
+  openingTurn?: number;
 }): { plan: ProductionPlan; target: ProducerSectorTarget } {
   const { sector } = input;
   const generation = sector.producerCapacity;
   const inventory = sector.producerInventory;
+  const oldest = input.openingTurn ?? input.turn - 1;
   if (
+    !Number.isSafeInteger(oldest) ||
+    oldest > input.turn - 1 ||
+    oldest < input.turn - 1 - PRODUCER_CATCH_UP_TURNS ||
     !generation ||
     !inventory ||
     generation.worldEpoch !== input.worldEpoch ||
     inventory.worldEpoch !== input.worldEpoch ||
-    generation.turn !== input.turn - 1 ||
+    generation.turn > input.turn - 1 ||
+    generation.turn < oldest ||
     inventory.turn !== generation.turn
   )
     throw new Error("Producer sector requires a reconciled opening generation");
