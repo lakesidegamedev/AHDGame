@@ -83,6 +83,7 @@ import { fundedShortageBuildOps } from "./sectorTurn/shortageBuildSpeedup";
 import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
+import { PRODUCER_CATCH_UP_TURNS } from "@/lib/market/producerMarket/capacityRules";
 import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
 import {
   createProducerWallets,
@@ -107,6 +108,34 @@ export { producerStageEnv } from "./producerStageEnv";
 const PUBLIC_CARRY = "producerPublicCarry";
 
 /**
+ * The last settled funded producer turn this turn opens from. Normally the
+ * previous turn; when a turn's economy step failed before freezing, an earlier
+ * one, and the missed turns produce nothing. A frozen but unsettled turn, or a
+ * gap longer than PRODUCER_CATCH_UP_TURNS, stops the turn instead.
+ */
+export async function readProducerOpeningTurn(
+  db: Db,
+  worldEpoch: string,
+  turn: number
+): Promise<number> {
+  const last = await db
+    .collection<{ _id: string; turn: number; status: string }>("producerEconomyTurns")
+    .find({ worldEpoch, turn: { $lt: turn } }, { projection: { turn: 1, status: 1 } })
+    .sort({ turn: -1 })
+    .limit(1)
+    .next();
+  // No funded turn yet: the opening conversion is the previous turn.
+  if (!last) return turn - 1;
+  if (last.status !== "settled")
+    throw new Error(`Funded producer turn ${last.turn} was frozen but never settled`);
+  if (turn - 1 - last.turn > PRODUCER_CATCH_UP_TURNS)
+    throw new Error(
+      `Funded producer market last settled turn ${last.turn}, more than ${PRODUCER_CATCH_UP_TURNS} turns before turn ${turn}`
+    );
+  return last.turn;
+}
+
+/**
  * Last turn's kept public funding per country, capped at what each public
  * wallet really holds before this turn's funding lands, so a stale or partly
  * burned carry can never promise more than the wallet has.
@@ -114,14 +143,14 @@ const PUBLIC_CARRY = "producerPublicCarry";
 async function readPublicCarryIn(
   db: Db,
   worldEpoch: string,
-  turn: number,
+  openingTurn: number,
   countryIds: readonly string[],
   walletOf: (countryId: string) => string,
   rateOfCountry: (countryId: string) => number
 ): Promise<Map<string, LineCarry>> {
   const doc = await db
     .collection<{ _id: string; byCountry?: Record<string, LineCarry> }>(PUBLIC_CARRY)
-    .findOne({ _id: `${worldEpoch}:${turn - 1}` });
+    .findOne({ _id: `${worldEpoch}:${openingTurn}` });
   const out = new Map<string, LineCarry>();
   if (!doc?.byCountry) return out;
   const wallets = await db
@@ -153,6 +182,7 @@ export async function runFundedProducerTurn(
   }
 ): Promise<FundedProducerTurnResult> {
   const { lookups, worldEpoch, turn } = input;
+  const openingTurn = await readProducerOpeningTurn(db, worldEpoch, turn);
   await admitNewProducerEntrants(db, lookups, worldEpoch, turn);
   const rates = lookups.exchangeRatesByCurrency;
   const rateOf = (code: string | null | undefined) => {
@@ -189,7 +219,7 @@ export async function runFundedProducerTurn(
       ? await readPublicCarryIn(
           db,
           worldEpoch,
-          turn,
+          openingTurn,
           [...countryCurrency.keys()],
           publicWallet,
           (c) => rateOf(countryCurrency.get(c))
@@ -223,7 +253,7 @@ export async function runFundedProducerTurn(
             bookPressure?: Record<string, number>;
           }>(PRODUCER_MARKET_OUTCOMES)
           .findOne(
-            { _id: `${worldEpoch}:${turn - 1}` },
+            { _id: `${worldEpoch}:${openingTurn}` },
             { projection: { clearingPrices: 1, bookPressure: 1 } }
           )
       : null;
@@ -231,6 +261,7 @@ export async function runFundedProducerTurn(
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
   const demandEnv = {
     ...input.env,
+    producerOpeningTurn: openingTurn,
     ...(lastClearing
       ? { lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
       : {}),
@@ -245,7 +276,7 @@ export async function runFundedProducerTurn(
     publicCarryIn,
     householdIncomeFloor: incomeFloor,
     openingShareByCountry,
-    carry: liveCarry(lookups, worldEpoch, turn),
+    carry: liveCarry(lookups, worldEpoch, openingTurn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
   });
@@ -786,7 +817,7 @@ export async function runFundedProducerTurn(
           filter: {
             _id: new ObjectId(id),
             "producerCapacity.worldEpoch": worldEpoch,
-            "producerCapacity.turn": turn - 1,
+            "producerCapacity.turn": { $gte: openingTurn, $lt: turn },
           },
           update: {
             $set: {
@@ -1125,14 +1156,14 @@ export function planFundedClose(input: {
 
 /**
  * Live carry: physical stock and receipts live on the sector documents, cash in
- * the real accounts. Only the public-buyer basis is carried here: last turn's
- * settled plant value added per country, or on the first funded turn the
+ * the real accounts. Only the public-buyer basis is carried here: the opening
+ * turn's settled plant value added per country, or on the first funded turn the
  * legacy realized revenue the sectors recorded.
  */
 function liveCarry(
   lookups: CorporationLookups,
   worldEpoch: string,
-  turn: number
+  openingTurn: number
 ): ShadowCarryState {
   const valueAddedByCountry: Record<string, number> = {};
   for (const corp of lookups.corporations)
@@ -1140,7 +1171,7 @@ function liveCarry(
       const country = String(sector.countryId ?? corp.countryId ?? "");
       const r = sector.producerSettlement;
       let va: number;
-      if (r && r.worldEpoch === worldEpoch && r.turn === turn - 1)
+      if (r && r.worldEpoch === worldEpoch && r.turn === openingTurn)
         va = r.revenue - r.inputsConsumed;
       else {
         const rate = lookups.exchangeRatesByCurrency.get(
@@ -1154,7 +1185,7 @@ function liveCarry(
   return {
     runId: `${worldEpoch}:live`,
     worldEpoch,
-    turn: turn - 1,
+    turn: openingTurn,
     predecessorTurn: null,
     schemaVersion: 0,
     codeSha: null,
