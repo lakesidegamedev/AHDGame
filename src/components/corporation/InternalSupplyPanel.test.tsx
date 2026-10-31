@@ -157,3 +157,22 @@ it("saves the cross-state opt-in and shows freight separately from discounts", a
   await screen.findByText("Policy saved. New reservations and discounts apply next turn.");
   expect(JSON.parse(fetcher.mock.calls[1][1].body).ownFirstAcrossStates).toBe(true);
 });
+it("hides the discount controls and explains the free transfer on funded worlds", async () => {
+  fetcher.mockResolvedValue({ ok: true, json: async () => ({ ...view, fundedMarket: true }) });
+  show();
+  await screen.findByText("Reserved supply, turn 12");
+  expect(screen.queryByLabelText("Internal discount")).toBeNull();
+  expect(screen.queryByText("Net internal discount credit: ₳20 per day.")).toBeNull();
+  expect(
+    screen.getByText(
+      "Output sent to your own plants is a free transfer: your plants get it at no cost and this plant books no revenue for it."
+    )
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Supply priority")).toBeTruthy();
+});
+it("keeps the discount controls and no free-transfer note on legacy worlds", async () => {
+  show();
+  await screen.findByText("Reserved supply, turn 12");
+  expect(screen.getByLabelText("Internal discount")).toBeTruthy();
+  expect(screen.queryByText(/free transfer/)).toBeNull();
+});
