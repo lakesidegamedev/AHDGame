@@ -40,6 +40,10 @@ import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import {
+  expectedUnitRevenue,
+  type SalesAdvanceLine,
+} from "@/lib/market/producerMarket/salesAdvanceRules";
+import {
   demandPlanRunShare,
   liveLineReceipt,
   pacedRunShare,
@@ -410,6 +414,12 @@ export function prepareProducerPhysicalSector(input: {
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
   const settledLast = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  // Last turn's realized prices and sell-through let this run borrow against its own sales.
+  const unitRevenue = expectedUnitRevenue(
+    plan.outputs,
+    (settledLast as { products?: SalesAdvanceLine[] } | null)?.products
+  );
+  if (unitRevenue > 0) plan.expectedUnitRevenue = unitRevenue;
   // Leftover stock of lines the recipe no longer makes is still sold, but does not steer the run.
   const liveLast = settledLast
     ? liveLineReceipt(
