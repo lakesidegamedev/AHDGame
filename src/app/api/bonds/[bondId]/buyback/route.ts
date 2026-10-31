@@ -11,6 +11,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Bond, Corporation, GameState } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import {
@@ -57,6 +58,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // corporate funds): blocked while an admin has paused corporation actions.
     const pausedGuard = await requireCorporationActionsEnabled(db);
     if (pausedGuard) return pausedGuard;
+    // Maturity settlement pays holders and retires the float from a snapshot
+    // taken at the start of the bond phase; a buyback in between is paid twice.
+    const turnGuard = await rejectDuringTurn(db);
+    if (turnGuard) return turnGuard;
 
     const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
     if (!bond) {

@@ -62,7 +62,14 @@ export function refreshSidebarWidgets() {
   request([...cache.keys()], true);
 }
 
-export function useSidebarWidgetData(keys: string[]): {
+/**
+ * Widget data for `keys`, shared across every caller. Pass `poll: false` for a
+ * one-off read, e.g. checking whether a role widget applies to this player.
+ */
+export function useSidebarWidgetData(
+  keys: string[],
+  { poll = true }: { poll?: boolean } = {}
+): {
   data: Record<string, unknown>;
   loaded: (key: string) => boolean;
 } {
@@ -75,6 +82,11 @@ export function useSidebarWidgetData(keys: string[]): {
     const listener = () => setVersion((v) => v + 1);
     listeners.add(listener);
     request(wanted);
+    if (!poll) {
+      return () => {
+        listeners.delete(listener);
+      };
+    }
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") request(wanted);
     }, REFRESH_MS);
@@ -87,7 +99,7 @@ export function useSidebarWidgetData(keys: string[]): {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [signature]);
+  }, [signature, poll]);
 
   // Cheap: a handful of keys, re-read whenever a listener bumps the version.
   const data: Record<string, unknown> = {};

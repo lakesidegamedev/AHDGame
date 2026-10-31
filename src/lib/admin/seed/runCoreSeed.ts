@@ -1,3 +1,4 @@
+import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
 import {
   selectPresetBundle,
@@ -396,9 +397,8 @@ export async function runSeed(
   }
 
   for (const state of statesBundle) {
-    await db
-      .collection<State>("states")
-      .updateOne({ _id: state._id }, { $set: state }, { upsert: true });
+    const update = statePopulationUpdate(state, reset);
+    await db.collection<State>("states").updateOne({ _id: state._id }, update, { upsert: true });
   }
   log(`Seeded ${statesBundle.length} states (${preset})`);
 

@@ -598,9 +598,9 @@ export function prepareProducerPhysicalSector(input: {
 }
 
 /**
- * Freight trades on one book per country in the funded market, so stock it
- * carried over is stamped `country:<id>`. Plant preparation knows only state
- * and world books; read carried country-book stock back onto the plant's own
+ * Freight and construction services trade on one book per country in the
+ * funded market, so stock they carried over is stamped `country:<id>`. Plant
+ * preparation knows only state and world books; read carried country-book stock back onto the plant's own
  * state book (the market maps it to the country book again).
  */
 export function withStateBooks(sector: CorporateSector): CorporateSector {

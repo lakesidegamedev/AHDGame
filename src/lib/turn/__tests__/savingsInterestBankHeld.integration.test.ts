@@ -118,4 +118,32 @@ describe("savingsInterestTurn base APY for bank-held savings", () => {
     expect(doc.currencyBalances.savings.USD).toBeCloseTo(48_000 + pending + 25, 8);
     expect(doc.currencyBalances.pendingSavingsInterest.USD ?? 0).toBe(0);
   });
+  it("keeps pending interest that lands between the flush read and its write", async () => {
+    const db = world("off", []);
+    await processSavingsInterestTurn(db as unknown as Db, ACCRUAL_TURN);
+    await db
+      .collection("centralBanks")
+      .updateOne({ _id: "US" }, { $set: { nationalSavingsBalance: 1_000_000_000 } });
+
+    // A concurrent write moves pending after the flush pass read it.
+    const chars = db.collection("characters");
+    const bulkWrite = chars.bulkWrite.bind(chars);
+    let injected = false;
+    chars.bulkWrite = (async (ops: Parameters<typeof bulkWrite>[0]) => {
+      const isCredit = JSON.stringify(ops).includes("currencyBalances.interestEarned.USD");
+      if (isCredit && !injected) {
+        injected = true;
+        await chars.updateOne(
+          { _id: SAVER },
+          { $inc: { "currencyBalances.pendingSavingsInterest.USD": 7 } }
+        );
+      }
+      return bulkWrite(ops);
+    }) as typeof chars.bulkWrite;
+
+    await processSavingsInterestTurn(db as unknown as Db, FLUSH_TURN);
+    expect(injected).toBe(true);
+    const doc = await saver(db);
+    expect(doc.currencyBalances.pendingSavingsInterest.USD ?? 0).toBeCloseTo(7, 8);
+  });
 });

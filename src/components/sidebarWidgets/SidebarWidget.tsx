@@ -5,44 +5,52 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
 import type { PixelNavIconName } from "@/components/navbar/PixelNavIcon";
-import { Sparkline } from "@/components/statusbar/Sparkline";
-import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
-import {
-  formatCompactNumber,
-  formatLocalAmount,
-  formatSharePrice,
-} from "@/lib/utils/formattersCore";
 import { parseWidgetKey, type WidgetId } from "@/lib/sidebarWidgets/widgetCatalog";
+import type { KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPetShared";
+import { KeirPetBody } from "./KeirPetBody";
 import type {
   MyCompanyWidgetData,
   StaffQueuesWidgetData,
   StockTickerWidgetData,
 } from "@/lib/sidebarWidgets/widgetData";
+import type { WatchlistWidgetData } from "@/lib/sidebarWidgets/data/watchlist";
+import { WatchlistBody } from "./bodies/WatchlistBody";
+import type { DueSoonWidgetData } from "@/lib/sidebarWidgets/dueSoon/types";
+import { DueSoonBody } from "./bodies/DueSoonBody";
+import type { ChamberFloorWidgetData } from "@/lib/sidebarWidgets/data/chamberFloor";
+import type { MyRaceWidgetData } from "@/lib/sidebarWidgets/data/myRace";
+import type { OfficeDashboardWidgetData } from "@/lib/sidebarWidgets/data/officeDashboard";
+import type { SinceAwayWidgetData } from "@/lib/sidebarWidgets/data/sinceAway";
+import { legislatureUrl } from "@/lib/urls";
+import { ChamberFloorBody } from "./bodies/ChamberFloorBody";
+import { MyRaceBody } from "./bodies/MyRaceBody";
+import { OfficeDashboardBody, officeDashboardHref } from "./bodies/OfficeDashboardBody";
+import { SinceAwayBody } from "./bodies/SinceAwayBody";
+import type { SectorHeatmapWidgetData } from "@/lib/sidebarWidgets/data/sectorHeatmap";
+import type { NetWorthWidgetData } from "@/lib/sidebarWidgets/data/netWorth";
+import type { CommodityBoardWidgetData } from "@/lib/sidebarWidgets/data/commodityBoard";
+import { Empty } from "./bodies/shared";
+import { MyCompanyBody } from "./bodies/MyCompanyBody";
+import { TickerBody } from "./bodies/TickerBody";
+import { SectorHeatmapBody } from "./bodies/SectorHeatmapBody";
+import { NetWorthBody } from "./bodies/NetWorthBody";
+import { CommodityBoardBody } from "./bodies/CommodityBoardBody";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
+  keirPet: "star",
+  dueSoon: "bell",
   myCompany: "briefcase",
   stockTicker: "chart",
+  sectorHeatmap: "chart",
+  netWorth: "bill",
+  commodityBoard: "scales",
   staffQueues: "gear",
+  watchlist: "star",
+  myRace: "vote",
+  chamberFloor: "bill",
+  officeDashboard: "capitol",
+  sinceAway: "bell",
 };
-
-function money(amount: number, code: CurrencyCode | null): string {
-  return code ? formatLocalAmount(amount, code) : formatCompactNumber(amount);
-}
-
-function price(amount: number, code: CurrencyCode | null): string {
-  return formatSharePrice(amount, code ? (CURRENCY_SYMBOLS[code] ?? "$") : "$");
-}
-
-function Change({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-muted">·</span>;
-  const up = value >= 0;
-  return (
-    <span className={`tabular-nums ${up ? "text-success" : "text-error"}`}>
-      {up ? "▲" : "▼"}
-      {Math.abs(value).toFixed(1)}%
-    </span>
-  );
-}
 
 interface FrameProps {
   icon: PixelNavIconName;
@@ -78,103 +86,6 @@ function Frame({ icon, title, href, openLabel, compact, onNavigate, children }: 
       </header>
       {children}
     </section>
-  );
-}
-
-function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-xs leading-relaxed text-muted">{children}</p>;
-}
-
-function MyCompanyBody({ data, compact }: { data: MyCompanyWidgetData; compact: boolean }) {
-  const t = useTranslations("nav.widgets.myCompany");
-  return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-semibold text-foreground">{data.name}</span>
-        {data.ticker && <span className="shrink-0 text-xs text-muted">{data.ticker}</span>}
-      </div>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <dt className="text-muted">{t("cash")}</dt>
-        <dd className="text-right font-medium tabular-nums text-foreground">
-          {money(data.cash, data.currencyCode)}
-        </dd>
-        {!data.isPrivate && (
-          <>
-            <dt className="text-muted">{t("sharePrice")}</dt>
-            <dd className="text-right font-medium tabular-nums text-foreground">
-              {price(data.sharePrice, data.currencyCode)} <Change value={data.sharePriceChange} />
-            </dd>
-          </>
-        )}
-        {data.revenue !== null && (
-          <>
-            <dt className="text-muted">{t("revenue")}</dt>
-            <dd className="text-right tabular-nums text-foreground">
-              {money(data.revenue, data.currencyCode)}
-            </dd>
-          </>
-        )}
-        {data.income !== null && (
-          <>
-            <dt className="text-muted">{t("income")}</dt>
-            <dd
-              className={`text-right tabular-nums ${data.income < 0 ? "text-error" : "text-foreground"}`}
-            >
-              {money(data.income, data.currencyCode)}
-            </dd>
-          </>
-        )}
-      </dl>
-      {!compact && data.cashSeries.length > 1 && (
-        <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
-          <span>{t("cashTrend")}</span>
-          <Sparkline data={data.cashSeries} width={120} height={22} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TickerBody({
-  data,
-  compact,
-  onNavigate,
-}: {
-  data: StockTickerWidgetData;
-  compact: boolean;
-  onNavigate?: () => void;
-}) {
-  const t = useTranslations("nav.widgets.stockTicker");
-  if (data.rows.length === 0) return <Empty>{t("empty")}</Empty>;
-  return (
-    <ul className="space-y-0.5">
-      {data.rows.slice(0, compact ? 5 : 8).map((row) => (
-        <li key={row.sequentialId}>
-          <Link
-            href={`/corporation/${row.sequentialId}`}
-            onClick={onNavigate}
-            className="flex items-center gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
-          >
-            <span className="w-14 shrink-0 truncate font-semibold text-foreground">
-              {row.ticker ?? row.name}
-            </span>
-            {compact ? (
-              <span className="flex-1" />
-            ) : (
-              <span className="min-w-0 flex-1 truncate text-muted">
-                {row.ticker ? row.name : ""}
-              </span>
-            )}
-            <span className="shrink-0 tabular-nums text-foreground">
-              {price(row.sharePrice, row.currencyCode)}
-            </span>
-            <span className="w-14 shrink-0 text-right">
-              <Change value={row.change} />
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -225,6 +136,7 @@ function StaffBody({ data, onNavigate }: { data: StaffQueuesWidgetData; onNaviga
 /** Count shown on the collapsed tray rail, or 0 for widgets that have none. */
 export function widgetBadge(widgetKey: string, data: unknown): number {
   const parsed = parseWidgetKey(widgetKey);
+  if (parsed?.id === "dueSoon" && data) return (data as DueSoonWidgetData).total;
   if (parsed?.id === "staffQueues" && data) {
     const queues = data as StaffQueuesWidgetData;
     return queues.wikiReview + queues.altClusters + queues.playerReports;
@@ -261,6 +173,32 @@ export function SidebarWidget({
   ) : null;
 
   switch (parsed.id) {
+    case "keirPet": {
+      const pet = data as KeirPetWidgetData | null;
+      return (
+        <Frame {...common} title={t("keirPet.title")}>
+          {pending ??
+            (pet ? (
+              <KeirPetBody data={pet} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "dueSoon": {
+      const due = data as DueSoonWidgetData | null;
+      return (
+        <Frame {...common} title={t("dueSoon.title")}>
+          {pending ??
+            (due ? (
+              <DueSoonBody data={due} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
     case "myCompany": {
       const company = data as MyCompanyWidgetData | null;
       return (
@@ -296,6 +234,50 @@ export function SidebarWidget({
         </Frame>
       );
     }
+    case "sectorHeatmap": {
+      const heatmap = data as SectorHeatmapWidgetData | null;
+      const scope = heatmap?.exchangeName ?? exchangeLabel;
+      return (
+        <Frame
+          {...common}
+          title={scope ? `${t("sectorHeatmap.title")} · ${scope}` : t("sectorHeatmap.title")}
+          href={heatmap ? `/stockmarket/${heatmap.exchange}` : undefined}
+        >
+          {pending ??
+            (heatmap ? (
+              <SectorHeatmapBody data={heatmap} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("sectorHeatmap.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "netWorth": {
+      const wealth = data as NetWorthWidgetData | null;
+      return (
+        <Frame {...common} title={t("netWorth.title")} href="/portfolio">
+          {pending ??
+            (wealth ? (
+              <NetWorthBody data={wealth} compact={compact} />
+            ) : (
+              <Empty>{t("netWorth.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "commodityBoard": {
+      const board = data as CommodityBoardWidgetData | null;
+      return (
+        <Frame {...common} title={t("commodityBoard.title")} href="/market?tab=commodities">
+          {pending ??
+            (board ? (
+              <CommodityBoardBody data={board} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("commodityBoard.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
     case "staffQueues": {
       const queues = data as StaffQueuesWidgetData | null;
       return (
@@ -303,6 +285,83 @@ export function SidebarWidget({
           {pending ??
             (queues ? (
               <StaffBody data={queues} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "watchlist": {
+      const watchlist = data as WatchlistWidgetData | null;
+      return (
+        <Frame {...common} title={t("watchlist.title")}>
+          {pending ??
+            (watchlist ? (
+              <WatchlistBody data={watchlist} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "myRace": {
+      const race = data as MyRaceWidgetData | null;
+      return (
+        <Frame
+          {...common}
+          title={t("myRace.title")}
+          href={race ? `/elections/${race.electionId}` : undefined}
+        >
+          {pending ??
+            (race ? (
+              <MyRaceBody data={race} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("myRace.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "chamberFloor": {
+      const floor = data as ChamberFloorWidgetData | null;
+      return (
+        <Frame
+          {...common}
+          title={floor?.chamber || t("chamberFloor.title")}
+          href={floor ? legislatureUrl(floor.countryId) : undefined}
+        >
+          {pending ??
+            (floor ? (
+              <ChamberFloorBody data={floor} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "officeDashboard": {
+      const office = data as OfficeDashboardWidgetData | null;
+      return (
+        <Frame
+          {...common}
+          title={t("officeDashboard.title")}
+          href={office ? officeDashboardHref(office) : undefined}
+        >
+          {pending ??
+            (office ? (
+              <OfficeDashboardBody data={office} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "sinceAway": {
+      const away = data as SinceAwayWidgetData | null;
+      return (
+        <Frame {...common} title={t("sinceAway.title")} href="/notifications">
+          {pending ??
+            (away ? (
+              <SinceAwayBody data={away} onNavigate={onNavigate} />
             ) : (
               <Empty>{t("unavailable")}</Empty>
             ))}

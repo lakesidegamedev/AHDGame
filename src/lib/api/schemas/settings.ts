@@ -5,6 +5,7 @@ import {
   WIDGET_KEY_PATTERN,
   WIDGET_MENUS,
 } from "@/lib/sidebarWidgets/widgetCatalog";
+import { MAX_WATCHLIST, WATCH_ID_PATTERNS } from "@/lib/sidebarWidgets/watchlist";
 import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
@@ -175,6 +176,25 @@ export const experimentalFeaturesSchema = z
       })
       .optional(),
     widgetTrayOpen: z.boolean().optional(),
+    widgetWatchlist: z
+      .array(
+        z.discriminatedUnion("kind", [
+          z
+            .object({
+              kind: z.literal("corporation"),
+              id: z.string().regex(WATCH_ID_PATTERNS.corporation),
+            })
+            .strict(),
+          z
+            .object({
+              kind: z.literal("commodity"),
+              id: z.string().regex(WATCH_ID_PATTERNS.commodity),
+            })
+            .strict(),
+        ])
+      )
+      .max(MAX_WATCHLIST)
+      .optional(),
     askDrawerSide: z.enum(["left", "right"]).optional(),
     askDrawerHidden: z.boolean().optional(),
     navCustomization: z
@@ -198,7 +218,8 @@ export const experimentalFeaturesSchema = z
       v.desktopNavigationLayout !== undefined ||
       v.mobileNavigationLayout !== undefined ||
       v.widgetLayout !== undefined ||
-      v.widgetTrayOpen !== undefined,
+      v.widgetTrayOpen !== undefined ||
+      v.widgetWatchlist !== undefined,
     {
       message: "Nothing to update",
     }

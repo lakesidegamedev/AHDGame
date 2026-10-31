@@ -76,6 +76,7 @@ import {
   getSingleplayerPhasePredicate,
 } from "@/simulation/phases/singleplayerPhases";
 import { runPostTurnIntegrityScans } from "@/lib/turn/postTurnScans";
+import { runCommittedTurnReporting } from "@/lib/turn/committedTurnReporting";
 import { inProcessTurnRefusal } from "@/lib/turn/turnWorkerHandoff";
 import { announcePendingSuggestionCompletions } from "@/lib/suggestions/completionAnnouncement";
 import { runContestsAfterTurn } from "@/lib/contests/engine";
@@ -635,6 +636,14 @@ async function processTurnImpl(
         startTimeMs: startTime,
       })
     );
+    // One eligibility predicate for the locked phases and the post-lock
+    // reporting phases alike; see the comment on `shouldRunPhase` below.
+    const phasePredicate = combinePhasePredicates(
+      getSimTurnPhasePredicate(config?.simTurnPhaseMode),
+      getEconomyPausePredicate(nextTurnNumber, config?.economyPauseUntilTurn),
+      getSingleplayerPhasePredicate(localSingleplayer),
+      getAnomalyScanCadencePredicate(gameState.currentTurn)
+    );
     const runtime = createTurnPhaseRuntime({
       db,
       phaseStatuses,
@@ -657,12 +666,7 @@ async function processTurnImpl(
       // profile predicate so a headless sim run keeps its own filtering.
       // In a shared world the same scans run on a cadence instead of every
       // turn; their rolling windows make that lossless.
-      shouldRunPhase: combinePhasePredicates(
-        getSimTurnPhasePredicate(config?.simTurnPhaseMode),
-        getEconomyPausePredicate(nextTurnNumber, config?.economyPauseUntilTurn),
-        getSingleplayerPhasePredicate(localSingleplayer),
-        getAnomalyScanCadencePredicate(gameState.currentTurn)
-      ),
+      shouldRunPhase: phasePredicate,
       // Audit traceId convention "turn:<n>:<phase>" (forensics plan §3.1, T2.7).
       turn: nextTurnNumber,
       onPhaseCompleted: options.onPhaseCompleted,
@@ -701,9 +705,6 @@ async function processTurnImpl(
     if (!localSingleplayer) {
       await reconcileFederalBudgetInvariants(db, context.newTurn);
     }
-
-    healthSnapshotWritten = context.phaseResults.gameHealthSnapshot !== null;
-    lastHealth = context.phaseResults.gameHealthSnapshot?.health ?? null;
 
     const completion = completedTurnStatus(warnings, phaseStatuses);
     const marketUpdateAt = completedMarketUpdateAt(phaseStatuses);
@@ -784,19 +785,40 @@ async function processTurnImpl(
       nppEngineVersion: NPP_ENGINE_VERSION,
       createdAt: context.realNow,
     };
+    let turnLogId: TurnLog["_id"] | null = null;
     if (!localSingleplayer) {
-      await db.collection<TurnLog>("turnLogs").insertOne(turnLog as TurnLog);
+      turnLogId = (await db.collection<TurnLog>("turnLogs").insertOne(turnLog as TurnLog))
+        .insertedId;
       turnLogWritten = true;
-      // Anti-abuse scans run after the commit, never holding up the turn
-      // (#2694). Results land on this turn log under postTurnScans.
-      void runPostTurnIntegrityScans(db, context.newTurn).catch((err) =>
-        console.warn("[post-turn] integrity scans failed to start", err)
-      );
       // Weekly contests read the committed turn's values; never blocks the turn.
       void runContestsAfterTurn(db, context.newTurn);
       // Suggestions marked done by any tool get their Discord post here.
       void announcePendingSuggestionCompletions(db).catch((err) =>
         console.warn("[post-turn] suggestion completion announcements failed", err)
+      );
+    }
+
+    // The lock is released: players can act again. Reporting phases that only
+    // write history for charts, rankings and diagnostics run now, stamped with
+    // the turn they describe, and finish before this call returns, so the next
+    // turn in this worker cannot start ahead of them. Never throws: a
+    // committed turn must not take the failure path below.
+    const reporting = await runCommittedTurnReporting({
+      context,
+      committedDurationMs: turnLog.durationMs,
+      shouldRunPhase: phasePredicate,
+      onPhaseCompleted: options.onPhaseCompleted,
+      turnLogId,
+    });
+    healthSnapshotWritten = reporting.healthWritten;
+    lastHealth = reporting.health;
+    if (!localSingleplayer) {
+      // Anti-abuse scans run after the commit, never holding up the turn
+      // (#2694). Started after the reporting above because the suspect scan
+      // reads this turn's portfolio history. Results land on this turn log
+      // under postTurnScans.
+      void runPostTurnIntegrityScans(db, context.newTurn).catch((err) =>
+        console.warn("[post-turn] integrity scans failed to start", err)
       );
     }
 

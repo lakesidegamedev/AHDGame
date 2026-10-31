@@ -89,8 +89,15 @@ export function plantEconomyShare(valueAddedPerTurn: number, gdpPerTurn: number)
   return Math.min(1, Math.max(0, valueAddedPerTurn / gdpPerTurn));
 }
 
-/** Freight sells anywhere in its own country in the shadow (owner yes, 2026-10-19). */
-const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set(["freight"]);
+/**
+ * Freight sells anywhere in its own country in the shadow (owner yes, 2026-10-19).
+ * Construction services follow (owner yes, 2026-10-30): crews travel within a
+ * country, and a state book left plants that need a trace of them idle.
+ */
+const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set([
+  "freight",
+  "construction_services",
+]);
 
 export function shadowBook(book: string, commodity: string, countryId: string): string {
   if (!COUNTRY_SCOPED_SHADOW_COMMODITIES.has(commodity) || !book.startsWith("state:")) return book;

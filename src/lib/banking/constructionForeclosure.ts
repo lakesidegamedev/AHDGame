@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { computeSectorListingValuation } from "@/lib/corporations/sectorValuation";
-import { sectorNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import {
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
@@ -63,19 +62,12 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
     const hostCurrency = resolveSectorHostCurrencyCode(sector, owner);
     const hostRate = hostCurrency ? rates.get(hostCurrency) : undefined;
     if (!Number.isFinite(hostRate) || !(hostRate! > 0)) continue;
-    const valuation = computeSectorListingValuation(
+    const valuation = computeSectorListingValuation(sector, owner, hostRate!, true, {
       sector,
-      owner,
-      hostRate!,
-      true,
-      {
-        sector,
-        currentYear: gameState?.currentYear,
-        currentTurn: turn,
-        eraUnitScale,
-      },
-      sectorNpvBoostMultiplier(turn)
-    );
+      currentYear: gameState?.currentYear,
+      currentTurn: turn,
+      eraUnitScale,
+    });
     if (!Number.isFinite(valuation.priceAnchor) || valuation.priceAnchor <= 0) continue;
     const now = new Date();
     const result = await db.collection<CorporateSector>("corporateSectors").updateOne(
