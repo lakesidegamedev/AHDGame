@@ -49,8 +49,14 @@ export interface PlannedLeg {
   stockTaxReceipt?: PendingStockTaxReceipt;
   key: string;
   kind: AcquisitionLegKind;
-  collection: "characters" | "imperialCharacters" | "corporations" | "federalBudget" | "indexFunds";
-  /** Hex string for `_id` docs, country id for the treasury leg. */
+  collection:
+    | "characters"
+    | "imperialCharacters"
+    | "corporations"
+    | "federalBudget"
+    | "indexFunds"
+    | "equityMarketPools";
+  /** Hex string for `_id` docs, country id for the treasury leg, currency for the pool leg. */
   id: string;
   inc: Record<string, number>;
   pull?: { path: string; selector: Record<string, unknown> };
@@ -87,6 +93,12 @@ export interface PayoutPlanInput {
   fundsPresentHex: string[];
   /** Whether the treasury (federalBudget) doc for the target country exists. */
   treasuryPresent: boolean;
+  /**
+   * Whether the equity market pool for the target's float currency exists.
+   * The pool is the holder that paid for the public float, so it is paid for
+   * it. A world without pools keeps the legacy treasury leg.
+   */
+  equityPoolPresent?: boolean;
   fxByCurrency: Record<string, number>;
   forexEnabled: boolean;
   /** Shell-cash relocation in anchor + acquirer-capital units (0 when none). */
@@ -274,7 +286,33 @@ export function buildAcquisitionPayoutPlan(input: PayoutPlanInput): PayoutPlan {
     });
   }
 
-  if (allocation.publicFloatRow && allocation.publicFloatRow.payout > 0) {
+  if (
+    allocation.publicFloatRow &&
+    allocation.publicFloatRow.payout > 0 &&
+    input.equityPoolPresent
+  ) {
+    const floatCurrency = (input.targetLiquidCurrencyCode ??
+      COUNTRY_CURRENCY_MAP[input.targetCountryId as CountryId] ??
+      "USD") as CurrencyCode;
+    const rate = input.fxByCurrency[floatCurrency] ?? 1;
+    const floatLocal =
+      Math.round(writeGovBudgetLocal(allocation.publicFloatRow.payout, floatCurrency, rate) * 100) /
+      100;
+    legs.push({
+      key: "holder:equity-pool",
+      kind: "holder_credit",
+      collection: "equityMarketPools",
+      id: floatCurrency,
+      // The pool sells its float to the acquirer, the same flow as a market buy.
+      inc: { cashLocal: floatLocal, "lifetime.purchasesIn": floatLocal },
+      payoutAnchor: allocation.publicFloatRow.payout,
+      costInAcquirerCapital: costOfAnchor(allocation.publicFloatRow.payout),
+      currencyCode: floatCurrency,
+      note: "public-float buyout credit to the equity market pool",
+      // No ledger: pool cash is audited by its own lifetime counters, not a ledger account.
+      ledgers: [],
+    });
+  } else if (allocation.publicFloatRow && allocation.publicFloatRow.payout > 0) {
     if (!input.treasuryPresent) {
       unpayable.push({ key: "holder:treasury", reason: "treasury account is missing" });
     } else {

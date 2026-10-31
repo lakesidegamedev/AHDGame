@@ -856,6 +856,7 @@ export async function applyEconomyReset(
         approvalReference: options.approvalReference,
         phasesDone: [],
         startedAt: acquiredAt,
+        turn: plan.currentTurn,
         restore: {
           corporationActionsPaused: state.corporationActionsPaused === true,
           playerTransfersPaused: state.playerTransfersPaused === true,
