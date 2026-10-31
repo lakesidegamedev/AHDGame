@@ -919,6 +919,52 @@ describe("receipt-backed production", () => {
     );
   });
 
+  it("anchors an automatic ask to last turn's clearing in its own lane", () => {
+    const seller = plant({
+      inputs: [],
+      labourCost: 0,
+      otherOperatingCost: 0,
+      outputs: [
+        {
+          commodity: "goods",
+          book: "world",
+          unitsPerOutput: 1,
+          policy: { kind: "automatic", targetMarkup: 0.1 },
+          referenceUnitPrice: 3,
+          storable: true,
+        },
+      ],
+      outputStock: [{ commodity: "goods", book: "world", units: 20 }],
+    });
+    const args = {
+      turn: 1,
+      accounts,
+      producers: [seller],
+      externalOrders: [
+        {
+          id: "customer",
+          accountId: "households",
+          commodity: "goods",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 4,
+        },
+      ],
+    };
+    const traded = (result: ReturnType<typeof advanceProducerEconomy>) => {
+      const row = result.prices.find((p) => p.commodity === "goods" && p.book === "world")!;
+      return row.value / row.units;
+    };
+    expect(traded(advanceProducerEconomy(args))).toBeCloseTo(3.3);
+    expect(
+      traded(advanceProducerEconomy({ ...args, clearingPriceByLane: { "goods|world": 2 } }))
+    ).toBeCloseTo(2.2);
+    // Another book's clearing does not move this lane.
+    expect(
+      traded(advanceProducerEconomy({ ...args, clearingPriceByLane: { "goods|state:CA": 2 } }))
+    ).toBeCloseTo(3.3);
+  });
+
   it("settles productive input cycles jointly without selling unsupported output", () => {
     const a = plant({
       id: "power",
