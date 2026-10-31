@@ -8,7 +8,12 @@ import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constan
 import { SECTOR_STRATEGIES, type SectorStrategy } from "@/lib/constants/sectorStrategies";
 import { isDecadeReached } from "@/lib/constants/techTree/decades";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
-import { chooseFoundingRecipe, recipePeakShortageScore } from "./rules/foundingRecipe";
+import {
+  chooseFoundingRecipe,
+  DEFAULT_RECIPE_ID,
+  recipePeakShortageScore,
+} from "./rules/foundingRecipe";
+import { recipeInputAvailability, type StateInputAvailabilityOf } from "./rules/inputAvailability";
 import { sectorPeakShortageScore, type CommodityPriceRatioFn } from "./marketSignals";
 
 export interface FoundingRecipeWorld {
@@ -41,12 +46,19 @@ export function foundingRecipeAvailable(
   };
 }
 
+/** Where a founding would land, for reading its inputs' delivered fill. */
+export interface FoundingInputSite {
+  stateId: string;
+  availabilityOf: StateInputAvailabilityOf;
+}
+
 /** The recipe a new plant of this lane builds; undefined keeps the standard recipe. */
 export function foundingRecipeFor(
   lane: OperatingSectorType,
   countryId: string,
   priceRatioOf: CommodityPriceRatioFn,
-  world: FoundingRecipeWorld
+  world: FoundingRecipeWorld,
+  site?: FoundingInputSite
 ): string | undefined {
   // A mine's recipe is bound to the deposits of the state it lands in, which
   // this lane-level choice cannot see; extraction keeps its standard recipe.
@@ -56,7 +68,39 @@ export function foundingRecipeFor(
     countryId,
     priceRatioOf,
     isAvailable: foundingRecipeAvailable(lane, world),
+    ...(site
+      ? {
+          inputAvailabilityOf: (recipe: SectorStrategy) =>
+            recipeInputAvailability(recipe.demand, site.stateId, site.availabilityOf),
+        }
+      : {}),
   });
+}
+
+/**
+ * Expected fill of the scarcest input of the recipe a founding of this lane
+ * would build at the site: the recipe `foundingRecipeFor` picks on a funded
+ * world, standard otherwise. Null for extraction, whose recipe follows the
+ * state's deposits, and for a lane with no recipe table.
+ */
+export function foundingInputAvailability(
+  lane: OperatingSectorType,
+  countryId: string,
+  priceRatioOf: CommodityPriceRatioFn,
+  world: FoundingRecipeWorld | undefined,
+  site: FoundingInputSite
+): number | null {
+  if (lane === "extraction") return null;
+  const recipes = SECTOR_STRATEGIES[lane];
+  if (!recipes || recipes.length === 0) return null;
+  const chosenId = world
+    ? foundingRecipeFor(lane, countryId, priceRatioOf, world, site)
+    : undefined;
+  const recipe =
+    recipes.find((r) => r.id === (chosenId ?? DEFAULT_RECIPE_ID)) ??
+    recipes.find((r) => r.id === DEFAULT_RECIPE_ID);
+  if (!recipe) return null;
+  return recipeInputAvailability(recipe.demand, site.stateId, site.availabilityOf);
 }
 
 /**

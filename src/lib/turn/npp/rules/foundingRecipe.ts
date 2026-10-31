@@ -17,6 +17,7 @@
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";
+import { isInputStarved } from "./inputAvailability";
 
 /** Price-over-base ratio of a commodity in a country; null when unpriced. */
 export type RecipePriceRatioOf = (commodity: CommodityType, countryId: string) => number | null;
@@ -121,22 +122,31 @@ export function chooseFoundingRecipe<R extends FoundingRecipeOption>(args: {
   countryId: string;
   priceRatioOf: RecipePriceRatioOf;
   isAvailable: (recipe: R) => boolean;
+  /**
+   * Expected fill of the recipe's scarcest input where the plant would land
+   * (rules/inputAvailability). A starved recipe is never chosen over standard,
+   * and a starved standard drops the advantage bar so any recipe that can run
+   * wins. Absent reads every input as available.
+   */
+  inputAvailabilityOf?: (recipe: R) => number;
 }): string | undefined {
   const recipes = args.recipes ?? [];
   const standard = recipes.find((r) => r.id === DEFAULT_RECIPE_ID);
   if (!standard) return undefined;
   const standardScore = strategyPriceScore(standard, args.countryId, args.priceRatioOf) ?? 0;
+  const standardStarved = isInputStarved(args.inputAvailabilityOf?.(standard));
   let best: { id: string; score: number } | null = null;
   for (const recipe of recipes) {
     if (recipe.id === DEFAULT_RECIPE_ID) continue;
     if (!args.isAvailable(recipe)) continue;
+    if (isInputStarved(args.inputAvailabilityOf?.(recipe))) continue;
     if (
       recipePeakOutputRatio(recipe, args.countryId, args.priceRatioOf) < FOUNDING_RECIPE_SHORT_RATIO
     )
       continue;
     const score = strategyPriceScore(recipe, args.countryId, args.priceRatioOf);
     if (score == null) continue;
-    if (score - standardScore < FOUNDING_RECIPE_MIN_ADVANTAGE) continue;
+    if (!standardStarved && score - standardScore < FOUNDING_RECIPE_MIN_ADVANTAGE) continue;
     if (!best || score > best.score) best = { id: recipe.id, score };
   }
   return best?.id;

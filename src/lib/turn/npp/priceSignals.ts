@@ -7,6 +7,7 @@ export function buildNppPriceSignals(priceByCommodity: ReadonlyMap<string, Commo
   priceRatioOf: CommodityPriceRatioFn;
   stateDemandOf: (commodity: CommodityType, stateId: string) => number | null;
   statePriceRatioOf: (commodity: CommodityType, stateId: string) => number | null;
+  stateInputAvailabilityOf: (commodity: CommodityType, stateId: string) => number | null;
 } {
   const priceRatioOf: CommodityPriceRatioFn = (commodity, countryId) => {
     const doc = priceByCommodity.get(commodity);
@@ -33,5 +34,11 @@ export function buildNppPriceSignals(priceByCommodity: ReadonlyMap<string, Commo
     const value = priceByCommodity.get(commodity)?.stateDemand?.[stateId];
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   };
-  return { priceRatioOf, statePriceRatioOf, stateDemandOf };
+  // Delivered share of each state's input demand from the prior freight
+  // settlement: the fill the corporation turn throttles plants against.
+  const stateInputAvailabilityOf = (commodity: CommodityType, stateId: string): number | null => {
+    const value = priceByCommodity.get(commodity)?.stateInputAvailability?.[stateId];
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  };
+  return { priceRatioOf, statePriceRatioOf, stateDemandOf, stateInputAvailabilityOf };
 }
