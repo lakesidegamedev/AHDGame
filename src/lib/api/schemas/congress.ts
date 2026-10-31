@@ -103,7 +103,7 @@ const policyProvisionSchema = z.object({
   proposedRate: z.number().optional(),
 });
 
-export const tariffProvisionSchema = z.object({
+const tariffProvisionSchema = z.object({
   type: z.literal("tariff"),
   scopeType: z.enum(["economy_wide", "sector", "origin_country", "corporation"]),
   targetSectorType: z.string().optional(),
@@ -112,7 +112,7 @@ export const tariffProvisionSchema = z.object({
   rate: z.number().min(0).max(100),
 });
 
-export const subsidyProvisionSchema = z.object({
+const subsidyProvisionSchema = z.object({
   type: z.literal("subsidy"),
   scopeType: z.enum(["economy_wide", "sector"]),
   targetSectorType: z.string().optional(),
@@ -120,14 +120,14 @@ export const subsidyProvisionSchema = z.object({
   domesticOnly: z.boolean(),
 });
 
-export const endSubsidyProvisionSchema = z.object({
+const endSubsidyProvisionSchema = z.object({
   type: z.literal("end_subsidy"),
   scopeType: z.enum(["economy_wide", "sector"]),
   targetSectorType: z.string().optional(),
   targetStrategyId: z.string().optional(),
 });
 
-export const nationalizeProvisionSchema = z
+const nationalizeProvisionSchema = z
   .object({
     type: z.literal("nationalize"),
     targetCorporationId: z.string().length(24).optional(),
@@ -142,7 +142,7 @@ export const nationalizeProvisionSchema = z
     message: "Provide exactly one of targetCorporationId or targetSectorType",
   });
 
-export const privatizeProvisionSchema = z.object({
+const privatizeProvisionSchema = z.object({
   type: z.literal("privatize"),
   sourceNationalCorporationId: z.string().length(24),
   selections: z
@@ -155,14 +155,14 @@ export const privatizeProvisionSchema = z.object({
   reservePrice: z.number().positive().optional(),
 });
 
-export const designateStrategicSectorProvisionSchema = z.object({
+const designateStrategicSectorProvisionSchema = z.object({
   type: z.literal("designate_strategic_sector"),
   sectorType: z.string().min(1),
 });
 
 const embargoCommoditySchema = z.union([z.enum(COMMODITY_TYPES), z.literal("all")]);
 
-export const embargoProvisionSchema = z.object({
+const embargoProvisionSchema = z.object({
   type: z.literal("embargo"),
   targetCountry: z.enum(ZOD_COUNTRY_ENUM),
   commodity: embargoCommoditySchema,
@@ -171,14 +171,14 @@ export const embargoProvisionSchema = z.object({
   cap: z.number().min(0).optional(),
 });
 
-export const endEmbargoProvisionSchema = z.object({
+const endEmbargoProvisionSchema = z.object({
   type: z.literal("end_embargo"),
   targetCountry: z.enum(ZOD_COUNTRY_ENUM),
   commodity: embargoCommoditySchema,
   direction: z.enum(["export", "import", "both"]),
 });
 
-export const resetLawSelectionSchema = z
+const resetLawSelectionSchema = z
   .object({
     type: z.literal("reset_law"),
     familyId: z.string().regex(/^L\d{2}$/),
@@ -203,7 +203,7 @@ export const resetLawSelectionSchema = z
  * non-empty legislationTypeId and an explicit effectDirection so arbitrary
  * payloads cannot flow into enactment (audit S6).
  */
-export const stateBillPolicyProvisionSchema = z.object({
+const stateBillPolicyProvisionSchema = z.object({
   type: z.literal("policy").optional(),
   legislationTypeId: z.string().min(1),
   policyOptionId: z.string().optional(),
@@ -233,7 +233,7 @@ export const stateBillProvisionSchema = z.union([
  * schema cannot express "at least one of" cleanly enough to be worth it here,
  * and the shared validator is the single gate both proposal paths run through.
  */
-export const electoralLawProvisionSchema = z.object({
+const electoralLawProvisionSchema = z.object({
   type: z.literal("electoral_law"),
   votingAge: z.number().int().min(16).max(25).optional(),
   registrationAccess: z.number().min(-50).max(50).optional(),
@@ -251,21 +251,21 @@ export const electoralLawProvisionSchema = z.object({
  * so every bill carrying one was rejected by the body parser with a union error
  * before the validator, the UI, or the enactment path ever saw it (#1250).
  */
-export const centralBankIndependenceProvisionSchema = z.object({
+const centralBankIndependenceProvisionSchema = z.object({
   type: z.literal("central_bank_independence"),
   action: z.enum(["grant", "revoke"]),
 });
 
-export const economicSystemReformProvisionSchema = z.object({
+const economicSystemReformProvisionSchema = z.object({
   type: z.literal("economic_system_reform"),
   target: z.enum(["dual_track", "market", "command"]),
 });
 
-export const euroAdoptionProvisionSchema = z.object({
+const euroAdoptionProvisionSchema = z.object({
   type: z.literal("euro_adoption"),
 });
 
-export const unionLawProvisionSchema = z.object({
+const unionLawProvisionSchema = z.object({
   type: z.literal("union_law"),
   bias: z.number().min(-50).max(50),
   // Union ban (player suggestion #93): when present the provision is a
@@ -290,7 +290,7 @@ export function moderatedBillText(base: z.ZodString) {
   });
 }
 
-export const europeanTreatyProvisionSchema = z.object({
+const europeanTreatyProvisionSchema = z.object({
   type: z.literal("european_treaty"),
   treaty: z.literal("maastricht"),
   action: z.enum(["ratify", "reject"]),
@@ -329,6 +329,7 @@ export const proposeBillSchema = z
       )
       .max(MAX_PROVISIONS, `At most ${MAX_PROVISIONS} provisions`),
     confirmElectionRisk: z.boolean().optional(),
+    proposeViaPartyNpp: z.boolean().optional(),
   })
   // Custom (flavor/roleplay) bills carry no provisions; every other category
   // still requires at least one.

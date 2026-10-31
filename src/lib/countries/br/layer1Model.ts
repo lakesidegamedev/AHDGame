@@ -38,7 +38,7 @@ import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const BR_GROUP_IDS = [
+const BR_GROUP_IDS = [
   "evangelical_conservative",
   "working_class_pt",
   "rural_agribusiness",

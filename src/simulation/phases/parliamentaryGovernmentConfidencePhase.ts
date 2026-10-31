@@ -1,4 +1,8 @@
 import type { Db } from "mongodb";
+import {
+  resetCompletedSnapConfidence,
+  type CompletedSnapConfidence,
+} from "@/lib/turn/snapConfidence";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getParliamentaryCountryIds } from "@/lib/turn/parliamentaryGovernment";
@@ -8,7 +12,8 @@ import { tickParliamentaryGovernmentConfidence } from "@/lib/uk/confidence/confi
 export async function runParliamentaryGovernmentConfidencePhase(
   db: Db,
   now: Date,
-  turn: number
+  turn: number,
+  completedSnaps: readonly CompletedSnapConfidence[] = []
 ): Promise<void> {
   const preset = await getGameStatePreset(db);
   const registered = new Set(await getRegisteredCountryIds(db));
@@ -21,4 +26,6 @@ export async function runParliamentaryGovernmentConfidencePhase(
   } catch (error) {
     console.error("[turn] parliamentary government confidence tick failed:", error);
   }
+  // UK's legacy gauge and every shared tick have already run. End the election turn at 50.
+  await resetCompletedSnapConfidence(db, completedSnaps, now);
 }

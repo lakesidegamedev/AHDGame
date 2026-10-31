@@ -75,7 +75,7 @@ export function calculateNppWhipSuccessChance(
   };
 }
 
-export function rollNppWhipSuccess(): number {
+function rollNppWhipSuccess(): number {
   return Math.floor(Math.random() * 100) + 1;
 }
 

@@ -17,9 +17,9 @@ import {
   Vote,
   Wallet,
 } from "lucide-react";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import {
   SectorSpecialtyPanel,
   SectorSpecialtySummaryChips,
@@ -342,8 +342,8 @@ function StartingEconomyPanel({ countryId }: { countryId: StartingCountryId }) {
           Regional baseline
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          {regions.length} {COUNTRY_CONFIGS[countryId].regionLabelPlural.toLowerCase()} seed local
-          GDP and population.{" "}
+          {regions.length} {COUNTRY_CLIENT_CONFIGS[countryId].regionLabelPlural.toLowerCase()} seed
+          local GDP and population.{" "}
           {topRegion && (
             <>
               <span className="font-medium text-foreground">{topRegion.name}</span> is the largest
@@ -428,7 +428,7 @@ function ResourceCapacityPanel({ countryId }: { countryId: StartingCountryId }) 
 }
 
 function CountrySection({ country }: { country: CountryStartingStateCopy }) {
-  const config = COUNTRY_CONFIGS[country.id];
+  const config = COUNTRY_CLIENT_CONFIGS[country.id];
   const parties = PARTY_SEEDS_BY_COUNTRY[country.id];
   const economy = STARTING_ECONOMY_BY_COUNTRY[country.id];
   const maxTreasury = Math.max(...parties.map((party) => party.treasury));
@@ -695,7 +695,7 @@ function ChamberBar({ chamber }: { chamber: ScenarioChamber }) {
 }
 
 function ScenarioCountrySection({ scenario }: { scenario: ScenarioCountry }) {
-  const config = COUNTRY_CONFIGS[scenario.countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[scenario.countryId];
   const countryId = scenario.countryId as StartingCountryId;
 
   return (
@@ -736,7 +736,7 @@ function UnseededCountrySection({
 }: {
   countryId: (typeof STARTING_STATE_1991_UNSEEDED_COUNTRIES)[number];
 }) {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
 
   return (
     <section
@@ -840,10 +840,10 @@ function StartingStateDashboard2019() {
     0
   );
   const onePartyDominantCount = COUNTRY_ORDER.filter(
-    (id) => COUNTRY_CONFIGS[id].governmentType === "onePartyState"
+    (id) => COUNTRY_CLIENT_CONFIGS[id].governmentType === "onePartyState"
   ).length;
   const presidentialCount = COUNTRY_ORDER.filter(
-    (id) => COUNTRY_CONFIGS[id].governmentType === "presidential"
+    (id) => COUNTRY_CLIENT_CONFIGS[id].governmentType === "presidential"
   ).length;
   const parliamentaryCount = countries.length - presidentialCount - onePartyDominantCount;
 

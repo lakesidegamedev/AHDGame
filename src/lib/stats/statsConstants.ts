@@ -61,16 +61,14 @@ export const ENERGY_MAX_ACTION_CAP = 250;
 /** Hoard threshold at Energy 1 (baseline) and Energy 10 (max). */
 export const ENERGY_BASE_HOARD_THRESHOLD = 100;
 export const ENERGY_MAX_HOARD_THRESHOLD = 125;
+/** Actions lost each turn while the balance sits above the hoard threshold. */
+export const ACTION_HOARD_PENALTY = 4;
+/** Floor on the base actions every character receives per turn. */
+export const MIN_BASE_ACTIONS_PER_TURN = 4;
 
 // ── Generic drift ─────────────────────────────────────────────────────────────
 /** XP added to a stat each time its qualifying action is performed. */
 export const USE_GROWTH_INCREMENT = 0.03;
-/**
- * Per-turn idle decay applied to a generic-drift stat ONLY when the stat was not
- * engaged that turn (clamped ≥ STAT_MIN). "Use it or lose it": engaging a stat's
- * loop staves off decay so active play never nets a loss on the stat it trained.
- */
-export const IDLE_DECAY_RATE = 0.05;
 /**
  * Energy is a stamina stat, not a skill: it accrues XP on every action, so a flat
  * "any use → no decay" rule would make it a free ratchet. Instead it only avoids

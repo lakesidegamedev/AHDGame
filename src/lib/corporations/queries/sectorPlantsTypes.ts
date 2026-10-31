@@ -16,6 +16,7 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "cash"
     | "strike"
     | "disaster"
     | "policy"
@@ -66,6 +67,8 @@ export interface PlantBuildOrderView {
 export interface SectorPlantsSection {
   /** Persisted whole facilities owned by this sector. */
   plantCount: number;
+  /** The strategy the sector runs; with the lane it decides plant size. */
+  strategyId?: string | null;
   /** Installed capacity, units/day. Null before the sector's first plants turn. */
   capacityUnits: number | null;
   /** Units the plants actually made this turn. Null until a plants turn has run. */
@@ -80,6 +83,8 @@ export interface SectorPlantsSection {
   fillRate: number | null;
   /** Named reasons behind `idleUnits`. Sums to `idleUnits`. */
   idleCauses: PlantIdleCause[];
+  /** State-scoped output labels: these sell only in this state (ticket 1700). */
+  localMarketOutputs: string[];
   mothballed: boolean;
   /** Outstanding build orders, oldest first. */
   buildQueue: PlantBuildOrderView[];

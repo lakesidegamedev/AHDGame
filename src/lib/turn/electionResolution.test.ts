@@ -278,10 +278,11 @@ describe("electionResolution", () => {
       expect(inserted.cycle).toBe(6);
       expect(inserted.status).toBe("active");
       expect(inserted.durationHours).toBe(96);
-      expect(inserted.primaryDurationHours).toBe(48);
+      expect(inserted.primaryDurationHours).toBe(72);
+      expect(inserted.endTurn - inserted.primaryEndTurn).toBe(24);
       expect(inserted.totalSeats).toBe(38);
       expect(new Date(inserted.endTime).getTime()).toBe(now.getTime() + 96 * MS);
-      expect(new Date(inserted.primaryEndTime).getTime()).toBe(now.getTime() + 48 * MS);
+      expect(new Date(inserted.primaryEndTime).getTime()).toBe(now.getTime() + 72 * MS);
     });
 
     it("spawns cycle N+1 as 'upcoming' when the prev was admin-accelerated to resolve early", async () => {
@@ -314,7 +315,8 @@ describe("electionResolution", () => {
       expect(new Date(inserted.startTime).getTime()).toBe(now.getTime() + (576 - 101) * MS);
       // Canonical durations — not inherited from admin-shortened prev
       expect(inserted.durationHours).toBe(96);
-      expect(inserted.primaryDurationHours).toBe(48);
+      expect(inserted.primaryDurationHours).toBe(72);
+      expect(inserted.endTurn - inserted.primaryEndTurn).toBe(24);
     });
 
     it("uses canonical durations regardless of fromElection durationHours", async () => {
@@ -338,7 +340,8 @@ describe("electionResolution", () => {
 
       const [inserted] = mockInsertOne.mock.calls[0];
       expect(inserted.durationHours).toBe(96);
-      expect(inserted.primaryDurationHours).toBe(48);
+      expect(inserted.primaryDurationHours).toBe(72);
+      expect(inserted.endTurn - inserted.primaryEndTurn).toBe(24);
     });
   });
 

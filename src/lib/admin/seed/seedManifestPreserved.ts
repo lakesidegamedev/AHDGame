@@ -120,7 +120,12 @@ export const PRESERVED: CollectionEntry[] = [
   { name: "taskLessons", category: "preserved" },
   { name: "roadmapCategories", category: "preserved" },
   { name: "roadmapItems", category: "preserved" },
-  { name: "wikiPages", category: "preserved" },
+  {
+    name: "wikiPages",
+    category: "preserved",
+    notes:
+      "Authored articles and embedded edit history outlive worlds. Bootstrap wiki seeds must only insert missing pages.",
+  },
   { name: "wikiTemplates", category: "preserved" },
   { name: "changelogSentHistory", category: "preserved" },
   { name: "remediations", category: "preserved", notes: "Incident-script registry." },
@@ -152,6 +157,12 @@ export const PRESERVED: CollectionEntry[] = [
     category: "preserved",
     notes:
       "Admin-authored era/position overrides (written by the position editor, consumed by the seed pipeline). Persists across resets as authored config.",
+  },
+  {
+    name: "electoratePriorityOverrides",
+    category: "preserved",
+    notes:
+      "Admin-authored legislative priorities per country/region/group. Preserve across resets like demographicConfigOverrides; Restore defaults explicitly deletes one override. Primary-key-only policy: deterministic country:region:dimension:group _id, single-key writes and bounded $in reads for one region's bucket roster; MongoDB automatically recreates the _id index on first write. No secondary indexes or migration are required for this additive collection.",
   },
 
   // ── 2026-07 backfill: moderation / audit surfaces that must survive reset ──
@@ -313,6 +324,6 @@ export const PRESERVED: CollectionEntry[] = [
     name: "economyResetPlans",
     category: "preserved",
     notes:
-      "Approved economy-only reset plans, one per digest. The apply resumes from the stored plan after a failure, and the record stays as the audit of what the reset removed.",
+      "Approved economy-only reset plans, stored as ordered chunk documents per digest so a real-size plan stays under the BSON limit. The apply resumes from the stored plan after a failure, and the record stays as the audit of what the reset removed.",
   },
 ];

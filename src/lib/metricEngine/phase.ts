@@ -385,7 +385,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         {
           projection: {
             labourSystemMode: 1,
-            bankFailurePoliticsEnabled: 1,
             privateBankingEnabled: 1,
           },
         }
@@ -418,8 +417,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   const bankFailureEffects = await loadBankFailureEffects(
     db,
     turn,
-    labourConfig?.privateBankingEnabled === true &&
-      labourConfig?.bankFailurePoliticsEnabled === true
+    labourConfig?.privateBankingEnabled === true
   );
   const labourMacroEnabled = await isLabourMacroEnabled(labourConfig ?? null);
 

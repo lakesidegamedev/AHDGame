@@ -941,6 +941,7 @@ function creditorClaimProjections(
           "bankCharter.discountWindowDebt": 0,
           "bankCharter.discountWindowArrears": 0,
           "bankCharter.cbMarginDebt": 0,
+          "bankCharter.cbLiquidityAdvanceDebt": 0,
           "bankCharter.cbMarginArrears": 0,
         },
       },

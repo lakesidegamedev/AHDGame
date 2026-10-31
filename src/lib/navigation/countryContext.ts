@@ -1,9 +1,9 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { isCountryId } from "@/lib/country/countryIds";
 
 export function toCountryId(raw: string | null | undefined): CountryId | null {
   if (!raw) return null;
-  const upper = raw.toUpperCase();
-  return upper in COUNTRY_CONFIGS ? (upper as CountryId) : null;
+  return isCountryId(raw) ? (raw.toUpperCase() as CountryId) : null;
 }
 
 export interface CountryContext {

@@ -200,7 +200,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const ctx = await resolveContext(request, code);
     if ("error" in ctx) return ctx.error;
 
-    const rl = checkRateLimit(String(ctx.character._id), 20, 60000);
+    const rl = checkRateLimit(`api/country/[code]/budget:${String(ctx.character._id)}`, 20, 60000);
     if (!rl.ok) return rateLimitResponse(rl.retryAfter);
 
     if (!ctx.isChancellor && !ctx.isActingChancellor) {

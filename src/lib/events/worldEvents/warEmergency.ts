@@ -3,7 +3,7 @@ import { hashToUint32 } from "@/lib/events/substrate/rng";
 export { DEMOCRATIC_HEALTH_METRIC_IDS } from "@/lib/governanceStyle/score";
 export { applyCivilLibertiesDelta } from "@/lib/politicalMetrics/civilLiberties";
 
-export const HIGH_TENSION_EVENT_KINDS = new Set([
+const HIGH_TENSION_EVENT_KINDS = new Set([
   "worldEvents.panicBuying",
   "worldEvents.bankRun",
   "worldEvents.civilDefenseFever",
@@ -11,8 +11,8 @@ export const HIGH_TENSION_EVENT_KINDS = new Set([
 ]);
 
 export const HIGH_TENSION_SHARED_LEDGER_KIND = "worldEvents.highTensionShared";
-export const HIGH_TENSION_STAGGER_MIN_TURNS = 3;
-export const HIGH_TENSION_STAGGER_MAX_TURNS = 6;
+const HIGH_TENSION_STAGGER_MIN_TURNS = 3;
+const HIGH_TENSION_STAGGER_MAX_TURNS = 6;
 
 export function isHighTensionSocietyEvent(kind: string): boolean {
   return HIGH_TENSION_EVENT_KINDS.has(kind);

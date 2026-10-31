@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const { user } = auth;
 
-    const rateLimit = checkRateLimit(user.userId, 10, 60_000);
+    const rateLimit = checkRateLimit(`api/wiki/my/claim:${user.userId}`, 10, 60_000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, claimSchema);

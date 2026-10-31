@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { State } from "@/lib/db/types";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
+  getCountryOfficeType,
   getRegionalExecutiveOfficeKey,
-  getOfficeTypeConfig,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryOfficesClient";
 import type { SerializedPlayer, NPPDisplaySimple } from "./StatePageTabsTypes";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -202,7 +202,7 @@ export function AdminTab({
   // the config label so the removal list matches the appointer + hero.
   const execOfficeKey = getRegionalExecutiveOfficeKey(state.countryId as CountryId);
   const execLabel =
-    getOfficeTypeConfig(state.countryId as CountryId, execOfficeKey)?.label ?? "Governor";
+    getCountryOfficeType(state.countryId as CountryId, execOfficeKey)?.label ?? "Governor";
 
   const getOfficeLabel = (official: FilledOfficial) => {
     if (official.officeType === execOfficeKey) return execLabel;

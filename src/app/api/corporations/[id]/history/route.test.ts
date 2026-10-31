@@ -88,6 +88,53 @@ describe("GET /api/corporations/[id]/history", () => {
     }
   );
 
+  it("sparkline=1 returns only the newest 20 turn/sharePrice points", async () => {
+    const corpId = new ObjectId();
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: {
+        _id: corpId,
+        sequentialId: 16,
+        sharePrice: 100,
+        totalShares: 1_000,
+        liquidCurrencyCode: "USD",
+      } as any,
+    } as any);
+
+    db.collectionMocks.corporationHistory.aggregate.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { turn: 1, sharePrice: 10 },
+        { turn: 2, sharePrice: 11 },
+      ]),
+    });
+
+    const { GET } = await import("./route");
+    const res = await GET(new Request("http://localhost/api/corporations/16/history?sparkline=1"), {
+      params: Promise.resolve({ id: "16" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { history: Array<{ turn: number; sharePrice: number }> };
+    expect(body.history).toEqual([
+      { turn: 1, sharePrice: 10 },
+      { turn: 2, sharePrice: 11 },
+    ]);
+
+    const [pipeline] = db.collectionMocks.corporationHistory.aggregate.mock.calls[0] as [
+      Array<Record<string, unknown>>,
+    ];
+    expect(pipeline).toEqual([
+      { $match: { corporationId: corpId } },
+      { $sort: { turn: -1, createdAt: -1, _id: -1 } },
+      { $group: { _id: "$turn", sharePrice: { $first: "$sharePrice" } } },
+      { $sort: { _id: -1 } },
+      { $limit: 20 },
+      { $sort: { _id: 1 } },
+      { $project: { _id: 0, turn: "$_id", sharePrice: 1 } },
+    ]);
+  });
+
   it("queries the newest 500 unique turns in chronological order", async () => {
     const corpId = new ObjectId();
     const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");

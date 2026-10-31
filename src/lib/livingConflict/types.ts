@@ -38,15 +38,6 @@ import type { CampaignStage, LivingCampaignState } from "@/lib/db/types/livingCo
  */
 export type ConflictRole = GlobalResponseRole;
 
-export const ALL_CONFLICT_ROLES: readonly ConflictRole[] = [
-  "belligerent",
-  "backer_a",
-  "backer_b",
-  "neighbor",
-  "bloc",
-  "bystander",
-] as const;
-
 /** What kind of living conflict this is. Drives framing and default surfaces. */
 export type LivingConflictType = "proxy_war" | "pandemic" | "disaster" | "geopolitical";
 

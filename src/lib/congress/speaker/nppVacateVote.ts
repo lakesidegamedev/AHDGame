@@ -25,7 +25,7 @@ import { resolvePartyTier } from "@/lib/parties/partyTier";
  * which an NPP counts as ideologically close to the sitting Speaker. A bloc
  * this close does not move to vacate, whatever its party label says.
  */
-export const NPP_VACATE_STANCE_DISTANCE = 2;
+const NPP_VACATE_STANCE_DISTANCE = 2;
 
 export type VacateVoteValue = "for" | "against";
 

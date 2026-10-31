@@ -26,6 +26,14 @@ export interface BuildQueueSummary {
    * orders it is the not-yet-built remainder, which falls a slice per turn.
    */
   unitsRemaining: number;
+  /**
+   * Capacity units arriving each turn from smooth orders still ramping in
+   * (a linear slice per turn until the order's online turn). 0 when every
+   * outstanding order lands all at once.
+   */
+  unitsPerTurn: number;
+  /** Turn the LAST outstanding order finishes. Null when the queue is empty. */
+  lastOnlineTurn: number | null;
   /** Turn the SOONEST outstanding order lands. Null when the queue is empty. */
   nextOnlineTurn: number | null;
   /**
@@ -53,15 +61,24 @@ export function summarizeBuildQueue(
   let unitsOrdered = 0;
   let unitsRemaining = 0;
   let nextOnlineTurn: number | null = null;
+  let lastOnlineTurn: number | null = null;
+  let unitsPerTurn = 0;
   for (const order of queue) {
     const units = Number.isFinite(order?.unitsOrdered) ? order.unitsOrdered : 0;
     if (units > 0) {
       unitsOrdered += units;
       unitsRemaining += undeliveredUnits(order, currentTurn);
+      const window = order.onlineTurn - order.startTurn;
+      if (order.smooth === true && window > 0 && currentTurn < order.onlineTurn) {
+        unitsPerTurn += units / window;
+      }
     }
     const online = order?.onlineTurn;
     if (Number.isFinite(online) && (nextOnlineTurn == null || online < nextOnlineTurn)) {
       nextOnlineTurn = online;
+    }
+    if (Number.isFinite(online) && (lastOnlineTurn == null || online > lastOnlineTurn)) {
+      lastOnlineTurn = online;
     }
   }
 
@@ -69,6 +86,8 @@ export function summarizeBuildQueue(
     orders: queue.length,
     unitsOrdered,
     unitsRemaining,
+    unitsPerTurn,
+    lastOnlineTurn,
     nextOnlineTurn,
     turnsRemaining: nextOnlineTurn == null ? null : Math.max(0, nextOnlineTurn - currentTurn),
   };

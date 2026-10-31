@@ -496,20 +496,22 @@ export async function runFinancialSuspectScan(db: Db, currentTurn: number): Prom
 
     if (flagUpdates.size === 0) return;
 
-    // Early ledger rows were seeded with `suspectFlags: null`; Mongo rejects
-    // `$push` against those docs, and any non-array shape can abort the whole
-    // unordered bulk scan during turn processing. Normalize the current window
-    // first so the scan can heal legacy data instead of bricking the phase.
+    // Early ledger rows were seeded with `suspectFlags: null`, and unflagged
+    // rows are written without the field; Mongo rejects `$push` against a
+    // non-array, which can abort the whole unordered bulk scan during turn
+    // processing. Normalize only the rows about to be flagged: the window holds
+    // thousands of unflagged rows, and rewriting all of them every scan made
+    // this one of the turn's heaviest writes.
+    const { ObjectId } = await import("mongodb");
     await col.updateMany(
       {
-        turn: { $gte: minTurn },
+        _id: { $in: Array.from(flagUpdates.keys(), (id) => new ObjectId(id)) },
         $expr: { $eq: [{ $isArray: "$suspectFlags" }, false] },
       } as Record<string, unknown>,
       [{ $set: { suspectFlags: [] } }] as Record<string, unknown>[]
     );
 
     // Backfill flags via bulkWrite, merging into existing suspectFlags array
-    const { ObjectId } = await import("mongodb");
     await budget.checkpoint("bulkWritePreparation");
     const ops = Array.from(flagUpdates.entries()).map(([id, newFlags]) => ({
       updateOne: {

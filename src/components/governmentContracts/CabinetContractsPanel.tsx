@@ -1,6 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
 import { officeContractType } from "@/lib/governmentContracts/rules";
 import { GovernmentContractsBoard } from "./GovernmentContractsBoard";
@@ -12,7 +13,7 @@ export function CabinetContractsPanel({
   positionId: string;
 }) {
   const t = useTranslations("corporations.governmentContracts");
-  const config = COUNTRY_CONFIGS[countryId as CountryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId as CountryId];
   const type = officeContractType(
     countryId,
     positionId,

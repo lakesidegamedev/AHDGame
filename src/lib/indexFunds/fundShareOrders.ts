@@ -73,6 +73,12 @@ export interface PlaceFundShareBuyOrderInput {
   txSink?: Omit<IndexFundTransaction, "_id">[];
   /** Caller flushes escrow ledger rows after completed bid placements. */
   ledgerSink?: TxInput[];
+  /**
+   * The caller has already established from the fund document it is looping
+   * over that this is not a picked-stocks fund, so the defensive re-read of
+   * `mandate` is unnecessary (it read the same document once per bid).
+   */
+  verifiedNotPickedStocks?: boolean;
 }
 
 export interface PlaceFundShareBuyOrderResult {
@@ -92,11 +98,13 @@ export async function placeFundShareBuyOrder(
   input: PlaceFundShareBuyOrderInput
 ): Promise<PlaceFundShareBuyOrderResult> {
   const { fund, corp, shares, limitPriceLocal, fxRate } = input;
-  const current = await db
-    .collection<IndexFund>("indexFunds")
-    .findOne({ _id: fund._id }, { projection: { mandate: 1 } });
-  if (current?.mandate?.mode === "picked_stocks")
-    return { ok: false, reason: "This fund buys available shares during rebalancing." };
+  if (!input.verifiedNotPickedStocks) {
+    const current = await db
+      .collection<IndexFund>("indexFunds")
+      .findOne({ _id: fund._id }, { projection: { mandate: 1 } });
+    if (current?.mandate?.mode === "picked_stocks")
+      return { ok: false, reason: "This fund buys available shares during rebalancing." };
+  }
 
   if (!Number.isFinite(shares) || shares <= 0) {
     return { ok: false, reason: "Invalid share quantity" };

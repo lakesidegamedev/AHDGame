@@ -3,6 +3,9 @@
  * A national devolution law can found, retain, abolish or restore the offices;
  * founding fixes the first election anchor instead of inheriting US midterms.
  */
+/** Founding races retain their 72-turn window as the General phase changes. */
+export const UK_EXECUTIVE_FOUNDING_TURNS = 72;
+
 export const UK_EXECUTIVE_REGIONS = ["SCO", "WAL", "NIR", "LON"] as const;
 export type UKExecutiveRegion = (typeof UK_EXECUTIVE_REGIONS)[number];
 

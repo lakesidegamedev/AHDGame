@@ -38,14 +38,11 @@ import {
   MAX_DIVIDEND_RATE,
   CEO_SALARY_MAX_REVENUE_MULTIPLE,
   CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
+  getSectorRiskPremium,
 } from "@/lib/constants/corporations";
 import { marketingStrengthAfterTurn } from "@/lib/corporations/strengthUpkeep";
 import { managementOverheadPpForCorp } from "./managementOverhead";
 import { valuationCashAnchor } from "@/lib/corporations/honestBalanceSheets";
-import {
-  bankNpvBoostMultiplier,
-  sectorRiskPremiumAtTurn,
-} from "@/lib/corporations/rules/marketBoost";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   anchorToCorpCapital,
@@ -93,6 +90,7 @@ import {
   type FundedReceipt,
 } from "@/lib/market/producerMarket/fundedSectorRules";
 import { processSector, type SectorTurnEnv } from "./sectorTurn";
+import { fundedSectorValuation } from "./fundedSectorValuation";
 import {
   perTurnIssuerBondInterestExpense,
   perTurnBondCouponIncomeAsHolder,
@@ -369,6 +367,8 @@ export function processSectors(
     let corpWageWeighted = 0;
     let corpWageWeight = 0;
     let corpSectorNPV = 0; // Sum of sector NPVs for balance sheet price
+    // Funded valuation: units sold at base prices, for the real growth premium.
+    let corpRealOutput = 0;
     // Diagnostic accumulators (revenue-weighted)
     let diagWeightedMargin = 0;
     let diagWeightedCommodityInput = 0;
@@ -399,8 +399,9 @@ export function processSectors(
         corp,
         lookups.exchangeRatesByCurrency
       );
+      const sectorIdStr = sector._id.toString();
       const legacyResult =
-        internalSupplyResults?.get(sector._id.toString()) ??
+        internalSupplyResults?.get(sectorIdStr) ??
         processSector(
           sectorTurnEnv,
           corp,
@@ -409,17 +410,31 @@ export function processSectors(
           sectorCurrencyCode,
           sectorFxRate
         );
-      const fundedReceipt = funded?.receiptsBySectorId.get(sector._id.toString());
+      const fundedReceipt = funded?.receiptsBySectorId.get(sectorIdStr);
       const r = fundedReceipt ? fundedSectorResult(legacyResult, fundedReceipt) : legacyResult;
       if (fundedReceipt) {
-        fundedResults.set(sector._id.toString(), r);
-        fundedDaily.set(sector._id.toString(), (anchorPerTurn: number) =>
+        fundedResults.set(sectorIdStr, r);
+        fundedDaily.set(sectorIdStr, (anchorPerTurn: number) =>
           writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
         );
       }
       corpGrowthNumer += (r.newCurrentGrowthRate / 100) * r.hourlyRevenue;
       corpGrowthDenom += r.hourlyRevenue;
-      corpSectorNPV += r.npvContribution;
+      // Funded valuation values the sector on what the settlement says it
+      // earned, not on the legacy nameplate P&L run beside it.
+      const fundedValue =
+        fundedReceipt && (lookups.fundedValuationStage ?? 0) >= 1
+          ? fundedSectorValuation({
+              sector,
+              receipt: fundedReceipt,
+              result: r,
+              currentTurn,
+              currentYear,
+              eraUnitScale: lookups.eraUnitScale,
+            })
+          : null;
+      corpSectorNPV += fundedValue ? fundedValue.valueAnchor : r.npvContribution;
+      corpRealOutput += fundedValue?.realOutputAnchor ?? 0;
 
       // O1c: paid growth cost → the operating state's capital investment.
       if (r.growthInvestmentAnchor > 0) {
@@ -1343,6 +1358,9 @@ export function processSectors(
       actualSharePrice: placeholderSharePrice,
       totalShares,
       sectorNPV: corpSectorNPV,
+      ...((lookups.fundedValuationStage ?? 0) >= 1 && funded
+        ? { realOutputAnchor: corpRealOutput }
+        : {}),
       creditComposite: creditPack.creditRating.compositeScore,
       creditRating: creditPack.creditRating.rating,
       marginDiagnostic:
@@ -1526,6 +1544,16 @@ export function processSectors(
       };
     };
     if (totalAdvertisingDeliveredValueAnchor > 0) {
+      // Every buyer pays every seller, so the per-corp settlement info (a
+      // currency and FX resolution) is read once per corp rather than once per
+      // pair, in the same order the pair loop read it.
+      const sellerInfos = advertisingSellerDeliveredValues.map(
+        ([sellerId, deliveredValueAnchor]) => ({
+          sellerId,
+          deliveredValueAnchor,
+          seller: corpInfo(sellerId),
+        })
+      );
       for (const [buyerId, spendAnchor] of marketingSpendAnchorByBuyerId) {
         const buyer = corpInfo(buyerId);
         if (!buyer) continue;
@@ -1535,12 +1563,11 @@ export function processSectors(
         );
         const ordinarySpendAnchor = Math.max(0, spendAnchor - deferredTitleAnchor);
         let allocatedAnchor = 0;
-        for (let i = 0; i < advertisingSellerDeliveredValues.length; i++) {
-          const [sellerId, deliveredValueAnchor] = advertisingSellerDeliveredValues[i];
-          const seller = corpInfo(sellerId);
+        for (let i = 0; i < sellerInfos.length; i++) {
+          const { sellerId, deliveredValueAnchor, seller } = sellerInfos[i];
           if (!seller) continue;
           const amountAnchor =
-            i === advertisingSellerDeliveredValues.length - 1
+            i === sellerInfos.length - 1
               ? ordinarySpendAnchor - allocatedAnchor
               : ordinarySpendAnchor * (deliveredValueAnchor / totalAdvertisingDeliveredValueAnchor);
           allocatedAnchor += amountAnchor;
@@ -1687,13 +1714,8 @@ export function processSectors(
     const corpPrimeRate =
       (lookups.primeRateByCountry.get(corp.countryId) ??
         getCountryConfig(corp.countryId).centralBank.defaultPrimeRate) / 100;
-    const riskPremium = sectorRiskPremiumAtTurn(
-      getOperatingSectorType(
-        corp.type,
-        corp.industryModel,
-        corp.mediaDiscriminator
-      ) as Corporation["type"],
-      currentTurn
+    const riskPremium = getSectorRiskPremium(
+      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
     );
     const growthNumer = corpGrowthNumerByCorpId.get(id) ?? 0;
     const growthDenom = corpGrowthDenomByCorpId.get(id) ?? 0;
@@ -1706,8 +1728,7 @@ export function processSectors(
       : 0;
     const bankNpvAnchor = activeBankCharter
       ? bankNpvFromPerTurnIncome(
-          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate,
-          bankNpvBoostMultiplier(currentTurn)
+          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate
         )
       : 0;
     return {

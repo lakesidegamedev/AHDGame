@@ -114,11 +114,14 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   const claim = await db
     .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
     .updateOne(
-      { _id: vote._id, status: "open" },
+      // The tallied votes are part of the claim: a cast that lands after the
+      // tally leaves the vote open for the next resolver to count it.
+      { _id: vote._id, status: "open", votes: vote.votes },
       { $set: { status: finalStatus, resolvedAt: now, updatedAt: now } }
     );
   if (claim.matchedCount === 0) {
-    // Another resolver already claimed this vote. Bail out — they own the side effects.
+    // Another resolver already claimed this vote, or a cast moved the tally.
+    // Bail out: the claimant owns the side effects, or the next pass recounts.
     return { resolved: false, reason: "already_resolved" };
   }
 

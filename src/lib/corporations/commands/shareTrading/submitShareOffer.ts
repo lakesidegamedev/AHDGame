@@ -50,6 +50,9 @@ import type {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { checkNegotiatedSale } from "@/lib/corporations/negotiatedSaleGuards";
+import { getGameTime } from "@/lib/time/gameTime";
+import { settleListingOffer } from "./acceptShareOffer";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -67,14 +70,19 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/submitShareOffer:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, listingId } = await params;
     const parsed = await parseJsonBody(request, submitOfferSchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    const { shares, pricePerShare, offerAsCorporation } = parsed.data;
+    const { shares, offerAsCorporation } = parsed.data;
+    let { pricePerShare } = parsed.data;
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
@@ -115,10 +123,27 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     const listingCorpSym =
       CURRENCY_SYMBOLS[(listingCorp?.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
 
+    // Negotiated sale: only the named buyer, every listed share, at the agreed
+    // price. The 50%-200% band does not apply; the guards below and the public
+    // record on the company page do.
+    const negotiated = listing.negotiated;
+    if (negotiated) {
+      if (offerAsCorporation) {
+        return errorResponse(400, "A negotiated sale is bought with your personal funds");
+      }
+      if (shares !== listing.sharesRemaining) {
+        return errorResponse(
+          400,
+          `This negotiated sale is for all ${listing.sharesRemaining.toLocaleString()} shares`
+        );
+      }
+      pricePerShare = negotiated.pricePerShare;
+    }
+
     // Price bounds: 50%–200% of market price at listing creation
     const priceFloor = listing.marketPriceAtCreation * 0.5;
     const priceCeiling = listing.marketPriceAtCreation * 2.0;
-    if (pricePerShare < priceFloor || pricePerShare > priceCeiling) {
+    if (!negotiated && (pricePerShare < priceFloor || pricePerShare > priceCeiling)) {
       return errorResponse(
         400,
         `Offer must be between ${listingCorpSym}${priceFloor.toFixed(4)} and ${listingCorpSym}${priceCeiling.toFixed(4)} per share`
@@ -132,6 +157,28 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     // transfer for a fresh account buying a confederate's listing.
     const barrier = await newCharacterTransferBarrierResponse(character);
     if (barrier) return barrier;
+
+    if (negotiated) {
+      if (!negotiated.buyerCharacterId.equals(character._id)) {
+        return errorResponse(403, "This sale is reserved for another player");
+      }
+      const seller = await db
+        .collection<Character>("characters")
+        .findOne(
+          { _id: listing.sellerCharacterId },
+          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+        );
+      if (!seller) return errorResponse(404, "Seller not found");
+      const gameTime = await getGameTime();
+      const guard = await checkNegotiatedSale(
+        db,
+        seller,
+        character,
+        gameTime.currentTurn,
+        gameTime.effectiveNow.getTime()
+      );
+      if (!guard.ok) return errorResponse(guard.status, guard.error);
+    }
 
     const tradeLock = await assertCeoTradeNotBlocked(db, corporation, character._id);
     if (tradeLock.blocked) {
@@ -173,7 +220,9 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     // expiry refund are all FX-stable. Wallet deduction uses ₳ as the hop.
     // listingCorp was fetched above for the price-bound currency display.
     const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
-    const escrowAmount = Math.round(shares * pricePerShare * 100) / 100;
+    const escrowAmount = negotiated
+      ? negotiated.totalPrice
+      : Math.round(shares * pricePerShare * 100) / 100;
     const escrowAnchor = corpLiquidCapitalToAnchor(
       escrowAmount,
       listingCorp ?? {},
@@ -185,6 +234,8 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     // placement (cancel/reject refunds only escrowAmount, not the markup), so
     // routed to the CB system before returning. Set inside the corp branch.
     let offerFxSpread: { fee: number; from: CurrencyCode; to: CurrencyCode } | null = null;
+    // Personal offer id, used to settle a negotiated sale straight away.
+    let placedOfferId: ObjectId | null = null;
 
     if (offerAsCorporation) {
       const placerCorp = await db
@@ -357,6 +408,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
           createdAt: now,
         } as Omit<ShareOffer, "_id">);
         offerId = insertResult.insertedId;
+        placedOfferId = offerId;
       } catch (err) {
         await refundCharacterCash(db, character._id, homeCurrency, escrowInHome, forexEnabled);
         if (isPendingShareOfferDuplicateKey(err)) {
@@ -391,6 +443,43 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         ]);
         throw err;
       }
+    }
+
+    if (negotiated) {
+      const placed = placedOfferId
+        ? await db.collection<ShareOffer>("shareOffers").findOne({ _id: placedOfferId })
+        : null;
+      if (!placed) return errorResponse(500, "Negotiated sale payment was not recorded");
+      const settled = await settleListingOffer(db, {
+        listing,
+        offer: placed,
+        sharesToAccept: shares,
+        forexEnabled,
+      });
+      if (!settled.ok) {
+        // Escrow stays on the pending offer; the buyer can withdraw it or the
+        // listing expiry refunds it, exactly as for an ordinary offer.
+        return errorResponse(
+          settled.status,
+          `${settled.error}. Your payment is held as a pending offer and is refunded if you withdraw it or the sale expires.`
+        );
+      }
+      void (async () => {
+        const sellerChar = await db
+          .collection<Character>("characters")
+          .findOne({ _id: listing.sellerCharacterId }, { projection: { userId: 1 } });
+        if (!sellerChar) return;
+        await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
+          userId: sellerChar.userId,
+          type: "share_offer_accepted",
+          title: "Your negotiated share sale went through",
+          message: `${character.name} paid ${listingCorpSym}${negotiated.totalPrice.toLocaleString()} for ${shares.toLocaleString()} shares of ${listingCorp?.name ?? "your corporation"}`,
+          read: false,
+          metadata: { listingId: listing._id.toString() },
+          createdAt: now,
+        } as Omit<Notification, "_id">);
+      })().catch(() => undefined);
+      return NextResponse.json({ ...settled.body, escrowAmount, negotiated: true });
     }
 
     // Notify the seller

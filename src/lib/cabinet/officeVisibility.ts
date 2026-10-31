@@ -9,9 +9,22 @@ import {
 } from "@/lib/constants/countries";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 
 /** Why a viewer may see a cabinet office. Null when they may not. */
-export type CabinetOfficeViewerRole = "holder" | "headOfGovernment" | "headOfState" | "admin";
+export type CabinetOfficeViewerRole =
+  "holder" | "headOfGovernment" | "headOfState" | "cabinetCoordinator" | "admin";
+
+/**
+ * Cabinet seats whose job is to coordinate the rest of the cabinet, so their
+ * holder may read every office in the same government without acting in it.
+ * Japan's Chief Cabinet Secretary runs the Cabinet Secretariat that oversees
+ * the ministries (ticket 1686, owner-approved 2026-10-26).
+ */
+const CABINET_COORDINATOR_SEATS: Partial<Record<CountryId, { positionId: string; title: string }>> =
+  {
+    JP: { positionId: "chief_cabinet_secretary", title: "Chief Cabinet Secretary" },
+  };
 
 export interface CabinetOfficeVisibility {
   /** May the viewer read this office's records at all? */
@@ -39,9 +52,10 @@ async function readActivePreset(db: Db): Promise<string | undefined> {
  * those numbers was served to anybody who knew the URL, including foreign
  * governments reading an opponent's order of battle off the defence page.
  *
- * The rule is deliberately narrow. Only the seated officeholder, and the two
- * offices that sit above every seat in the same country's government, may see
- * inside. Cabinet colleagues cannot: a foreign ministry has no business in the
+ * The rule is deliberately narrow. Only the seated officeholder, the two
+ * offices that sit above every seat in the same country's government, and a
+ * cabinet-coordinating seat where the country has one, may see inside. Other
+ * cabinet colleagues cannot: a foreign ministry has no business in the
  * defence ledger. Country scoping is implicit, because every head-of-X lookup
  * here is asked about the OFFICE's country, so a foreign head of government
  * never matches.
@@ -107,6 +121,17 @@ export async function resolveCabinetOfficeVisibility(
     if (hogCharacterId && hogCharacterId.toString() === viewerId) {
       return { canView: true, canAct: false, viewerRole: "headOfGovernment" };
     }
+  }
+
+  // The coordinating seat reads across its own government's cabinet. Looked up
+  // in the office's country, so a foreign coordinator never matches.
+  const coordinatorSeat = CABINET_COORDINATOR_SEATS[countryId];
+  if (viewerCharacterId && coordinatorSeat) {
+    const seat = await getCabinetMembersCollection(db).findOne(
+      { countryId, positionId: coordinatorSeat.positionId, characterId: viewerCharacterId },
+      { projection: { _id: 1 } }
+    );
+    if (seat) return { canView: true, canAct: false, viewerRole: "cabinetCoordinator" };
   }
 
   // Resolved lazily on purpose: only this branch needs the preset, and it is
@@ -178,6 +203,9 @@ export function cabinetOfficeViewerTitles(countryId: CountryId, preset?: string)
     // instead, which is why this one only fires when there is no office at all.
     titles.push(getHeadOfStateTitle(config));
   }
+
+  const coordinatorSeat = CABINET_COORDINATOR_SEATS[countryId];
+  if (coordinatorSeat) titles.push(coordinatorSeat.title);
 
   return titles;
 }

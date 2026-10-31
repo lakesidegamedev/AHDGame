@@ -17,11 +17,3 @@ export function defaultRoleResolver(ctx: RoleContext): ConflictRole {
   if (ctx.blocMembers.includes(ctx.countryId)) return "bloc";
   return "bystander";
 }
-
-/** Resolve a nation's role in a conflict, given the conflict's own resolver. */
-export function roleFor(
-  resolver: (ctx: RoleContext) => ConflictRole,
-  ctx: RoleContext
-): ConflictRole {
-  return resolver(ctx);
-}

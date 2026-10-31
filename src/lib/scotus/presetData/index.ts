@@ -20,7 +20,7 @@ import { SCOTUS_2027_DEFAULT_SEED } from "./2027";
  * the seeding hook is safe to ship ahead of content.
  * ============================================================================
  */
-export const SCOTUS_PRESET_DATA: Partial<Record<ResetPresetId, ScotusPresetSeed>> = {
+const SCOTUS_PRESET_DATA: Partial<Record<ResetPresetId, ScotusPresetSeed>> = {
   "1953-default": SCOTUS_1953_SEED, // #3599: 1953 Original Roster + Docket
   "1979-default": SCOTUS_1979_PRESET_SEED, // #3600: 1979 Original Roster + Docket
   "1991-default": SCOTUS_1991_PRESET_DATA, // #3601: 1991 Original Roster + Docket

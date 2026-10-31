@@ -2,7 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import type { SectorDetail } from "../CorporationPageTypes";
-import { DELIVERY_LIMITED_MIN_SHARE, formatFillPercent, formatUnits } from "../plantsPresentation";
+import {
+  DELIVERY_LIMITED_MIN_SHARE,
+  formatFillPercent,
+  formatUnits,
+  plantCountLabel,
+  sectorPlantCount,
+} from "../plantsPresentation";
 import {
   FREIGHT_CLASS_LABELS,
   freightClassAction,
@@ -48,7 +54,7 @@ export function CapacityChain({
   const block = variant === "block";
   const row = `flex justify-between gap-3 ${block ? "py-1 text-[12px]" : ""}`;
   const note = `mt-1.5 leading-snug text-muted ${block ? "text-[11px]" : "text-[10px]"}`;
-  const heading = "Capacity → net profit";
+  const heading = "Plants → net profit";
 
   const body = (
     <>
@@ -61,7 +67,13 @@ export function CapacityChain({
       )}
       <div className={`text-muted ${block ? "" : "space-y-0.5 text-xs"}`}>
         <div className={row}>
-          <span>Capacity</span>
+          <span>Plants</span>
+          <span className="tabular-nums">
+            {plantCountLabel(sectorPlantCount(sector), sector.sectorType)}
+          </span>
+        </div>
+        <div className={row}>
+          <span>Full output, units a day</span>
           <span className="tabular-nums">{formatUnits(sector.capacityUnits)}</span>
         </div>
         <div className={row}>

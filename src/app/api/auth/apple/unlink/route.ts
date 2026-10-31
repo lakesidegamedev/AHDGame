@@ -28,7 +28,7 @@ export const POST = withNoStore(async function POST() {
     }
     const userId = auth.user.userId;
 
-    const rateLimit = checkRateLimit(userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/auth/apple/unlink:${userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();

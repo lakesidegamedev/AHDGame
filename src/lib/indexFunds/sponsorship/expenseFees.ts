@@ -9,7 +9,8 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { withSessionDb } from "@/lib/db/sessionDb";
-import { emitTx } from "@/lib/financialTxLog/emit";
+import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
+import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { sumFundBondHoldingsByFundId } from "@/lib/bonds/fundBondHoldings";
 import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from "../fundValuation";
 import { computeHoldingsValueAnchor } from "../fundAllocation";
@@ -172,8 +173,18 @@ export async function chargeSponsorExpenseFees(
     const credits = await tx.collection<Corporation>("corporations").bulkWrite(sponsorUpdates);
     if (credits.matchedCount !== receipts.length) throw new Error("Sponsor fee credit failed");
     await tx.collection<IndexFundTransaction>("indexFundTransactions").insertMany(receipts);
+    // One thresholds and one turn-cadence read for every fee row: the
+    // single-row emitter repeated both once per sponsored fund. Loaded only
+    // once a fee is actually charged, so a pass that charges nothing reads
+    // nothing new.
+    const [thresholds, turnLengthMinutes] = await Promise.all([
+      loadTxThresholds(tx),
+      loadTurnLengthMinutes(tx),
+    ]);
+    // Each fee row still commits with the money it describes.
     for (const witness of witnesses) {
-      if ((await emitTx(tx, witness)) === "failed") throw new Error("Fund fee witness failed");
+      if ((await emitTx(tx, witness, thresholds, { turnLengthMinutes })) === "failed")
+        throw new Error("Fund fee witness failed");
     }
     return outcome;
   });

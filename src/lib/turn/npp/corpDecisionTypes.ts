@@ -80,6 +80,17 @@ export interface NppCorpDecisionContext {
    * absent before the funded market or outside a funded world.
    */
   transitionFirstFundedTurn?: number;
+  /**
+   * Funded market only: era and tech facts for choosing an entrant's recipe
+   * (rules/foundingRecipe). Absent keeps entrants on the standard recipe.
+   */
+  fundedRecipeWorld?: import("./foundingRecipeChoice").FoundingRecipeWorld;
+  /**
+   * World epoch when the funded producer market runs; absent on a legacy world.
+   * Growth and mothball decisions read funded sell-through under it
+   * (rules/fundedSellThrough).
+   */
+  fundedWorldEpoch?: string;
   /** Per-country allowance of capacity that may start converting this turn; absent = unpaced. */
   conversionBudgetOf?: (
     countryId: string
@@ -91,6 +102,13 @@ export interface NppCorpDecisionContext {
   ) => number | undefined;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
+  /**
+   * Unowned-pool lookup shared across the whole cohort. The index it builds is a
+   * pure function of the pool snapshot, which every corporation's decision in
+   * one turn reads unchanged, so it is built once instead of once per
+   * corporation. Absent builds a private one.
+   */
+  reinvestPoolFor?: import("./reinvestCandidatePool").ReinvestPoolLookup;
 }
 
 /** A composable sector write emitted by the NPP corporation decision engine. */
@@ -192,6 +210,8 @@ export interface NppCorpDecision {
 /** World facts needed to price founding builds through the player-equivalent path. */
 export interface NppPlantsContext {
   enabled: boolean;
+  /** gameConfig.wholePlantsStage on: builds are sized in whole plants. */
+  wholePlants?: boolean;
   year: number;
   eraUnitScale: number;
   preset: string | undefined;

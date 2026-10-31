@@ -1,3 +1,4 @@
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -31,7 +32,11 @@ export async function POST(request: Request, context: RouteContext) {
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/central-bank/nominate:${authResult.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const auth = authResult.user;
 
@@ -141,6 +146,16 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json(badRequest("Character must be in a member country").toJson(), {
         status: 400,
       });
+
+    if (
+      !recovering &&
+      (await getIncompatibleOfficeHolders(db, "bank", [targetId])).has(targetId.toString())
+    ) {
+      return errorResponse(
+        400,
+        "Leave the incompatible cabinet or central bank role before nomination"
+      );
+    }
 
     // Target must not hold the executive office
     const targetExecOffice = COUNTRY_CONFIGS[target.countryId as CountryId]?.officeTypes.find(

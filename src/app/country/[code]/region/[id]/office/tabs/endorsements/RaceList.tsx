@@ -2,7 +2,7 @@
 
 import { EndorseButton } from "./EndorseButton";
 import { PartyChip } from "@/app/congress/components/CongressShared";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 export interface RaceCandidate {
   id: string;

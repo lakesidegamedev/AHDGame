@@ -24,6 +24,9 @@ import { reconcileUnionLeaderCache } from "@/lib/unions/unionReconciliation";
 import { TRACKED_ONBOARDING_STEP_IDS } from "@/lib/onboarding/checklist";
 import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
+import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
+import { listCharacterPositions, listFundsByIds } from "@/lib/indexFunds/fundQueries";
+import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
 
 // The current corporation is read here, so this endpoint must never serve a
 // stale body: a positive max-age let the browser return a pre-founding
@@ -35,10 +38,16 @@ const ME_CACHE_HEADERS = {
 
 // GET /api/character/me — Returns the authenticated user's character data and their current CEO corporation if any.
 // Handles both regular and imperial characters.
+// `?include=funds` also returns the caller's fund positions, so the portfolio
+// page can paint holdings from the request it already makes instead of a second
+// id-keyed round trip. Only that page asks, so every other caller is unchanged.
 // Auth: requireAuthWithCharacter (regular) or getAuthUser + manual imperial lookup
 // Errors: 401
-export async function GET() {
+export async function GET(request?: Request) {
   try {
+    const includeFunds = request
+      ? new URL(request.url).searchParams.get("include")?.split(",").includes("funds") === true
+      : false;
     const db = await getDb();
     const bankPropTradingEnabled = await isBankPropTradingEnabled();
 
@@ -131,31 +140,55 @@ export async function GET() {
     const user = auth.user;
 
     // Parallelize independent queries
-    const [corporation, blockingRace, borderMap, forexEnabled, reconciledUnionLeaderOf] =
-      await Promise.all([
-        db.collection<Corporation>("corporations").findOne(
-          { ceoId: user.character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
-          {
-            projection: {
-              _id: 1,
-              sequentialId: 1,
-              name: 1,
-              logoUrl: 1,
-              countryOwnerId: 1,
-              liquidCapital: 1,
-              liquidCurrencyCode: 1,
-              bankCharter: 1,
-            },
-          }
-        ),
-        findBlockingActiveCandidacy(db, user.character._id),
-        fetchBordersByUserIds(db, [new ObjectId(user.userId)]),
-        isForexEnabled(),
-        // Code-review fix #8: self-heal a desynced unionLeaderOf cache on
-        // read (see reconcileUnionLeaderCache's docblock) — also un-sticks a
-        // character wrongly locked out of claiming a union.
-        reconcileUnionLeaderCache(db, user.character),
-      ]);
+    const [
+      corporation,
+      blockingRace,
+      borderMap,
+      forexEnabled,
+      reconciledUnionLeaderOf,
+      fundsFeatureEnabled,
+      fundPositions,
+    ] = await Promise.all([
+      db.collection<Corporation>("corporations").findOne(
+        { ceoId: user.character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
+        {
+          projection: {
+            _id: 1,
+            sequentialId: 1,
+            name: 1,
+            logoUrl: 1,
+            countryOwnerId: 1,
+            liquidCapital: 1,
+            liquidCurrencyCode: 1,
+            bankCharter: 1,
+          },
+        }
+      ),
+      findBlockingActiveCandidacy(db, user.character._id),
+      fetchBordersByUserIds(db, [new ObjectId(user.userId)]),
+      isForexEnabled(),
+      // Code-review fix #8: self-heal a desynced unionLeaderOf cache on
+      // read (see reconcileUnionLeaderCache's docblock) — also un-sticks a
+      // character wrongly locked out of claiming a union.
+      reconcileUnionLeaderCache(db, user.character),
+      includeFunds ? isIndexFundsEnabled() : Promise.resolve(false),
+      includeFunds ? listCharacterPositions(db, user.character._id) : Promise.resolve([]),
+    ]);
+
+    // Fund definitions are the only read that depends on the positions above,
+    // so it is one batched follow-up after the main wave rather than a per-row
+    // lookup. `null` means the feature is off for this world; the portfolio
+    // client hides the funds section on it.
+    const fundPortfolio = !includeFunds
+      ? undefined
+      : fundsFeatureEnabled
+        ? enrichFundPositions(
+            fundPositions,
+            await listFundsByIds(db, [
+              ...new Map(fundPositions.map((pos) => [pos.fundId.toString(), pos.fundId])).values(),
+            ])
+          )
+        : null;
 
     const activeElection: {
       id: string;
@@ -190,6 +223,7 @@ export async function GET() {
     return NextResponse.json(
       {
         foundingCooldownTurnsRemaining: foundingCooldownRemaining,
+        ...(includeFunds ? { fundPositions: fundPortfolio } : {}),
         character: {
           _id: user.character._id.toString(),
           name: user.character.name,
@@ -259,7 +293,7 @@ export async function PATCH(request: Request) {
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/character/me:${user.userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, patchSchema);

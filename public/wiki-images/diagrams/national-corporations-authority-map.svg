@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="340" viewBox="0 0 780 340" role="img" font-family="system-ui, sans-serif">
+<title>Who controls the National Corporation</title>
+<desc>The head of government, the finance minister and the CEO each control different parts of a National Corporation.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="339" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="30" width="220" height="170" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="32" y="102.5" text-anchor="start" font-size="13" font-weight="700" fill="#18181b">Head of government</text>
+<text x="32" y="119.5" text-anchor="start" font-size="13" fill="#18181b">Marks strategic sectors</text>
+<text x="32" y="136.5" text-anchor="start" font-size="13" fill="#18181b">Orders takings</text>
+<rect x="280" y="30" width="220" height="170" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="292" y="68.5" text-anchor="start" font-size="13" font-weight="700" fill="#18181b">Finance minister</text>
+<text x="292" y="85.5" text-anchor="start" font-size="13" fill="#18181b">Appoints or removes the CEO</text>
+<text x="292" y="102.5" text-anchor="start" font-size="13" fill="#18181b">Sets public mandates</text>
+<text x="292" y="119.5" text-anchor="start" font-size="13" fill="#18181b">Splits and merges sector</text>
+<text x="292" y="136.5" text-anchor="start" font-size="13" fill="#18181b">types</text>
+<text x="292" y="153.5" text-anchor="start" font-size="13" fill="#18181b">Sets the CEO's draw cap</text>
+<text x="292" y="170.5" text-anchor="start" font-size="13" fill="#18181b">Privatizes</text>
+<rect x="540" y="30" width="220" height="170" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="552" y="68.5" text-anchor="start" font-size="13" font-weight="700" fill="#18181b">CEO</text>
+<text x="552" y="85.5" text-anchor="start" font-size="13" fill="#18181b">Runs day-to-day operations</text>
+<text x="552" y="102.5" text-anchor="start" font-size="13" fill="#18181b">Chooses how much profit to</text>
+<text x="552" y="119.5" text-anchor="start" font-size="13" fill="#18181b">keep</text>
+<text x="552" y="136.5" text-anchor="start" font-size="13" fill="#18181b">Cannot set mandates, trade</text>
+<text x="552" y="153.5" text-anchor="start" font-size="13" fill="#18181b">assets or raise their own</text>
+<text x="552" y="170.5" text-anchor="start" font-size="13" fill="#18181b">cap</text>
+<path d="M500,90 L540,90" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M130,200 L130,270" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M390,200 L390,270" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M650,200 L650,270" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="138" y="245" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">orders takings</text>
+<text x="398" y="245" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">sets policy</text>
+<text x="658" y="245" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">runs operations</text>
+<rect x="20" y="270" width="740" height="50" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="390.0" y="299.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">National Corporation</text>
+</svg>

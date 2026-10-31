@@ -39,12 +39,7 @@ export function quoteConversionConstructionRefund(sector: CorporateSector, turn:
       capitalStock,
       operatingCapacityUnits: capitalStock,
       capacityBookAnchor: Math.max(0, (sector.capacityBookAnchor ?? 0) - removedBook),
-      ...seedPlantLedger(
-        sector.sectorType,
-        capitalStock,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      ),
+      ...seedPlantLedger(sector, capitalStock),
     },
   };
 }

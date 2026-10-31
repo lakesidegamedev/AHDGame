@@ -28,7 +28,7 @@ interface RouteParams {
 async function load(params: RouteParams["params"]) {
   const auth = await requireBasicAuth();
   if (!auth.ok) return { response: auth.response } as const;
-  const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+  const rateLimit = checkRateLimit(`api/corporations/[id]/ceo-pay:${auth.user.userId}`, 20, 60000);
   if (!rateLimit.ok) return { response: rateLimitResponse(rateLimit.retryAfter) } as const;
   const db = await getDb();
   const resolved = await resolveCorporation(db, (await params).id);

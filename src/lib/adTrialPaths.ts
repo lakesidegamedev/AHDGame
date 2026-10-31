@@ -8,7 +8,7 @@ const ADS_ENABLED = true;
  * dashboards, private account screens, and policy pages (/privacy, /terms —
  * ad chrome on policy pages reads poorly to ad-network reviewers) are excluded.
  */
-export const AD_BANNER_PATH_PREFIXES = [
+const AD_BANNER_PATH_PREFIXES = [
   "/about",
   "/approval",
   "/campaign",

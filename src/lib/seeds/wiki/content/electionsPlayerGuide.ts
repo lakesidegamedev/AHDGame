@@ -4,7 +4,7 @@ The elections UI has three levels: the country election board, the individual ra
 
 ## Results, maps and replay
 
-In normal multiplayer mode, general-election returns update at half past the hour as well as during the main hourly turn. Campaign budgets, action refresh and race deadlines stay on the main turn. A tick may be skipped while a turn is processing; faster returns do not mean another action allowance.
+In normal multiplayer mode, general-election returns update at half past the hour as well as during the main hourly turn, and so do state and regional primary counts once their ballot window has opened. Campaign budgets, action refresh and race deadlines stay on the main turn. A tick may be skipped while a turn is processing; faster returns do not mean another action allowance.
 
 Presidential races offer a full-screen map with state and county views, campaign presence and a road-to-270 strip for Electoral College races. Open a state in the map to inspect its results and campaign options. Popular-vote views answer a different question from the Electoral College count.
 
@@ -14,7 +14,9 @@ For a finished presidential race with recorded weekly history, choose **Replay t
 
 ### 1. Country election board
 
-Open **Nation > Elections**. Use the filters for country, office, stage, and state or region. The board is for finding a race and checking its phase. It is not the place to judge your detailed position.
+![Elections board with the office, state and stage filters and the election night summary](/wiki-images/screens/elections-player-guide-elections-board.webp)
+
+Open **Nation > Elections**. The board covers the country you opened it from. Use the filters for state or region, office, primary stage and field size, and the toggles for close races and races that have not opened yet. The board is for finding a race and checking its phase. It is not the place to judge your detailed position.
 
 Before entering, confirm:
 
@@ -100,7 +102,7 @@ You also receive the highest position bonus you qualify for:
 | National legislator, ceremonial head of state | +1.0 |
 | Acting cabinet member | +0.75 |
 | State or regional legislator, state party chair | +0.5 |
-| CEO of one of the 10 largest listed corporations in its country by market cap | +0.3 |
+| CEO of one of the 10 largest listed corporations in its country by market cap, not on autopilot | +0.3 |
 | CEO of any other listed corporation in the top half of its country by market cap | +0.15 |
 
 A CEO only qualifies after running the same corporation for 12 turns. Running a corporation grants no extra actions.
@@ -126,7 +128,7 @@ NPI is both a score and a spendable political resource.
 - Presidential general elections use it for national reach.
 - Some party and leadership systems rank or weight candidates with it.
 - Proposing legislation can spend it.
-- Moving to another country resets it; moving within the same country preserves it.
+- Moving to another country resets it to 0. Moving within the same country keeps your NPI but resets your local political influence, which drops your per-turn gain to -0.5 until you rebuild it.
 
 For ordinary policy, subsidy, and union-law bills, the provision ladder is:
 
@@ -160,7 +162,25 @@ Party organization helps turn alignment into votes. Registration makes the party
 
 ### Money
 
-Money funds campaign actions and upgrades. It is a means, not a direct victory score. Spend it on the weakest link the race page exposes.
+Money funds campaign actions and upgrades, and recent spending also counts directly: the Money persuasion driver compares how much each side has spent lately. Money sitting in a treasury scores nothing. Spend it on the weakest link the race page exposes.
+
+## Why you can win the primary and lose the general
+
+A primary and a general score different things in different electorates.
+
+- **Who votes.** The primary electorate is your party's registered voters. The general electorate is everyone registered in the state, including voters who dislike your party.
+- **What is scored.** A state primary rewards alignment with the state and the party (40 points), favorability (35) and influence (25). The general multiplies appeal to each voter group by reach, approval and your party's organization, and your rivals have spent the primary building their own coalitions.
+- **When it counts.** Primary ballots count over the closing stretch of the primary. General votes count over the whole general, with the last 4 turns carrying 30%.
+
+So a candidate who matches the party base but sits far from the state's swing groups can win the nomination and still lose. Run a Full Poll as soon as the primary ends and read [Primary vs General Tactics](/wiki/primary-general-tactics).
+
+## Which stat should I raise first?
+
+It depends on the race.
+
+- **State primary:** favorability is the largest single part (35 points). Alignment adds up to 40 but splits into 25 for the state and 15 for the party, and political influence is worth 25 on a square-root curve.
+- **Presidential primary:** alignment (40), favorability (25), party influence (20, and it keeps paying above that for very high party influence) and national reach (15). Party chairs get no special multiplier in presidential primaries, so a chair loses when favorability and alignment are weaker than a rival's.
+- **General:** favorability scales every vote you win, then reach (influence), then party organization.
 
 ## A turn-by-turn routine
 
@@ -173,13 +193,21 @@ Money funds campaign actions and upgrades. It is a means, not a direct victory s
 7. Recheck after the next turn instead of spending several turns blind.
 8. Save resources for the final four turns when the race is close.
 
-## Related
+## Where to go next
 
-- [Election Mechanics](/wiki/election-mechanics): full formulas and office rules.
+- [Election Mechanics](/wiki/election-mechanics): how the phases and vote math work.
 - [Primaries](/wiki/primaries): declaration, scoring, and nomination tactics.
 - [General Elections](/wiki/general-elections): vote accumulation and closing turns.
+- [Political Operations](/wiki/political-operations): Campaign Presence in presidential races.
+- [Nominating Convention](/wiki/nominating-convention): how a presidential nomination without a majority is settled.
+- [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate): what a running mate can do in the general.
+- [Vote Factor Ledger](/wiki/vote-factor-ledger): why each presidential candidate has the votes they have.
+- [Live Election Results](/wiki/live-election-results): the results page and replay.
 - [Campaign Manager](/wiki/campaign-manager): every campaign control.
+- [Glossary](/wiki/glossary): terms such as NPP and NPI.
 - [Polling](/wiki/polling): quick and demographic polls.
 - [Demographics & Targeting](/wiki/demographics-targeting): appeal by voter group.
 - [Campaign Strategy](/wiki/campaign-strategy): advanced spending and timing.
+
+Applies in every era and country with elections. Last checked 2026-10-29, version 1.18.0
 `;

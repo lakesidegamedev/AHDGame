@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import type { CountryMacroSnapshot, MacroMetric } from "@/app/country/[code]/forex/types";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";
 import { ForexChartTimeframeTabs } from "@/components/forex/ForexChartTimeframeTabs";
 import {
@@ -395,7 +396,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
           <span className="text-body-sm font-medium text-muted">Countries on chart</span>
           <div className="flex flex-wrap gap-2 justify-end">
             {primaryCountries.map((c) => {
-              const cfg = COUNTRY_CONFIGS[c.countryId];
+              const cfg = COUNTRY_CLIENT_CONFIGS[c.countryId];
               const visible = !hiddenCountryIds.has(c.countryId);
               return (
                 <button
@@ -435,7 +436,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
               </summary>
               <div className="mt-2 flex flex-wrap gap-2 justify-end">
                 {moreCountries.map((c) => {
-                  const cfg = COUNTRY_CONFIGS[c.countryId];
+                  const cfg = COUNTRY_CLIENT_CONFIGS[c.countryId];
                   const visible = !hiddenCountryIds.has(c.countryId);
                   return (
                     <button

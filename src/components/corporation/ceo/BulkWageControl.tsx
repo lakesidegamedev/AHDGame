@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { WAGE_LEVEL_MIN, WAGE_LEVEL_MAX } from "@/lib/labour/laborCost";
 import type { BulkOperationsFn, BulkOperationsResult } from "./CeoOperationsTable";
 import { SmallButton } from "../dense/DenseKit";

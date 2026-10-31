@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { RESET_V2_READY } from "@/lib/resetVersions/availability";
+import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { notFound } from "next/navigation";
 import { type Metadata } from "next";
 import { getDb } from "@/lib/mongodb";
@@ -37,6 +39,7 @@ import { isPrimaryEnded } from "@/lib/elections/phases";
 import { ObjectId } from "mongodb";
 import {
   getEndorseableElectionTypes,
+  getExecutiveOrderNamePlural,
   getSubNationalLegislatureKey,
 } from "@/lib/constants/countries";
 import { getOfficeState } from "@/lib/governorOffice/queries";
@@ -48,6 +51,7 @@ import { ADDRESS_COOLDOWN_TURNS } from "@/lib/constants/governorOffice";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
+import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -527,11 +531,19 @@ export default async function GovernorOfficePage({ params }: Props) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <GovernorOfficeClient
+        legislationVersion={
+          resetSystemVersionsForCountry(gameStateDoc, RESET_V2_READY, countryId).legislation
+        }
         countryId={countryId}
         stateId={stateId}
         stateName={state.name}
-        stateBannerImage={state.bannerImage ?? null}
+        bannerSrc={
+          resolveRegionOfficeBannerImage(countryId, stateId, state.bannerImage ?? null) ?? null
+        }
         regionalTitle={getRegionalBillAssentTitleForState(countryId, stateId)}
+        // Resolved here so the overview card title does not pull the client
+        // country config into the browser for one label.
+        ordersLabel={getExecutiveOrderNamePlural(countryId)}
         officeHolderName={officeHolder?.characterName ?? null}
         officeHolderAvatarUrl={officeHolderAvatarUrl}
         officeHolderPartyName={officeHolderPartyName}

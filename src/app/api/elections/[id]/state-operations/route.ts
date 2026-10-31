@@ -23,7 +23,11 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Its own read budget, matching the other reads this screen makes. The
     // shared `election:` bucket is 20 a minute and every other member of it is
     // an action the player takes; browsing must not starve acting.
-    const rateLimit = checkRateLimit(auth.user.userId, 60, 60000);
+    const rateLimit = checkRateLimit(
+      `api/elections/[id]/state-operations:${auth.user.userId}`,
+      60,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

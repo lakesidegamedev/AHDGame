@@ -88,27 +88,25 @@ export function marketTelemetry(input: {
       update.lowFillTurns =
         clearing.soldFraction < STRANDED_LOW_FILL_THRESHOLD ? (sector.lowFillTurns ?? 0) + 1 : 0;
     }
-    update.soldByCommodity = Object.fromEntries(
-      Object.entries(clearing.soldByCommodity ?? {})
-        .filter((entry): entry is [string, number] => Number.isFinite(entry[1]))
-        .map(([commodity, sold]) => [commodity, Math.round(sold * 1000) / 1000])
+    update.soldByCommodity = roundedMap(clearing.soldByCommodity, 1000, (sold) =>
+      Number.isFinite(sold)
     );
     // Per-output revenue share, so the sector page can show a sale price per
     // product instead of one blended average. Always overwritten (empty when
     // nothing sold) so a stale split never outlives the turn that wrote it.
-    update.revenueShareByCommodity = Object.fromEntries(
-      Object.entries(clearing.revenueShareByCommodity ?? {})
-        .filter((entry): entry is [string, number] => Number.isFinite(entry[1]) && entry[1]! > 0)
-        .map(([commodity, share]) => [commodity, Math.round(share * 10000) / 10000])
+    update.revenueShareByCommodity = roundedMap(
+      clearing.revenueShareByCommodity,
+      10000,
+      (share) => Number.isFinite(share) && share > 0
     );
     if (Number.isSafeInteger(currentTurn)) {
       update.soldByCommodityTurn = currentTurn;
       if (clearing.deliveredUnitsByCommodity) {
         update.soldUnitsByCommodityTurn = currentTurn;
-        update.soldUnitsByCommodity = Object.fromEntries(
-          Object.entries(clearing.deliveredUnitsByCommodity).filter(
-            (entry): entry is [string, number] => Number.isFinite(entry[1]) && entry[1]! >= 0
-          )
+        update.soldUnitsByCommodity = roundedMap(
+          clearing.deliveredUnitsByCommodity,
+          undefined,
+          (units) => Number.isFinite(units) && units >= 0
         );
       }
     }
@@ -117,15 +115,33 @@ export function marketTelemetry(input: {
   }
 
   if (inventoryTurn) {
-    update.inventoryUnits = Object.fromEntries(
-      Object.entries(inventoryTurn.nextInventory)
-        .filter((entry): entry is [string, number] => entry[1] > 0)
-        .map(([commodity, held]) => [commodity, Math.round(held * 100) / 100])
-    );
+    update.inventoryUnits = roundedMap(inventoryTurn.nextInventory, 100, (held) => held > 0);
     update.inventoryValueAnchor = Math.round(inventoryTurn.heldValueAnchor);
     update.inventoryDrainedUnits = Math.round(inventoryTurn.drainedUnits * 100) / 100;
     update.inventorySpoiledUnits = Math.round(inventoryTurn.spoiledUnits * 100) / 100;
   }
 
   return update;
+}
+
+/**
+ * Copy the kept entries of a commodity record, rounding each to `scale`
+ * decimals when one is given. A loop rather than entries/filter/map: this runs
+ * once per sector per telemetry field, and the chain allocated three arrays for
+ * a handful of keys.
+ */
+function roundedMap(
+  source: object | null | undefined,
+  scale: number | undefined,
+  keep: (value: number) => boolean
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!source) return out;
+  const rows = source as Record<string, number | undefined>;
+  for (const commodity of Object.keys(rows)) {
+    const value = rows[commodity];
+    if (typeof value !== "number" || !keep(value)) continue;
+    out[commodity] = scale === undefined ? value : Math.round(value * scale) / scale;
+  }
+  return out;
 }

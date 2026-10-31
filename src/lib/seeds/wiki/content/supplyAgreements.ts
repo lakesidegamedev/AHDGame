@@ -1,63 +1,61 @@
 export const supplyAgreementsContent = `# Supply Agreements
 
-By default, every corporation buys and sells on the open market, where orders clear **cheapest-first** and there's no guarantee of who you trade with turn to turn. A **supply agreement** is the alternative: a private, standing contract between two corporations, where a supplier commits to sell a particular commodity directly to a specific buyer.
+Your steel plant needs ore every turn, and on the open market most orders clear **cheapest-first**, so you have no say in who you trade with or whether the ore is there. A **supply agreement** fixes that. It is a private, standing contract in which one corporation (the supplier) commits to sell a commodity to a named buyer. The contracted volume is filled before the open market, so the buyer gets guaranteed inputs and the supplier gets guaranteed sales.
 
-It's the in-game version of a wholesale supply deal: a locked-in relationship that sits *outside* the open scramble and gets settled first.
+## What a contract does each turn
 
-## How it works
+An agreement covers one commodity between two corporations. When the market clears:
 
-An agreement is between two corporations for one commodity:
+1. **The buyer's demand is filled from the supplier's output first**, up to the contract's volume cap and what the supplier actually makes.
+2. **The supplier's excess** flows to the open market as normal.
+3. **If the supplier makes less than it promised**, the buyer covers the gap on the open market and the supplier pays the buyer damages.
 
-- One side is the **supplier**, who commits to sell.
-- The other is the **buyer**, who commits to take that supply.
+So a contract is a *priority claim*, not magic supply. It moves the buyer to the front of the queue; it cannot create goods that were never made. Overall, demand clears in this order: contracted first, then the loyal slice (the reserved share for loyal customers, see [Brand Loyalty](/wiki/brand-loyalty)), then cheapest-first for everything left. The full picture is in the [Market System guide](/wiki/market-system-guide), and contracted volume leaves the [open commodity market](/wiki/commodities) before cheapest-first clearing begins.
 
-When the market clears each turn, the contract is honored **before** the open market:
+## Making a deal
 
-1. **The buyer's demand is filled from the supplier's output first**, up to the volume the supplier can actually produce.
-2. **The supplier's excess** (whatever it makes beyond the contract) flows out to the open market as normal.
-3. **If the supplier falls short** of what it promised to produce, the buyer covers the gap on the open market **and** the supplier pays damages to the buyer (half the shortfall's market value, capped). A mothballed plant that still has a live contract is a damages machine.
+Open your [corporation](/wiki/corporations) page, go to the **Commodities** tab and use the **Supply agreements** section (shown to the CEO; national corporations do not get it). Pick a commodity, a counterparty, a volume cap, a price premium or discount, a term and whether it is exclusive. The other side must accept, and counter-offers are possible until both agree. Corporations can also post standing offers; accepting one forms the contract.
 
-**You are only charged for a gap you could have closed.** Damages are measured against what your plants could actually have made that turn, not against the number on the contract. If inputs ran short, a strike hit, or the market was so glutted that production throttled back, the ceiling drops with it and the damages drop too. What stays fully chargeable are the levers you control: turning the production policy down, or mothballing. Cut output yourself and you still owe the whole contracted volume.
+![Supply agreement lifecycle from offer and counter-offers to active, cancel notice and cancelled or expired.](/wiki-images/diagrams/supply-agreements-lifecycle.svg)
 
-The practical consequence: **size a volume cap to what your plants reliably make, not to their maximum.** Nameplate capacity is the best possible turn. Contracting at it means any ordinary bad turn is a shortfall.
+| Rule | Value |
+| --- | --- |
+| Price band | Contract price must stay within -35% to +35% of the market price |
+| Fixed term | 4 to 192 turns, or open-ended |
+| Volume cap at signing | At most 1.2 times what the supplier's running plants can make at its current production policy (20% headroom) |
+| Damages for a shortfall | 50% of the per-turn market value of the units not produced |
+| Damages ceiling per turn | 25% of the contract's own value (volume cap times unit price) |
+| Cancel notice, open-ended | 4 turns |
+| Cancel notice, fixed term | A quarter of the turns left, at least 4 and at most 24, never past the end date |
+| NPP auto-accept | Inbound offer from a player at up to +20% over market, when the NPP consumes the commodity |
 
-So a supply agreement is a *priority claim*, not a magic supply. It moves the buyer to the front of the supplier's queue; it doesn't create commodities that don't exist.
+The two sides agree a price as a premium or discount on the market price. The band keeps it honest: it cannot fall far below (a disguised gift) or rise far above (gouging a captive partner). Each turn the buyer still pays the market price through clearing, and the premium is settled between the two corporations on top: a positive premium moves cash from buyer to supplier, a negative one the other way.
 
-## Both sides must agree
+Size the cap to what you reliably make. Nameplate capacity, which comes from your plants (see [Running a Corporation under the Plants System](/wiki/plants-corp-guide)), is your best possible turn, and contracting at it turns every ordinary bad turn into a shortfall. To get a supplier to guarantee your inputs, offer a contract slightly above market, sized below what its plants make.
 
-An agreement can't be imposed. One corporation makes an **offer**, and it only takes effect once the other **accepts**. Either party can **cancel** an existing agreement. Otherwise it stays in force until its term ends. If a counterparty leaves the game, any agreement with them is retired automatically, so you are not left holding a dead contract.
+The **exclusive** box is recorded on the contract, but clearing does not act on it yet: an exclusive supplier's output above the cap still sells on the open market like any other contract's. NPP corporations accept offers from a player when they actually consume the commodity and the premium is within +20%. An NPP supplier also accepts a player buyer's offer when it has spare capacity and the discount is no deeper than 10%. They never propose contracts to players, and when an NPP supplier has no running capacity left for a contracted commodity (for example after mothballing) it serves cancel notice; the contract still settles, damages included, until the notice ends. If a counterparty leaves the game, the agreement is retired automatically.
 
-## The price stays honest
+Freight contracts name the state they are fulfilled in, because haulage is based in one state, and they reserve haulage there. The other local services (construction, healthcare and real estate services) work the same way. See [Logistics](/wiki/logistics-guide).
 
-The two corporations set the contract price themselves, but it has to stay within **±35% of the prevailing market price** for that commodity. It can't drift far below (a disguised gift, dumping supply into an ally for free) or far above (gouging a captive partner). The band keeps the contract anchored to what the commodity is actually worth, and it moves as the market moves.
+## When the supplier falls short
 
-## Exclusivity and loyalty
+Damages are measured against what your plants could actually have made that turn, not against the number on the contract. If inputs ran short, a strike hit, or the market was so glutted that production throttled back, the ceiling drops and so do the damages. A weak market for your goods is also not a breach, because the test is production, not sales.
 
-Agreements can be made **exclusive**, which, paired with scarcity, is genuinely powerful: a supplier-and-buyer pair can lock up a slice of a commodity that rivals then have to do without. It's a real strategic tool for controlling a supply chain.
+What stays fully chargeable are choices you control: turning production down, or mothballing a plant that still has a live contract. If you make nothing at all, the whole contracted volume the buyer actually used that turn counts as the shortfall. Damages never charge for units the buyer had no use for. The side that owes pays what it has and no more. Shutting a plant down means owing half the market value of the shortfall each turn, up to the 25% ceiling, until the notice period ends.
 
-It also interacts with [brand loyalty](/wiki/brand-loyalty). A guaranteed contract means guaranteed sales for the supplier, which helps its **fill rate**, and delivering what you offer is exactly what earns loyalty. There's no separate bonus stapled on; the benefit flows through the normal loyalty rules. For the buyer, a locked-in source is a stable, predictable input, which makes planning production far easier.
+Contracts signed before this rule existed, with no physical check at signing, are exempt from damages until the parties re-sign.
 
-## Clearing order, at a glance
+A steel supplier agrees to deliver up to **1,000 units** per turn to a buyer at a **+20% premium**. That is inside the +35% band, which at a market price of 100 tops out at 135. Its plants can make 1,200 units, so the 1,000 cap passes the 1.2 times check.
 
-Each turn, demand is satisfied in this sequence:
+Contract volumes use the same daily figures as plant capacity and the market, so each hourly turn settles one twenty-fourth of their value. One turn the supplier turns its production policy down and makes only **700 units** while the buyer uses all 1,000. The shortfall is 300 units, so uncapped damages are 300 x 100 x 0.5 / 24 = **625**. The ceiling is 0.25 x 1,000 x 100 / 24, about 1,042, so the full 625 is paid. The buyer buys the missing 300 units on the open market and is compensated for part of the extra cost. Had a strike cut output to 700 instead, the damage ceiling would have dropped to 700 too and no damages would be owed.
 
-1. **Contracted**: supply agreements are filled first.
-2. **Loyal slice**: loyal customers get their reserved share (see [brand loyalty](/wiki/brand-loyalty)).
-3. **Cheapest-first**: everything that's left clears on the open market.
+Had the supplier made nothing, the shortfall would be 1,000 units: 1,000 x 100 x 0.5 / 24, about 2,083, cut to the ceiling of about 1,042.
 
-## Non-player corporations
+## Leaving a contract
 
-NPP CEOs use the same contract book. They auto-accept an inbound proposal when they actually consume the commodity and the premium is honest (within 20%). They propose same-country NPP-to-NPP contracts when a seller has uncommitted plant and a buyer is input-starved, at a small glut discount or shortage premium. They never inbox-spam a player, and they serve cancel notice before a mothballed plant starts paying shortfall damages. State-owned enterprises are left to the command-economy pass.
+Either side can serve notice. The contract keeps delivering and settling, damages included, until the notice ends, so you cannot dodge a bad turn by cancelling.
 
-## Strategy notes
+Contracts do help your brand a little: contracted sales count as sold output, which helps your fill rate, and delivering what you offer is part of how Brand Loyalty is earned. There is no separate bonus.
 
-- **Secure your critical inputs.** If a commodity you depend on is prone to shortage, a contract with a reliable supplier means you're filled before the open-market scramble even starts.
-- **Lock in a buyer to protect your fill.** Selling under contract guarantees you move volume: good for cash-flow certainty and good for your brand loyalty.
-- **Exclusivity is a weapon, and a commitment.** Cornering a scarce commodity can starve rivals, but it ties up your own supply, and the ±35% band means you still can't extract an abusive price from your partner.
-
-## Related
-
-- [Commodities](/wiki/commodities): supply, demand, and how the open market clears
-- [Corporations](/wiki/corporations): running the businesses that sign these deals
-- [Market System: A Player's Guide](/wiki/market-system-guide): how posted-price clearing works
+Applies in worlds where private contracts are on, the default for new worlds. Damages and the volume check apply from the plants stage of the market system, the normal setting for new worlds. Last checked 2026-10-30, version 1.18.0. This system has no separate design page yet.
 `;

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
-    const rate = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rate = checkRateLimit(`api/targeted-ads:${auth.user.userId}`, 20, 60_000);
     if (!rate.ok) return rateLimitResponse(rate.retryAfter);
     const parsed = await parseJsonBody(request, purchaseSchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);

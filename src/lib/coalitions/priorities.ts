@@ -3,8 +3,6 @@ import type {
   Coalition,
   CoalitionLeadershipGoalKey,
   CoalitionPriority,
-  CoalitionPriorityPartyVote,
-  CoalitionPriorityStatus,
   CoalitionPriorityVoteEntry,
 } from "@/lib/db/types/coalition";
 
@@ -71,7 +69,7 @@ function cloneVote(vote: CoalitionPriorityVoteEntry): CoalitionPriorityVoteEntry
   };
 }
 
-export function clonePriority(priority: CoalitionPriority): CoalitionPriority {
+function clonePriority(priority: CoalitionPriority): CoalitionPriority {
   return {
     ...priority,
     billId: priority.billId ?? null,
@@ -118,7 +116,7 @@ export function shouldRejectPriority(priority: CoalitionPriority, memberPartyCou
   );
 }
 
-export function isBillPriorityExpired(priority: CoalitionPriority, bill: Bill | null | undefined) {
+function isBillPriorityExpired(priority: CoalitionPriority, bill: Bill | null | undefined) {
   if (priority.type !== "bill") return false;
   return !bill || !LIVE_BILL_STATUSES.has(bill.status);
 }
@@ -128,11 +126,7 @@ export function isBillPriorityExpired(priority: CoalitionPriority, bill: Bill | 
  * turn deadline; fall back to the date for legacy priorities that pre-date
  * the turn-number migration.
  */
-export function isLeadershipPriorityExpired(
-  priority: CoalitionPriority,
-  now: Date,
-  currentTurn?: number
-) {
+function isLeadershipPriorityExpired(priority: CoalitionPriority, now: Date, currentTurn?: number) {
   if (priority.type !== "leadership_goal") return false;
   if (typeof priority.expiresOnTurn === "number" && typeof currentTurn === "number") {
     return currentTurn >= priority.expiresOnTurn;
@@ -140,7 +134,7 @@ export function isLeadershipPriorityExpired(
   return !!priority.expiresAt && priority.expiresAt.getTime() <= now.getTime();
 }
 
-export function isPriorityExpired(
+function isPriorityExpired(
   priority: CoalitionPriority,
   billsById: Map<string, Bill>,
   now: Date,
@@ -219,30 +213,6 @@ export function calculateCoalitionCohesion(
     opposeVotes,
     abstainVotes,
   };
-}
-
-export function getCoalitionPriorityLabel(status: CoalitionPriorityStatus) {
-  switch (status) {
-    case "active":
-      return "Active";
-    case "proposed":
-      return "Proposed";
-    case "rejected":
-      return "Rejected";
-    case "expired":
-      return "Expired";
-    case "archived":
-    default:
-      return "Archived";
-  }
-}
-
-export function getPriorityVoteForParty(
-  priority: CoalitionPriority,
-  partyObjectId: string
-): CoalitionPriorityPartyVote | null {
-  const vote = priority.votes.find((entry) => entry.partyId.toString() === partyObjectId);
-  return vote?.vote ?? null;
 }
 
 export function upsertCoalitionPriorityVote(

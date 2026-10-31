@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/groups/controlGroups";
 
 /** gameConfig.groupSizeCostsStage at which the monopoly trigger reads the control group. */
-export const GROUP_MONOPOLY_TRIGGER_STAGE = 4;
+const GROUP_MONOPOLY_TRIGGER_STAGE = 4;
 
 export interface GroupCellShareRow {
   /** Control-group root of the sector's owner. */

@@ -49,16 +49,6 @@ export const HISTORICAL_FEATURE_IDS = [
 export type HistoricalFeatureId = (typeof HISTORICAL_FEATURE_IDS)[number];
 
 /**
- * Territories that sit INSIDE a modern country's polygon.
- *
- * Unlike Vietnam — where the two halves replace unified Vietnam's `704` outright —
- * these overlay their host rather than replacing it: the Saar is drawn on top of
- * Germany, Zanzibar on top of Tanzania. Dropping the host would erase a country
- * that very much exists in 1953, so nothing is removed from the basemap for them.
- */
-export const HISTORICAL_OVERLAYS_HOST = true;
-
-/**
  * ⚠️ DRAW ORDER — these must be added LAST, after the region-overlay blobs.
  *
  * An overlay territory is only visible if it is painted after whatever it overlays,

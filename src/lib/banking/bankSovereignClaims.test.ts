@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { countRoundTrips } from "@/lib/test-utils/roundTripCounter";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { Bond } from "@/lib/db/types/bond";
 import type { BankCharter } from "@/lib/db/types/bank";
@@ -406,6 +407,70 @@ describe("bank sovereign claims", () => {
     expect(budget(memory).treasuryBalance).toBe(80);
     expect(budget(memory).bankSovereignClaims).toEqual([]);
     expect(vault(memory)).toBe(125);
+  });
+
+  it("probes the claim's funding receipts by key, without decoding their plans", async () => {
+    const claim = couponClaim();
+    const memory = world(claim);
+    const journal = memory.collection("bankMoneyMoves");
+    const find = vi.spyOn(journal, "find");
+    const findOne = vi.spyOn(journal, "findOne");
+
+    await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
+
+    // One read asks "is a partial funding receipt still open"; the record itself
+    // is loaded by resumeSettlement under its own projection. The predicate is
+    // not re-read afterwards: the rows this find returned were each resumed to a
+    // terminal state, and one that stayed partial refuses the claim below.
+    const partialProbe = (call: unknown[]) =>
+      (call[0] as { status?: string } | undefined)?.status === "partial";
+    // The in-memory double takes no options argument; the calls still carry them.
+    const fundingFind = find.mock.calls.filter(partialProbe) as unknown as unknown[][];
+    const fundingFindOne = findOne.mock.calls.filter(partialProbe) as unknown as unknown[][];
+    expect(fundingFind).toHaveLength(1);
+    expect(fundingFind[0]?.[1]).toEqual({ projection: { _id: 1 } });
+    expect(fundingFind[0]?.[0]).toEqual({
+      _id: { $regex: `^${claim.id}:funding:` },
+      status: "partial",
+    });
+    expect(fundingFindOne).toHaveLength(0);
+  });
+
+  it("reads the bank book for the escrow and the charter in the same call", async () => {
+    const claim = couponClaim();
+    const memory = world(claim);
+    const escrowAndCharter = (call: unknown[]) =>
+      JSON.stringify(call[1] ?? {}) ===
+      JSON.stringify({ projection: { bankCharter: 1, bankSovereignEscrows: 1 } });
+    const findOne = vi.spyOn(memory.collection("corporations"), "findOne");
+
+    await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
+
+    // The pre-funding escrow probe and the post-funding confirmation both need
+    // the charter the payout guards on, so neither is a second read.
+    expect(findOne.mock.calls.filter(escrowAndCharter)).toHaveLength(2);
+    expect(
+      findOne.mock.calls.filter(
+        (call) =>
+          JSON.stringify((call as unknown[])[1] ?? {}) ===
+          JSON.stringify({ projection: { bankSovereignEscrows: 1 } })
+      )
+    ).toHaveLength(0);
+    expect(budget(memory).bankSovereignClaims).toEqual([]);
+    expect(vault(memory)).toBe(15);
+  });
+
+  it("settles one funded claim inside a bounded round-trip count", async () => {
+    const claim = couponClaim();
+    const memory = world(claim);
+    const trips = countRoundTrips(memory);
+
+    await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
+
+    // Funding receipt, escrow and charter, vault payout, the claim pull off the
+    // budget and the journal records. A per-claim probe or a separate charter
+    // read raises this by one each, so the bound is the measured 29 plus one.
+    expect(trips.total(), trips.summary()).toBeLessThanOrEqual(30);
   });
 
   it("sends a closed or rechartered epoch's recovery to the currency insurance fund", async () => {
@@ -922,5 +987,129 @@ describe("bank sovereign claims", () => {
     expect(budget(memory)).toMatchObject({ treasuryBalance: 1_000, treasuryCashLocal: 5 });
     expect(budget(memory).bankSovereignClaims).toHaveLength(1);
     expect(vault(memory)).toBe(5);
+  });
+
+  it("settles a maturity wave once per bond with one shared claim book", async () => {
+    const cash = 10_000;
+    const memory = createInMemoryDb();
+    memory.seed("federalBudget", [
+      {
+        _id: "federal",
+        countryId: "US",
+        currencyCode: "USD",
+        treasuryBalance: cash,
+        treasuryCashLocal: cash,
+        debt: { principal: 6_000 },
+        spending: { total: 0, debtInterest: 0 },
+        revenue: { total: 0 },
+        bankSovereignClaims: [],
+      },
+    ]);
+    memory.seed("corporations", [
+      {
+        _id: bankId,
+        bankCharter: {
+          status: "active",
+          currency: "USD",
+          charteredTurn: 4,
+          cashReserves: 5,
+        },
+      },
+    ]);
+    const holders = [new ObjectId(), new ObjectId(), new ObjectId()];
+    memory.seed(
+      "characters",
+      holders.map((holderId) => ({ _id: holderId, cashOnHand: 0 }))
+    );
+    const bonds = holders.map(
+      (holderId) =>
+        ({
+          _id: new ObjectId(),
+          issuerType: "sovereign",
+          countryId: "US",
+          corporationId: new ObjectId(),
+          currencyCode: "USD",
+          totalIssued: 2_000,
+          couponRate: 0,
+          maturityTurn: 48,
+          matured: false,
+          defaulted: false,
+          publicFloat: 0,
+          holders: [
+            { bankId, charteredTurn: 4, units: 0.5 },
+            { characterId: holderId, units: 1.5 },
+          ],
+        }) as unknown as Bond
+    );
+    memory.seed("bonds", bonds as unknown as Record<string, unknown>[]);
+    const now = new Date("2026-10-05T00:00:00Z");
+
+    for (const bond of bonds) {
+      const holderLegs = [
+        {
+          collection: "characters",
+          filter: { _id: bond.holders[1]!.characterId },
+          path: "cashOnHand",
+          amount: 1_500,
+          currencyCode: "USD" as const,
+          localPerAnchor: 1,
+          note: "Pay the wave's non-bank holder",
+        },
+      ];
+      await freezeFundedSovereignBondMaturityQuote(memory as unknown as Db, {
+        bond,
+        dueTurn: 48,
+        currencyCode: "USD",
+        treasuryLocalPerAnchor: 1,
+        nonBankRepaymentLocal: 1_500,
+        holderLegs,
+        now,
+      });
+      await addBankMaturityClaims(memory as unknown as Db, {
+        budgetId: "federal",
+        countryId: "US",
+        currencyCode: "USD",
+        turn: 48,
+        bond,
+        anchorRate: 1,
+        treasuryCashLedgerEnabled: true,
+      });
+      await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 48);
+      const settled = await settleFundedSovereignBondMaturity(memory as unknown as Db, {
+        bond,
+        turn: 48,
+        dueTurn: 48,
+        currencyCode: "USD",
+        treasuryLocalPerAnchor: 1,
+        nonBankRepaymentLocal: 1_500,
+        holderLegs,
+        now,
+      });
+      expect(settled?.status).toBe("applied");
+    }
+
+    // Every non-bank holder is paid exactly once, each bank lot lands in its
+    // charter vault once, and the Treasury pays only the 2,000 face per bond.
+    for (const holder of holders)
+      expect(
+        memory.collection("characters").docs.find((row) => String(row._id) === String(holder))
+          ?.cashOnHand
+      ).toBe(1_500);
+    expect(vault(memory)).toBe(1_505);
+    expect(budget(memory)).toMatchObject({
+      treasuryCashLocal: cash - 6_000,
+      treasuryBalance: cash - 6_000,
+      debt: { principal: 0 },
+      bankSovereignClaims: [],
+    });
+    // No bond keeps a holder, a float or a pending claim after its payout.
+    for (const bond of bonds) {
+      const stored = memory
+        .collection("bonds")
+        .docs.find((row) => String(row._id) === String(bond._id));
+      expect(stored).toMatchObject({ matured: true, holders: [], publicFloat: 0 });
+      expect((stored?.sovereignMaturityClaim as { paid?: boolean } | undefined)?.paid).toBe(true);
+    }
+    expect(memory.collection("bonds").docs.filter((row) => row.matured === false)).toHaveLength(0);
   });
 });

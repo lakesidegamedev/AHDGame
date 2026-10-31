@@ -88,7 +88,7 @@ export interface MutualDefenceContext {
  * committing posture or a standing charter are loaded, so a world with no Article 5
  * posture and no Cold War blocs costs three small reads and returns no pacts.
  */
-export async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceContext | null> {
+async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceContext | null> {
   const gs = await (
     await getGameStateCollection(db)
   ).findOne(
@@ -170,7 +170,7 @@ export async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceCon
  * applicant is told), so the warning can never promise a war the engine would not
  * start, or stay silent about one it would.
  */
-export function pactFiresFor(params: {
+function pactFiresFor(params: {
   pact: Pick<DefencePact, "memberJoinedTurn">;
   defender: string;
   attackers: readonly string[];
@@ -364,7 +364,7 @@ export interface DeclaredWarFront {
  * declaration opened (`createdBy: "player"`), interstate, not concluded, with the
  * host on a roster and at least one modelled attacker.
  */
-export async function loadDeclaredWarFronts(db: Db): Promise<DeclaredWarFront[]> {
+async function loadDeclaredWarFronts(db: Db): Promise<DeclaredWarFront[]> {
   const conflicts = (await getConflictsCollection(db)
     .find({
       createdBy: "player",

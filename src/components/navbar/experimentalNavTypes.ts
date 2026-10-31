@@ -34,7 +34,8 @@ export interface CharacterProfile {
   name?: string;
 }
 
-export type OpenKey = "world" | "country" | "nation" | "state" | "help" | "staff" | "user" | null;
+export type OpenKey =
+  "world" | "country" | "nation" | "state" | "help" | "staff" | "user" | "gear" | null;
 
 export type MobileSubKey = "state" | "nation" | "world" | "help" | "staff" | "country";
 

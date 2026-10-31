@@ -258,6 +258,12 @@ export function settleProducerMarket(input: {
   orders: readonly PurchaseOrder[];
   /** Build the per-country funded book from these orders and fills (see fundedBookRules). */
   trackCountryBooks?: boolean;
+  /**
+   * Intra-turn credit per buyer, settled from its own sales before the turn
+   * closes (salesAdvanceRules). A buyer may spend past its cash by this much,
+   * so its closing cash can be negative; the caller settles it. Absent = none.
+   */
+  credit?: Readonly<Record<string, number>>;
 }): ProducerMarketResult {
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
@@ -266,6 +272,25 @@ export function settleProducerMarket(input: {
   const cash = new Map(input.accounts.map((a) => [a.id, nonNegative(a.cash, "operating cash")]));
   // Opening budgets prevent a circular chain of unfunded sales from financing itself.
   const budgets = new Map(cash);
+  const floors = new Map<string, number>();
+  for (const [id, line] of Object.entries(input.credit ?? {})) {
+    if (!cash.has(id)) throw new Error("Unknown credit account");
+    const amount = nonNegative(line, "intra-turn credit");
+    if (amount > 0) {
+      budgets.set(id, budgets.get(id)! + amount);
+      floors.set(id, -amount);
+    }
+  }
+  const debit = (id: string, amount: number) =>
+    cash.set(id, Math.max(floors.get(id) ?? 0, cash.get(id)! - amount));
+  const credited = (id: string, amount: number) => {
+    const next = cash.get(id)! + amount;
+    const floor = floors.get(id);
+    if (floor == null) return nonNegative(next, "closing seller cash");
+    if (!Number.isFinite(next) || next < floor - Math.max(1e-9, -floor * 1e-12))
+      throw new Error("Invalid closing seller cash");
+    return next;
+  };
   const poolByOffer = new Map<string, ProducerSupplyPool>();
   const poolsByBook = new Map<string, Map<number, ProducerSupplyPool>>();
   // Offers behind each pooled price level, so a pooled fill can name the
@@ -506,7 +531,7 @@ export function settleProducerMarket(input: {
         if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - take);
         orderBudget = Math.max(0, orderBudget - amount);
         budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - amount));
-        cash.set(order.accountId, Math.max(0, cash.get(order.accountId)! - amount));
+        debit(order.accountId, amount);
         const buyer = orderResults.get(order.id)!;
         buyer.deliveredUnits += take;
         buyer.cost += amount;
@@ -592,11 +617,8 @@ export function settleProducerMarket(input: {
           if (!internal) {
             orderBudget = Math.max(0, orderBudget - amount);
             budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - amount));
-            cash.set(order.accountId, Math.max(0, cash.get(order.accountId)! - amount));
-            cash.set(
-              offer.accountId,
-              nonNegative(cash.get(offer.accountId)! + amount, "closing seller cash")
-            );
+            debit(order.accountId, amount);
+            cash.set(offer.accountId, credited(offer.accountId, amount));
           }
           const buyer = orderResults.get(order.id)!;
           buyer.deliveredUnits += units;
@@ -619,10 +641,7 @@ export function settleProducerMarket(input: {
     seller.soldUnits += units;
     seller.deliveredUnits += units;
     seller.revenue += amount;
-    cash.set(
-      offer.accountId,
-      nonNegative(cash.get(offer.accountId)! + amount, "closing seller cash")
-    );
+    cash.set(offer.accountId, credited(offer.accountId, amount));
   }
   if (tracked) {
     for (const [key, units] of deliveredAcross) {
@@ -731,14 +750,20 @@ export function quoteProducer(input: {
     return estimate(nonNegative(input.policy.unitPrice, "manual price"));
   const markup = input.policy.kind === "costPlus" ? input.policy.markup : input.policy.targetMarkup;
   if (!Number.isFinite(markup) || markup < -1) throw new Error("Invalid target markup");
-  const target = (breakEven ?? reference) * (1 + markup);
-  if (input.policy.kind === "costPlus") return estimate(target);
-  const candidates = new Set([reference, target]);
+  if (input.policy.kind === "costPlus") return estimate((breakEven ?? reference) * (1 + markup));
+  // An automatic seller prices off the market, never above the market reference
+  // plus its markup. The estimate below treats every bid in the book as one this
+  // seller can reach, so in a short world book the highest far-away ceiling looked
+  // like the best ask; the plant posted it and sold nothing (ticket 1728). A plant
+  // whose costs are above the market sells at the market and takes the loss.
+  const ceiling = reference * (1 + markup);
+  const candidates = new Set([reference, ceiling]);
   for (const seller of input.competitors)
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
   for (const order of input.demand)
     candidates.add(nonNegative(order.maximumUnitPrice, "demand limit"));
   return [...candidates]
+    .filter((price) => price <= ceiling)
     .map(estimate)
     .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice)[0];
 }

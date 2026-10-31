@@ -13,7 +13,7 @@ import { nextReferencePrice } from "./referencePriceRules";
 import type { ProducerPayable } from "./payablesRules";
 
 /** Planning passes the shadow allows per turn (see the t300 replay note above). */
-export const SHADOW_PLANNING_PASSES = 8;
+const SHADOW_PLANNING_PASSES = 8;
 
 export interface ShadowProducer {
   plan: ProductionPlan;
@@ -70,13 +70,23 @@ export function publicOrders(
   priceHeadroom: number
 ): PurchaseOrder[] {
   const orders: PurchaseOrder[] = [];
+  const byId = new Map<string, PurchaseOrder>();
   for (const b of buyers)
     for (const l of b.lines) {
       const price = referencePrice(l.commodity, l.book);
       if (price == null || !(price > 0) || !(l.amountLocal > 0)) continue;
+      const id = `public:${b.accountId}:${l.commodity}:${l.book}`;
+      // State lines of a country-scoped commodity (freight, construction
+      // services) land on one country book: they are one order there.
+      const same = byId.get(id);
+      if (same) {
+        same.units += l.amountLocal / price;
+        same.maximumSpend = (same.maximumSpend ?? 0) + l.amountLocal;
+        continue;
+      }
       const max = price * priceHeadroom;
-      orders.push({
-        id: `public:${b.accountId}:${l.commodity}:${l.book}`,
+      const order: PurchaseOrder = {
+        id,
         accountId: b.accountId,
         commodity: l.commodity,
         book: l.book,
@@ -84,7 +94,9 @@ export function publicOrders(
         maximumUnitPrice: max,
         maximumSpend: l.amountLocal,
         ...(b.countryId ? { countryId: b.countryId } : {}),
-      });
+      };
+      byId.set(id, order);
+      orders.push(order);
     }
   return orders;
 }

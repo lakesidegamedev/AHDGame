@@ -1,7 +1,11 @@
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { describe, expect, it } from "vitest";
 import type { CampaignFieldOffice } from "@/lib/db/types";
-import { buildFieldOfficeMultiplier } from "./engine";
+import {
+  buildFieldOfficeMultiplier,
+  loadFieldOfficesForElection,
+  loadFieldOfficesByElection,
+} from "./engine";
 
 function office(candidateId: ObjectId, regionId: string, share: number): CampaignFieldOffice {
   return {
@@ -35,5 +39,27 @@ describe("buildFieldOfficeMultiplier", () => {
     expect(mult(a.toString(), "pa")).toBe(mult(a.toString(), "PA"));
     expect(mult(a.toString(), "OH")).toBe(1);
     expect(mult(new ObjectId().toString(), "PA")).toBe(1);
+  });
+});
+
+// Apply the projection in the fake driver: returning full rows would hide the original bug.
+describe("field-office database readers", () => {
+  it("keeps county IDs through both projected readers for primary county redistribution", async () => {
+    const row = office(new ObjectId(), "PA", 0.12);
+    const db = {
+      collection: () => ({
+        find: (_filter: unknown, options: { projection: Record<string, number> }) => ({
+          toArray: async () => [
+            Object.fromEntries(
+              Object.entries(row).filter(([key]) => key === "_id" || options.projection[key] === 1)
+            ),
+          ],
+        }),
+      }),
+    } as unknown as Db;
+    expect((await loadFieldOfficesForElection(db, row.electionId))[0].subdivisionId).toBe("42101");
+    expect(
+      (await loadFieldOfficesByElection(db)).get(row.electionId.toString())![0].subdivisionId
+    ).toBe("42101");
   });
 });

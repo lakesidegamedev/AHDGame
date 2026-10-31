@@ -39,7 +39,7 @@ export const REPORT_VERSION = 1 as const;
 export const METRIC_DEFINITION_VERSION = 2 as const;
 
 /** Bounded client release string, for example "2.3.19". Not a git revision. */
-export const APP_RELEASE_PATTERN = /^\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+const APP_RELEASE_PATTERN = /^\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
 /** Collection holding sanitized aggregates. No db/types entry by design. */
 export const COLLECTION_NAME = "clientSimulationStatistics" as const;
@@ -48,19 +48,19 @@ export const COLLECTION_NAME = "clientSimulationStatistics" as const;
 export const MAX_BODY_BYTES = 8192;
 
 /** Maximum entries in the per-sector revenue map. Matches the client. */
-export const MAX_SECTOR_ENTRIES = 32;
+const MAX_SECTOR_ENTRIES = 32;
 
 /** How long a stored aggregate lives before expiry. */
 export const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Era allowlist: every seed era the game can actually bootstrap. */
-export const ALLOWED_ERAS = ["1953", "1979", "1991", "1999", "2007", "2019", "2023"] as const;
+const ALLOWED_ERAS = ["1953", "1979", "1991", "1999", "2007", "2019", "2023"] as const;
 
 /** Setup mode allowlist. Mirrors SingleplayerMode. */
-export const ALLOWED_MODES = ["normal", "head-of-state", "worldsim"] as const;
+const ALLOWED_MODES = ["normal", "head-of-state", "worldsim"] as const;
 
 /** Difficulty allowlist for client setup reports. */
-export const ALLOWED_DIFFICULTIES = ["easy", "normal", "hard"] as const;
+const ALLOWED_DIFFICULTIES = ["easy", "normal", "hard"] as const;
 
 /**
  * Autonomy allowlist: every `NppAutonomyLevel`. Kept in step with the client's
@@ -68,7 +68,7 @@ export const ALLOWED_DIFFICULTIES = ["easy", "normal", "hard"] as const;
  * simulationStatistics.ts): a level accepted on only one side means a world at
  * that level either fails validation before upload or is rejected on arrival.
  */
-export const ALLOWED_AUTONOMY = NPP_AUTONOMY_LEVELS;
+const ALLOWED_AUTONOMY = NPP_AUTONOMY_LEVELS;
 
 /**
  * Feature-flag allowlist. Exactly the flags the game reads from game state
@@ -177,7 +177,7 @@ export interface ClientSimulationStatisticsDoc {
 }
 
 /** Bounded turn buckets used for cohort comparison. Inclusive on both ends. */
-export const TURN_BUCKETS = ["0-11", "12-47", "48-95", "96-239", "240+", "unknown"] as const;
+const TURN_BUCKETS = ["0-11", "12-47", "48-95", "96-239", "240+", "unknown"] as const;
 export type TurnBucket = (typeof TURN_BUCKETS)[number];
 
 /** Map a turn number to a bounded bucket. Null/invalid turns are "unknown". */

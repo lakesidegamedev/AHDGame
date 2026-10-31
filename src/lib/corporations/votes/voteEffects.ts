@@ -9,7 +9,9 @@ import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
 import { isValidSuperShareMultiplier } from "@/lib/corporations/superShares";
 import { issuanceDilutionFactorExpr } from "@/lib/corporations/shareConsolidation";
 import {
+  placementPricePerShare,
   prepareEquityPrimaryPlacement,
+  recordCappedPrimaryPlacement,
   refundPreparedEquityPlacement,
 } from "@/lib/equities/primaryMarket";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -90,7 +92,8 @@ export async function applyPassedVoteEffects(opts: {
         corporation,
         newShareCount,
         issuancePrice,
-        now
+        now,
+        { turn: currentTurn }
       );
       const placedShares = placement.placedShares;
       // The pool pays for the first tranche now. Approved shares it cannot
@@ -163,13 +166,14 @@ export async function applyPassedVoteEffects(opts: {
         await refundPreparedEquityPlacement(db, placement, now);
         return;
       }
+      await recordCappedPrimaryPlacement(db, corporation._id, placement);
       if (placedShares > 0) {
         void recordShareTrade(db, {
           corporationId: corporation._id,
           kind: "issuance",
           turn: currentTurn,
           shares: placedShares,
-          pricePerShareAnchor: issuancePrice,
+          pricePerShareAnchor: placementPricePerShare(placement, issuancePrice),
           from: null,
           to: null,
           corpCurrencyCode: issuanceCurrencyCode ?? corporation.liquidCurrencyCode,

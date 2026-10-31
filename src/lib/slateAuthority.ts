@@ -5,7 +5,7 @@ import { getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
 export type SlateAssignerRole =
   "national_chair" | "national_vice_chair" | "state_chair" | "state_vice_chair";
 
-export const STATE_SLATE_ASSIGNMENT_BONUS = 5;
+const STATE_SLATE_ASSIGNMENT_BONUS = 5;
 
 export interface SlateAuthorityResult {
   canManage: boolean;

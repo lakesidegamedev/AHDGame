@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="430" viewBox="0 0 760 430" role="img" font-family="system-ui, sans-serif">
+<title>Three tier command authority</title>
+<desc>The defence seat holder builds Commands, commissions generals and assigns units. The Commanding General posts generals to conflicts and names a Theater Commander. The Theater Commander alone declares offensives at that front, and the defence seat holder loses that right there.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="429" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">Who holds which power</text>
+<rect x="30" y="44" width="390" height="84" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="225.0" y="72.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Defence seat holder</text>
+<text x="225.0" y="89.5" font-size="13" fill="#18181b" text-anchor="middle">Builds Commands, commissions generals, assigns units</text>
+<text x="225.0" y="106.5" font-size="13" fill="#18181b" text-anchor="middle">to generals</text>
+<rect x="30" y="160" width="390" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="225.0" y="188.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Commanding General</text>
+<text x="225.0" y="205.5" font-size="13" fill="#18181b" text-anchor="middle">One per Command. Posts the Command's generals to</text>
+<text x="225.0" y="222.5" font-size="13" fill="#18181b" text-anchor="middle">conflicts and names a Theater Commander</text>
+<rect x="30" y="276" width="390" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="225.0" y="304.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Theater Commander</text>
+<text x="225.0" y="321.5" font-size="13" fill="#18181b" text-anchor="middle">One per conflict. Declares and withdraws offensives</text>
+<text x="225.0" y="338.5" font-size="13" fill="#18181b" text-anchor="middle">at that front</text>
+<path d="M220 128 L220 160" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="225" y="139" width="56.4" height="15" fill="#ffffff"/>
+<text x="228" y="150" font-size="12" fill="#52525b" text-anchor="start">appoints</text>
+<path d="M220 244 L220 276" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="225" y="255" width="169.8" height="15" fill="#ffffff"/>
+<text x="228" y="266" font-size="12" fill="#52525b" text-anchor="start">names, hands off authority</text>
+<rect x="470" y="150" width="270" height="120" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="605.0" y="179.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Hand-off</text>
+<text x="605.0" y="196.5" font-size="13" fill="#18181b" text-anchor="middle">Once a Theater Commander is named,</text>
+<text x="605.0" y="213.5" font-size="13" fill="#18181b" text-anchor="middle">the defence seat holder can no</text>
+<text x="605.0" y="230.5" font-size="13" fill="#18181b" text-anchor="middle">longer declare or withdraw</text>
+<text x="605.0" y="247.5" font-size="13" fill="#18181b" text-anchor="middle">offensives at that front</text>
+<path d="M410 260 L470 230" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#mw)"/>
+<path d="M470 170 L410 100" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#mw)"/>
+<rect x="405.5" y="113" width="69.0" height="15" fill="#ffffff"/>
+<text x="440" y="124" font-size="12" fill="#52525b" text-anchor="middle">locked out</text>
+<text x="30" y="396" font-size="12" fill="#52525b" text-anchor="start">If the Theater Commander is dismissed, the front is vacated and the</text>
+<text x="30" y="412" font-size="12" fill="#52525b" text-anchor="start">defence seat holder gets the authority back.</text>
+</svg>

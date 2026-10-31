@@ -56,46 +56,6 @@ export const CDN_HERO_SLUGS = [
 /** Hero banner slugs served by `/api/images/hero/[slug]` (and direct CDN use). */
 export type HeroSlug = (typeof CDN_HERO_SLUGS)[number] | `commodity-${string}`;
 
-export function cdnHero(slug: string): string {
-  const ext = slug === "imf-logo" ? "png" : "webp";
-  return cdnStatic("heroes", slug, ext);
-}
-
-export function cdnMisc(slug: string): string {
-  return cdnStatic("misc", slug);
-}
-
-export function cdnSeal(countryId: string): string {
-  return cdnStatic("seals", countryId.toLowerCase());
-}
-
-export function cdnCrisis(unsplashPhotoSlug: string): string {
-  return cdnStatic("crises", unsplashPhotoSlug);
-}
-
-export function cdnPree(unsplashPhotoSlug: string): string {
-  return cdnStatic("pree", unsplashPhotoSlug);
-}
-
-export function cdnNppPolitician(id: string): string {
-  return cdnStatic("npp-politicians", id);
-}
-
-export function cdnNppAvatar(id: string): string {
-  return cdnStatic("npp-avatars", id);
-}
-
-/**
- * Landing bento card images. Slugs: state-metrics, ballot-box,
- * legislative-combat, industrial-empires, global-markets, newsroom,
- * central-banks, world-1979. Published by
- * `scripts/upload-landing-images-to-r2.mjs` to `static/landing/<slug>.webp`.
- * Use with `unoptimized` on `next/image` (CDN host not in remotePatterns).
- */
-export function cdnLanding(slug: string): string {
-  return cdnStatic("landing", slug);
-}
-
 const CDN_MAPS_BASE = `${CDN_BASE}/static/maps`;
 
 /** Regional GeoJSON files served from R2. Upload via `scripts/upload-geo-maps-to-r2.mjs`. */
@@ -117,6 +77,3 @@ export const CDN_GEO = {
 
 /** @deprecated Use CDN_GEO.worldCountries */
 export const CDN_WORLD_GEO_URL = CDN_GEO.worldCountries;
-
-/** @deprecated Use cdnHero("actions") — kept for existing imports */
-export { CDN_HERO_ACTIONS_URL } from "./staticCdnAssets";

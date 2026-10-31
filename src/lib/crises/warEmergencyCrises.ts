@@ -1,7 +1,7 @@
 import type { CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
 import type { WarEmergencyResponseId } from "./warEmergencyResponse";
 
-export const WAR_EMERGENCY_TEMPLATE_KEY_BY_EVENT_KIND = {
+const WAR_EMERGENCY_TEMPLATE_KEY_BY_EVENT_KIND = {
   "worldEvents.panicBuying": "war_panic_buying",
   "worldEvents.bankRun": "war_bank_run",
   "worldEvents.civilDefenseFever": "war_civil_defense_fever",

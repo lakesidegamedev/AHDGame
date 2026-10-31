@@ -12,6 +12,7 @@ import { resolveCorporationVoteIfReady } from "@/lib/corporations/votes/voteServ
 import { totalVotingPower } from "@/lib/corporations/superShares";
 import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { resolvePrivatizationVote } from "@/lib/corporations/commands/privatization/resolvePrivatizationVote";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 type ReminderVote = CorporationVote | CorporationPrivatizationVote;
 
@@ -156,7 +157,7 @@ export async function processVoteAutoResolve(
     genericCorpIds.length > 0
       ? await db
           .collection<Corporation>("corporations")
-          .find({ _id: { $in: genericCorpIds } })
+          .find({ _id: { $in: genericCorpIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
           .toArray()
       : [];
   const corpById = new Map(genericCorps.map((c) => [c._id.toString(), c]));

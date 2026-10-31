@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="420" viewBox="0 0 780 420" role="img" font-family="system-ui, sans-serif">
+<title>Conflicts chain of command and turn rhythm</title>
+<desc>Top lane: a unit is assigned to a general by the defence seat holder, the general belongs to a Command, the Commanding General posts the general to a conflict, and a Theater Commander declares offensives there. Bottom lane: the four steps of each war turn.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">Who moves what</text>
+<rect x="20" y="120" width="110" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="75.0" y="138.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Unit</text>
+<text x="75.0" y="155.5" font-size="13" fill="#18181b" text-anchor="middle">Follows its</text>
+<text x="75.0" y="172.5" font-size="13" fill="#18181b" text-anchor="middle">general</text>
+<rect x="230" y="120" width="130" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="295.0" y="147.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">General</text>
+<text x="295.0" y="164.0" font-size="13" fill="#18181b" text-anchor="middle">Brings its units</text>
+<rect x="490" y="120" width="130" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="555.0" y="147.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Conflict</text>
+<text x="555.0" y="164.0" font-size="13" fill="#18181b" text-anchor="middle">The front</text>
+<rect x="230" y="26" width="160" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="310.0" y="42.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Command</text>
+<text x="310.0" y="59.5" font-size="13" fill="#18181b" text-anchor="middle">Led by a Commanding</text>
+<text x="310.0" y="76.5" font-size="13" fill="#18181b" text-anchor="middle">General</text>
+<rect x="650" y="112" width="110" height="80" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="705.0" y="130.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Theater</text>
+<text x="705.0" y="147.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Commander</text>
+<text x="705.0" y="164.0" font-size="13" fill="#18181b" text-anchor="middle">Names</text>
+<text x="705.0" y="181.0" font-size="13" fill="#18181b" text-anchor="middle">offensives</text>
+<path d="M130 152 L230 152" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="180" y="140" font-size="12" fill="#52525b" text-anchor="middle">assigned by</text>
+<text x="180" y="172" font-size="12" fill="#52525b" text-anchor="middle">defence seat</text>
+<text x="180" y="186" font-size="12" fill="#52525b" text-anchor="middle">holder</text>
+<path d="M295 120 L295 86" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="299" y="97" width="69.0" height="15" fill="#ffffff"/>
+<text x="302" y="108" font-size="12" fill="#52525b" text-anchor="start">belongs to</text>
+<path d="M390 58 L555 58 L555 120" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="395" y="39" width="232.8" height="15" fill="#ffffff"/>
+<text x="398" y="50" font-size="12" fill="#52525b" text-anchor="start">Commanding General posts the general</text>
+<path d="M360 152 L490 152" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="403.1" y="135" width="43.8" height="15" fill="#ffffff"/>
+<text x="425" y="146" font-size="12" fill="#52525b" text-anchor="middle">posted</text>
+<path d="M650 152 L620 152" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="350" y="214" font-size="12" fill="#52525b" text-anchor="start">Once a Theater Commander is named, the defence seat</text>
+<text x="350" y="230" font-size="12" fill="#52525b" text-anchor="start">holder loses offensive rights at that front.</text>
+<line x1="20" y1="246" x2="760" y2="246" stroke="#d4d4d8" stroke-width="1"/>
+<text x="20" y="274" font-size="14" fill="#18181b" text-anchor="start" font-weight="700">Each war turn, in this order</text>
+<rect x="20" y="292" width="166" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="103.0" y="333.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">1. Force effects</text>
+<text x="103.0" y="350.0" font-size="13" fill="#18181b" text-anchor="middle">Upkeep, readiness</text>
+<path d="M186 338 L206 338" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="206" y="292" width="166" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="289.0" y="324.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">2. Battles resolve</text>
+<text x="289.0" y="341.5" font-size="13" fill="#18181b" text-anchor="middle">Offensives declared</text>
+<text x="289.0" y="358.5" font-size="13" fill="#18181b" text-anchor="middle">earlier</text>
+<path d="M372 338 L392 338" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="392" y="292" width="166" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="475.0" y="324.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">3. Tenure</text>
+<text x="475.0" y="341.5" font-size="13" fill="#18181b" text-anchor="middle">Generals accrue</text>
+<text x="475.0" y="358.5" font-size="13" fill="#18181b" text-anchor="middle">points</text>
+<path d="M558 338 L578 338" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="578" y="292" width="166" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="661.0" y="324.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">4. Reinforcement</text>
+<text x="661.0" y="341.5" font-size="13" fill="#18181b" text-anchor="middle">Manpower regenerates,</text>
+<text x="661.0" y="358.5" font-size="13" fill="#18181b" text-anchor="middle">units refill</text>
+<text x="20" y="408" font-size="12" fill="#52525b" text-anchor="start">Fight, count the losses, rebuild. A defender who is declared on has one turn to react.</text>
+</svg>

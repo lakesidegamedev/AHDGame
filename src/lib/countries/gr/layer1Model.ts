@@ -20,7 +20,7 @@ import { grRegionCensusData, type GRRegionLayer1 } from "@/lib/seeds/gr/grRegion
 import { grRegionCensusData1953 } from "@/lib/seeds/gr/grRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const GR_GROUP_IDS = [
+const GR_GROUP_IDS = [
   "conservative_right",
   "centrist_liberal",
   "socialist_left",
@@ -223,6 +223,3 @@ export function getGrModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-export const grLayer1Model: CountryLayer1Model = getGrModel("1979");
-export const grGroupIds = [...GR_GROUP_IDS];

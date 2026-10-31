@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { PolicyRecordResponse } from "@/lib/policy/types";
 import { useUserData } from "@/hooks/useUserData";
 import { policyApiUrl, regionUrl, socialAxisApiUrl } from "@/lib/urls";
@@ -91,7 +91,7 @@ export default function PolicyClient({ initialRecords, initialRecordPayload }: P
       .catch(() => setSocialAxis(null));
   }, [country]);
 
-  if (!COUNTRY_CONFIGS[countryId]) return null;
+  if (!COUNTRY_CLIENT_CONFIGS[countryId]) return null;
 
   return (
     <div className="min-h-screen bg-background pb-16">

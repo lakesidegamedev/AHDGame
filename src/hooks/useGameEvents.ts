@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import type { EconomyPauseStatus } from "@/lib/turn/economyPause";
 
 export interface GameEvent {
   /**
@@ -37,6 +38,8 @@ export interface TurnStatus {
   pausedAt?: string | null;
   pauseReason?: string | null;
   pauseKind?: "manual" | "auto-drift" | null;
+  /** Timed economy-only pause window; absent or null when no pause is scheduled. */
+  economyPause?: EconomyPauseStatus | null;
   corporationActionsPaused?: boolean;
   playerTransfersPaused?: boolean;
   freePartyMovesOpen?: boolean;
@@ -332,18 +335,4 @@ export function useGameEvents(
       }
     });
   }, [enabled]);
-}
-
-/**
- * Convenience hook: reload the page when a turn completes.
- * Use on pages that show turn-dependent data.
- */
-export function useLiveRefresh(enabled = true) {
-  useGameEvents(
-    useCallback(() => {
-      window.location.reload();
-    }, []),
-    ["turn_complete"],
-    enabled
-  );
 }

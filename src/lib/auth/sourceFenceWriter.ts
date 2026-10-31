@@ -165,7 +165,7 @@ function proofBinding(proof: SourceOwnershipProof): Record<string, unknown> {
   };
 }
 
-export function sourceProofDigest(proof: SourceOwnershipProof): string {
+function sourceProofDigest(proof: SourceOwnershipProof): string {
   return sha256(canonical(proofBinding(proof)));
 }
 

@@ -510,6 +510,10 @@ export async function snapshotMarketCap(
         // Persisted so recomputeSharePricesAfterBondTurn can rebuild the
         // share-price formula's inputs without re-deriving from sectors/bonds.
         sectorNPV: Math.round(writeCorpEconomicLocal(s.sectorNPV, code, rate)),
+        // Base-price real output (anchor, not FX-converted): only its trend is read.
+        ...(s.realOutputAnchor != null
+          ? { realOutputAnchor: Math.round(s.realOutputAnchor * 100) / 100 }
+          : {}),
         perTurnBondCouponIncome: Math.round(
           writeCorpEconomicLocal(s.perTurnBondCouponIncome, code, rate)
         ),
@@ -590,8 +594,7 @@ export async function snapshotMarketCap(
         {
           userId: c.userId,
           type: "corp_credit_rating_change",
-          title: "Credit rating changed",
-          message: `${c.name}: ${prev} → ${s.creditRating}`,
+          ...creditRatingCopy(c.name, prev, s.creditRating),
           metadata: {
             corporationId: s.corpId.toString(),
             priorRating: prev,
@@ -601,4 +604,23 @@ export async function snapshotMarketCap(
       ]);
     }
   }
+}
+
+/** Which way a rating moved, in words: "AAA → AA" alone did not say. */
+export function creditRatingCopy(
+  name: string,
+  prior: string,
+  next: string
+): { title: string; message: string } {
+  const scale = ["AAA", "AA", "A", "BBB", "BB", "B", "CCC"];
+  const up = scale.indexOf(next) < scale.indexOf(prior);
+  return up
+    ? {
+        title: `${name} upgraded to ${next}`,
+        message: `Lenders now rate ${name} ${next}, up from ${prior}. New bonds should cost less.`,
+      }
+    : {
+        title: `${name} downgraded to ${next}`,
+        message: `Lenders now rate ${name} ${next}, down from ${prior}. New bonds will cost more.`,
+      };
 }

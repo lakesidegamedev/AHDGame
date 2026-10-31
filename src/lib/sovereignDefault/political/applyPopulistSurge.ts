@@ -20,7 +20,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { deriveIdeology } from "@/lib/sovereignDefault/npc/getExecutiveLeaderProfile";
 
 /** Magnitude of the favorability bump applied to qualifying NPPs. */
-export const POPULIST_SURGE_FAVORABILITY = 10;
+const POPULIST_SURGE_FAVORABILITY = 10;
 
 export interface PopulistSurgeResult {
   npcsAffected: number;

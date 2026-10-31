@@ -291,6 +291,26 @@ describe("buildCorporationLookups — bond holdings", () => {
     expect(corporationProjection).toHaveProperty("mediaProductAdvertisingObligationsV1", 0);
   });
 
+  it("excludes the construction-claim fields and write-only receipts from the turn reads", async () => {
+    await buildCorporationLookups(db as unknown as Db);
+
+    const sectorProjection =
+      db.collectionMocks.corporateSectors.find.mock.calls[0]?.[1]?.projection;
+    const corporationProjection =
+      db.collectionMocks.corporations.find.mock.calls[0]?.[1]?.projection;
+    // No turn module reads either construction field; the banking commands do,
+    // under their own projections.
+    expect(sectorProjection).toMatchObject({
+      constructionFinancing: 0,
+      constructionPropertyTransition: 0,
+    });
+    // Written by the paying money move, never read back.
+    expect(corporationProjection).toMatchObject({
+      settledKeys: 0,
+      politicalMediaReceipts: 0,
+    });
+  });
+
   it("projects product output maps only when explicitly enabled", async () => {
     await buildCorporationLookups(db as unknown as Db, { productLinesV2Enabled: true });
 

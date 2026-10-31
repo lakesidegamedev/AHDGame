@@ -368,7 +368,10 @@ export function holdingMarketSnapshotValues(
 ): ReturnType<typeof holdingMarketValues> {
   cost(stockValue);
   cost(shortTermStockValue);
-  if (shortTermStockValue > stockValue + 1e-7)
+  // The two sums convert each holding to anchor in a different order, so a
+  // large all short-term portfolio can differ by rounding noise well above a
+  // fixed 1e-7. Allow noise relative to the value; a real excess still throws.
+  if (shortTermStockValue > stockValue + Math.max(1e-7, Math.abs(stockValue) * 1e-9))
     throw new Error("Short-term value exceeds total holdings");
   const total = Math.round(stockValue * 100) / 100;
   const short = Math.min(total, Math.round(shortTermStockValue * 100) / 100);

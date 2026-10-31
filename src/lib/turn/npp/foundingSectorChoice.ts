@@ -33,9 +33,17 @@ export function foundingSectorWeights(args: {
   existingCount: (countryId: string, type: OperatingSectorType) => number;
   /** Multiplier for a concentrated sector; absent reads as 1. */
   challengerBoostOf?: (type: OperatingSectorType) => number;
+  /**
+   * Peak shortage of a lane; absent reads the static sector table. The funded
+   * sweep passes a recipe-aware score so a good only a non-standard recipe
+   * makes (fertilizers, pharmaceuticals) can draw a founding.
+   */
+  peakShortageOf?: (type: OperatingSectorType) => number;
 }): number[] {
   return args.types.map((type) => {
-    const raw = sectorPeakShortageScore(type, args.countryId, args.priceRatioOf);
+    const raw =
+      args.peakShortageOf?.(type) ??
+      sectorPeakShortageScore(type, args.countryId, args.priceRatioOf);
     const score = Math.max(FOUNDING_MIN_SHORTAGE_SCORE, Number.isFinite(raw) && raw > 0 ? raw : 1);
     const crowding = 1 + Math.max(0, args.existingCount(args.countryId, type));
     const boost = Math.max(1, args.challengerBoostOf?.(type) ?? 1);

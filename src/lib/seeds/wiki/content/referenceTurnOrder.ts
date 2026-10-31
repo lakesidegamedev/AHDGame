@@ -1,38 +1,40 @@
 export const referenceTurnOrderContent = `# Reference: turn order
 
-The game runs on an hourly cron. Every real-world hour is one game turn, which is one game week. Turn processing runs through roughly a dozen top-level adapters that together call over 100 phase steps, each hour. This page lists the major groups of phases, what runs in each, and why the ordering matters.
+Your Campaign click lands instantly, but votes, bills and money all settle on the hour. When the hour ticks, the game works through roughly a dozen top-level adapters that together call over 100 phase steps, in a fixed order. If you have ever wondered why a vote total moved after a bill passed, or why a final-turn canvass still counted, the answer is in this order. This page lists the groups of phases, what runs in each, and why the ordering matters.
 
 **1 turn = 1 game week = 1 real hour**
 **48 turns = 1 game year**
 
 ---
 
-## Turn sequence overview
+## The order at a glance
 
 | Group | Phases | Key constraint |
 |---|---|---|
 | 0. Housekeeping | Release shares held by banned or inactive shareholders; **cold-war tension** relaxes toward its pressure floor | First, so everything downstream reads the current temperature |
 | 1. Resources | Action refresh, fund generation, corporation turn (production, clearing, freight, marketing settlement), unions and NPP union behaviour, party influence, caucus tax | Parallel-safe |
-| 1a. Finance | NPP funds, savings interest, NPC bank policy, **banking** (deposits, loans, runs), pensions, prospecting resolution, macro country turn, bond coupons and maturities, commodity prices, extraction-contract settlement, line of credit, share-price recompute, bank solvency, financial suspect scan | After corporations (bonds need updated liquid capital) |
+| 1a. Finance | NPP funds, savings interest, NPC bank policy, **banking** (deposits, loans, runs), pensions, prospecting resolution, macro country turn, bond coupons and maturities, commodity prices, extraction-contract settlement, line of credit, share-price recompute, bank solvency and supervision | After corporations (bonds need updated liquid capital) |
 | 2. Demographics | Turnout decay, party GOTV, party org maintenance, registration drift, pressure decay, priority-region decay, support decay and accrual, party tier (Major/Minor) | Sequential |
 | 3. Party elections | State/national/committee elections, party action generation, charter expiry, empty party cleanup, coalition disband votes, NPP relationship maintenance | Parallel then cleanup |
 | 4. NPP behavior | NPP bill sponsorship, challenger generation, election entry, bill voting, endorsement sweeps | Uses shared NPP context |
-| 5. Bills, courts & cabinets | Bill lifecycle, state bill timers, cabinet nominations, **Supreme Court** turn (docket and surprise cases), UK surprise cases, social-axis drift | Parallel-safe |
+| 5. Bills, courts & cabinets | Bill lifecycle, state bill timers, cabinet nominations, **Supreme Court** turn (docket and surprise cases), UK surprise cases, Fed (FOMC) nominations, social-axis drift | Parallel-safe |
 | 6. Campaigns & events | Campaign turn, player random events, world events, NPP action processing (every 4 turns), activity logging | Sequential |
-| 7. Election resolution | Candidate party sweep → primary resolution → vote accumulation → campaign spend reset → timer advancement → primary snapshots (ballot accrual) → general resolution → clear resolved support → leadership vacate | **Strictly sequential: ordering is load-bearing** |
+| 7. Election resolution | Inactive-candidate withdrawal → candidate party sweep → primary resolution → vote accumulation → campaign spend reset → timer advancement → primary snapshots (ballot accrual) → general resolution → clear resolved support → leadership vacate | **Strictly sequential: ordering is load-bearing** |
 | 8. Parliamentary government | Government formation, no-confidence and confidence votes, PM vacancy watcher | After election resolution |
-| 9. Election coverage & diplomacy | Perpetual elections, by-election watcher, leadership elections, stale-candidate cleanup, inactive-candidate withdrawal, auto-reelection entry, **international organizations** (votes, treaties, foreign-policy planner), **alignment** and spheres, **settlement** crises (the German Question and its kin), impeachment lifecycle, presidential succession | Parallel-safe |
+| 9. Election coverage & diplomacy | Perpetual elections, by-election watcher, leadership elections, stale-candidate cleanup, auto-reelection entry, **international organizations** (votes, treaties, foreign-policy planner), **alignment** and spheres, **settlement** crises (the German Question and its kin), impeachment lifecycle, presidential succession | Parallel-safe |
 | 10. Fiscal year | October processing (turn 40 of 48) | Conditional |
-| 11. Effects & metrics | Policy effects, demographic effects, policy-reaction and archetype-approval decay, unowned sector growth, metric decay, investor-confidence decay, state-ownership concentration, subsidy budget, regional budgets, crisis turn, **naval and air operations**, **ministerial orders (this is where battles resolve)** | Naval/air runs before battles so a battle reads this turn's sea control, air superiority and supply |
-| 12. National aggregation | Metric engine, demographic flows, **census**, era crossing, metric activation, national metrics, fiscal base growth, economic model, trade growth mirror, inflation recalc, **command economy**, Forex, central bank chair turn, **FOMC meetings and nominations**, NPP monetary operations, chair removal and selection, independence desire drift, referendum lifecycle, party member-count reconcile | After state effects |
-| 13. History | Metric, approval, interest-rate and party snapshots; portfolio, corporate portfolio, stock exchange, investor ranking and wealth-list snapshots; game health; audit anomaly and suspicious-activity scans; money-supply, ledger balance and reconciliation snapshots; economic vital signs | Parallel-safe |
+| 11. Effects & metrics | Crisis turn, naval and air operations, ministerial orders, then policy effects; alongside them demographic effects, archetype-approval decay, unowned sector growth, metric decay, investor-confidence decay, state-ownership concentration, subsidy budget, regional budgets; **ministerial orders are where battles resolve** | Naval/air runs before battles so a battle reads this turn's sea control, air superiority and supply |
+| 12. National aggregation | Metric engine, demographic flows, **census**, era crossing, metric activation, national metrics, fiscal base growth, economic model, trade growth mirror, inflation recalc, **command economy**, Forex, central bank chair turn, **FOMC meetings**, NPP monetary operations, chair removal and selection, independence desire drift, referendum lifecycle, party member-count reconcile | After state effects |
+| 13. History | Metric, approval, interest-rate and party snapshots; portfolio, corporate portfolio, stock exchange, investor ranking and wealth-list snapshots; game health; money-supply, ledger balance and reconciliation snapshots; economic vital signs | Parallel-safe |
 | 14. Persistence | Increment turn counter, save turn log, send live update | Not wrapped in try/catch |
 
 Country-specific election phases (UK by-elections, JP Sangiin half-elections, DE Landtag cycles, and so on) run inside group 9 as their own named steps.
 
+The anti-abuse scans (financial suspect scan, audit anomaly scan and suspicious-activity detection) are not part of the turn. They run just after the turn commits, on a fixed cadence of turns, and their results land on that turn's log.
+
 ---
 
-## Group details
+## What happens in each group
 
 ### Group 1: resources
 
@@ -59,19 +61,19 @@ Runs after corporations so bond coupon flows can read updated liquid capital:
 - **Savings interest turn**: Interest credited on savings balances.
 - **Commodity prices and contract settlement**: Commodity price indices updated, then extraction-contract royalties settle at those prices.
 - **Share-price recompute**: fundamental values refreshed.
-- **Financial suspect scan**: Automated fraud detection runs after all financial phase emissions.
+- **Bank solvency and supervision**: banks are scored and supervised after every flow above has landed.
 
 ### Group 2: demographics
 
 Sequential (each step depends on the previous):
 
-1. **Turnout decay**: All turnout modifiers decay 2% of their current value toward zero.
+1. **Turnout decay**: Campaign turnout modifiers decay toward zero with a 6-turn half-life (about 11% of the current value per turn; \`src/lib/campaignTargeting/rules.ts\`). The older turnout modifiers used by legacy races decay 2% per turn.
 2. **Party GOTV**: Party GOTV budget distributed to states, boosting turnout modifiers for aligned demographics.
 3. **Party org maintenance**: Org bucket shares are refreshed, and organization can decay for parties that become inactive in a state or region.
 
 ### Group 3: party elections
 
-Party leadership elections, national committee elections, and committee assignments all run in parallel. Then:
+State party elections, national leadership elections, national committee elections and party action generation all run in parallel. Then:
 
 - **Empty party cleanup**: Parties with zero members and no default status are deleted (cascade across 13+ related collections).
 - **Coalition disband votes**: Expired coalition disband votes resolved.
@@ -83,7 +85,7 @@ NPPs run their autonomous decision logic:
 - **NPP bill sponsorship**: with autonomy on, NPPs table bills aligned with their party's agenda.
 - **NPP election entry**: deterministic and priority-ordered, not a dice roll. Seat-holding incumbents defend their primary first, then each party fills at most one generic NPP into each open primary, in a fixed race-priority order. Under the higher autonomy levels an occasional ambitious challenger may also enter an already-filled primary. See [NPP Elections](/wiki/npp-elections).
 - **NPP bill voting**: NPPs vote on active bills through the cross-pressure model (ideology, whip, district, donors).
-- **Endorsement sweeps**: player endorsements are reconciled against party changes. US congressional leadership races are player-only; NPPs do not vote in them.
+- **Endorsement sweeps**: stale NPP endorsements are withdrawn. Player endorsements are reconciled against party changes later, in the campaigns group just before the campaign turn. US congressional leadership races are player-only; NPPs do not vote in them.
 
 ### Group 5: bills & cabinets
 
@@ -93,6 +95,7 @@ All parallel:
 - **Country-specific bill phases**: UK Parliament enactment, DE/JP specific bill phases.
 - **State bill timers**: State-level bill deadlines advanced.
 - **Cabinet nominations**: Presidential/PM cabinet nominations processed; acting appointments lapse at 24 turns.
+- **Fed nominations**: pending Federal Reserve board nominations resolve on the Senate's votes.
 - **Supreme Court turn**: scripted seat turnover on the calendar year, docket cases and surprise cases decided by the sitting bench.
 - **Social-axis drift**: a country's social baseline drifts toward the stance of its enacted laws.
 
@@ -105,7 +108,7 @@ All parallel:
 
 ### Group 7: election resolution (strictly sequential)
 
-This is the most critical group. The phases must run in this exact order. Reordering produces incorrect election results:
+This group decides who wins, so its order is fixed. The phases must run in this exact order. Reordering produces incorrect election results:
 
 1. **Candidate party sweep**: Candidates whose party no longer matches their candidacy are auto-withdrawn (party switches).
 2. **Primary resolution**: Primaries that have reached their end time are resolved. Down-ballot races read the cumulative primary ballots and the top count per party advances (the score path only where a party cast no ballots); presidential races read pledged delegates and, on the reworked ruleset, run the convention. Others are marked withdrawn.
@@ -133,7 +136,7 @@ Ensures no seat sits vacant:
 - **Perpetual elections**: For any office with no active or upcoming election, a new cycle is spawned, sized from the current census apportionment.
 - **Country-specific election coverage**: Per-country election seeding (UK by-elections / Regional Council, JP Sangiin half-elections / governors, DE Bundestag + Landtag staggered cycles).
 - **Leadership elections**: Expired leadership election cycles resolved.
-- **Stale candidate cleanup**: Candidacies in elections that have expired without resolution are cleaned up; inactive candidates are withdrawn.
+- **Stale candidate cleanup**: Candidacies in elections that have expired without resolution are cleaned up. (Inactive candidates are withdrawn earlier, at the start of group 7.)
 - **International organizations**: pending resolutions, admissions and leadership ballots resolve against the roll; the autonomous foreign-policy planner records one decision per country and cycle.
 - **Alignment and settlement**: bloc shares drift, spheres update, and settlement crises (the German Question) tick, attach to wars, or resolve.
 - **Impeachment lifecycle**: open impeachment votes advance and resolve.
@@ -147,15 +150,14 @@ Only runs on the fiscal year-end turn (turn 40 of each 48-turn year, correspondi
 
 ### Group 11: effects & metrics
 
-All parallel:
+Crisis turn, naval and air operations, ministerial orders and policy effects run one after another in that order, because they write the same metrics; everything else runs in parallel:
 
 - **Policy effects**: Active state policies apply their metric effects each turn.
 - **Demographic effects**: State demographic composition shifts based on economic conditions and policy.
-- **Policy reaction decay**: Player policy reactions decay toward zero.
 - **Archetype approval decay**: Approval ratings for each demographic archetype decay toward natural baseline.
 - **Metric decay**: State metrics decay toward baseline values when no policies are active.
 - **Unowned sector growth**: Sectors not owned by any corporation grow autonomously.
-- **Regional budgets**: Regional spending affects state metrics (US, JP, DE each processed separately).
+- **Regional budgets**: Regional spending affects state metrics. The UK, Japan, the Länder-model countries, the one-party states and Russia each have their own processor, and they alternate turns (UK, Länder and Russia on even turns, Japan and the one-party states on odd ones).
 - **Crisis turn**: Active world crises apply their effects and potentially resolve.
 - **Naval and air operations**: standing missions resolve so sea control, air superiority and supply are current before any battle reads them.
 - **Ministerial orders**: Active ministerial orders processed. This is also where the military turn runs: force effects, then **battles resolve** (offensives declared last turn), then generals accrue tenure, then reinforcement, then peace windows and lapsed offers. See [Conflicts & the Military System](/wiki/conflicts-overview).
@@ -166,13 +168,13 @@ Sequential (each depends on previous):
 
 1. **Metric engine and demographic flows**: state metrics move; population migrates.
 2. **Census and era crossing**: a decennial census reapportions House seats and redraws district maps; scheduled era content resolves against the calendar year the world shows.
-3. **GDP growth and national metrics**: Country-level aggregates recomputed from state-level data (GDP-weighted for economic metrics, population-weighted otherwise).
+3. **GDP growth and national metrics**: Country-level aggregates recomputed from state-level data: GDP growth weighted by state GDP, unemployment by labour force, most other rates by population.
 4. **Trade growth mirror**: Trade growth mirrored from the federal budget system to the central bank system (Forex prerequisite).
 5. **Inflation recalculation**: Per-turn inflation recalculated using updated national metrics.
 6. **Command economy**: plan fulfilment, directed credit, shortage and the marketization dial for planned economies.
 7. **Forex turn**: Exchange rates updated (when Forex is enabled). Reads inflation differentials and trade volumes; fills limit orders.
-8. **Central bank chair turn, FOMC meetings and nominations**: Chair scrutiny and bonuses updated; the Fed's rate meetings open and resolve at their deadline; pending Fed nominations resolve on the Senate's votes.
-9. **Central bank chair selection**: Open chair vacancies outside the US filled if conditions are met.
+8. **Central bank chair turn and FOMC meetings**: Chair scrutiny and bonuses updated; the Fed's rate meetings open and resolve at their deadline. (Fed nominations resolve earlier, in group 5.)
+9. **Central bank chair selection**: A chair who has taken executive office is removed first. Then every bank whose chair term has ended, whose seat was vacated, or that never had a chair draws from its nominees; a pick unanswered for 24 turns lapses and is redrawn.
 10. **Referendum lifecycle and independence desire**: UK devolved referendums advance.
 
 ### Group 13: history
@@ -184,7 +186,7 @@ All parallel, all read-only:
 - **Interest rate snapshots**: Central bank rate history recorded.
 - **Party history snapshot**: Party seat counts and standings recorded.
 - **Game health snapshot**: Turn duration, warning count, phase results recorded for admin monitoring.
-- **Suspicious activity detection**: Financial pattern anomalies flagged for admin review.
+- **Money and ledger snapshots**: money supply, ledger balances and reconciliation, and economic vital signs are recorded last.
 
 ### Group 14: persistence
 
@@ -196,7 +198,7 @@ This group is **not wrapped in the error-isolation pattern**. A failure here is 
 
 ---
 
-## The error isolation pattern
+## What happens when a phase breaks
 
 Every phase (except Group 14 persistence) runs inside an error-isolation wrapper. If a phase throws, the error is:
 
@@ -208,20 +210,17 @@ The turn does **not** halt. Subsequent phases continue processing. This means a 
 
 ---
 
-## Fast mode
+## Fast mode and the clock
 
-Fast mode runs turns every 30 minutes instead of every hour (i.e., 1 turn = 30 real minutes instead of 60). All timing calculations (election durations, bill deadlines) remain in hours, so everything simply completes in half the real-world time.
+Fast mode runs turns every 30 minutes instead of every hour. Each processed turn still advances the game clock by at least one game hour and never backward, so in fast mode the clock pulls ahead of real time; normal mode lets real time catch up once fast mode ends (\`src/lib/time/computeGameNow.ts\`).
 
 ## Stuck turns
 
-Every phase has a hard four-minute ceiling; a phase that runs past it fails and takes the turn with it. A turn whose process dies partway leaves the processing lock held, and a recovery sweep every five minutes repossesses an abandoned turn so the wait is bounded. That sweep is strictly a recovery path: it never starts a turn that is merely due, so the clock still advances only on the normal ticks. World News posts are de-duplicated so a turn that is taken over while still finishing reports each event once.
+Every phase has a four-minute ceiling by default; a phase that runs past it is marked failed, recorded as a warning, and the turn carries on without its result. A turn whose process dies partway leaves the processing lock held, and a recovery sweep every five minutes repossesses an abandoned turn so the wait is bounded. That sweep is strictly a recovery path: it never starts a turn that is merely due, so the clock still advances only on the normal ticks. World News posts are de-duplicated so a turn that is taken over while still finishing reports each event once.
 
 ---
 
-## Related
+## See also
 
-- [Reference: Formulas](/wiki/reference-formulas): All game math in one place.
-- [Election Mechanics](/wiki/election-mechanics): Election phase structure.
-- [Snap Elections](/wiki/snap-elections): Parliamentary dissolution triggers.
-- [The Game Loop](/wiki/the-game-loop): Player-facing explanation of the turn cycle.
+[The Game Loop](/wiki/the-game-loop) explains the turn cycle from the player's side, [Reference: Formulas](/wiki/reference-formulas) holds the math these phases run, [Election Mechanics](/wiki/election-mechanics) covers the election structure, and [Snap Elections](/wiki/snap-elections) covers parliamentary dissolution triggers.
 `;

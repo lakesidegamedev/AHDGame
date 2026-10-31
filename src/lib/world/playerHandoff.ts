@@ -35,7 +35,6 @@ import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import {
   assertCanOpenCountryToPlayers,
-  PlayerOpenBlockedError,
   resolvePresetIdFromGameState,
   type CountryReadinessReport,
 } from "@/lib/world/countryReadinessContract";
@@ -90,7 +89,7 @@ export type PreservedHandoffDomain = (typeof PRESERVED_HANDOFF_DOMAINS)[number];
  * Constitutional processes that refill claimable vacancies after player exit.
  * Instant NPP appointment outside these processes is forbidden by handoff.
  */
-export const CONSTITUTIONAL_REFILL_PROCESSES = [
+const CONSTITUTIONAL_REFILL_PROCESSES = [
   "election",
   "appointment",
   "succession",
@@ -233,8 +232,6 @@ export interface PlayerHandoffExitResult {
   caretakerMode: true;
   preservedDomains: PreservedHandoffDomain[];
 }
-
-export { PlayerOpenBlockedError };
 
 async function resolvePresetId(db: Db, explicit?: string): Promise<string> {
   if (explicit?.trim()) return explicit.trim();

@@ -1,66 +1,49 @@
 export const partyLeadershipAuthorityContent = `# Party Leadership & Authority
 
-Beyond the chair, vice chair, and treasurer elections covered in [Party Leadership](/wiki/party-leadership), four rules govern how party leadership authority actually works day to day: what happens when the chair seat is empty, how long a member must belong to a party before they can lead it, a shield that protects unmanned default parties from suppression, and how UK regional parties compete outside their traditional areas.
+Join a party today and you can run for its chair in 24 turns, not before. That waiting rule is one of a few small rules about who really holds power in a party. The others cover a chair seat that is empty, a built-in party nobody is looking after, and the UK's regional parties. This page sits beside [Party Leadership](/wiki/party-leadership), which covers the seats and elections themselves.
 
-## Acting chair: vice-chair inheritance
+## When the chair seat is empty
 
-If a party's chair seat goes vacant, the party is not leaderless. When \`chairId\` is empty and a vice chair is set, the **vice chair automatically inherits chair authority**: Chair Office access, parliamentary PM proposals, coalition actions, and every other route gated on being the chair. This happens immediately, with no new election required to restore functioning leadership.
+When a party has no chair but does have a vice chair, the vice chair **inherits the chair's powers at once**, with no election needed. That includes the Chair Office, proposing a prime minister, coalition actions, party settings, approving join requests ([Party Membership](/wiki/party-membership)), purges, logo and image uploads, bulk org actions, picking priority regions and managing campaigners. An acting vice chair can create a [coalition](/wiki/coalitions), request to join one, accept or decline invites and leave one for the party ([Coalition Formation](/wiki/coalition-formation)). Two coalition steps do not pass to an acting vice chair: casting the party's disband vote, which looks for the seated chair, and the coalition chair's own actions (invites, kicks, transfers, starting a disband vote), which follow the coalition's recorded chair, normally the lead party's seated chair.
 
-Important distinctions:
+It is borrowed authority, not a promotion. The party page still shows the chair seat as vacant, and the Chair Office is labelled "(acting)". A vice chair who acts as chair is never listed as the chair. If both seats are empty, nobody has chair powers until a new election seats one of them. If you are vice chair of a chairless party, open the Chair Office and act; a chair election will fill the seat. Keep a vice chair seated so a vacancy never leaves the party without chair powers.
 
-- This is an **authority** change, not a **role** change. The vice chair does not become the chair. No record is rewritten: \`chairId\` stays empty, \`viceChairId\` stays set.
-- Anywhere the party's identity is displayed ("chair of this party"), the game still shows the seat as vacant. A vice chair acting as chair is never presented as the chair.
-- The UI should show a "(acting)" label on the Chair Office while a vice chair is filling the role this way, so it's clear the authority is borrowed, not owned.
+## The 24 turn wait
 
-This covers a broad set of powers: party settings, approving join requests, purges, hero image and logo uploads, bulk org actions, priority-region selection, campaigner management, and coalition create/join/leave/disband-vote/invite decisions.
+You cannot join a party and run its leadership the same turn. A member must have been in the party for **24 turns** before running for or voting in its leadership elections. Joining or switching ([Party Membership](/wiki/party-membership)) restarts the clock. A party merger does not: your original tenure carries over.
 
-If both chair and vice chair seats are empty, no one has acting authority until a new election fills one of them.
+A second 24 turn clock covers **state** party leadership. After you [relocate](/wiki/relocation) to a new state you must wait 24 turns before standing for, or being appointed to, that state party's leadership. This stops players hopping states to grab a fresh party's seats. It is separate from the relocation cooldown, so it stays at 24 turns even if that cooldown changes.
 
-## Leadership tenure gate
+![Timeline showing a member who joins at turn 500 able to run nationally from turn 524, and who relocates at turn 600 able to lead the state party from turn 624.](/wiki-images/diagrams/party-leadership-authority-tenure-timeline.svg)
 
-You cannot walk into a party and run for its leadership the same turn you join. A character must have been a member of the party for **24 turns** before they are eligible to run for, or vote in, that party's leadership elections. The clock resets whenever you join, switch parties, or your party absorbs into another through a merge.
+You join the Republican Party at turn 500. You can vote and run in leadership elections from turn 524. At turn 600 you relocate to Ohio: you can stand for Ohio state party leadership from turn 624, but your national tenure is unaffected.
 
-A second, separate 24-turn clock applies specifically to **state** party leadership: after relocating to a new state, you must wait 24 turns before standing for (or being appointed into) that state party's leadership. This exists to stop players from relocation-hopping straight into a fresh state party's leadership seat. It runs independently of the general relocation cooldown, so even if that cooldown changes, local leadership residency stays fixed at 24 turns.
+Exceptions: an older character with no recorded join date is treated as eligible. A charter founder is exempt in the party they founded, though not in anyone else's. The accelerated founding elections at the start of a new world skip both rules so new characters can fill the first seats. Joining a party just to run in a single election does not work, so join early.
 
-If your tenure clock hasn't started (for example, on an older character predating this system), you're treated as eligible rather than locked out.
+## Abandoned built-in parties
 
-**Exception - founding elections:** the accelerated chair race run at the very start of a new iteration waives both the standard new-character cooldown and the party-tenure gate, so brand-new characters can compete for founding leadership seats immediately.
+A built-in party can end up with no active human chair: the seat is empty, the chair is an NPP, or the chair's account is banned. Nothing currently shields such a party. A rich rival's **Suppression** (see [Party Actions](/wiki/party-actions)) hits it at full strength, the same as any manned party, so an abandoned built-in party needs players to step in before a rival grinds its turnout down.
 
-## Unmanned-default capture shield
-
-Default parties (the pre-seeded DEM/REP-style parties every player starts able to join, as opposed to a party a player founded) can end up with no active human chair, either because the chair seat was never filled or the sitting chair is an NPP or banned user. Without protection, a well-resourced rival could use Suppression actions to grind an abandoned default party's turnout to nothing, wiping out a baseline entry point that new players rely on.
-
-The shield halves the effect of Suppression aimed at a default party with no active human chair: an unmanned default party takes half the damage a manned party would from the same attack. Build Org now adds durable bucket units and does not directly attack another party.
-
-What counts as "unmanned":
-
-- The chair seat is vacant (no \`chairId\`), or
-- The chair character is an NPP (no linked player account), or
-- The chair's linked account is banned
-
-The shield only reduces what the rival's attack *removes from the target*. It never changes how much the attacker draws from the pool of unaffiliated voters, so attacking an unmanned default party is weaker, not pointless.
+To take over such a party, join it. If it has no chair and no chair election is running, you become chair at once; if a chair race is open, you need the 24 turns of tenure and the ballot like everyone else. If the chair is an NPP or a banned account, wait 24 turns, then run for chair.
 
 ## UK regional parties
 
-The SNP, Plaid Cymru, the DUP, Sinn Féin and the UUP used to be barred from appearing on a ballot outside their home nation. That rule is gone. All five now stand anywhere in the country, on the same terms as every other party.
-
-What replaced the rule is organisation. Each of them starts with deep roots in the nation they came from and almost nothing everywhere else:
+The SNP, Plaid Cymru, the DUP, Sinn Fein and the UUP, in the eras where they exist, can stand anywhere in the UK on the same terms as any other party. What holds them back is [organization](/wiki/party-organization): each starts with deep roots in its home nation and almost none elsewhere, and Org decides how strong they are outside it.
 
 | Party | Where it starts strong |
 | --- | --- |
-| **SNP** (Scottish National Party) | Scotland |
-| **Plaid Cymru** | Wales |
-| **DUP, Sinn Féin, UUP** | Northern Ireland |
+| SNP | Scotland |
+| Plaid Cymru | Wales |
+| DUP, Sinn Fein, UUP | Northern Ireland |
 
-Outside those places they begin on the minimum organisation floor with no registered support, so a candidate can file but starts as a fringe presence and has to build from there. Organisation is now the only thing standing between these parties and a seat anywhere in the country, and Build Org is how you close that gap.
+Outside those places a candidate can file, but starts as a fringe presence and must build Org to compete. Standing outside the home nation also means running as a third party against two entrenched rivals.
 
-Note that the major-party sets used for spoiler effects are still scoped by nation, so standing outside your heartland means running as a third party against two entrenched rivals.
+| Item | Value |
+| --- | --- |
+| Tenure before you can run for or vote in party leadership | 24 turns |
+| Wait after relocating before state party leadership | 24 turns |
+| Damage taken by an unmanned built-in party from Suppression | 100% of normal (no shield) |
+| Acting chair powers | The chair's party powers while the chair seat is empty, except the coalition disband vote and coalition chair actions |
 
-## Related pages
-
-- [Party Leadership](/wiki/party-leadership) - the chair/vice chair/treasurer election system this page builds on
-- [Chamber Leadership](/wiki/chamber-leadership) - presiding officer elections (Speaker, Bundestagspräsident, etc.), which use a different eligibility engine but a similar tenure philosophy
-- [Party Organization](/wiki/party-organization) - what Build Org and the org score actually do
-- [Party Actions](/wiki/party-actions) - Suppression, GOTV, and other budget-based actions covered by the capture shield
-- [United Kingdom](/wiki/uk-overview) - country hub with more on UK's regional party landscape
+Live in every world and country with parties; the UK regional section applies in eras where those parties exist. Last checked 2026-10-30, version 1.18.0. Exact rules: [Party Leadership Authority design page](https://docs.lakesidegames.net/design/party-leadership-authority.html)
 `;

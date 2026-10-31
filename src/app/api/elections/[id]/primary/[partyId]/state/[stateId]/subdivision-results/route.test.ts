@@ -1,3 +1,6 @@
+vi.mock("@/lib/counties/queries", () => ({
+  loadCountyPopulationMap: vi.fn().mockResolvedValue(new Map()),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -67,7 +70,7 @@ beforeEach(async () => {
   const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
   vi.mocked(resolveElectionRouteParam).mockResolvedValue({
     ok: true,
-    election: { _id: ELECTION_OID, electionType: "president", countryId: "US" },
+    election: { _id: ELECTION_OID, electionType: "president", countryId: "US", status: "active" },
   } as never);
   const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
   vi.mocked(loadSubdivisionFile).mockResolvedValue({
@@ -141,5 +144,24 @@ describe("GET primary county results", () => {
       response: new Response(null, { status: 401 }),
     } as never);
     expect((await call("IA")).status).toBe(401);
+  });
+  it("keeps concluded primary county maps independent of current stocks", async () => {
+    const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
+    vi.mocked(resolveElectionRouteParam).mockResolvedValue({
+      ok: true,
+      election: {
+        _id: ELECTION_OID,
+        electionType: "president",
+        countryId: "US",
+        status: "completed",
+      },
+    } as never);
+    const { loadPrimaryPartyData } = await import("@/lib/elections/primaryPartyDetail");
+    vi.mocked(loadPrimaryPartyData).mockResolvedValue(
+      partyData({ IA: { [C1.toString()]: 1000, [C2.toString()]: 1000 } }) as never
+    );
+    const { loadCountyPopulationMap } = await import("@/lib/counties/queries");
+    expect((await call("IA")).status).toBe(200);
+    expect(loadCountyPopulationMap).not.toHaveBeenCalled();
   });
 });

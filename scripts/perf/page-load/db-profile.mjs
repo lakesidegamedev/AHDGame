@@ -5,14 +5,26 @@
  * request, then aggregates what the request ran: operations per collection,
  * total/median/max duration and any multi-op bursts (N+1 signatures).
  *
- * Usage: node scripts/perf/page-load/db-profile.mjs <baseUrl> <route> [--db=<name>]
+ * Usage: node scripts/perf/page-load/db-profile.mjs <baseUrl> <route> [--db=<name>] [--storage=<state.json>]
+ *
+ * `--storage` replays the cookie jar from `login-state.mjs`, so authenticated
+ * pages (/profile, /actions, /portfolio) can be profiled too.
  */
+import { readFile } from "node:fs/promises";
 import { MongoClient } from "mongodb";
 
 const base = (process.argv[2] || "http://127.0.0.1:3100").replace(/\/$/, "");
 const route = process.argv[3] || "/login";
 const dbNameArg = process.argv.find((a) => a.startsWith("--db="));
 const dbName = dbNameArg ? dbNameArg.slice(5) : "ahd_sim_pageload_perf_20261022";
+const storageArg = process.argv.find((a) => a.startsWith("--storage="));
+const storagePath = storageArg ? storageArg.slice("--storage=".length) : "";
+
+const requestHeaders = { "user-agent": "Mozilla/5.0 Chrome/120" };
+if (storagePath) {
+  const state = JSON.parse(await readFile(storagePath, "utf8"));
+  requestHeaders.cookie = state.cookies.map((c) => `${c.name}=${c.value}`).join("; ");
+}
 
 const client = new MongoClient("mongodb://127.0.0.1:27018/?directConnection=true", {
   serverSelectionTimeoutMS: 10_000,
@@ -26,7 +38,7 @@ await profile.drop().catch(() => {});
 await db.command({ profile: 2, slowms: 0, sampleRate: 1.0 });
 
 const started = Date.now();
-const res = await fetch(base + route, { redirect: "manual" });
+const res = await fetch(base + route, { headers: requestHeaders, redirect: "manual" });
 const body = await res.text();
 const elapsed = Date.now() - started;
 

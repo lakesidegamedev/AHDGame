@@ -35,7 +35,7 @@ const clamp = (v: number, lo: number, hi: number): number =>
 
 /** Per-turn persistence of accumulated overhang absent new flow. 0.99/turn ≈ a
  *  ~2-year decay horizon (48 turns/yr) — forced savings bleed off slowly. */
-export const OVERHANG_DECAY = 0.99;
+const OVERHANG_DECAY = 0.99;
 /**
  * Converts an unmet plan (1 − fulfillment) into an annual percentage-point
  * deficit on the GOODS side of the overhang gap.
@@ -53,7 +53,7 @@ export const OVERHANG_DECAY = 0.99;
  *
  * 20 maps a 16% plan miss to ~3.2pp of annual goods deficit.
  */
-export const PLAN_SHORTFALL_GOODS_DEFICIT = 20;
+const PLAN_SHORTFALL_GOODS_DEFICIT = 20;
 /** Max black-market premium as a fraction over official (2.0 = +200%). */
 export const MAX_BLACK_MARKET_PREMIUM = 2.0;
 /** Ceiling on how much of the economy can flee into the second economy. */
@@ -115,7 +115,7 @@ export function accumulateOverhang(
 
 /** Scales monetized directed-credit issuance into overhang-index points per turn.
  *  Chosen so a heavy-credit turn adds a few points; P3-tunable. */
-export const CREDIT_OVERHANG_SCALE = 1.0;
+const CREDIT_OVERHANG_SCALE = 1.0;
 
 /**
  * Convert this turn's monetized directed-credit issuance into the per-turn
@@ -198,7 +198,7 @@ export function updateSecondEconomy(
  * market, it does not conjure the missing goods (see the module header and the
  * design note in `internalRepression` on `economicFactors`).
  */
-export const REPRESSION_EXPRESSION_SUPPRESSION = 0.8;
+const REPRESSION_EXPRESSION_SUPPRESSION = 0.8;
 
 /**
  * Command Economy v2 (P0): collapse the three shortage-economy readouts into a

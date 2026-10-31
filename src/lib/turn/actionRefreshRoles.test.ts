@@ -1,19 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 
+const { resolveFromState } = vi.hoisted(() => ({ resolveFromState: vi.fn() }));
 vi.mock("@/lib/parliament/oppositionLeader", () => ({
-  resolveOppositionLeaderForCountry: vi.fn(async (_db: unknown, countryId: string) =>
-    countryId === "UK"
-      ? {
-          chairId: { toString: () => "leader" },
-          partyDoc: {
-            shadowCabinet: {
-              foreign: { characterId: { toString: () => "shadow" } },
-            },
-          },
-        }
-      : null
-  ),
+  resolveOppositionLeaderFromState: resolveFromState,
 }));
 
 import {
@@ -108,15 +98,49 @@ describe("resolveCeoNiTier", () => {
 });
 
 describe("loadOppositionRoles", () => {
-  it("collects the Leader of the Opposition and their shadow cabinet", async () => {
+  it("feeds every country's preloaded seats, parties and formation to the resolver", async () => {
+    resolveFromState.mockReset();
+    resolveFromState.mockImplementation(
+      async (_db: unknown, countryId: string, seats: Record<string, number>) =>
+        countryId === "UK" && seats["1"] === 5
+          ? {
+              chairId: { toString: () => "leader" },
+              partyDoc: {
+                shadowCabinet: {
+                  foreign: { characterId: { toString: () => "shadow" } },
+                },
+              },
+            }
+          : null
+    );
+    const { getLowerChamberOfficeType } = await import("@/lib/legislature/chamberOfficeType");
     const roles = await loadOppositionRoles(
       dbWith({
-        governmentFormations: [{ _id: "UK", countryId: "UK" }],
+        governmentFormations: [{ _id: "UK", countryId: "UK", governingPartyId: "1" }],
         parliamentaryGovernments: [{ _id: "DE" }],
+        electedOfficials: [
+          {
+            countryId: "UK",
+            officeType: getLowerChamberOfficeType("UK"),
+            party: "1",
+            seatsHeld: 5,
+          },
+          // A row for another chamber must not add seats to the lower tally.
+          { countryId: "UK", officeType: "stateSenate", party: "1", seatsHeld: 99 },
+        ],
+        politicalParties: [{ countryId: "UK", sequentialId: 1, chairId: null }],
       })
     );
     expect([...roles.leaderIds]).toEqual(["leader"]);
     expect([...roles.shadowCabinetIds]).toEqual(["shadow"]);
+    // Two countries, one resolver call each: the per-country document reads
+    // are gone.
+    expect(resolveFromState).toHaveBeenCalledTimes(2);
+    const ukCall = resolveFromState.mock.calls.find((call) => call[1] === "UK")!;
+    expect(ukCall[2]).toEqual({ "1": 5 });
+    expect(ukCall[3].get("1").sequentialId).toBe(1);
+    expect(ukCall[4].governingPartyId).toBe("1");
+    expect(ukCall[5]).toBeNull();
   });
 });
 

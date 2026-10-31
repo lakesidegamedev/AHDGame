@@ -1,25 +1,25 @@
 "use client";
 
-import { MIN_GROWTH_RATE, MAX_GROWTH_RATE } from "@/lib/constants/corporations";
+import { MIN_GROWTH_RATE, MAX_GROWTH_RATE } from "@/lib/constants/corporationsClient";
 import {
   MONEY_PERIOD_HELP,
   MONEY_PERIOD_LABEL,
   type MoneyPeriod,
 } from "@/lib/constants/moneyTimescale";
 import { GROWTH_HORIZON_SENTENCE } from "./SectorRowComponents";
-import { CAPACITY_UNIT_LABEL } from "./plantsPresentation";
 import type { SectorSortKey, SortDir } from "./sectorSortUtils";
+import { RUNNING_SOLD_HEADING, RUNNING_SOLD_HEADING_TITLE } from "./plantsPresentation";
 
 export const SECTOR_TABLE_GRID =
   "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_150px_64px_88px_64px_88px_64px_44px]";
 
 /**
- * Plants-tier grid: capacity, sites and fill replace the growth columns (the
+ * Plants-tier grid: plants and running / sold replace the growth columns (the
  * slider does not build capacity under plants), and the net margin gets its
  * own column instead of a second line under profit.
  */
 export const PLANTS_SECTOR_TABLE_GRID =
-  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_80px_56px_64px_88px_88px_88px_64px_44px]";
+  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_120px_72px_88px_88px_88px_64px_44px]";
 
 /** The grid template for the given world. */
 export function sectorTableGrid(plantsMode: boolean): string {
@@ -75,19 +75,14 @@ function columnsFor(plantsMode: boolean, timeScale: MoneyPeriod): Column[] {
     return [
       ...head,
       {
-        label: "Capacity",
-        help: `What these plants can make in one financial day, in ${CAPACITY_UNIT_LABEL}. This is what you buy when you build. Capacity already paid for and under construction shows under the figure. Always per day: the period toggle rescales money only.`,
+        label: "Plants",
+        help: "Plants you own, and plants paid for and still being built. Builds arrive a little each turn until the finish turn. Hover a figure for the output it stands for.",
         sortKey: "capacity",
         align: "right",
       },
       {
-        label: "Sites",
-        help: "Number of facilities the capacity is spread across.",
-        align: "right",
-      },
-      {
-        label: "Fill",
-        help: "Share of what these plants produced that actually sold. Low fill means paying to run capacity that earns nothing. For corporations you do not run, this is a broad band instead of the exact figure.",
+        label: RUNNING_SOLD_HEADING,
+        help: `${RUNNING_SOLD_HEADING_TITLE} A sector can sell all of a trickle, so read both: low running means plants sitting idle, low sold means output left unsold. For corporations you do not run, sold is a broad band instead of the exact figure.`,
         sortKey: "fill",
         align: "right",
       },

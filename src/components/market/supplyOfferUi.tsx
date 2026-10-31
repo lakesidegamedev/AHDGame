@@ -3,27 +3,48 @@
 import Link from "next/link";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { Avatar } from "@/components/Avatar";
-import { COMMODITY_LABELS, COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
+import {
+  COMMODITY_LABELS,
+  COMMODITY_TYPES,
+  type CommodityType,
+} from "@/lib/constants/commoditiesCore";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
+import {
+  DEFAULT_OFFER_VIEW,
+  OFFER_SORT_DEFAULT_DIR,
+  OFFER_SORT_LABELS,
+  offerSortDirLabels,
+  offerSortsFor,
+  type OfferSort,
+  type OfferSortDir,
+  type OfferView,
+} from "@/lib/corporations/supplyExchange/offerOrdering";
+import type { OfferCorporation } from "./SupplyOfferRow";
 
-export type OfferKindFilter = "player" | "npp" | "all";
-export type OfferSideFilter = "both" | "sell" | "buy";
-export type OfferSortKey = "newest" | "volume" | "premium";
+type OfferFilters = OfferView;
 
-export interface OfferFilters {
-  kind: OfferKindFilter;
-  side: OfferSideFilter;
-  /** Empty means every commodity. */
-  commodity: CommodityType | "";
-  sort: OfferSortKey;
+export const DEFAULT_OFFER_FILTERS: OfferFilters = DEFAULT_OFFER_VIEW;
+
+/**
+ * Offers per page. Lives here rather than in `SupplyDealsPanel` so the hub's
+ * one-row preview query does not statically import the whole panel, the offer
+ * rows and the commodity catalogue behind it.
+ */
+export const SUPPLY_PAGE_SIZE = 20;
+
+/** GET /api/supply-offers, as both the hub preview and the deals panel read it. */
+export interface SupplyOffersResponse {
+  enabled: boolean;
+  offers: SupplyListingView[];
+  myCorporations: OfferCorporation[];
+  currentTurn: number;
+  page: number;
+  hasMore: boolean;
+  /** Offers matching the filters. */
+  total: number;
+  /** Every open offer in the commodity scope, before the source and side filters. */
+  totalAll?: number;
 }
-
-export const DEFAULT_OFFER_FILTERS: OfferFilters = {
-  kind: "player",
-  side: "both",
-  commodity: "",
-  sort: "newest",
-};
 
 /** Query string for GET /api/supply-offers; omits anything left at its default. */
 export function offersQuery(filters: OfferFilters, page?: number, pageSize?: number): string {
@@ -34,6 +55,7 @@ export function offersQuery(filters: OfferFilters, page?: number, pageSize?: num
   if (filters.side !== "both") params.set("side", filters.side);
   if (filters.commodity) params.set("commodity", filters.commodity);
   params.set("sort", filters.sort);
+  if (filters.dir !== OFFER_SORT_DEFAULT_DIR[filters.sort]) params.set("dir", filters.dir);
   return params.toString();
 }
 
@@ -111,7 +133,7 @@ export function SideBadge({ side }: { side: "buy" | "sell" }) {
   );
 }
 
-export function NppBadge() {
+function NppBadge() {
   return (
     <span className="rounded bg-card-elevated px-1.5 py-0.5 text-[11px] font-medium text-muted">
       NPP
@@ -219,9 +241,9 @@ export function SupplyFilterBar({
         value={filters.side}
         onChange={(v) => set("side", v)}
         options={[
+          { value: "both", label: "Both" },
           { value: "sell", label: "Offering (sell)" },
           { value: "buy", label: "Seeking (buy)" },
-          { value: "both", label: "Both" },
         ]}
       />
       {showCommodity && (
@@ -246,13 +268,32 @@ export function SupplyFilterBar({
         <select
           className={selectCls}
           value={filters.sort}
-          onChange={(e) => set("sort", e.target.value as OfferSortKey)}
+          onChange={(e) => {
+            const sort = e.target.value as OfferSort;
+            onChange({ ...filters, sort, dir: OFFER_SORT_DEFAULT_DIR[sort] });
+          }}
         >
-          <option value="newest">Newest</option>
-          <option value="volume">Volume</option>
-          <option value="premium">Price vs market</option>
+          {offerSortsFor(!showCommodity).map((key) => (
+            <option key={key} value={key}>
+              {key === "premium" && showCommodity ? "Price vs market" : OFFER_SORT_LABELS[key]}
+            </option>
+          ))}
         </select>
       </label>
+      <Segmented<OfferSortDir>
+        label="Sort order"
+        value={filters.dir}
+        onChange={(v) => set("dir", v)}
+        options={(() => {
+          const words = offerSortDirLabels(filters.sort);
+          const first = OFFER_SORT_DEFAULT_DIR[filters.sort];
+          const second: OfferSortDir = first === "asc" ? "desc" : "asc";
+          return [
+            { value: first, label: words[first] },
+            { value: second, label: words[second] },
+          ];
+        })()}
+      />
     </div>
   );
 }

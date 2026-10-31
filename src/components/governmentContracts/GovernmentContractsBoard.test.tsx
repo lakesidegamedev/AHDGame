@@ -66,6 +66,34 @@ function show(
   );
 }
 describe("country government contracts board", () => {
+  it("shows the global pause and hides publishing even for an authorized minister", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (url: string) =>
+          new Response(
+            JSON.stringify(
+              url.endsWith("/access")
+                ? {
+                    enabled: false,
+                    defence: true,
+                    nationalExtraction: true,
+                    regionalExtraction: true,
+                    corporations: [],
+                    states: [],
+                    window: { endTurn: 12 },
+                    currentTurn: 5,
+                  }
+                : { total: 0, page: 1, pageSize: 10, totalPages: 1, currentTurn: 5, tenders: [] }
+            ),
+            { status: 200 }
+          )
+      )
+    );
+    show();
+    await screen.findByText(/Government contracts are temporarily disabled/);
+    expect(screen.queryByRole("button", { name: "Publish tender" })).toBeNull();
+  });
   it("opens a notification's tender even outside the visible results page", async () => {
     const focus = "d".repeat(24);
     vi.stubGlobal(

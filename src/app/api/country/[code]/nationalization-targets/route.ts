@@ -27,7 +27,11 @@ export async function GET(request: Request, { params }: RouteParams) {
     const auth = await requireHumanSession(request);
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/nationalization-targets:${auth.user.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code } = await params;

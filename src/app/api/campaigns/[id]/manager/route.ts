@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rate = checkRateLimit(auth.user.userId, 10, 60000);
+    const rate = checkRateLimit(`api/campaigns/[id]/manager:${auth.user.userId}`, 10, 60000);
     if (!rate.ok) return rateLimitResponse(rate.retryAfter);
 
     const parsed = await parseJsonBody(request, schema);

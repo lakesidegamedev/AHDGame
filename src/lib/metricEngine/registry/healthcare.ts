@@ -57,7 +57,7 @@ import { LIFE_EXPECTANCY_MID, PREVENTABLE_MORTALITY_MID } from "@/lib/demographi
 // UNITS with no USD normalization -- a half-sat tuned to USD-scale ranges may
 // under/over-saturate other countries' healthcare channel. Out of scope for
 // this pass; flag for a follow-up per-country/currency-normalized constant.
-export const HEALTH_SPEND_HALF_SAT = 4000;
+const HEALTH_SPEND_HALF_SAT = 4000;
 
 const spendResp = (ctx: EngineNodeContext): number =>
   fundingResponse(ctx.spending["healthcare"] ?? 0, HEALTH_SPEND_HALF_SAT, 100); // 0..100
@@ -165,7 +165,7 @@ export const lifeExpectancyNode: RegistryNode = {
   },
 };
 
-export const mentalHealthAccessNode: RegistryNode = {
+const mentalHealthAccessNode: RegistryNode = {
   id: "healthcare.mentalHealthAccess",
   categoryId: "healthcare",
   metricId: "mentalHealthAccess",
@@ -214,7 +214,7 @@ export const nhsWaitingTimeNode: RegistryNode = {
   },
 };
 
-export const socialCareQualityNode: RegistryNode = {
+const socialCareQualityNode: RegistryNode = {
   id: "healthcare.socialCareQuality",
   categoryId: "healthcare",
   metricId: "socialCareQuality",

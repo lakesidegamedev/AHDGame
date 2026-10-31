@@ -1,10 +1,15 @@
 "use client";
 import type { BucketProfileSection } from "@/lib/demographics/bucketProfile";
 import Image from "next/image";
-import Link from "next/link";
+import { RegionalHeroActions } from "@/components/state/RegionalHeroActions";
 import { PositionBadges } from "@/components/PositionBadges";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
-import { getUKRegionImage, type UKRegion, type UKNation } from "@/lib/constants/uk";
+import {
+  getUKCouncilName,
+  getUKRegionImage,
+  type UKRegion,
+  type UKNation,
+} from "@/lib/constants/uk";
 import { formatPopulation, formatGDP } from "@/lib/utils/formatters";
 import BackButton from "@/components/BackButton";
 import { HeroImage } from "@/components/HeroImage";
@@ -22,7 +27,7 @@ import type {
 } from "@/components/state/StatePageTabsTypes";
 import type { RegionCensus } from "@/lib/seeds/regionCensusData";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
-import { getCountryFlagUrl } from "@/lib/constants";
+import { getCountryFlagUrl } from "@/lib/constants/flags";
 import type { StateOverviewResult } from "@/lib/states/overview/types";
 
 export interface SerializedMP {
@@ -98,7 +103,7 @@ interface UKRegionClientProps {
   executiveLabel?: string | null;
   /**
    * Whether the viewer may reach the executive's Office page — the holder OR an
-   * authorized party officer of an NPP-held office. Gates the "Office →" link.
+   * authorized party officer of an NPP-held office. Gates the Office link.
    */
   canManageOffice?: boolean;
   regionalConditionsOverviewEnabled?: boolean;
@@ -265,22 +270,25 @@ export default function UKRegionClient({
             {executiveLabel && (
               <div className="flex flex-col px-5 py-3 min-w-max">
                 <span className="text-body-sm font-medium text-muted">{executiveLabel}</span>
-                <span className="text-base font-bold tabular-nums mt-0.5 flex items-center gap-2">
+                <span className="text-base font-bold tabular-nums mt-0.5 flex flex-wrap items-center gap-2">
                   {executive && (executive.characterId || executive.nppId)
                     ? (executive.characterName ?? "Unknown")
                     : "Vacant"}
-                  {(canManageOffice || isAdmin) && (
-                    <Link
-                      href={`/country/uk/region/${region.id.toLowerCase()}/office`}
-                      className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/25 transition-colors"
-                    >
-                      Office →
-                    </Link>
-                  )}
                 </span>
               </div>
             )}
           </div>
+          <RegionalHeroActions
+            officeHref={
+              executiveLabel && (canManageOffice || isAdmin)
+                ? regionUrl("UK", region.id) + "/office"
+                : null
+            }
+            legislature={{
+              href: regionUrl("UK", region.id) + "/legislature",
+              label: getUKCouncilName(region.id),
+            }}
+          />
         </header>
 
         {/* Tabbed Content */}

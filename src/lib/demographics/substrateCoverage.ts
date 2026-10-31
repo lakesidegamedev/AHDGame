@@ -24,7 +24,7 @@ import { deriveGranularElectorateUnits } from "./granularElectorate";
 import { type EraId, presetForEra } from "@/lib/seeds/presetSelector";
 
 /** Every era a world can be seeded into, oldest first. */
-export const COVERAGE_ERAS: readonly EraId[] = [
+const COVERAGE_ERAS: readonly EraId[] = [
   "1953",
   "1979",
   "1991",
@@ -218,7 +218,7 @@ export const REGION_ROSTERS: Partial<Record<CountryId, Partial<Record<EraId, Ros
 };
 
 /** The region ids a country seeds for an era, via the same fallback as seeding. */
-export async function regionRosterFor(countryId: CountryId, era: EraId): Promise<string[]> {
+async function regionRosterFor(countryId: CountryId, era: EraId): Promise<string[]> {
   const byEra = REGION_ROSTERS[countryId];
   if (!byEra) return [];
   const thunk = byEra[era] ?? byEra["2019"];
@@ -240,7 +240,7 @@ export interface CoverageRow {
 }
 
 /** An era anchor year is its id — the era ids ARE their anchor years. */
-export function anchorYearFor(era: EraId): number {
+function anchorYearFor(era: EraId): number {
   return Number(era);
 }
 

@@ -16,17 +16,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * demographicProfileId: "ie_archetypes"
  */
-export const IE_VOTER_GROUP_BASELINES: Record<string, number> = {
-  urban_professional: 68,
-  rural_traditional: 72,
-  working_class: 58,
-  new_irish: 45,
-  small_business: 74,
-  retirees: 80,
-  young_urban: 46,
-  border_communities: 65,
-};
-
 export const ieDemographicCategories: DemographicCategory[] = [
   {
     _id: "ie_voterGroups",

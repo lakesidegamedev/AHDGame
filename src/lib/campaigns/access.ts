@@ -90,7 +90,7 @@ export const MAX_CAMPAIGN_MANAGERS = 3;
  * the legacy pair mirrored to the FIRST manager so any un-migrated reader (and
  * the existing UI) still resolves someone sensible.
  */
-export function campaignManagerUserIds(campaign: Campaign): ObjectId[] {
+function campaignManagerUserIds(campaign: Campaign): ObjectId[] {
   const out: ObjectId[] = [];
   const seen = new Set<string>();
   const push = (id: ObjectId | null | undefined) => {
@@ -130,17 +130,4 @@ export function isCampaignManagerUser(campaign: Campaign, userId: string): boole
     return false;
   }
   return campaignManagerUserIds(campaign).some((id) => id.equals(asObjectId));
-}
-
-export async function getCampaignActorAccess(
-  db: Db,
-  campaign: Campaign,
-  userId: string,
-  activeCharacterId?: ObjectId | string | null
-): Promise<{ isManager: boolean; isNominee: boolean }> {
-  const [isManager, isNominee] = await Promise.all([
-    Promise.resolve(isCampaignManagerUser(campaign, userId)),
-    isCampaignNomineeUser(db, campaign, userId, activeCharacterId),
-  ]);
-  return { isManager, isNominee };
 }

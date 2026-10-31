@@ -1,0 +1,17 @@
+---
+date: 2026-10-27
+title: Refund governor proposal costs when bills become law
+summary: Governor-queued bills refund their original payer on enactment, including bills introduced before explicit payer attribution.
+tags: [legislation, governors, refunds]
+badges: [patch]
+areas: [backend]
+---
+
+## What changed
+
+- Preserve the governor's payer ID when a queued bill is introduced by a party NPP.
+- Use the governor attribution on older bills when no explicit payer ID is recorded.
+- Keep ordinary player and party-chair proposal refunds unchanged.
+- Atomically accept one governor decision so competing assent or veto requests cannot repeat enactment or overwrite each other.
+
+Tracks #5052.

@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { partyUrl } from "@/lib/urls";
 import { getEnabledCountryIds } from "@/lib/countryAccess";

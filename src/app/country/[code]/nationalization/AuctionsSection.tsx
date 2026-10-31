@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import { natMoney } from "@/components/national/natMoney";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import type { AuctionListing } from "@/lib/nationalization/auctionListing";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { apiErrorText } from "@/lib/errors/catalog";

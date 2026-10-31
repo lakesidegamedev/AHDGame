@@ -122,5 +122,5 @@ export function getBlrSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const blrSeedConfig: EasternBlocSeedConfig = getBlrSeedConfig("2019-default");
+const blrSeedConfig: EasternBlocSeedConfig = getBlrSeedConfig("2019-default");
 export default blrSeedConfig;

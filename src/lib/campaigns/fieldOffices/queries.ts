@@ -1,3 +1,4 @@
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import type { Db, ObjectId } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { notFound } from "@/lib/api/errors";
@@ -226,7 +227,13 @@ export async function getFieldOfficeView(
     base.leanSourceLabel = countyLeanSourceLabel(preset);
     base.liveLeanYear = live?.sourceYear ?? null;
     base.liveLeanPriorYear = live?.priorYear ?? null;
-    const map = await loadFieldOfficeRegionMap(rules.scope, selected._id, live, preset);
+    const map = await loadFieldOfficeRegionMap(
+      rules.scope,
+      selected._id,
+      live,
+      preset,
+      await loadCountyPopulationMap(db, selected._id)
+    );
     if (map) {
       const orientation = canManage
         ? await loadCampaignOrientation(db, campaign as Campaign, election.countryId)

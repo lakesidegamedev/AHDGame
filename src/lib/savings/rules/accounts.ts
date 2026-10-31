@@ -40,7 +40,7 @@ export interface SavingsAccountSnapshot {
 
 export const CENTRAL_BANK_HOLDER: SavingsHolder = "centralBank";
 
-export function accountKey(ownerType: string, ownerId: string, currency: string): string {
+function accountKey(ownerType: string, ownerId: string, currency: string): string {
   return `${ownerType}:${ownerId}:${currency}`;
 }
 

@@ -3,14 +3,14 @@
  * Depleted cash buffers release unused bids before selling bonds to funded dealers.
  * See recomputeNav and restoreFundCashBuffer.
  */
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { IndexFund, ShareOrder } from "@/lib/db/types";
 import { INDEX_FUND_INITIAL_NAV, calculateBackingRatio } from "./unitAccounting";
 import {
   computeHoldingsValueAnchor,
   INDEX_FUND_RESERVE_CASH_BUFFER_FRACTION,
 } from "./fundAllocation";
-import { getFundById, updateFundNav } from "./fundQueries";
+import { FUND_COLLECTION, getFundById, listFundsByIds, updateFundNav } from "./fundQueries";
 import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from "./fundValuation";
 import { cancelFundShareOrder } from "./fundShareOrders";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
@@ -71,6 +71,90 @@ export async function refreshFundNavAfterBondDeployment(
     unitSupply: fund.unitSupply,
   });
   await updateFundNav(db, fundId, { quotedNav: nav, backingRatio: backing.backingRatio });
+}
+
+/** One fund whose bond deployment this pass has to publish. */
+export interface BondDeploymentNavRefresh {
+  fund: IndexFund;
+  bondPrincipalAnchor: number;
+  openOrdersEscrowAnchor: number;
+  queuedRedemptionUnits?: number;
+}
+
+/**
+ * Publish every fund's NAV after the reserve pass in one read and one bulk
+ * write. The per-fund helper above re-read the fund and wrote it back one fund
+ * at a time; nothing else in the pass touches a fund's cash between its own
+ * deployment and the end of the loop, so the books are the same.
+ */
+export async function refreshFundNavsAfterBondDeployment(
+  db: Db,
+  refreshes: BondDeploymentNavRefresh[]
+): Promise<{
+  updated: string[];
+  failed: Array<{ fundId: IndexFund["_id"]; slug: string; message: string }>;
+}> {
+  const updated: string[] = [];
+  const failed: Array<{ fundId: IndexFund["_id"]; slug: string; message: string }> = [];
+  if (refreshes.length === 0) return { updated, failed };
+
+  const funds = await listFundsByIds(
+    db,
+    refreshes.map((refresh) => refresh.fund._id)
+  );
+  const fundById = new Map(funds.map((fund) => [fund._id.toString(), fund]));
+  const updates: AnyBulkWriteOperation<IndexFund>[] = [];
+  const now = new Date();
+
+  for (const refresh of refreshes) {
+    const id = refresh.fund._id.toString();
+    const fund = fundById.get(id);
+    if (!fund) {
+      failed.push({
+        fundId: refresh.fund._id,
+        slug: refresh.fund.slug,
+        message: "bond fund disappeared after deployment",
+      });
+      continue;
+    }
+    const queuedRedemptionUnits = refresh.queuedRedemptionUnits ?? 0;
+    const nav = recomputeNav(fund, {
+      bondPrincipalAnchor: refresh.bondPrincipalAnchor,
+      openOrdersEscrowAnchor: refresh.openOrdersEscrowAnchor,
+      queuedRedemptionUnits,
+    });
+    if (nav === null) {
+      failed.push({
+        fundId: refresh.fund._id,
+        slug: refresh.fund.slug,
+        message: "invalid NAV after bond deployment",
+      });
+      continue;
+    }
+    const backing = calculateBackingRatio({
+      cashAnchor: fund.cashAnchor,
+      holdingsValueAnchor: computeHoldingsValueAnchor(fund),
+      bondPrincipalAnchor: refresh.bondPrincipalAnchor,
+      openOrdersEscrowAnchor: refresh.openOrdersEscrowAnchor,
+      queuedRedemptionUnits,
+      quotedNav: nav,
+      unitSupply: fund.unitSupply,
+    });
+    updates.push({
+      updateOne: {
+        filter: { _id: fund._id },
+        update: {
+          $set: { quotedNav: nav, backingRatio: backing.backingRatio, updatedAt: now },
+        },
+      },
+    });
+    updated.push(id);
+  }
+
+  if (updates.length > 0) {
+    await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(updates);
+  }
+  return { updated, failed };
 }
 
 /** Restore cash depleted by redemptions or older reserve purchases using real bond sales. */

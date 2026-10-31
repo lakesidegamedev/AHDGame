@@ -72,9 +72,6 @@ export const WAR_ROAD_TARGET_PENALTY = 25;
  */
 export const WAR_ROAD_EXTRA_DECAY = 0.2;
 
-/** No war on this country's soil, and so no damage. The overwhelmingly common case. */
-export const NO_WAR_DAMAGE: WarDamage = { frontProgress: 0 };
-
 /** How much of the funded road target the fighting removes. 0 when at peace. */
 export function warRoadTargetPenalty(damage: WarDamage | undefined): number {
   const p = damage?.frontProgress ?? 0;

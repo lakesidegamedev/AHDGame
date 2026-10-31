@@ -338,7 +338,13 @@ export async function settleTransition(
     // further may be written on top of undelivered money. The result is still
     // `replayed` (this caller owns nothing), with `error` saying the key is
     // not settled; the claim record itself is what the repair queue lists.
-    const owned = await journal.findOne({ _id: transition.key });
+    // Only the disposition and which legs landed decide whether this replay may
+    // go on. A journal record is ~97 KB (89 KB of it the frozen projections), so
+    // reading it whole here decoded the plan again to answer one question.
+    const owned = await journal.findOne(
+      { _id: transition.key },
+      { projection: { status: 1, error: 1, "legs.applied": 1 } }
+    );
     // Judged on the legs themselves, not the record's status: a record can be
     // `partial` because a PROJECTION failed after every leg landed, and that
     // is exactly the case a replay must go on to finish.
@@ -477,7 +483,9 @@ async function splitConflictingProjections(
     { $set: { projections: split } }
   );
   if (replaced.matchedCount === 1) return split;
-  const fresh = await journal.findOne({ _id: key });
+  // The CAS failed, so the record moved underneath: take its list as stored.
+  // Nothing but the projection list is read from it.
+  const fresh = await journal.findOne({ _id: key }, { projection: { projections: 1 } });
   return fresh?.projections ?? records;
 }
 
@@ -497,9 +505,13 @@ async function finishProjections(
   // the ones that finish, never the recomputed ones. Records without a
   // projection list (written by the primitive alone) fall back to the caller.
   // Only the successful claimant may use its own immutable insert payload.
-  // Replays and recovery always load the original durable quote.
+  // Replays and recovery always load the original durable quote. The quote is
+  // the projection list; the legs and the event on the same record are not read
+  // here and are most of its bytes.
   const existing =
-    ownedRecords === undefined ? await journal.findOne({ _id: transition.key }) : null;
+    ownedRecords === undefined
+      ? await journal.findOne({ _id: transition.key }, { projection: { projections: 1 } })
+      : null;
   let records = ownedRecords ?? existing?.projections;
   if (existing && records)
     records = await splitConflictingProjections(journal, transition.key, records);
@@ -704,11 +716,20 @@ export async function listUnfinishedProjections(
   db: Db,
   limit = 100
 ): Promise<Array<{ key: string; kind: string; turn?: number; pending: number }>> {
+  type QueuedRow = Pick<
+    { _id: string; kind: string; turn?: number } & JournalExtension,
+    "_id" | "kind" | "turn" | "projections"
+  >;
   const rows = await db
     .collection<{ _id: string; kind: string; turn?: number } & JournalExtension>(
       MONEY_MOVE_COLLECTION
     )
-    .find({ ...unfinishedSettlementFilter(), projections: { $exists: true } })
+    // The repair queue counts what is pending; the legs and the event on the
+    // same record are most of its bytes and nothing here reads them.
+    .find<QueuedRow>(
+      { ...unfinishedSettlementFilter(), projections: { $exists: true } },
+      { projection: { kind: 1, turn: 1, projections: 1 } }
+    )
     .sort({ createdAt: 1 })
     .limit(Math.max(1, limit))
     .toArray();
@@ -787,7 +808,25 @@ export async function recoverProjections(
   const journal = db.collection<{ _id: string; kind: string; turn?: number } & JournalExtension>(
     MONEY_MOVE_COLLECTION
   );
-  const record = await journal.findOne({ _id: key });
+  // Recovery re-applies the projections and re-arms the settlement shape they
+  // belong to. The legs and the frozen event are not read here, and the legs
+  // are the second largest field after the projections themselves.
+  const record = await journal.findOne(
+    { _id: key },
+    {
+      projection: {
+        kind: 1,
+        turn: 1,
+        currency: 1,
+        status: 1,
+        error: 1,
+        projections: 1,
+        locSettlement: 1,
+        legacyInterestBatch: 1,
+        atomicDocument: 1,
+      },
+    }
+  );
   if (record?.locSettlement) {
     const { resumeLocSettlement } = await import("@/lib/lineOfCredit/settlement");
     return resumeLocSettlement(db, key);

@@ -54,7 +54,7 @@ export interface DepletableCapacityDoc {
 }
 
 /** Derived total recoverable reserves for one resource, in units. */
-export function depositReservesUnits(doc: DepletableCapacityDoc, r: ExtractableResource): number {
+function depositReservesUnits(doc: DepletableCapacityDoc, r: ExtractableResource): number {
   const perTurn = doc.resources?.[r] ?? 0;
   return perTurn > 0 ? perTurn * DEPOSIT_RESERVE_TURNS : 0;
 }

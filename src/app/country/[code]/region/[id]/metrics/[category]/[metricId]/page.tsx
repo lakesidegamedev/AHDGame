@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { regionUrl, regionApiSubUrl } from "@/lib/urls";
-import { canonicalRegionId } from "@/lib/constants/countries";
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 import { ALL_METRIC_DEFS, CATEGORY_LABELS, type MetricDetailData } from "./metricDefs";
 import { MetricChart } from "./MetricChart";
 import { getStatsIdentity } from "@/lib/constants/nationalStatsIdentity";

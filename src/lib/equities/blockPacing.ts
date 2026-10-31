@@ -25,11 +25,11 @@ import { getCorpFxRate } from "@/lib/currency/corporationCapital";
 import { getCurrentTurn } from "@/lib/currentTurn";
 
 /** Share of a company's market value the pool will buy from sellers in one turn. */
-export const EQUITY_POOL_SELL_SHARE_PER_TURN = 0.05;
+const EQUITY_POOL_SELL_SHARE_PER_TURN = 0.05;
 /** Sales below this ₳ value per company per turn are never paced. */
 export const EQUITY_POOL_SELL_FLOOR_ANCHOR = 25_000_000;
 /** Share of outstanding shares the pool will place from a new issue in one turn. */
-export const EQUITY_PRIMARY_PLACE_SHARE_PER_TURN = 0.1;
+const EQUITY_PRIMARY_PLACE_SHARE_PER_TURN = 0.1;
 /** Issues below this ₳ value per turn are never paced. */
 export const EQUITY_PRIMARY_PLACE_FLOOR_ANCHOR = 50_000_000;
 

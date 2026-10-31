@@ -3,6 +3,9 @@
  * freezeAndApplyDemographicFlowPlan freezes all regions before publishing a receipt;
  * resumeDemographicFlowReceipt completes partial writes without recomputing flows.
  */
+import { countyPopulationIdentity, freezeCountyPopulationPlans } from "@/lib/counties/projections";
+import type { County } from "@/lib/db/types/county";
+import type { CountyPopulation } from "@/lib/counties/rules";
 import { randomUUID } from "node:crypto";
 import { BSON, ObjectId } from "mongodb";
 import { materializeRefugeeReceptionResults } from "@/lib/livingConflict/refugeeReception";
@@ -16,16 +19,12 @@ import {
   type FertilityBasis,
   type MortalityBasis,
 } from "@/lib/resetMetrics/rules/demographicMeasurement";
-import {
-  demographicFlowBatchId,
-  demographicRecoveryDecision,
-  type DemographicFlowReceiptStatus,
-} from "./rules/flowReceipt";
+import { demographicFlowBatchId, type DemographicFlowReceiptStatus } from "./rules/flowReceipt";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
-export const DEMOGRAPHIC_FLOW_PENDING_INDEX = "demographic_flow_pending_epoch_turn";
-export const DEMOGRAPHIC_FLOW_PLAN_REGION_INDEX = "demographic_flow_plan_region_unique";
+const DEMOGRAPHIC_FLOW_PENDING_INDEX = "demographic_flow_pending_epoch_turn";
+const DEMOGRAPHIC_FLOW_PLAN_REGION_INDEX = "demographic_flow_plan_region_unique";
 
 const STAMP_FIELD = "populationFlowStamp";
 
@@ -66,6 +65,7 @@ export interface DemographicFlowCohortReading {
 
 export interface DemographicFlowRegionInput {
   regionId: string;
+  countyPopulationsAfter?: CountyPopulation[];
   agesAfter: AgeSexVector;
   stateAfter: DemographicFlowStateProjection;
   metricsAfter: DemographicFlowMetricsProjection;
@@ -166,7 +166,22 @@ function freezeRegionInput(input: DemographicFlowRegionInput): DemographicFlowRe
   if (Object.values(input.stateAfter).some((value) => value < 0)) {
     throw new Error(`Invalid demographic projection for ${input.regionId}`);
   }
+  if (input.countyPopulationsAfter) {
+    const rows = input.countyPopulationsAfter;
+    if (
+      !rows.length ||
+      new Set(rows.map((c) => c.id)).size !== rows.length ||
+      rows.some(
+        (c) => !/^\d{5}$/.test(c.id) || !Number.isSafeInteger(c.population) || c.population < 0
+      ) ||
+      rows.reduce((n, c) => n + c.population, 0) !== input.stateAfter.population
+    )
+      throw new Error(`Invalid frozen county population for ${input.regionId}`);
+  }
   return {
+    ...(input.countyPopulationsAfter
+      ? { countyPopulationsAfter: input.countyPopulationsAfter.map((c) => ({ ...c })) }
+      : {}),
     regionId: input.regionId,
     agesAfter: { male: [...input.agesAfter.male], female: [...input.agesAfter.female] },
     stateAfter: { ...input.stateAfter },
@@ -291,6 +306,26 @@ async function materializeReceipt(
     return materializeReceipt(db, latest);
   }
   const regionIds = projections.map((projection) => projection.regionId);
+  const countyPlans = projections.flatMap((p) =>
+    (p.countyPopulationsAfter ?? []).map((c) => ({ ...c, stateId: p.regionId }))
+  );
+  const countyTargets = countyPlans.length
+    ? await db
+        .collection<County>("counties")
+        .find(
+          { _id: { $in: countyPlans.map((c) => c.id) } },
+          { projection: { _id: 1, countryId: 1, stateId: 1, populationFlowStamp: 1 } }
+        )
+        .toArray()
+    : [];
+  const countyById = new Map(countyTargets.map((c) => [c._id, c]));
+  for (const county of countyPlans) {
+    const target = countyById.get(county.id);
+    if (!target || target.countryId !== "US" || target.stateId !== county.stateId)
+      throw new Error(`Missing or invalid county target ${county.id}`);
+    assertNoLaterOrConflictingStamp(target.populationFlowStamp, receipt, `counties/${county.id}`);
+  }
+
   const [demographics, states, metrics] = await Promise.all([
     readTargetMap(db, "regionDemographics", regionIds),
     readTargetMap(db, "states", regionIds),
@@ -318,6 +353,40 @@ async function materializeReceipt(
     turn: receipt.turn,
     batchId: receipt._id,
   };
+  const countyOps = countyPlans
+    .filter((c) => !alreadyApplied(countyById.get(c.id)?.populationFlowStamp, receipt))
+    .map((c) => ({
+      updateOne: {
+        filter: {
+          ...projectionFilter(c.id, receipt.worldEpochId, receipt.turn),
+          ...countyPopulationIdentity(c.stateId),
+        },
+        update: { $set: { population: c.population, [STAMP_FIELD]: stamp } },
+      },
+    }));
+  if (countyOps.length)
+    await db.collection<County>("counties").bulkWrite(countyOps, { ordered: true });
+  if (countyPlans.length) {
+    const confirmed = await db
+      .collection<County>("counties")
+      .find(
+        { _id: { $in: countyPlans.map((c) => c.id) } },
+        { projection: { _id: 1, countryId: 1, stateId: 1, population: 1, populationFlowStamp: 1 } }
+      )
+      .toArray();
+    const expected = new Map(countyPlans.map((c) => [c.id, c.population]));
+    if (
+      confirmed.length !== countyPlans.length ||
+      confirmed.some(
+        (c) =>
+          c.countryId !== "US" ||
+          c.stateId !== countyById.get(c._id)?.stateId ||
+          c.population !== expected.get(c._id) ||
+          !alreadyApplied(c.populationFlowStamp, receipt)
+      )
+    )
+      throw new Error("County population write not confirmed");
+  }
   const demographicOps = projections
     .filter(
       (projection) =>
@@ -450,7 +519,7 @@ async function createJournalIndexes(db: Db): Promise<void> {
     );
 }
 
-export async function ensureDemographicFlowJournalIndexes(db: Db): Promise<void> {
+async function ensureDemographicFlowJournalIndexes(db: Db): Promise<void> {
   let pending = indexReadiness.get(db);
   if (!pending) {
     pending = createJournalIndexes(db).catch((error) => {
@@ -530,7 +599,9 @@ export async function freezeAndApplyDemographicFlowPlan(
   const existing = await loadDemographicFlowReceipt(db, input.worldEpochId, input.turn);
   if (existing) return (await materializeReceipt(db, existing)).stats;
 
-  const regions = input.regions.map(freezeRegionInput);
+  const regions = (await freezeCountyPopulationPlans(db, input.regions.map(freezeRegionInput))).map(
+    freezeRegionInput
+  );
   const projectionRegionIds = new Set(regions.map((region) => region.regionId));
   const refugeeReceptions = input.refugeeReceptions?.length
     ? structuredClone(input.refugeeReceptions)
@@ -623,5 +694,3 @@ export async function freezeAndApplyDemographicFlowPlan(
   }
   return (await materializeReceipt(db, receipt)).stats;
 }
-
-export { demographicFlowBatchId, demographicRecoveryDecision };

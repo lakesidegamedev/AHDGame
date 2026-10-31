@@ -4,7 +4,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { Character, User } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 
 // GET /api/characters/search — Search characters by name with optional party, country, and exclude filters
 // Auth: public

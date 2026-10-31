@@ -272,8 +272,9 @@ export async function nationalizeSectorWide(
             null,
             sweepEraUnitScale
           ),
+          // Implied on the standard recipe (null strategy), so the lane size applies.
           ...seedPlantLedger(
-            params.sectorType,
+            { sectorType: params.sectorType },
             computeSectorImpliedUnits(params.sectorType, haircutAnchor, null, sweepEraUnitScale)
           ),
           // Capacity derived from an ₳ nameplate rather than transferred with a
@@ -532,12 +533,7 @@ export async function nationalizeSectorWide(
         resolveSectorHostCurrencyCode(sec, donor),
         fxRateForSectorHostFromMap(sec, donor, fxByCurrency)
       );
-      const openingPlantCount = seedPlantLedger(
-        sec.sectorType,
-        sec.capitalStock,
-        sec.industryModel,
-        sec.mediaDiscriminator
-      ).plantCount;
+      const openingPlantCount = seedPlantLedger(sec, sec.capitalStock).plantCount;
       // Compute the whole-facility split once so donor and state counts are
       // complementary, including a one-facility sub-quantum holding.
       const plantCountSplit = splitWholePlantCount(openingPlantCount, f);
@@ -576,12 +572,7 @@ export async function nationalizeSectorWide(
             return {
               ...sliced,
               capitalStock: sliced.capitalStock * (1 - NATIONALIZATION_REVENUE_HAIRCUT),
-              ...seedPlantLedger(
-                sec.sectorType,
-                sliced.capitalStock * (1 - NATIONALIZATION_REVENUE_HAIRCUT),
-                sec.industryModel,
-                sec.mediaDiscriminator
-              ),
+              ...seedPlantLedger(sec, sliced.capitalStock * (1 - NATIONALIZATION_REVENUE_HAIRCUT)),
               // P5: the paid basis takes the SAME haircut as the capacity it
               // prices, so the per-unit basis is invariant across the taking.
               capacityBookAnchor: sliced.capacityBookAnchor * (1 - NATIONALIZATION_REVENUE_HAIRCUT),
@@ -778,10 +769,8 @@ export async function nationalizeSectorWide(
             $set: {
               ...(captureUnits > 0
                 ? seedPlantLedger(
-                    params.sectorType,
-                    (ns.capitalStock ?? 0) + captureUnits,
-                    params.industryModel,
-                    params.mediaDiscriminator
+                    { ...params, strategyId: ns.strategyId },
+                    (ns.capitalStock ?? 0) + captureUnits
                   )
                 : {}),
               nationalizedAtTurn: params.consequence.turn,

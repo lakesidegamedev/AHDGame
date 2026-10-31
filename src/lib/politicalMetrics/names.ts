@@ -213,7 +213,7 @@ export const RU_METRIC_NAMES = {
 } as const satisfies Record<PoliticalMetricId, string>;
 
 /** DDR-era names (SED state; FDGB, Volkspolizei, polyclinics, Wismut, the National Front). */
-export const DD_METRIC_NAMES = {
+const DD_METRIC_NAMES = {
   "economy.workerSecurity": "Guaranteed Work and Trade Union Rights",
   "economy.mobility": "Wage Levelling and Social Provision",
   "economy.householdIncome": "Household Consumption and Real Wages",

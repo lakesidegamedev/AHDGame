@@ -18,7 +18,7 @@ export function projectCandidateApprovalBuckets(
 }
 
 /** Apply the vote engine's effective-favorability and approval kernels to a cell. */
-export function applyCandidateApprovalWeight(
+function applyCandidateApprovalWeight(
   appeal: number,
   favorability: number | undefined,
   approvalBuckets: Record<string, number>,

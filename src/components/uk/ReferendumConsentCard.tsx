@@ -3,7 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import Link from "next/link";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { referendumDetailUrl } from "@/lib/urls";
 
 export interface ConsentReferendum {

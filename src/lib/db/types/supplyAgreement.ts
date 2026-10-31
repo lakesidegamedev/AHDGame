@@ -229,7 +229,7 @@ export const CONTRACT_CANCEL_NOTICE_TURNS = 4;
  * at a financial day, keeps leaving possible without making it free. Both
  * sides can still end it sooner by agreeing a shorter term (amend).
  */
-export const CONTRACT_CANCEL_NOTICE_TERM_SHARE = 0.25;
+const CONTRACT_CANCEL_NOTICE_TERM_SHARE = 0.25;
 export const CONTRACT_CANCEL_NOTICE_MAX_TURNS = 24;
 
 /**
@@ -277,6 +277,9 @@ export const CONTRACT_DAMAGES_CAP_FRACTION = 0.25;
 
 /** Maximum contract price deviation from market (±35%). */
 export const SUPPLY_AGREEMENT_PRICE_BAND = 0.35;
+
+/** Deepest discount an AI-run supplier signs; deeper proposals get a counter at this price. */
+export const AI_SUPPLIER_MAX_DISCOUNT = 0.1;
 
 /** Clamp a proposed price premium into the legal band. */
 export function clampAgreementPremium(premium: number): number {

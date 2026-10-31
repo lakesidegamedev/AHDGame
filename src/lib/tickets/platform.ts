@@ -7,7 +7,7 @@
  * user agent, since the apps identify themselves.
  */
 
-export const TICKET_PLATFORMS = [
+const TICKET_PLATFORMS = [
   { value: "mobile_web", label: "Mobile: web browser" },
   { value: "mobile_android", label: "Mobile: Android app" },
   { value: "mobile_ios", label: "Mobile: iOS app" },

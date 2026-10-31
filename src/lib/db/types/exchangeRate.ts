@@ -91,8 +91,8 @@ export interface ExchangeRate {
   /**
    * Bretton Woods monetary regime (issue #7). Absent = `"pegged"`, which is
    * what every currency without a transition already behaved as, so legacy
-   * worlds read identically. Written by the `brettonWoodsTurn` phase while
-   * `brettonWoodsExitEnabled` is on; read by `forexTurn` (band + drift) and
+   * worlds read identically. Written by the Bretton Woods exit phase; read by
+   * `forexTurn` (band + drift) and
    * `inflationRecalc` (money-growth coefficient). Command-economy currencies
    * never leave `"pegged"` — see `participatesInFloat`.
    */

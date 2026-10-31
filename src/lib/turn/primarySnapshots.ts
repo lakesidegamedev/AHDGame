@@ -362,12 +362,19 @@ export async function recordPrimarySnapshots(
   // banked three slices; the primary accrual would do the same. A split turn
   // holds an early and a rest snapshot; each half is recorded once.
   const recordedParts = new Map<string, (TurnSlicePart | undefined)[]>();
+  // The { electionId, turn } index (2026-10-27-player-read-indexes) serves this
+  // as an equality lookup. The older { electionId, recordedAt } index could only
+  // bound the election, so every already-recorded turn of the race was fetched
+  // and filtered in memory on each turn and half-hour tick.
   const sameTurnSnapshots = await db
     .collection<PrimarySnapshot>("primarySnapshots")
-    .find({
-      electionId: { $in: activeElections.map((e) => e._id as ObjectId) },
-      turn: currentTurn,
-    })
+    .find(
+      {
+        electionId: { $in: activeElections.map((e) => e._id as ObjectId) },
+        turn: currentTurn,
+      },
+      { projection: { electionId: 1, slicePart: 1 } }
+    )
     .toArray();
   for (const s of sameTurnSnapshots) {
     const eid = s.electionId.toString();
@@ -785,6 +792,8 @@ async function recordPresidentialStatePollingSnapshots(
     orgMap.set(`${po.stateId}_${po.partyId}`, (po.organization ?? 0) + (po.primarySurge ?? 0));
   }
 
+  const pollingHistoryOps: AnyBulkWriteOperation<ElectionVoteTally>[] = [];
+
   for (const election of presElections) {
     const candidates = candidatesByElection.get(election._id.toString()) ?? [];
     if (candidates.length === 0) continue;
@@ -875,18 +884,26 @@ async function recordPresidentialStatePollingSnapshots(
     // primaryStatePollingHistory would crash full-view rendering downstream.
     // Skip the snapshot if the tally doesn't exist yet; it will start being
     // recorded after the stagger initializes the tally.
-    await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
-      { electionId: election._id },
-      {
-        $push: {
-          primaryStatePollingHistory: {
-            $each: [{ turn: 0, recordedAt: now, byParty }],
-            $slice: -24,
-          },
-        } as never,
-        $set: { updatedAt: now },
-      }
-    );
+    pollingHistoryOps.push({
+      updateOne: {
+        filter: { electionId: election._id },
+        update: {
+          $push: {
+            primaryStatePollingHistory: {
+              $each: [{ turn: 0, recordedAt: now, byParty }],
+              $slice: -24,
+            },
+          } as never,
+          $set: { updatedAt: now },
+        },
+      },
+    });
+  }
+
+  // One write for every presidential race's polling history, instead of one
+  // round trip per race.
+  if (pollingHistoryOps.length > 0) {
+    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(pollingHistoryOps);
   }
 
   return projectionsByElection;

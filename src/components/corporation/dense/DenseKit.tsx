@@ -8,12 +8,7 @@ import type { FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { ROW_ACCENT, type Tone } from "./InlineViz";
 import { useCorpLedger } from "../ledger/LedgerContext";
 import { ProportionBar } from "../ledger/ProportionBar";
-import {
-  FILL_BAND_TEXT,
-  fillBandSentence,
-  fillBandShort,
-  formatFillPercent,
-} from "../plantsPresentation";
+import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "../fillBand";
 
 /**
  * Shared building blocks for the corporation page's tabular layout.

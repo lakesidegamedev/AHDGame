@@ -21,9 +21,9 @@ import type { StockVsFlowByKind } from "@/lib/ledger/types";
 import type { CommoditySourcingDoc, SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 
 /** Default number of origin→destination routes returned by the route mix. */
-export const DEFAULT_TOP_ROUTES = 10;
+const DEFAULT_TOP_ROUTES = 10;
 /** Default number of stock-vs-flow kinds returned in the divergence summary. */
-export const DEFAULT_TOP_STOCK_VS_FLOW_KINDS = 5;
+const DEFAULT_TOP_STOCK_VS_FLOW_KINDS = 5;
 
 /** One commodity's delivered-price reading for the turn. */
 export interface DeliveredPriceSummary {

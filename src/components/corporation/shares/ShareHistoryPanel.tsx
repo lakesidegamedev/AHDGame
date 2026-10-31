@@ -165,6 +165,10 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
         )}
       </div>
 
+      <p className="text-xs text-muted">
+        Totals show gross trade value. Personal tax withholding and arrears collections are shown in
+        your personal tax statement.
+      </p>
       {error && (
         <div role="alert" className="py-2 text-xs text-error">
           {error}
@@ -197,7 +201,7 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
                 <th className="py-2 pr-3 font-medium">To</th>
                 <th className="py-2 pr-3 text-right font-medium">Shares</th>
                 <th className="py-2 pr-3 text-right font-medium">Price</th>
-                <th className="py-2 text-right font-medium">Total</th>
+                <th className="py-2 text-right font-medium">Gross total</th>
               </tr>
             </thead>
             <tbody>

@@ -87,4 +87,35 @@ describe("takeStateBillGovernorAction — parliamentary regional assent", () => 
     expect(res.status).toBe(403);
     expect(db.collection("stateBills").updateOne).not.toHaveBeenCalled();
   });
+
+  it.each(["signed", "vetoed"] as const)(
+    "rejects a concurrent %s decision before applying effects",
+    async (action) => {
+      mockCanManageOffice.mockResolvedValue(true);
+      db.collection("stateBills").updateOne.mockResolvedValue({
+        acknowledged: true,
+        matchedCount: 0,
+        modifiedCount: 0,
+      });
+      const { takeStateBillGovernorAction } = await import("./stateBillActions");
+      const res = await takeStateBillGovernorAction(
+        db as unknown as Db,
+        "CN",
+        "XB",
+        billId.toString(),
+        user(),
+        action,
+        "A competing governor decision already changed this bill."
+      );
+      expect(res.status).toBe(409);
+      expect(db.collection("stateBills").updateOne).toHaveBeenCalledWith(
+        { _id: billId, status: "passed" },
+        expect.any(Object)
+      );
+      const { onBillEnacted } = await import("@/lib/billEnactment");
+      const { applyLegislationEffect } = await import("@/lib/legislationEffects");
+      expect(onBillEnacted).not.toHaveBeenCalled();
+      expect(applyLegislationEffect).not.toHaveBeenCalled();
+    }
+  );
 });

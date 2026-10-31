@@ -153,7 +153,7 @@ export const isAutoReconciledSeedIndex = (entry: SeedIndexPlanEntry) =>
   !isTextIndex(entry) && !isTtlIndex(entry);
 
 /** Stable identity for comparing a planned index with an existing one. */
-export const indexKeySignature = (key: Record<string, unknown>) => JSON.stringify(key);
+const indexKeySignature = (key: Record<string, unknown>) => JSON.stringify(key);
 
 /** Planned indexes whose key is not present on the live collection. */
 export async function findMissingSeedIndexes(

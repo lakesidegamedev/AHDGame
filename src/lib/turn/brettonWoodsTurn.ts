@@ -2,11 +2,9 @@
  * Bretton Woods exit turn phase (issue #7) — shell around
  * `src/lib/monetary/brettonWoods.ts`.
  *
- * The rules module is complete, tested and flagged on, but nothing called it:
+ * The rules module is complete and tested, but for a while nothing called it:
  * the world was flagged for a monetary regime change that could never happen.
- * This phase is the wiring. It runs every turn while `brettonWoodsExitEnabled`
- * is on (fail-safe: flag off or absent ⇒ a single gameConfig read and zero
- * writes, byte-identical to the pegged world), positioned after inflationRecalc
+ * This phase is the wiring. It runs every turn, positioned after inflationRecalc
  * (which settles the US inflation gap this turn's drain reads) and before
  * forexTurn (which applies the persisted regime's band and drift).
  *
@@ -52,10 +50,9 @@ import {
   shouldSuspendConvertibility,
   stepGoldCover,
 } from "@/lib/monetary/brettonWoods";
-import { isBrettonWoodsExitEnabled } from "@/lib/monetary/featureFlag";
 
 export interface BrettonWoodsTurnResult {
-  /** False when the flag is off — nothing was read past gameConfig, nothing written. */
+  /** Always true: the phase runs every turn. Kept for the phase telemetry shape. */
   enabled: boolean;
   /** Stepped US gold cover, or null when there was no USD row to track it on. */
   goldCover: number | null;
@@ -77,7 +74,7 @@ export async function processBrettonWoodsTurn(
   currentYear: number | null | undefined
 ): Promise<BrettonWoodsTurnResult> {
   const empty: BrettonWoodsTurnResult = {
-    enabled: false,
+    enabled: true,
     goldCover: null,
     suspended: [],
     floated: [],
@@ -86,11 +83,7 @@ export async function processBrettonWoodsTurn(
 
   const gameConfig = await db
     .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { brettonWoodsExitEnabled: 1, commandEconomyEnabled: 1 } }
-    );
-  if (!isBrettonWoodsExitEnabled(gameConfig)) return empty;
+    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Small rows, but rateHistory is chart ballast this phase never reads —

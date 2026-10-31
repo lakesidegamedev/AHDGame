@@ -106,16 +106,26 @@ export function identifyPostHogUser(
   properties?: { signup_date?: string; nation?: string; party?: string }
 ): void {
   if (getStoredConsent() !== "accepted" || getAnalyticsAccount().account?.id !== userId) return;
-  if (identifiedAccountId !== userId) client.reset();
+  // Reset only when the stored identity belongs to someone else. Resetting the
+  // same player on every page load wipes the SDK's seen-survey records.
+  if (client.get_distinct_id() !== userId) {
+    client.reset();
+    // reset() clears stored consent, which turns capture off under
+    // opt_out_capturing_by_default and would drop the $identify below.
+    client.opt_in_capturing();
+  }
   identifiedAccountId = userId;
   client.identify(userId, { is_player: true, ...properties });
-  client.set_config({ disable_surveys: false });
+  // The SDK reads the remote survey setting once, at init, and ignores it while
+  // surveys are disabled. Force loading here or surveys never start whenever
+  // that response beat identify.
+  client.set_config({ disable_surveys: false, advanced_enable_surveys: true });
 }
 
 /** Keep later anonymous page views from loading surveys after logout. */
 export function resetPostHogUser(client: PostHogClient): void {
   identifiedAccountId = null;
-  client.set_config({ disable_surveys: true });
+  client.set_config({ disable_surveys: true, advanced_enable_surveys: false });
   client.reset();
   client.opt_in_capturing();
 }
@@ -160,7 +170,7 @@ export async function stopPostHogCapture(): Promise<void> {
   }
   const client = await clientPromise;
   if (!client || !isAnalyticsGenerationCurrent(generation)) return;
-  client.set_config({ disable_surveys: true });
+  client.set_config({ disable_surveys: true, advanced_enable_surveys: false });
   client.opt_out_capturing();
   client.reset();
 }

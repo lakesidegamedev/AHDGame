@@ -12,6 +12,11 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { LocalTime } from "@/components/time/LocalTime";
 import type { CorporationDetail } from "../CorporationPageTypes";
 import { apiErrorText } from "@/lib/errors/catalog";
+import NegotiatedSalePanel, {
+  type NegotiatedDealData,
+  type NegotiatedListingData,
+  type NegotiatedTermsData,
+} from "./NegotiatedSalePanel";
 
 interface ShareOfferData {
   _id: string;
@@ -41,6 +46,7 @@ interface ShareListingData {
   isMySelling: boolean;
   offerCount: number;
   offers: ShareOfferData[];
+  negotiated?: NegotiatedTermsData;
 }
 
 interface PrivateSalePanelProps {
@@ -93,6 +99,7 @@ export default function PrivateSalePanel({
 
   const [open, setOpen] = useState(forceOpen);
   const [listings, setListings] = useState<ShareListingData[]>([]);
+  const [negotiatedDeals, setNegotiatedDeals] = useState<NegotiatedDealData[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Create listing form
@@ -127,6 +134,7 @@ export default function PrivateSalePanel({
     if (!res.ok) return;
     const data = await res.json();
     setListings(data.listings ?? []);
+    setNegotiatedDeals(data.negotiatedDeals ?? []);
   }, [corpId]);
 
   useEffect(() => {
@@ -289,7 +297,7 @@ export default function PrivateSalePanel({
         onToast(apiErrorText(data, "Failed to accept offer"), "error");
       } else {
         onToast(
-          `Accepted ${data.sharesTransferred.toLocaleString("en-US")} shares. ${fmtFull(data.proceeds)} received.`,
+          `Accepted ${data.sharesTransferred.toLocaleString("en-US")} shares. Gross ${fmtFull(data.proceeds)}; tax withheld ${fmtFull(data.withheldTax ?? 0)}; cash received ${fmtFull(data.netProceeds ?? data.proceeds)}.`,
           "success"
         );
         await loadListings();
@@ -299,8 +307,12 @@ export default function PrivateSalePanel({
     }
   };
 
-  const myListings = listings.filter((l) => l.isMySelling);
-  const otherListings = listings.filter((l) => !l.isMySelling);
+  const negotiatedListings = listings.filter(
+    (l): l is ShareListingData & NegotiatedListingData => !!l.negotiated
+  );
+  const openListings = listings.filter((l) => !l.negotiated);
+  const myListings = openListings.filter((l) => l.isMySelling);
+  const otherListings = openListings.filter((l) => !l.isMySelling);
 
   const innerContent = (
     <div className={forceOpen ? "space-y-4" : "space-y-4 pt-2"}>
@@ -355,6 +367,27 @@ export default function PrivateSalePanel({
           )}
         </div>
       )}
+
+      <NegotiatedSalePanel
+        corpId={corpId}
+        corpName={corporation.name}
+        sharePrice={sharePrice}
+        myCharacterId={myCharacterId}
+        availableShares={myCharacterId ? availableShares : 0}
+        holdingTerm={holdingTerm}
+        listings={negotiatedListings}
+        deals={negotiatedDeals}
+        money={{
+          fmtLocalFull: (local) => fmtFull(escrowToAnchor(local)),
+          fmtLocalPrice,
+          inputToLocal: (display) =>
+            corpCurrencyCode ? toLocalOf(display, corpCurrencyCode) : toInternal(display),
+          localToDisplay: (local) => toDisplay(escrowToAnchor(local)),
+          inputSymbol,
+        }}
+        onToast={onToast}
+        onChanged={loadListings}
+      />
 
       {corporation?.isPrivate && myCorporation && corporationShares > 0 && (
         <div>
@@ -689,7 +722,7 @@ export default function PrivateSalePanel({
         </div>
       )}
 
-      {listings.length === 0 && (
+      {listings.length === 0 && negotiatedDeals.length === 0 && (
         <p className="py-1 text-xs text-muted">No open private listings for this corporation.</p>
       )}
     </div>
@@ -705,7 +738,8 @@ export default function PrivateSalePanel({
         <h2 className="flex min-w-0 items-baseline gap-2 text-sm font-semibold text-foreground">
           Private sale
           <span className="text-xs font-normal text-muted">
-            listings expire after 24 hours; offers run 50% to 200% of market
+            listings expire after 24 hours; offers run 50% to 200% of market, negotiated sales at
+            any agreed price
           </span>
         </h2>
         <button

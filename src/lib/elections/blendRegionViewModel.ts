@@ -294,7 +294,7 @@ function countedVotes(election: ElectionDisplay): number {
  * maps (legacy or summary-mode records) contribute nothing rather than
  * throwing, and an id seen in several maps counts once.
  */
-export function omittedCandidateCount(election: ElectionDisplay): number {
+function omittedCandidateCount(election: ElectionDisplay): number {
   const roster = new Set((election.candidates ?? []).map((c) => c.id));
   const extra = new Set<string>();
   for (const id of Object.keys(election.polling?.sharesPct ?? {})) {
@@ -307,7 +307,7 @@ export function omittedCandidateCount(election: ElectionDisplay): number {
 }
 
 /** "+N more candidate(s)" for the omitted ids, null when the field is whole. */
-export function omittedCandidateLabel(count: number): string | null {
+function omittedCandidateLabel(count: number): string | null {
   if (count <= 0) return null;
   return count === 1 ? "+1 more candidate" : `+${count} more candidates`;
 }

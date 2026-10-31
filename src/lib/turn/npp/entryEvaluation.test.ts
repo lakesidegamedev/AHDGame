@@ -4,6 +4,8 @@ import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types
 import type { CorporationType } from "@/lib/constants/corporations";
 import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { evaluateNppEntry } from "./entryEvaluation";
+import type { CommodityPriceRatioFn } from "./marketSignals";
+import type { FoundingRecipeWorld } from "./foundingRecipeChoice";
 
 function corp(overrides: Partial<Corporation> = {}): Corporation {
   return {
@@ -40,8 +42,9 @@ function evaluate(args: {
   marginPct?: number;
   retailExpansionPaused?: boolean;
   entryCapReached?: boolean;
-  prices?: () => number;
+  prices?: CommodityPriceRatioFn;
   entryEligible?: boolean;
+  fundedRecipeWorld?: FoundingRecipeWorld;
   allowExpansion?: boolean;
   wideEligible?: boolean;
 }) {
@@ -74,6 +77,7 @@ function evaluate(args: {
     criticalLogisticsShortageEligible: args.wideEligible,
     retailExpansionPaused: args.retailExpansionPaused,
     entryCapReached: args.entryCapReached ?? false,
+    fundedRecipeWorld: args.fundedRecipeWorld,
   });
 }
 
@@ -262,5 +266,45 @@ describe("existing media sector occupancy", () => {
     const result = evaluate({ corporation, pools: [market], sectors: [existing] });
     expect(result.entryCandidate).toBeNull();
     expect(result.expansion).toBeNull();
+  });
+});
+
+describe("entry recipe on a funded world", () => {
+  // Fertilizers at zero supply, chemicals glutted, everything else at base.
+  const fertilizerShort: CommodityPriceRatioFn = (commodity) =>
+    commodity === "fertilizers" ? 3 : commodity === "chemicals" ? 0.6 : 1;
+  const chemicalCorp = () => corp({ type: "chemical_industries" } as Partial<Corporation>);
+  const world: FoundingRecipeWorld = { currentYear: 2019, techTreesEnabled: false };
+
+  it("builds the fertilizers recipe and reads the cell as short, not glutted", () => {
+    const entry = evaluate({
+      corporation: chemicalCorp(),
+      pools: [pool("chemical_industries")],
+      prices: fertilizerShort,
+      fundedRecipeWorld: world,
+    });
+    expect(entry.entryCandidate?.sectorType).toBe("chemical_industries");
+    expect(entry.foundingStrategyId).toBe("fertilizers");
+    expect(entry.ordinaryEntryTargetGlutted).toBe(false);
+    expect(entry.criticalShortage).toBe(true);
+  });
+
+  it("keeps the standard recipe on a legacy world", () => {
+    const entry = evaluate({
+      corporation: chemicalCorp(),
+      pools: [pool("chemical_industries")],
+      prices: fertilizerShort,
+    });
+    expect(entry.foundingStrategyId).toBeUndefined();
+  });
+
+  it("keeps the standard recipe when nothing is short", () => {
+    const entry = evaluate({
+      corporation: chemicalCorp(),
+      pools: [pool("chemical_industries")],
+      prices: () => 1,
+      fundedRecipeWorld: world,
+    });
+    expect(entry.foundingStrategyId).toBeUndefined();
   });
 });

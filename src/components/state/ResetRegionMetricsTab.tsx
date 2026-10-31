@@ -8,7 +8,7 @@ import {
   type ResetMetricBoardResponse,
   type ResetMetricCountry,
 } from "@/components/metrics/ResetMetricBoard";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 export function ResetRegionMetricsTab({
   countryId,
@@ -19,7 +19,7 @@ export function ResetRegionMetricsTab({
   regionId: string;
   regionName: string;
 }) {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const [board, setBoard] = useState<ResetMetricBoardResponse | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);

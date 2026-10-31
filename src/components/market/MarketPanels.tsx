@@ -7,29 +7,26 @@ import { StockList } from "@/app/country/[code]/stockmarket/components/StockList
 import { BondTable } from "@/app/country/[code]/stockmarket/components/BondTable";
 import { WealthList } from "@/app/country/[code]/stockmarket/components/WealthList";
 import { FundTable } from "@/app/country/[code]/stockmarket/components/FundTable";
-import type {
-  BondListing,
-  ExchangeData,
-  WealthEntry,
-} from "@/app/country/[code]/stockmarket/types";
-import type { FundListItem } from "@/components/indexFunds/types";
-import type { CorporationType } from "@/lib/constants/corporations";
+import type { ExchangeData, WealthEntry } from "@/app/country/[code]/stockmarket/types";
 import { PanelState, pctText, toneClass } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
+import {
+  BONDS_URL,
+  FUNDS_URL,
+  sectorsUrl,
+  stocksUrl,
+  type BondsResponse,
+  type FundsResponse,
+  type SectorsForSaleResponse,
+} from "./marketEndpoints";
 
-export const STOCKS_URL = "/api/stock-exchange?exchange=global";
-export const stocksUrl = (exchange: string) =>
-  `/api/stock-exchange?exchange=${encodeURIComponent(exchange)}`;
-export const BONDS_URL = "/api/bonds";
-export const FUNDS_URL = "/api/investment-funds?exchange=global";
-
-export interface BondsResponse {
-  bonds?: BondListing[];
-  totalOutstanding?: number;
-}
-export interface FundsResponse {
-  funds?: FundListItem[];
-}
+export { BONDS_URL, FUNDS_URL, STOCKS_URL, stocksUrl } from "./marketEndpoints";
+export type {
+  BondsResponse,
+  FundsResponse,
+  SectorForSale,
+  SectorsForSaleResponse,
+} from "./marketEndpoints";
 
 export function StocksPanel({ exchange = "global" }: { exchange?: string }) {
   const { data, error, loading } = useMarketJson<ExchangeData>(stocksUrl(exchange));
@@ -103,33 +100,6 @@ export function FundsPanel() {
     />
   );
 }
-
-export interface SectorForSale {
-  id: string;
-  sectorType: CorporationType;
-  sectorTypeLabel: string;
-  stateName: string;
-  countryName: string;
-  countryFlag: string;
-  corporationId: string | null;
-  corporationName: string | null;
-  corporationSequentialId: number | null;
-  revenueAnchor: number;
-  margin: number | null;
-  growthRate: number | null;
-  forSalePrice: number | null;
-}
-
-export interface SectorsForSaleResponse {
-  page: number;
-  totalPages: number;
-  totalItems: number;
-  sectors: SectorForSale[];
-  counts: { unowned: number; owned: number; forSale: number };
-}
-
-export const sectorsUrl = (page: number) =>
-  `/api/sectors?view=forSale&sort=revenue&dir=desc&page=${page}`;
 
 export function SectorsPanel() {
   const [page, setPage] = useState(1);

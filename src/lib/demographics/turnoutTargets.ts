@@ -1,4 +1,4 @@
-import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
+import { ALL_COUNTRY_IDS } from "@/lib/constants/countryClientConfig";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import { getEraPositions } from "@/lib/seeds/demographicCategories";

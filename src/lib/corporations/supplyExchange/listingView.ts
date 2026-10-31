@@ -1,18 +1,23 @@
-import type { Db, Filter, ObjectId, Sort } from "mongodb";
+import type { Db, Document, Filter, ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import type { Character } from "@/lib/db/types/character";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
+import {
+  COMMODITIES_BY_NAME,
+  COMMODITY_NAME_RANK_FIELD,
+  offerSortSpec,
+  type OfferKind,
+  type OfferSort,
+  type OfferSortDir,
+} from "./offerOrdering";
 
 export type PublisherFields = Pick<
   Corporation,
   "_id" | "name" | "userId" | "ceoVacant" | "countryId" | "creditRatingSnapshot" | "logoUrl"
 > &
   Partial<Pick<Corporation, "ceoId" | "ceoType">>;
-
-export type OfferKind = "player" | "npp" | "all";
-export type OfferSort = "volume" | "premium" | "newest";
 
 export interface CeoDisplay {
   name: string;
@@ -74,15 +79,13 @@ export function toListingView(
   };
 }
 
-const SORTS: Record<OfferSort, Sort> = {
-  volume: { volumeCap: -1, _id: 1 },
-  premium: { pricePremium: 1, _id: 1 },
-  newest: { updatedAt: -1, _id: 1 },
-};
-
 /** Players first when both kinds are listed (an absent `aiListed` sorts before `true`). */
-export function offerSort(sort: OfferSort, kind: OfferKind): Sort {
-  return kind === "all" ? { aiListed: 1, ...(SORTS[sort] as Record<string, 1 | -1>) } : SORTS[sort];
+export function offerSort(
+  sort: OfferSort,
+  kind: OfferKind,
+  dir?: OfferSortDir
+): Record<string, 1 | -1> {
+  return offerSortSpec(sort, kind, dir);
 }
 
 /** Mongo filter for open offers, shared by the page read and the count. */
@@ -111,6 +114,40 @@ export function openOffersFilter(args: {
   };
 }
 
+/**
+ * The whole filter-and-order read as one aggregation: match the open offers,
+ * rank commodities by display name when sorting by name, order, then page.
+ * Ordering on the server keeps every page of a long list in one sequence.
+ */
+export function openOffersPipeline(args: {
+  commodity?: CommodityType;
+  commodities?: CommodityType[];
+  kind?: OfferKind;
+  side?: "buy" | "sell";
+  sort?: OfferSort;
+  dir?: OfferSortDir;
+  turn: number;
+  skip: number;
+  limit: number;
+}): Document[] {
+  const sort = args.sort ?? "newest";
+  return [
+    { $match: openOffersFilter(args) },
+    ...(sort === "commodity"
+      ? [
+          {
+            $addFields: {
+              [COMMODITY_NAME_RANK_FIELD]: { $indexOfArray: [COMMODITIES_BY_NAME, "$commodity"] },
+            },
+          },
+        ]
+      : []),
+    { $sort: offerSort(sort, args.kind ?? "all", args.dir) },
+    ...(args.skip > 0 ? [{ $skip: args.skip }] : []),
+    { $limit: args.limit },
+  ];
+}
+
 export interface OpenOffersPage {
   offers: SupplyListingView[];
   /** More rows exist past this page (before stale offers are dropped). */
@@ -130,6 +167,7 @@ export async function loadOpenOffers(
     kind?: OfferKind;
     side?: "buy" | "sell";
     sort?: OfferSort;
+    dir?: OfferSortDir;
     turn: number;
     viewerCorpIds: ReadonlySet<string>;
     limit: number;
@@ -137,13 +175,11 @@ export async function loadOpenOffers(
   }
 ): Promise<OpenOffersPage> {
   const page = Math.max(1, args.page ?? 1);
-  const kind = args.kind ?? "all";
   const found = await db
     .collection<SupplyListing>("supplyListings")
-    .find(openOffersFilter(args))
-    .sort(offerSort(args.sort ?? "newest", kind))
-    .skip((page - 1) * args.limit)
-    .limit(args.limit + 1)
+    .aggregate<SupplyListing>(
+      openOffersPipeline({ ...args, skip: (page - 1) * args.limit, limit: args.limit + 1 })
+    )
     .toArray();
   const hasMore = found.length > args.limit;
   const rows = hasMore ? found.slice(0, args.limit) : found;
