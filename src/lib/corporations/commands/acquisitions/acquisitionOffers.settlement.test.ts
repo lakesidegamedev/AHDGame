@@ -46,6 +46,9 @@ import { loadAcquisitionSettlement } from "./acquisitionSettlement";
 
 type WriteEntry = { collection: string; op: WriteOp };
 
+/** Shell cash below the default price, so the player-run price floor admits the accept. */
+const ACCEPTABLE_SHELL_CASH = 100_000;
+
 async function referenceLog(): Promise<WriteEntry[]> {
   const w = buildAcquisitionWorld({});
   const faulty = withInjectedCrash(w.memory, { onCall: Number.MAX_SAFE_INTEGER });
@@ -253,7 +256,7 @@ describe("resolveAcquisitionOfferStatus over settlement states", () => {
   });
 
   it("withdraw on a committed (applied) offer is rejected and moves nothing", async () => {
-    const w = buildAcquisitionWorld({});
+    const w = buildAcquisitionWorld({ shellCash: ACCEPTABLE_SHELL_CASH });
     const accepted = await acceptAcquisitionOffer(w.db, {
       offer: w.offer as never,
       currentTurn: 200,
@@ -275,8 +278,22 @@ describe("resolveAcquisitionOfferStatus over settlement states", () => {
 describe("acceptAcquisitionOffer settlement close-out", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("a terminal failure closes the offer as failed, never back to pending", async () => {
+  it("refuses to accept once the target holds more cash than the price, moving nothing", async () => {
+    // Default world: the target holds 5M and the pending offer pays 1M.
     const w = buildAcquisitionWorld({});
+    const r = await acceptAcquisitionOffer(w.db, { offer: w.offer as never, currentTurn: 200 });
+    expect(r).toMatchObject({ ok: false, status: 400 });
+    expect(await offerStatus(w)).toBe("pending");
+    expect(
+      await w.memory.collection("acquisitionSettlements").countDocuments({ _id: w.offerId })
+    ).toBe(0);
+    const b = await readBalances(w);
+    expect(b.acquirer).toBe(ACQUIRER_CASH);
+    expect(b.targetGone).toBe(false);
+  });
+
+  it("a terminal failure closes the offer as failed, never back to pending", async () => {
+    const w = buildAcquisitionWorld({ shellCash: ACCEPTABLE_SHELL_CASH });
     await w.memory.collection("imperialCharacters").deleteOne({ _id: w.imperial });
     const r = await acceptAcquisitionOffer(w.db, { offer: w.offer as never, currentTurn: 200 });
     expect(r.ok).toBe(false);
@@ -302,7 +319,7 @@ describe("acceptAcquisitionOffer settlement close-out", () => {
   });
 
   it("a retryable failure returns the offer to pending and succeeds on re-accept", async () => {
-    const w = buildAcquisitionWorld({ acquirerCash: 100 });
+    const w = buildAcquisitionWorld({ acquirerCash: 100, shellCash: ACCEPTABLE_SHELL_CASH });
     const r = await acceptAcquisitionOffer(w.db, { offer: w.offer as never, currentTurn: 200 });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/insufficient corporate funds/i);

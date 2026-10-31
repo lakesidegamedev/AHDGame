@@ -80,6 +80,43 @@ describe("chooseFoundingRecipe", () => {
     ).not.toBe("pharmaceuticals");
   });
 
+  it("never picks a recipe whose inputs the site cannot deliver", () => {
+    // Pharmaceuticals is the pricier output, but its electronics cannot be had.
+    const priceRatioOf = prices({ pharmaceuticals: 4, fertilizers: 3, chemicals: 0.6 });
+    const inputAvailabilityOf = (r: { demand: Partial<Record<CommodityType, number>> }) =>
+      r.demand.electronics ? 0.2 : 1;
+    expect(
+      chooseFoundingRecipe({ recipes: chemical, countryId: "US", priceRatioOf, isAvailable: all })
+    ).toBe("pharmaceuticals");
+    expect(
+      chooseFoundingRecipe({
+        recipes: chemical,
+        countryId: "US",
+        priceRatioOf,
+        isAvailable: all,
+        inputAvailabilityOf,
+      })
+    ).toBe("fertilizers");
+  });
+
+  it("leaves a starved standard recipe for any short recipe that can run", () => {
+    const agriculture = SECTOR_STRATEGIES.agriculture;
+    const priceRatioOf = prices({ food: 3, fertilizers: 3 });
+    // Standard and industrial lean on fertilizer; the site delivers 30% of it.
+    const inputAvailabilityOf = (r: { demand: Partial<Record<CommodityType, number>> }) =>
+      (r.demand.fertilizers ?? 0) > 0.1 ? 0.3 : 1;
+    const picked = chooseFoundingRecipe({
+      recipes: agriculture,
+      countryId: "US",
+      priceRatioOf,
+      isAvailable: all,
+      inputAvailabilityOf,
+    });
+    expect(picked).toBeDefined();
+    const recipe = agriculture.find((r) => r.id === picked)!;
+    expect(recipe.demand.fertilizers ?? 0).toBeLessThanOrEqual(0.1);
+  });
+
   it("scores with the retool price score", () => {
     const fertilizers = chemical.find((r) => r.id === "fertilizers")!;
     expect(

@@ -27,9 +27,11 @@ import { acquisitionsBarredByDivestiture } from "@/lib/corporations/mergerReview
 import { checkSubsidiaryAcquisition } from "./subsidiaryOutcome";
 import { acquisitionOutcomeOf } from "./rules/subsidiaryOutcome";
 import {
+  acquisitionBlockedAsNewThisTurn,
   isNppAutoResolvableTarget,
   meetsNppAcquisitionThreshold,
   nppAcquisitionMinimumPrice,
+  playerAcquisitionMinimumPrice,
 } from "./rules";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
@@ -37,8 +39,22 @@ const OFFERS = "acquisitionOffers";
 
 type Result<T = object> = { ok: false; error: string; status: number } | ({ ok: true } & T);
 
+export interface ReferenceValuation {
+  /** Canonical whole-corp reference valuation (₳). */
+  valuationAnchor: number;
+  /** The target's cash (₳). */
+  liquidCapitalAnchor: number;
+  /** Exit value of the target's sectors (₳). */
+  sectorNpvAnchor: number;
+}
+
 /** Canonical whole-corp reference valuation (₳) for display + a fair-value anchor. */
 export async function referenceValuationAnchor(db: Db, target: Corporation): Promise<number> {
+  return (await referenceValuation(db, target)).valuationAnchor;
+}
+
+/** The reference valuation with the balance-sheet parts it was built from. */
+export async function referenceValuation(db: Db, target: Corporation): Promise<ReferenceValuation> {
   const [sectors, centralBanks, fxByCurrency, targetFxRate, marketMode, gameState] =
     await Promise.all([
       db
@@ -69,12 +85,38 @@ export async function referenceValuationAnchor(db: Db, target: Corporation): Pro
     targetFxRate
   );
   const sharePriceAnchor = corpLiquidCapitalToAnchor(target.sharePrice ?? 0, target, targetFxRate);
-  return computeWholeCorpValuation({
+  const valuationAnchor = computeWholeCorpValuation({
     sharePrice: sharePriceAnchor,
     totalShares: target.totalShares ?? 0,
     balanceSheetEquity: liquidCapitalAnchor + sectorNpvAnchor,
     debt: 0, // v1 blocks bonded targets, so no debt to net out
   });
+  return { valuationAnchor, liquidCapitalAnchor, sectorNpvAnchor };
+}
+
+/**
+ * Refuses a player-run deal that would move a company's money to the buyer
+ * for less than it holds, or that buys a company founded or floated this turn.
+ */
+function playerTargetDealError(
+  target: Corporation,
+  valuation: ReferenceValuation,
+  priceAnchor: number,
+  currentTurn: number
+): string | null {
+  if (acquisitionBlockedAsNewThisTurn(target, currentTurn))
+    return "A corporation founded or floated this turn cannot be acquired until next turn.";
+  const { liquidCapitalAnchor, sectorNpvAnchor } = valuation;
+  const minimum = playerAcquisitionMinimumPrice({
+    cashAnchor: liquidCapitalAnchor,
+    otherAssetsAnchor: sectorNpvAnchor,
+  });
+  if (priceAnchor < minimum)
+    return (
+      `The price must be at least ₳${minimum.toLocaleString("en-US")}, ` +
+      `what ${target.name} holds in cash and assets.`
+    );
+  return null;
 }
 
 export type ProposeAcquisitionOfferResult =
@@ -164,8 +206,12 @@ export async function proposeAcquisitionOffer(
     if (!eligibility.ok) return { ok: false, error: eligibility.error, status: eligibility.status };
   }
 
-  const targetValuationAnchor = await referenceValuationAnchor(db, freshTarget);
-  const valuationAnchor = Math.round(targetValuationAnchor);
+  const valuation = await referenceValuation(db, freshTarget);
+  const valuationAnchor = Math.round(valuation.valuationAnchor);
+  if (!isNppAutoResolvableTarget(freshTarget)) {
+    const dealError = playerTargetDealError(freshTarget, valuation, priceAnchor, currentTurn);
+    if (dealError) return { ok: false, error: dealError, status: 400 };
+  }
   const now = new Date();
   const offers = db.collection<AcquisitionOffer>(OFFERS);
 
@@ -327,6 +373,21 @@ export async function acceptAcquisitionOffer(
     return { ok: false, error: "This offer is no longer open", status: 409 };
   if (currentTurn > offer.expiresAtTurn)
     return { ok: false, error: "This offer has expired", status: 400 };
+
+  // The target's cash can grow while the offer waits (a float, an injection),
+  // so the price floor is checked again against the company as it is now.
+  const target = await db
+    .collection<Corporation>("corporations")
+    .findOne({ _id: offer.targetCorporationId });
+  if (target && !isNppAutoResolvableTarget(target)) {
+    const dealError = playerTargetDealError(
+      target,
+      await referenceValuation(db, target),
+      offer.priceAnchor,
+      currentTurn
+    );
+    if (dealError) return { ok: false, error: dealError, status: 400 };
+  }
 
   // Atomic claim: only the winner of the pending→accepted transition executes.
   const now = new Date();

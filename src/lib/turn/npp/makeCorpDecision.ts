@@ -75,7 +75,6 @@ import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { foundingUnmetSizing, isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
 import {
   fundedSellThrough,
-  nppDemandThrottle,
   nppOperatingCapacityUnits,
 } from "@/lib/turn/npp/rules/fundedSellThrough";
 import type {
@@ -94,6 +93,7 @@ import {
   autopilotCapexBudgetLocal,
   evaluateAutopilotGrowthGate,
 } from "./rules/autopilotReinvest";
+import { growthEvidenceGate } from "./rules/growthEvidenceGate";
 import {
   allowsNppIndustryInvestment,
   isNppDivestmentProtected,
@@ -144,7 +144,6 @@ import {
   NPP_GROWTH_DEPLOY_FRACTION,
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_GROWTH_MIN_SHORTAGE,
-  NPP_GROWTH_MIN_THROTTLE,
   NPP_GROWTH_MIN_UTILIZATION,
   NPP_REINVEST_AGGRESSION,
   NPP_REINVEST_MAINTENANCE_CASH_SHARE,
@@ -1664,19 +1663,16 @@ export function makeNppCorpDecision(
             )
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
-      // NPP-run plants do not add growth where the market already throttles
-      // them; replacement of worn capacity still goes through below. On a
-      // funded world the reading is sell-through, so a plant held down by
-      // missing inputs while selling all it makes is not a throttled market.
-      const demandReading = nppDemandThrottle(sector, ctx.fundedWorldEpoch);
-      const throttledMarket =
-        !autopilot && demandReading != null && demandReading < NPP_GROWTH_MIN_THROTTLE;
-      let throttleGate = false;
-      if (throttledMarket && growthUnits > 0) {
+      // Market-throttle and input-starvation evidence (rules/growthEvidenceGate)
+      // refuse the growth leg; replacement of worn capacity still goes through.
+      const evidenceGate =
+        growthUnits > 0
+          ? growthEvidenceGate(sector, { autopilot, fundedWorldEpoch: ctx.fundedWorldEpoch })
+          : null;
+      if (evidenceGate) {
         growthUnits = 0;
-        throttleGate = true;
         observeReinvestCandidate(
-          "growth_throttled_market",
+          evidenceGate,
           sector,
           capitalStock,
           headroomUnits,
@@ -1722,7 +1718,7 @@ export function makeNppCorpDecision(
             )
           : rawUnits;
       if (!(units > 0)) {
-        if (!autopilotGate && !throttleGate) {
+        if (!autopilotGate && !evidenceGate) {
           observeReinvestCandidate(
             "below_minimum_order",
             sector,

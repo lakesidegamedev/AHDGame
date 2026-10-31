@@ -612,3 +612,47 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
     expect(Math.max(...lookups.values())).toBeLessThanOrEqual(2);
   });
 });
+
+describe("input-aware founding candidacy", () => {
+  it("skips a cell whose inputs the state cannot deliver and takes the next one", () => {
+    const pool = new Map([
+      ["US", [us("manufacturing", "WI", 10_000_000), us("manufacturing", "OH", 100_000)]],
+    ]);
+    const stats = {};
+    const pick = findBestUnownedSector(
+      "US",
+      "WI",
+      "manufacturing",
+      null,
+      new Set(),
+      pool,
+      new Set(),
+      ratios({}),
+      false,
+      1,
+      { foundingInputAvailabilityOf: (c) => (c.stateId === "WI" ? 0.3 : 0.9) },
+      undefined,
+      stats
+    );
+    expect(pick?.stateId).toBe("OH");
+    expect(stats).toMatchObject({ inputStarvedExcluded: 1 });
+  });
+
+  it("a missing reading never blocks", () => {
+    const pool = new Map([["US", [us("manufacturing", "WI")]]]);
+    const pick = findBestUnownedSector(
+      "US",
+      "WI",
+      "manufacturing",
+      null,
+      new Set(),
+      pool,
+      new Set(),
+      ratios({}),
+      false,
+      1,
+      { foundingInputAvailabilityOf: () => null }
+    );
+    expect(pick?.stateId).toBe("WI");
+  });
+});

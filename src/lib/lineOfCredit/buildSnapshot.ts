@@ -25,6 +25,7 @@ import {
   computePerPlayerNetWorthLimitInternal,
 } from "@/lib/lineOfCredit/locMath";
 import {
+  computeBankLoanDebtInternal,
   computePlayerGrossNetLocInternal,
   loadExchangeRatesMap,
 } from "@/lib/lineOfCredit/netWorth";
@@ -143,12 +144,14 @@ export async function buildLocSnapshot(
   if (!forexEnabled) return null;
 
   const rates = await loadExchangeRatesMap(db);
-  const { grossInternal, locDebtInternal, netInternal } = await computePlayerGrossNetLocInternal(
-    db,
-    character,
-    true,
-    rates
-  );
+  const [{ grossInternal, locDebtInternal, netInternal: netOfLocInternal }, bankLoanDebtInternal] =
+    await Promise.all([
+      computePlayerGrossNetLocInternal(db, character, true, rates),
+      computeBankLoanDebtInternal(db, character._id, rates),
+    ]);
+  // Bank loan debt comes off net worth like credit-line debt does: the cash a
+  // bank loan paid out is already counted in gross assets.
+  const netInternal = Math.max(0, netOfLocInternal - bankLoanDebtInternal);
 
   const debtToAssetsRatio =
     grossInternal > 0 ? locDebtInternal / grossInternal : locDebtInternal > 0 ? 1 : 0;
@@ -217,7 +220,9 @@ export async function buildLocSnapshot(
     gameState ?? undefined
   );
   const incomeScore = incomeScoreFromPerTurnCurrency(incomeGuess);
-  const nwScore = netWorthScoreFromInternal(netInternal);
+  // Scored on the same net worth the turn prices service with, so the quoted
+  // spread matches the one charged.
+  const nwScore = netWorthScoreFromInternal(netOfLocInternal);
 
   const corp = await db
     .collection<Corporation>("corporations")

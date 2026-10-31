@@ -15,6 +15,11 @@ import type {
 } from "@/lib/db/types";
 import type { IndexFund } from "@/lib/db/types";
 import type { FederalBudget } from "@/lib/db/types/budget";
+import {
+  EQUITY_MARKET_POOLS_COLLECTION,
+  type EquityMarketPool,
+} from "@/lib/db/types/equityMarketPool";
+import { equityPoolCurrency } from "@/lib/equities/marketPool";
 import type { AcquisitionOffer, AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import {
   anchorToCorpLiquidCapital,
@@ -87,8 +92,8 @@ export type ExecuteAgreedAcquisitionResult =
  * the agreed price.
  *
  * Money flow (conserved): the acquirer pays the agreed price to the target's
- * shareholders (public-float slice → the country treasury, per the shared
- * convention), then the target's own liquid cash relocates to the acquirer and
+ * shareholders (public-float slice → the equity market pool that paid for
+ * it, or the country treasury in a world without pools), then the target's own liquid cash relocates to the acquirer and
  * every sector re-parents to the acquirer; the target shell is deleted.
  *
  * Crash safety: every amount and recipient is pinned once per offer in an
@@ -343,7 +348,8 @@ async function runAgreedAcquisition(
   const fundIds = (allocation?.fundRows ?? [])
     .filter((r) => r.payout > 0)
     .map((r) => new ObjectId(r.fundId));
-  const [chars, imperials, creditors, funds, treasury] = await Promise.all([
+  const floatPaid = Boolean(allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0);
+  const [chars, imperials, creditors, funds, treasury, equityPool] = await Promise.all([
     charIds.length > 0
       ? db
           .collection<Character>("characters")
@@ -368,10 +374,15 @@ async function runAgreedAcquisition(
           .find({ _id: { $in: fundIds } })
           .toArray()
       : [],
-    allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0
+    floatPaid
       ? db
           .collection<FederalBudget>("federalBudget")
           .findOne({ countryId: target.countryId }, { projection: { _id: 1 } })
+      : null,
+    floatPaid
+      ? db
+          .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
+          .findOne({ _id: equityPoolCurrency(target) }, { projection: { _id: 1 } })
       : null,
   ]);
   const currencyByHolderHex: Record<string, string> = {};
@@ -456,6 +467,7 @@ async function runAgreedAcquisition(
     creditorByHolderHex,
     fundsPresentHex: funds.map((f) => f._id.toString()),
     treasuryPresent: treasury != null,
+    equityPoolPresent: equityPool != null,
     fxByCurrency: fxRecord,
     forexEnabled,
     shellCashAnchor: targetCashAnchor,
