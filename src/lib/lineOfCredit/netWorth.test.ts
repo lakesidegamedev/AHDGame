@@ -92,3 +92,30 @@ describe("computePlayerNetWorthInternal", () => {
     );
   });
 });
+
+describe("computeBankLoanDebtInternal", () => {
+  it("sums owed bank loan principal for the character in internal units", async () => {
+    const db = createMockDb();
+    const characterId = new ObjectId();
+    db.collection("bankLoans").find.mockReturnValue(
+      makeCursor([
+        { outstanding: 32_000, currency: "USD" },
+        { outstanding: 2_000_000, currency: "JPY" },
+        { outstanding: 0, currency: "USD" },
+      ])
+    );
+
+    const { computeBankLoanDebtInternal } = await import("./netWorth");
+    const result = await computeBankLoanDebtInternal(db as unknown as Db, characterId, {
+      USD: 1,
+      JPY: 100,
+    });
+
+    expect(result).toBe(52_000);
+    expect(db.collectionMocks["bankLoans"]!.find).toHaveBeenCalledWith({
+      borrowerType: "character",
+      borrowerId: characterId,
+      status: { $in: ["current", "arrears"] },
+    });
+  });
+});

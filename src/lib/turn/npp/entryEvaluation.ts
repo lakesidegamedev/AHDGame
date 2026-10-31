@@ -143,7 +143,13 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
           candidateLane,
           entryCandidate.countryId,
           entryCandidatePriceRatioOf,
-          input.fundedRecipeWorld
+          input.fundedRecipeWorld,
+          placementSignals?.stateInputAvailabilityOf
+            ? {
+                stateId: entryCandidate.stateId,
+                availabilityOf: placementSignals.stateInputAvailabilityOf,
+              }
+            : undefined
         )
       : undefined);
   const foundingRecipe =

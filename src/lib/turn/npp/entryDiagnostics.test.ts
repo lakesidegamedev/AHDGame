@@ -144,6 +144,19 @@ describe("initialNppMarketEntryReason", () => {
     ).toBe("glutted_market");
   });
 
+  it("reports inputs_unavailable when input-starved cells are the only block", () => {
+    expect(
+      initialNppMarketEntryReason({
+        ...open,
+        hasCandidate: false,
+        candidateExclusions: {
+          ...blankNppCandidateExclusions(),
+          inputStarvedExcluded: 2,
+        },
+      })
+    ).toBe("inputs_unavailable");
+  });
+
   it("keeps no_enterable_market when other filters also bound", () => {
     expect(
       initialNppMarketEntryReason({
@@ -258,6 +271,7 @@ describe("funnel reason coverage", () => {
     "cohort_ineligible",
     "retail_paused",
     "glutted_market",
+    "inputs_unavailable",
     "entry_cap",
     "facility_size",
     "cash_floor",

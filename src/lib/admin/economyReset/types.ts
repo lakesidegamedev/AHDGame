@@ -197,6 +197,8 @@ export interface EconomyResetMarker {
   approvalReference: string;
   phasesDone: EconomyResetPhase[];
   startedAt: Date;
+  /** Turn the reset ran on. Rows logged at or before it belong to the old economy. */
+  turn?: number;
   /** Pre-apply switches restored at the end. */
   restore: { corporationActionsPaused: boolean; playerTransfersPaused: boolean };
   completedAt?: Date;

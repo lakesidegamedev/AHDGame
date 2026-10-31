@@ -34,6 +34,7 @@ import {
 } from "@/lib/constants/commodities";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
+import { isInputStarved } from "@/lib/turn/npp/rules/inputAvailability";
 
 // Macro-aware production policy (SP5). A +33% price premium saturates to the
 // +25 policy bound; sub-5% moves are ignored so the policy does not churn on
@@ -245,6 +246,18 @@ export interface PlacementSignals {
   /** Turn-scoped memo of per-candidate facts that do not move during the pass. */
   sectorFacts?: PlacementSectorFacts;
   /**
+   * Delivered share of an input's demand in a state last turn, in [0, 1]; null
+   * when unknown. The same lagged fill the corporation turn throttles against.
+   */
+  stateInputAvailabilityOf?: (commodity: CommodityType, stateId: string) => number | null;
+  /**
+   * Expected fill of the scarcest input of the recipe a founding would build in
+   * a candidate cell (foundingRecipeChoice.foundingInputAvailability); null
+   * when not gated. A starved cell is never founded into: the plant could not
+   * run, whatever its output sells for (rules/inputAvailability).
+   */
+  foundingInputAvailabilityOf?: (candidate: UnownedSector) => number | null;
+  /**
    * Whether an NPP corp whose primary or secondary type is `sectorType`
    * operates in `countryId`. Gates the essential-shortage valve: it crosses a
    * corp's own field only when no same-type builder exists there.
@@ -413,6 +426,7 @@ export interface CandidateExclusionStats {
   stateControlledExcluded?: number;
   depositExcluded?: number;
   saturatedExcluded?: number;
+  inputStarvedExcluded?: number;
 }
 
 export function findBestUnownedSector(
@@ -473,6 +487,7 @@ export function findBestUnownedSector(
     stats.stateControlledExcluded = 0;
     stats.depositExcluded = 0;
     stats.saturatedExcluded = 0;
+    stats.inputStarvedExcluded = 0;
   }
   for (const us of countryUnowned) {
     if (
@@ -502,6 +517,12 @@ export function findBestUnownedSector(
     // no buyers for another plant whatever the price ratio says.
     if (isMarketSaturated(signals?.marketSaturationOf?.(us))) {
       if (stats) stats.saturatedExcluded! += 1;
+      continue;
+    }
+    // A plant whose scarcest input the state cannot deliver runs a fraction of
+    // nameplate and deepens the shortage starving it.
+    if (isInputStarved(signals?.foundingInputAvailabilityOf?.(us))) {
+      if (stats) stats.inputStarvedExcluded! += 1;
       continue;
     }
     candidates.push(us);
