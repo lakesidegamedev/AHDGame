@@ -12,9 +12,9 @@ import {
 } from "@/lib/corporations/commodityDominanceContext";
 import {
   commodityDominanceRatio,
+  memoSupplyMixOf,
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
-import { supplierCommoditySupplyMix } from "@/lib/corporations/supplyAgreementCapacity";
 import { groupOperator } from "@/lib/corporations/groups/operator";
 import {
   activeGroupDirection,
@@ -94,6 +94,7 @@ import {
   evaluateAutopilotGrowthGate,
 } from "./rules/autopilotReinvest";
 import { growthEvidenceGate } from "./rules/growthEvidenceGate";
+import { corpHeldByCashCut } from "./rules/cashCutHold";
 import {
   allowsNppIndustryInvestment,
   isNppDivestmentProtected,
@@ -168,7 +169,6 @@ import {
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import type { ObjectId } from "mongodb";
-import type { CommodityType } from "@/lib/constants/commoditiesCore";
 
 export function makeNppCorpDecision(
   ctx: NppCorpDecisionContext,
@@ -229,24 +229,11 @@ export function makeNppCorpDecision(
     ) ?? 0;
   // Commodity-level build toll, priced exactly as a player's build is: this
   // corp's potential output (owned plus queued plus the order) of each
-  // commodity the sector makes, over world demand. 0 when demand is unknown.
+  // commodity the sector makes, over world demand (state demand for freight and
+  // local services). 0 when demand is unknown.
   let dominanceSectorsCache: CommodityDominanceSector[] | undefined;
-  // One mix per sector per decision: the toll prices every sector the corp might
-  // build on, and the recipe behind each term does not change across those
-  // calls. Resolving it per call made the toll quadratic with a strategy lookup
-  // in every term.
-  let dominanceSupplyMixes:
-    WeakMap<CommodityDominanceSector, Partial<Record<CommodityType, number>>> | undefined;
-  const dominanceSupplyMixOf = (
-    sector: CommodityDominanceSector
-  ): Partial<Record<CommodityType, number>> => {
-    dominanceSupplyMixes ??= new WeakMap();
-    const cached = dominanceSupplyMixes.get(sector);
-    if (cached) return cached;
-    const mix = supplierCommoditySupplyMix(sector, ctx.turn);
-    dominanceSupplyMixes.set(sector, mix);
-    return mix;
-  };
+  // One mix per sector per decision (see memoSupplyMixOf).
+  const dominanceSupplyMixOf = memoSupplyMixOf(ctx.turn);
   const commodityRatioFor = (sector: CorporateSector, extraUnits: number): number => {
     const demandOf = plants?.commodityDemandOf;
     if (!plants || !demandOf) return 0;
@@ -257,7 +244,9 @@ export function makeNppCorpDecision(
       sectors: dominanceSectorsCache,
       commodities: sectorOutputCommodities(sector, ctx.turn),
       demandOf,
+      stateDemandOf: plants.commodityStateDemandOf,
       targetSectorId: sector._id.toString(),
+      targetStateId: sector.stateId,
       extraUnits,
       isNatcorp: !!corp.countryOwnerId,
       turn: ctx.turn,
@@ -921,6 +910,8 @@ export function makeNppCorpDecision(
   // overlays this evaluation; the shared priced founding block below prices
   // whichever target survives.
   const surplusCash = liquidCapital - effectiveCashFloor;
+  // Plants idle for want of cash hold founding and every reinvestment leg.
+  const cashCutHold = corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn);
   const entry = evaluateNppEntry({
     corp,
     sectors: sectorsAfterConversion(sectors, conversionApplied),
@@ -988,6 +979,7 @@ export function makeNppCorpDecision(
   const foundingTarget = expansion ?? frontier?.target ?? null;
   const foundingBlockEntered =
     foundAllowed &&
+    !cashCutHold &&
     foundingTarget !== null &&
     newSectors.length < NPP_SHORTAGE_ENTRIES_PER_TURN &&
     (ordinaryEntry || exceptionalShortageEntry || frontier !== null);
@@ -1300,6 +1292,7 @@ export function makeNppCorpDecision(
       retailExpansionPaused: ctx.retailExpansionPaused === true,
       ordinaryEntryTargetGlutted,
       exceptionalShortageEntry,
+      cashCutHold,
       blockEntered: foundingBlockEntered,
       plantsEnabled: plants?.enabled === true,
       expansionPresent: expansion !== null,
@@ -1409,6 +1402,7 @@ export function makeNppCorpDecision(
           )
         ),
         property_unavailable: !!sector.forSale || hasProtectedConstructionProperty(sector),
+        cash_cut_run: cashCutHold,
       });
       if (preSizingGate) {
         observeReinvestCandidate(preSizingGate, sector, capitalStock, null, 0, null);

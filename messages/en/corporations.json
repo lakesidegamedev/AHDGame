@@ -774,6 +774,7 @@
       "group": "Own plants, then wholly owned group",
       "discount": "Internal discount",
       "discountValue": "{percent}% below market",
+      "freeTransfer": "Output sent to your own plants is a free transfer: your plants get it at no cost and this plant books no revenue for it.",
       "save": "Save policy",
       "saving": "Saving...",
       "saved": "Policy saved. New reservations and discounts apply next turn.",
