@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { MessageBanner, SpinnerIcon } from "./shared";
@@ -43,6 +43,7 @@ function ProviderCard({
   brandColor,
   icon,
   onUnlink,
+  unlinkBlockedReason,
 }: {
   provider: string;
   isLinked: boolean;
@@ -54,12 +55,14 @@ function ProviderCard({
   brandColor: string;
   icon: React.ReactNode;
   onUnlink: () => void;
+  unlinkBlockedReason?: string;
 }) {
   const t = useTranslations("settings");
   const [unlinking, setUnlinking] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   const handleUnlink = async () => {
+    if (unlinkBlockedReason) return;
     setUnlinking(true);
     setMsg(null);
     try {
@@ -99,7 +102,8 @@ function ProviderCard({
           </div>
           <button
             onClick={handleUnlink}
-            disabled={unlinking}
+            disabled={unlinking || !!unlinkBlockedReason}
+            title={unlinkBlockedReason}
             className="rounded-xl bg-error/10 border border-error/20 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {unlinking ? (
@@ -122,6 +126,11 @@ function ProviderCard({
             {t("identity.link", { provider })}
           </button>
         </form>
+      )}
+      {isLinked && unlinkBlockedReason && (
+        <p className="text-sm text-muted" role="status">
+          {unlinkBlockedReason}
+        </p>
       )}
       {msg && <MessageBanner ok={msg.ok} text={msg.text} onDismiss={() => setMsg(null)} />}
     </div>
@@ -163,6 +172,22 @@ const AppleIcon = (
 
 export function IdentitySection({ character, onCharacterUpdate }: Props) {
   const t = useTranslations("settings");
+  const [discordRequired, setDiscordRequired] = useState<boolean | null>(null);
+  const [requirementLoadFailed, setRequirementLoadFailed] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/auth/signup-methods", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Discord requirement lookup failed");
+        const data = await response.json();
+        setDiscordRequired(data.discordLinkRequired === true);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setRequirementLoadFailed(true);
+      });
+    return () => controller.abort();
+  }, []);
   const discordAvatarUrl = character.discordId
     ? getDiscordAvatarUrl(character.discordId, character.discordAvatar ?? null)
     : null;
@@ -196,6 +221,15 @@ export function IdentitySection({ character, onCharacterUpdate }: Props) {
           subtitle={t("identity.discordLinked")}
           linkUrl="/api/auth/discord"
           unlinkUrl="/api/auth/discord/unlink"
+          unlinkBlockedReason={
+            requirementLoadFailed
+              ? t("identity.discordRequirementFailed")
+              : discordRequired === null
+                ? t("identity.discordRequirementLoading")
+                : discordRequired
+                  ? t("identity.discordUnlinkRequired")
+                  : undefined
+          }
           brandColor="bg-[#5865F2] hover:bg-[#4752C4]"
           icon={DiscordIcon}
           onUnlink={() =>
