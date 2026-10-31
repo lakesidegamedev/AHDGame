@@ -41,12 +41,13 @@ export async function loadFieldOfficeRegionMap(
   scope: FieldOfficeScope,
   regionId: string,
   live: LiveStateLean | null,
-  preset: string | null
+  preset: string | null,
+  countyPopulations?: ReadonlyMap<string, number>
 ): Promise<FieldOfficeRegionMap | null> {
   const dir = SUBDIVISION_DATA_DIR[scope];
   // regionId feeds a filesystem path; only region-code shapes get through.
   if (!dir || !/^[A-Z]{2,3}$/.test(regionId)) return null;
-  const file = await loadSubdivisionFile(dir, regionId, { preset });
+  const file = await loadSubdivisionFile(dir, regionId, { preset, countyPopulations });
   if (!file || file.subdivisions.length === 0) return null;
 
   const total = file.subdivisions.reduce((s, c) => s + (c.electorate || 0), 0);

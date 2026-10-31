@@ -1,3 +1,6 @@
+vi.mock("@/lib/counties/queries", () => ({
+  loadCountyPopulationMap: vi.fn().mockResolvedValue(new Map()),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { ObjectId } from "mongodb";
@@ -73,5 +76,20 @@ describe("county results at a turn (race replay)", () => {
   it("serves the final counties without a turn", async () => {
     const body = await (await call("resolved")).json();
     expect(body.subdivisions[0].winner).toBe("a");
+  });
+  it("keeps concluded replay independent of today's population stocks", async () => {
+    const { loadCountyPopulationMap } = await import("@/lib/counties/queries");
+    const res = await call("resolved", "?turn=10");
+    expect(res.status).toBe(200);
+    expect(loadCountyPopulationMap).not.toHaveBeenCalled();
+  });
+  it("loads persisted populations for an active race", async () => {
+    const { loadCountyPopulationMap } = await import("@/lib/counties/queries");
+    const res = await call("active");
+    expect(res.status).toBe(200);
+    expect(loadCountyPopulationMap).toHaveBeenCalledWith(expect.anything(), "OH");
+  });
+  it.each(["cancelled", "upcoming"])("refuses turn replay for a %s election", async (status) => {
+    expect((await call(status, "?turn=10")).status).toBe(400);
   });
 });

@@ -11,12 +11,12 @@
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1303149.2771513236,
+    "householdSpend": 1219946.287365522,
     "publicSpend": 43750,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "480e084a44b40eaebcab4deb8c7d1367676e6dc3c294478e924f969d41d3ffd3"
+    "sha256": "dacb09bd0856eefc23b96bb2503c27b7b8223b4691fd0615038a5712d1d8915e"
   },
   "clearing": {
     "sectorsWithClearing": 420,

@@ -3,6 +3,7 @@ import { producerTrades } from "./rules";
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
+import { MINOR_INPUT_SHORTFALL_PREMIUM } from "./makeDoRules";
 
 const plant = (changes: Partial<ProductionPlan> = {}): ProductionPlan => ({
   id: "plant",
@@ -1105,5 +1106,79 @@ describe("same-turn spillover", () => {
       r.prices.find((p) => p.commodity === commodity)!.unitPrice;
     expect(price(on, "food")).toBeCloseTo(price(off, "food"), 12);
     expect(price(on, "steel")).toBeCloseTo(price(off, "steel"), 12);
+  });
+});
+
+describe("minor inputs in make-do", () => {
+  // Energy is 2 per unit at 1; construction 0.001 per unit at 10 is 0.5% of input cost.
+  const recipe = [
+    { commodity: "energy", unitsPerOutput: 2, book: "world", maximumUnitPrice: 1 },
+    {
+      commodity: "construction_services",
+      unitsPerOutput: 0.001,
+      book: "world",
+      maximumUnitPrice: 10,
+    },
+  ];
+  const offer = (commodity: string, units: number, unitPrice: number) => ({
+    id: commodity,
+    accountId: "supplier",
+    commodity,
+    book: "world",
+    units,
+    unitPrice,
+  });
+
+  it("a plant missing only a minor input runs its plan and pays the premium", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ inputs: recipe })],
+      externalOffers: [offer("energy", 200, 1), offer("construction_services", 0.01, 10)],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeCloseTo(100, 9);
+    // Needed 0.1, had 0.01: 0.09 missing at 10 times the premium.
+    const premium = 0.09 * 10 * MINOR_INPUT_SHORTFALL_PREMIUM;
+    expect(r.minorInputPremium).toBeCloseTo(premium, 9);
+    expect(r.profit).toBeCloseTo(r.revenue - r.inputsConsumed - premium - 20 - 10, 9);
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    expect(cashOf("services")).toBeCloseTo(10 + premium, 9);
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(2000, 9);
+    expect(result.payables).toEqual([]);
+  });
+
+  it("owes the premium it cannot pay instead of minting it", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts: accounts.map((a) => (a.id === "corp" ? { ...a, cash: 230 } : a)),
+      producers: [plant({ inputs: recipe })],
+      externalOffers: [offer("energy", 200, 1)],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeGreaterThan(99);
+    // No construction at all: every needed unit is improvised.
+    const premium = r.producedUnits * 0.001 * 10 * MINOR_INPUT_SHORTFALL_PREMIUM;
+    expect(r.minorInputPremium).toBeCloseTo(premium, 9);
+    const owed = result.payables
+      .filter((c) => c.kind === "operating")
+      .reduce((n, c) => n + c.amount, 0);
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    expect(owed).toBeGreaterThan(0);
+    expect(cashOf("corp")).toBeCloseTo(0, 9);
+    expect(cashOf("services") - r.otherOperatingPaid + owed).toBeCloseTo(premium, 9);
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(1230, 9);
+  });
+
+  it("a plant missing a major input is still cut", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ inputs: recipe })],
+      externalOffers: [offer("energy", 50, 1), offer("construction_services", 1, 10)],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeCloseTo(25, 9);
+    expect(r.minorInputPremium).toBeUndefined();
   });
 });

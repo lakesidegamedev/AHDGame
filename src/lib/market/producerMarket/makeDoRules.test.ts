@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { makeDoOutput } from "./makeDoRules";
+import {
+  MINOR_INPUT_SHORTFALL_PREMIUM,
+  makeDoOutput,
+  minorInputShortfallCost,
+  minorInputs,
+} from "./makeDoRules";
 
 describe("plants make do with short inputs", () => {
   it("full fills make the plan", () => {
@@ -29,5 +34,50 @@ describe("plants make do with short inputs", () => {
     let x = 100;
     for (let i = 0; i < 50; i++) x = makeDoOutput(100, inputs);
     expect(x).toBeCloseTo(95, 9);
+  });
+});
+
+describe("minor inputs", () => {
+  it("an input at or under 5% of recipe input cost is minor", () => {
+    expect(
+      minorInputs([
+        { unitsPerOutput: 1, unitValue: 95 },
+        { unitsPerOutput: 1, unitValue: 5 },
+        { unitsPerOutput: 0, unitValue: 0 },
+      ])
+    ).toEqual([false, true, false]);
+    expect(minorInputs([{ unitsPerOutput: 1, unitValue: 0 }])).toEqual([false]);
+  });
+  it("a missing minor input does not cut output; a missing major input still does", () => {
+    expect(
+      makeDoOutput(100, [
+        { unitsPerOutput: 1, unitValue: 99, fill: 1 },
+        { unitsPerOutput: 1, unitValue: 1, fill: 0 },
+      ])
+    ).toBe(100);
+    expect(
+      makeDoOutput(100, [
+        { unitsPerOutput: 1, unitValue: 99, fill: 0.5 },
+        { unitsPerOutput: 1, unitValue: 1, fill: 0 },
+      ])
+    ).toBeCloseTo(50.5, 9);
+  });
+  it("charges the missing units at the premium over the bid limit", () => {
+    expect(
+      minorInputShortfallCost({
+        produced: 100,
+        unitsPerOutput: 0.01,
+        available: 0.25,
+        maximumUnitPrice: 4,
+      })
+    ).toBeCloseTo(0.75 * 4 * MINOR_INPUT_SHORTFALL_PREMIUM, 12);
+    expect(
+      minorInputShortfallCost({
+        produced: 100,
+        unitsPerOutput: 0.01,
+        available: 5,
+        maximumUnitPrice: 4,
+      })
+    ).toBe(0);
   });
 });

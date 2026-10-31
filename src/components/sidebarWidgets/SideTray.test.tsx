@@ -61,16 +61,15 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  delete document.documentElement.dataset.sideTray;
 });
 
 describe("SideTray", () => {
-  it("shows a badge for waiting staff work on the closed rail and makes room for it", async () => {
+  it("shows a badge for waiting staff work on the closed rail without moving the page", async () => {
     renderTray();
     const open = screen.getByRole("button", { name: w.tray.openTray });
     await waitFor(() => expect(open.textContent).toContain("3"));
-    expect(document.documentElement.dataset.sideTray).toBe("right");
-    expect(document.documentElement.style.getPropertyValue("--side-tray-push")).toBe("48px");
+    expect(document.documentElement.dataset.sideTray).toBeUndefined();
+    expect(document.body.style.paddingRight).toBe("");
   });
 
   it("opens to the widgets, links each queue, and remembers it was opened", async () => {
@@ -79,8 +78,9 @@ describe("SideTray", () => {
     expect(props.onSaveOpen).toHaveBeenCalledWith(true);
     const wiki = await screen.findByRole("link", { name: new RegExp(w.staffQueues.wikiReview) });
     expect(wiki.getAttribute("href")).toBe("/admin?tab=content&sub=wiki-review");
-    // Wide screens push the page over by the open panel.
-    expect(document.documentElement.style.getPropertyValue("--side-tray-push")).toBe("380px");
+    // The open tray sits over the page; the nav and content stay where they are.
+    expect(document.documentElement.style.getPropertyValue("--side-tray-push")).toBe("");
+    expect(document.documentElement.dataset.sideTray).toBeUndefined();
   });
 
   it("holds Ask Keir as a tab, and leaves it out when Keir is hidden", () => {

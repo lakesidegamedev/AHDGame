@@ -60,20 +60,11 @@ import {
   appendMacroTelemetry,
   resolveLongHorizonContext,
 } from "@/lib/telemetry/longHorizon/telemetry";
-import { appendCountryTurnTelemetry } from "@/lib/telemetry/research/countryTurn";
-import { appendSecurityTelemetry } from "@/lib/telemetry/research/securities";
 import { snapshotInterestRateHistory } from "@/lib/turn/interestRateSnapshot";
-import { snapshotPartyHistory } from "@/lib/turn/partyHistorySnapshot";
-import {
-  snapshotPortfolioValues,
-  snapshotCorporationPortfolioValues,
-} from "@/lib/turn/portfolioSnapshot";
 import {
   generateStockExchangeSnapshots,
-  generateInvestorRankingSnapshot,
   generateWealthListSnapshots,
 } from "@/lib/turn/stockExchangeSnapshot";
-import { processGameHealthSnapshot } from "@/lib/turn/gameHealthSnapshot";
 import { processNppStanceDrift } from "@/lib/turn/nppStanceDrift";
 import { resetVicePresidentActions } from "@/lib/turn/vicePresidentActionReset";
 import { resetRunningMateSurrogateActions } from "@/lib/turn/runningMateSurrogateActionReset";
@@ -87,17 +78,7 @@ import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVe
 export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
   key: "stateEffectsAndNationalAggregation",
   async execute(context, runtime) {
-    const {
-      db,
-      newTurn,
-      currentYear,
-      phaseResults,
-      gameState,
-      gameNow,
-      startTimeMs,
-      warnings,
-      phaseStatuses,
-    } = context;
+    const { db, newTurn, currentYear, phaseResults, gameState, gameNow } = context;
     // Both policy processors need the complete immutable legislation catalog
     // and run concurrently below. Share one decode rather than pulling the same
     // ~2.4 MB / 1,030-document collection into JS twice in the same turn.
@@ -703,107 +684,67 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       );
     }
 
-    // Two independent snapshot chains run side by side.
-    //
-    // Chain A: durable long-horizon provenance (#2099/#2100), resolved once per
-    // turn and shared by both telemetry writers, then the metric, approval,
-    // interest-rate and party history snapshots. Three round trips for the
+    // Durable long-horizon provenance (#2099/#2100), resolved once per turn
+    // and shared by the macro and approval telemetry writers, then the metric,
+    // approval and interest-rate history snapshots. Three round trips for the
     // context; a null result (phase failure) skips telemetry while the
     // operational snapshots still run.
     //
-    // Chain B: the market and wealth snapshots. None of them reads the
-    // long-horizon context or anything chain A writes (metric/approval/party
-    // history, approval telemetry, centralBanks rate history), and chain A never
-    // reads what B writes (portfolio/exchange/ranking/wealth history and the
-    // corporations.hiddenFromExchange repair), so B does not wait on A.
-    const snapshotChainA = (async () => {
-      const longHorizonCtx = await runtime.runPhase("longHorizonContext", () =>
-        resolveLongHorizonContext(db, newTurn)
-      );
-      return Promise.all([
-        runtime.runPhase("metricHistory", async () => {
-          const steps = substepMarker();
-          await snapshotMetricHistory(db, newTurn);
-          steps.mark("metricArrays");
-          if (longHorizonCtx) await appendMacroTelemetry(db, longHorizonCtx, newTurn);
-          steps.mark("macroTelemetry");
-        }),
-        // Covers the active countries plus any belligerent that is not one of
-        // them, so a war block is computed for every country actually fighting.
-        // The count is read back off the run rather than recomputed here: the
-        // roster is now turn-dependent, and a recomputed constant would report a
-        // number the phase did not do.
-        runtime.runPhase("approvalSnapshot", () =>
-          snapshotApprovalsForTurn(
-            db,
-            newTurn,
-            longHorizonCtx ?? undefined,
-            context.config?.privateBankingEnabled === true,
-            context.config?.marketAdjustmentStage ?? 0
-          )
-        ),
-        runtime.runPhase("interestRateSnapshot", () => snapshotInterestRateHistory(db, newTurn)),
-        runtime.runPhase("partyHistorySnapshot", () => snapshotPartyHistory(db, newTurn)),
-        // Research panels (#2331, #2332, #2336): country-turn macro/monetary/fiscal
-        // rows and the whole-market securities row. A failure here must never
-        // stop the turn, so each is isolated and only logged.
-        runtime.runPhase("researchTelemetry", async () => {
-          if (!longHorizonCtx) return;
-          const observedAt = new Date();
-          await Promise.all([
-            appendCountryTurnTelemetry(db, longHorizonCtx, newTurn, observedAt),
-            appendSecurityTelemetry(db, longHorizonCtx, newTurn, observedAt),
-          ]).catch((error) => {
-            console.error("[researchTelemetry] write failed", error);
-          });
-        }),
-      ]);
-    })();
-    const [metricHistResult, approvalSnapshotResult] = await snapshotChainA;
+    // These stay inside the lock because game logic reads what they write.
+    // Pure reporting (party history, research telemetry, the health snapshot)
+    // runs after the lock is released: see postLockReportingPhases.ts.
+    // auditAnomalyScan and suspiciousDetection likewise run after the turn
+    // commits (#2694, src/lib/turn/postTurnScans.ts), in that order.
+    const longHorizonCtx = await runtime.runPhase("longHorizonContext", () =>
+      resolveLongHorizonContext(db, newTurn)
+    );
+    const [metricHistResult, approvalSnapshotResult] = await Promise.all([
+      runtime.runPhase("metricHistory", async () => {
+        const steps = substepMarker();
+        await snapshotMetricHistory(db, newTurn);
+        steps.mark("metricArrays");
+        if (longHorizonCtx) await appendMacroTelemetry(db, longHorizonCtx, newTurn);
+        steps.mark("macroTelemetry");
+      }),
+      // Covers the active countries plus any belligerent that is not one of
+      // them, so a war block is computed for every country actually fighting.
+      // The count is read back off the run rather than recomputed here: the
+      // roster is now turn-dependent, and a recomputed constant would report a
+      // number the phase did not do.
+      runtime.runPhase("approvalSnapshot", () =>
+        snapshotApprovalsForTurn(
+          db,
+          newTurn,
+          longHorizonCtx ?? undefined,
+          context.config?.privateBankingEnabled === true,
+          context.config?.marketAdjustmentStage ?? 0
+        )
+      ),
+      runtime.runPhase("interestRateSnapshot", () => snapshotInterestRateHistory(db, newTurn)),
+    ]);
     phaseResults.metricHistory = { snapshotsTaken: metricHistResult ?? 0 };
     phaseResults.approvalSnapshot = {
       countriesProcessed: approvalSnapshotResult?.countriesProcessed ?? 0,
     };
-
-    // auditAnomalyScan and suspiciousDetection run after the turn commits
-    // (#2694, src/lib/turn/postTurnScans.ts), in that order.
-    const healthResult = await runtime.runPhase("gameHealthSnapshot", () =>
-      processGameHealthSnapshot(
-        db,
-        newTurn,
-        context.currentYear,
-        Date.now() - startTimeMs,
-        warnings.length === 0,
-        [...warnings],
-        phaseStatuses
-      )
-    );
-    if (healthResult) {
-      phaseResults.gameHealthSnapshot = healthResult;
-    }
   },
 };
 
-/** Closing financial snapshots follow all income and tax settlement phases. */
+/**
+ * Closing financial snapshots follow all income and tax settlement phases.
+ * Only the two that economic vital signs reads for this turn stay inside the
+ * lock; portfolio history and the investor ranking run after it is released.
+ */
 export const closingFinancialSnapshotsPhase: TurnPhaseAdapter = {
   key: "closingFinancialSnapshots",
   async execute(context, runtime) {
-    const { newTurn, phaseResults } = context;
-    const [portfolioSnapshotResult] = await Promise.all([
-      runtime.runPhase("portfolioSnapshot", () =>
-        snapshotPortfolioValues(newTurn, context.gameState.stockHoldingTaxStartTurn)
-      ),
-      runtime.runPhase("corpPortfolioSnapshot", () => snapshotCorporationPortfolioValues(newTurn)),
+    const { newTurn } = context;
+    await Promise.all([
       runtime.runPhase("stockExchangeSnapshot", () =>
         generateStockExchangeSnapshots(newTurn, context.db)
-      ),
-      runtime.runPhase("investorRankingSnapshot", () =>
-        generateInvestorRankingSnapshot(newTurn, context.db)
       ),
       runtime.runPhase("wealthListSnapshot", () =>
         generateWealthListSnapshots(newTurn, context.db)
       ),
     ]);
-    phaseResults.portfolioSnapshot = { charactersSnapshotted: portfolioSnapshotResult ?? 0 };
   },
 };

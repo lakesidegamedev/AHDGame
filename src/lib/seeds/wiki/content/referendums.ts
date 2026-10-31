@@ -41,19 +41,19 @@ independence-desire-drift
 | First Minister's policy: pro-devolution | 0 |
 | Regional approval | 0.002 per point away from 50, up to 0.05, pushing in the direction of the First Minister's stance |
 | Westminster's stance for that region | Half the First Minister's policy effect: +0.025 pro-independence, -0.020 anti-devolution, 0 pro-devolution |
-| Westminster approval | 0.001 per point away from 50, up to 0.025, in the direction of Westminster's stance |
+| Westminster approval | Below 50 raises desire; above 50 lowers it, regardless of stance. 0.001 per point away from 50, capped at 0.025 per turn |
 | UK inflation above 5% | +0.02 |
 | UK inflation below 2% | -0.01 |
 | UK inflation 2% to 5% | 0 |
 | Pull back toward 25 | up to 0.003 |
 
-Two of these come from other systems. [Government Approval](/wiki/government-approval) matters because approval above 50% strengthens whichever stance the government holds, and approval below 50% weakens it. A pro-devolution stance stays neutral on separation whatever the approval. [National Metrics](/wiki/national-metrics) matters because UK inflation above 5% adds to desire and inflation below 2% subtracts from it. Referendum results and Northern Ireland peace-process decisions can also change desire directly.
+Two of these come from other systems. [Government Approval](/wiki/government-approval) matters in two different ways. Regional approval above 50% strengthens the First Minister's stance, and approval below 50% weakens it; a pro-devolution First Minister stays neutral on separation. Westminster approval is independent of Westminster's stance: below 50% raises separation desire, above 50% lowers it, and exactly 50% is neutral. [National Metrics](/wiki/national-metrics) matters because UK inflation above 5% adds to desire and inflation below 2% subtracts from it. Referendum results and Northern Ireland peace-process decisions can also change desire directly.
 
 Westminster picks a separate stance for Scotland, Wales and Northern Ireland from the UK Executive Devolution tab. Each new government may make its first change in each region even if the old government left a cooldown running, paying the usual 2 office actions. The Prime Minister and First Ministers can see both governments' stances and every driver, and the dashboards project one game year ahead and the time to reach 60. Those projections ignore events and do not waive cooldowns or consent.
 
-**A popular separatist government.** A pro-independence First Minister at 70% regional approval, with Westminster on pro-devolution and inflation at 3%, adds 0.05 (policy) plus 0.04 (20 approval points at 0.002) minus 0.003 (pull toward 25) = 0.087 a turn. Over 48 turns that is about 4.2 points a year. To go from 45 to 60 at that pace takes about 172 turns, or 3.6 game years.
+**A popular separatist government.** A pro-independence First Minister at 70% regional approval, with Westminster on pro-devolution, Westminster approval at 50% and inflation at 3%, adds 0.05 (policy) plus 0.04 (20 approval points at 0.002) minus 0.003 (pull toward 25) = 0.087 a turn. Over 48 turns that is about 4.2 points a year. To go from 45 to 60 at that pace takes about 172 turns, or 3.6 game years.
 
-**The fastest possible climb.** The most you can add in one turn is 0.05 (policy) + 0.05 (regional approval, at 75% or better) + 0.025 (Westminster pro-independence) + 0.025 (Westminster approval at 75% or better) + 0.02 (inflation above 5%) - 0.003 = 0.167. Fifteen points then takes about 90 turns, nearly two game years. In practice that needs both governments to push the same way.
+**The fastest possible climb.** The most you can add in one turn is 0.05 (policy) + 0.05 (regional approval, at 75% or better) + 0.025 (Westminster pro-independence) + 0.025 (Westminster approval at 25% or lower) + 0.02 (inflation above 5%) - 0.003 = 0.167. Fifteen points then takes about 90 turns, nearly two game years. That combination assumes a popular separatist regional government, a supportive Westminster stance and low approval of Westminster.
 
 ## Running the campaign
 

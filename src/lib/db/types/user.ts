@@ -1,6 +1,8 @@
 import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import type { MobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import type { WidgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
+import type { WatchItem } from "@/lib/sidebarWidgets/watchlist";
+import type { KeirPetState } from "@/lib/sidebarWidgets/keirPet";
 import type { NavCustomization } from "@/lib/navigation/navCustomization";
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -185,6 +187,10 @@ export interface User {
   widgetLayout?: WidgetLayout;
   /** Whether the experimental side tray was last left open. */
   widgetTrayOpen?: boolean;
+  /** Corporations and commodities starred for the experimental watchlist widget. */
+  widgetWatchlist?: WatchItem[];
+  /** The Keir pet widget: bond, visit streak, care cooldowns and the current tip. */
+  keirPet?: KeirPetState;
   /** Which edge of the screen the experimental Ask drawer docks to. */
   askDrawerSide?: "left" | "right";
   /** Hides the Ask Keir drawer and its edge tab. Off unless explicitly true. */

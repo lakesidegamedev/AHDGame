@@ -261,7 +261,6 @@ export async function processSavingsInterestTurn(
         const savingsNow = char.currencyBalances?.savings ?? {};
         const holders = char.currencyBalances?.savingsHolder ?? {};
         const perCharInc: Record<string, number> = {};
-        const perCharSet: Record<string, number> = {};
 
         for (const [code, pendingAmt] of Object.entries(pending)) {
           const amount = typeof pendingAmt === "number" ? pendingAmt : 0;
@@ -297,8 +296,10 @@ export async function processSavingsInterestTurn(
               },
             });
           }
-          // Zero out pending (keep key present so next accrual uses $inc cleanly)
-          perCharSet[`currencyBalances.pendingSavingsInterest.${currency}`] = 0;
+          // Flush pending by exactly the amount credited. The key stays present
+          // so the next accrual $inc is clean, and a write that moved pending
+          // after this read keeps its effect instead of being zeroed away.
+          perCharInc[`currencyBalances.pendingSavingsInterest.${currency}`] = -amount;
           const currentSavings =
             typeof savingsNow[currency as CurrencyCode] === "number"
               ? (savingsNow[currency as CurrencyCode] ?? 0)
@@ -319,7 +320,7 @@ export async function processSavingsInterestTurn(
           creditOps.push({
             updateOne: {
               filter: { _id: char._id },
-              update: { $inc: perCharInc, $set: perCharSet },
+              update: { $inc: perCharInc },
             },
           });
         }

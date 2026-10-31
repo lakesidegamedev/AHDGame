@@ -714,6 +714,8 @@ function preparationView(
     producerCapacity: opening.producerCapacity,
     producerInventory: opening.producerInventory,
     producerQuotes: sector.producerQuotes,
+    pricingPosture: sector.pricingPosture,
+    pricingMode: sector.pricingMode,
     producerSettlement: opening.producerSettlement ?? sector.producerSettlement,
     labourStaffingFactor: sector.labourStaffingFactor,
     wageLevel: sector.wageLevel,

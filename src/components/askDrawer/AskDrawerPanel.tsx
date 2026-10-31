@@ -912,10 +912,13 @@ export function AskDrawerPanel({
   side,
   onClose,
   onSwapSide,
+  embedded = false,
 }: {
   side: AskDrawerSide;
   onClose: () => void;
   onSwapSide: () => void;
+  /** Inside the side tray, which has its own close button. */
+  embedded?: boolean;
 }) {
   const [view, setView] = useState<"thread" | "history">("thread");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -1451,15 +1454,17 @@ export function AskDrawerPanel({
         >
           <Icon d={ICONS.external} />
         </a>
-        <button
-          type="button"
-          onClick={onClose}
-          className={headerButton}
-          aria-label="Close Ask"
-          title="Close"
-        >
-          <Icon d={ICONS.close} />
-        </button>
+        {!embedded && (
+          <button
+            type="button"
+            onClick={onClose}
+            className={headerButton}
+            aria-label="Close Ask"
+            title="Close"
+          >
+            <Icon d={ICONS.close} />
+          </button>
+        )}
       </header>
 
       <div

@@ -31,27 +31,16 @@ beforeEach(() => {
 });
 
 describe("planPoolCashMoves", () => {
-  it("lets two percent of the shortfall in when short", () => {
-    expect(planPoolCashMoves({ cashLocal: 50, targetCashLocal: 100 })).toEqual({
-      inflow: 1,
-      sweep: 0,
-    });
+  it("never tops a short pool up: a pool holds only what it took in", () => {
+    expect(planPoolCashMoves({ cashLocal: 50, targetCashLocal: 100 })).toEqual({ sweep: 0 });
+    expect(planPoolCashMoves({ cashLocal: 0, targetCashLocal: 100 })).toEqual({ sweep: 0 });
   });
   it("sweeps down to 1.5x target when past 2x", () => {
-    expect(planPoolCashMoves({ cashLocal: 300, targetCashLocal: 100 })).toEqual({
-      inflow: 0,
-      sweep: 150,
-    });
+    expect(planPoolCashMoves({ cashLocal: 300, targetCashLocal: 100 })).toEqual({ sweep: 150 });
   });
   it("does nothing between target and 2x target, or without a target", () => {
-    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 100 })).toEqual({
-      inflow: 0,
-      sweep: 0,
-    });
-    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 0 })).toEqual({
-      inflow: 0,
-      sweep: 0,
-    });
+    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 100 })).toEqual({ sweep: 0 });
+    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 0 })).toEqual({ sweep: 0 });
   });
 });
 
@@ -63,7 +52,7 @@ describe("countriesForCurrency", () => {
 });
 
 describe("processBondMarketPoolTurn", () => {
-  it("re-sizes the target from M2, lets cash flow in, and stores sovereign appetite", async () => {
+  it("re-sizes the target from M2, mints nothing into a short pool, and stores sovereign appetite", async () => {
     db.collectionMocks.bondMarketPools.find.mockReturnValue({
       toArray: async () => [{ _id: "GBP", cashLocal: 100, targetCashLocal: 5 }],
     });
@@ -77,13 +66,11 @@ describe("processBondMarketPoolTurn", () => {
 
     const result = await processBondMarketPoolTurn(db as unknown as Db, 584, new Date());
 
-    // Target becomes 5% of 10,000 = 500; shortfall 400 -> inflow 8.
-    expect(result.inflowLocalByCurrency.GBP).toBe(8);
-    expect(db.collectionMocks.bondMarketPools.updateOne).toHaveBeenCalledWith(
+    // Target becomes 5% of 10,000 = 500; the pool is 400 short and stays short.
+    expect(result.sweptLocalByCurrency.GBP).toBeUndefined();
+    expect(db.collectionMocks.bondMarketPools.updateOne).not.toHaveBeenCalledWith(
       { _id: "GBP" },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ cashLocal: 8, "lifetime.inflowIn": 8 }),
-      }),
+      expect.objectContaining({ $inc: expect.anything() }),
       expect.anything()
     );
     expect(db.collectionMocks.bondMarketPools.updateOne).toHaveBeenLastCalledWith(

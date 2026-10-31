@@ -14,12 +14,11 @@ import { formalizedSubsidiaryCountByParentId } from "@/lib/corporations/subsidia
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Corporation, CorporationHistory } from "@/lib/db/types";
-import { STOCK_SPLIT_PRICE_SMOOTHING_TURNS } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
-  bankNpvBoostMultiplier,
-  sectorRiskPremiumAtTurn,
-} from "@/lib/corporations/rules/marketBoost";
+  getSectorRiskPremium,
+  STOCK_SPLIT_PRICE_SMOOTHING_TURNS,
+} from "@/lib/constants/corporations";
+import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { buildCorporationLookups } from "./buildLookups";
 import {
@@ -233,8 +232,7 @@ export async function recomputeSharePricesAfterBondTurn(
       : 0;
     const bankNpvAnchor = activeBankCharter
       ? bankNpvFromPerTurnIncome(
-          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate,
-          bankNpvBoostMultiplier(turn)
+          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate
         )
       : 0;
 
@@ -301,13 +299,8 @@ export async function recomputeSharePricesAfterBondTurn(
       (lookups.primeRateSmoothedByCountry.get(corp.countryId) ??
         lookups.primeRateByCountry.get(corp.countryId) ??
         countryPrimeRate) / 100;
-    const riskPremium = sectorRiskPremiumAtTurn(
-      getOperatingSectorType(
-        corp.type,
-        corp.industryModel,
-        corp.mediaDiscriminator
-      ) as Corporation["type"],
-      turn
+    const riskPremium = getSectorRiskPremium(
+      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
     );
 
     // hist.sectorNPV is stored in local currency (converted by marketCapSnapshot);
@@ -405,12 +398,10 @@ export async function recomputeSharePricesAfterBondTurn(
     const localPrice = writeCorpEconomicLocal(anchorPrice, code, rate);
     corpOps.push({
       updateOne: {
-        // Between turns there is no turn lock: an IPO, share issue or vote
-        // effect may write fundamentalSharePrice concurrently. Its write wins;
-        // this tick skips that corp until the next one.
-        filter: intraHour
-          ? { _id: oid, fundamentalSharePrice: corp?.fundamentalSharePrice }
-          : { _id: oid },
+        // An IPO, share issue or vote effect may write fundamentalSharePrice
+        // between this pass's read and its write, between turns and during a
+        // turn alike. Its write wins; this pass skips that corp until the next.
+        filter: { _id: oid, fundamentalSharePrice: corp?.fundamentalSharePrice },
         update: {
           $set: { sharePrice: localPrice, fundamentalSharePrice: localPrice, updatedAt: now },
         },
@@ -446,15 +437,13 @@ export async function recomputeSharePricesAfterBondTurn(
         ? database.collection<CorporationHistory>("corporationHistory").bulkWrite(histOps)
         : null,
     ]);
-    if (intraHour) {
-      return {
-        corpsRepriced: corpResult.matchedCount,
-        corpsSkipped: skipped + corpOps.length - corpResult.matchedCount,
-      };
-    }
+    return {
+      corpsRepriced: corpResult.matchedCount,
+      corpsSkipped: skipped + corpOps.length - corpResult.matchedCount,
+    };
   }
 
-  return { corpsRepriced: corpOps.length, corpsSkipped: skipped };
+  return { corpsRepriced: 0, corpsSkipped: skipped };
 }
 
 /**

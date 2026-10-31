@@ -31,7 +31,6 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
 import { bankBookEquity, bankNpvFromPerTurnIncome, bankValuation } from "@/lib/banking/valuation";
-import { bankNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import {
   TURNS_PER_DAY,
   MIN_SHARE_PRICE,
@@ -363,10 +362,8 @@ export async function computeIncomeStatement(
     corpCurrency,
     corpFxRate
   );
-  // Same phased bank-NPV boost as the share-price path so the corp page
-  // agrees with the market quote. Below the window the multiplier is 1.
   const bankNpvLocal = anchorToCorpCapital(
-    bankNpvFromPerTurnIncome(bankIncomePerTurnAnchor, bankNpvBoostMultiplier(currentTurn)),
+    bankNpvFromPerTurnIncome(bankIncomePerTurnAnchor),
     corpCurrency,
     corpFxRate
   );

@@ -225,7 +225,6 @@ function simulate(scenario: Scenario) {
   let poolTargetCash = poolCash > 0 ? conservativePoolCashSeed : 0;
   let poolAppetite = scenario.fixedPoolAppetite ?? 1;
   let minimumPoolAppetite = poolAppetite;
-  let poolCashInflow = 0;
   let poolCashSweep = 0;
   let lastPrimaryFillRatio: number | null = null;
   let lastPrimaryAuction: { turn: number; requestedUnits: number; placedUnits: number } | null =
@@ -366,7 +365,7 @@ function simulate(scenario: Scenario) {
 
   const assertCashConservation = () => {
     const observed = cash + externalCash + poolCash + treasuryCash + insuranceFundBalance;
-    const expected = initialSystemCash + poolCashInflow - poolCashSweep;
+    const expected = initialSystemCash - poolCashSweep;
     const error = Math.abs(observed - expected);
     maximumCashConservationError = Math.max(maximumCashConservationError, error);
     if (error > 1) throw new Error(`Unpaired model cash movement in ${scenario.name}: ${error}`);
@@ -799,10 +798,6 @@ function simulate(scenario: Scenario) {
       );
     minimumPoolAppetite = Math.min(minimumPoolAppetite, poolAppetite);
     const cashMoves = planPoolCashMoves({ cashLocal: poolCash, targetCashLocal: poolTarget });
-    if (cashMoves.inflow > 0) {
-      poolCash += cashMoves.inflow;
-      poolCashInflow += cashMoves.inflow;
-    }
     if (cashMoves.sweep > 0) {
       const swept = Math.min(poolCash, cashMoves.sweep);
       poolCash -= swept;
@@ -1351,7 +1346,6 @@ function simulate(scenario: Scenario) {
     endingPoolCash: Math.round(poolCash),
     openingPoolCash: Math.round(scenario.openingPoolCash ?? conservativePoolCashSeed),
     turnTwelveSnapshot,
-    cumulativePoolCashInflow: Math.round(poolCashInflow),
     cumulativePoolCashSweep: Math.round(poolCashSweep),
     poolTradeUnits: poolPurchaseAndSaleUnits,
     poolSaleCashPaid: Math.round(poolSaleCashPaid),

@@ -297,7 +297,7 @@
       "loadError": "Could not load devolution data.",
       "retry": "Try again",
       "missing": "No Desire data is available for this region.",
-      "policyHelp": "Westminster has half the direct policy and approval influence of the First Minister. Approval strengthens or weakens each government’s chosen stance. Pro-Devolution is neutral on separation.",
+      "policyHelp": "Westminster has half the direct policy and maximum approval influence of the First Minister. Regional approval strengthens or weakens the First Minister’s stance. Westminster approval below 50% raises independence or reunification desire; above 50% lowers it, regardless of Westminster’s stance. Pro-Devolution has no direct policy effect on separation.",
       "actions": "National office AP: {value}",
       "cost": "Changing a stance costs {cost} national office AP. Each region has its own {turns}-turn cooldown. An incoming government can make its first change in each region immediately.",
       "cooldown": "Available again in {turns} turns.",
@@ -385,9 +385,19 @@
         "saveError": "Could not save your widgets. Try again."
       },
       "names": {
+        "keirPet": "Keir",
+        "dueSoon": "Due soon",
         "myCompany": "My company",
         "stockTicker": "Stock ticker",
-        "staffQueues": "Staff review queues"
+        "staffQueues": "Staff review queues",
+        "watchlist": "Watchlist",
+        "myRace": "My race",
+        "chamberFloor": "Chamber floor",
+        "officeDashboard": "My office",
+        "sinceAway": "Since last turn",
+        "sectorHeatmap": "Sector map",
+        "netWorth": "Net worth",
+        "commodityBoard": "Commodity prices"
       },
       "tickerScopes": {
         "global": "Global market",
@@ -400,24 +410,151 @@
         "help": "Help menu",
         "staff": "Staff menu"
       },
+      "keirPet": {
+        "title": "Keir",
+        "pat": "Pat Keir",
+        "wake": "Wake Keir",
+        "tea": "Make tea",
+        "teaIn": "Tea in {time}",
+        "showMe": "Show me",
+        "streak": "{days, plural, one {# day} other {# days}}",
+        "hearts": "{count, plural, one {# heart} other {# hearts}}",
+        "bond": "Bond with Keir"
+      },
+      "dueSoon": {
+        "title": "Due soon",
+        "empty": "Nothing waiting on you.",
+        "turnsLeft": "{count, plural, one {Closes next turn} other {# turns left}}",
+        "hoursLeft": "{count, plural, one {# hour left} other {# hours left}}",
+        "closingNow": "Closing now",
+        "more": "{count, plural, one {# more waiting} other {# more waiting}}",
+        "positions": {
+          "chair": "Chair",
+          "viceChair": "Vice chair",
+          "treasurer": "Treasurer"
+        },
+        "kinds": {
+          "billVote": "Vote on bill",
+          "overrideVote": "Veto override vote",
+          "billSign": "Sign or veto",
+          "stateBillVote": "State bill vote",
+          "stateOverrideVote": "State veto override vote",
+          "stateBillSign": "Sign or veto state bill",
+          "corpVote": "Company vote",
+          "privatizationVote": "Privatization vote",
+          "debate": "Debate answers",
+          "partyElection": "Party ballot",
+          "confirmation": "Confirmation vote"
+        }
+      },
       "myCompany": {
         "title": "My company",
         "cash": "Cash",
         "sharePrice": "Share price",
         "revenue": "Revenue last turn",
         "income": "Income last turn",
-        "cashTrend": "Cash, recent turns",
-        "empty": "You do not run a company right now."
+        "empty": "You do not run a company right now.",
+        "recentTurns": "Last {count} turns",
+        "incomeTrend": "Income per turn",
+        "trendLabel": "{name} over the last {count} turns"
       },
       "stockTicker": {
         "title": "Stock ticker",
-        "empty": "No listed companies yet."
+        "empty": "No listed companies yet.",
+        "trendLabel": "{name} share price over the last {count} turns"
+      },
+      "sectorHeatmap": {
+        "title": "Sectors",
+        "empty": "No listed companies yet.",
+        "other": "Other",
+        "legendDown": "Falling",
+        "legendUp": "Rising",
+        "hint": "Tile size is market cap. Color is the price change since last turn.",
+        "tile": "{sector}: {change} since last turn, {cap} market cap, {count, plural, one {# company} other {# companies}}"
+      },
+      "netWorth": {
+        "title": "Net worth",
+        "empty": "No wealth record yet. It updates after each turn.",
+        "sinceLastTurn": "since last turn",
+        "overTurns": "over the last {count} turns",
+        "trendLabel": "Net worth over the last {count} turns",
+        "point": "Turn {turn}: {value}"
+      },
+      "commodityBoard": {
+        "title": "Commodity prices",
+        "empty": "No commodity prices yet.",
+        "trendLabel": "{commodity} price over the last {count} turns"
       },
       "staffQueues": {
         "title": "Review queues",
         "wikiReview": "Wiki edits to review",
         "altClusters": "Open alt clusters",
         "playerReports": "Player reports"
+      },
+      "watchlist": {
+        "title": "Watchlist",
+        "empty": "Star a company or commodity on its page to follow it here.",
+        "watch": "Watch",
+        "unwatch": "Watching",
+        "remove": "Stop watching {name}",
+        "missing": "No longer exists",
+        "private": "Private",
+        "full": "Your watchlist is full ({max} items). Remove one first.",
+        "saveError": "Could not save your watchlist. Try again."
+      },
+      "myRace": {
+        "title": "My race",
+        "opensIn": "{turns, plural, =0 {Opens this turn} one {Opens in # turn} other {Opens in # turns}}",
+        "closesIn": "{turns, plural, =0 {Closes this turn} one {# turn left} other {# turns left}}",
+        "you": "Your share",
+        "place": "Position",
+        "placeValue": "{rank} of {count}",
+        "leader": "Leader",
+        "seats": "Projected seats",
+        "noVotes": "No votes projected yet.",
+        "election": "Race page",
+        "campaign": "Campaign",
+        "empty": "You are not standing in a race right now."
+      },
+      "chamberFloor": {
+        "title": "On the floor",
+        "empty": "No bills are up for a vote in your chamber.",
+        "for": "For",
+        "against": "Against",
+        "abstain": "Abstain",
+        "notVoted": "Not voted",
+        "turnsLeft": "{turns, plural, =0 {last turn} one {# turn} other {# turns}}",
+        "more": "{count, plural, one {# more bill} other {# more bills}} in your chamber"
+      },
+      "officeDashboard": {
+        "title": "My office",
+        "approval": "Approval",
+        "budgetBalance": "Budget balance",
+        "growth": "Growth",
+        "unemployment": "Unemployment",
+        "office": "Office",
+        "economy": "Economy",
+        "budget": "Budget"
+      },
+      "sinceAway": {
+        "title": "Since last turn",
+        "netWorth": "Net worth",
+        "cash": "Cash and savings",
+        "stocks": "Your shares",
+        "bonds": "Your bonds",
+        "funds": "Your funds",
+        "noHistory": "Changes show here after your next turn.",
+        "unread": "{count, plural, one {#{more} unread notification} other {#{more} unread notifications}}",
+        "noUnread": "No unread notifications.",
+        "categories": {
+          "crisis": "Crisis",
+          "legislation": "Legislation",
+          "election": "Election",
+          "party": "Party",
+          "standing": "Standing",
+          "treasury": "Treasury",
+          "system": "System"
+        }
       }
     },
     "desktop": {
