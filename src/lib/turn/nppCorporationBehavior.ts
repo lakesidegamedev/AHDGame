@@ -485,6 +485,8 @@ export async function processNppCorporationDecisions(
       primeRateOf: (cid) => primeByCountry.get(cid) ?? 0,
       costOfLivingOf: (sid) => colByState.get(sid) ?? null,
       commodityDemandOf: (commodity) => priceByCommodity.get(commodity)?.globalDemand ?? null,
+      commodityStateDemandOf: (commodity, stateId) =>
+        priceByCommodity.get(commodity)?.stateDemand?.[stateId] ?? null,
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
       ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),

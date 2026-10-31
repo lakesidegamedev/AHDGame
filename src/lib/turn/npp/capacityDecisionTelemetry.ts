@@ -162,6 +162,8 @@ export interface FoundingCapacityGateInputs {
   retailExpansionPaused: boolean;
   ordinaryEntryTargetGlutted: boolean;
   exceptionalShortageEntry: boolean;
+  /** A sector's last funded run was cut by cash (rules/cashCutHold). */
+  cashCutHold?: boolean;
   blockEntered: boolean;
   plantsEnabled: boolean;
   expansionPresent: boolean;
@@ -203,6 +205,7 @@ export function buildFoundingCapacityObservation(args: {
     cohort_ineligible: !g.marketEntryEligible && g.shortageEntryEligible !== true,
     retail_paused: g.retailExpansionPaused === true && g.entryCandidate?.sectorType === "retail",
     glutted_market: g.ordinaryEntryTargetGlutted && !g.exceptionalShortageEntry,
+    cash_cut_run: g.cashCutHold === true && g.entryCandidate != null,
     facility_size: g.blockEntered && !o.affordable && o.sizeBlocked,
     credit_requested: g.blockEntered && !o.affordable && o.creditPath,
     state_credit_restricted:
@@ -246,6 +249,8 @@ export interface ReinvestPreSizingGateFlags {
   fill_below_min: boolean;
   state_controlled: boolean;
   property_unavailable: boolean;
+  /** A sector of this corp had its last funded run cut by cash. */
+  cash_cut_run?: boolean;
 }
 
 /**

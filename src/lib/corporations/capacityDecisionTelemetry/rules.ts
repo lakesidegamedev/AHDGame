@@ -79,7 +79,8 @@ export type CapacityDecisionOutcome =
   | "autopilot_demand_headroom"
   | "autopilot_capex_cap"
   | "growth_throttled_market"
-  | "growth_inputs_starved";
+  | "growth_inputs_starved"
+  | "cash_cut_run";
 
 /** Gates evaluated on the NPP founding path, earliest first. */
 export type FoundingCapacityGate = Extract<
@@ -92,6 +93,7 @@ export type FoundingCapacityGate = Extract<
   | "cohort_ineligible"
   | "retail_paused"
   | "glutted_market"
+  | "cash_cut_run"
   | "facility_size"
   | "credit_requested"
   | "state_credit_restricted"
@@ -116,6 +118,7 @@ export type ReinvestCapacityGate = Extract<
   | "autopilot_capex_cap"
   | "growth_throttled_market"
   | "growth_inputs_starved"
+  | "cash_cut_run"
   | "insufficient_cash"
 >;
 
@@ -135,6 +138,7 @@ export const FOUNDING_GATE_PRECEDENCE = [
   "cohort_ineligible",
   "retail_paused",
   "glutted_market",
+  "cash_cut_run",
   "facility_size",
   "credit_requested",
   "state_credit_restricted",
@@ -155,6 +159,7 @@ export const REINVEST_GATE_PRECEDENCE = [
   "fill_below_min",
   "state_controlled",
   "property_unavailable",
+  "cash_cut_run",
   "below_minimum_order",
   "insufficient_cash",
 ] as const satisfies readonly ReinvestCapacityGate[];

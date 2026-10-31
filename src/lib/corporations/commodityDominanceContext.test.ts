@@ -95,3 +95,44 @@ describe("commodity dominance context", () => {
     expect(commodityDominanceFor(ctx, 0).commodity).toBe("timber");
   });
 });
+
+describe("commodity dominance context for freight", () => {
+  it("prices a logistics build on its own state's freight demand", async () => {
+    const txId = new ObjectId();
+    const caId = new ObjectId();
+    await db.collection("corporateSectors").insertMany([
+      {
+        _id: txId,
+        corporationId: corpId,
+        countryId: "US",
+        stateId: "TX",
+        sectorType: "logistics",
+        strategyId: "standard",
+        capitalStock: 100,
+        buildQueue: [],
+      },
+      {
+        _id: caId,
+        corporationId: corpId,
+        countryId: "US",
+        stateId: "CA",
+        sectorType: "logistics",
+        strategyId: "standard",
+        capitalStock: 1_000_000,
+        buildQueue: [],
+      },
+    ]);
+    await db.collection("commodityPrices").insertMany([
+      { commodity: "freight", globalDemand: 100, stateDemand: { TX: 1_000_000, CA: 50 } },
+      { commodity: "consulting_services", globalDemand: 1_000_000_000 },
+    ]);
+    const ctx = await contextFor(txId);
+    expect(ctx.targetStateId).toBe("TX");
+    expect(ctx.stateDemand?.freight).toBe(1_000_000);
+    const toll = commodityDominanceFor(ctx, 0);
+    // The CA fleet does not count and TX demand dwarfs the TX fleet: no toll.
+    expect(commodityDominanceMultiplier(toll.ratio)).toBe(1);
+    const freightModel = commodityTollModels(ctx).find((m) => m.commodity === "freight");
+    expect(freightModel?.demandUnits).toBe(1_000_000);
+  });
+});
