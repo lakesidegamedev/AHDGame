@@ -14,12 +14,11 @@ import { formalizedSubsidiaryCountByParentId } from "@/lib/corporations/subsidia
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Corporation, CorporationHistory } from "@/lib/db/types";
-import { STOCK_SPLIT_PRICE_SMOOTHING_TURNS } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
-  bankNpvBoostMultiplier,
-  sectorRiskPremiumAtTurn,
-} from "@/lib/corporations/rules/marketBoost";
+  getSectorRiskPremium,
+  STOCK_SPLIT_PRICE_SMOOTHING_TURNS,
+} from "@/lib/constants/corporations";
+import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { buildCorporationLookups } from "./buildLookups";
 import {
@@ -233,8 +232,7 @@ export async function recomputeSharePricesAfterBondTurn(
       : 0;
     const bankNpvAnchor = activeBankCharter
       ? bankNpvFromPerTurnIncome(
-          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate,
-          bankNpvBoostMultiplier(turn)
+          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate
         )
       : 0;
 
@@ -301,13 +299,8 @@ export async function recomputeSharePricesAfterBondTurn(
       (lookups.primeRateSmoothedByCountry.get(corp.countryId) ??
         lookups.primeRateByCountry.get(corp.countryId) ??
         countryPrimeRate) / 100;
-    const riskPremium = sectorRiskPremiumAtTurn(
-      getOperatingSectorType(
-        corp.type,
-        corp.industryModel,
-        corp.mediaDiscriminator
-      ) as Corporation["type"],
-      turn
+    const riskPremium = getSectorRiskPremium(
+      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
     );
 
     // hist.sectorNPV is stored in local currency (converted by marketCapSnapshot);

@@ -16,7 +16,6 @@ import type { CorporateSector } from "@/lib/db/types";
 import { getSectorHostFxRate } from "@/lib/currency/corporationCapital";
 import { computeSectorListingValuation } from "@/lib/corporations/sectorValuation";
 import { getGameState } from "@/lib/gameState";
-import { sectorNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
@@ -119,8 +118,7 @@ export async function listSectorForSale(_request: Request, { params }: RoutePara
             currentTurn: listingTurn,
             eraUnitScale: await loadWorldEraUnitScale(db),
           }
-        : undefined,
-      sectorNpvBoostMultiplier(listingTurn)
+        : undefined
     );
 
     if (valuation.priceAnchor <= 0) {
