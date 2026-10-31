@@ -252,6 +252,9 @@ export function fiscalTaxMove(input: {
         note: "household taxes into Treasury cash",
       },
     ],
+    // Every wallet is a distinct document, so the debits land in one batch
+    // instead of a guarded write each.
+    record: { batchIndependentDebits: true },
   };
 }
 

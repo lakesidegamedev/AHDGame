@@ -232,6 +232,33 @@ export function scaledAmount(bookAmount: number, scale: number | null | undefine
   return bookAmount * Math.min(FISCAL_SCALE_CEILING, scale);
 }
 
+/**
+ * Real cash per unit of book face that moves between the bond pool and a
+ * Treasury under the debt service split: what the pool pays for a primary
+ * placement and what it is repaid at maturity. Both sides use it, so the pool
+ * neither drains nor inflates on a refunding cycle. Player holders never see
+ * it. Below stage 3, or without a usable scale, it is 1 (book face).
+ */
+export function fiscalScalePoolCashPerFace(
+  stage: unknown,
+  scale: number | null | undefined
+): number {
+  if (!fiscalScaleStageActive(stage, FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT)) return 1;
+  if (typeof scale !== "number" || !Number.isFinite(scale) || scale <= 0) return 1;
+  return Math.min(FISCAL_SCALE_CEILING, scale);
+}
+
+/**
+ * The cash-per-face a frozen maturity claim already carries on its pool leg:
+ * the leg's cash over the book face of the live float. 1 for a claim frozen at
+ * book face, so a claim from before the split keeps settling as it was quoted.
+ */
+export function frozenPoolCashPerFace(poolLegAmount: number, liveFloatFaceLocal: number): number {
+  if (!(liveFloatFaceLocal > 0) || !Number.isFinite(poolLegAmount) || poolLegAmount <= 0) return 1;
+  const ratio = poolLegAmount / liveFloatFaceLocal;
+  return Number.isFinite(ratio) && ratio > 0 ? Math.min(1, ratio) : 1;
+}
+
 /** One-line digest of a turn's scales for the turn log. */
 export function fiscalScaleLogLine(
   turn: number,
@@ -350,9 +377,10 @@ export const FISCAL_SCALE_PLAYER_HOLDER_KINDS: readonly string[] = [...PLAYER_CO
  * Largest share of a country's household cash the Treasury collects in one
  * turn. Book revenue times the scale is the target; this keeps one turn of tax
  * from emptying the wallets that buy the economy's output. A rehearsal at 0.2
- * bound most countries and cut household cash by 15 to 45% a turn.
+ * bound most countries and cut household cash by 15 to 45% a turn; 0.05 still
+ * bound every country and left budgets unable to service scaled claims.
  */
-export const FISCAL_TAX_MAX_HOUSEHOLD_SHARE = 0.05;
+export const FISCAL_TAX_MAX_HOUSEHOLD_SHARE = 0.1;
 
 /** Book revenue a turn, less the corporate tax the corporate phase already collects in real money. */
 export function bookNonCorporateRevenuePerTurn(

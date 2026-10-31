@@ -24,6 +24,7 @@ import { planSovereignUnderwriting, readPoolForPrimary } from "./primaryMarket";
 import {
   commitSovereignPrimary,
   loadPrimaryAccounting,
+  poolCashPerFace,
   primaryDocumentId,
   primarySettlementExists,
 } from "./sovereignPrimarySettlement";
@@ -100,23 +101,27 @@ export async function refundSovereignMaturityShortfall(
   // it forbids central-bank minting: the market is the only buyer.
   if (accounting.treasuryCashLedgerEnabled !== true)
     return { status: "refused", key, refusal: "invalid_input" };
+  // Under the fiscal scale split the pool buys at book face times the scale,
+  // the rate it was repaid at, so a refunding cycle neither drains nor inflates it.
+  const cashPerUnitLocal = BOND_UNIT_FACE_VALUE * poolCashPerFace(accounting, input.countryId);
   const capacity = planSovereignUnderwriting({
-    requestedUnits: Math.ceil(Math.max(0, input.shortfallLocal) / BOND_UNIT_FACE_VALUE),
+    requestedUnits: Math.ceil(Math.max(0, input.shortfallLocal) / cashPerUnitLocal),
     poolCashLocal: Math.max(0, pool?.cashLocal ?? 0),
     appetite: pool?.appetiteByCountry?.[input.countryId as CountryId],
-    pricePerUnitLocal: BOND_UNIT_FACE_VALUE,
+    pricePerUnitLocal: cashPerUnitLocal,
   });
   const plan = planSovereignMaturityRefunding({
     shortfallLocal: input.shortfallLocal,
     retiringFaceLocal: input.scopeOwedLocal,
     alreadyRefundedLocal: input.scopeRefundedLocal,
     marketCapacityUnits: capacity.placedUnits,
+    cashPerUnitLocal,
   });
   if (plan.refusal) return { status: "refused", key, refusal: plan.refusal };
-  if (input.followOn && plan.faceLocal < input.shortfallLocal)
+  if (input.followOn && plan.cashLocal < input.shortfallLocal)
     return { status: "refused", key, refusal: "no_market_capacity" };
 
-  const { units, faceLocal } = plan;
+  const { units, faceLocal, cashLocal } = plan;
   const annualCoupon = (faceLocal * input.couponRate) / 100;
   const refunding: Bond = {
     _id: bondId,
@@ -157,7 +162,7 @@ export async function refundSovereignMaturityShortfall(
         turn: input.turn,
         currency: input.currencyCode,
         budgetId: input.budgetId,
-        poolCash: faceLocal,
+        poolCash: cashLocal,
         monetaryCash: 0,
         face: faceLocal,
         annualCoupon,
@@ -174,8 +179,9 @@ export async function refundSovereignMaturityShortfall(
           filter: { _id: input.sourceBond._id, "sovereignMaturityClaim.id": input.claimId },
           update: {
             $inc: {
-              "sovereignMaturityClaim.refundedFaceLocal": faceLocal,
-              [SCOPE_COUNTER[input.scope]]: faceLocal,
+              // The caps are the cash the claim owes, so the counters count cash.
+              "sovereignMaturityClaim.refundedFaceLocal": cashLocal,
+              [SCOPE_COUNTER[input.scope]]: cashLocal,
             },
             $set: { updatedAt: input.now },
           },
@@ -184,7 +190,7 @@ export async function refundSovereignMaturityShortfall(
         ...(input.followOn?.projections ?? []),
       ],
       accounting,
-      input.followOn ? routeProceeds(input.followOn.legs, faceLocal, input.budgetId) : undefined
+      input.followOn ? routeProceeds(input.followOn.legs, cashLocal, input.budgetId) : undefined
     );
   } catch {
     // The pool cash guard refused or the receipt is still settling: no new

@@ -11,6 +11,7 @@ import { BOND_UNIT_FACE_VALUE, type BondMaturityTurns } from "@/lib/db/types/bon
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { planForcedPoolRollover } from "./rules/forcedSovereignRollover";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
+import { frozenClaimPoolCashPerFace } from "./sovereignMaturityPayoutTargets";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 
@@ -59,21 +60,26 @@ export async function rollOverUnfundedSovereignPoolFloat(
   );
   if (poolLegIndex < 0) return false;
   const poolLeg = claim.holderLegs[poolLegIndex]!;
+  // A claim frozen under the fiscal scale split repays the pool book face times
+  // the scale. Rolling units moves book face; the cash it stops owing is that
+  // face at the same rate.
+  const cashPerFace = frozenClaimPoolCashPerFace(claim);
   const plan = planForcedPoolRollover({
     liveFloatUnits: bond.publicFloat,
     liveTotalIssued: bond.totalIssued,
-    poolLegAmount: poolLeg.amount,
+    poolLegAmount: poolLeg.amount / cashPerFace,
     novatedUnits,
   });
   if (plan.refusal) return false;
 
   const { units, faceLocal } = plan;
+  const cashLocal = faceLocal * cashPerFace;
   const sourceCouponRate =
     disposition?.mode === "novation" ? disposition.sourceCouponRate : bond.couponRate;
   const couponDelta = ((couponRate - sourceCouponRate) / 100) * faceLocal;
   const replacementId = primaryDocumentId(`${claim.id}:forced-rollover`);
   const holderLegs = claim.holderLegs.map((leg, index) =>
-    index === poolLegIndex ? { ...leg, amount: leg.amount - faceLocal } : leg
+    index === poolLegIndex ? { ...leg, amount: leg.amount - cashLocal } : leg
   );
   const replacement: Omit<Bond, "_id"> = {
     issuerType: "sovereign",
@@ -126,12 +132,12 @@ export async function rollOverUnfundedSovereignPoolFloat(
             $inc: {
               totalIssued: -faceLocal,
               publicFloat: -units,
-              "sovereignMaturityClaim.amountLocal": -faceLocal,
+              "sovereignMaturityClaim.amountLocal": -cashLocal,
               "sovereignMaturityClaim.sourcePublicFloat": -units,
               ...(disposition?.mode === "novation"
                 ? {
                     "sovereignMaturityClaim.publicFloatDisposition.sourceTotalIssued": -faceLocal,
-                    "sovereignMaturityClaim.publicFloatDisposition.residualAmountLocal": -faceLocal,
+                    "sovereignMaturityClaim.publicFloatDisposition.residualAmountLocal": -cashLocal,
                   }
                 : {}),
             },

@@ -186,7 +186,8 @@ describe("stage 2: tax and spend", () => {
       scale: 1,
       payers: [{ id: "a", cash: 100 }],
     });
-    expect(capped.collectedLocal).toBeCloseTo(100 * FISCAL_TAX_MAX_HOUSEHOLD_SHARE);
+    expect(FISCAL_TAX_MAX_HOUSEHOLD_SHARE).toBe(0.1);
+    expect(capped.collectedLocal).toBeCloseTo(10);
     expect(
       fiscalTaxCollection({ bookRevenuePerTurn: 100, scale: null, payers: [{ id: "a", cash: 9 }] })
         .collectedLocal
@@ -299,5 +300,24 @@ describe("median fallback", () => {
     // Raw 1/1000 is below the borrowed 0.01; the cap walks it down 10%.
     expect(own).toMatchObject({ source: "observed", smoothedFundedOutputLocal: 1, capped: true });
     expect(own!.scale).toBeCloseTo(0.01 / (1 + FISCAL_SCALE_MAX_MOVE));
+  });
+});
+
+describe("pool cash per unit of book face", () => {
+  it("is book face below stage 3 and the scale under the split", async () => {
+    const { fiscalScalePoolCashPerFace } = await import("./fiscalScale");
+    expect(fiscalScalePoolCashPerFace(2, 0.01)).toBe(1);
+    expect(fiscalScalePoolCashPerFace(3, 0.01)).toBe(0.01);
+    expect(fiscalScalePoolCashPerFace(3, undefined)).toBe(1);
+    expect(fiscalScalePoolCashPerFace(3, 0)).toBe(1);
+    expect(fiscalScalePoolCashPerFace(3, 4)).toBe(1);
+  });
+
+  it("reads a frozen claim's rate back from its pool leg", async () => {
+    const { frozenPoolCashPerFace } = await import("./fiscalScale");
+    expect(frozenPoolCashPerFace(1_000, 1_000)).toBe(1);
+    expect(frozenPoolCashPerFace(10, 1_000)).toBeCloseTo(0.01);
+    expect(frozenPoolCashPerFace(0, 1_000)).toBe(1);
+    expect(frozenPoolCashPerFace(10, 0)).toBe(1);
   });
 });
