@@ -26,17 +26,13 @@ export interface FundedSectorValueInput {
   turnsPerYear: number;
   /** Annual rate the earnings stream is capitalized at. */
   annualDiscountRate: number;
-  /** Phased stock-market boost on the earnings value only, never on the book floor. */
-  npvBoostMultiplier?: number;
 }
 
 /** Anchor value of one funded sector for the share price and credit rating. */
 export function fundedSectorValueAnchor(input: FundedSectorValueInput): number {
   const yearlyProfit = finite(input.profitPerTurn) * Math.max(0, finite(input.turnsPerYear));
   const rate = finite(input.annualDiscountRate);
-  const boost = finite(input.npvBoostMultiplier ?? 1);
-  const earningsValue =
-    yearlyProfit > 0 && rate > 0 ? (yearlyProfit / rate) * (boost > 0 ? boost : 1) : 0;
+  const earningsValue = yearlyProfit > 0 && rate > 0 ? yearlyProfit / rate : 0;
   const book = Math.max(0, finite(input.bookFloorAnchor));
   return Math.round(Math.max(earningsValue, book));
 }
