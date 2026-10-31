@@ -65,3 +65,40 @@ export function fundedSectorTotalCost(
   const cost = pnl.totalCost;
   return typeof cost === "number" && Number.isFinite(cost) ? cost : null;
 }
+
+/**
+ * The daily profit a funded producer settlement booked for a sector, or null
+ * when the row is not a funded one or the line is missing. Read directly for
+ * the same reason as the bill: rebuilt from revenue x margin, a sector that
+ * sold nothing showed only its growth charge as a loss.
+ */
+export function fundedSectorProfit(
+  pnl: { source?: string; profit?: number | null } | null | undefined
+): number | null {
+  if (!pnl || pnl.source !== "funded") return null;
+  const profit = pnl.profit;
+  return typeof profit === "number" && Number.isFinite(profit) ? profit : null;
+}
+
+/**
+ * A sector's daily operating bill and profit as the sector page shows them.
+ * The engine's own lines win; a funded row's booked profit is next, with the
+ * bill sized so maintenance + growth sum back to it; the margin inversion is
+ * the fallback for rows with neither. Freight is outside all three.
+ */
+export function sectorMaintenanceAndProfit(args: {
+  engine: { operatingCost: number; profit: number } | null;
+  fundedProfit: number | null;
+  economicRevenue: number;
+  effectiveMarginPct: number;
+  growthCost: number;
+  freightNet: number;
+}): { maintenance: number; profit: number } {
+  const { engine, fundedProfit, economicRevenue, growthCost, freightNet } = args;
+  if (engine) return { maintenance: engine.operatingCost, profit: engine.profit + freightNet };
+  const maintenance =
+    fundedProfit != null
+      ? economicRevenue - fundedProfit - growthCost
+      : economicRevenue * (1 - args.effectiveMarginPct / 100);
+  return { maintenance, profit: economicRevenue - maintenance - growthCost + freightNet };
+}

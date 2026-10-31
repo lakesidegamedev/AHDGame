@@ -4,6 +4,7 @@
  * motion; no behavior change).
  */
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
+import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
 import { computeThroughput, inputAvailability, THROUGHPUT_MIN } from "@/lib/market/throughput";
@@ -325,6 +326,7 @@ export async function buildSectorCommoditySections(args: {
         posture: number | null;
         effectivePosture: number | null;
         soldFraction: number | null;
+        ownSiteFraction?: number | null;
         clearingFactor: number | null;
         brandPostureNorm?: number | null;
         costPlusEnabled?: boolean;
@@ -333,12 +335,25 @@ export async function buildSectorCommoditySections(args: {
       }
     | undefined;
   if (market.clearingEnabled) {
+    // A funded turn never runs the legacy clearing pass, so its fields keep a
+    // stale reading; last turn's funded receipt is what actually sold.
+    const funded = fundedClearingReading(sector.producerSettlement, args.currentTurn ?? 0);
     pricing = {
       posture: typeof sector.pricingPosture === "number" ? sector.pricingPosture : null,
       effectivePosture:
         typeof sector.effectivePosture === "number" ? sector.effectivePosture : null,
-      soldFraction: typeof sector.soldFraction === "number" ? sector.soldFraction : null,
-      clearingFactor: typeof sector.clearingFactor === "number" ? sector.clearingFactor : null,
+      soldFraction: funded
+        ? funded.soldFraction
+        : typeof sector.soldFraction === "number"
+          ? sector.soldFraction
+          : null,
+      // Own-site deliveries are CEO-only intel, like the per-output rows above.
+      ...(funded && isCeo ? { ownSiteFraction: funded.ownSiteFraction } : {}),
+      clearingFactor: funded
+        ? funded.clearingFactor
+        : typeof sector.clearingFactor === "number"
+          ? sector.clearingFactor
+          : null,
       // Brand loyalty (Package A): the corp's established price-identity norm,
       // exposed only to the CEO so the Pricing panel can warn about gouging
       // jumps. Corp-level (not sector-level); never sent to non-owners.
