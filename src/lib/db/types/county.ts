@@ -1,3 +1,5 @@
+import type { CountyPopulationBaseline } from "@/lib/counties/rules";
+
 /** Persisted US county stock. FIPS is stable across worlds using the committed map geometry. */
 export interface County {
   _id: string;
@@ -6,6 +8,6 @@ export interface County {
   name: string;
   population: number;
   baselinePopulation: number;
-  populationBaseline: "census-vintage-2019";
+  populationBaseline: CountyPopulationBaseline;
   populationFlowStamp?: { worldEpochId: string; turn: number; batchId: string };
 }

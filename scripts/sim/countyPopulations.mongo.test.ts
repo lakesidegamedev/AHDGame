@@ -1,4 +1,5 @@
-import { seedStates } from "@/lib/admin/seed/seedStates";
+import { seedCohortVectors } from "@/lib/admin/seed/seedCohortVectors";
+import { selectStatesBundleForPreset, seedStates } from "@/lib/admin/seed/seedStates";
 /** Isolated synthetic county qualification. Never reads configured MongoDB credentials. */
 import { afterAll, beforeAll, describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -153,7 +154,7 @@ describe.runIf(REAL_MONGO_ENABLED)("real Mongo county population qualification",
           .map((file) => [file, createHash("sha256").update(readFileSync(file)).digest("hex")])
       );
       evidence.verdict =
-        cases.length === (process.env.AHD_COUNTY_BASELINE_MODULE ? 5 : 4) ? "passed" : "incomplete";
+        cases.length === (process.env.AHD_COUNTY_BASELINE_MODULE ? 6 : 5) ? "passed" : "incomplete";
       evidence.baselinePopulationSource = JSON.parse(
         readFileSync("src/data/county-population-source.json", "utf8")
       );
@@ -163,6 +164,70 @@ describe.runIf(REAL_MONGO_ENABLED)("real Mongo county population qualification",
       );
     }
   }, 30000);
+  it("rebuilds all historical preset county stocks on reset and preserves live stocks", async () => {
+    const results: unknown[] = [];
+    for (const year of [1953, 1979, 1991, 1999, 2007, 2019, 2023, 2027]) {
+      const preset = `${year}-default`,
+        db = client.db(`county_reset_${year}`);
+      const states = selectStatesBundleForPreset(preset);
+      await db.collection("states").insertMany(structuredClone(states) as never[]);
+      await db.collection("gameState").insertOne({
+        _id: "current",
+        preset,
+        worldEpochId: "county-history",
+        currentTurn: 0,
+        startingYear: year,
+        currentYear: year,
+      } as never);
+      await seedCountyPopulations(db, { replace: true });
+      const initial = await db.collection("counties").find().sort({ _id: 1 }).toArray();
+      expect(initial).toHaveLength(3142);
+      for (const state of states)
+        expect(
+          initial
+            .filter((c) => c.stateId === state._id)
+            .reduce((n, c) => n + Number(c.population), 0)
+        ).toBe(state.population);
+      await db.collection("counties").updateMany(
+        {},
+        {
+          $set: {
+            population: 999999,
+            populationFlowStamp: { worldEpochId: "old", turn: 99, batchId: "old" },
+          },
+        }
+      );
+      await seedCountyPopulations(db, { replace: true });
+      const rebuilt = await db.collection("counties").find().sort({ _id: 1 }).toArray();
+      expect(rebuilt).toEqual(initial);
+      await seedCountyPopulations(db);
+      expect(await db.collection("counties").find().sort({ _id: 1 }).toArray()).toEqual(initial);
+      await db
+        .collection("gameConfig")
+        .insertOne({ _id: "default", labourSystemMode: "legacy" } as never);
+      await db.collection("macroMetrics").insertMany(
+        states.map((state) => ({
+          _id: state._id,
+          population: { birthRate: { value: 50 }, migrationRate: { value: 0 } },
+        })) as never[]
+      );
+      await seedCohortVectors(db, preset, () => {}, { replace: true });
+      await runDemographicFlows(db, 1, "county-history");
+      const afterTurn = await assertConserved(db);
+      results.push({
+        preset,
+        counties: initial.length,
+        afterFirstDemographicTurn: afterTurn,
+        nationalPopulation: initial.reduce((n, c) => n + Number(c.population), 0),
+        baselines: [...new Set(initial.map((c) => c.populationBaseline))],
+      });
+    }
+    cases.push({
+      name: "all-preset historical reset conservation",
+      verdict: "passed",
+      presets: results,
+    });
+  }, 120000);
   it("runs 48 demographic turns over every US county with exact state/country conservation", async () => {
     const db = client.db("county_full_phase");
     await seed(db);

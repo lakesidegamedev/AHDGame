@@ -1,24 +1,64 @@
 # County population stocks
 
-US counties persist in `counties`, keyed by the map's five-digit FIPS. The source
-is Census Bureau Vintage 2019 `POPESTIMATE2019`, which matches all 3,142 committed
-county geometries. `src/data/county-population-source.json` records provenance,
-source hash and official state checksums. The reference is a dated initialization
-weight, not a modern population to copy into historical worlds. It does not claim
-historically precise county shares for every world preset.
+US counties persist in `counties`, keyed by the map's five-digit FIPS. Initialization
+selects a Census population snapshot for the requested reset preset:
+
+| Preset | Population year                                | Counties with compatible historical data |
+| ------ | ---------------------------------------------- | ---------------------------------------- |
+| 1953   | 1950 Census                                    | 2,651                                    |
+| 1979   | 1979 annual estimate                           | 2,988                                    |
+| 1991   | 1991 intercensal estimate                      | 3,049                                    |
+| 1999   | 1999 intercensal estimate                      | 3,049                                    |
+| 2007   | 2007 annual estimate, Vintage 2009             | 3,142                                    |
+| 2019   | 2019 annual estimate, Vintage 2019             | 3,142                                    |
+| 2023   | 2023 annual estimate, Vintage 2025             | 3,134                                    |
+| 2027   | 2025 annual estimate, latest completed vintage | 3,134                                    |
+
+`src/lib/countries/us/data/countyPopulationHistory.json` records source URLs,
+raw-input SHA-256 hashes, selected fields, coverage and every fallback state's
+missing/extra FIPS. The 1950 table was authored by the Census Bureau and is
+retrieved from NBER's mirror of the original Census text. The 1979 series is
+preliminary and rounded as published. The 1991/1999 totals sum all 304 disjoint
+age/race-sex/origin cells per county. Annual CSV inputs validate official state
+checksums. Rebuild with `tsx scripts/geo/build-county-population-history.ts <input-directory>`;
+input filenames are recorded in the artifact and the builder. Use raw downloaded
+files, extracting `e7079co.txt` from the Census ZIP for 1979.
+
+Whole-entity renames and mergers follow Census county-change notices. The map
+keeps its existing county geography. If a state's historical roster cannot be
+reconciled completely, that entire state retains proportional 2019 weights;
+raw counts from different years are never mixed. This deliberately avoids
+inventing a historical population split for a later-created county. Minor
+boundary changes that retain county identities are not reconstructed.
+Connecticut's newer planning regions cannot be mapped to the old eight-county
+map and use the fallback for 2023/2027. Alaska, Colorado and other historical
+roster gaps are listed explicitly in the artifact.
+
+The proportional fallback is Census Vintage 2019 `POPESTIMATE2019`, which matches
+all 3,142 committed county geometries. `src/data/county-population-source.json`
+records its provenance and official state checksums. Unknown/empty preset aliases
+retain the existing 2019 fallback behavior.
 
 At initialization, exact largest-remainder apportionment scales reference weights
 to each existing state's population. State and country totals do not change. Non-reset reference reseeds preserve
 existing state populations; resetting a world remains an explicit bootstrap operation.
-`baselinePopulation` records the reference weight, while `population` is gameplay
-state. Geography and PVI remain in the existing map files.
+`baselinePopulation` records the selected raw reference weight and
+`populationBaseline` identifies its Census year (or the 2019 fallback), while
+`population` is gameplay state. Bootstrap passes its requested preset explicitly;
+standalone initialization reads the saved preset. Existing county populations and
+baselines are preserved on non-reset initialization, including already-migrated
+live worlds. A normal reset rebuilds them automatically without rerunning the held
+migration. Reference-only bootstrap refreshes preserve existing stocks unless
+`resetReference` explicitly requests replacing the state/reference populations. Geography and PVI remain in the existing map files.
 
 The existing regional cohort engine calculates births, deaths, migration and
 conflict effects. Their realized net population change is allocated among current
 county stocks proportionally, with FIPS tie breaks. Positive changes never reduce
 a county; losses never make one negative. Individual zero-population counties receive no proportional growth while their
-state remains populated. A completely empty state uses its documented baseline
-weights when receiving people again. No independent county age/sex distribution is fabricated.
+state remains populated. A completely empty state uses its persisted initialization
+baseline when receiving people again, so a new data release does not silently
+change its historical distribution. Legacy records without a stored baseline
+retain the original 2019 fallback. No independent county age/sex distribution is fabricated.
 
 County outcomes are frozen in the existing demographic projections before a
 receipt is published. Recovery writes absolute county stocks with the same
@@ -71,10 +111,11 @@ this task after the GitHub integration rejected issue creation.
 
 ## Measured bounded evidence
 
-The isolated 48-turn all-county run preserved all 51 state sums and country totals.
+The isolated real-Mongo run rebuilt all eight presets over prior-world county stocks.
+The 48-turn all-county run preserved all 51 state sums and country totals.
 The matched journal replay preserved regional cohort vectors, population readouts
 and metrics: baseline 17 commands / 133,859 reply BSON bytes; candidate 25 commands /
-1,267,967 bytes. The first full demographic phase used 37 commands / 1,396,701 reply
+1,343,375 bytes. The first full demographic phase used 37 commands / 1,472,109 reply
 bytes, below its existing 600-command budget. These are synthetic local-world
 measurements, not production latency or a whole-economy balance qualification.
 
