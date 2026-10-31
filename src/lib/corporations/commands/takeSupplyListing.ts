@@ -1,3 +1,4 @@
+import { controllerTransferBarrierError } from "./acquisitions/controllerTransferBarrier";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -53,6 +54,9 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
 
     const listings = db.collection<SupplyListing>("supplyListings");
     const turn = await getCurrentTurn(db);
+    const transferRestriction = await controllerTransferBarrierError(db, taker, turn, new Date());
+    if (transferRestriction) return errorResponse(403, transferRestriction);
+
     const listing = await listings.findOne({ _id: parsed.data.listingId });
     if (!listing || listing.expiresAtTurn <= turn) {
       return errorResponse(404, "This offer is no longer available");

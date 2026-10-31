@@ -1,3 +1,5 @@
+import { controllerTransferBarrierError } from "./acquisitions/controllerTransferBarrier";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -206,6 +208,14 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
     const initiator = resolved.corporation;
     const ceoCheck = requireCeo(initiator, auth.user.userId);
     if (ceoCheck) return ceoCheck;
+    const transferRestriction = await controllerTransferBarrierError(
+      db,
+      initiator,
+      await getCurrentTurn(db),
+      new Date()
+    );
+    if (transferRestriction) return errorResponse(403, transferRestriction);
+
     const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
     if (gate) return gate;
 
@@ -388,6 +398,14 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
 
     const body = parsed.data;
     if (body.action !== "cancel") {
+      const transferRestriction = await controllerTransferBarrierError(
+        db,
+        corp,
+        await getCurrentTurn(db),
+        new Date()
+      );
+      if (transferRestriction) return errorResponse(403, transferRestriction);
+
       const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
       if (gate) return gate;
     }
