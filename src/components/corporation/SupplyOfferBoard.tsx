@@ -345,7 +345,12 @@ export function SupplyOfferBoard({
                     {row.durationTurns ? t("term", { count: row.durationTurns }) : t("openEnded")} ·{" "}
                     {t("expires", { turn: row.expiresAtTurn })}
                   </p>
-                  {!row.own && (
+                  {!row.own && row.unreachableReason && (
+                    <p className="text-xs text-warning" role="note">
+                      {row.unreachableReason}
+                    </p>
+                  )}
+                  {!row.own && !row.unreachableReason && (
                     <div className="flex flex-wrap items-end gap-2">
                       <label className="text-xs">
                         {t("takeVolume")}

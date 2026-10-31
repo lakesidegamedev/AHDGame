@@ -5,15 +5,21 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isCurtained } from "@/lib/constants/commandEconomy";
 import { COUNTRY_ORDER } from "@/lib/constants/countries";
-import type { CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
 import { RELATED_PARTY_MESSAGE, resolveRelatedParty } from "./relatedParty";
+import {
+  buyerCommodityUse,
+  supplyAgreementReachProblem,
+  supplyReachMessage,
+} from "./rules/deliveryReach";
 
 /**
  * Gates shared by every way a supply contract can be opened or changed:
@@ -133,4 +139,51 @@ export async function checkSupplyContractParties(
     return `Trade in ${commodity} between ${supplier.countryId} and ${buyer.countryId} is closed by an embargo or the iron curtain, so these corporations cannot contract.`;
   }
   return null;
+}
+
+/** Fields of a buyer's sectors needed to tell which plants consume a commodity. */
+export const REACH_SECTOR_PROJECTION = {
+  sectorType: 1,
+  stateId: 1,
+  mothballed: 1,
+  strategyId: 1,
+  transitionFromStrategyId: 1,
+  transitionStartTurn: 1,
+  industryModel: 1,
+  mediaDiscriminator: 1,
+} as const;
+
+/**
+ * Refuses a contract the buyer's plants can never take delivery of: no active
+ * plant uses the commodity, or a local service names a state where the buyer
+ * has none. Returns a player-facing error, or null when delivery is possible.
+ */
+export async function checkSupplyAgreementReach(
+  db: Db,
+  args: {
+    buyer: Pick<Corporation, "_id">;
+    commodity: CommodityType;
+    stateId?: string | null;
+    readerIsBuyer: boolean;
+  }
+): Promise<string | null> {
+  const [sectors, world] = await Promise.all([
+    db
+      .collection<CorporateSector>("corporateSectors")
+      .find({ corporationId: args.buyer._id }, { projection: REACH_SECTOR_PROJECTION })
+      .toArray(),
+    db
+      .collection<GameState>("gameState")
+      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+  ]);
+  const problem = supplyAgreementReachProblem({
+    commodity: args.commodity,
+    stateId: args.stateId,
+    buyerUse: buyerCommodityUse(sectors, args.commodity, world?.currentTurn ?? 0),
+  });
+  if (!problem) return null;
+  return supplyReachMessage(problem, {
+    commodityLabel: COMMODITY_LABELS[args.commodity],
+    readerIsBuyer: args.readerIsBuyer,
+  });
 }
