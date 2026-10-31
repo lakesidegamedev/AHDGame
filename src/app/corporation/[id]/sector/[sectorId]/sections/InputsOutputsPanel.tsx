@@ -18,6 +18,7 @@ import { perProductSalePrices } from "../lib/perProductSalePrice";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
+import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 
 interface InputsOutputsPanelProps {
   commodities: CommoditiesData;
@@ -238,8 +239,14 @@ export default function InputsOutputsPanel({
                   )}
                   right={(() => {
                     const share = soldShareFor(f);
-                    if (share == null) return null;
+                    const ownSite = f.ownSite;
+                    if (share == null && !ownSite) return null;
                     const perOutput = f.soldFraction != null;
+                    const ownSiteText = ownSite
+                      ? `${ownSiteLabel(ownSite.share)}: ${fmtUnits(ownSite.units)} used by your company (about ${price(ownSite.valueAnchor)} ${currencyCode} at your asking price)`
+                      : null;
+                    if (share == null)
+                      return <span className="text-body-xs text-muted">{ownSiteText}</span>;
                     return (
                       <InfoTooltip
                         width={280}
@@ -250,6 +257,7 @@ export default function InputsOutputsPanel({
                             }`}
                           >
                             {fmtPct(share)} sold
+                            {ownSite ? ` · ${ownSiteLabel(ownSite.share)}` : ""}
                           </span>
                         }
                       >
@@ -263,6 +271,12 @@ export default function InputsOutputsPanel({
                             ? "This is this output on its own. Each thing you make can clear at a different rate, so read the rows against each other to find the one that is not moving."
                             : "This sector has not cleared a turn yet, so this is the average across everything you make, not this output on its own."}
                         </p>
+                        {ownSiteText && (
+                          <p className="mt-1 text-muted">
+                            {ownSiteText}. No money changes hands for that part, so it adds no
+                            revenue here. It is supplying your other sites, not going unsold.
+                          </p>
+                        )}
                       </InfoTooltip>
                     );
                   })()}

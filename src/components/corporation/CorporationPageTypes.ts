@@ -824,6 +824,12 @@ export interface SectorDetail {
   /** Coarse fill band. Present for everyone who can see the sector at all. */
   fillRateBand?: FillRateBand | null;
   /**
+   * Share of output (0-1) handed to the company's own other sites last turn.
+   * No sale and no revenue, so Sold reads low while the plant is fully used.
+   * Insider-only; null when none.
+   */
+  ownSiteShare?: number | null;
+  /**
    * Share of offered output (0-1) no freight network could place. The part of
    * the fill shortfall that is a DELIVERY failure rather than a demand
    * failure, which is the opposite instruction to the player. Insider-only,

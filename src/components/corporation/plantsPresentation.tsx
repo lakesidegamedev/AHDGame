@@ -17,6 +17,7 @@
  * the same period.
  */
 
+import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 import { type FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 
@@ -377,6 +378,7 @@ export function RunningSoldReading({
   fill,
   band,
   plantCount,
+  ownSiteShare,
   className = "",
 }: {
   produced: number | null | undefined;
@@ -385,8 +387,11 @@ export function RunningSoldReading({
   band: FillRateBand | null | undefined;
   /** Zero reads as "not running yet" instead of two empty figures. */
   plantCount?: number | null;
+  /** Share of output (0-1) handed to the company's own sites: not sold, not wasted. */
+  ownSiteShare?: number | null;
   className?: string;
 }) {
+  const ownSite = ownSiteLabel(ownSiteShare);
   if (plantCount === 0) {
     return (
       <span
@@ -433,6 +438,14 @@ export function RunningSoldReading({
           </span>
         )}
       </span>
+      {ownSite && (
+        <span
+          className="tabular-nums text-muted"
+          title="This output went to your company's other sites, so it earns no revenue here and is not counted as sold. The plant is supplying the company, not failing."
+        >
+          {ownSite}
+        </span>
+      )}
     </span>
   );
 }
