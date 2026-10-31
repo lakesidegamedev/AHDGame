@@ -335,9 +335,11 @@ export function fiscalScaleClaimLoadBound(
  * claim owed to a player and every claim a receipt already owns. The scaled
  * bound reaches far past the cash a starved Treasury holds, which pulled its
  * whole backlog into the phase every turn; this keeps the load near what the
- * phase reads with the split off, and the backlog drains oldest first.
+ * phase reads with the split off, and the backlog drains oldest first. It
+ * matches the claims one grouped coupon receipt can hold. A rehearsal at 500
+ * pinned every paying budget at the cap and only kept pace with new claims.
  */
-export const FISCAL_SCALE_CLAIM_LOAD_LIMIT = 500;
+export const FISCAL_SCALE_CLAIM_LOAD_LIMIT = 2000;
 
 /** Holder kinds paid at full face under the split, for a server-side filter. */
 export const FISCAL_SCALE_PLAYER_HOLDER_KINDS: readonly string[] = [...PLAYER_COUPON_HOLDER_KINDS];
