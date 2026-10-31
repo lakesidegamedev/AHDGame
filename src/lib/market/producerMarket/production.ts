@@ -208,6 +208,8 @@ export interface ProducerOperatingResult {
   /**
    * Inputs consumed by output that went to stock instead of a buyer this turn:
    * inventory at cost, not a loss. Reported beside profit, never moved as cash.
+   * Output that could not be stored or was written down is lost, not stock, and
+   * is left out.
    */
   unsoldProductionCost?: number;
   cashFlow: number;
@@ -1261,7 +1263,7 @@ export function advanceProducerEconomy(input: {
       offeredUnits = 0,
       soldUnits = 0,
       deliveredUnits = 0,
-      // Value-weighted share of this turn's output that went to stock unsold.
+      // Value-weighted share of this turn's output that went to stock unsold and stayed there.
       unsoldShare = 0;
     const products: ProducerOperatingResult["products"] = [];
     const outputStock = p.outputs.map((output) => {
@@ -1285,7 +1287,6 @@ export function advanceProducerEconomy(input: {
       const weight =
         outputValue > 0 ? (output.unitsPerOutput * output.referenceUnitPrice) / outputValue : 0;
       const made = produced * output.unitsPerOutput;
-      if (made > 0) unsoldShare += (weight * Math.max(0, made - sold.deliveredUnits)) / made;
       // Preserve an unknown historical cost as unknown. A reference price or
       // this turn's fixed bill cannot manufacture the old stock's cost basis.
       const knownOpeningCost = openingRows.every((stock) => stock.quoteUnitCost != null);
@@ -1322,6 +1323,11 @@ export function advanceProducerEconomy(input: {
             )
           : 0;
       const kept = carried - writtenDown;
+      // Only this turn's output that is still in stock at close counts as stock
+      // at cost. Unsold output of a good that cannot be stored, and units
+      // written down or lost in carry, left the books: they are a loss, not stock.
+      if (made > 0 && unsold > 0)
+        unsoldShare += (weight * Math.max(0, made - sold.deliveredUnits) * (kept / unsold)) / made;
       // The written-down units leave stock without a second charge: their
       // production cost was expensed in `consumed`, labour and site bills on the
       // turn they were made, and finished stock is not capitalized.

@@ -7,6 +7,7 @@ import { InfoTooltip } from "@/components/InfoTooltip";
 import { GOUGE_JUMP, CONSISTENCY_BAND } from "@/lib/market/brandLoyalty";
 import type { PricingData } from "../types";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 
 const POSTURE_STEPS = [-0.2, -0.1, -0.05, 0, 0.05, 0.1, 0.2] as const;
 
@@ -84,6 +85,10 @@ export default function PricingPanel({
   };
 
   const sold = pricing.soldFraction;
+  // Output handed to the company's own sites is no sale, but the plant was used.
+  const ownSite = pricing.ownSiteFraction ?? 0;
+  const used = Math.min(1, (sold ?? 0) + ownSite);
+  const ownSiteText = ownSiteLabel(ownSite);
 
   // Brand loyalty (Package A): warn the CEO before a sharp upward reprice away
   // from the corp's own price identity. Only when the norm is exposed (owner).
@@ -119,10 +124,11 @@ export default function PricingPanel({
             trigger={
               <span
                 className={`text-xs font-semibold tabular-nums underline decoration-dotted underline-offset-2 ${
-                  sold >= 0.995 ? "text-success" : sold >= 0.7 ? "text-warning" : "text-error"
+                  used >= 0.995 ? "text-success" : used >= 0.7 ? "text-warning" : "text-error"
                 }`}
               >
                 {Math.round(sold * 100)}% sold last turn (all outputs)
+                {ownSiteText ? `, ${ownSiteText}` : ""}
               </span>
             }
             width={260}
@@ -132,6 +138,9 @@ export default function PricingPanel({
               commodity it makes and weighted by output rate. Cheaper sellers fill first. A sector
               with two outputs can sell one out completely and the other hardly at all and still
               land in the middle here. See Commodity Flows for the per-output rates.
+              {ownSiteText
+                ? " Output sent to your own sites is not a sale and earns no revenue, so it is counted separately."
+                : ""}
             </p>
           </InfoTooltip>
         )}
