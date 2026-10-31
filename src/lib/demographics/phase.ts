@@ -205,6 +205,14 @@ const METRIC_BOUNDS = {
  * conserved age×sex transfers; unmatched demand keeps the rest-of-world cap.
  * Returns the region count + internal-migration circuit-breaker trips.
  */
+/**
+ * Health boards are refreshed from this phase's own cohort receipts, so a single
+ * failed demographic turn leaves them a turn behind and a strict `turn - 1`
+ * check would then fail every later turn too. A few turns of lag is accepted so
+ * the next successful run republishes receipts and the boards catch up.
+ */
+const HEALTH_INPUT_MAX_LAG_TURNS = 6;
+
 export async function runDemographicFlows(
   db: Db,
   turn: number,
@@ -359,7 +367,9 @@ export async function runDemographicFlows(
         board?.countryId !== demo.countryId ||
         board.regionId !== demo._id ||
         board.worldId !== gameState.resetWorldId ||
-        board.asOfTurn !== turn - 1 ||
+        typeof board.asOfTurn !== "number" ||
+        board.asOfTurn > turn - 1 ||
+        board.asOfTurn < turn - 1 - HEALTH_INPUT_MAX_LAG_TURNS ||
         typeof preventable !== "number" ||
         !Number.isFinite(preventable) ||
         !(() => {

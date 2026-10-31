@@ -190,6 +190,55 @@ describe("runDemographicFlows", () => {
     expect(plannedRegions(db)).toEqual([]);
   });
 
+  it.each([
+    [4, true],
+    [8, true],
+    [9, false],
+  ] as const)(
+    "accepts a health board that a failed demographic turn left behind (turn %i: %s)",
+    async (turn, accepted) => {
+      db.collection("gameState").findOne.mockResolvedValue({
+        currentTurn: turn - 1,
+        resetWorldId: "test-reset-world",
+        metricsSystemVersion: "v2",
+        resetVersionSeeds: {
+          metrics: {
+            worldId: "test-reset-world",
+            revision: RESET_V2_SEED_REVISION.metrics,
+            sourceTurn: 1,
+            completedAt: "2026-09-30T00:00:00.000Z",
+            verificationHash: "verified",
+          },
+        },
+      });
+      db.collection("resetMetricSnapshots").find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          {
+            _id: "US:CA",
+            worldId: "test-reset-world",
+            countryId: "US",
+            regionId: "CA",
+            asOfTurn: 1,
+            observations: { "19": { value: 250 } },
+            openingValues: { "19": 250 },
+          },
+        ]),
+      });
+      const { runDemographicFlows } = await import("./phase");
+      const run = runDemographicFlows(db as unknown as Db, turn, undefined, {
+        metrics: true,
+        legislation: false,
+        cabinet: false,
+      });
+      if (accepted) {
+        await run;
+        expect(plannedRegions(db)[0]!.resetCohortReadingAfter).toMatchObject({ asOfTurn: turn });
+      } else {
+        await expect(run).rejects.toThrow("V2 cohorts lack current health inputs");
+      }
+    }
+  );
+
   it.each(["US", "UK", "JP", "IE", "SCO", "WAL"] as const)(
     "publishes age-specific owner receipts for %s",
     async (countryId) => {
