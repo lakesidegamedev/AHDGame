@@ -650,6 +650,85 @@ describe("quote policies", () => {
     expect(quote.unitPrice).toBeCloseTo(12);
   });
 
+  describe("automatic asks follow last turn's clearing", () => {
+    // A short book where every buyer bids high: the estimate alone would take the
+    // ceiling, so these pin where the ceiling sits.
+    const short = {
+      ...basis,
+      referenceUnitPrice: 47.84,
+      variableUnitCost: 20,
+      fixedCost: 0,
+      demand: [{ units: 1000, maximumUnitPrice: 60 }],
+      competitors: [],
+    };
+
+    it("asks the clearing price when the reference sits above it", () => {
+      const quote = quoteProducer({
+        ...short,
+        clearingUnitPrice: 35.39,
+        policy: { kind: "automatic", targetMarkup: 0 },
+      });
+      expect(quote.unitPrice).toBeCloseTo(35.39);
+    });
+
+    it("applies the markup to the clearing price, not the reference", () => {
+      const quote = quoteProducer({
+        ...short,
+        clearingUnitPrice: 35.39,
+        policy: { kind: "automatic", targetMarkup: 0.1 },
+      });
+      expect(quote.unitPrice).toBeCloseTo(35.39 * 1.1);
+    });
+
+    it("falls back to the reference when nothing cleared", () => {
+      expect(
+        quoteProducer({ ...short, policy: { kind: "automatic", targetMarkup: 0.1 } }).unitPrice
+      ).toBeCloseTo(47.84 * 1.1);
+      expect(
+        quoteProducer({
+          ...short,
+          clearingUnitPrice: 0,
+          policy: { kind: "automatic", targetMarkup: 0.1 },
+        }).unitPrice
+      ).toBeCloseTo(47.84 * 1.1);
+    });
+
+    it("steps a seller that sold nothing down below its previous ask", () => {
+      const policy = { kind: "automatic", targetMarkup: 0.2 } as const;
+      // Last turn it asked the clearing plus markup, and buyers paid the clearing.
+      const previous = quoteProducer({ ...short, clearingUnitPrice: 35.39, policy }).unitPrice;
+      const next = quoteProducer({
+        ...short,
+        clearingUnitPrice: 35.39,
+        soldNothingLastTurn: true,
+        policy,
+      }).unitPrice;
+      expect(next).toBeLessThan(previous);
+      expect(next).toBeLessThanOrEqual(35.39);
+      // A falling book keeps pulling it down.
+      expect(
+        quoteProducer({ ...short, clearingUnitPrice: 30, soldNothingLastTurn: true, policy })
+          .unitPrice
+      ).toBeLessThanOrEqual(30);
+    });
+
+    it("keeps manual and cost-plus quotes off the clearing", () => {
+      const manual = { kind: "manual", unitPrice: 50 } as const;
+      expect(quoteProducer({ ...short, clearingUnitPrice: 35.39, policy: manual }).unitPrice).toBe(
+        50
+      );
+      const costPlus = { kind: "costPlus", markup: 0.1 } as const;
+      expect(
+        quoteProducer({
+          ...short,
+          clearingUnitPrice: 35.39,
+          soldNothingLastTurn: true,
+          policy: costPlus,
+        }).unitPrice
+      ).toBeCloseTo(quoteProducer({ ...short, policy: costPlus }).unitPrice);
+    });
+  });
+
   it("does not report break-even when nothing can be produced", () => {
     expect(
       quoteProducer({ ...basis, offeredUnits: 0, policy: { kind: "automatic", targetMarkup: 0.1 } })

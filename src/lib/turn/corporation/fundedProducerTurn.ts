@@ -82,6 +82,7 @@ import { bookPressure, plantPressure } from "@/lib/market/producerMarket/shortag
 import { fundedShortageBuildOps } from "./sectorTurn/shortageBuildSpeedup";
 import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
+import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import { PRODUCER_CATCH_UP_TURNS } from "@/lib/market/producerMarket/capacityRules";
 import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
@@ -240,23 +241,22 @@ export async function runFundedProducerTurn(
           )
         )
       : undefined;
-  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage)
-  // and measured shortage per book (shortageGrowthStage), from one read.
+  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage),
+  // per lane (automatic asks) and measured shortage per book (shortageGrowthStage),
+  // from one read.
   const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
   const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
-  const lastOutcome =
-    clearingOn || shortageOn
-      ? await db
-          .collection<{
-            _id: string;
-            clearingPrices?: Record<string, number>;
-            bookPressure?: Record<string, number>;
-          }>(PRODUCER_MARKET_OUTCOMES)
-          .findOne(
-            { _id: `${worldEpoch}:${openingTurn}` },
-            { projection: { clearingPrices: 1, bookPressure: 1 } }
-          )
-      : null;
+  const lastOutcome = await db
+    .collection<{
+      _id: string;
+      clearingPrices?: Record<string, number>;
+      laneClearingPrices?: Record<string, number>;
+      bookPressure?: Record<string, number>;
+    }>(PRODUCER_MARKET_OUTCOMES)
+    .findOne(
+      { _id: `${worldEpoch}:${openingTurn}` },
+      { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
+    );
   const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
   const demandEnv = {
@@ -684,6 +684,9 @@ export async function runFundedProducerTurn(
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
       stockCoverTurns: input.env.stockCoverTurns,
+      ...(lastOutcome?.laneClearingPrices
+        ? { clearingPriceByLane: lastOutcome.laneClearingPrices }
+        : {}),
       // Private companies (player and AI) may owe wages and site bills to keep
       // running; state companies run on the treasury advance above instead.
       credit: {
@@ -868,11 +871,15 @@ export async function runFundedProducerTurn(
       ? bookPressure(settled.result.orderOutcomes ?? [])
       : undefined;
   const pressureByBookNow = pressureNow ? new Map(Object.entries(pressureNow)) : undefined;
-  // World-book clearing price per commodity, for next turn's buyer references.
+  // World-book clearing price per commodity, for next turn's buyer references, and
+  // per lane in every book, for next turn's automatic asks.
   const clearingPrices: Record<string, number> = {};
-  for (const row of settled.result.prices)
-    if (row.book === "world" && row.units > 0 && row.value > 0)
-      clearingPrices[row.commodity] = row.value / row.units;
+  const laneClearingPrices: Record<string, number> = {};
+  for (const row of settled.result.prices) {
+    if (!(row.units > 0 && row.value > 0)) continue;
+    laneClearingPrices[laneKeyOf(row.commodity, row.book)] = row.value / row.units;
+    if (row.book === "world") clearingPrices[row.commodity] = row.value / row.units;
+  }
   // Per-country funded book, on the price phase's per-turn basis. The price
   // phase reads it instead of the modelled clearing when the stage is on.
   const countryBooks =
@@ -907,6 +914,7 @@ export async function runFundedProducerTurn(
       turn,
       rows,
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
+      laneClearingPrices,
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
       ...(restartOn && pressureNow

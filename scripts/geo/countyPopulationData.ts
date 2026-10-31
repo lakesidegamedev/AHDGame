@@ -4,7 +4,8 @@ export const COUNTY_POPULATION_SOURCE =
 
 /** Header-driven CSV parser: quoted names, embedded commas and CRLF are valid. */
 function parsePopulationRows(
-  csv: string
+  csv: string,
+  populationField = "POPESTIMATE2019"
 ): { level: string; state: string; county: string; population: number }[] {
   csv = csv.replace(/^(?:\uFEFF|ï»¿)/, "");
   const rows: string[][] = [];
@@ -39,7 +40,7 @@ function parsePopulationRows(
   const level = column("SUMLEV"),
     state = column("STATE"),
     county = column("COUNTY"),
-    pop = column("POPESTIMATE2019");
+    pop = column(populationField);
   return rows
     .filter((fields) => fields[level] === "050" || fields[level] === "040")
     .map((fields) => {
@@ -66,9 +67,12 @@ function parsePopulationRows(
     });
 }
 
-export function parseCountyPopulations(csv: string): Record<string, number> {
+export function parseCountyPopulations(
+  csv: string,
+  populationField = "POPESTIMATE2019"
+): Record<string, number> {
   const result: Record<string, number> = {};
-  for (const row of parsePopulationRows(csv)) {
+  for (const row of parsePopulationRows(csv, populationField)) {
     if (row.level !== "050") continue;
     const fips = row.state + row.county;
     if (fips in result) throw new Error(`Duplicate Census county ${fips}`);
@@ -79,13 +83,16 @@ export function parseCountyPopulations(csv: string): Record<string, number> {
 }
 
 /** Validate official state checksums before any population files are replaced. */
-export function parseCountyPopulationDataset(csv: string): {
+export function parseCountyPopulationDataset(
+  csv: string,
+  populationField = "POPESTIMATE2019"
+): {
   populations: Record<string, number>;
   stateTotalsByFips: Record<string, number>;
 } {
-  const populations = parseCountyPopulations(csv);
+  const populations = parseCountyPopulations(csv, populationField);
   const stateTotalsByFips: Record<string, number> = {};
-  for (const row of parsePopulationRows(csv)) {
+  for (const row of parsePopulationRows(csv, populationField)) {
     if (row.level !== "040") continue;
     if (row.state in stateTotalsByFips) throw new Error(`Duplicate Census state ${row.state}`);
     stateTotalsByFips[row.state] = row.population;

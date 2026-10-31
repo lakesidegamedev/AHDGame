@@ -633,8 +633,6 @@ export async function seedAllCountryData(
   // dependencyRatio / realizedMigrationRate), now that every country's states and
   // stateMetrics (with era-correct medianAge/birthRate) exist. Era-aware via preset.
   await seedCohortVectors(db, preset, log, { replace: true });
-  const { seedCountyPopulations } = await import("@/lib/counties/seed");
-  await seedCountyPopulations(db, { replace: true });
 
   // Normalize regional gdp so Σ state.gdp matches each country's authored
   // national GDP (pre-1999 eras only + tolerance-guarded; see
@@ -715,6 +713,11 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   ]);
 
   await seedAllCountryData(db, resetReference, log, preset, options.run);
+
+  // All state/cohort population seeds are complete. A reference-only refresh
+  // preserves live county stocks; new worlds and explicit reference resets rebuild them.
+  const { seedCountyPopulations } = await import("@/lib/counties/seed");
+  await seedCountyPopulations(db, { replace: !seedOnly || resetReference, preset });
 
   // Command Economy v2 gates RU/CN's multi-SOE seed (seedRuBudgets/seedCnBudgets,
   // below) behind `gameConfig.commandEconomyEnabled`. Tie it to era on every

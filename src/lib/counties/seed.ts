@@ -5,13 +5,23 @@
  */
 import type { Db } from "mongodb";
 import type { County } from "@/lib/db/types/county";
-import { apportionPopulation } from "./rules";
+import { apportionPopulation, countyBaselineYear, selectCountyPopulationBaseline } from "./rules";
+import { historicalCountyWeights } from "./historical";
 import { loadCountyReference } from "./reference";
 
 export async function seedCountyPopulations(
   db: Db,
-  options: { apply?: boolean; replace?: boolean } = {}
+  options: { apply?: boolean; replace?: boolean; preset?: string } = {}
 ): Promise<number> {
+  // Bootstrap knows the requested era before a direct caller stamps gameState.
+  const preset =
+    options.preset ??
+    (
+      await db
+        .collection<{ _id: string; preset?: string }>("gameState")
+        .findOne({ _id: "current" }, { projection: { preset: 1 } })
+    )?.preset;
+  const year = countyBaselineYear(preset);
   const states = await db
     .collection<{ _id: string; population: number }>("states")
     .find({ countryId: "US" }, { projection: { _id: 1, population: 1 } })
@@ -19,18 +29,20 @@ export async function seedCountyPopulations(
   const groups = await Promise.all(
     states.map(async (state) => {
       const reference = await loadCountyReference(state._id);
-      const allocated = apportionPopulation(
+      const baseline = selectCountyPopulationBaseline(
         reference.map((c) => ({ id: c.fips, population: c.population })),
-        state.population
+        historicalCountyWeights(reference[0]?.fips.slice(0, 2), year),
+        year
       );
+      const allocated = apportionPopulation(baseline.weights, state.population);
       return reference.map((c, i): County => ({
         _id: c.fips,
         stateId: state._id,
         countryId: "US",
         name: c.name,
         population: allocated[i].population,
-        baselinePopulation: c.population,
-        populationBaseline: "census-vintage-2019",
+        baselinePopulation: baseline.weights[i].population,
+        populationBaseline: baseline.populationBaseline,
       }));
     })
   );
