@@ -180,7 +180,7 @@
     "braces": "file:vendor/braces-depth-guard-3.0.3-ahd.1.tgz",
     "concurrently": "^10.0.5",
     "d3-geo": "^3.1.1",
-    "eslint": "^10.12.0",
+    "eslint": "^10.13.0",
     "eslint-config-next": "16.4.2",
     "eslint-config-prettier": "^10.1.8",
     "happy-dom": "^21.0.1",
