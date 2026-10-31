@@ -711,6 +711,13 @@ function priceVolumes(rows: readonly { price: number; units: number }[]) {
 export function quoteProducer(input: {
   policy: ProducerQuotePolicy;
   referenceUnitPrice: number;
+  /**
+   * What buyers actually paid for this commodity in this book last turn. An
+   * automatic ask anchors here; absent (no trade) it falls back to the reference.
+   */
+  clearingUnitPrice?: number;
+  /** This output sold nothing last turn: an automatic ask drops its markup. */
+  soldNothingLastTurn?: boolean;
   variableUnitCost: number;
   fixedCost: number;
   offeredUnits: number;
@@ -751,13 +758,20 @@ export function quoteProducer(input: {
   const markup = input.policy.kind === "costPlus" ? input.policy.markup : input.policy.targetMarkup;
   if (!Number.isFinite(markup) || markup < -1) throw new Error("Invalid target markup");
   if (input.policy.kind === "costPlus") return estimate((breakEven ?? reference) * (1 + markup));
-  // An automatic seller prices off the market, never above the market reference
-  // plus its markup. The estimate below treats every bid in the book as one this
+  // An automatic seller prices off the market, never above what buyers paid last
+  // turn plus its markup. The estimate below treats every bid in the book as one this
   // seller can reach, so in a short world book the highest far-away ceiling looked
-  // like the best ask; the plant posted it and sold nothing (ticket 1728). A plant
-  // whose costs are above the market sells at the market and takes the loss.
-  const ceiling = reference * (1 + markup);
-  const candidates = new Set([reference, ceiling]);
+  // like the best ask; the plant posted it and sold nothing (ticket 1728). The
+  // reference price alone is not enough either: it can sit well above the clearing,
+  // and a plant asking it sold nothing while the book traded below. A plant whose
+  // costs are above the market sells at the market and takes the loss.
+  const clearing = input.clearingUnitPrice;
+  const anchor =
+    clearing != null && Number.isFinite(clearing) && clearing > 0 ? clearing : reference;
+  // A seller that sold nothing last turn asks no more than the clearing, so an ask
+  // stuck above the book steps down instead of repeating.
+  const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  const candidates = new Set([reference, anchor, ceiling]);
   for (const seller of input.competitors)
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
   for (const order of input.demand)

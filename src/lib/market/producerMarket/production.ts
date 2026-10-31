@@ -315,6 +315,8 @@ export function advanceProducerEconomy(input: {
   carryLossByCommodity?: Readonly<Record<string, number>>;
   /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
   stockCoverTurns?: number;
+  /** Last turn's clearing price per lane (`laneKeyOf`), the anchor for automatic asks. */
+  clearingPriceByLane?: Readonly<Record<string, number>>;
   /** Country of a producing site, so offers and its input orders carry one. */
   countryOfProducer?: (producerId: string) => string | undefined;
   /** Build the per-country funded book on the final settlement (see fundedBookRules). */
@@ -855,9 +857,14 @@ export function advanceProducerEconomy(input: {
       const units = stock + plannedById.get(p.id)! * output.unitsPerOutput;
       const weight =
         outputValue > 0 ? (output.unitsPerOutput * output.referenceUnitPrice) / outputValue : 0;
+      const recentSold = recentSoldOf(p, output.commodity, output.book);
+      const clearingUnitPrice =
+        input.clearingPriceByLane?.[laneKeyOf(output.commodity, output.book)];
       const quoteInput = {
         policy: output.policy,
         referenceUnitPrice: output.referenceUnitPrice,
+        ...(clearingUnitPrice != null ? { clearingUnitPrice } : {}),
+        ...(recentSold === 0 ? { soldNothingLastTurn: true } : {}),
         variableUnitCost:
           output.unitsPerOutput > 0
             ? (variablePerOutput * weight) / output.unitsPerOutput
@@ -873,10 +880,9 @@ export function advanceProducerEconomy(input: {
         ...quoteInput,
         policy:
           output.policy.kind === "automatic"
-            ? { kind: "manual", unitPrice: output.referenceUnitPrice }
+            ? { kind: "manual", unitPrice: clearingUnitPrice ?? output.referenceUnitPrice }
             : output.policy,
       });
-      const recentSold = recentSoldOf(p, output.commodity, output.book);
       const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
       pendingQuotes.push({
         markdown: {
