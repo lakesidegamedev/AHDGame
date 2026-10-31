@@ -131,6 +131,10 @@ import {
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import {
+  fundedSectorProfit,
+  sectorMaintenanceAndProfit,
+} from "@/lib/corporations/rules/plantlessSector";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
 import {
   CAPACITY_BUILD_TURNS,
@@ -1206,13 +1210,19 @@ export function computeSectorMarginSection(args: {
   // `plantsPnlBasis.ts`. The inversion below stays as the fallback for sectors
   // with no persisted P&L yet, where it is the pre-existing behaviour exactly.
   const enginePnl = readPlantsPnl(sector);
-  const maintenance = enginePnl
-    ? enginePnl.operatingCost
-    : economicRevenue * (1 - effectiveMargin / 100);
-  const freightNet = (sector.freightBillingCredit ?? 0) - (sector.freightBillingCharge ?? 0);
-  const profit =
-    (enginePnl ? enginePnl.profit : economicRevenue - maintenance - sector.currentGrowthCost) +
-    freightNet;
+  // A funded settlement row carries its booked profit but not the engine's cost
+  // lines. Inverting the margin there gave zero cost to a sector that sold
+  // nothing, so a plant losing its whole bill read as losing only its growth
+  // charge. Use the booked profit, and size the bill so the page's lines
+  // (maintenance + growth) still sum back to it.
+  const { maintenance, profit } = sectorMaintenanceAndProfit({
+    engine: enginePnl,
+    fundedProfit: fundedSectorProfit(sector.plantsPnl),
+    economicRevenue,
+    effectiveMarginPct: effectiveMargin,
+    growthCost: sector.currentGrowthCost,
+    freightNet: (sector.freightBillingCredit ?? 0) - (sector.freightBillingCharge ?? 0),
+  });
 
   return {
     mods: effectiveMods,

@@ -756,6 +756,52 @@ describe("receipt-backed production", () => {
     expect(result.accounts.find((a) => a.id === "corp")!.cash).toBe(970);
   });
 
+  it("books no stock at cost for unsold output that cannot be stored", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ inputStock: [{ commodity: "energy", units: 200, value: 80 }] })],
+    });
+    const producer = result.producers[0];
+    expect(producer).toMatchObject({ producedUnits: 100, soldUnits: 0, inputsConsumed: 80 });
+    expect(producer.products[0]).toMatchObject({ unsoldUnits: 100, lostUnits: 100 });
+    expect(producer.unsoldProductionCost).toBe(0);
+  });
+
+  it("books only the unsold output still held at close as stock at cost", () => {
+    const storable = (carryLossByCommodity?: Record<string, number>) =>
+      advanceProducerEconomy({
+        turn: 1,
+        accounts,
+        ...(carryLossByCommodity ? { carryLossByCommodity } : {}),
+        producers: [
+          plant({
+            inputStock: [{ commodity: "energy", units: 200, value: 80 }],
+            outputs: [
+              {
+                commodity: "steel",
+                book: "world",
+                unitsPerOutput: 1,
+                policy: { kind: "manual", unitPrice: 3 },
+                referenceUnitPrice: 3,
+                storable: true,
+              },
+            ],
+          }),
+        ],
+      }).producers[0];
+    // The inputs in the run follow the units still held: 80 across 100 made.
+    const atCost = (p: ReturnType<typeof storable>) =>
+      (80 * p.outputStock.reduce((n, s) => n + s.units, 0)) / 100;
+    const held = storable();
+    expect(held.unsoldProductionCost).toBeGreaterThan(79);
+    expect(held.unsoldProductionCost).toBeCloseTo(atCost(held), 9);
+    // A quarter of the unsold run is lost in carry, so only three quarters is stock.
+    const lossy = storable({ steel: 0.25 });
+    expect(lossy.products[0]).toMatchObject({ unsoldUnits: 100, lostUnits: 25 });
+    expect(lossy.unsoldProductionCost).toBeCloseTo(60, 9);
+  });
+
   it("offers only existing stock plus input-backed production and expires undelivered services", () => {
     const result = advanceProducerEconomy({
       turn: 1,
