@@ -93,6 +93,19 @@ describe("sector action visibility", () => {
     expect(screen.queryByText("Pricing posture")).toBeNull();
   });
 
+  it("labels output sent to own sites apart from the sold share", () => {
+    render(
+      <PricingPanel
+        corporationId="corp"
+        sectorId="sector"
+        isCeo
+        pricing={{ ...pricing, soldFraction: 0, ownSiteFraction: 0.01, clearingFactor: 0 }}
+      />
+    );
+    expect(screen.getByText("0% sold last turn (all outputs), 1% to your sites")).toBeTruthy();
+    expect(screen.getByText("×0.00")).toBeTruthy();
+  });
+
   it("hides cost-plus mode until a producing turn provides its basis", () => {
     render(<PricingPanel corporationId="corp" sectorId="sector" isCeo pricing={pricing} />);
     expect(screen.queryByRole("button", { name: "costPlusMode" })).toBeNull();
