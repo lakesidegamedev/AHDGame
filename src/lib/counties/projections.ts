@@ -6,42 +6,63 @@
 import type { Db } from "mongodb";
 import type { County } from "@/lib/db/types/county";
 import type { DemographicFlowRegionInput } from "@/lib/demographics/flowJournal";
-import { advanceCountyPopulations } from "./rules";
-import { loadCountyReference } from "./reference";
+import {
+  advanceCountyPopulations,
+  COUNTY_COUNTRY_IDS,
+  countyCountryForId,
+  type CountyCountryId,
+} from "./rules";
+import {
+  hasPopulationSubdivisionReference,
+  loadPopulationSubdivisionReference,
+} from "./subdivisionReference";
 
 /** Identity retained on journal writes so reassigned targets cannot be overwritten. */
-export function countyPopulationIdentity(stateId: string): Pick<County, "countryId" | "stateId"> {
-  return { countryId: "US", stateId };
+export function countyPopulationIdentity(
+  stateId: string,
+  id: string
+): Pick<County, "countryId" | "stateId"> {
+  const countryId = countyCountryForId(id);
+  if (!countryId) throw new Error(`Invalid subdivision ID ${id}`);
+  return { countryId, stateId };
 }
 
 export async function freezeCountyPopulationPlans(
   db: Db,
   regions: DemographicFlowRegionInput[]
 ): Promise<DemographicFlowRegionInput[]> {
-  const states = await db
-    .collection<{ _id: string; population: number }>("states")
-    .find(
-      { _id: { $in: regions.map((r) => r.regionId) }, countryId: "US" },
-      { projection: { _id: 1, population: 1 } }
-    )
-    .toArray();
+  const states = (
+    await db
+      .collection<{ _id: string; countryId: CountyCountryId; population: number }>("states")
+      .find(
+        {
+          _id: { $in: regions.map((r) => r.regionId) },
+          countryId: { $in: [...COUNTY_COUNTRY_IDS] },
+        },
+        { projection: { _id: 1, countryId: 1, population: 1 } }
+      )
+      .toArray()
+  ).filter((state) => hasPopulationSubdivisionReference(state._id, state.countryId));
   if (!states.length) return regions;
   const counties = await db
     .collection<County>("counties")
     .find(
-      { stateId: { $in: states.map((s) => s._id) }, countryId: "US" },
-      { projection: { _id: 1, stateId: 1, population: 1, baselinePopulation: 1 } }
+      { stateId: { $in: states.map((s) => s._id) }, countryId: { $in: [...COUNTY_COUNTRY_IDS] } },
+      { projection: { _id: 1, countryId: 1, stateId: 1, population: 1, baselinePopulation: 1 } }
     )
     .toArray();
   const plans = new Map<string, ReturnType<typeof advanceCountyPopulations>>();
   const inputs = new Map(regions.map((r) => [r.regionId, r]));
   for (const state of states) {
     const rows = counties.filter((c) => c.stateId === state._id);
-    const reference = await loadCountyReference(state._id);
+    const reference = await loadPopulationSubdivisionReference(state._id, state.countryId);
     const ids = new Set(rows.map((c) => c._id));
     if (
       rows.length !== reference.length ||
-      reference.some((c) => !ids.has(c.fips)) ||
+      reference.some((c) => !ids.has(c.id)) ||
+      rows.some(
+        (c) => c.countryId !== state.countryId || countyCountryForId(c._id) !== state.countryId
+      ) ||
       rows.reduce((n, c) => n + c.population, 0) !== state.population
     )
       throw new Error(`County populations not initialized or inconsistent for ${state._id}`);
@@ -52,7 +73,7 @@ export async function freezeCountyPopulationPlans(
         inputs.get(state._id)!.stateAfter.population,
         rows.map((c) => ({
           id: c._id,
-          population: c.baselinePopulation ?? reference.find((r) => r.fips === c._id)!.population,
+          population: c.baselinePopulation ?? reference.find((r) => r.id === c._id)!.population,
         }))
       )
     );

@@ -2,12 +2,16 @@
 // Registry of which (country, electionType) pairs have sub-region map data.
 // Adding a country = add an entry here + a build script + committed JSON.
 
+import type { CountyCountryId } from "@/lib/counties/rules";
+
 export type SubdivisionMode = "distributed" | "seatConsistent" | "seatOrdered";
 
 export interface SubdivisionModeConfig {
   electionTypes: string[];
   /** Directory under src/data/ holding per-region JSON files. */
   dataDir: string;
+  /** Population stock owner for active map weights, when this layer has persisted stocks. */
+  populationCountryId?: CountyCountryId;
   /** Singular/plural display nouns for the generic UI ("Constituency Results",
    *  "Districts" count row). US paths keep their hardcoded copy. */
   unitLabel?: string;
@@ -19,8 +23,18 @@ const REGISTRY: Record<string, Partial<Record<SubdivisionMode, SubdivisionModeCo
     seatConsistent: {
       electionTypes: ["commons", "snap_commons", "regionalCouncil"],
       dataDir: "subdivisions/uk",
+      populationCountryId: "UK",
       unitLabel: "Constituency",
       unitLabelPlural: "Constituencies",
+    },
+  },
+  JP: {
+    distributed: {
+      electionTypes: ["shugiin", "snap_shugiin", "sangiin", "governor", "regionalCouncil"],
+      dataDir: "subdivisions/jp",
+      populationCountryId: "JP",
+      unitLabel: "Prefecture",
+      unitLabelPlural: "Prefectures",
     },
   },
   RU: {
@@ -40,6 +54,7 @@ const REGISTRY: Record<string, Partial<Record<SubdivisionMode, SubdivisionModeCo
       // US election type; these four are the ones with UI consumers).
       electionTypes: ["president", "governor", "senate", "stateSenate"],
       dataDir: "counties",
+      populationCountryId: "US",
     },
     seatOrdered: {
       electionTypes: ["house"],

@@ -55,7 +55,7 @@ const REFERENCE: CollectionEntry[] = [
     category: "reference",
     seededBy: "seedCountyPopulations",
     notes:
-      "US county population stocks. Bootstrap replaces stocks from current state totals; migration inserts missing records only.",
+      "US county, UK constituency and JP prefecture population stocks. Bootstrap replaces stocks from current state totals; migration inserts missing records only.",
   },
   { name: "states", category: "reference", seededBy: "runCoreSeed" },
   { name: "policies", category: "reference", seededBy: "runCoreSeed" },

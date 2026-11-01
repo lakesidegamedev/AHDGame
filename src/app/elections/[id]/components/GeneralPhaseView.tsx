@@ -22,6 +22,7 @@ import { StateOrganizationTab } from "@/app/political-operations/components/Stat
 import { GeneralVoteCharts, type LineSeries } from "./ElectionDetailCharts";
 import { buildGeneralColors } from "@/lib/utils/politics";
 import { states as referenceStates } from "@/lib/seeds/reference/states";
+import { JP_REGIONS } from "@/lib/countries/jp/data/jpRegionDirectory";
 import { getSubdivisionMode } from "@/lib/maps/subdivisionConfig";
 import { UK_REGION_NAMES, RU_REGION_NAMES } from "@/lib/constants/states";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -518,7 +519,11 @@ export function GeneralPhaseView({
               electionId={election.id}
               state={election.state}
               countryId={election.countryId}
-              stateName={UK_REGION_NAMES[election.state] ?? RU_REGION_NAMES[election.state]}
+              stateName={
+                UK_REGION_NAMES[election.state] ??
+                RU_REGION_NAMES[election.state] ??
+                JP_REGIONS.find((r) => r.id === election.state)?.name
+              }
             />
           )}
       </div>

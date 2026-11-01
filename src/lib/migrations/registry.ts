@@ -1,3 +1,4 @@
+import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
 import { migration as nationalPartyNppBills } from "./entries/2026-10-27-national-party-npp-bills";
 import { migration as partyNppRegionalBills } from "./entries/2026-10-27-party-npp-regional-bills";
@@ -437,6 +438,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   activateLiveDemographicsV2,
   // County stock initialization requires paused population writers and an explicit --only.
   countyPopulations,
+  ukJpSubdivisionPopulations,
 ];
 
 // Deferred to follow-up (need bootstrap-marker pass on production first):

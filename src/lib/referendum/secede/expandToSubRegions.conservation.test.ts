@@ -69,6 +69,11 @@ function makeStore(seed: Record<string, Doc[]>): { db: Db; cols: Record<string, 
         }
       return { matchedCount: n, modifiedCount: n };
     },
+    deleteMany: async (filter: Doc) => {
+      const before = col(name).length;
+      cols[name] = col(name).filter((d) => !matches(d, filter));
+      return { deletedCount: before - cols[name].length };
+    },
     deleteOne: async (filter: Doc) => {
       const i = col(name).findIndex((d) => matches(d, filter));
       if (i >= 0) {
@@ -109,6 +114,10 @@ function seedWorld() {
     states: [
       { _id: "SCO", countryId: "UK", regionType: "nation", population: 5_440_000, gdp: 163_000 },
       { _id: "LON", countryId: "UK", regionType: "region", population: 9_000_000, gdp: 837_000 },
+    ],
+    counties: [
+      { _id: "S14000001", countryId: "UK", stateId: "SCO", population: 5440000 },
+      { _id: "E14001073", countryId: "UK", stateId: "LON", population: 9000000 },
     ],
     macroMetrics: [{ _id: "SCO", countryId: "UK", approval: 47, growth: 1.5 }],
     regionDemographics: [
@@ -177,6 +186,10 @@ describe("SCO secession — expansion + economy conservation", () => {
     const scoStates = cols.states.filter((s) => s.countryId === "SCO");
     expect(scoStates.map((s) => s._id).sort()).toEqual([...ids].sort());
     expect(cols.states.find((s) => s._id === "SCO" && s.regionType === "nation")).toBeUndefined();
+
+    expect(cols.counties).toEqual([
+      { _id: "E14001073", countryId: "UK", stateId: "LON", population: 9000000 },
+    ]);
 
     // macroMetrics cloned to each sub-region, none left on the aggregate.
     expect(cols.macroMetrics.map((m) => m._id).sort()).toEqual([...ids].sort());
