@@ -58,7 +58,7 @@ function job(requested: number): BatchJob {
   };
 }
 
-const n = (type: BatchNote["type"], title = type): BatchNote => ({ type, title });
+const n = (type: BatchNote["type"], title: string = type): BatchNote => ({ type, title });
 
 describe("batch notification classification", () => {
   it("only names real notification types", () => {
