@@ -83,6 +83,23 @@ const pricing = {
 };
 
 describe("sector action visibility", () => {
+  it.each([0, null])(
+    "only promises clearing figures when sales telemetry is absent: %s",
+    (soldFraction) => {
+      render(
+        <PricingPanel
+          corporationId="corp"
+          sectorId="sector"
+          isCeo
+          pricing={{ ...pricing, soldFraction, clearingFactor: null }}
+        />
+      );
+      const hint = screen.queryByText("Clearing figures appear after the next turn.");
+      if (soldFraction == null) expect(hint).toBeTruthy();
+      else expect(hint).toBeNull();
+    }
+  );
+
   it("shows a published pricing sentence without controls or warnings to a non-CEO", () => {
     render(<PricingPanel corporationId="corp" sectorId="sector" isCeo={false} pricing={pricing} />);
     expect(

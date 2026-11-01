@@ -272,7 +272,7 @@ export default function PricingPanel({
         </span>
       </div>
 
-      {pricing.clearingFactor == null && (
+      {pricing.clearingFactor == null && pricing.soldFraction == null && (
         <p className="mt-2 text-[11px] italic text-muted">
           Clearing figures appear after the next turn.
         </p>

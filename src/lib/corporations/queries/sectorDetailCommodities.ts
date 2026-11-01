@@ -3,6 +3,7 @@
  * sector detail query. Extracted verbatim from sectorDetail.ts (pure code
  * motion; no behavior change).
  */
+import { fundedSalesTelemetry } from "@/lib/corporations/rules/fundedReporting";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
@@ -203,17 +204,23 @@ export async function buildSectorCommoditySections(args: {
 
   // Last turn's per-output clear rates (written by the clearing pass). Absent
   // on sectors that predate the field or when clearing never ran.
+  const fundedSales =
+    sector.producerSettlement && sector.producerSettlement.turn === args.currentTurn
+      ? fundedSalesTelemetry(sector.producerSettlement)
+      : null;
   const soldByCommodity: Partial<Record<string, number>> =
-    sector.soldByCommodity && typeof sector.soldByCommodity === "object"
+    fundedSales?.soldByCommodity ??
+    (sector.soldByCommodity && typeof sector.soldByCommodity === "object"
       ? sector.soldByCommodity
-      : {};
+      : {});
   // Each output's share of last turn's realized revenue (ticket 1507). Lets the
   // page show a sale price per product on a multi-output sector instead of one
   // blended average. Absent until the sector clears a turn with the field.
   const revenueShareByCommodity: Partial<Record<string, number>> =
-    sector.revenueShareByCommodity && typeof sector.revenueShareByCommodity === "object"
+    fundedSales?.revenueShareByCommodity ??
+    (sector.revenueShareByCommodity && typeof sector.revenueShareByCommodity === "object"
       ? sector.revenueShareByCommodity
-      : {};
+      : {});
   const hasRevenueSplit = Object.keys(revenueShareByCommodity).length > 0;
 
   const supplies = supplyFlows.map((f) => {
@@ -337,8 +344,15 @@ export async function buildSectorCommoditySections(args: {
       posture: typeof sector.pricingPosture === "number" ? sector.pricingPosture : null,
       effectivePosture:
         typeof sector.effectivePosture === "number" ? sector.effectivePosture : null,
-      soldFraction: typeof sector.soldFraction === "number" ? sector.soldFraction : null,
-      clearingFactor: typeof sector.clearingFactor === "number" ? sector.clearingFactor : null,
+      soldFraction:
+        fundedSales?.soldFraction ??
+        (typeof sector.soldFraction === "number" ? sector.soldFraction : null),
+      // The legacy clearing multiplier does not describe a funded settlement.
+      clearingFactor: fundedSales
+        ? null
+        : typeof sector.clearingFactor === "number"
+          ? sector.clearingFactor
+          : null,
       // Brand loyalty (Package A): the corp's established price-identity norm,
       // exposed only to the CEO so the Pricing panel can warn about gouging
       // jumps. Corp-level (not sector-level); never sent to non-owners.

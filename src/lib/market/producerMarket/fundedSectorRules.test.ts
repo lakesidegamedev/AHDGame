@@ -184,3 +184,43 @@ describe("funded sector result charges size costs as points of revenue", () => {
     expect(fundedSectorResult(legacy, receipt).costs).toBe(80);
   });
 });
+
+it("overwrites legacy sold-out telemetry when energy is destroyed without a sale", () => {
+  const noSales = {
+    revenue: 0,
+    profit: -100,
+    producedUnits: 10,
+    offeredUnits: 10,
+    soldUnits: 0,
+    products: [{ commodity: "energy", offeredUnits: 10, soldUnits: 0, revenue: 0 }],
+  };
+  const result = fundedSectorResult({ ...legacy, hourlyGrowthCost: 0 }, noSales);
+  const out = fundedSectorOps(
+    [
+      {
+        updateOne: {
+          filter: { _id: "s1" },
+          update: {
+            $set: {
+              soldFraction: 1,
+              soldByCommodity: { energy: 1 },
+              revenueShareByCommodity: { energy: 1 },
+            },
+          },
+        },
+      },
+    ],
+    "s1",
+    noSales,
+    result,
+    (a) => a * 24,
+    24
+  );
+  expect(out[0].updateOne.update.$set).toMatchObject({
+    soldFraction: 0,
+    soldByCommodity: { energy: 0 },
+    revenueShareByCommodity: { energy: 0 },
+    realizedRevenue: 0,
+    plantsPnl: { profit: -2400, totalCost: 2400 },
+  });
+});

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   appliedThroughputFloor,
   computeCapitalUsage,
@@ -69,4 +69,50 @@ describe("sector detail throughput attribution", () => {
       "real_estate_services"
     );
   });
+});
+
+vi.mock("@/lib/market/featureFlag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/market/featureFlag")>()),
+  getMarketSystemMode: vi.fn().mockResolvedValue("clearing"),
+}));
+
+it("shows settled market sales and clears stale per-output revenue shares", async () => {
+  const { buildSectorCommoditySections } = await import("./sectorDetailCommodities");
+  const args = {
+    sector: {
+      stateId: "NY",
+      pricingPosture: -0.05,
+      effectivePosture: -0.05,
+      soldFraction: 1,
+      clearingFactor: 1,
+      soldByCommodity: { energy: 1 },
+      revenueShareByCommodity: { energy: 1 },
+      producerSettlement: {
+        turn: 100,
+        producedUnits: 100,
+        offeredUnits: 100,
+        soldUnits: 0,
+        products: [{ commodity: "energy", offeredUnits: 100, soldUnits: 0, revenue: 0 }],
+      },
+    },
+    sectorRevenueAnchor: 1000,
+    sectorLaborCostAnchor: null,
+    sectorType: "energy",
+    sectorCountryId: "US",
+    eraUnitScale: 1,
+    corporation: {},
+    isCeo: false,
+    commodityPrices: [],
+    globalBalances: new Map(),
+    nationalBalancesByCountry: new Map(),
+    stateBalances: new Map(),
+    tariffBlend: { globalWeight: 1, nationalWeight: 0, localWeight: 0 },
+    effectiveRates: { supply: { energy: 1 }, demand: {}, isTransitioning: false },
+    currentTurn: 100,
+  } as unknown as Parameters<typeof buildSectorCommoditySections>[0];
+  const current = await buildSectorCommoditySections(args);
+  expect(current.pricing).toMatchObject({ soldFraction: 0, clearingFactor: null });
+  expect(current.supplies[0]).toMatchObject({ soldFraction: 0, revenueShare: 0 });
+  const old = await buildSectorCommoditySections({ ...args, currentTurn: 101 });
+  expect(old.pricing).toMatchObject({ soldFraction: 1, clearingFactor: 1 });
 });

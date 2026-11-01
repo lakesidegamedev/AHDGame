@@ -769,6 +769,8 @@ export async function runFundedProducerTurn(
         profit: r.profit,
         producedUnits: r.producedUnits,
         soldUnits: r.soldUnits,
+        offeredUnits: r.offeredUnits,
+        products: r.products,
         unsoldProductionCost: r.unsoldProductionCost ?? 0,
         transitionSupport: supportBySector[sector._id.toHexString()] ?? 0,
       });

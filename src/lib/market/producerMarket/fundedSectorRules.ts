@@ -19,6 +19,11 @@
  * Pure: plain data in, plain data out.
  */
 
+import {
+  fundedSalesTelemetry,
+  type FundedSalesReceipt,
+} from "@/lib/corporations/rules/fundedReporting";
+
 /** Sector fields only the funded settlement writes. */
 export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
   "capitalStock",
@@ -39,7 +44,7 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
   "demandThrottleFactor",
 ];
 
-export interface FundedReceipt {
+export interface FundedReceipt extends FundedSalesReceipt {
   /** Anchor per turn. */
   revenue: number;
   /** Anchor per turn: revenue minus inputs consumed, wages and site bills. */
@@ -174,6 +179,7 @@ export function fundedSectorOpsAll(
     );
     if (!stamped.has(id) && update.$set) {
       Object.assign(set, {
+        ...fundedSalesTelemetry(receipt),
         realizedRevenue: daily(result.hourlyRevenue),
         producedUnits: Math.round(receipt.producedUnits * turnsPerDay * 100) / 100,
         soldUnits: Math.round(receipt.soldUnits * turnsPerDay * 100) / 100,

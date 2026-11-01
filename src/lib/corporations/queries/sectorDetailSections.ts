@@ -1,3 +1,4 @@
+import { fundedSalesTelemetry, readFundedPnl } from "@/lib/corporations/rules/fundedReporting";
 import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
 export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
@@ -1206,13 +1207,19 @@ export function computeSectorMarginSection(args: {
   // `plantsPnlBasis.ts`. The inversion below stays as the fallback for sectors
   // with no persisted P&L yet, where it is the pre-existing behaviour exactly.
   const enginePnl = readPlantsPnl(sector);
+  const fundedPnl = readFundedPnl(sector.plantsPnl);
   const maintenance = enginePnl
     ? enginePnl.operatingCost
-    : economicRevenue * (1 - effectiveMargin / 100);
+    : fundedPnl
+      ? fundedPnl.totalCost - sector.currentGrowthCost
+      : economicRevenue * (1 - effectiveMargin / 100);
   const freightNet = (sector.freightBillingCredit ?? 0) - (sector.freightBillingCharge ?? 0);
   const profit =
-    (enginePnl ? enginePnl.profit : economicRevenue - maintenance - sector.currentGrowthCost) +
-    freightNet;
+    (enginePnl
+      ? enginePnl.profit
+      : fundedPnl
+        ? fundedPnl.profit
+        : economicRevenue - maintenance - sector.currentGrowthCost) + freightNet;
 
   return {
     mods: effectiveMods,
@@ -1694,8 +1701,14 @@ export function buildSectorPlantsSection(args: {
   // sell under half their output). The headline instead spreads cost and
   // revenue over every unit made, which is the basis the player's bank balance
   // actually moves on.
-  const soldFraction = num(sector.soldFraction) ?? fillRate;
-  const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
+  const fundedSales =
+    sector.producerSettlement?.turn === currentTurn
+      ? fundedSalesTelemetry(sector.producerSettlement)
+      : null;
+  const soldFraction = fundedSales?.soldFraction ?? num(sector.soldFraction) ?? fillRate;
+  const soldByCommodity = Object.entries(
+    fundedSales?.soldByCommodity ?? sector.soldByCommodity ?? {}
+  )
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({
       commodity,

@@ -1,3 +1,4 @@
+import { readFundedPnl } from "@/lib/corporations/rules/fundedReporting";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import type { CountryOperatingTotals } from "./countryStatements";
 import {
@@ -574,26 +575,25 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ? sectorFieldToCorpCcy(enginePnl.totalCost - enginePnl.compliance, sector) -
         sectorGrowthCostLocal
       : fundedTotalCost != null
-        ? sectorFieldToCorpCcy(fundedTotalCost, sector) - (fundedCompliance ?? 0)
+        ? sectorFieldToCorpCcy(fundedTotalCost, sector) -
+          (fundedCompliance ?? 0) -
+          sectorGrowthCostLocal
         : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100) -
           (fundedCompliance ?? 0);
-    // Funded market: the owner's result counts transition support received and
-    // output sent to stock at cost, both written beside the booked profit.
-    const fundedResultAdjust = sectorFieldToCorpCcy(
-      (sector.plantsPnl?.transitionSupport ?? 0) + (sector.plantsPnl?.stockAddedAtCost ?? 0),
-      sector
-    );
+    // Stock cost and transition support are separate memos, not operating profit.
+    const fundedPnl = readFundedPnl(sector.plantsPnl);
     const profit =
       (enginePnl
         ? sectorFieldToCorpCcy(enginePnl.profit, sector)
-        : financialRevenue -
-          freightIncome -
-          maintenance -
-          sectorGrowthCostLocal -
-          (fundedCompliance ?? 0)) +
+        : fundedPnl
+          ? sectorFieldToCorpCcy(fundedPnl.profit, sector)
+          : financialRevenue -
+            freightIncome -
+            maintenance -
+            sectorGrowthCostLocal -
+            (fundedCompliance ?? 0)) +
       freightIncome -
-      freightCost +
-      fundedResultAdjust;
+      freightCost;
     // Physical cost decomposition for the margin drilldown (ticket 1072: the
     // additive modifier list could not explain a physically-derived margin —
     // base + modifiers summed 40pts above the engine figure with no line
