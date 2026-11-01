@@ -68,6 +68,7 @@ export async function runCorporationProducerMarket(
     worldEpoch: string;
     turn: number;
     corporations: readonly Corporation[];
+    deferCorporateCreditsFor?: ReadonlySet<string>;
     prepare: () => readonly PreparedSector[];
     walletScopes: readonly ProducerWalletScope[];
     rates: ReadonlyMap<CurrencyCode, number>;
@@ -131,6 +132,7 @@ export async function runCorporationProducerMarket(
         kind: "corporation",
         accountId: id,
         corporationId: id,
+        ...(input.deferCorporateCreditsFor?.has(id) ? { deferCredit: true } : {}),
         currency: corp.liquidCurrencyCode,
         localPerAnchor: observedRate(corp.liquidCurrencyCode, input.rates),
         openingCashLocal: corp.liquidCapital,
@@ -191,7 +193,7 @@ async function publishHostState(
       .collection<Corporation>("corporations")
       .find(
         { _id: { $in: [...corporationIds].map((id) => new ObjectId(id)) } },
-        { projection: { liquidCapital: 1, producerPayables: 1 } }
+        { projection: { liquidCapital: 1, pendingOperatingCash: 1, producerPayables: 1 } }
       )
       .toArray(),
     db
@@ -224,7 +226,8 @@ async function publishHostState(
   for (const corp of corporations) {
     const closing = closingByCorp.get(corp._id.toHexString())!;
     if (!closing) continue;
-    corp.liquidCapital = closing.liquidCapital;
+    corp.pendingOperatingCash = closing.pendingOperatingCash ?? 0;
+    corp.liquidCapital = closing.liquidCapital + (closing.pendingOperatingCash ?? 0);
     corp.producerPayables = closing.producerPayables;
   }
   const operatingByCorporation = new Map<

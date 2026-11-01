@@ -1,3 +1,4 @@
+import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 /**
  * Savings earn interest from their currency's central bank and settle quarterly.
  * processSavingsInterestTurn also refreshes national savings totals for the
@@ -327,22 +328,22 @@ export async function processSavingsInterestTurn(
       }
 
       if (creditOps.length > 0) {
-        await db.collection("characters").bulkWrite(creditOps);
-        if (accountCreditOps.length > 0) {
-          await db.collection("savingsAccounts").bulkWrite(accountCreditOps);
-          // The central bank's liability on the accounts it holds grows by
-          // what it just credited.
-          await db.collection<CentralBank>("centralBanks").bulkWrite(
-            [...interestPaidByCountry.entries()]
-              .filter(([, amount]) => amount > 0)
-              .map(([countryId, amount]) => ({
-                updateOne: {
-                  filter: { _id: getBankId(countryId) },
-                  update: { $inc: { householdSavingsLiability: Math.round(amount * 100) / 100 } },
-                },
-              }))
-          );
-        }
+        const credits = ledgerBatch.map((entry) => ({
+          characterId: entry.characterId,
+          ownerCollection: "characters" as const,
+          currency: entry.currencyCode,
+          gross: entry.amount,
+          income: entry.amount,
+          destination: "currencyBalances.savings." + entry.currencyCode,
+          interest: {
+            pendingPath: "currencyBalances.pendingSavingsInterest." + entry.currencyCode,
+            authoritative: accountsAuthoritative,
+            centralBankId: getBankId(getCountryIdForCurrency(entry.currencyCode)),
+          },
+        }));
+        const settled = await creditIncomeAfterTax(db, "central-bank-interest", turn, now, credits);
+        for (const [index, credit] of settled.entries())
+          ledgerBatch[index].balanceAfter -= credit.gross - credit.net;
         // Booked AFTER the credit lands: crediting first and failing here
         // understates money created, which is recoverable from the ledger;
         // booking first and failing there overstates it, which is not.
@@ -372,6 +373,7 @@ export async function processSavingsInterestTurn(
             amount: e.amount,
             currencyCode: e.currencyCode,
             balanceAfter: e.balanceAfter,
+            meta: { incomeTaxAtSource: true },
           })),
           thresholds
         );
@@ -455,7 +457,23 @@ export async function processSavingsInterestTurn(
     return { charactersProcessed: 0, totalInterest: 0 };
   }
 
-  await db.collection("characters").bulkWrite(bulkOps);
+  const legacySettled = await creditIncomeAfterTax(
+    db,
+    "legacy-savings-interest",
+    turn,
+    new Date(),
+    ledgerBatch.map((entry) => ({
+      characterId: entry.characterId,
+      ownerCollection: "characters" as const,
+      currency: entry.currencyCode,
+      gross: entry.amount,
+      income: entry.amount,
+      destination: "savingsOnHand",
+      interest: {},
+    }))
+  );
+  for (const [index, credit] of legacySettled.entries())
+    ledgerBatch[index].balanceAfter -= credit.gross - credit.net;
   await bookCentralBankInterestCreation(db, legacyInterestByCountry);
   if (ledgerBatch.length > 0) {
     await db.collection("savingsLedger").insertMany(ledgerBatch);
@@ -475,6 +493,7 @@ export async function processSavingsInterestTurn(
         amount: e.amount,
         currencyCode: e.currencyCode,
         balanceAfter: e.balanceAfter,
+        meta: { incomeTaxAtSource: true },
       })),
       thresholds
     );

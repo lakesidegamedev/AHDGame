@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 /**
  * One attempt to split whole plants off a rival's sector (plants economy).
  *
@@ -206,6 +207,7 @@ export async function attemptPlantSectorSplit(
         {
           _id: freshAttacker._id,
           liquidCapital: { $gte: attackCostLocal },
+          ...corporateDiscretionaryCashGuard(),
           marketingStrength: { $gte: quote.marketingStrengthCost },
         },
         {

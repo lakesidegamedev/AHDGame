@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { CorpSnapshot } from "./types";
-import { settleCorporateOperatingCash } from "./operatingCashSettlement";
+import { settleCorporateOperatingCashLegacy as settleCorporateOperatingCash } from "./operatingCashSettlement";
 
 function snapshot(
   corpId: ObjectId,

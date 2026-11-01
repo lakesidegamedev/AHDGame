@@ -48,13 +48,9 @@ export async function settleFundDividendAccruals(
       if (process.env.AHD_BATCH_FUND_DIVIDENDS !== "off") {
         const { processIndexFundDividendsBatch } =
           await import("@/lib/indexFunds/dividendPassThrough");
-        try {
-          await processIndexFundDividendsBatch(db, fundDividendAccruals, {
-            turn: typeof turn === "number" ? turn : undefined,
-          });
-        } catch (err) {
-          console.warn("[corp-turn] Batched index-fund dividend pass-through failed:", err);
-        }
+        await processIndexFundDividendsBatch(db, fundDividendAccruals, {
+          turn: typeof turn === "number" ? turn : undefined,
+        });
       } else {
         const { processIndexFundDividend } = await import("@/lib/indexFunds/dividendPassThrough");
         const { getFundById, listFundPositions } = await import("@/lib/indexFunds/fundQueries");
@@ -87,23 +83,19 @@ export async function settleFundDividendAccruals(
             } catch {
               prefetch = undefined; // fall back to per-call fetch on any read hiccup
             }
-            for (const accrual of list) {
-              try {
-                await processIndexFundDividend(
-                  db,
-                  accrual.fundId,
-                  accrual.amountAnchor,
-                  accrual.corporationId,
-                  accrual.shares,
-                  { turn: typeof turn === "number" ? turn : undefined, prefetch }
-                );
-              } catch (err) {
-                console.warn("[corp-turn] Index fund dividend pass-through failed:", {
-                  fundId: accrual.fundId.toString(),
-                  corporationId: accrual.corporationId.toString(),
-                  error: err instanceof Error ? err.message : String(err),
-                });
-              }
+            for (const [index, accrual] of list.entries()) {
+              await processIndexFundDividend(
+                db,
+                accrual.fundId,
+                accrual.amountAnchor,
+                accrual.corporationId,
+                accrual.shares,
+                {
+                  turn: typeof turn === "number" ? turn : undefined,
+                  prefetch,
+                  payoutKey: String(index),
+                }
+              );
             }
           })
         );

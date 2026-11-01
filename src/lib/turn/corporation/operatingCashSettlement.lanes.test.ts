@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import * as settlementJournal from "@/lib/banking/settlementJournal";
 import type { CorpSnapshot } from "./types";
-import { settleCorporateOperatingCash } from "./operatingCashSettlement";
+import { settleCorporateOperatingCashLegacy as settleCorporateOperatingCash } from "./operatingCashSettlement";
 
 const COUNTRIES = ["US", "GB", "FR"] as const;
 

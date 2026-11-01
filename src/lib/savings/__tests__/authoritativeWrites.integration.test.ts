@@ -297,3 +297,8 @@ describe("authoritative savings writes", () => {
     expect(bank(db).bankCharter.playerDeposits).toBeCloseTo(1_000 + earned, 6);
   });
 });
+
+vi.mock("@/lib/budget/incomePayout", async () => {
+  const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+  return { creditIncomeAfterTax: vi.fn(untaxedIncomePayout) };
+});

@@ -1,3 +1,5 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
@@ -112,6 +114,8 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+    const cashBlock = requireSpendableCorporateCash(corporation);
+    if (cashBlock) return cashBlock;
 
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
@@ -421,12 +425,21 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       corporation,
       corpFxRate
     );
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
+    const debit = await db.collection<Corporation>("corporations").updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: costInCorpCapital },
+        ...corporateDiscretionaryCashGuard(),
+      },
+      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
+    );
+    if (debit.matchedCount !== 1) {
+      await db.collection<CorporateSector>("corporateSectors").deleteOne({ _id: newSectorId });
+      return errorResponse(
+        409,
+        "Insufficient spendable corporate funds, or outstanding taxes and payables."
       );
+    }
     // Route the cross-currency expansion spread to the CB system.
     if (expansionSpread.spreadAnchor > 0 && expansionSpread.from && expansionSpread.to) {
       const feeInCorp = Math.round(

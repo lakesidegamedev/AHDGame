@@ -507,6 +507,8 @@ export interface Corporation {
   /** Atomic admission key for landed NPP capacity-build cash history. */
   nppReinvestmentCashWitnessKey?: string;
   liquidCapital: number;
+  /** Funded operating proceeds held until current taxes and prior payables settle. Cleared on economy/world reset. */
+  pendingOperatingCash?: number;
   /** Unfunded realized operating costs by native liquid currency. */
   operatingCashArrearsByCurrency?: Partial<Record<CurrencyCode, number>>;
   /** Latest turn that added an operating payable for each currency. */

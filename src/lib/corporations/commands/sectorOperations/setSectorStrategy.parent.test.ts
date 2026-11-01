@@ -133,7 +133,13 @@ describe("parent-directed sector strategy", () => {
     const res = await setSectorStrategy(request(), { params });
     expect(res.status).toBe(200);
     const debit = db.collectionMocks.corporations.updateOne.mock.calls[0];
-    expect(debit[0]).toEqual({ _id: SUB_ID });
+    expect(debit[0]).toEqual(
+      expect.objectContaining({
+        _id: SUB_ID,
+        $expr: expect.any(Object),
+        liquidCapital: { $gte: 250_000 },
+      })
+    );
     expect((debit[1] as { $inc: { liquidCapital: number } }).$inc.liquidCapital).toBeLessThan(0);
     const set = sectorSet();
     expect(set.strategyId).toBe("heavy_metals");

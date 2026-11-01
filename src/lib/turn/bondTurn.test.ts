@@ -2864,3 +2864,8 @@ describe("processBondTurn", () => {
     });
   });
 });
+
+vi.mock("@/lib/budget/incomePayout", async () => {
+  const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+  return { creditIncomeAfterTax: vi.fn(untaxedIncomePayout) };
+});

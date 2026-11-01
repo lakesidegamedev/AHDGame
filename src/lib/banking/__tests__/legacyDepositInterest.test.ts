@@ -182,3 +182,8 @@ describe("legacy savings interest batches", () => {
     expect(balances(memory).savers).toEqual([1000]);
   });
 });
+
+vi.mock("@/lib/budget/incomePayout", async () => {
+  const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+  return { creditIncomeAfterTax: vi.fn(untaxedIncomePayout) };
+});

@@ -9,7 +9,7 @@ export type ProducerCashBinding = {
   /** Exact stored before-image, avoiding an FX round-trip in the write guard. */
   openingCashLocal: number;
 } & (
-  | { kind: "corporation"; corporationId: string }
+  | { kind: "corporation"; corporationId: string; deferCredit?: boolean }
   | { kind: "economyAccount"; economyAccountId: string }
 );
 
@@ -120,7 +120,12 @@ export function producerCashTransition(input: {
               currency: binding.currency,
               cash: binding.openingCashLocal,
             },
-      path: binding.kind === "corporation" ? "liquidCapital" : "cash",
+      path:
+        binding.kind === "corporation"
+          ? change > 0 && binding.deferCredit
+            ? "pendingOperatingCash"
+            : "liquidCapital"
+          : "cash",
       note: `Producer operating settlement ${id}`,
     });
   }

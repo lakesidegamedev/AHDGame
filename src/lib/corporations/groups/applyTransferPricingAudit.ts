@@ -164,7 +164,9 @@ export async function applyTransferPricingAudit(
       // An unaffordable assessment is not waived — it is taken as far as the
       // balance goes and the exposure clock resets either way, so a corp cannot
       // dodge by running its cash down.
-      const debit = await atomicallyDebitCorpLiquidCapital(db, liable._id, localAmount);
+      const debit = await atomicallyDebitCorpLiquidCapital(db, liable._id, localAmount, {
+        corporateObligation: true,
+      });
       const collected = debit.ok ? localAmount : 0;
       if (collected > 0) {
         // Same cross-border unit mismatch as the divestiture fine (#808):
