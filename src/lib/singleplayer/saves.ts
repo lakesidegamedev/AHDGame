@@ -86,13 +86,11 @@ function newSaveId(now = new Date()): string {
 
 export function cleanSaveName(raw: unknown): string {
   if (typeof raw !== "string") return "";
-  return (
-    raw
-      .replace(/[\u0000-\u001f\u007f]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, MAX_SAVE_NAME_LENGTH)
-  );
+  return raw
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SAVE_NAME_LENGTH);
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +143,7 @@ function parseMeta(raw: unknown, id: string): SaveMeta | null {
   };
 }
 
-/** Newest first. Half-written saves (a crash mid-save) are cleaned up, never listed. */
+/** Newest first. A save still being written lives in a temporary folder and is never listed. */
 export async function listSaves(home: string = singleplayerHomeDir()): Promise<SaveMeta[]> {
   const dir = savesDir(home);
   let entries: string[];
@@ -156,10 +154,6 @@ export async function listSaves(home: string = singleplayerHomeDir()): Promise<S
   }
   const saves: SaveMeta[] = [];
   for (const entry of entries) {
-    if (entry.startsWith(".tmp-")) {
-      await rm(path.join(dir, entry), { recursive: true, force: true }).catch(() => undefined);
-      continue;
-    }
     if (!isSaveId(entry)) continue;
     const meta = parseMeta(await readJson(path.join(dir, entry, META_FILE)), entry);
     if (meta && existsSync(path.join(dir, entry, ARCHIVE_FILE))) saves.push(meta);
@@ -296,6 +290,12 @@ async function writeSave(
   const root = savesDir(home);
   const id = newSaveId();
   const tmp = path.join(root, `.tmp-${id}`);
+  await mkdir(root, { recursive: true });
+  // Writers hold the save lock, so any temporary folder still here is left
+  // over from a save that was cut off (the world was stopped mid-save).
+  for (const entry of await readdir(root).catch(() => [] as string[]))
+    if (entry.startsWith(".tmp-"))
+      await rm(path.join(root, entry), { recursive: true, force: true }).catch(() => undefined);
   await mkdir(tmp, { recursive: true });
   try {
     await writeSaveArchive(db, path.join(tmp, ARCHIVE_FILE));

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Db } from "mongodb";
@@ -89,6 +89,15 @@ describe("manual saves", () => {
     world = null;
     await expect(createManualSave(fakeDb(), "x", home)).rejects.toBeInstanceOf(SaveError);
     expect(await listSaves(home)).toEqual([]);
+  });
+
+  it("keeps a save that is still being written out of the list, and sweeps leftovers on the next save", async () => {
+    const stale = path.join(home, "saves", ".tmp-20260101T000000Z-aaaaaa");
+    await mkdir(stale, { recursive: true });
+    expect(await listSaves(home)).toEqual([]);
+    expect(existsSync(stale)).toBe(true);
+    await createManualSave(fakeDb(), "x", home);
+    expect(existsSync(stale)).toBe(false);
   });
 
   it("leaves nothing behind when the dump fails", async () => {
