@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   shouldStartHostedBackgroundServices,
-  shouldRunRequiredStartupMigrations,
   shouldRunCronInWebProcess,
   isCronWorkerProcess,
 } from "./startupMode";
@@ -13,15 +12,6 @@ describe("startup mode", () => {
 
   it("keeps hosted background services enabled in production", () => {
     expect(shouldStartHostedBackgroundServices({})).toBe(true);
-  });
-
-  it("applies required startup migrations in production and singleplayer", () => {
-    expect(shouldRunRequiredStartupMigrations({})).toBe(true);
-    expect(shouldRunRequiredStartupMigrations({ SINGLEPLAYER: "1" })).toBe(true);
-  });
-
-  it("skips required startup migrations for a local dev server", () => {
-    expect(shouldRunRequiredStartupMigrations({ DISABLE_DEV_BACKGROUND: "1" })).toBe(false);
   });
 });
 
