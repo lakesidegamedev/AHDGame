@@ -28,6 +28,7 @@ import {
 } from "@/lib/wireEvent";
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 export interface ResolveInput {
   db: Db;
@@ -187,11 +188,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // ── Pass branch: settle the buyout ────────────────────────────────────────
   const ceoIdStr = corp.ceoId.toString();
   const nonCeoHolders = corp.shareholders.filter((s) => s.characterId?.toString() !== ceoIdStr);
-  const unplacedIpoShares =
-    corp.pendingShareIssuance?.issuedUpfront && corp.pendingShareIssuance.source === "ipo"
-      ? corp.pendingShareIssuance.remainingShares
-      : 0;
-  const publicFloat = Math.max(0, (corp.publicFloat ?? 0) - unplacedIpoShares);
+  const publicFloat = Math.max(0, (corp.publicFloat ?? 0) - unplacedIpoShares(corp));
 
   // #3450: index-fund holders must be paid too. Previously a fund holder had its
   // payout counted into the CEO's outflow but was NEVER credited, and its shares

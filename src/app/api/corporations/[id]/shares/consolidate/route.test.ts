@@ -106,6 +106,50 @@ describe("POST /api/corporations/[id]/shares/consolidate", () => {
     expect(db.collectionMocks["corporations"]).toBeUndefined();
   });
 
+  it("rescales an upfront IPO remainder with the consolidation and keeps it inside the float", async () => {
+    // A 12.5:1 consolidation with an upfront IPO still placing. Leaving the
+    // remainder unscaled put it above both the new float and the new total.
+    const holderId = new ObjectId();
+    const corp = baseCorp({
+      sharePrice: 2_000,
+      fundamentalSharePrice: 2_000,
+      totalShares: 12_500_000,
+      publicFloat: 2_500_000,
+      shareholders: [{ characterId: holderId, shares: 10_000_000 }],
+      pendingShareIssuance: {
+        remainingShares: 2_013_914,
+        requestedShares: 2_500_000,
+        source: "ipo",
+        issuedUpfront: true,
+        createdAtTurn: 90,
+        initialPriceLocal: 2_000,
+      },
+    });
+
+    const response = await runConsolidate({ corp, targetTotalShares: 1_000_000 });
+
+    expect(response.status).toBe(200);
+    const update = db.collectionMocks["corporations"].updateOne.mock.calls.find(
+      (call) => (call[0] as Record<string, unknown>)._id === corp._id
+    )?.[1] as { $set: Record<string, unknown> };
+    const set = update.$set as {
+      totalShares: number;
+      publicFloat: number;
+      pendingShareIssuance: {
+        remainingShares: number;
+        requestedShares: number;
+        initialPriceLocal: number;
+      };
+    };
+    expect(set.totalShares).toBe(1_000_000);
+    expect(set.publicFloat).toBe(200_000);
+    expect(set.pendingShareIssuance.remainingShares).toBe(161_113);
+    expect(set.pendingShareIssuance.remainingShares).toBeLessThanOrEqual(set.publicFloat);
+    expect(set.publicFloat).toBeLessThanOrEqual(set.totalShares);
+    expect(set.pendingShareIssuance.requestedShares).toBe(200_000);
+    expect(set.pendingShareIssuance.initialPriceLocal).toBe(25_000);
+  });
+
   it("scales fundamentalSharePrice alongside sharePrice on a reverse split (regression: bug #0449)", async () => {
     // Setup: corp where sharePrice and fundamentalSharePrice differ — i.e.,
     // sentiment/orderFlow multipliers have moved the live price off the

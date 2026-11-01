@@ -6,6 +6,7 @@ import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { issuanceDilutionFactorExpr } from "@/lib/corporations/shareConsolidation";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 import { corpLiquidCapitalToAnchor, getCorpFxRate } from "@/lib/currency/corporationCapital";
@@ -324,6 +325,14 @@ export async function placePendingShareIssuances(
   for (const corporation of corporations) {
     const pending = corporation.pendingShareIssuance;
     if (!pending || pending.remainingShares <= 0) continue;
+    // Upfront IPO shares already sit in the float, so the pool can only buy
+    // what the float still holds. A remainder above it would be paid for
+    // shares that do not exist.
+    const placeableShares =
+      pending.issuedUpfront && pending.source === "ipo"
+        ? wholeShares(unplacedIpoShares(corporation))
+        : wholeShares(pending.remainingShares);
+    if (placeableShares <= 0) continue;
     const currency = equityPoolCurrency(corporation);
     if (!budgetByCurrency.has(currency)) {
       const pool = await readEquityPool(db, currency);
@@ -356,21 +365,14 @@ export async function placePendingShareIssuances(
         cashoutLimits ? cashoutLimits.maxShares : Number.MAX_SAFE_INTEGER
       )
     );
-    const pacedShares = Math.min(
-      wholeShares(pending.remainingShares),
-      perTurnCap,
-      Math.floor(budget / price)
-    );
+    const pacedShares = Math.min(placeableShares, perTurnCap, Math.floor(budget / price));
     // A thin pool budget below the price of one share would pace this
     // remainder at zero shares per turn forever, while the issuance guards
     // keep rejecting every new share proposal as "awaiting market placement".
     // Guarantee one share of progress whenever the pool has any placement
     // budget; the gated debit below still refuses when pool cash cannot cover
     // that share, so pool solvency is unchanged.
-    const shares =
-      pacedShares > 0 || budget <= 0
-        ? pacedShares
-        : Math.min(1, wholeShares(pending.remainingShares));
+    const shares = pacedShares > 0 || budget <= 0 ? pacedShares : Math.min(1, placeableShares);
     if (shares <= 0) continue;
     const paidLocal = Math.round(shares * price * 100) / 100;
     const offer = pending.underwriting;
