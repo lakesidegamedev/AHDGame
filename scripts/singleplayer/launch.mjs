@@ -660,6 +660,23 @@ export function formatTimings(timings) {
 
 const MONGO_LOG = path.join(HOME, "mongod.log");
 
+/**
+ * Server parameters for the world's own MongoDB, a single loopback node that
+ * only this game uses.
+ *
+ * - maxNumActiveUserIndexBuilds: the default of 3 makes world setup queue its
+ *   few hundred index builds (151 waits in one measured setup) behind each
+ *   other; they are on empty collections and cheap, so let them overlap.
+ * - diagnosticDataCollectionEnabled: FTDC samples server metrics every second
+ *   for a support engineer who is not there, on a laptop that is.
+ */
+export const MONGOD_TUNING_ARGS = [
+  "--setParameter",
+  "maxNumActiveUserIndexBuilds=32",
+  "--setParameter",
+  "diagnosticDataCollectionEnabled=false",
+];
+
 async function spawnMongod(bin) {
   const child = spawn(
     bin,
@@ -672,6 +689,7 @@ async function spawnMongod(bin) {
       "127.0.0.1",
       "--replSet",
       "ahd-local",
+      ...MONGOD_TUNING_ARGS,
       "--logpath",
       MONGO_LOG,
       "--logappend",
