@@ -51,6 +51,7 @@ export async function PATCH(request: Request) {
       difficulty: parsed.data.difficulty ?? current.difficulty,
       nppAutonomyLevel: parsed.data.autonomyLevel ?? current.nppAutonomyLevel,
       permanentHeadOfState: current.permanentHeadOfState,
+      guide: current.guide,
       featureFlags: { ...current.featureFlags, ...parsed.data.featureFlags },
     });
     return NextResponse.json({

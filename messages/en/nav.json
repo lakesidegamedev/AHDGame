@@ -260,7 +260,44 @@
       "briefingTitle": "Turn {turn} briefing",
       "briefingFunds": "Campaign funds: {delta, number, ::sign-always}",
       "briefingActions": "Actions: {delta, number, ::sign-always}",
-      "viewCharacter": "View character"
+      "viewCharacter": "View character",
+      "guide": {
+        "title": "Getting started",
+        "progress": "{done} of {total} done",
+        "region": "Getting started guide",
+        "hide": "Hide guide",
+        "show": "Show guide",
+        "close": "Close guide",
+        "skip": "Skip guide",
+        "allDone": "That covers the basics. Your actions are all yours from here.",
+        "done": "Done",
+        "steps": {
+          "character": {
+            "title": "Create your character",
+            "body": "Pick a country and where you live, then name your character. This is who you play for the whole game.",
+            "action": "Create character"
+          },
+          "campaign": {
+            "title": "Run a Campaign action",
+            "body": "You have {funds} and {actions, plural, one {# action} other {# actions}}. Funds pay for most actions, and actions limit how much you can do before a turn ends. Campaign builds your influence, so run one from the Actions page.",
+            "action": "Open Actions"
+          },
+          "party": {
+            "title": "Join a party",
+            "body": "A party gives you a shared pool of actions and backing in primaries. Choose one from the parties page.",
+            "action": "Open parties"
+          },
+          "end-turn": {
+            "title": "End your first turn",
+            "body": "Nothing moves until you end the turn. Use the End turn button. The world updates and a briefing shows what changed for you."
+          },
+          "inbox": {
+            "title": "Check your inbox",
+            "body": "Results, offers and messages from the world arrive in your inbox after each turn.",
+            "action": "Open inbox"
+          }
+        }
+      }
     },
     "devolution": {
       "tab": "Devolution",

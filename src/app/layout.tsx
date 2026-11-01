@@ -20,6 +20,7 @@ import {
   DeferredStatAllocationGate,
   DeferredWealthTierRepickGate,
   DeferredTutorialCoachMount,
+  DeferredSingleplayerGuide,
   DeferredTurnProgressToast,
   DeferredNominationChoicePrompt,
 } from "@/components/DeferredShellOverlays";
@@ -475,6 +476,7 @@ export default async function RootLayout({
                             />
                           )}
                           {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
+                          {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
                           {!isWikiSubdomain && <DeferredTutorialCoachMount />}
                           {!isWikiSubdomain && <LiveRefreshBanner />}
                           {!isNativeApp && <CookieConsentBanner />}
