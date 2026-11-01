@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { useSignedIn } from "@/contexts/AuthDataContext";
+import { useOptionalAuthMe, useSignedIn } from "@/contexts/AuthDataContext";
+import { useSingleplayerGuideOffered } from "@/lib/singleplayerGuideClient";
 import {
   DEFAULT_TUTORIAL_PLAN,
   resolveTutorialPlan,
@@ -64,6 +65,11 @@ export function TutorialCoachMount() {
   /** True once the player answers in this session, so the tour starts straight away. */
   const [justChose, setJustChose] = useState(false);
   const signedIn = useSignedIn();
+  // A normal-mode local world that offers the first-game guide has its own
+  // walkthrough. Hold this one back there (the tutorial page still starts it),
+  // including while the guide's answer is pending.
+  const guideOffered = useSingleplayerGuideOffered();
+  const localGuideWorld = useOptionalAuthMe()?.navData?.user?.singleplayerMode === "normal";
 
   useEffect(() => {
     // No character to coach before sign-in; the request could only 401.
@@ -135,6 +141,7 @@ export function TutorialCoachMount() {
   }, []);
 
   if (!state) return null;
+  if (localGuideWorld && guideOffered !== false) return null;
 
   // Ask anyone who has not answered yet, not only brand new characters.
   //
