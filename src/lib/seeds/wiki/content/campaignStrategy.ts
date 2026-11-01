@@ -26,7 +26,7 @@ Poll results from [Polling](/wiki/polling) decide which phases and groups get yo
 
 Once you are a candidate, your campaign page has a **separate budget** spent on **Strategic Ops trees** (the Operations section). It is not your personal Campaign Funds. Each of four trees has a starter node you unlock first, then up to three branches, each with three tiers. Branch effects stack with the starter and with other branches in the same tree, so two campaigns can have very different effects from the same tree.
 
-The prices below are for a presidential race. Other races scale costs, income and upkeep down: 0.5x for governor, Senate and national legislature races, 0.4x for minister-president and Landtag races, 0.3x for House and regional council races, 0.2x for state senate races. The era price level and the campaign's currency apply on top.
+Campaign pages exist only for presidential races, so these prices are what every campaign pays. The era price level and the campaign's currency apply on top.
 
 | Tree | Starter (funds, actions) | Starter effect | Branches |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ The fundraising tree sets your campaign page's income (see [Fundraising and Ads]
 
 ## Campaign actions
 
-Your campaign earns its own action pool each turn: the world's base actions per turn (at least 4, half that for an NPP-run campaign), plus endorsements. Politician endorsements count in every race, player endorsements only in presidential races, and governor and executive endorsements count 1.5 each (a governor's counts only outside presidential races). With a base of 4 the pool is 4 + floor(sqrt(endorsements) x 3), so 4 endorsements give 10 actions, 9 give 13 and 16 give 16. A campaign banks at most 48 turns of its own income. These actions pay for upgrades and for presidential Campaign Presence (see [Political Operations](/wiki/political-operations)), not for regular character actions.
+Your campaign earns its own action pool each turn: the world's base actions per turn (at least 4, half that for an NPP-run campaign), plus endorsements. Politician and player endorsements count once each and executive endorsements count 1.5 each. A governor's endorsement adds no actions; it boosts your vote in the governor's own state instead. With a base of 4 the pool is 4 + floor(sqrt(endorsements) x 3), so 4 endorsements give 10 actions, 9 give 13 and 16 give 16. A campaign banks at most 48 turns of its own income. These actions pay for upgrades and for presidential Campaign Presence (see [Political Operations](/wiki/political-operations)), not for regular character actions.
 
 ## The closing multiplier
 

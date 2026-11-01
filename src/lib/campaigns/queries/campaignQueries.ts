@@ -24,7 +24,6 @@ import {
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
 import { CAMPAIGN_STRENGTH_MAX_BONUS } from "@/lib/campaigns/campaignStrength";
 import { buildCampaignStatePresence } from "@/lib/elections/campaignStatePresence";
-import { getCampaignCopyForElection } from "@/lib/campaigns/raceFamilyCopy";
 import { CURRENCY_SYMBOLS, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import {
@@ -553,14 +552,11 @@ export async function getCampaignDetail(
       toLocal
     ),
     groundGame: localizeUpgradeCostFunds(
-      localizeGroundGameEffect(
-        getEffectiveUpgradeCost(
-          "groundGame",
-          campaign.groundGameLevel + 1,
-          electionType,
-          isGeneralPhase
-        ),
-        election
+      getEffectiveUpgradeCost(
+        "groundGame",
+        campaign.groundGameLevel + 1,
+        electionType,
+        isGeneralPhase
       ),
       toLocal
     ),
@@ -777,37 +773,6 @@ function localizeUpgradeCostFunds(
     funds: toLocal(cost.funds),
     ...(cost.maintenance != null ? { maintenance: toLocal(cost.maintenance) } : {}),
   };
-}
-
-/**
- * Phase 5.5 — replace the hardcoded "+X% in swing states" effect string
- * with race-family-aware wording ("swing counties" for senate / governor,
- * "swing precincts" for house / state senate). Mechanic unchanged; copy
- * localizes per the D5 adapter pattern.
- *
- * Returns null untouched so the upstream `|| null` ladder still flows
- * cleanly when the campaign is at max ground-game level. The return type
- * widens `effect` to plain `string` (vs the literal-typed `UPGRADE_COSTS`
- * entries) so the localized copy fits — DTO consumers only need
- * `{ funds, actions, effect, ... }`, not the literal types.
- */
-function localizeGroundGameEffect(
-  cost: {
-    level: number;
-    funds: number;
-    actions: number;
-    effect: string;
-    maintenance?: number;
-  } | null,
-  election: Election | null
-): { level: number; funds: number; actions: number; effect: string; maintenance?: number } | null {
-  if (!cost || !election) return cost;
-  const copy = getCampaignCopyForElection(election);
-  if (copy.family === "president") return cost;
-  const match = /^\+(\d+)%/.exec(cost.effect);
-  if (!match) return cost;
-  const percent = Number(match[1]);
-  return { ...cost, effect: copy.groundGameEffect(percent) };
 }
 
 export async function getViewerCampaigns(

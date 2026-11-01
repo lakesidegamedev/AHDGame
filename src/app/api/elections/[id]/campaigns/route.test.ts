@@ -273,16 +273,16 @@ describe("campaign list budget preview", () => {
       trees: false,
     },
     {
+      // JP has no field-office scope (no presidency), so stray offices cost nothing.
       suspended: false,
       countryId: "JP",
-      electionType: "house",
-      officeAnchor: 1_800,
+      electionType: "president",
       preset: "1991-default",
       priceLevel: 0.35808,
       rate: 150,
       currency: "JPY",
       count: 3,
-      charged: 3,
+      charged: 0,
       trees: false,
     },
   ])(
@@ -406,7 +406,7 @@ describe("campaign list budget preview", () => {
       );
       expect(budget.expenses.total).toBe(ops + offices);
       expect(campaigns[1].budget.expenses.fieldOfficeMaintenance).toBe(
-        countryId === "FR" ? 0 : local(officeAnchor)
+        countryId === "US" ? local(officeAnchor) : 0
       );
       expect(budget.netIncome).toBe(income - ops - offices);
       expect(db.collectionMocks.campaignFieldOffices!.find).toHaveBeenCalledTimes(1);

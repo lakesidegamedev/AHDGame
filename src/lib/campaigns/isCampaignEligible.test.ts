@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import type { Election } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "./isCampaignEligible";
 
-describe("isCampaignEligibleElection — Phase 5.5 eligibility matrix", () => {
-  describe("Presidential path (unchanged from pre-Phase-5.5)", () => {
+describe("isCampaignEligibleElection: presidential only", () => {
+  describe("Presidential path", () => {
     it("enables only a valid bound Russian popular ballot through the runtime seam", () => {
       const election = {
         countryId: "RU" as const,
@@ -27,50 +27,24 @@ describe("isCampaignEligibleElection — Phase 5.5 eligibility matrix", () => {
     });
   });
 
-  describe("US non-presidential races (Phase 5.5 newly eligible)", () => {
-    it("returns true for US senate", () => {
-      expect(isCampaignEligibleElection({ countryId: "US", electionType: "senate" })).toBe(true);
-    });
-    it("returns true for US governor", () => {
-      expect(isCampaignEligibleElection({ countryId: "US", electionType: "governor" })).toBe(true);
-    });
-    it("returns true for US house", () => {
-      expect(isCampaignEligibleElection({ countryId: "US", electionType: "house" })).toBe(true);
-    });
-    it("returns true for US state senate", () => {
-      expect(isCampaignEligibleElection({ countryId: "US", electionType: "stateSenate" })).toBe(
-        true
-      );
-    });
-  });
-
-  describe("Non-US races", () => {
-    it("opts in JP shugiin / snap shugiin / sangiin / governor by name", () => {
-      for (const electionType of ["shugiin", "snap_shugiin", "sangiin", "governor"]) {
-        expect(isCampaignEligibleElection({ countryId: "JP", electionType })).toBe(true);
+  describe("Non-presidential races campaign through Actions, not Campaign Manager", () => {
+    it("returns false for every US down-ballot race", () => {
+      for (const electionType of ["senate", "governor", "house", "stateSenate"]) {
+        expect(isCampaignEligibleElection({ countryId: "US", electionType })).toBe(false);
       }
-      expect(isCampaignEligibleElection({ countryId: "JP", electionType: "regionalCouncil" })).toBe(
-        false
-      );
     });
-    it("opts in UK commons and by-elections, not regional councils", () => {
-      expect(isCampaignEligibleElection({ countryId: "UK", electionType: "commons" })).toBe(true);
-      expect(isCampaignEligibleElection({ countryId: "UK", electionType: "special_commons" })).toBe(
-        true
-      );
-      expect(isCampaignEligibleElection({ countryId: "UK", electionType: "regionalCouncil" })).toBe(
-        false
-      );
+    it("returns false for UK and JP parliamentary and governor races", () => {
+      for (const electionType of ["commons", "special_commons", "regionalCouncil"]) {
+        expect(isCampaignEligibleElection({ countryId: "UK", electionType })).toBe(false);
+      }
+      for (const electionType of ["shugiin", "snap_shugiin", "sangiin", "governor"]) {
+        expect(isCampaignEligibleElection({ countryId: "JP", electionType })).toBe(false);
+      }
     });
     it("returns false for DE bundestag", () => {
       expect(isCampaignEligibleElection({ countryId: "DE", electionType: "bundestag" })).toBe(
         false
       );
-    });
-    it("returns false even for race types that ARE eligible in US (no cross-country leak)", () => {
-      // 'senate' is US-eligible, but a hypothetical UK senate race must NOT inherit eligibility.
-      expect(isCampaignEligibleElection({ countryId: "UK", electionType: "senate" })).toBe(false);
-      expect(isCampaignEligibleElection({ countryId: "JP", electionType: "house" })).toBe(false);
     });
   });
 

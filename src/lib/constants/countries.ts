@@ -325,32 +325,13 @@ export interface CountryConfig {
    */
   discordWebhookNote?: string;
   /**
-   * Phase 5.5: whether the Campaign Manager system extends to non-presidential
-   * races (senate, governor, house, state senate) in this country. Defaults to
-   * `false`; set to `true` only after the country's campaign-finance model has
-   * been audited and adapted to fit the per-candidate fundraising loop. UK
-   * statutory expense limits, JP mixed FPTP/PR, DE party-list PR, and IE STV
-   * all need separate audit + adaptation before flipping this flag (Phase 5.5
-   * D4). Presidential races stay gated on `isDirectElection(config)` only —
-   * that path is unchanged from pre-Phase-5.5.
-   */
-  campaignManagerNonPresidentialEnabled?: boolean;
-  /**
-   * Non-presidential race families (`Election.electionType` values) this
-   * country runs Campaign Manager for. Overrides the US default family set
-   * that `campaignManagerNonPresidentialEnabled` turns on, so a parliamentary
-   * country can opt in its own chambers (UK `commons`, JP `shugiin`) without
-   * inheriting US race names. Requires `campaignManagerNonPresidentialEnabled`.
-   */
-  campaignRaceFamilies?: readonly string[];
-  /**
    * Geographic granularity of campaign field offices. `"county"` pins each
    * office to a subdivision with its own committed geometry and lean (US
-   * counties); `"region"` keeps offices at the election-region level with a
-   * smaller flat bonus (UK regions, JP regions). Unset disables field offices.
+   * counties). Unset disables field offices. Field offices belong to Campaign
+   * Manager, so only countries with a directly elected executive use it.
    * Rules per scope live in `src/lib/campaigns/fieldOffices/rules.ts`.
    */
-  fieldOfficeScope?: "county" | "region";
+  fieldOfficeScope?: "county";
   /**
    * Minimum seats for an outright majority in the lower chamber.
    * US House: 218. UK Commons: 326.

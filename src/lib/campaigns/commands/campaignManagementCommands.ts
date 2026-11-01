@@ -163,22 +163,11 @@ export async function contributeCampaignStrength(params: {
   const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
   const forexEnabled = await isForexEnabled();
 
-  // Phase 5.5: gate matches Campaign Manager eligibility broadly (US president +
-  // senate / governor / house / stateSenate; non-US deferred per D4) instead of
-  // hard-coding electionType === 'president'. The eligibility check is the
-  // single source of truth — see src/lib/campaigns/isCampaignEligible.ts.
+  // Campaign Manager eligibility is the single source of truth and admits only
+  // presidential races, the only engines that read `campaignStrength`. Reject
+  // BEFORE any funds/actions debit.
   if (!election || !isCampaignEligibleElection(election)) {
     throw badRequest("Campaign strength is not available for this race");
-  }
-  // UI-honesty gate (issue #2891 bundle): only the presidential engine
-  // consumes `campaignStrength` (presidentialElectionEngine strengthMultiplier).
-  // Down-ballot engines ignore it entirely, so accepting contributions there
-  // would charge players for a stat with zero vote effect. Reject BEFORE any
-  // funds/actions debit. Revisit if CS is ever wired into down-ballot engines.
-  if (election.electionType !== "president") {
-    throw badRequest(
-      "Campaign strength only affects presidential races right now, so contributions to this race are disabled to protect your funds and actions."
-    );
   }
   if (election.status === "completed") {
     throw badRequest("Election has ended");

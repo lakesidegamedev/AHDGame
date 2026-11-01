@@ -11,11 +11,7 @@
  * payload or is absent.
  */
 
-import {
-  getCampaignCategoriesForElection,
-  CAMPAIGN_CATEGORIES,
-  type CampaignData,
-} from "@/lib/campaigns/dto/campaignView";
+import { CAMPAIGN_CATEGORIES, type CampaignData } from "@/lib/campaigns/dto/campaignView";
 import {
   CAMPAIGN_STRENGTH_CONTRIBUTION_NPI_MULTIPLIER,
   CAMPAIGN_STRENGTH_MAX_BONUS,
@@ -516,9 +512,7 @@ export function buildCampaignBlendViewModel(inp: CampaignBlendInput): CampaignBl
   }
 
   // ── Operations ────────────────────────────────────────────────────────────
-  const categories = campaign.electionInfo?.electionType
-    ? getCampaignCategoriesForElection({ electionType: campaign.electionInfo.electionType })
-    : CAMPAIGN_CATEGORIES;
+  const categories = CAMPAIGN_CATEGORIES;
 
   const ops: OpsRowVM[] = campaign.opsTrees
     ? CATEGORY_ORDER.map((key) => {

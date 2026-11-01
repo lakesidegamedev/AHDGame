@@ -6,7 +6,7 @@ import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import type { UpdateFilter } from "mongodb";
-import type { Campaign, ElectionCandidate } from "@/lib/db/types";
+import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { calculateCampaignIncome } from "@/lib/campaigns/income";
 import { campaignActionsPerTurn, cappedCampaignActionGrant } from "@/lib/campaigns/actions";
 import { diminishPassiveFavorabilityGain } from "@/lib/actions";
@@ -103,31 +103,32 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // halving for NPP-run campaigns, so the desk applies the same ones.
         const rawBaseActionsPerTurn = gameConfig?.baseActionsPerTurn ?? 4;
 
-        // Only process campaigns tied to elections that are still active — completed
-        // elections should have had their campaigns deleted at resolution time, but
-        // this filter is a defensive guard against any stragglers.
-        const activeElections = await db
-          .collection("elections")
-          .find(
-            { status: "active" },
-            // Phase 5.5: countryId added so isCampaignEligibleElection can run
-            // against the active election when deciding whether passive favorability
-            // effects should fire (Phase 5.5 widened from president-only to all
-            // US senate / governor / house / state-senate races).
-            {
-              projection: {
-                _id: 1,
-                endTime: 1,
-                endTurn: 1,
-                primaryEndTime: 1,
-                primaryEndTurn: 1,
-                electionType: 1,
-                countryId: 1,
-                rulesetVersion: 1,
-              },
-            }
-          )
-          .toArray();
+        // Only process campaigns tied to active, Campaign-Manager-eligible
+        // (presidential) elections. A campaign left in a down-ballot race from
+        // before Campaign Manager became presidential-only earns no income, pays
+        // no upkeep and gets no actions; completed elections should have had their
+        // campaigns archived at resolution, and this also guards stragglers.
+        const activeElections = (
+          await db
+            .collection("elections")
+            .find(
+              { status: "active" },
+              {
+                projection: {
+                  _id: 1,
+                  endTime: 1,
+                  endTurn: 1,
+                  primaryEndTime: 1,
+                  primaryEndTurn: 1,
+                  electionType: 1,
+                  countryId: 1,
+                  rulesetVersion: 1,
+                  russianPresidentialRound: 1,
+                },
+              }
+            )
+            .toArray()
+        ).filter((e) => isCampaignEligibleElection(e as Partial<Election>));
         const activeElectionIds = activeElections.map((e) => e._id);
         const electionDataMap = new Map(
           activeElections.map((e) => [
@@ -736,20 +737,12 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             const favorabilityChanges = new Map<string, { collection: string; amount: number }>();
 
             // Passive favorability effects (media, opposition research, travel presence,
-            // primary in-state bonus) fire for any race where Campaign Manager is
-            // eligible. Phase 5.5 widened eligibility from president-only to US
-            // senate / governor / house / state senate — all of which run the same
-            // upgrade levels and therefore should also see the passive effects fire.
-            // Pure passive favorability still gates on travel presence + primary
-            // in-state bonus separately below; those gate on isPresidential because
-            // the underlying mechanics (national travel system, presidential primary
-            // in-state bonus) are presidential-only by design.
-            const applyCampaignPassives =
-              electionData != null && isCampaignEligibleElection(electionData);
+            // primary in-state bonus) fire for every campaign processed here, since
+            // only eligible (presidential) elections reach this loop. Travel presence
+            // and the primary in-state bonus additionally gate on isPresidential below.
+            const applyCampaignPassives = electionData != null;
 
             // Media Spending: +0.5% favorability per level per turn (2× during final 4 hours).
-            // Phase 5.5: applies to all Campaign-Manager-eligible races (president +
-            // US senate / governor / house / stateSenate).
             // Strategic Operations v2: read favorability/turn from the media tree
             // (starter + Broadcast + Television), with legacy-level fallback.
             const mediaFavPerTurn = getMediaFavPerTurn(campaign);
@@ -793,9 +786,8 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             }
 
             // Opposition Research: -0.5% opponent favorability per level per turn
-            // (2× during final 4 hours). Phase 5.5: applies to all Campaign-Manager-
-            // eligible races. Targeting still requires opposition research level > 0
-            // and an oppositionTargetId — both are race-family-agnostic.
+            // (2× during final 4 hours). Targeting requires opposition research
+            // level > 0 and an oppositionTargetId.
             // Strategic Operations v2: recurring drain from the oppo tree
             // (starter + Dossier, amplified by Counter-Intel), reduced by the
             // target's Rapid Response shield (cross-campaign, precomputed above).

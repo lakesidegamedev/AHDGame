@@ -27,7 +27,7 @@ export function buildCampaignBudgetPreview(
   // Suspension stops strategic operations, but active-race geographic offices still charge.
   const fieldOfficeMaintenance =
     campaign.status !== "archived" && election?.status === "active" && rules
-      ? officeCount * toLocal(getFieldOfficeCostAnchor(rules, electionType).upkeep)
+      ? officeCount * toLocal(getFieldOfficeCostAnchor(rules).upkeep)
       : 0;
   // Strategic upkeep rounds once; geographic upkeep rounds per office.
   const total =

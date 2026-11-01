@@ -95,7 +95,7 @@ Raising your donor base from level 1 to 2 costs about ₳5,000 at national-avera
 
 ### The campaign page budget
 
-Once you are a candidate your campaign page has its own budget, separate from your personal Campaign Funds: passive income by fundraising level (₳20,000 at level 0 up to ₳5,000,000 at level 10 for a presidential race, scaled for other races), upgrade costs and maintenance. If the campaign cannot cover next turn's maintenance, levels downgrade automatically. The fundraising upgrade levels in [Campaign Strategy](/wiki/campaign-strategy) set that passive income, and the [Campaign Manager](/wiki/campaign-manager) is where you buy them.
+Once you are a presidential candidate your campaign page has its own budget, separate from your personal Campaign Funds: passive income by fundraising level (₳20,000 at level 0 up to ₳5,000,000 at level 10), upgrade costs and maintenance. Other races have no campaign page. If the campaign cannot cover next turn's maintenance, levels downgrade automatically. The fundraising upgrade levels in [Campaign Strategy](/wiki/campaign-strategy) set that passive income, and the [Campaign Manager](/wiki/campaign-manager) is where you buy them.
 
 ### Party tax
 
@@ -114,7 +114,7 @@ Tips:
 1. Spend your starting actions on the first Build Donor Network, to level 2.
 2. Fundraise regularly at level 2 and above.
 3. Run ads only when favorability is below your target. Do not ad-spam above 75.
-4. Upgrade the campaign page's fundraising level once you are a candidate.
+4. Upgrade the campaign page's fundraising level once you are a presidential candidate.
 5. Factor a high party tax (25% or more) into your per-turn income. Fundraise is untaxed, so it is the better source in a high-tax party.
 
 Common question, "Why am I always out of funds?": the sinks are ads (₳100,000 to ₳180,000 each), polls and Campaign Presence, against an income of only base + donor + office per turn. Fundraising and a higher donor level are the fix. If you are new, the income and ad rules behind the day-one ledger are in the [first campaign walkthrough](/wiki/first-campaign-walkthrough).

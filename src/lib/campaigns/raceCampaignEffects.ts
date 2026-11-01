@@ -9,13 +9,14 @@ import {
 } from "./fieldOffices/engine";
 
 /**
- * Campaign vote effects for the generic (non-presidential) tally engine.
+ * Campaign vote effects for the generic tally engine.
  *
- * The presidential engine has applied Ground Game since Strategic Operations
- * v2. Every other race ignored it, so a Senate or Commons campaign paid for
- * canvassers that moved nothing. This is the one hook that engine calls: it
- * folds the Ground Game swing/GOTV bonus and the race's field offices into a
- * single per-candidate multiplier for the race's region.
+ * Campaigns exist only in presidential races (see `isCampaignEligible`). The
+ * US presidential engine applies Ground Game and field offices itself; this is
+ * the hook for presidential races the generic engine tallies, such as Russia's
+ * popular rounds. It folds the Ground Game swing/GOTV bonus and the race's
+ * field offices into a single per-candidate multiplier for the race's region.
+ * Races with no campaign return null.
  *
  * Per-turn loads are memoised by the caller (`VoteTurnMemo`), so a turn with
  * hundreds of races still costs two queries.

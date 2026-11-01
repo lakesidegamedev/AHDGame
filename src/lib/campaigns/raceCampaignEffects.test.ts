@@ -78,9 +78,10 @@ describe("loadRaceCampaignMultiplier", () => {
           {
             electionId,
             candidateId: candidate,
-            countryId: "UK",
-            regionId: "LON",
-            electorateShare: 0,
+            countryId: "US",
+            regionId: "PA",
+            subdivisionId: "42101",
+            electorateShare: 0.1,
             yieldFactor: 1,
             openedTurn: 0,
           },
@@ -90,8 +91,8 @@ describe("loadRaceCampaignMultiplier", () => {
     );
     const mult = await loadRaceCampaignMultiplier(db, {
       electionId,
-      countryId: "UK",
-      regionId: "LON",
+      countryId: "US",
+      regionId: "PA",
       currentTurn: 10,
       isSwingRegion: false,
     });

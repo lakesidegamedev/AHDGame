@@ -1,4 +1,3 @@
-import { getCampaignCopyForElection } from "@/lib/campaigns/raceFamilyCopy";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Campaign } from "@/lib/db/types";
@@ -140,7 +139,7 @@ export interface CampaignData {
     electionYear: number | null;
     isEnded: boolean;
     /** Field-office granularity in this race's country; null when unavailable. */
-    fieldOfficeScope?: "county" | "region" | null;
+    fieldOfficeScope?: "county" | null;
     /** Offices this campaign holds right now. */
     fieldOfficeCount?: number;
   } | null;
@@ -575,8 +574,6 @@ export const CAMPAIGN_CATEGORIES = [
   },
   {
     key: "groundGame",
-    // Phase 5.5 — copy is presidential-default; non-presidential races see
-    // race-family-aware wording via getCampaignCategoriesForElection() below.
     label: "Ground Game",
     description: "Boost swing state performance",
     tooltipText:
@@ -598,64 +595,3 @@ export const CAMPAIGN_CATEGORIES = [
     requiresTarget: false,
   },
 ] as const;
-
-/**
- * Widened shape for the race-family-aware category list. Same fields as
- * `CAMPAIGN_CATEGORIES` entries but with `description` and `tooltipText`
- * widened to plain `string` so localized copy can be substituted in.
- */
-export interface CampaignCategoryDisplay {
-  key: string;
-  label: string;
-  description: string;
-  tooltipText: string;
-  colorClass: string;
-  bgClass: string;
-  barClass: string;
-  requiresTarget: boolean;
-}
-
-/**
- * Phase 5.5 — returns the upgrade-category list with the `groundGame`
- * entry's description / tooltipText localized for the election's race
- * family (president → swing states, senate / gov → swing counties,
- * house / stateSenate → swing precincts).
- *
- * Pure function — UI consumers use this when an election is in scope so
- * the displayed copy matches the campaign's actual constituency. Falls
- * back to presidential copy for unknown / missing election types per the
- * adapter's defensive default.
- *
- * See plan §"Phase 5.5 — Decisions Recorded During Execution" D5.
- */
-export function getCampaignCategoriesForElection(election: {
-  electionType?: string;
-}): CampaignCategoryDisplay[] {
-  const copy = getCampaignCopyForElection(
-    election as Parameters<typeof getCampaignCopyForElection>[0]
-  );
-  return CAMPAIGN_CATEGORIES.map((cat) => {
-    if (cat.key !== "groundGame") {
-      return {
-        key: cat.key,
-        label: cat.label,
-        description: cat.description,
-        tooltipText: cat.tooltipText,
-        colorClass: cat.colorClass,
-        bgClass: cat.bgClass,
-        barClass: cat.barClass,
-        requiresTarget: cat.requiresTarget,
-      };
-    }
-    return {
-      key: cat.key,
-      label: cat.label,
-      description: `Boost ${copy.swingArea} performance`,
-      tooltipText: copy.groundGameDescription,
-      colorClass: cat.colorClass,
-      bgClass: cat.bgClass,
-      barClass: cat.barClass,
-      requiresTarget: cat.requiresTarget,
-    };
-  });
-}
