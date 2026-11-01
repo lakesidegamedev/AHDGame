@@ -199,6 +199,10 @@ export async function setSingleplayerConfig(
     Object.keys(defaults).map((key) => [key, config.featureFlags?.[key] ?? defaults[key]])
   ) as Record<string, boolean>;
   const persisted: SingleplayerConfig = { ...config, featureFlags, configuredAt: new Date() };
+  // An absent guide must stay absent: the driver would store an explicit
+  // undefined as null, and a legacy world would start looking like one that
+  // offers the guide.
+  if (persisted.guide === undefined) delete persisted.guide;
   await db.collection<GameState>("gameState").updateOne(
     { _id: "current" },
     {

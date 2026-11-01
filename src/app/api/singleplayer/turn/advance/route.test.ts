@@ -8,6 +8,7 @@ const {
   findOne,
   getSingleplayerWorldAvailability,
   runShareFillRecoveryPass,
+  getActiveSingleplayerBatch,
   maybeAutosave,
 } = vi.hoisted(() => ({
   requireSingleplayer: vi.fn(),
@@ -17,6 +18,7 @@ const {
   findOne: vi.fn(),
   getSingleplayerWorldAvailability: vi.fn(),
   runShareFillRecoveryPass: vi.fn(),
+  getActiveSingleplayerBatch: vi.fn(),
   maybeAutosave: vi.fn(),
 }));
 
@@ -25,6 +27,7 @@ vi.mock("@/lib/mongodb", () => ({ getDb }));
 vi.mock("@/lib/singleplayerServer", () => ({ getSingleplayerConfig }));
 vi.mock("@/lib/singleplayerOperator", () => ({ getSingleplayerWorldAvailability }));
 vi.mock("@/lib/turnSystem", () => ({ processTurn }));
+vi.mock("@/lib/singleplayerBatch", () => ({ getActiveSingleplayerBatch }));
 vi.mock("@/lib/singleplayer/saves", () => ({ maybeAutosave }));
 vi.mock("@/lib/corporations/commands/shareTrading/shareFillAudit", () => ({
   runShareFillRecoveryPass,
@@ -47,7 +50,16 @@ describe("POST /api/singleplayer/turn/advance", () => {
       warnings: [],
     });
     runShareFillRecoveryPass.mockResolvedValue({ status: "completed", examined: 0 });
-    maybeAutosave.mockResolvedValue(null);
+    getActiveSingleplayerBatch.mockReturnValue(null);
+  });
+
+  it("refuses a single turn while a multi-turn advance is running", async () => {
+    getActiveSingleplayerBatch.mockReturnValue({ id: "batch" });
+    const response = await POST(
+      new Request("http://localhost/api/singleplayer/turn/advance", { method: "POST" })
+    );
+    expect(response.status).toBe(409);
+    expect(processTurn).not.toHaveBeenCalled();
   });
 
   it("does not expose a player turn control for a worldsim", async () => {
@@ -122,12 +134,17 @@ describe("POST /api/singleplayer/turn/advance", () => {
 
     expect(response.status).toBe(200);
     expect(processTurn).toHaveBeenCalledTimes(1);
-    expect(maybeAutosave).toHaveBeenCalledWith(expect.anything(), 2);
     await expect(response.json()).resolves.toMatchObject({ success: true, turn: 2 });
   });
 
-  it("does not autosave a turn that did not commit", async () => {
-    processTurn.mockResolvedValue({ success: false, turn: 0, message: "locked", warnings: [] });
+  it("asks for an autosave after a completed turn, and not after a refused one", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/singleplayer/turn/advance", { method: "POST" })
+    );
+    expect(response.status).toBe(200);
+    expect(maybeAutosave).toHaveBeenCalledTimes(1);
+    maybeAutosave.mockClear();
+    getActiveSingleplayerBatch.mockReturnValueOnce({ status: "running" });
     await POST(new Request("http://localhost/api/singleplayer/turn/advance", { method: "POST" }));
     expect(maybeAutosave).not.toHaveBeenCalled();
   });

@@ -20,6 +20,7 @@ import {
   DeferredStatAllocationGate,
   DeferredWealthTierRepickGate,
   DeferredTutorialCoachMount,
+  DeferredSingleplayerGuide,
   DeferredTurnProgressToast,
   DeferredNominationChoicePrompt,
 } from "@/components/DeferredShellOverlays";
@@ -475,9 +476,12 @@ export default async function RootLayout({
                             />
                           )}
                           {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
+                          {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
                           {!isWikiSubdomain && <DeferredTutorialCoachMount />}
                           {!isWikiSubdomain && <LiveRefreshBanner />}
-                          {!isNativeApp && <CookieConsentBanner />}
+                          {/* Singleplayer loads no analytics (see below), so there is
+                              nothing to consent to. */}
+                          {!isNativeApp && !singleplayer && <CookieConsentBanner />}
                           {/* A singleplayer build runs on the player's machine with no
                               account and nothing to measure, so none of the telemetry
                               or ad tags below have a job there.

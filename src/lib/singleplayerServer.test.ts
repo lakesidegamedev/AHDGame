@@ -168,6 +168,26 @@ describe("singleplayer maintenance recovery", () => {
     expect(set.nppAutonomyLevel).toBe("v4");
   });
 
+  it("stores the first-game guide only when the caller supplies one", async () => {
+    const base = {
+      mode: "normal",
+      difficulty: "normal",
+      nppAutonomyLevel: "v4",
+      permanentHeadOfState: false,
+    } as const;
+    const fresh = createMockDb();
+    await setSingleplayerConfig(fresh as unknown as Db, { ...base, guide: {} });
+    expect(
+      fresh.collectionMocks.gameState.updateOne.mock.calls[0]?.[1].$set.singleplayerConfig
+    ).toHaveProperty("guide", {});
+
+    const legacy = createMockDb();
+    await setSingleplayerConfig(legacy as unknown as Db, { ...base, guide: undefined });
+    const stored =
+      legacy.collectionMocks.gameState.updateOne.mock.calls[0]?.[1].$set.singleplayerConfig;
+    expect("guide" in stored).toBe(false);
+  });
+
   it("clears reset maintenance when a new local world is configured", async () => {
     const db = createMockDb();
 

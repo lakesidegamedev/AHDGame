@@ -2,13 +2,9 @@ import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireSingleplayer } from "@/lib/api/requireSingleplayer";
 import { getDb } from "@/lib/mongodb";
-import { getSingleplayerConfig } from "@/lib/singleplayerServer";
-import { ObjectId } from "mongodb";
-import { SINGLEPLAYER_USER_ID } from "@/lib/singleplayer";
-import { getSingleplayerWorldAvailability } from "@/lib/singleplayerOperator";
-import { processTurn } from "@/lib/turnSystem";
+import { advanceSingleplayerTurn } from "@/lib/singleplayerTurn";
+import { getActiveSingleplayerBatch } from "@/lib/singleplayerBatch";
 import { maybeAutosave } from "@/lib/singleplayer/saves";
-import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTrading/shareFillAudit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -18,65 +14,22 @@ export async function POST(request: Request) {
   const denied = requireSingleplayer(request);
   if (denied) return denied;
   try {
+    if (getActiveSingleplayerBatch()) {
+      return errorResponse(409, "A multi-turn advance is already running.");
+    }
     const db = await getDb();
-    const config = await getSingleplayerConfig(db);
-    if (!config || config.mode === "worldsim") {
-      return errorResponse(409, "A player world is not configured");
-    }
-
-    const character = await db
-      .collection("characters")
-      .findOne(
-        { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
-        { projection: { _id: 1, funds: 1, currencyBalances: 1, actions: 1 } }
-      );
-    if (!character) {
-      return errorResponse(409, "Create a character before ending a turn.");
-    }
-
-    if ((await getSingleplayerWorldAvailability(db)) !== "off") {
-      return errorResponse(409, "Resume the world before ending a turn.");
-    }
-    const started = performance.now();
-    const result = await processTurn();
-    if (result.turn <= 0) {
-      return errorResponse(500, result.message);
-    }
-
-    // Lonely share-fill orphans are re-driven by the periodic cron sweep in
-    // multiplayer, but singleplayer runs no cron. Drive one bounded pass here,
-    // after (never inside) the turn. Best-effort by contract:
-    // `runShareFillRecoveryPass` never throws: a `failed` summary leaves
-    // receipts `in_progress` for the next advance and never fails this one,
-    // so no catch here: an outer silent catch would only hide a broken
-    // contract instead of surfacing it through `handleRouteError`.
-    await runShareFillRecoveryPass(db);
-    // After the recovery pass, so the save holds the settled turn. Not awaited:
-    // the player's turn never waits on, or fails because of, a save.
-    void maybeAutosave(db, result.turn);
-
-    const updated = await db
-      .collection("characters")
-      .findOne(
-        { _id: character._id },
-        { projection: { funds: 1, currencyBalances: 1, actions: 1 } }
-      );
-    const beforeFunds = character.currencyBalances?.campaign ?? character.funds ?? 0;
-    const afterFunds = updated?.currencyBalances?.campaign ?? updated?.funds ?? beforeFunds;
-    const briefing = {
-      funds: afterFunds,
-      fundsDelta: afterFunds - beforeFunds,
-      actions: updated?.actions ?? character.actions ?? 0,
-      actionsDelta: (updated?.actions ?? character.actions ?? 0) - (character.actions ?? 0),
-    };
+    const outcome = await advanceSingleplayerTurn(db);
+    if (!outcome.ok) return errorResponse(outcome.status, outcome.error);
+    // Not awaited: the player's turn never waits on, or fails because of, a save.
+    void maybeAutosave(db, outcome.turn);
 
     return NextResponse.json({
       success: true,
-      briefing,
-      turn: result.turn,
-      message: result.message,
-      durationSeconds: Math.round((performance.now() - started) / 100) / 10,
-      ...(result.warnings.length > 0 ? { warnings: result.warnings } : {}),
+      briefing: outcome.briefing,
+      turn: outcome.turn,
+      message: outcome.message,
+      durationSeconds: outcome.durationSeconds,
+      ...(outcome.warnings.length > 0 ? { warnings: outcome.warnings } : {}),
     });
   } catch (error) {
     return handleRouteError(error);
