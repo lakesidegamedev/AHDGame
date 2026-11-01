@@ -7,6 +7,12 @@ export function producerRecipe(input: {
   eraUnitScale: number;
   /** Base output-rate value, frozen before technology and resource yield effects. */
   outputRateValueBasis?: number;
+  /**
+   * Supply basket the input divisor is normalised against. Defaults to
+   * `supply`. Extraction passes the resource-unfiltered mix here, so a site
+   * short of a resource pays materials only for the share it can extract.
+   */
+  inputYieldSupply?: Readonly<Partial<Record<CommodityType, number>>>;
 }) {
   if (!Number.isFinite(input.eraUnitScale) || input.eraUnitScale <= 0)
     throw new Error("Invalid recipe unit scale");
@@ -31,6 +37,13 @@ export function producerRecipe(input: {
   if (!Number.isFinite(outputRateValueBasis) || outputRateValueBasis <= 0)
     throw new Error("Recipe requires physical output value basis");
   const normalizedYield = yieldAtBasePrices / outputRateValueBasis;
+  const inputYieldAtBasePrices = weights(input.inputYieldSupply ?? input.supply).reduce(
+    (sum, row) => sum + row.weight,
+    0
+  );
+  const normalizedInputYield = inputYieldAtBasePrices / outputRateValueBasis;
+  if (!(normalizedInputYield > 0) || !Number.isFinite(normalizedInputYield))
+    throw new Error("Recipe requires physical input yield");
   const unitsPerNominalAnchor = normalizedYield * input.eraUnitScale;
   if (!(unitsPerNominalAnchor > 0) || !Number.isFinite(unitsPerNominalAnchor))
     throw new Error("Recipe requires physical output");
@@ -43,7 +56,7 @@ export function producerRecipe(input: {
   return {
     unitsPerNominalAnchor,
     nominalAnchorPerCapacityUnit: 1 / unitsPerNominalAnchor,
-    inputs: coefficients(inputs, normalizedYield),
+    inputs: coefficients(inputs, normalizedInputYield),
     outputs: coefficients(outputs, yieldAtBasePrices),
   };
 }

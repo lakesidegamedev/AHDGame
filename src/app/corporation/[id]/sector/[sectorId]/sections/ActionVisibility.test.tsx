@@ -102,7 +102,9 @@ describe("sector action visibility", () => {
         pricing={{ ...pricing, soldFraction: 0, ownSiteFraction: 0.01, clearingFactor: 0 }}
       />
     );
-    expect(screen.getByText("0% sold last turn (all outputs), 1% to your sites")).toBeTruthy();
+    expect(
+      screen.getByText("0% sold of units offered last turn (all outputs), 1% to your sites")
+    ).toBeTruthy();
     expect(screen.getByText("×0.00")).toBeTruthy();
   });
 
