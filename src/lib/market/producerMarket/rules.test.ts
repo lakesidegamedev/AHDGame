@@ -958,3 +958,54 @@ describe("country-tagged funded settlement", () => {
     expect(settleProducerMarket({ turn: 1, ...base }).countryBooks).toBeUndefined();
   });
 });
+
+describe("automatic ask with sell-through memory", () => {
+  const basis = {
+    referenceUnitPrice: 10,
+    variableUnitCost: 4,
+    fixedCost: 200,
+    offeredUnits: 100,
+    demand: [{ units: 200, maximumUnitPrice: 20 }],
+    competitors: [{ units: 200, unitPrice: 10 }],
+  };
+  const policy = { kind: "automatic", targetMarkup: 0.5 } as const;
+  const memory = { ask: 10, previousAsk: 9 };
+
+  it("raises the ask above last turn's price after selling out", () => {
+    const flat = quoteProducer({ ...basis, policy });
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 100, offeredUnits: 100 },
+    });
+    expect(flat.unitPrice).toBeCloseTo(10);
+    expect(quote.unitPrice).toBeGreaterThan(flat.unitPrice);
+  });
+
+  it("gives a rejected raise back to the previous ask", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 40, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(9);
+  });
+
+  it("holds through the deadband rather than chasing the book", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 95, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(10);
+  });
+
+  it("keeps the estimator when no memory is passed", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory: null, soldUnits: 100, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(10);
+  });
+});
