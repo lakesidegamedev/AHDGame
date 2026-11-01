@@ -1,3 +1,5 @@
+import { planDividendAllocation } from "@/lib/corporations/rules/dividendAllocation";
+import { hasCorporateCashPayables, corporatePayoutCash } from "./rules/corporateTaxPriority";
 import { holdingMaturationWrites } from "./holdingMaturationWrites";
 /**
  * The per-turn corporation ledger: why a corp lost money this turn. processSectors
@@ -482,6 +484,7 @@ export function processSectors(
     // for the per-turn arithmetic. The anchor variants also feed the marketing/
     // logistics strength helpers below (their thresholds are ₳-calibrated).
     const imfBailoutActive = corp.imfBailoutActive === true;
+    const cashPayables = hasCorporateCashPayables(corp);
 
     const marketingBudgetAnchor = readCorpEconomicAnchor(
       corp.marketingBudget,
@@ -504,12 +507,13 @@ export function processSectors(
       localFxRate
     );
 
-    const requestedHourlyMarketing = marketingBudgetAnchor / TURNS_PER_DAY;
-    const requestedHourlyLogistics = logisticsBudgetAnchor / TURNS_PER_DAY;
+    const requestedHourlyMarketing = cashPayables ? 0 : marketingBudgetAnchor / TURNS_PER_DAY;
+    const requestedHourlyLogistics = cashPayables ? 0 : logisticsBudgetAnchor / TURNS_PER_DAY;
     // R&D spend lives in the same daily-budget cadence as marketing/logistics
     // and counts against the 150% overhead cap. Feeds rdScore growth below.
-    const requestedHourlyRd = rdBudgetAnchor / TURNS_PER_DAY;
-    const requestedCeoSalary = imfBailoutActive ? 0 : ceoSalaryAnchor / TURNS_PER_DAY;
+    const requestedHourlyRd = cashPayables ? 0 : rdBudgetAnchor / TURNS_PER_DAY;
+    const requestedCeoSalary =
+      imfBailoutActive || cashPayables ? 0 : ceoSalaryAnchor / TURNS_PER_DAY;
 
     // Ticket #1237: pay-time ceiling on the 150% combined-overhead rule. The
     // set-time check in updateCorporationSettings only binds at the moment
@@ -608,6 +612,17 @@ export function processSectors(
       marketingSpendAnchorByBuyerId.set(corpId, hourlyMarketing);
     }
 
+    const heldBonds = lookups.bondsHeldByCorpId.get(corp._id.toString()) ?? [];
+    const perTurnBondCouponIncome = perTurnBondCouponIncomeAsHolder(
+      heldBonds,
+      lookups.exchangeRatesByCurrency
+    );
+    const corpLegalStructure = getLegalStructureForCorp(corp);
+    const corpTaxMultiplier = corporateTaxMultiplierFor(corpLegalStructure, passThroughPhase, corp);
+    const corpCountryFedRate = lookups.domesticCorpTaxRateByCountry.get(corp.countryId) ?? 0;
+    const bondCouponFedTax =
+      Math.max(0, perTurnBondCouponIncome) * corpTaxMultiplier * (corpCountryFedRate / 100);
+
     // Compute income before CEO salary to determine what the corp can afford
     const costsBeforeCeo =
       corpCosts +
@@ -622,7 +637,14 @@ export function processSectors(
     // Cap CEO salary: only pay what the corp can cover without going below zero.
     // projectedLiquid is what liquidCapital would be after all costs except CEO salary.
     // Both sides in ₳: liquidCapital is normalized; incomeBeforeCeo is already ₳.
-    const projectedLiquid = liquidCapitalAnchor + incomeBeforeCeo;
+    const projectedLiquid = treasuryCashLedgerEnabled
+      ? corporatePayoutCash({
+          cash: liquidCapitalAnchor,
+          income: incomeBeforeCeo,
+          alreadySettled: funded?.settledProfitByCorp.get(corpId) ?? 0,
+          reservedTax: corp.countryOwnerId ? 0 : bondCouponFedTax,
+        })
+      : liquidCapitalAnchor + incomeBeforeCeo;
     let actualCeoSalary: number;
     let shouldZeroCeoSalary = false;
     if (requestedCeoSalary <= 0 || projectedLiquid <= 0) {
@@ -679,8 +701,6 @@ export function processSectors(
     // Legal structure: preferential -> taxMultiplier x rate; standard -> 1x. A
     // pass-through pays no company tax (its owners are taxed below), except a
     // structure taxed as a company in reality, which phases in to 1x.
-    const corpLegalStructure = getLegalStructureForCorp(corp);
-    const corpTaxMultiplier = corporateTaxMultiplierFor(corpLegalStructure, passThroughPhase, corp);
 
     // Consolidated loss offset. Taxing each sector's positive income in
     // isolation (`max(0, sectorNetIncome)`) meant a diversified corp's losses
@@ -751,11 +771,6 @@ export function processSectors(
       issuerBonds,
       lookups.exchangeRatesByCurrency
     );
-    const heldBonds = lookups.bondsHeldByCorpId.get(corp._id.toString()) ?? [];
-    const perTurnBondCouponIncome = perTurnBondCouponIncomeAsHolder(
-      heldBonds,
-      lookups.exchangeRatesByCurrency
-    );
     const isNationalEnterprise = !!corp.countryOwnerId;
     const perTurnBondDragOnNetIncome = isNationalEnterprise ? 0 : perTurnBondInterestExpense;
 
@@ -767,9 +782,6 @@ export function processSectors(
     // history breakdown attributes the revenue correctly.
     // Corp's home country — bond income is always domestic from the corp's perspective.
     // pass_through structures pay no corporate tax including on bond income (corpTaxMultiplier = 0).
-    const corpCountryFedRate = lookups.domesticCorpTaxRateByCountry.get(corp.countryId) ?? 0;
-    const bondCouponFedTax =
-      Math.max(0, perTurnBondCouponIncome) * corpTaxMultiplier * (corpCountryFedRate / 100);
     if (bondCouponFedTax > 0) {
       totalFederalTax += bondCouponFedTax;
       taxPaidByCountry.set(
@@ -924,26 +936,42 @@ export function processSectors(
 
     if (
       !imfBailoutActive &&
+      !cashPayables &&
       payoutDividendRate > 0 &&
       netIncomeBeforeDividends > 0 &&
       ((corp.shareholders?.length ?? 0) > 0 || (corp.publicFloat ?? 0) > 0)
     ) {
       const rawDividendPool = netIncomeBeforeDividends * (payoutDividendRate / 100);
-      hourlyDividendPayout = Math.min(rawDividendPool, Math.max(0, netIncomeBeforeDividends));
+      hourlyDividendPayout = Math.min(
+        rawDividendPool,
+        Math.max(0, netIncomeBeforeDividends),
+        treasuryCashLedgerEnabled
+          ? corporatePayoutCash({
+              cash: liquidCapitalAnchor,
+              income: afterTaxOperating,
+              alreadySettled: funded?.settledProfitByCorp.get(corpId) ?? 0,
+            })
+          : Infinity
+      );
       // Shares issued for an IPO but not yet placed have no holder and earn no dividend.
       const unplacedIpoShares =
         corp.pendingShareIssuance?.issuedUpfront && corp.pendingShareIssuance.source === "ipo"
           ? corp.pendingShareIssuance.remainingShares
           : 0;
-      const totalShares = Math.max(1, (corp.totalShares ?? 10_000_000) - unplacedIpoShares);
+      const holderDividends = planDividendAllocation({
+        pool: hourlyDividendPayout,
+        totalShares: corp.totalShares ?? 10_000_000,
+        publicFloat: corp.publicFloat ?? 0,
+        unplacedIpoShares,
+        holderShares: corp.shareholders.map((holder) => holder.shares),
+      });
       const taxedAtSourceShare = alreadyTaxedDistributionShare(
         corpLegalStructure,
         passThroughPhase,
         corp
       );
-      for (const sh of corp.shareholders) {
-        const share = totalShares > 0 ? sh.shares / totalShares : 0;
-        const payment = hourlyDividendPayout * share;
+      for (const [holderIndex, sh] of corp.shareholders.entries()) {
+        const payment = holderDividends.holders[holderIndex];
         if (payment > 0) {
           if (sh.characterId) {
             addToPaymentMap(dividendPayments, sh.characterId.toString(), payment, corp.countryId);
@@ -1029,11 +1057,7 @@ export function processSectors(
           }
         }
       }
-      const floatShares = Math.max(
-        0,
-        Math.min(totalShares, (corp.publicFloat ?? 0) - unplacedIpoShares)
-      );
-      const floatDividendAnchor = hourlyDividendPayout * (floatShares / totalShares);
+      const floatDividendAnchor = holderDividends.publicFloat;
       if (floatDividendAnchor > 0) {
         equityPoolDividendAccruals.push({
           corporationId: corp._id,
@@ -1178,6 +1202,8 @@ export function processSectors(
     // by both this bulk op and the initial snapshot. The settlement pass later
     // applies its delta to both representations before pricing and persistence.
     const escrowFundingMove =
+      !cashPayables &&
+      !(corp.pendingOperatingCash! > 0) &&
       !equityMarketPoolCurrencies.has((resolvedHomeCurrency ?? "USD") as CurrencyCode) &&
       getShareBuybackMode(corp) === "escrow"
         ? computeEscrowFundingTransfer({
@@ -1432,7 +1458,7 @@ export function processSectors(
             // again. Only an active IMF bailout (which the rate-setting API itself
             // also blocks — see dividends/route.ts) should force-clear the stored rate.
             ...(imfBailoutActive ? { dividendRate: 0, lastDividendChange: now } : {}),
-            ...(shouldZeroCeoSalary || imfBailoutActive ? { ceoSalary: 0 } : {}),
+            ...((shouldZeroCeoSalary && !cashPayables) || imfBailoutActive ? { ceoSalary: 0 } : {}),
             ...(lossCarryforwardByCorpId.has(corpId)
               ? { taxLossCarryforward: lossCarryforwardByCorpId.get(corpId) }
               : {}),

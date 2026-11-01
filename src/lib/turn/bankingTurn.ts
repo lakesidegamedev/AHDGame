@@ -1,3 +1,4 @@
+import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
@@ -762,6 +763,8 @@ async function processOneBank(
   // keeps recipient writes batched and recovery verifies every target receipt.
   const interestMoveKey = turnMoveKey("deposit-interest", bankIdHex, turn);
   let playerInterestSettled = 0;
+  let playerInterestWithheld = 0;
+  const netInterestByCharacter = new Map<string, number>();
   let legacyInterestDebit = 0;
   let legacyNewCredits = new Map<string, number>();
   let npcInterestPaid = roundSavingsAmount(npcInterestDue * interestScale, currency);
@@ -782,48 +785,28 @@ async function processOneBank(
     const credits = playerCredits
       .map((pc) => ({ pc, paid: roundSavingsAmount(pc.interest * interestScale, currency) }))
       .filter(({ paid }) => paid > 0);
-    const settled = await settleTransition(db, {
-      key: interestMoveKey,
-      kind: "deposit_interest",
+    const settledIncome = await creditIncomeAfterTax(
+      db,
+      "bank-interest:" + bankIdHex,
       turn,
-      currency,
-      legs: [],
-      projections: [
-        ...credits.map(({ pc, paid }) => ({
-          collection: "savingsAccounts",
-          filter: { ownerType: "character", ownerId: oid(pc.characterId.toString()), currency },
-          update: {
-            $inc: { balance: paid, interestEarned: paid, version: 1 },
-            $set: { lastSettlementKey: interestMoveKey, lastSettledTurn: turn },
-          },
-          note: "deposit interest credited to the account",
-        })),
-        ...credits.map(({ pc, paid }) => ({
-          collection: "characters",
-          filter: { _id: oid(pc.characterId.toString()) },
-          update: {
-            $inc: {
-              [`currencyBalances.savings.${currency}`]: paid,
-              [`currencyBalances.interestEarned.${currency}`]: paid,
-            },
-          },
-          note: "legacy savings projection follows the account",
-        })),
-        {
-          collection: "corporations",
-          filter: { _id: oid(bankIdHex) },
-          update: { $inc: { "bankCharter.playerDeposits": playerInterestPaid } },
-          note: "the bank's player-deposit liability grows by the interest",
-        },
-      ],
-      event: {
-        kind: "account.interest_paid",
-        command: "bank.turn.depositInterest",
-        amount: playerInterestPaid,
-      },
-    });
-    if (settled.status === "applied" || settled.status === "replayed") {
-      playerInterestSettled = playerInterestPaid;
+      new Date(),
+      credits.map(({ pc, paid }) => ({
+        characterId: pc.characterId,
+        ownerCollection: "characters" as const,
+        currency,
+        gross: paid,
+        income: paid,
+        destination: "currencyBalances.savings." + currency,
+        interest: { authoritative: true, bankId: corp._id },
+      }))
+    );
+    const withheld = settledIncome.reduce((sum, credit) => sum + credit.gross - credit.net, 0);
+    for (const credit of settledIncome)
+      netInterestByCharacter.set(credit.characterId.toHexString(), credit.net);
+    playerInterestWithheld = withheld;
+    cashReserves = Math.max(0, cashReserves - withheld);
+    playerInterestSettled = playerInterestPaid;
+    {
       const thresholds = caches.txThresholds ?? (await loadTxThresholds(db));
       await emitTxBulk(
         db,
@@ -839,12 +822,14 @@ async function processOneBank(
           counterpartyType: "corporation" as const,
           counterpartyId: corp._id,
           counterpartyName: corp.name,
-          meta: { ratePercent: playerRatePercent, retainedAsBacking: true },
+          meta: {
+            ratePercent: playerRatePercent,
+            retainedAsBacking: true,
+            incomeTaxAtSource: true,
+          },
         })),
         thresholds
       );
-    } else {
-      result.depositInterestShortfall += playerInterestPaid;
     }
   } else if (policy.savingsAccounts !== "authoritative") {
     const settled = await settleLegacyDepositInterest(db, {
@@ -866,6 +851,7 @@ async function processOneBank(
         .filter((credit) => credit.amount > 0),
     });
     playerInterestSettled = settled.paid;
+    playerInterestWithheld = settled.withheld ?? 0;
     legacyInterestDebit = settled.newlyDebited;
     legacyNewCredits = settled.newlyCredited;
     npcInterestPaid = settled.npcInterestPaid;
@@ -918,7 +904,9 @@ async function processOneBank(
       ] ?? 0;
     paidByCharId.set(
       id,
-      policy.savingsAccounts === "authoritative" ? paid : (legacyNewCredits.get(id) ?? 0)
+      policy.savingsAccounts === "authoritative"
+        ? (netInterestByCharacter.get(id) ?? paid)
+        : (legacyNewCredits.get(id) ?? 0)
     );
   }
   const premiumBasis = await insurancePremiumBasisForTurn(db, {
@@ -931,7 +919,7 @@ async function processOneBank(
     npcDeposits,
     playerDepositsAreLiabilities,
     playerDeposits,
-    playerInterestSettled,
+    playerInterestSettled: playerInterestSettled - playerInterestWithheld,
     cashReserves,
   });
   const premium = await settleInsurancePremiumForTurn(
@@ -1005,7 +993,7 @@ async function processOneBank(
   stageDone("householdBook");
 
   // (f) Recompute aggregates + stamp lastBankingTurn (END of bank pass)
-  const finalPlayerDeposits = playerDeposits + playerInterestSettled;
+  const finalPlayerDeposits = playerDeposits + playerInterestSettled - playerInterestWithheld;
   const totalDeposits = finalPlayerDeposits + npcDeposits;
   const baseBankingIncome =
     result.loanInterestCollected +

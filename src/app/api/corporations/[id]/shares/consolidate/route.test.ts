@@ -89,6 +89,51 @@ function baseCorp(overrides: Record<string, unknown> = {}): Record<string, unkno
 }
 
 describe("POST /api/corporations/[id]/shares/consolidate", () => {
+  it.each(["ipo", "vote"])(
+    "rejects restructuring during a pending %s issuance before cleanup",
+    async (source) => {
+      const corp = baseCorp({
+        pendingShareIssuance: { remainingShares: 200_000, source, issuedUpfront: true },
+      });
+      const response = await runConsolidate({ corp, targetTotalShares: 1_000_000 });
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toMatch(/pending share issuance/i);
+      const { cleanupShareMarketActivityForCorporationTargets } =
+        await import("@/lib/corporations/cleanupShareMarketActivity");
+      expect(cleanupShareMarketActivityForCorporationTargets).not.toHaveBeenCalled();
+      expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
+    }
+  );
+
+  it("rejects a newly opened issuance after market cleanup", async () => {
+    const corp = baseCorp();
+    db.collection("corporations").findOne.mockResolvedValue({
+      ...corp,
+      pendingShareIssuance: { remainingShares: 1, source: "ipo" },
+    });
+    const response = await runConsolidate({ corp, targetTotalShares: 1_000_000 });
+    expect(response.status).toBe(409);
+    expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
+  });
+
+  it("does not publish history when the atomic restructure guard loses a race", async () => {
+    const corp = baseCorp();
+    db.collection("corporations").updateOne.mockResolvedValue({
+      matchedCount: 0,
+      modifiedCount: 0,
+    });
+    const response = await runConsolidate({ corp, targetTotalShares: 1_000_000 });
+    expect(response.status).toBe(409);
+    expect(db.collection("corporations").updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalShares: corp.totalShares,
+        "pendingShareIssuance.remainingShares": { $not: { $gt: 0 } },
+      }),
+      expect.anything()
+    );
+    expect(db.collectionMocks["corporationHistory"]).toBeUndefined();
+  });
+
   it("rejects a split while a shareholder vote is open", async () => {
     const corp = baseCorp();
     db.collection("corporationVotes").findOne.mockResolvedValue({
@@ -122,7 +167,7 @@ describe("POST /api/corporations/[id]/shares/consolidate", () => {
     // sharePrice            : 100 × 1.2 = 120
     // fundamentalSharePrice : 80  × 1.2 = 96
     expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalledWith(
-      { _id: corp._id },
+      expect.objectContaining({ _id: corp._id, totalShares: corp.totalShares }),
       expect.objectContaining({
         $set: expect.objectContaining({
           totalShares: 1_000_000,
@@ -186,7 +231,7 @@ describe("POST /api/corporations/[id]/shares/consolidate", () => {
 
     expect(response.status).toBe(200);
     expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalledWith(
-      { _id: corp._id },
+      expect.objectContaining({ _id: corp._id, totalShares: corp.totalShares }),
       expect.objectContaining({
         $set: expect.objectContaining({
           totalShares: 2_000_000,
@@ -214,7 +259,7 @@ describe("POST /api/corporations/[id]/shares/consolidate", () => {
 
     expect(response.status).toBe(200);
     expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalledWith(
-      { _id: corp._id },
+      expect.objectContaining({ _id: corp._id, totalShares: corp.totalShares }),
       expect.objectContaining({
         $set: expect.objectContaining({
           sharePrice: 120,

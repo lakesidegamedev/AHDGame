@@ -147,3 +147,8 @@ describe("savingsInterestTurn base APY for bank-held savings", () => {
     expect(doc.currencyBalances.pendingSavingsInterest.USD ?? 0).toBeCloseTo(7, 8);
   });
 });
+
+vi.mock("@/lib/budget/incomePayout", async () => {
+  const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+  return { creditIncomeAfterTax: vi.fn(untaxedIncomePayout) };
+});

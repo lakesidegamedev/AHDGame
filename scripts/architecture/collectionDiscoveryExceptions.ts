@@ -270,10 +270,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts",
     owner: "applyAcquisitionLeg",
     argument: "leg.collection",
-    scopeHash: "865133c464541ed054e5dfdc28be29403872ac66db44655cea9b74c7a91ab90e",
+    scopeHash: "0ca6c157583b0846a2da2d02e66888e50bcd2f89bf106105a92083ad54c2bfa8",
     count: 1,
     reason:
-      "Reviewed stock-tax receipt addition: persisted acquisition legs target the existing characters, imperialCharacters or corporations collections; the receipt shares the keyed wallet write and inherits actor reset coverage.",
+      "Reviewed corporate-tax priority guard: fresh acquirer debits reject pending withholding and existing payables; persisted acquisition legs still target only characters, imperialCharacters or corporations, retain their keyed wallet recovery, and inherit actor reset coverage.",
   },
   {
     file: "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts",

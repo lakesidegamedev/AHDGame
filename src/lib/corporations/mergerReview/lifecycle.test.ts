@@ -235,7 +235,8 @@ describe("fineOverdueDivestitures", () => {
     expect(vi.mocked(atomicallyDebitCorpLiquidCapital)).toHaveBeenCalledWith(
       db,
       ACQ,
-      1_000 * MERGER_REMEDY_OVERDUE_FINE_RATE
+      1_000 * MERGER_REMEDY_OVERDUE_FINE_RATE,
+      { corporateObligation: true }
     );
     // The treasury is credited the ANCHOR amount, so the receiving country
     // converts into its own currency rather than banking the payer's local

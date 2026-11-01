@@ -858,16 +858,17 @@ describe("marketing settlement", () => {
     const sellerAfter = (await memory
       .collection("corporations")
       .findOne({ _id: seller._id })) as unknown as Corporation | null;
-    expect(buyerAfter?.liquidCapital).toBe(990);
-    expect(sellerAfter?.liquidCapital).toBe(1_010);
+    expect(buyerAfter?.liquidCapital).toBe(1_000);
+    // The fixture independently credits 100 of settled seller income above.
+    expect(sellerAfter?.liquidCapital).toBe(1_100);
     expect(buyerAfter?.mediaProductAdvertisingReceiptV1).toBeUndefined();
-    expect(buyerAfter?.mediaProductAdvertisingObligationsV1).toEqual([]);
+    expect(buyerAfter?.mediaProductAdvertisingObligationsV1).toBeUndefined();
     const move = (await memory.collection("bankMoneyMoves").find({}).toArray()).find((row) =>
       String(row._id).startsWith("media-product-advertising:")
     );
-    expect(move?.status).toBe("rejected");
+    expect(move).toBeUndefined();
     expect(Number(buyerAfter?.liquidCapital ?? 0) + Number(sellerAfter?.liquidCapital ?? 0)).toBe(
-      2_000
+      2_100
     );
   });
 
@@ -1556,6 +1557,35 @@ describe("dividend payments to shareholders", () => {
       1000 * EFF_MARGIN_100 * 0.25,
       1
     );
+    expect(result.equityPoolDividendAccruals).toHaveLength(0);
+  });
+
+  it("does not multiply dividends when stale IPO inventory exceeds post-split shares", () => {
+    const charId = new ObjectId();
+    const corp = makeCorp({
+      dividendRate: 25,
+      totalShares: 1_000_000,
+      publicFloat: 200_000,
+      shareholders: [{ characterId: charId, shares: 800_000 }],
+      pendingShareIssuance: {
+        remainingShares: 2_000_000,
+        requestedShares: 2_500_000,
+        source: "ipo",
+        issuedUpfront: true,
+        createdAtTurn: 1,
+        initialPriceLocal: 1,
+      },
+    });
+    const sector = makeSector(corp._id, {
+      revenue: 24_000,
+      profitMargin: 100,
+      targetGrowthRate: 0,
+      currentGrowthRate: 0,
+    });
+    const result = processSectors(baseLookups([corp], [sector]), 1, new Date());
+    const paid = getTotalPayment(result.dividendPayments, charId.toString());
+    expect(paid).toBeGreaterThan(0);
+    expect(paid).toBeCloseTo(result.corpSnapshots[0].dividendPaidPerTurn, 8);
     expect(result.equityPoolDividendAccruals).toHaveLength(0);
   });
 
@@ -4009,4 +4039,57 @@ describe("funded valuation (fundedValuationStage)", () => {
     expect(before.sectorNPV).toBeGreaterThan(500_000);
     expect(after.sectorNPV).toBeGreaterThan(before.sectorNPV);
   });
+});
+
+it("does not distribute forecast bond coupons before current tax is cash-covered", () => {
+  const charId = new ObjectId();
+  const corp = makeCorp({
+    liquidCapital: 0,
+    dividendRate: 30,
+    ceoSalary: 0,
+    marketingBudget: 0,
+    totalShares: 10_000_000,
+    shareholders: [{ characterId: charId, shares: 10_000_000 }],
+  });
+  const sector = makeSector(corp._id, { revenue: 24_000, profitMargin: 50 });
+  const lookups = baseLookups([corp], [sector]);
+  lookups.domesticCorpTaxRateByCountry.set("US", 30);
+  lookups.bondsHeldByCorpId.set(corp._id.toString(), [
+    {
+      bond: {
+        couponRate: 10,
+        currencyCode: "USD",
+      } as unknown as import("@/lib/db/types/bond").Bond,
+      units: 1_000_000,
+    },
+  ]);
+  const result = processSectors(
+    lookups,
+    1,
+    new Date(),
+    false,
+    undefined,
+    undefined,
+    MARKET_DISABLED,
+    false,
+    false,
+    false,
+    new Set(),
+    true
+  );
+  expect(result.corpSnapshots[0].federalTaxPaid).toBeGreaterThan(0);
+  expect(result.corpSnapshots[0].dividendPaidPerTurn).toBe(0);
+  expect(getTotalPayment(result.dividendPayments, charId.toString())).toBe(0);
+});
+
+it("pauses configured CEO salary while arrears remain without clearing that setting", () => {
+  const ceoId = new ObjectId();
+  const corp = makeCorp({ ceoId, ceoSalary: 1000, federalTaxArrearsAnchorByCountry: { US: 1 } });
+  const sector = makeSector(corp._id, { revenue: 24_000, profitMargin: 50 });
+  const result = processSectors(baseLookups([corp], [sector]), 1, new Date());
+  expect(result.ceoSalaryPayments.size).toBe(0);
+  const operation = result.corpOps[0];
+  if (!("updateOne" in operation) || Array.isArray(operation.updateOne.update))
+    throw new Error("Expected a corporate update");
+  expect(operation.updateOne.update.$set?.ceoSalary).toBeUndefined();
 });

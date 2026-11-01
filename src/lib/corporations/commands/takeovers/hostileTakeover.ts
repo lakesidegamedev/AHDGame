@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { referenceValuation } from "../acquisitions/referenceValuation";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import {
@@ -435,6 +436,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         {
           _id: parent._id,
           liquidCapital: { $gte: totalInParentCapital },
+          ...corporateDiscretionaryCashGuard(),
         },
         {
           $inc: { liquidCapital: -totalInParentCapital },

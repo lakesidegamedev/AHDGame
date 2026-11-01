@@ -8,13 +8,17 @@
  * cannot fund their loss. A per-corporation receipt, or a book that stops
  * merging, fails here instead of in production.
  */
-import { ObjectId } from "mongodb";
+import { ObjectId, BSON } from "mongodb";
 import type { Db } from "mongodb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { settleCorporateTaxPriority } from "./corporateTaxPriority";
+vi.mock("@/lib/db/runRequiredTransaction", () => ({
+  runRequiredTransaction: (body: (session: object) => unknown) => body({}),
+}));
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { countRoundTrips } from "@/lib/test-utils/roundTripCounter";
 import type { CorpSnapshot } from "./types";
-import { settleCorporateOperatingCash } from "./operatingCashSettlement";
+import { settleCorporateOperatingCashLegacy as settleCorporateOperatingCash } from "./operatingCashSettlement";
 
 const TURN = 458;
 const CURRENCIES = [
@@ -198,4 +202,66 @@ describe("settleCorporateOperatingCash round trips", () => {
     const kinds = db.collection("bankMoneyMoves").docs.map((row) => String(row.kind));
     expect(kinds).toEqual(expect.arrayContaining(["corporate_operating_loss"]));
   });
+});
+
+it("batches the new tax-first path and measures projected corporation bytes", async () => {
+  const shape: Shape = {
+    taxCountries: (n) => [[CURRENCIES[n % CURRENCIES.length].country, 20]],
+    cash: () => 500,
+    netLocal: fundedNet,
+    corp: () => ({
+      federalTaxArrearsAnchorByCountry: { US: 10 },
+      operatingCashArrearsByCurrency: { USD: 5 },
+      unusedLargeField: "x".repeat(4000),
+    }),
+  };
+  const before = await measure(shape);
+  const { db, snapshots } = fixture(shape);
+  const collection = db.collection("corporations");
+  const read = collection.find.bind(collection);
+  let bytes = 0;
+  vi.spyOn(collection, "find").mockImplementation((...args) => {
+    const cursor = read(...args);
+    const array = cursor.toArray.bind(cursor);
+    cursor.toArray = async () => {
+      const rows = await array();
+      // The in-memory find cursor does not apply Mongo projections. Apply the
+      // captured projection here to estimate the actual returned BSON size.
+      const projection = (args as unknown as [unknown, { projection: Record<string, number> }])[1]
+        .projection;
+      expect(projection).toEqual({
+        liquidCapital: 1,
+        pendingOperatingCash: 1,
+        operatingCashArrearsByCurrency: 1,
+        federalTaxArrearsAnchorByCountry: 1,
+      });
+      bytes += rows.reduce(
+        (sum, row) =>
+          sum +
+          BSON.calculateObjectSize(
+            Object.fromEntries(
+              ["_id", ...Object.keys(projection)]
+                .filter((key) => row[key] !== undefined)
+                .map((key) => [key, row[key]])
+            )
+          ),
+        0
+      );
+      return rows;
+    };
+    return cursor;
+  });
+  const count = countRoundTrips(db);
+  await settleCorporateTaxPriority(db as unknown as Db, snapshots, TURN, new Date());
+  console.info(
+    "Synthetic corporate settlement:",
+    "legacy",
+    before.detail,
+    "tax-first",
+    count.total(),
+    "commands; projected corporation BSON bytes",
+    bytes
+  );
+  expect(count.total()).toBeLessThanOrEqual(60);
+  expect(bytes).toBeLessThan(CORPORATIONS * 300);
 });

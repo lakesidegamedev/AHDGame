@@ -1,3 +1,4 @@
+import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
 /**
  * Dividend Pass-Through for Index Funds
  *
@@ -94,6 +95,7 @@ export async function processIndexFundDividend(
   sharesHeld: number,
   options?: {
     turn?: number;
+    payoutKey?: string;
     // Optional prefetched fund doc + unit-holder positions. The turn-loop
     // caller groups accruals by fund and processes a fund's accruals back to
     // back; the fund's unitSupply and its position rows do NOT change during
@@ -362,14 +364,14 @@ export async function processIndexFundDividend(
   }
 
   if (corpOps.length > 0) await db.collection("corporations").bulkWrite(corpOps);
-  if (characterOps.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("characters").bulkWrite(characterOps as any);
-  }
-  if (imperialOps.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("imperialCharacters").bulkWrite(imperialOps as any);
-  }
+  await payFundHolderIncome(
+    db,
+    `fund:${fundId}:${corporationId}:${options?.payoutKey ?? "default"}`,
+    turn,
+    now,
+    dividendTxEntries,
+    forexEnabled
+  );
   if (nppOps.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.collection("npps").bulkWrite(nppOps as any);
@@ -794,12 +796,7 @@ export async function processIndexFundDividendsBatch(
   const corporateOps = [...corporateInc.values()].map((e) => ({
     updateOne: { filter: { _id: e.id }, update: { $inc: e.inc, $set: { updatedAt: now } } },
   }));
-  const charOps = [...charInc.values()].map((e) => ({
-    updateOne: { filter: { _id: e.id }, update: { $inc: e.inc, $set: { updatedAt: now } } },
-  }));
-  const impOps = [...impInc.values()].map((e) => ({
-    updateOne: { filter: { _id: e.id }, update: { $inc: e.inc, $set: { updatedAt: now } } },
-  }));
+  await payFundHolderIncome(db, "fund-batch", turn, now, holderTxEntries, forexEnabled);
   const nppOps = [...nppInc.values()].map((e) => ({
     updateOne: {
       filter: { _id: e.id },
@@ -811,10 +808,6 @@ export async function processIndexFundDividendsBatch(
   await Promise.all([
     corporateOps.length ? db.collection("corporations").bulkWrite(corporateOps) : Promise.resolve(),
     fundOps.length ? db.collection("indexFunds").bulkWrite(fundOps as any[]) : Promise.resolve(),
-    charOps.length ? db.collection("characters").bulkWrite(charOps as any[]) : Promise.resolve(),
-    impOps.length
-      ? db.collection("imperialCharacters").bulkWrite(impOps as any[])
-      : Promise.resolve(),
     nppOps.length ? db.collection("npps").bulkWrite(nppOps as any[]) : Promise.resolve(),
   ]);
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -848,4 +841,34 @@ export async function findFundsHoldingCorporation(
     if (!holding || holding.shares <= 0) return [];
     return [{ fundId: fund._id, sharesHeld: holding.shares }];
   });
+}
+
+/** Aggregate each recipient/currency before the atomic source payout. */
+async function payFundHolderIncome(
+  db: Db,
+  source: string,
+  turn: number,
+  now: Date,
+  entries: ReturnType<typeof buildIndexFundDividendTxEntry>[],
+  forexEnabled: boolean
+) {
+  const grouped = new Map<string, IncomeCredit>();
+  for (const entry of entries) {
+    if (entry.subjectType !== "character" || !entry.subjectId) continue;
+    const ownerCollection = entry.meta?.imperial ? "imperialCharacters" : "characters";
+    const key = ownerCollection + ":" + entry.subjectId.toString() + ":" + entry.currencyCode;
+    const credit = grouped.get(key) ?? {
+      characterId: entry.subjectId,
+      ownerCollection,
+      currency: entry.currencyCode,
+      gross: 0,
+      income: 0,
+      destination: forexEnabled ? "currencyBalances.personal." + entry.currencyCode : "cashOnHand",
+    };
+    credit.gross += entry.amount;
+    credit.income += entry.amount;
+    grouped.set(key, credit);
+    entry.meta = { ...entry.meta, incomeTaxAtSource: true };
+  }
+  await creditIncomeAfterTax(db, source, turn, now, [...grouped.values()]);
 }

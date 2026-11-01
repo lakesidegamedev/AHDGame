@@ -1,4 +1,4 @@
-import { ObjectId, type Db } from "mongodb";
+import { ObjectId, type Db, type ClientSession } from "mongodb";
 import type {
   Character,
   FederalBudget,
@@ -26,71 +26,97 @@ export const stockSellerKey = (seller: StockSeller) =>
   seller.collection + ":" + seller.id.toHexString();
 
 /** One projected read per input collection, including when used by automatic order fills. */
-export async function loadStockWithholdingContexts(db: Db, sellers: StockSeller[], turn: number) {
+export async function loadStockWithholdingContexts(
+  db: Db,
+  sellers: StockSeller[],
+  turn: number,
+  options?: { income?: boolean; session?: ClientSession }
+) {
   if (!sellers.length) return new Map<string, StockWithholdingContext>();
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { forexEnabled: 1, preset: 1, stockHoldingTaxStartTurn: 1 } }
-    );
+  const state = await db.collection<GameState>("gameState").findOne(
+    { _id: "current" },
+    {
+      session: options?.session,
+      projection: { forexEnabled: 1, preset: 1, stockHoldingTaxStartTurn: 1 },
+    }
+  );
   const contexts = new Map<string, StockWithholdingContext>();
   if (
-    state?.stockHoldingTaxStartTurn === undefined ||
-    turn < state.stockHoldingTaxStartTurn ||
+    (!options?.income &&
+      (state?.stockHoldingTaxStartTurn === undefined || turn < state.stockHoldingTaxStartTurn)) ||
     !sellers.length
   )
     return contexts;
-  const [regular, imperial, budgets, regional, exchange] = await Promise.all([
-    db
-      .collection<Character>("characters")
-      .find(
-        { _id: { $in: sellers.filter((s) => s.collection === "characters").map((s) => s.id) } },
-        {
-          projection: {
-            countryId: 1,
-            homeState: 1,
-            incomeTier: 1,
-            initialIncomeTier: 1,
-            demographics: 1,
-            incomeTaxStartTurn: 1,
+  const reads = [
+    () =>
+      db
+        .collection<Character>("characters")
+        .find(
+          { _id: { $in: sellers.filter((s) => s.collection === "characters").map((s) => s.id) } },
+          {
+            session: options?.session,
+            projection: {
+              countryId: 1,
+              homeState: 1,
+              incomeTier: 1,
+              initialIncomeTier: 1,
+              demographics: 1,
+              incomeTaxStartTurn: 1,
+            },
+          }
+        )
+        .toArray(),
+    () =>
+      db
+        .collection<Character>("imperialCharacters")
+        .find(
+          {
+            _id: {
+              $in: sellers.filter((s) => s.collection === "imperialCharacters").map((s) => s.id),
+            },
           },
-        }
-      )
-      .toArray(),
-    db
-      .collection<Character>("imperialCharacters")
-      .find(
-        {
-          _id: {
-            $in: sellers.filter((s) => s.collection === "imperialCharacters").map((s) => s.id),
-          },
-        },
-        {
-          projection: {
-            countryId: 1,
-            homeState: 1,
-            incomeTier: 1,
-            initialIncomeTier: 1,
-            demographics: 1,
-            incomeTaxStartTurn: 1,
-          },
-        }
-      )
-      .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1 } })
-      .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
-      .find({}, { projection: { countryId: 1, taxRates: 1 } })
-      .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
-      .find({}, { projection: { currencyCode: 1, rate: 1 } })
-      .toArray(),
-  ]);
+          {
+            session: options?.session,
+            projection: {
+              countryId: 1,
+              homeState: 1,
+              incomeTier: 1,
+              initialIncomeTier: 1,
+              demographics: 1,
+              incomeTaxStartTurn: 1,
+            },
+          }
+        )
+        .toArray(),
+    () =>
+      db
+        .collection<FederalBudget>("federalBudget")
+        .find(
+          {},
+          { session: options?.session, projection: { countryId: 1, taxRates: 1, currencyCode: 1 } }
+        )
+        .toArray(),
+    () =>
+      db
+        .collection<StateBudget>("stateBudgets")
+        .find({}, { session: options?.session, projection: { countryId: 1, taxRates: 1 } })
+        .toArray(),
+    () =>
+      db
+        .collection<ExchangeRate>("exchangeRates")
+        .find({}, { session: options?.session, projection: { currencyCode: 1, rate: 1 } })
+        .toArray(),
+  ] as const;
+  // Mongo does not support parallel operations on one active transaction session.
+  const [regular, imperial, budgets, regional, exchange] = options?.session
+    ? ([
+        await reads[0](),
+        await reads[1](),
+        await reads[2](),
+        await reads[3](),
+        await reads[4](),
+      ] as const)
+    : await Promise.all([reads[0](), reads[1](), reads[2](), reads[3](), reads[4]()]);
   const fx = new Map(exchange.map((r) => [r.currencyCode as string, r.rate]));
   const federal = new Map(budgets.map((b) => [b.countryId, b]));
   const states = new Map(regional.map((b) => [b._id, b]));
@@ -99,10 +125,14 @@ export async function loadStockWithholdingContexts(db: Db, sellers: StockSeller[
     ["imperialCharacters", imperial],
   ] as const) {
     for (const actor of actors) {
-      if (actor.incomeTaxStartTurn === undefined) continue;
+      if (
+        actor.incomeTaxStartTurn === undefined ||
+        (options?.income && turn < actor.incomeTaxStartTurn)
+      )
+        continue;
       const budget = federal.get(actor.countryId);
       if (!budget?.taxRates) throw new Error("Stock withholding budget unavailable");
-      const currency = getHomeCurrency(actor, state.preset);
+      const currency = getHomeCurrency(actor, state?.preset);
       const rate = fx.get(currency);
       const nationalCurrency = budget.currencyCode ?? currency;
       const nationalFx = fx.get(nationalCurrency);
@@ -111,18 +141,21 @@ export async function loadStockWithholdingContexts(db: Db, sellers: StockSeller[
       const tier =
         actor.incomeTier ?? actor.initialIncomeTier ?? actor.demographics?.wealth ?? "middle";
       // Receipts need the applicable rates, not every tax provision in the budget.
-      const freezeRates = (rates: CapitalGainsTaxRates) => ({
-        incomeTax: incomeTaxRate(rates, tier),
-        [CAPITAL_GAINS_TAX_KEYS[tier]]: capitalGainsTaxRate(rates, tier),
-      });
+      const freezeRates = (rates: CapitalGainsTaxRates) =>
+        options?.income
+          ? { ...rates }
+          : {
+              incomeTax: incomeTaxRate(rates, tier),
+              [CAPITAL_GAINS_TAX_KEYS[tier]]: capitalGainsTaxRate(rates, tier),
+            };
       contexts.set(stockSellerKey({ collection, id: actor._id }), {
         taxStartTurn: actor.incomeTaxStartTurn,
         tier,
         countryId: actor.countryId,
         currency,
-        sourcePath: state.forexEnabled ? "currencyBalances.personal." + currency : "cashOnHand",
+        sourcePath: state?.forexEnabled ? "currencyBalances.personal." + currency : "cashOnHand",
         sourceFx: rate,
-        walletFx: state.forexEnabled ? rate : 1,
+        walletFx: state?.forexEnabled ? rate : 1,
         nationalBudgetId: getNationalBudgetId(actor.countryId),
         nationalCurrency,
         nationalFx,

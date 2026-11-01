@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import {
   loadStockWithholdingContexts,
   withholdStockReceipt,
@@ -278,6 +279,7 @@ export async function applyAcquisitionLeg(
 
   const filter = {
     ...leg.filter,
+    ...(leg.kind === "acquirer_debit" ? corporateDiscretionaryCashGuard() : {}),
     ...(leg.guardPath && leg.guardGte !== undefined
       ? { [leg.guardPath]: { $gte: leg.guardGte } }
       : {}),

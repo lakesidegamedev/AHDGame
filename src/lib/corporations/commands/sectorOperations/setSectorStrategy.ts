@@ -1,3 +1,5 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -94,6 +96,8 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+    const cashBlock = requireSpendableCorporateCash(corporation);
+    if (cashBlock) return cashBlock;
 
     const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user.userId);
     if (!authorized.ok) return authorized.response;
@@ -319,15 +323,20 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     });
 
     // Apply changes atomically
+    const debit = await db.collection("corporations").updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: retoolCostInCorpCapital },
+        ...corporateDiscretionaryCashGuard(),
+      },
+      { $inc: { liquidCapital: -retoolCostInCorpCapital }, $set: { updatedAt: new Date() } }
+    );
+    if (debit.matchedCount !== 1)
+      return errorResponse(
+        409,
+        "Insufficient spendable corporate funds, or outstanding taxes and payables."
+      );
     await Promise.all([
-      // Deduct retooling cost from corporation
-      db
-        .collection("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: -retoolCostInCorpCapital }, $set: { updatedAt: new Date() } }
-        ),
-      // Start transition on sector
       db.collection<CorporateSector>("corporateSectors").updateOne(
         { _id: sector._id },
         {

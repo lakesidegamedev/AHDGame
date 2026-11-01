@@ -177,6 +177,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
       corporation;
 
+    const freshEligibility = corporationCanRestructureShares(freshCorporation);
+    if (!freshEligibility.ok) return errorResponse(409, freshEligibility.reason);
     const accounted = sumAccountedOutstandingShares(freshCorporation);
     if (accounted !== oldTotal) {
       return errorResponse(
@@ -302,7 +304,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       updatedAt: now,
     };
 
-    await db.collection<Corporation>("corporations").updateOne({ _id: corporation._id }, { $set });
+    const restructure = await db.collection<Corporation>("corporations").updateOne(
+      {
+        _id: corporation._id,
+        totalShares: oldTotal,
+        "pendingShareIssuance.remainingShares": { $not: { $gt: 0 } },
+      },
+      { $set }
+    );
+    if (restructure.matchedCount !== 1)
+      return errorResponse(
+        409,
+        "Share structure or pending issuance changed. Refresh and try again."
+      );
 
     // Rescale this turn's history row too. Between turns the market tick
     // recomputes prices in the split cooldown using this turn's persisted
