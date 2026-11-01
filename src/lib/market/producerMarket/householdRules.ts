@@ -26,6 +26,8 @@ export function householdPurchaseOrders(input: {
   accountId: string;
   /** Country the spending wallet belongs to; the funded book places demand here. */
   countryId?: string;
+  /** State the spending wallet belongs to; a freight order takes local sellers first. */
+  stateId?: string;
   /** Opening wallet plus wages already paid into it. No imputed GDP or bank deposits. */
   cash: number;
   spendFraction: number;
@@ -90,6 +92,7 @@ export function householdPurchaseOrders(input: {
         maximumSpend,
         eligibleOfferIds: p.eligibleOfferIds,
         ...(input.countryId ? { countryId: input.countryId } : {}),
+        ...(input.stateId ? { stateId: input.stateId } : {}),
       };
     });
 }

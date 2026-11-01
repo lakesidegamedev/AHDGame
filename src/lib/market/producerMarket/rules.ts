@@ -23,6 +23,8 @@ export interface ProducerOffer {
   deliverableUnits?: number;
   /** Country the selling site is in; the funded book places supply here. */
   countryId?: string;
+  /** State the selling site is in; freight clears against local demand first. */
+  stateId?: string;
 }
 
 export interface PurchaseOrder {
@@ -46,6 +48,8 @@ export interface PurchaseOrder {
   quantityGroup?: { id: string; maximumUnits: number };
   /** Country the buying site is in; the funded book places demand here. */
   countryId?: string;
+  /** State the buying site is in; a freight order takes local sellers first. */
+  stateId?: string;
 }
 
 export interface ProducerTrade {
@@ -80,6 +84,8 @@ export interface ProducerTradeReceipt {
     sellerCountry?: string;
     /** Country of the buying site, when known. */
     buyerCountry?: string;
+    /** Set when every seller in the fill is in this state (a state-first freight fill). */
+    sellerState?: string;
   }>;
   tradeCount: number;
 }
@@ -132,7 +138,8 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     const matchesOrder = (offer: ProducerOffer) =>
       (offer.accountId === order.accountId) === internal &&
       (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
-      (!eligible || eligible.has(offer.id));
+      (!eligible || eligible.has(offer.id)) &&
+      (!fill.sellerState || offer.stateId === fill.sellerState);
     // Internal transfers and contract/supplier orders ignore the posted price
     // and keep the full-book scan. An ordinary public order takes exactly the
     // offers posted at the fill's price, which the bucket already holds.
@@ -144,8 +151,11 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
               matchesOrder(offer) &&
               (internal || (order.contractUnitPrice ?? offer.unitPrice) === fill.unitPrice)
           );
+    // A state-first fill draws on one state's offers individually, never on
+    // the shared price pool, so its sellers are replayed one by one.
     const pooled =
       !internal &&
+      !fill.sellerState &&
       !order.eligibleOfferIds &&
       !order.supplierOfferId &&
       order.contractUnitPrice == null
@@ -467,10 +477,118 @@ export function settleProducerMarket(input: {
       Number(!!b.supplierOfferId) - Number(!!a.supplierOfferId) ||
       compareId(a.id, b.id)
   );
+  // State-first freight: a local buyer clears against its own state's offers
+  // before the national book pass, so a remote buyer sorted earlier cannot
+  // take the stock a local buyer needs. Indexed per book and state in the
+  // book's (price, id) order.
+  const freightByState = new Map<string, Map<string, Map<number, ProducerOffer[]>>>();
+  for (const offer of input.offers) {
+    if (offer.commodity !== "freight" || !offer.stateId) continue;
+    const key = bookKey(offer.commodity, offer.book);
+    const byState = freightByState.get(key) ?? new Map<string, Map<number, ProducerOffer[]>>();
+    const byPrice = byState.get(offer.stateId) ?? new Map<number, ProducerOffer[]>();
+    const level = byPrice.get(offer.unitPrice) ?? [];
+    level.push(offer);
+    byPrice.set(offer.unitPrice, level);
+    byState.set(offer.stateId, byPrice);
+    freightByState.set(key, byState);
+  }
+  for (const byState of freightByState.values())
+    for (const byPrice of byState.values())
+      for (const level of byPrice.values()) level.sort((a, b) => compareId(a.id, b.id));
+  /** The state-first pass for one freight order: its own state's offers only. */
+  const fillStateFreight = (
+    order: PurchaseOrder,
+    openingWanted: number,
+    openingBudget: number
+  ): { wanted: number; orderBudget: number } => {
+    let wanted = openingWanted;
+    let orderBudget = openingBudget;
+    // A named supplier, a contract or an eligibility filter keeps its ordinary
+    // pass: it has no free choice of sellers to reorder.
+    const stateId = order.stateId;
+    if (
+      !stateId ||
+      order.eligibleOfferIds ||
+      order.supplierOfferId ||
+      order.contractUnitPrice != null
+    )
+      return { wanted, orderBudget };
+    const byPrice = freightByState.get(bookKey(order.commodity, order.book))?.get(stateId);
+    if (!byPrice) return { wanted, orderBudget };
+    const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
+    const key = bookKey(order.commodity, order.book);
+    for (const [price, offers] of [...byPrice].sort(([a], [b]) => a - b)) {
+      if (!(wanted > 0) || price > order.maximumUnitPrice) break;
+      const rows = offers.filter((offer) => offer.accountId !== order.accountId);
+      const total = rows.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
+      const budget = Math.min(budgets.get(order.accountId)!, orderBudget);
+      const take = Math.min(wanted, total, price > 0 ? budget / price : wanted);
+      if (!(take > 0)) continue;
+      const amount = take * price;
+      if (!Number.isFinite(amount)) throw new Error("Non-finite trade value");
+      fills.push(
+        fillsWithCountries(
+          order,
+          { orderId: order.id, kind: "sale", unitPrice: price, units: take, sellerState: stateId },
+          rows
+        )
+      );
+      const observed = prices.get(key) ?? {
+        commodity: order.commodity,
+        book: order.book,
+        units: 0,
+        value: 0,
+        unitPrice: 0,
+      };
+      observed.units += take;
+      observed.value += amount;
+      observed.unitPrice = observed.value / observed.units;
+      prices.set(key, observed);
+      const buyer = orderResults.get(order.id)!;
+      buyer.deliveredUnits += take;
+      buyer.cost += amount;
+      for (const offer of rows) {
+        const available = remaining.get(offer.id);
+        const units = Math.min(available, (take / total) * available);
+        if (!(units > 0)) continue;
+        recordDelivery(offer, order, units);
+        tradeCount++;
+        remaining.set(offer.id, Math.max(0, available - units));
+        wanted = Math.max(0, wanted - units);
+        if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - units);
+        const spent = units * price;
+        orderBudget = Math.max(0, orderBudget - spent);
+        budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - spent));
+        debit(order.accountId, spent);
+        cash.set(offer.accountId, credited(offer.accountId, spent));
+        const seller = offerResults.get(offer.id)!;
+        seller.soldUnits += units;
+        seller.deliveredUnits += units;
+        seller.revenue += spent;
+      }
+    }
+    return { wanted, orderBudget };
+  };
+  // Phase 1: every freight order with a state clears its own state's offers
+  // first, carrying its residual target and budget into the ordinary pass.
+  const carried = new Map<string, { wanted: number; orderBudget: number }>();
+  for (const order of orders) {
+    if (order.commodity !== "freight" || !order.stateId) continue;
+    const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
+    const wanted = Math.min(order.units, quantityGroup?.remaining ?? order.units);
+    carried.set(order.id, fillStateFreight(order, wanted, order.maximumSpend ?? Number.MAX_VALUE));
+  }
+  // Phase 2: the ordinary book pass over every order at its residual target.
   for (const order of orders) {
     const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
-    let wanted = Math.min(order.units, quantityGroup?.remaining ?? order.units);
-    let orderBudget = order.maximumSpend ?? Number.MAX_VALUE;
+    const carriedOrder = carried.get(order.id);
+    let wanted = carriedOrder
+      ? carriedOrder.wanted
+      : Math.min(order.units, quantityGroup?.remaining ?? order.units);
+    let orderBudget = carriedOrder
+      ? carriedOrder.orderBudget
+      : (order.maximumSpend ?? Number.MAX_VALUE);
     const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
     const key = bookKey(order.commodity, order.book);
     if (!eligible && !order.supplierOfferId && order.contractUnitPrice == null) {
