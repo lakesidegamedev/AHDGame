@@ -727,7 +727,7 @@ export default function OverviewTab({
             title="Operations"
             summary={
               physical?.fillRate != null
-                ? `${Math.round(physical.fillRate * 100)}% sold`
+                ? `${Math.round(physical.fillRate * 100)}% of output sold`
                 : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
             }
           >

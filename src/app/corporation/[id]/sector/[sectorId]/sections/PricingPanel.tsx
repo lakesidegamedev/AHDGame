@@ -127,17 +127,18 @@ export default function PricingPanel({
                   used >= 0.995 ? "text-success" : used >= 0.7 ? "text-warning" : "text-error"
                 }`}
               >
-                {Math.round(sold * 100)}% sold last turn (all outputs)
+                {Math.round(sold * 100)}% sold of units offered last turn (all outputs)
                 {ownSiteText ? `, ${ownSiteText}` : ""}
               </span>
             }
             width={260}
           >
             <p className="text-muted text-xs">
-              Share of this sector&apos;s output that found a buyer last turn, blended across every
-              commodity it makes and weighted by output rate. Cheaper sellers fill first. A sector
-              with two outputs can sell one out completely and the other hardly at all and still
-              land in the middle here. See Commodity Flows for the per-output rates.
+              Share of the units this sector offered that found a buyer last turn, blended across
+              every commodity it makes and weighted by the amount offered. The corporation page
+              instead counts sold units against what the sector produced. Cheaper sellers fill
+              first. A sector with two outputs can sell one out completely and the other hardly at
+              all and still land in the middle here. See Commodity Flows for the per-output rates.
               {ownSiteText
                 ? " Output sent to your own sites is not a sale and earns no revenue, so it is counted separately."
                 : ""}
