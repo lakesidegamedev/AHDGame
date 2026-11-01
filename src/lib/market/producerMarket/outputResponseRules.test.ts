@@ -265,6 +265,42 @@ describe("a sold-out line short of inputs holds its plan", () => {
     );
   });
 
+  it("a sold-out plan that lost only on its crew bill grows from its plan scale, not the output scale", () => {
+    // Live case: it made its whole plan of 21.95 of 8406.25 active, so
+    // produced / active (0.0026) floors to 0.01 and would restart near the
+    // floor every turn. Materials are covered (4.56 revenue per unit against
+    // 2.28 materials); the crew and site bill makes the run a loss.
+    const live = receipt({
+      activeUnits: 8406.25,
+      producedUnits: 21.95,
+      plannedUnits: 21.95,
+      offeredUnits: 21.95,
+      soldUnits: 21.95,
+      revenue: 100,
+      inputsConsumed: 50,
+      labourPaid: 200,
+      otherOperatingPaid: 50,
+      plannedRunShare: 0.01187,
+    });
+    const next = demandPlanRunShare(live, LOW_USE_RUN_FLOOR);
+    expect(next).toBeCloseTo(0.01187 * (1 + OUTPUT_GROW_STEP), 12);
+    expect(next).toBeGreaterThan(0.01187);
+  });
+
+  it("a starved sold-out run that lost on its crew bill grows from half the plan it made", () => {
+    // Planned 40 units, made 20 of them, sold out, but the crew bill made the
+    // run a loss: the fallback is half the planned share, then the growth step.
+    const half = starved({ plannedUnits: 40, labourPaid: 500 });
+    expect(demandPlanRunShare(half)).toBeCloseTo(0.5 * 0.5 * (1 + OUTPUT_GROW_STEP), 12);
+  });
+
+  it("a receipt without planned units keeps the output-scale fallback", () => {
+    expect(demandPlanRunShare(starved({ plannedUnits: undefined, labourPaid: 500 }))).toBeCloseTo(
+      0.2 * (1 + OUTPUT_GROW_STEP),
+      12
+    );
+  });
+
   it("idle upkeep on the unrun capacity does not stop a starved line holding its plan", () => {
     // Site 400 of which 350 is cold upkeep on idle capacity: running cost
     // without it is 100 + 100 + 50 = 250 under revenue 400.
