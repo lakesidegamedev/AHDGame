@@ -9,7 +9,7 @@ import {
 const character: SingleplayerGuideCharacter = {
   countryId: "US",
   party: "independent",
-  currentOffice: undefined,
+  currentOffice: null,
   careerHistory: [],
   onboarding: undefined,
   funds: 120_000,
