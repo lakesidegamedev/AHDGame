@@ -5,20 +5,6 @@ export function shouldStartHostedBackgroundServices(
 }
 
 /**
- * Should startup apply the audited required migrations (startupMigrations.ts)?
- *
- * Hosted servers and singleplayer both do. A singleplayer save outlives the
- * build that created it: a client update opens an old world with new code, and
- * the code assumes these repairs ran. Only a local `next dev` pointed at a
- * shared database opts out.
- */
-export function shouldRunRequiredStartupMigrations(
-  env: Record<string, string | undefined>
-): boolean {
-  return env.DISABLE_DEV_BACKGROUND !== "1";
-}
-
-/**
  * Should THIS process own the cron schedule, turn processing included?
  *
  * Turns run in-process inside the Next.js server, driven by `instrumentation.ts` ->

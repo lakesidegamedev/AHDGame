@@ -16,6 +16,10 @@ import type {
 import { reconcileSingleplayerHeadOfState } from "@/lib/singleplayerHeadOfState";
 import { promoteSingleplayerOwnerIfNoAdmin } from "@/lib/singleplayerOwnerAdmin";
 import { runRequiredStartupMigrations } from "@/lib/migrations/startupMigrations";
+import {
+  migrateSingleplayerWorld,
+  stampSingleplayerBaseline,
+} from "@/lib/migrations/singleplayerMigrations";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -122,6 +126,7 @@ async function clearSingleplayerMaintenance(db: Db): Promise<void> {
  * so a fresh database is playable the moment the server answers.
  */
 export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
+  await ensureSingleplayerWorldMigrated(db);
   const account = await ensureSingleplayerUser(db);
   // Existing worlds predate owner-admin: promote the earliest account when
   // nobody holds admin, next to the head-of-state repair below.
@@ -217,7 +222,8 @@ export async function getSingleplayerConfig(db: Db): Promise<SingleplayerConfig 
 }
 
 /**
- * Runs the required startup migrations after a local world reset.
+ * Runs the required startup migrations after a local world reset, then stamps
+ * the world current with this build.
  *
  * A hosted reset is followed by a server restart, and startup applies these
  * (the opening 1991 bond pools only exist at turn 1 of a fresh 1991 world, and
@@ -232,5 +238,35 @@ export async function applyStartupRepairsAfterReset(
   for (const id of summary.ranIds) {
     log(`[startup-migrations] ${id}`);
   }
+  // The world was just seeded by this build, so it is current with every
+  // migration the build knows; a later build applies only newer ones.
+  await stampSingleplayerBaseline(db);
   return summary.ranIds;
+}
+
+// One pass per server process, shared across Next's duplicated module copies.
+const MIGRATED_KEY = Symbol.for("ahd.singleplayer.worldMigrated");
+
+/**
+ * Applies pending migrations to the local world once per server start. The
+ * launcher waits on the status route before it reports ready, so this
+ * finishes before the player is let in. A failure is logged and the world
+ * still opens: the failed migration stays pending and retries next start.
+ */
+export function ensureSingleplayerWorldMigrated(db: Db): Promise<void> {
+  const store = globalThis as typeof globalThis & { [MIGRATED_KEY]?: Promise<void> };
+  store[MIGRATED_KEY] ??= migrateSingleplayerWorld(db).then(
+    (summary) => {
+      if (summary && summary.ranIds.length > 0) {
+        console.log(`[singleplayer-migrations] ran=${summary.ranIds.join(",")}`);
+      }
+    },
+    (error: unknown) => {
+      console.error(
+        "[singleplayer-migrations] failed; the world opens and retries next start:",
+        error instanceof Error ? (error.stack ?? error.message) : error
+      );
+    }
+  );
+  return store[MIGRATED_KEY];
 }
