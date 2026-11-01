@@ -17,3 +17,5 @@ areas: [backend]
   would have cleared that other world. It now uses the port only when the
   running database is the one holding this world's files, and otherwise stops
   and says another program is using the port.
+- Singleplayer no longer shows the website's cookie and analytics banner. The
+  local game loads no analytics, so there was nothing to agree to.
