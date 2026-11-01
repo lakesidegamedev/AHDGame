@@ -328,6 +328,10 @@ async function extractFromZipByRange(url, wanted, destDir) {
 // server printed and the tail of MongoDB's log. Silence is never the answer.
 // ---------------------------------------------------------------------------
 
+// A world with a save waiting to be loaded rebuilds its database before the
+// status route answers, which takes longer than a normal start on a big world.
+const RESTORE_MARKER = path.join(HOME, "restore-pending.json");
+const RESTORE_READY_TIMEOUT_MS = 900_000;
 const READY_TIMEOUT_MS = Number(process.env.SINGLEPLAYER_READY_TIMEOUT_MS) || 120_000;
 const PORT_TIMEOUT_MS = Number(process.env.SINGLEPLAYER_PORT_TIMEOUT_MS) || 120_000;
 // A probe never waits less than the deadline allows; 30s absorbs a slow first
@@ -1015,7 +1019,12 @@ async function main() {
     timings.server = Date.now() - at;
     const base = `http://127.0.0.1:${APP_PORT}`;
     gameBase = base;
-    Object.assign(timings, await waitForGame(base, READY_TIMEOUT_MS));
+    const restoring = existsSync(RESTORE_MARKER);
+    if (restoring) log("loading your saved game; this can take a minute on a big world");
+    Object.assign(
+      timings,
+      await waitForGame(base, restoring ? RESTORE_READY_TIMEOUT_MS : READY_TIMEOUT_MS)
+    );
     gameReady = true;
     log(`startup took ${formatTimings(timings)}`);
     log(`ready at ${base}`);

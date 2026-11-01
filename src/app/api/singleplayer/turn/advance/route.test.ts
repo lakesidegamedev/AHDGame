@@ -9,6 +9,7 @@ const {
   getSingleplayerWorldAvailability,
   runShareFillRecoveryPass,
   getActiveSingleplayerBatch,
+  maybeAutosave,
 } = vi.hoisted(() => ({
   requireSingleplayer: vi.fn(),
   getDb: vi.fn(),
@@ -18,6 +19,7 @@ const {
   getSingleplayerWorldAvailability: vi.fn(),
   runShareFillRecoveryPass: vi.fn(),
   getActiveSingleplayerBatch: vi.fn(),
+  maybeAutosave: vi.fn(),
 }));
 
 vi.mock("@/lib/api/requireSingleplayer", () => ({ requireSingleplayer }));
@@ -26,6 +28,7 @@ vi.mock("@/lib/singleplayerServer", () => ({ getSingleplayerConfig }));
 vi.mock("@/lib/singleplayerOperator", () => ({ getSingleplayerWorldAvailability }));
 vi.mock("@/lib/turnSystem", () => ({ processTurn }));
 vi.mock("@/lib/singleplayerBatch", () => ({ getActiveSingleplayerBatch }));
+vi.mock("@/lib/singleplayer/saves", () => ({ maybeAutosave }));
 vi.mock("@/lib/corporations/commands/shareTrading/shareFillAudit", () => ({
   runShareFillRecoveryPass,
 }));
@@ -132,6 +135,18 @@ describe("POST /api/singleplayer/turn/advance", () => {
     expect(response.status).toBe(200);
     expect(processTurn).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toMatchObject({ success: true, turn: 2 });
+  });
+
+  it("asks for an autosave after a completed turn, and not after a refused one", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/singleplayer/turn/advance", { method: "POST" })
+    );
+    expect(response.status).toBe(200);
+    expect(maybeAutosave).toHaveBeenCalledTimes(1);
+    maybeAutosave.mockClear();
+    getActiveSingleplayerBatch.mockReturnValueOnce({ status: "running" });
+    await POST(new Request("http://localhost/api/singleplayer/turn/advance", { method: "POST" }));
+    expect(maybeAutosave).not.toHaveBeenCalled();
   });
 
   it("drives one bounded orphan recovery pass after the turn", async () => {

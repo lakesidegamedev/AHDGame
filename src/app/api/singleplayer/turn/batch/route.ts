@@ -10,6 +10,7 @@ import {
   requestSingleplayerBatchStop,
   startSingleplayerBatch,
 } from "@/lib/singleplayerBatch";
+import { maybeAutosave } from "@/lib/singleplayer/saves";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,15 @@ export async function POST(request: Request) {
   try {
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
-    const started = await startSingleplayerBatch(await getDb(), parsed.data.turns);
+    const db = await getDb();
+    const started = await startSingleplayerBatch(db, parsed.data.turns);
     if (!started.ok) return errorResponse(started.status, started.error);
+    // One autosave check once the batch ends, counted from the last autosave,
+    // so a batch never skips one and never saves while its next turn runs.
+    void started.done.then(() => {
+      const last = started.job.turns.at(-1)?.turn;
+      if (last != null) return maybeAutosave(db, last);
+    });
     return NextResponse.json(
       { success: true, batch: started.job },
       { status: 202, headers: NO_STORE }

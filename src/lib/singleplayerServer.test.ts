@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm, writeFile } from "fs/promises";
 import path from "path";
 import os from "os";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import {
+  ensureSingleplayerStartupRestore,
   ensureSingleplayerUser,
   setSingleplayerConfig,
   singleplayerCdnDir,
@@ -12,6 +14,9 @@ import {
 } from "./singleplayerServer";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { reconcileSingleplayerHeadOfState } from "@/lib/singleplayerHeadOfState";
+
+const restore = vi.hoisted(() => ({ applyPendingRestore: vi.fn() }));
+vi.mock("@/lib/singleplayer/saves", () => ({ applyPendingRestore: restore.applyPendingRestore }));
 
 vi.mock("@/lib/singleplayerHeadOfState", () => ({
   reconcileSingleplayerHeadOfState: vi.fn().mockResolvedValue(false),
@@ -197,5 +202,46 @@ describe("singleplayer maintenance recovery", () => {
       { _id: "default", maintenanceMode: { $ne: "off" } },
       expect.objectContaining({ $set: { maintenanceMode: "off" } })
     );
+  });
+});
+
+describe("singleplayer save load at start", () => {
+  const KEY = Symbol.for("ahd.singleplayer.startupRestore");
+  let home: string;
+  beforeEach(async () => {
+    home = await mkdtemp(path.join(os.tmpdir(), "ahd-startup-restore-"));
+    vi.stubEnv("SINGLEPLAYER_HOME", home);
+    delete (globalThis as Record<symbol, unknown>)[KEY];
+    restore.applyPendingRestore.mockReset().mockResolvedValue(null);
+  });
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    await rm(home, { recursive: true, force: true });
+  });
+
+  it("does nothing when no load was requested", async () => {
+    await ensureSingleplayerStartupRestore({} as Db);
+    expect(restore.applyPendingRestore).not.toHaveBeenCalled();
+  });
+
+  it("applies a requested load on the first call only, so a running world is never swapped", async () => {
+    await writeFile(path.join(home, "restore-pending.json"), "{}");
+    await Promise.all([
+      ensureSingleplayerStartupRestore({} as Db),
+      ensureSingleplayerStartupRestore({} as Db),
+    ]);
+    expect(restore.applyPendingRestore).toHaveBeenCalledTimes(1);
+    // A load requested while the world runs waits for the next start.
+    await writeFile(path.join(home, "restore-pending.json"), "{}");
+    await ensureSingleplayerStartupRestore({} as Db);
+    expect(restore.applyPendingRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it("tries again after an unexpected failure", async () => {
+    await writeFile(path.join(home, "restore-pending.json"), "{}");
+    restore.applyPendingRestore.mockRejectedValueOnce(new Error("boom"));
+    await expect(ensureSingleplayerStartupRestore({} as Db)).rejects.toThrow("boom");
+    await ensureSingleplayerStartupRestore({} as Db);
+    expect(restore.applyPendingRestore).toHaveBeenCalledTimes(2);
   });
 });
