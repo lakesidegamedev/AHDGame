@@ -17,7 +17,12 @@ describe("singleplayer phase filtering", () => {
 
   it("skips the anti-abuse scans in singleplayer", () => {
     const shouldRun = getSingleplayerPhasePredicate(true)!;
-    for (const phase of ["financialSuspectScan", "auditAnomalyScan", "suspiciousDetection"]) {
+    for (const phase of [
+      "financialSuspectScan",
+      "auditAnomalyScan",
+      "suspiciousDetection",
+      "researchTelemetry",
+    ]) {
       expect(shouldRun(phase), phase).toBe(false);
     }
   });
@@ -38,12 +43,13 @@ describe("singleplayer phase filtering", () => {
     }
   });
 
-  it("skips only detection and production diagnostics", () => {
+  it("skips only detection, production diagnostics and admin-only exports", () => {
     expect([...SINGLEPLAYER_SKIP_PHASES].sort()).toEqual(
       [
         "auditAnomalyScan",
         "financialSuspectScan",
         "gameHealthSnapshot",
+        "researchTelemetry",
         "suspiciousDetection",
       ].sort()
     );

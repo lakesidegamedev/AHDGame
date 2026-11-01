@@ -9,6 +9,7 @@ import { getGameState } from "@/lib/gameState";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
 import { shouldMirrorMoneyAudit } from "@/lib/audit/moneyMirrorPolicy";
+import { isSingleplayer } from "@/lib/singleplayer";
 import type {
   ActionAuditActor,
   ActionAuditDelta,
@@ -137,7 +138,20 @@ function scheduleFlush(): void {
   flushTimer.unref?.();
 }
 
+/**
+ * Singleplayer has no staff, no second account and no forensics: every reader
+ * of `actionAuditLog` is an admin surface or an anti-abuse scan (the audit
+ * browser and dossier, the watchlist, `auditAnomalyScan`, alt detection), and
+ * the scans are already off there. A turn buffered thousands of these rows for
+ * nobody. Durable settlement outboxes use {@link prepareAuditRecord}, which is
+ * not affected, so a committed plan still carries its own receipts.
+ */
+function skipsSpineWrites(): boolean {
+  return isSingleplayer();
+}
+
 function enqueue(entry: ActionAuditInput): void {
+  if (skipsSpineWrites()) return;
   const normalized = withContextDefaults({ ...entry, delta: trimDelta(entry.delta) });
   if (!shouldKeepAuditEntry(entry, normalized)) return;
   buffer.push(normalized);
@@ -239,6 +253,7 @@ export function recordAudit(entry: ActionAuditInput): void {
 export function recordAuditBulk(entries: ActionAuditInput[]): void {
   if (entries.length === 0) return;
   try {
+    if (skipsSpineWrites()) return;
     let added = 0;
     for (const entry of entries) {
       const normalized = withContextDefaults({ ...entry, delta: trimDelta(entry.delta) });

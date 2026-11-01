@@ -49,6 +49,18 @@ describe("recordAudit / recordAuditBulk", () => {
     isAuditLogEnabled.mockResolvedValue(true);
   });
 
+  it("singleplayer: drops spine rows before they are buffered", async () => {
+    vi.stubEnv("SINGLEPLAYER", "1");
+    try {
+      recordAudit(baseEntry());
+      recordAuditBulk([baseEntry(), baseEntry({ action: "corp.dividends" })]);
+      await flushRecordAuditBufferForTest();
+      expect(db.collectionMocks.actionAuditLog.insertMany).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("flag OFF: buffers but never inserts", async () => {
     isAuditLogEnabled.mockResolvedValue(false);
 

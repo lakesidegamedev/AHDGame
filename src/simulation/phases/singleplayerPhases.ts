@@ -18,7 +18,7 @@
  * failure mode is "singleplayer does more work than it needed to", never
  * "singleplayer quietly stopped simulating something".
  *
- * Scope note: this covers detection, not record-keeping. `activityLogging`
+ * Scope note: this covers detection and admin-only exports, not record-keeping. `activityLogging`
  * still runs, because the audit trail it writes is read by player-facing
  * history surfaces, not only by the scans.
  */
@@ -31,6 +31,8 @@ export const SINGLEPLAYER_SKIP_PHASES: ReadonlySet<string> = new Set<string>([
   "suspiciousDetection",
   /** Production-only forensic snapshot. Compact local metrics live on gameState. */
   "gameHealthSnapshot",
+  /** Research export rows, read only by the admin research export. */
+  "researchTelemetry",
 ]);
 
 /**

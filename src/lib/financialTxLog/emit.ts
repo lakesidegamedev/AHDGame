@@ -15,6 +15,7 @@ import {
   loadTurnLengthMinutes,
 } from "@/lib/financialTxLog/expiresAt";
 import { isDuplicateKeyError } from "@/lib/api/errors";
+import { isSingleplayer } from "@/lib/singleplayer";
 import { isLedgerShadowEnabled } from "@/lib/ledger/featureFlag";
 import { deriveLedgerEntries } from "@/lib/ledger/deriveFromTx";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
@@ -337,6 +338,34 @@ export function buildTxDocs(
   });
 }
 
+/**
+ * Row types nothing in the app reads back from `financialTxLog`. Singleplayer
+ * does not store them; the shadow ledger still derives its entries from the
+ * same rows, so the money trail that reconciliation and the economy vital
+ * signs read is unchanged.
+ *
+ * Each type was traced to every reader of the collection. Player-facing and
+ * mechanical readers filter by character subject (income tax, line of credit),
+ * by `bond_*` types on a corporation (bond history), or by one named type
+ * (`corp_capital_injection` contests, `corp_tech_unlock` idempotency); the rest
+ * are admin audit tools and the suspect scan, which singleplayer skips. None of
+ * these types is in any of those sets.
+ */
+export const SINGLEPLAYER_UNREAD_TX_TYPES: ReadonlySet<FinancialTxType> =
+  new Set<FinancialTxType>([
+    "party_dues_received",
+    "corp_revenue",
+    "corp_operating_loss",
+    "corp_tax_paid",
+    "bank_npc_loan_interest",
+  ]);
+
+/** Rows to store for a bulk emission: all of them, except unread types in singleplayer. */
+function rowsToStore(docs: FinancialTxLogEntry[]): FinancialTxLogEntry[] {
+  if (!isSingleplayer()) return docs;
+  return docs.filter((doc) => !SINGLEPLAYER_UNREAD_TX_TYPES.has(doc.type));
+}
+
 // Bulk emission — callers MUST pre-load thresholds with loadTxThresholds once before the loop.
 export async function emitTxBulk(
   db: Db,
@@ -350,14 +379,16 @@ export async function emitTxBulk(
     const turnLengthMinutes = await loadTurnLengthMinutes(db);
     const ratesByCurrency = await loadAnchorRateMap(db, entries);
     const docs = buildTxDocs(entries, thresholds, turnLengthMinutes, ratesByCurrency);
+    const stored = rowsToStore(docs);
     if (
       entries.some((entry) => entry.subjectType === "character" && taxablePlayerIncome(entry.type))
     ) {
-      await persistTaxableIncomeBatch(db, docs);
-    } else
+      await persistTaxableIncomeBatch(db, stored);
+    } else if (stored.length > 0) {
       await db
         .collection<FinancialTxLogEntry>("financialTxLog")
-        .insertMany(docs, { ordered: false });
+        .insertMany(stored, { ordered: false });
+    }
     await shadowLedgerFromTx(db, docs);
     // BULK path so the hot loop (bondTurn / corporationTurn, hundreds of
     // entries/turn) pays one insertMany at flush time, not one per row. The
