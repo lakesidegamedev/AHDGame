@@ -18,8 +18,8 @@ describe("resolveMongoWriteConcern", () => {
   });
   it("acknowledges on apply in a singleplayer world, whatever the process", () => {
     expect(resolveMongoWriteConcern({ SINGLEPLAYER: "1" })).toEqual({ w: 1 });
-    expect(
-      resolveMongoWriteConcern({ SINGLEPLAYER: "1", TURN_WRITE_CONCERN: "majority" })
-    ).toEqual({ w: 1 });
+    expect(resolveMongoWriteConcern({ SINGLEPLAYER: "1", TURN_WRITE_CONCERN: "majority" })).toEqual(
+      { w: 1 }
+    );
   });
 });
