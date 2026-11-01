@@ -1,7 +1,7 @@
 /**
- * Player income tax. Salary, dividends, coupons and savings interest are assessed
- * together after income phases. Frozen settlement receipts prevent duplicate tax
- * and retain unpaid assessments when a balance cannot cover the guarded debit.
+ * Closing fallback for legacy income and deferred stock receipts. Source-taxed
+ * earnings still determine income tiers but are not assessed a second time.
+ * Guarded batches retry existing unpaid liabilities against available wallets.
  */
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
@@ -296,6 +296,7 @@ export async function processPlayerIncomeTax(
       (entry) => (amounts(entry).assessmentTurn ?? entry.turn) >= turn - LOOKBACK_TURNS + 1
     );
     const current = eligibleRows.filter((entry) => {
+      if (entry.meta?.incomeTaxAtSource === true) return false;
       if (entry.type === "stock_trade_sell") {
         const receipt = entry.meta?.stockTax as { id?: string } | undefined;
         return (

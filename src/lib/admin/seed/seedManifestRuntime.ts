@@ -20,7 +20,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "playerIncomeTaxBatches",
     category: "runtime",
     notes:
-      "One durable active tax batch per world; retained target watermarks prevent stale replay. Wiped on reset.",
+      "One active closing tax batch per world and one latest atomic income payout receipt per source. Turn watermarks prevent stale replay without retaining every payout batch. Wiped on reset.",
   },
   {
     name: "governmentTenders",
@@ -385,7 +385,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "corporations",
     category: "runtime",
     notes:
-      "Group identity, objectives, CEO-bound receiving consent and bounded private forecast inputs are embedded runtime state and reset with corporations.",
+      "Group identity, objectives, CEO-bound receiving consent, bounded private forecast inputs and pendingOperatingCash withholding holds are embedded runtime state and reset with corporations.",
   },
   { name: "corporationCeoVotes", category: "runtime" },
   { name: "corporationHistory", category: "runtime" },

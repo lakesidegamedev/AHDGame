@@ -14,7 +14,7 @@ import {
 } from "@/lib/bonds/sovereignMaturityWave";
 import { loadSovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
+import { ObjectId } from "mongodb";
 import type {
   Bond,
   Corporation,
@@ -23,7 +23,6 @@ import type {
   FederalBudget,
   GameConfig,
 } from "@/lib/db/types";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import {
   BOND_DEFAULT_CREDIT_PENALTY_TURNS,
@@ -48,11 +47,7 @@ import {
   addBankMaturityClaims,
   settleBankSovereignClaims,
 } from "@/lib/banking/bankSovereignClaims";
-import {
-  buildPersonalBalanceBulkOp,
-  buildPersonalBalanceInc,
-  getHomeCurrency,
-} from "@/lib/currency/characterFunds";
+import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import {
@@ -60,7 +55,7 @@ import {
   distributeConversionSpreadsBatch,
 } from "@/lib/currency/marketMaker";
 import { corporateBondMaturityLiquidity } from "@/lib/bonds/corporateCredit";
-import { garnishLocFromIncome } from "@/lib/lineOfCredit/garnishment";
+import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
 import {
   anchorToCorpCapital,
   corpCapitalToAnchor,
@@ -1755,28 +1750,46 @@ export async function processBondTurn(
     await payNppBondReturns(db, nppReturnKinds, turn, now);
   }
 
-  // Pay character coupon income (in the bond's issuing country currency).
-  // First, garnish income for distressed LOC borrowers — redirected coupons
-  // never touch their wallet, going straight to LOC arrears/principal.
-  if (charPayments.size > 0) {
-    await garnishLocFromIncome(db, charPayments, turn, "bond_coupon");
-  }
-  if (charPayments.size > 0) {
-    const charOps: AnyBulkWriteOperation<Character>[] = [];
-    for (const [charIdStr, currencyAmounts] of charPayments) {
-      for (const [currency, amount] of currencyAmounts) {
-        charOps.push(
-          buildPersonalBalanceBulkOp(
-            new ObjectId(charIdStr),
-            amount,
-            currency,
-            forexEnabled
-          ) as AnyBulkWriteOperation<Character>
-        );
-      }
+  // Coupons are taxable earnings; maturity principal is neither taxed nor
+  // garnished as income. Both destinations share an atomic net credit.
+  const couponAmounts = new Map<string, number>();
+  for (const row of txBondEntries)
+    if (row.type === "bond_coupon" && row.subjectType === "character" && row.subjectId) {
+      const key =
+        (row.isImperial ? "imperialCharacters:" : "characters:") +
+        row.subjectId.toString() +
+        ":" +
+        row.currencyCode;
+      couponAmounts.set(key, (couponAmounts.get(key) ?? 0) + row.amount);
+      row.meta = { ...row.meta, incomeTaxAtSource: true };
     }
-    if (charOps.length > 0) await db.collection<Character>("characters").bulkWrite(charOps);
-
+  const payoutCredits: IncomeCredit[] = [];
+  for (const [ownerCollection, payments] of [
+    ["characters", charPayments],
+    ["imperialCharacters", imperialPayments],
+  ] as const)
+    for (const [id, amounts] of payments)
+      for (const [currency, gross] of amounts) {
+        const income = Math.min(
+          gross,
+          couponAmounts.get(ownerCollection + ":" + id + ":" + currency) ?? 0
+        );
+        payoutCredits.push({
+          characterId: new ObjectId(id),
+          ownerCollection,
+          currency,
+          gross,
+          income,
+          destination: forexEnabled ? "currencyBalances.personal." + currency : "cashOnHand",
+          arrearsExempt: gross - income,
+        });
+      }
+  const netCredits = await creditIncomeAfterTax(db, "bonds", turn, now, payoutCredits);
+  for (const credit of netCredits)
+    (credit.ownerCollection === "characters" ? charPayments : imperialPayments)
+      .get(credit.characterId.toHexString())
+      ?.set(credit.currency, credit.net);
+  if (charPayments.size > 0) {
     // Auto-convert bond income (coupons + maturity returns) to each holder's
     // home currency. One trade per (character, foreign currency) aggregating all
     // bond payments received in that currency this turn — contributes to forex
@@ -1808,24 +1821,6 @@ export async function processBondTurn(
         }
       }
     }
-  }
-
-  // Pay imperial character coupon/maturity income
-  if (imperialPayments.size > 0) {
-    const imperialOps: AnyBulkWriteOperation<ImperialCharacter>[] = [];
-    for (const [imperialIdStr, currencyAmounts] of imperialPayments) {
-      for (const [currency, amount] of currencyAmounts) {
-        imperialOps.push(
-          buildPersonalBalanceBulkOp(
-            new ObjectId(imperialIdStr),
-            amount,
-            currency,
-            forexEnabled
-          ) as AnyBulkWriteOperation<ImperialCharacter>
-        );
-      }
-    }
-    await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialOps);
   }
 
   // Corporate holder coupon income + maturity face-value returns were already

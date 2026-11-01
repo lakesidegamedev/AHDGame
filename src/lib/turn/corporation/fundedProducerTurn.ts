@@ -98,6 +98,10 @@ export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening c
 
 export interface FundedProducerTurnResult {
   receiptsBySectorId: Map<string, FundedReceipt>;
+  deferredDistributions?: Map<
+    string,
+    NonNullable<import("./types").CorpSnapshot["deferredProducerDistributions"]>
+  >;
   /** Anchor per turn, by corporation id. */
   settledProfitByCorp: Map<string, number>;
   /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
@@ -180,6 +184,8 @@ export async function runFundedProducerTurn(
     seedHouseholds: boolean;
     /** First funded turn of the world (opening turn + 1), for the transition window. */
     firstFundedTurn?: number;
+    /** Hold private corporate receipts until Treasury withholding is settled. */
+    withholdCorporateTax?: boolean;
   }
 ): Promise<FundedProducerTurnResult> {
   const { lookups, worldEpoch, turn } = input;
@@ -635,9 +641,15 @@ export async function runFundedProducerTurn(
         });
       }
     }
+    const deferredCorporateDistributions = transfers.filter(
+      (transfer) => input.withholdCorporateTax === true && transfer.reason === "ai_dividend"
+    );
     return {
-      transfers,
+      transfers: transfers.filter(
+        (transfer) => input.withholdCorporateTax !== true || transfer.reason !== "ai_dividend"
+      ),
       meta: {
+        deferredCorporateDistributions,
         paidByCountry: paid,
         supportBySector: bySector,
         retiredBookBySector,
@@ -673,6 +685,11 @@ export async function runFundedProducerTurn(
     worldEpoch,
     turn,
     corporations: lookups.corporations,
+    deferCorporateCreditsFor: new Set(
+      input.withholdCorporateTax
+        ? [...demand.ownerKindByCompany].filter(([, kind]) => kind !== "state").map(([id]) => id)
+        : []
+    ),
     prepare: () => demand.preparedSectors,
     walletScopes,
     rates,
@@ -1102,11 +1119,26 @@ export async function runFundedProducerTurn(
     input.firstFundedTurn
   );
 
-  return {
-    receiptsBySectorId,
-    settledProfitByCorp,
-    headcountBySectorId,
-  };
+  const deferredDistributions = new Map<
+    string,
+    NonNullable<import("./types").CorpSnapshot["deferredProducerDistributions"]>
+  >();
+  for (const transfer of (close?.meta?.deferredCorporateDistributions ??
+    []) as SettlementClose["transfers"]) {
+    const scope = scopeById.get(transfer.toAccountId);
+    if (!scope) throw new Error("Deferred corporate distribution wallet unavailable");
+    deferredDistributions.set(transfer.fromAccountId, [
+      ...(deferredDistributions.get(transfer.fromAccountId) ?? []),
+      {
+        walletId: transfer.toAccountId,
+        worldEpoch,
+        amountAnchor: transfer.amountAnchor,
+        currency: scope.currency,
+        localPerAnchor: rateOf(scope.currency),
+      },
+    ]);
+  }
+  return { receiptsBySectorId, settledProfitByCorp, headcountBySectorId, deferredDistributions };
 }
 
 /**

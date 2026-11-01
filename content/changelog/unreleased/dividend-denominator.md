@@ -17,5 +17,5 @@ areas: [backend, engine]
 
 - Fixed a rare dividend miscalculation that could overpay shareholders of a
   company with new shares still being placed on the market.
-- A share consolidation now keeps shares still being placed in step with the
-  rest of the company's shares.
+- Share structure changes wait for unfinished issuances to complete. Completed
+  issuance metadata stays in step with the company's share counts.

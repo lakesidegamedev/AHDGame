@@ -1,3 +1,5 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, getMongoClient } from "@/lib/mongodb";
@@ -106,6 +108,8 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+    const cashBlock = requireSpendableCorporateCash(corporation);
+    if (cashBlock) return cashBlock;
 
     if (corporation.primaryUnderwritingIncomingFunding || corporation.bankUnderwritingFunding) {
       return errorResponse(
@@ -414,6 +418,8 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
             primaryUnderwritingIncomingFunding: { $exists: false },
             bankUnderwritingFunding: { $exists: false },
             headquartersRelocationBondFunding: { $exists: false },
+            liquidCapital: { $gte: relocationInCorpCapital },
+            ...corporateDiscretionaryCashGuard(),
           },
           {
             $set: baseCorpSet,
@@ -521,6 +527,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
         if (!session) return { status: "transactions_unavailable" as const };
         const leaseFreeFilter = {
           _id: workingCorp._id,
+          ...corporateDiscretionaryCashGuard(),
           "headquartersRelocationBondFunding.operationKey": frozenBondLease!.operationKey,
           ...relocationBondSourceSnapshotFilter(frozenBondLease!),
           ...(frozenBondLease!.ceoId

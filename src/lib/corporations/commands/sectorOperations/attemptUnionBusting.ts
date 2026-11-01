@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
@@ -177,13 +178,15 @@ export async function attemptUnionBusting(
           .updateOne(sectorFilter, sectorSet, { session });
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
-        const corpUpdate = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id, liquidCapital: { $gte: cashCost } },
-            { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } },
-            { session }
-          );
+        const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+          {
+            _id: corporation._id,
+            liquidCapital: { $gte: cashCost },
+            ...corporateDiscretionaryCashGuard(),
+          },
+          { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } },
+          { session }
+        );
         if (corpUpdate.modifiedCount === 0) throw new Error("INSUFFICIENT_FUNDS");
       },
       async () => {
@@ -193,12 +196,14 @@ export async function attemptUnionBusting(
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
         try {
-          const corpUpdate = await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corporation._id, liquidCapital: { $gte: cashCost } },
-              { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } }
-            );
+          const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+            {
+              _id: corporation._id,
+              liquidCapital: { $gte: cashCost },
+              ...corporateDiscretionaryCashGuard(),
+            },
+            { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } }
+          );
           if (corpUpdate.modifiedCount === 0) {
             await db
               .collection<CorporateSector>("corporateSectors")

@@ -145,7 +145,12 @@ describe("atomicallyDebitCorpLiquidCapital", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.newBalance).toBe(600);
     expect(db.collectionMocks.corporations.findOneAndUpdate).toHaveBeenCalledWith(
-      { _id: corpId, liquidCapital: { $gte: 400 } },
+      expect.objectContaining({
+        _id: corpId,
+        liquidCapital: { $gte: 400 },
+        $expr: expect.any(Object),
+        pendingOperatingCash: expect.any(Object),
+      }),
       expect.objectContaining({ $inc: { liquidCapital: -400 } }),
       expect.objectContaining({ returnDocument: "after" })
     );

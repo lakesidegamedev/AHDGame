@@ -1,3 +1,4 @@
+import { settleCorporateTaxPriority } from "./corporateTaxPriority";
 import { createHash } from "node:crypto";
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -188,11 +189,8 @@ function operatingLossBatchTransition(args: {
 }
 
 /**
- * Settle modeled gross operating receipts before federal withholding. These
- * are separate durable receipts because the settlement journal applies
- * guarded debits before credits: one transition cannot spend income that has
- * not yet landed. Unfunded operating losses and withholding remain explicit
- * corporation arrears rather than aborting the whole corporation turn.
+ * Fresh settlements withhold current taxes before arrears and spendable cash.
+ * An interrupted legacy turn resumes its original durable journal protocol.
  */
 export async function settleCorporateOperatingCash(
   db: Db,
@@ -201,17 +199,32 @@ export async function settleCorporateOperatingCash(
   now: Date,
   lanes: number = OPERATING_CASH_LANES
 ): Promise<void> {
-  return withBankingTelemetryBatch(db, turn, () =>
-    settleCorporateOperatingCashBatched(db, snapshots, turn, now, lanes)
-  );
+  if (!snapshots.length) return;
+  return withBankingTelemetryBatch(db, turn, async () => {
+    // Old claimed protocols retain their exact receipts; new turns never expose
+    // gross modeled earnings or let prior payables consume current withholding.
+    const legacy = await db.collection<{ _id: string }>("bankMoneyMoves").findOne(
+      {
+        $or: [
+          { _id: { $regex: `^corp-operating-cash:${turn}:` } },
+          { _id: { $regex: `^corp-operating-net-batch:${turn}:` } },
+          { _id: { $regex: `^corp-operating-loss-batch:${turn}:` } },
+        ],
+      },
+      { projection: { _id: 1 } }
+    );
+    if (legacy) return settleCorporateOperatingCashLegacy(db, snapshots, turn, now, lanes);
+    return settleCorporateTaxPriority(db, snapshots, turn, now);
+  });
 }
 
-async function settleCorporateOperatingCashBatched(
+/** Recovery protocol for pre-withholding receipts. Do not use for fresh turns. */
+export async function settleCorporateOperatingCashLegacy(
   db: Db,
   snapshots: readonly CorpSnapshot[],
   turn: number,
   now: Date,
-  lanes: number
+  lanes: number = OPERATING_CASH_LANES
 ): Promise<void> {
   if (snapshots.length === 0) return;
   const context = await loadTreasuryCashContext(db, turn);

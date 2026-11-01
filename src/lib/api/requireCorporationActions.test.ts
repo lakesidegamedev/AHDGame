@@ -74,3 +74,15 @@ describe("requireCorporationActions / requireGameActive", () => {
     expect(await requireCorporationActionsEnabled(db as unknown as Db)).toBeNull();
   });
 });
+
+it("blocks cash mutations during a live processing lock", async () => {
+  const { createInMemoryDb } = await import("@/lib/test-utils/inMemoryDb");
+  const memory = createInMemoryDb();
+  memory.seed("gameState", [
+    { _id: "current", isProcessing: true, processingHeartbeatAt: new Date() },
+  ]);
+  const { getGameStateCollection } = await import("@/lib/db/collections");
+  vi.mocked(getGameStateCollection).mockResolvedValue(memory.collection("gameState") as never);
+  const { requireCorporationActionsEnabled } = await import("./requireCorporationActions");
+  expect((await requireCorporationActionsEnabled(memory as unknown as Db))?.status).toBe(409);
+});

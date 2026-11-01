@@ -1,3 +1,4 @@
+import { corporateGrowthWithPayables } from "./rules/corporateTaxPriority";
 /**
  * Sector operations turn owned capacity into sales, jobs and operating profit.
  * processSector prices production, upkeep and policy effects while preserving payroll.
@@ -180,16 +181,21 @@ export function processSector(
     embargoTradeExposureActive,
     newRevenue,
     preFlipNameplateRevenue,
-  } = resolveSectorGrowthPolicy({
+  } = corporateGrowthWithPayables(
+    resolveSectorGrowthPolicy({
+      corp,
+      sector,
+      currentYear,
+      commandEconomyEnabled,
+      sectorRevenueAnchor,
+      plantsEnabled,
+      embargoSuppressed,
+      useTradeExposureEmbargo,
+    }),
     corp,
-    sector,
-    currentYear,
-    commandEconomyEnabled,
     sectorRevenueAnchor,
-    plantsEnabled,
-    embargoSuppressed,
-    useTradeExposureEmbargo,
-  });
+    plantsEnabled
+  );
 
   // Recalculate daily growth cost; legacy sectors fall back to the HQ country.
   const sectorCountryId = sector.countryId ?? corp.countryId;

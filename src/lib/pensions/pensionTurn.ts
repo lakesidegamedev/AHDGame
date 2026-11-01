@@ -227,7 +227,9 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       });
       let paidLocal = 0;
       if (contributionLocal > 0) {
-        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal);
+        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal, {
+          corporateObligation: true,
+        });
         if (debit.ok) {
           paidLocal = contributionLocal;
         } else {
@@ -251,7 +253,9 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       let toppedUpAnchor = 0;
       let toppedUpLocal = 0;
       if (topUpLocal > 0) {
-        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal);
+        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal, {
+          corporateObligation: true,
+        });
         if (debit.ok) {
           toppedUpAnchor = topUpAnchor;
           toppedUpLocal = topUpLocal;

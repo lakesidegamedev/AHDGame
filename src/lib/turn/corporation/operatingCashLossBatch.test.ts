@@ -14,7 +14,9 @@ import { describe, expect, it } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash, type FaultPlan } from "@/lib/test-utils/faultyDb";
 import type { CorpSnapshot } from "./types";
-import { settleCorporateOperatingCash } from "./operatingCashSettlement";
+// Historical loss-wave recovery retains its original receipts and payment order.
+// Current tax-first settlement is covered by corporateTaxPriority.test.ts.
+import { settleCorporateOperatingCashLegacy as settleCorporateOperatingCash } from "./operatingCashSettlement";
 
 const TURN = 458;
 const NOW = new Date("2026-10-27T03:00:00Z");

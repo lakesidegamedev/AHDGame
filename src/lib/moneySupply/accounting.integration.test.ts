@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { snapshotMoneySupply } from "./snapshot";
@@ -266,4 +266,23 @@ describe("monetary stock boundaries", () => {
     expect(operation.moneySupplyDelta).toBe(50);
     expect(Number((await observe(db, 1)).m2) - Number(before.m2)).toBe(50);
   });
+});
+
+vi.mock("@/lib/budget/incomePayout", async () => {
+  const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+  return { creditIncomeAfterTax: vi.fn(untaxedIncomePayout) };
+});
+
+it("keeps money supply unchanged when operating cash is held for withholding", async () => {
+  const db = world();
+  const id = new ObjectId();
+  db.seed("corporations", [
+    { _id: id, countryId: "US", liquidCurrencyCode: "USD", liquidCapital: 100 },
+  ]);
+  const before = await observe(db, 0);
+  await db
+    .collection("corporations")
+    .updateOne({ _id: id }, { $set: { liquidCapital: 70, pendingOperatingCash: 30 } });
+  const after = await observe(db, 1);
+  expect(after.m2).toBe(before.m2);
 });

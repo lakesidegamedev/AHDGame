@@ -120,6 +120,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
             countryId: 1,
             liquidCurrencyCode: 1,
             liquidCapital: 1,
+            pendingOperatingCash: 1,
             "bankCharter.status": 1,
             "bankCharter.currency": 1,
             "bankCharter.npcDeposits": 1,
@@ -278,7 +279,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       byCurrency,
       (corp.liquidCurrencyCode ?? currencyFor(corp.countryId as CountryId)) as CurrencyCode,
       "corporateLiquid",
-      corp.liquidCapital
+      corp.liquidCapital + (corp.pendingOperatingCash ?? 0)
     );
   for (const sector of constructionEscrows) {
     const escrow = sector.constructionFinancing;

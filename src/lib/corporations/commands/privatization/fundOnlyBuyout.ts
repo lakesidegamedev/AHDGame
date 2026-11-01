@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import { referenceValuation } from "../acquisitions/referenceValuation";
 import type { Db } from "mongodb";
@@ -224,12 +225,14 @@ export async function executeFundOnlyBuyout(
       fxRate = 1;
     }
     const topUpLocalTotal = anchorToCorpCapital(topUpAnchorTotal, currency, fxRate);
-    const debit = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, liquidCapital: { $gte: topUpLocalTotal } },
-        { $inc: { liquidCapital: -topUpLocalTotal }, $set: { updatedAt: now } }
-      );
+    const debit = await db.collection<Corporation>("corporations").updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: topUpLocalTotal },
+        ...corporateDiscretionaryCashGuard(),
+      },
+      { $inc: { liquidCapital: -topUpLocalTotal }, $set: { updatedAt: now } }
+    );
     const debited = (debit.modifiedCount ?? debit.matchedCount ?? 0) > 0;
     if (!debited) {
       return {
