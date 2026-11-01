@@ -1,3 +1,4 @@
+import { isSingleplayer } from "@/lib/singleplayer";
 import { prepareManagedMongo } from "@/lib/singleplayer/prepareManagedMongo";
 import { MongoClient, Db, type WriteConcernSettings } from "mongodb";
 import { getValidatedEnv } from "@/lib/env";
@@ -67,10 +68,18 @@ export function resolveMongoSocketTimeoutMs(env: Record<string, string | undefin
  * the process marked as the turn worker honors it; the web server keeps the
  * default whatever its environment says. Explicit write concerns (transactions,
  * index builds) are unaffected.
+ *
+ * A singleplayer world always takes w:1: its database is one local node, so
+ * "majority" is the same node, and the journal wait per write is pure latency
+ * on a player's disk (about a third of a turn's database time on a fast SSD,
+ * more on a slower one). Mongo still journals every 100 ms, so a power cut
+ * loses the last instants of play and leaves the state a crashed turn would,
+ * which turn crash-resume already handles.
  */
 export function resolveMongoWriteConcern(
   env: Record<string, string | undefined>
 ): WriteConcernSettings | undefined {
+  if (isSingleplayer(env)) return { w: 1 };
   if (env.TURN_WRITE_CONCERN?.trim().toLowerCase() !== "w1") return undefined;
   if (!isTurnWorkerProcess(env)) return undefined;
   return { w: 1 };

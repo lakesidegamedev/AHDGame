@@ -1,14 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireSingleplayer, getDb, startSingleplayerBatch, getLatest, requestStop } = vi.hoisted(
-  () => ({
-    requireSingleplayer: vi.fn(),
-    getDb: vi.fn(),
-    startSingleplayerBatch: vi.fn(),
-    getLatest: vi.fn(),
-    requestStop: vi.fn(),
-  })
-);
+const {
+  requireSingleplayer,
+  getDb,
+  startSingleplayerBatch,
+  getLatest,
+  requestStop,
+  maybeAutosave,
+} = vi.hoisted(() => ({
+  requireSingleplayer: vi.fn(),
+  getDb: vi.fn(),
+  startSingleplayerBatch: vi.fn(),
+  getLatest: vi.fn(),
+  requestStop: vi.fn(),
+  maybeAutosave: vi.fn(),
+}));
 
 vi.mock("@/lib/api/requireSingleplayer", () => ({ requireSingleplayer }));
 vi.mock("@/lib/mongodb", () => ({ getDb }));
@@ -18,6 +24,7 @@ vi.mock("@/lib/singleplayerBatch", () => ({
   getLatestSingleplayerBatch: getLatest,
   requestSingleplayerBatchStop: requestStop,
 }));
+vi.mock("@/lib/singleplayer/saves", () => ({ maybeAutosave }));
 
 import { DELETE, GET, POST } from "./route";
 
@@ -46,11 +53,32 @@ describe("/api/singleplayer/turn/batch", () => {
   });
 
   it("starts a batch and answers 202 with the job", async () => {
-    startSingleplayerBatch.mockResolvedValue({ ok: true, job: { id: "j", requested: 5 } });
+    startSingleplayerBatch.mockResolvedValue({
+      ok: true,
+      job: { id: "j", requested: 5, turns: [] },
+      done: Promise.resolve(),
+    });
     const response = await POST(post({ turns: 5 }));
     expect(response.status).toBe(202);
     expect(startSingleplayerBatch).toHaveBeenCalledWith({}, 5);
     await expect(response.json()).resolves.toMatchObject({ batch: { id: "j", requested: 5 } });
+  });
+
+  it("checks for an autosave once, after the batch's last turn", async () => {
+    let finish!: () => void;
+    const job = { id: "j", requested: 3, turns: [] as Array<{ turn: number }> };
+    startSingleplayerBatch.mockResolvedValue({
+      ok: true,
+      job,
+      done: new Promise<void>((resolve) => (finish = resolve)),
+    });
+    await POST(post({ turns: 3 }));
+    expect(maybeAutosave).not.toHaveBeenCalled();
+    job.turns.push({ turn: 7 }, { turn: 8 });
+    finish();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(maybeAutosave).toHaveBeenCalledTimes(1);
+    expect(maybeAutosave).toHaveBeenCalledWith({}, 8);
   });
 
   it.each([0, 11, 2.5, "3"])("rejects turns=%s before touching the world", async (turns) => {

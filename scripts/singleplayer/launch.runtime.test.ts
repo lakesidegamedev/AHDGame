@@ -390,3 +390,14 @@ describe("resolveBindHost", () => {
     );
   });
 });
+
+describe("MongoDB tuning", () => {
+  it("passes only well-formed server parameters", () => {
+    const args = launcher.MONGOD_TUNING_ARGS;
+    expect(args.length % 2).toBe(0);
+    for (let i = 0; i < args.length; i += 2) {
+      expect(args[i]).toBe("--setParameter");
+      expect(args[i + 1]).toMatch(/^[A-Za-z]+=[^=\s]+$/);
+    }
+  });
+});

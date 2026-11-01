@@ -618,6 +618,60 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     count: 2,
     reason: "The world-transition operation iterates its explicit collection descriptors.",
   },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "<anonymous-function>",
+    argument: "done.name",
+    scopeHash: "adc11d03e63213ed779b8655209bba33c459cf3f891ff04f42f638412f208e08",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "describeCollections",
+    argument: "entry.name",
+    scopeHash: "3f05cf471f4d7bde6cdc4250ccb918c48de17918898ac732c9c3d7189d6cbe4e",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "flush",
+    argument: "current.name",
+    scopeHash: "0a010e43ad066b19fffe764da263abfcf71fa556fe4e27fe1dd9d1b9225dbed3",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "readLiveCollections",
+    argument: "entry.name",
+    scopeHash: "4388fa5b97584cae5b48387293df1b13f520355c71de48538e4089b3cb45874c",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "restoreSaveArchive",
+    argument: "descriptor.name",
+    scopeHash: "f373553af419b5d65fad397d24fd38caf0ffe3f4728029d3c68fc348fc70bd94",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "writeSaveArchive",
+    argument: "collection.name",
+    scopeHash: "11a465166e3a8407efa3bc8f15fb09f5883ad6c9d59f0052e1948635e6498609",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
 ];
 
 /** Reviewed transport forwarding, separate from frozen legacy collection debt.

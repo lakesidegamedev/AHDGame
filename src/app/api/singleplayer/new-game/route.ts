@@ -86,6 +86,7 @@ export async function POST(request: Request) {
       nppAutonomyLevel: body.autonomyLevel,
       featureFlags: body.featureFlags,
       permanentHeadOfState: body.mode === "head-of-state",
+      guide: {},
     });
 
     return NextResponse.json({ ok: true, preset, mode: body.mode, config, reset, logs });
