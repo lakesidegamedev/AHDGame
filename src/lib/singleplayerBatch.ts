@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { SINGLEPLAYER_USER_ID } from "@/lib/singleplayer";
 import { categoryOf, type InboxCategory } from "@/lib/inbox/categories";
+import { deliveryOf } from "@/lib/inbox/delivery";
 import { isActionRequiredType } from "@/lib/inbox/priority";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import {
@@ -257,7 +258,16 @@ export function detectBatchStop(
   }
 
   add("vote", titlesOf(notes, VOTES));
-  add("crisis", titlesOf(notes, CRISES));
+  // Only crises the game would push to the player's phone: attacks on them,
+  // nationalization, treaty calls, impeachment, their own events. World news
+  // crises are inbox-only and would otherwise end nearly every batch.
+  add(
+    "crisis",
+    titlesOf(
+      notes.filter((note) => deliveryOf(note.type) === "push"),
+      CRISES
+    )
+  );
   add("offer", titlesOf(notes, OFFERS));
 
   for (const kind of STOP_ORDER) {

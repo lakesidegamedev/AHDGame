@@ -81,8 +81,8 @@ describe("detectBatchStop", () => {
     ["election_opened", "election"],
     ["bill_vote_open", "vote"],
     ["party_whip_issued", "vote"],
-    ["crisis", "crisis"],
     ["player_attack", "crisis"],
+    ["player_event", "crisis"],
     ["coalition_invite_received", "offer"],
     ["contract_offered", "offer"],
     ["leadership_lost", "office"],
@@ -92,6 +92,16 @@ describe("detectBatchStop", () => {
     expect(stop?.kind).toBe(kind);
     expect(stop?.turn).toBe(6);
     expect(stop?.details).toEqual(["Headline"]);
+  });
+
+  it("keeps going through world news crises that are inbox-only", () => {
+    // Found on a packaged 2023 world: four living-conflict notices on turn 2
+    // ended a 5-turn batch after one turn.
+    const stop = detectBatchStop(before, after, [
+      n("crisis", "Governments coordinate the pandemic response"),
+      n("crisis", "A transnational extremist network takes shape"),
+    ]);
+    expect(stop).toBeNull();
   });
 
   it("stops when the character is gone", () => {
@@ -171,7 +181,7 @@ describe("detectBatchStop", () => {
     const stop = detectBatchStop(before, after, [
       n("coalition_invite_received", "Invite"),
       n("bill_vote_open", "Budget vote"),
-      n("crisis", "Border crisis"),
+      n("player_attack", "Border attack"),
     ]);
     expect(stop?.kind).toBe("vote");
     expect(stop?.details).toEqual(["Budget vote"]);
