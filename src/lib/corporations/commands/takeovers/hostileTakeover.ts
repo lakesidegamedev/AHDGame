@@ -93,6 +93,7 @@ import {
 } from "@/lib/corporations/mergerReview/gate";
 import { attachMergerRemedy } from "@/lib/corporations/mergerReview/lifecycle";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -204,10 +205,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       );
     }
 
-    const unplacedFloat =
-      target.pendingShareIssuance?.issuedUpfront && target.pendingShareIssuance.source === "ipo"
-        ? target.pendingShareIssuance.remainingShares
-        : 0;
+    const unplacedFloat = unplacedIpoShares(target);
     if ((target.publicFloat ?? 0) > unplacedFloat) {
       return errorResponse(
         400,
