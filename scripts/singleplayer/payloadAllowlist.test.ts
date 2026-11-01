@@ -45,7 +45,10 @@ function runtimeFixture(): string {
     ".next/server/chunks/ssr.js",
     'require("mongodb-438b504308ffa4be");\n' +
       'require("@sentry/server-runtime-injection-e7acc8d92084955d/register");\n' +
-      'require("@aws-sdk/client-s3-ecbef8e33fd0b8f0");\n'
+      'require("@aws-sdk/client-s3-ecbef8e33fd0b8f0");\n' +
+      'var i=await a.y("sharp-20c6a5da84e2135f");\n' +
+      // A hashed-looking string with no installed base package is not an alias.
+      'const id="build-0123456789abcdef";\n'
   );
   touch(root, "public/ahd-logo.png");
   touch(root, "node_modules/mongodb/package.json", "{}");
@@ -117,7 +120,11 @@ describe("payload allowlist apply", () => {
       "@aws-sdk/client-s3-ecbef8e33fd0b8f0",
       "@sentry/server-runtime-injection-e7acc8d92084955d",
       "mongodb-438b504308ffa4be",
+      "sharp-20c6a5da84e2135f",
     ]);
+    expect(
+      existsSync(path.join(root, "node_modules", "sharp-20c6a5da84e2135f", "package.json"))
+    ).toBe(true);
     expect(
       existsSync(path.join(root, "node_modules", "mongodb-438b504308ffa4be", "package.json"))
     ).toBe(true);

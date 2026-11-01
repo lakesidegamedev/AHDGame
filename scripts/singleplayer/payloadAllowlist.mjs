@@ -49,12 +49,14 @@ const REQUIRED_PATHS = [
 const CACHE_DIRS = [path.join(".next", "cache")];
 
 // Turbopack loads server externals under a hashed alias, optionally scoped and
-// with a subpath: require("mongodb-438b504308ffa4be"),
-// require("@sentry/server-runtime-injection-e7acc8d92084955d/register").
-// The alias resolves through a `.next/node_modules` symlink that installers
-// drop, so packaging materializes each one as a real copy of its package.
+// with a subpath, through several loaders: require("mongodb-438b504308ffa4be"),
+// require("@sentry/server-runtime-injection-e7acc8d92084955d/register"),
+// await e.y("sharp-20c6a5da84e2135f"). The alias resolves through a
+// `.next/node_modules` symlink that installers drop, so packaging materializes
+// each one as a real copy of its package. Any quoted hashed name whose base
+// package is installed counts, whatever loader references it.
 const ALIAS_PATTERN =
-  /require\("((?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*-[a-f0-9]{16})(?:\/[^"]*)?"\)/g;
+  /["']((?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*-[a-f0-9]{16})(?:\/[^"']*)?["']/g;
 
 export function toPosix(rel) {
   return rel.split(path.sep).join("/");
@@ -143,7 +145,10 @@ export function findRequiredExternalAliases(root) {
   for (const entry of readdirSync(chunkDir)) {
     if (!entry.endsWith(".js")) continue;
     const source = readFileSync(path.join(chunkDir, entry), "utf8");
-    for (const match of source.matchAll(ALIAS_PATTERN)) aliases.add(match[1]);
+    for (const match of source.matchAll(ALIAS_PATTERN)) {
+      const base = match[1].replace(/-[a-f0-9]{16}$/, "");
+      if (existsSync(path.join(root, "node_modules", ...base.split("/")))) aliases.add(match[1]);
+    }
   }
   return aliases;
 }
