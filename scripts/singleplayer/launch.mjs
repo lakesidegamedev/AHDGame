@@ -721,10 +721,34 @@ async function spawnMongod(bin) {
  * other exit is explained (port taken, incompatible data files, missing
  * Visual C++ runtime) rather than retried.
  */
+/**
+ * Whether a live mongod already holds this world's data directory. mongod
+ * writes its pid into `mongod.lock` while running and empties it on a clean
+ * stop, so a live pid there means the server on our port is serving this world.
+ */
+export function worldMongodRunning(dataDir = DATA_DIR) {
+  try {
+    const pid = Number(readFileSync(path.join(dataDir, "mongod.lock"), "utf8").trim());
+    if (!Number.isInteger(pid) || pid <= 0) return false;
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function startMongod(bin) {
   mkdirSync(DATA_DIR, { recursive: true });
   if (!(await portFree(MONGO_PORT))) {
-    log(`port ${MONGO_PORT} already in use; assuming a MongoDB is running there`);
+    // Never attach to a database that holds a different world: setup and new
+    // game wipe whatever they are connected to.
+    if (!worldMongodRunning()) {
+      throw new StartupError(
+        "database",
+        `port ${MONGO_PORT} is in use by another program, not this world's MongoDB`
+      );
+    }
+    log(`port ${MONGO_PORT} already in use by this world's MongoDB; using it`);
     return null;
   }
   if (shuttingDown) return null;
