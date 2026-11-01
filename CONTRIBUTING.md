@@ -154,6 +154,24 @@ The UI chrome (navigation, settings, tutorial) is localized with next-intl. Game
 - Data modules that feed rendered chrome (nav menu definitions, settings section configs, tutorial chapters) store message keys; the rendering component resolves them.
 - Adding a locale: extend `SUPPORTED_LOCALES` in `src/i18n/locales.ts` and create `messages/<locale>/` mirroring `messages/en/`. Natural phrasing over literal translation; informal address (du-form in German); the player-copy rules above apply in every language.
 
+## Conflicts of interest
+
+Many contributors also play. That is welcome, but a change can move your own standing in the game, and other players need to trust that it did not land for that reason.
+
+Disclose a conflict when your change could directly help or hurt:
+
+- a character you play,
+- a corporation you own, run, or hold shares in, or
+- anything else you control in game, such as a party you lead or a government you head.
+
+"Directly" means the change targets something you hold, or does more for it than for comparable players. If you are unsure, disclose.
+
+To disclose, tick the conflict box in the PR template and say what the link is. You do not have to name your character or corporation in the public PR: tell a maintainer privately and write "disclosed privately" in the PR instead.
+
+A disclosure does not block a PR. It tells the reviewer to weigh the change on its merits and against other players' positions, and a conflicted PR is never merged on its author's word alone. Staff contributors follow the same rule.
+
+An undisclosed conflict found later is grounds to revert the change and remove contribution access, and gains made through it may be reversed in game.
+
 ## Review
 
 The maintainer reviews every PR. Balance and economy paths get extra scrutiny and may require a worldsim run. Feature PRs squash merge into `development`; your PR title becomes the commit message, so write it like one. The maintainer promotes `development` to `staging` to `main` with merge commits.
