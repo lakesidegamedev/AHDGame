@@ -5,7 +5,6 @@ import type { CampaignStatePresence } from "@/lib/elections/dto/campaignStatePre
 import type { OppositionTarget } from "@/lib/campaigns/oppositionTargets";
 import {
   getEffectiveBranchCost,
-  getCampaignFamilyScalar,
   OPS_MAX_BRANCH_LEVEL,
   OPS_TREES,
   type OpsBranchKey,
@@ -268,11 +267,11 @@ export interface CampaignData {
     rallyTourActive: boolean;
     /** Whether a one-shot rally has been fired this turn (throttle). */
     rallyFiredThisTurn: boolean;
-    /** Race-family-scaled R for this race's rally (full value). */
+    /** R for this race's rally (full value). */
     rallyFullValue: number;
-    /** Race-family-scaled action cost of a one-shot rally. */
+    /** Action cost of a one-shot rally. */
     rallyOneShotActionCost: number;
-    /** Race-family-scaled action cost per tour-tick. */
+    /** Action cost per tour-tick. */
     rallyTourTickActionCost: number;
   };
 
@@ -420,7 +419,6 @@ export function buildOpsTreeView(
   category: UpgradeCategory,
   tree: { starter: boolean; a: number; b: number; c: number } | undefined,
   requiresTarget: boolean,
-  electionType: string | undefined,
   isGeneralPhase: boolean,
   toLocal: (anchor: number) => number,
   currencySymbol = "$"
@@ -428,7 +426,7 @@ export function buildOpsTreeView(
   const def = OPS_TREES[category];
   const unlocked = !!tree?.starter;
   const localMoney = (amount: number) =>
-    `${currencySymbol}${Math.round(toLocal(amount * getCampaignFamilyScalar(electionType))).toLocaleString("en-US")}`;
+    `${currencySymbol}${Math.round(toLocal(amount)).toLocaleString("en-US")}`;
   const starterEffect =
     category === "fundraising"
       ? `+${localMoney(def.starter.magnitude)}/turn base income`
@@ -472,15 +470,12 @@ export function buildOpsTreeView(
     requiresTarget,
     starterCost: unlocked
       ? null
-      : localizeCost(
-          getEffectiveBranchCost(category, null, 0, electionType, isGeneralPhase),
-          starterEffect
-        ),
+      : localizeCost(getEffectiveBranchCost(category, null, 0, isGeneralPhase), starterEffect),
     branches: def.branches.map((b) => {
       const level = tree ? tree[b.key] : 0;
       const next =
         unlocked && level < OPS_MAX_BRANCH_LEVEL
-          ? getEffectiveBranchCost(category, b.key, level + 1, electionType, isGeneralPhase)
+          ? getEffectiveBranchCost(category, b.key, level + 1, isGeneralPhase)
           : null;
       return {
         key: b.key,
@@ -504,7 +499,6 @@ export function buildOpsTrees(
     Campaign,
     "fundraisingTree" | "oppositionResearchTree" | "groundGameTree" | "mediaSpendingTree"
   >,
-  electionType: string | undefined,
   isGeneralPhase: boolean,
   toLocal: (anchor: number) => number,
   currencySymbol = "$"
@@ -514,7 +508,6 @@ export function buildOpsTrees(
       "fundraising",
       campaign.fundraisingTree,
       false,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -523,7 +516,6 @@ export function buildOpsTrees(
       "oppositionResearch",
       campaign.oppositionResearchTree,
       true,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -532,7 +524,6 @@ export function buildOpsTrees(
       "groundGame",
       campaign.groundGameTree,
       false,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -541,7 +532,6 @@ export function buildOpsTrees(
       "mediaSpending",
       campaign.mediaSpendingTree,
       false,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol

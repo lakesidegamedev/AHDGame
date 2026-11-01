@@ -14,7 +14,7 @@ import {
   calculateMaintenanceCosts,
   calculateMediaMaintenanceAfterDowngrade,
 } from "@/lib/campaigns/maintenance";
-import { getCampaignFamilyScalar, getOpsBranchMagnitude } from "@/lib/campaigns/upgradeCosts";
+import { getOpsBranchMagnitude } from "@/lib/campaigns/upgradeCosts";
 import { getMediaFavPerTurn, getOppoDrainPerTurn } from "@/lib/campaigns/opsEffects";
 import {
   SUPPORT_RALLY_FULL_VALUE,
@@ -512,15 +512,10 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
               return hoursRemaining <= 4 ? 2 : 1;
             })();
 
-            // Per-race-family budget scalar applies to income, maintenance, and
-            // upgrade costs. Sourced from the pre-fetched electionDataMap so
-            // there's no per-campaign DB hop. Unknown / undefined electionType
-            // falls back to 1.0× via getCampaignFamilyScalar.
-            const electionTypeForScalar = electionData?.electionType;
             // Anchor income; converted to the campaign's local currency for the
             // treasury write below. `fundsAnchorForCalc` lets the anchor-denominated
             // auto-downgrade math compare against the local-stored balance.
-            const income = calculateCampaignIncome(campaign, electionTypeForScalar);
+            const income = calculateCampaignIncome(campaign);
             const campaignCountryId = electionData?.countryId ?? "US";
             // Frozen base local rate — never the live exchangeRates.
             const campaignRate = campaignLocalRate(campaignCountryId, campaignRates);
@@ -559,10 +554,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             // levels. Passive favorability effects below still use these levels —
             // the player paid for them this turn and gets one last gasp before the
             // auto-downgrade kicks in.
-            const preDowngradeMaintenance = calculateMaintenanceCosts(
-              campaign,
-              electionTypeForScalar
-            );
+            const preDowngradeMaintenance = calculateMaintenanceCosts(campaign);
 
             /*
              * Auto-downgrade on insolvency: when projected funds (funds + income)
@@ -575,7 +567,6 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             const downgrade = computeAutoDowngrade(campaign, {
               funds: fundsAnchorForCalc,
               income,
-              electionType: electionTypeForScalar,
             });
             const effectiveMaintenance =
               downgrade.downgrades.length > 0 ? downgrade.newMaintenance : preDowngradeMaintenance;
@@ -593,8 +584,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             );
             const mediaMaintenanceAnchor = calculateMediaMaintenanceAfterDowngrade(
               campaign,
-              downgrade.downgrades,
-              electionTypeForScalar
+              downgrade.downgrades
             );
             const campaignTarget = campaign as Campaign & {
               targetState?: unknown;
@@ -677,12 +667,9 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             const tourKey = `${campaign.electionId.toString()}:${campaign.candidateId.toString()}`;
             const rallyState = electionCandidateRallyMap.get(tourKey);
             if (rallyState?.rallyTourActive && !campaign.candidateIsNPP) {
-              const tourTickCost = Math.ceil(
-                SUPPORT_RALLY_TOUR_TICK_ACTION_COST * getCampaignFamilyScalar(electionTypeForScalar)
-              );
+              const tourTickCost = SUPPORT_RALLY_TOUR_TICK_ACTION_COST;
               if (campaign.actions >= tourTickCost) {
-                const scaledR =
-                  SUPPORT_RALLY_FULL_VALUE * getCampaignFamilyScalar(electionTypeForScalar);
+                const scaledR = SUPPORT_RALLY_FULL_VALUE;
                 const { immediateBump, entry } = buildRallyAccrualEntry(scaledR);
                 const nextSupport = Math.max(0, Math.min(100, rallyState.support + immediateBump));
 

@@ -7,7 +7,7 @@ import type { AuthUserWithCharacter } from "@/lib/auth";
 import { campaignActionBankCap, campaignActionsPerTurn } from "@/lib/campaigns/actions";
 import { buildCampaignBudgetPreview } from "@/lib/campaigns/rules/budgetPreview";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
-import { getEffectiveUpgradeCost, getCampaignFamilyScalar } from "@/lib/campaigns/upgradeCosts";
+import { getEffectiveUpgradeCost } from "@/lib/campaigns/upgradeCosts";
 import { computeElectionPhase, isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
@@ -302,10 +302,6 @@ export async function getCampaignDetail(
     return base;
   }
 
-  // Per-race-family budget scalar applies to income, maintenance, and
-  // upgrade costs. `election?.electionType` may be undefined for legacy
-  // rows without an election link — the helpers fall back to neutral 1.0×.
-  const electionType = election?.electionType;
   // General-phase upgrade surcharge (×1.5 on funds + actions) must be reflected
   // in the cost preview so the "Upgrade" button only enables when the gate will
   // accept it. SSOT shared with the gate — see isCampaignUpgradeGeneralPhase.
@@ -444,7 +440,6 @@ export async function getCampaignDetail(
   if (!campaign.candidateIsNPP) {
     if (candidateRow && candidateRow.status === "active") {
       const currentTurn = await getCurrentTurn(db);
-      const scalar = getCampaignFamilyScalar(electionType);
       const pendingDripTotal = Array.isArray(candidateRow.supportAccrual)
         ? candidateRow.supportAccrual.reduce(
             (sum, entry) => sum + entry.amountPerTurn * entry.turnsRemaining,
@@ -458,9 +453,9 @@ export async function getCampaignDetail(
         rallyFiredThisTurn:
           typeof candidateRow.lastRallyTurn === "number" &&
           candidateRow.lastRallyTurn >= currentTurn,
-        rallyFullValue: SUPPORT_RALLY_FULL_VALUE * scalar,
-        rallyOneShotActionCost: Math.ceil(SUPPORT_RALLY_ACTION_COST * scalar),
-        rallyTourTickActionCost: Math.ceil(SUPPORT_RALLY_TOUR_TICK_ACTION_COST * scalar),
+        rallyFullValue: SUPPORT_RALLY_FULL_VALUE,
+        rallyOneShotActionCost: SUPPORT_RALLY_ACTION_COST,
+        rallyTourTickActionCost: SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
       };
 
       // An active rally tour ticks every turn IF the campaign can afford it (same
@@ -527,46 +522,29 @@ export async function getCampaignDetail(
 
   const opsTrees = buildOpsTrees(
     campaign,
-    electionType,
     isGeneralPhase,
     toLocal,
     CURRENCY_SYMBOLS[campaignCurrencyCode]
   );
   const nextUpgradeCosts: CampaignData["nextUpgradeCosts"] = {
     fundraising: localizeUpgradeCostFunds(
-      getEffectiveUpgradeCost(
-        "fundraising",
-        campaign.fundraisingLevel + 1,
-        electionType,
-        isGeneralPhase
-      ),
+      getEffectiveUpgradeCost("fundraising", campaign.fundraisingLevel + 1, isGeneralPhase),
       toLocal
     ),
     oppositionResearch: localizeUpgradeCostFunds(
       getEffectiveUpgradeCost(
         "oppositionResearch",
         campaign.oppositionResearchLevel + 1,
-        electionType,
         isGeneralPhase
       ),
       toLocal
     ),
     groundGame: localizeUpgradeCostFunds(
-      getEffectiveUpgradeCost(
-        "groundGame",
-        campaign.groundGameLevel + 1,
-        electionType,
-        isGeneralPhase
-      ),
+      getEffectiveUpgradeCost("groundGame", campaign.groundGameLevel + 1, isGeneralPhase),
       toLocal
     ),
     mediaSpending: localizeUpgradeCostFunds(
-      getEffectiveUpgradeCost(
-        "mediaSpending",
-        campaign.mediaSpendingLevel + 1,
-        electionType,
-        isGeneralPhase
-      ),
+      getEffectiveUpgradeCost("mediaSpending", campaign.mediaSpendingLevel + 1, isGeneralPhase),
       toLocal
     ),
   };

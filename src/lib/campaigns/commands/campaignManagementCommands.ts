@@ -19,7 +19,6 @@ import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { createNotification } from "@/lib/notifications";
 import type { Campaign, Character, Election, ElectionCandidate, NPP } from "@/lib/db/types";
-import { getCampaignFamilyScalar } from "@/lib/campaigns/upgradeCosts";
 import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_ACTION_COST,
@@ -719,7 +718,7 @@ export async function getCurrentTurn(db: Db): Promise<number> {
 
 /**
  * Fire a one-shot rally event for the campaign's candidate. Per the B1
- * design, 60% of the race-family-scaled `SUPPORT_RALLY_FULL_VALUE` lands
+ * design, 60% of `SUPPORT_RALLY_FULL_VALUE` lands
  * immediately on `electionCandidates.support`; the remaining 40% is
  * queued as a `supportAccrual` entry that drips over the next
  * `RALLY_SPREAD_TURNS` turns via the accrual-tick processor.
@@ -758,9 +757,8 @@ export async function fireRallyOneShot(params: {
     throw badRequest("Election is not active");
   }
 
-  const scalar = getCampaignFamilyScalar(election.electionType as string);
-  const scaledR = SUPPORT_RALLY_FULL_VALUE * scalar;
-  const actionCost = Math.ceil(SUPPORT_RALLY_ACTION_COST * scalar);
+  const scaledR = SUPPORT_RALLY_FULL_VALUE;
+  const actionCost = SUPPORT_RALLY_ACTION_COST;
 
   if (campaign.actions < actionCost) {
     throw badRequest(`Insufficient actions. Need ${actionCost}, have ${campaign.actions}`);

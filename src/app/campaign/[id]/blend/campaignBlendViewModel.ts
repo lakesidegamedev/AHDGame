@@ -20,11 +20,7 @@ import {
   campaignStrengthContributionCost,
 } from "@/lib/campaigns/campaignStrength";
 import { describeOpsCurrentEffect } from "@/lib/campaigns/opsCurrentEffect";
-import {
-  getCampaignFamilyScalar,
-  OPS_MAX_BRANCH_LEVEL,
-  type UpgradeCategory,
-} from "@/lib/campaigns/upgradeCosts";
+import { OPS_MAX_BRANCH_LEVEL, type UpgradeCategory } from "@/lib/campaigns/upgradeCosts";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { formatFundsCompact, resolveElectionYear } from "@/lib/utils/formatters";
 import { BLEND, OPS_LEVER_COLOR, blendSegments } from "@/components/blend/tokens";
@@ -529,9 +525,7 @@ export function buildCampaignBlendViewModel(inp: CampaignBlendInput): CampaignBl
             key,
             treeStateOf(campaign, key),
             symbol,
-            campaign.fxRate *
-              (campaign.priceLevel ?? 1) *
-              getCampaignFamilyScalar(campaign.electionInfo?.electionType)
+            campaign.fxRate * (campaign.priceLevel ?? 1)
           ),
           color,
           invested,

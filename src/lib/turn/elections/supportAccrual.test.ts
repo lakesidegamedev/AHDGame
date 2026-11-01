@@ -28,8 +28,7 @@ describe("buildRallyAccrualEntry", () => {
     expect(immediateBump + trailingTotal).toBeCloseTo(R, 6);
   });
 
-  it("scales linearly for per-race-family scalar (sub-presidential)", () => {
-    // State Senate scalar 0.2 → R = 2
+  it("scales linearly with R", () => {
     const R = SUPPORT_RALLY_FULL_VALUE * 0.2;
     const { immediateBump, entry } = buildRallyAccrualEntry(R);
     expect(immediateBump).toBeCloseTo(1.2); // 60% of 2

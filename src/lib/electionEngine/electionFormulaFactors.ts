@@ -24,11 +24,9 @@ export const SUPPORT_DECAY_PER_TURN = 0.5 as const;
 // will re-examine each after Phase B has live-race data.
 
 /**
- * Total Support "worth" of one rally event at the neutral race-family
- * scalar (1.0× = presidential). Per the design doc, the value is
- * distributed as 60% immediate this-turn / 40% spread over future
- * turns. Subject to the per-race-family scalar — a state-senate rally's
- * effective `R` is `0.2 × SUPPORT_RALLY_FULL_VALUE`, etc.
+ * Total Support "worth" of one presidential rally event. Per the design doc,
+ * the value is distributed as 60% immediate this-turn / 40% spread over
+ * future turns.
  */
 export const SUPPORT_RALLY_FULL_VALUE = 10 as const;
 
@@ -42,15 +40,14 @@ export const RALLY_IMMEDIATE_SHARE = 0.6 as const;
 export const RALLY_SPREAD_TURNS = 4 as const;
 
 /**
- * Action cost of a one-shot rally for a presidential campaign. Per-race-
- * family scalar applies — smaller races pay proportionally less.
+ * Action cost of a one-shot rally for a presidential campaign.
  */
 export const SUPPORT_RALLY_ACTION_COST = 20 as const;
 
 /**
  * Action cost of a per-turn rally-tour tick. ~50% of one-shot at the
  * presidential baseline — a tour is cheaper per tick but consumes every
- * turn it's active. Per-race-family scalar applies.
+ * turn it's active.
  */
 export const SUPPORT_RALLY_TOUR_TICK_ACTION_COST = 10 as const;
 
