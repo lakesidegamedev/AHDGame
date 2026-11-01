@@ -67,7 +67,8 @@ class FrameWriter {
     this.file = createWriteStream(path);
     this.gzip.pipe(this.file);
     this.finished = new Promise<void>((resolve, reject) => {
-      this.file.once("finish", resolve);
+      // "close", not "finish": Windows cannot rename the folder while the file is open.
+      this.file.once("close", resolve);
       this.file.once("error", (error) => {
         this.failure = error;
         reject(error);
