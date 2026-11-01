@@ -50,16 +50,14 @@ export async function POST(request: Request) {
         : "singleplayerConfig.guide.inboxOpenedAt";
     const db = await getDb();
     // Set once: a repeat visit must not move the original timestamp.
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        {
-          _id: "current",
-          "singleplayerConfig.guide": { $exists: true },
-          [field]: { $exists: false },
-        },
-        { $set: { [field]: new Date() } }
-      );
+    await db.collection<GameState>("gameState").updateOne(
+      {
+        _id: "current",
+        "singleplayerConfig.guide": { $exists: true },
+        [field]: { $exists: false },
+      },
+      { $set: { [field]: new Date() } }
+    );
     return NextResponse.json(await loadSingleplayerGuide(db));
   } catch (error) {
     return handleRouteError(error, { request, route: "/api/singleplayer/guide POST" });
