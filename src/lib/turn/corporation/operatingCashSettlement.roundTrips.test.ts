@@ -264,4 +264,7 @@ it("batches the new tax-first path and measures projected corporation bytes", as
   );
   expect(count.total()).toBeLessThanOrEqual(60);
   expect(bytes).toBeLessThan(CORPORATIONS * 300);
-});
+  // The legacy baseline above settles arrears for every corporation, which is
+  // ~30 s of work on its own. It is the comparison this test exists to print,
+  // so it gets its own budget rather than the suite-wide 15 s default.
+}, 120_000);
