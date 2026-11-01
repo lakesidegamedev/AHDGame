@@ -8,7 +8,8 @@
  *   2. first-run world setup completes and reports progress while it runs;
  *   3. a turn processes;
  *   4. shutdown is graceful (exit code 0 on the control channel);
- *   5. a restart restores the save at turn 2;
+ *   5. a restart on a new MongoDB port (as the desktop client does) restores
+ *      the save at turn 2;
  *   6. MongoDB is fetched at most once and reused on restart;
  *   7. the launcher captures the game server's own output continuously.
  *
@@ -63,9 +64,9 @@ async function freePort() {
   });
 }
 
-// A saved replica set records its database address. Keep it stable when the
-// same world restarts, while allowing the web server to use a new free port.
-const mongoPort = await freePort();
+// The desktop client picks a free MongoDB port on every start, so the restart
+// below deliberately uses a new one: the saved replica set must follow it.
+let mongoPort = await freePort();
 
 async function start(label) {
   let appPort = await freePort();
@@ -238,6 +239,7 @@ try {
   const first = running;
   running = null;
 
+  mongoPort = await freePort();
   running = await start("restart");
   const restored = await json(running, "/api/singleplayer/status");
   if (!restored.hasWorld || restored.turn !== 2 || restored.preset !== "1953-default")
