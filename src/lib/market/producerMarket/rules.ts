@@ -1,6 +1,7 @@
 import { ProducerSupplyPool } from "./supplyPoolRules";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
+import { nextAutoAsk } from "./autoAskRules";
 /**
  * Every producer sells delivered units at its posted price. Manual, cost-plus
  * and automatic quotes share the same funded order book and trade receipts.
@@ -721,6 +722,22 @@ export function quoteProducer(input: {
   variableUnitCost: number;
   fixedCost: number;
   offeredUnits: number;
+  /**
+   * Sell-through memory for an automatic ask (see autoAskRules). When present,
+   * the controller owns the price instead of the profit-maximum candidate
+   * search, which is how a seller that sold its whole offer can ask for more
+   * and how a raise the book rejected is given back. Absent keeps the
+   * historical estimator, which cannot raise a price at all.
+   */
+  autoAsk?: {
+    memory: { ask: number; previousAsk: number } | null;
+    /** Units the last ask actually sold. */
+    soldUnits: number;
+    /** Units the last ask offered. */
+    offeredUnits: number;
+    /** Fractional raise per sell-out step; defaults inside the controller. */
+    step?: number;
+  };
   demand: readonly { maximumUnitPrice: number; units: number }[];
   competitors: readonly { unitPrice: number; units: number }[];
 }): {
@@ -771,6 +788,19 @@ export function quoteProducer(input: {
   // A seller that sold nothing last turn asks no more than the clearing, so an ask
   // stuck above the book steps down instead of repeating.
   const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  // Sell-through feedback (autoAskRules). With ask memory the controller decides
+  // the price: sold out climbs one step, the deadband holds, a shortfall reverts
+  // to the previous ask. Without memory the estimator below still runs.
+  if (input.autoAsk) {
+    const decided = nextAutoAsk({
+      memory: input.autoAsk.memory,
+      soldUnits: input.autoAsk.soldUnits,
+      offeredUnits: input.autoAsk.offeredUnits,
+      ...(input.autoAsk.step != null ? { step: input.autoAsk.step } : {}),
+      ceiling,
+    });
+    if (decided) return estimate(decided.ask);
+  }
   const candidates = new Set([reference, anchor, ceiling]);
   for (const seller of input.competitors)
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
