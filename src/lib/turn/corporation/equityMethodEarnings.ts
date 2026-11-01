@@ -21,7 +21,7 @@ export function applyEquityMethodEarnings(
     for (const holding of holdings) {
       const issuerTotalShares = totalSharesByCorpId.get(holding.issuerCorpId) ?? 0;
       if (issuerTotalShares <= 0) continue;
-      const fraction = holding.shares / issuerTotalShares;
+      const fraction = Math.min(1, holding.shares / issuerTotalShares);
       const issuerBaseEarnings = baseEarnings.get(holding.issuerCorpId) ?? 0;
       equityAddition += fraction * issuerBaseEarnings;
     }

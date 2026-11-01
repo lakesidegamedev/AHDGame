@@ -1,6 +1,7 @@
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { NextResponse } from "next/server";
 import { holdingCostBasis, scaleHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import { scalePendingIssuanceForStructureChange } from "@/lib/corporations/rules/dividendShares";
 import { ObjectId } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
@@ -301,6 +302,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       lastShareStructureTurn: currentTurn,
       updatedAt: now,
     };
+    // A pending issuance is counted in shares too. Leaving it at the old count
+    // let an upfront IPO remainder exceed the consolidated float and total,
+    // which collapsed the placed-share basis that dividends divide by.
+    if (freshCorporation.pendingShareIssuance) {
+      $set.pendingShareIssuance = scalePendingIssuanceForStructureChange(
+        freshCorporation.pendingShareIssuance,
+        oldTotal,
+        targetTotalShares,
+        newPublicFloat
+      );
+    }
 
     await db.collection<Corporation>("corporations").updateOne({ _id: corporation._id }, { $set });
 

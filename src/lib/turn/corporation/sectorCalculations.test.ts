@@ -1559,6 +1559,42 @@ describe("dividend payments to shareholders", () => {
     expect(result.equityPoolDividendAccruals).toHaveLength(0);
   });
 
+  it("never pays more than the pool when a stored IPO remainder exceeds total shares", () => {
+    // Live shape: a consolidation left the upfront IPO remainder above the
+    // float and the total, so the old basis collapsed to one share and the
+    // sole holder's payout was multiplied by their share count.
+    const charId = new ObjectId();
+    const corp = makeCorp({
+      dividendRate: 25,
+      totalShares: 1_000_000,
+      publicFloat: 200_000,
+      shareholders: [{ characterId: charId, shares: 800_000 }],
+      pendingShareIssuance: {
+        remainingShares: 2_013_914,
+        requestedShares: 2_500_000,
+        source: "ipo",
+        issuedUpfront: true,
+        createdAtTurn: 1,
+        initialPriceLocal: 1,
+      },
+    });
+    const sector = makeSector(corp._id, {
+      revenue: 24_000,
+      profitMargin: 100,
+      targetGrowthRate: 0,
+      currentGrowthRate: 0,
+    });
+
+    const result = processSectors(baseLookups([corp], [sector]), 1, new Date());
+    const pool = result.corpSnapshots[0]!.dividendPaidPerTurn;
+    const holderPayment = getTotalPayment(result.dividendPayments, charId.toString());
+    expect(pool).toBeGreaterThan(0);
+    // The whole float counts as unplaced, so the holder owns every placed share.
+    expect(holderPayment).toBeCloseTo(pool, 6);
+    expect(holderPayment).toBeLessThanOrEqual(pool + 1e-9);
+    expect(result.equityPoolDividendAccruals).toHaveLength(0);
+  });
+
   it("pays the public-float slice into the equity market pool accrual", () => {
     const charId = new ObjectId();
     const corp = makeCorp({
