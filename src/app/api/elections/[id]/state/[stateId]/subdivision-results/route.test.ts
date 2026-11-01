@@ -87,9 +87,37 @@ describe("county results at a turn (race replay)", () => {
     const { loadCountyPopulationMap } = await import("@/lib/counties/queries");
     const res = await call("active");
     expect(res.status).toBe(200);
-    expect(loadCountyPopulationMap).toHaveBeenCalledWith(expect.anything(), "OH");
+    expect(loadCountyPopulationMap).toHaveBeenCalledWith(expect.anything(), "OH", "US");
   });
   it.each(["cancelled", "upcoming"])("refuses turn replay for a %s election", async (status) => {
     expect((await call(status, "?turn=10")).status).toBe(400);
+  });
+});
+
+describe("UK and Japan persisted subdivision results", () => {
+  it.each([
+    ["UK", "commons", "LON", "Constituency"],
+    ["JP", "shugiin", "KAN", "Prefecture"],
+    ["JP", "sangiin", "KAN", "Prefecture"],
+    ["JP", "governor", "KAN", "Prefecture"],
+  ])("serves active %s %s map stocks", async (countryId, electionType, state, unitLabel) => {
+    const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
+    vi.mocked(resolveElectionRouteParam).mockResolvedValue({
+      ok: true,
+      election: { _id: ELECTION, electionType, countryId, status: "active" },
+    } as never);
+    tally.state = state;
+    tally.seatsEstimate = { a: 1 };
+    const { GET } = await import("./route");
+    const response = await GET(
+      new NextRequest("http://t/api/elections/e/state/x/subdivision-results"),
+      { params: Promise.resolve({ id: "e", stateId: state }) }
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.unitLabel).toBe(unitLabel);
+    expect(body.mode).toBe(countryId === "JP" ? "distributed" : "seatConsistent");
+    const { loadCountyPopulationMap } = await import("@/lib/counties/queries");
+    expect(loadCountyPopulationMap).toHaveBeenCalledWith(expect.anything(), state, countryId);
   });
 });

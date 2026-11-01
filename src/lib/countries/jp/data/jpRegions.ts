@@ -4,7 +4,7 @@ import type { State } from "@/lib/db/types";
  * Japan regions as State-compatible documents.
  *
  * Japan uses 8 game regions (each containing multiple prefectures) as the
- * playable tier. Prefectures are metadata only — the game region is the parent.
+ * playable tier. Prefecture population stocks persist beneath their parent region.
  *
  * Population figures approximate 2020 census data.
  * GDP in millions of JPY (approximate 2020 prefectural GDP sums).

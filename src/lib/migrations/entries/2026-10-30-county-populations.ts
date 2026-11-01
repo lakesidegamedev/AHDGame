@@ -11,7 +11,7 @@ export const migration: Migration = {
       .countDocuments({ status: "ready" });
     if (pending)
       throw new Error("Finish pending demographic receipts before initializing counties");
-    const count = await seedCountyPopulations(db, { apply: !ctx.dryRun });
+    const count = await seedCountyPopulations(db, { apply: !ctx.dryRun, countryIds: ["US"] });
     if (!ctx.dryRun)
       await db
         .collection("counties")

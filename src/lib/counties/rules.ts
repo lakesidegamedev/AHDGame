@@ -9,7 +9,22 @@ export interface CountyPopulation {
 }
 
 export type CountyBaselineYear = 1950 | 1979 | 1991 | 1999 | 2007 | 2019 | 2023 | 2025;
-export type CountyPopulationBaseline = "census-vintage-2019" | `census-${CountyBaselineYear}`;
+export const COUNTY_COUNTRY_IDS = ["US", "UK", "JP"] as const;
+export type CountyCountryId = (typeof COUNTY_COUNTRY_IDS)[number];
+export type CountyPopulationBaseline =
+  | "census-vintage-2019"
+  | `census-${CountyBaselineYear}`
+  | "uk-electorate-2024-proportional"
+  | "jp-reference-2020-proportional";
+
+/** Stable, non-overlapping map identifiers preserve existing US receipt compatibility. */
+export function countyCountryForId(id: string): CountyCountryId | null {
+  if (typeof id !== "string") return null;
+  if (/^\d{5}$/.test(id)) return "US";
+  if (/^[ENSW]\d{8}$/.test(id)) return "UK";
+  if (/^JP-(0[1-9]|[1-3]\d|4[0-7])$/.test(id)) return "JP";
+  return null;
+}
 
 /** Use a preceding census for 1953 and the latest completed estimate for 2027. */
 export function countyBaselineYear(preset?: string | null): CountyBaselineYear {
