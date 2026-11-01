@@ -1,17 +1,32 @@
 /**
- * County populations start from Census weights scaled to the world's state totals.
+ * Subdivision populations start from dated reference weights scaled to region totals.
  * seedCountyPopulations preserves existing stocks on migration and replaces them
  * on a world reset, so modern reference headcounts never overwrite a historical world.
  */
 import type { Db } from "mongodb";
 import type { County } from "@/lib/db/types/county";
-import { apportionPopulation, countyBaselineYear, selectCountyPopulationBaseline } from "./rules";
+import {
+  apportionPopulation,
+  countyBaselineYear,
+  selectCountyPopulationBaseline,
+  COUNTY_COUNTRY_IDS,
+  type CountyCountryId,
+} from "./rules";
 import { historicalCountyWeights } from "./historical";
-import { loadCountyReference } from "./reference";
+import {
+  hasPopulationSubdivisionReference,
+  loadPopulationSubdivisionReference,
+  referencePopulationBaseline,
+} from "./subdivisionReference";
 
 export async function seedCountyPopulations(
   db: Db,
-  options: { apply?: boolean; replace?: boolean; preset?: string } = {}
+  options: {
+    apply?: boolean;
+    replace?: boolean;
+    preset?: string;
+    countryIds?: readonly CountyCountryId[];
+  } = {}
 ): Promise<number> {
   // Bootstrap knows the requested era before a direct caller stamps gameState.
   const preset =
@@ -22,23 +37,35 @@ export async function seedCountyPopulations(
         .findOne({ _id: "current" }, { projection: { preset: 1 } })
     )?.preset;
   const year = countyBaselineYear(preset);
-  const states = await db
-    .collection<{ _id: string; population: number }>("states")
-    .find({ countryId: "US" }, { projection: { _id: 1, population: 1 } })
-    .toArray();
+  const countryIds = options.countryIds ?? COUNTY_COUNTRY_IDS;
+  const states = (
+    await db
+      .collection<{ _id: string; countryId: CountyCountryId; population: number }>("states")
+      .find(
+        { countryId: { $in: [...countryIds] } },
+        { projection: { _id: 1, countryId: 1, population: 1 } }
+      )
+      .toArray()
+  ).filter((state) => hasPopulationSubdivisionReference(state._id, state.countryId));
   const groups = await Promise.all(
     states.map(async (state) => {
-      const reference = await loadCountyReference(state._id);
-      const baseline = selectCountyPopulationBaseline(
-        reference.map((c) => ({ id: c.fips, population: c.population })),
-        historicalCountyWeights(reference[0]?.fips.slice(0, 2), year),
-        year
-      );
+      const reference = await loadPopulationSubdivisionReference(state._id, state.countryId);
+      const baseline =
+        state.countryId === "US"
+          ? selectCountyPopulationBaseline(
+              reference.map((c) => ({ id: c.id, population: c.population })),
+              historicalCountyWeights(reference[0]?.id.slice(0, 2), year),
+              year
+            )
+          : {
+              weights: reference.map((c) => ({ id: c.id, population: c.population })),
+              populationBaseline: referencePopulationBaseline(state.countryId),
+            };
       const allocated = apportionPopulation(baseline.weights, state.population);
       return reference.map((c, i): County => ({
-        _id: c.fips,
+        _id: c.id,
         stateId: state._id,
-        countryId: "US",
+        countryId: state.countryId,
         name: c.name,
         population: allocated[i].population,
         baselinePopulation: baseline.weights[i].population,
@@ -51,14 +78,15 @@ export async function seedCountyPopulations(
   const existing = await db
     .collection<County>("counties")
     .find(
-      { $or: [{ countryId: "US" }, { _id: { $in: rows.map((c) => c._id) } }] },
+      { $or: [{ countryId: { $in: [...countryIds] } }, { _id: { $in: rows.map((c) => c._id) } }] },
       { projection: { _id: 1, countryId: 1, stateId: 1, population: 1 } }
     )
     .toArray();
   if (
     existing.some(
       (row) =>
-        row.countryId !== "US" ||
+        !countryIds.includes(row.countryId) ||
+        (expectedById.has(row._id) && expectedById.get(row._id)!.countryId !== row.countryId) ||
         (!options.replace &&
           (!expectedById.has(row._id) ||
             expectedById.get(row._id)!.stateId !== row.stateId ||
@@ -79,7 +107,8 @@ export async function seedCountyPopulations(
       );
   }
   if (options.apply === false) return rows.length;
-  if (options.replace) await db.collection<County>("counties").deleteMany({ countryId: "US" });
+  if (options.replace)
+    await db.collection<County>("counties").deleteMany({ countryId: { $in: [...countryIds] } });
   if (rows.length)
     await db.collection<County>("counties").bulkWrite(
       rows.map((row) => ({
@@ -93,7 +122,10 @@ export async function seedCountyPopulations(
     );
   const persisted = await db
     .collection<County>("counties")
-    .find({ countryId: "US" }, { projection: { _id: 1, stateId: 1, population: 1 } })
+    .find(
+      { countryId: { $in: [...countryIds] } },
+      { projection: { _id: 1, stateId: 1, population: 1 } }
+    )
     .toArray();
   for (const state of states) {
     const actual = persisted.filter((c) => c.stateId === state._id);

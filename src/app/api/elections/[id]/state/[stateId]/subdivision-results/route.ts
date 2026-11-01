@@ -1,3 +1,4 @@
+import { hasPopulationSubdivisionReference } from "@/lib/counties/subdivisionReference";
 import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -55,11 +56,23 @@ export async function GET(
       return errorResponse(404, "Subdivision map data is not available for this election");
     }
 
+    if (
+      modeEntry.config.populationCountryId &&
+      !hasPopulationSubdivisionReference(regionId, modeEntry.config.populationCountryId)
+    )
+      return errorResponse(404, "Subdivision data not available for this region");
+
     // County leans follow the world's era (a 1991 world starts from 1984/1988).
     const data = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
       preset: await getGameStatePresetOrDefault(db),
-      ...(modeEntry.config.dataDir === "counties" && election.status === "active"
-        ? { countyPopulations: await loadCountyPopulationMap(db, regionId) }
+      ...(modeEntry.config.populationCountryId && election.status === "active"
+        ? {
+            countyPopulations: await loadCountyPopulationMap(
+              db,
+              regionId,
+              modeEntry.config.populationCountryId
+            ),
+          }
         : {}),
     });
     if (!data) {

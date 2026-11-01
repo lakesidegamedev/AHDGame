@@ -78,6 +78,24 @@ export async function loadSubdivisionFile(
         })),
       };
     }
+    if (options?.countyPopulations) {
+      const populations = options.countyPopulations;
+      if (
+        populations.size !== parsed.subdivisions.length ||
+        parsed.subdivisions.some((s) => !populations.has(s.id))
+      )
+        throw new Error("Incomplete subdivision population coverage");
+      countyPopulationTotal(
+        parsed.subdivisions.map((s) => ({ id: s.id, population: populations.get(s.id)! }))
+      );
+      return {
+        ...parsed,
+        subdivisions: parsed.subdivisions.map((s) => ({
+          ...s,
+          electorate: populations.get(s.id)!,
+        })),
+      };
+    }
     return parsed;
   } catch {
     return null;

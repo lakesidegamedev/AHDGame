@@ -3,7 +3,12 @@ import type { Db } from "mongodb";
 
 const mocks = vi.hoisted(() => ({
   runMigrations: vi.fn(),
+  resumePending: vi.fn(),
   runRequiredStartupMigrations: vi.fn(),
+}));
+
+vi.mock("@/lib/demographics/flowJournal", () => ({
+  resumePendingDemographicFlowReceipts: mocks.resumePending,
 }));
 
 vi.mock("./runner", () => ({ runMigrations: mocks.runMigrations }));
@@ -21,12 +26,26 @@ import {
 
 const empty = { ranIds: [], skippedIds: [], results: {}, dryRun: false };
 
-function fakeDb({ world, stamped }: { world: boolean; stamped: boolean }) {
+function fakeDb({
+  world,
+  stamped,
+  interrupted = false,
+}: {
+  world: boolean;
+  stamped: boolean;
+  interrupted?: boolean;
+}) {
   const bulkWrite = vi.fn(async (ops: unknown[]) => ({ upsertedCount: ops.length }));
   const db = {
     collection: (name: string) => ({
       findOne: async (filter: { _id: string }) => {
-        if (name === "gameState") return world ? { _id: "current" } : null;
+        if (name === "gameState")
+          return world
+            ? {
+                _id: "current",
+                ...(interrupted ? { worldEpochId: "old-save", currentTurn: 12 } : {}),
+              }
+            : null;
         if (filter._id === SINGLEPLAYER_BASELINE_MARKER) return stamped ? filter : null;
         return null;
       },
@@ -39,12 +58,31 @@ function fakeDb({ world, stamped }: { world: boolean; stamped: boolean }) {
 describe("singleplayer migrations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.resumePending.mockResolvedValue([]);
     mocks.runMigrations.mockResolvedValue({ ...empty, ranIds: ["chain"] });
     mocks.runRequiredStartupMigrations.mockResolvedValue({ ...empty, ranIds: ["required"] });
   });
 
   it("includes county stocks, which the hosted chain holds", () => {
     expect(SINGLEPLAYER_MIGRATIONS.map((m) => m.id)).toContain("2026-10-30-county-populations");
+  });
+
+  it("finishes frozen receipts before migrations in an interrupted singleplayer save", async () => {
+    const { db } = fakeDb({ world: true, stamped: true, interrupted: true });
+    await migrateSingleplayerWorld(db);
+    expect(mocks.resumePending).toHaveBeenCalledWith(db, "old-save", 13);
+    expect(mocks.resumePending.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.runMigrations.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("retains the migration marker for retry if receipt recovery fails, and still runs required repairs", async () => {
+    const { db, bulkWrite } = fakeDb({ world: true, stamped: true, interrupted: true });
+    mocks.resumePending.mockRejectedValueOnce(new Error("invalid frozen target"));
+    await expect(migrateSingleplayerWorld(db)).rejects.toThrow("invalid frozen target");
+    expect(mocks.runMigrations).not.toHaveBeenCalled();
+    expect(mocks.runRequiredStartupMigrations).toHaveBeenCalledWith(db);
+    expect(bulkWrite).not.toHaveBeenCalled();
   });
 
   it("does nothing without a world; creating one stamps the baseline", async () => {

@@ -123,3 +123,58 @@ Inactive general and primary county maps use the committed reference weights,
 matching the existing reconstructed-results model. Active races and office placement
 use persisted populations. This keeps historical maps stable as current stocks change;
 it does not claim archived, independently counted county ballots.
+
+## UK constituencies and Japanese prefectures
+
+The same `counties` collection and demographic receipt protocol also hold 650 UK
+constituencies (ONS IDs such as `E14001073`) and 47 Japanese prefectures (prefixed
+IDs such as `JP-13`). The existing compound country/state index serves all three
+countries; US FIPS and old frozen receipts remain compatible. Names in the UI
+remain Constituency/Constituencies and Prefecture/Prefectures.
+
+UK initializes from complete 2024 constituency electorate weights in the
+committed map files (`populationBaseline: uk-electorate-2024-proportional`). These
+are a proportional fallback, not measured resident populations or reconstructed
+historical constituencies. Japan initializes from the directory's approximate
+2020 prefecture population weights (`jp-reference-2020-proportional`). Every
+preset scales those weights to its own authored region totals. No historical
+UK/JP subdivision population series is supplied by this change.
+
+UK/JP reference region reseeds preserve live regional populations. World resets
+replace subdivision stocks after seeding the requested era's regions. Realized
+net births, deaths, migration and conflict losses follow the same proportional
+allocation, zero-population recovery and frozen receipt replay as US counties.
+Regional age/sex vectors remain authoritative for demographics; no independent
+subdivision cohorts are invented.
+
+`scripts/geo/build-jp-subdivisions.ts` reproducibly builds eight prefecture map
+shards from the committed 47-prefecture topology and country directory, offline.
+Japan uses distributed vote estimates, with neutral lean where no prefecture
+political baseline is authored. These polygons do not claim statutory district
+results or a one-prefecture/one-seat allocation. Active UK/JP maps read persisted
+populations; concluded maps retain committed weights so future turns do not
+change an old result.
+
+Hosted rollout requires the held migration
+`2026-11-01-uk-jp-subdivision-populations` before resuming turns on this build.
+Pause population writers, finish any ready demographic receipts, back up, dry-run,
+apply with `--only`, then dry-run again. The original US migration stays US-only.
+The new migration inserts missing UK/JP records without changing existing stocks
+or parent populations. A partially populated, inconsistent region fails closed.
+Singleplayer startup includes the new migration automatically; new worlds get
+these stocks from bootstrap and stamp the migration baseline.
+
+When a UK region secedes into a different region roster, its Westminster
+constituency stocks retire with the aggregate inside the secession transaction.
+A region transferred out of the UK likewise retires that UK-specific layer; its
+people remain conserved by the transferred state/cohort populations. Independent
+Scotland/Wales and Ireland are not added to this subdivision system. Acquired
+regions outside a country's committed map roster do not acquire invented map
+subdivisions during bootstrap or demographic processing.
+
+Singleplayer startup resumes current-world frozen demographic receipts through
+the next turn before running migrations. It finishes the original outcomes
+without recomputing demographics, then initializes new stocks against those
+recovered regional totals. A recovery failure leaves migration markers pending
+and still runs required startup repairs. Hosted migration behavior is unchanged:
+operators must finish pending receipts explicitly.

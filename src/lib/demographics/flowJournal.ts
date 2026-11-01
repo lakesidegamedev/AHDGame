@@ -5,7 +5,7 @@
  */
 import { countyPopulationIdentity, freezeCountyPopulationPlans } from "@/lib/counties/projections";
 import type { County } from "@/lib/db/types/county";
-import type { CountyPopulation } from "@/lib/counties/rules";
+import { countyCountryForId, type CountyPopulation } from "@/lib/counties/rules";
 import { randomUUID } from "node:crypto";
 import { BSON, ObjectId } from "mongodb";
 import { materializeRefugeeReceptionResults } from "@/lib/livingConflict/refugeeReception";
@@ -172,7 +172,7 @@ function freezeRegionInput(input: DemographicFlowRegionInput): DemographicFlowRe
       !rows.length ||
       new Set(rows.map((c) => c.id)).size !== rows.length ||
       rows.some(
-        (c) => !/^\d{5}$/.test(c.id) || !Number.isSafeInteger(c.population) || c.population < 0
+        (c) => !countyCountryForId(c.id) || !Number.isSafeInteger(c.population) || c.population < 0
       ) ||
       rows.reduce((n, c) => n + c.population, 0) !== input.stateAfter.population
     )
@@ -321,7 +321,11 @@ async function materializeReceipt(
   const countyById = new Map(countyTargets.map((c) => [c._id, c]));
   for (const county of countyPlans) {
     const target = countyById.get(county.id);
-    if (!target || target.countryId !== "US" || target.stateId !== county.stateId)
+    if (
+      !target ||
+      target.countryId !== countyPopulationIdentity(county.stateId, county.id).countryId ||
+      target.stateId !== county.stateId
+    )
       throw new Error(`Missing or invalid county target ${county.id}`);
     assertNoLaterOrConflictingStamp(target.populationFlowStamp, receipt, `counties/${county.id}`);
   }
@@ -359,7 +363,7 @@ async function materializeReceipt(
       updateOne: {
         filter: {
           ...projectionFilter(c.id, receipt.worldEpochId, receipt.turn),
-          ...countyPopulationIdentity(c.stateId),
+          ...countyPopulationIdentity(c.stateId, c.id),
         },
         update: { $set: { population: c.population, [STAMP_FIELD]: stamp } },
       },
@@ -379,7 +383,7 @@ async function materializeReceipt(
       confirmed.length !== countyPlans.length ||
       confirmed.some(
         (c) =>
-          c.countryId !== "US" ||
+          c.countryId !== countyPopulationIdentity(c.stateId, c._id).countryId ||
           c.stateId !== countyById.get(c._id)?.stateId ||
           c.population !== expected.get(c._id) ||
           !alreadyApplied(c.populationFlowStamp, receipt)
