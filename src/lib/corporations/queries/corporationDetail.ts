@@ -42,6 +42,7 @@ import { loadArrearsView } from "./corporationDetail/arrears";
 import { buildShareholderList, loadShareholderContext } from "./corporationDetail/shareholders";
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -336,11 +337,7 @@ export async function loadCorporationDetailView(args: {
           : equityQuote.bidDepthShares,
       totalShares: income.totalShares,
       publicFloat: corporation.publicFloat ?? 0,
-      pendingIpoShares:
-        corporation.pendingShareIssuance?.source === "ipo" &&
-        corporation.pendingShareIssuance.issuedUpfront
-          ? corporation.pendingShareIssuance.remainingShares
-          : 0,
+      pendingIpoShares: unplacedIpoShares(corporation),
       shareholders,
       superShareMultiplier: corporation.superShareMultiplier ?? undefined,
       superSharesAdoptedAtTurn: corporation.superSharesAdoptedAtTurn ?? undefined,

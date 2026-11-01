@@ -27,6 +27,7 @@ import {
 } from "../takeovers/rules/bankNavFloor";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import { executeFundOnlyBuyout } from "./fundOnlyBuyout";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 export interface OpenPrivatizationVoteInput {
   db: Db;
@@ -117,12 +118,10 @@ export async function openPrivatizationVote(
     return { ok: false, error: "A privatization vote is already open", status: 400 };
   }
 
-  const unplacedIpoShares =
-    corporation.pendingShareIssuance?.issuedUpfront &&
-    corporation.pendingShareIssuance.source === "ipo"
-      ? corporation.pendingShareIssuance.remainingShares
-      : 0;
-  const nonCeoShares = corporation.totalShares - ceoShares - unplacedIpoShares;
+  const nonCeoShares = Math.max(
+    0,
+    corporation.totalShares - ceoShares - unplacedIpoShares(corporation)
+  );
 
   // CEO holds 100% — no minority holders to buy out, skip the vote entirely.
   if (nonCeoShares === 0) {
@@ -174,7 +173,7 @@ export async function openPrivatizationVote(
   );
   if (
     !hasNonCeoCharOrCorp &&
-    (corporation.publicFloat ?? 0) - unplacedIpoShares === 0 &&
+    (corporation.publicFloat ?? 0) - unplacedIpoShares(corporation) === 0 &&
     hasFundHolders
   ) {
     const buyout = await executeFundOnlyBuyout(db, corporation, currentTurn);

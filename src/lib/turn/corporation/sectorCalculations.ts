@@ -115,6 +115,7 @@ import {
   passThroughReformPhase,
   passThroughTaxMode,
 } from "@/lib/corporations/rules/passThroughTax";
+import { dividendShareBasis, payFromDividendPool } from "@/lib/corporations/rules/dividendShares";
 
 export function processSectors(
   lookups: CorporationLookups,
@@ -930,20 +931,29 @@ export function processSectors(
     ) {
       const rawDividendPool = netIncomeBeforeDividends * (payoutDividendRate / 100);
       hourlyDividendPayout = Math.min(rawDividendPool, Math.max(0, netIncomeBeforeDividends));
-      // Shares issued for an IPO but not yet placed have no holder and earn no dividend.
-      const unplacedIpoShares =
-        corp.pendingShareIssuance?.issuedUpfront && corp.pendingShareIssuance.source === "ipo"
-          ? corp.pendingShareIssuance.remainingShares
-          : 0;
-      const totalShares = Math.max(1, (corp.totalShares ?? 10_000_000) - unplacedIpoShares);
+      // Shares issued for an IPO but not yet placed have no holder and earn no
+      // dividend. The basis never drops below the shares actually held, and
+      // every payment draws from the fixed pool, so a corrupt pending remainder
+      // cannot multiply a holder's payout.
+      const { denominator: totalShares, placedFloatShares } = dividendShareBasis(
+        corp,
+        corp.shareholders.map((sh) => sh.shares),
+        10_000_000
+      );
+      let dividendPaid = 0;
       const taxedAtSourceShare = alreadyTaxedDistributionShare(
         corpLegalStructure,
         passThroughPhase,
         corp
       );
       for (const sh of corp.shareholders) {
-        const share = totalShares > 0 ? sh.shares / totalShares : 0;
-        const payment = hourlyDividendPayout * share;
+        const payment = payFromDividendPool(
+          hourlyDividendPayout,
+          dividendPaid,
+          sh.shares,
+          totalShares
+        );
+        dividendPaid += payment;
         if (payment > 0) {
           if (sh.characterId) {
             addToPaymentMap(dividendPayments, sh.characterId.toString(), payment, corp.countryId);
@@ -1029,11 +1039,12 @@ export function processSectors(
           }
         }
       }
-      const floatShares = Math.max(
-        0,
-        Math.min(totalShares, (corp.publicFloat ?? 0) - unplacedIpoShares)
+      const floatDividendAnchor = payFromDividendPool(
+        hourlyDividendPayout,
+        dividendPaid,
+        placedFloatShares,
+        totalShares
       );
-      const floatDividendAnchor = hourlyDividendPayout * (floatShares / totalShares);
       if (floatDividendAnchor > 0) {
         equityPoolDividendAccruals.push({
           corporationId: corp._id,
