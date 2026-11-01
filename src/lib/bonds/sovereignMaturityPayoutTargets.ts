@@ -7,6 +7,8 @@ import type { Collection, Db } from "mongodb";
 import { getBankId } from "@/lib/centralBank/helpers";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
+import { frozenPoolCashPerFace } from "@/lib/budget/rules/fiscalScale";
 
 export interface SovereignMaturityCashLeg {
   collection: string;
@@ -16,6 +18,25 @@ export interface SovereignMaturityCashLeg {
   currencyCode: CurrencyCode;
   localPerAnchor: number;
   note: string;
+}
+
+/**
+ * Pool cash per unit of book face a frozen maturity claim was quoted at: below
+ * 1 only when the claim froze under the fiscal scale split. Novation and a
+ * forced rollover net pool units off the pool leg at this rate, never at face.
+ */
+export function frozenClaimPoolCashPerFace(claim: {
+  currencyCode: string;
+  sourcePublicFloat: number;
+  holderLegs: ReadonlyArray<Pick<SovereignMaturityCashLeg, "collection" | "filter" | "amount">>;
+}): number {
+  const leg = claim.holderLegs.find(
+    (row) => row.collection === "bondMarketPools" && String(row.filter._id) === claim.currencyCode
+  );
+  return frozenPoolCashPerFace(
+    leg?.amount ?? 0,
+    Math.max(0, claim.sourcePublicFloat) * BOND_UNIT_FACE_VALUE
+  );
 }
 
 /**

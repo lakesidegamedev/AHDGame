@@ -23,6 +23,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   explicitPlantCostsEnabled: 1,
   commodityFixStage: 1,
   marketRecoveryStage: 1,
+  fiscalScaleStage: 1,
   producerMarketShadowEnabled: 1,
   producerMarketLiveFromTurn: 1,
   producerDemandPlanStage: 1,
