@@ -30,3 +30,41 @@ describe("county map persisted population", () => {
     ).toBeNull();
   });
 });
+
+describe("international subdivision maps", () => {
+  it.each([
+    ["subdivisions/uk", "LON", 75],
+    ["subdivisions/jp", "KAN", 7],
+  ])("loads %s geometry with complete persisted weights", async (dataDir, region, count) => {
+    const baseline = await loadSubdivisionFile(String(dataDir), String(region));
+    expect(baseline?.subdivisions).toHaveLength(Number(count));
+    const stocks = new Map(baseline!.subdivisions.map((s, i) => [s.id, i === 0 ? 0 : 100 + i]));
+    const active = await loadSubdivisionFile(String(dataDir), String(region), {
+      countyPopulations: stocks,
+    });
+    expect(active!.subdivisions.map((s) => s.electorate)).toEqual([...stocks.values()]);
+    expect(active!.subdivisions.every((s) => s.path.length > 0)).toBe(true);
+    stocks.delete(baseline!.subdivisions[0].id);
+    expect(
+      await loadSubdivisionFile(String(dataDir), String(region), { countyPopulations: stocks })
+    ).toBeNull();
+    expect(await loadSubdivisionFile(String(dataDir), String(region))).toEqual(baseline);
+  });
+  it("covers all 47 Japanese prefectures once in the correct parent regions", async () => {
+    const { JP_REGIONS, JP_PREFECTURES } =
+      await import("@/lib/countries/jp/data/jpRegionDirectory");
+    const ids = new Set<string>();
+    for (const region of JP_REGIONS) {
+      const file = await loadSubdivisionFile("subdivisions/jp", region.id);
+      const expected = JP_PREFECTURES.filter((p) => p.regionId === region.id).map(
+        (p) => `JP-${String(p.id).padStart(2, "0")}`
+      );
+      expect(file!.subdivisions.map((s) => s.id)).toEqual(expected);
+      for (const s of file!.subdivisions) {
+        expect(ids.has(s.id)).toBe(false);
+        ids.add(s.id);
+      }
+    }
+    expect(ids.size).toBe(47);
+  });
+});

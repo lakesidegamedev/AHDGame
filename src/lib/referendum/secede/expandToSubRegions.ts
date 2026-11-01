@@ -89,6 +89,11 @@ export async function expandToSubRegions(
       { $set: { headquartersState: capital, countryId } }
     );
 
+  // The UK's Westminster constituency layer ends with the aggregate geography.
+  // Its residents are conserved by the cohort fan-out above; independent regions
+  // have their own map tier, not duplicated stocks attached to the retired parent.
+  await db.collection("counties").deleteMany({ countryId: "UK", stateId: countryId });
+
   // Drop the single-region aggregate once its sub-regions exist.
   await db.collection<State>("states").deleteOne({ _id: countryId });
 

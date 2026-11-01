@@ -1,9 +1,9 @@
-import type { CountyPopulationBaseline } from "@/lib/counties/rules";
+import type { CountyCountryId, CountyPopulationBaseline } from "@/lib/counties/rules";
 
-/** Persisted US county stock. FIPS is stable across worlds using the committed map geometry. */
+/** Persisted map subdivision stock: US county, UK constituency or Japanese prefecture. */
 export interface County {
   _id: string;
-  countryId: "US";
+  countryId: CountyCountryId;
   stateId: string;
   name: string;
   population: number;

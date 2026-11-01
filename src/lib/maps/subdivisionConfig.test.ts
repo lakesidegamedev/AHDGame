@@ -18,6 +18,18 @@ describe("subdivision registry", () => {
     expect(m?.config.unitLabelPlural).toBe("Constituencies");
   });
 
+  it("Japan maps votes by prefecture without inventing parliamentary seats", () => {
+    for (const type of ["shugiin", "snap_shugiin", "sangiin", "governor", "regionalCouncil"]) {
+      expect(getSubdivisionMode("JP", type)).toEqual({
+        mode: "distributed",
+        config: expect.objectContaining({
+          dataDir: "subdivisions/jp",
+          unitLabel: "Prefecture",
+          unitLabelPlural: "Prefectures",
+        }),
+      });
+    }
+  });
   it("unknown pairs stay null", () => {
     expect(getSubdivisionMode("RU", "commons")).toBeNull();
     expect(getSubdivisionMode("DE", "landtag")).toBeNull();

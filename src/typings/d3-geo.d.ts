@@ -16,16 +16,19 @@ declare module "d3-geo" {
     clipAngle(angle: number | null): this;
     precision(): number;
     precision(precision: number): this;
+    fitExtent(extent: [[number, number], [number, number]], object: GeoPermissibleObjects): this;
     fitSize(size: [number, number], object: GeoPermissibleObjects): this;
   }
 
   /** Path generator: SVG path data, plus planar bounds and centroid in projected units. */
   export interface GeoPath {
     (object: GeoPermissibleObjects): string | null;
+    digits(digits: number): this;
     bounds(object: GeoPermissibleObjects): [[number, number], [number, number]];
     centroid(object: GeoPermissibleObjects): [number, number];
   }
 
+  export function geoMercator(): GeoProjection;
   export function geoEqualEarth(): GeoProjection;
   export function geoOrthographic(): GeoProjection;
   /** Composite conic US projection with Alaska and Hawaii inset. */

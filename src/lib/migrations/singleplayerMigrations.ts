@@ -18,6 +18,8 @@
 // for those the catch-up starts at that date.
 
 import type { Db } from "mongodb";
+import { resumePendingDemographicFlowReceipts } from "@/lib/demographics/flowJournal";
+import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
 import { MIGRATIONS } from "./registry";
 import { runMigrations, type RunSummary } from "./runner";
@@ -38,7 +40,11 @@ export const SINGLEPLAYER_LEGACY_CUTOFF = "2026-09-04";
  * writers must be paused; a local world at startup or right after a reset
  * runs no turn, and demographicFlows fails every turn without them.
  */
-export const SINGLEPLAYER_MIGRATIONS: readonly Migration[] = [...MIGRATIONS, countyPopulations];
+export const SINGLEPLAYER_MIGRATIONS: readonly Migration[] = [
+  ...MIGRATIONS,
+  countyPopulations,
+  ukJpSubdivisionPopulations,
+];
 
 function datedOnOrAfter(id: string, cutoff: string): boolean {
   const date = /^\d{4}-\d{2}-\d{2}/.exec(id)?.[0];
@@ -75,8 +81,8 @@ export async function stampSingleplayerBaseline(db: Db): Promise<number> {
  */
 export async function migrateSingleplayerWorld(db: Db): Promise<RunSummary | null> {
   const world = await db
-    .collection<{ _id: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { _id: 1 } });
+    .collection<{ _id: string; worldEpochId?: string; currentTurn?: number }>("gameState")
+    .findOne({ _id: "current" }, { projection: { _id: 1, worldEpochId: 1, currentTurn: 1 } });
   if (!world) return null;
 
   const stamped = await db
@@ -90,6 +96,17 @@ export async function migrateSingleplayerWorld(db: Db): Promise<RunSummary | nul
   // be stamped as applied: it stays pending for the next start.
   let chain: RunSummary;
   try {
+    // The launcher has not let the player in yet, so no local turn is running.
+    // Finish only already-frozen outcomes before stock migrations inspect totals;
+    // this never starts a new turn or recomputes a crashed phase's demographics.
+    if (
+      typeof world.worldEpochId === "string" &&
+      world.worldEpochId.length > 0 &&
+      Number.isSafeInteger(world.currentTurn) &&
+      world.currentTurn! >= 0 &&
+      world.currentTurn! < Number.MAX_SAFE_INTEGER
+    )
+      await resumePendingDemographicFlowReceipts(db, world.worldEpochId, world.currentTurn! + 1);
     chain = await runMigrations(db, { migrations, dryRun: false });
   } catch (error) {
     await runRequiredStartupMigrations(db);
