@@ -1,7 +1,7 @@
 /**
  * Funded sector reporting uses settled sales and booked profit. Unsold output
  * cost is a memo, not income, and own-site deliveries are not market sales:
- * see fundedSalesTelemetry and readFundedPnl.
+ * see fundedSalesTelemetry, fundedSalesForTurn and readFundedPnl.
  */
 export interface FundedSalesReceipt {
   producedUnits: number;
@@ -29,6 +29,22 @@ export function fundedSalesTelemetry(receipt: FundedSalesReceipt) {
       products.map((p) => [p.commodity, revenue > 0 ? p.revenue / revenue : 0])
     ),
   };
+}
+
+/** Match the last-turn receipt window used by idle and own-site reporting. */
+export function fundedSalesForTurn(
+  receipt: (FundedSalesReceipt & { turn: number }) | null | undefined,
+  currentTurn: number | undefined
+) {
+  if (
+    !receipt ||
+    currentTurn == null ||
+    !Number.isFinite(currentTurn) ||
+    !Number.isFinite(receipt.turn) ||
+    receipt.turn < currentTurn - 1
+  )
+    return null;
+  return fundedSalesTelemetry(receipt);
 }
 
 export function readFundedPnl(

@@ -113,6 +113,8 @@ it("shows settled market sales and clears stale per-output revenue shares", asyn
   const current = await buildSectorCommoditySections(args);
   expect(current.pricing).toMatchObject({ soldFraction: 0, clearingFactor: null });
   expect(current.supplies[0]).toMatchObject({ soldFraction: 0, revenueShare: 0 });
-  const old = await buildSectorCommoditySections({ ...args, currentTurn: 101 });
+  const previous = await buildSectorCommoditySections({ ...args, currentTurn: 101 });
+  expect(previous.pricing).toMatchObject({ soldFraction: 0, clearingFactor: null });
+  const old = await buildSectorCommoditySections({ ...args, currentTurn: 102 });
   expect(old.pricing).toMatchObject({ soldFraction: 1, clearingFactor: 1 });
 });

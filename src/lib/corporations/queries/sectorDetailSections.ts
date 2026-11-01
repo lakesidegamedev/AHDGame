@@ -1,4 +1,4 @@
-import { fundedSalesTelemetry, readFundedPnl } from "@/lib/corporations/rules/fundedReporting";
+import { fundedSalesForTurn, readFundedPnl } from "@/lib/corporations/rules/fundedReporting";
 import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
 export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
@@ -1701,10 +1701,7 @@ export function buildSectorPlantsSection(args: {
   // sell under half their output). The headline instead spreads cost and
   // revenue over every unit made, which is the basis the player's bank balance
   // actually moves on.
-  const fundedSales =
-    sector.producerSettlement?.turn === currentTurn
-      ? fundedSalesTelemetry(sector.producerSettlement)
-      : null;
+  const fundedSales = fundedSalesForTurn(sector.producerSettlement, currentTurn);
   const soldFraction = fundedSales?.soldFraction ?? num(sector.soldFraction) ?? fillRate;
   const soldByCommodity = Object.entries(
     fundedSales?.soldByCommodity ?? sector.soldByCommodity ?? {}

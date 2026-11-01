@@ -437,33 +437,37 @@ it("names the consumed-input transfer separately without changing the displayed 
   expect(panelIdentity(result.pnl)).toBe(engine.profit);
 });
 
-it("reads the settled sell-through instead of legacy sold-out telemetry", () => {
-  const s = buildSectorPlantsSection({
-    ...BASE_ARGS,
-    sector: sectorFixture({
-      producedUnits: 100,
-      soldUnits: 0,
-      soldFraction: 1,
-      soldByCommodity: { energy: 1 },
-      producerSettlement: {
-        turn: 100,
+it.each([100, 101])(
+  "reads settled sell-through at clock %s instead of legacy telemetry",
+  (currentTurn) => {
+    const s = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      currentTurn,
+      sector: sectorFixture({
         producedUnits: 100,
-        offeredUnits: 100,
         soldUnits: 0,
-        products: [{ commodity: "energy", offeredUnits: 100, soldUnits: 0, revenue: 0 }],
-      } as CorporateSector["producerSettlement"],
-    }),
-    money: {
-      realizedRevenueAnchor: 0,
-      maintenanceNetAnchor: 900,
-      labourAnchor: 0,
-      growthCostAnchor: 0,
-      profitAnchor: -900,
-      inputsAnchor: 800,
-    },
-  });
-  expect(s.truth?.soldFraction).toBe(0);
-  expect(s.truth?.soldByCommodity).toEqual([{ commodity: "energy", fraction: 0 }]);
-  expect(s.pnl.profitAnchor).toBe(-900);
-  expect(panelIdentity(s.pnl)).toBeCloseTo(-900);
-});
+        soldFraction: 1,
+        soldByCommodity: { energy: 1 },
+        producerSettlement: {
+          turn: 100,
+          producedUnits: 100,
+          offeredUnits: 100,
+          soldUnits: 0,
+          products: [{ commodity: "energy", offeredUnits: 100, soldUnits: 0, revenue: 0 }],
+        } as CorporateSector["producerSettlement"],
+      }),
+      money: {
+        realizedRevenueAnchor: 0,
+        maintenanceNetAnchor: 900,
+        labourAnchor: 0,
+        growthCostAnchor: 0,
+        profitAnchor: -900,
+        inputsAnchor: 800,
+      },
+    });
+    expect(s.truth?.soldFraction).toBe(0);
+    expect(s.truth?.soldByCommodity).toEqual([{ commodity: "energy", fraction: 0 }]);
+    expect(s.pnl.profitAnchor).toBe(-900);
+    expect(panelIdentity(s.pnl)).toBeCloseTo(-900);
+  }
+);

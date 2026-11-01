@@ -3,7 +3,7 @@
  * sector detail query. Extracted verbatim from sectorDetail.ts (pure code
  * motion; no behavior change).
  */
-import { fundedSalesTelemetry } from "@/lib/corporations/rules/fundedReporting";
+import { fundedSalesForTurn } from "@/lib/corporations/rules/fundedReporting";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
@@ -204,10 +204,7 @@ export async function buildSectorCommoditySections(args: {
 
   // Last turn's per-output clear rates (written by the clearing pass). Absent
   // on sectors that predate the field or when clearing never ran.
-  const fundedSales =
-    sector.producerSettlement && sector.producerSettlement.turn === args.currentTurn
-      ? fundedSalesTelemetry(sector.producerSettlement)
-      : null;
+  const fundedSales = fundedSalesForTurn(sector.producerSettlement, args.currentTurn);
   const soldByCommodity: Partial<Record<string, number>> =
     fundedSales?.soldByCommodity ??
     (sector.soldByCommodity && typeof sector.soldByCommodity === "object"
