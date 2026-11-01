@@ -264,4 +264,6 @@ it("batches the new tax-first path and measures projected corporation bytes", as
   );
   expect(count.total()).toBeLessThanOrEqual(60);
   expect(bytes).toBeLessThan(CORPORATIONS * 300);
-});
+  // The legacy 480-corporation baseline is deliberately expensive. This test
+  // gates Mongo command count and projected bytes, not hosted-runner wall time.
+}, 60_000);
