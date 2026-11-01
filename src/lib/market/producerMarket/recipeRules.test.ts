@@ -89,4 +89,83 @@ describe("physical producer recipes", () => {
       "commodity recipe"
     );
   });
+  it("pays extraction materials only for the resource share the state can supply", () => {
+    const supply = { oil: 0.58, natural_gas: 0.32 };
+    const demand = { energy: 0.2, steel: 0.1 };
+    const outputRateValueBasis = 0.9;
+    const full = producerRecipe({ supply, demand, eraUnitScale: 1, outputRateValueBasis });
+    // Pennsylvania can extract gas but no oil. The input divisor still sees
+    // the full recipe, so the materials bill follows the output that is kept.
+    const gasOnly = producerRecipe({
+      supply: { natural_gas: 0.32 },
+      demand,
+      eraUnitScale: 1,
+      outputRateValueBasis,
+      inputYieldSupply: supply,
+    });
+    const gasShare = 0.32 / 25 / (0.58 / 80 + 0.32 / 25);
+    expect(gasOnly.unitsPerNominalAnchor / full.unitsPerNominalAnchor).toBeCloseTo(gasShare, 12);
+    for (const [index, row] of gasOnly.inputs.entries()) {
+      const fullRow = full.inputs[index];
+      expect(row.commodity).toBe(fullRow.commodity);
+      // Same material budget per output unit...
+      expect(row.unitsPerOutput).toBeCloseTo(fullRow.unitsPerOutput, 12);
+      // ...times the output the site keeps: 0.638 of the full-resource bill.
+      expect(
+        row.unitsPerOutput * (gasOnly.unitsPerNominalAnchor / full.unitsPerNominalAnchor)
+      ).toBeCloseTo(fullRow.unitsPerOutput * gasShare, 12);
+    }
+  });
+
+  it("leaves coefficients unchanged when every resource is available", () => {
+    const supply = { oil: 0.58, natural_gas: 0.32 };
+    const demand = { energy: 0.2, steel: 0.1 };
+    const plain = producerRecipe({ supply, demand, eraUnitScale: 1 });
+    const explicit = producerRecipe({
+      supply,
+      demand,
+      eraUnitScale: 1,
+      inputYieldSupply: supply,
+    });
+    expect(explicit.inputs).toEqual(plain.inputs);
+    expect(explicit.outputs).toEqual(plain.outputs);
+    expect(explicit.unitsPerNominalAnchor).toBe(plain.unitsPerNominalAnchor);
+  });
+
+  it("keeps non-extraction recipes on the default supply basket", () => {
+    const supply = { steel: 0.5 };
+    const demand = { iron: 0.2 };
+    const plain = producerRecipe({ supply, demand, eraUnitScale: 1 });
+    const same = producerRecipe({ supply, demand, eraUnitScale: 1, inputYieldSupply: supply });
+    expect(same.inputs).toEqual(plain.inputs);
+    expect(same.outputs).toEqual(plain.outputs);
+    expect(same.nominalAnchorPerCapacityUnit).toBe(plain.nominalAnchorPerCapacityUnit);
+  });
+
+  it("scales missing-resource materials by the resource share, not the technology multiplier", () => {
+    const demand = { energy: 0.2 };
+    const outputRateValueBasis = 0.9;
+    // Gas output is doubled by technology; oil is unchanged. The site has gas only.
+    const techSupply = { oil: 0.58, natural_gas: 0.64 };
+    const all = producerRecipe({
+      supply: techSupply,
+      demand,
+      eraUnitScale: 1,
+      outputRateValueBasis,
+      inputYieldSupply: techSupply,
+    });
+    const gasOnly = producerRecipe({
+      supply: { natural_gas: 0.64 },
+      demand,
+      eraUnitScale: 1,
+      outputRateValueBasis,
+      inputYieldSupply: techSupply,
+    });
+    const gasShare = 0.64 / 25 / (0.58 / 80 + 0.64 / 25);
+    expect(gasOnly.unitsPerNominalAnchor / all.unitsPerNominalAnchor).toBeCloseTo(gasShare, 12);
+    expect(gasOnly.inputs[0].unitsPerOutput).toBeCloseTo(all.inputs[0].unitsPerOutput, 12);
+    expect(
+      gasOnly.inputs[0].unitsPerOutput * (gasOnly.unitsPerNominalAnchor / all.unitsPerNominalAnchor)
+    ).toBeCloseTo(all.inputs[0].unitsPerOutput * gasShare, 12);
+  });
 });
