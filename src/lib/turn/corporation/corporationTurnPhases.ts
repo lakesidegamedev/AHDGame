@@ -1,3 +1,5 @@
+import { settleCorporateTaxPriority } from "./corporateTaxPriority";
+import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { dividendStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import { garnishLocFromIncome } from "@/lib/lineOfCredit/garnishment";
 import { fillPendingShareOrders } from "./shareOrders";
@@ -202,6 +204,9 @@ export async function creditCorpDividends(args: {
     fee: number;
   }> = [];
   if (corpDividendPaymentsAnchorByCorpId.size > 0) {
+    const withholding =
+      (await loadTreasuryCashContext(db, turn ?? 0))?.treasuryCashLedgerEnabled === true;
+    const dividendCash: CorpSnapshot[] = [];
     const corpDivOps: AnyBulkWriteOperation<Corporation>[] = [];
     for (const [recipientCorpIdStr, anchorAmount] of corpDividendPaymentsAnchorByCorpId) {
       if (!Number.isFinite(anchorAmount) || anchorAmount <= 0) continue;
@@ -250,15 +255,24 @@ export async function creditCorpDividends(args: {
         recipientCorpIdStr,
         (dividendIncomeReceivedByCorpId.get(recipientCorpIdStr) ?? 0) + Math.round(liquidInc)
       );
-      corpDivOps.push({
-        updateOne: {
-          filter: { _id: recipient._id },
-          update: {
-            $inc: { liquidCapital: Math.round(liquidInc) },
-            $set: { updatedAt: now },
+      if (withholding)
+        dividendCash.push({
+          corpId: recipient._id,
+          operatingCashIncomeLocal: Math.round(liquidInc),
+          operatingCashCurrency: recipientCcy,
+          operatingCashLocalPerAnchor: fx,
+          federalTaxByCountryAnchor: new Map([[recipient.countryId, dividendTaxAnchor]]),
+        } as CorpSnapshot);
+      else
+        corpDivOps.push({
+          updateOne: {
+            filter: { _id: recipient._id },
+            update: {
+              $inc: { liquidCapital: Math.round(liquidInc) },
+              $set: { updatedAt: now },
+            },
           },
-        },
-      });
+        });
       if (dividendTaxAnchor > 0) {
         const perCorp =
           dividendTaxPaidByCountry.get(recipientCorpIdStr) ?? new Map<string, number>();
@@ -294,6 +308,7 @@ export async function creditCorpDividends(args: {
         });
       }
     }
+    if (withholding) await settleCorporateTaxPriority(db, dividendCash, turn ?? 0, now, "dividend");
     if (corpDivOps.length > 0) {
       await db.collection<Corporation>("corporations").bulkWrite(corpDivOps);
     }
@@ -503,6 +518,7 @@ export async function emitCorporationTurnTx(args: {
   capitalDividendPayments?: Map<string, Map<CurrencyCode, number>>;
   /** Dividend amounts already taxed at source (pass-through reform). */
   passThroughTaxedDividendPayments?: Map<string, Map<CurrencyCode, number>>;
+  incomeTaxAtSource?: boolean;
   dividendTaxPaidByCountry: Map<string, Map<string, number>>;
   turn: number | undefined;
   now: Date;
@@ -711,6 +727,7 @@ export async function emitCorporationTurnTx(args: {
           counterpartyType: "corporation",
           meta: {
             source: metaSource,
+            ...(args.incomeTaxAtSource ? { incomeTaxAtSource: true } : {}),
             ...(txType === "corp_dividend" && capitalDividendPayments
               ? {
                   stockTax: dividendStockTaxReceipt(

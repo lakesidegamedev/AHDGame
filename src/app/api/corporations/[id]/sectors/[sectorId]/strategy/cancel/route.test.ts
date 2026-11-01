@@ -198,7 +198,10 @@ describe("POST /strategy/cancel", () => {
       _id: "current",
       currentTurn: 100,
     });
-    db.collectionMocks["corporations"]!.updateOne.mockResolvedValue({ modifiedCount: 1 } as never);
+    db.collectionMocks["corporations"]!.updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    } as never);
     db.collectionMocks["corporateSectors"]!.updateOne.mockResolvedValue({
       modifiedCount: 1,
     } as never);
@@ -249,7 +252,10 @@ describe("POST /strategy/cancel", () => {
       _id: "current",
       currentTurn: 100,
     });
-    db.collectionMocks["corporations"]!.updateOne.mockResolvedValue({ modifiedCount: 1 } as never);
+    db.collectionMocks["corporations"]!.updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    } as never);
     db.collectionMocks["corporateSectors"]!.updateOne.mockResolvedValue({
       modifiedCount: 1,
     } as never);
@@ -262,5 +268,40 @@ describe("POST /strategy/cancel", () => {
     expect(res.status).toBe(200);
     expect(body.cancelCost).toBe(0);
     expect(body.reversalTurns).toBe(1);
+  });
+
+  it("does not reverse the strategy when the guarded debit is rejected", async () => {
+    await wireDb();
+    await wireAuth();
+    const { POST } = await import("./route");
+    db.collectionMocks["corporations"]!.findOne.mockResolvedValue({
+      _id: new ObjectId(corpId),
+      userId,
+      ceoId: userId,
+      ceoVacant: false,
+      liquidCapital: 100_000,
+      countryId: "US",
+    });
+    db.collectionMocks["corporateSectors"]!.findOne.mockResolvedValue({
+      _id: new ObjectId(sectorId),
+      corporationId: new ObjectId(corpId),
+      strategyId: "oil_gas",
+      transitionFromStrategyId: "standard",
+      transitionStartTurn: 94,
+      revenue: 100_000,
+    });
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 100,
+    });
+    db.collectionMocks["corporations"]!.updateOne.mockResolvedValue({
+      matchedCount: 0,
+      modifiedCount: 0,
+    } as never);
+    const res = await POST(new Request("http://localhost/api/test", { method: "POST" }), {
+      params: Promise.resolve({ id: corpId, sectorId }),
+    });
+    expect(res.status).toBe(409);
+    expect(db.collectionMocks["corporateSectors"]!.updateOne).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { isWholePlantOrder } from "@/lib/corporations/wholePlants/rules";
@@ -983,12 +984,14 @@ export async function placeCapacityBuild(
   // both pass, and both $inc down through zero. `$gte` makes the loser's
   // write match nothing.
   const costInCorpCapital = anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate);
-  const debit = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporation._id, liquidCapital: { $gte: costInCorpCapital } },
-      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
-    );
+  const debit = await db.collection<Corporation>("corporations").updateOne(
+    {
+      _id: corporation._id,
+      liquidCapital: { $gte: costInCorpCapital },
+      ...corporateDiscretionaryCashGuard(),
+    },
+    { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
+  );
   if (debit.modifiedCount !== 1) {
     void observe("order", "insufficient_cash");
     return fail(

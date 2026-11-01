@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import * as Sentry from "@sentry/nextjs";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -141,6 +142,7 @@ export async function unlockTechNode(
       _id: corporation._id,
       rdScore: { $gte: node.cost },
       liquidCapital: { $gte: cashCost },
+      ...corporateDiscretionaryCashGuard(),
       // Must not already own this node, must own at least ONE prerequisite
       // (any-of), and must not own a rival from this node's exclusive group.
       $and: [

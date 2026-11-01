@@ -1,3 +1,6 @@
+import { corporationsWithReservedTaxCash } from "./corporateDecisionCash";
+import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
+import { taxableDistribution } from "@/lib/budget/rules/incomePayout";
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
 import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
@@ -71,7 +74,7 @@ import {
 import { processRdInnovations } from "./rdInnovation";
 import { processVoteReminders, processVoteAutoResolve } from "./voteReminders";
 import { processImfBailoutPayments } from "@/lib/turn/imfBailoutTurn";
-import { buildPersonalBalanceBulkOp, getHomeCurrency } from "@/lib/currency/characterFunds";
+import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import {
@@ -105,7 +108,6 @@ import {
   updateCorporateTaxBases,
   emitCorporationTurnTx,
   settleShareMarketTurn,
-  garnishCorporationIncome,
 } from "./corporationTurnPhases";
 import { getGameState } from "@/lib/gameState";
 import { deleteDivestedNppSectors } from "../npp/divestmentPersistence";
@@ -789,6 +791,7 @@ export async function processCorporationTurn(
     // A failed funded settlement must stop the turn: advancing would leave every
     // plant a generation behind, so no later funded turn could reconcile.
     funded = await runFundedProducerTurn(db, {
+      withholdCorporateTax: treasuryCashLedgerEnabled,
       turn: producerTurn,
       worldEpoch,
       lookups,
@@ -901,7 +904,12 @@ export async function processCorporationTurn(
     constructionFinanceBacklogCount: nppConstructionFinanceBacklogCount,
   } = await processNppCorporationDecisions(db, turn ?? 0, now, techTreesEnabled, {
     groupMembership,
-    corporations: lookups.corporations,
+    corporations: corporationsWithReservedTaxCash(
+      lookups.corporations,
+      corpSnapshots,
+      lookups.exchangeRatesByCurrency,
+      treasuryCashLedgerEnabled
+    ),
     issuerBondsByCorpId: lookups.bondsByCorpId,
     heldBondsByCorpId: lookups.bondsHeldByCorpId,
     ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
@@ -911,6 +919,10 @@ export async function processCorporationTurn(
   await persistNppManufacturingProjects(db, nppManufacturingProductProjects);
 
   corpOps.push(...groupForecastWriteOps(market, lookups));
+  for (const snapshot of corpSnapshots) {
+    const distribution = funded?.deferredDistributions?.get(snapshot.corpId.toHexString());
+    if (distribution) snapshot.deferredProducerDistributions = distribution;
+  }
   // Merge NPP corp updates into the main corpOps
   for (const nppUpdate of nppCorpUpdates) {
     corpOps.push({
@@ -1675,52 +1687,56 @@ export async function processCorporationTurn(
     if (internal > 0) currencyIncomeInternalByCharacterId.set(charIdStr, internal);
   }
 
-  // Phase 6 (pre-write): garnish CEO salary + dividend income for distressed
-  // LOC borrowers BEFORE the wallet credit. `garnishLocFromIncome` mutates
-  // `charPayments` to remove or scale down redirected entries; the bulkWrite
-  // below then only credits whatever survived (typically zero for distressed
-  // borrowers, since their LOC obligation dwarfs one turn of income).
-  // Recomputes income totals so dividends already redirected don't double-feed
-  // the LOC composite via Phase 6a forex auto-convert.
-  const taxableDividendPayments = await garnishCorporationIncome({
-    db,
-    charPayments,
-    dividendPayments,
-    turn,
-    stockTaxActive:
-      lookups.stockHoldingTaxStartTurn !== undefined &&
-      (turn ?? 0) >= lookups.stockHoldingTaxStartTurn,
-  });
-
-  if (charPayments.size > 0) {
-    const charOps: AnyBulkWriteOperation<Character>[] = [];
-    for (const [charIdStr, currencyAmounts] of charPayments) {
-      for (const [currency, amount] of currencyAmounts) {
-        charOps.push(
-          buildPersonalBalanceBulkOp(
-            new ObjectId(charIdStr),
-            amount,
-            currency,
-            forexEnabled
-          ) as AnyBulkWriteOperation<Character>
+  // Reserve current taxes and old arrears atomically with each net payout.
+  // Gross maps remain available for earnings history and tax-tier observations.
+  const taxableDividendPayments = new Map(
+    [...dividendPayments].map(([id, amounts]) => [id, new Map(amounts)])
+  );
+  const payoutCredits: IncomeCredit[] = [];
+  for (const [ownerCollection, payments] of [
+    ["characters", charPayments],
+    ["imperialCharacters", imperialPayments],
+  ] as const) {
+    for (const [id, amounts] of payments)
+      for (const [currency, gross] of amounts) {
+        const recipientKey = ownerCollection === "imperialCharacters" ? "imperial:" + id : id;
+        const capital =
+          lookups.stockHoldingTaxStartTurn !== undefined &&
+          (turn ?? 0) >= lookups.stockHoldingTaxStartTurn
+            ? (capitalDividendPayments.get(recipientKey)?.get(currency) ?? 0)
+            : 0;
+        const taxable = taxableDistribution(
+          gross,
+          capital,
+          passThroughTaxedDividendPayments.get(recipientKey)?.get(currency) ?? 0,
+          Math.max(0, gross - (dividendPayments.get(recipientKey)?.get(currency) ?? 0))
         );
+        payoutCredits.push({
+          characterId: new ObjectId(id),
+          ownerCollection,
+          currency,
+          gross,
+          destination: forexEnabled ? "currencyBalances.personal." + currency : "cashOnHand",
+          ...taxable,
+        });
       }
-    }
-    if (charOps.length > 0) await db.collection<Character>("characters").bulkWrite(charOps);
   }
-  mark("garnish+charPayments");
-
-  if (imperialPayments.size > 0) {
-    const imperialOps: AnyBulkWriteOperation[] = [];
-    for (const [imperialIdStr, currencyAmounts] of imperialPayments) {
-      for (const [currency, amount] of currencyAmounts) {
-        imperialOps.push(
-          buildPersonalBalanceBulkOp(new ObjectId(imperialIdStr), amount, currency, forexEnabled)
-        );
-      }
+  if (typeof turn !== "number" && payoutCredits.length)
+    throw new Error("Income payout needs a turn identity");
+  const netCredits = await creditIncomeAfterTax(db, "corporation", turn ?? 0, now, payoutCredits);
+  for (const credit of netCredits) {
+    const id = credit.characterId.toHexString();
+    const payments = credit.ownerCollection === "characters" ? charPayments : imperialPayments;
+    payments.get(id)?.set(credit.currency, credit.net);
+    if (credit.ownerCollection === "characters") {
+      const dividend = dividendPayments.get(id)?.get(credit.currency);
+      if (dividend !== undefined)
+        dividendPayments
+          .get(id)!
+          .set(credit.currency, credit.gross > 0 ? (dividend * credit.net) / credit.gross : 0);
     }
-    await db.collection("imperialCharacters").bulkWrite(imperialOps);
   }
+  mark("tax+charPayments");
 
   // Phase 6b: Credit NPP CEO salaries and dividends to the NPP's PERSONAL wealth
   // (currencyBalances.personal, per corp currency), mirroring the player path in
@@ -1830,6 +1846,7 @@ export async function processCorporationTurn(
     turn,
     now,
     thresholds,
+    incomeTaxAtSource: true,
   });
   mark("emitTx(revenue/salary/tax)");
 

@@ -1,3 +1,4 @@
+import { isTurnProcessingNow } from "@/lib/turn/processingLock";
 import { NextResponse } from "next/server";
 import type { Db } from "mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
@@ -39,9 +40,24 @@ export async function requireCorporationActionsEnabled(db: Db): Promise<NextResp
   const col = await getGameStateCollection(db);
   const gameState = await col.findOne(
     { _id: "current" },
-    { projection: { corporationActionsPaused: 1, processingKind: 1 } }
+    {
+      projection: {
+        corporationActionsPaused: 1,
+        processingKind: 1,
+        isProcessing: 1,
+        processingHeartbeatAt: 1,
+        processingAbandonedAt: 1,
+        processingStartedAt: 1,
+        updatedAt: 1,
+      },
+    }
   );
 
+  if (gameState && isTurnProcessingNow(gameState))
+    return errorResponse(
+      409,
+      "Corporate cash and taxes are settling this turn. Try again shortly."
+    );
   const pause = corporationActionsPause(gameState);
   return pause ? errorResponse(pause.status, pause.message) : null;
 }

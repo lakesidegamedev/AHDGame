@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { NextResponse } from "next/server";
 import { ObjectId, type ClientSession, type AnyBulkWriteOperation } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
@@ -414,13 +415,15 @@ export async function POST(request: Request, { params }: RouteParams) {
 
           // 1. Debit the parent (conditional). Nothing else is written yet, so a
           //    failure here needs no compensation.
-          const debitResult = await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: refreshedParent._id, liquidCapital: { $gte: costInParentCapital } },
-              { $inc: { liquidCapital: -costInParentCapital }, $set: { updatedAt: now } },
-              sessionOpt
-            );
+          const debitResult = await db.collection<Corporation>("corporations").updateOne(
+            {
+              _id: refreshedParent._id,
+              liquidCapital: { $gte: costInParentCapital },
+              ...corporateDiscretionaryCashGuard(),
+            },
+            { $inc: { liquidCapital: -costInParentCapital }, $set: { updatedAt: now } },
+            sessionOpt
+          );
           if (debitResult.modifiedCount === 0) {
             throw badRequest("Insufficient liquid capital (race with another transaction).");
           }

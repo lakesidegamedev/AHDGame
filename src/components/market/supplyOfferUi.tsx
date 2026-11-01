@@ -121,14 +121,26 @@ export function PremiumChip({ premium, side }: { premium: number; side: "buy" | 
   );
 }
 
+/**
+ * What taking an offer makes you. A company offering to sell leaves you the
+ * buyer, and a company seeking supply leaves you the seller; the badge on its
+ * own names the poster's side, which players read as their own.
+ */
+export function takerSideText(side: "buy" | "sell"): string {
+  return side === "sell" ? "You buy" : "You sell";
+}
+
 export function SideBadge({ side }: { side: "buy" | "sell" }) {
   return (
-    <span
-      className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-bold uppercase ${
-        side === "sell" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"
-      }`}
-    >
-      {side === "sell" ? "Offering" : "Seeking"}
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <span
+        className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-bold uppercase ${
+          side === "sell" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"
+        }`}
+      >
+        {side === "sell" ? "Offering" : "Seeking"}
+      </span>
+      <span className="text-[11px] text-muted">{takerSideText(side)}</span>
     </span>
   );
 }

@@ -122,3 +122,58 @@ describe.each(["characters", "imperialCharacters"] as const)(
     );
   }
 );
+
+it("serializes context reads on a transaction session while retaining parallel standalone reads", async () => {
+  const memory = createInMemoryDb();
+  const id = new ObjectId();
+  memory.seed("gameState", [{ _id: "current", forexEnabled: true, stockHoldingTaxStartTurn: 0 }]);
+  memory.seed("characters", [
+    { _id: id, countryId: "US", homeState: "CA", incomeTier: "middle", incomeTaxStartTurn: 0 },
+  ]);
+  memory.seed("federalBudget", [
+    { _id: "federal", countryId: "US", currencyCode: "USD", taxRates: { incomeTax: 20 } },
+  ]);
+  memory.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
+  let active = 0,
+    peak = 0;
+  for (const name of [
+    "characters",
+    "imperialCharacters",
+    "federalBudget",
+    "stateBudgets",
+    "exchangeRates",
+  ]) {
+    const collection = memory.collection(name);
+    const find = collection.find.bind(collection);
+    vi.spyOn(collection, "find").mockImplementation((...args) => {
+      const cursor = find(...args);
+      const read = cursor.toArray.bind(cursor);
+      cursor.toArray = async () => {
+        active += 1;
+        peak = Math.max(active, peak);
+        try {
+          await Promise.resolve();
+          return await read();
+        } finally {
+          active -= 1;
+        }
+      };
+      return cursor;
+    });
+  }
+  const targets = [{ id, collection: "characters" as const }];
+  expect(
+    (
+      await loadStockWithholdingContexts(memory as unknown as Db, targets, 2, {
+        income: true,
+        session: {} as never,
+      })
+    ).size
+  ).toBe(1);
+  expect(peak).toBe(1);
+  peak = 0;
+  expect(
+    (await loadStockWithholdingContexts(memory as unknown as Db, targets, 2, { income: true })).size
+  ).toBe(1);
+  expect(peak).toBe(5);
+});

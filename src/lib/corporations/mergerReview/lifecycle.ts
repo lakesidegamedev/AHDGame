@@ -253,7 +253,9 @@ export async function fineOverdueDivestitures(
     );
     if (fineLocal <= 0) continue;
 
-    const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, fineLocal);
+    const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, fineLocal, {
+      corporateObligation: true,
+    });
     if (!debit.ok) continue; // Cannot pay this turn; the order stands and it is retried next turn.
 
     // The fine was DEBITED in the corporation's currency, but the reviewing

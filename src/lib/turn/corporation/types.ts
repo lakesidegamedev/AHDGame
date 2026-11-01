@@ -461,6 +461,13 @@ export interface CorpSnapshot {
   income: number;
   /** Net operating cash delta in the corporation's liquid currency for this turn. */
   operatingCashIncomeLocal?: number;
+  deferredProducerDistributions?: {
+    walletId: string;
+    worldEpoch: string;
+    amountAnchor: number;
+    currency: CurrencyCode;
+    localPerAnchor: number;
+  }[];
   /**
    * Funded producer turn: producer profit the settlement already moved as cash
    * and witnessed in its own ledger entry (anchor). The legacy cash witness

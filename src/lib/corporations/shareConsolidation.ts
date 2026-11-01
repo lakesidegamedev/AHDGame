@@ -4,18 +4,7 @@ import type { Corporation, Shareholder } from "@/lib/db/types";
 /**
  * Whether the corporation may undergo CEO-driven share structure changes (split / reverse split).
  */
-export function corporationCanRestructureShares(
-  corp: Corporation
-): { ok: true } | { ok: false; reason: string } {
-  if (corp.countryOwnerId != null || corp.isNationalized) {
-    return { ok: false, reason: "State-owned corporations cannot change share structure." };
-  }
-  const total = corp.totalShares ?? 0;
-  if (total <= 0) {
-    return { ok: false, reason: "Invalid outstanding share count." };
-  }
-  return { ok: true };
-}
+export { shareStructureEligibility as corporationCanRestructureShares } from "./rules/shareStructure";
 
 /** Sum of on-book shareholder shares plus public float (must match totalShares when no open sell orders). */
 export function sumAccountedOutstandingShares(corp: Corporation): number {
