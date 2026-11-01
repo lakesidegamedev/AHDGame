@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import os from "os";
 import path from "path";
 import { ObjectId, type Db } from "mongodb";
@@ -37,6 +38,13 @@ export function singleplayerHomeDir(env: Record<string, string | undefined> = pr
   const configured = env.SINGLEPLAYER_HOME?.trim();
   if (configured) return path.resolve(configured);
   return path.join(os.homedir(), ".a-house-divided");
+}
+
+/** Written by a save-load request; the next start of the world applies it. */
+export const RESTORE_MARKER_FILE = "restore-pending.json";
+
+export function hasPendingRestore(env: Record<string, string | undefined> = process.env): boolean {
+  return existsSync(path.join(singleplayerHomeDir(env), RESTORE_MARKER_FILE));
 }
 
 export function singleplayerCdnDir(env: Record<string, string | undefined> = process.env): string {
@@ -126,6 +134,13 @@ async function clearSingleplayerMaintenance(db: Db): Promise<void> {
  * so a fresh database is playable the moment the server answers.
  */
 export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
+  // A requested save load is applied first, so the migration pass below brings
+  // an older save up to this build exactly as it does for any older world.
+  // Imported lazily: the saves module reads this file's home directory.
+  if (hasPendingRestore()) {
+    const { applyPendingRestore } = await import("@/lib/singleplayer/saves");
+    await applyPendingRestore(db);
+  }
   await ensureSingleplayerWorldMigrated(db);
   const account = await ensureSingleplayerUser(db);
   // Existing worlds predate owner-admin: promote the earliest account when

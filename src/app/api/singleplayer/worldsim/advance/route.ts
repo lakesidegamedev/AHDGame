@@ -7,6 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { advanceWorldsim, MAX_WORLD_SIM_BATCH_TURNS } from "@/lib/singleplayerWorld";
 import { getSingleplayerWorldAvailability } from "@/lib/singleplayerOperator";
 import { getSingleplayerConfig } from "@/lib/singleplayerServer";
+import { maybeAutosave } from "@/lib/singleplayer/saves";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -38,9 +39,10 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    return NextResponse.json(await advanceWorldsim(parsed.data.turns), {
-      headers: { "Cache-Control": "no-store" },
-    });
+    const advanced = await advanceWorldsim(parsed.data.turns);
+    // One save for the whole batch: it is the only state a player can load.
+    void maybeAutosave(db, advanced.finalTurn);
+    return NextResponse.json(advanced, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return handleRouteError(error);
   }

@@ -7,6 +7,7 @@ import { ObjectId } from "mongodb";
 import { SINGLEPLAYER_USER_ID } from "@/lib/singleplayer";
 import { getSingleplayerWorldAvailability } from "@/lib/singleplayerOperator";
 import { processTurn } from "@/lib/turnSystem";
+import { maybeAutosave } from "@/lib/singleplayer/saves";
 import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTrading/shareFillAudit";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,9 @@ export async function POST(request: Request) {
     // so no catch here: an outer silent catch would only hide a broken
     // contract instead of surfacing it through `handleRouteError`.
     await runShareFillRecoveryPass(db);
+    // After the recovery pass, so the save holds the settled turn. Not awaited:
+    // the player's turn never waits on, or fails because of, a save.
+    void maybeAutosave(db, result.turn);
 
     const updated = await db
       .collection("characters")
