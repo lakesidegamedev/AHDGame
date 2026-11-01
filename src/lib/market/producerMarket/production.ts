@@ -56,6 +56,8 @@ export interface ProducedStock {
 export interface ProductionPlan {
   id: string;
   accountId: string;
+  /** State the plant site is in; freight buys its own state's offers first. */
+  stateId?: string;
   capacityUnits: number;
   activeFraction: number;
   /** Prior staffing, disasters and other physical constraints, excluding demand. */
@@ -770,6 +772,7 @@ export function advanceProducerEconomy(input: {
           priority: 1,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
+          ...(p.stateId ? { stateId: p.stateId } : {}),
           ...(quantityGroup ? { quantityGroup } : {}),
         };
         return [
@@ -899,6 +902,7 @@ export function advanceProducerEconomy(input: {
           units,
           unitPrice: quote.unitPrice,
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
+          ...(p.stateId ? { stateId: p.stateId } : {}),
         },
         quote: quoteInput,
       });
