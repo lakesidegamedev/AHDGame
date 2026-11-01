@@ -134,13 +134,7 @@ async function clearSingleplayerMaintenance(db: Db): Promise<void> {
  * so a fresh database is playable the moment the server answers.
  */
 export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
-  // A requested save load is applied first, so the migration pass below brings
-  // an older save up to this build exactly as it does for any older world.
-  // Imported lazily: the saves module reads this file's home directory.
-  if (hasPendingRestore()) {
-    const { applyPendingRestore } = await import("@/lib/singleplayer/saves");
-    await applyPendingRestore(db);
-  }
+  await ensureSingleplayerStartupRestore(db);
   await ensureSingleplayerWorldMigrated(db);
   const account = await ensureSingleplayerUser(db);
   // Existing worlds predate owner-admin: promote the earliest account when
@@ -257,6 +251,31 @@ export async function applyStartupRepairsAfterReset(
   // migration the build knows; a later build applies only newer ones.
   await stampSingleplayerBaseline(db);
   return summary.ranIds;
+}
+
+const STARTUP_RESTORE_KEY = Symbol.for("ahd.singleplayer.startupRestore");
+
+/**
+ * Applies a requested save load, once per server start and before the world is
+ * opened, so the migration pass that follows brings an older save up to this
+ * build exactly as it does for any older world. Only the first status call of
+ * a process looks: a load requested while the world runs waits for its next
+ * start, and a concurrent second call waits for the first instead of reading
+ * a half-restored database. Imported lazily: the saves module reads this
+ * file's home directory.
+ */
+export function ensureSingleplayerStartupRestore(db: Db): Promise<void> {
+  const store = globalThis as typeof globalThis & { [STARTUP_RESTORE_KEY]?: Promise<void> };
+  store[STARTUP_RESTORE_KEY] ??= (async () => {
+    if (!hasPendingRestore()) return;
+    const { applyPendingRestore } = await import("@/lib/singleplayer/saves");
+    await applyPendingRestore(db);
+  })().catch((error: unknown) => {
+    // The marker is still there: let the next status call try again.
+    store[STARTUP_RESTORE_KEY] = undefined;
+    throw error;
+  });
+  return store[STARTUP_RESTORE_KEY];
 }
 
 // One pass per server process, shared across Next's duplicated module copies.
