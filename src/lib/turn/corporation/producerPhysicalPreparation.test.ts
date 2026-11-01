@@ -443,6 +443,31 @@ describe("physical producer preparation", () => {
     expect(halted.prepared.plan.otherOperatingCost).toBe(running.prepared.plan.otherOperatingCost);
   });
 
+  it("bills extraction materials only for the resource share the state can supply", () => {
+    const { input, env, sector } = fixture();
+    sector.sectorType = "extraction";
+    sector.strategyId = "oil_gas";
+    env.lookups.stateResourceCapacityByState.set(sector.stateId, {
+      oil: 1000,
+      natural_gas: 1000,
+    });
+    const full = prepareProducerPhysicalSector(input).prepared.plan;
+    env.lookups.stateResourceCapacityByState.set(sector.stateId, {
+      oil: 0,
+      natural_gas: 1000,
+    });
+    const gasOnly = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(gasOnly.inputs.length).toBeGreaterThan(0);
+    for (const [index, row] of gasOnly.inputs.entries()) {
+      const fullRow = full.inputs[index];
+      expect(row.commodity).toBe(fullRow.commodity);
+      // The divisor sees the full basket even though oil is filtered out, so
+      // the per-output material budget matches the fully supplied site. The
+      // recipe test pins the resulting bill to the resource share.
+      expect(row.unitsPerOutput).toBeCloseTo(fullRow.unitsPerOutput, 12);
+    }
+  });
+
   it("requires actual resource and unit-basis reconciliation instead of granting output", () => {
     const { input, sector, env } = fixture();
     sector.sectorType = "extraction";

@@ -302,6 +302,11 @@ export function prepareProducerPhysicalSector(input: {
     tech.inputRateMult,
     getInputMultiplier(policyLevel) / policyOutput
   );
+  // Materials are billed against the full recipe basket, never the state's
+  // filtered supply: a site missing part of its resource mix already earns
+  // less output, so scaling inputs to the filtered yield would charge it the
+  // full bill for the share it cannot extract.
+  const inputYieldSupply = scaledCommodityRates(recipe.supply, tech.outputRateMult);
   const prices = eraScaledBasePrices(lookups.eraUnitScale);
   const commodities = producerRecipeCommodities(recipe, sector);
   const markets = new Map(
@@ -350,6 +355,7 @@ export function prepareProducerPhysicalSector(input: {
       demand,
       eraUnitScale: lookups.eraUnitScale,
       outputRateValueBasis,
+      ...(outputYield > 0 ? { inputYieldSupply } : {}),
     },
     markets,
     outputMultiplier: 0,
