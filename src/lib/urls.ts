@@ -1,6 +1,5 @@
 import { compactRegionCode, type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencyCodes";
-import { primaryTierHref } from "@/lib/campaignManager/links";
 
 // ── Internal helpers ──
 // Defensive coercions so URL builders never throw when a caller hands in an
@@ -328,7 +327,10 @@ export function tierPrimaryRoute(
   tier: "president" | "senate" | "stateSenate" | "governor" | "house",
   partyId: string
 ): string {
-  return primaryTierHref(tier, partyId);
+  // Same URL as campaignManager/links primaryTierHref; spelled out here so this
+  // client-safe leaf module stays free of the links module's imports.
+  if (tier === "president") return `/president/primary/${partyId}`;
+  return `/campaign-manager?type=${encodeURIComponent(tier)}&stage=primary&party=${encodeURIComponent(partyId)}`;
 }
 
 /**
