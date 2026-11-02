@@ -80,6 +80,27 @@ describe("buildRaceIndex", () => {
     expect(races[0].turnsLeft).toBe(0);
   });
 
+  it("lists a primary nobody has entered as one open race", () => {
+    const [race, ...rest] = buildRaceIndex(
+      [
+        election({
+          id: "open",
+          inPrimary: true,
+          inGeneral: false,
+          byParty: [],
+          primaryEndTurn: 14,
+        }),
+      ],
+      ctx
+    );
+    expect(rest).toEqual([]);
+    expect(race.key).toBe("open");
+    expect(race.stage).toBe("primary");
+    expect(race.primaryPartyId).toBeNull();
+    expect(race.candidates).toEqual([]);
+    expect(race.turnsLeft).toBe(4);
+  });
+
   it("counts turns left to the primary end in a primary and to the end in a general", () => {
     const general = buildRaceIndex(
       [election({ cands: [{ id: "a", name: "A", party: "1", share: 50 }] })],

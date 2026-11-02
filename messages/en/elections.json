@@ -474,7 +474,8 @@
         "noVotes": "No votes counted yet",
         "margin": "{abbr} +{margin}",
         "watch": "Watch {race}",
-        "unwatch": "Stop watching {race}"
+        "unwatch": "Stop watching {race}",
+        "noFilers": "No one has filed yet"
       },
       "race": {
         "pick": "Pick a race from the list or the map.",
@@ -503,7 +504,10 @@
         "colInfluence": "Influence",
         "you": "You",
         "player": "Player",
-        "npp": "Politician"
+        "npp": "Politician",
+        "openPrimary": "The primary is open and no one has filed yet. Candidates enter from the election page.",
+        "electionPage": "Election page",
+        "enter": "Enter this race"
       },
       "chart": {
         "title": "Polling by turn",

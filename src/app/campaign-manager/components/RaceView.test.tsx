@@ -4,7 +4,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderWithElectionsMessages } from "@/lib/test-utils/renderWithElectionsMessages";
 import { buildRaceIndex } from "@/lib/campaignManager/rules";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
-import { election } from "@/lib/campaignManager/rules/__fixtures__/election";
+import { cand, election } from "@/lib/campaignManager/rules/__fixtures__/election";
 import { RaceView } from "./RaceView";
 
 afterEach(cleanup);
@@ -138,7 +138,7 @@ describe("RaceView", () => {
             partyId: "1",
             partyName: "Democratic",
             partyColor: "#2563eb",
-            candidates: [],
+            candidates: [cand({ id: "p1", name: "Pat", party: "1", share: 100 })],
           },
         ] as never,
       })
@@ -148,5 +148,16 @@ describe("RaceView", () => {
         "Democratic primary. The winner carries the Democratic nomination into the general in 3 turns."
       )
     ).toBeTruthy();
+  });
+});
+
+describe("RaceView open primary", () => {
+  it("says no one has filed and links to the election page to enter", () => {
+    view(election({ id: "open-1", inPrimary: true, inGeneral: false, byParty: [] }));
+    expect(screen.getByText(/no one has filed yet/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Enter this race" }).getAttribute("href")).toBe(
+      "/elections/open-1"
+    );
+    expect(screen.getByRole("link", { name: "Election page" })).toBeTruthy();
   });
 });

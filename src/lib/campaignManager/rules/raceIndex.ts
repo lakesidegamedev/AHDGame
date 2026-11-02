@@ -135,6 +135,24 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
     };
 
     if (e.inPrimary) {
+      // A primary nobody has entered yet is still a race the player can find
+      // and enter: one open row for the election until a party has filers.
+      if ((e.byParty ?? []).length === 0) {
+        races.push({
+          ...base,
+          key: e.id,
+          stage: "primary",
+          primaryPartyId: null,
+          primaryPartyName: null,
+          turnsLeft: turnsUntil(e.primaryEndTurn, ctx.currentTurn),
+          candidates: [],
+          hasPolling: false,
+          multiSeat: false,
+          seatsEstimate: null,
+          isMine: false,
+        });
+        continue;
+      }
       for (const group of e.byParty ?? []) {
         const candidates = group.candidates.map((c) => toCandidate(c, c.sharePct)).sort(byShare);
         races.push({

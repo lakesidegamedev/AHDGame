@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { useBlendGround } from "@/components/blend/useBlendGround";
@@ -102,6 +103,23 @@ export function RaceView(props: RaceViewProps) {
         {race.hasPolling ? (
           <span style={ratingChipStyle(shade.fill, shade.ink)}>{t(`tier.${standing.tier}`)}</span>
         ) : null}
+        <Link
+          href={`/elections/${race.electionId}`}
+          style={{
+            minHeight: 32,
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "0 12px",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            color: BLEND.ink,
+            border: `1px solid ${BLEND.hairlineStrong}`,
+            textDecoration: "none",
+          }}
+        >
+          {t("race.electionPage")}
+        </Link>
         <button
           type="button"
           aria-pressed={props.watched}
@@ -122,7 +140,17 @@ export function RaceView(props: RaceViewProps) {
         </button>
       </header>
 
-      {race.stage === "primary" ? (
+      {race.candidates.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
+          {t("race.openPrimary")}{" "}
+          <Link
+            href={`/elections/${race.electionId}`}
+            style={{ color: BLEND.ink, fontWeight: 600 }}
+          >
+            {t("race.enter")}
+          </Link>
+        </p>
+      ) : race.stage === "primary" ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
           {race.turnsLeft != null
             ? t("race.primaryNote", { party: race.primaryPartyName ?? "", n: race.turnsLeft })
@@ -171,9 +199,9 @@ export function RaceView(props: RaceViewProps) {
             ) : null}
           </p>
         </section>
-      ) : (
+      ) : race.candidates.length > 0 && race.stage === "general" ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noVotes")}</p>
-      )}
+      ) : null}
 
       {seats ? (
         <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>

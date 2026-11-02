@@ -246,11 +246,14 @@ function RaceRow({
   const t = useTranslations("elections.campaignManager");
   const s = raceStanding(race);
   const shade = tierShade(s.leaderColor, s.tier, ground);
-  const leaderLine = !race.hasPolling
-    ? t("finder.noVotes")
-    : s.runnerUpName
-      ? t("finder.leads", { leader: s.leaderName, runnerUp: s.runnerUpName })
-      : t("finder.unopposed", { leader: s.leaderName });
+  const leaderLine =
+    race.candidates.length === 0
+      ? t("finder.noFilers")
+      : !race.hasPolling
+        ? t("finder.noVotes")
+        : s.runnerUpName
+          ? t("finder.leads", { leader: s.leaderName, runnerUp: s.runnerUpName })
+          : t("finder.unopposed", { leader: s.leaderName });
   return (
     <li
       style={{
