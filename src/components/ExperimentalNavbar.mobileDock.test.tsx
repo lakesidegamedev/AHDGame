@@ -164,6 +164,12 @@ describe("phone navigation dock", () => {
     expect(screen.getByTestId("profile-menu")).toBeTruthy();
   });
 
+  it("leaves the bottom edge to the phone app's own tab bar", () => {
+    renderNav({ phoneApp: true });
+    expect(screen.queryByRole("navigation", { name: en.nav.dock.label })).toBeNull();
+    expect(screen.getByRole("button", { name: en.nav.common.openMenu })).toBeTruthy();
+  });
+
   it("is not rendered for the standard phone layout", () => {
     renderNav({ mobileLayout: "standard" });
     expect(screen.queryByRole("navigation", { name: en.nav.dock.label })).toBeNull();
