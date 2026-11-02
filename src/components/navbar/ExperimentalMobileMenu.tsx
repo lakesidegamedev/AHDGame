@@ -55,6 +55,7 @@ import type {
   MobileSubKey,
   NavLinkRef,
 } from "./experimentalNavTypes";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 export interface ExperimentalMobileMenuProps {
   navigationVariant?: "a" | "b";
@@ -493,7 +494,7 @@ export function ExperimentalMobileMenu({
                         )}
                         {activeElection ? (
                           <Link
-                            href={`/elections/${activeElection.seatId ?? activeElection.id}`}
+                            href={campaignManagerHref({ race: activeElection.id })}
                             onClick={onClose}
                             className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
                           >

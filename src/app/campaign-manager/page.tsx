@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
-import type { State } from "@/lib/db/types";
-import { parseCampaignManagerParams } from "@/lib/campaignManager/links";
+import { ObjectId } from "mongodb";
+import type { Election, State } from "@/lib/db/types";
+import { parseCampaignManagerParams, presidentialRedirect } from "@/lib/campaignManager/links";
 import CampaignManagerClient from "./CampaignManagerClient";
 
 export const metadata: Metadata = { title: "Campaign Manager" };
@@ -41,6 +42,17 @@ export default async function CampaignManagerPage({
   ].filter((k): k is string => !!k);
   // Deep-link params (race, type, stage, region, year, party); junk is dropped.
   const { race, filter } = parseCampaignManagerParams(await searchParams);
+  // Links that know only a race id land here; the presidency has its own page.
+  if (race) {
+    const linked = await db
+      .collection<Election>("elections")
+      .findOne(
+        { _id: new ObjectId(race.split(":")[0]) },
+        { projection: { _id: 1, electionType: 1, seatId: 1 } }
+      );
+    const elsewhere = presidentialRedirect(linked);
+    if (elsewhere) redirect(elsewhere);
+  }
 
   return (
     <CampaignManagerClient

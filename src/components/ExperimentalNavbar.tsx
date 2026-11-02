@@ -108,6 +108,7 @@ import type {
   NavLinkRef,
   OpenKey,
 } from "@/components/navbar/experimentalNavTypes";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 const NavCustomizeDialog = dynamic(
   () =>
@@ -743,7 +744,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       )}
       {activeElection ? (
         <MenuRow
-          href={`/elections/${activeElection.seatId ?? activeElection.id}`}
+          href={campaignManagerHref({ race: activeElection.id })}
           onNavigate={closeAll}
           metaClass="text-primary"
           meta={t("common.active")}
@@ -1070,7 +1071,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
               desktopLink(
                 "activeElection",
                 t("state.myElection"),
-                `/elections/${activeElection.seatId ?? activeElection.id}`
+                campaignManagerHref({ race: activeElection.id })
               ),
             ]
           : []),

@@ -9,6 +9,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { apiErrorText } from "@/lib/errors/catalog";
 import type { FirstDaysData } from "@/lib/onboarding/firstDays";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 /**
  * "Your first days" panel on the profile of a new character.
@@ -161,7 +162,7 @@ export function FirstDaysPanel({
                       {data.races.map((race) => (
                         <li key={race.id} className="flex flex-wrap items-baseline gap-x-2">
                           <Link
-                            href={`/elections/${race.id}`}
+                            href={campaignManagerHref({ race: race.id })}
                             className="text-body-sm text-foreground underline-offset-4 hover:underline"
                           >
                             {race.label}

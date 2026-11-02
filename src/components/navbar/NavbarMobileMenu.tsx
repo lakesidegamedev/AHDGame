@@ -39,6 +39,7 @@ import type {
 } from "./navbarTypes";
 import { viewerIsSingleplayerOwner, visibleStaffNavItems } from "./staffNavItems";
 import type { NavbarAction, NavbarState } from "./useNavbarState";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 // Same on-demand loading as the desktop panels: the switcher only mounts once
 // the profile section is expanded.
@@ -396,14 +397,11 @@ export function NavbarMobileMenu({
                 )}
                 {activeElection ? (
                   <Link
-                    href={`/elections/${activeElection.seatId ?? activeElection.id}`}
+                    href={campaignManagerHref({ race: activeElection.id })}
                     onClick={onClose}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, `/elections/${activeElection.seatId ?? activeElection.id}`) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, campaignManagerHref({ race: activeElection.id })) ? "bg-white/5 font-medium" : "text-muted"}`}
                     aria-current={
-                      isNavActive(
-                        pathname,
-                        `/elections/${activeElection.seatId ?? activeElection.id}`
-                      )
+                      isNavActive(pathname, campaignManagerHref({ race: activeElection.id }))
                         ? "page"
                         : undefined
                     }

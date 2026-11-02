@@ -36,6 +36,32 @@ export function campaignManagerHref(p: CmLinkParams): string {
   return qs ? `/campaign-manager?${qs}` : "/campaign-manager";
 }
 
+/**
+ * Where a "view this race" link goes: the presidency keeps its own page; every
+ * other race opens in Campaign Manager, selected.
+ */
+export function raceHref(e: { id: string; electionType: string; seatId?: string | null }): string {
+  if (e.electionType === "president") return `/elections/${e.seatId ?? e.id}`;
+  return campaignManagerHref({ race: e.id });
+}
+
+/**
+ * A link that names its race by id alone may point at the presidency, which
+ * Campaign Manager does not show: the page sends it to the race's own page.
+ */
+export function presidentialRedirect(
+  e: { _id: { toString(): string } | string; electionType: string; seatId?: string | null } | null
+): string | null {
+  if (!e || e.electionType !== "president") return null;
+  return `/elections/${e.seatId ?? String(e._id)}`;
+}
+
+/** A party's primaries of one race type: the presidential primary page, else Campaign Manager. */
+export function primaryTierHref(tier: string, partyId: string): string {
+  if (tier === "president") return `/president/primary/${partyId}`;
+  return campaignManagerHref({ type: tier, stage: "primary", party: partyId });
+}
+
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 const raceSchema = z.string().regex(/^[a-f0-9]{24}(:[\w-]{1,32})?$/i);

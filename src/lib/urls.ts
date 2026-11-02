@@ -1,5 +1,6 @@
 import { compactRegionCode, type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencyCodes";
+import { primaryTierHref } from "@/lib/campaignManager/links";
 
 // ── Internal helpers ──
 // Defensive coercions so URL builders never throw when a caller hands in an
@@ -320,17 +321,14 @@ export function congressMembersApiUrl(countryId: CountryId | string): string {
 
 /**
  * Per-party primary page for a given race tier. Presidential lives at
- * `/president/primary/[partyId]` (preserved for backwards compat); the
- * lower tiers — Senate, Governor, House — share the new
- * `/elections/primary/[tier]/[partyId]` tree built out as part of the
- * tier-selector activation feature.
+ * `/president/primary/[partyId]`; the lower tiers (Senate, Governor, House)
+ * open Campaign Manager on that type's primaries, filtered to the party.
  */
 export function tierPrimaryRoute(
   tier: "president" | "senate" | "stateSenate" | "governor" | "house",
   partyId: string
 ): string {
-  if (tier === "president") return `/president/primary/${partyId}`;
-  return `/elections/primary/${tier}/${partyId}`;
+  return primaryTierHref(tier, partyId);
 }
 
 /**

@@ -17,6 +17,7 @@ import { getElectionMethod, isMultiSeatMethod } from "@/lib/elections/electionMe
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import type { CountryId, ElectionMethod } from "@/lib/constants/countries";
 import type { ElectionDisplay } from "@/lib/db/types";
+import { raceHref } from "@/lib/campaignManager/links";
 
 /** Where a race sits on the ballot. Drives the card kicker. */
 export type BlendTier = "federal" | "presidential" | "regional";
@@ -852,7 +853,7 @@ export function buildBlendRegionCards(input: BlendRegionInput): BlendRaceCard[] 
 
     return {
       electionId: election.id,
-      href: hrefById[election.id] ?? `/elections/${election.id}`,
+      href: hrefById[election.id] ?? raceHref(election),
       tier,
       phase,
       title,

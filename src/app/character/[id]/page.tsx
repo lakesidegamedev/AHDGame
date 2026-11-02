@@ -88,6 +88,7 @@ import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstant
 import { countryElectionsUrl, countryUrl, politiciansUrl, regionUrl } from "@/lib/urls";
 import { truncate, loadCharacterByUrlId } from "./characterLoaders";
 import { buildPublicSummary, getCharacterById, type OverviewStatItem } from "./characterData";
+import { raceHref } from "@/lib/campaignManager/links";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -798,7 +799,10 @@ export default async function CharacterPage({ params }: PageProps) {
                   {candidateElections.map(({ election, candidacy }) => (
                     <li key={candidacy._id.toString()} className="py-2">
                       <Link
-                        href={`/elections/${election._id.toString()}`}
+                        href={raceHref({
+                          id: election._id.toString(),
+                          electionType: election.electionType,
+                        })}
                         className={`text-body-sm ${PROFILE_LINK_CLASS}`}
                       >
                         {formatElectionTypeLabel(election.electionType, character.countryId)}

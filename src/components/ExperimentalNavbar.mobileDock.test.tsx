@@ -112,7 +112,7 @@ describe("phone navigation dock", () => {
         "/country/us/region/NY/party/1",
         "/country/us/region/NY/legislature",
         "/country/us/region/NY?tab=economy",
-        "/elections/NY-senate",
+        "/campaign-manager?race=election",
         "/country/us/region/NY/office",
       ])
     );

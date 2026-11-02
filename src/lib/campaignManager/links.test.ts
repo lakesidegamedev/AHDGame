@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { buildRaceIndex } from "./rules";
 import { election } from "./rules/__fixtures__/election";
-import { campaignManagerHref, openingFilter, parseCampaignManagerParams } from "./links";
+import {
+  campaignManagerHref,
+  openingFilter,
+  parseCampaignManagerParams,
+  primaryTierHref,
+  raceHref,
+  presidentialRedirect,
+} from "./links";
 
 describe("campaignManagerHref", () => {
   it("builds a race link", () => {
@@ -99,5 +106,45 @@ describe("openingFilter", () => {
 
   it("has nothing to open on an empty country", () => {
     expect(openingFilter([], null, {})).toBeNull();
+  });
+});
+
+describe("raceHref", () => {
+  it("opens a down-ballot race in Campaign Manager", () => {
+    expect(raceHref({ id: "e1", electionType: "senate", seatId: "US-senate-MI-1" })).toBe(
+      "/campaign-manager?race=e1"
+    );
+    expect(raceHref({ id: "e1", electionType: "special_commons" })).toBe(
+      "/campaign-manager?race=e1"
+    );
+  });
+
+  it("keeps the presidency on its own page", () => {
+    expect(raceHref({ id: "e1", electionType: "president", seatId: "US-president" })).toBe(
+      "/elections/US-president"
+    );
+    expect(raceHref({ id: "e1", electionType: "president" })).toBe("/elections/e1");
+  });
+});
+
+describe("primaryTierHref", () => {
+  it("opens a party's primaries of one race type in Campaign Manager", () => {
+    expect(primaryTierHref("house", "2")).toBe(
+      "/campaign-manager?type=house&stage=primary&party=2"
+    );
+    expect(primaryTierHref("president", "2")).toBe("/president/primary/2");
+  });
+});
+
+describe("presidentialRedirect", () => {
+  it("sends a linked presidential race to its own page", () => {
+    expect(
+      presidentialRedirect({ _id: "e1", electionType: "president", seatId: "US-president" })
+    ).toBe("/elections/US-president");
+  });
+
+  it("keeps every other race in Campaign Manager", () => {
+    expect(presidentialRedirect({ _id: "e1", electionType: "senate" })).toBeNull();
+    expect(presidentialRedirect(null)).toBeNull();
   });
 });
