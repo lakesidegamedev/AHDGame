@@ -39,7 +39,7 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
   const [open, setOpen] = useState(false);
   if (!election.endTime && !election.primaryEndTime) return null;
 
-  const when = (turn: number | null | undefined, time: string | null | undefined) => {
+  const when = (turn: number | null | undefined, time: Date | string | null | undefined) => {
     const timer =
       turn != null ? clock.formatRemainingTurns(turn) : clock.formatRemaining(time ?? undefined);
     const year = clock.formatYear(time ?? null);
@@ -53,6 +53,7 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
   const primary = when(election.primaryEndTurn, election.primaryEndTime);
   const closes = when(election.endTurn, election.endTime);
   const closeYear = clock.formatYear(election.endTime ?? null);
+  const closeYearText = closeYear != null ? String(closeYear) : null;
 
   const rows: Row[] = [
     ...(election.startTime
@@ -81,7 +82,14 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
       : []),
     ...(election.endTime
       ? election.isEnded
-        ? [{ key: "closes", label: t("declared"), value: closeYear ?? closes.text, ended: true }]
+        ? [
+            {
+              key: "closes",
+              label: t("declared"),
+              value: closeYearText ?? closes.text,
+              ended: true,
+            },
+          ]
         : [{ key: "closes", label: t("closes"), value: closes.text, ended: closes.ended }]
       : []),
   ];
