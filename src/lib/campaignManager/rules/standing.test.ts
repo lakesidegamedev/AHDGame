@@ -68,6 +68,17 @@ describe("regionFill", () => {
     expect(regionFill([])).toBeNull();
   });
 
+  it("leaves a region unshaded when none of its races has votes yet", () => {
+    const open = buildRaceIndex(
+      [election({ id: "o", inPrimary: true, inGeneral: false, byParty: [] })],
+      ctx
+    );
+    const noVotes = one(
+      election({ id: "n", polling: null, cands: [{ id: "a", name: "A", party: "1" }] })
+    );
+    expect(regionFill([...open, noVotes])).toBeNull();
+  });
+
   it("shades one race by its leader and tier", () => {
     const race = one(
       election({

@@ -109,8 +109,10 @@ export function sortRaces(races: CmRace[], watched: ReadonlySet<string>): CmRace
  * tie between parties is a toss-up in the closest race's leader colour.
  */
 export function regionFill(regionRaces: CmRace[]): { color: string; tier: MarginTier } | null {
-  if (regionRaces.length === 0) return null;
-  const standings = regionRaces.map(raceStanding);
+  // Only races with counted shares say anything about the region.
+  const read = regionRaces.filter((r) => r.hasPolling && r.candidates.length > 0);
+  if (read.length === 0) return null;
+  const standings = read.map(raceStanding);
   const closest = standings.reduce((a, b) => (b.margin < a.margin ? b : a));
   if (standings.length === 1) return { color: closest.leaderColor, tier: closest.tier };
   const tally = new Map<string, { n: number; color: string }>();
