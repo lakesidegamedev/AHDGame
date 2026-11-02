@@ -10,18 +10,22 @@ import type { MapView } from "@/app/elections/[id]/blend/presMap/mapView";
 import { subunitShares, type CmRace } from "@/lib/campaignManager/rules";
 import type { CampaignGeoRegion } from "./geoSource";
 
-/** The sub-unit results route the map reads for a race; null when it has no tally yet. */
+/**
+ * Where the map reads a race's sub-units from: the counted results once a
+ * general has votes, otherwise a live projection of the race's current shares
+ * (a party's primary, or a general before its first count). Null only for a
+ * primary nobody has entered.
+ */
 export function countySourceFor(race: CmRace): CountySource | null {
   if (race.candidates.length === 0) return null;
-  if (race.stage === "primary" && race.primaryPartyId) {
-    const party = race.primaryPartyId;
-    return {
-      id: `primary:${party}`,
-      url: (stateId) =>
-        `/api/elections/${race.electionId}/primary/${encodeURIComponent(party)}/state/${stateId}/subdivision-results`,
-    };
-  }
-  return generalCountySource(race.electionId);
+  if (race.stage === "general" && race.hasPolling) return generalCountySource(race.electionId);
+  const party = race.stage === "primary" ? race.primaryPartyId : null;
+  const query = party ? `?party=${encodeURIComponent(party)}` : "";
+  return {
+    id: `projected:${party ?? "general"}`,
+    url: (stateId) =>
+      `/api/elections/${race.electionId}/state/${stateId}/projected-subdivisions${query}`,
+  };
 }
 
 export interface UnitRow {

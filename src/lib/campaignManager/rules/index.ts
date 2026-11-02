@@ -28,3 +28,4 @@ export {
   type RaceStanding,
   type SeatSummary,
 } from "./standing";
+export { projectSubunits, type ProjectionCandidate } from "./projection";

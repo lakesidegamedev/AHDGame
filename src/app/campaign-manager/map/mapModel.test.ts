@@ -16,7 +16,7 @@ describe("countySourceFor", () => {
     expect(src.url("OH")).toBe("/api/elections/e1/state/OH/subdivision-results");
   });
 
-  it("reads one party's primary in a primary", () => {
+  it("projects one party's primary from its live shares", () => {
     const race = buildRaceIndex(
       [
         election({
@@ -36,8 +36,18 @@ describe("countySourceFor", () => {
       ctx
     )[0];
     const src = countySourceFor(race)!;
-    expect(src.id).toBe("primary:7");
-    expect(src.url("OH")).toBe("/api/elections/e2/primary/7/state/OH/subdivision-results");
+    expect(src.id).toBe("projected:7");
+    expect(src.url("OH")).toBe("/api/elections/e2/state/OH/projected-subdivisions?party=7");
+  });
+
+  it("projects a general that has no counted votes yet", () => {
+    const race = buildRaceIndex(
+      [election({ id: "e4", polling: null, cands: [{ id: "a", name: "A", party: "1" }] })],
+      ctx
+    )[0];
+    const src = countySourceFor(race)!;
+    expect(src.id).toBe("projected:general");
+    expect(src.url("OH")).toBe("/api/elections/e4/state/OH/projected-subdivisions");
   });
 
   it("has nothing to read in a primary nobody has entered", () => {
