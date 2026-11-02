@@ -1,10 +1,11 @@
 ---
 date: 2026-11-02
-title: See what is inside the grey bars on the budget flow chart
+title: See what the Other lines in a national budget are made of
 summary: >-
-  The fiscal flow chart on a national budget folds its smallest lines into one
-  grey bar on each side. Those bars are now named "Smaller sources" and
-  "Smaller outlays" with a count, and tapping one lists every line inside it.
+  Open Other Spending on a national budget to see every law it pays for, with
+  its cost, and the general spending not tied to any law. Other Revenue now
+  says what it holds, and the grey bars on the fiscal flow chart list the lines
+  folded into them.
 # Free text. What the change was about: economy, elections, balance, corporations.
 tags: [budget, economy, ui]
 # How big this change is, which sets how it is grouped in the release post.
@@ -16,15 +17,16 @@ areas: [frontend]
 
 ## What changed
 
-- The chart keeps the five biggest revenue lines and the six biggest spending
-  lines and folds the rest into one bar per side. Those bars were called "Other
-  revenue" and "Other outlays", which sat next to real budget lines such as
-  "Other Revenue" and could not be told apart. They are now "Smaller sources"
-  and "Smaller outlays", with the number of lines they hold.
-- Tap, click, or press Enter on one of those bars to list each line inside it
-  with its amount. Tap it again to close the list. Hovering on a desktop shows
-  the same list.
-- Real budget lines called "Other" are a single modelled amount and cannot be
-  split further; the Income and Expenses panels below the chart describe what
-  each one covers.
+- Opening Other Spending in the Income and Expenses panel now lists what it is
+  made of: each law paid for from it, largest first, with its yearly cost and
+  share of the line, then the general spending the budget books without a law.
+  The rows add up to the line.
+- Laws with no spending category were counted in Other Spending but never
+  listed under it. They now are.
+- Opening Other Revenue says what it holds: fees, fines, asset income and
+  profit from state-owned companies that do not pay into a named revenue line.
+  The game stores these as one amount, so they are shown together.
+- On the fiscal flow chart, the grey bars that fold in the smallest lines are
+  now called "Smaller sources" and "Smaller outlays" with a count, so they no
+  longer look like the real Other lines. Tap one to list the lines inside it.
 - Suggested by a player (suggestion 405).

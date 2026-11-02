@@ -41,6 +41,11 @@ export interface BreakdownLine {
   laws?: BreakdownLaw[];
   /** Spending: intergovernmental-grant recipients (the grants line only). */
   grants?: BreakdownGrant[];
+  /**
+   * What a catch-all line is made of, adding up to `amount` (the "Other" lines,
+   * see otherLineBreakdown.ts). Shown as an itemised list when the row is open.
+   */
+  parts?: { label: string; amount: number; note?: string }[];
   /** Spending: this is the debt-service line (rate-driven). */
   isDebt?: boolean;
   /** This line is the State-Enterprise remittance → deep-link to the NatCorp. */
@@ -302,7 +307,38 @@ export function BudgetBreakdownPanel({
                     </Link>
                   )}
 
-                  {l.laws && l.laws.length > 0 && (
+                  {l.parts && l.parts.length > 0 && (
+                    <div className="mt-2.5">
+                      <div className="mb-1 text-body-sm font-medium text-muted">
+                        What this line is made of
+                      </div>
+                      <ul className="divide-y divide-card-border rounded-md border border-card-border bg-card">
+                        {l.parts.map((part, partIdx) => (
+                          <li key={`${part.label}-${partIdx}`} className="px-2.5 py-1.5">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="text-body-xs text-foreground">{part.label}</span>
+                              <span className="shrink-0 font-mono text-body-xs tabular-nums text-foreground">
+                                {money(part.amount)}
+                                <span className="ml-1.5 text-[10px] text-muted">
+                                  {l.amount > 0
+                                    ? `${((part.amount / l.amount) * 100).toFixed(1)}%`
+                                    : ""}
+                                </span>
+                              </span>
+                            </div>
+                            {part.note && (
+                              <p className="mt-0.5 text-[11px] leading-snug text-muted">
+                                {part.note}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* A spending line with parts already itemises its laws with amounts. */}
+                  {l.laws && l.laws.length > 0 && !(!isRev && l.parts && l.parts.length > 0) && (
                     <div className="mt-2.5">
                       <div className="mb-1 text-body-sm font-medium text-muted">
                         {isRev ? "Governing statutes" : "Driving legislation"}
