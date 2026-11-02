@@ -434,6 +434,7 @@ export default async function RootLayout({
                             <NavbarWrapper
                               singleplayer={singleplayer}
                               clientShell={isClientShell}
+                              phoneApp={isStoreApp}
                               displayMode={displayMode}
                               initialPageCountry={initialPageCountry}
                               typedWordmark={typedWordmark}

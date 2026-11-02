@@ -130,6 +130,8 @@ export interface ExperimentalNavbarProps {
   /** Saved pins and group order; used by the grouped-cards layout only. */
   navCustomization?: unknown;
   clientShell?: boolean;
+  /** The AHDClient phone app, which draws its own bottom tab bar. */
+  phoneApp?: boolean;
   /** Type the site name in on load, in mono (1991 worlds). */
   typedWordmark?: boolean;
   user?: NavLinkRef;
@@ -165,6 +167,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   mobileLayout = null,
   navCustomization: savedCustomization,
   clientShell = false,
+  phoneApp = false,
   typedWordmark = false,
   user,
   showProfile = false,
@@ -281,7 +284,9 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   );
 
   // The dock replaces the menu button only for signed-in players with a character.
-  const mobileDock = mobileLayout === "dock" && showProfile && !!user;
+  // The phone app has its own bottom tab bar; two docks stacked would leave
+  // little room for the page. The app keeps the standard phone menu.
+  const mobileDock = mobileLayout === "dock" && showProfile && !!user && !phoneApp;
   useEffect(() => setDockSheet(null), [pathname]);
 
   const nationMenuOpen = open === "nation" || open === "country" || dockSheet === "nation";
