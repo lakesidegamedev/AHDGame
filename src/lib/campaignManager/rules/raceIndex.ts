@@ -49,13 +49,12 @@ export interface CmRace {
   multiSeat: boolean;
   totalSeats: number | null;
   seatsEstimate: Record<string, number> | null;
-  /** Seats follow vote shares (list PR) rather than one winner per district. */
-  proportional: boolean;
   isMine: boolean;
 }
 
 export interface RaceIndexContext {
-  currentTurn: number;
+  /** Null when the turn could not be read; turns left are then unknown. */
+  currentTurn: number | null;
   /** Legislature chamber keys elected nationwide (e.g. `senate`, `house`, `commons`). */
   nationalChamberKeys: readonly string[];
 }
@@ -86,8 +85,8 @@ function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
   };
 }
 
-function turnsUntil(deadline: number | null, currentTurn: number): number | null {
-  return deadline == null ? null : Math.max(0, deadline - currentTurn);
+function turnsUntil(deadline: number | null, currentTurn: number | null): number | null {
+  return deadline == null || currentTurn == null ? null : Math.max(0, deadline - currentTurn);
 }
 
 const byShare = (a: CmCandidate, b: CmCandidate) => b.share - a.share;
@@ -110,7 +109,6 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       classNum,
       multiSeat,
       totalSeats: e.totalSeats ?? null,
-      proportional: multiSeat && /^(pr_|ams$)/.test(e.allocationMethod ?? ""),
     };
 
     if (e.inPrimary) {

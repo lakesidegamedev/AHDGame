@@ -433,6 +433,12 @@
       "projectionExplanation": "Cross-tab segments are projections from Layer-1 demographics. The uncertainty band is illustrative; this poll does not sample respondents.",
       "uncertaintyBand": "Illustrative uncertainty band",
       "uncertaintyExplanation": "Illustration only: 3 points divided by the square root of the segment's electorate share. It is not a sample-based margin of error."
+    },
+    "campaignManager": {
+      "title": "Campaign Manager",
+      "loading": "Loading races",
+      "loadError": "Races could not load.",
+      "retry": "Try again"
     }
   }
 }

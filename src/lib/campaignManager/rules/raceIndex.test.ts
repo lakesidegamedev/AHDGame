@@ -91,6 +91,14 @@ describe("buildRaceIndex", () => {
     expect(primary[0].turnsLeft).toBe(3);
   });
 
+  it("leaves turns left unknown when the current turn is unknown", () => {
+    const [race] = buildRaceIndex(
+      [election({ cands: [{ id: "a", name: "A", party: "1", share: 50 }] })],
+      { ...ctx, currentTurn: null }
+    );
+    expect(race.turnsLeft).toBeNull();
+  });
+
   it("marks a general with no counted votes as having no polling", () => {
     const [race] = buildRaceIndex(
       [
