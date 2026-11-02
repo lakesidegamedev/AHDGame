@@ -347,14 +347,23 @@ export interface RaceFilter {
   year?: number | null;
 }
 
+/**
+ * Whether a row belongs under a stage: "all" is every live race, a stage its
+ * own rows, Finished the year's finished races (every year when `year` is
+ * unset). Finished primaries belong under none; they open from their race.
+ */
+export function inStage(r: CmRace, stage: RaceFilter["stage"], year?: number | null): boolean {
+  if (isFinishedPrimary(r)) return false;
+  if (stage === "all") return r.stage !== "final";
+  if (r.stage !== stage) return false;
+  return stage !== "final" || year == null || r.year === year;
+}
+
 export function filterRaces(races: CmRace[], f: RaceFilter): CmRace[] {
   const q = f.query.trim().toLowerCase();
   return races.filter((r) => {
     if (r.electionType !== f.type) return false;
-    if (isFinishedPrimary(r)) return false;
-    // "All" means every live race; finished races have their own stage.
-    if (f.stage === "all" ? r.stage === "final" : r.stage !== f.stage) return false;
-    if (f.stage === "final" && f.year != null && r.year !== f.year) return false;
+    if (!inStage(r, f.stage, f.year)) return false;
     if (f.regionId !== "ALL" && r.regionId !== f.regionId) return false;
     if (!q) return true;
     const region = (f.regionNames[r.regionId] ?? r.regionId).toLowerCase();
@@ -373,4 +382,15 @@ export function finishedYears(races: CmRace[], type: string): number[] {
     if (r.stage === "final" && r.electionType === type && r.year != null) years.add(r.year);
   }
   return [...years].sort((a, b) => b - a);
+}
+
+/** The Finished year to show: `current` while `type` still has races then, else the newest. */
+export function defaultFinishedYear(
+  races: CmRace[],
+  type: string,
+  current: number | null | undefined
+): number | null {
+  const years = finishedYears(races, type);
+  if (current != null && years.includes(current)) return current;
+  return years[0] ?? null;
 }

@@ -119,3 +119,72 @@ describe("RaceFinder", () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ key: "s-oh" }));
   });
 });
+
+describe("RaceFinder Finished stage", () => {
+  const finishedRaces = buildRaceIndex(
+    [
+      election({
+        id: "s-oh",
+        state: "OH",
+        cands: [{ id: "a", name: "Grant Pruitt", party: "1", share: 51 }],
+        primaryResults: {
+          "1": [{ candidateId: "a", characterName: "Grant Pruitt", sharePct: 100, won: true }],
+        },
+      }),
+      ...[1988, 1994].map((year) =>
+        election({
+          id: `old-${year}`,
+          state: "PA",
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          electionYear: year,
+          cands: [{ id: "c", name: "Cora", party: "1", share: 60 }],
+        })
+      ),
+    ],
+    { currentTurn: 10, nationalChamberKeys: ["senate"], includeFinal: true }
+  );
+  function renderWith(over: Partial<RaceFilter>) {
+    const onFilter = vi.fn();
+    renderWithElectionsMessages(
+      <RaceFinder
+        countryId="US"
+        races={finishedRaces}
+        filter={{ type: "senate", stage: "all", regionId: "ALL", query: "", regionNames, ...over }}
+        onFilter={onFilter}
+        selectedKey={null}
+        onSelect={() => {}}
+        watched={new Set()}
+        onToggleWatch={() => {}}
+        regionNoun="State"
+        regionNounPlural="States"
+      />
+    );
+    return onFilter;
+  }
+
+  it("counts live races under All and finished races under Finished", () => {
+    renderWith({});
+    const stage = screen.getByRole("group", { name: "Election stage" });
+    expect(within(stage).getByRole("button", { name: /All\s*1/ })).toBeTruthy();
+    expect(within(stage).getByRole("button", { name: /Finished\s*2/ })).toBeTruthy();
+  });
+
+  it("shows a year picker only on Finished", () => {
+    renderWith({});
+    expect(screen.queryByRole("combobox", { name: "Election year" })).toBeNull();
+    cleanup();
+    const onFilter = renderWith({ stage: "final", year: 1994 });
+    const year = screen.getByRole("combobox", { name: "Election year" }) as HTMLSelectElement;
+    expect([...year.options].map((o) => o.value)).toEqual(["1994", "1988"]);
+    fireEvent.change(year, { target: { value: "1988" } });
+    expect(onFilter).toHaveBeenCalledWith({ year: 1988 });
+    expect(screen.getByText("1 race nationwide")).toBeTruthy();
+  });
+
+  it("says so when a type has no finished races", () => {
+    renderWith({ type: "governor", stage: "final", year: null });
+    expect(screen.getByText("No finished races yet.")).toBeTruthy();
+  });
+});

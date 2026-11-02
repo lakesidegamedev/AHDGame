@@ -97,3 +97,39 @@ describe("BottomSheet", () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe("MobileRaceStrip Finished stage", () => {
+  it("offers Finished and a year picker on it", () => {
+    const done = buildRaceIndex(
+      [
+        election({
+          id: "old",
+          state: "OH",
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          electionYear: 1988,
+          cands: [{ id: "a", name: "A", party: "1", share: 60 }],
+        }),
+      ],
+      { currentTurn: 10, nationalChamberKeys: ["senate"], includeFinal: true }
+    );
+    const onFilter = vi.fn();
+    renderWithElectionsMessages(
+      <MobileRaceStrip
+        countryId="US"
+        races={[...races, ...done]}
+        filter={{ ...filter, stage: "final", year: 1988 }}
+        onFilter={onFilter}
+        selectedKey={null}
+        onSelect={() => {}}
+        watched={new Set()}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Finished" }).getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    const year = screen.getByRole("combobox", { name: "Election year" }) as HTMLSelectElement;
+    expect(year.value).toBe("1988");
+  });
+});

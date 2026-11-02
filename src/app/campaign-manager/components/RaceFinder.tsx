@@ -7,6 +7,8 @@ import { BlendInput, BlendSelect } from "@/components/blend/BlendControls";
 import { useBlendGround } from "@/components/blend/useBlendGround";
 import {
   filterRaces,
+  finishedYears,
+  inStage,
   raceStanding,
   sortRaces,
   type CmRace,
@@ -33,6 +35,7 @@ const STAGES = [
   { id: "all", key: "stageAll" },
   { id: "primary", key: "stagePrimary" },
   { id: "general", key: "stageGeneral" },
+  { id: "final", key: "stageFinal" },
 ] as const;
 
 /** Find a Race: race types by scope, the stage switch, a region, search, and the list. */
@@ -56,31 +59,32 @@ export function RaceFinder({
     const seen = new Map<string, { type: string; scope: CmScope; count: number }>();
     for (const r of races) {
       const entry = seen.get(r.electionType) ?? { type: r.electionType, scope: r.scope, count: 0 };
-      if (filter.stage === "all" || r.stage === filter.stage) entry.count += 1;
+      if (inStage(r, filter.stage, filter.year)) entry.count += 1;
       seen.set(r.electionType, entry);
     }
     return [...seen.values()].sort((a, b) =>
       typeLabel(a.type, countryId).localeCompare(typeLabel(b.type, countryId))
     );
-  }, [races, filter.stage, countryId]);
+  }, [races, filter.stage, filter.year, countryId]);
 
   const ofType = useMemo(
     () => races.filter((r) => r.electionType === filter.type),
     [races, filter.type]
   );
-  const stageCount = (stage: "all" | "primary" | "general") =>
-    ofType.filter((r) => stage === "all" || r.stage === stage).length;
+  // Finished counts every year; the year picker narrows the list below.
+  const stageCount = (stage: RaceFilter["stage"]) => ofType.filter((r) => inStage(r, stage)).length;
+  const years = filter.stage === "final" ? finishedYears(races, filter.type) : [];
 
   const regionOptions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const r of ofType) {
-      if (filter.stage !== "all" && r.stage !== filter.stage) continue;
+      if (!inStage(r, filter.stage, filter.year)) continue;
       counts.set(r.regionId, (counts.get(r.regionId) ?? 0) + 1);
     }
     return Object.entries(regionNames)
       .sort(([, a], [, b]) => a.localeCompare(b))
       .map(([id, name]) => ({ id, name, count: counts.get(id) ?? 0 }));
-  }, [ofType, filter.stage, regionNames]);
+  }, [ofType, filter.stage, filter.year, regionNames]);
 
   const list = sortRaces(filterRaces(races, filter), watched);
   const allRegions = filter.regionId === "ALL";
@@ -142,7 +146,7 @@ export function RaceFinder({
           aria-label={t("finder.stageGroup")}
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
             gap: 2,
             padding: 3,
             background: BLEND.field,
@@ -163,6 +167,27 @@ export function RaceFinder({
           ))}
         </div>
       </div>
+
+      {filter.stage === "final" ? (
+        years.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("finder.noFinished")}</p>
+        ) : (
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={EYEBROW}>{t("finder.finishedYear")}</span>
+            <BlendSelect
+              aria-label={t("finder.finishedYear")}
+              value={String(filter.year ?? years[0])}
+              onChange={(e) => onFilter({ year: Number(e.target.value) })}
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </BlendSelect>
+          </label>
+        )
+      ) : null}
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={EYEBROW}>{regionNoun}</span>

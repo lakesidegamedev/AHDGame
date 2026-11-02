@@ -1,7 +1,9 @@
 export {
   buildRaceIndex,
   filterRaces,
+  defaultFinishedYear,
   finishedYears,
+  inStage,
   isFinishedPrimary,
   initialsOf,
   raceScope,

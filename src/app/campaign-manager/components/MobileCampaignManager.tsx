@@ -3,8 +3,10 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
+import { BlendSelect } from "@/components/blend/BlendControls";
 import {
   filterRaces,
+  finishedYears,
   raceStanding,
   sortRaces,
   type CmRace,
@@ -79,6 +81,7 @@ const STAGES = [
   { id: "all", key: "stageAll" },
   { id: "primary", key: "stagePrimary" },
   { id: "general", key: "stageGeneral" },
+  { id: "final", key: "stageFinal" },
 ] as const;
 
 export function MobileRaceStrip({
@@ -101,6 +104,7 @@ export function MobileRaceStrip({
   const t = useTranslations("elections.campaignManager");
   const types = [...new Set(races.map((r) => r.electionType))];
   const list = sortRaces(filterRaces(races, filter), watched);
+  const years = filter.stage === "final" ? finishedYears(races, filter.type) : [];
   const scroller: React.CSSProperties = {
     display: "flex",
     gap: 6,
@@ -134,7 +138,7 @@ export function MobileRaceStrip({
         aria-label={t("finder.stageGroup")}
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
           gap: 2,
           padding: 3,
           background: BLEND.field,
@@ -154,6 +158,23 @@ export function MobileRaceStrip({
           </button>
         ))}
       </div>
+      {filter.stage === "final" ? (
+        years.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("finder.noFinished")}</p>
+        ) : (
+          <BlendSelect
+            aria-label={t("finder.finishedYear")}
+            value={String(filter.year ?? years[0])}
+            onChange={(e) => onFilter({ year: Number(e.target.value) })}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </BlendSelect>
+        )
+      ) : null}
       <div role="group" aria-label={t("mobile.raceChips")} style={scroller}>
         {list.map((race) => {
           const s = raceStanding(race);

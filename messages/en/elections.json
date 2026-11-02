@@ -475,7 +475,10 @@
         "margin": "{abbr} +{margin}",
         "watch": "Watch {race}",
         "unwatch": "Stop watching {race}",
-        "noFilers": "No one has filed yet"
+        "noFilers": "No one has filed yet",
+        "stageFinal": "Finished",
+        "finishedYear": "Election year",
+        "noFinished": "No finished races yet."
       },
       "race": {
         "pick": "Pick a race from the list or the map.",

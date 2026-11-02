@@ -3,6 +3,7 @@ import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import {
   buildRaceIndex,
   filterRaces,
+  defaultFinishedYear,
   finishedYears,
   initialsOf,
   raceScope,
@@ -408,5 +409,31 @@ describe("finished primaries", () => {
     );
     expect(filterRaces(rows, f({})).map((r) => r.key)).toEqual(["g"]);
     expect(filterRaces(rows, f({ stage: "final", year: 1988 })).map((r) => r.key)).toEqual(["old"]);
+  });
+});
+
+describe("defaultFinishedYear", () => {
+  const rows = buildRaceIndex(
+    [1988, 1994].map((year) =>
+      election({
+        id: `f${year}`,
+        status: "resolved",
+        isEnded: true,
+        inGeneral: false,
+        electionYear: year,
+        cands: [{ id: "a", name: "A", party: "1", share: 60 }],
+      })
+    ),
+    { ...ctx, includeFinal: true }
+  );
+
+  it("keeps the chosen year while the type has races that year", () => {
+    expect(defaultFinishedYear(rows, "senate", 1988)).toBe(1988);
+  });
+
+  it("resets the year when the type has no races that year", () => {
+    expect(defaultFinishedYear(rows, "senate", 2000)).toBe(1994);
+    expect(defaultFinishedYear(rows, "senate", null)).toBe(1994);
+    expect(defaultFinishedYear(rows, "governor", 1994)).toBeNull();
   });
 });

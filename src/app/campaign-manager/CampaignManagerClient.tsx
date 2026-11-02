@@ -6,6 +6,7 @@ import { BlendShell } from "@/components/blend/BlendShell";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import {
   adjacentCycles,
+  defaultFinishedYear,
   resolveSelectedRace,
   type CmRace,
   type RaceFilter,
@@ -80,16 +81,23 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   // without refetching every election in the country.
   const liveFav = actions.character?.favorability;
   const liveInfl = actions.character?.politicalInfluence;
-  // Finished races of the chosen type join the index only on the Finished stage.
+  // Finished races of the type on screen join the index (once per type a
+  // visit), so the Finished stage can count them; every other stage leaves
+  // them out. The type is the chosen one, else the one the page opens on.
+  const openingRace =
+    indexedRaces.find((r) => r.key === pickedKey) ??
+    indexedRaces.find((r) => r.isMine) ??
+    indexedRaces[0];
+  const shownType = chosenFilter?.type ?? openingRace?.electionType ?? "";
   const finished = useFinishedRaces(
     props.countryId,
-    chosenFilter?.type ?? "",
-    chosenFilter?.stage === "final",
+    shownType,
+    shownType !== "",
     props.nationalChamberKeys
   );
   const allRaces = useMemo(
-    () => (chosenFilter?.stage === "final" ? [...indexedRaces, ...finished.races] : indexedRaces),
-    [chosenFilter?.stage, indexedRaces, finished.races]
+    () => (finished.races.length > 0 ? [...indexedRaces, ...finished.races] : indexedRaces),
+    [indexedRaces, finished.races]
   );
   const races = useMemo(
     () =>
@@ -114,11 +122,20 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     [allRaces, liveFav, liveInfl]
   );
 
-  const myRace = useMemo(() => races.find((r) => r.isMine), [races]);
+  // The player's race now: a finished race or primary is history, not theirs to run.
+  const myRace = useMemo(() => races.find((r) => r.isMine && r.stage !== "final"), [races]);
   // Until the player chooses, the page opens on the linked race, else their own
   // race, else the first race type in the country, nationwide.
   const filter = useMemo<RaceFilter | null>(() => {
-    if (chosenFilter) return { ...chosenFilter, regionNames: props.regionNames };
+    if (chosenFilter) {
+      // Finished always shows one year: the chosen one while the type has
+      // races then, else its newest (a type switch lands on a real year).
+      const year =
+        chosenFilter.stage === "final"
+          ? defaultFinishedYear(races, chosenFilter.type, chosenFilter.year)
+          : chosenFilter.year;
+      return { ...chosenFilter, year, regionNames: props.regionNames };
+    }
     const linked = races.find((r) => r.key === pickedKey);
     const start = linked ?? myRace ?? races[0];
     if (!start) return null;
