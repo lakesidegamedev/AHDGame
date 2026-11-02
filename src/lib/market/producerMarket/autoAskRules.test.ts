@@ -3,6 +3,7 @@ import {
   AUTO_ASK_DEFAULT_STEP,
   AUTO_ASK_MAX_STEP,
   nextAutoAsk,
+  rememberAutoAsk,
   sellThroughRatio,
 } from "./autoAskRules";
 
@@ -139,13 +140,12 @@ describe("auto ask sell-through controller", () => {
     expect(decision?.ask).toBe(100 * (1 + AUTO_ASK_MAX_STEP));
   });
 
-  it("rejects a nonsensical step", () => {
-    expect(() =>
-      nextAutoAsk({ memory, soldUnits: 100, offeredUnits: 100, step: Number.NaN })
-    ).toThrow("Invalid auto ask step");
-    expect(() => nextAutoAsk({ memory, soldUnits: 100, offeredUnits: 100, step: -0.1 })).toThrow(
-      "Invalid auto ask step"
-    );
+  it("falls back to the default step instead of throwing on a nonsensical step", () => {
+    const expected = 100 * (1 + AUTO_ASK_DEFAULT_STEP);
+    for (const step of [Number.NaN, Number.POSITIVE_INFINITY, -0.1]) {
+      const decision = nextAutoAsk({ memory, soldUnits: 100, offeredUnits: 100, step });
+      expect(decision?.ask).toBeCloseTo(expected);
+    }
   });
 
   it("walks a rejected raise back over two turns instead of compounding it", () => {
@@ -159,6 +159,61 @@ describe("auto ask sell-through controller", () => {
     });
     expect(second?.action).toBe("revert");
     expect(second?.ask).toBe(memory.ask);
+  });
+});
+
+describe("rememberAutoAsk", () => {
+  const sold = (soldUnits: number, mem = memory) =>
+    nextAutoAsk({ memory: mem, soldUnits, offeredUnits: 100 })!;
+
+  it("records the ask a raise came from as the revert target", () => {
+    const decision = sold(100);
+    expect(rememberAutoAsk(memory, decision)).toEqual({
+      ask: decision.ask,
+      previousAsk: memory.ask,
+    });
+  });
+
+  it("confirms the price on a hold, so there is nothing left to revert", () => {
+    expect(rememberAutoAsk(memory, sold(95))).toEqual({ ask: 100, previousAsk: 100 });
+  });
+
+  it("advances past a revert and a lower", () => {
+    const reverted = sold(50);
+    expect(reverted.action).toBe("revert");
+    expect(rememberAutoAsk(memory, reverted)).toEqual({ ask: 95, previousAsk: 95 });
+
+    const flat = { ask: 100, previousAsk: 100 };
+    const lowered = sold(50, flat);
+    expect(lowered.action).toBe("lower");
+    expect(rememberAutoAsk(flat, lowered)).toEqual({
+      ask: lowered.ask,
+      previousAsk: lowered.ask,
+    });
+  });
+
+  it("keeps the revert target through a turn that offered nothing", () => {
+    const silent = nextAutoAsk({ memory, soldUnits: 0, offeredUnits: 0 })!;
+    expect(rememberAutoAsk(memory, silent)).toEqual(memory);
+  });
+
+  it("closes the loop: raise, overshoot, give it back, then step down", () => {
+    let mem = { ask: 100, previousAsk: 100 };
+    const asks: number[] = [];
+    const actions: string[] = [];
+    for (const soldUnits of [100, 100, 50, 50, 95]) {
+      const decision = sold(soldUnits, mem);
+      asks.push(decision.ask);
+      actions.push(decision.action);
+      mem = rememberAutoAsk(mem, decision);
+    }
+    const up = 1 + AUTO_ASK_DEFAULT_STEP;
+    expect(actions).toEqual(["raise", "raise", "revert", "lower", "hold"]);
+    expect(asks[0]).toBeCloseTo(100 * up);
+    expect(asks[1]).toBeCloseTo(100 * up * up);
+    expect(asks[2]).toBeCloseTo(100 * up);
+    expect(asks[3]).toBeCloseTo(100);
+    expect(asks[4]).toBeCloseTo(100);
   });
 });
 

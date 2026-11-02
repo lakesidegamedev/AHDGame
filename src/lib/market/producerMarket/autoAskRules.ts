@@ -109,7 +109,10 @@ export function nextAutoAsk(input: {
   floor?: number;
   /** Highest ask the seller may post. Absent, non-finite or non-positive = unbounded. */
   ceiling?: number;
-  /** Fractional raise per sell-out step. Absent = AUTO_ASK_DEFAULT_STEP. */
+  /**
+   * Fractional raise per sell-out step. Absent, non-finite or negative =
+   * AUTO_ASK_DEFAULT_STEP; above AUTO_ASK_MAX_STEP = the cap.
+   */
   step?: number;
 }): AutoAskDecision | null {
   const ask =
@@ -126,9 +129,13 @@ export function nextAutoAsk(input: {
       ? Math.max(floor, ceilingRaw)
       : Number.POSITIVE_INFINITY;
 
+  // A bad step can only come from our own config, and this runs inside the turn,
+  // where a throw would fail the whole turn for every player. Fall back instead.
   const stepRaw = input.step ?? AUTO_ASK_DEFAULT_STEP;
-  if (!Number.isFinite(stepRaw) || stepRaw < 0) throw new Error("Invalid auto ask step");
-  const step = Math.min(stepRaw, AUTO_ASK_MAX_STEP);
+  const step =
+    Number.isFinite(stepRaw) && stepRaw >= 0
+      ? Math.min(stepRaw, AUTO_ASK_MAX_STEP)
+      : AUTO_ASK_DEFAULT_STEP;
 
   const last = clampAsk(ask, floor, ceiling);
   const sellThrough = sellThroughRatio(input.soldUnits, input.offeredUnits);
@@ -155,4 +162,27 @@ export function nextAutoAsk(input: {
   }
 
   return { ask: last, action: "hold", sellThrough };
+}
+
+/**
+ * The memory to store for next turn, given this turn's memory and the decision
+ * made from it. Callers store what this returns and nothing else, so the rule
+ * for `previousAsk` lives here with the controller that reads it.
+ *
+ * Only a raise records a revert target: the ask it raised from. Every other
+ * move leaves nothing to undo, so `previousAsk` advances to the new ask and a
+ * later shortfall steps down instead of reverting to a stale price. A raise is
+ * undoable once, on the turn right after it.
+ *
+ * The exception is silence. A turn that offered nothing carries no signal, so
+ * it keeps the revert target it was given rather than confirming the raise.
+ *
+ * On a first selling turn there is no memory and no decision. The caller seeds
+ * memory as `{ ask, previousAsk: ask }` from the ask it posted.
+ */
+export function rememberAutoAsk(memory: AutoAskMemory, decision: AutoAskDecision): AutoAskMemory {
+  if (decision.action === "raise")
+    return { ask: decision.ask, previousAsk: Math.min(memory.ask, decision.ask) };
+  if (decision.sellThrough === null) return { ask: decision.ask, previousAsk: memory.previousAsk };
+  return { ask: decision.ask, previousAsk: decision.ask };
 }

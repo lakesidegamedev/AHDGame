@@ -790,7 +790,13 @@ export function quoteProducer(input: {
   const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
   // Sell-through feedback (autoAskRules). With ask memory the controller decides
   // the price: sold out climbs one step, the deadband holds, a shortfall reverts
-  // to the previous ask. Without memory the estimator below still runs.
+  // to the previous ask or steps down. Without memory the estimator below still
+  // runs. The controller replaces the profit search, so the demand book only
+  // bounds the price through the ceiling and the ask moves one step per turn.
+  // The loop closes where the caller stores `rememberAutoAsk(memory, decision)`
+  // for next turn; nothing stores it yet, so no caller passes `autoAsk`. Note
+  // that production.ts applies `markedDownAsk` after this returns, so the posted
+  // price can sit below the one chosen here.
   if (input.autoAsk) {
     const decided = nextAutoAsk({
       memory: input.autoAsk.memory,
