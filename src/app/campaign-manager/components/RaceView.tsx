@@ -154,12 +154,14 @@ function RaceBody(
     final && race.primaryPartyId == null && full?.id === race.electionId
       ? (full.generalVotes?.totalVotes ?? null)
       : null;
+  const noCount = final && !race.hasPolling;
   const hasVotes = votes != null && Object.values(votes).some((v) => v > 0);
   const thirdCol = final ? (hasVotes ? "votes" : null) : "change";
   const thirdWidth = props.compact ? (thirdCol === "votes" ? "72px" : "52px") : "80px";
   const cols = [
     "minmax(0,1fr)",
-    props.compact ? "64px" : "80px",
+    // A finished race that counted nothing has no shares to show.
+    ...(noCount ? [] : [props.compact ? "64px" : "80px"]),
     ...(thirdCol ? [thirdWidth] : []),
     ...(props.compact ? [] : ["64px", "72px"]),
   ].join(" ");
@@ -259,6 +261,8 @@ function RaceBody(
         </section>
       ) : race.candidates.length > 0 && race.stage === "general" ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noVotes")}</p>
+      ) : noCount && race.candidates.length > 0 ? (
+        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noFinalVotes")}</p>
       ) : null}
 
       {seats ? (
@@ -353,9 +357,11 @@ function RaceBody(
           }}
         >
           <span>{race.multiSeat ? t("race.colCandidateSlate") : t("race.colCandidate")}</span>
-          <span style={{ textAlign: "right" }}>
-            {race.multiSeat ? t("race.colPartyPoll") : t("race.colPoll")}
-          </span>
+          {noCount ? null : (
+            <span style={{ textAlign: "right" }}>
+              {race.multiSeat ? t("race.colPartyPoll") : t("race.colPoll")}
+            </span>
+          )}
           {thirdCol ? (
             <span style={{ textAlign: "right" }}>
               {t(thirdCol === "votes" ? "race.colVotes" : "race.colChange")}
@@ -472,9 +478,11 @@ function RaceBody(
                       ) : null}
                     </span>
                   </span>
-                  <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
-                    {lineShare(c).toFixed(1)}%
-                  </span>
+                  {noCount ? null : (
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
+                      {lineShare(c).toFixed(1)}%
+                    </span>
+                  )}
                   {thirdCol === "change" ? (
                     <span
                       style={{

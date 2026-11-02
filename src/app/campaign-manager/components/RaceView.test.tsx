@@ -401,3 +401,36 @@ describe("RaceView seat margins", () => {
     ).toBeTruthy();
   });
 });
+
+describe("RaceView finished race with no count", () => {
+  it("says no votes were counted instead of printing zero shares", () => {
+    const done = election({
+      id: "nc",
+      status: "resolved",
+      isEnded: true,
+      inGeneral: false,
+      polling: { sharesPct: {} } as never,
+      cands: [
+        { id: "a", name: "Grant Pruitt", party: "2" },
+        { id: "b", name: "Marcus Hale", party: "1" },
+      ],
+    });
+    const race = buildRaceIndex([done], { ...ctx, includeFinal: true })[0];
+    renderWithElectionsMessages(
+      <RaceView
+        countryId="US"
+        regionNames={regionNames}
+        race={race}
+        full={null}
+        wire={[]}
+        watched={false}
+        onToggleWatch={() => {}}
+        selectedCandidateId={null}
+        onSelectCandidate={() => {}}
+      />
+    );
+    expect(screen.getByText("No votes were counted for this race.")).toBeTruthy();
+    expect(screen.queryByText("0.0%")).toBeNull();
+    expect(screen.getByText("Grant Pruitt")).toBeTruthy();
+  });
+});
