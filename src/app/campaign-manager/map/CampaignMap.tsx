@@ -19,6 +19,7 @@ import { ratingChipStyle } from "../ui";
 import { loadCampaignGeo, type CampaignGeo } from "./geoSource";
 import { countySourceFor, unitRowsFrom, visibleRegions, type UnitRow } from "./mapModel";
 import { useRegionUnits, type RegionUnitRequest } from "./useRegionUnits";
+import { useRegionShapes } from "./useRegionShapes";
 
 export interface CampaignMapProps {
   countryId: string;
@@ -97,6 +98,14 @@ export function CampaignMap(props: CampaignMapProps) {
     return out;
   }, [visible, selectedRace, byRegion]);
   const unitData = useRegionUnits(requests, props.turn ?? 0);
+  // US sub-units are not in the static asset: their shapes load on their own so
+  // a race draws its counties before it has results to colour them.
+  const shapeData = useRegionShapes(
+    props.countryId,
+    filter.type,
+    visible,
+    geo?.unitSource === "results"
+  );
 
   const rowsByRegion = useMemo(() => {
     const out: Record<string, Map<string, UnitRow>> = {};
@@ -132,6 +141,9 @@ export function CampaignMap(props: CampaignMapProps) {
         row: rows?.get(u.id),
       }));
     }
+    const served = shapeData[region]?.subdivisions;
+    if (served)
+      return served.map((u) => ({ id: u.id, name: u.name, d: u.path, row: rows?.get(u.id) }));
     return [...(rows?.values() ?? [])].map((r) => ({ id: r.id, name: r.name, d: r.path, row: r }));
   };
 
@@ -185,7 +197,10 @@ export function CampaignMap(props: CampaignMapProps) {
             <span style={{ fontWeight: 700 }}>{regionLabel(sel)}</span>
             {unitCount > 0 ? (
               <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
-                {t("map.units", { count: unitCount, label: selData?.unitLabelPlural ?? "" }).trim()}
+                {t("map.units", {
+                  count: unitCount,
+                  label: selData?.unitLabelPlural ?? shapeData[sel]?.unitLabelPlural ?? "",
+                }).trim()}
               </span>
             ) : null}
           </>

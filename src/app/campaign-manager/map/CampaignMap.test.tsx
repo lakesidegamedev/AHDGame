@@ -176,3 +176,43 @@ describe("CampaignMap", () => {
     expect(await screen.findByText("No map for this country yet.")).toBeTruthy();
   });
 });
+
+describe("CampaignMap with shapes served apart from results (US)", () => {
+  it("draws a region's counties before its race has any results", async () => {
+    geoResult = {
+      w: 100,
+      h: 100,
+      unitSource: "results",
+      unitOffsetY: 0,
+      regions: { SEE: { n: "SEE", d: "M0,0H10V10Z", bb: [0, 0, 10, 10], nb: [] } },
+      units: null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url.startsWith("/api/maps/subdivisions")
+          ? new Response(
+              JSON.stringify({
+                viewBox: "0 0 1 1",
+                unitLabel: "County",
+                unitLabelPlural: "Counties",
+                subdivisions: [
+                  { id: "c1", name: "Aurora", path: "M0,0H5V5Z" },
+                  { id: "c2", name: "Beadle", path: "M5,5H9V9Z" },
+                ],
+              })
+            )
+          : new Response("{}", { status: 404 })
+      )
+    );
+    // A race no other test has loaded results for: the results cache is module-wide.
+    renderMap({ regionId: "SEE" }, "see");
+    fireEvent.click(await screen.findByRole("button", { name: "Aurora" }));
+    expect(screen.getByText("No results for this area yet.")).toBeTruthy();
+    expect(screen.getByText("2 Counties")).toBeTruthy();
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "/api/maps/subdivisions?country=UK&type=commons&region=SEE",
+      expect.anything()
+    );
+  });
+});
