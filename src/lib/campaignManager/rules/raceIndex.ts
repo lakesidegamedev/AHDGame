@@ -40,6 +40,8 @@ export interface CmCandidate {
   influence: number;
   isYou: boolean;
   isNPP: boolean;
+  /** Who has endorsed the candidate, as the elections API lists them. */
+  endorsements: EnrichedCandidate["endorsements"];
 }
 
 export interface CmRace {
@@ -63,6 +65,8 @@ export interface CmRace {
   totalSeats: number | null;
   seatsEstimate: Record<string, number> | null;
   isMine: boolean;
+  /** Live primary rows: how many from each party advance to the general. */
+  advanceCount: number | null;
   /** The race's calendar year; null on legacy rows without a baked year. */
   year: number | null;
   cycle: number;
@@ -119,6 +123,7 @@ function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
     influence: c.politicalInfluence,
     isYou: c.isYou,
     isNPP: c.isNPP,
+    endorsements: c.endorsements ?? [],
   };
 }
 
@@ -173,6 +178,7 @@ function finishedPrimaryCandidates(
         influence: 0,
         isYou: false,
         isNPP: false,
+        endorsements: [],
       };
     })
     .sort(byShare)
@@ -203,6 +209,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       cycle: e.cycle,
       seatId: e.seatId ?? null,
       winnerId: null,
+      advanceCount: null,
     };
 
     if (e.isEnded) {
@@ -234,6 +241,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
           ...base,
           key: e.id,
           stage: "primary",
+          advanceCount: e.primaryAdvanceCount ?? 1,
           primaryPartyId: null,
           primaryPartyName: null,
           turnsLeft: turnsUntil(e.primaryEndTurn, ctx.currentTurn),
@@ -254,6 +262,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
           ...base,
           key: `${e.id}:${group.partyId}`,
           stage: "primary",
+          advanceCount: e.primaryAdvanceCount ?? 1,
           primaryPartyId: group.partyId,
           primaryPartyName: group.partyName,
           turnsLeft: turnsUntil(e.primaryEndTurn, ctx.currentTurn),
@@ -301,6 +310,7 @@ type RaceBase = Pick<
   | "cycle"
   | "seatId"
   | "winnerId"
+  | "advanceCount"
 >;
 
 /**

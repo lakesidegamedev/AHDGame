@@ -8,6 +8,7 @@ import { readableInk } from "@/lib/elections/marginTierShade";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { partyLines, type CmCandidate, type CmRace } from "@/lib/campaignManager/rules";
+import { EndorsementBadges } from "@/components/elections/EndorsementBadges";
 
 /** What the simple-influence routes report for one viewer and one target. */
 interface InfluenceInfo {
@@ -145,6 +146,7 @@ export function TargetPanel({
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 17, fontWeight: 700 }}>{candidate.name}</div>
           <div style={{ fontSize: 12.5, color: BLEND.muted }}>{candidate.partyName}</div>
+          <EndorsementBadges endorsements={candidate.endorsements} />
         </div>
       </div>
 

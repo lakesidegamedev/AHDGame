@@ -491,8 +491,8 @@
         "undecided": "Undecided {pct}",
         "leadBy": "{leader} leads by {margin} pts",
         "noVotes": "No votes counted yet. Polling starts with the first turn of the general.",
-        "primaryNote": "{party} primary. The winner carries the {party} nomination into the general in {n, plural, one {# turn} other {# turns}}.",
-        "primaryNoteOpen": "{party} primary. The winner carries the {party} nomination into the general.",
+        "primaryNote": "{party} primary. Only {party} members vote. Top {count} {count, plural, one {advances} other {advance}} to the general in {n, plural, one {# turn} other {# turns}}.",
+        "primaryNoteOpen": "{party} primary. Only {party} members vote. Top {count} {count, plural, one {advances} other {advance}} to the general.",
         "seatTitle": "Projected seats",
         "majority": "Majority {majority} of {total}",
         "seatMajority": "{abbr} wins a majority ({seats}). Projected from the current vote.",
@@ -517,7 +517,13 @@
         "over": "This race is over.",
         "enterRace": "Enter race",
         "withdraw": "Withdraw",
-        "working": "Working"
+        "working": "Working",
+        "scoringShow": "How primary scoring works",
+        "scoringHide": "Hide scoring detail",
+        "scoring": "Primary share = candidate score ÷ total in that party. Score = party alignment (40, split into state-lean 25 + party 15 where available) + favorability (35) + in-region influence (25). NPP opponents take a 25% score penalty against players.",
+        "advancing": "Projected to advance",
+        "standing": "Your standing: {position} of {n}, {gap} pts {leading, select, true {ahead} other {behind}}",
+        "endorsedBy": "Endorsed by"
       },
       "chart": {
         "title": "Polling by turn",

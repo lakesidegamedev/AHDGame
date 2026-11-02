@@ -153,7 +153,7 @@ describe("RaceView", () => {
     );
     expect(
       screen.getByText(
-        "Democratic primary. The winner carries the Democratic nomination into the general in 3 turns."
+        "Democratic primary. Only Democratic members vote. Top 1 advances to the general in 3 turns."
       )
     ).toBeTruthy();
   });
@@ -248,5 +248,55 @@ describe("RaceView on a finished race", () => {
     expect(screen.getByText("Grant Pruitt")).toBeTruthy();
     expect(screen.queryByText("Votes")).toBeNull();
     expect(screen.queryByText(/won by/)).toBeNull();
+  });
+});
+
+describe("RaceView primary details", () => {
+  const primary = (over: Partial<ElectionResponse> = {}) =>
+    election({
+      id: "pr",
+      inPrimary: true,
+      inGeneral: false,
+      primaryAdvanceCount: 1,
+      byParty: [
+        {
+          partyId: "1",
+          partyName: "Party 1",
+          partyColor: "#2563eb",
+          candidates: [
+            { ...cand({ id: "a", name: "Ann Lee", party: "1", share: 55 }), endorsements: [] },
+            {
+              ...cand({ id: "b", name: "Bo Diaz", party: "1", share: 30, isYou: true }),
+              endorsements: [{ type: "npp", nppId: "7", nppName: "Sen. Roe" }],
+            },
+            { ...cand({ id: "c", name: "Cy Park", party: "1", share: 15 }), endorsements: [] },
+          ],
+        },
+      ] as never,
+      ...over,
+    });
+
+  it("tags the projected advancers", () => {
+    view(primary());
+    expect(screen.getAllByText("Projected to advance")).toHaveLength(1);
+    const ann = screen.getByRole("button", { name: /Ann Lee/ });
+    expect(ann.textContent).toContain("Projected to advance");
+  });
+
+  it("shows the advancing count and scoring link", () => {
+    view(primary({ primaryAdvanceCount: 3 } as Partial<ElectionResponse>));
+    expect(screen.getByText(/Top 3 advance to the general/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "How primary scoring works" }));
+    expect(screen.getByText(/Primary share = candidate score/)).toBeTruthy();
+  });
+
+  it("shows your standing on your own primary", () => {
+    view(primary());
+    expect(screen.getByText("Your standing: 2 of 3, 25.0 pts behind")).toBeTruthy();
+  });
+
+  it("shows a candidate's endorsements", () => {
+    view(primary());
+    expect(screen.getByText("Sen. Roe")).toBeTruthy();
   });
 });

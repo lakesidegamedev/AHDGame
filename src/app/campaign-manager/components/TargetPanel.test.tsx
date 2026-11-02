@@ -164,3 +164,18 @@ describe("TargetPanel on a finished race", () => {
     expect(screen.queryByRole("button", { name: /Boost/ })).toBeNull();
   });
 });
+
+describe("TargetPanel endorsements", () => {
+  it("links each endorser of the picked candidate", () => {
+    const endorsed = {
+      ...pruitt,
+      endorsements: [{ type: "npp" as const, nppId: "7", nppName: "Sen. Roe" }],
+    };
+    renderWithElectionsMessages(
+      <TargetPanel race={race} candidate={endorsed} onActed={() => {}} onShowMyMoves={() => {}} />
+    );
+    expect(screen.getByRole("link", { name: /Sen. Roe/ }).getAttribute("href")).toBe(
+      "/politicians/npp/7"
+    );
+  });
+});

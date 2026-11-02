@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { readableInk } from "@/lib/elections/marginTierShade";
@@ -8,6 +8,7 @@ import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import type { RaceWireItem } from "@/lib/elections/raceWireFeed";
 import {
   lastDelta,
+  myRaceSummary,
   partyLines,
   pollingSeries,
   raceLines,
@@ -81,6 +82,15 @@ function RaceBody(
     ...(props.compact ? [] : ["64px", "72px"]),
   ].join(" ");
   const standing = raceStanding(race);
+  // A live primary's top N by share are on course for the general.
+  const advancers = new Set(
+    race.stage === "primary" && race.advanceCount != null
+      ? [...race.candidates]
+          .sort((a, b) => b.share - a.share)
+          .slice(0, race.advanceCount)
+          .map((c) => c.id)
+      : []
+  );
   const lines = raceLines(race);
   const total = lines.reduce((s, l) => s + l.share, 0);
   const undecided = Math.max(0, 100 - total);
@@ -117,11 +127,7 @@ function RaceBody(
       {race.candidates.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.openPrimary")}</p>
       ) : race.stage === "primary" ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
-          {race.turnsLeft != null
-            ? t("race.primaryNote", { party: race.primaryPartyName ?? "", n: race.turnsLeft })
-            : t("race.primaryNoteOpen", { party: race.primaryPartyName ?? "" })}
-        </p>
+        <PrimaryNote race={race} />
       ) : null}
 
       {race.hasPolling ? (
@@ -274,6 +280,7 @@ function RaceBody(
         >
           {people.map((c) => {
             const d = lastDelta(series, lineOf(c));
+            const advancing = advancers.has(c.id);
             const on = c.id === props.selectedCandidateId;
             const party = race.multiSeat ? `${c.partyName} · #${slotOf.get(c.id)}` : c.partyName;
             return (
@@ -333,6 +340,30 @@ function RaceBody(
                       >
                         {party}
                       </span>
+                      {advancing ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: BLEND.positive }}>
+                          {t("race.advancing")}
+                        </span>
+                      ) : null}
+                      {c.endorsements.length > 0 ? (
+                        <span
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 6,
+                            fontSize: 11,
+                            color: BLEND.caution,
+                          }}
+                        >
+                          <span className="sr-only">{t("race.endorsedBy")}</span>
+                          {c.endorsements.map((e, i) => (
+                            <span key={`${e.nppId ?? e.characterId ?? i}`}>
+                              <span aria-hidden="true">★ </span>
+                              <span>{e.type === "npp" ? e.nppName : e.characterName}</span>
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
                     </span>
                   </span>
                   <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
@@ -395,6 +426,57 @@ function RaceBody(
       {props.history}
       {props.admin}
     </article>
+  );
+}
+
+/** The primary's rules (who votes, how many advance), its scoring and the player's standing. */
+function PrimaryNote({ race }: { race: CmRace }) {
+  const t = useTranslations("elections.campaignManager");
+  const [open, setOpen] = useState(false);
+  const party = race.primaryPartyName ?? "";
+  const count = race.advanceCount ?? 1;
+  const mine = race.isMine ? myRaceSummary(race) : null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+      <p style={{ margin: 0, color: BLEND.muted }}>
+        {race.turnsLeft != null
+          ? t("race.primaryNote", { party, count, n: race.turnsLeft })
+          : t("race.primaryNoteOpen", { party, count })}
+      </p>
+      {mine ? (
+        <p style={{ margin: 0, fontWeight: 600 }}>
+          {t("race.standing", {
+            position: mine.position,
+            n: race.candidates.length,
+            gap: mine.gap.toFixed(1),
+            leading: String(mine.leading),
+          })}
+        </p>
+      ) : null}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          alignSelf: "flex-start",
+          padding: 0,
+          border: 0,
+          background: "transparent",
+          cursor: "pointer",
+          fontFamily: FONT.sans,
+          fontSize: 12,
+          fontWeight: 600,
+          color: BLEND.accentInk,
+        }}
+      >
+        {t(open ? "race.scoringHide" : "race.scoringShow")}
+      </button>
+      {open ? (
+        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: BLEND.muted }}>
+          {t("race.scoring")}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
