@@ -165,6 +165,9 @@ export function GameResetControls() {
   const [startingParties, setStartingParties] = useState<"default" | "none">("default");
   const [startYear, setStartYear] = useState(2019);
   const [startWeek, setStartWeek] = useState(1);
+  // In-progress text in the year/week fields; null shows the committed date.
+  const [yearDraft, setYearDraft] = useState<string | null>(null);
+  const [weekDraft, setWeekDraft] = useState<string | null>(null);
   const [currentIteration, setCurrentIteration] = useState<{
     type: IterationType;
     number: number;
@@ -402,6 +405,12 @@ export function GameResetControls() {
     if (next) selectConditions(next, sameVariant ? selectedVariant : presetVariant(next));
   };
 
+  // Typed year/week commit through the same path as the slider, so the base
+  // world and metric blend follow. A partial entry ("19") stays in the draft
+  // until it is a valid date; blur drops the draft back to the committed value.
+  const setDate = (year: number, week: number) =>
+    setDateFromIndex((year - MIN_RESET_YEAR) * WEEKS_PER_YEAR + (week - 1));
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
@@ -410,9 +419,47 @@ export function GameResetControls() {
         <div className="mb-3 flex items-end justify-between gap-4">
           <div>
             <p className="text-body-sm font-medium text-muted">Reset date</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {startYear} <span className="text-base text-muted">Week {startWeek}</span>
-            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={MIN_RESET_YEAR}
+                max={MAX_RESET_YEAR}
+                value={yearDraft ?? String(startYear)}
+                onChange={(event) => {
+                  setYearDraft(event.target.value);
+                  const year = Number(event.target.value);
+                  if (Number.isInteger(year) && year >= MIN_RESET_YEAR && year <= MAX_RESET_YEAR) {
+                    setDate(year, startWeek);
+                  }
+                }}
+                onBlur={() => setYearDraft(null)}
+                disabled={loading !== null}
+                aria-label="Reset year"
+                className="w-[4.5ch] appearance-none rounded-md border border-transparent bg-transparent px-1 text-2xl font-semibold tabular-nums hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <label className="flex items-baseline gap-1 text-base text-muted">
+                Week
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={WEEKS_PER_YEAR}
+                  value={weekDraft ?? String(startWeek)}
+                  onChange={(event) => {
+                    setWeekDraft(event.target.value);
+                    const week = Number(event.target.value);
+                    if (Number.isInteger(week) && week >= 1 && week <= WEEKS_PER_YEAR) {
+                      setDate(startYear, week);
+                    }
+                  }}
+                  onBlur={() => setWeekDraft(null)}
+                  disabled={loading !== null}
+                  aria-label="Reset week"
+                  className="w-[3.5ch] appearance-none rounded-md border border-transparent bg-transparent px-1 tabular-nums text-foreground hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </label>
+            </div>
           </div>
           <p className="text-right text-xs text-muted">
             Base world: <span className="font-medium text-foreground">{selectedYear}</span>
