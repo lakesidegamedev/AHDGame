@@ -35,6 +35,8 @@ export interface MobileDockPayload {
   tabs: {
     id: string;
     label: string;
+    /** Optional label for a narrow native tab; clients fall back to `label`. */
+    shortLabel?: string;
     icon: MobileDockIcon;
     href?: string;
     sheet?: DockSheetKey;
@@ -111,6 +113,7 @@ export function mobileDockPayload(spec: MobileDockSpec): MobileDockPayload {
     tabs: spec.tabs.map((tab) => ({
       id: tab.id,
       label: tab.label,
+      ...(tab.shortLabel ? { shortLabel: tab.shortLabel } : {}),
       icon: iconFor(tab.icon),
       ...(tab.href ? { href: tab.href } : {}),
       ...(tab.sheet ? { sheet: tab.sheet } : {}),

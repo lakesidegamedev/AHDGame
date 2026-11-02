@@ -396,7 +396,8 @@
       "portfolio": "Portfolio",
       "whatsNew": "What's new",
       "switchCountry": "View another country",
-      "close": "Close"
+      "close": "Close",
+      "nation": "Nation"
     },
     "widgets": {
       "open": "Open",
