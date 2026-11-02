@@ -101,12 +101,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       for (const p of Object.values(t.candidateParties ?? {})) partyIds.add(Number(p));
       for (const p of Object.keys(t.primaryResults?.byParty ?? {})) partyIds.add(Number(p));
     }
-    const countryId = resolved.election.countryId;
+    // Party ids repeat across countries; legacy rows without one are US (as enrichElection treats them).
+    const countryId = resolved.election.countryId ?? "US";
     const [parties, gameState] = await Promise.all([
       db
         .collection<PoliticalParty>("politicalParties")
         .find({
-          ...(countryId ? { countryId } : {}),
+          countryId,
           sequentialId: { $in: [...partyIds].filter(Number.isFinite) },
         })
         .project<Pick<PoliticalParty, "sequentialId" | "name" | "abbreviation" | "color">>({

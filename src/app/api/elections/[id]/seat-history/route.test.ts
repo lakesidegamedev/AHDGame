@@ -148,3 +148,15 @@ describe("GET /api/elections/[id]/seat-history", () => {
     }
   });
 });
+
+describe("GET seat-history party scope", () => {
+  it("reads a legacy US seat's parties from the US only", async () => {
+    const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
+    const legacy = makeElection({ countryId: undefined, state: "MI", electionType: "senate" });
+    vi.mocked(resolveElectionRouteParam).mockResolvedValue({ ok: true, election: legacy });
+    await call(legacy._id.toHexString());
+    expect(db.collection("politicalParties").find.mock.calls[0][0]).toMatchObject({
+      countryId: "US",
+    });
+  });
+});
