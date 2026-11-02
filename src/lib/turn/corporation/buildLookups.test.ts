@@ -195,6 +195,44 @@ describe("buildCorporationLookups — bond holdings", () => {
     expect(result.countryClearingBooks?.has("WAL")).toBe(true);
   });
 
+  it("builds trade routes on a modern world once a block embargo is in force", async () => {
+    db.collection("tradeEmbargoes").find.mockReturnValue(
+      makeCursor([
+        {
+          sourceCountry: "US",
+          targetCountry: "JP",
+          commodity: "iron",
+          direction: "export",
+          mode: "block",
+        },
+      ])
+    );
+    const result = await buildCorporationLookups(db as unknown as Db);
+    expect(result.countryClearingBooks).toBeNull();
+    expect(result.tradeRoutes).not.toBeNull();
+    expect(result.tradeRoutes!.affinityFor("iron" as never, "US" as never, "JP" as never)).toBe(0);
+    expect(
+      result.tradeRoutes!.affinityFor("iron" as never, "JP" as never, "US" as never)
+    ).toBeGreaterThan(0);
+  });
+
+  it("builds no trade routes on a modern world whose only embargo is a cap", async () => {
+    db.collection("tradeEmbargoes").find.mockReturnValue(
+      makeCursor([
+        {
+          sourceCountry: "US",
+          targetCountry: "JP",
+          commodity: "iron",
+          direction: "export",
+          mode: "cap",
+          cap: 100,
+        },
+      ])
+    );
+    const result = await buildCorporationLookups(db as unknown as Db);
+    expect(result.tradeRoutes).toBeNull();
+  });
+
   it("includes sovereign bond holdings in bondsHeldByCorpId", async () => {
     const lookups = await buildCorporationLookups(db as unknown as Db);
 

@@ -147,7 +147,7 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { ownRouteKey, recordedGroupRouteMembers } from "@/lib/market/internalSupply/rules";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
-import { tradeEligibilityScope } from "./rules/tradeEligibilityScope";
+import { countBlockEmbargoes, tradeEligibilityScope } from "./rules/tradeEligibilityScope";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -1233,11 +1233,11 @@ export async function buildCorporationLookups(
   // Route eligibility is a different question from book partitioning: it says
   // who may buy from whom inside whatever book clears the sale. That is where
   // an embargo belongs, and it is not era-specific, so a modern world with an
-  // active embargo now builds the affinity graph too. A modern world without
+  // active block embargo now builds the affinity graph too. A modern world without
   // one still builds nothing, which keeps this a no-op there.
   const tradeScope = tradeEligibilityScope({
     eraUnitScale,
-    activeEmbargoCount: activeEmbargoDocs.length,
+    activeBlockEmbargoCount: countBlockEmbargoes(activeEmbargoDocs),
   });
   let countryClearingBooks: ReturnType<typeof buildCountryClearingBooks> | null = null;
   let tradeRoutes: CorporationLookups["tradeRoutes"] = null;

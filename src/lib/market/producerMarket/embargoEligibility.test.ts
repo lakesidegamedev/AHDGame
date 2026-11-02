@@ -49,10 +49,12 @@ function eligibleFor(embargoes: TradeEmbargo[], buyerCountry: string): string[] 
 
 describe("a modern world keeps one book but an embargo still binds", () => {
   it("builds route eligibility for an embargo world even at era unit scale 1", () => {
-    expect(tradeEligibilityScope({ eraUnitScale: 1, activeEmbargoCount: 1 }).routes).toBe(true);
-    expect(tradeEligibilityScope({ eraUnitScale: 1, activeEmbargoCount: 1 }).countryBooks).toBe(
-      false
+    expect(tradeEligibilityScope({ eraUnitScale: 1, activeBlockEmbargoCount: 1 }).routes).toBe(
+      true
     );
+    expect(
+      tradeEligibilityScope({ eraUnitScale: 1, activeBlockEmbargoCount: 1 }).countryBooks
+    ).toBe(false);
   });
 
   it("keeps every seller eligible when no embargo is in force", () => {

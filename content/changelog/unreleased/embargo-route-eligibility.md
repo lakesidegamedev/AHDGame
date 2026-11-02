@@ -20,9 +20,11 @@ areas: [engine, backend]
   with an era unit scale. On every modern world it was skipped, so an embargo
   limited to one commodity or one direction of trade had no effect on a sale.
   Only a full two-way embargo did anything, through a separate older path.
-- That rule now also runs on any world with an active embargo. Households,
+- That rule now also runs on any world with an active block embargo. Households,
   governments, investment buyers, marketing buyers and producers buying inputs
   all skip offers the embargo blocks.
 - A world with no active embargo builds exactly what it built before, and era
   worlds are unchanged. Modern worlds still clear in one world market; the
   embargo filters who can buy inside it.
+- A cap embargo limits volume rather than closing a route, so it does not
+  switch this rule on by itself. Caps keep working on era worlds as before.
