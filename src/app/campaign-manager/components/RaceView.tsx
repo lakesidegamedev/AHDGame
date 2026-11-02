@@ -19,6 +19,7 @@ import {
 import { EYEBROW } from "../ui";
 import { PollingChart } from "./PollingChart";
 import { RaceHeader, useRaceHeading } from "./RaceHeader";
+import { RaceSchedule } from "./RaceSchedule";
 
 export interface RaceViewProps {
   countryId: string;
@@ -385,6 +386,8 @@ function RaceBody(
           turnLabel={race.stage === "primary" ? "count" : "turn"}
         />
       </section>
+
+      {full?.id === race.electionId ? <RaceSchedule election={full} /> : null}
 
       <RaceWire items={props.wire} />
       {props.history}

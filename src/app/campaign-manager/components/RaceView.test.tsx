@@ -7,6 +7,14 @@ import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { cand, election } from "@/lib/campaignManager/rules/__fixtures__/election";
 import { RaceView } from "./RaceView";
 
+vi.mock("@/contexts/useGameClock", () => ({
+  useGameClock: () => ({
+    formatRemainingTurns: () => ({ text: "5 turns", urgency: "normal" }),
+    formatRemaining: () => ({ text: "No timer", urgency: "normal" }),
+    formatYear: () => null,
+  }),
+}));
+
 afterEach(cleanup);
 
 const ctx = { currentTurn: 10, nationalChamberKeys: ["senate", "house"] };

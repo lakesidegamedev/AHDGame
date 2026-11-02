@@ -621,6 +621,18 @@
         "noResult": "No result recorded",
         "primary": "{abbr} primary",
         "primaryWinner": "{name} won"
+      },
+      "schedule": {
+        "title": "Schedule",
+        "primaryOpens": "Primary opens",
+        "primaryOpened": "Primary opened",
+        "primaryEnds": "Primary ends",
+        "primaryClosed": "Primary closed",
+        "closes": "Voting closes",
+        "declared": "Result declared",
+        "show": "Show full schedule",
+        "hide": "Hide full schedule",
+        "when": "{timer} · {year}"
       }
     }
   }
