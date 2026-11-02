@@ -21,6 +21,8 @@ export type DockIconSpec =
 export interface DockTabSpec {
   id: string;
   label: string;
+  /** A label that fits a narrow native tab (the web dock shows `label`). */
+  shortLabel?: string;
   icon: DockIconSpec;
   href?: string;
   sheet?: DockSheetKey;
@@ -147,6 +149,7 @@ export function buildMobileDock({
   tabs.push({
     id: "nation",
     label: nationName,
+    shortLabel: t("dock.nation"),
     icon: { kind: "flag", country: pageCountry },
     sheet: "nation",
     active: !onState && pathActive(pathname, nationHref),
