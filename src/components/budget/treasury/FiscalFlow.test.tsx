@@ -100,6 +100,17 @@ describe("FiscalFlow grouped bars", () => {
     expect(screen.queryByText("Debt Service")).toBeNull();
   });
 
+  it("says Hide while open and keeps a hint on how to close the list", () => {
+    renderFlow();
+    const group = screen.getByRole("button", { name: /Smaller outlays \(2\)/ });
+    expect(group.getAttribute("aria-label")).toMatch(/Show the lines/);
+    expect(screen.getByText(/to see the lines inside it/)).toBeTruthy();
+
+    fireEvent.click(group);
+    expect(group.getAttribute("aria-label")).toMatch(/Hide the lines/);
+    expect(screen.getByText(/same bar again to close this list/)).toBeTruthy();
+  });
+
   it("opens a group from the keyboard", () => {
     renderFlow();
     const group = screen.getByRole("button", { name: /Smaller sources \(2\)/ });

@@ -307,7 +307,23 @@ export function BudgetBreakdownPanel({
                     </Link>
                   )}
 
-                  {l.parts && l.parts.length > 0 && (
+                  {/* One part is the whole line: a 100% row would repeat the
+                      line, so say what it is instead of itemising it. */}
+                  {l.parts && l.parts.length === 1 && (
+                    <div data-line-parts="single" className="mt-2.5">
+                      <div className="mb-1 text-body-sm font-medium text-muted">
+                        What this line is made of
+                      </div>
+                      <p className="text-body-xs text-foreground">{l.parts[0]!.label}</p>
+                      {l.parts[0]!.note && (
+                        <p className="mt-0.5 text-[11px] leading-snug text-muted">
+                          {l.parts[0]!.note}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {l.parts && l.parts.length > 1 && (
                     <div className="mt-2.5">
                       <div className="mb-1 text-body-sm font-medium text-muted">
                         What this line is made of

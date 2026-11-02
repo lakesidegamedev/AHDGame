@@ -57,6 +57,35 @@ describe("BudgetBreakdownPanel parts", () => {
     expect(screen.getAllByText("Space Programme Act")).toHaveLength(1);
   });
 
+  it("describes a one-part line instead of listing it at 100%", () => {
+    render(
+      <BudgetBreakdownPanel
+        kind="revenue"
+        title="Revenue"
+        lines={[
+          {
+            id: "other",
+            label: "Other Revenue",
+            description: "Non-tax receipts.",
+            amount: 50,
+            parts: [{ label: "Fees and fines", amount: 50, note: "Charges and fines." }],
+          },
+        ]}
+        total={50}
+        sym="$"
+        countryCode="US"
+        grantRecipientLabel="States"
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Other Revenue/ }));
+    expect(screen.getByText("Fees and fines")).toBeTruthy();
+    expect(screen.getByText("Charges and fines.")).toBeTruthy();
+    const block = document.querySelector('[data-line-parts="single"]');
+    expect(block).toBeTruthy();
+    expect(block!.querySelector("ul")).toBeNull();
+    expect(block!.textContent).not.toContain("%");
+  });
+
   it("leaves a line without parts as it was", () => {
     renderPanel();
     fireEvent.click(screen.getByRole("button", { name: /Healthcare/ }));

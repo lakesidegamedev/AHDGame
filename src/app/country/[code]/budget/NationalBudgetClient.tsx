@@ -319,7 +319,9 @@ export function NationalBudgetClient() {
             .filter((law) => lawSpendingCategory(law.budgetCategory) === key)
             .map((law) => ({ title: law.title, cost: formatLawCost(law), year: law.enactedYear })),
           // Live laws carry their annual cost, so the Other line can be added
-          // up; a historical snapshot has only cost descriptions.
+          // up; a historical snapshot stores only cost descriptions, so a past
+          // year lists its laws without amounts. Deliberate: Other Revenue's
+          // one described part needs no amounts, so it shows in both views.
           ...(key === "other" && !(data.isSnapshot ?? false)
             ? {
                 parts: otherSpendingParts({

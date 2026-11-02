@@ -185,8 +185,14 @@ export function FiscalFlow({
       ? {
           role: "button",
           tabIndex: 0,
-          "aria-expanded": openGroup?.nid === n.nid,
-          "aria-label": `${n.label}: ${money(n.value)}. Show the lines in this group.`,
+          // The control toggles the pinned list, so its state is the pin, not a hover.
+          "aria-expanded": pinned === n.nid,
+          "aria-label": `${n.label}: ${money(n.value)}. ${
+            pinned === n.nid ? "Hide" : "Show"
+          } the lines in this group.`,
+          // SVG groups draw no focus ring of their own; outline the bar instead.
+          className:
+            "outline-none focus-visible:[&>rect]:stroke-gold focus-visible:[&>rect]:stroke-2",
           onClick: () => togglePinned(n.nid),
           onKeyDown: (e: KeyboardEvent) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -347,9 +353,13 @@ export function FiscalFlow({
           </ul>
         </div>
       )}
-      {groupNodes.length > 0 && !openGroup && (
+      {groupNodes.length > 0 && (
         <div className="mt-1 text-body-xs text-muted">
-          Tap or click a grey &quot;Smaller&quot; bar to see the lines inside it.
+          {pinned ? (
+            <>Tap or click the same bar again to close this list.</>
+          ) : (
+            <>Tap or click a grey &quot;Smaller&quot; bar to see the lines inside it.</>
+          )}
         </div>
       )}
       <div className="mt-1 flex items-center justify-between text-body-xs text-muted">
