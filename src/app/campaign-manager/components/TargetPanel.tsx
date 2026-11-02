@@ -9,6 +9,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { partyLines, type CmCandidate, type CmRace } from "@/lib/campaignManager/rules";
 import { EndorsementBadges } from "@/components/elections/EndorsementBadges";
+import { EndorseControl } from "./EndorseControl";
 
 /** What the simple-influence routes report for one viewer and one target. */
 interface InfluenceInfo {
@@ -47,11 +48,14 @@ export function TargetPanel({
   candidate,
   onActed,
   onShowMyMoves,
+  endorse,
 }: {
   race: CmRace | null;
   candidate: CmCandidate | null;
   onActed: () => void;
   onShowMyMoves: () => void;
+  /** A live general the player may endorse in: who they endorse now. */
+  endorse?: { endorsedId: string | null; onChanged: () => void } | null;
 }) {
   const t = useTranslations("elections.campaignManager.target");
   const tr = useTranslations("elections.campaignManager.race");
@@ -149,6 +153,15 @@ export function TargetPanel({
           <EndorsementBadges endorsements={candidate.endorsements} />
         </div>
       </div>
+
+      {endorse && race.stage === "general" && !candidate.isYou ? (
+        <EndorseControl
+          electionId={race.electionId}
+          candidateId={candidate.id}
+          endorsedId={endorse.endorsedId}
+          onChanged={endorse.onChanged}
+        />
+      ) : null}
 
       <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         {[

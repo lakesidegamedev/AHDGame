@@ -572,7 +572,10 @@
         "cost": "{actions} AP · {amount}",
         "barnstormNote": "{gain} influence",
         "working": "Working",
-        "resources": "You have {actions} AP and {amount} in campaign funds."
+        "resources": "You have {actions} AP and {amount} in campaign funds.",
+        "endorse": "Endorse",
+        "unendorse": "Withdraw endorsement",
+        "endorsed": "You endorse this candidate."
       },
       "myMoves": {
         "loading": "Loading your actions",

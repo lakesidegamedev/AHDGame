@@ -263,6 +263,11 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     selected && selected.stage !== "final" && detail.full?.id === selected.electionId
       ? detail.full
       : null;
+  // Endorsing works in a live general, for a player with a character.
+  const endorse =
+    selected?.stage === "general" && detail.full?.id === selected.electionId && detail.full.myCharId
+      ? { endorsedId: detail.full.myEndorsedCandidateId, onChanged: refreshAfterAction }
+      : null;
   const entry = useRaceEntry(entryElection, {
     confirm,
     constituencyId,
@@ -354,6 +359,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
             race={selected}
             candidate={candidate}
             onActed={refreshAfterAction}
+            endorse={endorse}
             onShowMyMoves={() => setPanel("self")}
           />
         ) : (
@@ -546,6 +552,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
             race={selected}
             candidate={candidate}
             onActed={refreshAfterAction}
+            endorse={endorse}
             onShowMyMoves={() => {
               setSheetOpen(false);
               setMobileTab("self");

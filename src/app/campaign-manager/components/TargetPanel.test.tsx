@@ -6,6 +6,7 @@ import { buildRaceIndex } from "@/lib/campaignManager/rules";
 import { election } from "@/lib/campaignManager/rules/__fixtures__/election";
 import { TargetPanel } from "./TargetPanel";
 
+vi.mock("@/contexts/ToastContext", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({ formatAmount: (n: number) => `$${Math.round(n).toLocaleString("en-US")}` }),
 }));
@@ -177,5 +178,44 @@ describe("TargetPanel endorsements", () => {
     expect(screen.getByRole("link", { name: /Sen. Roe/ }).getAttribute("href")).toBe(
       "/politicians/npp/7"
     );
+  });
+});
+
+describe("TargetPanel endorsing", () => {
+  it("endorses the picked candidate in a general", async () => {
+    const onChanged = vi.fn();
+    renderWithElectionsMessages(
+      <TargetPanel
+        race={race}
+        candidate={pruitt}
+        onActed={() => {}}
+        onShowMyMoves={() => {}}
+        endorse={{ endorsedId: null, onChanged }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Endorse" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "/api/elections/e1/endorse",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ candidateId: "a" }) })
+    );
+  });
+
+  it("withdraws an endorsement already given", async () => {
+    const onChanged = vi.fn();
+    renderWithElectionsMessages(
+      <TargetPanel
+        race={race}
+        candidate={pruitt}
+        onActed={() => {}}
+        onShowMyMoves={() => {}}
+        endorse={{ endorsedId: "a", onChanged }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw endorsement" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith("/api/elections/e1/endorse", {
+      method: "DELETE",
+    });
   });
 });
