@@ -18,6 +18,7 @@ export {
   raceLines,
   raceStanding,
   regionFill,
+  resolveSelectedRace,
   seatSummary,
   sortRaces,
   subunitShares,

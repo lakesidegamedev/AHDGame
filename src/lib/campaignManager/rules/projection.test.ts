@@ -60,6 +60,22 @@ describe("projectSubunits", () => {
     expect(out.find((u) => u.id === "right")!.winner).toBe("centrist");
   });
 
+  it("weighs equal-population districts evenly when they carry no electorate", () => {
+    const districts = [
+      { id: "D-1", name: "D-1", electorate: 0, leanScalar: -20 },
+      { id: "D-2", name: "D-2", electorate: 0, leanScalar: 20 },
+    ];
+    const out = projectSubunits(
+      districts,
+      [
+        { id: "d", partyId: "1", share: 50, econ: -2 },
+        { id: "r", partyId: "2", share: 50, econ: 2 },
+      ],
+      "general"
+    );
+    expect(out.map((u) => u.winner)).toEqual(["d", "r"]);
+  });
+
   it("returns nothing with no candidates", () => {
     expect(projectSubunits(subs, [], "general")).toEqual([]);
   });

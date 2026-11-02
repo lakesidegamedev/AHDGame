@@ -1,6 +1,6 @@
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { classifyMarginTier, type MarginTier } from "@/lib/elections/generalViewModel";
-import type { CmRace } from "./raceIndex";
+import { filterRaces, type CmRace, type RaceFilter } from "./raceIndex";
 
 /** Who leads a race, by how much, and how safe that is. */
 
@@ -106,6 +106,24 @@ export function sortRaces(races: CmRace[], watched: ReadonlySet<string>): CmRace
       Number(watched.has(b.key)) - Number(watched.has(a.key)) ||
       (margin.get(a.key) ?? 0) - (margin.get(b.key) ?? 0)
   );
+}
+
+/**
+ * The race on screen: the one the player picked while the filter still shows
+ * it, else the region's first race in `sortRaces` order (theirs, watched,
+ * closest). Nationwide, a race that left view selects nothing.
+ */
+export function resolveSelectedRace(
+  races: CmRace[],
+  pickedKey: string | null,
+  filter: RaceFilter,
+  watched: ReadonlySet<string>
+): CmRace | null {
+  const inView = filterRaces(races, { ...filter, query: "" });
+  const picked = inView.find((r) => r.key === pickedKey);
+  if (picked) return picked;
+  if (filter.regionId === "ALL") return null;
+  return sortRaces(inView, watched)[0] ?? null;
 }
 
 /**

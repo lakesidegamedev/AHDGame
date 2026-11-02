@@ -56,7 +56,12 @@ export function projectSubunits(
             econPosition: c.econ,
           };
   }
-  return distributeSubdivisionVotes(subdivisions, regionVotes, info);
+  // District files carry no electorate (districts are drawn to equal
+  // population), and an all-zero electorate distributes nothing: weigh them evenly.
+  const weighted = subdivisions.some((s) => s.electorate > 0)
+    ? subdivisions
+    : subdivisions.map((s) => ({ ...s, electorate: 1 }));
+  return distributeSubdivisionVotes(weighted, regionVotes, info);
 }
 
 /** A primary's candidates share a party colour; the leader keeps it, the rest take these in order. */

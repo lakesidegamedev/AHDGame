@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BlendShell } from "@/components/blend/BlendShell";
 import { BLEND, FONT } from "@/components/blend/tokens";
-import type { CmRace, RaceFilter } from "@/lib/campaignManager/rules";
+import { resolveSelectedRace, type CmRace, type RaceFilter } from "@/lib/campaignManager/rules";
 import { useRaceIndex } from "./useRaceIndex";
 import { useRaceDetail } from "./useRaceDetail";
 import { useWatchedRaces } from "./useWatchedRaces";
@@ -18,7 +18,6 @@ import { CampaignMap } from "./map/CampaignMap";
 import { BottomSheet, MobileRaceStrip, MobileTabs } from "./components/MobileCampaignManager";
 import { useIsDesktop } from "./useIsDesktop";
 import { CampaignActionModal } from "@/app/actions/components/CampaignActionModal";
-import { filterRaces, sortRaces } from "@/lib/campaignManager/rules";
 
 export interface CampaignManagerClientProps {
   countryId: string;
@@ -104,8 +103,11 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     };
   }, [chosenFilter, races, pickedKey, myRace, props.regionNames]);
 
-  const selected: CmRace | null =
-    races.find((r) => r.key === pickedKey) ?? (chosenFilter ? null : (myRace ?? null));
+  // A race the filter no longer shows (another type, stage or region) gives
+  // way to the region's own race, so the panel and the map agree with the filter.
+  const selected: CmRace | null = filter
+    ? resolveSelectedRace(races, pickedKey, filter, watched)
+    : null;
   // A completed turn changes `currentTurn`, an action bumps `detailVersion`:
   // either re-reads the selected race's polling and wire.
   const detail = useRaceDetail(
@@ -146,8 +148,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
       updateFilter({ regionId });
       if (regionId === "ALL" || !filter) return;
       if (selected?.regionId === regionId) return;
-      const there = sortRaces(filterRaces(races, { ...filter, regionId, query: "" }), watched);
-      const next = there.find((r) => r.isMine) ?? there[0];
+      const next = resolveSelectedRace(races, null, { ...filter, regionId }, watched);
       if (next) {
         setPickedKey(next.key);
         setCandidateId(null);

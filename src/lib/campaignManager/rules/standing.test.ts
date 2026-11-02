@@ -8,6 +8,7 @@ import {
   pollingSeries,
   raceStanding,
   regionFill,
+  resolveSelectedRace,
   seatSummary,
   subunitShares,
 } from "./index";
@@ -302,5 +303,70 @@ describe("myRaceSummary", () => {
       partySeats: null,
       totalSeats: null,
     });
+  });
+});
+
+describe("resolveSelectedRace", () => {
+  const races = buildRaceIndex(
+    [
+      election({
+        id: "wa-house",
+        electionType: "house",
+        state: "WA",
+        cands: [{ id: "h", name: "H", party: "1", share: 60 }],
+      }),
+      election({
+        id: "wa-sen-safe",
+        state: "WA",
+        cands: [
+          { id: "a", name: "A", party: "1", share: 80 },
+          { id: "b", name: "B", party: "2", share: 20 },
+        ],
+      }),
+      election({
+        id: "wa-sen-close",
+        state: "WA",
+        cands: [
+          { id: "c", name: "C", party: "1", share: 51 },
+          { id: "d", name: "D", party: "2", share: 49 },
+        ],
+      }),
+    ],
+    ctx
+  );
+  const view = (
+    over: Partial<{ type: string; stage: "all" | "primary" | "general"; regionId: string }>
+  ) => ({
+    type: "senate",
+    stage: "all" as const,
+    regionId: "WA",
+    query: "",
+    regionNames: {},
+    ...over,
+  });
+
+  it("keeps the picked race while the filter still shows it", () => {
+    expect(resolveSelectedRace(races, "wa-sen-safe", view({}), new Set())?.key).toBe("wa-sen-safe");
+  });
+
+  it("moves to the region's closest race of the new type when the picked one leaves view", () => {
+    // Picked the House race, then switched the filter to Senate.
+    expect(resolveSelectedRace(races, "wa-house", view({}), new Set())?.key).toBe("wa-sen-close");
+  });
+
+  it("prefers a watched race in the region", () => {
+    expect(resolveSelectedRace(races, "wa-house", view({}), new Set(["wa-sen-safe"]))?.key).toBe(
+      "wa-sen-safe"
+    );
+  });
+
+  it("selects nothing nationwide once the picked race leaves view", () => {
+    expect(resolveSelectedRace(races, "wa-house", view({ regionId: "ALL" }), new Set())).toBeNull();
+  });
+
+  it("selects nothing when the region has no race of the type", () => {
+    expect(
+      resolveSelectedRace(races, "wa-house", view({ stage: "primary" }), new Set())
+    ).toBeNull();
   });
 });
