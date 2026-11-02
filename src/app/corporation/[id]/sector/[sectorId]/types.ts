@@ -643,6 +643,8 @@ export interface PlantsData {
   capacityUnits: number | null;
   producedUnits: number | null;
   soldUnits: number | null;
+  /** Units handed free to the company's own sites; not sales and not unsold. */
+  ownSiteUnits?: number | null;
   unsoldUnits: number | null;
   idleUnits: number | null;
   fillRate: number | null;
