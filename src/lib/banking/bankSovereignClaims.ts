@@ -16,6 +16,7 @@ import {
 import { settleAtomicDocumentTransition } from "@/lib/banking/atomicDocumentSettlement";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { bankSovereignMaturityCostBasis } from "@/lib/banking/rules/sovereignClaims";
+import { remarkBankTreasuryAfterMaturity } from "@/lib/banking/bankTreasury";
 
 type ClaimReceiptRow = { _id: string; kind?: string; turn?: number; status?: string };
 
@@ -901,6 +902,7 @@ export async function settleBankSovereignClaims(
     ? budget.treasuryBalance
     : undefined;
 
+  const maturedBankIds = new Set<string>();
   for (const claim of claims) {
     if (!ObjectId.isValid(claim.bankId)) continue;
     const receipts = receiptsByClaim.get(claim.id) ?? [];
@@ -910,6 +912,7 @@ export async function settleBankSovereignClaims(
     if (await recoverCompletedClaim(db, claim, budgetId, receipts)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
+      if (claim.kind === "maturity") maturedBankIds.add(claim.bankId);
       continue;
     }
     if (receipts.some((record) => record.status === "partial")) continue;
@@ -937,7 +940,14 @@ export async function settleBankSovereignClaims(
     if (settled?.status === "applied" || (settled?.status === "replayed" && !settled.error)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
+      if (claim.kind === "maturity") maturedBankIds.add(claim.bankId);
     }
+  }
+  // Redemption cash is now in the vault; take the matured lots out of the mark
+  // in the same pass, or the bank reads the same money twice until its next
+  // banking phase.
+  for (const bankId of maturedBankIds) {
+    await remarkBankTreasuryAfterMaturity(db, new ObjectId(bankId), attemptTurn);
   }
   return { paidClaimIds };
 }

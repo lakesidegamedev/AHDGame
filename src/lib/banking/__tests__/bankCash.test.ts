@@ -49,8 +49,8 @@ describe("reserve arithmetic", () => {
   });
 
   it("offers only the surplus over the requirement", () => {
-    // 500k held, 200k required.
-    expect(upstreamCapacity(charter(), 0.2)).toBe(300_000);
+    // 500k held, 200k required; 2M of loans leaves equity far above the capital kept.
+    expect(upstreamCapacity(charter({ totalLoans: 2_000_000 }), 0.2)).toBe(300_000);
   });
 
   it("offers nothing when the whole balance is required", () => {
@@ -70,11 +70,14 @@ describe("reserve arithmetic", () => {
     // = −400k, so nothing may be upstreamed even though 300k looks 'surplus'.
     expect(upstreamCapacity(charter({ totalLoans: 100_000 }), 0.2)).toBe(0);
     // With loans covering more of the deposit liability the owner has real
-    // equity: 500k + 850k − 1M = 350k, but only the 300k reserve surplus fits.
-    expect(upstreamCapacity(charter({ totalLoans: 850_000 }), 0.2)).toBe(300_000);
-    // Equity below the reserve surplus becomes the binding ceiling: 500k + 700k
-    // − 1M = 200k < 300k surplus.
-    expect(upstreamCapacity(charter({ totalLoans: 700_000 }), 0.2)).toBe(200_000);
+    // equity: 500k + 850k − 1M = 350k. The bank keeps the capital that clears the
+    // stress test on its 850k of loans (127.5k loss + 6% of 722.5k = 170.85k), so
+    // 179.15k may leave, inside the 300k reserve surplus.
+    expect(upstreamCapacity(charter({ totalLoans: 850_000 }), 0.2)).toBe(179_150);
+    // 500k + 700k − 1M = 200k of equity, 140.7k of it kept: 59.3k.
+    expect(upstreamCapacity(charter({ totalLoans: 700_000 }), 0.2)).toBeCloseTo(59_300, 6);
+    // Equity with ample loans: the reserve surplus binds again.
+    expect(upstreamCapacity(charter({ totalLoans: 2_000_000 }), 0.2)).toBe(300_000);
   });
 
   it("counts borrowed cash as a liability, not distributable capital", () => {
@@ -189,8 +192,8 @@ describe("injectBankCapital and upstreamBankCash through the journal", () => {
   });
 
   it("pays out the surplus and re-gates the requirement inside the write", async () => {
-    const memory = world();
-    // 500k held, 200k required at 20%, equity 300k: 300k distributable.
+    const memory = world({ totalLoans: 2_000_000 });
+    // 500k held, 200k required at 20%, equity 1.5M: the 300k surplus binds.
     const result = await upstreamBankCash(memory as unknown as Db, corpId, 300_000, 0.2);
     expect(result).toEqual({
       ok: true,
@@ -206,7 +209,7 @@ describe("injectBankCapital and upstreamBankCash through the journal", () => {
   });
 
   it("clamps to the surplus rather than paying what was asked", async () => {
-    const memory = world();
+    const memory = world({ totalLoans: 2_000_000 });
     const result = await upstreamBankCash(memory as unknown as Db, corpId, 999_999_999, 0.2);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -256,7 +259,7 @@ describe("injectBankCapital and upstreamBankCash through the journal", () => {
   it("never books negative contributed capital when paying out earnings", async () => {
     // 500k held against 100k ever posted: the bank earned the rest, and paying
     // it out must not drive the memo below zero.
-    const memory = world({ postedCapital: 100_000 });
+    const memory = world({ postedCapital: 100_000, totalLoans: 2_000_000 });
     await upstreamBankCash(memory as unknown as Db, corpId, 300_000, 0.2);
     expect(corp(memory).bankCharter.postedCapital).toBe(0);
     expect(corp(memory).bankCharter.cashReserves).toBe(200_000);
