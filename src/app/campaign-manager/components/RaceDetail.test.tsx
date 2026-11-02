@@ -57,3 +57,25 @@ describe("RaceDetail", () => {
     expect(screen.getByText("factor ledger")).toBeTruthy();
   });
 });
+
+vi.mock("@/components/elections/general/PersuasionDrivers", () => ({
+  PersuasionDrivers: ({ stateName }: { stateName: string }) => <div>drivers for {stateName}</div>,
+}));
+
+describe("RaceDetail persuasion drivers", () => {
+  it("explains a regional general's swing with the persuasion drivers", () => {
+    renderWithElectionsMessages(
+      <RaceDetail
+        election={full({
+          electionType: "senate",
+          state: "OH",
+          inPrimary: false,
+          allCandidates: [{ id: "a", characterName: "A", party: "1" }] as never,
+        })}
+        regionName="Ohio"
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Race detail" }));
+    expect(screen.getByText("drivers for Ohio")).toBeTruthy();
+  });
+});

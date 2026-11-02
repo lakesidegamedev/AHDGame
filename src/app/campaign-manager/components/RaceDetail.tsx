@@ -6,19 +6,40 @@ import { BLEND, FONT } from "@/components/blend/tokens";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { ParticipationLedgerCard } from "@/components/elections/general/ParticipationLedgerCard";
 import { FactorLedgerCard } from "@/components/elections/general/FactorLedgerCard";
+import { PersuasionDrivers } from "@/components/elections/general/PersuasionDrivers";
+import {
+  persuasionDriverProps,
+  type PersuasionDriverSource,
+} from "@/components/elections/general/persuasionDriverProps";
 
 type DetailRace = Pick<
   ElectionResponse,
-  "countryId" | "allCandidates" | "generalVotes" | "regionElectorate" | "factorLedger"
->;
+  | "countryId"
+  | "electionType"
+  | "state"
+  | "inPrimary"
+  | "allCandidates"
+  | "generalVotes"
+  | "regionElectorate"
+  | "factorLedger"
+> &
+  Omit<PersuasionDriverSource, "allCandidates">;
 
 /**
  * The general's detail, collapsed under "Race detail": turnout against the
  * region's electorate, why people are voting (the latest turn's participation
- * ledger) and the factor ledger, each only where the race carries it. The
+ * ledger), what is moving the swing (persuasion drivers, for a regional
+ * general) and the factor ledger, each only where the race carries it. The
  * same cards the election page shows.
  */
-export function RaceDetail({ election }: { election: DetailRace }) {
+export function RaceDetail({
+  election,
+  regionName,
+}: {
+  election: DetailRace;
+  /** The race's region, named for the drivers card. */
+  regionName?: string;
+}) {
   const t = useTranslations("elections.campaignManager.detail");
   const [open, setOpen] = useState(false);
   const gv = election.generalVotes;
@@ -31,7 +52,14 @@ export function RaceDetail({ election }: { election: DetailRace }) {
     electorate && electorate.count > 0 && ballots > 0 ? (ballots / electorate.count) * 100 : null;
   const participation = gv?.turnSnapshots?.at(-1)?.participation ?? null;
   const factorLedger = election.factorLedger ?? null;
-  if (turnout == null && !participation && !factorLedger) return null;
+  // Same gate as the election page: a single-region general with candidates.
+  const showDrivers =
+    !election.inPrimary &&
+    election.electionType !== "president" &&
+    !!election.state &&
+    (election.allCandidates?.length ?? 0) > 0;
+  const drivers = showDrivers ? persuasionDriverProps(election) : null;
+  if (turnout == null && !participation && !factorLedger && !drivers) return null;
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -65,6 +93,14 @@ export function RaceDetail({ election }: { election: DetailRace }) {
             </p>
           ) : null}
           <ParticipationLedgerCard data={participation} />
+          {drivers ? (
+            <PersuasionDrivers
+              stateId={election.state}
+              stateName={regionName ?? election.state}
+              candidates={drivers.candidates}
+              inputs={drivers.inputs}
+            />
+          ) : null}
           {factorLedger && gv ? (
             <FactorLedgerCard
               countryId={election.countryId}

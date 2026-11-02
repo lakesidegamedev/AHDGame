@@ -8,11 +8,8 @@ import { GeneralElectionShellClient } from "./GeneralElectionShellClient";
 import { buildGeneralElectionViewModel } from "@/lib/elections/generalViewModel";
 import { countryHasPresidentialRunningMate } from "@/lib/elections/runningMateEligibility";
 import { CampaignSeasonBanner } from "./CampaignSeasonBanner";
-import type { DriverDisplayInputs } from "@/lib/elections/computePersuasionDriverDisplay";
-import {
-  PersuasionDrivers,
-  type PersuasionDriverCandidate,
-} from "@/components/elections/general/PersuasionDrivers";
+import { persuasionDriverProps } from "@/components/elections/general/persuasionDriverProps";
+import { PersuasionDrivers } from "@/components/elections/general/PersuasionDrivers";
 import { NationalMoodGauge } from "@/components/elections/general/NationalMoodGauge";
 import { DemocraticHealthGauge } from "@/components/elections/general/DemocraticHealthGauge";
 import { FactorLedgerCard } from "@/components/elections/general/FactorLedgerCard";
@@ -182,38 +179,8 @@ export function GeneralPhaseView({
   // Persuasion-driver inputs — shared by the presidential shell and the
   // state-race card. All fields are already on the client DTO (support is
   // fogged server-side for non-privileged viewers).
-  const persuasionCandidates: PersuasionDriverCandidate[] = (election.allCandidates ?? []).map(
-    (c) => ({
-      id: c.id,
-      characterId: c.characterId,
-      name: c.characterName,
-      party: c.party,
-      partyColor: c.partyColor,
-      partyEcon: c.partyEcon,
-      partySocial: c.partySocial,
-      economicPosition: c.economicPosition,
-      socialPosition: c.socialPosition,
-      favorability: c.favorability,
-      politicalInfluence: c.politicalInfluence,
-      nationalInfluence: c.nationalInfluence,
-      isNPP: c.isNPP,
-      sharePct: c.sharePct,
-      support: c.support,
-    })
-  );
-  const persuasionInputs: DriverDisplayInputs = {
-    fundsByParty: election.fundsByParty,
-    incumbentSeatShareByParty: election.incumbentSeatShareByParty,
-    regByParty: election.persuasionRegByParty,
-    medianVoter: election.medianVoter,
-    presidentialCoattailPctByParty: election.presidentialCoattailPctByParty,
-    gubernatorialCoattailPctByParty: election.gubernatorialCoattailPctByParty,
-    midtermOppositionBoostPctByParty: election.midtermOppositionBoostPctByParty,
-    incumbentPartyId: election.incumbentPartyId,
-    incumbentApproval: election.incumbentApproval,
-    legislativeIncumbentPartyId: election.legislativeIncumbentPartyId,
-    legislativeIncumbentTenureTerms: election.legislativeIncumbentTenureTerms,
-  };
+  const { candidates: persuasionCandidates, inputs: persuasionInputs } =
+    persuasionDriverProps(election);
   /* Persuasion Drivers for non-presidential general elections. The swing-flow
      engine + drivers already run server-side for every general race (see
      `tallyManagement.ts`). Single-state races (US Senate / Governor / House /

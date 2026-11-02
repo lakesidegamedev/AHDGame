@@ -515,7 +515,7 @@ function RaceBody(
 
       {full?.id === race.electionId ? <RaceSchedule election={full} /> : null}
       {full?.id === race.electionId && race.primaryPartyId == null ? (
-        <RaceDetail election={full} />
+        <RaceDetail election={full} regionName={props.regionNames[race.regionId]} />
       ) : null}
 
       <RaceWire items={props.wire} />
