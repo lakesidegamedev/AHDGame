@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import type { PollingSeries } from "@/lib/campaignManager/rules";
+import { useElementWidth } from "../useElementWidth";
 
 export interface PollingChartLine {
   id: string;
@@ -33,19 +34,7 @@ export function PollingChart({
 }) {
   const t = useTranslations("elections.campaignManager.chart");
   const [hover, setHover] = useState<number | null>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
-  const [W, setW] = useState(FALLBACK_W);
-
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(([entry]) => {
-      const w = Math.round(entry.contentRect.width);
-      if (w > 0) setW(w);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const [boxRef, W] = useElementWidth<HTMLDivElement>(FALLBACK_W);
 
   if (series.length === 0) {
     return <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("empty")}</p>;

@@ -14,6 +14,7 @@ import { TargetPanel } from "./components/TargetPanel";
 import { MyMovesPanel } from "./components/MyMovesPanel";
 import { useActionsController } from "@/app/actions/useActionsController";
 import { raceTitle } from "./raceLabels";
+import { useElementWidth } from "./useElementWidth";
 import { CampaignMap } from "./map/CampaignMap";
 import { BottomSheet, MobileRaceStrip, MobileTabs } from "./components/MobileCampaignManager";
 import { useIsDesktop } from "./useIsDesktop";
@@ -32,6 +33,9 @@ export interface CampaignManagerClientProps {
 }
 
 type FilterState = Omit<RaceFilter, "regionNames">;
+
+/** Centre-column width (px) from which the race sits beside the map. */
+const SIDE_BY_SIDE_MIN = 1000;
 
 /**
  * The Campaign Manager screen. Owns what is selected (race type, stage, region,
@@ -54,6 +58,9 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const [detailVersion, setDetailVersion] = useState(0);
   const [panel, setPanel] = useState<"target" | "self">("target");
   const isDesktop = useIsDesktop();
+  // A wide centre column sets the race beside the map instead of under it.
+  const [centreRef, centreWidth] = useElementWidth<HTMLElement>(0);
+  const sideBySide = isDesktop && centreWidth >= SIDE_BY_SIDE_MIN;
   const [mobileTab, setMobileTab] = useState<"races" | "self">("races");
   const [sheetOpen, setSheetOpen] = useState(false);
   // My moves reports results as toasts, like the Actions page's compact view.
@@ -272,6 +279,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
         }
       >
         <section
+          ref={centreRef}
           style={{
             padding: isDesktop ? "20px 24px" : "16px",
             display: "flex",
@@ -314,33 +322,46 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               }}
             />
           ) : null}
-          {!loading && filter && (isDesktop || mobileTab === "races") ? (
-            <CampaignMap
-              countryId={props.countryId}
-              countryName={props.countryName}
-              regionNoun={props.regionNoun}
-              races={races}
-              filter={filter}
-              selectedRace={selected}
-              onSelectRegion={selectRegion}
-              onCanvass={() => actions.setCampaignAction("canvass")}
-              turn={currentTurn}
-            />
-          ) : null}
-          {!loading && (isDesktop || mobileTab === "races") ? (
-            <RaceView
-              countryId={props.countryId}
-              regionNames={props.regionNames}
-              race={selected}
-              full={detail.full}
-              wire={detail.wire}
-              watched={selected ? watched.has(selected.key) : false}
-              onToggleWatch={() => selected && toggleWatch(selected.key)}
-              selectedCandidateId={candidateId}
-              onSelectCandidate={pickCandidate}
-              compact={!isDesktop}
-            />
-          ) : null}
+          <div
+            style={
+              sideBySide
+                ? {
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 7fr) minmax(380px, 5fr)",
+                    gap: 24,
+                    alignItems: "start",
+                  }
+                : { display: "flex", flexDirection: "column", gap: 18 }
+            }
+          >
+            {!loading && filter && (isDesktop || mobileTab === "races") ? (
+              <CampaignMap
+                countryId={props.countryId}
+                countryName={props.countryName}
+                regionNoun={props.regionNoun}
+                races={races}
+                filter={filter}
+                selectedRace={selected}
+                onSelectRegion={selectRegion}
+                onCanvass={() => actions.setCampaignAction("canvass")}
+                turn={currentTurn}
+              />
+            ) : null}
+            {!loading && (isDesktop || mobileTab === "races") ? (
+              <RaceView
+                countryId={props.countryId}
+                regionNames={props.regionNames}
+                race={selected}
+                full={detail.full}
+                wire={detail.wire}
+                watched={selected ? watched.has(selected.key) : false}
+                onToggleWatch={() => selected && toggleWatch(selected.key)}
+                selectedCandidateId={candidateId}
+                onSelectCandidate={pickCandidate}
+                compact={!isDesktop}
+              />
+            ) : null}
+          </div>
         </section>
       </BlendShell>
       {!isDesktop && sheetOpen && candidate ? (
