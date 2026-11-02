@@ -16,13 +16,14 @@ import { useTranslations } from "next-intl";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { PixelNavIcon } from "./PixelNavIcon";
 import { pixelIconForLink, type DesktopNavLink, type DesktopNavMenu } from "./desktopNavModel";
+import type { DockSheetKey } from "./mobileDockBuilder";
 
 export const MOBILE_DOCK_HEIGHT_VAR = "--mobile-dock-height";
 /** Fired on window when the dock's height changes, so StatusBar can re-measure.
  *  useStatusBarHeightVar keeps its own copy of this name. */
 export const MOBILE_DOCK_EVENT = "ahd:mobile-dock";
 
-export type DockSheetKey = "state" | "nation" | "more";
+export type { DockSheetKey };
 
 export interface DockTab {
   id: string;
