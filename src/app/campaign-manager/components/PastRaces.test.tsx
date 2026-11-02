@@ -16,6 +16,7 @@ const cycles: SeatCycle[] = [
     state: "live",
     winner: null,
     margin: null,
+    seatSplit: null,
     primaries: [{ ...dem, winnerName: "Ann Lee", margin: 12.5 }],
   },
   {
@@ -25,6 +26,7 @@ const cycles: SeatCycle[] = [
     state: "final",
     winner: { name: "Don Riegle", ...dem },
     margin: 21.4,
+    seatSplit: null,
     primaries: [],
   },
   {
@@ -34,6 +36,7 @@ const cycles: SeatCycle[] = [
     state: "final",
     winner: null,
     margin: null,
+    seatSplit: null,
     primaries: [],
   },
 ];
@@ -87,5 +90,21 @@ describe("PastRaces with a cycle that cannot open yet", () => {
     );
     const row = screen.getByRole("button", { name: /2000/ }) as HTMLButtonElement;
     expect(row.disabled).toBe(true);
+  });
+});
+
+describe("PastRaces multi-seat", () => {
+  it("shows the leading party's seats for a multi-seat cycle", () => {
+    const multi: SeatCycle = {
+      ...cycles[1],
+      electionId: "m",
+      winner: null,
+      margin: null,
+      seatSplit: { total: 52, parties: [{ ...dem, seats: 30 }] },
+    };
+    renderWithElectionsMessages(
+      <PastRaces cycles={[cycles[0], multi]} currentId="e3" onOpen={() => {}} />
+    );
+    expect(screen.getByText("DEM won 30 of 52 seats")).toBeTruthy();
   });
 });

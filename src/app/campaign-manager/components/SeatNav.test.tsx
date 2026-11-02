@@ -14,6 +14,7 @@ const cycle = (n: number, year: number, state: SeatCycle["state"] = "final"): Se
   state,
   winner: null,
   margin: null,
+  seatSplit: null,
   primaries: [],
 });
 

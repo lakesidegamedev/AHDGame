@@ -80,3 +80,24 @@ describe("orderSeatCycles and adjacentCycles", () => {
     expect(adjacentCycles(cycles, "e3").next).toBeNull();
   });
 });
+
+describe("multi-seat cycles", () => {
+  it("reports a finished multi-seat race's seat split, not a single winner", () => {
+    const c = summarizeSeatCycle(
+      input({ totalSeats: 52, seatsWon: { "1": 30, "2": 22 }, totalVotes: { a: 600, b: 400 } })
+    );
+    expect(c.winner).toBeNull();
+    expect(c.margin).toBeNull();
+    expect(c.seatSplit).toEqual({
+      total: 52,
+      parties: [
+        { partyId: "1", partyAbbr: "DEM", partyColor: "#2563eb", seats: 30 },
+        { partyId: "2", partyAbbr: "GOP", partyColor: "#dc2626", seats: 22 },
+      ],
+    });
+  });
+
+  it("keeps single-seat races on winner and margin", () => {
+    expect(summarizeSeatCycle(input({ totalSeats: 1 })).seatSplit).toBeNull();
+  });
+});

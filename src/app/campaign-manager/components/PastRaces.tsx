@@ -114,6 +114,12 @@ export function PastRaces({
                       >
                         {t(c.state)}
                       </span>
+                    ) : c.seatSplit ? (
+                      t("seatLead", {
+                        abbr: c.seatSplit.parties[0].partyAbbr,
+                        seats: c.seatSplit.parties[0].seats,
+                        total: c.seatSplit.total,
+                      })
                     ) : c.winner ? (
                       t("winner", { name: c.winner.name, abbr: c.winner.partyAbbr })
                     ) : (

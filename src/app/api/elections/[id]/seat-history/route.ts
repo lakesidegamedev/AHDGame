@@ -32,11 +32,29 @@ type SeatElection = Pick<
   | "senateClass"
   | "chamberClass"
   | "status"
+  | "totalSeats"
 >;
 type SeatTally = Pick<
   ElectionVoteTally,
-  "electionId" | "totalVotes" | "candidateNames" | "candidateParties" | "primaryResults"
+  | "electionId"
+  | "totalVotes"
+  | "candidateNames"
+  | "candidateParties"
+  | "primaryResults"
+  | "seatsEstimate"
+  | "resolvedSeatHolders"
 >;
+
+/** Seats by party: the resolver's frozen holders when present, else the count's estimate. */
+function seatsByParty(tally: SeatTally | undefined): Record<string, number> | null {
+  if (!tally) return null;
+  if (tally.resolvedSeatHolders?.length) {
+    const out: Record<string, number> = {};
+    for (const h of tally.resolvedSeatHolders) out[h.party] = (out[h.party] ?? 0) + h.seats;
+    return out;
+  }
+  return tally.seatsEstimate ?? null;
+}
 
 // GET /api/elections/[id]/seat-history — every cycle of one seat, newest
 // first, with each finished cycle's winner and margin and its finished
@@ -67,6 +85,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         senateClass: 1,
         chamberClass: 1,
         status: 1,
+        totalSeats: 1,
       })
       .toArray();
     const ids: ObjectId[] = elections.map((e) => e._id);
@@ -91,6 +110,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           candidateNames: 1,
           candidateParties: 1,
           primaryResults: 1,
+          seatsEstimate: 1,
+          resolvedSeatHolders: 1,
         })
         .toArray(),
     ]);
@@ -161,6 +182,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         parties: partyMap,
         totalVotes: tally?.totalVotes ?? null,
         primaryResults: tally?.primaryResults?.byParty ?? null,
+        totalSeats: e.totalSeats ?? null,
+        seatsWon: seatsByParty(tally),
       });
     });
 

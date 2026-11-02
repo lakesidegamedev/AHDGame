@@ -644,7 +644,8 @@
         "margin": "{abbr} +{margin}",
         "noResult": "No result recorded",
         "primary": "{abbr} primary",
-        "primaryWinner": "{name} won"
+        "primaryWinner": "{name} won",
+        "seatLead": "{abbr} won {seats} of {total} seats"
       },
       "schedule": {
         "title": "Schedule",

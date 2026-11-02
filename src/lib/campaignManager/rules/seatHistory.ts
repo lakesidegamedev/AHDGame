@@ -24,6 +24,10 @@ export interface SeatCycleInput {
   totalVotes: Record<string, number> | null;
   /** Each party's primary result (tally.primaryResults.byParty). */
   primaryResults: Record<string, SeatPrimaryResult[]> | null;
+  /** Seats the race fills; above 1 it is a multi-seat race. */
+  totalSeats?: number | null;
+  /** Multi-seat races: seats each party won (or holds in the count), by party id. */
+  seatsWon?: Record<string, number> | null;
 }
 
 export interface SeatCycle {
@@ -34,6 +38,11 @@ export interface SeatCycle {
   winner: { name: string; partyId: string; partyAbbr: string; partyColor: string } | null;
   /** Winner minus runner-up in percentage points, 1 dp; null without votes. */
   margin: number | null;
+  /** Finished multi-seat races: seats won by party, most first. Null for single-seat races. */
+  seatSplit: {
+    total: number;
+    parties: Array<{ partyId: string; partyAbbr: string; partyColor: string; seats: number }>;
+  } | null;
   /** Finished primaries in this cycle. */
   primaries: Array<{
     partyId: string;
@@ -93,15 +102,32 @@ function primaryResults(input: SeatCycleInput): SeatCycle["primaries"] {
   return out;
 }
 
+/** A multi-seat race's result is its seat split; it has no single winner. */
+function seatSplit(input: SeatCycleInput): SeatCycle["seatSplit"] {
+  const parties = Object.entries(input.seatsWon ?? {})
+    .filter(([, seats]) => seats > 0)
+    .map(([partyId, seats]) => ({
+      partyId,
+      partyAbbr: input.parties[partyId]?.abbr ?? "",
+      partyColor: input.parties[partyId]?.color ?? "#888888",
+      seats,
+    }))
+    .sort((a, b) => b.seats - a.seats);
+  return parties.length > 0 ? { total: input.totalSeats ?? 0, parties } : null;
+}
+
 export function summarizeSeatCycle(input: SeatCycleInput): SeatCycle {
   const state = cycleState(input.status);
-  const result = state === "final" ? generalResult(input) : { winner: null, margin: null };
+  const multiSeat = (input.totalSeats ?? 1) > 1;
+  const result =
+    state === "final" && !multiSeat ? generalResult(input) : { winner: null, margin: null };
   return {
     electionId: input.electionId,
     cycle: input.cycle,
     year: input.year,
     state,
     ...result,
+    seatSplit: state === "final" && multiSeat ? seatSplit(input) : null,
     primaries: primaryResults(input),
   };
 }
