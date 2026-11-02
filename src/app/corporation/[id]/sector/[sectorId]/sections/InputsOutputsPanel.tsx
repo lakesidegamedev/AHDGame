@@ -78,6 +78,26 @@ export default function InputsOutputsPanel({
   // availability ratio on the rows above is uncapped and is not the throttle.
   const throttleApplied = commodities.throughput?.applied ?? null;
   const throttleFloor = commodities.throughput?.floor ?? THROUGHPUT_MIN;
+  // The callout under the input rows has to explain the run meter's "waiting on
+  // inputs" slice, which is the settlement's input shortfall, not the
+  // availability throttle quoted above (ticket 1754). These can diverge sharply:
+  // a turn where availability was barely trimmed can still have lost most of its
+  // run because the plant could not buy enough of the input. Read the slice off
+  // the same idle causes the meter draws.
+  const inputIdleShare =
+    plants.capacityUnits != null && plants.capacityUnits > 0
+      ? Math.min(
+          1,
+          Math.max(
+            0,
+            (plants.idleCauses?.find((c) => c.cause === "inputs")?.units ?? 0) /
+              plants.capacityUnits
+          )
+        )
+      : null;
+  const showsInputShortfall =
+    commodities.throughput?.bindingInput != null &&
+    ((inputIdleShare ?? 0) > 0.005 || (throttleApplied != null && throttleApplied < 0.999));
   const inputBillSharePct =
     plants.pnl && plants.pnl.revenueAnchor > 0
       ? (plants.pnl.inputsAnchor / plants.pnl.revenueAnchor) * 100
@@ -198,22 +218,37 @@ export default function InputsOutputsPanel({
             </ul>
           )}
           {costliest && <InputOffersHint flow={costliest} />}
-          {throttleApplied != null &&
-            throttleApplied < 0.999 &&
-            commodities.throughput?.bindingInput && (
-              <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
-                Last turn, short supply of{" "}
-                <span className="font-semibold">
-                  {COMMODITY_LABELS[commodities.throughput.bindingInput as CommodityType] ??
-                    commodities.throughput.bindingInput}
-                </span>{" "}
-                was the binding input. That was the &quot;waiting on inputs&quot; slice in the run
-                meter above. Your plants ran at{" "}
-                <span className="font-semibold tabular-nums">{fmtPct(throttleApplied)}</span> of
-                what they could have. A shortage never cuts you below {fmtPct(throttleFloor)}, so a
-                worse world number than that does not bite any harder.
-              </p>
-            )}
+          {showsInputShortfall && commodities.throughput?.bindingInput && (
+            <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
+              Last turn, short supply of{" "}
+              <span className="font-semibold">
+                {COMMODITY_LABELS[commodities.throughput.bindingInput as CommodityType] ??
+                  commodities.throughput.bindingInput}
+              </span>{" "}
+              was the binding input.{" "}
+              {inputIdleShare != null && inputIdleShare > 0.005 ? (
+                <>
+                  It held{" "}
+                  <span className="font-semibold tabular-nums">{fmtPct(inputIdleShare)}</span> of
+                  your capacity idle, which is the &quot;waiting on inputs&quot; slice in the run
+                  meter above.
+                </>
+              ) : (
+                <>It is the &quot;waiting on inputs&quot; slice in the run meter above.</>
+              )}{" "}
+              The availability limit the game put on these plants was{" "}
+              {throttleApplied != null && throttleApplied < 0.999 ? (
+                <>
+                  <span className="font-semibold tabular-nums">{fmtPct(throttleApplied)}</span>, and
+                  a shortage never takes that limit below {fmtPct(throttleFloor)}
+                </>
+              ) : (
+                <>never lower than {fmtPct(throttleFloor)}</>
+              )}
+              . That floor sits under the limit, not under the run: when the input you can actually
+              buy falls short, the run can still be cut below it.
+            </p>
+          )}
         </section>
 
         {/* Outputs ──────────────────────────────────────────────────────────*/}

@@ -106,8 +106,37 @@ describe("InputsOutputsPanel layout", () => {
     );
 
     const callout = screen.getByText("Iron Ore").closest("p");
-    expect(callout?.textContent).toContain("never cuts you below 85%");
+    expect(callout?.textContent).toContain("never takes that limit below 85%");
     expect(callout?.textContent).not.toContain("50%");
+  });
+
+  it("quotes the run meter's input slice, not the availability throttle, as what the plants lost", () => {
+    const throttled: CommoditiesData = {
+      ...commodities,
+      throughput: { bindingInput: "iron", applied: 0.958, projected: 0.5, floor: 0.85 },
+    };
+    render(
+      <InputsOutputsPanel
+        commodities={throttled}
+        plants={
+          {
+            fillRate: 0.15,
+            capacityUnits: 52620,
+            producedUnits: 14699.9,
+            soldUnits: 8000,
+            idleCauses: [{ cause: "inputs", units: 39106 }],
+          } as PlantsData
+        }
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+
+    const callout = screen.getByText("Iron Ore").closest("p");
+    expect(callout?.textContent).toContain("It held 74% of your capacity idle");
+    expect(callout?.textContent).not.toContain("ran at");
   });
 
   it("does not call a projected shortage the cause of a throttle that has not been applied", () => {
