@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 
 /**
@@ -53,10 +53,44 @@ function shortLabel(s: string): string {
   return stripped.length > 26 ? `${stripped.slice(0, 25)}…` : stripped;
 }
 
-interface PreppedNode extends FlowItem {
+interface FlowGroup extends FlowItem {
+  color: string;
+  /** Lines folded into a grouped bar, largest first, with their full labels. */
+  members?: FlowItem[];
+}
+
+/**
+ * Keep the largest `keep` lines and fold the rest into one bar named after how
+ * many lines it holds. The name must not read like a real budget line: most
+ * countries have a line literally called "Other Revenue" or "Other Spending",
+ * and a bucket called "Other revenue" beside it showed two "Other" bars with no
+ * way to tell them apart (suggestion 405).
+ */
+export function groupFlowLines(
+  lines: FlowItem[],
+  keep: number,
+  colors: readonly string[],
+  noun: string
+): FlowGroup[] {
+  const sorted = lines
+    .map((l, i) => ({ label: l.label, value: l.value, color: colors[i % colors.length] }))
+    .sort((a, b) => b.value - a.value);
+  const top: FlowGroup[] = sorted.slice(0, keep).map((g) => ({ ...g, label: shortLabel(g.label) }));
+  const rest = sorted.slice(keep).filter((g) => g.value > 0);
+  const restTotal = rest.reduce((s, g) => s + g.value, 0);
+  if (restTotal > 0)
+    top.push({
+      label: `Smaller ${noun} (${rest.length})`,
+      value: restTotal,
+      color: "#94a3b8",
+      members: rest.map(({ label, value }) => ({ label, value })),
+    });
+  return top;
+}
+
+interface PreppedNode extends FlowGroup {
   /** Stable unique id (index-derived) — labels can repeat across data, keys can't. */
   nid: string;
-  color: string;
   borrow?: boolean;
   surplus?: boolean;
   y: number;
@@ -85,6 +119,9 @@ export function FiscalFlow({
   accent,
 }: FiscalFlowProps) {
   const [hover, setHover] = useState<{ nid: string; label: string; value: number } | null>(null);
+  // A grouped bar opened by tap or keyboard stays open; hover alone does not
+  // exist on a phone, so the list must not depend on it.
+  const [pinned, setPinned] = useState<string | null>(null);
   const money = (n: number) => formatFundsCompact(n, sym);
 
   const W = 760;
@@ -95,40 +132,20 @@ export function FiscalFlow({
   const trunkX1 = W / 2 - 26;
   const trunkX2 = W / 2 + 26;
 
-  // Aggregate revenue: top 5 lines + "Other revenue". Labels are kept full (no
-  // " — " trim) so e.g. Corporate Tax — Domestic/Foreign stay distinct lines.
-  const revGroups = revenue
-    .map((l, i) => ({
-      label: shortLabel(l.label),
-      value: l.value,
-      color: REV_COLORS[i % REV_COLORS.length],
-    }))
-    .sort((a, b) => b.value - a.value);
-  const revTop = revGroups.slice(0, 5);
-  const revOther = revGroups.slice(5).reduce((s, g) => s + g.value, 0);
-  if (revOther > 0) revTop.push({ label: "Other revenue", value: revOther, color: "#94a3b8" });
-
-  // Aggregate spending: top 6 lines + "Other outlays" (named so it can't collide
-  // with a real category literally labelled "Other", e.g. US spending).
-  const spGroups = spending
-    .map((l, i) => ({
-      label: shortLabel(l.label),
-      value: l.value,
-      color: SPEND_COLORS[i % SPEND_COLORS.length],
-    }))
-    .sort((a, b) => b.value - a.value);
-  const spTop = spGroups.slice(0, 6);
-  const spOther = spGroups.slice(6).reduce((s, g) => s + g.value, 0);
-  if (spOther > 0) spTop.push({ label: "Other outlays", value: spOther, color: "#94a3b8" });
+  // Top 5 revenue and top 6 spending lines; the rest fold into one bar each.
+  // Labels are kept full (no " — " trim) so e.g. Corporate Tax — Domestic/Foreign
+  // stay distinct lines.
+  const revTop = groupFlowLines(revenue, 5, REV_COLORS, "sources");
+  const spTop = groupFlowLines(spending, 6, SPEND_COLORS, "outlays");
 
   const deficit = spendingTotal - revenueTotal;
 
-  const leftItems: Array<FlowItem & { color: string; borrow?: boolean }> = [...revTop];
+  const leftItems: Array<FlowGroup & { borrow?: boolean }> = [...revTop];
   if (deficit > 0)
     leftItems.push({ label: "Net borrowing", value: deficit, color: "#ef4444", borrow: true });
   const leftTotal = leftItems.reduce((s, g) => s + g.value, 0);
 
-  const rightItems: Array<FlowItem & { color: string; surplus?: boolean }> = [...spTop];
+  const rightItems: Array<FlowGroup & { surplus?: boolean }> = [...spTop];
   if (deficit < 0)
     rightItems.push({ label: "Surplus", value: -deficit, color: "#22c55e", surplus: true });
   const rightTotal = rightItems.reduce((s, g) => s + g.value, 0);
@@ -157,6 +174,29 @@ export function FiscalFlow({
   const trunkY = PAD;
   let trunkLeftOff = trunkY;
   let trunkRightOff = trunkY;
+
+  const groupNodes = [...leftNodes, ...rightNodes].filter((n) => n.members?.length);
+  const openGroup =
+    groupNodes.find((n) => n.nid === hover?.nid) ?? groupNodes.find((n) => n.nid === pinned);
+  const togglePinned = (nid: string) => setPinned((current) => (current === nid ? null : nid));
+  // Grouped bars are the only interactive nodes: the rest stay hover-only.
+  const nodeProps = (n: PreppedNode) =>
+    n.members?.length
+      ? {
+          role: "button",
+          tabIndex: 0,
+          "aria-expanded": openGroup?.nid === n.nid,
+          "aria-label": `${n.label}: ${money(n.value)}. Show the lines in this group.`,
+          onClick: () => togglePinned(n.nid),
+          onKeyDown: (e: KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              togglePinned(n.nid);
+            }
+          },
+          style: { cursor: "pointer" },
+        }
+      : { style: { cursor: "default" } };
 
   const ribbon = (x1: number, y1a: number, y1b: number, x2: number, y2a: number, y2b: number) => {
     const mx = (x1 + x2) / 2;
@@ -251,7 +291,7 @@ export function FiscalFlow({
             key={`ln-${n.nid}`}
             onMouseEnter={() => setHover({ nid: n.nid, label: n.label, value: n.value })}
             onMouseLeave={() => setHover(null)}
-            style={{ cursor: "default" }}
+            {...nodeProps(n)}
           >
             <rect x={colL} y={n.y} width="7" height={n.h} rx="2" fill={n.color} />
             <text
@@ -274,7 +314,7 @@ export function FiscalFlow({
             key={`rn-${n.nid}`}
             onMouseEnter={() => setHover({ nid: n.nid, label: n.label, value: n.value })}
             onMouseLeave={() => setHover(null)}
-            style={{ cursor: "default" }}
+            {...nodeProps(n)}
           >
             <rect x={colR - 7} y={n.y} width="7" height={n.h} rx="2" fill={n.color} />
             <text
@@ -292,6 +332,26 @@ export function FiscalFlow({
           </g>
         ))}
       </svg>
+      {openGroup?.members && (
+        <div className="mt-2 rounded-lg border border-card-border bg-background/40 p-3">
+          <div className="mb-1 text-body-xs font-semibold text-foreground">
+            {openGroup.label}: {money(openGroup.value)}
+          </div>
+          <ul className="space-y-0.5 text-body-xs text-muted">
+            {openGroup.members.map((m, i) => (
+              <li key={`${openGroup.nid}-${i}`} className="flex justify-between gap-3">
+                <span>{m.label}</span>
+                <span className="tabular-nums text-foreground">{money(m.value)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {groupNodes.length > 0 && !openGroup && (
+        <div className="mt-1 text-body-xs text-muted">
+          Tap or click a grey &quot;Smaller&quot; bar to see the lines inside it.
+        </div>
+      )}
       <div className="mt-1 flex items-center justify-between text-body-xs text-muted">
         <span>
           <span
