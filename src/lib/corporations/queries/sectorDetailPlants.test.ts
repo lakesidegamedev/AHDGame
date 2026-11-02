@@ -99,6 +99,42 @@ describe("buildSectorPlantsSection", () => {
     expect(s.fillRate).toBeCloseTo(0.8, 6);
   });
 
+  it("does not count output delivered to the company's own sites as unsold (ticket 1757)", () => {
+    // Turn 621 shape: 104.34/day made, 29.11 sold, the rest handed free to
+    // the owner's US sites. The settlement receipt is per hour.
+    const s = buildSectorPlantsSection({
+      eraUnitScale: 1,
+      ...BASE_ARGS,
+      sector: sectorFixture({
+        capitalStock: 250,
+        producedUnits: 104.34,
+        soldUnits: 29.11,
+        producerSettlement: {
+          turn: 100,
+          activeUnits: 10.4167,
+          offeredUnits: 4.3474,
+          producedUnits: 4.3474,
+          soldUnits: 1.2129,
+          plannedRunShare: 1,
+          products: [
+            {
+              commodity: "energy",
+              book: "world",
+              producedUnits: 4.3474,
+              offeredUnits: 4.3474,
+              soldUnits: 1.2129,
+              internalDeliveredUnits: 3.1345,
+              askingUnitPrice: 53.88,
+            },
+          ],
+        } as unknown as CorporateSector["producerSettlement"],
+      }),
+    });
+    expect(s.ownSiteUnits).toBeCloseTo(75.23, 1);
+    expect(s.unsoldUnits).toBeCloseTo(0, 1);
+    expect(s.idleCauses.some((c) => c.cause === "demand")).toBe(false);
+  });
+
   it("falls back to the pre-migration visible facility count", () => {
     const s = buildSectorPlantsSection({ eraUnitScale: 1, ...BASE_ARGS, sector: sectorFixture() });
     expect(s.plantCount).toBe(8);

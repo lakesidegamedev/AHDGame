@@ -46,6 +46,7 @@ import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { deliveredFraction, queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl, type PolicyStackRow } from "@/lib/corporations/plantsPnlBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import {
   SPLIT_BASE_CAPTURE_FRACTION,
   UNOWNED_CAPTURE_BONUS_MULTIPLIER,
@@ -1254,7 +1255,12 @@ function fundedIdleWeights(
   if (!(Number.isFinite(active) && active > 0)) return null;
   const share = (x: number) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
   const offered = receipt.offeredUnits;
-  const sellThrough = offered > 0 ? share(receipt.soldUnits / offered) : 1;
+  // Units delivered to the company's own sites found a use; they are not demand-idle.
+  const ownDelivered = (receipt.products ?? []).reduce(
+    (n, p) => n + Math.max(0, p.internalDeliveredUnits ?? 0),
+    0
+  );
+  const sellThrough = offered > 0 ? share((receipt.soldUnits + ownDelivered) / offered) : 1;
   const runShare = share(receipt.plannedRunShare ?? 1);
   const made = share(receipt.producedUnits / active);
   const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
@@ -1422,8 +1428,15 @@ export function buildSectorPlantsSection(args: {
   const soldUnits = num(sector.soldUnits);
   const mothballed = sector.mothballed === true;
 
+  // Output handed free to the company's own sites is used, not unsold (ticket
+  // 1757): a Kanto plant that fed its owner's US mines read "75 units went
+  // unsold, the market is oversupplied" on a fully used turn.
+  const ownSiteShare = ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? 0;
+  const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
-    producedUnits != null && soldUnits != null ? nonNeg(producedUnits - soldUnits) : null;
+    producedUnits != null && soldUnits != null
+      ? nonNeg(producedUnits - soldUnits - (ownSiteUnits ?? 0))
+      : null;
   const idleUnits =
     capacityUnits != null && producedUnits != null ? nonNeg(capacityUnits - producedUnits) : null;
   const fillRate =
@@ -1781,6 +1794,7 @@ export function buildSectorPlantsSection(args: {
     capacityUnits,
     producedUnits,
     soldUnits,
+    ownSiteUnits,
     unsoldUnits,
     idleUnits,
     fillRate,
