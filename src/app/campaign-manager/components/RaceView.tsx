@@ -421,7 +421,7 @@ export function RaceView(props: RaceViewProps) {
 }
 
 function Avatar({ candidate }: { candidate: CmCandidate }) {
-  const ink = readableInk(candidate.partyColor || "#888888");
+  const ink = readableInk(candidate.color || "#888888");
   const initials = candidate.name
     .split(/\s+/)
     .map((w) => w[0])
@@ -450,7 +450,7 @@ function Avatar({ candidate }: { candidate: CmCandidate }) {
         fontSize: 12,
         fontWeight: 700,
         color: ink,
-        background: candidate.partyColor || BLEND.mutedDim,
+        background: candidate.color || BLEND.mutedDim,
         boxShadow: candidate.isYou
           ? `0 0 0 2px ${BLEND.page}, 0 0 0 4px ${BLEND.accent}`
           : undefined,

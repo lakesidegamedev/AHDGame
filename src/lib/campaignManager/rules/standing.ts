@@ -51,7 +51,10 @@ export interface RaceLine {
   name: string;
   partyId: string;
   abbr: string;
+  /** The line's own colour: a primary gives each candidate one. */
   color: string;
+  /** The party's colour, what the map fills a region with. */
+  partyColor: string;
   share: number;
 }
 
@@ -63,6 +66,7 @@ export function raceLines(race: CmRace): RaceLine[] {
       partyId: l.partyId,
       abbr: l.partyAbbr,
       color: l.partyColor,
+      partyColor: l.partyColor,
       share: l.share,
     }));
   }
@@ -71,7 +75,8 @@ export function raceLines(race: CmRace): RaceLine[] {
     name: c.name,
     partyId: c.partyId,
     abbr: c.partyAbbr,
-    color: c.partyColor,
+    color: c.color,
+    partyColor: c.partyColor,
     share: c.share,
   }));
 }
@@ -85,7 +90,7 @@ export function raceStanding(race: CmRace): RaceStanding {
     leaderName: lead?.name ?? "",
     leaderPartyId: lead?.partyId ?? "",
     leaderAbbr: lead?.abbr ?? "",
-    leaderColor: lead?.color ?? "",
+    leaderColor: lead?.partyColor ?? "",
     runnerUpName: second?.name ?? null,
     margin,
     tier: classifyMarginTier(margin),
@@ -173,7 +178,12 @@ export function subunitShares(
     .sort((a, b) => b.pct - a.pct);
 }
 
-export type PollingSeries = Array<{ turn: number; shares: Record<string, number> }>;
+export type PollingSeries = Array<{
+  turn: number;
+  shares: Record<string, number>;
+  /** Cumulative counted votes by line, when the snapshot carries them (generals). */
+  votes?: Record<string, number>;
+}>;
 
 /**
  * The race's polling by turn, keyed the way `raceLines` keys it. A general
@@ -193,13 +203,26 @@ export function pollingSeries(full: ElectionResponse, race: CmRace): PollingSeri
   }
   const partyOf = new Map(race.candidates.map((c) => [c.id, c.partyId]));
   return (full.generalVotes?.turnSnapshots ?? []).map((snap) => {
-    if (!race.multiSeat) return { turn: snap.turn, shares: { ...snap.sharesPct } };
+    const counted = snap.cumulativeVotes;
+    if (!race.multiSeat) {
+      return {
+        turn: snap.turn,
+        shares: { ...snap.sharesPct },
+        ...(counted ? { votes: { ...counted } } : {}),
+      };
+    }
     const shares: Record<string, number> = {};
     for (const [cid, pct] of Object.entries(snap.sharesPct)) {
       const party = partyOf.get(cid);
       if (party) shares[party] = r1((shares[party] ?? 0) + pct);
     }
-    return { turn: snap.turn, shares };
+    if (!counted) return { turn: snap.turn, shares };
+    const votes: Record<string, number> = {};
+    for (const [cid, n] of Object.entries(counted)) {
+      const party = partyOf.get(cid);
+      if (party) votes[party] = (votes[party] ?? 0) + n;
+    }
+    return { turn: snap.turn, shares, votes };
   });
 }
 

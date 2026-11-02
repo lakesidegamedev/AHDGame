@@ -1,5 +1,6 @@
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import type { EnrichedCandidate } from "@/lib/elections/candidateEnrichment";
+import { primaryCandidateColor } from "./projection";
 
 /**
  * Campaign Manager race index: the elections API's summary rows, reshaped into
@@ -30,6 +31,8 @@ export interface CmCandidate {
   /** Short party label for chips and margins ("DEM +4.2"). */
   partyAbbr: string;
   partyColor: string;
+  /** What the candidate draws in: the party colour, or their own in a primary. */
+  color: string;
   share: number;
   favorability: number;
   influence: number;
@@ -100,6 +103,7 @@ function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
     partyName: c.partyName,
     partyAbbr: c.partyAbbr || initialsOf(c.partyName),
     partyColor: c.partyColor,
+    color: c.partyColor,
     share,
     favorability: c.favorability,
     influence: c.politicalInfluence,
@@ -154,7 +158,10 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
         continue;
       }
       for (const group of e.byParty ?? []) {
-        const candidates = group.candidates.map((c) => toCandidate(c, c.sharePct)).sort(byShare);
+        const candidates = group.candidates
+          .map((c) => toCandidate(c, c.sharePct))
+          .sort(byShare)
+          .map((c, i) => ({ ...c, color: primaryCandidateColor(c.partyColor, i) }));
         races.push({
           ...base,
           key: `${e.id}:${group.partyId}`,

@@ -7,10 +7,11 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getSubdivisionMode } from "@/lib/maps/subdivisionConfig";
 import { loadSubdivisionFile } from "@/lib/maps/subdivisionData";
 import { loadCountyPopulationMap } from "@/lib/counties/queries";
-import { projectSubunits, type ProjectionCandidate } from "@/lib/campaignManager/rules";
-
-/** A primary's candidates share a party colour; the leader keeps it, the rest take these. */
-const PRIMARY_PALETTE = ["#8b5cf6", "#10b981", "#f472b6", "#38bdf8", "#fb923c"];
+import {
+  primaryCandidateColor,
+  projectSubunits,
+  type ProjectionCandidate,
+} from "@/lib/campaignManager/rules";
 
 // GET /api/elections/[id]/state/[stateId]/projected-subdivisions[?party=ID] —
 // a race in progress, projected sub-unit by sub-unit from its current shares:
@@ -76,8 +77,7 @@ export async function GET(
       ordered.forEach((c, i) => {
         candidateNames[c.id] = c.characterName;
         candidateParties[c.id] = party;
-        candidateColors[c.id] =
-          i === 0 ? group.partyColor : PRIMARY_PALETTE[(i - 1) % PRIMARY_PALETTE.length];
+        candidateColors[c.id] = primaryCandidateColor(group.partyColor, i);
       });
       partyColors[party] = group.partyColor;
     } else {

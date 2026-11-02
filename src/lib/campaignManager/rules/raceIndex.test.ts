@@ -76,6 +76,9 @@ describe("buildRaceIndex", () => {
     expect(races[0].primaryPartyId).toBe("1");
     expect(races[0].primaryPartyName).toBe("Party 1");
     expect(races[0].candidates.map((x) => x.share)).toEqual([60, 40]);
+    // Same party, so each primary candidate gets a colour of their own; the leader keeps the party's.
+    expect(races[0].candidates[0].color).toBe("#2563eb");
+    expect(races[0].candidates[1].color).not.toBe("#2563eb");
     // Primary end turn 6 is behind turn 10: a deadline in the past reads as 0, never negative.
     expect(races[0].turnsLeft).toBe(0);
   });

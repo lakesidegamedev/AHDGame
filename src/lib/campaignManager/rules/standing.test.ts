@@ -201,19 +201,19 @@ describe("pollingSeries and lastDelta", () => {
     expect(lastDelta([], "a")).toBe(0);
   });
 
-  it("reads general turn snapshots by candidate", () => {
+  it("reads general turn snapshots by candidate, with their counted votes", () => {
     const full = election({
       generalVotes: {
         turnSnapshots: [
           { turn: 8, sharesPct: { a: 50, b: 50 } },
-          { turn: 9, sharesPct: { a: 52, b: 48 } },
+          { turn: 9, sharesPct: { a: 52, b: 48 }, cumulativeVotes: { a: 5200, b: 4800 } },
         ],
       } as unknown as ElectionResponse["generalVotes"],
     });
     const series = pollingSeries(full, race);
     expect(series).toEqual([
       { turn: 8, shares: { a: 50, b: 50 } },
-      { turn: 9, shares: { a: 52, b: 48 } },
+      { turn: 9, shares: { a: 52, b: 48 }, votes: { a: 5200, b: 4800 } },
     ]);
     expect(lastDelta(series, "a")).toBeCloseTo(2);
   });
@@ -264,10 +264,18 @@ describe("pollingSeries and lastDelta", () => {
     );
     const full = election({
       generalVotes: {
-        turnSnapshots: [{ turn: 9, sharesPct: { a: 35, b: 25, c: 40 } }],
+        turnSnapshots: [
+          {
+            turn: 9,
+            sharesPct: { a: 35, b: 25, c: 40 },
+            cumulativeVotes: { a: 350, b: 250, c: 400 },
+          },
+        ],
       } as unknown as ElectionResponse["generalVotes"],
     });
-    expect(pollingSeries(full, multi)).toEqual([{ turn: 9, shares: { "1": 60, "2": 40 } }]);
+    expect(pollingSeries(full, multi)).toEqual([
+      { turn: 9, shares: { "1": 60, "2": 40 }, votes: { "1": 600, "2": 400 } },
+    ]);
   });
 });
 

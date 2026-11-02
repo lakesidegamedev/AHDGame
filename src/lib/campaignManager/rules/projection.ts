@@ -58,3 +58,11 @@ export function projectSubunits(
   }
   return distributeSubdivisionVotes(subdivisions, regionVotes, info);
 }
+
+/** A primary's candidates share a party colour; the leader keeps it, the rest take these in order. */
+const PRIMARY_PALETTE = ["#8b5cf6", "#10b981", "#f472b6", "#38bdf8", "#fb923c"];
+
+/** The colour a primary candidate draws in, by their place in the primary (0 = leader). */
+export function primaryCandidateColor(partyColor: string, index: number): string {
+  return index === 0 ? partyColor : PRIMARY_PALETTE[(index - 1) % PRIMARY_PALETTE.length];
+}

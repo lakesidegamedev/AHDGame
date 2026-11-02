@@ -64,3 +64,13 @@ describe("projectSubunits", () => {
     expect(projectSubunits(subs, [], "general")).toEqual([]);
   });
 });
+
+describe("primaryCandidateColor", () => {
+  it("keeps the party colour for the leader and gives the rest their own", async () => {
+    const { primaryCandidateColor } = await import("./projection");
+    expect(primaryCandidateColor("#2563eb", 0)).toBe("#2563eb");
+    const others = [1, 2, 3].map((i) => primaryCandidateColor("#2563eb", i));
+    expect(new Set(others).size).toBe(3);
+    expect(others).not.toContain("#2563eb");
+  });
+});

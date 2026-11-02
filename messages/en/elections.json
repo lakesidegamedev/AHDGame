@@ -514,7 +514,8 @@
         "empty": "No polling history yet.",
         "turn": "Turn {n}",
         "count": "Count {n}",
-        "value": "{name} {pct}"
+        "value": "{name} {pct}",
+        "votes": "{count, plural, one {# vote} other {# votes}}"
       },
       "wire": {
         "title": "Race wire",
