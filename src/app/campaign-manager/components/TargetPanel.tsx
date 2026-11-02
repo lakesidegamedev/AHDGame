@@ -58,7 +58,7 @@ export function TargetPanel({
   const url = candidate && !candidate.isYou ? influenceUrl(candidate) : null;
   const [info, setInfo] = useState<{ url: string; data: InfluenceInfo | null } | null>(null);
   const [busy, setBusy] = useState<Action | null>(null);
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [result, setResult] = useState<{ url: string; ok: boolean; msg: string } | null>(null);
 
   const load = useCallback(async (target: string) => {
     try {
@@ -72,7 +72,6 @@ export function TargetPanel({
 
   useEffect(() => {
     if (!url) return;
-    setResult(null);
     void load(url);
   }, [url, load]);
 
@@ -100,14 +99,14 @@ export function TargetPanel({
       });
       const data = await res.json();
       if (res.ok) {
-        setResult({ ok: !data.attackFailed, msg: data.message ?? "" });
+        setResult({ url, ok: !data.attackFailed, msg: data.message ?? "" });
         onActed();
         await load(url);
       } else {
-        setResult({ ok: false, msg: apiErrorText(data, ti("actionFailed")) });
+        setResult({ url, ok: false, msg: apiErrorText(data, ti("actionFailed")) });
       }
     } catch {
-      setResult({ ok: false, msg: ti("actionFailed") });
+      setResult({ url, ok: false, msg: ti("actionFailed") });
     } finally {
       setBusy(null);
     }
@@ -200,7 +199,8 @@ export function TargetPanel({
         />
       )}
 
-      {result ? (
+      {/* A result belongs to the candidate it was for; switching targets hides it. */}
+      {result && result.url === url ? (
         <p
           role="status"
           style={{ margin: 0, fontSize: 12.5, color: result.ok ? BLEND.positive : BLEND.caution }}
