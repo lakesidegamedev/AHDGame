@@ -586,6 +586,9 @@ describe("enrichElectionCandidates", () => {
     // The displayed party's abbreviation travels with its name and colour.
     expect(historical.partyAbbr).toBe("DEM");
     expect(live.partyAbbr).toBe("GOP");
+    // Database ids ride along for routes that act on the character itself.
+    expect(live.characterDbId).toBe(characterId.toString());
+    expect(live.nppDbId).toBeNull();
   });
 
   it("uses an NPP's live party in active races while preserving historical ballot labels", () => {

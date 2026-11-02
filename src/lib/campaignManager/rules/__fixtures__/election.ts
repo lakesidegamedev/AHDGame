@@ -14,6 +14,8 @@ export function cand(c: Cand) {
     id: c.id,
     characterId: c.isNPP ? null : `ch-${c.id}`,
     nppId: c.isNPP ? `n-${c.id}` : null,
+    characterDbId: c.isNPP ? null : `db-ch-${c.id}`,
+    nppDbId: c.isNPP ? `db-n-${c.id}` : null,
     characterName: c.name,
     party: c.party,
     partyName: `Party ${c.party}`,

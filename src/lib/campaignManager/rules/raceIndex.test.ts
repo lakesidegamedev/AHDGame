@@ -143,6 +143,7 @@ describe("buildRaceIndex", () => {
       ctx
     );
     expect(race.classNum).toBe(2);
+    expect(race.candidates[0].characterDbId).toBe("db-ch-a");
     expect(race.isMine).toBe(true);
     expect(race.multiSeat).toBe(true);
     expect(race.scope).toBe("national");

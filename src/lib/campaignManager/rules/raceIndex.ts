@@ -19,6 +19,10 @@ export interface CmCandidate {
   characterId: string | null;
   /** NPP sequential id (URL form), null for a player. */
   nppId: string | null;
+  /** Character ObjectId hex, what the influence routes take; null for an NPP. */
+  characterDbId: string | null;
+  /** NPP ObjectId hex, what the boost route takes; null for a player. */
+  nppDbId: string | null;
   name: string;
   avatarUrl?: string;
   partyId: string;
@@ -88,6 +92,8 @@ function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
     id: c.id,
     characterId: c.characterId,
     nppId: c.nppId,
+    characterDbId: c.characterDbId ?? null,
+    nppDbId: c.nppDbId ?? null,
     name: c.characterName,
     avatarUrl: c.avatarUrl,
     partyId: c.party,

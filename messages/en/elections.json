@@ -515,6 +515,27 @@
       "wire": {
         "title": "Race wire",
         "empty": "Quiet so far. Headlines from the last two days show here."
+      },
+      "tabs": {
+        "target": "Target",
+        "myMoves": "My moves",
+        "group": "Campaign actions"
+      },
+      "target": {
+        "pick": "Pick a candidate in the race to boost, attack or barnstorm with them.",
+        "you": "That's you. Your own actions are under My moves.",
+        "openMyMoves": "Open My moves",
+        "poll": "Poll",
+        "partyPoll": "Party poll",
+        "favor": "Favor",
+        "influence": "Influence",
+        "boost": "Boost",
+        "attack": "Attack",
+        "barnstorm": "Barnstorm",
+        "cost": "{actions} AP · {amount}",
+        "barnstormNote": "{gain} influence",
+        "working": "Working",
+        "resources": "You have {actions} AP and {amount} in campaign funds."
       }
     }
   }
