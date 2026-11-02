@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
-import { useBlendGround } from "@/components/blend/useBlendGround";
 import { readableInk } from "@/lib/elections/marginTierShade";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import type { RaceWireItem } from "@/lib/elections/raceWireFeed";
@@ -18,9 +17,9 @@ import {
   type CmCandidate,
   type CmRace,
 } from "@/lib/campaignManager/rules";
-import { raceTitle, typeLabel } from "../raceLabels";
-import { EYEBROW, ratingChipStyle, tierShade } from "../ui";
+import { EYEBROW } from "../ui";
 import { PollingChart } from "./PollingChart";
+import { RaceHeader, useRaceHeading } from "./RaceHeader";
 
 export interface RaceViewProps {
   countryId: string;
@@ -34,6 +33,12 @@ export interface RaceViewProps {
   onSelectCandidate: (candidateId: string) => void;
   /** Phone width: the table keeps name, poll and change; the sheet shows the rest. */
   compact?: boolean;
+  /** Previous / Next cycle arrows, shown in the header. */
+  nav?: ReactNode;
+  /** Enter race / Withdraw, shown in the header. */
+  entry?: ReactNode;
+  /** Shown under the wire: the seat's other cycles. */
+  history?: ReactNode;
 }
 
 const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
@@ -41,7 +46,6 @@ const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
 /** The selected race: header, standing bars, candidates, polling and wire. */
 export function RaceView(props: RaceViewProps) {
   const t = useTranslations("elections.campaignManager");
-  const ground = useBlendGround();
   const { race, full } = props;
   const series = useMemo(() => (race && full ? pollingSeries(full, race) : []), [race, full]);
 
@@ -49,10 +53,32 @@ export function RaceView(props: RaceViewProps) {
     return <p style={{ margin: 0, padding: "18px 0", color: BLEND.muted }}>{t("race.pick")}</p>;
   }
 
-  const title = raceTitle(race, t, props.countryId, props.regionNames);
-  const cols = props.compact ? "minmax(0,1fr) 64px 52px" : "minmax(0,1fr) 80px 64px 64px 72px";
+  return <RaceBody {...props} race={race} series={series} />;
+}
+
+function RaceBody(
+  props: RaceViewProps & { race: CmRace; series: ReturnType<typeof pollingSeries> }
+) {
+  const t = useTranslations("elections.campaignManager");
+  const { race, full, series } = props;
+  const title = useRaceHeading(race, props.countryId, props.regionNames);
+  const final = race.stage === "final";
+  // A finished general shows its counted votes in place of the change column;
+  // a finished race with no count (or a finished primary) drops the column.
+  const votes =
+    final && race.primaryPartyId == null && full?.id === race.electionId
+      ? (full.generalVotes?.totalVotes ?? null)
+      : null;
+  const hasVotes = votes != null && Object.values(votes).some((v) => v > 0);
+  const thirdCol = final ? (hasVotes ? "votes" : null) : "change";
+  const thirdWidth = props.compact ? (thirdCol === "votes" ? "72px" : "52px") : "80px";
+  const cols = [
+    "minmax(0,1fr)",
+    props.compact ? "64px" : "80px",
+    ...(thirdCol ? [thirdWidth] : []),
+    ...(props.compact ? [] : ["64px", "72px"]),
+  ].join(" ");
   const standing = raceStanding(race);
-  const shade = tierShade(standing.leaderColor, standing.tier, ground);
   const lines = raceLines(race);
   const total = lines.reduce((s, l) => s + l.share, 0);
   const undecided = Math.max(0, 100 - total);
@@ -76,72 +102,15 @@ export function RaceView(props: RaceViewProps) {
 
   return (
     <article aria-label={title} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <header style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{title}</h2>
-          <p
-            style={{
-              margin: "4px 0 0",
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              fontSize: 13,
-              color: BLEND.muted,
-            }}
-          >
-            <span>
-              {typeLabel(race.electionType, props.countryId)}
-              {race.multiSeat && race.totalSeats
-                ? ` · ${t("race.seats", { n: race.totalSeats })}`
-                : ""}
-            </span>
-            <span>{t(race.stage === "primary" ? "race.stagePrimary" : "race.stageGeneral")}</span>
-            {race.turnsLeft != null ? (
-              <span style={{ color: race.turnsLeft <= 1 ? BLEND.caution : BLEND.muted }}>
-                {t("race.turnsLeft", { n: race.turnsLeft })}
-              </span>
-            ) : null}
-          </p>
-        </div>
-        {race.hasPolling ? (
-          <span style={ratingChipStyle(shade.fill, shade.ink)}>{t(`tier.${standing.tier}`)}</span>
-        ) : null}
-        <Link
-          href={`/elections/${race.electionId}`}
-          style={{
-            minHeight: 32,
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "0 12px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 600,
-            color: BLEND.ink,
-            border: `1px solid ${BLEND.hairlineStrong}`,
-            textDecoration: "none",
-          }}
-        >
-          {t("race.electionPage")}
-        </Link>
-        <button
-          type="button"
-          aria-pressed={props.watched}
-          onClick={props.onToggleWatch}
-          style={{
-            minHeight: 32,
-            padding: "0 12px",
-            borderRadius: 8,
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 600,
-            background: "transparent",
-            color: props.watched ? BLEND.caution : BLEND.ink,
-            border: `1px solid ${props.watched ? BLEND.caution : BLEND.hairlineStrong}`,
-          }}
-        >
-          {props.watched ? t("race.watching") : t("race.watch")}
-        </button>
-      </header>
+      <RaceHeader
+        race={race}
+        countryId={props.countryId}
+        regionNames={props.regionNames}
+        watched={props.watched}
+        onToggleWatch={props.onToggleWatch}
+        nav={props.nav}
+        entry={props.entry}
+      />
 
       {race.candidates.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
@@ -190,12 +159,13 @@ export function RaceView(props: RaceViewProps) {
             }}
           >
             <span>
-              {t("race.leadBy", {
+              {t(final ? "race.wonBy" : "race.leadBy", {
                 leader: standing.leaderName,
+                name: standing.leaderName,
                 margin: standing.margin.toFixed(1),
               })}
             </span>
-            {undecided >= 0.5 ? (
+            {!final && undecided >= 0.5 ? (
               <span style={{ color: BLEND.muted }}>
                 {t("race.undecided", { pct: `${undecided.toFixed(1)}%` })}
               </span>
@@ -288,7 +258,11 @@ export function RaceView(props: RaceViewProps) {
           <span style={{ textAlign: "right" }}>
             {race.multiSeat ? t("race.colPartyPoll") : t("race.colPoll")}
           </span>
-          <span style={{ textAlign: "right" }}>{t("race.colChange")}</span>
+          {thirdCol ? (
+            <span style={{ textAlign: "right" }}>
+              {t(thirdCol === "votes" ? "race.colVotes" : "race.colChange")}
+            </span>
+          ) : null}
           {props.compact ? null : <span style={{ textAlign: "right" }}>{t("race.colFavor")}</span>}
           {props.compact ? null : (
             <span style={{ textAlign: "right" }}>{t("race.colInfluence")}</span>
@@ -370,16 +344,22 @@ export function RaceView(props: RaceViewProps) {
                   <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
                     {lineShare(c).toFixed(1)}%
                   </span>
-                  <span
-                    style={{
-                      textAlign: "right",
-                      fontFamily: FONT.mono,
-                      fontSize: 12.5,
-                      color: d > 0 ? BLEND.positive : d < 0 ? BLEND.negative : BLEND.muted,
-                    }}
-                  >
-                    {fmtDelta(d)}
-                  </span>
+                  {thirdCol === "change" ? (
+                    <span
+                      style={{
+                        textAlign: "right",
+                        fontFamily: FONT.mono,
+                        fontSize: 12.5,
+                        color: d > 0 ? BLEND.positive : d < 0 ? BLEND.negative : BLEND.muted,
+                      }}
+                    >
+                      {fmtDelta(d)}
+                    </span>
+                  ) : thirdCol === "votes" ? (
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
+                      {Math.round(votes?.[c.id] ?? 0).toLocaleString("en-US")}
+                    </span>
+                  ) : null}
                   {props.compact ? null : (
                     <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
                       {Math.round(c.favorability)}%
@@ -416,6 +396,7 @@ export function RaceView(props: RaceViewProps) {
       </section>
 
       <RaceWire items={props.wire} />
+      {props.history}
     </article>
   );
 }

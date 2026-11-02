@@ -111,3 +111,48 @@ describe("visibleRegions", () => {
     expect(visibleRegions(regions, { k: 1, x: 0, y: 0 }, 200, 200).sort()).toEqual(["A", "B"]);
   });
 });
+
+describe("countySourceFor on a finished race", () => {
+  const withFinal = { ...ctx, includeFinal: true };
+  const done = (over = {}) =>
+    election({
+      id: "f",
+      status: "resolved",
+      isEnded: true,
+      inGeneral: false,
+      cands: [
+        { id: "a", name: "A", party: "1", share: 60 },
+        { id: "b", name: "B", party: "2", share: 40 },
+      ],
+      ...over,
+    });
+
+  it("draws a finished race from its counted results", () => {
+    const src = countySourceFor(buildRaceIndex([done()], withFinal)[0])!;
+    expect(src.id).toBe("general");
+    expect(src.url("OH")).toBe("/api/elections/f/state/OH/subdivision-results");
+  });
+
+  it("draws a finished party primary from its stored result", () => {
+    const rows = buildRaceIndex(
+      [
+        done({
+          primaryResults: {
+            "1": [{ candidateId: "a", characterName: "A", sharePct: 100, won: true }],
+          },
+        }),
+      ],
+      withFinal
+    );
+    const src = countySourceFor(rows.find((r) => r.key === "f:1")!)!;
+    expect(src.url("OH")).toBe("/api/elections/f/state/OH/projected-subdivisions?party=1");
+  });
+
+  it("draws nothing, never a projection, when a finished race counted no votes", () => {
+    const race = buildRaceIndex(
+      [done({ polling: { sharesPct: {} }, cands: [{ id: "a", name: "A", party: "1" }] })],
+      withFinal
+    )[0];
+    expect(countySourceFor(race)).toBeNull();
+  });
+});

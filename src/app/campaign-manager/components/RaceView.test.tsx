@@ -170,3 +170,75 @@ describe("RaceView on a phone", () => {
     expect(screen.getByText("Poll")).toBeTruthy();
   });
 });
+
+describe("RaceView on a finished race", () => {
+  const done = (
+    over: Partial<ElectionResponse> & { cands?: Parameters<typeof election>[0]["cands"] } = {}
+  ) =>
+    election({
+      id: "f",
+      status: "resolved",
+      isEnded: true,
+      inGeneral: false,
+      electionYear: 1988,
+      cands: [
+        { id: "a", name: "Grant Pruitt", party: "2", share: 52 },
+        { id: "b", name: "Marcus Hale", party: "1", share: 48 },
+      ],
+      ...over,
+    });
+  const full = (votes: Record<string, number> | null) =>
+    ({
+      ...done(),
+      generalVotes: votes ? { totalVotes: votes } : null,
+    }) as unknown as ElectionResponse;
+
+  function finalView(e: ElectionResponse, f: ElectionResponse | null) {
+    const race = buildRaceIndex([e], { ...ctx, includeFinal: true })[0];
+    renderWithElectionsMessages(
+      <RaceView
+        countryId="US"
+        regionNames={regionNames}
+        race={race}
+        full={f}
+        wire={[]}
+        watched={false}
+        onToggleWatch={() => {}}
+        selectedCandidateId={null}
+        onSelectCandidate={() => {}}
+      />
+    );
+    return race;
+  }
+
+  it("shows a finished race as Final with its winner and vote totals", () => {
+    finalView(done(), full({ a: 5200, b: 4800 }));
+    expect(screen.getByText("Final")).toBeTruthy();
+    expect(screen.getByText("Grant Pruitt won by 4.0 pts")).toBeTruthy();
+    expect(screen.getByText("1988 Ohio Senate")).toBeTruthy();
+    expect(screen.getByText("5,200")).toBeTruthy();
+    expect(screen.getByText("Votes")).toBeTruthy();
+    expect(screen.queryByText(/turns? left/)).toBeNull();
+  });
+
+  it("has no change column on a finished race", () => {
+    finalView(done(), full({ a: 5200, b: 4800 }));
+    expect(screen.queryByText("Change")).toBeNull();
+  });
+
+  it("shows candidates without totals when the race has no counted votes", () => {
+    finalView(
+      done({
+        polling: { sharesPct: {} } as never,
+        cands: [
+          { id: "a", name: "Grant Pruitt", party: "2" },
+          { id: "b", name: "Marcus Hale", party: "1" },
+        ],
+      }),
+      full(null)
+    );
+    expect(screen.getByText("Grant Pruitt")).toBeTruthy();
+    expect(screen.queryByText("Votes")).toBeNull();
+    expect(screen.queryByText(/won by/)).toBeNull();
+  });
+});

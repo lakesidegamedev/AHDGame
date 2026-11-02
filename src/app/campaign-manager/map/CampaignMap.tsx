@@ -148,6 +148,11 @@ export function CampaignMap(props: CampaignMapProps) {
   };
 
   const selData = sel ? unitData[sel] : null;
+  // A finished race that counted nothing has no sub-unit results to draw.
+  const noCount =
+    selectedRace?.stage === "final" &&
+    selectedRace.regionId === sel &&
+    countySourceFor(selectedRace) === null;
   const unitCount = sel ? unitsOf(sel).length : 0;
   const picked =
     unitPick && unitPick.region === sel
@@ -370,7 +375,11 @@ export function CampaignMap(props: CampaignMapProps) {
             name={picked.name}
             row={picked.row}
             race={selectedRace}
-            canCanvass={!!selectedRace?.isMine && selectedRace.regionId === sel}
+            canCanvass={
+              !!selectedRace?.isMine &&
+              selectedRace.stage !== "final" &&
+              selectedRace.regionId === sel
+            }
             onCanvass={props.onCanvass}
             onClose={() => setUnitPick(null)}
           />
@@ -380,9 +389,11 @@ export function CampaignMap(props: CampaignMapProps) {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <MapLegend lines={legendLines} ground={ground} />
         <span style={{ fontSize: 12, color: BLEND.muted }}>
-          {sel
-            ? t("map.hintRegion")
-            : t("map.hintNational", { noun: props.regionNoun.toLowerCase() })}
+          {sel && noCount
+            ? t("map.noCountyResults")
+            : sel
+              ? t("map.hintRegion")
+              : t("map.hintNational", { noun: props.regionNoun.toLowerCase() })}
         </span>
       </div>
     </section>

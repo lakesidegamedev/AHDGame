@@ -13,13 +13,17 @@ import type { CampaignGeoRegion } from "./geoSource";
 /**
  * Where the map reads a race's sub-units from: the counted results once a
  * general has votes, otherwise a live projection of the race's current shares
- * (a party's primary, or a general before its first count). Null only for a
- * primary nobody has entered.
+ * (a party's primary, or a general before its first count). A finished general
+ * reads only its count, never a projection; a finished primary is drawn from
+ * its stored result. Null for a primary nobody has entered and for a finished
+ * general that counted no votes.
  */
 export function countySourceFor(race: CmRace): CountySource | null {
   if (race.candidates.length === 0) return null;
+  const finalGeneral = race.stage === "final" && race.primaryPartyId == null;
+  if (finalGeneral) return race.hasPolling ? generalCountySource(race.electionId) : null;
   if (race.stage === "general" && race.hasPolling) return generalCountySource(race.electionId);
-  const party = race.stage === "primary" ? race.primaryPartyId : null;
+  const party = race.stage === "general" ? null : race.primaryPartyId;
   const query = party ? `?party=${encodeURIComponent(party)}` : "";
   return {
     id: `projected:${party ?? "general"}`,

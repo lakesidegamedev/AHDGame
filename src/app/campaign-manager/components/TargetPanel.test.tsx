@@ -138,3 +138,29 @@ describe("TargetPanel", () => {
     expect(await screen.findByText("Could not load influence data.")).toBeTruthy();
   });
 });
+
+describe("TargetPanel on a finished race", () => {
+  it("offers no actions on a finished race", () => {
+    const done = buildRaceIndex(
+      [
+        election({
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          cands: [{ id: "a", name: "Grant Pruitt", party: "2", share: 52 }],
+        }),
+      ],
+      { currentTurn: 10, nationalChamberKeys: ["senate"], includeFinal: true }
+    )[0];
+    renderWithElectionsMessages(
+      <TargetPanel
+        race={done}
+        candidate={done.candidates[0]}
+        onActed={() => {}}
+        onShowMyMoves={() => {}}
+      />
+    );
+    expect(screen.getByText("This race is over.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Boost/ })).toBeNull();
+  });
+});

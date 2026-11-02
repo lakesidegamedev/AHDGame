@@ -53,9 +53,11 @@ export function TargetPanel({
   onShowMyMoves: () => void;
 }) {
   const t = useTranslations("elections.campaignManager.target");
+  const tr = useTranslations("elections.campaignManager.race");
   const ti = useTranslations("profile.interact");
   const { formatAmount } = useCurrency();
-  const url = candidate && !candidate.isYou ? influenceUrl(candidate) : null;
+  const over = race?.stage === "final";
+  const url = candidate && !candidate.isYou && !over ? influenceUrl(candidate) : null;
   const [info, setInfo] = useState<{ url: string; data: InfluenceInfo | null } | null>(null);
   const [busy, setBusy] = useState<Action | null>(null);
   const [result, setResult] = useState<{ url: string; ok: boolean; msg: string } | null>(null);
@@ -77,6 +79,9 @@ export function TargetPanel({
 
   if (!race || !candidate) {
     return <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("pick")}</p>;
+  }
+  if (over) {
+    return <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{tr("over")}</p>;
   }
 
   const line = race.multiSeat

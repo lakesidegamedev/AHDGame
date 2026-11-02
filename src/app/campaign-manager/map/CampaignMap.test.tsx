@@ -216,3 +216,45 @@ describe("CampaignMap with shapes served apart from results (US)", () => {
     );
   });
 });
+
+describe("CampaignMap on a finished race", () => {
+  it("says a finished race recorded no county results, and offers no canvassing", async () => {
+    const done = buildRaceIndex(
+      [
+        election({
+          id: "old",
+          electionType: "commons",
+          state: "LON",
+          countryId: "UK",
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          polling: { sharesPct: {} } as never,
+          cands: [{ id: "a", name: "Labour", party: "1", isYou: true }],
+        }),
+      ],
+      { ...ctx, includeFinal: true }
+    );
+    renderWithElectionsMessages(
+      <CampaignMap
+        countryId="UK"
+        countryName="United Kingdom"
+        regionNoun="Region"
+        races={done}
+        filter={{
+          type: "commons",
+          stage: "final",
+          regionId: "LON",
+          query: "",
+          regionNames: { LON: "London" },
+        }}
+        selectedRace={done[0]}
+        onSelectRegion={() => {}}
+        onCanvass={() => {}}
+      />
+    );
+    expect(await screen.findByText("No county results were recorded for this race.")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /Battersea/ }));
+    expect(screen.queryByRole("button", { name: "Canvass voters here" })).toBeNull();
+  });
+});

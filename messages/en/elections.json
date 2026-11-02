@@ -507,7 +507,12 @@
         "npp": "Politician",
         "openPrimary": "The primary is open and no one has filed yet. Candidates enter from the election page.",
         "electionPage": "Election page",
-        "enter": "Enter this race"
+        "enter": "Enter this race",
+        "final": "Final",
+        "yearTitle": "{year} {title}",
+        "wonBy": "{name} won by {margin} pts",
+        "colVotes": "Votes",
+        "over": "This race is over."
       },
       "chart": {
         "title": "Polling by turn",
@@ -584,7 +589,8 @@
         "noResults": "No results for this area yet.",
         "source": "Projected from {race}",
         "canvass": "Canvass voters here",
-        "close": "Close"
+        "close": "Close",
+        "noCountyResults": "No county results were recorded for this race."
       },
       "mobile": {
         "races": "Races",
