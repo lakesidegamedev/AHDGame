@@ -4,6 +4,7 @@ import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
+import { parseCampaignManagerParams } from "@/lib/campaignManager/links";
 import CampaignManagerClient from "./CampaignManagerClient";
 
 export const metadata: Metadata = { title: "Campaign Manager" };
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: "Campaign Manager" };
 export default async function CampaignManagerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ race?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await getAuthUserWithCharacter();
   if (!user?.hasCharacter || !user.character) {
@@ -38,7 +39,8 @@ export default async function CampaignManagerPage({
     config.legislature?.lowerChamber?.key,
     config.legislature?.upperChamber?.key,
   ].filter((k): k is string => !!k);
-  const { race } = await searchParams;
+  // Deep-link params (race, type, stage, region, year, party); junk is dropped.
+  const { race, filter } = parseCampaignManagerParams(await searchParams);
 
   return (
     <CampaignManagerClient
@@ -50,7 +52,8 @@ export default async function CampaignManagerPage({
       nationalChamberKeys={nationalChamberKeys}
       characterId={String(character._id)}
       homeRegionId={character.homeState ?? null}
-      initialRaceKey={race ?? null}
+      initialRaceKey={race}
+      initialFilter={filter}
     />
   );
 }

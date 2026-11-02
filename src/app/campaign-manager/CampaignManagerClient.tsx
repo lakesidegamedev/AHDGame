@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BlendShell } from "@/components/blend/BlendShell";
 import { BLEND, FONT } from "@/components/blend/tokens";
@@ -12,6 +12,9 @@ import {
   type RaceFilter,
   type SeatCycle,
 } from "@/lib/campaignManager/rules";
+import { openingFilter, type CmLinkFilter } from "@/lib/campaignManager/links";
+import { fetchJson } from "@/lib/observability/fetchJson";
+import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { useRaceIndex } from "./useRaceIndex";
 import { useFinishedRaces } from "./useFinishedRaces";
 import { useSeatHistory } from "./useSeatHistory";
@@ -41,6 +44,8 @@ export interface CampaignManagerClientProps {
   characterId: string;
   homeRegionId: string | null;
   initialRaceKey: string | null;
+  /** Filter params from a deep link, already validated. */
+  initialFilter?: Partial<CmLinkFilter>;
 }
 
 type FilterState = Omit<RaceFilter, "regionNames">;
@@ -88,7 +93,8 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     indexedRaces.find((r) => r.key === pickedKey) ??
     indexedRaces.find((r) => r.isMine) ??
     indexedRaces[0];
-  const shownType = chosenFilter?.type ?? openingRace?.electionType ?? "";
+  const shownType =
+    chosenFilter?.type ?? props.initialFilter?.type ?? openingRace?.electionType ?? "";
   const finished = useFinishedRaces(
     props.countryId,
     shownType,
@@ -136,17 +142,43 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           : chosenFilter.year;
       return { ...chosenFilter, year, regionNames: props.regionNames };
     }
-    const linked = races.find((r) => r.key === pickedKey);
-    const start = linked ?? myRace ?? races[0];
-    if (!start) return null;
-    return {
-      type: start.electionType,
-      stage: "all",
-      regionId: linked || myRace ? start.regionId : "ALL",
-      query: "",
-      regionNames: props.regionNames,
-    };
-  }, [chosenFilter, races, pickedKey, myRace, props.regionNames]);
+    const opening = openingFilter(races, pickedKey, props.initialFilter ?? {});
+    if (!opening) return null;
+    const year =
+      opening.stage === "final"
+        ? defaultFinishedYear(races, opening.type, opening.year)
+        : opening.year;
+    return { ...opening, year, regionNames: props.regionNames };
+  }, [chosenFilter, races, pickedKey, props.initialFilter, props.regionNames]);
+
+  // A link to a finished race the live index does not hold: look the race up
+  // once and open Finished at its type, year and region. A race that is not
+  // this country's finished down-ballot race is ignored (the page opens as if
+  // unlinked).
+  const lookedUp = useRef(false);
+  useEffect(() => {
+    if (loading || chosenFilter || !pickedKey || lookedUp.current) return;
+    if (races.some((r) => r.key === pickedKey)) return;
+    lookedUp.current = true;
+    const electionId = pickedKey.split(":")[0];
+    fetchJson<{ election?: ElectionResponse }>(
+      `/api/elections?id=${encodeURIComponent(electionId)}&view=summary`,
+      { feature: "campaign-manager-link" }
+    )
+      .then(({ election: e }) => {
+        if (!e?.isEnded || e.electionType === "president" || e.countryId !== props.countryId) {
+          return;
+        }
+        setChosenFilter({
+          type: e.electionType,
+          stage: "final",
+          year: e.electionYear,
+          regionId: e.state,
+          query: "",
+        });
+      })
+      .catch((err: unknown) => console.warn("Campaign Manager: linked race unavailable", err));
+  }, [loading, chosenFilter, pickedKey, races, props.countryId]);
 
   // A race the filter no longer shows (another type, stage or region) gives
   // way to the region's own race, so the panel and the map agree with the filter.
