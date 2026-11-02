@@ -75,7 +75,9 @@ export interface SectorPlantsSection {
   producedUnits: number | null;
   /** Units that found a buyer. Null until a plants turn has run. */
   soldUnits: number | null;
-  /** producedUnits − soldUnits, floored at 0. */
+  /** Units handed free to the company's own sites (funded market). Not sales, not unsold. */
+  ownSiteUnits: number | null;
+  /** producedUnits − soldUnits − ownSiteUnits, floored at 0. */
   unsoldUnits: number | null;
   /** capacityUnits − producedUnits, floored at 0. */
   idleUnits: number | null;
