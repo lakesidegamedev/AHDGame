@@ -52,8 +52,8 @@ const FIT_PADDING = 0.12;
  * region zooms to it and draws its sub-units from the selected race's results;
  * every other region in view keeps its own sub-units, faded, so the race reads
  * in context. Labels are HTML over the map so they stay crisp at any zoom.
- * The map drags to pan and zooms by its buttons, a pinch, or Ctrl and the
- * wheel (a plain wheel keeps scrolling the page).
+ * The map drags to pan and zooms by its buttons, the wheel or a pinch, as the
+ * country maps do: a wheel over the map zooms it instead of scrolling the page.
  */
 export function CampaignMap(props: CampaignMapProps) {
   const t = useTranslations("elections.campaignManager");
@@ -87,7 +87,6 @@ export function CampaignMap(props: CampaignMapProps) {
     width: mapW,
     height: geo?.h ?? 1,
     frame: MAP_FRAME,
-    wheelNeedsModifier: true,
   });
   const { zoomToBox, reset } = pz;
   const fitView = useCallback(() => {
@@ -292,9 +291,7 @@ export function CampaignMap(props: CampaignMapProps) {
           role="group"
           aria-label={t("map.aria", { place: sel ? regionLabel(sel) : props.countryName, type })}
           onPointerDownCapture={() => setGlide(false)}
-          onWheel={(e) => {
-            if (e.ctrlKey || e.metaKey) setGlide(false);
-          }}
+          onWheel={() => setGlide(false)}
           onPointerDown={pz.handlers.onPointerDown}
           onPointerMove={pz.handlers.onPointerMove}
           onPointerUp={pz.handlers.onPointerUp}
@@ -305,8 +302,9 @@ export function CampaignMap(props: CampaignMapProps) {
           }}
           style={{
             display: "block",
-            // Vertical swipes still scroll the page; sideways drags and pinches move the map.
-            touchAction: "pan-y",
+            // Touch gestures move the map, not the page, as on the country maps.
+            touchAction: "none",
+            overscrollBehavior: "contain",
             cursor: pz.dragging ? "grabbing" : "grab",
             userSelect: "none",
           }}

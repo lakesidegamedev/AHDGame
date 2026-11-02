@@ -625,7 +625,7 @@
         "zoomIn": "Zoom in",
         "zoomOut": "Zoom out",
         "resetView": "Reset view",
-        "hintGestures": "Drag to move, pinch or Ctrl + scroll to zoom."
+        "hintGestures": "Drag to move, scroll or pinch to zoom."
       },
       "mobile": {
         "races": "Races",

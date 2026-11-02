@@ -34,11 +34,6 @@ interface Options {
   height: number;
   /** Frame size and zoom cap when the frame is not the map's own shape (the stage). */
   frame?: MapFrame;
-  /**
-   * The wheel zooms only with Ctrl or Cmd held (a trackpad pinch sends Ctrl), so
-   * a map in the page's flow does not take over the page's scrolling.
-   */
-  wheelNeedsModifier?: boolean;
 }
 
 /**
@@ -46,15 +41,7 @@ interface Options {
  * own scrolling is attached only while `enabled`, so a locked map never
  * intercepts a wheel or a touch.
  */
-export function usePanZoom({
-  svgRef,
-  enabled,
-  scale,
-  width,
-  height,
-  frame,
-  wheelNeedsModifier = false,
-}: Options) {
+export function usePanZoom({ svgRef, enabled, scale, width, height, frame }: Options) {
   const frameWidth = frame?.frameWidth;
   const frameHeight = frame?.frameHeight;
   const maxZoom = frame?.maxZoom;
@@ -76,7 +63,6 @@ export function usePanZoom({
     const svg = svgRef.current;
     if (!svg || !enabled) return;
     const onWheel = (e: WheelEvent) => {
-      if (wheelNeedsModifier && !e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const rect = svg.getBoundingClientRect();
       const px = (e.clientX - rect.left) / scale;
@@ -85,7 +71,7 @@ export function usePanZoom({
     };
     svg.addEventListener("wheel", onWheel, { passive: false });
     return () => svg.removeEventListener("wheel", onWheel);
-  }, [svgRef, enabled, scale, width, height, f, wheelNeedsModifier]);
+  }, [svgRef, enabled, scale, width, height, f]);
 
   const onPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {

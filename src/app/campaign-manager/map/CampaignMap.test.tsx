@@ -282,17 +282,14 @@ describe("CampaignMap pan and zoom", () => {
     expect(scaleOf(mapGroup())).toBe(1);
   });
 
-  it("zooms on the wheel only with Ctrl held, so the page still scrolls", async () => {
+  it("zooms on the wheel instead of scrolling the page", async () => {
     renderMap();
     await screen.findByRole("button", { name: /London/ });
     const svg = screen.getByRole("group", { name: /map/ });
-    fireEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
-    expect(scaleOf(mapGroup())).toBe(1);
-    // happy-dom drops ctrlKey from a WheelEvent's init, so it is set on the event.
-    const pinch = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
-    Object.defineProperty(pinch, "ctrlKey", { value: true });
-    fireEvent(svg, pinch);
+    const wheel = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
+    fireEvent(svg, wheel);
     expect(scaleOf(mapGroup())).toBeGreaterThan(1);
+    expect(wheel.defaultPrevented).toBe(true);
   });
 
   it("pans on a drag, and the drag's closing click does not pick a region", async () => {
