@@ -373,3 +373,31 @@ describe("RaceView seat results", () => {
     expect(screen.getByText(/won a majority \(6\)/)).toBeTruthy();
   });
 });
+
+describe("RaceView seat margins", () => {
+  it("shows how many votes each slate is from a seat in a live proportional race", () => {
+    const live = election({
+      id: "lon",
+      electionType: "commons",
+      state: "LON",
+      countryId: "UK",
+      totalSeats: 10,
+      seatsEstimate: { "1": 6, "2": 4 },
+      cands: [
+        { id: "a", name: "Lab A", party: "1", share: 55 },
+        { id: "b", name: "Con B", party: "2", share: 45 },
+      ],
+    });
+    const full = {
+      ...live,
+      generalVotes: {
+        totalVotes: { a: 5500, b: 4500 },
+        seatMargins: { a: { toGain: 1200, toLose: 299 } },
+      },
+    } as unknown as ElectionResponse;
+    view(live, full, { countryId: "UK" });
+    expect(
+      screen.getByText("1,200 more votes to gain a seat, 300 fewer votes to lose one")
+    ).toBeTruthy();
+  });
+});

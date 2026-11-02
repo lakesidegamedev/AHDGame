@@ -23,6 +23,7 @@ import { RaceHeader, useRaceHeading } from "./RaceHeader";
 import { RaceSchedule } from "./RaceSchedule";
 import { RaceDetail } from "./RaceDetail";
 import { RaceNotes } from "./RaceNotes";
+import { seatMarginNote } from "@/lib/elections/blendDetailViewModel";
 
 export interface RaceViewProps {
   countryId: string;
@@ -378,6 +379,11 @@ function RaceBody(
           {people.map((c) => {
             const d = lastDelta(series, lineOf(c));
             const advancing = advancers.has(c.id);
+            // Live proportional races: votes to the next seat, cushion before losing one.
+            const marginNote =
+              race.multiSeat && race.stage === "general" && full?.id === race.electionId
+                ? seatMarginNote(full.generalVotes?.seatMargins?.[c.id])
+                : null;
             const on = c.id === props.selectedCandidateId;
             const party = race.multiSeat ? `${c.partyName} · #${slotOf.get(c.id)}` : c.partyName;
             return (
@@ -437,6 +443,9 @@ function RaceBody(
                       >
                         {party}
                       </span>
+                      {marginNote ? (
+                        <span style={{ fontSize: 11, color: BLEND.muted }}>{marginNote}</span>
+                      ) : null}
                       {advancing ? (
                         <span style={{ fontSize: 11, fontWeight: 700, color: BLEND.positive }}>
                           {t("race.advancing")}
