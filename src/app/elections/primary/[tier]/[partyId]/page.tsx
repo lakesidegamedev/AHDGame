@@ -1,6 +1,7 @@
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { primaryPageRedirectTarget } from "@/lib/elections/downBallotRedirect";
 import { getDb } from "@/lib/mongodb";
 import BackButton from "@/components/BackButton";
 import { PartyRegimeBadge } from "@/components/parties/PartyRegimeBadge";
@@ -86,6 +87,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function TierPrimaryPage({ params, searchParams }: PageProps) {
   const { tier, partyId } = await params;
   if (!VALID_TIERS.has(tier)) notFound();
+  // Every tier this page serves is down-ballot: its primaries live in Campaign Manager.
+  const elsewhere = await primaryPageRedirectTarget(await getDb(), tier, partyId);
+  if (elsewhere) redirect(elsewhere);
   const lowerTier = tier as LowerTier;
 
   const sp = (await searchParams) ?? {};

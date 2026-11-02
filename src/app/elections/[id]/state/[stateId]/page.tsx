@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
 import type { State } from "@/lib/db/types";
+import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
 
 export default async function ElectionStateRedirect({
   params,
@@ -10,6 +11,8 @@ export default async function ElectionStateRedirect({
   const { id, stateId } = await params;
   const upper = stateId.toUpperCase();
   const db = await getDb();
+  const elsewhere = await downBallotRedirectTarget(db, id);
+  if (elsewhere) redirect(elsewhere);
   const state = await db
     .collection<State>("states")
     .findOne({ _id: upper }, { projection: { countryId: 1 } });

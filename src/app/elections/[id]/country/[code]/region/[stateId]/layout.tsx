@@ -6,6 +6,8 @@ import type { Election } from "@/lib/db/types/election";
 import type { State } from "@/lib/db/types";
 import { canonicalRegionId } from "@/lib/constants/countries";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { redirect } from "next/navigation";
+import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -74,6 +76,10 @@ export async function generateMetadata({
   };
 }
 
-export default function ElectionRegionLayout({ children }: LayoutProps) {
+/** A down-ballot race's region view is Campaign Manager's map; the presidency stays here. */
+export default async function ElectionRegionLayout({ children, params }: LayoutProps) {
+  const { id } = await params;
+  const elsewhere = await downBallotRedirectTarget(await getDb(), id);
+  if (elsewhere) redirect(elsewhere);
   return <>{children}</>;
 }
