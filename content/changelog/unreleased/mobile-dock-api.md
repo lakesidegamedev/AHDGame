@@ -8,7 +8,7 @@ summary: >-
   standard menu button stays, so every page is still one tap away.
 tags: [mobile, ahdclient, navigation, ui]
 badges: [minor]
-areas: [frontend, api]
+areas: [fullstack]
 ---
 
 ## What changed
