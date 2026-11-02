@@ -1008,4 +1008,17 @@ describe("automatic ask with sell-through memory", () => {
     });
     expect(quote.unitPrice).toBeCloseTo(10);
   });
+
+  it("treats a zero ceiling as a cap, not as unbounded", () => {
+    const soldOut = { memory: { ask: 50, previousAsk: 50 }, soldUnits: 100, offeredUnits: 100 };
+    const noAnchor = quoteProducer({ ...basis, referenceUnitPrice: 0, policy, autoAsk: soldOut });
+    const fullDiscount = quoteProducer({
+      ...basis,
+      clearingUnitPrice: 10,
+      policy: { kind: "automatic", targetMarkup: -1 },
+      autoAsk: soldOut,
+    });
+    expect(noAnchor.unitPrice).toBe(0);
+    expect(fullDiscount.unitPrice).toBe(0);
+  });
 });

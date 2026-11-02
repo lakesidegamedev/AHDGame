@@ -799,7 +799,9 @@ export function quoteProducer(input: {
       ...(input.autoAsk.step != null ? { step: input.autoAsk.step } : {}),
       ceiling,
     });
-    if (decided) return estimate(decided.ask);
+    // The controller reads a non-positive ceiling as unbounded, but here a zero
+    // ceiling (no anchor price, or a -100% markup) is a real cap of zero.
+    if (decided) return estimate(Math.min(decided.ask, ceiling));
   }
   const candidates = new Set([reference, anchor, ceiling]);
   for (const seller of input.competitors)
