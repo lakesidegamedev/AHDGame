@@ -159,33 +159,47 @@ export function RecapitalizePanel({
           )}
         </div>
         {canMutate && (
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-1 text-xs text-muted">
-              Amount
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                inputMode="decimal"
-                aria-label="Capital transfer amount"
-                className="h-8 w-40 rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
-              />
-            </label>
-            <SmallButton tone="primary" onClick={() => void move("in")} disabled={busy}>
-              {busy ? "Working..." : "Move into bank"}
-            </SmallButton>
+          <div className="space-y-2">
             {withdrawable > 0 && (
-              <SmallButton
-                onClick={() => void move("out")}
-                disabled={busy || withdrawable <= 0}
-                title={
-                  withdrawable > 0
-                    ? undefined
-                    : "Nothing free to withdraw: reserves are required against deposits, or the supervisor has not cleared the bank."
-                }
+              <p
+                className={`text-xs ${
+                  Number(amount) > withdrawable * 0.75 ? "text-warning" : "text-muted"
+                }`}
               >
-                Withdraw to treasury
-              </SmallButton>
+                Free to withdraw leaves the bank enough capital to stay adequate at today&apos;s
+                prices. Bonds are re-priced every turn at what buyers will pay, so taking out close
+                to the limit leaves little room: if the bank&apos;s cash, loans and bonds fall below
+                what it owes depositors, it fails and the charter is lost.
+              </p>
             )}
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-col gap-1 text-xs text-muted">
+                Amount
+                <input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  inputMode="decimal"
+                  aria-label="Capital transfer amount"
+                  className="h-8 w-40 rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                />
+              </label>
+              <SmallButton tone="primary" onClick={() => void move("in")} disabled={busy}>
+                {busy ? "Working..." : "Move into bank"}
+              </SmallButton>
+              {withdrawable > 0 && (
+                <SmallButton
+                  onClick={() => void move("out")}
+                  disabled={busy || withdrawable <= 0}
+                  title={
+                    withdrawable > 0
+                      ? undefined
+                      : "Nothing free to withdraw: reserves are required against deposits, or the supervisor has not cleared the bank."
+                  }
+                >
+                  Withdraw to treasury
+                </SmallButton>
+              )}
+            </div>
           </div>
         )}
       </div>

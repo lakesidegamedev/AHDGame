@@ -1818,6 +1818,31 @@ export async function refreshBankTreasuryMark(
   return markBankTreasury(db, bankId, bank.bankCharter, turn);
 }
 
+/**
+ * Re-mark a bank right after a sovereign maturity paid face value into its vault.
+ *
+ * The banking phase marks treasuries before the bond phase redeems them, so
+ * until the next banking phase the vault held the redemption cash AND the mark
+ * still valued the matured lots: the same money counted twice, which inflated
+ * equity, the withdrawable figure and the supervisor's rating for that window
+ * (ticket 1749: an 8.86M double count let the owner withdraw against equity the
+ * bank did not have). The mark skips matured bonds, so re-marking removes them.
+ */
+export async function remarkBankTreasuryAfterMaturity(
+  db: Db,
+  bankId: ObjectId,
+  turn: number
+): Promise<number | null> {
+  const bank = await db
+    .collection<BankState>("corporations")
+    .findOne(
+      { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
+      { projection: { bankCharter: 1 } }
+    );
+  if (!bank?.bankCharter) return null;
+  return markBankTreasury(db, bankId, bank.bankCharter, turn);
+}
+
 /** Automatic cash sweep. Trade IDs are stable across a turn replay. */
 export async function sweepBankTreasury(
   db: Db,

@@ -96,7 +96,9 @@ describe("balance sheet lines", () => {
         regulatoryCapital: 1_799_000,
         requiredReserves: 800_000,
         reserveSurplus: 1_200_000,
-        distributable: 299_000,
+        // 299k of equity on 6.5M of loans is 4.6% capital, under the 8% minimum:
+        // nothing may leave until it is rebuilt (was 299k, i.e. all of it).
+        distributable: 0,
         equityCeiling: 3_588_000,
         depositCeiling: 3_588_000,
         depositCeilingBinds: "equity",
@@ -113,7 +115,9 @@ describe("balance sheet lines", () => {
       {
         requiredReserves: 1_600_000,
         reserveSurplus: 400_000,
-        distributable: 299_000,
+        // 299k of equity on 6.5M of loans is 4.6% capital, under the 8% minimum:
+        // nothing may leave until it is rebuilt (was 299k, i.e. all of it).
+        distributable: 0,
         capacityCeiling: 0,
         depositCeiling: 3_588_000,
         depositCeilingBinds: "capacity",
@@ -157,7 +161,9 @@ describe("balance sheet lines", () => {
         bookEquity: 895_000,
         regulatoryCapital: 495_000,
         requiredReserves: 0,
-        distributable: 895_000,
+        // Keeps the stress-cleared capital on 1.1M of risk assets: 895k less 221.1k.
+        distributable: 673_900,
+        retainedCapital: 221_100,
         equityCeiling: 10_740_000,
         runLine: 0,
         reserveCoverRatio: 1,
@@ -167,6 +173,36 @@ describe("balance sheet lines", () => {
   ] as const)("%s", (_label, charter, reserveRatio, capacityCeiling, expected) => {
     const sheet = bankBalanceSheet({ charter: charter as never, reserveRatio, capacityCeiling });
     expect(sheet).toMatchObject(expected);
+  });
+
+  it("leaves an adequate bank adequate after the largest payout it offers (ticket 1749)", () => {
+    // The real bank's turn 600 books without the double-counted matured lots.
+    const charter = {
+      type: "universal",
+      status: "active",
+      currency: "USD",
+      capitalStanding: "adequate",
+      cashReserves: 3_500_000,
+      npcDeposits: 9_104_121,
+      totalDeposits: 9_104_121,
+      totalLoans: 1_076_039,
+      sovereignTreasuryMarkValue: 6_600_000,
+      appliedStressLossFraction: 0.0511,
+      propBookMarkValue: 0,
+    } as const;
+    const sheet = bankBalanceSheet({ charter: charter as never, reserveRatio: 0.1 });
+    expect(sheet.distributable).toBeGreaterThan(0);
+    const after = { ...charter, cashReserves: charter.cashReserves - sheet.distributable };
+    const position = assessCapital({
+      cashReserves: after.cashReserves,
+      totalLoans: after.totalLoans,
+      borrowings: {},
+      sovereignTreasuryMarkValue: after.sovereignTreasuryMarkValue,
+    });
+    expect(position.capitalRatio).toBeGreaterThanOrEqual(0.08 - 1e-9);
+    // A 2% fall in the treasury mark after the payout leaves equity positive.
+    const shocked = after.cashReserves + after.totalLoans + after.sovereignTreasuryMarkValue * 0.98;
+    expect(shocked - after.npcDeposits).toBeGreaterThan(0);
   });
 
   it.each([
