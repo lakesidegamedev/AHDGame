@@ -4,6 +4,17 @@ import { hasProtectedConstructionClaim } from "@/lib/banking/rules/constructionP
 
 type RelocationBondLease = NonNullable<Corporation["headquartersRelocationBondFunding"]>;
 
+export interface RelocationPropertyGuardOptions {
+  /**
+   * A construction loan is secured on its site, and the site does not move with
+   * the headquarters. A move that leaves the corporation's currency and sector
+   * records untouched may therefore proceed with the loan still servicing.
+   * A move that converts the treasury still refuses, because conversion rewrites
+   * the claimed sector rows.
+   */
+  allowFinancedConstructionClaims?: boolean;
+}
+
 /**
  * A crashed bond relocation may leave its own HQ transition markers behind.
  * Permit only those exact markers on a retry of the frozen destination, while
@@ -14,10 +25,12 @@ export function hasProtectedRelocationProperty(
     Pick<CorporateSector, "_id" | "constructionFinancing" | "constructionPropertyTransition">
   >,
   corporationId: Corporation["_id"],
-  lease: RelocationBondLease | undefined
+  lease: RelocationBondLease | undefined,
+  options: RelocationPropertyGuardOptions = {}
 ): boolean {
+  const allowFinancedConstructionClaims = options.allowFinancedConstructionClaims === true;
   return sectors.some((sector) => {
-    if (hasProtectedConstructionClaim(sector)) return true;
+    if (!allowFinancedConstructionClaims && hasProtectedConstructionClaim(sector)) return true;
     const marker = sector.constructionPropertyTransition;
     if (!marker) return false;
     if (!lease || marker.kind !== "headquarters_relocation") return true;
@@ -26,6 +39,22 @@ export function hasProtectedRelocationProperty(
     const characterKey = `headquarters:${corporationId.toHexString()}:${lease.targetCountryId}:${lease.targetStateId}${suffix}`;
     return marker.key !== commandKey && marker.key !== characterKey;
   });
+}
+
+/**
+ * The sectors that must be held through the HQ transition write. A financed
+ * claim is left untouched when the move may proceed with the loan servicing, so
+ * it is not reserved (a reservation only accepts unclaimed rows); a claim that
+ * already carries this relocation's own marker is kept so the retry cleans it up.
+ */
+export function relocationTransitionSectors<
+  T extends Pick<CorporateSector, "constructionFinancing" | "constructionPropertyTransition">,
+>(sectors: T[], allowFinancedConstructionClaims: boolean): T[] {
+  if (!allowFinancedConstructionClaims) return sectors;
+  return sectors.filter(
+    (sector) =>
+      !hasProtectedConstructionClaim(sector) || sector.constructionPropertyTransition !== undefined
+  );
 }
 
 function exactOptionalField<T extends string>(value: T | undefined) {
