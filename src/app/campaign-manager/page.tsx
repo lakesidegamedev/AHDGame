@@ -5,7 +5,8 @@ import { getDb } from "@/lib/mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { ObjectId } from "mongodb";
 import type { Election, State } from "@/lib/db/types";
-import { parseCampaignManagerParams, presidentialRedirect } from "@/lib/campaignManager/links";
+import { presidentialRedirect } from "@/lib/campaignManager/links";
+import { parseCampaignManagerParams } from "@/lib/campaignManager/linkParams";
 import CampaignManagerClient from "./CampaignManagerClient";
 
 export const metadata: Metadata = { title: "Campaign Manager" };

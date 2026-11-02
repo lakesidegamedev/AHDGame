@@ -12,7 +12,8 @@ import {
   type RaceFilter,
   type SeatCycle,
 } from "@/lib/campaignManager/rules";
-import { openingFilter, type CmLinkFilter } from "@/lib/campaignManager/links";
+import type { CmLinkFilter } from "@/lib/campaignManager/links";
+import { openingFilter } from "@/lib/campaignManager/openingFilter";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { useRaceIndex } from "./useRaceIndex";

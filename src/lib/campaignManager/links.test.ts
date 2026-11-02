@@ -1,14 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildRaceIndex } from "./rules";
 import { election } from "./rules/__fixtures__/election";
-import {
-  campaignManagerHref,
-  openingFilter,
-  parseCampaignManagerParams,
-  primaryTierHref,
-  raceHref,
-  presidentialRedirect,
-} from "./links";
+import { campaignManagerHref, primaryTierHref, raceHref, presidentialRedirect } from "./links";
+import { parseCampaignManagerParams } from "./linkParams";
+import { openingFilter } from "./openingFilter";
 
 describe("campaignManagerHref", () => {
   it("builds a race link", () => {
@@ -156,5 +151,14 @@ describe("openingFilter party", () => {
       stage: "primary",
       party: "2",
     });
+  });
+});
+
+describe("links module", () => {
+  it("stays a dependency-free leaf, since the status bar and navbars import it", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync("src/lib/campaignManager/links.ts", "utf8");
+    const valueImports = source.match(/^import (?!type )[^\n]*$/gm) ?? [];
+    expect(valueImports).toEqual([]);
   });
 });
