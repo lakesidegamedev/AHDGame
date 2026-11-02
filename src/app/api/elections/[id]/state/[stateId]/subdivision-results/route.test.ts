@@ -121,3 +121,27 @@ describe("UK and Japan persisted subdivision results", () => {
     expect(loadCountyPopulationMap).toHaveBeenCalledWith(expect.anything(), state, countryId);
   });
 });
+
+describe("sub-unit holder baseline", () => {
+  it("names the party that led the sub-unit's baseline result, and omits it without one", async () => {
+    const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+    vi.mocked(loadSubdivisionFile).mockResolvedValue({
+      viewBox: "0 0 1 1",
+      subdivisions: [
+        {
+          id: "39001",
+          name: "Adams",
+          path: "M0 0",
+          electorate: 100,
+          leanScalar: 0,
+          partyShares: { CON: 40, LAB: 35 },
+        },
+        { id: "39003", name: "Allen", path: "M1 1", electorate: 100, leanScalar: 0 },
+      ],
+    } as never);
+    const body = await (await call("active")).json();
+    const byId = Object.fromEntries(body.subdivisions.map((s: { id: string }) => [s.id, s]));
+    expect(byId["39001"].baselineLeader).toBe("CON");
+    expect(byId["39003"]).not.toHaveProperty("baselineLeader");
+  });
+});

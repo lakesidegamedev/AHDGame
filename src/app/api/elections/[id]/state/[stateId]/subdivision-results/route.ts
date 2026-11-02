@@ -222,11 +222,15 @@ export async function GET(
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
       subdivisions: results.map((r) => {
         const src = subById.get(r.id);
+        // The party that led the sub-unit's baseline result, so a map can read a
+        // projected winner as a hold or a gain.
+        const baseline = Object.entries(src?.partyShares ?? {}).sort(([, a], [, b]) => b - a)[0];
         return {
           ...r,
           path: src?.path ?? "",
           leanScalar: src?.leanScalar,
           electorate: src?.electorate,
+          ...(baseline ? { baselineLeader: baseline[0] } : {}),
         };
       }),
       candidateNames: tally.candidateNames,
