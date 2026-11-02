@@ -44,7 +44,6 @@ import {
   cabinetOfficeUrl,
   scotusJusticeOfficeUrl,
 } from "@/lib/urls";
-import { UK_NATIONS, UK_REGIONS } from "@/lib/constants/uk";
 import {
   HELP_DISCORD_URL,
   HELP_PATREON_URL,
@@ -85,7 +84,6 @@ import dynamic from "next/dynamic";
 
 import {
   pixelIconForLink,
-  rankDesktopLinks,
   type DesktopNavLink,
   type DesktopNavMenu,
 } from "@/components/navbar/desktopNavModel";
@@ -93,6 +91,12 @@ import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigation
 import type { MobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { MobileDock, type DockSheetKey } from "@/components/navbar/MobileDock";
 import { useMobileDockModel } from "@/components/navbar/mobileDockModel";
+import {
+  buildDesktopMenus,
+  stateLegislatureLabelFor,
+  type DesktopMenuKey,
+  type NavTranslator,
+} from "@/components/navbar/dockMenus";
 import { SidebarWidget } from "@/components/sidebarWidgets/SidebarWidget";
 import { useSidebarWidgetData } from "@/components/sidebarWidgets/useSidebarWidgetData";
 import { useWidgetSetup } from "@/components/sidebarWidgets/useWidgetSetup";
@@ -114,7 +118,6 @@ const NavCustomizeDialog = dynamic(
   { ssr: false }
 );
 
-type DesktopMenuKey = "nation" | "world" | "state" | "help" | "staff";
 const CUSTOMIZABLE_MENUS: DesktopMenuKey[] = ["state", "nation", "world", "help", "staff"];
 
 const DesktopMegaMenu = dynamic(
@@ -419,15 +422,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const countryName = useCountryDisplayName();
   const switchableCountries = useEnabledCountries();
 
-  // State legislature label (UK devolution-aware).
-  const stateLegislatureLabel = (() => {
-    if (!homeState || homeState.countryId !== "UK") return t("state.legislature");
-    const nation = UK_NATIONS.find((n) => n.id === homeState.id);
-    if (nation?.devolvedBody) return nation.devolvedBody;
-    const region = UK_REGIONS.find((r) => r.id === homeState.id);
-    const parentNation = UK_NATIONS.find((n) => n.id === region?.nationId);
-    return parentNation?.devolvedBody ?? t("state.legislature");
-  })();
+  const stateLegislatureLabel = stateLegislatureLabelFor(t as unknown as NavTranslator, homeState);
 
   const canAccessSandbox =
     !user?.singleplayer &&
@@ -861,276 +856,35 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   ) : null;
 
   const useDesktopMegaMenu = desktopLayout !== null && desktopLayout !== "standard";
-  const desktopLink = (
-    id: string,
-    label: string,
-    href?: string,
-    extra: Partial<DesktopNavLink> = {}
-  ): DesktopNavLink => ({
-    id,
-    label,
-    href,
-    description: t.has(`desktop.descriptions.${id}`) ? t(`desktop.descriptions.${id}`) : undefined,
-    ...extra,
-  });
-  const desktopMenus: Partial<Record<DesktopMenuKey, DesktopNavMenu>> = {};
   // The phone dock shows these same menus as card sheets, so it builds them too.
   const buildMenu = (key: DesktopMenuKey) =>
     mobileDock || (useDesktopMegaMenu && (open === key || customizableNav));
-  if (buildMenu("nation") && showProfile) {
-    const map = nationalDetailSections
-      .flatMap((section) => section.items)
-      .find((item) => item.id === "map");
-    desktopMenus.nation = {
-      title: countryName(pageCountry as CountryId),
-      overview: desktopLink(
-        "overview",
-        countryName(pageCountry as CountryId),
-        countryUrl(pageCountry as CountryId)
-      ),
-      groups: nationalDetailSections
-        .filter((section) => section.title !== "Other")
-        .map((section) => ({
-          id: section.title,
-          label: t(section.titleKey),
-          items: rankDesktopLinks(
-            section.items.map((item) =>
-              desktopLink(item.id, item.labelKey ? t(item.labelKey) : item.label, item.href)
-            )
-          ),
-        })),
-      shortcuts: rankDesktopLinks([
-        ...(currentParty
-          ? [
-              desktopLink(
-                "myParty",
-                currentParty.name,
-                partyUrl(currentParty.countryId ?? pageCountry, currentParty.id)
-              ),
-            ]
-          : []),
-        ...(map ? [desktopLink("map", t("menus.nation.map"), map.href)] : []),
-        ...(cabinetOffice
-          ? [
-              desktopLink(
-                "cabinetOffice",
-                t("menus.nation.cabinetOffice"),
-                cabinetOfficeUrl(cabinetOffice.countryCode, cabinetOffice.positionId)
-              ),
-            ]
-          : []),
-        ...(justiceOffice
-          ? [
-              desktopLink(
-                "justiceOffice",
-                t("menus.nation.justiceOffice"),
-                scotusJusticeOfficeUrl(justiceOffice.countryCode)
-              ),
-            ]
-          : []),
-        ...(userCountry === "US"
-          ? [
-              desktopLink(
-                "politicalOperations",
-                t("menus.nation.myPoliticalOperations"),
-                "/political-operations"
-              ),
-            ]
-          : []),
-        ...(userCountry !== pageCountry
-          ? [
-              desktopLink(
-                "homeNation",
-                `${t("menus.nation.homeNation")} · ${countryName(userCountry as CountryId)}`,
-                countryUrl(userCountry as CountryId)
-              ),
-            ]
-          : []),
-      ]),
-    };
-  }
-  if (buildMenu("world")) {
-    const markets = new Set(["stockMarket", "banking", "forex", "trade", "imf"]);
-    const industry = new Set(["sectors", "governmentContracts", "unions", "news"]);
-    const desktopWorldItems = visibleWorldNavItems({
-      countryId: pageCountry,
-      myCorporationId,
-      myCorporationHasGroup,
-      myUnionId,
-      conflictsEnabled,
-      unionsEnabled,
-      settlementCrisisLive,
-    });
-    const links = desktopWorldItems.map((item) =>
-      desktopLink(item.id, t(item.labelKey), item.href, { parentId: item.parentId })
-    );
-    const personal = new Set(
-      desktopWorldItems.filter((item) => item.section === "corporate").map((item) => item.id)
-    );
-    desktopMenus.world = {
-      title: t("common.world"),
-      overview: desktopLink("nations", t("menus.world.nations"), "/world"),
-      groups: [
-        {
-          id: "markets",
-          label: t("desktop.groups.markets"),
-          items: rankDesktopLinks(links.filter((item) => markets.has(item.id))),
-        },
-        {
-          id: "industry",
-          label: t("desktop.groups.industry"),
-          items: rankDesktopLinks(links.filter((item) => industry.has(item.id))),
-        },
-        {
-          id: "diplomacy",
-          label: t("desktop.groups.diplomacy"),
-          items: rankDesktopLinks(
-            links.filter(
-              (item) => !personal.has(item.id) && !markets.has(item.id) && !industry.has(item.id)
-            )
-          ),
-        },
-      ].filter((group) => group.items.length > 0),
-      shortcuts: rankDesktopLinks(links.filter((item) => personal.has(item.id))),
-    };
-  }
-  if (buildMenu("state") && homeState) {
-    const region = regionUrl(homeState.countryId, homeState.id);
-    desktopMenus.state = {
-      title: homeState.name,
-      overview: desktopLink("overview", homeState.name, region),
-      groups: [
-        {
-          id: "politics",
-          label: t("menus.nation.sections.politics"),
-          items: [
-            ...(currentParty
-              ? [
-                  desktopLink(
-                    "stateParty",
-                    `${homeState.name} · ${currentParty.name}`,
-                    regionPartyUrl(homeState.countryId, homeState.id, currentParty.id)
-                  ),
-                ]
-              : []),
-            desktopLink(
-              "elections",
-              t("state.elections"),
-              regionElectionsUrl(homeState.countryId, homeState.id)
-            ),
-          ],
-        },
-        {
-          id: "government",
-          label: t("menus.nation.sections.government"),
-          items: [
-            desktopLink(
-              "legislature",
-              stateLegislatureLabel,
-              regionLegislatureUrl(homeState.countryId, homeState.id)
-            ),
-          ],
-        },
-        {
-          id: "economy",
-          label: t("menus.nation.sections.economy"),
-          items: [desktopLink("economy", t("state.economy"), `${region}?tab=economy`)],
-        },
-      ],
-      shortcuts: rankDesktopLinks([
-        ...(activeElection
-          ? [
-              desktopLink(
-                "activeElection",
-                t("state.myElection"),
-                `/elections/${activeElection.seatId ?? activeElection.id}`
-              ),
-            ]
-          : []),
-        ...(governorOffice && governorOffice.stateId === homeState.id
-          ? [desktopLink("governorOffice", t("state.governorOffice"), `${region}/office`)]
-          : []),
-        ...(cabinetOffice
-          ? [
-              desktopLink(
-                "cabinetOffice",
-                `${t("menus.nation.cabinetOffice")} · ${cabinetOffice.positionName}`,
-                cabinetOfficeUrl(cabinetOffice.countryCode, cabinetOffice.positionId)
-              ),
-            ]
-          : []),
-      ]),
-    };
-  }
-  if (buildMenu("help")) {
-    desktopMenus.help = {
-      title: t("common.help"),
-      overview: desktopLink(
-        "guides",
-        showWiki ? t("help.wikiGuides") : t("help.guides"),
-        showWiki ? "https://wiki.ahousedividedgame.com" : "/guides",
-        { external: showWiki }
-      ),
-      groups: [
-        {
-          id: "resources",
-          label: t("help.resources"),
-          items: [
-            desktopLink(
-              "guides",
-              showWiki ? t("help.wikiGuides") : t("help.guides"),
-              showWiki ? "https://wiki.ahousedividedgame.com" : "/guides",
-              { external: showWiki }
-            ),
-            desktopLink("about", t("help.about"), "/about"),
-            desktopLink("suggestions", t("help.suggestions"), "/feedback"),
-          ],
-        },
-        {
-          id: "community",
-          label: t("help.community"),
-          items: [
-            desktopLink("discord", "Discord", HELP_DISCORD_URL, { external: true }),
-            desktopLink("patreon", t("help.patreon"), HELP_PATREON_URL, { external: true }),
-            desktopLink("supporters", t("help.supporterWall"), HELP_SUPPORTER_WALL_URL, {
-              external: true,
-            }),
-          ],
-        },
-        {
-          id: "support",
-          label: t("desktop.groups.support"),
-          items: [
-            desktopLink("support", t("help.emailSupport"), HELP_SUPPORT_EMAIL, { external: true }),
-            ...(onOpenFeedback
-              ? [
-                  desktopLink(
-                    "feedback",
-                    feedbackCapturing ? t("common.capturingScreenshot") : t("common.quickSuggest"),
-                    undefined,
-                    { onSelect: onOpenFeedback, disabled: feedbackCapturing }
-                  ),
-                ]
-              : []),
-            desktopLink("privacy", t("help.privacy"), "/privacy"),
-            desktopLink("terms", t("help.terms"), "/terms"),
-          ],
-        },
-      ],
-      shortcuts: [],
-    };
-  }
-  if (buildMenu("staff") && staffSubItems.length > 0) {
-    const items = staffSubItems.map((item) =>
-      desktopLink(item.labelKey, t(item.labelKey), item.href, { external: item.external })
-    );
-    desktopMenus.staff = {
-      title: t("common.staff"),
-      overview: items[0]!,
-      groups: [{ id: "staff", label: t("common.staff"), items }],
-      shortcuts: [],
-    };
-  }
+  const desktopMenus = buildDesktopMenus({
+    t: t as unknown as NavTranslator,
+    build: buildMenu,
+    showProfile,
+    pageCountry: pageCountry as CountryId,
+    userCountry: userCountry as CountryId,
+    countryName,
+    homeState,
+    currentParty,
+    activeElection,
+    cabinetOffice,
+    justiceOffice,
+    governorOffice,
+    myCorporationId,
+    myCorporationHasGroup,
+    myUnionId,
+    conflictsEnabled,
+    unionsEnabled,
+    settlementCrisisLive,
+    nationalDetailSections,
+    stateLegislatureLabel,
+    staffSubItems,
+    showWiki,
+    onOpenFeedback,
+    feedbackCapturing,
+  });
   // Saved group order applies to the grouped-cards layout only.
   const orderedMenu = (key: DesktopMenuKey, menu: DesktopNavMenu): DesktopNavMenu =>
     customizableNav
@@ -1232,7 +986,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       help: desktopMenus.help && orderedMenu("help", desktopMenus.help),
       staff: desktopMenus.staff && orderedMenu("staff", desktopMenus.staff),
     },
-    link: desktopLink,
     onClose: () => setDockSheet(null),
     search: <UniversalSearch onNavigate={() => setDockSheet(null)} />,
   });
