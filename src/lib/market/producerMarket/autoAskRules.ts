@@ -14,12 +14,15 @@
  *
  *   sold out            -> raise the ask one step
  *   inside the deadband -> hold the ask
- *   below the floor     -> revert to the ask posted before this raise
+ *   below the floor     -> revert to the ask posted before this raise, or
+ *                          lower one step when there is no raise to give back
  *
  * Reverting to the previous ask rather than to a computed "fair" price is
  * deliberate: it gives back exactly the step that overshot, so the price walks
  * toward the market instead of jumping, and a raise that the book rejects is
- * undone rather than compounded.
+ * undone rather than compounded. Once that raise is given back, a shortfall that
+ * persists keeps lowering the ask one step per turn, so a plant whose demand fell
+ * away is not stuck at a price the book stopped paying.
  *
  * A deadband between `AUTO_ASK_REVERT_RATIO` and a sell-out holds the price on
  * purpose. Raising on strong-but-not-total sell-through, or cutting on a small
@@ -61,7 +64,7 @@ export interface AutoAskMemory {
   previousAsk: number;
 }
 
-export type AutoAskAction = "raise" | "hold" | "revert";
+export type AutoAskAction = "raise" | "hold" | "revert" | "lower";
 
 export interface AutoAskDecision {
   /** Ask to post this turn, already clamped to the caller's floor and ceiling. */
@@ -139,13 +142,16 @@ export function nextAutoAsk(input: {
 
   if (sellThrough < AUTO_ASK_REVERT_RATIO) {
     const previous = input.memory?.previousAsk;
-    const target =
-      typeof previous === "number" && Number.isFinite(previous) && previous > 0 ? previous : last;
-    // Never let a revert raise the ask. Corrupt memory or a ceiling that moved
-    // since the last turn could put `previousAsk` above the current ask, and a
-    // "revert" that raises is the opposite of what the controller intends.
-    const reverted = Math.min(last, clampAsk(target, floor, ceiling));
-    return { ask: reverted, action: reverted < last ? "revert" : "hold", sellThrough };
+    // Give back the last raise when there is one. A previous ask at or above the
+    // current one (no raise last turn, a ceiling that moved, or corrupt memory)
+    // is not a raise to undo, so step down instead of holding: holding there
+    // would freeze a seller whose demand fell away at a price nobody pays.
+    const revertable =
+      typeof previous === "number" && Number.isFinite(previous) && previous > 0 && previous < last;
+    const target = revertable ? previous : last / (1 + step);
+    const lowered = clampAsk(target, floor, ceiling);
+    const action = lowered < last ? (revertable ? "revert" : "lower") : "hold";
+    return { ask: lowered, action, sellThrough };
   }
 
   return { ask: last, action: "hold", sellThrough };

@@ -43,24 +43,45 @@ describe("auto ask sell-through controller", () => {
     expect(decision?.action).toBe("revert");
   });
 
-  it("never reverts upward when the stored previous ask is above the current ask", () => {
+  it("steps down instead of reverting upward when the stored previous ask is above the current ask", () => {
     const decision = nextAutoAsk({
       memory: { ask: 100, previousAsk: 140 },
       soldUnits: 10,
       offeredUnits: 100,
     });
-    expect(decision?.ask).toBe(100);
-    expect(decision?.action).toBe("hold");
+    expect(decision?.ask).toBeCloseTo(100 / (1 + AUTO_ASK_DEFAULT_STEP));
+    expect(decision?.action).toBe("lower");
   });
 
-  it("falls back to holding when the revert target is missing", () => {
+  it("steps down when the revert target is missing", () => {
     const decision = nextAutoAsk({
       memory: { ask: 100, previousAsk: Number.NaN },
       soldUnits: 10,
       offeredUnits: 100,
     });
-    expect(decision?.ask).toBe(100);
-    expect(decision?.action).toBe("hold");
+    expect(decision?.ask).toBeCloseTo(100 / (1 + AUTO_ASK_DEFAULT_STEP));
+    expect(decision?.action).toBe("lower");
+  });
+
+  it("keeps lowering through a shortfall that outlasts the last raise", () => {
+    let state = { ask: 100, previousAsk: 100 };
+    for (let turn = 0; turn < 3; turn++) {
+      const decision = nextAutoAsk({ memory: state, soldUnits: 50, offeredUnits: 100 });
+      expect(decision?.action).toBe("lower");
+      expect(decision!.ask).toBeLessThan(state.ask);
+      state = { ask: decision!.ask, previousAsk: state.ask };
+    }
+    expect(state.ask).toBeCloseTo(100 / (1 + AUTO_ASK_DEFAULT_STEP) ** 3);
+  });
+
+  it("holds a shortfall at the floor", () => {
+    const decision = nextAutoAsk({
+      memory: { ask: 80, previousAsk: 80 },
+      soldUnits: 10,
+      offeredUnits: 100,
+      floor: 80,
+    });
+    expect(decision).toEqual({ ask: 80, action: "hold", sellThrough: 0.1 });
   });
 
   it("holds the ask when nothing was offered, without reading it as zero sales", () => {
