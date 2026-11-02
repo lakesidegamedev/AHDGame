@@ -526,8 +526,19 @@ export async function buildProducerTurnDemand(
       ),
     ];
     eligibleOffersByOrder = routeEligibility(orders, offers, open);
-    const listFor = (commodity: string, country: string) =>
-      routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x;
+    // One list per (commodity, buyer country): households, public and
+    // marketing orders repeat the same pairs, and each call regroups every offer.
+    const listCache = new Map<string, readonly string[]>();
+    const listFor = (commodity: string, country: string) => {
+      const key = `${commodity}|${country}`;
+      let list = listCache.get(key);
+      if (!list) {
+        list =
+          routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x ?? [];
+        listCache.set(key, list);
+      }
+      return list;
+    };
     for (const h of households)
       for (const product of h.products)
         if (product.book === "world")
