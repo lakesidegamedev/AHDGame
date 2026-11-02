@@ -710,7 +710,7 @@ export function CampaignBlendClient({
           }
         >
           <BlendHeader
-            kicker="The campaign desk"
+            kicker="Campaign HQ"
             readout={vm.turnReadout}
             headline={vm.paneTitle}
             standfirst={vm.standfirst}

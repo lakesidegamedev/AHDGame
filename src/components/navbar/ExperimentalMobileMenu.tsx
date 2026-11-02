@@ -7,6 +7,7 @@
  * presentation: all open/close state lives in the navbar and is passed down.
  */
 
+import { buildCampaignNavItems, isCampaignNavActive } from "./campaignNav";
 import React from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -391,7 +392,10 @@ export function ExperimentalMobileMenu({
         }
       >
         {navItems.map((item) => {
-          const active = isNavActive(pathname, item.href);
+          const active =
+            item.key === "campaign"
+              ? isCampaignNavActive(pathname)
+              : isNavActive(pathname, item.href);
           const subKey = item.key as MobileSubKey | undefined;
           if (subKey) {
             const isSubOpen = !!mobileSubOpen[subKey];
@@ -411,6 +415,18 @@ export function ExperimentalMobileMenu({
                 </button>
                 {isSubOpen && (
                   <div className="ml-3 mt-0.5 space-y-0.5 border-l border-card-border/60 pl-3">
+                    {subKey === "campaign" &&
+                      buildCampaignNavItems(t).map((link) => (
+                        <Link
+                          key={link.id}
+                          href={link.href}
+                          onClick={onClose}
+                          aria-current={isNavActive(pathname, link.href) ? "page" : undefined}
+                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                        >
+                          {link.label}
+                        </Link>
+                      ))}
                     {subKey === "state" && homeState && (
                       <>
                         <Link

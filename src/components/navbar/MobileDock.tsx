@@ -22,7 +22,7 @@ export const MOBILE_DOCK_HEIGHT_VAR = "--mobile-dock-height";
  *  useStatusBarHeightVar keeps its own copy of this name. */
 export const MOBILE_DOCK_EVENT = "ahd:mobile-dock";
 
-export type DockSheetKey = "state" | "nation" | "more";
+export type DockSheetKey = "state" | "nation" | "campaign" | "more";
 
 export interface DockTab {
   id: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { buildCampaignNavItems } from "./campaignNav";
 import type { Dispatch } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -241,16 +242,19 @@ export function NavbarMobileMenu({
         )}
 
         {/* Actions - hidden for imperial characters */}
-        {showProfile && !isImperialMode && (
-          <Link
-            href="/actions"
-            onClick={onClose}
-            className={`flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/actions") ? "bg-white/5 font-medium" : ""}`}
-            aria-current={isNavActive(pathname, "/actions") ? "page" : undefined}
-          >
-            {t("common.actions")}
-          </Link>
-        )}
+        {showProfile &&
+          !isImperialMode &&
+          buildCampaignNavItems(t).map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={onClose}
+              className={`flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, item.href) ? "bg-white/5 font-medium" : ""}`}
+              aria-current={isNavActive(pathname, item.href) ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
 
         {/* Staff tools - collapsible, admin/mod only. Kept OUT of the flat
             top-level list on purpose: ops/staff links live under this one

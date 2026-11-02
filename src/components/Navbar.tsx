@@ -1,5 +1,6 @@
 "use client";
 
+import { CampaignDropdown } from "@/components/navbar/CampaignDropdown";
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -443,16 +444,7 @@ export const Navbar = React.memo(function Navbar({
               )
             )}
 
-            {showProfile && !isImperialMode && (
-              <Link
-                href="/actions"
-                data-coach="nav-actions"
-                className={`relative px-2.5 py-1 text-sm transition-colors hover:text-foreground ${isNavActive(pathname, "/actions") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
-                aria-current={isNavActive(pathname, "/actions") ? "page" : undefined}
-              >
-                {t("common.actions")}
-              </Link>
-            )}
+            {showProfile && !isImperialMode && <CampaignDropdown />}
 
             {homeState && (
               <StateDropdown

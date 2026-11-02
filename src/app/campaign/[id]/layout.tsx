@@ -71,7 +71,7 @@ export async function generateMetadata({
 
   const candidateName = candidate?.name ?? npp?.name ?? "Candidate";
   const electionLabel = describeElection(election);
-  const title = `${candidateName} — ${electionLabel} | A House Divided`;
+  const title = `${candidateName} · ${electionLabel} Campaign HQ | A House Divided`;
   const description = `${candidateName}'s campaign for ${electionLabel}. Fundraising, ground game, and polling.`;
   const url = `${getSiteUrl()}/campaign/${id}`;
   const image = candidate?.avatarUrl ?? npp?.avatarUrl ?? CDN_LOGO_URL;

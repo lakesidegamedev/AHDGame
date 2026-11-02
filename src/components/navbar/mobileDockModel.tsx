@@ -1,5 +1,6 @@
 "use client";
 
+import { buildCampaignNavMenu, isCampaignNavActive } from "./campaignNav";
 import React, { type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -107,13 +108,14 @@ export function useMobileDockModel({
     sheet: "nation",
     active: !onState && isNavActive(pathname, countryUrl(pageCountry)),
   });
+  // The Campaign tab opens a sheet with Actions and the Campaign Manager.
   if (!isImperialMode)
     tabs.push({
       id: "actions",
-      label: t("common.actions"),
+      label: t("campaignMenu.label"),
       icon: <MobileDockIcon name="bolt" />,
-      href: "/actions",
-      active: isNavActive(pathname, "/actions"),
+      sheet: "campaign",
+      active: isCampaignNavActive(pathname),
     });
   tabs.push({
     id: "more",
@@ -124,6 +126,11 @@ export function useMobileDockModel({
   });
 
   const sheets: Partial<Record<DockSheetKey, DockSheet>> = {};
+  if (!isImperialMode)
+    sheets.campaign = {
+      title: t("campaignMenu.label"),
+      sections: [{ id: "campaign", menu: buildCampaignNavMenu(t) }],
+    };
   if (homeState && menus.state)
     sheets.state = { title: homeState.name, sections: [{ id: "state", menu: menus.state }] };
   if (menus.nation)

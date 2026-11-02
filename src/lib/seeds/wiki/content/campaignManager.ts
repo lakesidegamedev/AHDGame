@@ -1,6 +1,16 @@
 export const campaignManagerContent = `# Campaign Manager
 
-Once you declare for president, a campaign page is where money and actions turn into votes. Every presidential candidacy gets its own: budget, upgrades, field offices, activity log, endorsements and manager assignments. It is separate from your character's profile and has its own action and money pools.
+The **Campaign Manager** (Campaign, then Campaign Manager, in the navigation) is where you follow and work every race in your country. It has three parts:
+
+- **Find a Race.** Race types sorted into National and Regional, a Stage switch for Primary and General, a region picker and a search for candidates, races and regions. Each race shows its leader, margin and rating. Star a race to keep it near the top of the list on this device.
+- **The map and the race.** The country shaded race by race in each party's own Lean, Likely and Safe shades. Pick a region to zoom in: its counties, constituencies or prefectures fill in from the race's results, with the neighbours shown faded around it, and a click on one gives its projected call. Below the map are the race's standing, projected seats for multi-seat races, every candidate's poll, change, favorability and influence, polling by turn and the race wire.
+- **Target and My moves.** Pick any candidate to Boost, Attack or Barnstorm with them, at the same prices as on their profile. My moves holds your own stats, your race at a glance and every card from the Actions page, run exactly as they run there.
+
+A primary nobody has entered yet still shows, with a link to the election page where you can enter it.
+
+## Campaign HQ (presidential races)
+
+Once you declare for president, a campaign page is where money and actions turn into votes. Every presidential candidacy gets its own Campaign HQ: budget, upgrades, field offices, activity log, endorsements and manager assignments. It is separate from your character's profile and has its own action and money pools.
 
 **Eligibility.** Only presidential races have a campaign page: the US presidency, and presidential races in other countries with a directly elected president, such as Brazil, Nigeria and Russia. Every other race, from Senate and House seats to the UK Commons and the Japanese Diet, is campaigned for with your character's own [Actions](/wiki/fundraising-ads) and the race's election page.
 

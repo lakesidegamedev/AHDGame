@@ -22,7 +22,7 @@
       "openMenu": "Open menu",
       "closeMenu": "Close menu",
       "userMenu": "User menu",
-      "capturingScreenshot": "Capturing screenshot\u2026",
+      "capturingScreenshot": "Capturing screenshot…",
       "quickSuggest": "Quick suggest (screenshot)"
     },
     "menus": {
@@ -136,10 +136,10 @@
       "switchNationView": "Switch nation view",
       "switchNationViewCurrent": "Switch nation view: currently {country}",
       "selectNation": "Select Nation",
-      "homeBadge": "\u2605 Home"
+      "homeBadge": "★ Home"
     },
     "notifications": {
-      "openInbox": "Open inbox \u2192",
+      "openInbox": "Open inbox →",
       "awaitingInput": "{count, plural, one {# awaiting your input} other {# awaiting your input}}",
       "empty": "No notifications yet",
       "needsYou": "Needs you",
@@ -186,7 +186,7 @@
       "demographicsToast": "Set your character's background in Settings > Background"
     },
     "search": {
-      "placeholder": "Search characters, corporations, bills\u2026",
+      "placeholder": "Search characters, corporations, bills…",
       "ariaLabel": "Search characters, corporations, bills, elections",
       "noResults": "No results found for \"{query}\"",
       "trySearchingFor": "Try searching for",
@@ -199,11 +199,11 @@
       "readyTitle": "What are you looking for?",
       "emptyQueryDescription": "Search names, places, offices, legislation, companies, and markets.",
       "minimumQuery": "Enter at least two characters to search.",
-      "resultsFor": "Matches for \u201c{query}\u201d",
+      "resultsFor": "Matches for “{query}”",
       "resultCount": "{count, plural, one {# result} other {# results}}",
-      "searching": "Searching across the game\u2026",
+      "searching": "Searching across the game…",
       "noResultsTitle": "No matches found",
-      "noResultsDescription": "We could not find anything matching \u201c{query}\u201d. Try another spelling or a broader search.",
+      "noResultsDescription": "We could not find anything matching “{query}”. Try another spelling or a broader search.",
       "errorTitle": "Search is unavailable",
       "searchError": "Please try again in a moment.",
       "queryTooLong": "Search terms can be up to 200 characters.",
@@ -615,6 +615,14 @@
         "support": "Get help with a problem",
         "feedback": "Describe an issue with a screenshot"
       }
+    },
+    "campaignMenu": {
+      "label": "Campaign",
+      "actions": "Actions",
+      "actionsNote": "Campaign, advertise, fundraise, poll. Raises your own stats",
+      "manager": "Campaign Manager",
+      "managerNote": "Every race in your country. Boost or attack any candidate",
+      "menuAria": "Campaign"
     }
   }
 }

@@ -92,6 +92,7 @@ import {
 import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import type { MobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { MobileDock, type DockSheetKey } from "@/components/navbar/MobileDock";
+import { buildCampaignNavItems, isCampaignNavActive } from "@/components/navbar/campaignNav";
 import { useMobileDockModel } from "@/components/navbar/mobileDockModel";
 import { SidebarWidget } from "@/components/sidebarWidgets/SidebarWidget";
 import { useSidebarWidgetData } from "@/components/sidebarWidgets/useSidebarWidgetData";
@@ -441,7 +442,13 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const navItems: ExperimentalNavItem[] = [];
 
   if (showProfile && !isImperialMode) {
-    navItems.push({ label: t("common.actions"), href: "/actions", icon: "Actions" });
+    // The Campaign tab holds Actions and the Campaign Manager (see campaignNav).
+    navItems.push({
+      label: t("campaignMenu.label"),
+      href: "/actions",
+      icon: "Actions",
+      key: "campaign",
+    });
   }
 
   if (showProfile && homeState) {
@@ -661,6 +668,31 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       </div>
     </DropdownPanel>
   ) : null;
+
+  const campaignMenu = (
+    <DropdownPanel
+      anchorRef={dropdownAnchorRef}
+      panelRef={dropdownPanelRef}
+      align="left"
+      width="w-[300px]"
+    >
+      {buildCampaignNavItems(t).map((item) => (
+        <MenuRow
+          key={item.id}
+          href={item.href}
+          onNavigate={closeAll}
+          strong={isNavActive(pathname, item.href)}
+        >
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span>{item.label}</span>
+            <span className="text-[12px] font-normal leading-snug text-muted">
+              {item.description}
+            </span>
+          </span>
+        </MenuRow>
+      ))}
+    </DropdownPanel>
+  );
 
   const stateMenu = homeState ? (
     <DropdownPanel
@@ -1289,7 +1321,10 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 aria-hidden={searchOpen ? "true" : undefined}
               >
                 {navItems.map((item) => {
-                  const active = isNavActive(pathname, item.href);
+                  const active =
+                    item.key === "campaign"
+                      ? isCampaignNavActive(pathname)
+                      : isNavActive(pathname, item.href);
                   const tabIcon = item.useFlag ? (
                     <CountryFlag country={pageCountry} size="sm" />
                   ) : (
@@ -1308,6 +1343,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                           onClick={() => toggle(item.key!)}
                           aria-expanded={isOpen}
                           aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
+                          data-coach={item.key === "campaign" ? "nav-actions" : undefined}
                           className={navTabClassName(active || isOpen)}
                         >
                           {tabIcon}
@@ -1316,13 +1352,15 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                         </button>
                         {isOpen &&
                           (megaPanel ??
-                            (item.key === "state"
-                              ? stateMenu
-                              : item.key === "world"
-                                ? worldMenu
-                                : item.key === "nation"
-                                  ? nationMenu
-                                  : null))}
+                            (item.key === "campaign"
+                              ? campaignMenu
+                              : item.key === "state"
+                                ? stateMenu
+                                : item.key === "world"
+                                  ? worldMenu
+                                  : item.key === "nation"
+                                    ? nationMenu
+                                    : null))}
                       </div>
                     );
                   }
