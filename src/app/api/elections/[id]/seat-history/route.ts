@@ -11,7 +11,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
-import { adjacentElectionsQuery } from "@/lib/elections/resolveElection";
+import { adjacentElectionsQuery } from "@/lib/elections/adjacentElections";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { resolveElectionYear } from "@/lib/utils/formatters";
 import {
