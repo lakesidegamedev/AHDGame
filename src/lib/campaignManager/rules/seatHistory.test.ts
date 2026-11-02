@@ -6,7 +6,6 @@ const input = (over: Partial<SeatCycleInput> = {}): SeatCycleInput => ({
   cycle: 1,
   year: 1988,
   status: "completed",
-  inPrimary: false,
   candidates: [
     { id: "a", name: "A", partyId: "1" },
     { id: "b", name: "B", partyId: "2" },

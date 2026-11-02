@@ -18,7 +18,6 @@ export interface SeatCycleInput {
   year: number | null;
   /** Election status as stored. */
   status: string;
-  inPrimary: boolean;
   candidates: Array<{ id: string; name: string; partyId: string }>;
   parties: Record<string, { name: string; abbr: string; color: string }>;
   /** The general's counted votes by candidate id (tally.totalVotes). */

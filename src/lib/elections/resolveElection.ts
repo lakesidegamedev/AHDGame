@@ -93,6 +93,24 @@ const ADJACENT_ELECTION_TYPE_FAMILIES: Readonly<Record<string, readonly string[]
   snap_shugiin: ["shugiin", "snap_shugiin"],
 };
 
+/**
+ * Every non-cancelled cycle of the same seat as `election`: by `seatId`, or for
+ * legacy docs without one, by country, region, type family and Senate class.
+ */
+export function adjacentElectionsQuery(
+  election: Pick<Election, "seatId" | "countryId" | "state" | "electionType" | "senateClass">
+): Record<string, unknown> {
+  if (election.seatId) return { seatId: election.seatId, status: { $ne: "cancelled" } };
+  const adjacentTypes = ADJACENT_ELECTION_TYPE_FAMILIES[election.electionType];
+  return {
+    ...(election.countryId ? { countryId: election.countryId } : {}),
+    state: election.state,
+    electionType: adjacentTypes ? { $in: adjacentTypes } : election.electionType,
+    status: { $ne: "cancelled" },
+    ...(election.senateClass != null ? { senateClass: election.senateClass } : {}),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
@@ -170,21 +188,9 @@ export async function resolveElection(
   let adjacentElections: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null =
     null;
   if (isFull) {
-    const adjacentTypes = ADJACENT_ELECTION_TYPE_FAMILIES[election.electionType];
-    const adjacentQuery: Record<string, unknown> = election.seatId
-      ? { seatId: election.seatId, status: { $ne: "cancelled" } }
-      : {
-          ...(election.countryId ? { countryId: election.countryId } : {}),
-          state: election.state,
-          electionType: adjacentTypes ? { $in: adjacentTypes } : election.electionType,
-          status: { $ne: "cancelled" },
-        };
-    if (!election.seatId && election.senateClass != null) {
-      adjacentQuery.senateClass = election.senateClass;
-    }
     adjacentElections = await db
       .collection<Election>("elections")
-      .find(adjacentQuery)
+      .find(adjacentElectionsQuery(election))
       .sort({ cycle: 1 })
       .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({
         _id: 1,
