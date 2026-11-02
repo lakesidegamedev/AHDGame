@@ -85,6 +85,7 @@ import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRu
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import { PRODUCER_CATCH_UP_TURNS } from "@/lib/market/producerMarket/capacityRules";
+import type { ProducerOpeningMarker } from "@/lib/market/producerMarket/liveMode";
 import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
 import {
   createProducerWallets,
@@ -129,8 +130,9 @@ export async function readProducerOpeningTurn(
     .sort({ turn: -1 })
     .limit(1)
     .next();
-  // No funded turn yet: the opening conversion is the previous turn.
-  if (!last) return turn - 1;
+  // No funded turn yet: resume from the stored opening conversion. A world
+  // switched to the funded market retroactively can be several turns past it.
+  if (!last) return readStoredOpeningTurn(db, worldEpoch, turn);
   if (last.status !== "settled")
     throw new Error(`Funded producer turn ${last.turn} was frozen but never settled`);
   if (turn - 1 - last.turn > PRODUCER_CATCH_UP_TURNS)
@@ -138,6 +140,24 @@ export async function readProducerOpeningTurn(
       `Funded producer market last settled turn ${last.turn}, more than ${PRODUCER_CATCH_UP_TURNS} turns before turn ${turn}`
     );
   return last.turn;
+}
+
+/**
+ * The opening generation a world's first funded turn resumes from, when no
+ * funded turn has settled yet. The stored marker is authoritative: with no
+ * funded records, the previous turn is only right when no opening exists.
+ */
+async function readStoredOpeningTurn(db: Db, worldEpoch: string, turn: number): Promise<number> {
+  const state = await db
+    .collection<{ _id: string; producerOpening?: ProducerOpeningMarker }>("gameState")
+    .findOne({ _id: "current" }, { projection: { producerOpening: 1 } });
+  const opening = state?.producerOpening;
+  if (!opening || opening.worldEpoch !== worldEpoch) return turn - 1;
+  if (turn - 1 - opening.turn > PRODUCER_CATCH_UP_TURNS)
+    throw new Error(
+      `Funded producer market opening turn ${opening.turn} is more than ${PRODUCER_CATCH_UP_TURNS} turns before turn ${turn}`
+    );
+  return opening.turn;
 }
 
 /**

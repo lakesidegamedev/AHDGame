@@ -324,4 +324,28 @@ describe("funded producer turn after a missed economy step", () => {
     expect(await readProducerOpeningTurn(db, "world", 2)).toBe(1);
     await expect(readProducerOpeningTurn(db, "world", 9)).rejects.toThrow("more than 6 turns");
   });
+
+  it("resumes from the stored opening when no funded turn has run yet", async () => {
+    const { memory, sector, household, operating, db } = world(868);
+    const gameState = memory.collection("gameState");
+    gameState.docs[0].producerOpening = { worldEpoch: "world", turn: 864, digest: "opening" };
+    // Plants and stock still hold the opening generation, 3 turns back.
+    const lagging = {
+      ...sector,
+      producerCapacity: { worldEpoch: "world", turn: 864 },
+      producerInventory: { worldEpoch: "world", turn: 864, inputStock: [], outputStock: [] },
+    };
+    const openingTurn = await readProducerOpeningTurn(db, "world", 868);
+    expect(openingTurn).toBe(864);
+    // The stored opening reconciles the lagging plant instead of refusing it.
+    expect(prepareAt(lagging, household, operating, 868, openingTurn)).toBeDefined();
+
+    // Another world's opening is ignored: the previous turn is the opening.
+    gameState.docs[0].producerOpening = { worldEpoch: "old", turn: 864, digest: "opening" };
+    expect(await readProducerOpeningTurn(db, "world", 868)).toBe(867);
+
+    // An opening further back than the catch-up bound stops the turn.
+    gameState.docs[0].producerOpening = { worldEpoch: "world", turn: 864, digest: "opening" };
+    await expect(readProducerOpeningTurn(db, "world", 875)).rejects.toThrow("more than 6 turns");
+  });
 });

@@ -265,10 +265,13 @@ export function NavbarWrapper({
   initialPageCountry,
   singleplayer = false,
   clientShell = false,
+  phoneApp = false,
   typedWordmark = false,
 }: {
   singleplayer?: boolean;
   clientShell?: boolean;
+  /** The AHDClient phone app, which draws its own bottom tab bar. */
+  phoneApp?: boolean;
   displayMode?: "focused" | "classic";
   initialPageCountry?: CountryId | null;
   /** Type the site name in on load, in mono (1991 worlds). */
@@ -664,6 +667,7 @@ export function NavbarWrapper({
               )}
               navCustomization={navData?.user?.navCustomization}
               clientShell={clientShell}
+              phoneApp={phoneApp}
               typedWordmark={typedWordmark}
               user={
                 state.user ?? (singleplayer ? { username: "Admin", singleplayer: true } : undefined)
