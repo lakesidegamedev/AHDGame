@@ -82,6 +82,8 @@ import {
   type BookTranche,
 } from "@/lib/banking/rules/creditBands";
 import {
+  MIN_CAPITAL_RATIO,
+  STRESS_CAPITAL_RATIO,
   regulatoryCapital,
   type BankBorrowings as Borrowings,
   type CapitalStanding as Standing,
@@ -89,11 +91,9 @@ import {
 
 export { STRESS_LOSS_FRACTION };
 
-/** Capital as a share of the loan book below which a bank must recapitalize. */
-export const MIN_CAPITAL_RATIO = 0.08;
-
-/** Ratio the bank must still clear AFTER the supervisory shock to distribute. */
-export const STRESS_CAPITAL_RATIO = 0.06;
+// MIN_CAPITAL_RATIO and STRESS_CAPITAL_RATIO live beside the balance sheet,
+// which also caps distributions with them.
+export { MIN_CAPITAL_RATIO, STRESS_CAPITAL_RATIO };
 
 /** Turns an undercapitalized bank has to post capital before its charter goes. */
 export const RECAP_GRACE_TURNS = 12;

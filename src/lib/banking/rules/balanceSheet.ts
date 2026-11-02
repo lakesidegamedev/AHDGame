@@ -101,6 +101,7 @@ export type BalanceSheetCharter = BorrowingCharter &
     | "totalLoans"
     | "propBookMarkValue"
     | "sovereignTreasuryMarkValue"
+    | "appliedStressLossFraction"
   >;
 
 /**
@@ -252,6 +253,39 @@ export const NPC_DEPOSIT_MAX_EQUITY_LEVERAGE = 12;
 /** Cash below this share of required reserves fails a red-banded bank. */
 export const RUN_FAILURE_COVER_FRACTION = 0.5;
 
+/** Capital as a share of the loan book below which a bank must recapitalize. */
+export const MIN_CAPITAL_RATIO = 0.08;
+
+/** Ratio the bank must still clear AFTER the supervisory shock to distribute. */
+export const STRESS_CAPITAL_RATIO = 0.06;
+
+/**
+ * Flat share of the book assumed to default at once when no band mix is
+ * known. `creditBands.ts` replaces it with a band-weighted figure per bank.
+ */
+export const STRESS_LOSS_FRACTION = 0.15;
+
+/**
+ * Capital a bank must keep after paying its owner, so that the payout cannot
+ * itself make the bank anything less than adequate: at least the minimum ratio
+ * on its risk assets, and enough to clear the stress ratio after the published
+ * shock. Cash leaving does not shrink risk assets, so this is a fixed floor
+ * under book equity for the distribution.
+ *
+ * Before 2026-11-02 the cap stopped at zero equity, so an adequate bank could
+ * pay out everything above its deposits and fail on the next small mark move
+ * (ticket 1749, bank of corporation 2857, turn 601).
+ */
+export function capitalRetainedOnDistribution(
+  riskAssets: number,
+  stressLossFraction: number = STRESS_LOSS_FRACTION
+): number {
+  const assets = nonNegative(riskAssets);
+  if (assets <= 0) return 0;
+  const loss = assets * Math.min(1, nonNegative(stressLossFraction));
+  return Math.max(MIN_CAPITAL_RATIO * assets, loss + STRESS_CAPITAL_RATIO * (assets - loss));
+}
+
 export interface BankBalanceSheetInput extends BalanceSheetOptions {
   charter: BalanceSheetCharter & Pick<BankCharter, "totalDeposits" | "capitalStanding">;
   /** Reserve requirement for the charter currency, 0..1. */
@@ -291,6 +325,8 @@ export interface BankBalanceSheet {
   reserveSurplus: number;
   /** What the owner may actually take out right now. */
   distributable: number;
+  /** Equity that stays in the bank after any payout, so it remains adequate. */
+  retainedCapital: number;
   /** Ceiling from branch capacity, before the equity cap. */
   capacityCeiling: number;
   /** Ceiling from equity: `max(0, equity) x 12`. */
@@ -329,12 +365,23 @@ export function bankBalanceSheet(input: BankBalanceSheetInput): BankBalanceSheet
     input.capacityCeiling === undefined ? equityCeiling : Math.min(capacityCeiling, equityCeiling);
 
   // Two ceilings on a distribution, take the lower: the bank may not drop below
-  // its reserve requirement, and it may never pay the owner more than its book
-  // equity, because anything above equity is depositor money. Zero unless the
-  // supervisor calls the bank adequate.
+  // its reserve requirement, and it may never pay the owner more than the book
+  // equity it holds above the capital an adequate bank must keep, because
+  // anything below that is depositors' cushion. Zero unless the supervisor
+  // calls the bank adequate.
   const standing = charter?.capitalStanding;
+  const riskAssets =
+    loans +
+    nonNegative(charter?.propBookMarkValue) +
+    nonNegative(options.sovereignTreasuryMarkValue);
+  const stressFraction = Number.isFinite(charter?.appliedStressLossFraction)
+    ? charter!.appliedStressLossFraction!
+    : STRESS_LOSS_FRACTION;
+  const retainedCapital = capitalRetainedOnDistribution(riskAssets, stressFraction);
   const distributable =
-    standing && !mayDistribute(standing) ? 0 : Math.max(0, Math.min(reserveSurplus, equity));
+    standing && !mayDistribute(standing)
+      ? 0
+      : Math.max(0, Math.min(reserveSurplus, equity - retainedCapital));
 
   const runLine = RUN_FAILURE_COVER_FRACTION * required;
 
@@ -353,6 +400,7 @@ export function bankBalanceSheet(input: BankBalanceSheetInput): BankBalanceSheet
     requiredReserves: required,
     reserveSurplus,
     distributable,
+    retainedCapital,
     capacityCeiling,
     equityCeiling,
     depositCeiling,
