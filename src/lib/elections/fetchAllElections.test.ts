@@ -30,3 +30,21 @@ describe("fetchAllElections", () => {
     expect(out.error).toContain("500");
   });
 });
+
+describe("fetchAllElections when cancelled", () => {
+  it("returns quietly, without logging an error, when its caller aborts", async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        controller.abort();
+        throw new DOMException("The operation was aborted.", "AbortError");
+      })
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const out = await fetchAllElections("US", { signal: controller.signal });
+    expect(out).toEqual({ elections: [], aborted: true });
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});

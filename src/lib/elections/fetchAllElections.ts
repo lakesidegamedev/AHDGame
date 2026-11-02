@@ -11,7 +11,7 @@ const DEFAULT_PAGE_SIZE = 500;
 export async function fetchAllElections(
   countryId: string,
   opts: { pageSize?: number; signal?: AbortSignal } = {}
-): Promise<{ elections: ElectionResponse[]; error?: string }> {
+): Promise<{ elections: ElectionResponse[]; error?: string; aborted?: true }> {
   const pageSize = opts.pageSize ?? DEFAULT_PAGE_SIZE;
   const elections: ElectionResponse[] = [];
   let page = 1;
@@ -34,6 +34,8 @@ export async function fetchAllElections(
     }
     return { elections };
   } catch (err) {
+    // The caller cancelled (an unmount, a newer request): not a failure.
+    if (opts.signal?.aborted) return { elections: [], aborted: true };
     console.error("Error fetching elections:", err);
     return { elections: [], error: String(err) };
   }
