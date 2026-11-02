@@ -63,7 +63,7 @@ interface DockNav {
   pendingCharterCount: number;
 }
 
-// GET /api/mobile-dock[?country=XX] — the phone dock (tabs and sheets) for the signed-in player, for the native app to draw.
+// GET /api/mobile-dock[?country=XX] : the phone dock (tabs and sheets) for the signed-in player, for the native app to draw.
 // Auth: signed-in session (the same one /api/client-nav reads)
 // Errors: 401 when signed out
 export async function GET(request: Request) {
