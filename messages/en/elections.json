@@ -564,6 +564,26 @@
         "noRace": "You are not running in a race. Your actions below still build influence, favorability and funds.",
         "openRace": "Open race",
         "resources": "{actions} AP · {funds} campaign funds"
+      },
+      "map": {
+        "aria": "{place} map, {type}",
+        "loading": "Loading map",
+        "unavailable": "No map for this country yet.",
+        "hintNational": "Click a {noun} to zoom in",
+        "hintRegion": "Click an area for detail, or a neighbor to move there",
+        "units": "{count} {label}",
+        "regionTitle": "{name}, {count, plural, =0 {no race} one {# race} other {# races}}",
+        "moveHere": "{name}. Click to move here",
+        "unitTitle": "{name}, {tier}",
+        "legendToss": "Toss-up",
+        "legendTitle": "{party}: toss-up, lean, likely, safe",
+        "callHold": "{leader} hold · {tier}",
+        "callGain": "{leader} gain from {holder} · {tier}",
+        "call": "{leader} · {tier}",
+        "noResults": "No results for this area yet.",
+        "source": "Projected from {race}",
+        "canvass": "Canvass voters here",
+        "close": "Close"
       }
     }
   }

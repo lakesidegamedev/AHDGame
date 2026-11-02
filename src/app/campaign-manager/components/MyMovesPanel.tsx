@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import ActionCardCompact from "@/app/actions/components/ActionCardCompact";
-import { CampaignActionModal } from "@/app/actions/components/CampaignActionModal";
 import { CATEGORY_LABELS } from "@/app/actions/actionsConstants";
 import { actionCardProps } from "@/app/actions/actionCardProps";
 import type { ActionsController } from "@/app/actions/useActionsController";
@@ -17,7 +16,7 @@ const CATEGORY_ORDER = ["influence", "money", "research"] as const;
 /**
  * My moves: the player's own stats, their race at a glance, and the Actions
  * page's cards, run through the same controller (same prices, same batching,
- * same pickers and modals).
+ * same pickers; the Canvass and Targeted Ads modal is mounted by the page).
  */
 export function MyMovesPanel({
   controller,
@@ -208,13 +207,6 @@ export function MyMovesPanel({
           </section>
         );
       })}
-
-      <CampaignActionModal
-        action={controller.campaignAction}
-        character={character}
-        onClose={() => controller.setCampaignAction(null)}
-        onResourcesSpent={controller.fetchCharacter}
-      />
     </div>
   );
 }

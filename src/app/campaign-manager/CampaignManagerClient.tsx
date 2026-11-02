@@ -14,6 +14,9 @@ import { TargetPanel } from "./components/TargetPanel";
 import { MyMovesPanel } from "./components/MyMovesPanel";
 import { useActionsController } from "@/app/actions/useActionsController";
 import { raceTitle } from "./raceLabels";
+import { CampaignMap } from "./map/CampaignMap";
+import { CampaignActionModal } from "@/app/actions/components/CampaignActionModal";
+import { filterRaces, sortRaces } from "@/lib/campaignManager/rules";
 
 export interface CampaignManagerClientProps {
   countryId: string;
@@ -130,6 +133,23 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     setDetailVersion((v) => v + 1);
     void actions.fetchCharacter();
   }, [reload, actions]);
+
+  // Choosing a region on the map keeps the race when it is there, else the
+  // player's race there, else the region's closest race of the chosen type.
+  const selectRegion = useCallback(
+    (regionId: string) => {
+      updateFilter({ regionId });
+      if (regionId === "ALL" || !filter) return;
+      if (selected?.regionId === regionId) return;
+      const there = sortRaces(filterRaces(races, { ...filter, regionId, query: "" }), watched);
+      const next = there.find((r) => r.isMine) ?? there[0];
+      if (next) {
+        setPickedKey(next.key);
+        setCandidateId(null);
+      }
+    },
+    [updateFilter, filter, selected, races, watched]
+  );
 
   const pickCandidate = useCallback((id: string) => {
     setCandidateId(id);
@@ -254,6 +274,19 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               </button>
             </p>
           ) : null}
+          {!loading && filter ? (
+            <CampaignMap
+              countryId={props.countryId}
+              countryName={props.countryName}
+              regionNoun={props.regionNoun}
+              races={races}
+              filter={filter}
+              selectedRace={selected}
+              onSelectRegion={selectRegion}
+              onCanvass={() => actions.setCampaignAction("canvass")}
+              turn={currentTurn}
+            />
+          ) : null}
           {!loading ? (
             <RaceView
               countryId={props.countryId}
@@ -269,6 +302,14 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           ) : null}
         </section>
       </BlendShell>
+      {actions.character ? (
+        <CampaignActionModal
+          action={actions.campaignAction}
+          character={actions.character}
+          onClose={() => actions.setCampaignAction(null)}
+          onResourcesSpent={actions.fetchCharacter}
+        />
+      ) : null}
     </div>
   );
 }
