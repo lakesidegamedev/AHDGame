@@ -161,3 +161,12 @@ describe("RaceView open primary", () => {
     expect(screen.getByRole("link", { name: "Election page" })).toBeTruthy();
   });
 });
+
+describe("RaceView on a phone", () => {
+  it("keeps name, poll and change and leaves the rest to the sheet", () => {
+    view(senate, null, { compact: true });
+    expect(screen.queryByText("Favor")).toBeNull();
+    expect(screen.queryByText("Influence")).toBeNull();
+    expect(screen.getByText("Poll")).toBeTruthy();
+  });
+});

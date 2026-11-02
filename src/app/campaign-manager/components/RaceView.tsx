@@ -32,6 +32,8 @@ export interface RaceViewProps {
   onToggleWatch: () => void;
   selectedCandidateId: string | null;
   onSelectCandidate: (candidateId: string) => void;
+  /** Phone width: the table keeps name, poll and change; the sheet shows the rest. */
+  compact?: boolean;
 }
 
 const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
@@ -48,6 +50,7 @@ export function RaceView(props: RaceViewProps) {
   }
 
   const title = raceTitle(race, t, props.countryId, props.regionNames);
+  const cols = props.compact ? "minmax(0,1fr) 64px 52px" : "minmax(0,1fr) 80px 64px 64px 72px";
   const standing = raceStanding(race);
   const shade = tierShade(standing.leaderColor, standing.tier, ground);
   const lines = raceLines(race);
@@ -275,7 +278,7 @@ export function RaceView(props: RaceViewProps) {
           role="row"
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0,1fr) 80px 64px 64px 72px",
+            gridTemplateColumns: cols,
             gap: 8,
             padding: "0 12px 6px",
             ...EYEBROW,
@@ -286,8 +289,10 @@ export function RaceView(props: RaceViewProps) {
             {race.multiSeat ? t("race.colPartyPoll") : t("race.colPoll")}
           </span>
           <span style={{ textAlign: "right" }}>{t("race.colChange")}</span>
-          <span style={{ textAlign: "right" }}>{t("race.colFavor")}</span>
-          <span style={{ textAlign: "right" }}>{t("race.colInfluence")}</span>
+          {props.compact ? null : <span style={{ textAlign: "right" }}>{t("race.colFavor")}</span>}
+          {props.compact ? null : (
+            <span style={{ textAlign: "right" }}>{t("race.colInfluence")}</span>
+          )}
         </div>
         <ul
           style={{
@@ -312,7 +317,7 @@ export function RaceView(props: RaceViewProps) {
                   style={{
                     width: "100%",
                     display: "grid",
-                    gridTemplateColumns: "minmax(0,1fr) 80px 64px 64px 72px",
+                    gridTemplateColumns: cols,
                     gap: 8,
                     alignItems: "center",
                     minHeight: 52,
@@ -375,12 +380,16 @@ export function RaceView(props: RaceViewProps) {
                   >
                     {fmtDelta(d)}
                   </span>
-                  <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
-                    {Math.round(c.favorability)}%
-                  </span>
-                  <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
-                    {Math.round(c.influence)}%
-                  </span>
+                  {props.compact ? null : (
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
+                      {Math.round(c.favorability)}%
+                    </span>
+                  )}
+                  {props.compact ? null : (
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
+                      {Math.round(c.influence)}%
+                    </span>
+                  )}
                 </button>
               </li>
             );

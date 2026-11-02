@@ -584,6 +584,13 @@
         "source": "Projected from {race}",
         "canvass": "Canvass voters here",
         "close": "Close"
+      },
+      "mobile": {
+        "races": "Races",
+        "myMoves": "My moves",
+        "tabs": "Campaign Manager sections",
+        "close": "Close",
+        "raceChips": "Races"
       }
     }
   }

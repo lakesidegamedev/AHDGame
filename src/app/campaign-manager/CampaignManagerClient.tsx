@@ -15,6 +15,8 @@ import { MyMovesPanel } from "./components/MyMovesPanel";
 import { useActionsController } from "@/app/actions/useActionsController";
 import { raceTitle } from "./raceLabels";
 import { CampaignMap } from "./map/CampaignMap";
+import { BottomSheet, MobileRaceStrip, MobileTabs } from "./components/MobileCampaignManager";
+import { useIsDesktop } from "./useIsDesktop";
 import { CampaignActionModal } from "@/app/actions/components/CampaignActionModal";
 import { filterRaces, sortRaces } from "@/lib/campaignManager/rules";
 
@@ -52,6 +54,9 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
   const [panel, setPanel] = useState<"target" | "self">("target");
+  const isDesktop = useIsDesktop();
+  const [mobileTab, setMobileTab] = useState<"races" | "self">("races");
+  const [sheetOpen, setSheetOpen] = useState(false);
   // My moves reports results as toasts, like the Actions page's compact view.
   const actions = useActionsController({ viewMode: "compact" });
   // The player's own favorability and influence move with every My moves action;
@@ -151,10 +156,15 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     [updateFilter, filter, selected, races, watched]
   );
 
-  const pickCandidate = useCallback((id: string) => {
-    setCandidateId(id);
-    setPanel("target");
-  }, []);
+  // Desktop shows the Target card in the right rail; a phone opens it in a sheet.
+  const pickCandidate = useCallback(
+    (id: string) => {
+      setCandidateId(id);
+      setPanel("target");
+      if (!isDesktop) setSheetOpen(true);
+    },
+    [isDesktop]
+  );
 
   const openMyRace = useCallback(() => {
     if (!myRace) return;
@@ -261,7 +271,13 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
         }
       >
         <section
-          style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}
+          style={{
+            padding: isDesktop ? "20px 24px" : "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            minWidth: 0,
+          }}
           aria-busy={loading}
         >
           <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
@@ -274,7 +290,30 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               </button>
             </p>
           ) : null}
-          {!loading && filter ? (
+          {!isDesktop ? <MobileTabs tab={mobileTab} onTab={setMobileTab} /> : null}
+          {!isDesktop && mobileTab === "races" && filter ? (
+            <MobileRaceStrip
+              countryId={props.countryId}
+              races={races}
+              filter={filter}
+              onFilter={updateFilter}
+              selectedKey={selected?.key ?? null}
+              onSelect={selectRace}
+              watched={watched}
+            />
+          ) : null}
+          {!isDesktop && mobileTab === "self" ? (
+            <MyMovesPanel
+              controller={actions}
+              myRace={myRace}
+              myRaceTitle={myRace ? raceTitle(myRace, t, props.countryId, props.regionNames) : null}
+              onOpenRace={() => {
+                openMyRace();
+                setMobileTab("races");
+              }}
+            />
+          ) : null}
+          {!loading && filter && (isDesktop || mobileTab === "races") ? (
             <CampaignMap
               countryId={props.countryId}
               countryName={props.countryName}
@@ -287,7 +326,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               turn={currentTurn}
             />
           ) : null}
-          {!loading ? (
+          {!loading && (isDesktop || mobileTab === "races") ? (
             <RaceView
               countryId={props.countryId}
               regionNames={props.regionNames}
@@ -298,10 +337,24 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               onToggleWatch={() => selected && toggleWatch(selected.key)}
               selectedCandidateId={candidateId}
               onSelectCandidate={pickCandidate}
+              compact={!isDesktop}
             />
           ) : null}
         </section>
       </BlendShell>
+      {!isDesktop && sheetOpen && candidate ? (
+        <BottomSheet title={candidate.name} onClose={() => setSheetOpen(false)}>
+          <TargetPanel
+            race={selected}
+            candidate={candidate}
+            onActed={refreshAfterAction}
+            onShowMyMoves={() => {
+              setSheetOpen(false);
+              setMobileTab("self");
+            }}
+          />
+        </BottomSheet>
+      ) : null}
       {actions.character ? (
         <CampaignActionModal
           action={actions.campaignAction}
