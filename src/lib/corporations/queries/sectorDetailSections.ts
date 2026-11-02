@@ -45,6 +45,7 @@ import type { FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import {
   deliveredFraction,
+  nextArrivalTurn,
   queueUndeliveredCost,
   steadyUnitsPerTurn,
 } from "@/lib/corporations/buildDelivery";
@@ -1533,6 +1534,7 @@ export function buildSectorPlantsSection(args: {
       unitsDelivered: o.unitsOrdered * delivered,
       smooth: o.smooth === true,
       unitsPerTurn: steadyUnitsPerTurn(o, currentTurn),
+      nextArrivalTurn: nextArrivalTurn(o, currentTurn),
       costPaidAnchor: o.costPaidAnchor,
       startTurn: o.startTurn,
       onlineTurn: o.onlineTurn,

@@ -422,7 +422,8 @@ export default function PlantPanel({
               // Smooth orders deliver capacity every turn across
               // [startTurn, onlineTurn] (buildDelivery.ts). Show the rate so the
               // queue reads as a ramp, not a binary wait. A whole-plant order
-              // that lands in steps has no rate (ticket 1753).
+              // that lands in steps has no rate (ticket 1753); it names the turn
+              // its next plant lands instead.
               const unitsPerTurn = o.unitsPerTurn > 0 ? o.unitsPerTurn : null;
               // Everything a player orders is a FACILITY. Capacity units are the
               // engine's internal measure of what a facility produces, and
@@ -447,7 +448,9 @@ export default function PlantPanel({
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
                             ? `about ${fmtUnits(sitesPerTurn, sitesPerTurn < 10 ? 1 : 0)} ${sitesPerTurn === 1 ? vocab.singular : vocab.plural} arriving each turn · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
-                            : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
+                            : o.nextArrivalTurn != null && o.nextArrivalTurn < o.onlineTurn
+                              ? `next ${vocab.singular} lands on turn ${o.nextArrivalTurn} · done on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
+                              : `ready on turn ${o.onlineTurn} (${o.turnsRemaining} to go) · ${money(o.costPaidAnchor)} paid`
                           : `arrives next turn · ${money(o.costPaidAnchor)} paid`}
                       </p>
                     </div>

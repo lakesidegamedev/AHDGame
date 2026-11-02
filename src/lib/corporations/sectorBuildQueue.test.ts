@@ -77,4 +77,14 @@ describe("summarizeBuildQueue", () => {
     expect(summary?.unitsRemaining).toBeCloseTo(193, 9);
     expect(summary?.lastOnlineTurn).toBe(614);
   });
+
+  it("reports when a stepped order next lands, before its finish turn", () => {
+    const summary = summarizeBuildQueue(
+      [order({ unitsOrdered: 200, plantUnits: 100, startTurn: 0, onlineTurn: 6, smooth: true })],
+      1
+    );
+    expect(summary?.unitsPerTurn).toBe(0);
+    expect(summary?.nextArrivalTurn).toBe(3);
+    expect(summary?.lastOnlineTurn).toBe(6);
+  });
 });

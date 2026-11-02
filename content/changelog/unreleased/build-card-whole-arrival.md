@@ -5,7 +5,7 @@ summary: >-
   An order for less than one whole plant, or for fewer plants than it has turns
   to build, showed a small per-turn rate such as "about 0.1 a turn" even though
   nothing arrives until each plant is finished. The build card and the sector
-  page now show the turn it is ready instead.
+  page now show the turn the next plant lands, or the turn it is ready.
 # Free text. What the change was about: economy, elections, balance, corporations.
 tags: [corporations, construction]
 # How big this change is, which sets how it is grouped in the release post.
@@ -23,7 +23,8 @@ areas: [frontend, backend]
   arrives.
 - The build card and the Under construction list on the sector page used to
   show a per-turn rate for these orders, so a build on schedule read as stuck
-  at "0 of 0.8 in, about 0.1 a turn". They now show the finish turn only, and
-  the tooltip says the capacity arrives in whole plants.
+  at "0 of 0.8 in, about 0.1 a turn". They now say when the next plant lands
+  if that is before the build is done, and otherwise the finish turn. The
+  tooltip says whether the capacity arrives in one piece or in steps.
 - Orders that land at least one plant every turn keep their per-turn rate.
   Nothing about how or when capacity is built has changed.

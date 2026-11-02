@@ -632,6 +632,8 @@ export interface PlantBuildOrderView {
    * at once or in whole-plant steps that skip turns.
    */
   unitsPerTurn: number;
+  /** Next turn this order adds capacity; null once it has landed. */
+  nextArrivalTurn?: number | null;
   costPaidAnchor: number;
   startTurn: number;
   onlineTurn: number;

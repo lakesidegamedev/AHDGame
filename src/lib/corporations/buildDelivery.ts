@@ -83,15 +83,17 @@ export function costReleasedThisTurn(order: SectorBuildOrder, currentTurn: numbe
 }
 
 /**
- * Capacity units this order adds on every turn of its ramp, or 0 when it does
- * not add capacity every turn.
+ * Average capacity units this order adds per turn of its ramp, or 0 when it
+ * does not add capacity on every turn.
  *
- * A linear smooth order adds `unitsOrdered / window` each turn. A whole-plant
- * order adds whole plants, so it only has a per-turn rate when at least one
- * plant lands each turn. With fewer plants than turns it lands in steps, and an
- * order under one plant lands whole on its online turn; quoting "about 0.1 a
- * turn" for that described capacity that never arrives that way (ticket 1753).
- * Legacy orders land all at once and have no rate either.
+ * A linear smooth order adds exactly `unitsOrdered / window` each turn. A
+ * whole-plant order adds whole plants, so it only has a per-turn rate when at
+ * least one plant lands each turn, and then the rate is an average of lumpy
+ * steps. With fewer plants than turns it lands in steps with empty turns
+ * between, and an order under one plant lands in one piece on its online turn;
+ * quoting "about 0.1 a turn" for that described capacity that never arrives
+ * that way (ticket 1753). Legacy orders land all at once and have no rate
+ * either. Use `nextArrivalTurn` to say when a stepped order next lands.
  */
 export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number): number {
   const units = safeUnits(order);
@@ -103,6 +105,21 @@ export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number)
     if (plants < window) return 0;
   }
   return units / window;
+}
+
+/**
+ * First turn after `currentTurn` on which this order adds capacity, or null
+ * once it has landed. A legacy order lands on its online turn; a whole-plant
+ * order on the turn its next plant steps in, which can be well before the
+ * online turn (two plants over six turns land at the midpoint and the end).
+ */
+export function nextArrivalTurn(order: SectorBuildOrder, currentTurn: number): number | null {
+  if (safeUnits(order) === 0 || currentTurn >= order.onlineTurn) return null;
+  if (!isSmooth(order)) return order.onlineTurn;
+  for (let turn = Math.max(order.startTurn, currentTurn) + 1; turn < order.onlineTurn; turn++) {
+    if (unitsDeliveredThisTurn(order, turn) > 0) return turn;
+  }
+  return order.onlineTurn;
 }
 
 /** Paid cost still under construction (not yet delivered) as of `currentTurn`. */

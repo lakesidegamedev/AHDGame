@@ -98,7 +98,30 @@ describe("BuildQueueBadge", () => {
     expect(screen.getByText(/done turn 614/)).toBeTruthy();
     expect(screen.queryByText(/a turn/)).toBeNull();
     const label = buildProgressLabel(queue, 250, "mine", "mines");
-    expect(label).toContain("Capacity arrives in whole mines, not a slice each turn.");
+    expect(label).toContain(
+      "Capacity arrives in one piece when it is done, not a slice each turn."
+    );
+    expect(label).not.toContain("whole mines");
     expect(label).not.toContain("rises each turn");
+  });
+
+  it("names the turn a stepped order next lands when that is before it is done", () => {
+    // Two 100-unit plants over six turns: one lands on turn 3, the last on turn 6.
+    const queue = {
+      orders: 1,
+      unitsOrdered: 200,
+      unitsRemaining: 200,
+      unitsPerTurn: 0,
+      lastOnlineTurn: 6,
+      nextOnlineTurn: 6,
+      nextArrivalTurn: 3,
+      turnsRemaining: 5,
+    };
+    render(<BuildQueueBadge queue={queue} plantUnits={100} />);
+    expect(screen.getByText(/next lands turn 3/)).toBeTruthy();
+    expect(screen.queryByText(/a turn/)).toBeNull();
+    expect(buildProgressLabel(queue, 100, "plant", "plants")).toContain(
+      "Capacity arrives in steps, not a slice each turn: the next lands on turn 3."
+    );
   });
 });

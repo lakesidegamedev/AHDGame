@@ -169,6 +169,49 @@ describe("PlantPanel order that lands whole", () => {
     expect(screen.getByText(/ready on turn 614 \(6 to go\)/)).toBeTruthy();
     expect(screen.queryByText(/arriving each turn/)).toBeNull();
   });
+
+  it("names the turn the next plant lands for an order that steps plants in", () => {
+    const steppedPlants = {
+      ...plants,
+      capacityUnits: 0,
+      plantCount: undefined,
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 0,
+          onlineTurn: 6,
+          turnsRemaining: 5,
+          smooth: true,
+          unitsPerTurn: 0,
+          nextArrivalTurn: 3,
+          unitsOrdered: 2,
+          unitsDelivered: 0,
+          costPaidAnchor: 1_000_000,
+          progress: 0,
+        },
+      ],
+    } as unknown as PlantsData;
+
+    render(
+      <PlantPanel
+        plants={steppedPlants}
+        sectorType="manufacturing"
+        industryModel="vehicles"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(
+      screen.getByText(/next plant lands on turn 3 · done on turn 6 \(5 to go\)/)
+    ).toBeTruthy();
+  });
 });
 
 describe("PlantPanel workforce", () => {
