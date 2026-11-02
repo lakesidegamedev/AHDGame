@@ -621,7 +621,11 @@
         "source": "Projected from {race}",
         "canvass": "Canvass voters here",
         "close": "Close",
-        "noCountyResults": "No county results were recorded for this race."
+        "noCountyResults": "No county results were recorded for this race.",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "resetView": "Reset view",
+        "hintGestures": "Drag to move, pinch or Ctrl + scroll to zoom."
       },
       "mobile": {
         "races": "Races",

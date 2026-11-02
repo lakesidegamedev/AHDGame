@@ -34,6 +34,11 @@ interface Options {
   height: number;
   /** Frame size and zoom cap when the frame is not the map's own shape (the stage). */
   frame?: MapFrame;
+  /**
+   * The wheel zooms only with Ctrl or Cmd held (a trackpad pinch sends Ctrl), so
+   * a map in the page's flow does not take over the page's scrolling.
+   */
+  wheelNeedsModifier?: boolean;
 }
 
 /**
@@ -41,7 +46,15 @@ interface Options {
  * own scrolling is attached only while `enabled`, so a locked map never
  * intercepts a wheel or a touch.
  */
-export function usePanZoom({ svgRef, enabled, scale, width, height, frame }: Options) {
+export function usePanZoom({
+  svgRef,
+  enabled,
+  scale,
+  width,
+  height,
+  frame,
+  wheelNeedsModifier = false,
+}: Options) {
   const frameWidth = frame?.frameWidth;
   const frameHeight = frame?.frameHeight;
   const maxZoom = frame?.maxZoom;
@@ -63,6 +76,7 @@ export function usePanZoom({ svgRef, enabled, scale, width, height, frame }: Opt
     const svg = svgRef.current;
     if (!svg || !enabled) return;
     const onWheel = (e: WheelEvent) => {
+      if (wheelNeedsModifier && !e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const rect = svg.getBoundingClientRect();
       const px = (e.clientX - rect.left) / scale;
@@ -71,7 +85,7 @@ export function usePanZoom({ svgRef, enabled, scale, width, height, frame }: Opt
     };
     svg.addEventListener("wheel", onWheel, { passive: false });
     return () => svg.removeEventListener("wheel", onWheel);
-  }, [svgRef, enabled, scale, width, height, f]);
+  }, [svgRef, enabled, scale, width, height, f, wheelNeedsModifier]);
 
   const onPointerDown = useCallback(
     (e: PointerEvent<SVGSVGElement>) => {
@@ -151,8 +165,8 @@ export function usePanZoom({ svgRef, enabled, scale, width, height, frame }: Opt
   const reset = useCallback(() => setView(rest), [rest]);
   /** Bring a box (map units) into view, e.g. a double-clicked state. */
   const zoomToBox = useCallback(
-    (box: { x0: number; y0: number; x1: number; y1: number }, insetRight = 0) =>
-      setView(viewForBox(box, width, height, f, undefined, insetRight)),
+    (box: { x0: number; y0: number; x1: number; y1: number }, insetRight = 0, padding?: number) =>
+      setView(viewForBox(box, width, height, f, padding, insetRight)),
     [width, height, f]
   );
 

@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { useBlendGround } from "@/components/blend/useBlendGround";
-import { viewForBox, type MapView } from "@/app/elections/[id]/blend/presMap/mapView";
+import {
+  MIN_ZOOM,
+  viewForBox,
+  type MapFrame,
+  type MapView,
+} from "@/app/elections/[id]/blend/presMap/mapView";
+import { usePanZoom } from "@/app/elections/[id]/blend/presMap/usePanZoom";
 import { shadeColorForTier } from "@/lib/elections/marginTierShade";
 import type { MarginTier } from "@/lib/elections/generalViewModel";
 import {
@@ -37,20 +43,66 @@ export interface CampaignMapProps {
 const TIERS: MarginTier[] = ["tossup", "lean", "likely", "safe"];
 const NEIGHBOUR_OPACITY = 0.32;
 const FAR_OPACITY = 0.2;
+/** Deep enough to read a small county once its state is already in view. */
+const MAP_FRAME: MapFrame = { maxZoom: 24 };
+const FIT_PADDING = 0.12;
 
 /**
  * The country, shaded race by race for the chosen type and stage. Picking a
  * region zooms to it and draws its sub-units from the selected race's results;
  * every other region in view keeps its own sub-units, faded, so the race reads
  * in context. Labels are HTML over the map so they stay crisp at any zoom.
+ * The map drags to pan and zooms by its buttons, a pinch, or Ctrl and the
+ * wheel (a plain wheel keeps scrolling the page).
  */
 export function CampaignMap(props: CampaignMapProps) {
   const t = useTranslations("elections.campaignManager");
   const ground = useBlendGround();
   const [geo, setGeo] = useState<CampaignGeo | null | undefined>(undefined);
   const [unitPick, setUnitPick] = useState<{ region: string; id: string } | null>(null);
+  // A gesture moves the map at once; a pick, a button or a reset glides there.
+  const [glide, setGlide] = useState(true);
+  const [frameWidth, setFrameWidth] = useState(0);
+  const svgRef = useRef<SVGSVGElement>(null);
   const { filter, races, selectedRace } = props;
   const sel = filter.regionId !== "ALL" ? filter.regionId : null;
+  const fitBox = useMemo(() => {
+    const bb = geo && sel ? geo.regions[sel]?.bb : undefined;
+    return bb ? { x0: bb[0], y0: bb[1], x1: bb[2], y1: bb[3] } : null;
+  }, [geo, sel]);
+
+  const measure = useCallback((el: HTMLDivElement | null) => {
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setFrameWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const mapW = geo?.w ?? 1;
+  const pz = usePanZoom({
+    svgRef,
+    enabled: !!geo,
+    scale: (frameWidth || mapW) / mapW,
+    width: mapW,
+    height: geo?.h ?? 1,
+    frame: MAP_FRAME,
+    wheelNeedsModifier: true,
+  });
+  const { zoomToBox, reset } = pz;
+  const fitView = useCallback(() => {
+    setGlide(true);
+    if (fitBox) zoomToBox(fitBox, 0, FIT_PADDING);
+    else reset();
+  }, [fitBox, zoomToBox, reset]);
+
+  // Picking a region (or the country) frames it, before the map paints.
+  const fitKey = geo ? (sel ?? "") : null;
+  const [fittedFor, setFittedFor] = useState<string | null>(null);
+  if (fitKey !== fittedFor) {
+    setFittedFor(fitKey);
+    if (geo) fitView();
+  }
 
   useEffect(() => {
     let live = true;
@@ -74,15 +126,19 @@ export function CampaignMap(props: CampaignMapProps) {
     return out;
   }, [races, filter]);
 
-  const view: MapView = useMemo(() => {
-    if (!geo || !sel || !geo.regions[sel]) return { k: 1, x: 0, y: 0 };
-    const [x0, y0, x1, y1] = geo.regions[sel].bb;
-    return viewForBox({ x0, y0, x1, y1 }, geo.w, geo.h, {}, 0.12);
-  }, [geo, sel]);
+  // Regions in the picked region's frame load their sub-units. Panning and
+  // zooming do not widen that, so a drag never fans out into more reads.
+  const fitted: MapView = useMemo(
+    () =>
+      geo && fitBox
+        ? viewForBox(fitBox, geo.w, geo.h, MAP_FRAME, FIT_PADDING)
+        : { k: 1, x: 0, y: 0 },
+    [geo, fitBox]
+  );
 
   const visible = useMemo(
-    () => (geo && sel ? visibleRegions(geo.regions, view, geo.w, geo.h) : []),
-    [geo, sel, view]
+    () => (geo && sel ? visibleRegions(geo.regions, fitted, geo.w, geo.h) : []),
+    [geo, sel, fitted]
   );
 
   // The race whose results draw a region's sub-units: the selected race in its
@@ -159,6 +215,11 @@ export function CampaignMap(props: CampaignMapProps) {
       ? unitsOf(sel).find((u) => u.id === unitPick.id)
       : undefined;
   const legendLines = (selectedRace ? partyLines(selectedRace) : []).slice(0, 6);
+  const view = pz.view;
+  const atFit =
+    Math.abs(view.k - fitted.k) < 1e-6 &&
+    Math.abs(view.x - fitted.x) < 1e-6 &&
+    Math.abs(view.y - fitted.y) < 1e-6;
   const toScreen = (x: number, y: number) => ({
     left: `${((x * view.k + view.x) / geo.w) * 100}%`,
     top: `${((y * view.k + view.y) / geo.h) * 100}%`,
@@ -167,7 +228,10 @@ export function CampaignMap(props: CampaignMapProps) {
     ? visible
     : Object.keys(geo.regions).filter((id) => {
         const [x0, y0, x1, y1] = geo.regions[id].bb;
-        return !geo.labelMin || (x1 - x0 > geo.labelMin[0] && y1 - y0 > geo.labelMin[1]);
+        return (
+          !geo.labelMin ||
+          ((x1 - x0) * view.k > geo.labelMin[0] && (y1 - y0) * view.k > geo.labelMin[1])
+        );
       });
 
   return (
@@ -213,6 +277,7 @@ export function CampaignMap(props: CampaignMapProps) {
       </nav>
 
       <div
+        ref={measure}
         style={{
           position: "relative",
           borderRadius: 12,
@@ -221,17 +286,36 @@ export function CampaignMap(props: CampaignMapProps) {
         }}
       >
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${geo.w} ${geo.h}`}
           width="100%"
           role="group"
           aria-label={t("map.aria", { place: sel ? regionLabel(sel) : props.countryName, type })}
-          style={{ display: "block" }}
+          onPointerDownCapture={() => setGlide(false)}
+          onWheel={(e) => {
+            if (e.ctrlKey || e.metaKey) setGlide(false);
+          }}
+          onPointerDown={pz.handlers.onPointerDown}
+          onPointerMove={pz.handlers.onPointerMove}
+          onPointerUp={pz.handlers.onPointerUp}
+          onPointerCancel={pz.handlers.onPointerCancel}
+          // The click that ends a drag is not a pick.
+          onClickCapture={(e) => {
+            if (pz.consumeDrag()) e.stopPropagation();
+          }}
+          style={{
+            display: "block",
+            // Vertical swipes still scroll the page; sideways drags and pinches move the map.
+            touchAction: "pan-y",
+            cursor: pz.dragging ? "grabbing" : "grab",
+            userSelect: "none",
+          }}
         >
           <g
             style={{
               transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
               transformOrigin: "0 0",
-              transition: "transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1)",
+              transition: glide ? "transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1)" : "none",
             }}
           >
             {geo.frame ? (
@@ -370,6 +454,16 @@ export function CampaignMap(props: CampaignMapProps) {
             </span>
           );
         })}
+        <ZoomControls
+          canZoomIn={view.k < (MAP_FRAME.maxZoom ?? 1)}
+          canZoomOut={view.k > MIN_ZOOM}
+          canReset={!atFit}
+          onZoom={(direction) => {
+            setGlide(true);
+            pz.zoomBy(direction);
+          }}
+          onReset={fitView}
+        />
         {picked ? (
           <CountyCard
             name={picked.name}
@@ -388,15 +482,79 @@ export function CampaignMap(props: CampaignMapProps) {
 
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <MapLegend lines={legendLines} ground={ground} />
-        <span style={{ fontSize: 12, color: BLEND.muted }}>
-          {sel && noCount
-            ? t("map.noCountyResults")
-            : sel
-              ? t("map.hintRegion")
-              : t("map.hintNational", { noun: props.regionNoun.toLowerCase() })}
+        <span style={{ display: "flex", flexWrap: "wrap", gap: "0 6px", fontSize: 12 }}>
+          <span style={{ color: BLEND.muted }}>
+            {sel && noCount
+              ? t("map.noCountyResults")
+              : sel
+                ? t("map.hintRegion")
+                : t("map.hintNational", { noun: props.regionNoun.toLowerCase() })}
+          </span>
+          <span style={{ color: BLEND.mutedDim }}>{t("map.hintGestures")}</span>
         </span>
       </div>
     </section>
+  );
+}
+
+function ZoomControls({
+  canZoomIn,
+  canZoomOut,
+  canReset,
+  onZoom,
+  onReset,
+}: {
+  canZoomIn: boolean;
+  canZoomOut: boolean;
+  canReset: boolean;
+  onZoom: (direction: 1 | -1) => void;
+  onReset: () => void;
+}) {
+  const t = useTranslations("elections.campaignManager.map");
+  const buttons: Array<{ label: string; glyph: string; on: boolean; act: () => void }> = [
+    { label: t("zoomIn"), glyph: "+", on: canZoomIn, act: () => onZoom(1) },
+    { label: t("zoomOut"), glyph: "\u2212", on: canZoomOut, act: () => onZoom(-1) },
+    { label: t("resetView"), glyph: "\u21BA", on: canReset, act: onReset },
+  ];
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 10,
+        bottom: 10,
+        display: "flex",
+        flexDirection: "column",
+        borderRadius: 8,
+        overflow: "hidden",
+        border: `1px solid ${BLEND.hairlineStrong}`,
+        background: BLEND.rail,
+      }}
+    >
+      {buttons.map((b, i) => (
+        <button
+          key={b.label}
+          type="button"
+          aria-label={b.label}
+          title={b.label}
+          disabled={!b.on}
+          onClick={b.act}
+          style={{
+            width: 32,
+            height: 32,
+            border: 0,
+            borderTop: i > 0 ? `1px solid ${BLEND.hairline}` : 0,
+            background: "transparent",
+            color: b.on ? BLEND.ink : BLEND.mutedDim,
+            cursor: b.on ? "pointer" : "default",
+            fontFamily: FONT.sans,
+            fontSize: 16,
+            lineHeight: 1,
+          }}
+        >
+          {b.glyph}
+        </button>
+      ))}
+    </div>
   );
 }
 

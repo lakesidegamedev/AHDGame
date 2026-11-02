@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithElectionsMessages } from "@/lib/test-utils/renderWithElectionsMessages";
 import { buildRaceIndex, type RaceFilter } from "@/lib/campaignManager/rules";
 import { election } from "@/lib/campaignManager/rules/__fixtures__/election";
@@ -256,5 +256,57 @@ describe("CampaignMap on a finished race", () => {
     expect(await screen.findByText("No county results were recorded for this race.")).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /Battersea/ }));
     expect(screen.queryByRole("button", { name: "Canvass voters here" })).toBeNull();
+  });
+});
+
+describe("CampaignMap pan and zoom", () => {
+  const mapGroup = () => {
+    const svg = screen.getByRole("group", { name: /map/ });
+    return svg.querySelector(":scope > g") as SVGGElement;
+  };
+  const scaleOf = (g: SVGGElement) => Number(/scale\(([\d.]+)\)/.exec(g.style.transform)?.[1]);
+
+  beforeEach(() => {
+    const proto = Element.prototype as unknown as Record<string, unknown>;
+    proto.setPointerCapture ??= () => {};
+    proto.releasePointerCapture ??= () => {};
+  });
+
+  it("zooms with the buttons and resets to the whole country", async () => {
+    renderMap();
+    await screen.findByRole("button", { name: /London/ });
+    expect(scaleOf(mapGroup())).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    expect(scaleOf(mapGroup())).toBeGreaterThan(1);
+    fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
+    expect(scaleOf(mapGroup())).toBe(1);
+  });
+
+  it("zooms on the wheel only with Ctrl held, so the page still scrolls", async () => {
+    renderMap();
+    await screen.findByRole("button", { name: /London/ });
+    const svg = screen.getByRole("group", { name: /map/ });
+    fireEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
+    expect(scaleOf(mapGroup())).toBe(1);
+    // happy-dom drops ctrlKey from a WheelEvent's init, so it is set on the event.
+    const pinch = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
+    Object.defineProperty(pinch, "ctrlKey", { value: true });
+    fireEvent(svg, pinch);
+    expect(scaleOf(mapGroup())).toBeGreaterThan(1);
+  });
+
+  it("pans on a drag, and the drag's closing click does not pick a region", async () => {
+    const { onSelectRegion } = renderMap();
+    const london = await screen.findByRole("button", { name: /London/ });
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    const before = mapGroup().style.transform;
+    fireEvent.pointerDown(london, { pointerId: 1, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(london, { pointerId: 1, clientX: 80, clientY: 70 });
+    fireEvent.pointerUp(london, { pointerId: 1, clientX: 80, clientY: 70 });
+    fireEvent.click(london);
+    expect(mapGroup().style.transform).not.toBe(before);
+    expect(onSelectRegion).not.toHaveBeenCalled();
+    fireEvent.click(london);
+    expect(onSelectRegion).toHaveBeenCalledWith("LON");
   });
 });
