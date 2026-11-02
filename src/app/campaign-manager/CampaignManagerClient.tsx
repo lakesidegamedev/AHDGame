@@ -201,16 +201,13 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     detailVersion * 100_000 + (currentTurn ?? 0)
   );
 
-  // The seat's other cycles. Upcoming cycles are listed but cannot open yet:
-  // races that have not opened are not in the index.
+  // The seat's other cycles: live and upcoming ones are in the index, finished
+  // ones load with the Finished stage that opening them switches to.
   const seat = useSeatHistory(selected?.electionId ?? null, currentTurn ?? 0);
-  const canOpenCycle = useCallback((c: SeatCycle) => c.state !== "upcoming", []);
   const cycleNav = useMemo(
     () =>
-      selected
-        ? adjacentCycles(seat.cycles.filter(canOpenCycle), selected.electionId)
-        : { prev: null, next: null },
-    [selected, seat.cycles, canOpenCycle]
+      selected ? adjacentCycles(seat.cycles, selected.electionId) : { prev: null, next: null },
+    [selected, seat.cycles]
   );
 
   const updateFilter = useCallback(
@@ -536,7 +533,6 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                     cycles={seat.cycles}
                     currentId={selected?.electionId ?? null}
                     onOpen={openCycle}
-                    canOpen={canOpenCycle}
                   />
                 }
               />

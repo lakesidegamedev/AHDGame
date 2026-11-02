@@ -33,6 +33,7 @@ export interface RaceFinderProps {
 
 const STAGES = [
   { id: "all", key: "stageAll" },
+  { id: "upcoming", key: "stageUpcoming" },
   { id: "primary", key: "stagePrimary" },
   { id: "general", key: "stageGeneral" },
   { id: "final", key: "stageFinal" },
@@ -146,7 +147,7 @@ export function RaceFinder({
           aria-label={t("finder.stageGroup")}
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: 2,
             padding: 3,
             background: BLEND.field,

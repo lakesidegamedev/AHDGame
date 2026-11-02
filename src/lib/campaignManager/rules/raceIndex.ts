@@ -12,7 +12,7 @@ import { primaryCandidateColor } from "./projection";
  * party primary its tally kept.
  */
 
-export type CmStage = "primary" | "general" | "final";
+export type CmStage = "upcoming" | "primary" | "general" | "final";
 export type CmScope = "national" | "regional";
 
 export interface CmCandidate {
@@ -82,6 +82,8 @@ export interface RaceIndexContext {
   nationalChamberKeys: readonly string[];
   /** Emit finished races as `final` rows; they are skipped otherwise. */
   includeFinal?: boolean;
+  /** Emit races that have not opened as `upcoming` rows (their filers so far). */
+  includeUpcoming?: boolean;
 }
 
 const VARIANT_PREFIX = /^(snap_|special_)/;
@@ -192,8 +194,9 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
     if (e.electionType === "president") continue;
     // Ended races are history, listed only when the caller asks for them.
     if (e.isEnded && !ctx.includeFinal) continue;
-    // A race that has not opened has no stage to show yet.
-    if (!e.isEnded && !e.inPrimary && !e.inGeneral) continue;
+    // A race that has not opened is listed only when asked for, with its filers.
+    const notOpen = !e.isEnded && !e.inPrimary && !e.inGeneral;
+    if (notOpen && !(ctx.includeUpcoming && e.isUpcoming)) continue;
     const scope = raceScope(e.electionType, ctx.nationalChamberKeys);
     const classNum = e.senateClass ?? e.chamberClass ?? null;
     const multiSeat = (e.totalSeats ?? 1) > 1;
@@ -211,6 +214,22 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       winnerId: null,
       advanceCount: null,
     };
+
+    if (notOpen) {
+      races.push({
+        ...base,
+        key: e.id,
+        stage: "upcoming",
+        primaryPartyId: null,
+        primaryPartyName: null,
+        turnsLeft: turnsUntil(e.startTurn, ctx.currentTurn),
+        candidates: e.candidates.map((c) => toCandidate(c, 0)),
+        hasPolling: false,
+        seatsEstimate: null,
+        isMine: e.candidates.some((c) => c.isYou),
+      });
+      continue;
+    }
 
     if (e.isEnded) {
       const shares = finalShares(e);

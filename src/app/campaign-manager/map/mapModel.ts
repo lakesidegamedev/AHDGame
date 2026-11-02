@@ -19,7 +19,8 @@ import type { CampaignGeoRegion } from "./geoSource";
  * general that counted no votes.
  */
 export function countySourceFor(race: CmRace): CountySource | null {
-  if (race.candidates.length === 0) return null;
+  // Nothing to draw before a race opens or before anyone files.
+  if (race.candidates.length === 0 || race.stage === "upcoming") return null;
   const finalGeneral = race.stage === "final" && race.primaryPartyId == null;
   if (finalGeneral) return race.hasPolling ? generalCountySource(race.electionId) : null;
   if (race.stage === "general" && race.hasPolling) return generalCountySource(race.electionId);

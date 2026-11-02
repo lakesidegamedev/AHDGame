@@ -437,3 +437,38 @@ describe("defaultFinishedYear", () => {
     expect(defaultFinishedYear(rows, "governor", 1994)).toBeNull();
   });
 });
+
+describe("upcoming races", () => {
+  const upcoming = election({
+    id: "up",
+    status: "upcoming",
+    isUpcoming: true,
+    inPrimary: false,
+    inGeneral: false,
+    startTurn: 14,
+    cands: [
+      { id: "a", name: "Ann", party: "1" },
+      { id: "b", name: "Bo", party: "2" },
+    ],
+  });
+
+  it("lists an upcoming race with its filers", () => {
+    expect(buildRaceIndex([upcoming], ctx)).toEqual([]);
+    const [row] = buildRaceIndex([upcoming], { ...ctx, includeUpcoming: true });
+    expect(row).toMatchObject({ key: "up", stage: "upcoming", hasPolling: false });
+    expect(row.candidates.map((c) => c.name)).toEqual(["Ann", "Bo"]);
+  });
+
+  it("counts turns until it opens", () => {
+    const [row] = buildRaceIndex([upcoming], { ...ctx, includeUpcoming: true });
+    expect(row.turnsLeft).toBe(4);
+  });
+
+  it("keeps upcoming races under All and their own stage", () => {
+    const rows = buildRaceIndex([upcoming], { ...ctx, includeUpcoming: true });
+    const f = { type: "senate", regionId: "ALL", query: "", regionNames: {} };
+    expect(filterRaces(rows, { ...f, stage: "all" })).toHaveLength(1);
+    expect(filterRaces(rows, { ...f, stage: "upcoming" })).toHaveLength(1);
+    expect(filterRaces(rows, { ...f, stage: "general" })).toHaveLength(0);
+  });
+});

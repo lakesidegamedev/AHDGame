@@ -59,7 +59,7 @@ export function useRaceIndex(
   useGameEvents(reload, ["turn_complete"]);
 
   const races = useMemo(
-    () => buildRaceIndex(elections, { currentTurn, nationalChamberKeys }),
+    () => buildRaceIndex(elections, { currentTurn, nationalChamberKeys, includeUpcoming: true }),
     [elections, currentTurn, nationalChamberKeys]
   );
 

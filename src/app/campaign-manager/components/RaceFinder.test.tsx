@@ -188,3 +188,40 @@ describe("RaceFinder Finished stage", () => {
     expect(screen.getByText("No finished races yet.")).toBeTruthy();
   });
 });
+
+describe("RaceFinder Upcoming stage", () => {
+  it("counts upcoming races under their own stage and under All", () => {
+    const rows = buildRaceIndex(
+      [
+        election({ id: "live", cands: [{ id: "a", name: "A", party: "1", share: 50 }] }),
+        election({
+          id: "up",
+          state: "PA",
+          status: "upcoming",
+          isUpcoming: true,
+          inPrimary: false,
+          inGeneral: false,
+          startTurn: 20,
+        }),
+      ],
+      { currentTurn: 10, nationalChamberKeys: ["senate"], includeUpcoming: true }
+    );
+    renderWithElectionsMessages(
+      <RaceFinder
+        countryId="US"
+        races={rows}
+        filter={{ type: "senate", stage: "all", regionId: "ALL", query: "", regionNames }}
+        onFilter={() => {}}
+        selectedKey={null}
+        onSelect={() => {}}
+        watched={new Set()}
+        onToggleWatch={() => {}}
+        regionNoun="State"
+        regionNounPlural="States"
+      />
+    );
+    const stage = screen.getByRole("group", { name: "Election stage" });
+    expect(within(stage).getByRole("button", { name: /All\s*2/ })).toBeTruthy();
+    expect(within(stage).getByRole("button", { name: /Upcoming\s*1/ })).toBeTruthy();
+  });
+});

@@ -56,7 +56,86 @@ export function RaceView(props: RaceViewProps) {
     return <p style={{ margin: 0, padding: "18px 0", color: BLEND.muted }}>{t("race.pick")}</p>;
   }
 
+  if (race.stage === "upcoming") return <UpcomingBody {...props} race={race} />;
   return <RaceBody {...props} race={race} series={series} />;
+}
+
+/** A race that has not opened: when it opens, and who has filed so far, by party. */
+function UpcomingBody(props: RaceViewProps & { race: CmRace }) {
+  const t = useTranslations("elections.campaignManager");
+  const { race, full } = props;
+  const title = useRaceHeading(race, props.countryId, props.regionNames);
+  const byParty = new Map<string, { name: string; color: string; people: CmCandidate[] }>();
+  for (const c of race.candidates) {
+    const g = byParty.get(c.partyId) ?? { name: c.partyName, color: c.partyColor, people: [] };
+    g.people.push(c);
+    byParty.set(c.partyId, g);
+  }
+  return (
+    <article aria-label={title} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <RaceHeader
+        race={race}
+        countryId={props.countryId}
+        regionNames={props.regionNames}
+        watched={props.watched}
+        onToggleWatch={props.onToggleWatch}
+        nav={props.nav}
+        entry={props.entry}
+      />
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <h3 style={{ ...EYEBROW, margin: 0 }}>{t("race.filers")}</h3>
+        {byParty.size === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noFilersYet")}</p>
+        ) : (
+          [...byParty.entries()].map(([partyId, g]) => (
+            <div key={partyId} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{ width: 10, height: 10, borderRadius: 2, background: g.color }}
+                />
+                {g.name}
+              </span>
+              <ul style={{ listStyle: "none", margin: 0, padding: "0 0 0 16px", fontSize: 13 }}>
+                {g.people.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      aria-pressed={c.id === props.selectedCandidateId}
+                      onClick={() => props.onSelectCandidate(c.id)}
+                      style={{
+                        padding: "2px 0",
+                        border: 0,
+                        background: "transparent",
+                        cursor: "pointer",
+                        fontFamily: FONT.sans,
+                        fontSize: 13,
+                        color: BLEND.ink,
+                      }}
+                    >
+                      {c.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        )}
+      </section>
+      {full?.id === race.electionId ? <RaceSchedule election={full} /> : null}
+      <RaceWire items={props.wire} />
+      {props.history}
+      {props.admin}
+    </article>
+  );
 }
 
 function RaceBody(

@@ -300,3 +300,39 @@ describe("RaceView primary details", () => {
     expect(screen.getByText("Sen. Roe")).toBeTruthy();
   });
 });
+
+describe("RaceView on an upcoming race", () => {
+  it("says when it opens and lists the filers by party", () => {
+    const up = election({
+      id: "up",
+      status: "upcoming",
+      isUpcoming: true,
+      inPrimary: false,
+      inGeneral: false,
+      startTurn: 14,
+      cands: [
+        { id: "a", name: "Ann Lee", party: "1" },
+        { id: "b", name: "Bo Diaz", party: "2" },
+      ],
+    });
+    const race = buildRaceIndex([up], { ...ctx, includeUpcoming: true })[0];
+    renderWithElectionsMessages(
+      <RaceView
+        countryId="US"
+        regionNames={regionNames}
+        race={race}
+        full={null}
+        wire={[]}
+        watched={false}
+        onToggleWatch={() => {}}
+        selectedCandidateId={null}
+        onSelectCandidate={() => {}}
+      />
+    );
+    expect(screen.getByText("Upcoming")).toBeTruthy();
+    expect(screen.getByText("Opens in 4 turns")).toBeTruthy();
+    expect(screen.getByText("Party 1")).toBeTruthy();
+    expect(screen.getByText("Ann Lee")).toBeTruthy();
+    expect(screen.queryByText("Change")).toBeNull();
+  });
+});

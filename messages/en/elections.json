@@ -478,7 +478,8 @@
         "noFilers": "No one has filed yet",
         "stageFinal": "Finished",
         "finishedYear": "Election year",
-        "noFinished": "No finished races yet."
+        "noFinished": "No finished races yet.",
+        "stageUpcoming": "Upcoming"
       },
       "race": {
         "pick": "Pick a race from the list or the map.",
@@ -523,7 +524,11 @@
         "scoring": "Primary share = candidate score ÷ total in that party. Score = party alignment (40, split into state-lean 25 + party 15 where available) + favorability (35) + in-region influence (25). NPP opponents take a 25% score penalty against players.",
         "advancing": "Projected to advance",
         "standing": "Your standing: {position} of {n}, {gap} pts {leading, select, true {ahead} other {behind}}",
-        "endorsedBy": "Endorsed by"
+        "endorsedBy": "Endorsed by",
+        "stageUpcoming": "Upcoming",
+        "opensIn": "{n, plural, =0 {Opens this turn} one {Opens in # turn} other {Opens in # turns}}",
+        "filers": "Filed so far",
+        "noFilersYet": "No one has filed for this race yet."
       },
       "chart": {
         "title": "Polling by turn",

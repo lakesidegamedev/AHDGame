@@ -31,6 +31,13 @@ const BUTTON = {
   fontWeight: 600,
 } as const;
 
+const STAGE_LABEL = {
+  upcoming: "race.stageUpcoming",
+  primary: "race.stagePrimary",
+  general: "race.stageGeneral",
+  final: "race.final",
+} as const;
+
 /** "1994 Delaware Senate": the race title, led by its year when the race has one. */
 export function useRaceHeading(
   race: CmRace,
@@ -51,6 +58,7 @@ export function RaceHeader(props: RaceHeaderProps) {
   const standing = raceStanding(race);
   const shade = tierShade(standing.leaderColor, standing.tier, ground);
   const final = race.stage === "final";
+  const upcoming = race.stage === "upcoming";
 
   return (
     <header style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -73,14 +81,14 @@ export function RaceHeader(props: RaceHeaderProps) {
               ? ` · ${t("race.seats", { n: race.totalSeats })}`
               : ""}
           </span>
-          <span>
-            {final
-              ? t("race.final")
-              : t(race.stage === "primary" ? "race.stagePrimary" : "race.stageGeneral")}
-          </span>
+          <span>{t(STAGE_LABEL[race.stage])}</span>
           {!final && race.turnsLeft != null ? (
-            <span style={{ color: race.turnsLeft <= 1 ? BLEND.caution : BLEND.muted }}>
-              {t("race.turnsLeft", { n: race.turnsLeft })}
+            <span
+              style={{
+                color: race.turnsLeft <= 1 && !upcoming ? BLEND.caution : BLEND.muted,
+              }}
+            >
+              {t(upcoming ? "race.opensIn" : "race.turnsLeft", { n: race.turnsLeft })}
             </span>
           ) : null}
         </p>
