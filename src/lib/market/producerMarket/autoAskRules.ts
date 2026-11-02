@@ -64,7 +64,13 @@ export interface AutoAskMemory {
   previousAsk: number;
 }
 
-export type AutoAskAction = "raise" | "hold" | "revert" | "lower";
+/**
+ * `clamp` is the floor or ceiling moving the remembered ask before any
+ * decision: the anchor fell and pulled the ceiling under it, or the floor rose
+ * over it. The price moves, but not because of sell-through, so it is not
+ * labelled a hold, a raise or a lower.
+ */
+export type AutoAskAction = "raise" | "hold" | "revert" | "lower" | "clamp";
 
 export interface AutoAskDecision {
   /** Ask to post this turn, already clamped to the caller's floor and ceiling. */
@@ -140,11 +146,19 @@ export function nextAutoAsk(input: {
   const last = clampAsk(ask, floor, ceiling);
   const sellThrough = sellThroughRatio(input.soldUnits, input.offeredUnits);
 
-  if (sellThrough === null) return { ask: last, action: "hold", sellThrough: null };
+  // A move that only re-applies the floor or ceiling to the remembered ask.
+  const settle = (action: AutoAskAction, sold: number | null): AutoAskDecision => ({
+    ask: last,
+    action: action === "hold" && last !== ask ? "clamp" : action,
+    sellThrough: sold,
+  });
+
+  if (sellThrough === null) return settle("hold", null);
 
   if (sellThrough >= AUTO_ASK_SELLOUT_RATIO - SELLOUT_EPSILON) {
     const raised = clampAsk(last * (1 + step), floor, ceiling);
-    return { ask: raised, action: raised > last ? "raise" : "hold", sellThrough };
+    if (raised > last) return { ask: raised, action: "raise", sellThrough };
+    return settle("hold", sellThrough);
   }
 
   if (sellThrough < AUTO_ASK_REVERT_RATIO) {
@@ -157,11 +171,12 @@ export function nextAutoAsk(input: {
       typeof previous === "number" && Number.isFinite(previous) && previous > 0 && previous < last;
     const target = revertable ? previous : last / (1 + step);
     const lowered = clampAsk(target, floor, ceiling);
-    const action = lowered < last ? (revertable ? "revert" : "lower") : "hold";
-    return { ask: lowered, action, sellThrough };
+    if (lowered < last)
+      return { ask: lowered, action: revertable ? "revert" : "lower", sellThrough };
+    return settle("hold", sellThrough);
   }
 
-  return { ask: last, action: "hold", sellThrough };
+  return settle("hold", sellThrough);
 }
 
 /**
@@ -177,12 +192,25 @@ export function nextAutoAsk(input: {
  * The exception is silence. A turn that offered nothing carries no signal, so
  * it keeps the revert target it was given rather than confirming the raise.
  *
+ * Memory holds the price the book actually saw. The caller passes `postedAsk`
+ * when something after the controller moved the price (production marks an
+ * unsold ask down before posting it); otherwise the decided ask was posted. A
+ * revert target the book never saw would give back a step that never happened.
+ *
  * On a first selling turn there is no memory and no decision. The caller seeds
  * memory as `{ ask, previousAsk: ask }` from the ask it posted.
  */
-export function rememberAutoAsk(memory: AutoAskMemory, decision: AutoAskDecision): AutoAskMemory {
+export function rememberAutoAsk(
+  memory: AutoAskMemory,
+  decision: AutoAskDecision,
+  postedAsk?: number
+): AutoAskMemory {
+  const posted =
+    typeof postedAsk === "number" && Number.isFinite(postedAsk) && postedAsk > 0
+      ? postedAsk
+      : decision.ask;
   if (decision.action === "raise")
-    return { ask: decision.ask, previousAsk: Math.min(memory.ask, decision.ask) };
-  if (decision.sellThrough === null) return { ask: decision.ask, previousAsk: memory.previousAsk };
-  return { ask: decision.ask, previousAsk: decision.ask };
+    return { ask: posted, previousAsk: Math.min(memory.ask, posted) };
+  if (decision.sellThrough === null) return { ask: posted, previousAsk: memory.previousAsk };
+  return { ask: posted, previousAsk: posted };
 }

@@ -798,16 +798,20 @@ export function quoteProducer(input: {
   // that production.ts applies `markedDownAsk` after this returns, so the posted
   // price can sit below the one chosen here.
   if (input.autoAsk) {
+    // Last turn's clearing includes this plant's own sales, so where it sets the
+    // price a sell-out raise lifts the clearing and the ceiling with it, and the
+    // step cap never binds. Bound the controller by the reference price too.
+    const controllerCeiling = reference > 0 ? Math.min(ceiling, reference * (1 + markup)) : ceiling;
     const decided = nextAutoAsk({
       memory: input.autoAsk.memory,
       soldUnits: input.autoAsk.soldUnits,
       offeredUnits: input.autoAsk.offeredUnits,
       ...(input.autoAsk.step != null ? { step: input.autoAsk.step } : {}),
-      ceiling,
+      ceiling: controllerCeiling,
     });
     // The controller reads a non-positive ceiling as unbounded, but here a zero
     // ceiling (no anchor price, or a -100% markup) is a real cap of zero.
-    if (decided) return estimate(Math.min(decided.ask, ceiling));
+    if (decided) return estimate(Math.min(decided.ask, controllerCeiling));
   }
   const candidates = new Set([reference, anchor, ceiling]);
   for (const seller of input.competitors)

@@ -1009,6 +1009,14 @@ describe("automatic ask with sell-through memory", () => {
     expect(quote.unitPrice).toBeCloseTo(10);
   });
 
+  it("bounds a sell-out by the reference price when its own sales lifted the clearing", () => {
+    // Clearing 30 is the plant's own raises feeding back; reference 10 with a
+    // 50% markup caps the controller at 15 instead of 45.
+    const soldOut = { memory: { ask: 20, previousAsk: 18 }, soldUnits: 100, offeredUnits: 100 };
+    const quote = quoteProducer({ ...basis, clearingUnitPrice: 30, policy, autoAsk: soldOut });
+    expect(quote.unitPrice).toBeCloseTo(15);
+  });
+
   it("treats a zero ceiling as a cap, not as unbounded", () => {
     const soldOut = { memory: { ask: 50, previousAsk: 50 }, soldUnits: 100, offeredUnits: 100 };
     const noAnchor = quoteProducer({ ...basis, referenceUnitPrice: 0, policy, autoAsk: soldOut });

@@ -162,6 +162,32 @@ describe("auto ask sell-through controller", () => {
   });
 });
 
+describe("clamp label", () => {
+  it("labels a ceiling that fell under the remembered ask as a clamp, not a hold", () => {
+    expect(nextAutoAsk({ memory, soldUnits: 95, offeredUnits: 100, ceiling: 80 })).toEqual({
+      ask: 80,
+      action: "clamp",
+      sellThrough: 0.95,
+    });
+  });
+
+  it("labels a floor that rose over the remembered ask as a clamp", () => {
+    const d = nextAutoAsk({ memory, soldUnits: 95, offeredUnits: 100, floor: 120 })!;
+    expect(d.ask).toBe(120);
+    expect(d.action).toBe("clamp");
+  });
+
+  it("keeps hold for a sell-out already pinned at an unchanged ceiling", () => {
+    const d = nextAutoAsk({ memory, soldUnits: 100, offeredUnits: 100, ceiling: 100 })!;
+    expect(d).toEqual({ ask: 100, action: "hold", sellThrough: 1 });
+  });
+
+  it("labels a silent turn that only re-applies the ceiling as a clamp", () => {
+    const d = nextAutoAsk({ memory, soldUnits: 0, offeredUnits: 0, ceiling: 90 })!;
+    expect(d).toEqual({ ask: 90, action: "clamp", sellThrough: null });
+  });
+});
+
 describe("rememberAutoAsk", () => {
   const sold = (soldUnits: number, mem = memory) =>
     nextAutoAsk({ memory: mem, soldUnits, offeredUnits: 100 })!;
@@ -172,6 +198,16 @@ describe("rememberAutoAsk", () => {
       ask: decision.ask,
       previousAsk: memory.ask,
     });
+  });
+
+  it("stores the price actually posted when production marked the ask down", () => {
+    expect(rememberAutoAsk(memory, sold(95), 97)).toEqual({ ask: 97, previousAsk: 97 });
+    const raise = sold(100);
+    expect(rememberAutoAsk(memory, raise, 102)).toEqual({ ask: 102, previousAsk: 100 });
+  });
+
+  it("ignores a non-positive posted price and keeps the decided ask", () => {
+    expect(rememberAutoAsk(memory, sold(95), 0)).toEqual({ ask: 100, previousAsk: 100 });
   });
 
   it("confirms the price on a hold, so there is nothing left to revert", () => {
