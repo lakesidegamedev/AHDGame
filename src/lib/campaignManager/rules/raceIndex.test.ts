@@ -18,6 +18,14 @@ describe("buildRaceIndex", () => {
     expect(buildRaceIndex([], ctx)).toEqual([]);
   });
 
+  it("skips a race that has not opened yet", () => {
+    const races = buildRaceIndex(
+      [election({ id: "u", isUpcoming: true, inGeneral: false, inPrimary: false })],
+      ctx
+    );
+    expect(races).toEqual([]);
+  });
+
   it("skips the presidency and ended races", () => {
     const races = buildRaceIndex(
       [

@@ -97,6 +97,8 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
   for (const e of elections) {
     // The presidency has its own campaign screen; ended races are history.
     if (e.electionType === "president" || e.isEnded) continue;
+    // A race that has not opened has no stage to show yet.
+    if (!e.inPrimary && !e.inGeneral) continue;
     const scope = raceScope(e.electionType, ctx.nationalChamberKeys);
     const classNum = e.senateClass ?? e.chamberClass ?? null;
     const multiSeat = (e.totalSeats ?? 1) > 1;
