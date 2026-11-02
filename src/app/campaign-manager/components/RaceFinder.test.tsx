@@ -269,3 +269,25 @@ describe("RaceFinder party filter", () => {
     expect(onFilter).toHaveBeenCalledWith({ party: "2" });
   });
 });
+
+describe("RaceFinder finished count", () => {
+  it("shows the Finished count before the finished races are loaded", () => {
+    renderWithElectionsMessages(
+      <RaceFinder
+        countryId="US"
+        races={races}
+        filter={{ type: "senate", stage: "all", regionId: "ALL", query: "", regionNames }}
+        onFilter={() => {}}
+        selectedKey={null}
+        onSelect={() => {}}
+        watched={new Set()}
+        onToggleWatch={() => {}}
+        regionNoun="State"
+        regionNounPlural="States"
+        finishedCount={12}
+      />
+    );
+    const stage = screen.getByRole("group", { name: "Election stage" });
+    expect(within(stage).getByRole("button", { name: /Finished\s*12/ })).toBeTruthy();
+  });
+});

@@ -29,6 +29,8 @@ export interface RaceFinderProps {
   onToggleWatch: (key: string) => void;
   regionNoun: string;
   regionNounPlural: string;
+  /** The type's finished races, counted without loading them (until Finished loads them). */
+  finishedCount?: number | null;
 }
 
 const STAGES = [
@@ -51,6 +53,7 @@ export function RaceFinder({
   onToggleWatch,
   regionNoun,
   regionNounPlural,
+  finishedCount,
 }: RaceFinderProps) {
   const t = useTranslations("elections.campaignManager");
   const ground = useBlendGround();
@@ -73,7 +76,10 @@ export function RaceFinder({
     [races, filter.type]
   );
   // Finished counts every year; the year picker narrows the list below.
-  const stageCount = (stage: RaceFilter["stage"]) => ofType.filter((r) => inStage(r, stage)).length;
+  const stageCount = (stage: RaceFilter["stage"]) => {
+    const n = ofType.filter((r) => inStage(r, stage)).length;
+    return stage === "final" && n === 0 ? (finishedCount ?? 0) : n;
+  };
   const years = filter.stage === "final" ? finishedYears(races, filter.type) : [];
   // Parties holding primaries of this type, for the Primary stage's party picker.
   const primaryParties = useMemo(() => {

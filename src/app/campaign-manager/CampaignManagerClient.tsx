@@ -17,7 +17,7 @@ import { openingFilter } from "@/lib/campaignManager/openingFilter";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { useRaceIndex } from "./useRaceIndex";
-import { useFinishedRaces } from "./useFinishedRaces";
+import { useFinishedCount, useFinishedRaces } from "./useFinishedRaces";
 import { useSeatHistory } from "./useSeatHistory";
 import { SeatNav } from "./components/SeatNav";
 import { PastRaces } from "./components/PastRaces";
@@ -96,9 +96,10 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   // without refetching every election in the country.
   const liveFav = actions.character?.favorability;
   const liveInfl = actions.character?.politicalInfluence;
-  // Finished races of the type on screen join the index (once per type a
-  // visit), so the Finished stage can count them; every other stage leaves
-  // them out. The type is the chosen one, else the one the page opens on.
+  // Finished races join the index only on the Finished stage (opening a past
+  // race or a link to one switches there), reloaded each turn; the stage's
+  // count comes from a one-row count. The type is the chosen one, else the
+  // one the page opens on.
   const openingRace =
     indexedRaces.find((r) => r.key === pickedKey) ??
     indexedRaces.find((r) => r.isMine) ??
@@ -108,9 +109,11 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const finished = useFinishedRaces(
     props.countryId,
     shownType,
-    shownType !== "",
-    props.nationalChamberKeys
+    chosenFilter?.stage === "final",
+    props.nationalChamberKeys,
+    currentTurn ?? 0
   );
+  const finishedCount = useFinishedCount(props.countryId, shownType, currentTurn ?? 0);
   const allRaces = useMemo(
     () => (finished.races.length > 0 ? [...indexedRaces, ...finished.races] : indexedRaces),
     [indexedRaces, finished.races]
@@ -402,6 +405,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               onToggleWatch={toggleWatch}
               regionNoun={props.regionNoun}
               regionNounPlural={props.regionNounPlural}
+              finishedCount={finishedCount}
             />
           ) : null
         }
