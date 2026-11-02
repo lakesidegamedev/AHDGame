@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { BuildQueueBadge, buildQueueBadgeLabel } from "./plantsPresentation";
+import { BuildQueueBadge, buildProgressLabel, buildQueueBadgeLabel } from "./plantsPresentation";
 
 afterEach(cleanup);
 
@@ -78,5 +78,27 @@ describe("BuildQueueBadge", () => {
     expect(screen.getByText(/done turn 539/)).toBeTruthy();
     expect(screen.getByText(/1\.7 of 3\.4 in/)).toBeTruthy();
     expect(screen.getByText(/about 0\.5 a turn/)).toBeTruthy();
+  });
+
+  it("shows no per-turn rate for an order that lands whole (ticket 1753)", () => {
+    // About 193 units against a 250-unit mine, landing in one piece on turn 614.
+    const queue = {
+      orders: 1,
+      unitsOrdered: 193,
+      unitsRemaining: 193,
+      unitsPerTurn: 0,
+      lastOnlineTurn: 614,
+      nextOnlineTurn: 614,
+      turnsRemaining: 6,
+    };
+    render(
+      <BuildQueueBadge queue={queue} plantUnits={250} plantSingular="mine" plantPlural="mines" />
+    );
+    expect(screen.getByText(/\+0\.8 building/)).toBeTruthy();
+    expect(screen.getByText(/done turn 614/)).toBeTruthy();
+    expect(screen.queryByText(/a turn/)).toBeNull();
+    const label = buildProgressLabel(queue, 250, "mine", "mines");
+    expect(label).toContain("Capacity arrives in whole mines, not a slice each turn.");
+    expect(label).not.toContain("rises each turn");
   });
 });

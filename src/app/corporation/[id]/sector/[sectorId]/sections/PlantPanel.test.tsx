@@ -51,6 +51,7 @@ describe("PlantPanel facility sizing", () => {
           onlineTurn: 140,
           turnsRemaining: 40,
           smooth: true,
+          unitsPerTurn: 1,
           unitsOrdered: 40,
           unitsDelivered: 0,
           costPaidAnchor: 1_000_000,
@@ -95,6 +96,7 @@ describe("PlantPanel vehicle recipe without a vehicle model", () => {
           onlineTurn: 551,
           turnsRemaining: 14,
           smooth: true,
+          unitsPerTurn: 2,
           unitsOrdered: 40,
           unitsDelivered: 12.4,
           costPaidAnchor: 1_000_000,
@@ -124,6 +126,48 @@ describe("PlantPanel vehicle recipe without a vehicle model", () => {
     expect(screen.getByText("41")).toBeTruthy();
     expect(screen.getByText(/28 more being built/)).toBeTruthy();
     expect(screen.queryByText(/units per day/)).toBeNull();
+  });
+});
+
+describe("PlantPanel order that lands whole", () => {
+  it("gives a ready turn, not a per-turn rate, for an order under one plant (ticket 1753)", () => {
+    const steppedPlants = {
+      ...plants,
+      capacityUnits: 0,
+      plantCount: undefined,
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 606,
+          onlineTurn: 614,
+          turnsRemaining: 6,
+          smooth: true,
+          unitsPerTurn: 0,
+          unitsOrdered: 193,
+          unitsDelivered: 0,
+          costPaidAnchor: 1_000_000,
+          progress: 0,
+        },
+      ],
+    } as unknown as PlantsData;
+
+    render(
+      <PlantPanel
+        plants={steppedPlants}
+        sectorType="extraction"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(screen.getByText(/ready on turn 614 \(6 to go\)/)).toBeTruthy();
+    expect(screen.queryByText(/arriving each turn/)).toBeNull();
   });
 });
 

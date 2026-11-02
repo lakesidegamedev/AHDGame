@@ -82,6 +82,29 @@ export function costReleasedThisTurn(order: SectorBuildOrder, currentTurn: numbe
   return slice > 0 ? cost * slice : 0;
 }
 
+/**
+ * Capacity units this order adds on every turn of its ramp, or 0 when it does
+ * not add capacity every turn.
+ *
+ * A linear smooth order adds `unitsOrdered / window` each turn. A whole-plant
+ * order adds whole plants, so it only has a per-turn rate when at least one
+ * plant lands each turn. With fewer plants than turns it lands in steps, and an
+ * order under one plant lands whole on its online turn; quoting "about 0.1 a
+ * turn" for that described capacity that never arrives that way (ticket 1753).
+ * Legacy orders land all at once and have no rate either.
+ */
+export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number): number {
+  const units = safeUnits(order);
+  if (units === 0 || !isSmooth(order) || currentTurn >= order.onlineTurn) return 0;
+  const window = order.onlineTurn - order.startTurn;
+  if (order.plantUnits != null && order.plantUnits > 0) {
+    // The same plant count steppedDeliveredFraction ramps through.
+    const plants = Math.max(1, Math.round(units / order.plantUnits));
+    if (plants < window) return 0;
+  }
+  return units / window;
+}
+
 /** Paid cost still under construction (not yet delivered) as of `currentTurn`. */
 export function undeliveredCost(order: SectorBuildOrder, currentTurn: number): number {
   return safeCost(order) * (1 - deliveredFraction(order, currentTurn));

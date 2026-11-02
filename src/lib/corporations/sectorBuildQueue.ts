@@ -13,7 +13,7 @@
  */
 
 import type { SectorBuildOrder } from "@/lib/db/types";
-import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
+import { steadyUnitsPerTurn, undeliveredUnits } from "@/lib/corporations/buildDelivery";
 
 export interface BuildQueueSummary {
   /** Number of outstanding orders. */
@@ -28,8 +28,9 @@ export interface BuildQueueSummary {
   unitsRemaining: number;
   /**
    * Capacity units arriving each turn from smooth orders still ramping in
-   * (a linear slice per turn until the order's online turn). 0 when every
-   * outstanding order lands all at once.
+   * (a slice per turn until the order's online turn). 0 when every outstanding
+   * order lands all at once or in whole-plant steps that skip turns
+   * (see `steadyUnitsPerTurn`).
    */
   unitsPerTurn: number;
   /** Turn the LAST outstanding order finishes. Null when the queue is empty. */
@@ -68,10 +69,7 @@ export function summarizeBuildQueue(
     if (units > 0) {
       unitsOrdered += units;
       unitsRemaining += undeliveredUnits(order, currentTurn);
-      const window = order.onlineTurn - order.startTurn;
-      if (order.smooth === true && window > 0 && currentTurn < order.onlineTurn) {
-        unitsPerTurn += units / window;
-      }
+      unitsPerTurn += steadyUnitsPerTurn(order, currentTurn);
     }
     const online = order?.onlineTurn;
     if (Number.isFinite(online) && (nextOnlineTurn == null || online < nextOnlineTurn)) {

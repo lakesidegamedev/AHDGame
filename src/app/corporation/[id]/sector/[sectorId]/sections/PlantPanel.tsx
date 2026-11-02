@@ -419,12 +419,11 @@ export default function PlantPanel({
           <p className="mb-2 text-body-sm font-medium text-muted">Under construction</p>
           <ul className="space-y-2">
             {plants.buildQueue.map((o) => {
-              // Smooth orders deliver a linear slice of capacity every turn
-              // across [startTurn, onlineTurn] (buildDelivery.ts). Show the
-              // rate so the queue reads as a ramp, not a binary wait.
-              const buildWindow = o.onlineTurn - o.startTurn;
-              const unitsPerTurn =
-                o.smooth && buildWindow > 0 ? o.unitsOrdered / buildWindow : null;
+              // Smooth orders deliver capacity every turn across
+              // [startTurn, onlineTurn] (buildDelivery.ts). Show the rate so the
+              // queue reads as a ramp, not a binary wait. A whole-plant order
+              // that lands in steps has no rate (ticket 1753).
+              const unitsPerTurn = o.unitsPerTurn > 0 ? o.unitsPerTurn : null;
               // Everything a player orders is a FACILITY. Capacity units are the
               // engine's internal measure of what a facility produces, and
               // quoting the queue in them read as though you were buying units

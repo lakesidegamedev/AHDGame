@@ -215,7 +215,13 @@ export function buildProgressLabel(
     p.perTurn != null
       ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
       : "";
-  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done} Capacity is added a slice at a time, so the capacity figure rises each turn until then.`;
+  // Without a per-turn rate the capacity lands in whole steps (ticket 1753), so
+  // saying it rises each turn would make a build that is on schedule look stuck.
+  const arrival =
+    p.perTurn != null
+      ? " Capacity is added a slice at a time, so the capacity figure rises each turn until then."
+      : ` Capacity arrives in whole ${plural}, not a slice each turn.`;
+  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done}${arrival}`;
 }
 
 export function BuildQueueBadge({

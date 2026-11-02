@@ -59,4 +59,22 @@ describe("summarizeBuildQueue", () => {
     expect(summary?.lastOnlineTurn).toBe(80);
     expect(summary?.nextOnlineTurn).toBe(50);
   });
+
+  it("reports no per-turn arrival for an order under one whole plant (ticket 1753)", () => {
+    const summary = summarizeBuildQueue(
+      [
+        order({
+          unitsOrdered: 193,
+          plantUnits: 250,
+          startTurn: 606,
+          onlineTurn: 614,
+          smooth: true,
+        }),
+      ],
+      608
+    );
+    expect(summary?.unitsPerTurn).toBe(0);
+    expect(summary?.unitsRemaining).toBeCloseTo(193, 9);
+    expect(summary?.lastOnlineTurn).toBe(614);
+  });
 });

@@ -43,7 +43,11 @@ import {
 } from "@/lib/tariffs/tariffEffects";
 import type { FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import { deliveredFraction, queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
+import {
+  deliveredFraction,
+  queueUndeliveredCost,
+  steadyUnitsPerTurn,
+} from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl, type PolicyStackRow } from "@/lib/corporations/plantsPnlBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import {
@@ -1528,6 +1532,7 @@ export function buildSectorPlantsSection(args: {
       unitsOrdered: o.unitsOrdered,
       unitsDelivered: o.unitsOrdered * delivered,
       smooth: o.smooth === true,
+      unitsPerTurn: steadyUnitsPerTurn(o, currentTurn),
       costPaidAnchor: o.costPaidAnchor,
       startTurn: o.startTurn,
       onlineTurn: o.onlineTurn,
