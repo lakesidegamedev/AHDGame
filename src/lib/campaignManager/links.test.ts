@@ -148,3 +148,13 @@ describe("presidentialRedirect", () => {
     expect(presidentialRedirect(null)).toBeNull();
   });
 });
+
+describe("openingFilter party", () => {
+  it("carries the party param into the opening filter", () => {
+    expect(openingFilter([], null, { type: "house", stage: "primary", party: "2" })).toMatchObject({
+      type: "house",
+      stage: "primary",
+      party: "2",
+    });
+  });
+});

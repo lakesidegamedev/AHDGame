@@ -225,3 +225,47 @@ describe("RaceFinder Upcoming stage", () => {
     expect(within(stage).getByRole("button", { name: /Upcoming\s*1/ })).toBeTruthy();
   });
 });
+
+describe("RaceFinder party filter", () => {
+  const rows = buildRaceIndex(
+    [
+      election({
+        id: "p",
+        inPrimary: true,
+        inGeneral: false,
+        byParty: [
+          { partyId: "1", partyName: "Democratic", partyColor: "#00f", candidates: [] },
+          { partyId: "2", partyName: "Republican", partyColor: "#f00", candidates: [] },
+        ] as never,
+      }),
+    ],
+    { currentTurn: 10, nationalChamberKeys: ["senate"] }
+  );
+  function renderAt(stage: RaceFilter["stage"]) {
+    const onFilter = vi.fn();
+    renderWithElectionsMessages(
+      <RaceFinder
+        countryId="US"
+        races={rows}
+        filter={{ type: "senate", stage, regionId: "ALL", query: "", regionNames }}
+        onFilter={onFilter}
+        selectedKey={null}
+        onSelect={() => {}}
+        watched={new Set()}
+        onToggleWatch={() => {}}
+        regionNoun="State"
+        regionNounPlural="States"
+      />
+    );
+    return onFilter;
+  }
+
+  it("offers a party picker on the Primary stage only", () => {
+    renderAt("all");
+    expect(screen.queryByRole("combobox", { name: "Party" })).toBeNull();
+    cleanup();
+    const onFilter = renderAt("primary");
+    fireEvent.change(screen.getByRole("combobox", { name: "Party" }), { target: { value: "2" } });
+    expect(onFilter).toHaveBeenCalledWith({ party: "2" });
+  });
+});

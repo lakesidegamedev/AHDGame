@@ -374,6 +374,8 @@ export interface RaceFilter {
   regionNames: Record<string, string>;
   /** Finished stage only: the election year shown; unset shows every year. */
   year?: number | null;
+  /** Primary stage only: one party's primaries; unset shows every party's. */
+  party?: string | null;
 }
 
 /**
@@ -393,6 +395,7 @@ export function filterRaces(races: CmRace[], f: RaceFilter): CmRace[] {
   return races.filter((r) => {
     if (r.electionType !== f.type) return false;
     if (!inStage(r, f.stage, f.year)) return false;
+    if (f.stage === "primary" && f.party && r.primaryPartyId !== f.party) return false;
     if (f.regionId !== "ALL" && r.regionId !== f.regionId) return false;
     if (!q) return true;
     const region = (f.regionNames[r.regionId] ?? r.regionId).toLowerCase();

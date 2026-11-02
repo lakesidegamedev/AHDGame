@@ -75,6 +75,16 @@ export function RaceFinder({
   // Finished counts every year; the year picker narrows the list below.
   const stageCount = (stage: RaceFilter["stage"]) => ofType.filter((r) => inStage(r, stage)).length;
   const years = filter.stage === "final" ? finishedYears(races, filter.type) : [];
+  // Parties holding primaries of this type, for the Primary stage's party picker.
+  const primaryParties = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const r of ofType) {
+      if (r.stage === "primary" && r.primaryPartyId) {
+        seen.set(r.primaryPartyId, r.primaryPartyName ?? r.primaryPartyId);
+      }
+    }
+    return [...seen.entries()].sort(([, a], [, b]) => a.localeCompare(b));
+  }, [ofType]);
 
   const regionOptions = useMemo(() => {
     const counts = new Map<string, number>();
@@ -168,6 +178,24 @@ export function RaceFinder({
           ))}
         </div>
       </div>
+
+      {filter.stage === "primary" && primaryParties.length > 0 ? (
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={EYEBROW}>{t("finder.party")}</span>
+          <BlendSelect
+            aria-label={t("finder.party")}
+            value={filter.party ?? ""}
+            onChange={(e) => onFilter({ party: e.target.value || null })}
+          >
+            <option value="">{t("finder.allParties")}</option>
+            {primaryParties.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </BlendSelect>
+        </label>
+      ) : null}
 
       {filter.stage === "final" ? (
         years.length === 0 ? (

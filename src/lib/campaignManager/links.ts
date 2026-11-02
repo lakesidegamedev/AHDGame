@@ -119,5 +119,6 @@ export function openingFilter(
     regionId: initial.regionId ?? (start && (linked || mine) ? start.regionId : "ALL"),
     query: "",
     year: initial.year ?? (linkedFinal ? linked.year : null),
+    party: initial.party ?? null,
   };
 }

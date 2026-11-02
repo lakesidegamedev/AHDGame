@@ -479,7 +479,9 @@
         "stageFinal": "Finished",
         "finishedYear": "Election year",
         "noFinished": "No finished races yet.",
-        "stageUpcoming": "Upcoming"
+        "stageUpcoming": "Upcoming",
+        "party": "Party",
+        "allParties": "All parties"
       },
       "race": {
         "pick": "Pick a race from the list or the map.",

@@ -472,3 +472,41 @@ describe("upcoming races", () => {
     expect(filterRaces(rows, { ...f, stage: "general" })).toHaveLength(0);
   });
 });
+
+describe("party filter", () => {
+  const rows = buildRaceIndex(
+    [
+      election({
+        id: "p",
+        inPrimary: true,
+        inGeneral: false,
+        byParty: [
+          {
+            partyId: "1",
+            partyName: "Dem",
+            partyColor: "#00f",
+            candidates: [cand({ id: "a", name: "A", party: "1", share: 100 })],
+          },
+          {
+            partyId: "2",
+            partyName: "Rep",
+            partyColor: "#f00",
+            candidates: [cand({ id: "b", name: "B", party: "2", share: 100 })],
+          },
+        ] as never,
+      }),
+    ],
+    ctx
+  );
+  const f = { type: "senate", regionId: "ALL", query: "", regionNames: {} };
+
+  it("narrows primaries to one party", () => {
+    expect(filterRaces(rows, { ...f, stage: "primary", party: "2" }).map((r) => r.key)).toEqual([
+      "p:2",
+    ]);
+  });
+
+  it("ignores the party outside the Primary stage", () => {
+    expect(filterRaces(rows, { ...f, stage: "all", party: "2" })).toHaveLength(2);
+  });
+});
