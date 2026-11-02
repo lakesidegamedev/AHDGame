@@ -45,6 +45,14 @@ export interface SnapshotEntry {
   byParty: PrimarySnapshot["byParty"];
 }
 
+/** One candidate's result in a finished party primary. */
+export interface FinishedPrimaryEntry {
+  candidateId: string;
+  characterName: string;
+  sharePct: number;
+  won: boolean;
+}
+
 export interface GeneralVotesData {
   russianPresidentialResult?: ElectionVoteTally["russianPresidentialResult"];
   totalVotes: Record<string, number>;
@@ -192,6 +200,11 @@ export interface ElectionResponse {
   candidates: EnrichedCandidate[];
   byParty: PartyGroup[];
   polling: PollingData | null;
+  /**
+   * Ended races only: each party's finished primary from the tally
+   * (`primaryResults.byParty`), so a finished race's primaries stay viewable.
+   */
+  primaryResults?: Record<string, FinishedPrimaryEntry[]> | null;
   /** Seat estimates for multi-seat races (house/stateSenate/commons/regionalCouncil). Always computed. */
   seatsEstimate: Record<string, number> | null;
   /**

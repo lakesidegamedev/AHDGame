@@ -1,4 +1,4 @@
-import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
+import type { ElectionResponse, FinishedPrimaryEntry } from "@/lib/elections/electionResponseTypes";
 import type { EnrichedCandidate } from "@/lib/elections/candidateEnrichment";
 import { primaryCandidateColor } from "./projection";
 
@@ -8,9 +8,11 @@ import { primaryCandidateColor } from "./projection";
  *
  * A general election is one row. A primary is one row per party, because each
  * party's primary is its own contest with its own shares and its own winner.
+ * A finished race (when asked for) is a `final` row, plus one `final` row per
+ * party primary its tally kept.
  */
 
-export type CmStage = "primary" | "general";
+export type CmStage = "primary" | "general" | "final";
 export type CmScope = "national" | "regional";
 
 export interface CmCandidate {
@@ -61,6 +63,12 @@ export interface CmRace {
   totalSeats: number | null;
   seatsEstimate: Record<string, number> | null;
   isMine: boolean;
+  /** The race's calendar year; null on legacy rows without a baked year. */
+  year: number | null;
+  cycle: number;
+  seatId: string | null;
+  /** Finished rows only: the candidate with the top final share. */
+  winnerId: string | null;
 }
 
 export interface RaceIndexContext {
@@ -68,6 +76,8 @@ export interface RaceIndexContext {
   currentTurn: number | null;
   /** Legislature chamber keys elected nationwide (e.g. `senate`, `house`, `commons`). */
   nationalChamberKeys: readonly string[];
+  /** Emit finished races as `final` rows; they are skipped otherwise. */
+  includeFinal?: boolean;
 }
 
 const VARIANT_PREFIX = /^(snap_|special_)/;
@@ -118,13 +128,66 @@ function turnsUntil(deadline: number | null, currentTurn: number | null): number
 
 const byShare = (a: CmCandidate, b: CmCandidate) => b.share - a.share;
 
+/** Final general shares: the count's last shares, else the counted votes. */
+function finalShares(e: ElectionResponse): Record<string, number> | null {
+  const polled = e.polling?.sharesPct;
+  if (polled && Object.keys(polled).length > 0) return polled;
+  const votes = e.generalVotes?.totalVotes;
+  if (!votes) return null;
+  const total = Object.values(votes).reduce((s, v) => s + v, 0);
+  if (total <= 0) return null;
+  return Object.fromEntries(Object.entries(votes).map(([id, v]) => [id, (v / total) * 100]));
+}
+
+/**
+ * A finished primary's candidates. Losers may have no candidacy row any more,
+ * so a candidate the election no longer lists is rebuilt from the stored
+ * result, drawn in their party's colours.
+ */
+function finishedPrimaryCandidates(
+  e: ElectionResponse,
+  partyId: string,
+  rows: FinishedPrimaryEntry[]
+): CmCandidate[] {
+  const known = [...(e.allCandidates ?? []), ...e.candidates];
+  const partyRef = known.find((c) => c.party === partyId);
+  return rows
+    .map((r) => {
+      const c = known.find((k) => k.id === r.candidateId);
+      if (c) return toCandidate(c, r.sharePct);
+      const partyName = partyRef?.partyName ?? "";
+      return {
+        id: r.candidateId,
+        characterId: null,
+        nppId: null,
+        characterDbId: null,
+        nppDbId: null,
+        name: r.characterName,
+        partyId,
+        partyName,
+        partyAbbr: partyRef?.partyAbbr || initialsOf(partyName),
+        partyColor: partyRef?.partyColor ?? "#888888",
+        color: partyRef?.partyColor ?? "#888888",
+        share: r.sharePct,
+        favorability: 0,
+        influence: 0,
+        isYou: false,
+        isNPP: false,
+      };
+    })
+    .sort(byShare)
+    .map((c, i) => ({ ...c, color: primaryCandidateColor(c.partyColor, i) }));
+}
+
 export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexContext): CmRace[] {
   const races: CmRace[] = [];
   for (const e of elections) {
-    // The presidency has its own campaign screen; ended races are history.
-    if (e.electionType === "president" || e.isEnded) continue;
+    // The presidency has its own campaign screen.
+    if (e.electionType === "president") continue;
+    // Ended races are history, listed only when the caller asks for them.
+    if (e.isEnded && !ctx.includeFinal) continue;
     // A race that has not opened has no stage to show yet.
-    if (!e.inPrimary && !e.inGeneral) continue;
+    if (!e.isEnded && !e.inPrimary && !e.inGeneral) continue;
     const scope = raceScope(e.electionType, ctx.nationalChamberKeys);
     const classNum = e.senateClass ?? e.chamberClass ?? null;
     const multiSeat = (e.totalSeats ?? 1) > 1;
@@ -136,7 +199,49 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       classNum,
       multiSeat,
       totalSeats: e.totalSeats ?? null,
+      year: e.electionYear ?? null,
+      cycle: e.cycle,
+      seatId: e.seatId ?? null,
+      winnerId: null,
     };
+
+    if (e.isEnded) {
+      const shares = finalShares(e);
+      const candidates = e.candidates.map((c) => toCandidate(c, shares?.[c.id] ?? 0)).sort(byShare);
+      const hasPolling = candidates.some((c) => c.share > 0);
+      races.push({
+        ...base,
+        key: e.id,
+        stage: "final",
+        primaryPartyId: null,
+        primaryPartyName: null,
+        turnsLeft: null,
+        candidates,
+        hasPolling,
+        seatsEstimate: multiSeat ? (e.seatsEstimate ?? null) : null,
+        isMine: candidates.some((c) => c.isYou),
+        winnerId: hasPolling ? candidates[0].id : null,
+      });
+      for (const [partyId, rows] of Object.entries(e.primaryResults ?? {})) {
+        if (rows.length === 0) continue;
+        const pc = finishedPrimaryCandidates(e, partyId, rows);
+        races.push({
+          ...base,
+          key: `${e.id}:${partyId}`,
+          stage: "final",
+          primaryPartyId: partyId,
+          primaryPartyName: pc[0]?.partyName || null,
+          turnsLeft: null,
+          candidates: pc,
+          hasPolling: true,
+          multiSeat: false,
+          seatsEstimate: null,
+          isMine: pc.some((c) => c.isYou),
+          winnerId: rows.find((r) => r.won)?.candidateId ?? pc[0]?.id ?? null,
+        });
+      }
+      continue;
+    }
 
     if (e.inPrimary) {
       // A primary nobody has entered yet is still a race the player can find
@@ -205,13 +310,17 @@ export interface RaceFilter {
   regionId: string;
   query: string;
   regionNames: Record<string, string>;
+  /** Finished stage only: the election year shown; unset shows every year. */
+  year?: number | null;
 }
 
 export function filterRaces(races: CmRace[], f: RaceFilter): CmRace[] {
   const q = f.query.trim().toLowerCase();
   return races.filter((r) => {
     if (r.electionType !== f.type) return false;
-    if (f.stage !== "all" && r.stage !== f.stage) return false;
+    // "All" means every live race; finished races have their own stage.
+    if (f.stage === "all" ? r.stage === "final" : r.stage !== f.stage) return false;
+    if (f.stage === "final" && f.year != null && r.year !== f.year) return false;
     if (f.regionId !== "ALL" && r.regionId !== f.regionId) return false;
     if (!q) return true;
     const region = (f.regionNames[r.regionId] ?? r.regionId).toLowerCase();
@@ -221,4 +330,13 @@ export function filterRaces(races: CmRace[], f: RaceFilter): CmRace[] {
       r.candidates.some((c) => c.name.toLowerCase().includes(q))
     );
   });
+}
+
+/** Years with finished races of `type`, newest first. */
+export function finishedYears(races: CmRace[], type: string): number[] {
+  const years = new Set<number>();
+  for (const r of races) {
+    if (r.stage === "final" && r.electionType === type && r.year != null) years.add(r.year);
+  }
+  return [...years].sort((a, b) => b - a);
 }

@@ -344,3 +344,69 @@ describe("Hungarian modern election response", () => {
     expect(response.hungarianModernAssembly).toEqual({ ruleVersion: "mixed-2011-v1" });
   });
 });
+
+describe("finished primary results", () => {
+  const primaryResults = {
+    byParty: {
+      "1": [
+        {
+          candidateId: "a",
+          characterName: "Player One",
+          party: "1",
+          primaryScore: 60,
+          sharePct: 62.5,
+          won: true,
+        },
+        {
+          candidateId: "b",
+          characterName: "NPP Ron",
+          party: "1",
+          primaryScore: 40,
+          sharePct: 37.5,
+          won: false,
+        },
+      ],
+    },
+    recordedAt: new Date("2025-01-01T00:00:00Z"),
+  };
+
+  function withTally(db: MockDb, electionId: ObjectId) {
+    db.collection("electionVoteTallies").find.mockReturnValue({
+      toArray: async () => [
+        {
+          _id: new ObjectId(),
+          electionId,
+          state: "CA",
+          totalVotes: {},
+          candidateNames: {},
+          candidateParties: {},
+          turnSnapshots: [],
+          finalized: true,
+          primaryResults,
+        },
+      ],
+    });
+  }
+
+  it("carries primary results on an ended race only", async () => {
+    const { db, election } = setupSummaryWorld();
+    withTally(db, election._id);
+    const ended = { ...election, status: "resolved" as const, endTurn: 5, primaryEndTurn: 3 };
+    const [done] = await resolveElections(db as unknown as Db, [ended], {
+      view: "summary",
+      userId: null,
+    });
+    expect(done.primaryResults).toEqual({
+      "1": [
+        { candidateId: "a", characterName: "Player One", sharePct: 62.5, won: true },
+        { candidateId: "b", characterName: "NPP Ron", sharePct: 37.5, won: false },
+      ],
+    });
+
+    const [live] = await resolveElections(db as unknown as Db, [election], {
+      view: "summary",
+      userId: null,
+    });
+    expect(live.primaryResults ?? null).toBeNull();
+  });
+});

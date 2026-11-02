@@ -89,3 +89,35 @@ describe("GET projected-subdivisions", () => {
     expect((await call("bundestag", false)).status).toBe(404);
   });
 });
+
+describe("GET projected-subdivisions for a finished primary", () => {
+  it("draws a finished party primary from its stored result, losers included", async () => {
+    const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
+    vi.mocked(resolveElectionRouteParam).mockResolvedValue({
+      ok: true,
+      election: { _id: "e", electionType: "governor", countryId: "US", status: "resolved" },
+    } as never);
+    const { resolveElection } = await import("@/lib/elections/resolveElection");
+    vi.mocked(resolveElection).mockResolvedValue({
+      inPrimary: false,
+      isEnded: true,
+      candidates: [cand("lefty", "1", 0, -4), cand("r", "2", 0, 2)],
+      polling: { sharesPct: { lefty: 55, r: 45 } },
+      byParty: [{ partyId: "1", partyColor: "#2563eb", candidates: [cand("lefty", "1", 100, -4)] }],
+      primaryResults: {
+        "1": [
+          { candidateId: "lefty", characterName: "Lefty", sharePct: 70, won: true },
+          { candidateId: "gone", characterName: "Gone", sharePct: 30, won: false },
+        ],
+      },
+    } as never);
+    const res = await GET(
+      new NextRequest(`http://t/api/elections/e/state/SD/projected-subdivisions?party=1`),
+      { params: Promise.resolve({ id: "e", stateId: "SD" }) }
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.candidateNames).toEqual({ lefty: "Lefty", gone: "Gone" });
+    expect(Object.keys(body.candidateColors)).toEqual(["lefty", "gone"]);
+  });
+});

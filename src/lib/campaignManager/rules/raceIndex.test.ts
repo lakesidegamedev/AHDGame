@@ -3,6 +3,7 @@ import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import {
   buildRaceIndex,
   filterRaces,
+  finishedYears,
   initialsOf,
   raceScope,
   sortRaces,
@@ -263,5 +264,91 @@ describe("filterRaces and sortRaces", () => {
     });
     expect(sortRaces(senate, new Set()).map((r) => r.key)).toEqual(["c", "a", "b"]);
     expect(sortRaces(senate, new Set(["b"])).map((r) => r.key)).toEqual(["c", "b", "a"]);
+  });
+});
+
+describe("finished races", () => {
+  const finished = (
+    over: Partial<ElectionResponse> & { cands?: Parameters<typeof election>[0]["cands"] }
+  ) =>
+    election({
+      status: "resolved",
+      isEnded: true,
+      inGeneral: false,
+      electionYear: 1988,
+      cycle: 3,
+      seatId: "US-senate-OH-1",
+      cands: [
+        { id: "a", name: "Ann", party: "1", share: 58 },
+        { id: "b", name: "Bo", party: "2", share: 42 },
+      ],
+      ...over,
+    });
+  const withFinal = { ...ctx, includeFinal: true };
+
+  it("emits a final row for a finished race only when asked", () => {
+    expect(buildRaceIndex([finished({})], ctx)).toEqual([]);
+    const [row] = buildRaceIndex([finished({})], withFinal);
+    expect(row).toMatchObject({
+      key: "e1",
+      stage: "final",
+      year: 1988,
+      cycle: 3,
+      seatId: "US-senate-OH-1",
+      winnerId: "a",
+      turnsLeft: null,
+      hasPolling: true,
+    });
+    expect(row.candidates.map((c) => c.share)).toEqual([58, 42]);
+  });
+
+  it("emits a finished race's party primaries from its primary results", () => {
+    const rows = buildRaceIndex(
+      [
+        finished({
+          primaryResults: {
+            "1": [
+              { candidateId: "a", characterName: "Ann", sharePct: 70, won: true },
+              { candidateId: "c", characterName: "Cy", sharePct: 30, won: false },
+            ],
+          },
+        }),
+      ],
+      withFinal
+    );
+    const primary = rows.find((r) => r.key === "e1:1");
+    expect(primary).toMatchObject({ stage: "final", primaryPartyId: "1", winnerId: "a" });
+    expect(primary?.candidates.map((c) => [c.name, c.share])).toEqual([
+      ["Ann", 70],
+      ["Cy", 30],
+    ]);
+  });
+
+  const f = (over: Partial<Parameters<typeof filterRaces>[1]>) => ({
+    type: "senate",
+    stage: "all" as const,
+    regionId: "ALL",
+    query: "",
+    regionNames: {},
+    ...over,
+  });
+  const live = election({ id: "l", cands: [{ id: "x", name: "X", party: "1", share: 50 }] });
+  const all = buildRaceIndex(
+    [live, finished({ id: "f88" }), finished({ id: "f94", electionYear: 1994 })],
+    withFinal
+  );
+
+  it("keeps finished races out of All", () => {
+    expect(filterRaces(all, f({})).map((r) => r.key)).toEqual(["l"]);
+  });
+
+  it("narrows Finished to the chosen year", () => {
+    expect(filterRaces(all, f({ stage: "final", year: 1994 })).map((r) => r.key)).toEqual(["f94"]);
+    expect(filterRaces(all, f({ stage: "final" })).map((r) => r.key)).toEqual(["f88", "f94"]);
+  });
+
+  it("lists finished years newest first", () => {
+    expect(finishedYears(all, "senate")).toEqual([1994, 1988]);
+    expect(finishedYears(all, "governor")).toEqual([]);
   });
 });

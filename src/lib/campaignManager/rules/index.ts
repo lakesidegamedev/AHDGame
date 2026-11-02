@@ -1,6 +1,7 @@
 export {
   buildRaceIndex,
   filterRaces,
+  finishedYears,
   initialsOf,
   raceScope,
   type CmCandidate,

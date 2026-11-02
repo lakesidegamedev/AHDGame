@@ -15,7 +15,8 @@ import {
 
 // GET /api/elections/[id]/state/[stateId]/projected-subdivisions[?party=ID] —
 // a race in progress, projected sub-unit by sub-unit from its current shares:
-// the general's polling, or (with `party`) that party's primary. Same response
+// the general's polling, or (with `party`) that party's primary (a finished
+// race's primary from its stored result). Same response
 // shape as subdivision-results, so a map reads either. Works before a race has
 // counted votes, when subdivision-results has nothing to show.
 // Auth: public (built from public race shares)
@@ -62,7 +63,30 @@ export async function GET(
     const candidateParties: Record<string, string> = {};
     const partyColors: Record<string, string> = {};
     const candidateColors: Record<string, string> = {};
-    if (party != null) {
+    const finishedPrimary = race.isEnded && party != null ? race.primaryResults?.[party] : null;
+    if (party != null && finishedPrimary && finishedPrimary.length > 0) {
+      // A finished primary: the stored result names every candidate, losers
+      // included, whose candidacy rows may be gone. Each keeps their own
+      // economic position where the race still lists them, else their party's.
+      mode = "primary";
+      const listed = [...(race.byParty?.find((g) => g.partyId === party)?.candidates ?? [])];
+      const partyRef = race.candidates.find((c) => c.party === party);
+      const partyColor = partyRef?.partyColor ?? listed[0]?.partyColor ?? "#888888";
+      const ordered = [...finishedPrimary].sort((a, b) => b.sharePct - a.sharePct);
+      cands = ordered.map((r) => ({
+        id: r.candidateId,
+        partyId: party,
+        share: r.sharePct,
+        econ:
+          listed.find((c) => c.id === r.candidateId)?.economicPosition ?? partyRef?.partyEcon ?? 0,
+      }));
+      ordered.forEach((r, i) => {
+        candidateNames[r.candidateId] = r.characterName;
+        candidateParties[r.candidateId] = party;
+        candidateColors[r.candidateId] = primaryCandidateColor(partyColor, i);
+      });
+      partyColors[party] = partyColor;
+    } else if (party != null) {
       const group = race.byParty?.find((g) => g.partyId === party);
       if (!group || group.candidates.length === 0)
         return errorResponse(404, "Party not in this primary");

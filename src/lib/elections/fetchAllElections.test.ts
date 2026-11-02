@@ -48,3 +48,14 @@ describe("fetchAllElections when cancelled", () => {
     errorSpy.mockRestore();
   });
 });
+
+describe("fetchAllElections filters", () => {
+  it("passes status and type through", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ elections: [], total: 0 })));
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchAllElections("US", { status: ["completed", "resolved"], type: "senate" });
+    const url = String((fetchMock.mock.calls[0] as unknown[])[0]);
+    expect(url).toContain("&status=completed,resolved");
+    expect(url).toContain("&type=senate");
+  });
+});

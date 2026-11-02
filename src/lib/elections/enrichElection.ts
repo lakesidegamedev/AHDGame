@@ -1353,7 +1353,26 @@ export async function _enrichElection(
     ...(regionElectorate ? { regionElectorate } : {}),
     ...(regionName ? { regionName } : {}),
     ...(tally?.primaryVotes ? { primaryVotes: tally.primaryVotes } : {}),
+    ...(isEnded && tally?.primaryResults
+      ? { primaryResults: finishedPrimaryResults(tally.primaryResults) }
+      : {}),
   };
+}
+
+/** The tally's stored primary results, trimmed to what a finished view shows. */
+function finishedPrimaryResults(
+  results: NonNullable<ElectionVoteTally["primaryResults"]>
+): NonNullable<ElectionResponse["primaryResults"]> {
+  const out: NonNullable<ElectionResponse["primaryResults"]> = {};
+  for (const [partyId, rows] of Object.entries(results.byParty ?? {})) {
+    out[partyId] = rows.map((r) => ({
+      candidateId: r.candidateId,
+      characterName: r.characterName,
+      sharePct: r.sharePct,
+      won: r.won,
+    }));
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
