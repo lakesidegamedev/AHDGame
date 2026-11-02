@@ -30,6 +30,16 @@ export function isStoreAppUserAgent(userAgent: string): boolean {
 }
 
 /**
+ * An AHDClient phone build (2.10.0 and later) that draws its own dock with the
+ * status figures built in. The site leaves its bottom status bar out for these
+ * so the phone shows one bar, not two. Older phone builds do not send the
+ * marker and keep the site's status bar.
+ */
+export function hasNativeStatusDockUserAgent(userAgent: string): boolean {
+  return isStoreAppUserAgent(userAgent) && userAgent.includes("AHDClientNativeStatus/");
+}
+
+/**
  * The AHDClient phone app on anything but Android (iPhone or iPad). iPad runs the iPhone build
  * with window controls over the top-left corner and no top safe-area inset,
  * so the navbar keeps a minimum top gap there. Android reports its insets
