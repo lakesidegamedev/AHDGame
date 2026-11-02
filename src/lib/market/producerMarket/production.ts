@@ -315,6 +315,8 @@ export function advanceProducerEconomy(input: {
    * buyer's other lanes with unsold supply (spilloverRules). 0 or absent = off.
    */
   spilloverShare?: number;
+  /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
+  ownSitesFirst?: boolean;
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
   /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
@@ -952,6 +954,7 @@ export function advanceProducerEconomy(input: {
       orders: [...consumerOrders, ...inputOrders()],
       ...(track ? { trackCountryBooks: true } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
+      ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it

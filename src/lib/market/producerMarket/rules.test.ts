@@ -512,6 +512,189 @@ describe("one funded producer market", () => {
     expect(result.prices).toEqual([]);
   });
 
+  describe("own sites first (tickets 1755, 1757)", () => {
+    // An outside order whose id sorts before the company's own order would buy
+    // the company's stock out before the own fill ran.
+    const market = (ownSitesFirst: boolean) =>
+      settleProducerMarket({
+        turn: 1,
+        accounts: [
+          { id: "corp", cash: 0 },
+          { id: "rival", cash: 1_000 },
+        ],
+        offers: [
+          {
+            id: "far",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 50,
+            countryId: "JP",
+            stateId: "KAN",
+          },
+          {
+            id: "near",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 50,
+            countryId: "US",
+            stateId: "WI",
+          },
+        ],
+        orders: [
+          {
+            id: "a-rival",
+            accountId: "rival",
+            commodity: "energy",
+            book: "world",
+            units: 10,
+            maximumUnitPrice: 60,
+            countryId: "US",
+          },
+          {
+            id: "b-corp-mine",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 4,
+            maximumUnitPrice: 60,
+            countryId: "US",
+            stateId: "WI",
+          },
+        ],
+        ...(ownSitesFirst ? { ownSitesFirst: true } : {}),
+      });
+
+    it("off: an earlier outside order takes the company's stock first", () => {
+      const result = market(false);
+      const mine = result.orders.find((o) => o.id === "b-corp-mine")!;
+      expect(mine.deliveredUnits).toBe(0);
+    });
+
+    it("on: own sites are served first, nearest seller first, and the rest sells", () => {
+      const result = market(true);
+      const mine = result.orders.find((o) => o.id === "b-corp-mine")!;
+      expect(mine.deliveredUnits).toBeCloseTo(4, 9);
+      expect(mine.cost).toBe(0);
+      const near = result.offers.find((o) => o.id === "near")!;
+      const far = result.offers.find((o) => o.id === "far")!;
+      expect(near.internalDeliveredUnits).toBeCloseTo(4, 9);
+      expect(far.internalDeliveredUnits).toBe(0);
+      expect(near.soldUnits + far.soldUnits).toBeCloseTo(6, 9);
+      const trades = [...producerTrades(result.tradeReceipt)];
+      const internal = trades.filter((t) => t.kind === "internalTransfer");
+      expect(internal).toHaveLength(1);
+      expect(internal[0]).toMatchObject({ offerId: "near", units: 4, amount: 0 });
+      expect(trades.reduce((n, t) => n + t.units, 0)).toBeCloseTo(10, 9);
+    });
+
+    it("on: falls back to the same country, then abroad", () => {
+      const result = settleProducerMarket({
+        turn: 1,
+        accounts: [{ id: "corp", cash: 0 }],
+        offers: [
+          {
+            id: "jp",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 1,
+            countryId: "JP",
+            stateId: "KAN",
+          },
+          {
+            id: "la",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 2,
+            unitPrice: 1,
+            countryId: "US",
+            stateId: "LA",
+          },
+        ],
+        orders: [
+          {
+            id: "wi",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 4,
+            maximumUnitPrice: 1,
+            countryId: "US",
+            stateId: "WI",
+          },
+        ],
+        ownSitesFirst: true,
+      });
+      expect(result.offers.find((o) => o.id === "la")!.internalDeliveredUnits).toBeCloseTo(2, 9);
+      expect(result.offers.find((o) => o.id === "jp")!.internalDeliveredUnits).toBeCloseTo(2, 9);
+      const trades = [...producerTrades(result.tradeReceipt)];
+      expect(trades.map((t) => [t.offerId, t.units])).toEqual([
+        ["la", 2],
+        ["jp", 2],
+      ]);
+    });
+
+    it("on: a named supplier contract still reserves before own supply", () => {
+      const result = settleProducerMarket({
+        turn: 1,
+        accounts: [
+          { id: "corp", cash: 100 },
+          { id: "supplier", cash: 0 },
+        ],
+        offers: [
+          {
+            id: "own",
+            accountId: "corp",
+            commodity: "steel",
+            book: "world",
+            units: 5,
+            unitPrice: 1,
+          },
+          {
+            id: "contracted",
+            accountId: "supplier",
+            commodity: "steel",
+            book: "world",
+            units: 5,
+            unitPrice: 2,
+          },
+        ],
+        orders: [
+          {
+            id: "reserved",
+            accountId: "corp",
+            commodity: "steel",
+            book: "world",
+            units: 3,
+            maximumUnitPrice: 2,
+            supplierOfferId: "contracted",
+            contractUnitPrice: 2,
+            priority: 1,
+            quantityGroup: { id: "g", maximumUnits: 3 },
+          },
+          {
+            id: "public",
+            accountId: "corp",
+            commodity: "steel",
+            book: "world",
+            units: 3,
+            maximumUnitPrice: 2,
+            quantityGroup: { id: "g", maximumUnits: 3 },
+          },
+        ],
+        ownSitesFirst: true,
+      });
+      expect(result.offers.find((o) => o.id === "contracted")!.soldUnits).toBeCloseTo(3, 9);
+      expect(result.offers.find((o) => o.id === "own")!.internalDeliveredUnits).toBe(0);
+    });
+  });
+
   it("rejects non-finite, duplicated and unbacked participant inputs", () => {
     expect(() =>
       settleProducerMarket({

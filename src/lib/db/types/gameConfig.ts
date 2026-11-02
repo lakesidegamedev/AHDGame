@@ -177,6 +177,12 @@ export interface GameConfig {
   /** With producerSpilloverStage on: share (0 to 1) of stranded spend that substitutes. Absent = 0.7. */
   producerSpilloverShare?: number;
   /**
+   * Funded producer market: >= 1 lets each company's own sites take its own
+   * output before any outside buyer, nearest first (same state, same country,
+   * anywhere eligible). 0 or absent = own fills happen in order-id sequence.
+   */
+  producerOwnSitesFirstStage?: number;
+  /**
    * Funded producer market: >= 1 keeps a share of each public budget line's
    * unfilled money in the public wallet for the next turn (instead of burning
    * it at close), capped at four turns of the line's outlay. Support and grants
