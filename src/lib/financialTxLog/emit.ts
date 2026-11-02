@@ -351,14 +351,13 @@ export function buildTxDocs(
  * are admin audit tools and the suspect scan, which singleplayer skips. None of
  * these types is in any of those sets.
  */
-export const SINGLEPLAYER_UNREAD_TX_TYPES: ReadonlySet<FinancialTxType> =
-  new Set<FinancialTxType>([
-    "party_dues_received",
-    "corp_revenue",
-    "corp_operating_loss",
-    "corp_tax_paid",
-    "bank_npc_loan_interest",
-  ]);
+export const SINGLEPLAYER_UNREAD_TX_TYPES: ReadonlySet<FinancialTxType> = new Set<FinancialTxType>([
+  "party_dues_received",
+  "corp_revenue",
+  "corp_operating_loss",
+  "corp_tax_paid",
+  "bank_npc_loan_interest",
+]);
 
 /** Rows to store for a bulk emission: all of them, except unread types in singleplayer. */
 function rowsToStore(docs: FinancialTxLogEntry[]): FinancialTxLogEntry[] {
