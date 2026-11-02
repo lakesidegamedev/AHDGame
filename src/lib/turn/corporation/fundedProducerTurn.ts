@@ -720,6 +720,7 @@ export async function runFundedProducerTurn(
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
+      ownSitesFirst: input.env.ownSitesFirst,
       stockCoverTurns: input.env.stockCoverTurns,
       ...(lastOutcome?.laneClearingPrices
         ? { clearingPriceByLane: lastOutcome.laneClearingPrices }

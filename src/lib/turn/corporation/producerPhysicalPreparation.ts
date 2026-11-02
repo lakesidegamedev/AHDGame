@@ -103,6 +103,8 @@ export type ProducerPhysicalEnv = Pick<
   demandPlanStage?: number;
   /** gameConfig.producerSpilloverStage share: substitution share for same-turn spillover (0 or absent = off). */
   spilloverShare?: number;
+  /** gameConfig.producerOwnSitesFirstStage >= 1: own sites take own output first, nearest first. */
+  ownSitesFirst?: boolean;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
   /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */

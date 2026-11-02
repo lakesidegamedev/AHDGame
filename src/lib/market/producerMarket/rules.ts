@@ -86,8 +86,23 @@ export interface ProducerTradeReceipt {
     buyerCountry?: string;
     /** Set when every seller in the fill is in this state (a state-first freight fill). */
     sellerState?: string;
+    /**
+     * Own-sites-first tier of an internal transfer: 0 the buyer's state, 1 the
+     * buyer's country outside that state, 2 anywhere else. Absent = all own offers.
+     */
+    ownTier?: 0 | 1 | 2;
   }>;
   tradeCount: number;
+}
+
+/** Own-sites-first distance tier of a seller for a buyer: state, country, anywhere else. */
+export function ownTierOf(
+  order: Pick<PurchaseOrder, "stateId" | "countryId">,
+  offer: Pick<ProducerOffer, "stateId" | "countryId">
+): 0 | 1 | 2 {
+  if (order.stateId && offer.stateId === order.stateId) return 0;
+  if (order.countryId && offer.countryId === order.countryId) return 1;
+  return 2;
 }
 
 /** Expand supplier-level trades for audits or route and contract accounting without retaining a matrix. */
@@ -139,7 +154,8 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
       (offer.accountId === order.accountId) === internal &&
       (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
       (!eligible || eligible.has(offer.id)) &&
-      (!fill.sellerState || offer.stateId === fill.sellerState);
+      (!fill.sellerState || offer.stateId === fill.sellerState) &&
+      (fill.ownTier == null || ownTierOf(order, offer) === fill.ownTier);
     // Internal transfers and contract/supplier orders ignore the posted price
     // and keep the full-book scan. An ordinary public order takes exactly the
     // offers posted at the fill's price, which the bucket already holds.
@@ -274,6 +290,13 @@ export function settleProducerMarket(input: {
    * so its closing cash can be negative; the caller settles it. Absent = none.
    */
   credit?: Readonly<Record<string, number>>;
+  /**
+   * gameConfig.producerOwnSitesFirstStage >= 1: before any outside order, each
+   * company's own sites take its own output, nearest first (same state, same
+   * country, anywhere eligible). Absent = the own fill happens only when the
+   * company's order comes up in id order.
+   */
+  ownSitesFirst?: boolean;
 }): ProducerMarketResult {
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
@@ -570,14 +593,66 @@ export function settleProducerMarket(input: {
     }
     return { wanted, orderBudget };
   };
+  const carried = new Map<string, { wanted: number; orderBudget: number }>();
+  // Phase 0 (ownSitesFirst): a company's own sites take its own output before
+  // any outside order, nearest first. Without it the own fill below runs only
+  // when the company's order comes up in id order, so an outside order sorted
+  // earlier could buy the stock out (tickets 1755, 1757). Named suppliers,
+  // contracts and reservation groups keep their ordinary pass: agreements
+  // reserve before own supply.
+  if (input.ownSitesFirst) {
+    for (const order of orders) {
+      if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
+      const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
+      const own = (
+        ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
+      ).filter((offer) => !eligible || eligible.has(offer.id));
+      if (own.length === 0) continue;
+      let wanted = order.units;
+      for (const ownTier of [0, 1, 2] as const) {
+        const tier = own.filter((offer) => ownTierOf(order, offer) === ownTier);
+        if (!(wanted > 0)) break;
+        const total = tier.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
+        const take = Math.min(wanted, total);
+        if (!(take > 0)) continue;
+        fills.push(
+          fillsWithCountries(
+            order,
+            { orderId: order.id, kind: "internalTransfer", unitPrice: 0, units: take, ownTier },
+            tier
+          )
+        );
+        for (const offer of tier) {
+          const available = remaining.get(offer.id);
+          const units = Math.min(available, (take / total) * available);
+          if (!(units > 0)) continue;
+          recordDelivery(offer, order, units);
+          remaining.set(offer.id, Math.max(0, available - units));
+          const seller = offerResults.get(offer.id)!;
+          seller.internalDeliveredUnits += units;
+          seller.deliveredUnits += units;
+          tradeCount++;
+        }
+        orderResults.get(order.id)!.deliveredUnits += take;
+        wanted = Math.max(0, wanted - take);
+      }
+      if (wanted < order.units)
+        carried.set(order.id, { wanted, orderBudget: order.maximumSpend ?? Number.MAX_VALUE });
+    }
+  }
   // Phase 1: every freight order with a state clears its own state's offers
   // first, carrying its residual target and budget into the ordinary pass.
-  const carried = new Map<string, { wanted: number; orderBudget: number }>();
   for (const order of orders) {
     if (order.commodity !== "freight" || !order.stateId) continue;
     const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
-    const wanted = Math.min(order.units, quantityGroup?.remaining ?? order.units);
-    carried.set(order.id, fillStateFreight(order, wanted, order.maximumSpend ?? Number.MAX_VALUE));
+    const prior = carried.get(order.id);
+    const wanted = prior
+      ? prior.wanted
+      : Math.min(order.units, quantityGroup?.remaining ?? order.units);
+    carried.set(
+      order.id,
+      fillStateFreight(order, wanted, prior?.orderBudget ?? order.maximumSpend ?? Number.MAX_VALUE)
+    );
   }
   // Phase 2: the ordinary book pass over every order at its residual target.
   for (const order of orders) {
