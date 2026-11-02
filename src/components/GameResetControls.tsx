@@ -436,7 +436,7 @@ export function GameResetControls() {
                 onBlur={() => setYearDraft(null)}
                 disabled={loading !== null}
                 aria-label="Reset year"
-                className="w-[4.5ch] appearance-none rounded-md border border-transparent bg-transparent px-1 text-2xl font-semibold tabular-nums hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-[6ch] [appearance:textfield] rounded-md border border-transparent bg-transparent px-1 text-2xl font-semibold tabular-nums hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
               <label className="flex items-baseline gap-1 text-base text-muted">
                 Week
@@ -456,7 +456,7 @@ export function GameResetControls() {
                   onBlur={() => setWeekDraft(null)}
                   disabled={loading !== null}
                   aria-label="Reset week"
-                  className="w-[3.5ch] appearance-none rounded-md border border-transparent bg-transparent px-1 tabular-nums text-foreground hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="w-[4.5ch] [appearance:textfield] rounded-md border border-transparent bg-transparent px-1 tabular-nums text-foreground hover:border-card-border focus:border-primary focus:outline-none disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </label>
             </div>
