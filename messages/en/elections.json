@@ -512,7 +512,6 @@
         "player": "Player",
         "npp": "Politician",
         "openPrimary": "The primary is open and no one has filed yet.",
-        "electionPage": "Election page",
         "final": "Final",
         "yearTitle": "{year} {title}",
         "wonBy": "{name} won by {margin} pts",

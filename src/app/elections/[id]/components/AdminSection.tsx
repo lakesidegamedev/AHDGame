@@ -8,13 +8,6 @@ const PresAdminPanel = dynamic(
   () => import("./PresAdminPanel").then((m) => ({ default: m.PresAdminPanel })),
   { ssr: false }
 );
-const ElectionAdminPanel = dynamic(
-  () =>
-    import("@/components/elections/admin/ElectionAdminPanel").then((m) => ({
-      default: m.ElectionAdminPanel,
-    })),
-  { ssr: false }
-);
 
 interface AdminSectionProps {
   electionId: string;
@@ -74,6 +67,7 @@ export function AdminSection({
       </button>
       {adminOpen && (
         <div className="mt-3">
+          {/* Only the presidency renders here; other races' admin tools are in Campaign Manager. */}
           {electionType === "president" ? (
             <PresAdminPanel
               electionId={electionId}
@@ -82,14 +76,7 @@ export function AdminSection({
               candidates={candidates}
               onSuccess={onSuccess}
             />
-          ) : (
-            <ElectionAdminPanel
-              electionId={electionId}
-              inPrimary={localInPrimary}
-              isEnded={localIsEnded}
-              onSuccess={onSuccess}
-            />
-          )}
+          ) : null}
         </div>
       )}
     </div>

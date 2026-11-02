@@ -14,9 +14,7 @@ import { ElectionScheduleCard } from "./ElectionScheduleCard";
 import { PrimaryPhaseNote } from "./PrimaryPhaseNote";
 import dynamic from "next/dynamic";
 // Mutually exclusive phase bodies: an election is upcoming, in a primary, or in
-// its general phase, and the country pickers only exist for their own country.
-// They are loaded on demand so a presidential race in the US never downloads
-// the Hungarian constituency picker.
+// its general phase. They are loaded on demand.
 const PhaseFallback = () => (
   <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
 );
@@ -31,20 +29,6 @@ const GeneralPhaseView = dynamic(
 );
 const PrimaryPhaseView = dynamic(
   () => import("./PrimaryPhaseView").then((m) => m.PrimaryPhaseView),
-  { loading: PhaseFallback }
-);
-const BgFoundingConstituencyPicker = dynamic(
-  () =>
-    import("@/components/elections/raceEntry/BgFoundingConstituencyPicker").then(
-      (m) => m.BgFoundingConstituencyPicker
-    ),
-  { loading: PhaseFallback }
-);
-const Hu1991ConstituencyPicker = dynamic(
-  () =>
-    import("@/components/elections/raceEntry/Hu1991ConstituencyPicker").then(
-      (m) => m.Hu1991ConstituencyPicker
-    ),
   { loading: PhaseFallback }
 );
 import { PrimaryMapPills } from "./PrimaryMapPills";
@@ -345,10 +329,8 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
     };
   }, [fetchElection, fetchWire]);
 
-  const [huDistrictId, setHuDistrictId] = useState("");
   const raceEntry = useRaceEntry(election, {
     confirm: confirmDialog,
-    constituencyId: huDistrictId,
     onDone: fetchElection,
   });
   const handleEnter = raceEntry.enter;
@@ -418,24 +400,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const stageRailTop = (
     <div>
       <ElectionNavigation election={election} showLiveLink={presidentialResultsLive(election)} />
-      {canEnter &&
-        (election.bulgarianFoundingRound?.round === 1 ||
-          Boolean(election.bulgarianFoundingRound?.newNominationDistrictIds?.length)) && (
-          <BgFoundingConstituencyPicker
-            allowedDistrictIds={election.bulgarianFoundingRound?.newNominationDistrictIds}
-            regionId={election.state}
-            value={huDistrictId}
-            onChange={setHuDistrictId}
-          />
-        )}
-      {canEnter && election.hungarianAssemblyRound?.round === 1 && (
-        <Hu1991ConstituencyPicker
-          allowedDistrictIds={election.hungarianAssemblyRound?.vacancyDistrictIds}
-          regionId={election.state}
-          value={huDistrictId}
-          onChange={setHuDistrictId}
-        />
-      )}
       <p className="mb-1 text-xs text-muted">
         <Link href="/wiki/reference-offices" className="text-primary hover:underline">
           What the presidency can do
@@ -625,24 +589,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
         <ElectionNavigation election={election} />
         {confirmDialogNode}
 
-        {canEnter &&
-          (election.bulgarianFoundingRound?.round === 1 ||
-            Boolean(election.bulgarianFoundingRound?.newNominationDistrictIds?.length)) && (
-            <BgFoundingConstituencyPicker
-              allowedDistrictIds={election.bulgarianFoundingRound?.newNominationDistrictIds}
-              regionId={election.state}
-              value={huDistrictId}
-              onChange={setHuDistrictId}
-            />
-          )}
-        {canEnter && election.hungarianAssemblyRound?.round === 1 && (
-          <Hu1991ConstituencyPicker
-            allowedDistrictIds={election.hungarianAssemblyRound?.vacancyDistrictIds}
-            regionId={election.state}
-            value={huDistrictId}
-            onChange={setHuDistrictId}
-          />
-        )}
         <ElectionHeader
           election={election}
           electionYear={electionYear}

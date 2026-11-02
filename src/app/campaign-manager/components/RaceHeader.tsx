@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { BLEND } from "@/components/blend/tokens";
 import { useBlendGround } from "@/components/blend/useBlendGround";
@@ -97,17 +96,6 @@ export function RaceHeader(props: RaceHeaderProps) {
         <span style={ratingChipStyle(shade.fill, shade.ink)}>{t(`tier.${standing.tier}`)}</span>
       ) : null}
       {props.entry}
-      <Link
-        href={`/elections/${race.electionId}`}
-        style={{
-          ...BUTTON,
-          color: BLEND.ink,
-          border: `1px solid ${BLEND.hairlineStrong}`,
-          textDecoration: "none",
-        }}
-      >
-        {t("race.electionPage")}
-      </Link>
       {final ? null : (
         <button
           type="button"
