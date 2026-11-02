@@ -7,21 +7,28 @@
 // party — the Conservatives' 14 NEE UK-commons seats reported as "vacant".
 //
 // Half A (code): $unset seatsHeld on vacate, stopping new orphans.
-// Half B (this heal): delete the existing phantom blocs. Vacancy is represented
-// by row ABSENCE in this codebase — true vacancies delete rows rather than
-// leaving null placeholders — so deletion is the correct repair, and the next
-// election re-contests the seats.
+// Half B (this heal): delete the existing phantom blocs. For most chambers
+// vacancy is row ABSENCE — true vacancies delete rows rather than leaving null
+// placeholders — so deletion is the correct repair and the next election
+// re-contests the seats. UK Commons is the exception (#856/#860): a
+// holder-less `commons` row is the durable seat record that a live
+// `ukCommonsVacancies` doc anchors until a by-election fills it, so those rows
+// are excluded here.
 //
 // Ported from scripts/heal-orphan-null-party-seats.ts, which stays as the
 // standalone escape hatch. The office-type allowlist is deliberate: a
 // null-party row on any OTHER office type may be a legitimate non-party seat,
 // so those are reported and left alone rather than swept up.
 
-import type { Db } from "mongodb";
+import type { Db, ObjectId } from "mongodb";
+import { getUkCommonsVacanciesCollection } from "@/lib/db/collections/ukByElection";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 
 /** Office types where a null-party bloc can only be the vacate bug. */
 const HEALED_OFFICE_TYPES = ["commons", "snap_commons", "bundestag", "snap_bundestag", "seanad"];
+
+/** Non-terminal UK Commons vacancies: a live doc anchors its holder-less row. */
+const LIVE_VACANCY_STATUSES = ["open", "scheduled"] as const;
 
 /** No holder of any kind, yet still claiming seats. */
 const ORPHAN_SHAPE = {
@@ -34,18 +41,47 @@ const ORPHAN_SHAPE = {
 const HEAL_FILTER = { ...ORPHAN_SHAPE, officeType: { $in: HEALED_OFFICE_TYPES } };
 
 interface OrphanRow {
-  _id: unknown;
+  _id: ObjectId;
   countryId?: string;
   officeType?: string;
   state?: string;
   seatsHeld?: number;
 }
 
-async function findOrphans(db: Db): Promise<OrphanRow[]> {
-  return db
+interface OrphanScan {
+  /** Rows the heal may delete. */
+  orphans: OrphanRow[];
+  /** Holder-less commons rows kept because a live vacancy doc anchors them. */
+  anchored: number;
+}
+
+/**
+ * A holder-less `commons` row with a live `ukCommonsVacancies` doc is not an
+ * orphan: the row is the seat record the scheduled by-election fills and
+ * deletes on resolution, and removing it would orphan the vacancy.
+ */
+async function listVacancyAnchoredIds(db: Db, ids: ObjectId[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const docs = await getUkCommonsVacanciesCollection(db)
+    .find(
+      { officialId: { $in: ids }, status: { $in: [...LIVE_VACANCY_STATUSES] } },
+      { projection: { officialId: 1 } }
+    )
+    .toArray();
+  return new Set(docs.map((doc) => String(doc.officialId)));
+}
+
+async function scanOrphans(db: Db): Promise<OrphanScan> {
+  const rows = await db
     .collection<OrphanRow>("electedOfficials")
     .find(HEAL_FILTER, { projection: { countryId: 1, officeType: 1, state: 1, seatsHeld: 1 } })
     .toArray();
+  const anchoredIds = await listVacancyAnchoredIds(
+    db,
+    rows.map((row) => row._id)
+  );
+  const orphans = rows.filter((row) => !anchoredIds.has(String(row._id)));
+  return { orphans, anchored: rows.length - orphans.length };
 }
 
 async function countFlagged(db: Db): Promise<number> {
@@ -55,11 +91,16 @@ async function countFlagged(db: Db): Promise<number> {
 }
 
 async function detect(db: Db): Promise<DetectResult> {
-  const orphans = await findOrphans(db);
+  const { orphans, anchored } = await scanOrphans(db);
   const flagged = await countFlagged(db);
   const phantomSeats = orphans.reduce((sum, row) => sum + (row.seatsHeld ?? 0), 0);
 
   const notes = [`${phantomSeats} phantom seats across ${orphans.length} bloc(s)`];
+  if (anchored > 0) {
+    notes.push(
+      `${anchored} holder-less commons row(s) are live UK by-election vacancy anchors and are NOT touched`
+    );
+  }
   if (flagged > 0) {
     notes.push(
       `${flagged} null-party bloc(s) on OTHER office types are flagged but NOT touched — review against the seed before deleting, they may be legitimate non-party seats`
@@ -80,7 +121,7 @@ async function detect(db: Db): Promise<DetectResult> {
 }
 
 async function plan(db: Db): Promise<HealPlan> {
-  const orphans = await findOrphans(db);
+  const { orphans } = await scanOrphans(db);
   const phantomSeats = orphans.reduce((sum, row) => sum + (row.seatsHeld ?? 0), 0);
 
   return {
@@ -97,28 +138,25 @@ async function plan(db: Db): Promise<HealPlan> {
 async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
   const ids = healPlan.touched.find((t) => t.collection === "electedOfficials")?.ids ?? [];
   // Delete by the SHAPE filter restricted to the approved ids, not by id alone.
-  // If a row stopped being an orphan between plan and apply, it survives.
-  const docs = await db
-    .collection<OrphanRow>("electedOfficials")
-    .find(HEAL_FILTER)
-    .project({ _id: 1 })
-    .toArray();
+  // If a row stopped being an orphan — or became a live by-election vacancy
+  // anchor — between plan and apply, it survives.
+  const { orphans } = await scanOrphans(db);
   const approved = new Set(ids);
-  const toDelete = docs.map((d) => d._id).filter((id) => approved.has(String(id)));
+  const toDelete = orphans.map((row) => row._id).filter((id) => approved.has(String(id)));
 
   const res = await db
     .collection("electedOfficials")
     .deleteMany({ ...HEAL_FILTER, _id: { $in: toDelete } } as Record<string, unknown>);
 
   return {
-    documentsScanned: docs.length,
+    documentsScanned: orphans.length,
     documentsDeleted: res.deletedCount,
     notes: [`deleted ${res.deletedCount} of ${ids.length} approved orphan bloc(s)`],
   };
 }
 
 async function verify(db: Db): Promise<VerifyResult> {
-  const remaining = await db.collection("electedOfficials").countDocuments(HEAL_FILTER);
+  const remaining = (await scanOrphans(db)).orphans.length;
   const flagged = await countFlagged(db);
   return {
     ok: remaining === 0,
@@ -152,14 +190,14 @@ export const defect: Defect = {
   },
   // Checked 2026-08-08. The roster seeder allocates seatsHeld proportionally
   // across default parties, so every seeded row carries a party, and "vacant"
-  // is expressed by leaving the chamber empty rather than by writing a
-  // holder-less row (priors mode seeds no incumbents at all). A seed therefore
-  // cannot emit `party:null seatsHeld>0`; this shape only comes from the
-  // runtime vacate path.
+  // seed rosters leave the chamber empty rather than writing a holder-less row
+  // (priors mode seeds no incumbents at all). A seed therefore cannot emit
+  // `party:null seatsHeld>0`; at runtime that shape only comes from the vacate
+  // path or, for UK Commons, from a by-election vacancy anchor.
   seedFix: {
     status: "not-needed",
     files: ["src/lib/admin/seed/seedEconTierRosters.ts", "src/lib/admin/seed/seedUK.ts"],
-    note: "seeded rosters always stamp a party; vacancy is row absence, not a null-party row",
+    note: "seeded rosters always stamp a party; a holder-less commons row is only the by-election vacancy anchor",
   },
   envs: ["dev", "sandbox", "prod"],
   idempotent: true,
