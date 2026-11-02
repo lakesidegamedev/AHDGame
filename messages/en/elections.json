@@ -536,6 +536,30 @@
         "barnstormNote": "{gain} influence",
         "working": "Working",
         "resources": "You have {actions} AP and {amount} in campaign funds."
+      },
+      "myMoves": {
+        "loading": "Loading your actions",
+        "statsLabel": "Your stats",
+        "influence": "Influence",
+        "favor": "Favor",
+        "infamy": "Infamy",
+        "donors": "Donors",
+        "debate": "Debate",
+        "donorLevel": "Lv {n}",
+        "influenceTitle": "Political Influence",
+        "favorTitle": "Favorability",
+        "infamyTitle": "Infamy above 20 drains favorability every turn",
+        "donorsTitle": "Donor network level",
+        "debateTitle": "Debate skill",
+        "yourRace": "Your race",
+        "summary": "{position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} · {share} · {standing}",
+        "summaryParty": "{abbr} {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} · {share} · {standing}",
+        "leads": "leads by {gap} pts",
+        "trails": "trails by {gap} pts",
+        "seats": "{seats} of {total} seats",
+        "noRace": "You are not running in a race. Your actions below still build influence, favorability and funds.",
+        "openRace": "Open race",
+        "resources": "{actions} AP · {funds} campaign funds"
       }
     }
   }
