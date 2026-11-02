@@ -508,14 +508,16 @@
         "you": "You",
         "player": "Player",
         "npp": "Politician",
-        "openPrimary": "The primary is open and no one has filed yet. Candidates enter from the election page.",
+        "openPrimary": "The primary is open and no one has filed yet.",
         "electionPage": "Election page",
-        "enter": "Enter this race",
         "final": "Final",
         "yearTitle": "{year} {title}",
         "wonBy": "{name} won by {margin} pts",
         "colVotes": "Votes",
-        "over": "This race is over."
+        "over": "This race is over.",
+        "enterRace": "Enter race",
+        "withdraw": "Withdraw",
+        "working": "Working"
       },
       "chart": {
         "title": "Polling by turn",

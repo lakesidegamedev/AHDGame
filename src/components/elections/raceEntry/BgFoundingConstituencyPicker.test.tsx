@@ -3,7 +3,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import messages from "../../../../../messages/en/elections.json";
+import messages from "../../../../messages/en/elections.json";
 import { BG_1990_CONSTITUENCIES } from "@/lib/countries/bg/data/foundingDistricts1990";
 import { BgFoundingConstituencyPicker } from "./BgFoundingConstituencyPicker";
 

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useToast } from "@/contexts/ToastContext";
 import { useSignedIn } from "@/contexts/AuthDataContext";
 import { resolveElectionYear } from "@/lib/utils/formatters";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
@@ -35,11 +34,17 @@ const PrimaryPhaseView = dynamic(
   { loading: PhaseFallback }
 );
 const BgFoundingConstituencyPicker = dynamic(
-  () => import("./BgFoundingConstituencyPicker").then((m) => m.BgFoundingConstituencyPicker),
+  () =>
+    import("@/components/elections/raceEntry/BgFoundingConstituencyPicker").then(
+      (m) => m.BgFoundingConstituencyPicker
+    ),
   { loading: PhaseFallback }
 );
 const Hu1991ConstituencyPicker = dynamic(
-  () => import("./Hu1991ConstituencyPicker").then((m) => m.Hu1991ConstituencyPicker),
+  () =>
+    import("@/components/elections/raceEntry/Hu1991ConstituencyPicker").then(
+      (m) => m.Hu1991ConstituencyPicker
+    ),
   { loading: PhaseFallback }
 );
 import { PrimaryMapPills } from "./PrimaryMapPills";
@@ -52,12 +57,10 @@ import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types"
 import { BLEND } from "@/components/blend/tokens";
 import { useNightWatch } from "../night/useNightBroadcast";
 import { isNightWindow } from "../night/nightModel";
-import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { getStoredConsent } from "@/components/CookieConsent";
-import { huDistrictIds } from "@/lib/countries/hu/rules/constituencies2014";
-import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useRaceEntry } from "@/components/elections/raceEntry/useRaceEntry";
 
 // The stage screens are mutually exclusive: a race is concluded, in its general
 // phase, in its primary, or in the final-night broadcast, and exactly one of
@@ -105,7 +108,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const router = useRouter();
   const searchParams = useSearchParams();
   const cycle = searchParams.get("cycle");
-  const { showToast } = useToast();
   const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirmDialog();
 
   const [election, setElection] = useState<ElectionDetail | null>(initialElection);
@@ -115,7 +117,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const [resultsFailedId, setResultsFailedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(initialElection === null);
   const [error, setError] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const fallbackCountry = searchParams.get("country")?.toUpperCase() === "UK" ? "uk" : "us";
 
@@ -345,149 +346,14 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   }, [fetchElection, fetchWire]);
 
   const [huDistrictId, setHuDistrictId] = useState("");
-  const handleEnter = async () => {
-    if (!election) return;
-    let constituencyId: string | undefined;
-    let japanShugiinListOrder: number | undefined;
-    const japanMixed = election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
-    if (
-      election.countryId === "HU" &&
-      election.electionType === "nationalAssembly" &&
-      election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1"
-    ) {
-      const districts = huDistrictIds(election.state);
-      const answer = window.prompt(`Choose your constituency number (1-${districts.length}).`);
-      if (answer === null) return;
-      const number = Number(answer.trim());
-      if (!Number.isInteger(number) || number < 1 || number > districts.length) {
-        showToast("Choose a valid constituency number in this region.", "error");
-        return;
-      }
-      constituencyId = districts[number - 1];
-    }
-    if (japanMixed) {
-      // Only the 1994 Shugiin flow reads the statutory constituency table
-      // (~72 KB). Loading it here keeps it out of every other election page.
-      const { JP_SHUGIIN_1994_CONSTITUENCIES } =
-        await import("@/lib/countries/jp/data/jpShugiinConstituencies1994");
-      const districts = JP_SHUGIIN_1994_CONSTITUENCIES.filter(
-        (district) => district.regionId === election.state
-      );
-      const districtAnswer = window.prompt(
-        `Choose a constituency number (1-${districts.length}; blank for party-list only). See the statutory map on this page.`
-      );
-      if (districtAnswer === null) return;
-      if (districtAnswer.trim()) {
-        const number = Number(districtAnswer.trim());
-        if (!Number.isInteger(number) || number < 1 || number > districts.length) {
-          showToast("Choose a valid Shugiin constituency number.", "error");
-          return;
-        }
-        constituencyId = districts[number - 1].id;
-      }
-      const listAnswer = window.prompt("Party-list position (1-300; blank for constituency only).");
-      if (listAnswer === null) return;
-      if (listAnswer.trim()) {
-        const rank = Number(listAnswer.trim());
-        if (!Number.isInteger(rank) || rank < 1 || rank > 300) {
-          showToast("Choose a valid party-list position.", "error");
-          return;
-        }
-        japanShugiinListOrder = rank;
-      }
-      if (!constituencyId && japanShugiinListOrder == null) {
-        showToast("Choose a constituency, a party-list position, or both.", "error");
-        return;
-      }
-    }
-    if (
-      !(await confirmDialog({
-        title: "Enter this race?",
-        message: "This will register your character as a candidate.",
-        confirmLabel: "Enter race",
-      }))
-    )
-      return;
-    setActionLoading(true);
-    try {
-      const res = await fetch(`/api/elections/${id}/enter`, {
-        method: "POST",
-        ...(japanMixed
-          ? {
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ...(constituencyId ? { constituencyId } : {}),
-                ...(japanShugiinListOrder != null ? { japanShugiinListOrder } : {}),
-              }),
-            }
-          : constituencyId
-            ? {
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ constituencyId }),
-              }
-            : (election.hungarianAssemblyRound?.round === 1 ||
-                  election.bulgarianFoundingRound?.round === 1 ||
-                  Boolean(election.bulgarianFoundingRound?.newNominationDistrictIds?.length)) &&
-                huDistrictId
-              ? {
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ constituencyId: huDistrictId }),
-                }
-              : {}),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message ?? "Entered race", "success");
-        void import("@/lib/analytics/capture")
-          .then(({ captureProductEvent }) => captureProductEvent("election_entered"))
-          .catch(() => {});
-        await fetchElection();
-      } else {
-        showToast(apiErrorText(data, "Failed to enter race"), "error");
-      }
-    } catch {
-      showToast("Network error — please try again", "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!election) return;
-    // Phase decides the consequence wording: general-phase withdrawals
-    // destroy accumulated votes; primary withdrawals do not.
-    const phase: "primary" | "general" | "unknown" = election.inPrimary
-      ? "primary"
-      : election.isEnded
-        ? "unknown"
-        : "general";
-    if (
-      !(await confirmDialog({
-        title: "Confirm withdrawal",
-        message: buildWithdrawalConfirmMessage(phase),
-        confirmLabel: "Withdraw",
-        destructive: true,
-      }))
-    )
-      return;
-    setActionLoading(true);
-    try {
-      const res = await fetch(`/api/elections/${id}/withdraw`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message ?? "Withdrawn from race", "success");
-        await fetchElection();
-      } else {
-        showToast(apiErrorText(data, "Failed to withdraw"), "error");
-      }
-    } catch {
-      showToast("Network error — please try again", "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const raceEntry = useRaceEntry(election, {
+    confirm: confirmDialog,
+    constituencyId: huDistrictId,
+    onDone: fetchElection,
+  });
+  const handleEnter = raceEntry.enter;
+  const handleWithdraw = raceEntry.withdraw;
+  const actionLoading = raceEntry.busy;
 
   if (loading) return <ElectionDetailSkeleton />;
 
@@ -514,10 +380,8 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const localIsEnded = election.isEnded;
 
   const amInRace = election.allCandidates.some((c) => c.isYou);
-  // Entry is only open during the primary phase for all candidates.
-  const entryPhaseOpen = localInPrimary;
-  const canEnter = entryPhaseOpen && !amInRace && !localIsEnded && election.myCharId !== null;
-  const canWithdraw = amInRace && !localIsEnded;
+  // Entry is only open during the primary phase (shared rules, raceEntry/entryRules).
+  const { canEnter, canWithdraw } = raceEntry;
 
   // Election year = the year the general election takes place (voting year).
   // Prefers the baked `electionYear` on the doc (set at spawn under the active

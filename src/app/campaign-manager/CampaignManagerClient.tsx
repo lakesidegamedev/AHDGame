@@ -20,6 +20,14 @@ import { useFinishedRaces } from "./useFinishedRaces";
 import { useSeatHistory } from "./useSeatHistory";
 import { SeatNav } from "./components/SeatNav";
 import { PastRaces } from "./components/PastRaces";
+import { RaceEntryButtons } from "./components/RaceEntryButtons";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import {
+  needsConstituencyPicker,
+  useRaceEntry,
+} from "@/components/elections/raceEntry/useRaceEntry";
+import { BgFoundingConstituencyPicker } from "@/components/elections/raceEntry/BgFoundingConstituencyPicker";
+import { Hu1991ConstituencyPicker } from "@/components/elections/raceEntry/Hu1991ConstituencyPicker";
 import { useRaceDetail } from "./useRaceDetail";
 import { useWatchedRaces } from "./useWatchedRaces";
 import { RaceFinder } from "./components/RaceFinder";
@@ -249,6 +257,20 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     void actions.fetchCharacter();
   }, [reload, actions]);
 
+  // Enter / withdraw for the selected live race, through the election page's
+  // own flow. A finished race (or a finished primary) offers neither.
+  const { confirm, dialog: confirmNode } = useConfirmDialog();
+  const [constituencyId, setConstituencyId] = useState("");
+  const entryElection =
+    selected && selected.stage !== "final" && detail.full?.id === selected.electionId
+      ? detail.full
+      : null;
+  const entry = useRaceEntry(entryElection, {
+    confirm,
+    constituencyId,
+    onDone: refreshAfterAction,
+  });
+
   // Choosing a region on the map keeps the race when it is there, else the
   // player's race there, else the region's closest race of the chosen type.
   const selectRegion = useCallback(
@@ -461,6 +483,38 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                 onSelectCandidate={pickCandidate}
                 compact={!isDesktop}
                 nav={<SeatNav prev={cycleNav.prev} next={cycleNav.next} onOpen={openCycle} />}
+                entry={
+                  <>
+                    <RaceEntryButtons
+                      canEnter={entry.canEnter}
+                      canWithdraw={entry.canWithdraw}
+                      busy={entry.busy}
+                      onEnter={() => void entry.enter()}
+                      onWithdraw={() => void entry.withdraw()}
+                    />
+                    {entry.canEnter && entryElection && needsConstituencyPicker(entryElection) ? (
+                      entryElection.hungarianAssemblyRound?.round === 1 ? (
+                        <Hu1991ConstituencyPicker
+                          allowedDistrictIds={
+                            entryElection.hungarianAssemblyRound.vacancyDistrictIds
+                          }
+                          regionId={entryElection.state}
+                          value={constituencyId}
+                          onChange={setConstituencyId}
+                        />
+                      ) : (
+                        <BgFoundingConstituencyPicker
+                          allowedDistrictIds={
+                            entryElection.bulgarianFoundingRound?.newNominationDistrictIds
+                          }
+                          regionId={entryElection.state}
+                          value={constituencyId}
+                          onChange={setConstituencyId}
+                        />
+                      )
+                    ) : null}
+                  </>
+                }
                 history={
                   <PastRaces
                     cycles={seat.cycles}
@@ -487,6 +541,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           />
         </BottomSheet>
       ) : null}
+      {confirmNode}
       {actions.character ? (
         <CampaignActionModal
           action={actions.campaignAction}

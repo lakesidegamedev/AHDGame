@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { readableInk } from "@/lib/elections/marginTierShade";
@@ -113,15 +112,7 @@ function RaceBody(
       />
 
       {race.candidates.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
-          {t("race.openPrimary")}{" "}
-          <Link
-            href={`/elections/${race.electionId}`}
-            style={{ color: BLEND.ink, fontWeight: 600 }}
-          >
-            {t("race.enter")}
-          </Link>
-        </p>
+        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.openPrimary")}</p>
       ) : race.stage === "primary" ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
           {race.turnsLeft != null

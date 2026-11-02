@@ -3,7 +3,7 @@ import React from "react";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import messages from "../../../../../messages/en/elections.json";
+import messages from "../../../../messages/en/elections.json";
 import { Hu1991ConstituencyPicker } from "./Hu1991ConstituencyPicker";
 afterEach(cleanup);
 describe("Hungarian constituency filing selector", () => {

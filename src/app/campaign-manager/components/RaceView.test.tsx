@@ -152,13 +152,13 @@ describe("RaceView", () => {
 });
 
 describe("RaceView open primary", () => {
-  it("says no one has filed and links to the election page to enter", () => {
-    view(election({ id: "open-1", inPrimary: true, inGeneral: false, byParty: [] }));
-    expect(screen.getByText(/no one has filed yet/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Enter this race" }).getAttribute("href")).toBe(
-      "/elections/open-1"
-    );
-    expect(screen.getByRole("link", { name: "Election page" })).toBeTruthy();
+  it("says no one has filed, and shows the header's entry control", () => {
+    view(election({ id: "open-1", inPrimary: true, inGeneral: false, byParty: [] }), null, {
+      entry: <button type="button">Enter race</button>,
+    });
+    expect(screen.getByText("The primary is open and no one has filed yet.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Enter this race" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Enter race" })).toBeTruthy();
   });
 });
 
