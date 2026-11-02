@@ -531,3 +531,27 @@ describe("legacy finished races", () => {
     expect(finishedYears(rows, "senate")).toEqual([1990]);
   });
 });
+
+describe("seat estimates keyed by candidate", () => {
+  it("counts a race's seats by party when the count keys them by candidate", () => {
+    const [row] = buildRaceIndex(
+      [
+        election({
+          id: "ct",
+          electionType: "house",
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          totalSeats: 6,
+          seatsEstimate: { a: 3, b: 3 },
+          cands: [
+            { id: "a", name: "Donna", party: "1", share: 53.5 },
+            { id: "b", name: "Nancy", party: "2", share: 46.5 },
+          ],
+        }),
+      ],
+      { ...ctx, includeFinal: true }
+    );
+    expect(row.seatsEstimate).toEqual({ "1": 3, "2": 3 });
+  });
+});

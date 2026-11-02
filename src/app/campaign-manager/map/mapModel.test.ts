@@ -156,3 +156,24 @@ describe("countySourceFor on a finished race", () => {
     expect(countySourceFor(race)).toBeNull();
   });
 });
+
+describe("unitRowsFrom for seat-ordered results", () => {
+  it("colours a district by the winner it seated when the count has no votes per district", () => {
+    const [row] = unitRowsFrom(
+      {
+        viewBox: "0 0 1 1",
+        subdivisions: [
+          { id: "CT-04", name: "CT-04", path: "M0,0Z", winner: "b", margin: 0 } as never,
+        ],
+        candidateNames: { a: "Ann", b: "Bo" },
+        candidateParties: { a: "1", b: "2" },
+        partyColors: { "1": "#2563eb", "2": "#dc2626" },
+      },
+      "#0c0c12"
+    );
+    expect(row.fill).not.toBe("#0c0c12");
+    expect(row.tier).toBe("safe");
+    expect(row.leaderPartyId).toBe("2");
+    expect(row.shares).toEqual([{ name: "Bo", partyId: "2", color: "#dc2626", pct: 100 }]);
+  });
+});

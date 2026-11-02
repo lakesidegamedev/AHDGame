@@ -135,6 +135,24 @@ function turnsUntil(deadline: number | null, currentTurn: number | null): number
 
 const byShare = (a: CmCandidate, b: CmCandidate) => b.share - a.share;
 
+/**
+ * Seats by party. Most counts key `seatsEstimate` by party; a resolved
+ * districted House keys it by the winning candidates, so those fold into
+ * their parties.
+ */
+function partySeats(e: ElectionResponse): Record<string, number> | null {
+  if (!e.seatsEstimate) return null;
+  const partyOf = new Map(
+    [...(e.allCandidates ?? []), ...e.candidates].map((c) => [c.id, c.party])
+  );
+  const out: Record<string, number> = {};
+  for (const [key, seats] of Object.entries(e.seatsEstimate)) {
+    const partyId = partyOf.get(key) ?? key;
+    out[partyId] = (out[partyId] ?? 0) + seats;
+  }
+  return out;
+}
+
 /** Final general shares: the count's last shares, else the counted votes. */
 function finalShares(e: ElectionResponse): Record<string, number> | null {
   const polled = e.polling?.sharesPct;
@@ -244,7 +262,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
         turnsLeft: null,
         candidates,
         hasPolling,
-        seatsEstimate: multiSeat ? (e.seatsEstimate ?? null) : null,
+        seatsEstimate: multiSeat ? partySeats(e) : null,
         isMine: candidates.some((c) => c.isYou),
         winnerId: hasPolling ? candidates[0].id : null,
       });
@@ -307,7 +325,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       turnsLeft: turnsUntil(e.endTurn, ctx.currentTurn),
       candidates,
       hasPolling: shares != null && Object.keys(shares).length > 0,
-      seatsEstimate: multiSeat ? (e.seatsEstimate ?? null) : null,
+      seatsEstimate: multiSeat ? partySeats(e) : null,
       isMine: candidates.some((c) => c.isYou),
     });
     // A general under way keeps its own finished primaries as history.

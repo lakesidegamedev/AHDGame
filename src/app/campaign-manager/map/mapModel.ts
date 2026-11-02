@@ -57,14 +57,27 @@ export function unitRowsFrom(
   const colorOf = (cid: string) =>
     data.candidateColors?.[cid] ?? data.partyColors?.[parties[cid] ?? ""] ?? "#888888";
   return data.subdivisions.map((s) => {
-    const shares = subunitShares(s.votes ?? {}, parties).map((x) => ({
+    const counted = subunitShares(s.votes ?? {}, parties).map((x) => ({
       name: data.candidateNames?.[x.candidateId] ?? x.candidateId,
       partyId: x.partyId,
       color: colorOf(x.candidateId),
       pct: x.pct,
     }));
+    // Seat-ordered results (a districted House) name each district's winner
+    // but carry no votes per district: the seat is decided, so it shades solid.
+    const seated = counted.length === 0 && !!s.winner;
+    const shares = seated
+      ? [
+          {
+            name: data.candidateNames?.[s.winner] ?? s.winner,
+            partyId: parties[s.winner] ?? "",
+            color: colorOf(s.winner),
+            pct: 100,
+          },
+        ]
+      : counted;
     const margin = shares.length > 1 ? shares[0].pct - shares[1].pct : (shares[0]?.pct ?? 0);
-    const tier = classifyMarginTier(margin);
+    const tier: MarginTier = seated ? "safe" : classifyMarginTier(margin);
     const leaderColor = shares[0]?.color ?? colorOf(s.winner);
     const fill = shares.length ? shadeColorForTier(leaderColor, tier, ground) : ground;
     return {
