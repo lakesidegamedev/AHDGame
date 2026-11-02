@@ -28,6 +28,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerDemandPlanStage: 1,
   producerSpilloverStage: 1,
   producerSpilloverShare: 1,
+  producerOwnSitesFirstStage: 1,
   producerPublicCarryStage: 1,
   producerPublicCarryShare: 1,
   producerRunPaceDrop: 1,

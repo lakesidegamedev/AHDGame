@@ -13,6 +13,7 @@ export function producerStageEnv(
         decommissionGrantShare?: number;
         producerSpilloverStage?: number;
         producerSpilloverShare?: number;
+        producerOwnSitesFirstStage?: number;
         producerPublicCarryStage?: number;
         producerPublicCarryShare?: number;
         producerRunPaceDrop?: number;
@@ -50,6 +51,7 @@ export function producerStageEnv(
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
         : 0,
+    ownSitesFirst: (config?.producerOwnSitesFirstStage ?? 0) >= 1,
     runPaceDrop: config?.producerRunPaceDrop,
     householdIncomeFloor: config?.producerHouseholdIncomeFloor,
     stockCoverTurns: config?.producerStockCover,
