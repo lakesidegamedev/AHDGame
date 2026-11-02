@@ -11,11 +11,14 @@ const stageSchema = z.enum(["all", "primary", "general", "final"]);
 const regionSchema = z.string().regex(/^[A-Z]{2,3}$/);
 const yearSchema = z.coerce.number().int().min(1700).max(2300);
 const partySchema = z.string().regex(/^[\w-]{1,32}$/);
+const countrySchema = z.string().regex(/^[A-Z]{2,3}$/);
 
 /** The link's race and filter, each param kept only when it is well formed. */
 export function parseCampaignManagerParams(sp: Record<string, string | string[] | undefined>): {
   race: string | null;
   filter: Partial<CmLinkFilter>;
+  /** A country to view when no race names one. */
+  country: string | null;
 } {
   const pick = <T>(schema: z.ZodType<T>, v: string | undefined): T | undefined => {
     if (v === undefined) return undefined;
@@ -33,5 +36,9 @@ export function parseCampaignManagerParams(sp: Record<string, string | string[] 
   if (year !== undefined) filter.year = year;
   const party = pick(partySchema, one(sp.party));
   if (party) filter.party = party;
-  return { race: pick(raceSchema, one(sp.race)) ?? null, filter };
+  return {
+    race: pick(raceSchema, one(sp.race)) ?? null,
+    filter,
+    country: pick(countrySchema, one(sp.country)?.toUpperCase()) ?? null,
+  };
 }

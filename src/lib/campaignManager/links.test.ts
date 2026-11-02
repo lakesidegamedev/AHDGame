@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildRaceIndex } from "./rules";
 import { election } from "./rules/__fixtures__/election";
-import { campaignManagerHref, primaryTierHref, raceHref, presidentialRedirect } from "./links";
+import {
+  campaignManagerCountry,
+  campaignManagerHref,
+  primaryTierHref,
+  raceHref,
+  presidentialRedirect,
+} from "./links";
 import { parseCampaignManagerParams } from "./linkParams";
 import { openingFilter } from "./openingFilter";
 
@@ -36,10 +42,12 @@ describe("parseCampaignManagerParams", () => {
         region: "mi",
         year: "1988",
         party: "2",
+        country: "uk",
       })
     ).toEqual({
       race: "6ae803d32a6841f128efd90d:1",
       filter: { type: "senate", stage: "final", regionId: "MI", year: 1988, party: "2" },
+      country: "UK",
     });
     expect(
       parseCampaignManagerParams({
@@ -49,8 +57,9 @@ describe("parseCampaignManagerParams", () => {
         region: "Michigan",
         year: "soon",
         party: ["1", "2"],
+        country: "United Kingdom",
       })
-    ).toEqual({ race: null, filter: {} });
+    ).toEqual({ race: null, filter: {}, country: null });
   });
 });
 
@@ -160,5 +169,29 @@ describe("links module", () => {
     const source = readFileSync("src/lib/campaignManager/links.ts", "utf8");
     const valueImports = source.match(/^import (?!type )[^\n]*$/gm) ?? [];
     expect(valueImports).toEqual([]);
+  });
+});
+
+describe("campaignManagerCountry", () => {
+  it("opens a linked race in its own country", () => {
+    expect(campaignManagerCountry("US", { countryId: "UK" }, null)).toBe("UK");
+  });
+
+  it("treats a legacy race without a country as American", () => {
+    expect(campaignManagerCountry("UK", { countryId: undefined }, null)).toBe("US");
+  });
+
+  it("uses a country param when no race is linked, else the player's own country", () => {
+    expect(campaignManagerCountry("US", null, "JP")).toBe("JP");
+    expect(campaignManagerCountry("US", null, null)).toBe("US");
+  });
+});
+
+describe("campaignManagerHref country", () => {
+  it("names a country to view", () => {
+    expect(campaignManagerHref({ country: "UK" })).toBe("/campaign-manager?country=UK");
+    expect(campaignManagerHref({ country: "JP", type: "governor" })).toBe(
+      "/campaign-manager?country=JP&type=governor"
+    );
   });
 });

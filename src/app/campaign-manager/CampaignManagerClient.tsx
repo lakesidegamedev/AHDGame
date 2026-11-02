@@ -24,6 +24,7 @@ import { SeatNav } from "./components/SeatNav";
 import { PastRaces } from "./components/PastRaces";
 import { RaceEntryButtons } from "./components/RaceEntryButtons";
 import { RaceAdmin } from "./components/RaceAdmin";
+import { CountryPicker } from "./components/CountryPicker";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   needsConstituencyPicker,
@@ -413,6 +414,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               regionNoun={props.regionNoun}
               regionNounPlural={props.regionNounPlural}
               finishedCount={finishedCount}
+              countryPicker={<CountryPicker countryId={props.countryId} />}
             />
           ) : null
         }
@@ -448,6 +450,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               selectedKey={selected?.key ?? null}
               onSelect={selectRace}
               watched={watched}
+              countryPicker={<CountryPicker countryId={props.countryId} />}
             />
           ) : null}
           {!isDesktop && mobileTab === "self" ? (

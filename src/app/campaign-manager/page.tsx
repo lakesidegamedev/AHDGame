@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { ObjectId } from "mongodb";
 import type { Election, State } from "@/lib/db/types";
-import { presidentialRedirect } from "@/lib/campaignManager/links";
+import { campaignManagerCountry, presidentialRedirect } from "@/lib/campaignManager/links";
 import { parseCampaignManagerParams } from "@/lib/campaignManager/linkParams";
 import CampaignManagerClient from "./CampaignManagerClient";
 
@@ -27,9 +27,26 @@ export default async function CampaignManagerPage({
     redirect("/unauthorized?reason=You need a character to use the Campaign Manager");
   }
   const character = user.character;
-  const countryId = (character.countryId ?? "US") as CountryId;
-  const config = getCountryConfig(countryId);
+  const homeCountryId = (character.countryId ?? "US") as CountryId;
   const db = await getDb();
+  // Deep-link params (race, type, stage, region, year, party, country); junk is dropped.
+  const { race, filter, country: countryParam } = parseCampaignManagerParams(await searchParams);
+  // Links that know only a race id land here; the presidency has its own page.
+  const linked = race
+    ? await db
+        .collection<Election>("elections")
+        .findOne(
+          { _id: new ObjectId(race.split(":")[0]) },
+          { projection: { _id: 1, electionType: 1, seatId: 1, countryId: 1 } }
+        )
+    : null;
+  const elsewhere = presidentialRedirect(linked);
+  if (elsewhere) redirect(elsewhere);
+
+  // Any country's races can be viewed: a linked race opens in its own country.
+  const wanted = campaignManagerCountry(homeCountryId, linked, countryParam) as CountryId;
+  const countryId = getCountryConfig(wanted) ? wanted : homeCountryId;
+  const config = getCountryConfig(countryId);
   const regions = await db
     .collection<State>("states")
     .find({ countryId }, { projection: { _id: 1, name: 1 } })
@@ -41,22 +58,11 @@ export default async function CampaignManagerPage({
     config.legislature?.lowerChamber?.key,
     config.legislature?.upperChamber?.key,
   ].filter((k): k is string => !!k);
-  // Deep-link params (race, type, stage, region, year, party); junk is dropped.
-  const { race, filter } = parseCampaignManagerParams(await searchParams);
-  // Links that know only a race id land here; the presidency has its own page.
-  if (race) {
-    const linked = await db
-      .collection<Election>("elections")
-      .findOne(
-        { _id: new ObjectId(race.split(":")[0]) },
-        { projection: { _id: 1, electionType: 1, seatId: 1 } }
-      );
-    const elsewhere = presidentialRedirect(linked);
-    if (elsewhere) redirect(elsewhere);
-  }
 
   return (
     <CampaignManagerClient
+      // A new country is a new page: type, region and selection start over.
+      key={countryId}
       countryId={countryId}
       countryName={config.name}
       regionNoun={config.regionLabel ?? "Region"}

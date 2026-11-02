@@ -93,7 +93,10 @@ export function MobileRaceStrip({
   selectedKey,
   onSelect,
   watched,
+  countryPicker,
 }: {
+  /** The country selector, first in the strip. */
+  countryPicker?: ReactNode;
   countryId: string;
   races: CmRace[];
   filter: RaceFilter;
@@ -116,6 +119,7 @@ export function MobileRaceStrip({
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+      {countryPicker}
       <div style={scroller}>
         {types.map((type) => (
           <button

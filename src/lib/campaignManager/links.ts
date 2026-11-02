@@ -14,6 +14,8 @@ import type { RaceFilter } from "./rules";
 export type CmLinkStage = RaceFilter["stage"];
 
 export interface CmLinkParams {
+  /** The country to view (a linked race's own country otherwise wins). */
+  country?: string;
   race?: string;
   type?: string;
   stage?: CmLinkStage;
@@ -30,7 +32,7 @@ export interface CmLinkFilter {
   party: string;
 }
 
-const PARAM_ORDER = ["race", "type", "stage", "region", "year", "party"] as const;
+const PARAM_ORDER = ["country", "race", "type", "stage", "region", "year", "party"] as const;
 
 export function campaignManagerHref(p: CmLinkParams): string {
   const qs = PARAM_ORDER.filter((k) => p[k] !== undefined)
@@ -57,6 +59,20 @@ export function presidentialRedirect(
 ): string | null {
   if (!e || e.electionType !== "president") return null;
   return `/elections/${e.seatId ?? String(e._id)}`;
+}
+
+/**
+ * Which country Campaign Manager shows: a linked race's own (legacy rows
+ * without one are American, as everywhere else), else a `country` param, else
+ * the player's. Any country's races can be viewed; entering stays home-only.
+ */
+export function campaignManagerCountry(
+  characterCountryId: string,
+  linked: { countryId?: string | null } | null,
+  countryParam: string | null
+): string {
+  if (linked) return linked.countryId ?? "US";
+  return countryParam ?? characterCountryId;
 }
 
 /** A party's primaries of one race type: the presidential primary page, else Campaign Manager. */

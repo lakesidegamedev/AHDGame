@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { BlendInput, BlendSelect } from "@/components/blend/BlendControls";
@@ -31,6 +31,8 @@ export interface RaceFinderProps {
   regionNounPlural: string;
   /** The type's finished races, counted without loading them (until Finished loads them). */
   finishedCount?: number | null;
+  /** The country selector, first in the rail. */
+  countryPicker?: ReactNode;
 }
 
 const STAGES = [
@@ -54,6 +56,7 @@ export function RaceFinder({
   regionNoun,
   regionNounPlural,
   finishedCount,
+  countryPicker,
 }: RaceFinderProps) {
   const t = useTranslations("elections.campaignManager");
   const ground = useBlendGround();
@@ -115,6 +118,8 @@ export function RaceFinder({
       <h2 style={{ margin: 0, fontFamily: FONT.sans, fontSize: 16, fontWeight: 700 }}>
         {t("finder.title")}
       </h2>
+
+      {countryPicker}
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={EYEBROW}>{t("finder.searchLabel")}</span>

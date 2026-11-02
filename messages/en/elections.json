@@ -481,7 +481,8 @@
         "noFinished": "No finished races yet.",
         "stageUpcoming": "Upcoming",
         "party": "Party",
-        "allParties": "All parties"
+        "allParties": "All parties",
+        "country": "Country"
       },
       "race": {
         "pick": "Pick a race from the list or the map.",
