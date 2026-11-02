@@ -9,7 +9,10 @@ const PresAdminPanel = dynamic(
   { ssr: false }
 );
 const ElectionAdminPanel = dynamic(
-  () => import("./ElectionAdminPanel").then((m) => ({ default: m.ElectionAdminPanel })),
+  () =>
+    import("@/components/elections/admin/ElectionAdminPanel").then((m) => ({
+      default: m.ElectionAdminPanel,
+    })),
   { ssr: false }
 );
 

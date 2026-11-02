@@ -39,6 +39,8 @@ export interface RaceViewProps {
   entry?: ReactNode;
   /** Shown under the wire: the seat's other cycles. */
   history?: ReactNode;
+  /** Admin tools, last in the panel (renders nothing for non-admins). */
+  admin?: ReactNode;
 }
 
 const fmtDelta = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
@@ -391,6 +393,7 @@ function RaceBody(
 
       <RaceWire items={props.wire} />
       {props.history}
+      {props.admin}
     </article>
   );
 }

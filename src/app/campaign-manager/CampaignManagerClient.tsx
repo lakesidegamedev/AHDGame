@@ -21,6 +21,7 @@ import { useSeatHistory } from "./useSeatHistory";
 import { SeatNav } from "./components/SeatNav";
 import { PastRaces } from "./components/PastRaces";
 import { RaceEntryButtons } from "./components/RaceEntryButtons";
+import { RaceAdmin } from "./components/RaceAdmin";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   needsConstituencyPicker,
@@ -514,6 +515,21 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                       )
                     ) : null}
                   </>
+                }
+                admin={
+                  selected && detail.full?.id === selected.electionId ? (
+                    <RaceAdmin
+                      electionId={selected.electionId}
+                      isAdmin={detail.full.isAdmin}
+                      inPrimary={detail.full.inPrimary}
+                      isEnded={detail.full.isEnded}
+                      candidates={detail.full.candidates.map((c) => ({
+                        id: c.id,
+                        name: c.characterName,
+                      }))}
+                      onDone={refreshAfterAction}
+                    />
+                  ) : null
                 }
                 history={
                   <PastRaces

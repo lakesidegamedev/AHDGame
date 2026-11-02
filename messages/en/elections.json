@@ -633,6 +633,10 @@
         "show": "Show full schedule",
         "hide": "Hide full schedule",
         "when": "{timer} · {year}"
+      },
+      "admin": {
+        "toggle": "Admin",
+        "candidates": "Candidates"
       }
     }
   }

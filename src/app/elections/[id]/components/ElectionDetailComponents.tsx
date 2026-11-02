@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
@@ -9,47 +8,7 @@ import { PrimaryLineGraph } from "./ElectionDetailCharts";
 import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
 import type { CandidateDetail, PartyGroup, SnapshotPoint } from "./ElectionDetailTypes";
 import { NppAbbr } from "@/components/elections/NppAbbr";
-import { apiErrorText } from "@/lib/errors/catalog";
-
-function RemoveCandidateButton({
-  candidateId,
-  electionId,
-  onRemoveSuccess,
-}: {
-  candidateId: string;
-  electionId: string;
-  onRemoveSuccess: () => void;
-}) {
-  const [removing, setRemoving] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        if (!confirm("Remove this candidate from the race?")) return;
-        setRemoving(true);
-        try {
-          const res = await fetch(`/api/admin/elections/${electionId}/remove-candidate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ candidateId }),
-          });
-          const data = await res.json();
-          if (res.ok) onRemoveSuccess();
-          else alert(apiErrorText(data, "Failed to remove"));
-        } catch {
-          alert("Network error");
-        } finally {
-          setRemoving(false);
-        }
-      }}
-      disabled={removing}
-      className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-      title="Remove candidate (admin)"
-    >
-      {removing ? "…" : "Remove"}
-    </button>
-  );
-}
+import { RemoveCandidateButton } from "@/components/elections/admin/RemoveCandidateButton";
 
 function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
   const colorMap = buildCandidateColorMap(
