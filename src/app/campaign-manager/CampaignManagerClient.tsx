@@ -181,7 +181,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
         setChosenFilter({
           type: e.electionType,
           stage: "final",
-          year: e.electionYear,
+          year: e.electionYear ?? e.resolvedYear,
           regionId: e.state,
           query: "",
         });

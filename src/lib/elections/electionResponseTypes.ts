@@ -154,6 +154,8 @@ export interface ElectionResponse {
    * `electionToLarpYear(...)` with the active gameState ctx.
    */
   electionYear: number | null;
+  /** `electionYear`, else derived from the cycle under the active preset: always set. */
+  resolvedYear: number;
   status: string;
   /** The requesting character withdrew from this election and may not re-enter. */
   viewerWithdrew?: boolean;

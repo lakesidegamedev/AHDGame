@@ -510,3 +510,24 @@ describe("party filter", () => {
     expect(filterRaces(rows, { ...f, stage: "all", party: "2" })).toHaveLength(2);
   });
 });
+
+describe("legacy finished races", () => {
+  it("lists a finished race with no baked year under its derived year", () => {
+    const rows = buildRaceIndex(
+      [
+        election({
+          id: "legacy",
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          electionYear: null,
+          resolvedYear: 1990,
+          cands: [{ id: "a", name: "A", party: "1", share: 60 }],
+        } as Partial<ElectionResponse>),
+      ],
+      { ...ctx, includeFinal: true }
+    );
+    expect(rows[0].year).toBe(1990);
+    expect(finishedYears(rows, "senate")).toEqual([1990]);
+  });
+});

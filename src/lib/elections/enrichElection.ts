@@ -3,6 +3,8 @@
  * _enrichElection retains Russian national list nominees together and uses the
  * same primary advance limit as the resolver.
  */
+import { resolveElectionYear } from "@/lib/utils/formatters";
+import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
 import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
@@ -1269,6 +1271,7 @@ export async function _enrichElection(
     chamberClass: election.chamberClass ?? null,
     cycle: election.cycle,
     electionYear: election.electionYear ?? null,
+    resolvedYear: resolveElectionYear(election, cycleAnchorContextFromGameState(gameState)),
     status: election.status,
     totalSeats: election.totalSeats ?? null,
 

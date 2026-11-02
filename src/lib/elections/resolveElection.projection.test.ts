@@ -23,6 +23,8 @@ import {
 import { getGameTime } from "@/lib/time/gameTime";
 import { fetchDepsForElection } from "./enrichElection";
 import { resolveElection, resolveElections } from "./resolveElection";
+import { resolveElectionYear } from "@/lib/utils/formatters";
+import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/mongodb", () => ({
@@ -420,5 +422,29 @@ describe("finished primary results", () => {
     });
     expect(race.inGeneral).toBe(true);
     expect(Object.keys(race.primaryResults ?? {})).toEqual(["1"]);
+  });
+});
+
+describe("resolved year", () => {
+  it("derives a year for a legacy race with none baked, and keeps a baked one", async () => {
+    const { db, election } = setupSummaryWorld();
+    const legacy = { ...election, electionYear: undefined, cycle: 2 };
+    const [r] = await resolveElections(db as unknown as Db, [legacy], {
+      view: "summary",
+      userId: null,
+    });
+    expect(r.electionYear).toBeNull();
+    expect(r.resolvedYear).toBe(
+      resolveElectionYear(legacy, cycleAnchorContextFromGameState({ preset: "1990" } as never))
+    );
+    const [baked] = await resolveElections(
+      db as unknown as Db,
+      [{ ...election, electionYear: 1988 }],
+      {
+        view: "summary",
+        userId: null,
+      }
+    );
+    expect(baked.resolvedYear).toBe(1988);
   });
 });

@@ -208,7 +208,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       classNum,
       multiSeat,
       totalSeats: e.totalSeats ?? null,
-      year: e.electionYear ?? null,
+      year: e.electionYear ?? e.resolvedYear ?? null,
       cycle: e.cycle,
       seatId: e.seatId ?? null,
       winnerId: null,
