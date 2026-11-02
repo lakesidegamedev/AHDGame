@@ -87,7 +87,7 @@ export function useRaceEntry(
         (district) => district.regionId === election.state
       );
       const districtAnswer = window.prompt(
-        `Choose a constituency number (1-${districts.length}; blank for party-list only). See the statutory map on the election page.`
+        `Choose a constituency number (1-${districts.length}; blank for party-list only). See the 1994 statutory constituency map with the race.`
       );
       if (districtAnswer === null) return;
       if (districtAnswer.trim()) {

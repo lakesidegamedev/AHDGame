@@ -22,6 +22,7 @@ import { PollingChart } from "./PollingChart";
 import { RaceHeader, useRaceHeading } from "./RaceHeader";
 import { RaceSchedule } from "./RaceSchedule";
 import { RaceDetail } from "./RaceDetail";
+import { RaceNotes } from "./RaceNotes";
 
 export interface RaceViewProps {
   countryId: string;
@@ -203,6 +204,9 @@ function RaceBody(
         nav={props.nav}
         entry={props.entry}
       />
+      {full?.id === race.electionId ? (
+        <RaceNotes election={full} stage={race.stage} turnsLeft={race.turnsLeft} />
+      ) : null}
 
       {race.candidates.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.openPrimary")}</p>

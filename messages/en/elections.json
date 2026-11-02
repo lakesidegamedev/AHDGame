@@ -536,7 +536,10 @@
         "seatShortFinal": "{abbr} was the largest party, {short} short of a majority.",
         "colParty": "Party",
         "colSeats": "Seats",
-        "colShare": "Share"
+        "colShare": "Share",
+        "campaignSeason": "Campaign season is open. {n, plural, one {# turn} other {# turns}} left. Campaign passive effects are doubled, and the closing turns carry a large share of the total vote. This is the window to spend actions.",
+        "jpMixed": "This 500-seat chamber has {districtSeats} district constituencies and {listSeats} regional party-list seats. Constituency and list nominations are separate; a direct winner cannot take a second list seat.",
+        "jpMap": "1994 statutory constituency map"
       },
       "chart": {
         "title": "Polling by turn",

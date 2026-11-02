@@ -5,10 +5,10 @@ import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugii
 /**
  * The 1994 Shugiin statutory constituency list for one region.
  *
- * It sits inside a collapsed `<details>` on the election header and is the only
- * reader of the 72 KB constituency table there, so `ElectionHeader` imports it
- * lazily: Japanese parliamentary elections still get the full map, and every
- * other election page stops downloading it.
+ * It sits inside a collapsed `<details>` (the election header, Campaign
+ * Manager's race notes) and is the only reader of the 72 KB constituency
+ * table, so both import it lazily: Japanese parliamentary races get the full
+ * map, and every other page stops downloading it.
  */
 export function JpStatutoryConstituencyList({ regionId }: { regionId: string | undefined }) {
   return (

@@ -10,7 +10,10 @@ import type { ElectionDetail } from "./ElectionDetailTypes";
 // The statutory map inside the collapsed details is Japan-only and reads the
 // 72 KB 1994 constituency table, so it loads after the header paints.
 const JpStatutoryConstituencyList = dynamic(
-  () => import("./JpStatutoryConstituencyList").then((m) => m.JpStatutoryConstituencyList),
+  () =>
+    import("@/components/elections/JpStatutoryConstituencyList").then(
+      (m) => m.JpStatutoryConstituencyList
+    ),
   {
     loading: () => <div className="mt-2 h-24 animate-pulse rounded bg-muted" aria-hidden="true" />,
   }

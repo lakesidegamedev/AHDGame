@@ -132,6 +132,8 @@ export interface ElectionResponse {
     newNominationDistrictIds?: string[];
   };
   hungarianModernAssembly?: { ruleVersion: "mixed-2011-v1" };
+  /** Hungarian single-constituency by-election: the district it fills. */
+  hungarianModernByElection?: { districtId: string };
   japanShugiinRules?: {
     ruleVersion: "sntv-1991-v1" | "mixed-1994-v1";
     districtSeats: number;
