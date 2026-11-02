@@ -953,6 +953,8 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
       unitsPerTurn: 0,
       lastOnlineTurn: 52,
       nextOnlineTurn: 52,
+      // A legacy all-at-once order next adds capacity on its online turn.
+      nextArrivalTurn: 52,
       turnsRemaining: 12,
     });
   });

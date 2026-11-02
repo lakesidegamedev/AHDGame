@@ -627,6 +627,13 @@ export interface PlantBuildOrderView {
   unitsDelivered: number;
   /** True when this order ramps in per turn rather than landing all at once. */
   smooth: boolean;
+  /**
+   * Capacity units added on every turn of the ramp; 0 when the order lands all
+   * at once or in whole-plant steps that skip turns.
+   */
+  unitsPerTurn: number;
+  /** Next turn this order adds capacity; null once it has landed. */
+  nextArrivalTurn?: number | null;
   costPaidAnchor: number;
   startTurn: number;
   onlineTurn: number;
