@@ -388,7 +388,7 @@ describe("finished primary results", () => {
     });
   }
 
-  it("carries primary results on an ended race only", async () => {
+  it("carries primary results on an ended race, never during its primary", async () => {
     const { db, election } = setupSummaryWorld();
     withTally(db, election._id);
     const ended = { ...election, status: "resolved" as const, endTurn: 5, primaryEndTurn: 3 };
@@ -408,5 +408,17 @@ describe("finished primary results", () => {
       userId: null,
     });
     expect(live.primaryResults ?? null).toBeNull();
+  });
+
+  it("carries primary results once the primary has ended and the general runs", async () => {
+    const { db, election } = setupSummaryWorld();
+    withTally(db, election._id);
+    const inGeneral = { ...election, primaryEndTurn: 5, endTurn: 40 };
+    const [race] = await resolveElections(db as unknown as Db, [inGeneral], {
+      view: "summary",
+      userId: null,
+    });
+    expect(race.inGeneral).toBe(true);
+    expect(Object.keys(race.primaryResults ?? {})).toEqual(["1"]);
   });
 });

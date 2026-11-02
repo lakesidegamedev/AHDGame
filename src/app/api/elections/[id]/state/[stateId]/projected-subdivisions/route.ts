@@ -63,7 +63,7 @@ export async function GET(
     const candidateParties: Record<string, string> = {};
     const partyColors: Record<string, string> = {};
     const candidateColors: Record<string, string> = {};
-    const finishedPrimary = race.isEnded && party != null ? race.primaryResults?.[party] : null;
+    const finishedPrimary = party != null && !race.inPrimary ? race.primaryResults?.[party] : null;
     if (party != null && finishedPrimary && finishedPrimary.length > 0) {
       // A finished primary: the stored result names every candidate, losers
       // included, whose candidacy rows may be gone. Each keeps their own

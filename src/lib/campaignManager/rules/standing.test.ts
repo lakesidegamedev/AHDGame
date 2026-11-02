@@ -370,3 +370,35 @@ describe("resolveSelectedRace", () => {
     ).toBeNull();
   });
 });
+
+describe("resolveSelectedRace with a finished primary", () => {
+  const primaryResults = {
+    "1": [{ candidateId: "a", characterName: "Ann", sharePct: 100, won: true }],
+  };
+  const races = buildRaceIndex(
+    [
+      election({
+        id: "g",
+        state: "OH",
+        cands: [{ id: "a", name: "Ann", party: "1", share: 50 }],
+        primaryResults,
+      }),
+    ],
+    ctx
+  );
+  const filter = {
+    type: "senate",
+    stage: "all" as const,
+    regionId: "OH",
+    query: "",
+    regionNames: {},
+  };
+
+  it("keeps a picked finished primary while its race is in view", () => {
+    expect(resolveSelectedRace(races, "g:1", filter, new Set())?.key).toBe("g:1");
+  });
+
+  it("drops it when its race leaves view", () => {
+    expect(resolveSelectedRace(races, "g:1", { ...filter, regionId: "PA" }, new Set())).toBeNull();
+  });
+});

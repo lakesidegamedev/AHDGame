@@ -1,6 +1,6 @@
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { classifyMarginTier, type MarginTier } from "@/lib/elections/generalViewModel";
-import { filterRaces, type CmRace, type RaceFilter } from "./raceIndex";
+import { filterRaces, isFinishedPrimary, type CmRace, type RaceFilter } from "./raceIndex";
 
 /** Who leads a race, by how much, and how safe that is. */
 
@@ -122,6 +122,9 @@ export function resolveSelectedRace(
   const inView = filterRaces(races, { ...filter, query: "" });
   const picked = inView.find((r) => r.key === pickedKey);
   if (picked) return picked;
+  // A finished primary is never listed itself; it stays open while its race is in view.
+  const primary = races.find((r) => r.key === pickedKey && isFinishedPrimary(r));
+  if (primary && inView.some((r) => r.key === primary.electionId)) return primary;
   if (filter.regionId === "ALL") return null;
   return sortRaces(inView, watched)[0] ?? null;
 }

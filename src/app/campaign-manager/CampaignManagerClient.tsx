@@ -4,8 +4,18 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BlendShell } from "@/components/blend/BlendShell";
 import { BLEND, FONT } from "@/components/blend/tokens";
-import { resolveSelectedRace, type CmRace, type RaceFilter } from "@/lib/campaignManager/rules";
+import {
+  adjacentCycles,
+  resolveSelectedRace,
+  type CmRace,
+  type RaceFilter,
+  type SeatCycle,
+} from "@/lib/campaignManager/rules";
 import { useRaceIndex } from "./useRaceIndex";
+import { useFinishedRaces } from "./useFinishedRaces";
+import { useSeatHistory } from "./useSeatHistory";
+import { SeatNav } from "./components/SeatNav";
+import { PastRaces } from "./components/PastRaces";
 import { useRaceDetail } from "./useRaceDetail";
 import { useWatchedRaces } from "./useWatchedRaces";
 import { RaceFinder } from "./components/RaceFinder";
@@ -70,11 +80,22 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   // without refetching every election in the country.
   const liveFav = actions.character?.favorability;
   const liveInfl = actions.character?.politicalInfluence;
+  // Finished races of the chosen type join the index only on the Finished stage.
+  const finished = useFinishedRaces(
+    props.countryId,
+    chosenFilter?.type ?? "",
+    chosenFilter?.stage === "final",
+    props.nationalChamberKeys
+  );
+  const allRaces = useMemo(
+    () => (chosenFilter?.stage === "final" ? [...indexedRaces, ...finished.races] : indexedRaces),
+    [chosenFilter?.stage, indexedRaces, finished.races]
+  );
   const races = useMemo(
     () =>
       liveFav == null && liveInfl == null
-        ? indexedRaces
-        : indexedRaces.map((r) =>
+        ? allRaces
+        : allRaces.map((r) =>
             r.isMine
               ? {
                   ...r,
@@ -90,7 +111,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                 }
               : r
           ),
-    [indexedRaces, liveFav, liveInfl]
+    [allRaces, liveFav, liveInfl]
   );
 
   const myRace = useMemo(() => races.find((r) => r.isMine), [races]);
@@ -122,6 +143,18 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     detailVersion * 100_000 + (currentTurn ?? 0)
   );
 
+  // The seat's other cycles. Upcoming cycles are listed but cannot open yet:
+  // races that have not opened are not in the index.
+  const seat = useSeatHistory(selected?.electionId ?? null, currentTurn ?? 0);
+  const canOpenCycle = useCallback((c: SeatCycle) => c.state !== "upcoming", []);
+  const cycleNav = useMemo(
+    () =>
+      selected
+        ? adjacentCycles(seat.cycles.filter(canOpenCycle), selected.electionId)
+        : { prev: null, next: null },
+    [selected, seat.cycles, canOpenCycle]
+  );
+
   const updateFilter = useCallback(
     (patch: Partial<FilterState>) => {
       if (!filter) return;
@@ -140,6 +173,25 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
       }
     },
     [filter, updateFilter]
+  );
+
+  // Opening another cycle of the seat: a finished one switches the finder to
+  // Finished at that year; a live one back to every live race. A primary row
+  // opens that party's primary.
+  const openCycle = useCallback(
+    (c: SeatCycle, partyId?: string) => {
+      if (!selected) return;
+      setChosenFilter({
+        type: selected.electionType,
+        stage: c.state === "final" ? "final" : "all",
+        ...(c.state === "final" ? { year: c.year } : {}),
+        regionId: selected.regionId,
+        query: "",
+      });
+      setPickedKey(partyId ? `${c.electionId}:${partyId}` : c.electionId);
+      setCandidateId(null);
+    },
+    [selected]
   );
 
   const refreshAfterAction = useCallback(() => {
@@ -359,6 +411,15 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                 selectedCandidateId={candidateId}
                 onSelectCandidate={pickCandidate}
                 compact={!isDesktop}
+                nav={<SeatNav prev={cycleNav.prev} next={cycleNav.next} onOpen={openCycle} />}
+                history={
+                  <PastRaces
+                    cycles={seat.cycles}
+                    currentId={selected?.electionId ?? null}
+                    onOpen={openCycle}
+                    canOpen={canOpenCycle}
+                  />
+                }
               />
             ) : null}
           </div>

@@ -222,24 +222,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
         isMine: candidates.some((c) => c.isYou),
         winnerId: hasPolling ? candidates[0].id : null,
       });
-      for (const [partyId, rows] of Object.entries(e.primaryResults ?? {})) {
-        if (rows.length === 0) continue;
-        const pc = finishedPrimaryCandidates(e, partyId, rows);
-        races.push({
-          ...base,
-          key: `${e.id}:${partyId}`,
-          stage: "final",
-          primaryPartyId: partyId,
-          primaryPartyName: pc[0]?.partyName || null,
-          turnsLeft: null,
-          candidates: pc,
-          hasPolling: true,
-          multiSeat: false,
-          seatsEstimate: null,
-          isMine: pc.some((c) => c.isYou),
-          winnerId: rows.find((r) => r.won)?.candidateId ?? pc[0]?.id ?? null,
-        });
-      }
+      races.push(...finishedPrimaryRows(e, base));
       continue;
     }
 
@@ -299,8 +282,58 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       seatsEstimate: multiSeat ? (e.seatsEstimate ?? null) : null,
       isMine: candidates.some((c) => c.isYou),
     });
+    // A general under way keeps its own finished primaries as history.
+    races.push(...finishedPrimaryRows(e, base));
   }
   return races;
+}
+
+type RaceBase = Pick<
+  CmRace,
+  | "electionId"
+  | "electionType"
+  | "scope"
+  | "regionId"
+  | "classNum"
+  | "multiSeat"
+  | "totalSeats"
+  | "year"
+  | "cycle"
+  | "seatId"
+  | "winnerId"
+>;
+
+/**
+ * One `final` row per party primary the election's tally kept. These rows are
+ * history reached from their race (the past-races list, a link), never listed
+ * on their own: `filterRaces` leaves them out of every stage.
+ */
+function finishedPrimaryRows(e: ElectionResponse, base: RaceBase): CmRace[] {
+  const out: CmRace[] = [];
+  for (const [partyId, rows] of Object.entries(e.primaryResults ?? {})) {
+    if (rows.length === 0) continue;
+    const pc = finishedPrimaryCandidates(e, partyId, rows);
+    out.push({
+      ...base,
+      key: `${e.id}:${partyId}`,
+      stage: "final",
+      primaryPartyId: partyId,
+      primaryPartyName: pc[0]?.partyName || null,
+      turnsLeft: null,
+      candidates: pc,
+      hasPolling: true,
+      multiSeat: false,
+      seatsEstimate: null,
+      isMine: pc.some((c) => c.isYou),
+      winnerId: rows.find((r) => r.won)?.candidateId ?? pc[0]?.id ?? null,
+    });
+  }
+  return out;
+}
+
+/** A finished primary row: opened from its race, never listed on its own. */
+export function isFinishedPrimary(r: CmRace): boolean {
+  return r.stage === "final" && r.primaryPartyId != null;
 }
 
 export interface RaceFilter {
@@ -318,6 +351,7 @@ export function filterRaces(races: CmRace[], f: RaceFilter): CmRace[] {
   const q = f.query.trim().toLowerCase();
   return races.filter((r) => {
     if (r.electionType !== f.type) return false;
+    if (isFinishedPrimary(r)) return false;
     // "All" means every live race; finished races have their own stage.
     if (f.stage === "all" ? r.stage === "final" : r.stage !== f.stage) return false;
     if (f.stage === "final" && f.year != null && r.year !== f.year) return false;

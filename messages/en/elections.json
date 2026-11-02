@@ -598,6 +598,24 @@
         "tabs": "Campaign Manager sections",
         "close": "Close",
         "raceChips": "Races"
+      },
+      "history": {
+        "title": "Past races for this seat",
+        "empty": "No earlier races for this seat.",
+        "loading": "Loading past races",
+        "live": "Live",
+        "upcoming": "Upcoming",
+        "final": "Final",
+        "previous": "Previous",
+        "next": "Next",
+        "previousTo": "Previous race, {year}",
+        "nextTo": "Next race, {year}",
+        "cycle": "Cycle {n}",
+        "winner": "{name} ({abbr})",
+        "margin": "{abbr} +{margin}",
+        "noResult": "No result recorded",
+        "primary": "{abbr} primary",
+        "primaryWinner": "{name} won"
       }
     }
   }

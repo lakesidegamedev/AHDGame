@@ -2,6 +2,7 @@ export {
   buildRaceIndex,
   filterRaces,
   finishedYears,
+  isFinishedPrimary,
   initialsOf,
   raceScope,
   type CmCandidate,

@@ -61,7 +61,9 @@ describe("summarizeSeatCycle", () => {
         },
       })
     );
-    expect(c.primaries).toEqual([{ partyId: "1", winnerName: "A", margin: 20 }]);
+    expect(c.primaries).toEqual([
+      { partyId: "1", partyAbbr: "DEM", partyColor: "#2563eb", winnerName: "A", margin: 20 },
+    ]);
   });
 });
 

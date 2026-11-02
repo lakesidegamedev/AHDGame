@@ -201,8 +201,9 @@ export interface ElectionResponse {
   byParty: PartyGroup[];
   polling: PollingData | null;
   /**
-   * Ended races only: each party's finished primary from the tally
-   * (`primaryResults.byParty`), so a finished race's primaries stay viewable.
+   * Each party's finished primary from the tally (`primaryResults.byParty`),
+   * once the race is past its primary (general running or race over), so a
+   * race's primaries stay viewable as history.
    */
   primaryResults?: Record<string, FinishedPrimaryEntry[]> | null;
   /** Seat estimates for multi-seat races (house/stateSenate/commons/regionalCouncil). Always computed. */

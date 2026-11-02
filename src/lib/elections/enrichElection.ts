@@ -1353,7 +1353,9 @@ export async function _enrichElection(
     ...(regionElectorate ? { regionElectorate } : {}),
     ...(regionName ? { regionName } : {}),
     ...(tally?.primaryVotes ? { primaryVotes: tally.primaryVotes } : {}),
-    ...(isEnded && tally?.primaryResults
+    // Finished primaries: once a race is past its primary (general running,
+    // or the whole race over), the stored primary result is history.
+    ...((isEnded || inGeneral) && tally?.primaryResults
       ? { primaryResults: finishedPrimaryResults(tally.primaryResults) }
       : {}),
   };

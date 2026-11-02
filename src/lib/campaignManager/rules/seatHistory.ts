@@ -35,7 +35,13 @@ export interface SeatCycle {
   /** Winner minus runner-up in percentage points, 1 dp; null without votes. */
   margin: number | null;
   /** Finished primaries in this cycle. */
-  primaries: Array<{ partyId: string; winnerName: string; margin: number | null }>;
+  primaries: Array<{
+    partyId: string;
+    partyAbbr: string;
+    partyColor: string;
+    winnerName: string;
+    margin: number | null;
+  }>;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -75,8 +81,11 @@ function primaryResults(input: SeatCycleInput): SeatCycle["primaries"] {
     const next = rows
       .filter((r) => r !== won)
       .reduce<number | null>((m, r) => (m === null || r.sharePct > m ? r.sharePct : m), null);
+    const party = input.parties[partyId];
     out.push({
       partyId,
+      partyAbbr: party?.abbr ?? "",
+      partyColor: party?.color ?? "#888888",
       winnerName: won.characterName,
       margin: next === null ? null : round1(won.sharePct - next),
     });

@@ -352,3 +352,61 @@ describe("finished races", () => {
     expect(finishedYears(all, "governor")).toEqual([]);
   });
 });
+
+describe("finished primaries", () => {
+  const primaryResults = {
+    "1": [
+      { candidateId: "a", characterName: "Ann", sharePct: 70, won: true },
+      { candidateId: "c", characterName: "Cy", sharePct: 30, won: false },
+    ],
+  };
+  const f = (over: Partial<Parameters<typeof filterRaces>[1]>) => ({
+    type: "senate",
+    stage: "all" as const,
+    regionId: "ALL",
+    query: "",
+    regionNames: {},
+    ...over,
+  });
+
+  it("offers a live race's finished primary as a final row", () => {
+    const rows = buildRaceIndex(
+      [
+        election({
+          id: "g",
+          cands: [{ id: "a", name: "Ann", party: "1", share: 50 }],
+          primaryResults,
+        }),
+      ],
+      ctx
+    );
+    expect(rows.map((r) => [r.key, r.stage])).toEqual([
+      ["g", "general"],
+      ["g:1", "final"],
+    ]);
+  });
+
+  it("lists finished primaries under no stage: they open from their race", () => {
+    const rows = buildRaceIndex(
+      [
+        election({
+          id: "g",
+          cands: [{ id: "a", name: "Ann", party: "1", share: 50 }],
+          primaryResults,
+        }),
+        election({
+          id: "old",
+          status: "resolved",
+          isEnded: true,
+          inGeneral: false,
+          electionYear: 1988,
+          cands: [{ id: "a", name: "Ann", party: "1", share: 60 }],
+          primaryResults,
+        }),
+      ],
+      { ...ctx, includeFinal: true }
+    );
+    expect(filterRaces(rows, f({})).map((r) => r.key)).toEqual(["g"]);
+    expect(filterRaces(rows, f({ stage: "final", year: 1988 })).map((r) => r.key)).toEqual(["old"]);
+  });
+});

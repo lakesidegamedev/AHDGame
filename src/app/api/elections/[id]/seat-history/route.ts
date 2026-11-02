@@ -99,6 +99,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     for (const c of candidates) partyIds.add(Number(c.party));
     for (const t of tallies) {
       for (const p of Object.values(t.candidateParties ?? {})) partyIds.add(Number(p));
+      for (const p of Object.keys(t.primaryResults?.byParty ?? {})) partyIds.add(Number(p));
     }
     const countryId = resolved.election.countryId;
     const [parties, gameState] = await Promise.all([
