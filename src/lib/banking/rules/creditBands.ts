@@ -31,6 +31,7 @@
  */
 
 import { computeNpcLoanBook } from "./loans";
+import { STRESS_LOSS_FRACTION } from "./balanceSheet";
 
 /** Rating bands, ordered best credit first. Display order in the console. */
 export const CREDIT_BAND_IDS = ["AAA", "AA", "A", "BBB", "BB", "B", "CCC"] as const;
@@ -213,7 +214,7 @@ export function bandRatePercent(band: CreditBand, lendingRatePercent: number): n
 export const STRESS_LOSS_MULTIPLIER = 5;
 
 /** Flat fallback stress loss for a book with no band detail (legacy rows). */
-export const STRESS_LOSS_FRACTION = 0.15;
+export { STRESS_LOSS_FRACTION };
 
 export type BookTranche = { creditBand?: CreditBandId; outstanding: number };
 

@@ -265,13 +265,15 @@ describe("capital and window commands through the journal", () => {
     });
     expect(bank(memory).bankCharter.postedCapital).toBe(200_000);
 
-    // equity = 600k + 800k - 1M = 400k; required 100k; surplus 500k; distributable 400k
+    // equity = 600k + 800k - 1M = 400k; required 100k; surplus 500k. The bank keeps
+    // the capital that clears the stress test on 800k of loans (120k + 6% of 680k =
+    // 160.8k), so 239.2k is distributable.
     const upstreamed = await upstreamBankCash(memory as unknown as Db, BANK, 10_000_000, 0.1, "c2");
     expect(upstreamed).toEqual({
       ok: true,
-      amount: 400_000,
-      cashReserves: 200_000,
-      liquidCapital: 600_000,
+      amount: 239_200,
+      cashReserves: 360_800,
+      liquidCapital: 439_200,
     });
     expect(bank(memory).bankCharter.postedCapital).toBe(0);
     expect(totalMoney(memory)).toBe(before);
