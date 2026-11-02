@@ -528,7 +528,13 @@
         "stageUpcoming": "Upcoming",
         "opensIn": "{n, plural, =0 {Opens this turn} one {Opens in # turn} other {Opens in # turns}}",
         "filers": "Filed so far",
-        "noFilersYet": "No one has filed for this race yet."
+        "noFilersYet": "No one has filed for this race yet.",
+        "seatTitleFinal": "Seats won",
+        "seatMajorityFinal": "{abbr} won a majority ({seats}).",
+        "seatShortFinal": "{abbr} was the largest party, {short} short of a majority.",
+        "colParty": "Party",
+        "colSeats": "Seats",
+        "colShare": "Share"
       },
       "chart": {
         "title": "Polling by turn",
@@ -648,6 +654,10 @@
       "admin": {
         "toggle": "Admin",
         "candidates": "Candidates"
+      },
+      "detail": {
+        "title": "Race detail",
+        "turnout": "Turnout {pct}% of {basis, select, eligible {eligible voters} other {residents}} ({ballots} ballots)"
       }
     }
   }

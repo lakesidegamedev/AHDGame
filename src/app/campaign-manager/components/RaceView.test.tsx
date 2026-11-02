@@ -336,3 +336,40 @@ describe("RaceView on an upcoming race", () => {
     expect(screen.queryByText("Change")).toBeNull();
   });
 });
+
+describe("RaceView seat results", () => {
+  it("labels a finished multi-seat race's seats as won", () => {
+    const done = election({
+      id: "lon",
+      electionType: "commons",
+      state: "LON",
+      countryId: "UK",
+      status: "resolved",
+      isEnded: true,
+      inGeneral: false,
+      totalSeats: 10,
+      seatsEstimate: { "1": 6, "2": 4 },
+      cands: [
+        { id: "a", name: "Lab A", party: "1", share: 55 },
+        { id: "b", name: "Con B", party: "2", share: 45 },
+      ],
+    });
+    const race = buildRaceIndex([done], { ...ctx, includeFinal: true })[0];
+    renderWithElectionsMessages(
+      <RaceView
+        countryId="UK"
+        regionNames={regionNames}
+        race={race}
+        full={null}
+        wire={[]}
+        watched={false}
+        onToggleWatch={() => {}}
+        selectedCandidateId={null}
+        onSelectCandidate={() => {}}
+      />
+    );
+    expect(screen.getByText("Seats won")).toBeTruthy();
+    expect(screen.queryByText("Projected seats")).toBeNull();
+    expect(screen.getByText(/won a majority \(6\)/)).toBeTruthy();
+  });
+});

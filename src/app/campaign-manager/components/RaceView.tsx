@@ -21,6 +21,7 @@ import { EYEBROW } from "../ui";
 import { PollingChart } from "./PollingChart";
 import { RaceHeader, useRaceHeading } from "./RaceHeader";
 import { RaceSchedule } from "./RaceSchedule";
+import { RaceDetail } from "./RaceDetail";
 
 export interface RaceViewProps {
   countryId: string;
@@ -258,7 +259,7 @@ function RaceBody(
       {seats ? (
         <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <span style={EYEBROW}>{t("race.seatTitle")}</span>
+            <span style={EYEBROW}>{t(final ? "race.seatTitleFinal" : "race.seatTitle")}</span>
             <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
               {t("race.majority", { majority: seats.majority, total: seats.total })}
             </span>
@@ -314,11 +315,24 @@ function RaceBody(
             {(() => {
               const abbr = partyAbbr.get(seats.leaderPartyId)?.partyAbbr ?? "";
               const seatsHeld = seats.order[0].seats;
+              if (final) {
+                return seats.leaderHasMajority
+                  ? t("race.seatMajorityFinal", { abbr, seats: seatsHeld })
+                  : t("race.seatShortFinal", { abbr, short: seats.shortBy });
+              }
               return seats.leaderHasMajority
                 ? t("race.seatMajority", { abbr, seats: seatsHeld })
                 : t("race.seatShort", { abbr, short: seats.shortBy });
             })()}
           </p>
+          {final ? (
+            <PartyResults
+              order={seats.order}
+              lines={partyAbbr}
+              votes={votes}
+              people={race.candidates}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -500,11 +514,88 @@ function RaceBody(
       </section>
 
       {full?.id === race.electionId ? <RaceSchedule election={full} /> : null}
+      {full?.id === race.electionId && race.primaryPartyId == null ? (
+        <RaceDetail election={full} />
+      ) : null}
 
       <RaceWire items={props.wire} />
       {props.history}
       {props.admin}
     </article>
+  );
+}
+
+/** A finished multi-seat race's result by party: seats won, vote share and votes. */
+function PartyResults({
+  order,
+  lines,
+  votes,
+  people,
+}: {
+  order: Array<{ partyId: string; seats: number }>;
+  lines: Map<string, { partyAbbr: string; partyColor: string; share: number }>;
+  votes: Record<string, number> | null;
+  people: CmCandidate[];
+}) {
+  const t = useTranslations("elections.campaignManager");
+  const votesOf = (partyId: string) =>
+    votes
+      ? people.filter((c) => c.partyId === partyId).reduce((s, c) => s + (votes[c.id] ?? 0), 0)
+      : null;
+  const cols = votes ? "minmax(0,1fr) 56px 64px 80px" : "minmax(0,1fr) 56px 64px";
+  const cell = { textAlign: "right" as const, fontFamily: FONT.mono, fontSize: 12.5 };
+  return (
+    <div role="table" style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 13 }}>
+      <div role="row" style={{ display: "grid", gridTemplateColumns: cols, gap: 8, ...EYEBROW }}>
+        <span role="columnheader">{t("race.colParty")}</span>
+        <span role="columnheader" style={{ textAlign: "right" }}>
+          {t("race.colSeats")}
+        </span>
+        <span role="columnheader" style={{ textAlign: "right" }}>
+          {t("race.colShare")}
+        </span>
+        {votes ? (
+          <span role="columnheader" style={{ textAlign: "right" }}>
+            {t("race.colVotes")}
+          </span>
+        ) : null}
+      </div>
+      {order.map((o) => {
+        const line = lines.get(o.partyId);
+        const v = votesOf(o.partyId);
+        return (
+          <div
+            key={o.partyId}
+            role="row"
+            style={{ display: "grid", gridTemplateColumns: cols, gap: 8, alignItems: "center" }}
+          >
+            <span role="cell" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 2,
+                  background: line?.partyColor ?? BLEND.mutedDim,
+                }}
+              />
+              {line?.partyAbbr ?? o.partyId}
+            </span>
+            <span role="cell" style={cell}>
+              {o.seats}
+            </span>
+            <span role="cell" style={cell}>
+              {(line?.share ?? 0).toFixed(1)}%
+            </span>
+            {votes ? (
+              <span role="cell" style={cell}>
+                {Math.round(v ?? 0).toLocaleString("en-US")}
+              </span>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
