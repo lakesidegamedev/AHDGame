@@ -113,6 +113,23 @@ export function sortRaces(races: CmRace[], watched: ReadonlySet<string>): CmRace
  * it, else the region's first race in `sortRaces` order (theirs, watched,
  * closest). Nationwide, a race that left view selects nothing.
  */
+/**
+ * The row a link means. Links name a race by its election id; a race in its
+ * primary is one row per party (`electionId:partyId`), so a bare id opens the
+ * player's own primary there, else the closest (watched first). Exact keys and
+ * keys no row matches come back unchanged.
+ */
+export function canonicalRaceKey(
+  races: CmRace[],
+  key: string | null,
+  watched: ReadonlySet<string>
+): string | null {
+  if (!key || races.some((r) => r.key === key)) return key;
+  const rows = races.filter((r) => r.electionId === key && !isFinishedPrimary(r));
+  if (rows.length === 0) return key;
+  return (rows.find((r) => r.isMine) ?? sortRaces(rows, watched)[0]).key;
+}
+
 export function resolveSelectedRace(
   races: CmRace[],
   pickedKey: string | null,

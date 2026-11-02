@@ -6,6 +6,7 @@ import { BlendShell } from "@/components/blend/BlendShell";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import {
   adjacentCycles,
+  canonicalRaceKey,
   defaultFinishedYear,
   resolveSelectedRace,
   type CmRace,
@@ -101,7 +102,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   // count comes from a one-row count. The type is the chosen one, else the
   // one the page opens on.
   const openingRace =
-    indexedRaces.find((r) => r.key === pickedKey) ??
+    indexedRaces.find((r) => r.key === canonicalRaceKey(indexedRaces, pickedKey, watched)) ??
     indexedRaces.find((r) => r.isMine) ??
     indexedRaces[0];
   const shownType =
@@ -142,6 +143,12 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   );
 
   // The player's race now: a finished race or primary is history, not theirs to run.
+  // Links name races by election id; a race in its primary has a row per party.
+  const raceKey = useMemo(
+    () => canonicalRaceKey(races, pickedKey, watched),
+    [races, pickedKey, watched]
+  );
+
   const myRace = useMemo(() => races.find((r) => r.isMine && r.stage !== "final"), [races]);
   // Until the player chooses, the page opens on the linked race, else their own
   // race, else the first race type in the country, nationwide.
@@ -155,14 +162,14 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           : chosenFilter.year;
       return { ...chosenFilter, year, regionNames: props.regionNames };
     }
-    const opening = openingFilter(races, pickedKey, props.initialFilter ?? {});
+    const opening = openingFilter(races, raceKey, props.initialFilter ?? {});
     if (!opening) return null;
     const year =
       opening.stage === "final"
         ? defaultFinishedYear(races, opening.type, opening.year)
         : opening.year;
     return { ...opening, year, regionNames: props.regionNames };
-  }, [chosenFilter, races, pickedKey, props.initialFilter, props.regionNames]);
+  }, [chosenFilter, races, raceKey, props.initialFilter, props.regionNames]);
 
   // A link to a finished race the live index does not hold: look the race up
   // once and open Finished at its type, year and region. A race that is not
@@ -171,7 +178,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const lookedUp = useRef(false);
   useEffect(() => {
     if (loading || chosenFilter || !pickedKey || lookedUp.current) return;
-    if (races.some((r) => r.key === pickedKey)) return;
+    if (races.some((r) => r.key === raceKey)) return;
     lookedUp.current = true;
     const electionId = pickedKey.split(":")[0];
     fetchJson<{ election?: ElectionResponse }>(
@@ -191,12 +198,12 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
         });
       })
       .catch((err: unknown) => console.warn("Campaign Manager: linked race unavailable", err));
-  }, [loading, chosenFilter, pickedKey, races, props.countryId]);
+  }, [loading, chosenFilter, pickedKey, raceKey, races, props.countryId]);
 
   // A race the filter no longer shows (another type, stage or region) gives
   // way to the region's own race, so the panel and the map agree with the filter.
   const selected: CmRace | null = filter
-    ? resolveSelectedRace(races, pickedKey, filter, watched)
+    ? resolveSelectedRace(races, raceKey, filter, watched)
     : null;
   // A completed turn changes `currentTurn`, an action bumps `detailVersion`:
   // either re-reads the selected race's polling and wire.

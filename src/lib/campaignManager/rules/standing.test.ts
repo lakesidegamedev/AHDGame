@@ -8,11 +8,12 @@ import {
   pollingSeries,
   raceStanding,
   regionFill,
+  canonicalRaceKey,
   resolveSelectedRace,
   seatSummary,
   subunitShares,
 } from "./index";
-import { election } from "./__fixtures__/election";
+import { cand, election } from "./__fixtures__/election";
 
 const ctx = { currentTurn: 10, nationalChamberKeys: ["senate", "house"] };
 const one = (e: ElectionResponse) => buildRaceIndex([e], ctx)[0];
@@ -400,5 +401,58 @@ describe("resolveSelectedRace with a finished primary", () => {
 
   it("drops it when its race leaves view", () => {
     expect(resolveSelectedRace(races, "g:1", { ...filter, regionId: "PA" }, new Set())).toBeNull();
+  });
+});
+
+describe("canonicalRaceKey", () => {
+  const primary = buildRaceIndex(
+    [
+      election({
+        id: "mi-house",
+        state: "MI",
+        electionType: "house",
+        inPrimary: true,
+        inGeneral: false,
+        byParty: [
+          {
+            partyId: "1",
+            partyName: "Dem",
+            partyColor: "#00f",
+            candidates: [
+              { ...cand({ id: "a", name: "A", party: "1", share: 56 }), endorsements: [] },
+              { ...cand({ id: "b", name: "B", party: "1", share: 44 }), endorsements: [] },
+            ],
+          },
+          {
+            partyId: "2",
+            partyName: "Rep",
+            partyColor: "#f00",
+            candidates: [
+              {
+                ...cand({ id: "c", name: "C", party: "2", share: 100, isYou: true }),
+                endorsements: [],
+              },
+            ],
+          },
+        ] as never,
+      }),
+      election({
+        id: "mi-sen",
+        state: "MI",
+        cands: [{ id: "d", name: "D", party: "1", share: 50 }],
+      }),
+    ],
+    ctx
+  );
+
+  it("opens a primary race linked by its election id on one of its party primaries", () => {
+    expect(canonicalRaceKey(primary, "mi-house", new Set())).toBe("mi-house:2");
+  });
+
+  it("keeps an exact key, and leaves an unknown one alone", () => {
+    expect(canonicalRaceKey(primary, "mi-house:1", new Set())).toBe("mi-house:1");
+    expect(canonicalRaceKey(primary, "mi-sen", new Set())).toBe("mi-sen");
+    expect(canonicalRaceKey(primary, "gone", new Set())).toBe("gone");
+    expect(canonicalRaceKey(primary, null, new Set())).toBeNull();
   });
 });

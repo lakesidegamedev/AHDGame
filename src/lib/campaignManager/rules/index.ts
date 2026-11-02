@@ -22,6 +22,7 @@ export {
   raceLines,
   raceStanding,
   regionFill,
+  canonicalRaceKey,
   resolveSelectedRace,
   seatSummary,
   sortRaces,
