@@ -30,3 +30,12 @@ export {
   type SeatSummary,
 } from "./standing";
 export { primaryCandidateColor, projectSubunits, type ProjectionCandidate } from "./projection";
+export {
+  adjacentCycles,
+  orderSeatCycles,
+  summarizeSeatCycle,
+  type SeatCycle,
+  type SeatCycleInput,
+  type SeatCycleState,
+  type SeatPrimaryResult,
+} from "./seatHistory";
