@@ -292,6 +292,18 @@ describe("classifyPopulationSumCheck", () => {
   });
 });
 
+describe("classifyNationalPolicyCount", () => {
+  it("passes a 1991 country with its 16 core laws plus later tiers and laws, and fails one that did not seed", async () => {
+    const { classifyNationalPolicyCount } = await import("./conformance");
+    // 16 core laws, 6 income-tax tier rows and 3 backfilled mechanical laws.
+    expect(classifyNationalPolicyCount("pl", 25).severity).toBe("ok");
+    expect(classifyNationalPolicyCount("pl", 16).severity).toBe("ok");
+    expect(classifyNationalPolicyCount("pl", 15).severity).toBe("critical");
+    expect(classifyNationalPolicyCount("pl", 0).severity).toBe("critical");
+    expect(classifyNationalPolicyCount("pl", 25).id).toBe("policies.pl.national");
+  });
+});
+
 describe("runConformanceChecks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
