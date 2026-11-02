@@ -180,7 +180,7 @@ export default function PlantPanel({
             income.
           </p>
           {(fullCapacityFreightEstimate != null || freightState) && (
-            <div className="mt-2 max-w-2xl space-y-1 text-body-xs text-muted">
+            <div className="mt-2 max-w-2xl space-y-1 text-body text-muted">
               {freightState && (
                 <p>
                   {t("freightState", {
