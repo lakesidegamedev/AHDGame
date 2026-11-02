@@ -6,7 +6,7 @@ import { PartyLogo } from "@/components/PartyLogo";
 import { Card, CardSubLabel } from "@/components/ui";
 import { PrimaryLineGraph } from "./ElectionDetailCharts";
 import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
-import type { CandidateDetail, PartyGroup, SnapshotPoint } from "./ElectionDetailTypes";
+import type { PartyGroup, SnapshotPoint } from "./ElectionDetailTypes";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { RemoveCandidateButton } from "@/components/elections/admin/RemoveCandidateButton";
 import { EndorsementBadges } from "@/components/elections/EndorsementBadges";
