@@ -58,6 +58,9 @@ export interface SectorRowProps {
   growthUpdatingSectorId?: string | null;
   onMenuToggle: () => void;
   onAbandonSector: (sectorId: string) => void;
+  /** Plants tier, CEO: mothball or reactivate from the actions menu (suggestion 412). */
+  onMothballSector?: (sectorId: string, action: "mothball" | "reactivate") => void;
+  mothballingSectorId?: string | null;
   onStrategyChange?: (sectorId: string, strategyId: string) => void;
   onGrowthChange?: (sectorId: string, newRate: number) => void;
   onCancelTransition?: (sectorId: string) => void;
@@ -87,6 +90,8 @@ export function SectorRow({
   growthUpdatingSectorId,
   onMenuToggle,
   onAbandonSector,
+  onMothballSector,
+  mothballingSectorId,
   onStrategyChange,
   onGrowthChange,
   onCancelTransition,
@@ -418,6 +423,20 @@ export function SectorRow({
     </button>
   );
 
+  // Suggestion 412: mothball without opening the sector page.
+  const canMothball = plantsMode && isCeo && !!onMothballSector;
+  const mothballBusy = mothballingSectorId === sector._id;
+  const mothballLabel = mothballBusy
+    ? isMothballed
+      ? "Reactivating…"
+      : "Mothballing…"
+    : isMothballed
+      ? "Reactivate"
+      : "Mothball";
+  const mothballTitle = isMothballed
+    ? "Bring these plants back into production"
+    : "Stow these plants: they make nothing and still cost upkeep";
+
   const actionsCell = (
     <div className="flex items-center justify-end gap-0.5 text-right">
       {expandButton}
@@ -455,6 +474,21 @@ export function SectorRow({
             >
               Build capacity
             </Link>
+          )}
+          {canMothball && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onMenuToggle();
+                onMothballSector!(sector._id, isMothballed ? "reactivate" : "mothball");
+              }}
+              disabled={mothballBusy}
+              className="rounded px-2 py-1 text-left text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
+              title={mothballTitle}
+            >
+              {mothballLabel}
+            </button>
           )}
           {isCeo && (
             <button
@@ -854,6 +888,19 @@ export function SectorRow({
             >
               Build capacity
             </Link>
+          )}
+          {canMothball && (
+            <button
+              type="button"
+              onClick={() =>
+                onMothballSector!(sector._id, isMothballed ? "reactivate" : "mothball")
+              }
+              disabled={mothballBusy}
+              title={mothballTitle}
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
+            >
+              {mothballLabel}
+            </button>
           )}
           <button
             type="button"

@@ -565,3 +565,50 @@ describe("SectorsTab plants columns", () => {
     expect(screen.queryByText("0 / 0 plants")).toBeNull();
   });
 });
+
+describe("SectorsTab quick mothball (suggestion 412)", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("mothballs a running sector from its row", () => {
+    const onMothballSector = vi.fn();
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo
+        onMothballSector={onMothballSector}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: "Mothball" })[0]!);
+    expect(onMothballSector).toHaveBeenCalledWith("s1", "mothball");
+  });
+
+  it("offers Reactivate on a mothballed sector", () => {
+    const onMothballSector = vi.fn();
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing", mothballed: true })]}
+        isCeo
+        onMothballSector={onMothballSector}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Reactivate" })[0]!);
+    expect(onMothballSector).toHaveBeenCalledWith("s1", "reactivate");
+  });
+
+  it("shows no mothball control to a viewer who is not the CEO", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo={false}
+        onMothballSector={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
+  });
+});

@@ -660,6 +660,42 @@ export default function CorporationDetailPage() {
     }
   }
 
+  const [mothballingSectorId, setMothballingSectorId] = useState<string | null>(null);
+
+  // Suggestion 412: mothball or reactivate straight from the sector row's menu,
+  // through the same build route the sector page uses.
+  async function handleSectorMothball(sectorId: string, action: "mothball" | "reactivate") {
+    setMothballingSectorId(sectorId);
+    setSectorsMessage(null);
+    try {
+      const res = await fetch(`/api/corporations/${id}/sectors/${sectorId}/build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setSectorsMessage({
+          type: "success",
+          text:
+            action === "mothball"
+              ? "Mothballed. These plants make nothing while stowed, and still cost upkeep."
+              : "Reactivated. These plants run again.",
+        });
+        fetchCorporation();
+      } else {
+        setSectorsMessage({
+          type: "error",
+          text: apiErrorText(data, action === "mothball" ? "Mothball failed" : "Reactivate failed"),
+        });
+      }
+    } catch {
+      setSectorsMessage({ type: "error", text: "Network error" });
+    } finally {
+      setMothballingSectorId(null);
+    }
+  }
+
   const [cancelTransitionSectorId, setCancelTransitionSectorId] = useState<string | null>(null);
 
   async function handleCancelTransition(sectorId: string) {
@@ -1391,6 +1427,8 @@ export default function CorporationDetailPage() {
                         logisticsStrength={corporation.logisticsStrength}
                         onAbandonSector={handleAbandonSector}
                         abandoningSectorId={abandoningSectorId}
+                        onMothballSector={handleSectorMothball}
+                        mothballingSectorId={mothballingSectorId}
                         sectorsMessage={sectorsMessage}
                         onStrategyChange={handleSectorStrategyChange}
                         canChangeStrategy={isCeo || !!corporation.canDirectAsParent}
