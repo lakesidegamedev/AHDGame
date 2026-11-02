@@ -6,8 +6,10 @@ import { BlendShell } from "@/components/blend/BlendShell";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import type { CmRace, RaceFilter } from "@/lib/campaignManager/rules";
 import { useRaceIndex } from "./useRaceIndex";
+import { useRaceDetail } from "./useRaceDetail";
 import { useWatchedRaces } from "./useWatchedRaces";
 import { RaceFinder } from "./components/RaceFinder";
+import { RaceView } from "./components/RaceView";
 
 export interface CampaignManagerClientProps {
   countryId: string;
@@ -30,25 +32,28 @@ type FilterState = Omit<RaceFilter, "regionNames">;
  */
 export default function CampaignManagerClient(props: CampaignManagerClientProps) {
   const t = useTranslations("elections.campaignManager");
-  const { races, loading, error, reload } = useRaceIndex(
+  const { races, currentTurn, loading, error, reload } = useRaceIndex(
     props.countryId,
     props.nationalChamberKeys
   );
   const { watched, toggle: toggleWatch } = useWatchedRaces(props.characterId);
   const [pickedKey, setPickedKey] = useState<string | null>(props.initialRaceKey);
   const [chosenFilter, setChosenFilter] = useState<FilterState | null>(null);
+  const [candidateId, setCandidateId] = useState<string | null>(null);
+  const [detailVersion, setDetailVersion] = useState(0);
 
   const myRace = useMemo(() => races.find((r) => r.isMine), [races]);
   // Until the player chooses, the page opens on the linked race, else their own
   // race, else the first race type in the country, nationwide.
   const filter = useMemo<RaceFilter | null>(() => {
     if (chosenFilter) return { ...chosenFilter, regionNames: props.regionNames };
-    const start = races.find((r) => r.key === pickedKey) ?? myRace ?? races[0];
+    const linked = races.find((r) => r.key === pickedKey);
+    const start = linked ?? myRace ?? races[0];
     if (!start) return null;
     return {
       type: start.electionType,
       stage: "all",
-      regionId: start === races[0] && !myRace && !pickedKey ? "ALL" : start.regionId,
+      regionId: linked || myRace ? start.regionId : "ALL",
       query: "",
       regionNames: props.regionNames,
     };
@@ -56,6 +61,12 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
 
   const selected: CmRace | null =
     races.find((r) => r.key === pickedKey) ?? (chosenFilter ? null : (myRace ?? null));
+  // A completed turn changes `currentTurn`, an action bumps `detailVersion`:
+  // either re-reads the selected race's polling and wire.
+  const detail = useRaceDetail(
+    selected?.electionId ?? null,
+    detailVersion * 100_000 + (currentTurn ?? 0)
+  );
 
   const updateFilter = useCallback(
     (patch: Partial<FilterState>) => {
@@ -69,12 +80,18 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const selectRace = useCallback(
     (race: CmRace) => {
       setPickedKey(race.key);
+      setCandidateId(null);
       if (filter && filter.regionId !== "ALL" && filter.regionId !== race.regionId) {
         updateFilter({ regionId: race.regionId });
       }
     },
     [filter, updateFilter]
   );
+
+  const refreshAfterAction = useCallback(() => {
+    reload();
+    setDetailVersion((v) => v + 1);
+  }, [reload]);
 
   return (
     <div
@@ -106,16 +123,32 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           ) : null
         }
       >
-        <section style={{ padding: 24 }} aria-busy={loading}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
-          {loading ? <p style={{ color: BLEND.muted }}>{t("loading")}</p> : null}
+        <section
+          style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}
+          aria-busy={loading}
+        >
+          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
+          {loading ? <p style={{ color: BLEND.muted, margin: 0 }}>{t("loading")}</p> : null}
           {!loading && error ? (
-            <p role="alert" style={{ color: BLEND.negative }}>
+            <p role="alert" style={{ color: BLEND.negative, margin: 0 }}>
               {t("loadError")}{" "}
-              <button type="button" onClick={reload}>
+              <button type="button" onClick={refreshAfterAction}>
                 {t("retry")}
               </button>
             </p>
+          ) : null}
+          {!loading ? (
+            <RaceView
+              countryId={props.countryId}
+              regionNames={props.regionNames}
+              race={selected}
+              full={detail.full}
+              wire={detail.wire}
+              watched={selected ? watched.has(selected.key) : false}
+              onToggleWatch={() => selected && toggleWatch(selected.key)}
+              selectedCandidateId={candidateId}
+              onSelectCandidate={setCandidateId}
+            />
           ) : null}
         </section>
       </BlendShell>

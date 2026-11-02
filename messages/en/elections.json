@@ -475,6 +475,46 @@
         "margin": "{abbr} +{margin}",
         "watch": "Watch {race}",
         "unwatch": "Stop watching {race}"
+      },
+      "race": {
+        "pick": "Pick a race from the list or the map.",
+        "seats": "{n} seats",
+        "stagePrimary": "Primary",
+        "stageGeneral": "General",
+        "turnsLeft": "{n, plural, =0 {Ends this turn} one {# turn left} other {# turns left}}",
+        "watch": "Watch race",
+        "watching": "Watching",
+        "undecided": "Undecided {pct}",
+        "leadBy": "{leader} leads by {margin} pts",
+        "noVotes": "No votes counted yet. Polling starts with the first turn of the general.",
+        "primaryNote": "{party} primary. The winner carries the {party} nomination into the general in {n, plural, one {# turn} other {# turns}}.",
+        "primaryNoteOpen": "{party} primary. The winner carries the {party} nomination into the general.",
+        "seatTitle": "Projected seats",
+        "majority": "Majority {majority} of {total}",
+        "seatMajority": "{abbr} wins a majority ({seats}). Projected from the current vote.",
+        "seatShort": "{abbr} is the largest party, {short} short of a majority. Projected from the current vote.",
+        "tableNote": "Poll is the party's regional share. Seats go down each slate in order, so lifting any slate member lifts the whole party.",
+        "colCandidate": "Candidate",
+        "colCandidateSlate": "Candidate · slate",
+        "colPoll": "Poll",
+        "colPartyPoll": "Party poll",
+        "colChange": "Change",
+        "colFavor": "Favor",
+        "colInfluence": "Influence",
+        "you": "You",
+        "player": "Player",
+        "npp": "Politician"
+      },
+      "chart": {
+        "title": "Polling by turn",
+        "empty": "No polling history yet.",
+        "turn": "Turn {n}",
+        "count": "Count {n}",
+        "value": "{name} {pct}"
+      },
+      "wire": {
+        "title": "Race wire",
+        "empty": "Quiet so far. Headlines from the last two days show here."
       }
     }
   }
