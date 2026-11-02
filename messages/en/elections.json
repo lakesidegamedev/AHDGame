@@ -438,7 +438,44 @@
       "title": "Campaign Manager",
       "loading": "Loading races",
       "loadError": "Races could not load.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "tier": {
+        "safe": "Safe",
+        "likely": "Likely",
+        "lean": "Lean",
+        "tossup": "Toss-up"
+      },
+      "raceTitle": "{region} {type}",
+      "nationalTitle": "{type}",
+      "primarySuffix": "{party} primary",
+      "classLabel": "Class {n}",
+      "yourRace": "Your race",
+      "finder": {
+        "title": "Find a Race",
+        "searchLabel": "Search races",
+        "searchPlaceholder": "Candidate, race or {noun}",
+        "national": "National",
+        "regional": "Regional",
+        "nationalGroup": "National races",
+        "regionalGroup": "Regional races",
+        "stage": "Stage",
+        "stageGroup": "Election stage",
+        "stageAll": "All",
+        "stagePrimary": "Primary",
+        "stageGeneral": "General",
+        "allRegions": "All {nounPlural} (national map)",
+        "regionOption": "{name} ({count})",
+        "countIn": "{count, plural, one {# race} other {# races}} in {region}",
+        "countNationwide": "{count, plural, one {# race} other {# races}} nationwide",
+        "emptyRegion": "No {type} races in {region}. Try another type or pick a colored {noun} on the map.",
+        "emptySearch": "No races match. Clear the search.",
+        "leads": "{leader} leads {runnerUp}",
+        "unopposed": "{leader} is unopposed",
+        "noVotes": "No votes counted yet",
+        "margin": "{abbr} +{margin}",
+        "watch": "Watch {race}",
+        "unwatch": "Stop watching {race}"
+      }
     }
   }
 }

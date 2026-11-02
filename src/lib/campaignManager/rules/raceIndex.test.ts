@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
-import { buildRaceIndex, filterRaces, raceScope, sortRaces, type CmRace } from "./index";
+import {
+  buildRaceIndex,
+  filterRaces,
+  initialsOf,
+  raceScope,
+  sortRaces,
+  type CmRace,
+} from "./index";
 import { cand, election } from "./__fixtures__/election";
 
 const ctx = { currentTurn: 10, nationalChamberKeys: ["senate", "house"] };
@@ -10,6 +17,14 @@ describe("raceScope", () => {
     expect(raceScope("snap_commons", ["commons", "lords"])).toBe("national");
     expect(raceScope("special_commons", ["commons"])).toBe("national");
     expect(raceScope("governor", ["senate", "house"])).toBe("regional");
+  });
+});
+
+describe("initialsOf", () => {
+  it("abbreviates a party name when the party has no abbreviation", () => {
+    expect(initialsOf("Social Democratic Party")).toBe("SDP");
+    expect(initialsOf("Labour")).toBe("LAB");
+    expect(initialsOf("")).toBe("");
   });
 });
 
@@ -59,6 +74,7 @@ describe("buildRaceIndex", () => {
     expect(races.map((r) => r.key)).toEqual(["e9:1", "e9:2"]);
     expect(races[0].stage).toBe("primary");
     expect(races[0].primaryPartyId).toBe("1");
+    expect(races[0].primaryPartyName).toBe("Party 1");
     expect(races[0].candidates.map((x) => x.share)).toEqual([60, 40]);
     // Primary end turn 6 is behind turn 10: a deadline in the past reads as 0, never negative.
     expect(races[0].turnsLeft).toBe(0);

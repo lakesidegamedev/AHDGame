@@ -45,6 +45,7 @@ export default async function CampaignManagerPage({
       countryId={countryId}
       countryName={config.name}
       regionNoun={config.regionLabel ?? "Region"}
+      regionNounPlural={config.regionLabelPlural ?? "Regions"}
       regionNames={regionNames}
       nationalChamberKeys={nationalChamberKeys}
       characterId={String(character._id)}

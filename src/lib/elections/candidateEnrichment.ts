@@ -26,6 +26,8 @@ export interface EnrichedCandidate {
   party: string;
   partyName: string;
   partyColor: string;
+  /** The displayed party's abbreviation, when the party doc is loaded. */
+  partyAbbr?: string;
   partyEcon: number;
   partySocial: number;
   isNPP: boolean;
@@ -323,6 +325,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       party: displayPartyKey,
       partyName,
       partyColor,
+      partyAbbr: displayParty?.abbreviation,
       partyEcon,
       partySocial,
       isNPP: c.isNPP ?? false,

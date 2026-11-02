@@ -7,6 +7,7 @@ import type { CmRace } from "./raceIndex";
 export interface PartyLine {
   partyId: string;
   partyName: string;
+  partyAbbr: string;
   partyColor: string;
   share: number;
 }
@@ -23,6 +24,7 @@ export function partyLines(race: CmRace): PartyLine[] {
       byParty.set(c.partyId, {
         partyId: c.partyId,
         partyName: c.partyName,
+        partyAbbr: c.partyAbbr,
         partyColor: c.partyColor,
         share: c.share,
       });
@@ -33,6 +35,7 @@ export function partyLines(race: CmRace): PartyLine[] {
 export interface RaceStanding {
   leaderName: string;
   leaderPartyId: string;
+  leaderAbbr: string;
   leaderColor: string;
   runnerUpName: string | null;
   margin: number;
@@ -43,14 +46,22 @@ export interface RaceStanding {
  * The lines a race is read by: parties in a multi-seat general (every slate
  * member lifts the party), candidates everywhere else.
  */
-export function raceLines(
-  race: CmRace
-): Array<{ id: string; name: string; partyId: string; color: string; share: number }> {
+export interface RaceLine {
+  id: string;
+  name: string;
+  partyId: string;
+  abbr: string;
+  color: string;
+  share: number;
+}
+
+export function raceLines(race: CmRace): RaceLine[] {
   if (race.multiSeat) {
     return partyLines(race).map((l) => ({
       id: l.partyId,
       name: l.partyName,
       partyId: l.partyId,
+      abbr: l.partyAbbr,
       color: l.partyColor,
       share: l.share,
     }));
@@ -59,6 +70,7 @@ export function raceLines(
     id: c.id,
     name: c.name,
     partyId: c.partyId,
+    abbr: c.partyAbbr,
     color: c.partyColor,
     share: c.share,
   }));
@@ -72,6 +84,7 @@ export function raceStanding(race: CmRace): RaceStanding {
   return {
     leaderName: lead?.name ?? "",
     leaderPartyId: lead?.partyId ?? "",
+    leaderAbbr: lead?.abbr ?? "",
     leaderColor: lead?.color ?? "",
     runnerUpName: second?.name ?? null,
     margin,

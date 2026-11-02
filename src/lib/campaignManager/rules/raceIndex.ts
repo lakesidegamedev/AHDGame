@@ -23,6 +23,8 @@ export interface CmCandidate {
   avatarUrl?: string;
   partyId: string;
   partyName: string;
+  /** Short party label for chips and margins ("DEM +4.2"). */
+  partyAbbr: string;
   partyColor: string;
   share: number;
   favorability: number;
@@ -40,6 +42,8 @@ export interface CmRace {
   regionId: string;
   stage: CmStage;
   primaryPartyId: string | null;
+  /** The party whose primary this is, named even before anyone files. */
+  primaryPartyName: string | null;
   classNum: number | null;
   /** Turns until this stage ends, never negative; null when the race has no turn deadline. */
   turnsLeft: number | null;
@@ -67,6 +71,18 @@ export function raceScope(electionType: string, nationalChamberKeys: readonly st
     : "regional";
 }
 
+/** "Social Democratic Party" → "SDP"; used only when the party doc gave no abbreviation. */
+export function initialsOf(name: string): string {
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 4)
+    .toUpperCase();
+}
+
 function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
   return {
     id: c.id,
@@ -76,6 +92,7 @@ function toCandidate(c: EnrichedCandidate, share: number): CmCandidate {
     avatarUrl: c.avatarUrl,
     partyId: c.party,
     partyName: c.partyName,
+    partyAbbr: c.partyAbbr || initialsOf(c.partyName),
     partyColor: c.partyColor,
     share,
     favorability: c.favorability,
@@ -119,6 +136,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
           key: `${e.id}:${group.partyId}`,
           stage: "primary",
           primaryPartyId: group.partyId,
+          primaryPartyName: group.partyName,
           turnsLeft: turnsUntil(e.primaryEndTurn, ctx.currentTurn),
           candidates,
           hasPolling: true,
@@ -138,6 +156,7 @@ export function buildRaceIndex(elections: ElectionResponse[], ctx: RaceIndexCont
       key: e.id,
       stage: "general",
       primaryPartyId: null,
+      primaryPartyName: null,
       turnsLeft: turnsUntil(e.endTurn, ctx.currentTurn),
       candidates,
       hasPolling: shares != null && Object.keys(shares).length > 0,

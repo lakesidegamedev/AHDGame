@@ -1,6 +1,7 @@
 export {
   buildRaceIndex,
   filterRaces,
+  initialsOf,
   raceScope,
   type CmCandidate,
   type CmRace,
@@ -23,6 +24,7 @@ export {
   type MyRaceSummary,
   type PartyLine,
   type PollingSeries,
+  type RaceLine,
   type RaceStanding,
   type SeatSummary,
 } from "./standing";
