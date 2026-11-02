@@ -86,7 +86,11 @@ describe("GET /api/mobile-dock", () => {
       activePrefixes: ["/corporation/7"],
     });
     expect(body.tabs[1]).toMatchObject({ label: "New York", sheet: "state" });
-    expect(body.tabs[2]).toMatchObject({ label: "United States", sheet: "nation" });
+    expect(body.tabs[2]).toMatchObject({
+      label: "United States",
+      shortLabel: "Nation",
+      sheet: "nation",
+    });
     expect(body.tabs[4]).toMatchObject({ id: "more", sheet: "more" });
     expect(Object.keys(body.sheets).sort()).toEqual(["more", "nation", "state"]);
     for (const tab of body.tabs) {
