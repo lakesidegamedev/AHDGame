@@ -552,11 +552,6 @@ function TurnView({
               <p className="ask-shimmer truncate text-[14px] text-foreground">
                 {turn.status || turn.trail.at(-1) || "Working"}
               </p>
-              {steps > 0 && (
-                <p className="text-[12px] text-muted">
-                  {steps} step{steps === 1 ? "" : "s"}
-                </p>
-              )}
             </div>
             {steps > 0 && (
               <button
@@ -565,7 +560,7 @@ function TurnView({
                 aria-expanded={stepsOpen}
                 className="shrink-0 text-[12px] text-muted hover:text-foreground"
               >
-                {stepsOpen ? "Hide" : "Show"}
+                {stepsOpen ? "Hide" : `Show ${steps}`}
               </button>
             )}
           </div>
