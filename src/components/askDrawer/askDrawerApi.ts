@@ -230,15 +230,51 @@ export function parseSse(buffer: string): { events: AskStreamEvent[]; rest: stri
   return { events, rest };
 }
 
+/** Ask sends a keepalive every few seconds, so this long a silence means the stream died. */
+export const STREAM_STALL_MS = 45_000;
+
+export interface AskQuestionResult {
+  ok: boolean;
+  status: number;
+  payload: AskAnswerPayload | null;
+  /** The stream ended, stalled or errored before the done event. The answer may still finish. */
+  dropped?: boolean;
+  /** The conversation id seen on the stream, needed to look for the finished answer. */
+  convId?: string;
+}
+
+/** Read one chunk, giving up if nothing arrives for `stallMs`. */
+function readOrStall(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  stallMs: number
+): Promise<ReadableStreamReadResult<Uint8Array> | "stalled"> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve("stalled"), stallMs);
+    reader.read().then(
+      (chunk) => {
+        clearTimeout(timer);
+        resolve(chunk);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 /**
  * Ask a question. Cached answers and refusals come back as JSON; live answers
- * stream. Either way the caller gets events and a final payload.
+ * stream. Either way the caller gets events and a final payload. A stream that
+ * stops before its done event comes back as `dropped` rather than an error, so
+ * the caller can go and fetch the answer Ask finished without us.
  */
 export async function askQuestion(
   body: Record<string, unknown>,
   signal: AbortSignal,
-  onEvent: (event: AskStreamEvent) => void
-): Promise<{ ok: boolean; status: number; payload: AskAnswerPayload | null }> {
+  onEvent: (event: AskStreamEvent) => void,
+  stallMs = STREAM_STALL_MS
+): Promise<AskQuestionResult> {
   const response = await fetch(`${BASE}/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -255,19 +291,39 @@ export async function askQuestion(
   const decoder = new TextDecoder();
   let buffer = "";
   let final: AskAnswerPayload | null = null;
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parsed = parseSse(buffer);
-    buffer = parsed.rest;
-    for (const event of parsed.events) {
-      if (event.event === "done") final = event.data;
-      if (event.event === "error") final = { error: event.data.error || "Something went wrong." };
-      onEvent(event);
+  let convId: string | undefined;
+  let dropped = false;
+  try {
+    for (;;) {
+      const chunk = await readOrStall(reader, stallMs);
+      if (chunk === "stalled") {
+        dropped = true;
+        void reader.cancel().catch(() => undefined);
+        break;
+      }
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const parsed = parseSse(buffer);
+      buffer = parsed.rest;
+      for (const event of parsed.events) {
+        if (event.event === "meta" && event.data.convId) convId = event.data.convId;
+        if (event.event === "done") final = event.data;
+        if (event.event === "error") final = { error: event.data.error || "Something went wrong." };
+        onEvent(event);
+      }
     }
+  } catch (error) {
+    if (signal.aborted || (error as Error).name === "AbortError") throw error;
+    dropped = true;
   }
-  return { ok: !!final && !final.error, status: response.status, payload: final };
+  if (!final) dropped = true;
+  return {
+    ok: !!final && !final.error,
+    status: response.status,
+    payload: final,
+    dropped: dropped && !final,
+    convId,
+  };
 }
 
 export interface AskSuggestedQuestions {
