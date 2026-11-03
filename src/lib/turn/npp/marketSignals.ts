@@ -36,6 +36,11 @@ import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { isInputStarved } from "@/lib/turn/npp/rules/inputAvailability";
 import { isStateShortfallCommodity } from "@/lib/turn/npp/rules/stateShortfallSignal";
+import {
+  peakOutputShortage,
+  plantOutputFlows,
+  weightedOutputShortage,
+} from "@/lib/turn/npp/rules/plantOutputShortage";
 
 // Macro-aware production policy (SP5). A +33% price premium saturates to the
 // +25 policy bound; sub-5% moves are ignored so the policy does not churn on
@@ -785,15 +790,35 @@ export function sectorShortageScore(
 ): number {
   const supply = SECTOR_SUPPLY[sectorType];
   if (!supply || supply.length === 0) return 1;
-  let weighted = 0;
-  let totalWeight = 0;
-  for (const { commodity, rate } of supply) {
-    const ratio = priceRatioOf(commodity, countryId);
-    if (ratio == null || !Number.isFinite(ratio)) continue;
-    weighted += rate * ratio;
-    totalWeight += rate;
-  }
-  return totalWeight > 0 ? weighted / totalWeight : 1;
+  return weightedOutputShortage(supply, countryId, priceRatioOf);
+}
+
+/**
+ * Shortage score of what one existing plant sells: a mine running a focused
+ * recipe is scored on that recipe's outputs, not the broad extraction mix
+ * (rules/plantOutputShortage). Other plants read sectorShortageScore.
+ */
+export function plantShortageScore(
+  sector: { sectorType: string; strategyId?: string | null },
+  countryId: string,
+  priceRatioOf: CommodityPriceRatioFn
+): number {
+  const flows = plantOutputFlows(sector.sectorType, sector.strategyId);
+  if (flows.length === 0) return 1;
+  return weightedOutputShortage(flows, countryId, priceRatioOf);
+}
+
+/** Peak output shortage of one existing plant, read like plantShortageScore. */
+export function plantPeakShortageScore(
+  sector: { sectorType: string; strategyId?: string | null },
+  countryId: string,
+  priceRatioOf: CommodityPriceRatioFn
+): number {
+  return peakOutputShortage(
+    plantOutputFlows(sector.sectorType, sector.strategyId),
+    countryId,
+    priceRatioOf
+  );
 }
 
 /**
@@ -826,10 +851,5 @@ export function sectorPeakShortageScore(
 ): number {
   const supply = SECTOR_SUPPLY[sectorType];
   if (!supply || supply.length === 0) return 0;
-  let peak = 0;
-  for (const { commodity } of supply) {
-    const ratio = priceRatioOf(commodity, countryId);
-    if (ratio != null && Number.isFinite(ratio) && ratio > peak) peak = ratio;
-  }
-  return peak;
+  return peakOutputShortage(supply, countryId, priceRatioOf);
 }

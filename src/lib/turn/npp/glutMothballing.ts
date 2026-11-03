@@ -12,6 +12,7 @@ import {
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import {
+  plantShortageScore,
   sectorShortageScore,
   type CommodityPriceRatioFn,
   type PlacementSignals,
@@ -87,8 +88,10 @@ export function buildNppGlutMothballUpdates(args: {
       // precisely because such mines produce nothing, so the price signal
       // would restart it straight back onto a zero-output deposit.
       if (sp.sector.sectorType === "extraction" && sp.sector.capacityUtilization === 0) continue;
-      const ratio = sectorShortageScore(
-        sp.sector.sectorType,
+      // A mothballed mine reopens on its own recipe's prices, not on a
+      // shortage of a resource it does not extract.
+      const ratio = plantShortageScore(
+        sp.sector,
         sp.sector.countryId ?? corp.countryId,
         priceRatioOf
       );

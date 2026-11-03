@@ -43,6 +43,7 @@ import {
   getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 
 export interface CountrySectorMixEntry {
   type: OperatingSectorType;
@@ -456,8 +457,8 @@ export async function aggregateCountrySectorMix(
   db: Db,
   countryId: CountryId
 ): Promise<CountrySectorMixEntry[]> {
-  const [states, sectors, fxByCurrency, preset, marketMode, worldState, prices] = await Promise.all(
-    [
+  const [states, sectors, fxByCurrency, preset, marketMode, worldState, storedPrices] =
+    await Promise.all([
       db
         .collection<State>("states")
         .find({ countryId })
@@ -469,10 +470,12 @@ export async function aggregateCountrySectorMix(
       getMarketSystemModeForDb(db),
       db
         .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+        .findOne({ _id: "current" }, { projection: { currentTurn: 1, worldEpochId: 1 } }),
       db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-    ]
-  );
+    ]);
+  // The national gap reads the funded country book of the prices' turn when
+  // there is one: stored nationalDemand misses buyers with no state.
+  const prices = await withFundedNationalBalances(db, storedPrices, worldState?.worldEpochId);
   const plantsMode = marketAtLeast(marketMode, "plants");
   const unownedDocs = plantsMode
     ? []

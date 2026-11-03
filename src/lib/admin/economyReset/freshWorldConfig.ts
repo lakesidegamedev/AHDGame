@@ -44,6 +44,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerSpilloverShare: "",
   producerPublicCarryStage: "",
   producerPublicCarryShare: "",
+  // Soft price ceiling stage (issue #5452), switched on deliberately.
+  producerSoftPriceCeilingStage: "",
   producerRunPaceDrop: "",
   producerConversionPaceShare: "",
   producerHouseholdIncomeFloor: "",

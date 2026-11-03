@@ -315,6 +315,14 @@ export interface GameConfig {
   /** Funded-turn price ceiling: largest scarcity multiplier. Absent = 10. */
   producerPriceMaxMultiplier?: number;
   /**
+   * Funded producer market (issue #5452): >= 1 replaces the hard ceiling at
+   * producerPriceMaxMultiplier with a soft one: the target price is softened
+   * above SOFT_CEILING_KNEE of the ceiling before the pace bound applies, so it
+   * approaches the ceiling instead of piling up on it and goods in different
+   * shortages stop publishing the same pinned price. 0 or absent = off.
+   */
+  producerSoftPriceCeilingStage?: number;
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.

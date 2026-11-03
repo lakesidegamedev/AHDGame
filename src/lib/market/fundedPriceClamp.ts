@@ -16,10 +16,13 @@ import {
   FUNDED_SCARCITY_MAX_MOVE,
   FUNDED_SCARCITY_MIN,
 } from "./scarcityDrift";
+import { softCeiling } from "./rules/softCeiling";
 
 export interface FundedPricePace {
   maxMove?: number;
   maxMultiplier?: number;
+  /** Soft ceiling (issue #5448): approach the ceiling gradually instead of pinning on it. */
+  softCeiling?: boolean;
 }
 
 export function clampFundedPrice(
@@ -37,7 +40,14 @@ export function clampFundedPrice(
     typeof pace.maxMultiplier === "number" && pace.maxMultiplier >= 1
       ? pace.maxMultiplier
       : FUNDED_SCARCITY_MAX;
-  let price = next;
+  // Soften the target, not the paced price: softening after the pace bound
+  // re-compressed an already softened price every turn, so a capped good with
+  // unchanged demand slid toward the knee (about 3.0x to 2.1x base over 60
+  // turns). Softened first, the price walks to the soft target and holds there.
+  let target = next;
+  if (pace.softCeiling && Number.isFinite(nominalBase) && nominalBase > 0)
+    target = softCeiling(target, nominalBase * ceiling);
+  let price = target;
   if (typeof previous === "number" && Number.isFinite(previous) && previous > 0)
     price = Math.min(previous * (1 + maxMove), Math.max(previous * (1 - maxMove), price));
   if (Number.isFinite(nominalBase) && nominalBase > 0)

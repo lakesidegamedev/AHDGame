@@ -105,6 +105,7 @@ import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
+import { loadReceiptLanePrices } from "@/lib/corporations/queries/receiptLanePrices";
 import {
   explainOwnSupplyReach,
   type OwnSupplyRow,
@@ -862,6 +863,17 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       throughput,
     } = await buildSectorCommoditySections({
       currentTurn,
+      // What buyers paid per book on the receipt's turn, for the unsold reason.
+      // CEO only, and only when there is a fresh receipt to explain. Keyed by
+      // the turn engine's own `${worldEpoch}:${turn}` id: the collection also
+      // holds a per-epoch share doc and has no `turn` index.
+      ...(isCeo
+        ? await loadReceiptLanePrices(db, {
+            worldEpochId: gameState?.worldEpochId,
+            receiptTurn: sector.producerSettlement?.turn,
+            currentTurn,
+          })
+        : {}),
       sector,
       // Commodity flows run in ₳; normalize the sector's host-currency revenue
       // to ₳ at its host rate before passing in.

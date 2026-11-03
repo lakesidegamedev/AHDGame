@@ -587,6 +587,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         inputDemandRealPhaseStartTurn: 1,
         producerPriceMaxMove: 1,
         producerPriceMaxMultiplier: 1,
+        producerSoftPriceCeilingStage: 1,
       },
     });
   const inputDemandRealPhase = inputDemandRealPhaseProgress(
@@ -1131,6 +1132,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     fundedPricePace: {
       maxMove: fixStageCfg?.producerPriceMaxMove,
       maxMultiplier: fixStageCfg?.producerPriceMaxMultiplier,
+      softCeiling: (fixStageCfg?.producerSoftPriceCeilingStage ?? 0) >= 1,
     },
     marketRecoveryStage:
       producerPath === "funded"

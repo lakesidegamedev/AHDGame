@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
+import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import type { CommodityPrice, State } from "@/lib/db/types";
@@ -45,6 +46,12 @@ export interface CommodityDistributionResponse {
   /** Populated only for extractables; top 5 producing states/regions. */
   topProducerStates: TopProducerState[];
   turn: number | null;
+  /**
+   * "funded_book": country supply is what producers offered and demand what
+   * buyers ordered on last turn's funded market. "modelled": the stored
+   * national totals (older worlds, or a turn with no funded book).
+   */
+  nationalBalanceSource: "funded_book" | "modelled" | null;
   updatedAt: string | null;
 }
 
@@ -65,7 +72,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
     const isExtractable = (EXTRACTABLE_RESOURCES as readonly string[]).includes(commodity);
     const db = await getDb();
 
-    const [priceDoc, states, capacities] = await Promise.all([
+    const [rawPriceDoc, states, capacities] = await Promise.all([
       db.collection<CommodityPrice>("commodityPrices").findOne({ commodity }),
       db
         .collection<State>("states")
@@ -78,6 +85,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
             .toArray()
         : Promise.resolve([] as StateResourceCapacity[]),
     ]);
+
+    // Country totals read the funded country book of the price row's turn when
+    // there is one: stored nationalDemand misses buyers with no state.
+    const priceDoc = rawPriceDoc ? (await withFundedNationalBalances(db, [rawPriceDoc]))[0] : null;
 
     // Build state→country lookup so we can aggregate per-state S/D to country totals
     // even when nationalSupply/nationalDemand aren't stored on the price document.
@@ -96,7 +107,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
       const nationalSupply = priceDoc.nationalSupply ?? {};
       const nationalDemand = priceDoc.nationalDemand ?? {};
       const haveAuthoritative =
-        Object.keys(nationalSupply).length > 0 || Object.keys(nationalDemand).length > 0;
+        priceDoc.nationalBalanceSource === "funded_book" ||
+        Object.keys(nationalSupply).length > 0 ||
+        Object.keys(nationalDemand).length > 0;
 
       if (haveAuthoritative) {
         for (const c of COUNTRY_ORDER) {
@@ -169,6 +182,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
       byCountry,
       topProducerStates,
       turn: priceDoc?.turn ?? null,
+      nationalBalanceSource: priceDoc?.nationalBalanceSource ?? null,
       updatedAt: priceDoc?.updatedAt ? priceDoc.updatedAt.toISOString() : null,
     };
 
