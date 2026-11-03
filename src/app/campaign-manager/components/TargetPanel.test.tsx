@@ -89,12 +89,54 @@ describe("TargetPanel", () => {
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/characters/db-ch-a/influence");
   });
 
-  it("uses the NPP boost route for an NPP", async () => {
+  it("prices an NPP as its profile does, from the direct-action menu", async () => {
+    const entry = (type: string, actionCost: number, fundCost: number, enabled = true) => ({
+      type,
+      label: type,
+      description: "",
+      actionCost,
+      fundCost,
+      minRelationship: null,
+      effectBlurb: `${type} effect`,
+      enabled,
+      meetsActions: true,
+      meetsFunds: true,
+      meetsRelationship: true,
+      availabilityNote: null,
+    });
+    getBody = {
+      balance: { current: 20, funds: 90_000 },
+      homeCurrency: "GBP",
+      currencySymbol: "£",
+      relationship: { score: 0 },
+      isRetired: false,
+      actions: [
+        entry("private_meeting", 3, 0),
+        entry("boost_favorability", 5, 7_500),
+        entry("reduce_favorability", 5, 7_500, false),
+        entry("boost_influence", 6, 15_000),
+      ],
+      pickerOptions: { candidacies: [] },
+    };
+    const onActed = vi.fn();
     renderWithElectionsMessages(
-      <TargetPanel race={race} candidate={npp} onActed={() => {}} onShowMyMoves={() => {}} />
+      <TargetPanel race={race} candidate={npp} onActed={onActed} onShowMyMoves={() => {}} />
     );
-    await screen.findByText("2 AP · $12,000");
-    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/npps/db-n-n/boost");
+    const boost = await screen.findByRole("button", { name: /Boost/ });
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/npps/db-n-n/direct-action");
+    expect(screen.getAllByText("5 AP · £7,500")).toHaveLength(2);
+    expect(screen.getByText("6 AP · £15,000")).toBeTruthy();
+    expect(screen.getByText("boost_favorability effect")).toBeTruthy();
+    expect((screen.getByRole("button", { name: /Attack/ }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+    expect(screen.getByText("You have 20 AP and £90,000 in campaign funds.")).toBeTruthy();
+
+    fireEvent.click(boost);
+    await waitFor(() => expect(onActed).toHaveBeenCalled());
+    const post = vi.mocked(fetch).mock.calls.find(([, i]) => i?.method === "POST")!;
+    expect(post[0]).toBe("/api/npps/db-n-n/direct-action");
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ action: "boost_favorability" });
   });
 
   it("disables Boost with the reason at 100% favorability", async () => {
