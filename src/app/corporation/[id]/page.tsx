@@ -1,6 +1,10 @@
 "use client";
 
 import { abandonSectorRequest } from "@/lib/corporations/abandonSectorClient";
+import {
+  mothballSectorRequest,
+  type MothballAction,
+} from "@/lib/corporations/mothballSectorClient";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
@@ -660,21 +664,23 @@ export default function CorporationDetailPage() {
     }
   }
 
-  const [mothballingSectorId, setMothballingSectorId] = useState<string | null>(null);
+  // A set, so a second row clicked while the first is in flight does not clear
+  // the first one's busy state; the ref drops a double click before re-render.
+  const [mothballingSectorIds, setMothballingSectorIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+  const mothballInFlight = useRef(new Set<string>());
 
   // Suggestion 412: mothball or reactivate straight from the sector row's menu,
   // through the same build route the sector page uses.
-  async function handleSectorMothball(sectorId: string, action: "mothball" | "reactivate") {
-    setMothballingSectorId(sectorId);
+  async function handleSectorMothball(sectorId: string, action: MothballAction) {
+    if (mothballInFlight.current.has(sectorId)) return;
+    mothballInFlight.current.add(sectorId);
+    setMothballingSectorIds(new Set(mothballInFlight.current));
     setSectorsMessage(null);
     try {
-      const res = await fetch(`/api/corporations/${id}/sectors/${sectorId}/build`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
+      const { ok, data } = await mothballSectorRequest(String(id), sectorId, action);
+      if (ok) {
         setSectorsMessage({
           type: "success",
           text:
@@ -692,7 +698,8 @@ export default function CorporationDetailPage() {
     } catch {
       setSectorsMessage({ type: "error", text: "Network error" });
     } finally {
-      setMothballingSectorId(null);
+      mothballInFlight.current.delete(sectorId);
+      setMothballingSectorIds(new Set(mothballInFlight.current));
     }
   }
 
@@ -1428,7 +1435,7 @@ export default function CorporationDetailPage() {
                         onAbandonSector={handleAbandonSector}
                         abandoningSectorId={abandoningSectorId}
                         onMothballSector={handleSectorMothball}
-                        mothballingSectorId={mothballingSectorId}
+                        mothballingSectorIds={mothballingSectorIds}
                         sectorsMessage={sectorsMessage}
                         onStrategyChange={handleSectorStrategyChange}
                         canChangeStrategy={isCeo || !!corporation.canDirectAsParent}

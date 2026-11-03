@@ -75,7 +75,8 @@ interface SectorsTabProps {
   abandoningSectorId: string | null;
   /** Plants tier, CEO: mothball or reactivate a sector from its row menu. */
   onMothballSector?: (sectorId: string, action: "mothball" | "reactivate") => void;
-  mothballingSectorId?: string | null;
+  /** Sectors with a mothball or reactivate request in flight. */
+  mothballingSectorIds?: ReadonlySet<string>;
   sectorsMessage: { type: "error" | "success"; text: string } | null;
   onStrategyChange?: (sectorId: string, strategyId: string) => void;
   /** May change sector strategies; defaults to isCeo (the controlling parent's CEO also may). */
@@ -120,7 +121,7 @@ export default function SectorsTab({
   onAbandonSector,
   abandoningSectorId,
   onMothballSector,
-  mothballingSectorId,
+  mothballingSectorIds,
   sectorsMessage,
   onStrategyChange,
   canChangeStrategy,
@@ -528,7 +529,7 @@ export default function SectorsTab({
                   }
                   onAbandonSector={onAbandonSector}
                   onMothballSector={onMothballSector}
-                  mothballingSectorId={mothballingSectorId}
+                  mothballingSectorIds={mothballingSectorIds}
                   onStrategyChange={onStrategyChange}
                   canChangeStrategy={canChangeStrategy ?? isCeo}
                   onGrowthChange={onGrowthChange}

@@ -600,6 +600,37 @@ describe("SectorsTab quick mothball (suggestion 412)", () => {
     expect(onMothballSector).toHaveBeenCalledWith("s1", "reactivate");
   });
 
+  it("shows no mothball control below the plants tier", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        plantsMode={false}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo
+        onMothballSector={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
+  });
+
+  it("marks the control busy while its request is in flight", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo
+        onMothballSector={vi.fn()}
+        mothballingSectorIds={new Set(["s1"])}
+      />
+    );
+    const busy = screen.getAllByRole("button", { name: "Mothballing…" });
+    expect(busy.length).toBeGreaterThan(0);
+    for (const b of busy) {
+      expect(b.getAttribute("aria-busy")).toBe("true");
+      expect((b as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
   it("shows no mothball control to a viewer who is not the CEO", () => {
     render(
       <SectorsTab

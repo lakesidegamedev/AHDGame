@@ -60,7 +60,8 @@ export interface SectorRowProps {
   onAbandonSector: (sectorId: string) => void;
   /** Plants tier, CEO: mothball or reactivate from the actions menu (suggestion 412). */
   onMothballSector?: (sectorId: string, action: "mothball" | "reactivate") => void;
-  mothballingSectorId?: string | null;
+  /** Sectors with a mothball or reactivate request in flight. */
+  mothballingSectorIds?: ReadonlySet<string>;
   onStrategyChange?: (sectorId: string, strategyId: string) => void;
   onGrowthChange?: (sectorId: string, newRate: number) => void;
   onCancelTransition?: (sectorId: string) => void;
@@ -91,7 +92,7 @@ export function SectorRow({
   onMenuToggle,
   onAbandonSector,
   onMothballSector,
-  mothballingSectorId,
+  mothballingSectorIds,
   onStrategyChange,
   onGrowthChange,
   onCancelTransition,
@@ -425,7 +426,7 @@ export function SectorRow({
 
   // Suggestion 412: mothball without opening the sector page.
   const canMothball = plantsMode && isCeo && !!onMothballSector;
-  const mothballBusy = mothballingSectorId === sector._id;
+  const mothballBusy = mothballingSectorIds?.has(sector._id) ?? false;
   const mothballLabel = mothballBusy
     ? isMothballed
       ? "Reactivating…"
@@ -484,6 +485,7 @@ export function SectorRow({
                 onMothballSector!(sector._id, isMothballed ? "reactivate" : "mothball");
               }}
               disabled={mothballBusy}
+              aria-busy={mothballBusy}
               className="rounded px-2 py-1 text-left text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
               title={mothballTitle}
             >
@@ -896,6 +898,7 @@ export function SectorRow({
                 onMothballSector!(sector._id, isMothballed ? "reactivate" : "mothball")
               }
               disabled={mothballBusy}
+              aria-busy={mothballBusy}
               title={mothballTitle}
               className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
             >
