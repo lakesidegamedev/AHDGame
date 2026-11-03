@@ -14,6 +14,7 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import { getSubNationalLegislatureKey, type CountryId } from "@/lib/constants/countries";
+import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { canDirectRegionalPartyNpp, hasPartyNppSeats } from "../rules/partyNppProposal";
@@ -57,7 +58,7 @@ export async function resolvePartyNppProposalAccess(
   const seats = await db
     .collection<ElectedOfficial>("electedOfficials")
     .find(
-      { countryId, state: stateId, officeType, isNPP: true },
+      { ...officialsCountryScope(countryId), state: stateId, officeType, isNPP: true },
       { projection: { nppId: 1, seatsHeld: 1 } }
     )
     .toArray();

@@ -574,6 +574,8 @@ export interface Financials {
   /** Banked tax losses offsetting up to 80% of future taxable profit. */
   taxLossCarryforward?: number;
   passThroughOwnerTax?: number;
+  /** Part of federal tax charged at the home rate on bond coupon income. */
+  bondCouponFederalTax?: number;
   /** Federal tax broken down by sector country (for tooltip display). */
   federalTaxByCountry: Record<string, number>;
   /** Revenue and the costs of each country's own sectors, largest revenue first. */

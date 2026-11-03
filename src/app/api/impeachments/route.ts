@@ -8,7 +8,13 @@ import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import type { Character, ElectedOfficial } from "@/lib/db/types";
+import { getGameState } from "@/lib/gameState";
+import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
+import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
+import { loadImpeachmentFilingWindow } from "@/lib/impeachment/filingWindow";
 import type { Impeachment } from "@/lib/db/types/impeachment";
+import { resolvePartyImpeachmentSponsor } from "@/lib/impeachment/partySponsor";
 import { fileArticlesOfImpeachment } from "@/lib/impeachment/fileArticles";
 import {
   countChamberSeats,
@@ -25,6 +31,7 @@ export interface ImpeachmentChamberInfo {
 
 const fileSchema = z.object({
   countryId: z.string().min(1),
+  proposeViaPartyNpp: z.boolean().optional().default(false),
   office: z.enum(["president", "governor"]).optional().default("president"),
   state: z.string().optional(),
   // Required for president; optional for governor (resolved from state).
@@ -97,11 +104,46 @@ export async function GET(request: Request) {
     // the raw whippedFromVote map never leaves the server: it names every
     // member a party force-voted, which is nobody else's business.
     const viewer = await getAuthUser().catch(() => null);
-    const viewerCharacterId = viewer
-      ? ((await getCharacterByUserId(db, viewer.userId))?._id?.toString() ?? null)
+    const viewerCharacter = viewer ? await getCharacterByUserId(db, viewer.userId) : null;
+    const viewerCharacterId = viewerCharacter?._id.toString() ?? null;
+    const partyAccess =
+      viewerCharacter && countryId in COUNTRY_CONFIGS
+        ? await resolvePartyImpeachmentSponsor(
+            db,
+            countryId as CountryId,
+            viewerCharacter,
+            office === "governor" ? "governor" : "president",
+            state?.toUpperCase()
+          )
+        : null;
+
+    const official = await db
+      .collection<ElectedOfficial>("electedOfficials")
+      .findOne(
+        office === "governor"
+          ? governorOfficialFilter(countryId as CountryId, state?.toUpperCase() ?? "")
+          : getExecutiveOfficialFilter(countryId as CountryId, "president"),
+        { projection: { characterId: 1 } }
+      );
+    const target = official?.characterId
+      ? await db
+          .collection<Character>("characters")
+          .findOne({ _id: official.characterId }, { projection: { careerHistory: 1 } })
+      : null;
+    const filingWindow = target
+      ? await loadImpeachmentFilingWindow(
+          db,
+          target,
+          countryId as CountryId,
+          office === "governor" ? "governor" : "president",
+          state?.toUpperCase(),
+          (await getGameState(db))?.currentTurn ?? 0
+        )
       : null;
 
     return NextResponse.json({
+      filingWindow,
+      canFileViaPartyNpp: Boolean(partyAccess?.authorized && partyAccess.npp),
       impeachments: impeachments.map((imp, i) => {
         const { whippedFromVote, ...rest } = imp;
         return {
@@ -128,7 +170,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { countryId, office, state, targetCharacterId } = parsed.data;
+    const { countryId, office, state, targetCharacterId, proposeViaPartyNpp } = parsed.data;
     if (!(countryId in COUNTRY_CONFIGS)) {
       return errorResponse(400, "Unknown countryId");
     }
@@ -146,7 +188,8 @@ export async function POST(request: Request) {
       auth.user.isAdmin === true,
       {
         office,
-        state,
+        state: state?.toUpperCase(),
+        proposeViaPartyNpp,
         targetCharacterId: targetCharacterId ? new ObjectId(targetCharacterId) : undefined,
       }
     );

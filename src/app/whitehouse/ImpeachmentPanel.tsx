@@ -12,6 +12,8 @@ interface ImpeachmentDoc {
   stage: Stage;
   targetName: string;
   filedByName: string;
+  filedByNppId?: string;
+  requestedByName?: string;
   houseVotesFor: number;
   houseVotesAgainst: number;
   houseVotesAbstain: number;
@@ -63,6 +65,11 @@ export default function ImpeachmentPanel({
 }: Props) {
   const isGovernor = office === "governor";
   const [active, setActive] = useState<ImpeachmentDoc | null>(null);
+  const [filingWindow, setFilingWindow] = useState<{
+    eligibleOnTurn: number | null;
+    remainingTurns: number;
+  } | null>(null);
+  const [canFileViaPartyNpp, setCanFileViaPartyNpp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -82,7 +89,13 @@ export default function ImpeachmentPanel({
         : `countryId=${countryId}&targetCharacterId=${targetCharacterId}`;
       const res = await fetch(`/api/impeachments?${params}`);
       if (res.ok) {
-        const data = (await res.json()) as { impeachments: ImpeachmentDoc[] };
+        const data = (await res.json()) as {
+          impeachments: ImpeachmentDoc[];
+          canFileViaPartyNpp?: boolean;
+          filingWindow?: { eligibleOnTurn: number | null; remainingTurns: number };
+        };
+        setFilingWindow(data.filingWindow ?? null);
+        setCanFileViaPartyNpp(data.canFileViaPartyNpp === true);
         setActive(data.impeachments.find((i) => ACTIVE_STAGES.includes(i.stage)) ?? null);
       }
     } catch {
@@ -96,7 +109,7 @@ export default function ImpeachmentPanel({
     void load();
   }, [load]);
 
-  const file = async () => {
+  const file = async (proposeViaPartyNpp = false) => {
     setBusy(true);
     setMessage(null);
     try {
@@ -106,7 +119,7 @@ export default function ImpeachmentPanel({
       const res = await fetch("/api/impeachments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, proposeViaPartyNpp }),
       });
       const data = await res.json();
       setMessage(res.ok ? "Articles of impeachment filed." : apiErrorText(data, "Failed to file."));
@@ -177,12 +190,28 @@ export default function ImpeachmentPanel({
         {!isViewerTarget && (
           <button
             type="button"
-            onClick={file}
-            disabled={busy}
+            onClick={() => void file()}
+            disabled={busy || (filingWindow?.remainingTurns ?? 0) > 0}
             className="font-semibold text-error/80 transition-colors hover:text-error disabled:opacity-50"
           >
             File articles of impeachment
           </button>
+        )}
+        {!isViewerTarget && canFileViaPartyNpp && (
+          <button
+            type="button"
+            onClick={() => void file(true)}
+            disabled={busy || (filingWindow?.remainingTurns ?? 0) > 0}
+            className="font-semibold text-error/80 hover:text-error disabled:opacity-50"
+          >
+            File articles through party legislator
+          </button>
+        )}
+        {filingWindow && filingWindow.remainingTurns > 0 && (
+          <p className="w-full text-warning">
+            Post-election protection: filing opens on turn {filingWindow.eligibleOnTurn}, in{" "}
+            {filingWindow.remainingTurns} turns.
+          </p>
         )}
         {message && <p className="w-full text-error">{message}</p>}
       </section>
@@ -201,6 +230,11 @@ export default function ImpeachmentPanel({
       </div>
 
       <div className="mt-3 space-y-3">
+        <p className="text-xs text-muted">
+          Filed by <span className="font-semibold text-foreground">{active.filedByName}</span>
+          {active.filedByNppId ? " (NPP legislator)" : ""}
+          {active.requestedByName ? ` at the request of ${active.requestedByName}.` : "."}
+        </p>
         <p className="text-xs text-muted">
           {active.stage === "house"
             ? "The lower chamber is voting on articles of impeachment. Passage needs a majority of ALL seats, not just votes cast."
