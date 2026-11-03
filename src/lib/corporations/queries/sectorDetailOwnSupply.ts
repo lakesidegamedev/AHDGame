@@ -11,7 +11,13 @@ import type { SourcingOwnRoute } from "@/lib/logistics/ownRoutes";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { FREIGHT_CLASS_BY_COMMODITY } from "@/lib/logistics/freightClass";
 import { DEFAULT_INTERNAL_SUPPLY_POLICY } from "@/lib/market/internalSupply/rules";
-import { ownSupplyReach, type OwnSupplyReach } from "@/lib/corporations/rules/ownSupplyReach";
+import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import {
+  agreementLeftAGap,
+  isLastTurnRecord,
+  ownSupplyReach,
+  type OwnSupplyReach,
+} from "@/lib/corporations/rules/ownSupplyReach";
 
 export type OwnSupplyRow = OwnSupplyReach & { sourceStateNames: string[] };
 
@@ -37,6 +43,8 @@ export async function explainOwnSupplyReach(args: {
   shortInputs: readonly string[];
   stateNameById: ReadonlyMap<string, string>;
   ownRouteDelivered: readonly SourcingOwnRoute[];
+  /** Turn of the sourcing record the hauls come from; null when there is none. */
+  ownRouteTurn: number | null;
   currentTurn: number;
   out: Map<string, OwnSupplyRow>;
 }): Promise<void> {
@@ -46,7 +54,7 @@ export async function explainOwnSupplyReach(args: {
   for (const s of args.siblings) {
     if (s._id.toString() === sectorId) continue;
     const receipt = s.producerSettlement;
-    if (!receipt || !(receipt.turn >= args.currentTurn - 1)) continue;
+    if (!receipt || !isLastTurnRecord(receipt.turn, args.currentTurn)) continue;
     for (const p of receipt.products ?? []) {
       if (!(p.producedUnits > 0) || !args.shortInputs.includes(p.commodity)) continue;
       const states = sourcesByCommodity.get(p.commodity) ?? [];
@@ -64,10 +72,33 @@ export async function explainOwnSupplyReach(args: {
         status: "active",
         commodity: { $in: [...sourcesByCommodity.keys()] as CommodityType[] },
       },
-      { projection: { commodity: 1 } }
+      {
+        projection: {
+          commodity: 1,
+          stateId: 1,
+          volumeCap: 1,
+          lastDeliveryTurn: 1,
+          lastDeliveredUnits: 1,
+        },
+      }
     )
     .toArray();
-  const agreed = new Set<string>(agreements.map((a) => a.commodity));
+  const agreed = new Set<string>(
+    agreements
+      .filter((a) =>
+        agreementLeftAGap({
+          volumeCap: a.volumeCap,
+          agreementStateId: a.stateId,
+          stateScoped: isStateScopedCommodity(a.commodity),
+          buyerStateId: args.sector.stateId,
+          lastDeliveryTurn: a.lastDeliveryTurn,
+          lastDeliveredUnits: a.lastDeliveredUnits,
+          currentTurn: args.currentTurn,
+        })
+      )
+      .map((a) => a.commodity)
+  );
+  const routesFresh = isLastTurnRecord(args.ownRouteTurn, args.currentTurn);
 
   const corpId = args.corporation._id.toString();
   const priority = (args.corporation.internalSupplyPolicy ?? DEFAULT_INTERNAL_SUPPLY_POLICY)
@@ -89,6 +120,7 @@ export async function explainOwnSupplyReach(args: {
       // resolve, so a group policy never claims a missing haul.
       crossesStatesByFreight:
         !!FREIGHT_CLASS_BY_COMMODITY[commodity as CommodityType] && priority !== "group",
+      routesFresh,
       routedUnitsIn,
       hasAgreement: agreed.has(commodity),
     });

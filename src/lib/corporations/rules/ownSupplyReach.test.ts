@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ownSupplyReach } from "./ownSupplyReach";
+import { agreementLeftAGap, ownSupplyReach } from "./ownSupplyReach";
 
 const base = {
   priority: "own" as const,
   buyerStateId: "KYU",
   sourceStateIds: ["HOK"],
   crossesStatesByFreight: true,
+  routesFresh: true,
   routedUnitsIn: 0,
   hasAgreement: false,
 };
@@ -53,5 +54,44 @@ describe("ownSupplyReach", () => {
     expect(
       ownSupplyReach({ ...base, sourceStateIds: ["KAN", "HOK", "KAN"] })?.sourceStateIds
     ).toEqual(["HOK", "KAN"]);
+  });
+});
+
+describe("routesFresh", () => {
+  it("never claims a missing haul from a stale haul record", () => {
+    expect(ownSupplyReach({ ...base, routesFresh: false })?.reasons).toEqual(["not_enough"]);
+  });
+});
+
+describe("agreementLeftAGap", () => {
+  const gap = {
+    volumeCap: 50,
+    stateScoped: false,
+    buyerStateId: "KYU",
+    lastDeliveryTurn: 9,
+    lastDeliveredUnits: 10,
+    currentTurn: 10,
+  };
+
+  it("counts a short delivery on last turn's record", () => {
+    expect(agreementLeftAGap(gap)).toBe(true);
+  });
+
+  it("does not count an agreement that reserves nothing", () => {
+    expect(agreementLeftAGap({ ...gap, volumeCap: 0 })).toBe(false);
+  });
+
+  it("does not count a delivery in full", () => {
+    expect(agreementLeftAGap({ ...gap, lastDeliveredUnits: 50 })).toBe(false);
+  });
+
+  it("does not count a record older than last turn", () => {
+    expect(agreementLeftAGap({ ...gap, lastDeliveryTurn: 5 })).toBe(false);
+    expect(agreementLeftAGap({ ...gap, lastDeliveryTurn: undefined })).toBe(false);
+  });
+
+  it("does not count a state-scoped agreement fulfilled in another state", () => {
+    expect(agreementLeftAGap({ ...gap, stateScoped: true, agreementStateId: "KAN" })).toBe(false);
+    expect(agreementLeftAGap({ ...gap, stateScoped: true, agreementStateId: "KYU" })).toBe(true);
   });
 });

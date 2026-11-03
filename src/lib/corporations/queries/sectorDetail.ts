@@ -982,6 +982,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
             .map((d) => d.commodity),
           stateNameById: new Map(allStates.map((s) => [s._id, s.name ?? s._id])),
           ownRouteDelivered: latestSourcingNetwork?.ownRouteDelivered ?? [],
+          ownRouteTurn: latestSourcingNetwork?.turn ?? null,
           currentTurn,
           out: ownSupplyByCommodity,
         });

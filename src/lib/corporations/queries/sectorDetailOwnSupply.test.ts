@@ -4,10 +4,21 @@ import type { Db } from "mongodb";
 import type { CorporateSector, Corporation } from "@/lib/db/types";
 import { explainOwnSupplyReach, type OwnSupplyRow } from "./sectorDetailOwnSupply";
 
-function fakeDb(agreementCommodities: string[]) {
-  const find = vi.fn(() => ({
-    toArray: async () => agreementCommodities.map((commodity) => ({ commodity })),
-  }));
+type AgreementRow = {
+  commodity: string;
+  volumeCap?: number;
+  lastDeliveryTurn?: number;
+  lastDeliveredUnits?: number;
+};
+
+/** A string is a pharma-style agreement that delivered nothing against a 50 cap last turn. */
+function fakeDb(agreements: (string | AgreementRow)[]) {
+  const rows = agreements.map((a) =>
+    typeof a === "string"
+      ? { commodity: a, volumeCap: 50, lastDeliveryTurn: 9, lastDeliveredUnits: 0 }
+      : a
+  );
+  const find = vi.fn(() => ({ toArray: async () => rows }));
   return { db: { collection: () => ({ find }) } as unknown as Db, find };
 }
 
@@ -38,8 +49,9 @@ async function run(args: {
   corporation: Corporation;
   siblings?: CorporateSector[];
   routedUnits?: number;
-  agreements?: string[];
+  agreements?: (string | AgreementRow)[];
   shortInputs?: string[];
+  routeTurn?: number | null;
 }) {
   const { db, find } = fakeDb(args.agreements ?? []);
   const out = new Map<string, OwnSupplyRow>();
@@ -61,6 +73,7 @@ async function run(args: {
           },
         ]
       : [],
+    ownRouteTurn: args.routeTurn === undefined ? 9 : args.routeTurn,
     currentTurn: 10,
     out,
   });
@@ -68,6 +81,37 @@ async function run(args: {
 }
 
 describe("explainOwnSupplyReach", () => {
+  it("does not claim a missing haul from a stale sourcing record", async () => {
+    const { row } = await run({ corporation: corp("own"), routeTurn: 6 });
+    expect(row?.reasons).toEqual(["not_enough"]);
+  });
+
+  it("does not blame an agreement that delivered in full last turn", async () => {
+    const { row } = await run({
+      corporation: corp("own"),
+      agreements: [
+        {
+          commodity: "pharmaceuticals",
+          volumeCap: 50,
+          lastDeliveryTurn: 9,
+          lastDeliveredUnits: 50,
+        },
+      ],
+    });
+    expect(row?.reasons).toEqual(["no_route"]);
+  });
+
+  it("does not blame an agreement with nothing reserved or no record from last turn", async () => {
+    const { row } = await run({
+      corporation: corp("own"),
+      agreements: [
+        { commodity: "pharmaceuticals", volumeCap: 0, lastDeliveryTurn: 9, lastDeliveredUnits: 0 },
+        { commodity: "pharmaceuticals", volumeCap: 50, lastDeliveryTurn: 4, lastDeliveredUnits: 0 },
+      ],
+    });
+    expect(row?.reasons).toEqual(["no_route"]);
+  });
+
   it("names the making region and a missing haul plus a claiming agreement", async () => {
     const { row } = await run({ corporation: corp("own"), agreements: ["pharmaceuticals"] });
     expect(row).toEqual({
