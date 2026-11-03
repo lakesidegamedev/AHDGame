@@ -1,8 +1,9 @@
 /**
  * Closing the money loop (owner decision 2026-10-18).
  *
- * Under funded demand households spend only cash they receive. Wages are about
- * 38% of value added, so without a return path for profit, company cash piles
+ * Under funded demand households spend only cash they receive. Base wages are
+ * a small share of value added (about 12% measured in November 2026; see
+ * wageShareRules.ts), so without a return path for profit, company cash piles
  * up and final demand shrinks every turn. AI-run companies are owned by the
  * public: they pay profit beyond what they reinvest into their country's
  * household wallet. State companies remit to their own treasury. Player
