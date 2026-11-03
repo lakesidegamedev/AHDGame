@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { ORGANIZATION_CATEGORY_META } from "@/lib/constants/orgCategory";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { homeCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { orgHref } from "../orgRouting";
@@ -14,7 +14,7 @@ import { Seal, MetricTile } from "./OrgPrimitives";
 import { formatFundAmount } from "./fundCurrency";
 
 function viewerCountry(viewer: OrgViewerInfo | null): CountryId | null {
-  return viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  return homeCountryOf(viewer);
 }
 
 export function OrgMasthead({

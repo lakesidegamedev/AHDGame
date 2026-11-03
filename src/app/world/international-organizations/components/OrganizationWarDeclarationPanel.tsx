@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { WAR_GOALS } from "@/lib/military/warGoals";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { organizationVoteHandler, postOrganizationAction } from "../proposalActions";
 import { ProposalBallotCard } from "../ProposalBallotCard";
 
@@ -26,7 +26,7 @@ export function OrganizationWarDeclarationPanel({
   onChange,
 }: Props) {
   const resolveCountryName = useCountryDisplayName();
-  const viewerCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerCountry = actingCountryOf(viewer);
   const viewerIsMember =
     viewerCountry != null && org.members.some((member) => member.countryId === viewerCountry);
   const memberIds = new Set(org.members.map((member) => member.countryId));

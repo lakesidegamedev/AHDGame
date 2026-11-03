@@ -16,6 +16,7 @@ import {
   isPositionShiftLocked,
   isProposalTypeLocked,
 } from "@/lib/parties/proposals";
+import { requiredYesVotes } from "@/lib/parties/proposalConstants";
 import type { CommitteeProposal, PoliticalParty, Character } from "@/lib/db/types";
 import type {
   ProposalView,
@@ -33,7 +34,12 @@ function buildVoteSummary(
 ): ProposalVoteSummary {
   const yes = votes.filter((v) => v.vote === "yes").length;
   const no = votes.filter((v) => v.vote === "no").length;
-  return { yes, no, notVoted: Math.max(0, committeeSize - yes - no) };
+  return {
+    yes,
+    no,
+    notVoted: Math.max(0, committeeSize - yes - no),
+    yesNeeded: requiredYesVotes(committeeSize),
+  };
 }
 
 async function toProposalView(

@@ -20,6 +20,7 @@ import {
   openAppleRefreshToken,
   revokeAppleRefreshToken,
 } from "@/lib/auth/apple";
+import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -90,6 +91,7 @@ export const DELETE = withNoStore(async () => {
     if (character) {
       const now = new Date();
 
+      const blocRowIds = await heldBlocRowIds(db, { characterId: character._id });
       await officialsCollection.updateMany(
         { characterId: character._id },
         {
@@ -101,6 +103,7 @@ export const DELETE = withNoStore(async () => {
           },
         }
       );
+      await releaseVacatedBlocSeats(db, blocRowIds, new Date());
 
       await cleanupCaucusParticipationForCharacters(db, [character._id], {
         removeMembership: true,

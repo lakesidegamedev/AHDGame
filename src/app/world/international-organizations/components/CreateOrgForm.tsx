@@ -15,7 +15,7 @@ import {
   ORGANIZATION_CATEGORY_META,
   type OrganizationCategory,
 } from "@/lib/constants/orgCategory";
-import type { OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgViewerInfo } from "../orgTypes";
 import { useEntityName } from "../useEntityName";
 import {
   CUSTOM_ALIGNMENT_POLE_TOKENS,
@@ -84,7 +84,7 @@ export function CreateOrgForm({
 }) {
   const t = useTranslations("worldOrganizations.creation");
   const entityName = useEntityName();
-  const viewerCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerCountry = actingCountryOf(viewer);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);

@@ -144,6 +144,22 @@ describe("autosave", () => {
     expect(taken).toEqual([1, 4, 7]);
   });
 
+  it("counts from the latest turn when saves share a millisecond", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-03T12:00:00.000Z"));
+    try {
+      await writeSaveSettings({ autosaveEvery: 3 }, home);
+      const taken: number[] = [];
+      for (let turn = 1; turn <= 8; turn += 1) {
+        world = { currentTurn: turn, isProcessing: false };
+        if (await maybeAutosave(fakeDb(), turn, home)) taken.push(turn);
+      }
+      expect(taken).toEqual([1, 4, 7]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("covers a batch of turns with one save", async () => {
     await writeSaveSettings({ autosaveEvery: 2 }, home);
     world = { currentTurn: 1, isProcessing: false };

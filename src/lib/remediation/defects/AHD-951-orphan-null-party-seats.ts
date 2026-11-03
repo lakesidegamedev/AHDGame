@@ -29,10 +29,11 @@
 // so those are reported and left alone rather than swept up.
 
 import type { Db } from "mongodb";
+import { MULTI_SEAT_BLOC_OFFICE_TYPES } from "@/lib/elections/vacatedBlocSeats";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 
 /** Office types where a null-party bloc can only be the vacate bug. */
-const HEALED_OFFICE_TYPES = ["commons", "snap_commons", "bundestag", "snap_bundestag", "seanad"];
+const HEALED_OFFICE_TYPES: string[] = [...MULTI_SEAT_BLOC_OFFICE_TYPES];
 
 /** No holder of any kind, yet still claiming seats. */
 const ORPHAN_SHAPE = {

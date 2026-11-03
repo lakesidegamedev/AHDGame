@@ -10,6 +10,7 @@ import type {
 import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
+import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 
 export interface NppRelocationOutcome {
   /** Office label the NPP was vacated from, or null if they held none. */
@@ -35,6 +36,7 @@ async function vacateNppOffice(
   const currentOffice = npp.currentOffice;
   if (!currentOffice) return { resignedFromOffice: null };
 
+  const blocRowIds = await heldBlocRowIds(db, { nppId: npp._id });
   await db.collection<ElectedOfficial>("electedOfficials").updateOne(
     { nppId: npp._id },
     {
@@ -42,6 +44,7 @@ async function vacateNppOffice(
       $unset: { nppId: "", characterName: "", party: "", electedAt: "" },
     }
   );
+  await releaseVacatedBlocSeats(db, blocRowIds, now);
 
   if (
     currentOffice.type === "senate" &&

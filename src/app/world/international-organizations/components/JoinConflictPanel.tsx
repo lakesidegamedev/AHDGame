@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { mutualDefenceBasis } from "@/lib/constants/mutualDefence";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
 import type { ConflictOption } from "@/lib/military/dto/conflictOption";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { organizationVoteHandler, postOrganizationAction } from "../proposalActions";
 import { ProposalBallotCard } from "../ProposalBallotCard";
 
@@ -36,7 +36,7 @@ export function JoinConflictPanel({
   onChange,
 }: Props) {
   const canTable = canTableResolutionType(org.def.category, "join_conflict");
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   const viewerIsMember =
     viewerFmCountry != null && org.members.some((m) => m.countryId === viewerFmCountry);
 

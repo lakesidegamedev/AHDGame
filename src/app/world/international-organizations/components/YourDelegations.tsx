@@ -2,7 +2,7 @@
 
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CountryFlag } from "@/components/CountryFlag";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { homeCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { OrgCard } from "./OrgCard";
 import { useEntityName } from "../useEntityName";
 
@@ -19,7 +19,7 @@ export function YourDelegations({
   viewer: OrgViewerInfo | null;
 }) {
   const entityName = useEntityName();
-  const focusCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const focusCountry = homeCountryOf(viewer);
 
   if (!focusCountry) {
     return (

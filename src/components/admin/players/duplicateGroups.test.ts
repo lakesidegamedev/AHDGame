@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FINGERPRINT_COMMONNESS_CEILING } from "@/lib/utils/degenerateFingerprints";
 import { getDuplicateGroups } from "./duplicateGroups";
 import type { UserData } from "./types";
 
@@ -172,6 +173,22 @@ describe("getDuplicateGroups", () => {
     ]);
     expect(groups).toHaveLength(1);
     expect(groups[0].members).toHaveLength(2);
+  });
+
+  it("does not group accounts on a fingerprint held by more accounts than the ceiling", () => {
+    const common = Array.from({ length: FINGERPRINT_COMMONNESS_CEILING + 1 }, (_, i) =>
+      user(`c${i}`, {
+        lastFingerprint: "common-handset",
+        historicalFingerprints: ["common-past"],
+        signalEligibility: eligibility({ lastFingerprint: eligible(DAY) }),
+      })
+    );
+    expect(getDuplicateGroups(common)).toEqual([]);
+
+    const rare = common.slice(0, FINGERPRINT_COMMONNESS_CEILING);
+    const groups = getDuplicateGroups(rare);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].members[0].matchReasons).toContain("fingerprint");
   });
 
   it("labels a historical fingerprint match distinctly from a current one", () => {

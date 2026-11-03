@@ -7,7 +7,7 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
 import { COMMODITY_TYPES } from "@/lib/constants/commoditiesCore";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";
 import { useEntityName } from "../useEntityName";
 import { organizationVoteHandler, postOrganizationAction } from "../proposalActions";
@@ -28,7 +28,7 @@ interface Props {
  */
 export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, onChange }: Props) {
   const entityName = useEntityName();
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   // Who tables resolutions: the FM/HoG country, or the member an org head sits
   // for (agenda pool). Votes stay on viewerFmCountry.
   const proposer = orgProposingCountry(viewer, org.id);

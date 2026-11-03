@@ -3,6 +3,8 @@ import type { ResetLawProgramDocument } from "../program";
 export interface LawProgramDelivery {
   familyId: string;
   implementationFactor: number;
+  /** True when the program has no settlement row yet because its first annual funding round has not run. */
+  awaitingFirstFunding?: boolean;
 }
 
 export interface CombinedLawMetricEffect {
