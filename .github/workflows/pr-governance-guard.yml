@@ -1,0 +1,30 @@
+name: PR governance guard
+
+# Runs the base branch's copy of the governance script, so a pull request cannot
+# disable the check by editing the workflow or the script it is being checked by.
+# It never checks out or runs code from the pull request.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-governance-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  governance-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          persist-credentials: false
+      - name: Maintainer approval for CI and governance changes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GOVERNANCE_GUARD_ONLY: "1"
+        run: python3 scripts/ci/pr_governance.py
