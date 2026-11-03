@@ -12,6 +12,30 @@ afterEach(cleanup);
  * to their segments.
  */
 describe("run meter idle causes", () => {
+  it("caps internal deliveries at production left after sales", () => {
+    const { container } = render(
+      <RunMeter
+        capacityUnits={100}
+        producedUnits={80}
+        soldUnits={30}
+        ownSiteUnits={60}
+        idleCauses={[{ cause: "inputs", units: 20 }]}
+        sectorType="manufacturing"
+      />
+    );
+    expect(container.textContent).not.toContain("Made, not sold");
+    const rows = Array.from(container.querySelectorAll("li"));
+    expect(
+      rows.find((row) => row.textContent?.includes("Sent to your sites"))?.textContent
+    ).toContain("50 50%");
+    const bar = container.querySelector('[role="img"]');
+    expect(Array.from(bar?.children ?? []).map((el) => (el as HTMLElement).style.width)).toEqual([
+      "30%",
+      "50%",
+      "20%",
+    ]);
+  });
+
   it("draws a different colour for each idle cause and reuses it for that cause's legend dot", () => {
     const { container } = render(
       <RunMeter
