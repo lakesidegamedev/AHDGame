@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PR governance for contributors (run by the required custom-rules check on pull requests).
 
-For a PR opened by anyone other than the maintainer account or a bot:
+For a PR opened by anyone other than a maintainer account or a bot:
 1. The "Conflict of interest" section must be present with exactly one box ticked.
 2. A change to economy or turn-processing code needs the maintainer's approving review
    on the PR's current commit. The check re-runs when a review is submitted.
@@ -14,7 +14,7 @@ import re
 import sys
 import urllib.request
 
-MAINTAINERS = {"Egg3901"}
+MAINTAINERS = {"Egg3901", "arle-bina"}
 BOTS = {"dependabot[bot]", "github-actions[bot]"}
 # Code that moves money, prices, production or turn results for every player.
 ECONOMY = re.compile(
