@@ -61,7 +61,12 @@ const financials = {
 describe("corporation income statement", () => {
   it("shows arrears separately without annualizing the balance or last-turn payment", () => {
     const props = {
-      corporation: { countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail,
+      corporation: {
+        countryId: "US",
+        liquidCurrencyCode: "USD",
+        currentTurn: 626,
+        passThroughTaxStartTurn: 626,
+      } as CorporationDetail,
       financials: { ...financials, arrears: { turn: 23, paidLastTurn: 123, remaining: 456 } },
       balanceSheet: null,
       bondInfo: null,
@@ -71,6 +76,7 @@ describe("corporation income statement", () => {
       sectors: [],
     };
     const view = render(<FinancialsTab {...props} />);
+    expect(screen.getByText(/Currently applying 4.17%/)).toBeTruthy();
     expect(screen.getByText("Arrears paid last turn")).toBeTruthy();
     expect(screen.getByText("Arrears remaining")).toBeTruthy();
     expect(screen.getByText("M123")).toBeTruthy();
