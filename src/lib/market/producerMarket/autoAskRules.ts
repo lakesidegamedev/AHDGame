@@ -65,10 +65,13 @@ export interface AutoAskMemory {
 }
 
 /**
- * `clamp` is the floor or ceiling moving the remembered ask before any
- * decision: the anchor fell and pulled the ceiling under it, or the floor rose
- * over it. The price moves, but not because of sell-through, so it is not
- * labelled a hold, a raise or a lower.
+ * What the controller did. `raise`, `revert` and `lower` are decisions about
+ * demand, read from sell-through. `hold` and `clamp` both mean sell-through
+ * called for no change; the difference is that `hold` keeps the price and
+ * `clamp` moves it. A `clamp` is a floor or ceiling move, not a decision about
+ * demand: the anchor fell and pulled the ceiling under the remembered ask, or
+ * the floor rose over it. Player-facing text must not describe a clamp as the
+ * market asking for a lower or higher price.
  */
 export type AutoAskAction = "raise" | "hold" | "revert" | "lower" | "clamp";
 
