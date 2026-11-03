@@ -1,6 +1,6 @@
 /** Queued payouts retain forward pricing, pro rata cash and their original settlement plan. */
 import { randomUUID } from "node:crypto";
-import { type Db, type ObjectId, type Document } from "mongodb";
+import { type Db, type ObjectId, type Document, type AnyBulkWriteOperation } from "mongodb";
 import type { IndexFund, IndexFundRedemptionQueueEntry } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -233,6 +233,7 @@ export async function processQueuedRedemptions(
 
   // Units still unserved in this pass. Decremented as each entry is handled so
   // the share is measured against who is still waiting, not the original queue.
+  const cancellations: AnyBulkWriteOperation<IndexFundRedemptionQueueEntry>[] = [];
   let unservedUnits = pending.reduce((sum, e) => sum + Math.max(0, e.units ?? 0), 0);
 
   // NPP payouts wait here and settle together (queuedPayoutBatch.ts). The
@@ -256,17 +257,33 @@ export async function processQueuedRedemptions(
 
   for (const pendingEntry of ordered) {
     if (budget.claimsLeft <= 0) break;
-    // An entry whose holder document is gone can never be paid: both payout
-    // paths need the holder record, because the credit leg is guarded on its id
-    // and settleQueuedPayout refuses without it. Such an entry used to be
-    // fenced, break the NPP payout batch, possibly liquidate the fund for cash
-    // and be restored, every turn, forever (a merged or dissolved NPP leaves
-    // exactly this row). Leave the obligation untouched and do not spend a claim
-    // on it. Its units still leave the pro-rata denominator at this point in the
-    // order, exactly as they did after the old claim, so every entry that can
-    // pay sees the same share it saw before.
+    // A deleted holder cannot receive a payout. Burned-unit entries are cash
+    // obligations with no recipient; cancel them once without moving money or
+    // spending a payout claim. Legacy entries still own units and need manual
+    // reconciliation, so keep them queued and warn instead.
     const owedUnits = remainingRedemptionUnits(pendingEntry);
     if (owedUnits > 0 && !holderOf(pendingEntry)) {
+      if (pendingEntry.unitsBurnedAtRequest === true) {
+        cancellations.push({
+          updateOne: {
+            filter: {
+              _id: pendingEntry._id,
+              status: pendingEntry.status,
+              units: pendingEntry.units,
+              paidAmountAnchor: pendingEntry.paidAmountAnchor,
+              unitsBurnedAtRequest: true,
+              pendingSettlementProjection: { $exists: false },
+            },
+            update: {
+              $set: { status: "cancelled", cancelReason: "holder_missing", updatedAt: new Date() },
+            },
+          },
+        });
+      } else {
+        console.warn(
+          `[indexfund-cron] queued redemption ${pendingEntry._id} for ${fund.slug}: holder ${holderKeyOf(pendingEntry)} no longer exists; its units were not burned at request, so the row stays queued`
+        );
+      }
       unservedUnits = Math.max(0, unservedUnits - owedUnits);
       continue;
     }
@@ -451,5 +468,14 @@ export async function processQueuedRedemptions(
   }
   await flushBatch();
 
+  if (cancellations.length > 0) {
+    const cancelled = await db
+      .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+      .bulkWrite(cancellations);
+    if (cancelled.matchedCount > 0)
+      console.warn(
+        `[indexfund-cron] cancelled queued redemptions for ${fund.slug}: ${cancelled.matchedCount} holder_missing claims with units burned at request`
+      );
+  }
   return paid;
 }
