@@ -5,6 +5,7 @@ import { execSync } from "child_process";
 import { readFileSync } from "fs";
 import { PRIVATE_PAGE_CACHE_CONTROL } from "./src/lib/cacheHeaders";
 import { retiredChangelogRedirects } from "./src/lib/changelog/retiredSlugs";
+import { legacyCountryRootRedirects } from "./src/lib/countryRedirect";
 import {
   resolvePublicSentryDsn,
   SENTRY_DEFAULT_ORG,
@@ -284,6 +285,8 @@ const nextConfig: NextConfig = {
       // Public changelog posts folded into their release by the 2026-09-06
       // consolidation. These addresses are linked from Discord and the wiki.
       ...retiredChangelogRedirects(),
+      // Legacy root pages that moved under /country/<code>/.
+      ...legacyCountryRootRedirects(),
       {
         // The in-app API reference page was retired in favor of the canonical
         // docs site (docs.lakesidegames.net, source: lakesidegamedev/ahd-docs). Keeping
