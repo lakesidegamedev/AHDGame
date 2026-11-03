@@ -127,7 +127,7 @@
     "dotenv": "^18.0.9",
     "hast-util-to-html": "^9.0.5",
     "html2canvas": "^1.4.1",
-    "jose": "^6.2.9",
+    "jose": "^6.2.13",
     "lightweight-charts": "^5.2.1",
     "lucide-react": "^1.33.0",
     "mongodb": "^7.4.0",
