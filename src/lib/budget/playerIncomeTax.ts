@@ -537,7 +537,8 @@ export async function processPlayerIncomeTax(
     gameState.resetWorldId ?? "legacy",
     fundedTreasury,
     ledgerShadow,
-    turnLengthMinutes
+    turnLengthMinutes,
+    gameState.forexEnabled === true
   );
   const pending = await db
     .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
