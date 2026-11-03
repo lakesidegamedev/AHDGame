@@ -17,3 +17,5 @@ areas: [backend]
 - Contributor changes to economy or turn code (markets, banking, trade, budgets,
   corporations, the turn engine) need a maintainer's approval on the current
   commit before they can merge.
+- Contributor changes to CI workflows, code owners or the review scripts also need
+  a maintainer's approval, checked by a guard that a pull request cannot edit.
