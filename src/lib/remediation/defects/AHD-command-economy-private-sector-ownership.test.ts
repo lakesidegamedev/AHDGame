@@ -122,7 +122,7 @@ describe("command-economy ownership repair after a world reset", () => {
     };
     const db = { collection: () => emptyCollection } as unknown as Db;
 
-    const result = await defect.detect(db);
+    const result = await defect.detect(db, { env: "prod", dryRun: true, now: new Date() });
 
     expect(result.affected).toBe(0);
     expect(result.sample).toEqual([]);
