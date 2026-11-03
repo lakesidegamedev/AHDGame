@@ -1,10 +1,10 @@
 /** Turn-based windows and cooldown for presidential impeachment (two-chamber). */
 
 /** Turns the House has to vote on articles before they lapse to a decision. */
-export const IMPEACHMENT_HOUSE_VOTING_TURNS = 6;
+export const IMPEACHMENT_HOUSE_VOTING_TURNS = 24;
 
 /** Turns the Senate has to vote on conviction once the House impeaches. */
-export const IMPEACHMENT_SENATE_VOTING_TURNS = 6;
+export const IMPEACHMENT_SENATE_VOTING_TURNS = 24;
 
 /**
  * Turns before another impeachment can be filed against the same target after a
@@ -12,3 +12,6 @@ export const IMPEACHMENT_SENATE_VOTING_TURNS = 6;
  * cannot be used to grief a sitting executive.
  */
 export const IMPEACHMENT_COOLDOWN_TURNS = 48;
+
+/** New articles cannot be filed during the first 72 turns after an election win. */
+export const IMPEACHMENT_POST_ELECTION_PROTECTION_TURNS = 72;
