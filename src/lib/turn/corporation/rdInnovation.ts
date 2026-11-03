@@ -1,4 +1,5 @@
 import { extractionRdTargetIndex } from "./rules/rdTarget";
+import { rdDepositGrowth } from "./rules/rdDepositGrowth";
 import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import type { UpdateOneModel } from "mongodb";
 import type { CorporationLookups } from "./types";
@@ -18,6 +19,24 @@ import {
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { createNotifications } from "@/lib/notifications";
 import { plantChangePipeline } from "@/lib/corporations/plantLedger";
+import {
+  getStateResourceCapacity,
+  lookupStateResourceCapacity,
+} from "@/lib/seeds/reference/stateResourceCapacity";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+
+/** A state's seeded deposits (headroom included), or undefined when it was seeded with none. */
+export type SeedDepositLookup = (
+  countryId: string,
+  stateId: string
+) => Partial<Record<ExtractableResource, number>> | undefined;
+
+/** Seeded deposits for the world's reset preset, the reference the research ceiling scales. */
+export function seedDepositLookup(preset: string | undefined): SeedDepositLookup {
+  const capacityMap = getStateResourceCapacity(preset ?? DEFAULT_SEED_PRESET);
+  return (countryId, stateId) =>
+    lookupStateResourceCapacity(capacityMap, countryId, stateId)?.resources;
+}
 
 // PLANTS-GATED: under plants a breakthrough raises `capitalStock` by the same
 // proportion the legacy path raised `revenue`; the revenue write below runs only
@@ -41,12 +60,7 @@ export interface RdInnovationResult {
   innovationsTriggered: number;
 }
 
-/**
- * Return every extractable resource produced by a sector's active strategy
- * along with its supply rate. Callers weight per-resource capacity boosts by
- * the returned supply rate so `oil_gas` splits growth across oil + natural
- * gas (not just the single highest-supply resource).
- */
+/** Every extractable resource produced by a sector's active strategy, with its supply rate. */
 function getStrategyExtractableResources(
   sectorType: string,
   strategyId: string | undefined
@@ -76,17 +90,17 @@ function getStrategyExtractableResources(
  *
  * Extraction corps (type === "extraction"):
  *   - Pick a random sector, boost its revenue by 1–5% (scaling with rdScore)
- *   - Boost every extractable resource in the sector's active strategy supply
- *     map, weighted by supply rate, so diversified strategies spread the
- *     capacity increase across resources they actually produce (Q4).
+ *   - Grow the state's deposit of the sector's binding resource, only when the
+ *     sector is deposit-constrained, never past 3x the seeded deposit (see
+ *     rules/rdDepositGrowth.ts).
  *
  * Regular corps (all other types):
  *   - Pick a random sector, boost its revenue by 1–10% (floor mirrors
  *     extraction so breakthroughs always feel meaningful).
  *
  * All boosts are permanent revenue increases applied as $inc on the sector
- * document. State resource capacity grows unboundedly by design (Q3 — "R&D
- * unlocks new deposits"); the docs/design call records this policy.
+ * document. Deposit growth used to compound on every recipe resource with no
+ * ceiling (one state's oil reached 390x its seed); it is now bounded.
  * Notifications are sent to the CEO's user for each breakthrough.
  */
 export function processRdInnovations(
@@ -108,7 +122,9 @@ export function processRdInnovations(
    * write below). Defaults to false so every non-plants caller and every
    * existing test keeps the legacy revenue behaviour byte-identical.
    */
-  plantsEnabled: boolean = false
+  plantsEnabled: boolean = false,
+  /** Seeded deposits that bound research growth; pass `seedDepositLookup(gameState.preset)`. */
+  seedDeposits: SeedDepositLookup = seedDepositLookup(undefined)
 ): RdInnovationResult {
   const sectorBoostOps: RdInnovationResult["sectorBoostOps"] = [];
   const capacityBoostOps: RdInnovationResult["capacityBoostOps"] = [];
@@ -227,32 +243,36 @@ export function processRdInnovations(
     }
     innovationsTriggered++;
 
-    // Extraction-specific: grow the state's per-resource capacity for every
-    // extractable in the sector's strategy supply, weighted by supply rate.
-    // Only applies to states that already have a cap doc — "uncapped" legacy
-    // states don't need boosts and we don't auto-create docs mid-turn.
+    // Extraction-specific: grow the state's deposit of the resource binding
+    // this mine, bounded by its seed. Only applies to states that already have
+    // a cap doc; "uncapped" legacy states don't need boosts and we don't
+    // auto-create docs mid-turn.
+    let depositGrew = false;
     if (isExtraction) {
-      const strategyResources = getStrategyExtractableResources(
-        sector.sectorType,
-        sector.strategyId
-      );
-      const hasCapDoc = lookups.stateResourceCapacityByState.get(sector.stateId) !== undefined;
-      if (strategyResources.length > 0 && hasCapDoc) {
-        const capResources = lookups.stateResourceCapacityByState.get(sector.stateId) ?? {};
+      const capResources = lookups.stateResourceCapacityByState.get(sector.stateId);
+      if (capResources !== undefined) {
+        const util = lookups.extractionCapacityUtilBySector.get(sector._id.toString());
         const existing = capacityBoostsByState.get(sector.stateId) ?? {};
-        for (const { resource } of strategyResources) {
-          const currentCap = capResources[resource] ?? 0;
-          if (currentCap <= 0) continue;
-          const pct =
-            RD_CAPACITY_BOOST_MIN_PCT +
-            rng() * (RD_CAPACITY_BOOST_MAX_PCT - RD_CAPACITY_BOOST_MIN_PCT);
-          const increase = Math.round(currentCap * pct);
-          if (increase > 0) {
-            existing[resource] = (existing[resource] ?? 0) + increase;
-          }
-        }
-        if (Object.keys(existing).length > 0) {
+        const binding = util?.bindingResource ?? null;
+        const growth = binding
+          ? rdDepositGrowth({
+              utilization: util?.utilization,
+              bindingResource: binding,
+              recipeResources: getStrategyExtractableResources(
+                sector.sectorType,
+                sector.strategyId
+              ).map(({ resource }) => resource),
+              currentDeposit: (capResources[binding] ?? 0) + (existing[binding] ?? 0),
+              seedDeposit: seedDeposits(sector.countryId, sector.stateId)?.[binding],
+              growthFraction:
+                RD_CAPACITY_BOOST_MIN_PCT +
+                rng() * (RD_CAPACITY_BOOST_MAX_PCT - RD_CAPACITY_BOOST_MIN_PCT),
+            })
+          : null;
+        if (growth) {
+          existing[growth.resource] = (existing[growth.resource] ?? 0) + growth.increase;
           capacityBoostsByState.set(sector.stateId, existing);
+          depositGrew = true;
         }
       }
     }
@@ -263,7 +283,7 @@ export function processRdInnovations(
       const boostDisplayPercent = Math.round(boostPercent * 100);
       const where = getStateDisplayName(corp.countryId, sector.stateId);
       const title = `R&D breakthrough at ${corp.name}`;
-      const message = isExtraction
+      const message = depositGrew
         ? `Research paid off in ${where}: revenue there is up ${boostDisplayPercent}% and the state's resource capacity grew.`
         : `Research paid off in ${where}: revenue there is up ${boostDisplayPercent}%.`;
 

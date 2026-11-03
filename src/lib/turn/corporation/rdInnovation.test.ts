@@ -378,8 +378,25 @@ describe("processRdInnovations", () => {
     expect(result.capacityBoostOps).toHaveLength(0);
   });
 
-  it("allocates capacity boost across all extractable resources in the strategy (Q4)", () => {
-    // oil_gas strategy: supply { oil: 0.4, natural_gas: 0.2 }
+  const seeds =
+    (byState: Record<string, Partial<Record<ExtractableResource, number>>>) =>
+    (_countryId: string, stateId: string) =>
+      byState[stateId];
+
+  function constrain(
+    lookups: CorporationLookups,
+    sector: CorporateSector,
+    bindingResource: ExtractableResource | null,
+    utilization = 0.5
+  ) {
+    lookups.extractionCapacityUtilBySector.set(sector._id.toString(), {
+      utilization,
+      bindingResource,
+    });
+  }
+
+  it("grows only the binding resource of a deposit-constrained mine", () => {
+    // oil_gas strategy produces oil and natural gas; only oil binds.
     const corp = makeCorp({ rdScore: 200, type: "extraction" });
     const sector = makeSector(corp._id, {
       sectorType: "extraction",
@@ -388,28 +405,78 @@ describe("processRdInnovations", () => {
     });
     const cap = new Map<string, Partial<Record<ExtractableResource, number>>>();
     cap.set("US-TX", { oil: 100_000, natural_gas: 50_000 });
+    const lookups = baseLookups([corp], [sector], { stateResourceCapacity: cap });
+    constrain(lookups, sector, "oil");
     const result = processRdInnovations(
-      baseLookups([corp], [sector], { stateResourceCapacity: cap }),
+      lookups,
       6,
-      now
+      now,
+      Math.random,
+      false,
+      seeds({ "US-TX": { oil: 100_000, natural_gas: 50_000 } })
     );
 
     expect(result.innovationsTriggered).toBe(1);
     expect(result.capacityBoostOps).toHaveLength(1);
     const op = result.capacityBoostOps[0];
     expect(op.updateOne.filter.stateId).toBe("US-TX");
-    // Capacity boost is a per-resource percentage of the state's CURRENT
-    // capacity, rolled in [MIN_PCT, MAX_PCT]. Math.random is mocked to 0, so
-    // every roll lands on the minimum: increase = round(currentCap × MIN_PCT).
-    const oilIncrement = op.updateOne.update.$inc["resources.oil"];
-    const gasIncrement = op.updateOne.update.$inc["resources.natural_gas"];
-    expect(oilIncrement).toBe(Math.round(100_000 * RD_CAPACITY_BOOST_MIN_PCT));
-    expect(gasIncrement).toBe(Math.round(50_000 * RD_CAPACITY_BOOST_MIN_PCT));
-    // Larger existing deposit → larger absolute boost (percent-of-cap scaling).
-    expect(oilIncrement).toBeGreaterThan(gasIncrement);
+    // Math.random is mocked to 0, so the growth roll lands on the minimum.
+    expect(op.updateOne.update.$inc).toEqual({
+      "resources.oil": Math.round(100_000 * RD_CAPACITY_BOOST_MIN_PCT),
+    });
   });
 
-  it("aggregates multiple breakthroughs in the same state into a single bulk op", () => {
+  it("does not grow deposits for a mine that is not deposit-constrained", () => {
+    const corp = makeCorp({ rdScore: 200, type: "extraction" });
+    const sector = makeSector(corp._id, {
+      sectorType: "extraction",
+      strategyId: "oil_gas",
+      stateId: "US-TX",
+    });
+    const cap = new Map<string, Partial<Record<ExtractableResource, number>>>();
+    cap.set("US-TX", { oil: 100_000, natural_gas: 50_000 });
+    const seedMap = seeds({ "US-TX": { oil: 100_000, natural_gas: 50_000 } });
+    for (const [utilization, binding] of [
+      [1, null],
+      [0.98, null],
+    ] as const) {
+      const lookups = baseLookups([corp], [sector], { stateResourceCapacity: cap });
+      constrain(lookups, sector, binding, utilization);
+      const result = processRdInnovations(lookups, 6, now, Math.random, false, seedMap);
+      expect(result.innovationsTriggered).toBe(1);
+      expect(result.capacityBoostOps).toHaveLength(0);
+    }
+    // No utilization entry at all reads as unconstrained.
+    const lookups = baseLookups([corp], [sector], { stateResourceCapacity: cap });
+    expect(
+      processRdInnovations(lookups, 6, now, Math.random, false, seedMap).capacityBoostOps
+    ).toHaveLength(0);
+  });
+
+  it("never grows a deposit past three times its seed", () => {
+    const corp = makeCorp({ rdScore: 200, type: "extraction" });
+    const sector = makeSector(corp._id, {
+      sectorType: "extraction",
+      strategyId: "iron_mining",
+      stateId: "US-MN",
+    });
+    const seedMap = seeds({ "US-MN": { iron: 100_000 } });
+    for (const [live, expected] of [
+      [299_500, 500],
+      [300_000, 0],
+      [58_000_000, 0],
+    ] as const) {
+      const cap = new Map<string, Partial<Record<ExtractableResource, number>>>();
+      cap.set("US-MN", { iron: live });
+      const lookups = baseLookups([corp], [sector], { stateResourceCapacity: cap });
+      constrain(lookups, sector, "iron");
+      const result = processRdInnovations(lookups, 6, now, () => 0.99, false, seedMap);
+      const inc = result.capacityBoostOps[0]?.updateOne.update.$inc["resources.iron"] ?? 0;
+      expect(inc).toBe(expected);
+    }
+  });
+
+  it("stacks same-state breakthroughs in one op without passing the ceiling", () => {
     const corpA = makeCorp({ rdScore: 200, type: "extraction" });
     const corpB = makeCorp({ rdScore: 200, type: "extraction" });
     const sectorA = makeSector(corpA._id, {
@@ -424,21 +491,59 @@ describe("processRdInnovations", () => {
     });
     const cap = new Map<string, Partial<Record<ExtractableResource, number>>>();
     cap.set("US-MN", { iron: 500_000 });
+    const lookups = baseLookups([corpA, corpB], [sectorA, sectorB], {
+      stateResourceCapacity: cap,
+    });
+    constrain(lookups, sectorA, "iron");
+    constrain(lookups, sectorB, "iron");
     const result = processRdInnovations(
-      baseLookups([corpA, corpB], [sectorA, sectorB], { stateResourceCapacity: cap }),
+      lookups,
       6,
-      now
+      now,
+      Math.random,
+      false,
+      seeds({ "US-MN": { iron: 1_000_000 } })
     );
 
     expect(result.innovationsTriggered).toBe(2);
-    // Two extraction breakthroughs in the same state collapse to a single bulk op.
-    // Each adds round(currentCap × MIN_PCT) (Math.random mocked to 0), and the
-    // current cap is read from the same pre-turn lookup for both.
     expect(result.capacityBoostOps).toHaveLength(1);
-    const op = result.capacityBoostOps[0];
-    expect(op.updateOne.update.$inc["resources.iron"]).toBe(
-      2 * Math.round(500_000 * RD_CAPACITY_BOOST_MIN_PCT)
+    // The second breakthrough grows from the deposit the first one left.
+    const first = Math.round(500_000 * RD_CAPACITY_BOOST_MIN_PCT);
+    const second = Math.round((500_000 + first) * RD_CAPACITY_BOOST_MIN_PCT);
+    expect(result.capacityBoostOps[0].updateOne.update.$inc["resources.iron"]).toBe(first + second);
+
+    // With a seed of 170k the ceiling is 510k: the pair cannot add more than 10k.
+    const capped = processRdInnovations(
+      lookups,
+      6,
+      now,
+      () => 0,
+      false,
+      seeds({ "US-MN": { iron: 170_000 } })
     );
+    expect(capped.capacityBoostOps[0].updateOne.update.$inc["resources.iron"]).toBe(10_000);
+  });
+
+  it("uses the reset preset's seeded deposits by default", () => {
+    // JP:CHU is seeded with 150k of oil after headroom, a 450k ceiling.
+    const corp = makeCorp({ rdScore: 200, type: "extraction", countryId: "JP" });
+    const sector = makeSector(corp._id, {
+      sectorType: "extraction",
+      strategyId: "oil_gas",
+      countryId: "JP",
+      stateId: "CHU",
+    });
+    const grown = (oil: number) => {
+      const cap = new Map<string, Partial<Record<ExtractableResource, number>>>();
+      cap.set("CHU", { oil, natural_gas: 169_153_847 });
+      const lookups = baseLookups([corp], [sector], { stateResourceCapacity: cap });
+      constrain(lookups, sector, "oil");
+      return processRdInnovations(lookups, 6, now).capacityBoostOps[0]?.updateOne.update.$inc;
+    };
+    expect(grown(200_000)).toEqual({
+      "resources.oil": Math.round(200_000 * RD_CAPACITY_BOOST_MIN_PCT),
+    });
+    expect(grown(58_619_666)).toBeUndefined();
   });
 
   it("skips sending notifications when the CEO slot is vacant", async () => {
