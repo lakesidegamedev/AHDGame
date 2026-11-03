@@ -37,6 +37,10 @@ export default function UnsoldNote({
         return t("buyersExhausted");
       case "no_buyers":
         return t("noBuyers", { good: label });
+      case "buyers_elsewhere":
+        return unsold.elsewhere === "state"
+          ? t("buyersElsewhereState", { good: label })
+          : t("buyersElsewhereCountry", { good: label });
     }
   })();
   return (

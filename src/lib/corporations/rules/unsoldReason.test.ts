@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { unsoldByCommodity, unsoldReasonFor } from "./unsoldReason";
+import {
+  unsoldByCommodity,
+  unsoldReadingsFor,
+  unsoldReasonFor,
+  type SettledProductRow,
+} from "./unsoldReason";
 
 const row = (over: Partial<Parameters<typeof unsoldByCommodity>[0][number]> = {}) => ({
   commodity: "energy",
@@ -88,5 +93,95 @@ describe("unsoldByCommodity", () => {
     }).get("energy")!;
     expect(seen).toEqual([]);
     expect(reading.reason).toBe("no_buyers");
+  });
+});
+
+describe("buyers elsewhere (#5450)", () => {
+  const exhausted = [row({ askingUnitPrice: 8 })];
+  const priced = (_c: string, _b: string) => 10;
+
+  it("names buyers in other states for a covered local market while the good is short", () => {
+    const reading = unsoldByCommodity(exhausted, priced, () => "state").get("energy")!;
+    expect(reading).toMatchObject({ reason: "buyers_elsewhere", elsewhere: "state" });
+  });
+
+  it("names buyers in other countries when this book had no trade at all", () => {
+    const reading = unsoldByCommodity(
+      exhausted,
+      () => null,
+      () => "country"
+    ).get("energy")!;
+    expect(reading).toMatchObject({ reason: "buyers_elsewhere", elsewhere: "country" });
+  });
+
+  it("keeps a price problem a price problem, even when the good is short elsewhere", () => {
+    const reading = unsoldByCommodity([row({ askingUnitPrice: 12 })], priced, () => "state").get(
+      "energy"
+    )!;
+    expect(reading.reason).toBe("ask_above_market");
+    expect(reading.elsewhere).toBeUndefined();
+  });
+
+  it("stays exhausted buyers when the good is not short anywhere", () => {
+    expect(unsoldByCommodity(exhausted, priced, () => null).get("energy")!.reason).toBe(
+      "buyers_exhausted"
+    );
+  });
+});
+
+describe("unsoldReadingsFor (#5450)", () => {
+  // Typed against the settled receipt product, so a change to that shape fails here.
+  const product = (over: Partial<SettledProductRow> = {}): SettledProductRow => ({
+    commodity: "energy",
+    book: "world",
+    offeredUnits: 100,
+    deliveredUnits: 30,
+    askingUnitPrice: 12,
+    ...over,
+  });
+  const receipt = { turn: 9, products: [product(), product()] };
+  const prices = { "energy|world": 10 };
+
+  it("reads every plant row against the lane price for its book", () => {
+    const reading = unsoldReadingsFor({
+      isCeo: true,
+      receipt,
+      currentTurn: 10,
+      laneClearingPrices: prices,
+    }).get("energy")!;
+    expect(reading).toMatchObject({ reason: "ask_above_market", marketUnitPrice: 10 });
+    expect(reading.unsoldShare).toBeCloseTo(0.7, 12);
+  });
+
+  it("shows nothing to a viewer who is not the CEO", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: false, receipt, currentTurn: 10, laneClearingPrices: prices }).size
+    ).toBe(0);
+  });
+
+  it("shows nothing for a receipt older than last turn", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: true, receipt, currentTurn: 12, laneClearingPrices: prices }).size
+    ).toBe(0);
+  });
+
+  it("shows nothing without lane prices", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: true, receipt, currentTurn: 10, laneClearingPrices: undefined })
+        .size
+    ).toBe(0);
+  });
+
+  it("passes the short-elsewhere signal through", () => {
+    const covered = { turn: 9, products: [product({ askingUnitPrice: 8 })] };
+    expect(
+      unsoldReadingsFor({
+        isCeo: true,
+        receipt: covered,
+        currentTurn: 10,
+        laneClearingPrices: prices,
+        shortElsewhere: () => "state",
+      }).get("energy")!.reason
+    ).toBe("buyers_elsewhere");
   });
 });

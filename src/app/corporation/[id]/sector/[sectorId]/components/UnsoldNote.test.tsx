@@ -60,12 +60,37 @@ describe("UnsoldNote (#5450)", () => {
     ).toContain("Nobody bought Electricity");
   });
 
+  it("says the buyers are in other states for a local service", () => {
+    expect(
+      note({
+        reason: "buyers_elsewhere",
+        elsewhere: "state",
+        unsoldShare: 0.4,
+        askUnitPrice: 8,
+        marketUnitPrice: 10,
+      })
+    ).toContain("short in other states");
+  });
+
+  it("says the buyers are in other countries for a traded good", () => {
+    expect(
+      note({
+        reason: "buyers_elsewhere",
+        elsewhere: "country",
+        unsoldShare: 0.4,
+        askUnitPrice: 8,
+        marketUnitPrice: null,
+      })
+    ).toContain("short in other countries");
+  });
+
   it("uses no em or en dashes in any sentence", () => {
     for (const reason of [
       "ask_above_market",
       "shared_at_market",
       "buyers_exhausted",
       "no_buyers",
+      "buyers_elsewhere",
     ] as const)
       expect(note({ reason, unsoldShare: 0.5, askUnitPrice: 12, marketUnitPrice: 10 })).not.toMatch(
         /[–—]/

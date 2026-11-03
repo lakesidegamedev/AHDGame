@@ -4,8 +4,7 @@
  * motion; no behavior change).
  */
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
-import { unsoldByCommodity, type UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
-import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
+import { unsoldReadingsFor } from "@/lib/corporations/rules/unsoldReason";
 import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
@@ -217,6 +216,13 @@ export async function buildSectorCommoditySections(args: {
     receipt: sector.producerSettlement,
     currentTurn: args.currentTurn ?? 0,
     laneClearingPrices: args.laneClearingPrices,
+    // Still short worldwide while this plant's own market is covered: the
+    // buyers are in another state (local services) or another country.
+    shortElsewhere: (commodity) => {
+      const world = globalBalances.get(commodity as CommodityType);
+      if (!world || !(world.demand > 0) || world.supply >= world.demand * 0.95) return null;
+      return isStateScopedCommodity(commodity as CommodityType) ? "state" : "country";
+    },
   });
 
   // Last turn's per-output clear rates (written by the clearing pass). Absent
@@ -589,30 +595,4 @@ export async function buildSectorCommoditySections(args: {
     capital,
     throughput,
   };
-}
-
-/**
- * The unsold reading per commodity for a sector page: nothing for a non-CEO,
- * without last turn's lane prices, or without a receipt from last turn.
- * Exported for tests.
- */
-export function unsoldReadingsFor(args: {
-  isCeo: boolean;
-  receipt: CorporateSector["producerSettlement"] | null | undefined;
-  currentTurn: number;
-  laneClearingPrices: Readonly<Record<string, number | undefined>> | undefined;
-}): Map<string, UnsoldReading> {
-  const { receipt, laneClearingPrices } = args;
-  if (!args.isCeo || !laneClearingPrices || !receipt || !(receipt.turn >= args.currentTurn - 1))
-    return new Map();
-  return unsoldByCommodity(
-    (receipt.products ?? []).map((p) => ({
-      commodity: p.commodity,
-      book: p.book,
-      offeredUnits: p.offeredUnits,
-      deliveredUnits: p.deliveredUnits,
-      askingUnitPrice: p.askingUnitPrice,
-    })),
-    (commodity, book) => laneClearingPrices[laneKeyOf(commodity, book)] ?? null
-  );
 }
