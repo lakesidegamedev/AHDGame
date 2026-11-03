@@ -293,6 +293,18 @@ export interface GameConfig {
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
   /**
+   * Funded producer market: >= 1 raises a plant's wages toward
+   * producerWageShareTarget of the value it added last turn, taking at most
+   * producerWageShareSurplusCap of the surplus left after base wages and site
+   * bills, so households earn more of what plants make and no plant is pushed
+   * into a loss on last turn's numbers (wageShareRules.ts). 0 or absent = off.
+   */
+  producerWageShareStage?: number;
+  /** Target wage share (0 to 1) of value added with the stage on. Absent = 0.6. */
+  producerWageShareTarget?: number;
+  /** Largest share (0 to 1) of surplus after base wages the raise takes. Absent = 0.75. */
+  producerWageShareSurplusCap?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
