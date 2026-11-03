@@ -117,3 +117,51 @@ describe("1991 no starting parties picker", () => {
     expect(message.textContent).toContain("Maintenance remains enabled");
   });
 });
+
+describe("reset date fields", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (url: string) =>
+          new Response(JSON.stringify(url.includes("presets") ? { presets } : {}))
+      )
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("moves the slider and base world when the year and week are typed", async () => {
+    render(<GameResetControls />);
+    await screen.findByRole("button", { name: "1991" });
+    const year = screen.getByLabelText("Reset year") as HTMLInputElement;
+    const week = screen.getByLabelText("Reset week") as HTMLInputElement;
+    const slider = screen.getByLabelText("Reset year and week") as HTMLInputElement;
+
+    // A partial year stays as typed without moving the date.
+    fireEvent.change(year, { target: { value: "19" } });
+    expect(year.value).toBe("19");
+    expect(slider.getAttribute("aria-valuetext")).toBe("2019, week 1");
+
+    fireEvent.change(year, { target: { value: "1995" } });
+    fireEvent.change(week, { target: { value: "12" } });
+    expect(slider.value).toBe(String((1995 - 1953) * 48 + 11));
+    expect(screen.getByText(/Base world:/).textContent).toContain("1991");
+
+    // Blurring an invalid entry falls back to the committed date.
+    fireEvent.change(week, { target: { value: "60" } });
+    fireEvent.blur(week);
+    expect(week.value).toBe("12");
+  });
+
+  it("updates the typed fields when the slider moves", async () => {
+    render(<GameResetControls />);
+    await screen.findByRole("button", { name: "1991" });
+    const slider = screen.getByLabelText("Reset year and week");
+    fireEvent.change(slider, { target: { value: String((2000 - 1953) * 48 + 4) } });
+    expect((screen.getByLabelText("Reset year") as HTMLInputElement).value).toBe("2000");
+    expect((screen.getByLabelText("Reset week") as HTMLInputElement).value).toBe("5");
+  });
+});

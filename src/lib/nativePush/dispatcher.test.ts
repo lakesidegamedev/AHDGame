@@ -51,7 +51,7 @@ describe("native push inbox dispatch", () => {
       expect.objectContaining({
         title: "You won the Ohio Senate race",
         body: "You carried 54.2% of the vote.",
-        href: "/elections/aaaaaaaaaaaaaaaaaaaaaaaa",
+        href: "/campaign-manager?race=aaaaaaaaaaaaaaaaaaaaaaaa",
         path: "/notifications",
         count: 1,
       })

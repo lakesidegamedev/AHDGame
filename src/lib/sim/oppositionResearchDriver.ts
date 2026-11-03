@@ -352,13 +352,7 @@ export async function runOppositionResearchFlow(
 
   // Debits reconcile against the same cost helper the command gates on.
   const isGeneralPhase = isCampaignUpgradeGeneralPhase(election, gameTime.currentTurn, gameTime);
-  const cost = getEffectiveBranchCost(
-    "oppositionResearch",
-    null,
-    0,
-    election.electionType,
-    isGeneralPhase
-  );
+  const cost = getEffectiveBranchCost("oppositionResearch", null, 0, isGeneralPhase);
   if (!cost) throw new OppoDriverError("starter cost helper returned null");
   const rates = await loadCampaignCurrencyRates(db);
   const expectedFundsDebit = campaignAnchorToLocal(cost.funds, election.countryId ?? "US", rates);

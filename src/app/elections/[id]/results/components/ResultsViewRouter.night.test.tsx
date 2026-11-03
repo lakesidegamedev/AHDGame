@@ -10,8 +10,6 @@ vi.mock("../../night/NightBroadcast", () => ({
 vi.mock("./PresidentialResultsView", () => ({
   PresidentialResultsView: () => <div data-testid="normal-president" />,
 }));
-vi.mock("./ParliamentaryResultsView", () => ({ ParliamentaryResultsView: () => null }));
-vi.mock("./SingleWinnerResultsView", () => ({ SingleWinnerResultsView: () => null }));
 
 afterEach(cleanup);
 

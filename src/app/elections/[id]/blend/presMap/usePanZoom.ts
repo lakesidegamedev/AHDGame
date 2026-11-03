@@ -151,8 +151,8 @@ export function usePanZoom({ svgRef, enabled, scale, width, height, frame }: Opt
   const reset = useCallback(() => setView(rest), [rest]);
   /** Bring a box (map units) into view, e.g. a double-clicked state. */
   const zoomToBox = useCallback(
-    (box: { x0: number; y0: number; x1: number; y1: number }, insetRight = 0) =>
-      setView(viewForBox(box, width, height, f, undefined, insetRight)),
+    (box: { x0: number; y0: number; x1: number; y1: number }, insetRight = 0, padding?: number) =>
+      setView(viewForBox(box, width, height, f, padding, insetRight)),
     [width, height, f]
   );
 

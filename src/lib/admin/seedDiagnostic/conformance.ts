@@ -519,6 +519,23 @@ async function checkRegions(db: Db, expect: SeedExpectations): Promise<SeedDiagn
   return checks;
 }
 
+/** The 16 national laws every 1991 Central European country opens with. */
+const CORE_1991_NATIONAL_POLICIES = 16;
+
+/**
+ * A 1991 country's national laws seeded. A floor, not an exact count: income
+ * tax tier rows and backfilled mechanical laws (competition, foreign
+ * investment, subsidiary limits) legitimately add rows on top of the core 16,
+ * and an exact 16 blocked every 1991 reset once they landed (25 rows each).
+ */
+export function classifyNationalPolicyCount(prefix: string, policyCount: number) {
+  const id = `policies.${prefix}.national`;
+  const scope = prefix.toUpperCase();
+  return policyCount >= CORE_1991_NATIONAL_POLICIES
+    ? ok(id, scope, "1991 national policies", CORE_1991_NATIONAL_POLICIES, policyCount)
+    : critical(id, scope, "1991 national policies", CORE_1991_NATIONAL_POLICIES, policyCount);
+}
+
 async function checkPolitical(
   db: Db,
   expect: SeedExpectations,
@@ -532,23 +549,7 @@ async function checkPolitical(
         stateId,
         scope: "national",
       });
-      checks.push(
-        policyCount === 16
-          ? ok(
-              `policies.${prefix}.national`,
-              prefix.toUpperCase(),
-              "1991 national policies",
-              16,
-              policyCount
-            )
-          : critical(
-              `policies.${prefix}.national`,
-              prefix.toUpperCase(),
-              "1991 national policies",
-              16,
-              policyCount
-            )
-      );
+      checks.push(classifyNationalPolicyCount(prefix, policyCount));
       const democracy = await db.collection("statePolicies").findOne({
         stateId,
         legislationTypeId: `${prefix}_political_system`,

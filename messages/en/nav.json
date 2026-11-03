@@ -653,6 +653,14 @@
         "support": "Get help with a problem",
         "feedback": "Describe an issue with a screenshot"
       }
+    },
+    "campaignMenu": {
+      "label": "Campaign",
+      "actions": "Actions",
+      "actionsNote": "Campaign, advertise, fundraise, poll. Raises your own stats",
+      "manager": "Campaign Manager",
+      "managerNote": "Every race in your country. Boost or attack any candidate",
+      "menuAria": "Campaign"
     }
   }
 }

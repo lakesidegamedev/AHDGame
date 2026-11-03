@@ -8,8 +8,12 @@ import { countryUrl, regionUrl } from "@/lib/urls";
 import type { DesktopNavLink, DesktopNavMenu } from "./desktopNavModel";
 import { makeDesktopLink, type NavTranslator } from "./dockMenus";
 import type { PixelNavIconName } from "./PixelNavIcon";
+import { buildCampaignNavMenu, isCampaignNavActive } from "./campaignNav";
 
-export type DockSheetKey = "state" | "nation" | "more";
+export type DockSheetKey = "state" | "nation" | "campaign" | "more";
+
+/** Every sheet, in the order a client lays them out. */
+export const DOCK_SHEET_KEYS: readonly DockSheetKey[] = ["state", "nation", "campaign", "more"];
 
 export type DockIconSpec =
   | { kind: "pixel"; name: PixelNavIconName }
@@ -94,8 +98,8 @@ function pathActive(pathname: string, href: string): boolean {
 
 /**
  * Tabs follow phone traffic: company (or the market without one), home state,
- * nation, Actions, then More. Every destination the standard phone menu offers
- * stays reachable from a sheet.
+ * nation, Campaign (Actions and the Campaign Manager), then More. Every
+ * destination the standard phone menu offers stays reachable from a sheet.
  */
 export function buildMobileDock({
   t,
@@ -155,14 +159,16 @@ export function buildMobileDock({
     active: !onState && pathActive(pathname, nationHref),
     activePrefixes: [nationHref.split("?")[0]!],
   });
+  // The Campaign tab keeps the Actions slot (and id) and opens a sheet with
+  // Actions and the Campaign Manager.
   if (!isImperialMode)
     tabs.push({
       id: "actions",
-      label: t("common.actions"),
+      label: t("campaignMenu.label"),
       icon: { kind: "pixel", name: "bolt" },
-      href: "/actions",
-      active: pathActive(pathname, "/actions"),
-      activePrefixes: ["/actions"],
+      sheet: "campaign",
+      active: !!pathname && isCampaignNavActive(pathname),
+      activePrefixes: ["/actions", "/campaign-manager"],
     });
   tabs.push({
     id: "more",
@@ -176,6 +182,12 @@ export function buildMobileDock({
   const switchLabel = t("dock.switchCountry");
   const shortcutsLabel = t("desktop.shortcuts");
   const sheets: Partial<Record<DockSheetKey, DockSheetSpec>> = {};
+  if (!isImperialMode)
+    sheets.campaign = {
+      title: t("campaignMenu.label"),
+      switchLabel,
+      sections: [{ id: "campaign", menu: buildCampaignNavMenu(t), shortcutsLabel }],
+    };
   if (homeState && menus.state)
     sheets.state = {
       title: homeState.name,

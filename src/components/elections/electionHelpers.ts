@@ -2,6 +2,7 @@ import { electionRegionUrl } from "@/lib/urls";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryOfficesClient";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { raceHref } from "@/lib/campaignManager/links";
 
 // Static 2020 electoral vote allocation per state
 export const STATE_EV: Record<string, number> = {
@@ -136,12 +137,15 @@ export function electionRaceTitle(
 }
 
 /**
- * Builds an election detail page URL, using seatId if available.
- * For elections with seatId, navigates to `/elections/{seatId}` (most relevant cycle).
- * Falls back to `/elections/{id}` (ObjectId) for legacy elections.
+ * Where a race links to: Campaign Manager with the race selected, or the
+ * presidency's own page (see `raceHref`).
  */
-export function buildElectionHref(election: { id: string; seatId?: string }): string {
-  return `/elections/${election.seatId ?? election.id}`;
+export function buildElectionHref(election: {
+  id: string;
+  seatId?: string | null;
+  electionType: string;
+}): string {
+  return raceHref(election);
 }
 
 /**

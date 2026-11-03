@@ -7,7 +7,7 @@ import type { AuthUserWithCharacter } from "@/lib/auth";
 import { campaignActionBankCap, campaignActionsPerTurn } from "@/lib/campaigns/actions";
 import { buildCampaignBudgetPreview } from "@/lib/campaigns/rules/budgetPreview";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
-import { getEffectiveUpgradeCost, getCampaignFamilyScalar } from "@/lib/campaigns/upgradeCosts";
+import { getEffectiveUpgradeCost } from "@/lib/campaigns/upgradeCosts";
 import { computeElectionPhase, isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
@@ -24,7 +24,6 @@ import {
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
 import { CAMPAIGN_STRENGTH_MAX_BONUS } from "@/lib/campaigns/campaignStrength";
 import { buildCampaignStatePresence } from "@/lib/elections/campaignStatePresence";
-import { getCampaignCopyForElection } from "@/lib/campaigns/raceFamilyCopy";
 import { CURRENCY_SYMBOLS, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import {
@@ -303,10 +302,6 @@ export async function getCampaignDetail(
     return base;
   }
 
-  // Per-race-family budget scalar applies to income, maintenance, and
-  // upgrade costs. `election?.electionType` may be undefined for legacy
-  // rows without an election link — the helpers fall back to neutral 1.0×.
-  const electionType = election?.electionType;
   // General-phase upgrade surcharge (×1.5 on funds + actions) must be reflected
   // in the cost preview so the "Upgrade" button only enables when the gate will
   // accept it. SSOT shared with the gate — see isCampaignUpgradeGeneralPhase.
@@ -445,7 +440,6 @@ export async function getCampaignDetail(
   if (!campaign.candidateIsNPP) {
     if (candidateRow && candidateRow.status === "active") {
       const currentTurn = await getCurrentTurn(db);
-      const scalar = getCampaignFamilyScalar(electionType);
       const pendingDripTotal = Array.isArray(candidateRow.supportAccrual)
         ? candidateRow.supportAccrual.reduce(
             (sum, entry) => sum + entry.amountPerTurn * entry.turnsRemaining,
@@ -459,9 +453,9 @@ export async function getCampaignDetail(
         rallyFiredThisTurn:
           typeof candidateRow.lastRallyTurn === "number" &&
           candidateRow.lastRallyTurn >= currentTurn,
-        rallyFullValue: SUPPORT_RALLY_FULL_VALUE * scalar,
-        rallyOneShotActionCost: Math.ceil(SUPPORT_RALLY_ACTION_COST * scalar),
-        rallyTourTickActionCost: Math.ceil(SUPPORT_RALLY_TOUR_TICK_ACTION_COST * scalar),
+        rallyFullValue: SUPPORT_RALLY_FULL_VALUE,
+        rallyOneShotActionCost: SUPPORT_RALLY_ACTION_COST,
+        rallyTourTickActionCost: SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
       };
 
       // An active rally tour ticks every turn IF the campaign can afford it (same
@@ -528,49 +522,29 @@ export async function getCampaignDetail(
 
   const opsTrees = buildOpsTrees(
     campaign,
-    electionType,
     isGeneralPhase,
     toLocal,
     CURRENCY_SYMBOLS[campaignCurrencyCode]
   );
   const nextUpgradeCosts: CampaignData["nextUpgradeCosts"] = {
     fundraising: localizeUpgradeCostFunds(
-      getEffectiveUpgradeCost(
-        "fundraising",
-        campaign.fundraisingLevel + 1,
-        electionType,
-        isGeneralPhase
-      ),
+      getEffectiveUpgradeCost("fundraising", campaign.fundraisingLevel + 1, isGeneralPhase),
       toLocal
     ),
     oppositionResearch: localizeUpgradeCostFunds(
       getEffectiveUpgradeCost(
         "oppositionResearch",
         campaign.oppositionResearchLevel + 1,
-        electionType,
         isGeneralPhase
       ),
       toLocal
     ),
     groundGame: localizeUpgradeCostFunds(
-      localizeGroundGameEffect(
-        getEffectiveUpgradeCost(
-          "groundGame",
-          campaign.groundGameLevel + 1,
-          electionType,
-          isGeneralPhase
-        ),
-        election
-      ),
+      getEffectiveUpgradeCost("groundGame", campaign.groundGameLevel + 1, isGeneralPhase),
       toLocal
     ),
     mediaSpending: localizeUpgradeCostFunds(
-      getEffectiveUpgradeCost(
-        "mediaSpending",
-        campaign.mediaSpendingLevel + 1,
-        electionType,
-        isGeneralPhase
-      ),
+      getEffectiveUpgradeCost("mediaSpending", campaign.mediaSpendingLevel + 1, isGeneralPhase),
       toLocal
     ),
   };
@@ -777,37 +751,6 @@ function localizeUpgradeCostFunds(
     funds: toLocal(cost.funds),
     ...(cost.maintenance != null ? { maintenance: toLocal(cost.maintenance) } : {}),
   };
-}
-
-/**
- * Phase 5.5 — replace the hardcoded "+X% in swing states" effect string
- * with race-family-aware wording ("swing counties" for senate / governor,
- * "swing precincts" for house / state senate). Mechanic unchanged; copy
- * localizes per the D5 adapter pattern.
- *
- * Returns null untouched so the upstream `|| null` ladder still flows
- * cleanly when the campaign is at max ground-game level. The return type
- * widens `effect` to plain `string` (vs the literal-typed `UPGRADE_COSTS`
- * entries) so the localized copy fits — DTO consumers only need
- * `{ funds, actions, effect, ... }`, not the literal types.
- */
-function localizeGroundGameEffect(
-  cost: {
-    level: number;
-    funds: number;
-    actions: number;
-    effect: string;
-    maintenance?: number;
-  } | null,
-  election: Election | null
-): { level: number; funds: number; actions: number; effect: string; maintenance?: number } | null {
-  if (!cost || !election) return cost;
-  const copy = getCampaignCopyForElection(election);
-  if (copy.family === "president") return cost;
-  const match = /^\+(\d+)%/.exec(cost.effect);
-  if (!match) return cost;
-  const percent = Number(match[1]);
-  return { ...cost, effect: copy.groundGameEffect(percent) };
 }
 
 export async function getViewerCampaigns(

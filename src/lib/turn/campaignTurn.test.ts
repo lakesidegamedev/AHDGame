@@ -258,7 +258,7 @@ describe("campaign fund de-forex", () => {
             find: vi.fn().mockReturnValue({
               toArray: vi
                 .fn()
-                .mockResolvedValue([{ _id: "e1", countryId, electionType: "senate", endTime }]),
+                .mockResolvedValue([{ _id: "e1", countryId, electionType: "president", endTime }]),
             }),
           };
         }

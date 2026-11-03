@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import type { MyRaceWidgetData } from "@/lib/sidebarWidgets/data/myRace";
 import { Meter } from "../MiniCharts";
 import { percent, Empty, WidgetLinks } from "./shared";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 export function MyRaceBody({
   data,
@@ -22,7 +23,7 @@ export function MyRaceBody({
   // A tick at half the vote, where one seat is at stake.
   const majorityMark = data.mySeats === null ? 50 : undefined;
   const links = [
-    { href: `/elections/${data.electionId}`, label: t("election") },
+    { href: campaignManagerHref({ race: data.electionId }), label: t("election") },
     ...(data.campaignId ? [{ href: `/campaign/${data.campaignId}`, label: t("campaign") }] : []),
   ];
   return (

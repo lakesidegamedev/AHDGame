@@ -51,18 +51,8 @@ export default async function CampaignPage() {
       .collection<Election>("elections")
       .find({ _id: { $in: electionIds } })
       .toArray();
-    const racePriority: Record<string, number> = {
-      president: 0,
-      governor: 1,
-      senate: 2,
-      house: 3,
-      stateSenate: 4,
-    };
-    const eligibleByPriority = eligibleElections
-      .filter((e) => isCampaignEligibleElection(e))
-      .sort((a, b) => (racePriority[a.electionType] ?? 99) - (racePriority[b.electionType] ?? 99));
-    if (eligibleByPriority.length > 0) {
-      const target = eligibleByPriority[0];
+    const target = eligibleElections.find((e) => isCampaignEligibleElection(e));
+    if (target) {
       const targetCampaign = candidateCampaigns.find(
         (c) => c.electionId.toString() === target._id.toString()
       );

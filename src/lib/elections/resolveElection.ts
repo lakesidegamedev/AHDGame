@@ -46,6 +46,7 @@ import type {
   ElectionDeps,
 } from "./electionResponseTypes";
 import { _enrichElection, fetchDepsForElection } from "./enrichElection";
+import { adjacentElectionsQuery } from "./adjacentElections";
 import { resolvedSeatsEstimate } from "@/lib/elections/resolvedSeatsEstimate";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
 import {
@@ -83,15 +84,6 @@ export function isSeatId(id: string): boolean {
   if (!/^[A-Z]{2}$/i.test(parts[0])) return false;
   return true;
 }
-
-const ADJACENT_ELECTION_TYPE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
-  commons: ["commons", "snap_commons"],
-  snap_commons: ["commons", "snap_commons"],
-  bundestag: ["bundestag", "snap_bundestag"],
-  snap_bundestag: ["bundestag", "snap_bundestag"],
-  shugiin: ["shugiin", "snap_shugiin"],
-  snap_shugiin: ["shugiin", "snap_shugiin"],
-};
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -170,21 +162,9 @@ export async function resolveElection(
   let adjacentElections: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null =
     null;
   if (isFull) {
-    const adjacentTypes = ADJACENT_ELECTION_TYPE_FAMILIES[election.electionType];
-    const adjacentQuery: Record<string, unknown> = election.seatId
-      ? { seatId: election.seatId, status: { $ne: "cancelled" } }
-      : {
-          ...(election.countryId ? { countryId: election.countryId } : {}),
-          state: election.state,
-          electionType: adjacentTypes ? { $in: adjacentTypes } : election.electionType,
-          status: { $ne: "cancelled" },
-        };
-    if (!election.seatId && election.senateClass != null) {
-      adjacentQuery.senateClass = election.senateClass;
-    }
     adjacentElections = await db
       .collection<Election>("elections")
-      .find(adjacentQuery)
+      .find(adjacentElectionsQuery(election))
       .sort({ cycle: 1 })
       .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({
         _id: 1,

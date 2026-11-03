@@ -7,8 +7,7 @@ import type { LiveStateLean } from "./liveLean";
  *
  * The geometry and baseline PVI come from the committed subdivision files
  * (`src/data/counties/{ST}.json`), with the lean swapped for the world's era
- * baseline (`src/data/county-leans`). Region scope has no subdivisions; offices
- * attach to the region itself.
+ * baseline (`src/data/county-leans`).
  */
 
 /** Data directory per scope. Add a scope here to give it a map. */

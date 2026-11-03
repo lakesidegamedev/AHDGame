@@ -19,7 +19,6 @@ import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { createNotification } from "@/lib/notifications";
 import type { Campaign, Character, Election, ElectionCandidate, NPP } from "@/lib/db/types";
-import { getCampaignFamilyScalar } from "@/lib/campaigns/upgradeCosts";
 import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_ACTION_COST,
@@ -163,22 +162,11 @@ export async function contributeCampaignStrength(params: {
   const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
   const forexEnabled = await isForexEnabled();
 
-  // Phase 5.5: gate matches Campaign Manager eligibility broadly (US president +
-  // senate / governor / house / stateSenate; non-US deferred per D4) instead of
-  // hard-coding electionType === 'president'. The eligibility check is the
-  // single source of truth — see src/lib/campaigns/isCampaignEligible.ts.
+  // Campaign Manager eligibility is the single source of truth and admits only
+  // presidential races, the only engines that read `campaignStrength`. Reject
+  // BEFORE any funds/actions debit.
   if (!election || !isCampaignEligibleElection(election)) {
     throw badRequest("Campaign strength is not available for this race");
-  }
-  // UI-honesty gate (issue #2891 bundle): only the presidential engine
-  // consumes `campaignStrength` (presidentialElectionEngine strengthMultiplier).
-  // Down-ballot engines ignore it entirely, so accepting contributions there
-  // would charge players for a stat with zero vote effect. Reject BEFORE any
-  // funds/actions debit. Revisit if CS is ever wired into down-ballot engines.
-  if (election.electionType !== "president") {
-    throw badRequest(
-      "Campaign strength only affects presidential races right now, so contributions to this race are disabled to protect your funds and actions."
-    );
   }
   if (election.status === "completed") {
     throw badRequest("Election has ended");
@@ -730,7 +718,7 @@ export async function getCurrentTurn(db: Db): Promise<number> {
 
 /**
  * Fire a one-shot rally event for the campaign's candidate. Per the B1
- * design, 60% of the race-family-scaled `SUPPORT_RALLY_FULL_VALUE` lands
+ * design, 60% of `SUPPORT_RALLY_FULL_VALUE` lands
  * immediately on `electionCandidates.support`; the remaining 40% is
  * queued as a `supportAccrual` entry that drips over the next
  * `RALLY_SPREAD_TURNS` turns via the accrual-tick processor.
@@ -769,9 +757,8 @@ export async function fireRallyOneShot(params: {
     throw badRequest("Election is not active");
   }
 
-  const scalar = getCampaignFamilyScalar(election.electionType as string);
-  const scaledR = SUPPORT_RALLY_FULL_VALUE * scalar;
-  const actionCost = Math.ceil(SUPPORT_RALLY_ACTION_COST * scalar);
+  const scaledR = SUPPORT_RALLY_FULL_VALUE;
+  const actionCost = SUPPORT_RALLY_ACTION_COST;
 
   if (campaign.actions < actionCost) {
     throw badRequest(`Insufficient actions. Need ${actionCost}, have ${campaign.actions}`);

@@ -108,7 +108,7 @@ describe("CommonsVacancyPanel", () => {
     // and links to the race itself (ticket 1379: "how do we see where they are?").
     expect(screen.getByText(/entries close turn 520, voting closes turn 540/i)).toBeTruthy();
     const link = screen.getByRole("link", { name: /go to the by-election/i });
-    expect(link.getAttribute("href")).toBe("/elections/UK-special_commons-LON");
+    expect(link.getAttribute("href")).toBe("/campaign-manager?race=race1");
     expect(screen.getByText(/hopeful/i)).toBeTruthy();
     expect(screen.getByText(/3 of 5 signatures/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: /sign recall petition/i })).toBeTruthy();
@@ -158,7 +158,7 @@ describe("CommonsVacancyPanel", () => {
     expect(screen.queryByText(/entries close/i)).toBeNull();
     // No seatId: the page is still reachable by the race id.
     const link = screen.getByRole("link", { name: /go to the by-election/i });
-    expect(link.getAttribute("href")).toBe("/elections/race1");
+    expect(link.getAttribute("href")).toBe("/campaign-manager?race=race1");
   });
 
   it("says what happens next for each open vacancy instead of a blanket promise", async () => {

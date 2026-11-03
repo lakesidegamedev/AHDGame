@@ -1,55 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { Card, CardSubLabel } from "@/components/ui";
 import { PrimaryLineGraph } from "./ElectionDetailCharts";
 import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
-import type { CandidateDetail, PartyGroup, SnapshotPoint } from "./ElectionDetailTypes";
+import type { PartyGroup, SnapshotPoint } from "./ElectionDetailTypes";
 import { NppAbbr } from "@/components/elections/NppAbbr";
-import { apiErrorText } from "@/lib/errors/catalog";
-
-function RemoveCandidateButton({
-  candidateId,
-  electionId,
-  onRemoveSuccess,
-}: {
-  candidateId: string;
-  electionId: string;
-  onRemoveSuccess: () => void;
-}) {
-  const [removing, setRemoving] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        if (!confirm("Remove this candidate from the race?")) return;
-        setRemoving(true);
-        try {
-          const res = await fetch(`/api/admin/elections/${electionId}/remove-candidate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ candidateId }),
-          });
-          const data = await res.json();
-          if (res.ok) onRemoveSuccess();
-          else alert(apiErrorText(data, "Failed to remove"));
-        } catch {
-          alert("Network error");
-        } finally {
-          setRemoving(false);
-        }
-      }}
-      disabled={removing}
-      className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-      title="Remove candidate (admin)"
-    >
-      {removing ? "…" : "Remove"}
-    </button>
-  );
-}
+import { RemoveCandidateButton } from "@/components/elections/admin/RemoveCandidateButton";
+import { EndorsementBadges } from "@/components/elections/EndorsementBadges";
 
 function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
   const colorMap = buildCandidateColorMap(
@@ -113,55 +73,6 @@ function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
           Delegate projection appears once candidates have live primary share data
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * Endorsement chips for a candidate. Lives here because both the primary
- * candidate rows and the general-phase tables show the same list. Previously
- * this markup was trapped inside `CandidateCard`, a component nothing
- * imported — so endorsements never rendered during the primary at all.
- */
-export function EndorsementBadges({
-  endorsements,
-}: {
-  endorsements: CandidateDetail["endorsements"];
-}) {
-  if (endorsements.length === 0) return null;
-  return (
-    <div className="mt-1 flex flex-wrap gap-1">
-      {endorsements.map((e, i) => {
-        const label = e.type === "npp" ? e.nppName : e.characterName;
-        const href =
-          e.type === "npp"
-            ? `/politicians/npp/${e.nppId}`
-            : e.characterId
-              ? `/character/${e.characterId}`
-              : null;
-        const tone =
-          e.type === "npp"
-            ? "text-yellow-400 hover:text-yellow-300"
-            : "text-blue-400 hover:text-blue-300";
-        const inner = (
-          <>
-            <svg className="h-2.5 w-2.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            {label}
-          </>
-        );
-        const cls = `flex items-center gap-0.5 text-[10px] transition-colors ${tone}`;
-        return href ? (
-          <Link key={`${label}-${i}`} href={href} className={cls} title={`Endorsed by ${label}`}>
-            {inner}
-          </Link>
-        ) : (
-          <span key={`${label}-${i}`} className={cls} title={`Endorsed by ${label}`}>
-            {inner}
-          </span>
-        );
-      })}
     </div>
   );
 }

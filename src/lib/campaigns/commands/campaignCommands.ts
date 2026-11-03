@@ -100,16 +100,9 @@ export async function upgradeCampaign(params: {
 
   const currentBranchLevel = branch === null ? 0 : tree[branch];
   const nextLevel = branch === null ? 0 : currentBranchLevel + 1;
-  // SSOT cost helper — shares the per-race-family scalar and general-phase
-  // surcharge with the UI preview so the enabled "Upgrade" button always passes
+  // SSOT cost helper — shares the general-phase surcharge with the UI preview so the enabled "Upgrade" button always passes
   // this gate. Returns null when the branch is already maxed.
-  const cost = getEffectiveBranchCost(
-    category,
-    branch,
-    nextLevel,
-    election?.electionType,
-    isGeneralPhase
-  );
+  const cost = getEffectiveBranchCost(category, branch, nextLevel, isGeneralPhase);
   if (!cost) {
     throw badRequest("Max level reached");
   }

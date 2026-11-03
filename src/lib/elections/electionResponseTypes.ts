@@ -45,6 +45,14 @@ export interface SnapshotEntry {
   byParty: PrimarySnapshot["byParty"];
 }
 
+/** One candidate's result in a finished party primary. */
+export interface FinishedPrimaryEntry {
+  candidateId: string;
+  characterName: string;
+  sharePct: number;
+  won: boolean;
+}
+
 export interface GeneralVotesData {
   russianPresidentialResult?: ElectionVoteTally["russianPresidentialResult"];
   totalVotes: Record<string, number>;
@@ -124,6 +132,8 @@ export interface ElectionResponse {
     newNominationDistrictIds?: string[];
   };
   hungarianModernAssembly?: { ruleVersion: "mixed-2011-v1" };
+  /** Hungarian single-constituency by-election: the district it fills. */
+  hungarianModernByElection?: { districtId: string };
   japanShugiinRules?: {
     ruleVersion: "sntv-1991-v1" | "mixed-1994-v1";
     districtSeats: number;
@@ -144,6 +154,8 @@ export interface ElectionResponse {
    * `electionToLarpYear(...)` with the active gameState ctx.
    */
   electionYear: number | null;
+  /** `electionYear`, else derived from the cycle under the active preset: always set. */
+  resolvedYear: number;
   status: string;
   /** The requesting character withdrew from this election and may not re-enter. */
   viewerWithdrew?: boolean;
@@ -192,6 +204,12 @@ export interface ElectionResponse {
   candidates: EnrichedCandidate[];
   byParty: PartyGroup[];
   polling: PollingData | null;
+  /**
+   * Each party's finished primary from the tally (`primaryResults.byParty`),
+   * once the race is past its primary (general running or race over), so a
+   * race's primaries stay viewable as history.
+   */
+  primaryResults?: Record<string, FinishedPrimaryEntry[]> | null;
   /** Seat estimates for multi-seat races (house/stateSenate/commons/regionalCouncil). Always computed. */
   seatsEstimate: Record<string, number> | null;
   /**

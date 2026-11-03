@@ -3,6 +3,8 @@
  * _enrichElection retains Russian national list nominees together and uses the
  * same primary advance limit as the resolver.
  */
+import { resolveElectionYear } from "@/lib/utils/formatters";
+import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
 import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
@@ -1269,6 +1271,7 @@ export async function _enrichElection(
     chamberClass: election.chamberClass ?? null,
     cycle: election.cycle,
     electionYear: election.electionYear ?? null,
+    resolvedYear: resolveElectionYear(election, cycleAnchorContextFromGameState(gameState)),
     status: election.status,
     totalSeats: election.totalSeats ?? null,
 
@@ -1353,7 +1356,28 @@ export async function _enrichElection(
     ...(regionElectorate ? { regionElectorate } : {}),
     ...(regionName ? { regionName } : {}),
     ...(tally?.primaryVotes ? { primaryVotes: tally.primaryVotes } : {}),
+    // Finished primaries: once a race is past its primary (general running,
+    // or the whole race over), the stored primary result is history.
+    ...((isEnded || inGeneral) && tally?.primaryResults
+      ? { primaryResults: finishedPrimaryResults(tally.primaryResults) }
+      : {}),
   };
+}
+
+/** The tally's stored primary results, trimmed to what a finished view shows. */
+function finishedPrimaryResults(
+  results: NonNullable<ElectionVoteTally["primaryResults"]>
+): NonNullable<ElectionResponse["primaryResults"]> {
+  const out: NonNullable<ElectionResponse["primaryResults"]> = {};
+  for (const [partyId, rows] of Object.entries(results.byParty ?? {})) {
+    out[partyId] = rows.map((r) => ({
+      candidateId: r.candidateId,
+      characterName: r.characterName,
+      sharePct: r.sharePct,
+      won: r.won,
+    }));
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
+import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
 import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
 import { migration as nationalPartyNppBills } from "./entries/2026-10-27-national-party-npp-bills";
 import { migration as partyNppRegionalBills } from "./entries/2026-10-27-party-npp-regional-bills";
@@ -400,6 +401,7 @@ export const MIGRATIONS: Migration[] = [
   dropLogTextIndexes,
   partyNppRegionalBills,
   nationalPartyNppBills,
+  archiveNonPresidentialCampaigns,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

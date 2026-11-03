@@ -25,6 +25,9 @@ ECONOMY = re.compile(
     r"sovereignDefault|nationalization|unions|wealth|products|macroMetrics|npps?|constants)(?:/|\.|$)"
     r"|^src/lib/turnSystem\.ts$"
 )
+# The rules themselves: CI workflows, code owners and these scripts. Without this a
+# contributor could rewrite the check in the same PR it is checking.
+GOVERNANCE = re.compile(r"^\.github/|^scripts/ci/")
 BOX = re.compile(r"^\s*-\s*\[([ xX])\]\s*(.+)$", re.M)
 
 
@@ -70,16 +73,23 @@ def main():
     # Re-read the PR so a review event sees the current description and head.
     pr = api(f"pulls/{pr['number']}")
     problems = []
-    coi = coi_problem(pr.get("body"))
+    # The guard workflow runs on pull_request_target, so it uses the base branch's copy of
+    # this script and workflow; it checks only the rule files and leaves the rest to custom-rules.
+    guard_only = os.environ.get("GOVERNANCE_GUARD_ONLY") == "1"
+    coi = None if guard_only else coi_problem(pr.get("body"))
     if coi:
         problems.append(coi)
     files = [f["filename"] for f in paged(f"pulls/{pr['number']}/files")]
-    economy = [f for f in files if ECONOMY.search(f)]
-    if economy:
+    economy = [] if guard_only else [f for f in files if ECONOMY.search(f)]
+    rules = [f for f in files if GOVERNANCE.search(f)]
+    if economy or rules:
         head = pr["head"]["sha"]
         reviews = paged(f"pulls/{pr['number']}/reviews")
         approved = any(r["user"]["login"] in MAINTAINERS and r["state"] == "APPROVED" and r.get("commit_id") == head for r in reviews)
-        if not approved:
+        if not approved and rules:
+            rerun = " After approving, re-run this check." if guard_only else ""
+            problems.append(f"This changes CI or governance files ({', '.join(rules[:5])}). It needs an approving review from a maintainer on the current commit {head[:10]}.{rerun}")
+        if not approved and economy:
             shown = ", ".join(economy[:5]) + (f" and {len(economy) - 5} more" if len(economy) > 5 else "")
             problems.append(f"This changes economy or turn code ({shown}). It needs an approving review from a maintainer on the current commit {head[:10]}.")
     if problems:

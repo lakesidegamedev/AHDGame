@@ -134,7 +134,7 @@ House, State Senate and other multi-seat contests allocate seats by the largest 
 - **Declare** for one office in your home state or region (President is national). Your home country must match the election's country.
 - **Pick a party.** Independents run in the independent party primary under the same rules.
 - **Withdraw** any time before the election resolves. Your votes are removed for good, your campaign is archived and you cannot re-enter that election. During a primary this is almost always wrong; during a general you are losing it can free your actions for the next cycle.
-- **Campaign** from the Campaign Manager page (see [Campaign Manager](/wiki/campaign-manager)).
+- **Campaign** with your character's actions (see [Fundraising and Ads](/wiki/fundraising-ads)), and in a presidential race also from the Campaign Manager page (see [Campaign Manager](/wiki/campaign-manager)).
 - **Build presence, travel, suspend or endorse** in presidential races, as described above.
 
 You can only run in one race at a time. Declarations close when the primary window ends, and if you miss it you wait a full cycle.

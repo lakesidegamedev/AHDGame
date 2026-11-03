@@ -39,7 +39,9 @@ describe("resolveSourceLink", () => {
   });
 
   it("links an election notification", () => {
-    expect(resolveSourceLink("general_win", { electionId: "e1" })?.href).toBe("/elections/e1");
+    expect(resolveSourceLink("general_win", { electionId: "e1" })?.href).toBe(
+      "/campaign-manager?race=e1"
+    );
   });
 
   it("returns null when no resolvable metadata", () => {
@@ -50,7 +52,7 @@ describe("resolveSourceLink", () => {
   // ── Election ────────────────────────────────────────────────────────────
   it("election link has correct label", () => {
     const s = resolveSourceLink("primary_win", { electionId: "e2" });
-    expect(s?.href).toBe("/elections/e2");
+    expect(s?.href).toBe("/campaign-manager?race=e2");
     expect(s?.label).toBe("View election");
   });
 
