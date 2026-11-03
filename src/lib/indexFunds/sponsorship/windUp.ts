@@ -341,8 +341,25 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   }
   if (holderPayouts.length > 0) {
     const payouts = await payFundHoldersCash(db, fund, holderPayouts, currentTurn, now);
-    if (payouts.unpaid.some((position) => position.holderKind !== "fund_reserve"))
-      throw new Error("Fund holder payout failed");
+    // A hard-deleted NPP, character or pension scheme leaves its position row
+    // behind and can never be paid. Throwing here rolled back every other
+    // holder's payout and froze the fund in winding_down, so that slice has no
+    // owner and escheats like the corporate and sponsor cases.
+    for (const position of payouts.unpaid) {
+      if (position.holderKind === "fund_reserve") continue;
+      const payout = holderPayouts.find((p) => p.position === position);
+      const escheated = payout
+        ? await escheatUnclaimedFundCash(
+            db,
+            fund,
+            payout.payoutAnchor,
+            currentTurn,
+            now,
+            "holder_missing"
+          )
+        : null;
+      if (escheated && payout) distributedAnchor += payout.payoutAnchor;
+    }
     distributedAnchor += payouts.distributedAnchor;
     holdersPaid += payouts.paid.filter((position) => position.holderKind !== "fund_reserve").length;
   }

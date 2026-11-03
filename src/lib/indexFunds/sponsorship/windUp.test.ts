@@ -333,6 +333,32 @@ describe("wind-up when a corporation no longer exists", () => {
     expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
   });
 
+  it("escheats an unpayable NPP holder's slice instead of freezing the wind-up", async () => {
+    const positions = [
+      { _id: new ObjectId(), units: 500, holderKind: "character" as const },
+      { _id: new ObjectId(), units: 500, holderKind: "npp" as const },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 100_000,
+      unitSupply: 1_000,
+      countryId: "US",
+    });
+    vi.mocked(payFundHolderCash).mockImplementation(
+      async (_db, _fund, position) =>
+        position.holderKind !== "fund_reserve" && position.holderKind !== "npp"
+    );
+    const { db, centralBanksUpdate, fundUpdate } = makeDb({ positions, fund });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBe(50_000);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    vi.mocked(payFundHolderCash).mockImplementation(
+      async (_db, _fund, position) => position.holderKind !== "fund_reserve"
+    );
+  });
+
   it("ignores a dead holder whose units are worth nothing", async () => {
     const positions = [
       {
