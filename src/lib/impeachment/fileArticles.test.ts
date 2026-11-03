@@ -191,41 +191,35 @@ describe("party NPP impeachment filing", () => {
   });
   it("blocks a direct human filing during the same post-election window", async () => {
     const electionId = new ObjectId();
-    await memory
-      .collection("characters")
-      .updateOne(
-        { _id: target },
-        {
-          $set: {
-            careerHistory: [
-              {
-                type: "elected",
-                office: { type: "governor", state: "NY" },
-                electionId: electionId.toString(),
-              },
-            ],
-          },
-        }
-      );
-    await memory
-      .collection("elections")
-      .insertOne({
-        _id: electionId,
-        countryId: "US",
-        electionType: "governor",
-        state: "NY",
-        status: "resolved",
-        endTurn: 90,
-      });
-    await memory
-      .collection("electedOfficials")
-      .insertOne({
-        _id: new ObjectId(),
-        countryId: "US",
-        state: "NY",
-        officeType: "stateSenate",
-        characterId: chairId,
-      });
+    await memory.collection("characters").updateOne(
+      { _id: target },
+      {
+        $set: {
+          careerHistory: [
+            {
+              type: "elected",
+              office: { type: "governor", state: "NY" },
+              electionId: electionId.toString(),
+            },
+          ],
+        },
+      }
+    );
+    await memory.collection("elections").insertOne({
+      _id: electionId,
+      countryId: "US",
+      electionType: "governor",
+      state: "NY",
+      status: "resolved",
+      endTurn: 90,
+    });
+    await memory.collection("electedOfficials").insertOne({
+      _id: new ObjectId(),
+      countryId: "US",
+      state: "NY",
+      officeType: "stateSenate",
+      characterId: chairId,
+    });
     await expect(
       fileArticlesOfImpeachment(memory as unknown as Db, "US", chair, false, {
         office: "governor",
