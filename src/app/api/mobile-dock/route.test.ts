@@ -99,9 +99,13 @@ describe("GET /api/mobile-dock", () => {
     expect(body.tabs[4]).toMatchObject({ id: "more", sheet: "more" });
     expect(Object.keys(body.sheets).sort()).toEqual(["campaign", "more", "nation", "state"]);
     const campaignLinks = body.sheets.campaign.sections.flatMap(
-      (section: { links: { href: string }[] }) => section.links.map((l) => l.href)
+      (section: { links: { href: string; icon: { name: string } }[] }) =>
+        section.links.map((l) => [l.href, l.icon.name])
     );
-    expect(campaignLinks).toEqual(["/actions", "/campaign-manager"]);
+    expect(campaignLinks).toEqual([
+      ["/actions", "bolt"],
+      ["/campaign-manager", "vote"],
+    ]);
     for (const tab of body.tabs) {
       expect(tab.icon.grid).toHaveLength(11);
       expect(tab.href === undefined).toBe(tab.sheet !== undefined);

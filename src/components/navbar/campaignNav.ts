@@ -17,19 +17,21 @@ export function isCampaignNavActive(pathname: string): boolean {
 
 export function buildCampaignNavItems(
   t: T
-): Array<Required<Pick<DesktopNavLink, "id" | "label" | "href" | "description">>> {
+): Array<Required<Pick<DesktopNavLink, "id" | "label" | "href" | "description" | "icon">>> {
   return [
     {
       id: "actions",
       label: t("campaignMenu.actions"),
       href: "/actions",
       description: t("campaignMenu.actionsNote"),
+      icon: "bolt",
     },
     {
       id: "campaignManager",
       label: t("campaignMenu.manager"),
       href: "/campaign-manager",
       description: t("campaignMenu.managerNote"),
+      icon: "vote",
     },
   ];
 }

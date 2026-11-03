@@ -98,8 +98,8 @@ function pathActive(pathname: string, href: string): boolean {
 
 /**
  * Tabs follow phone traffic: company (or the market without one), home state,
- * nation, Campaign (Actions and the Campaign Manager), then More. Every destination the standard phone menu offers
- * stays reachable from a sheet.
+ * nation, Campaign (Actions and the Campaign Manager), then More. Every
+ * destination the standard phone menu offers stays reachable from a sheet.
  */
 export function buildMobileDock({
   t,
