@@ -39,6 +39,7 @@ import {
   type AskProposedAction,
   type AskUsage,
 } from "@/components/askDrawer/askDrawerApi";
+import { AskLengthSelect, useAskLength } from "@/components/askDrawer/askLength";
 import { recoverFinishedAnswer } from "@/components/askDrawer/askRecovery";
 import {
   capturePageContext,
@@ -936,6 +937,7 @@ export function AskDrawerPanel({
   const [convId, setConvId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<ModeId>("auto");
+  const [length, setLength] = useAskLength();
   const [sharePage, setSharePage] = useState(true);
   const [page, setPage] = useState<AskPageContext | null>(null);
   const [usage, setUsage] = useState<AskUsage | null>(null);
@@ -1117,6 +1119,7 @@ export function AskDrawerPanel({
             clientReqId: reqId,
             convId: convId ?? undefined,
             mode,
+            length,
             // Ask reads live game data whenever the question needs it.
             useMcp: true,
             visualizations: true,
@@ -1192,7 +1195,7 @@ export function AskDrawerPanel({
         lastActivityRef.current = Date.now();
       }
     },
-    [applyFinal, busy, convId, mode, question, sharePage, turns, updateTurn]
+    [applyFinal, busy, convId, length, mode, question, sharePage, turns, updateTurn]
   );
 
   const retry = useCallback(
@@ -1760,19 +1763,22 @@ export function AskDrawerPanel({
                 {page ? pageLabel(page) : "This page"}
               </span>
             </button>
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value as ModeId)}
-              aria-label="Answer mode"
-              title={MODES.find((m) => m.id === mode)?.hint}
-              className="ml-auto rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
-            >
-              {MODES.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+            <span className="ml-auto flex items-center gap-1">
+              <AskLengthSelect value={length} onChange={setLength} />
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as ModeId)}
+                aria-label="Answer mode"
+                title={MODES.find((m) => m.id === mode)?.hint}
+                className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
+              >
+                {MODES.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </span>
           </div>
         </div>
         <div className="mt-1.5 px-1">

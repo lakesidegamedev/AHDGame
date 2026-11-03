@@ -66,3 +66,15 @@ describe("AskDrawerPanel dropped stream", () => {
     expect(screen.getAllByText("How do I build union support?")).toHaveLength(1);
   });
 });
+
+describe("AskDrawerPanel answer length", () => {
+  it("sends the chosen length with the question", async () => {
+    mocks.askQuestion.mockReset();
+    mocks.askQuestion.mockResolvedValue({ ok: true, status: 200, payload: { answer: "Short." } });
+    localStorage.clear();
+    render(<AskDrawerPanel side="right" onClose={() => undefined} onSwapSide={() => undefined} />);
+    fireEvent.change(screen.getByLabelText("Answer length"), { target: { value: "concise" } });
+    await ask("How do I build union support?");
+    expect(mocks.askQuestion.mock.calls[0][0]).toMatchObject({ length: "concise" });
+  });
+});
