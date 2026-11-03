@@ -97,6 +97,7 @@ export async function POST(request: Request) {
       nppAutonomyLevel: autonomyLevel,
       featureFlags,
       permanentHeadOfState: mode === "head-of-state",
+      guide: {},
     });
     await ensureSingleplayerUser(db, displayName);
 

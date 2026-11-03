@@ -154,7 +154,7 @@ export const WIKI_LAST_UPDATED: Record<string, string> = {
   "power-player-guide": "2026-10-30",
   primaries: "2026-10-30",
   "primary-general-tactics": "2026-10-30",
-  "private-banking": "2026-10-30",
+  "private-banking": "2026-11-02",
   "reading-the-game": "2026-10-30",
   "reference-formulas": "2026-10-30",
   "reference-offices": "2026-10-30",

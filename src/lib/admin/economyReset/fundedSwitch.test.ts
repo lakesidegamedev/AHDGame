@@ -29,6 +29,7 @@ describe("funded switch gameConfig update", () => {
         producerLowUseCostStage: 1,
         producerIdleRetireStage: 1,
         producerSpilloverStage: 1,
+        producerOwnSitesFirstStage: 1,
         producerStockCover: 1,
         producerClearingReferenceStage: 1,
         producerFundedBookStage: 1,

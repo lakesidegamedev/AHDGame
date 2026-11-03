@@ -34,7 +34,8 @@ type SectorFacts = Pick<
   | "plantWearUnits"
   | "pricingPosture"
   | "pricingMode"
->;
+> &
+  Partial<Pick<CorporateSector, "stateId">>;
 
 /**
  * The quote a sector posts without an explicit producer quote: automatic, with
@@ -211,6 +212,7 @@ export function prepareProducerSector(input: {
     plan: {
       id,
       accountId: target.corporationId,
+      stateId: sector.stateId,
       capacityUnits: capacity.capacityUnits,
       activeFraction,
       outputMultiplier: input.outputMultiplier,

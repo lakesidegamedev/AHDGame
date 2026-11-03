@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import {
   isClientShellUserAgent,
+  hasNativeStatusDockUserAgent,
   isInAppWebViewUserAgent,
   isIosStoreAppUserAgent,
   isStoreAppUserAgent,
@@ -20,6 +21,7 @@ import {
   DeferredStatAllocationGate,
   DeferredWealthTierRepickGate,
   DeferredTutorialCoachMount,
+  DeferredSingleplayerGuide,
   DeferredTurnProgressToast,
   DeferredNominationChoicePrompt,
 } from "@/components/DeferredShellOverlays";
@@ -237,6 +239,8 @@ export default async function RootLayout({
   // consent prompts, no cookie banner inside an app webview.
   const isNativeApp = isInAppWebViewUserAgent(userAgent);
   const isClientShell = isClientShellUserAgent(userAgent);
+  // The 2.10 phone app shows status in its own dock; keep one bar on screen.
+  const nativeStatusDock = hasNativeStatusDockUserAgent(userAgent);
   const isStoreApp = isStoreAppUserAgent(userAgent);
   const isIosStoreApp = isIosStoreAppUserAgent(userAgent);
   const host = requestHeaders.get("host");
@@ -430,6 +434,7 @@ export default async function RootLayout({
                             <NavbarWrapper
                               singleplayer={singleplayer}
                               clientShell={isClientShell}
+                              phoneApp={isStoreApp}
                               displayMode={displayMode}
                               initialPageCountry={initialPageCountry}
                               typedWordmark={typedWordmark}
@@ -456,7 +461,11 @@ export default async function RootLayout({
                             horizontal clipping without creating a scroll container. */}
                           <main
                             id="main-content"
-                            className="min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))]"
+                            className={
+                              nativeStatusDock
+                                ? "min-w-0 overflow-x-clip pb-4"
+                                : "min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))]"
+                            }
                             tabIndex={-1}
                           >
                             <SiteTrafficTracker gameVersion={world.version} />
@@ -468,16 +477,19 @@ export default async function RootLayout({
                           {!isWikiSubdomain && !isNativeApp && <AdSlot />}
                           {!isWikiSubdomain && !isNativeApp && <AdSenseSlot />}
                           {!isWikiSubdomain && <SiteFooter displayMode={displayMode} />}
-                          {!isWikiSubdomain && (
+                          {!isWikiSubdomain && !nativeStatusDock && (
                             <StatusBar
                               showOnlineStatus={!isClientShell}
                               turnStatusLink={!singleplayer}
                             />
                           )}
                           {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
+                          {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
                           {!isWikiSubdomain && <DeferredTutorialCoachMount />}
                           {!isWikiSubdomain && <LiveRefreshBanner />}
-                          {!isNativeApp && <CookieConsentBanner />}
+                          {/* Singleplayer loads no analytics (see below), so there is
+                              nothing to consent to. */}
+                          {!isNativeApp && !singleplayer && <CookieConsentBanner />}
                           {/* A singleplayer build runs on the player's machine with no
                               account and nothing to measure, so none of the telemetry
                               or ad tags below have a job there.

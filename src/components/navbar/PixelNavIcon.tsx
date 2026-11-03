@@ -225,6 +225,11 @@ const SHAPES = {
 
 export type PixelNavIconName = keyof typeof SHAPES;
 
+/** The 11x11 bitmap of an icon, rows of "0" and "1". The phone dock API sends these. */
+export function pixelNavIconGrid(name: PixelNavIconName): readonly string[] {
+  return SHAPES[name];
+}
+
 export function PixelNavIcon({
   name,
   className = "h-5 w-5",

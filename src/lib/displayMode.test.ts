@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  hasNativeStatusDockUserAgent,
   isClientShellUserAgent,
   isInAppWebViewUserAgent,
   isNativeAppUserAgent,
@@ -60,5 +61,19 @@ describe("isIosStoreAppUserAgent", () => {
     expect(isIosStoreAppUserAgent(SHELL_DESKTOP)).toBe(false);
     expect(isIosStoreAppUserAgent(CAPACITOR)).toBe(false);
     expect(isIosStoreAppUserAgent(BROWSER)).toBe(false);
+  });
+});
+
+describe("hasNativeStatusDockUserAgent", () => {
+  const phone = "Mozilla/5.0 (iPhone) AppleWebKit Mobile AHDClient-Mobile/2.10.0";
+  it("is true only for a phone build that announces its status dock", () => {
+    expect(hasNativeStatusDockUserAgent(`${phone} AHDClientNativeStatus/1`)).toBe(true);
+    expect(hasNativeStatusDockUserAgent(phone)).toBe(false);
+  });
+  it("never applies to desktop or plain browsers, even with the marker", () => {
+    expect(
+      hasNativeStatusDockUserAgent("Mozilla/5.0 AHDClient-Desktop/2.10.0 AHDClientNativeStatus/1")
+    ).toBe(false);
+    expect(hasNativeStatusDockUserAgent("Mozilla/5.0 AHDClientNativeStatus/1")).toBe(false);
   });
 });

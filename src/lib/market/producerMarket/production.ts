@@ -56,6 +56,8 @@ export interface ProducedStock {
 export interface ProductionPlan {
   id: string;
   accountId: string;
+  /** State the plant site is in; freight buys its own state's offers first. */
+  stateId?: string;
   capacityUnits: number;
   activeFraction: number;
   /** Prior staffing, disasters and other physical constraints, excluding demand. */
@@ -313,6 +315,8 @@ export function advanceProducerEconomy(input: {
    * buyer's other lanes with unsold supply (spilloverRules). 0 or absent = off.
    */
   spilloverShare?: number;
+  /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
+  ownSitesFirst?: boolean;
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
   /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
@@ -770,6 +774,7 @@ export function advanceProducerEconomy(input: {
           priority: 1,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
+          ...(p.stateId ? { stateId: p.stateId } : {}),
           ...(quantityGroup ? { quantityGroup } : {}),
         };
         return [
@@ -899,6 +904,7 @@ export function advanceProducerEconomy(input: {
           units,
           unitPrice: quote.unitPrice,
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
+          ...(p.stateId ? { stateId: p.stateId } : {}),
         },
         quote: quoteInput,
       });
@@ -948,6 +954,7 @@ export function advanceProducerEconomy(input: {
       orders: [...consumerOrders, ...inputOrders()],
       ...(track ? { trackCountryBooks: true } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
+      ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it

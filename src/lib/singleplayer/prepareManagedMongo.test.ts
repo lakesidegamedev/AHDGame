@@ -29,6 +29,38 @@ describe("managed singleplayer replica set", () => {
       .mockResolvedValueOnce({ isWritablePrimary: true, setName: "ahd-local" });
     await initializeLocalReplicaSet({ command }, host);
   });
+  it("moves a single-node set to the new port when the client picked another one", async () => {
+    const command = vi
+      .fn()
+      .mockRejectedValueOnce(Object.assign(new Error("not a member"), { code: 93 }))
+      .mockResolvedValueOnce({
+        config: { _id: "ahd-local", version: 1, members: [{ _id: 0, host: "127.0.0.1:50000" }] },
+      })
+      .mockResolvedValueOnce({ ok: 1 })
+      .mockResolvedValueOnce({ isWritablePrimary: true, setName: "ahd-local" });
+    await initializeLocalReplicaSet({ command }, host);
+    expect(command).toHaveBeenNthCalledWith(3, {
+      replSetReconfig: { _id: "ahd-local", version: 2, members: [{ _id: 0, host }] },
+      force: true,
+    });
+  });
+  it("never reconfigures a set that is not the local single-node one", async () => {
+    for (const config of [
+      { _id: "other", version: 1, members: [{ _id: 0, host: "a:1" }] },
+      {
+        _id: "ahd-local",
+        version: 1,
+        members: [
+          { _id: 0, host: "a:1" },
+          { _id: 1, host: "b:2" },
+        ],
+      },
+    ]) {
+      const command = vi.fn().mockRejectedValueOnce({ code: 93 }).mockResolvedValueOnce({ config });
+      await expect(initializeLocalReplicaSet({ command }, host)).rejects.toThrow("configuration");
+      expect(command).toHaveBeenCalledTimes(2);
+    }
+  });
   it("refuses unrelated replication configurations without changing them", async () => {
     const command = vi.fn().mockResolvedValue({ set: "other", members: [{ name: host }] });
     await expect(initializeLocalReplicaSet({ command }, host)).rejects.toThrow("configuration");

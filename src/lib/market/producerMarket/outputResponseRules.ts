@@ -52,6 +52,11 @@ export interface PriorReceipt {
    * Absent on receipts settled before it was recorded.
    */
   plannedRunShare?: number;
+  /**
+   * Units the plant planned to make that turn, before input and cash cuts.
+   * Absent on receipts settled before it was recorded.
+   */
+  plannedUnits?: number;
   /** Cold upkeep on idle capacity inside the site bill; owed whether or not the line runs. */
   idleOperatingCost?: number;
   /**
@@ -240,7 +245,18 @@ export function demandPlanRunShare(
     const runContribution =
       contributionPerUnit +
       Math.max(0, finite(prior.idleOperatingCost ?? 0)) / Math.max(produced, sold);
-    const base = runContribution >= 0 ? Math.max(run, planned) : run;
+    // The fallback for a run that did not pay its crew is on the plan scale,
+    // not the production scale: produced units already reflect staffing and
+    // resource yield, so produced / active reads far below the planned share
+    // and would restart the plant near the floor every turn. Reading what was
+    // made against what was planned keeps the shortfall proportional.
+    const plannedUnits = finite(prior.plannedUnits ?? 0);
+    const base =
+      runContribution >= 0
+        ? Math.max(run, planned)
+        : plannedUnits > 0 && planned > 0
+          ? Math.max(floor, planned * Math.min(1, produced / plannedUnits))
+          : run;
     return Math.min(1, base * soldOutGrowth);
   }
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);

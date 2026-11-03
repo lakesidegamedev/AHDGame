@@ -40,6 +40,13 @@ export interface PlantBuildOrderView {
   unitsDelivered: number;
   /** True when this order ramps in per turn rather than landing all at once. */
   smooth: boolean;
+  /**
+   * Capacity units added on every turn of the ramp; 0 when the order lands all
+   * at once or in whole-plant steps that skip turns (`steadyUnitsPerTurn`).
+   */
+  unitsPerTurn: number;
+  /** Next turn this order adds capacity; null once it has landed (`nextArrivalTurn`). */
+  nextArrivalTurn: number | null;
   costPaidAnchor: number;
   startTurn: number;
   onlineTurn: number;
@@ -75,7 +82,9 @@ export interface SectorPlantsSection {
   producedUnits: number | null;
   /** Units that found a buyer. Null until a plants turn has run. */
   soldUnits: number | null;
-  /** producedUnits − soldUnits, floored at 0. */
+  /** Units handed free to the company's own sites (funded market). Not sales, not unsold. */
+  ownSiteUnits: number | null;
+  /** producedUnits − soldUnits − ownSiteUnits, floored at 0. */
   unsoldUnits: number | null;
   /** capacityUnits − producedUnits, floored at 0. */
   idleUnits: number | null;

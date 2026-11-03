@@ -13,7 +13,11 @@
  */
 
 import type { SectorBuildOrder } from "@/lib/db/types";
-import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
+import {
+  nextArrivalTurn as orderNextArrivalTurn,
+  steadyUnitsPerTurn,
+  undeliveredUnits,
+} from "@/lib/corporations/buildDelivery";
 
 export interface BuildQueueSummary {
   /** Number of outstanding orders. */
@@ -28,14 +32,21 @@ export interface BuildQueueSummary {
   unitsRemaining: number;
   /**
    * Capacity units arriving each turn from smooth orders still ramping in
-   * (a linear slice per turn until the order's online turn). 0 when every
-   * outstanding order lands all at once.
+   * (a slice per turn until the order's online turn). 0 when every outstanding
+   * order lands all at once or in whole-plant steps that skip turns
+   * (see `steadyUnitsPerTurn`).
    */
   unitsPerTurn: number;
   /** Turn the LAST outstanding order finishes. Null when the queue is empty. */
   lastOnlineTurn: number | null;
   /** Turn the SOONEST outstanding order lands. Null when the queue is empty. */
   nextOnlineTurn: number | null;
+  /**
+   * Soonest turn any outstanding order next adds capacity. Earlier than
+   * `nextOnlineTurn` when a whole-plant order steps a plant in mid-build.
+   * Absent on summaries built before this field existed.
+   */
+  nextArrivalTurn?: number | null;
   /**
    * Turns until `nextOnlineTurn`, floored at 0. Null when the queue is empty.
    * Floored rather than allowed negative: an order whose turn has passed but
@@ -63,15 +74,16 @@ export function summarizeBuildQueue(
   let nextOnlineTurn: number | null = null;
   let lastOnlineTurn: number | null = null;
   let unitsPerTurn = 0;
+  let nextArrivalTurn: number | null = null;
   for (const order of queue) {
     const units = Number.isFinite(order?.unitsOrdered) ? order.unitsOrdered : 0;
     if (units > 0) {
       unitsOrdered += units;
       unitsRemaining += undeliveredUnits(order, currentTurn);
-      const window = order.onlineTurn - order.startTurn;
-      if (order.smooth === true && window > 0 && currentTurn < order.onlineTurn) {
-        unitsPerTurn += units / window;
-      }
+      unitsPerTurn += steadyUnitsPerTurn(order, currentTurn);
+      const arrival = orderNextArrivalTurn(order, currentTurn);
+      if (arrival != null && (nextArrivalTurn == null || arrival < nextArrivalTurn))
+        nextArrivalTurn = arrival;
     }
     const online = order?.onlineTurn;
     if (Number.isFinite(online) && (nextOnlineTurn == null || online < nextOnlineTurn)) {
@@ -89,6 +101,7 @@ export function summarizeBuildQueue(
     unitsPerTurn,
     lastOnlineTurn,
     nextOnlineTurn,
+    nextArrivalTurn,
     turnsRemaining: nextOnlineTurn == null ? null : Math.max(0, nextOnlineTurn - currentTurn),
   };
 }

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 
 /**
  * Shell overlays that never contribute to first paint: the one-time stat gate,
- * season recap, turn-progress toast and tutorial coach. Each is event or state
+ * season recap, turn-progress toast, singleplayer guide and tutorial coach. Each is event or state
  * driven, so shipping their markup and dependencies eagerly only delays the
  * page. The thin wrappers below are what the server layout imports.
  */
@@ -28,6 +28,10 @@ const TutorialCoachMount = dynamic(
   () => import("@/components/tutorial/TutorialCoachMount").then((m) => m.TutorialCoachMount),
   { ssr: false }
 );
+const SingleplayerGuide = dynamic(
+  () => import("@/components/singleplayer/SingleplayerGuide").then((m) => m.SingleplayerGuide),
+  { ssr: false }
+);
 const NominationChoicePrompt = dynamic(
   () => import("@/components/cabinet/NominationChoicePrompt").then((m) => m.NominationChoicePrompt),
   { ssr: false }
@@ -47,6 +51,10 @@ export function DeferredSeasonRecapGate() {
 
 export function DeferredTurnProgressToast() {
   return <TurnProgressToast />;
+}
+
+export function DeferredSingleplayerGuide() {
+  return <SingleplayerGuide />;
 }
 
 export function DeferredTutorialCoachMount() {

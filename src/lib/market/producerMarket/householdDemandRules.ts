@@ -47,7 +47,7 @@ export function householdDemandSpecs(input: {
         weight,
       });
     }
-    specs.push({ accountId: w.accountId, spendFraction, products });
+    specs.push({ accountId: w.accountId, spendFraction, products, stateId: w.stateId });
   }
   return specs;
 }

@@ -88,6 +88,14 @@ describe("POST /api/singleplayer/setup", () => {
     );
   });
 
+  it("offers the first-game guide to every new world", async () => {
+    await POST(request({ preset: "2023-default", mode: "normal" }));
+    expect(mocks.setSingleplayerConfig).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ guide: {} })
+    );
+  });
+
   it("accepts the v5 autonomy tier", async () => {
     await POST(
       request({ preset: "2023-default", mode: "normal", difficulty: "normal", autonomyLevel: "v5" })

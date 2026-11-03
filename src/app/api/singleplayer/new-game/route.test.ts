@@ -64,6 +64,14 @@ describe("POST /api/singleplayer/new-game", () => {
       expect.objectContaining({ mode: "normal", difficulty: "normal", nppAutonomyLevel: "v6" })
     );
   });
+  it("offers the first-game guide to every new world", async () => {
+    await POST(request({ mode: "normal" }));
+    expect(mocks.setSingleplayerConfig).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ guide: {} })
+    );
+  });
+
   it("applies the startup repairs after the reset, before the world opens", async () => {
     expect((await POST(request({ preset: "1991-default" }))).status).toBe(200);
     expect(mocks.applyStartupRepairsAfterReset).toHaveBeenCalledWith(

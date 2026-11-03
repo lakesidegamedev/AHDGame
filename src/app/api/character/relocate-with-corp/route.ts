@@ -42,6 +42,7 @@ import {
   acquireRelocationBondFundingLease,
   hasProtectedRelocationProperty,
   relocationBondSourceSnapshotFilter,
+  relocationTransitionSectors,
   releaseRelocationBondFundingLease,
 } from "@/lib/corporations/relocationBondFunding";
 import {
@@ -179,18 +180,6 @@ export async function POST(request: Request) {
           .collection<CorporateSector>("corporateSectors")
           .find({ corporationId: corp._id })
           .toArray();
-        if (
-          hasProtectedRelocationProperty(
-            propertySectors,
-            corp._id,
-            corp.headquartersRelocationBondFunding
-          )
-        ) {
-          return errorResponse(
-            409,
-            "Resolve secured construction before relocating corporate headquarters"
-          );
-        }
 
         // The CEO may still move alone; taking a private corporation along would
         // found private enterprise inside a command economy.
@@ -254,6 +243,24 @@ export async function POST(request: Request) {
         const oldCurrency = resolveCorpLiquidCurrencyCode(corp);
         const needsCurrencyConversion =
           crossCountry && newCurrency !== undefined && newCurrency !== oldCurrency;
+
+        // A construction loan is secured on its site, which stays where it is when
+        // only the headquarters moves. An in-country or same-currency move leaves
+        // the claimed sector rows untouched, so the loan may keep servicing.
+        const allowFinancedConstructionClaims = !needsCurrencyConversion;
+        if (
+          hasProtectedRelocationProperty(
+            propertySectors,
+            corp._id,
+            corp.headquartersRelocationBondFunding,
+            { allowFinancedConstructionClaims }
+          )
+        ) {
+          return errorResponse(
+            409,
+            "Resolve secured construction before relocating corporate headquarters"
+          );
+        }
 
         // ── No-mutation validations first ──
         let currencyConversion: ConvertCorpCurrencySuccess | null = null;
@@ -343,11 +350,15 @@ export async function POST(request: Request) {
           bondPreflight = postConversionPreflight;
         }
 
+        const transitionSectors = relocationTransitionSectors(
+          propertySectors,
+          allowFinancedConstructionClaims
+        );
         const hqTransitionKeys = needsCurrencyConversion
           ? null
           : await reserveSectorsForTransition(
               db,
-              propertySectors,
+              transitionSectors,
               "headquarters_relocation",
               `headquarters:${corp._id.toHexString()}:${targetState.countryId}:${normalizedTarget}`,
               true
@@ -534,7 +545,7 @@ export async function POST(request: Request) {
         } finally {
           if (hqTransitionKeys) {
             await Promise.all(
-              propertySectors.map((sector, index) =>
+              transitionSectors.map((sector, index) =>
                 releaseConstructionPropertyTransition(db, sector._id, hqTransitionKeys[index])
               )
             );
