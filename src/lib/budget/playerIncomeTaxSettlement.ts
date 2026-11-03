@@ -576,9 +576,11 @@ export async function settlePlayerIncomeTaxAssessments(
     ),
   ]);
   const rates: Record<string, number> = {};
-  if (forexEnabled)
-    for (const quote of await db.collection<ExchangeRate>("exchangeRates").find({}).toArray())
+  if (forexEnabled) {
+    const quotes = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    for (const quote of quotes)
       if (Number.isFinite(quote.rate) && quote.rate > 0) rates[quote.currencyCode] = quote.rate;
+  }
   // Wallets are planned in candidate order so one payer's money cannot fund
   // two assessments in one batch.
   const personal = new Map<string, Record<string, number>>();

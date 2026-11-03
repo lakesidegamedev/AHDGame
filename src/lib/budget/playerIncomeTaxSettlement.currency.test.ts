@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { settlePlayerIncomeTaxAssessments } from "./playerIncomeTaxSettlement";
+import type { PlayerIncomeTaxAssessment } from "@/lib/db/types/incomeTax";
 import { planTaxFunding } from "./rules/playerTaxFunding";
 
 const now = new Date("2026-10-24T00:00:00Z");
@@ -129,7 +130,9 @@ describe("settlePlayerIncomeTaxAssessments funding", () => {
   it("collects only the outstanding remainder of a partially paid assessment", async () => {
     const { db } = fixture([{ collectedFederal: 75, collectedRegional: 25 }]);
     await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, true, 60, true);
-    const a = await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" });
+    const a = await db
+      .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+      .findOne({ _id: "a1" });
     expect(a).toMatchObject({ status: "paid", collectedFederal: 150, collectedRegional: 50 });
     const character = await db.collection("characters").findOne({});
     expect(character?.currencyBalances.personal).toMatchObject({ USD: 0, GBP: 1000 });
@@ -151,9 +154,13 @@ describe("settlePlayerIncomeTaxAssessments funding", () => {
   it("collects a short assessed wallet from another wallet and credits the same tax", async () => {
     const { db } = fixture([{}]);
     await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, true, 60, true);
-    expect((await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" }))?.status).toBe(
-      "paid"
-    );
+    expect(
+      (
+        await db
+          .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+          .findOne({ _id: "a1" })
+      )?.status
+    ).toBe("paid");
     const character = await db.collection("characters").findOne({});
     expect(character?.currencyBalances.personal.USD).toBe(0);
     expect(character?.currencyBalances.personal.GBP).toBe(950);
@@ -195,11 +202,17 @@ describe("settlePlayerIncomeTaxAssessments funding", () => {
       .collection("characters")
       .updateOne({}, { $set: { "currencyBalances.personal.GBP": 0 } });
     await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, false, 60, true);
-    expect((await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" }))?.status).toBe(
-      "unpaid"
-    );
+    expect(
+      (
+        await db
+          .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+          .findOne({ _id: "a1" })
+      )?.status
+    ).toBe("unpaid");
     expect((await db.collection("characters").findOne({}))?.currencyBalances.personal.USD).toBe(0);
-    const assessment = await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" });
+    const assessment = await db
+      .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+      .findOne({ _id: "a1" });
     expect(assessment?.collectedFederal).toBe(75);
     expect(assessment?.collectedRegional).toBe(25);
     expect((await db.collection("federalBudget").findOne({}))?.treasuryBalance).toBe(75);
@@ -210,12 +223,20 @@ describe("settlePlayerIncomeTaxAssessments funding", () => {
       .collection("characters")
       .updateOne({}, { $set: { "currencyBalances.personal.GBP": 60 } });
     await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, false, 60, true);
-    expect((await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" }))?.status).toBe(
-      "paid"
-    );
-    expect((await db.collection("playerIncomeTaxAssessments").findOne({ _id: "b2" }))?.status).toBe(
-      "unpaid"
-    );
+    expect(
+      (
+        await db
+          .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+          .findOne({ _id: "a1" })
+      )?.status
+    ).toBe("paid");
+    expect(
+      (
+        await db
+          .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+          .findOne({ _id: "b2" })
+      )?.status
+    ).toBe("unpaid");
     expect((await db.collection("characters").findOne({}))?.currencyBalances.personal.GBP).toBe(10);
   });
 });
