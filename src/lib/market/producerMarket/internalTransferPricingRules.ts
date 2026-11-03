@@ -5,6 +5,23 @@
  */
 export type InternalTransferPricing = "free" | "cost" | "market";
 
+/** Site management accounts only; economic revenue and profit stay unchanged. */
+export function internalTransferAccount(input: {
+  revenue: number;
+  costs: number;
+  profit: number;
+  income?: number;
+  charge?: number;
+}): { revenue: number; costs: number; profit: number } {
+  const income = Number.isFinite(input.income) ? Math.max(0, input.income ?? 0) : 0;
+  const charge = Number.isFinite(input.charge) ? Math.max(0, input.charge ?? 0) : 0;
+  return {
+    revenue: input.revenue + income,
+    costs: input.costs + charge,
+    profit: input.profit + income - charge,
+  };
+}
+
 export function internalTransferUnitPrice(input: {
   mode?: InternalTransferPricing;
   marketPrice: number;

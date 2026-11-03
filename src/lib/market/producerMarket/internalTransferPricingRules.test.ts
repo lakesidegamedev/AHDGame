@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { internalTransferUnitPrice } from "./internalTransferPricingRules";
+import { internalTransferAccount, internalTransferUnitPrice } from "./internalTransferPricingRules";
 import { settleProducerMarket } from "./rules";
 
 describe("internal transfer pricing", () => {
+  it("allocates site accounts without mutating the economic figures", () => {
+    const supplier = { revenue: 0, costs: 50, profit: -50 };
+    const buyer = { revenue: 1000, costs: 500, profit: 500 };
+    const supplied = internalTransferAccount({ ...supplier, income: 300 });
+    const received = internalTransferAccount({ ...buyer, charge: 300 });
+    expect(supplied).toEqual({ revenue: 300, costs: 50, profit: 250 });
+    expect(received).toEqual({ revenue: 1000, costs: 800, profit: 200 });
+    expect(supplied.profit + received.profit).toBe(supplier.profit + buyer.profit);
+    expect(supplier).toEqual({ revenue: 0, costs: 50, profit: -50 });
+    expect(buyer).toEqual({ revenue: 1000, costs: 500, profit: 500 });
+    expect(internalTransferAccount(supplier)).toEqual(supplier);
+  });
   it("allocates different supplier costs pro rata and keeps outside sales at their posted price", () => {
     const result = settleProducerMarket({
       turn: 1,

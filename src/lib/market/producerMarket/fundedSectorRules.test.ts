@@ -11,31 +11,22 @@ const legacy = { hourlyRevenue: 500, effectiveMargin: 40, costs: 300, hourlyGrow
 const receipt = { revenue: 100, profit: 30, producedUnits: 12.345, soldUnits: 10 };
 
 describe("funded sector result", () => {
-  it("balances internal allocations without charging revenue-based levies on them", () => {
+  it("keeps management allocations out of tax, salary, growth and valuation bases", () => {
     const base = {
       ...legacy,
-      hourlyGrowthCost: 0,
       fundedRegulatoryBurdenRate: 0.1,
-      fundedComplianceCost: 0,
+      fundedSizeCostPp: 5,
+      nameplateHourlyRevenue: 500,
+      nameplateHourlyGrowthCost: 10,
     };
-    const supplier = fundedSectorResult(base, {
-      ...receipt,
-      revenue: 0,
-      profit: 250,
-      internalSupplyIncome: 300,
-    });
-    const buyer = fundedSectorResult(base, {
-      ...receipt,
-      revenue: 1000,
-      profit: 200,
-      internalSupplyCharge: 300,
-    });
-    expect(supplier.hourlyRevenue).toBe(300);
-    expect(supplier.costs).toBe(50);
-    expect(supplier.fundedComplianceCost).toBe(0);
-    expect(buyer.costs).toBe(900);
-    expect(buyer.fundedComplianceCost).toBe(100);
-    expect(supplier.hourlyRevenue + buyer.hourlyRevenue - supplier.costs - buyer.costs).toBe(350);
+    const free = fundedSectorResult(base, receipt);
+    for (const allocations of [
+      { internalSupplyIncome: 300 },
+      { internalSupplyCharge: 300 },
+      { internalSupplyIncome: 20, internalSupplyCharge: 5 },
+    ]) {
+      expect(fundedSectorResult(base, { ...receipt, ...allocations })).toEqual(free);
+    }
   });
   it("takes revenue and producer costs from the receipt and keeps growth spend", () => {
     const r = fundedSectorResult(legacy, receipt);
@@ -81,7 +72,7 @@ describe("funded sector ops", () => {
   ];
 
   it("persists internal allocations on the same daily money basis as the site P&L", () => {
-    const priced = { ...receipt, internalSupplyIncome: 20, internalSupplyCharge: 5, profit: 45 };
+    const priced = { ...receipt, internalSupplyIncome: 20, internalSupplyCharge: 5 };
     const result = fundedSectorResult(legacy, priced);
     const out = fundedSectorOps(ops, "s1", priced, result, (a) => a * 24, 24);
     expect(out[0].updateOne.update.$set).toMatchObject({

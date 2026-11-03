@@ -99,8 +99,10 @@ describe("internal supply accounting", () => {
       });
       expect(priced.accounts).toEqual(free.accounts);
       expect(
-        priced.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow])
-      ).toEqual(free.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow]));
+        priced.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow, p.profit])
+      ).toEqual(
+        free.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow, p.profit])
+      );
       const income = priced.producers.reduce((n, p) => n + (p.internalSupplyIncome ?? 0), 0);
       const charge = priced.producers.reduce((n, p) => n + (p.internalSupplyCharge ?? 0), 0);
       expect(income).toBeGreaterThan(0);
@@ -110,7 +112,7 @@ describe("internal supply accounting", () => {
         8
       );
       expect(priced.producers.find((p) => p.id === "energy")!.profit).toBeCloseTo(
-        free.producers.find((p) => p.id === "energy")!.profit + income,
+        free.producers.find((p) => p.id === "energy")!.profit,
         8
       );
     }

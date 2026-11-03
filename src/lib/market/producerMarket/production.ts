@@ -1455,9 +1455,7 @@ export function advanceProducerEconomy(input: {
       arrearsPaid,
       closingArrears,
       profit:
-        revenue +
-        internalSupplyIncome -
-        internalSupplyCharge -
+        revenue -
         consumed -
         minorInputPremium -
         inventoryWriteOff -

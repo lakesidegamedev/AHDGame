@@ -89,20 +89,16 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
 ): T {
-  const externalRevenue = Math.max(0, finite(r.revenue));
-  const internalIncome = Math.max(0, finite(r.internalSupplyIncome ?? 0));
-  const internalCharge = Math.max(0, finite(r.internalSupplyCharge ?? 0));
-  const revenue = externalRevenue + internalIncome;
-  const producerCosts =
-    Math.max(0, externalRevenue - finite(r.profit) + internalIncome - internalCharge) +
-    internalCharge;
-  const growthCost = fundedGrowthCost(legacy, externalRevenue);
-  const compliance = externalRevenue * Math.max(0, finite(legacy.fundedRegulatoryBurdenRate ?? 0));
+  // Management allocations stay out of economic revenue, tax and valuation bases.
+  const revenue = Math.max(0, finite(r.revenue));
+  const producerCosts = Math.max(0, revenue - finite(r.profit));
+  const growthCost = fundedGrowthCost(legacy, revenue);
+  const compliance = revenue * Math.max(0, finite(legacy.fundedRegulatoryBurdenRate ?? 0));
   const costs =
     producerCosts +
     growthCost +
     compliance +
-    (externalRevenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
+    (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
   return {
     ...legacy,
     hourlyRevenue: revenue,
