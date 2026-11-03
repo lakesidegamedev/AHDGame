@@ -25,6 +25,38 @@ describe("otherSpendingParts", () => {
     ]);
   });
 
+  it("itemises nothing when live law costs sum past the booked line", () => {
+    expect(
+      otherSpendingParts({
+        total: 1_000,
+        laws: [
+          { title: "Space Programme Act", amount: 700 },
+          { title: "Small Grants Act", amount: 400 },
+        ],
+      })
+    ).toEqual([]);
+  });
+
+  it("itemises nothing when a law saves money, since positive rows could not add up", () => {
+    expect(
+      otherSpendingParts({
+        total: 1_000,
+        laws: [
+          { title: "Space Programme Act", amount: 300 },
+          { title: "Efficiency Act", amount: -50 },
+        ],
+      })
+    ).toEqual([]);
+  });
+
+  it("never shows a negative part", () => {
+    const parts = otherSpendingParts({
+      total: 1_000,
+      laws: [{ title: "Space Programme Act", amount: 1_000.4 }],
+    });
+    expect(parts.every((p) => p.amount > 0)).toBe(true);
+  });
+
   it("adds up to the line it explains", () => {
     const parts = otherSpendingParts({
       total: 777,

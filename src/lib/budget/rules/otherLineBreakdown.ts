@@ -41,12 +41,19 @@ export function otherSpendingParts(input: {
   laws: readonly { title: string; amount: number | null | undefined }[];
 }): OtherLinePart[] {
   if (!isPositive(input.total)) return [];
+  // A law that saves money books a negative cost into the line, and a list of
+  // positive rows plus a remainder could not show that honestly. Say nothing.
+  if (input.laws.some((l) => typeof l.amount === "number" && l.amount < 0)) return [];
   const laws = input.laws
     .filter((l): l is { title: string; amount: number } => isPositive(l.amount))
     .map((l) => ({ label: l.title, amount: l.amount }))
     .sort((a, b) => b.amount - a.amount);
   const lawTotal = laws.reduce((s, l) => s + l.amount, 0);
   const remainder = input.total - lawTotal;
+  // The line was booked at the last budget refresh and the page prices laws
+  // live, so after the economy moves the laws can sum past the line. Rows that
+  // overshoot the line they explain are wrong, so itemise nothing then.
+  if (remainder < -input.total * RESIDUAL_FLOOR_SHARE) return [];
   const parts: OtherLinePart[] = [...laws];
   if (remainder > input.total * RESIDUAL_FLOOR_SHARE)
     parts.push({

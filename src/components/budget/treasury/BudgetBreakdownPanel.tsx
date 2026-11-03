@@ -353,7 +353,11 @@ export function BudgetBreakdownPanel({
                     </div>
                   )}
 
-                  {/* A spending line with parts already itemises its laws with amounts. */}
+                  {/* A spending line with parts already itemises its laws with
+                      amounts. The parts leave grant laws out (they book into
+                      state grants, not this line) while these chips include
+                      them, so a snapshot, which has no parts, still lists
+                      grants here. Keep both filters in step if either changes. */}
                   {l.laws && l.laws.length > 0 && !(!isRev && l.parts && l.parts.length > 0) && (
                     <div className="mt-2.5">
                       <div className="mb-1 text-body-sm font-medium text-muted">
