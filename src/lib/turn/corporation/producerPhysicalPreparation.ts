@@ -73,6 +73,11 @@ import {
 import { energyProductivityMultiplier } from "@/lib/corporations/rules/energyProductivityRamp";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
+import {
+  WAGE_SHARE_DEFAULT_SURPLUS_CAP,
+  wageShareLabourCost,
+  type WageShareReceipt,
+} from "@/lib/market/producerMarket/wageShareRules";
 import { prepareProducerSector } from "./producerSectorPlan";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
 import {
@@ -112,6 +117,10 @@ export type ProducerPhysicalEnv = Pick<
   fiscalScaleStage?: number;
   /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */
   procurementSpillShare?: number;
+  /** gameConfig.producerWageShareStage target: wage share of value added a plant moves toward (0 or absent = off). */
+  wageShareTarget?: number;
+  /** gameConfig.producerWageShareSurplusCap: largest share of surplus after base wages the raise takes. */
+  wageShareSurplusCap?: number;
   /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
   runPaceDrop?: number;
   /** gameConfig.producerHouseholdIncomeFloor: target household income per turn, anchor (0 or absent = off). */
@@ -590,7 +599,17 @@ export function prepareProducerPhysicalSector(input: {
           sector.nationalizationTransitionMultiplier ?? 1
         )
       : 1);
-  plan.labourCost = payroll.sectorLaborCost;
+  // Wage share stage: wages rise toward a share of last turn's value added (wageShareRules).
+  plan.labourCost =
+    (env.wageShareTarget ?? 0) > 0
+      ? wageShareLabourCost({
+          baseLabourCost: payroll.sectorLaborCost,
+          fullRunUnits: plan.capacityUnits * plan.activeFraction * plan.outputMultiplier,
+          last: settledLast as WageShareReceipt | null,
+          targetShare: env.wageShareTarget ?? 0,
+          surplusCap: env.wageShareSurplusCap ?? WAGE_SHARE_DEFAULT_SURPLUS_CAP,
+        })
+      : payroll.sectorLaborCost;
   const siteBill = (activeFraction: number) =>
     standingProducerSiteBill({
       nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
