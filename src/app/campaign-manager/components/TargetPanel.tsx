@@ -240,6 +240,9 @@ export function TargetPanel({
             {t("openMyMoves")}
           </button>
         </div>
+      ) : !url ? (
+        // No profile to act through (a character record that is gone).
+        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("noProfile")}</p>
       ) : current === undefined ? (
         <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("working")}</p>
       ) : current === null ? (

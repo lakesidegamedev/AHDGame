@@ -163,6 +163,20 @@ describe("TargetPanel", () => {
     ).toBeTruthy();
   });
 
+  it("says so, instead of loading forever, for a candidate with no profile", () => {
+    renderWithElectionsMessages(
+      <TargetPanel
+        race={race}
+        candidate={{ ...pruitt, characterDbId: null }}
+        onActed={() => {}}
+        onShowMyMoves={() => {}}
+      />
+    );
+    expect(screen.getByText("No actions are available for this candidate.")).toBeTruthy();
+    expect(screen.queryByText("Working")).toBeNull();
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+
   it("offers no actions on the player's own row", () => {
     const onShowMyMoves = vi.fn();
     renderWithElectionsMessages(
