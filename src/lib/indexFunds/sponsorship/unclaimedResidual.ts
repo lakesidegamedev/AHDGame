@@ -18,7 +18,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { emitTx } from "@/lib/financialTxLog/emit";
 
-export type UnclaimedFundReason = "sponsor_missing" | "corporate_holder_missing";
+export type UnclaimedFundReason = "sponsor_missing" | "corporate_holder_missing" | "holder_missing";
 
 export interface UnclaimedFundDestination {
   countryId: CountryId;

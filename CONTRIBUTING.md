@@ -15,7 +15,7 @@ Issues labeled `good-first-issue` are verified and scoped.
 
 ## What needs an issue first
 
-- **Balance changes.** Economy constants, election math, demographic weights, action costs. These merge only with a simulation report from `scripts/sim/`. A PR that changes balance constants without one gets closed with a request for one.
+- **Balance changes.** Economy constants, election math, demographic weights, action costs. Back them with deterministic rules and accounting tests, a turn-cost measurement when the turn path changes, and current read-only numbers from the live world. A world simulation is not required; the maintainer runs one only when a specific question needs it. New balance behavior ships behind a stage or flag that defaults off where practical, so it can be switched on and rolled back without a deploy.
 - **New mechanics.** The game has a design direction; talk before you build.
 - **Schema changes.** Anything in `src/lib/db/types` affects a live production database and needs a migration plan.
 
@@ -40,19 +40,19 @@ Code layout in one minute: `src/app/api/**` are thin route handlers (auth guard,
 
 Persisted state must have a reset policy. `npm run architecture:contracts` checks collection lifecycle entries, GameState reset writes or named preservation reasons, region state and political or macro metric field coverage, and bootstrap index coverage. Optional seed writes do not prove that a field resets when a different preset omits it. New world collections need a seed index plan or a reviewed primary-key policy. The same command flags new direct Mongo operations inside turn loops; collect ids and batch reads and writes. Frozen legacy boundaries record existing debt and must not be regenerated to approve new violations. Explain any necessary lifecycle or concurrency exception in the PR.
 
-## Select simulation evidence by change risk
+## Select evidence by change risk
 
-These checks select relevant simulation evidence. The required verify, build,
-security and dependency gates above still apply. Balance changes still require
-a report from `scripts/sim/`.
+These checks select relevant evidence. The required verify, build, security and
+dependency gates above still apply. World simulations are optional: no PR waits
+on one unless the maintainer asks for it.
 
 | Change                                        | Minimum relevant qualification                                                                     | Escalation                                                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Copy or isolated UI behavior                  | Focused behavior check and existing merge gates                                                    | World simulation when gameplay semantics change                                 |
-| Rules or formula                              | Deterministic rules and accounting tests; simulation report for balance changes                    | Longer trajectory when feedback or accumulation matters                         |
+| Copy or isolated UI behavior                  | Focused behavior check and existing merge gates                                                    | Wider behavior check when gameplay semantics change                             |
+| Rules or formula                              | Deterministic rules and accounting tests; live read-only numbers for balance changes               | Longer trajectory when feedback or accumulation matters                         |
 | Phase I/O or performance                      | Same-state before/after replay, preserved outputs and invariants, command/byte/memory measurements | Integrated smoke when order, writes, retries or cross-phase dependencies change |
 | Scheduler, seed, migration or multiple phases | Bounded integrated replay on the relevant isolated state                                           | Longer campaign when unresolved effects span turns                              |
-| New economic feedback or long-horizon balance | Experiment with question, baseline, state, metrics and horizon                                     | Long simulation remains necessary; insufficient budget means unqualified        |
+| New economic feedback or long-horizon balance | Experiment with question, baseline, state, metrics and horizon                                     | World simulation only when the maintainer requests one                          |
 
 For a change-aware world plan, copy `scripts/sim/worldsim-plan.example.json`,
 replace the placeholder source commits/worktree names, and state the question,
@@ -179,6 +179,6 @@ An undisclosed conflict found later is grounds to revert the change and remove c
 
 ## Review
 
-The maintainer reviews every PR. Balance and economy paths get extra scrutiny and may require a worldsim run. Feature PRs squash merge into `development`; your PR title becomes the commit message, so write it like one. The maintainer promotes `development` to `staging` to `main` with merge commits.
+The maintainer reviews every PR. Balance and economy paths get extra scrutiny; a world simulation is run only when the maintainer asks for one. Feature PRs squash merge into `development`; your PR title becomes the commit message, so write it like one. The maintainer promotes `development` to `staging` to `main` with merge commits.
 
 By contributing you agree your contribution is licensed under [PolyForm Noncommercial 1.0.0](./LICENSE.md) and that Lakeside Games may use it in the hosted game.

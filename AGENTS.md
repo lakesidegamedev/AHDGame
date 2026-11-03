@@ -136,8 +136,8 @@ scripts/perf/trace-callsites.ts`. For CPU: `--profile out.cpuprofile`.
 
 Balance changes (economy constants, election math, demographic weights, action
 costs), new mechanics, and schema changes under `src/lib/db/types`. Balance
-changes merge only with a simulation report from `scripts/sim/`. See
-CONTRIBUTING.md for the full policy.
+changes need rules tests and live read-only evidence; a world simulation is
+not a merge requirement. See CONTRIBUTING.md for the full policy.
 
 ## Keep touched issues current
 
