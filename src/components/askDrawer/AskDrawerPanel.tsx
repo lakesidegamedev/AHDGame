@@ -39,6 +39,7 @@ import {
   type AskProposedAction,
   type AskUsage,
 } from "@/components/askDrawer/askDrawerApi";
+import { recoverFinishedAnswer } from "@/components/askDrawer/askRecovery";
 import {
   capturePageContext,
   pageLabel,
@@ -104,6 +105,8 @@ interface Turn {
   answerId: number | null;
   usedMcp: boolean;
   error: string | null;
+  /** The answer could not be recovered after a dropped connection; offer Retry. */
+  retryable: boolean;
   upgrade: AskUpgradeOffer | null;
   feedback: "up" | "down" | null;
   /** The research steps Ask narrated while it worked, and how long it took. */
@@ -132,6 +135,7 @@ function newTurn(question: string): Turn {
     answerId: null,
     usedMcp: false,
     error: null,
+    retryable: false,
     upgrade: null,
     feedback: null,
     trail: [],
@@ -467,6 +471,7 @@ function TurnView({
   fullAskUrl,
   canShare,
   onFollowup,
+  onRetry,
   onFeedback,
   onShare,
   onFiled,
@@ -476,6 +481,7 @@ function TurnView({
   fullAskUrl: string;
   canShare: boolean;
   onFollowup: (question: string) => void;
+  onRetry: (turn: Turn) => void;
   onFeedback: (turn: Turn, rating: "up" | "down", reason?: string) => void;
   onShare: () => Promise<string | null>;
   onFiled: (receipt: AskActionReceipt) => void;
@@ -651,6 +657,11 @@ function TurnView({
         </div>
       )}
       {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
+      {turn.error && turn.retryable && (
+        <button type="button" onClick={() => onRetry(turn)} className={ROUND_BUTTON}>
+          Retry
+        </button>
+      )}
       {turn.upgrade && <AskUpgradeCard offer={turn.upgrade} />}
       {settled && turn.proposedAction && (
         <AskActionCard action={turn.proposedAction} onFiled={onFiled} />
@@ -1051,6 +1062,7 @@ export function AskDrawerPanel({
         answerId: Number(d.answerId || d.id || 0) || null,
         usedMcp: !!d.usedMcp,
         error: d.stopped ? "Stopped. This did not use any energy." : (d.error ?? null),
+        retryable: false,
         upgrade: d.quota ? (d.upgrade ?? null) : null,
         extras: {
           vizBlocked: d.vizBlocked,
@@ -1141,11 +1153,29 @@ export function AskDrawerPanel({
             }
           }
         );
+        let payload = result.payload;
+        let lost = false;
+        const savedConv = result.convId ?? convId ?? undefined;
+        if (result.dropped && !payload && savedConv) {
+          // The stream died, but Ask may still be finishing. Look for the saved answer.
+          updateTurn(turn.key, { status: "Reconnecting..." });
+          payload = await recoverFinishedAnswer({
+            convId: savedConv,
+            question: q.slice(0, MAX_QUESTION),
+            knownAnswerIds: new Set(
+              turns.map((t) => t.answerId).filter((id): id is number => id !== null)
+            ),
+            signal: controller.signal,
+          });
+        }
+        if (!payload && controller.signal.aborted) payload = { stopped: true };
+        else if (!payload) lost = true;
         updateTurn(turn.key, { elapsedMs: Date.now() - startedAt });
         applyFinal(
           turn.key,
-          result.payload ?? { error: "Ask did not finish that answer. It did not use any energy." }
+          payload ?? { error: "Ask lost the connection before that answer finished." }
         );
+        if (lost) updateTurn(turn.key, { retryable: true });
       } catch (error) {
         applyFinal(
           turn.key,
@@ -1162,7 +1192,16 @@ export function AskDrawerPanel({
         lastActivityRef.current = Date.now();
       }
     },
-    [applyFinal, busy, convId, mode, question, sharePage, updateTurn]
+    [applyFinal, busy, convId, mode, question, sharePage, turns, updateTurn]
+  );
+
+  const retry = useCallback(
+    (failed: Turn) => {
+      if (busy) return;
+      setTurns((all) => all.filter((t) => t.key !== failed.key));
+      void submit(failed.question);
+    },
+    [busy, submit]
   );
 
   const stop = useCallback(() => {
@@ -1634,6 +1673,7 @@ export function AskDrawerPanel({
                 fullAskUrl={fullAskUrl}
                 canShare={!!convId && !t.streaming}
                 onFollowup={(f) => void submit(f)}
+                onRetry={retry}
                 onFeedback={feedback}
                 onShare={shareThread}
                 onFiled={filed}
