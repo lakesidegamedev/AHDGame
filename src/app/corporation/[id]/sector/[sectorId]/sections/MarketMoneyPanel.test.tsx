@@ -182,12 +182,15 @@ it("shows the internal input credit as a named signed line in the plant account"
 });
 
 it("names own-site charges and identifies allocated income already included in revenue", () => {
+  function withAllocations(base: PlantsData): PlantsData {
+    return {
+      ...base,
+      pnl: { ...base.pnl, internalSupplyIncomeAnchor: 100, internalSupplyChargeAnchor: 50 },
+    };
+  }
   render(
     <MarketMoneyPanel
-      plants={{
-        ...plants,
-        pnl: { ...plants.pnl, internalSupplyIncomeAnchor: 100, internalSupplyChargeAnchor: 50 },
-      }}
+      plants={withAllocations(plants)}
       sectorType="manufacturing"
       financials={null}
       corporation={{ _id: "fixture", name: "Synthetic producer" }}

@@ -12,7 +12,12 @@ const receipt = { revenue: 100, profit: 30, producedUnits: 12.345, soldUnits: 10
 
 describe("funded sector result", () => {
   it("balances internal allocations without charging revenue-based levies on them", () => {
-    const base = { ...legacy, hourlyGrowthCost: 0, fundedRegulatoryBurdenRate: 0.1 };
+    const base = {
+      ...legacy,
+      hourlyGrowthCost: 0,
+      fundedRegulatoryBurdenRate: 0.1,
+      fundedComplianceCost: 0,
+    };
     const supplier = fundedSectorResult(base, {
       ...receipt,
       revenue: 0,
