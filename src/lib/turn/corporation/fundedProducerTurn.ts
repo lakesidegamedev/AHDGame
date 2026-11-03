@@ -50,7 +50,10 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
-import { fundedDemandThrottle } from "@/lib/market/producerMarket/fundedSectorRules";
+import {
+  fundedDemandThrottle,
+  fundedInputThroughput,
+} from "@/lib/market/producerMarket/fundedSectorRules";
 import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
@@ -819,6 +822,8 @@ export async function runFundedProducerTurn(
   const receiptsBySectorId = new Map<string, FundedReceipt>();
   // AI saturation reads `demandThrottleFactor`; funded turns write it here.
   const throttleBySectorId = new Map<string, number>();
+  // The input gauge the sector page, trace tools and NPP supply deals read.
+  const throughputBySectorId = new Map<string, ReturnType<typeof fundedInputThroughput>>();
   // Sectors whose plant delivered to its own company's sites (captiveDeliveryStage).
   const captiveOn = (input.env.captiveDeliveryStage ?? 0) >= 1;
   const offtakeBySectorId = new Map<string, number>();
@@ -853,6 +858,7 @@ export async function runFundedProducerTurn(
         sector._id.toHexString(),
         fundedDemandThrottle(r.soldUnits, r.offeredUnits)
       );
+      throughputBySectorId.set(sector._id.toHexString(), fundedInputThroughput(r));
     }
   }
   // Consecutive zero-sales turns per settled sector (AI mothballing reads it),
@@ -866,6 +872,7 @@ export async function runFundedProducerTurn(
       ? (offtakeBySectorId.get(id) ?? receipt.soldUnits)
       : receipt.soldUnits;
     const throttle = throttleBySectorId.get(id) ?? 1;
+    const throughput = throughputBySectorId.get(id) ?? fundedInputThroughput(null);
     // Only output that found no buyer is a demand signal. A plant that made
     // nothing (no cash, no inputs, capacity not landed yet) holds its streak,
     // so AI mothballing does not park plants that were never able to sell.
@@ -874,13 +881,15 @@ export async function runFundedProducerTurn(
         filter: { _id: new ObjectId(id) },
         update:
           soldUnits > 0
-            ? { $set: { demandThrottleFactor: throttle, producerZeroSalesTurns: 0 } }
+            ? {
+                $set: { demandThrottleFactor: throttle, ...throughput, producerZeroSalesTurns: 0 },
+              }
             : receipt.producedUnits > 0
               ? {
                   $inc: { producerZeroSalesTurns: 1 },
-                  $set: { demandThrottleFactor: throttle },
+                  $set: { demandThrottleFactor: throttle, ...throughput },
                 }
-              : { $set: { demandThrottleFactor: throttle } },
+              : { $set: { demandThrottleFactor: throttle, ...throughput } },
       },
     });
   }
@@ -904,6 +913,8 @@ export async function runFundedProducerTurn(
               producerCapacity: { worldEpoch, turn },
               "producerInventory.worldEpoch": worldEpoch,
               "producerInventory.turn": turn,
+              // Nothing ran, so no input bound; the legacy gauge no longer writes it.
+              ...fundedInputThroughput(null),
             },
           },
         },
