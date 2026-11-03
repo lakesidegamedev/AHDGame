@@ -159,6 +159,35 @@ describe("index fund cron missed rebalance", () => {
     expect(result.rebalances).toBe(0);
   }, 120_000);
 
+  it("does not warn when a fund that rebalanced yesterday is held for one slot", async () => {
+    const w = world();
+    const staggerTurn = TURNS_PER_DAY * 10 + staggerPhase(String(w.fund._id), TURNS_PER_DAY);
+    // Due again on its slot, but it has not yet missed a whole day: the queue
+    // pays down this turn and the catch-up turn rebalances it.
+    const yesterday = new Date(Date.now() - (TURNS_PER_DAY + 2) * 60 * 60_000);
+    await w.db
+      .collection("indexFunds")
+      .updateOne({ _id: w.fund._id }, { $set: { lastRebalancedAt: yesterday } });
+    await w.db.collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue").insertOne({
+      _id: new ObjectId(),
+      fundId: w.fund._id,
+      holderKind: "npp",
+      nppId: w.npp._id,
+      units: 10,
+      requestedNavAnchor: 100,
+      requestedAmountAnchor: 1_000,
+      paidAmountAnchor: 0,
+      status: "queued",
+      unitsBurnedAtRequest: true,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+
+    const held = await runIndexFundCron(w.db, { currentTurn: staggerTurn });
+    expect(held.rebalances).toBe(0);
+    expect(held.errors).toEqual([]);
+  }, 120_000);
+
   it("warns on the fund's stagger turn only while a queued redemption blocks later catch-up turns", async () => {
     const w = world();
     const staggerTurn = TURNS_PER_DAY * 10 + staggerPhase(String(w.fund._id), TURNS_PER_DAY);

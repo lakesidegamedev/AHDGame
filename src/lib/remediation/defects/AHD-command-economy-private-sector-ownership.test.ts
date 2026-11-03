@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { describe, expect, it } from "vitest";
 import { queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
 import {
@@ -111,5 +111,20 @@ describe("command-economy ownership repair registration", () => {
     expect(defect.guards).toContain("money-conserving");
     expect(defect.codeFix?.requiredCommit).toBe("23c23601254109f382085bca00f85ccd38149545");
     expect(defect.seedFix.status).toBe("fixed");
+  });
+});
+
+describe("command-economy ownership repair after a world reset", () => {
+  it("reports nothing to heal when none of the audited records exist", async () => {
+    const emptyCollection = {
+      find: () => ({ toArray: async () => [] }),
+      findOne: async () => null,
+    };
+    const db = { collection: () => emptyCollection } as unknown as Db;
+
+    const result = await defect.detect(db);
+
+    expect(result.affected).toBe(0);
+    expect(result.sample).toEqual([]);
   });
 });
