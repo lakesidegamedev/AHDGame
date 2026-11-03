@@ -3,10 +3,16 @@ import type { Metadata } from "next";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { loadCountryNameOverrides } from "@/lib/country/countryIdentity";
+import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { ObjectId } from "mongodb";
 import type { Election, State } from "@/lib/db/types";
 import { campaignManagerCountry, presidentialRedirect } from "@/lib/campaignManager/links";
 import { parseCampaignManagerParams } from "@/lib/campaignManager/linkParams";
+import {
+  campaignManagerCountryView,
+  type CountryRuntimeState,
+} from "@/lib/campaignManager/countryView";
 import CampaignManagerClient from "./CampaignManagerClient";
 
 export const metadata: Metadata = { title: "Campaign Manager" };
@@ -46,29 +52,32 @@ export default async function CampaignManagerPage({
   // Any country's races can be viewed: a linked race opens in its own country.
   const wanted = campaignManagerCountry(homeCountryId, linked, countryParam) as CountryId;
   const countryId = getCountryConfig(wanted) ? wanted : homeCountryId;
-  const config = getCountryConfig(countryId);
-  const regions = await db
-    .collection<State>("states")
-    .find({ countryId }, { projection: { _id: 1, name: 1 } })
-    .toArray();
+  const [regions, preset, countryState, nameOverrides] = await Promise.all([
+    db
+      .collection<State>("states")
+      .find({ countryId }, { projection: { _id: 1, name: 1 } })
+      .toArray(),
+    getGameStatePreset(db),
+    db
+      .collection<{ _id: string } & NonNullable<CountryRuntimeState>>("countryGameStates")
+      .findOne({ _id: countryId }),
+    loadCountryNameOverrides(db),
+  ]);
+  const view = campaignManagerCountryView(countryId, preset, countryState, nameOverrides);
   const regionNames = Object.fromEntries(
     regions.map((r) => [String(r._id), r.name ?? String(r._id)])
   );
-  const nationalChamberKeys = [
-    config.legislature?.lowerChamber?.key,
-    config.legislature?.upperChamber?.key,
-  ].filter((k): k is string => !!k);
 
   return (
     <CampaignManagerClient
       // A new country is a new page: type, region and selection start over.
       key={countryId}
       countryId={countryId}
-      countryName={config.name}
-      regionNoun={config.regionLabel ?? "Region"}
-      regionNounPlural={config.regionLabelPlural ?? "Regions"}
+      countryName={view.countryName}
+      regionNoun={view.regionNoun}
+      regionNounPlural={view.regionNounPlural}
       regionNames={regionNames}
-      nationalChamberKeys={nationalChamberKeys}
+      nationalChamberKeys={view.nationalChamberKeys}
       characterId={String(character._id)}
       homeRegionId={character.homeState ?? null}
       initialRaceKey={race}

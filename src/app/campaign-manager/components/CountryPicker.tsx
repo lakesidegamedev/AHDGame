@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BlendSelect } from "@/components/blend/BlendControls";
 import { useCountryDisplayName, useEnabledCountries } from "@/contexts/RegisteredCountriesContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
 import { EYEBROW } from "../ui";
 
