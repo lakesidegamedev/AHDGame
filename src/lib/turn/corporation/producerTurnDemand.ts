@@ -20,9 +20,9 @@ import {
   carryLineKey,
   publicOrderId,
   withCarriedLines,
-  releaseCarriedLines,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { releaseCarriedLines } from "@/lib/market/rules/publicCarryRelease";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";

@@ -7,10 +7,9 @@ import {
   carryLineKey,
   carryTotal,
   nextLineCarry,
-  releaseCarriedLines,
   withCarriedLines,
-  withHeldCarry,
 } from "./publicCarryRules";
+import { releaseCarriedLines, withHeldCarry } from "@/lib/market/rules/publicCarryRelease";
 
 const order = (id: string, budget: number, fresh = budget) => ({
   id,
@@ -118,5 +117,19 @@ describe("carry release (issue #5448)", () => {
     }
     expect(Math.max(...spent)).toBe(150);
     expect(spent.filter((x) => x > 100)).toHaveLength(6);
+  });
+});
+
+describe("carry release bounds (review of #5475)", () => {
+  const key = carryLineKey("construction_services", "world");
+  const line = { commodity: "construction_services", book: "world", amountLocal: 100 };
+
+  it("never releases more than the whole fresh outlay a turn", () => {
+    const { lines } = releaseCarriedLines([line], { [key]: 400 }, 2);
+    expect(lines[0]!.amountLocal).toBe(200);
+  });
+
+  it("drops held carry for a line that no longer exists", () => {
+    expect(withHeldCarry({}, { [key]: 50 }, new Map())).toEqual({});
   });
 });

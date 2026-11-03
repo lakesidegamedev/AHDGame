@@ -83,10 +83,10 @@ import {
   carryLineKey,
   carryTotal,
   nextLineCarry,
-  withHeldCarry,
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { withHeldCarry } from "@/lib/market/rules/publicCarryRelease";
 import {
   offtakeUnits,
   type CaptiveProduct,
