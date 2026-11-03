@@ -270,6 +270,7 @@ export default function PlantPanel({
               capacityUnits={plants.capacityUnits ?? 0}
               producedUnits={plants.producedUnits ?? 0}
               soldUnits={plants.soldUnits ?? 0}
+              ownSiteUnits={plants.ownSiteUnits ?? 0}
               idleCauses={plants.idleCauses}
               sectorType={sectorType}
               localMarketOutputs={plants.localMarketOutputs}
