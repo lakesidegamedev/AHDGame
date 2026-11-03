@@ -39,6 +39,8 @@ import {
   type AskProposedAction,
   type AskUsage,
 } from "@/components/askDrawer/askDrawerApi";
+import { AskLengthSelect, useAskLength } from "@/components/askDrawer/askLength";
+import { recoverFinishedAnswer } from "@/components/askDrawer/askRecovery";
 import {
   capturePageContext,
   pageLabel,
@@ -104,6 +106,8 @@ interface Turn {
   answerId: number | null;
   usedMcp: boolean;
   error: string | null;
+  /** The answer could not be recovered after a dropped connection; offer Retry. */
+  retryable: boolean;
   upgrade: AskUpgradeOffer | null;
   feedback: "up" | "down" | null;
   /** The research steps Ask narrated while it worked, and how long it took. */
@@ -132,6 +136,7 @@ function newTurn(question: string): Turn {
     answerId: null,
     usedMcp: false,
     error: null,
+    retryable: false,
     upgrade: null,
     feedback: null,
     trail: [],
@@ -467,6 +472,7 @@ function TurnView({
   fullAskUrl,
   canShare,
   onFollowup,
+  onRetry,
   onFeedback,
   onShare,
   onFiled,
@@ -476,6 +482,7 @@ function TurnView({
   fullAskUrl: string;
   canShare: boolean;
   onFollowup: (question: string) => void;
+  onRetry: (turn: Turn) => void;
   onFeedback: (turn: Turn, rating: "up" | "down", reason?: string) => void;
   onShare: () => Promise<string | null>;
   onFiled: (receipt: AskActionReceipt) => void;
@@ -545,11 +552,6 @@ function TurnView({
               <p className="ask-shimmer truncate text-[14px] text-foreground">
                 {turn.status || turn.trail.at(-1) || "Working"}
               </p>
-              {steps > 0 && (
-                <p className="text-[12px] text-muted">
-                  {steps} step{steps === 1 ? "" : "s"}
-                </p>
-              )}
             </div>
             {steps > 0 && (
               <button
@@ -558,7 +560,7 @@ function TurnView({
                 aria-expanded={stepsOpen}
                 className="shrink-0 text-[12px] text-muted hover:text-foreground"
               >
-                {stepsOpen ? "Hide" : "Show"}
+                {stepsOpen ? "Hide" : `Show ${steps}`}
               </button>
             )}
           </div>
@@ -651,6 +653,11 @@ function TurnView({
         </div>
       )}
       {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
+      {turn.error && turn.retryable && (
+        <button type="button" onClick={() => onRetry(turn)} className={ROUND_BUTTON}>
+          Retry
+        </button>
+      )}
       {turn.upgrade && <AskUpgradeCard offer={turn.upgrade} />}
       {settled && turn.proposedAction && (
         <AskActionCard action={turn.proposedAction} onFiled={onFiled} />
@@ -925,6 +932,7 @@ export function AskDrawerPanel({
   const [convId, setConvId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<ModeId>("auto");
+  const [length, setLength] = useAskLength();
   const [sharePage, setSharePage] = useState(true);
   const [page, setPage] = useState<AskPageContext | null>(null);
   const [usage, setUsage] = useState<AskUsage | null>(null);
@@ -1051,6 +1059,7 @@ export function AskDrawerPanel({
         answerId: Number(d.answerId || d.id || 0) || null,
         usedMcp: !!d.usedMcp,
         error: d.stopped ? "Stopped. This did not use any energy." : (d.error ?? null),
+        retryable: false,
         upgrade: d.quota ? (d.upgrade ?? null) : null,
         extras: {
           vizBlocked: d.vizBlocked,
@@ -1105,6 +1114,7 @@ export function AskDrawerPanel({
             clientReqId: reqId,
             convId: convId ?? undefined,
             mode,
+            length,
             // Ask reads live game data whenever the question needs it.
             useMcp: true,
             visualizations: true,
@@ -1141,11 +1151,29 @@ export function AskDrawerPanel({
             }
           }
         );
+        let payload = result.payload;
+        let lost = false;
+        const savedConv = result.convId ?? convId ?? undefined;
+        if (result.dropped && !payload && savedConv) {
+          // The stream died, but Ask may still be finishing. Look for the saved answer.
+          updateTurn(turn.key, { status: "Reconnecting..." });
+          payload = await recoverFinishedAnswer({
+            convId: savedConv,
+            question: q.slice(0, MAX_QUESTION),
+            knownAnswerIds: new Set(
+              turns.map((t) => t.answerId).filter((id): id is number => id !== null)
+            ),
+            signal: controller.signal,
+          });
+        }
+        if (!payload && controller.signal.aborted) payload = { stopped: true };
+        else if (!payload) lost = true;
         updateTurn(turn.key, { elapsedMs: Date.now() - startedAt });
         applyFinal(
           turn.key,
-          result.payload ?? { error: "Ask did not finish that answer. It did not use any energy." }
+          payload ?? { error: "Ask lost the connection before that answer finished." }
         );
+        if (lost) updateTurn(turn.key, { retryable: true });
       } catch (error) {
         applyFinal(
           turn.key,
@@ -1162,7 +1190,16 @@ export function AskDrawerPanel({
         lastActivityRef.current = Date.now();
       }
     },
-    [applyFinal, busy, convId, mode, question, sharePage, updateTurn]
+    [applyFinal, busy, convId, length, mode, question, sharePage, turns, updateTurn]
+  );
+
+  const retry = useCallback(
+    (failed: Turn) => {
+      if (busy) return;
+      setTurns((all) => all.filter((t) => t.key !== failed.key));
+      void submit(failed.question);
+    },
+    [busy, submit]
   );
 
   const stop = useCallback(() => {
@@ -1634,6 +1671,7 @@ export function AskDrawerPanel({
                 fullAskUrl={fullAskUrl}
                 canShare={!!convId && !t.streaming}
                 onFollowup={(f) => void submit(f)}
+                onRetry={retry}
                 onFeedback={feedback}
                 onShare={shareThread}
                 onFiled={filed}
@@ -1720,19 +1758,22 @@ export function AskDrawerPanel({
                 {page ? pageLabel(page) : "This page"}
               </span>
             </button>
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value as ModeId)}
-              aria-label="Answer mode"
-              title={MODES.find((m) => m.id === mode)?.hint}
-              className="ml-auto rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
-            >
-              {MODES.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+            <span className="ml-auto flex items-center gap-1">
+              <AskLengthSelect value={length} onChange={setLength} />
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as ModeId)}
+                aria-label="Answer mode"
+                title={MODES.find((m) => m.id === mode)?.hint}
+                className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
+              >
+                {MODES.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </span>
           </div>
         </div>
         <div className="mt-1.5 px-1">
