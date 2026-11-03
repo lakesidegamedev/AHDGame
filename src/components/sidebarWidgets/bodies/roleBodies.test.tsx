@@ -51,7 +51,7 @@ describe("role widget bodies", () => {
     // Shares are drawn as meters against a majority tick for one seat.
     const meters = screen.getAllByRole("meter");
     expect(meters.map((meter) => meter.getAttribute("aria-valuenow"))).toEqual(["40", "52.5"]);
-    expect(href(w.myRace.election)).toBe("/elections/e1");
+    expect(href(w.myRace.election)).toBe("/campaign-manager?race=e1");
     expect(href(w.myRace.campaign)).toBe("/campaign/c1");
   });
 

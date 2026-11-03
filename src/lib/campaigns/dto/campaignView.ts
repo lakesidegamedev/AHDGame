@@ -1,4 +1,3 @@
-import { getCampaignCopyForElection } from "@/lib/campaigns/raceFamilyCopy";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Campaign } from "@/lib/db/types";
@@ -6,7 +5,6 @@ import type { CampaignStatePresence } from "@/lib/elections/dto/campaignStatePre
 import type { OppositionTarget } from "@/lib/campaigns/oppositionTargets";
 import {
   getEffectiveBranchCost,
-  getCampaignFamilyScalar,
   OPS_MAX_BRANCH_LEVEL,
   OPS_TREES,
   type OpsBranchKey,
@@ -140,7 +138,7 @@ export interface CampaignData {
     electionYear: number | null;
     isEnded: boolean;
     /** Field-office granularity in this race's country; null when unavailable. */
-    fieldOfficeScope?: "county" | "region" | null;
+    fieldOfficeScope?: "county" | null;
     /** Offices this campaign holds right now. */
     fieldOfficeCount?: number;
   } | null;
@@ -269,11 +267,11 @@ export interface CampaignData {
     rallyTourActive: boolean;
     /** Whether a one-shot rally has been fired this turn (throttle). */
     rallyFiredThisTurn: boolean;
-    /** Race-family-scaled R for this race's rally (full value). */
+    /** R for this race's rally (full value). */
     rallyFullValue: number;
-    /** Race-family-scaled action cost of a one-shot rally. */
+    /** Action cost of a one-shot rally. */
     rallyOneShotActionCost: number;
-    /** Race-family-scaled action cost per tour-tick. */
+    /** Action cost per tour-tick. */
     rallyTourTickActionCost: number;
   };
 
@@ -421,7 +419,6 @@ export function buildOpsTreeView(
   category: UpgradeCategory,
   tree: { starter: boolean; a: number; b: number; c: number } | undefined,
   requiresTarget: boolean,
-  electionType: string | undefined,
   isGeneralPhase: boolean,
   toLocal: (anchor: number) => number,
   currencySymbol = "$"
@@ -429,7 +426,7 @@ export function buildOpsTreeView(
   const def = OPS_TREES[category];
   const unlocked = !!tree?.starter;
   const localMoney = (amount: number) =>
-    `${currencySymbol}${Math.round(toLocal(amount * getCampaignFamilyScalar(electionType))).toLocaleString("en-US")}`;
+    `${currencySymbol}${Math.round(toLocal(amount)).toLocaleString("en-US")}`;
   const starterEffect =
     category === "fundraising"
       ? `+${localMoney(def.starter.magnitude)}/turn base income`
@@ -473,15 +470,12 @@ export function buildOpsTreeView(
     requiresTarget,
     starterCost: unlocked
       ? null
-      : localizeCost(
-          getEffectiveBranchCost(category, null, 0, electionType, isGeneralPhase),
-          starterEffect
-        ),
+      : localizeCost(getEffectiveBranchCost(category, null, 0, isGeneralPhase), starterEffect),
     branches: def.branches.map((b) => {
       const level = tree ? tree[b.key] : 0;
       const next =
         unlocked && level < OPS_MAX_BRANCH_LEVEL
-          ? getEffectiveBranchCost(category, b.key, level + 1, electionType, isGeneralPhase)
+          ? getEffectiveBranchCost(category, b.key, level + 1, isGeneralPhase)
           : null;
       return {
         key: b.key,
@@ -505,7 +499,6 @@ export function buildOpsTrees(
     Campaign,
     "fundraisingTree" | "oppositionResearchTree" | "groundGameTree" | "mediaSpendingTree"
   >,
-  electionType: string | undefined,
   isGeneralPhase: boolean,
   toLocal: (anchor: number) => number,
   currencySymbol = "$"
@@ -515,7 +508,6 @@ export function buildOpsTrees(
       "fundraising",
       campaign.fundraisingTree,
       false,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -524,7 +516,6 @@ export function buildOpsTrees(
       "oppositionResearch",
       campaign.oppositionResearchTree,
       true,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -533,7 +524,6 @@ export function buildOpsTrees(
       "groundGame",
       campaign.groundGameTree,
       false,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -542,7 +532,6 @@ export function buildOpsTrees(
       "mediaSpending",
       campaign.mediaSpendingTree,
       false,
-      electionType,
       isGeneralPhase,
       toLocal,
       currencySymbol
@@ -575,8 +564,6 @@ export const CAMPAIGN_CATEGORIES = [
   },
   {
     key: "groundGame",
-    // Phase 5.5 — copy is presidential-default; non-presidential races see
-    // race-family-aware wording via getCampaignCategoriesForElection() below.
     label: "Ground Game",
     description: "Boost swing state performance",
     tooltipText:
@@ -598,64 +585,3 @@ export const CAMPAIGN_CATEGORIES = [
     requiresTarget: false,
   },
 ] as const;
-
-/**
- * Widened shape for the race-family-aware category list. Same fields as
- * `CAMPAIGN_CATEGORIES` entries but with `description` and `tooltipText`
- * widened to plain `string` so localized copy can be substituted in.
- */
-export interface CampaignCategoryDisplay {
-  key: string;
-  label: string;
-  description: string;
-  tooltipText: string;
-  colorClass: string;
-  bgClass: string;
-  barClass: string;
-  requiresTarget: boolean;
-}
-
-/**
- * Phase 5.5 — returns the upgrade-category list with the `groundGame`
- * entry's description / tooltipText localized for the election's race
- * family (president → swing states, senate / gov → swing counties,
- * house / stateSenate → swing precincts).
- *
- * Pure function — UI consumers use this when an election is in scope so
- * the displayed copy matches the campaign's actual constituency. Falls
- * back to presidential copy for unknown / missing election types per the
- * adapter's defensive default.
- *
- * See plan §"Phase 5.5 — Decisions Recorded During Execution" D5.
- */
-export function getCampaignCategoriesForElection(election: {
-  electionType?: string;
-}): CampaignCategoryDisplay[] {
-  const copy = getCampaignCopyForElection(
-    election as Parameters<typeof getCampaignCopyForElection>[0]
-  );
-  return CAMPAIGN_CATEGORIES.map((cat) => {
-    if (cat.key !== "groundGame") {
-      return {
-        key: cat.key,
-        label: cat.label,
-        description: cat.description,
-        tooltipText: cat.tooltipText,
-        colorClass: cat.colorClass,
-        bgClass: cat.bgClass,
-        barClass: cat.barClass,
-        requiresTarget: cat.requiresTarget,
-      };
-    }
-    return {
-      key: cat.key,
-      label: cat.label,
-      description: `Boost ${copy.swingArea} performance`,
-      tooltipText: copy.groundGameDescription,
-      colorClass: cat.colorClass,
-      bgClass: cat.bgClass,
-      barClass: cat.barClass,
-      requiresTarget: cat.requiresTarget,
-    };
-  });
-}

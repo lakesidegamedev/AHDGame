@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { buildElectionHref } from "@/components/elections/electionHelpers";
 import type {
   CommonsElectionDto,
   CommonsVacancyDto,
@@ -11,6 +10,7 @@ import type {
   RecallPetitionDto,
 } from "@/lib/uk/elections/commonsVacancyStatus";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 const VACANCY_REASON_LABELS: Record<string, string> = {
   death: "Death",
@@ -133,7 +133,7 @@ function VacancyCard({
               : ""}
           </p>
           <Link
-            href={buildElectionHref({ id: election.id, seatId: election.seatId ?? undefined })}
+            href={campaignManagerHref({ race: election.id })}
             className="mt-1 inline-block font-medium text-primary underline-offset-2 hover:underline"
           >
             Go to the by-election

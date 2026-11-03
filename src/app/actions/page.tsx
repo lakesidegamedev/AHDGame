@@ -2,34 +2,20 @@
 
 import dynamic from "next/dynamic";
 import { CampaignActionModal } from "./components/CampaignActionModal";
-import { useTranslations } from "next-intl";
-import { useCurrency } from "@/contexts/CurrencyContext";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import type { Character } from "@/lib/db/types";
 import { calculatePoliticalInfluenceDecay } from "@shared/constants/formulas";
-import {
-  getCampaignActionCost,
-  getAdvertiseActionCost,
-  getDonorActionCost,
-  fundraiseYieldLocal,
-  isCampaignEligible,
-  quoteCampaignAction,
-  quoteAdvertiseAction,
-  quoteBuildDonorBaseAction,
-  type ActionStateEconomics,
-} from "@/lib/actions";
-import { getHomeCurrency, getTotalPersonalLiquidWealth } from "@/lib/currency/characterFunds";
-import { notifyCharacterStatsUpdated } from "@/lib/characterStatsSync";
+import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { Skeleton } from "@/components/ui";
 import { CARDS } from "./actionsConstants";
-import type { ActionProjection, ActionsViewMode } from "./actionsTypes";
-import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
+import type { ActionsViewMode } from "./actionsTypes";
 import ActionCard from "./components/ActionCard";
 import ActionCardCompact from "./components/ActionCardCompact";
 import ActionsHero from "./components/ActionsHero";
 import { EventsPanel } from "./components/EventsPanel";
+import { useActionsController } from "./useActionsController";
+import { actionCardProps } from "./actionCardProps";
+import { getActionImage } from "@/lib/images/actionImages";
 
 // Conditional banners: each renders nothing unless the player has a pending
 // event, a live debate, an active crisis or an unendorsed home presidential
@@ -51,57 +37,31 @@ const EndorsePresidentCard = dynamic(() => import("./components/EndorsePresident
 import CategoryFilter from "./components/CategoryFilter";
 import ViewToggle from "./components/ViewToggle";
 import CategoryHeading from "./components/CategoryHeading";
-import { useToast } from "@/contexts/ToastContext";
-import { useGameEvents } from "@/hooks/useGameEvents";
-import { useWorldFlags } from "@/hooks/useWorldFlags";
-import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
-import { getActionImage } from "@/lib/images/actionImages";
-import { apiErrorText } from "@/lib/errors/catalog";
 
 const CATEGORIES = ["all", "influence", "money", "research"];
 
 export default function ActionsPage() {
-  const [campaignAction, setCampaignAction] = useState<"canvass" | "targetedAds" | null>(null);
-  const adText = useTranslations("elections.campaignTargeting");
-  const { baseRates: campaignRates } = useCurrency();
-  const { showToast } = useToast();
-  const router = useRouter();
-  const worldFlags = useWorldFlags();
-  const [character, setCharacter] = useState<Character | null>(null);
-  const [homeState, setHomeState] = useState<ActionStateEconomics | null>(null);
-  const [executing, setExecuting] = useState<string | null>(null);
-  const [flash, setFlash] = useState<{
-    type: string;
-    msg: string;
-    ok: boolean;
-  } | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [flipflopStep, setFlipflopStep] = useState<"axis" | "direction" | null>(null);
-  const [flipflopAxis, setFlipflopAxis] = useState<"economic" | "social" | null>(null);
-  const [flipflopDir, setFlipflopDir] = useState<-1 | 1 | null>(null);
-  const [convertCashOpen, setConvertCashOpen] = useState(false);
-  const [convertCashAmount, setConvertCashAmount] = useState("");
-  const [loading, setLoading] = useState(true);
   const [portfolioData, setPortfolioData] = useState<{
     totalValue: number;
     totalBondValue: number;
     totalBondIncomePerTurn: number;
     cashOnHand: number;
   } | null>(null);
-  const [_mutedTypes, _setMutedTypes] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("mutedSuggestionTypes");
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
   const [viewMode, setViewMode] = useState<ActionsViewMode>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("actionsViewMode") as ActionsViewMode) || "cards";
     }
     return "cards";
   });
+
+  // The account's saved preference wins over this browser's.
+  const adoptStoredViewMode = useCallback((mode: ActionsViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem("actionsViewMode", mode);
+  }, []);
+  const controller = useActionsController({ viewMode, onStoredViewMode: adoptStoredViewMode });
+  const { character, actionCosts, era, countryId, eraLabel } = controller;
 
   const handleViewModeChange = useCallback((mode: ActionsViewMode) => {
     setViewMode(mode);
@@ -113,76 +73,6 @@ export default function ActionsPage() {
       feature: "actions-view-mode",
     }).catch(() => {});
   }, []);
-
-  const fetchCharacter = useCallback(async () => {
-    try {
-      const [meRes, charRes] = await Promise.all([
-        fetch("/api/auth/me"),
-        // The GDP and population the cost quotes need ride the character
-        // response, so the grid paints at final prices without a second,
-        // serial state round trip.
-        fetch("/api/auth/character?include=homeState"),
-      ]);
-      if (meRes.status === 401 || meRes.status === 403) {
-        router.push("/login");
-        return;
-      }
-      const meData = await meRes.json();
-      // Imperial characters cannot use regular character actions
-      if (meData?.user?.isImperial) {
-        router.push("/dashboard");
-        return;
-      }
-      // Load user preferences (e.g. actionsViewMode)
-      if (meData?.user?.actionsViewMode) {
-        setViewMode(meData.user.actionsViewMode);
-        localStorage.setItem("actionsViewMode", meData.user.actionsViewMode);
-      }
-      if (charRes.ok) {
-        const char: Character & { homeStateEconomics?: ActionStateEconomics | null } =
-          await charRes.json();
-        setCharacter(char);
-        if (char.homeStateEconomics) setHomeState(char.homeStateEconomics);
-        setLoading(false);
-      } else {
-        setLoading(false);
-      }
-    } catch (err) {
-      console.error("Failed to fetch character:", err);
-      setLoading(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    fetchCharacter();
-  }, [fetchCharacter]);
-
-  // Keep the character snapshot — and therefore the affordability gate — in sync
-  // with the StatusBar, which refetches on the same triggers. The turn engine
-  // credits campaign-fund income server-side, so a page left open across a turn
-  // would otherwise gate actions against the stale page-load balance while the
-  // StatusBar shows the fresh (higher) figure. That divergence surfaces as a
-  // spurious "Insufficient funds" on actions the player can actually afford
-  // (bug #0885). Refetch on turn completion and when the player returns to the tab.
-  useGameEvents(
-    useCallback(() => {
-      void fetchCharacter();
-    }, [fetchCharacter]),
-    ["turn_complete"]
-  );
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchCharacter();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, [fetchCharacter]);
 
   // Fetch portfolio data on mount
   useEffect(() => {
@@ -207,176 +97,12 @@ export default function ActionsPage() {
     fetchPortfolio();
   }, []);
 
-  const execute = async (type: string, count: 1 | 5 | 10 = 1) => {
-    if (!character || executing) return;
-    const execKey = count === 1 ? type : `${type}:${count}`;
-    setExecuting(execKey);
-    setFlash(null);
-    try {
-      const res = await fetch("/api/actions/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          actionType: type,
-          ...(count !== 1 ? { count } : {}),
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setCharacter(data.character);
-        notifyCharacterStatsUpdated({
-          ...data.character,
-          // LOCAL home-currency balance (canonical source of truth) — both
-          // fields expose the same value during the migration.
-          funds: data.character.currencyBalances?.campaign ?? data.character.funds ?? 0,
-          campaignFundsStored:
-            data.character.currencyBalances?.campaign ?? data.character.funds ?? 0,
-          personalHomeLiquid: getTotalPersonalLiquidWealth(
-            data.character,
-            !!data.character.currencyBalances
-          ),
-        });
-        // The server already formats result messages in the player's local home
-        // currency (see makeFundsFormatter), so surface them as-is.
-        if (viewMode === "compact") {
-          showToast(data.message, "success");
-        } else {
-          setFlash({ type, msg: data.message, ok: true });
-        }
-      } else {
-        // A refused action can still follow earlier spending (another tab, a
-        // turn), so reload the character: stale action points are what let a
-        // batch look affordable when it was not (ticket 1457).
-        void fetchCharacter();
-        if (viewMode === "compact") {
-          showToast(apiErrorText(data, "Action failed."), "error");
-        } else {
-          setFlash({ type, msg: apiErrorText(data, "Action failed."), ok: false });
-        }
-      }
-    } catch {
-      if (viewMode === "compact") {
-        showToast("Network error.", "error");
-      } else {
-        setFlash({ type, msg: "Network error.", ok: false });
-      }
-    } finally {
-      setExecuting(null);
-    }
-  };
-
-  const executeFlipflop = async (axis: "economic" | "social", direction: -1 | 1) => {
-    if (!character || executing) return;
-    setExecuting("flipflop");
-    setFlash(null);
-    try {
-      const res = await fetch("/api/settings/policy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ axis, direction }),
-      });
-      const data = await res.json();
-      if (res.ok && data.stats) {
-        const updated = {
-          ...character,
-          policies: data.stats.policies,
-          actions: data.stats.actions,
-          infamy: data.stats.infamy,
-          politicalInfluence: data.stats.politicalInfluence,
-          nationalInfluence: data.stats.nationalInfluence,
-        } as Character;
-        setCharacter(updated);
-        notifyCharacterStatsUpdated({
-          ...updated,
-          // LOCAL home-currency balance.
-          funds: updated.currencyBalances?.campaign ?? updated.funds ?? 0,
-          campaignFundsStored: updated.currencyBalances?.campaign ?? updated.funds ?? 0,
-          personalHomeLiquid: getTotalPersonalLiquidWealth(updated, !!updated.currencyBalances),
-        });
-        const axisLabel = axis === "economic" ? "Economic" : "Social";
-        const dirLabel = direction === 1 ? "right" : "left";
-        if (viewMode === "compact") {
-          showToast(
-            `${axisLabel} position shifted ${dirLabel}. +5 Infamy, −5% Influence.`,
-            "success"
-          );
-        } else {
-          setFlash({
-            type: "flipflop",
-            msg: `${axisLabel} position shifted ${dirLabel}. +5 Infamy, −5% Influence.`,
-            ok: true,
-          });
-        }
-      } else if (viewMode === "compact") {
-        showToast(apiErrorText(data, "Shift failed."), "error");
-      } else {
-        setFlash({ type: "flipflop", msg: apiErrorText(data, "Shift failed."), ok: false });
-      }
-    } catch {
-      if (viewMode === "compact") {
-        showToast("Network error.", "error");
-      } else {
-        setFlash({ type: "flipflop", msg: "Network error.", ok: false });
-      }
-    } finally {
-      setExecuting(null);
-      setFlipflopStep(null);
-      setFlipflopAxis(null);
-      setFlipflopDir(null);
-    }
-  };
-
-  const executeConvertCash = async (amount: number) => {
-    if (!character || executing) return;
-    setExecuting("convertCash");
-    setFlash(null);
-    try {
-      const res = await fetch("/api/actions/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actionType: "convertCash", convertAmount: amount }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setCharacter(data.character);
-        notifyCharacterStatsUpdated({
-          ...data.character,
-          // LOCAL home-currency balance (canonical source of truth) — both
-          // fields expose the same value during the migration.
-          funds: data.character.currencyBalances?.campaign ?? data.character.funds ?? 0,
-          campaignFundsStored:
-            data.character.currencyBalances?.campaign ?? data.character.funds ?? 0,
-          personalHomeLiquid: getTotalPersonalLiquidWealth(
-            data.character,
-            !!data.character.currencyBalances
-          ),
-        });
-        if (viewMode === "compact") {
-          showToast(data.message, "success");
-        } else {
-          setFlash({ type: "convertCash", msg: data.message, ok: true });
-        }
-      } else if (viewMode === "compact") {
-        showToast(apiErrorText(data, "Conversion failed."), "error");
-      } else {
-        setFlash({ type: "convertCash", msg: apiErrorText(data, "Conversion failed."), ok: false });
-      }
-    } catch {
-      if (viewMode === "compact") {
-        showToast("Network error.", "error");
-      } else {
-        setFlash({ type: "convertCash", msg: "Network error.", ok: false });
-      }
-    } finally {
-      setExecuting(null);
-      setConvertCashOpen(false);
-      setConvertCashAmount("");
-    }
-  };
-
   const visible = useMemo(
-    () => (activeCategory === "all" ? CARDS : CARDS.filter((c) => c.category === activeCategory)),
-    [activeCategory]
+    () =>
+      activeCategory === "all"
+        ? controller.cards
+        : controller.cards.filter((c) => c.category === activeCategory),
+    [activeCategory, controller.cards]
   );
 
   const categoryCounts = useMemo(() => {
@@ -385,27 +111,6 @@ export default function ActionsPage() {
     return counts;
   }, []);
 
-  // Card art is era- and country-specific: a 1953 US player sees Eisenhower-era
-  // American photography, a DD player sees Volkskammer-era East German photography,
-  // and anything without bespoke national art falls back to the era-generic set.
-  // Resolved from the LIVE year, not the seed preset: the header right below
-  // labels this page with `currentYear`, so picking art from the era the world
-  // seeded from meant a 1953-seeded world sitting in 1985 read "1985" over
-  // Eisenhower-era photography. Art tiers are discrete, which is exactly what
-  // `eraIdForYear` is for.
-  const era =
-    worldFlags.currentYear != null
-      ? eraIdForYear(worldFlags.currentYear)
-      : eraForPreset(worldFlags.preset);
-  const countryId = character?.countryId ?? null;
-  // Deliberately not `getEraConfig().label` — that would pull the whole
-  // landing-page era config (every era's copy and nation list) into this bundle.
-  const eraLabel = String(worldFlags.currentYear ?? era);
-  const cardImages = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const c of CARDS) map[c.type] = getActionImage(c.imageSlug, { era, countryId });
-    return map;
-  }, [era, countryId]);
   const heroImage = useMemo(() => getActionImage("hero", { era, countryId }), [era, countryId]);
   const debateImage = useMemo(
     () => getActionImage("debatePrep", { era, countryId }),
@@ -416,185 +121,9 @@ export default function ActionsPage() {
   const infamy = character?.infamy ?? 0;
   const influenceDecay = calculatePoliticalInfluenceDecay(influence).toFixed(2);
 
-  const actionCosts = useMemo(() => {
-    if (!character) return null;
-    // Face value in the campaign treasury's own currency, computed by the same
-    // helper the server credits with (ticket 1107). Never pass this through the
-    // live-forex formatter: campaign funds convert at the frozen base rate.
-    const fundraiseAmount = fundraiseYieldLocal(
-      character,
-      !!character.currencyBalances,
-      campaignRates,
-      worldFlags.campaignPriceLevel,
-      worldFlags.preset
-    );
-    // Same rules quote the server executes: level-scaled AP cost, GDP-scaled
-    // fund cost with the fundraising discount, and the +1 level gain. When
-    // the quote rejects (unallocated stats or home-state economics still
-    // loading), the AP cost stays displayable from the donor level alone
-    // while the fund cost reports 0: GDP-scaled cards already block fund
-    // display until home-state data loads, and the server rejects execution
-    // with the quote reason.
-    const buildDonorBaseQuote = quoteBuildDonorBaseAction(
-      {
-        donorBaseLevel: character.donorBaseLevel,
-        fundraising: character.stats?.fundraising,
-      },
-      homeState
-        ? {
-            gdpMillions: homeState.gdp,
-            population: homeState.population,
-            countryId: character.countryId,
-            // Same era baseline the server executes with (see executeAction):
-            // without this a 1953-world card would quote modern-era costs.
-            preset: worldFlags.preset,
-          }
-        : undefined,
-      worldFlags.campaignPriceLevel
-    );
-    const buildDonorBaseFundCost = buildDonorBaseQuote.ok ? buildDonorBaseQuote.fundCostAnchor : 0;
-    const donorUpgradeCost = buildDonorBaseFundCost;
-    // Same rules quote the server executes: tiered AP cost, GDP-scaled fund
-    // cost and stat-scaled gain. When the quote rejects (maxed influence,
-    // unallocated stats, or home-state economics still loading), the AP tiers
-    // stay displayable from influence alone while the fund cost reports 0:
-    // GDP-scaled cards already block fund display until home-state data loads,
-    // and the server rejects execution with the quote reason.
-    const campaignQuote = quoteCampaignAction(
-      {
-        politicalInfluence: influence,
-        charisma: character.stats?.charisma,
-        intellect: character.stats?.intellect,
-      },
-      homeState
-        ? {
-            gdpMillions: homeState.gdp,
-            population: homeState.population,
-            countryId: character.countryId,
-            // Same era baseline the server executes with (see executeAction).
-            preset: worldFlags.preset,
-          }
-        : undefined,
-      worldFlags.campaignPriceLevel
-    );
-    // Same rules quote the server executes: tiered AP cost, GDP-scaled fund
-    // cost and stat-scaled gain. When the quote rejects (unallocated stats or
-    // home-state economics still loading), the AP tiers stay displayable from
-    // favorability alone while the fund cost reports 0: GDP-scaled cards
-    // already block fund display until home-state data loads, and the server
-    // rejects execution with the quote reason.
-    const advertiseQuote = quoteAdvertiseAction(
-      {
-        favorability: character.favorability,
-        charisma: character.stats?.charisma,
-      },
-      homeState
-        ? {
-            gdpMillions: homeState.gdp,
-            population: homeState.population,
-            countryId: character.countryId,
-            // Same era baseline the server executes with (see executeAction).
-            preset: worldFlags.preset,
-          }
-        : undefined,
-      worldFlags.campaignPriceLevel
-    );
-    const campaignActionCost = campaignQuote.ok
-      ? campaignQuote.apCost
-      : getCampaignActionCost(influence);
-    const campaignFundCost = campaignQuote.ok ? campaignQuote.fundCostAnchor : 0;
-    const campaignInfluenceGain = campaignQuote.ok ? campaignQuote.influenceGain : null;
-    const campaignMaxed = !isCampaignEligible(influence);
-    const advertiseActionCost = advertiseQuote.ok
-      ? advertiseQuote.apCost
-      : getAdvertiseActionCost(character?.favorability ?? 0);
-    const advertiseFundCost = advertiseQuote.ok ? advertiseQuote.fundCostAnchor : 0;
-    const advertiseFavorabilityGain = advertiseQuote.ok ? advertiseQuote.favorabilityGain : null;
-    const fundraiseActionCost = getDonorActionCost(character?.donorBaseLevel ?? 0, "fundraise");
-    const buildDonorBaseActionCost = buildDonorBaseQuote.ok
-      ? buildDonorBaseQuote.apCost
-      : getDonorActionCost(character?.donorBaseLevel ?? 0, "buildDonorBase");
-    return {
-      fundraiseAmount,
-      donorUpgradeCost,
-      campaignActionCost,
-      campaignFundCost,
-      campaignMaxed,
-      advertiseActionCost,
-      advertiseFundCost,
-      fundraiseActionCost,
-      buildDonorBaseActionCost,
-      buildDonorBaseFundCost,
-      campaignInfluenceGain,
-      advertiseFavorabilityGain,
-    };
-  }, [
-    character,
-    influence,
-    homeState,
-    campaignRates,
-    worldFlags.preset,
-    worldFlags.campaignPriceLevel,
-  ]);
-
-  const forexEnabled = !!character?.currencyBalances;
-  // LOCAL home-currency balance — canonical source of truth.
-  // The card components convert the ₳ cost to home currency via useCurrency.convert
-  // before comparing, so both sides of the check are in the same units.
-  // #885: when forex is on, NEVER fall back to the legacy anchor `funds` field —
-  // it is USD-scaled and, in a high-denomination currency like NGN, reads as a
-  // tiny local balance, producing a false "insufficient funds" if
-  // currencyBalances.campaign is momentarily undefined. Fall back to 0 instead.
-  const displayCampaignFundsStored = forexEnabled
-    ? (character?.currencyBalances?.campaign ?? 0)
-    : (character?.funds ?? 0);
-  const displayCampaignFunds = displayCampaignFundsStored;
-  const displayPersonalWealth = character
-    ? getTotalPersonalLiquidWealth(character, forexEnabled)
-    : 0;
-  const blockGdpScaledCosts = homeState === null;
-
-  // One-use outcome previews, from the same quotes the server executes. Shown
-  // on the cards as "Influence 12.0% to 13.0%" so a player sees what a click
-  // buys before spending it.
-  const pct = (v: number) => `${Math.min(100, Math.max(0, v)).toFixed(1)}%`;
-  const projections: Partial<Record<string, ActionProjection>> = {};
-  if (character && actionCosts) {
-    if (actionCosts.campaignInfluenceGain !== null) {
-      projections.campaign = {
-        label: "Influence",
-        from: pct(influence),
-        to: pct(influence + actionCosts.campaignInfluenceGain),
-      };
-    }
-    if (actionCosts.advertiseFavorabilityGain !== null) {
-      const favorability = character.favorability ?? 50;
-      projections.advertise = {
-        label: "Favorability",
-        from: pct(favorability),
-        to: pct(favorability + actionCosts.advertiseFavorabilityGain),
-      };
-    }
-    const campaignCurrency = getHomeCurrency(character);
-    projections.fundraise = {
-      label: "Campaign funds",
-      from: formatCurrencyFaceAmount(displayCampaignFundsStored, campaignCurrency),
-      to: formatCurrencyFaceAmount(
-        displayCampaignFundsStored + actionCosts.fundraiseAmount,
-        campaignCurrency
-      ),
-    };
-    const donorLevel = character.donorBaseLevel ?? 0;
-    projections.buildDonorBase = {
-      label: "Donor level",
-      from: String(donorLevel),
-      to: String(donorLevel + 1),
-    };
-  }
-
   // Wait on world flags too: resolving art before the era is known would paint
   // the 2019 fallback set for a frame and then swap it for the 1953 set.
-  if (loading || !worldFlags.loaded || !character || !actionCosts) {
+  if (!controller.ready || !character || !actionCosts) {
     return (
       <div className="min-h-screen bg-background pb-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
@@ -674,59 +203,8 @@ export default function ActionsPage() {
     currency: getHomeCurrency(character),
     upgradeCost: actionCosts.donorUpgradeCost,
   };
-  const renderCard = (card: (typeof CARDS)[number], index: number) => (
-    <CardComponent
-      key={card.type}
-      card={
-        card.type === "targetedAds"
-          ? {
-              ...card,
-              label: adText("title"),
-              tagline: adText("actionTagline"),
-              flavor: adText("actionFlavor"),
-              fundLabel: () => adText("actionCost"),
-              effect: adText("actionEffect"),
-              imageAlt: adText("actionImageAlt"),
-            }
-          : card
-      }
-      imageUrl={cardImages[card.type]}
-      index={index}
-      viewMode={viewMode}
-      character={character}
-      homeState={homeState}
-      executing={executing}
-      flash={flash}
-      flipflopStep={flipflopStep}
-      flipflopAxis={flipflopAxis}
-      flipflopDir={flipflopDir}
-      onOpenCampaignAction={setCampaignAction}
-      onExecute={execute}
-      onFlipflop={executeFlipflop}
-      onFlipflopStepChange={setFlipflopStep}
-      onFlipflopAxisChange={setFlipflopAxis}
-      onFlipflopDirChange={setFlipflopDir}
-      campaignActionCost={actionCosts.campaignActionCost}
-      campaignFundCost={actionCosts.campaignFundCost}
-      campaignMaxed={actionCosts.campaignMaxed}
-      advertiseActionCost={actionCosts.advertiseActionCost}
-      advertiseFundCost={actionCosts.advertiseFundCost}
-      fundraiseActionCost={actionCosts.fundraiseActionCost}
-      buildDonorBaseActionCost={actionCosts.buildDonorBaseActionCost}
-      buildDonorBaseFundCost={actionCosts.buildDonorBaseFundCost}
-      fundraiseYield={actionCosts.fundraiseAmount}
-      campaignCurrency={getHomeCurrency(character)}
-      displayCampaignFunds={displayCampaignFunds}
-      displayPersonalWealth={displayPersonalWealth}
-      blockGdpScaledCosts={blockGdpScaledCosts}
-      forexEnabled={forexEnabled}
-      convertCashOpen={convertCashOpen}
-      convertCashAmount={convertCashAmount}
-      onConvertCashOpenChange={setConvertCashOpen}
-      onConvertCashAmountChange={setConvertCashAmount}
-      onConvertCashExecute={executeConvertCash}
-      projection={projections[card.type]}
-    />
+  const renderCard = (card: (typeof controller.cards)[number], index: number) => (
+    <CardComponent key={card.type} {...actionCardProps(controller, card, index, viewMode)} />
   );
 
   return (
@@ -737,7 +215,7 @@ export default function ActionsPage() {
           character={character}
           imageUrl={heroImage}
           eraLabel={eraLabel}
-          campaignFundsDisplay={displayCampaignFundsStored}
+          campaignFundsDisplay={controller.displayCampaignFundsStored}
           campaignFundsCurrency={getHomeCurrency(character)}
           influence={influence}
           infamy={infamy}
@@ -772,7 +250,7 @@ export default function ActionsPage() {
         {activeCategory === "all" ? (
           <div className="space-y-12">
             {CATEGORIES.filter((c) => c !== "all").map((category) => {
-              const cards = CARDS.filter((c) => c.category === category);
+              const cards = controller.cards.filter((c) => c.category === category);
               return (
                 <section key={category} aria-labelledby={`actions-${category}-title`}>
                   <CategoryHeading
@@ -797,10 +275,10 @@ export default function ActionsPage() {
         )}
       </main>
       <CampaignActionModal
-        action={campaignAction}
+        action={controller.campaignAction}
         character={character}
-        onClose={() => setCampaignAction(null)}
-        onResourcesSpent={fetchCharacter}
+        onClose={() => controller.setCampaignAction(null)}
+        onResourcesSpent={controller.fetchCharacter}
       />
     </div>
   );

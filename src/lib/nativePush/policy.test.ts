@@ -70,7 +70,7 @@ describe("native push preview", () => {
       subtitle: "Election",
       body: "You carried 54.2% of the vote.",
       path: "/notifications",
-      href: "/elections/aaaaaaaaaaaaaaaaaaaaaaaa",
+      href: "/campaign-manager?race=aaaaaaaaaaaaaaaaaaaaaaaa",
       thread: "election",
       count: 1,
       id: "0123456789abcdef01234567",

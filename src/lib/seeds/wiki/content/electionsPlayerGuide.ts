@@ -37,7 +37,7 @@ In a **general election**, the page shows live votes, share, trends, persuasion 
 
 ### 3. Campaign page
 
-Open **View Campaign** from the race page. This is where you raise and spend funds, buy upgrades, run actions, assign a manager, and inspect the activity log. The race page tells you where you stand. The campaign page is where you act.
+Presidential candidates open **View Campaign** from the race page. This is where you raise and spend funds, buy upgrades, run actions, assign a manager, and inspect the activity log. In every other race you act through your character's own Actions. The race page tells you where you stand. The campaign page and your Actions are where you act.
 
 ## Primary phase: win your party first
 
@@ -189,7 +189,7 @@ It depends on the race.
 3. Compare share and trend, not just raw votes.
 4. Select yourself and your nearest opponent in Persuasion Drivers.
 5. Identify one weak driver you can actually change.
-6. Act on the campaign page.
+6. Act through your Actions, or the campaign page in a presidential race.
 7. Recheck after the next turn instead of spending several turns blind.
 8. Save resources for the final four turns when the race is close.
 

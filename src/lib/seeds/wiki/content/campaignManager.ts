@@ -1,8 +1,18 @@
 export const campaignManagerContent = `# Campaign Manager
 
-Once you declare, a campaign page is where money and actions turn into votes. Every eligible candidacy gets its own: budget, upgrades, field offices, activity log, endorsements and manager assignments. It is separate from your character's profile and has its own action and money pools.
+The **Campaign Manager** (Campaign, then Campaign Manager, in the navigation) is where you follow and work every race in your country. It has three parts:
 
-**Eligibility.** US president, Senate, governor, House and state senate races have a campaign page, as do UK Commons races and Japanese House of Representatives, House of Councillors and governor races. Presidential races in other countries with a directly elected president, such as Brazil, Nigeria and Russia, get one too. German and Irish races use the lighter election-detail page for now.
+- **Find a Race.** Race types sorted into National and Regional, a Stage switch for Primary and General, a region picker and a search for candidates, races and regions. Each race shows its leader, margin and rating. Star a race to keep it near the top of the list on this device.
+- **The map and the race.** The country shaded race by race in each party's own Lean, Likely and Safe shades. Pick a region to zoom in: its counties, constituencies or prefectures fill in from the race's results, with the neighbours shown faded around it, and a click on one gives its projected call. Below the map are the race's standing, projected seats for multi-seat races, every candidate's poll, change, favorability and influence, polling by turn and the race wire.
+- **Target and My moves.** Pick any candidate to Boost, Attack or Barnstorm with them, at the same prices as on their profile. My moves holds your own stats, your race at a glance and every card from the Actions page, run exactly as they run there.
+
+A primary nobody has entered yet still shows, with a link to the election page where you can enter it.
+
+## Campaign HQ (presidential races)
+
+Once you declare for president, a campaign page is where money and actions turn into votes. Every presidential candidacy gets its own Campaign HQ: budget, upgrades, field offices, activity log, endorsements and manager assignments. It is separate from your character's profile and has its own action and money pools.
+
+**Eligibility.** Only presidential races have a campaign page: the US presidency, and presidential races in other countries with a directly elected president, such as Brazil, Nigeria and Russia. Every other race, from Senate and House seats to the UK Commons and the Japanese Diet, is campaigned for with your character's own [Actions](/wiki/fundraising-ads) and the race's election page.
 
 For upgrade tables, maintenance math and tactical priorities see [Campaign Strategy](/wiki/campaign-strategy), whose trees and costs are what you buy on this page.
 
@@ -10,7 +20,7 @@ For upgrade tables, maintenance math and tactical priorities see [Campaign Strat
 
 The campaign has a **budget**: passive income and donations in (funds raised through [Fundraising and Ads](/wiki/fundraising-ads) can be donated in, see [Core Systems](/wiki/core-systems)), upgrade purchases, maintenance and field office upkeep out. Targeted Ads bought from the page are paid from the buyer's own Campaign Funds and actions, not the campaign budget. It also has an **action pool** of its own, earned each turn, that pays for upgrades and field offices rather than your character's actions. It also pays for Campaign Presence in [Political Operations](/wiki/political-operations). Three rules matter:
 
-1. **Campaign actions** per turn = 4 + floor(sqrt(endorsements) x 3), so 0 endorsements give 4, 4 give 10, 9 give 13, 16 give 16 and 25 give 19. Governor and executive endorsements count 1.5 each (a governor's only outside presidential races), and player endorsements count only in presidential races. The base of 4 is the world's base actions per turn, halved for an NPP-run campaign. A campaign banks at most 48 turns of its own income (480 actions at 10 per turn). Actions already over the cap are kept.
+1. **Campaign actions** per turn = 4 + floor(sqrt(endorsements) x 3), so 0 endorsements give 4, 4 give 10, 9 give 13, 16 give 16 and 25 give 19. Executive endorsements count 1.5 each and player endorsements count too. A governor's endorsement adds no campaign actions; it lands as a vote boost in the governor's own state instead. The base of 4 is the world's base actions per turn, halved for an NPP-run campaign. A campaign banks at most 48 turns of its own income (480 actions at 10 per turn). Actions already over the cap are kept.
 2. **Upgrades** cost 1.5 times as much once the general election phase starts, so buy early.
 3. **Maintenance** on some upgrades comes out of funds each turn. If funds plus this turn's income cannot cover it, upgrades downgrade automatically.
 
@@ -24,7 +34,6 @@ The campaign has a **budget**: passive income and donations in (funds raised thr
 | General-phase upgrade cost | 1.5x funds and actions |
 | Opposition Research retarget cooldown | 6 turns |
 | Field office ramp | 3 turns to full strength |
-| UK and Japan field offices | Up to 3 per region |
 | Fog of war on upgrade levels | public plus or minus 3, party plus or minus 1 |
 | Briefing viewers | Nominee and managers only |
 
@@ -44,7 +53,7 @@ Fog of war is automatic and refreshes every turn. An estimate never shows below 
 - **Vitals.** Across the top: war chest with net per turn and turns of runway, campaign actions against the bank cap, support, and campaign strength with its vote boost.
 - **Overview.** Every section below on one page.
 - **Money.** Fundraising income, upkeep for each lever and for field offices, total upkeep, the per-turn net, lifetime funds and actions generated and spent, and boxes to contribute from your own funds or a party treasury.
-- **Strategic Ops.** Four branch trees: Fundraising, Media Spending, Ground Game and Opposition Research. Each card shows the starter node, its branches, the next cost in funds and campaign actions, and the current effect per turn. Ground Game moves votes in every race type, not only the presidency, and with Media and field offices it adds votes and turnout in [General Elections](/wiki/general-elections). See [Campaign Strategy](/wiki/campaign-strategy) for what each does.
+- **Strategic Ops.** Four branch trees: Fundraising, Media Spending, Ground Game and Opposition Research. Each card shows the starter node, its branches, the next cost in funds and campaign actions, and the current effect per turn. Ground Game, Media and field offices add votes and turnout in [General Elections](/wiki/general-elections). See [Campaign Strategy](/wiki/campaign-strategy) for what each does.
 - **Field offices.** Staff on the ground (below).
 - **Ledger.** Activity and Endorsements tabs, ten rows per page. Activity lists upgrade purchases (with their cost in funds and actions), automatic downgrades and their reason, Opposition Research resets, and suspending the campaign to endorse someone else. It keeps the last 200 entries, normally the campaign's whole life. Endorsements lists the players and politicians backing the campaign, and the panel says "Politicians" where the rest of the wiki says NPPs. Both tabs are visible only to the campaign's own side.
 - **Campaign Managers.** Appointment panel (below).
@@ -52,15 +61,14 @@ Fog of war is automatic and refreshes every turn. An estimate never shows below 
 
 ## Field offices
 
-- **United States:** pick a county on the state map and open an office. The map shades counties by partisan lean; switch to Opportunity to shade by what a new office would add.
+- Pick a county on the state map and open an office. The map shades counties by partisan lean; switch to Opportunity to shade by what a new office would add.
 - An office raises turnout in its county, weighted by the county's size and how strong your side is there, and adds a smaller boost across the whole state. The statewide part has diminishing returns, so the tenth office in a state adds much less than the first.
-- **UK and Japan:** offices work by region rather than county, up to three per region, each adding a smaller boost.
 - Offices take 3 turns to reach full strength, so early ground beats late ground.
 - Each office costs funds and campaign actions to open, and funds each turn in upkeep. If the war chest cannot cover upkeep, the newest offices close first.
-- A presidential campaign can run dozens of offices, a House campaign only a handful.
+- A campaign can run up to 40 offices across the country.
 - Office locations are public.
 
-These effects enter the vote model of every race with a campaign page, see [Election Mechanics](/wiki/election-mechanics). County leans start from the real county results of your world's era, then shift with your world's own presidential elections.
+These effects enter the presidential vote model, see [Election Mechanics](/wiki/election-mechanics). County leans start from the real county results of your world's era, then shift with your world's own presidential elections.
 
 ## Campaign managers
 

@@ -70,7 +70,7 @@ describe("FirstDaysPanel", () => {
   it("lists open races with when they close", () => {
     renderPanel();
     expect(screen.getByRole("link", { name: "State Senate" }).getAttribute("href")).toBe(
-      "/elections/r1"
+      "/campaign-manager?race=r1"
     );
     expect(screen.getByText("closes in 5 hours, 4 candidates")).toBeTruthy();
   });

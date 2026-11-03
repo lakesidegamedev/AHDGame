@@ -993,14 +993,12 @@ describe("campaign budget office upkeep", () => {
       const detail = await getCampaignDetail(db as never, campaignId, user);
       const regular = status !== "archived" && !suspended;
       const local = (n: number) => Math.round(n * 0.35808);
-      const income = regular ? local(calculateCampaignIncome(campaign, "president")) : 0;
-      const ops = regular ? local(calculateMaintenanceCosts(campaign, "president")) : 0;
+      const income = regular ? local(calculateCampaignIncome(campaign)) : 0;
+      const ops = regular ? local(calculateMaintenanceCosts(campaign)) : 0;
       const officeCost = charged * local(6_000);
       expect(detail.budget!.expenses.fieldOfficeMaintenance).toBe(officeCost);
       expect(detail.budget!.expenses.fundraisingMaintenance).toBe(
-        regular
-          ? local(getTreeMaintenanceCost("fundraising", campaign.fundraisingTree, "president"))
-          : 0
+        regular ? local(getTreeMaintenanceCost("fundraising", campaign.fundraisingTree)) : 0
       );
       expect(detail.budget!.expenses.total).toBe(ops + officeCost);
       expect(detail.budget!.netIncome).toBe(income - ops - officeCost);

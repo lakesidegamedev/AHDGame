@@ -67,7 +67,7 @@ describe("GET /api/mobile-dock", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  it("returns the five tabs and three sheets, never cached", async () => {
+  it("returns the five tabs and four sheets, never cached", async () => {
     const response = await GET(request());
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -91,8 +91,21 @@ describe("GET /api/mobile-dock", () => {
       shortLabel: "Nation",
       sheet: "nation",
     });
+    expect(body.tabs[3]).toMatchObject({
+      label: "Campaign",
+      sheet: "campaign",
+      activePrefixes: ["/actions", "/campaign-manager"],
+    });
     expect(body.tabs[4]).toMatchObject({ id: "more", sheet: "more" });
-    expect(Object.keys(body.sheets).sort()).toEqual(["more", "nation", "state"]);
+    expect(Object.keys(body.sheets).sort()).toEqual(["campaign", "more", "nation", "state"]);
+    const campaignLinks = body.sheets.campaign.sections.flatMap(
+      (section: { links: { href: string; icon: { name: string } }[] }) =>
+        section.links.map((l) => [l.href, l.icon.name])
+    );
+    expect(campaignLinks).toEqual([
+      ["/actions", "bolt"],
+      ["/campaign-manager", "vote"],
+    ]);
     for (const tab of body.tabs) {
       expect(tab.icon.grid).toHaveLength(11);
       expect(tab.href === undefined).toBe(tab.sheet !== undefined);

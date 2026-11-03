@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { UK_NATIONS, UK_REGIONS } from "@/lib/constants/uk";
 import { regionUrl, regionPartyUrl, regionLegislatureUrl, regionElectionsUrl } from "@/lib/urls";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 export interface StateDropdownPanelProps {
   stateId: string;
@@ -165,7 +166,7 @@ export function StateDropdownPanel({
       {/* My Election */}
       {activeElection ? (
         <Link
-          href={`/elections/${activeElection.seatId ?? activeElection.id}`}
+          href={campaignManagerHref({ race: activeElection.id })}
           onClick={() => onClose()}
           className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
         >

@@ -6,6 +6,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 interface UseElectionActionsProps {
   character: CharacterBasic | null;
@@ -73,7 +74,7 @@ export function useElectionActions({
 
       const targetRace = elections.find((e) => e.id === electionId);
       if (targetRace?.hungarianAssemblyRound?.round === 1) {
-        router.push(`/elections/${electionId}`);
+        router.push(campaignManagerHref({ race: electionId }));
         return;
       }
       const raceName = targetRace

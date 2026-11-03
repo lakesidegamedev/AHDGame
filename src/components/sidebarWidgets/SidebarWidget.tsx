@@ -35,6 +35,7 @@ import { TickerBody } from "./bodies/TickerBody";
 import { SectorHeatmapBody } from "./bodies/SectorHeatmapBody";
 import { NetWorthBody } from "./bodies/NetWorthBody";
 import { CommodityBoardBody } from "./bodies/CommodityBoardBody";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
   keirPet: "star",
@@ -310,7 +311,7 @@ export function SidebarWidget({
         <Frame
           {...common}
           title={t("myRace.title")}
-          href={race ? `/elections/${race.electionId}` : undefined}
+          href={race ? campaignManagerHref({ race: race.electionId }) : undefined}
         >
           {pending ??
             (race ? (

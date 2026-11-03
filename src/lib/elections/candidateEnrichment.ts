@@ -26,10 +26,16 @@ export interface EnrichedCandidate {
   party: string;
   partyName: string;
   partyColor: string;
+  /** The displayed party's abbreviation, when the party doc is loaded. */
+  partyAbbr?: string;
   partyEcon: number;
   partySocial: number;
   isNPP: boolean;
   nppId: string | null;
+  /** Character ObjectId hex, for routes that act on the character (null for an NPP). */
+  characterDbId?: string | null;
+  /** NPP ObjectId hex, for routes that act on the NPP (null for a player). */
+  nppDbId?: string | null;
   economicPosition: number;
   socialPosition: number;
   favorability: number;
@@ -323,10 +329,13 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
       party: displayPartyKey,
       partyName,
       partyColor,
+      partyAbbr: displayParty?.abbreviation,
       partyEcon,
       partySocial,
       isNPP: c.isNPP ?? false,
       nppId: nppIdForUrl,
+      characterDbId: c.isNPP ? null : (c.characterId?.toString() ?? null),
+      nppDbId: npp?._id?.toString() ?? c.nppId?.toString() ?? null,
       economicPosition: econ,
       socialPosition: social,
       favorability,

@@ -130,10 +130,9 @@ export async function GET(request: Request, { params }: RouteParams) {
     ]);
     const campaignCurrencyCode = getCampaignCurrency(electionCountryId, preset);
 
-    // General-phase upgrade surcharge + per-race-family scalar are computed once
-    // for the whole list (one election → one phase). The cost preview must match
-    // the upgrade gate so the "Upgrade" button only enables when it will pass.
-    const electionType = resolved.election.electionType;
+    // The general-phase upgrade surcharge is computed once for the whole list
+    // (one election → one phase). The cost preview must match the upgrade gate
+    // so the "Upgrade" button only enables when it will pass.
     const gameTime = await getGameTime();
     const isGeneralPhase = isCampaignUpgradeGeneralPhase(
       resolved.election,
@@ -222,7 +221,6 @@ export async function GET(request: Request, { params }: RouteParams) {
           partyMap,
           electionCountryId,
           campaignCurrencyCode,
-          electionType,
           isGeneralPhase,
           campaignRates,
           preset,
@@ -248,7 +246,6 @@ function formatCampaignForViewer(
   partyMap: Map<string, PoliticalParty>,
   electionCountryId: string,
   campaignCurrencyCode: string,
-  electionType: string | undefined,
   isGeneralPhase: boolean,
   campaignRates: CampaignCurrencyRates,
   preset: string,
@@ -343,7 +340,7 @@ function formatCampaignForViewer(
       campaignAnchorToLocal(anchor * priceLevel, electionCountryId, campaignRates, preset);
     const preview = buildCampaignBudgetPreview(
       campaign,
-      { countryId: electionCountryId, electionType, status: electionStatus },
+      { countryId: electionCountryId, status: electionStatus },
       suspended,
       officeCount,
       toLocal
@@ -367,39 +364,23 @@ function formatCampaignForViewer(
       },
       nextUpgradeCosts: {
         fundraising: localizeCostFunds(
-          getEffectiveUpgradeCost(
-            "fundraising",
-            campaign.fundraisingLevel + 1,
-            electionType,
-            isGeneralPhase
-          ),
+          getEffectiveUpgradeCost("fundraising", campaign.fundraisingLevel + 1, isGeneralPhase),
           toLocal
         ),
         oppositionResearch: localizeCostFunds(
           getEffectiveUpgradeCost(
             "oppositionResearch",
             campaign.oppositionResearchLevel + 1,
-            electionType,
             isGeneralPhase
           ),
           toLocal
         ),
         groundGame: localizeCostFunds(
-          getEffectiveUpgradeCost(
-            "groundGame",
-            campaign.groundGameLevel + 1,
-            electionType,
-            isGeneralPhase
-          ),
+          getEffectiveUpgradeCost("groundGame", campaign.groundGameLevel + 1, isGeneralPhase),
           toLocal
         ),
         mediaSpending: localizeCostFunds(
-          getEffectiveUpgradeCost(
-            "mediaSpending",
-            campaign.mediaSpendingLevel + 1,
-            electionType,
-            isGeneralPhase
-          ),
+          getEffectiveUpgradeCost("mediaSpending", campaign.mediaSpendingLevel + 1, isGeneralPhase),
           toLocal
         ),
       },

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { CountryFlag } from "@/components/CountryFlag";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import type { DesktopNavMenu } from "./desktopNavModel";
-import { buildMobileDock, type DockIconSpec } from "./mobileDockBuilder";
+import { buildMobileDock, DOCK_SHEET_KEYS, type DockIconSpec } from "./mobileDockBuilder";
 import type { NavTranslator } from "./dockMenus";
 import {
   MobileDockGridIcon,
@@ -65,7 +65,7 @@ export function useMobileDockModel({ enabled, onClose, search, ...input }: Mobil
   }));
 
   const sheets: Partial<Record<DockSheetKey, DockSheet>> = {};
-  for (const key of ["state", "nation", "more"] as const) {
+  for (const key of DOCK_SHEET_KEYS) {
     const sheet = spec.sheets[key];
     if (!sheet) continue;
     sheets[key] = {

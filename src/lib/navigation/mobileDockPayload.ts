@@ -3,6 +3,7 @@ import {
   DOCK_MORE_ICON_GRID,
   type DockIconSpec,
   type DockSectionSpec,
+  DOCK_SHEET_KEYS,
   type DockSheetKey,
   type MobileDockSpec,
 } from "@/components/navbar/mobileDockBuilder";
@@ -86,7 +87,7 @@ function sectionsFor(section: DockSectionSpec): MobileDockSection[] {
 /** The dock spec as the JSON the phone app draws natively. */
 export function mobileDockPayload(spec: MobileDockSpec): MobileDockPayload {
   const sheets: MobileDockPayload["sheets"] = {};
-  for (const key of ["state", "nation", "more"] as const) {
+  for (const key of DOCK_SHEET_KEYS) {
     const sheet = spec.sheets[key];
     if (!sheet) continue;
     const switcher: MobileDockSection[] = sheet.switchCountries

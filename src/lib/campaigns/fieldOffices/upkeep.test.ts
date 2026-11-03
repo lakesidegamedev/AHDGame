@@ -51,7 +51,7 @@ function stubDb(collections: Record<string, Row[]>) {
 }
 
 const rules = getFieldOfficeRules("US")!;
-const upkeep = getFieldOfficeCostAnchor(rules, "senate").upkeep;
+const upkeep = getFieldOfficeCostAnchor(rules).upkeep;
 
 function office(campaignId: ObjectId, electionId: ObjectId, openedTurn: number): Row {
   return {
@@ -75,7 +75,9 @@ describe("processFieldOfficeUpkeep", () => {
     const { db, bulk } = stubDb({
       campaignFieldOffices: [office(campaignId, electionId, 1), office(campaignId, electionId, 2)],
       campaigns: [{ _id: campaignId, funds: 1_000_000, status: "active" }],
-      elections: [{ _id: electionId, status: "active", countryId: "US", electionType: "senate" }],
+      elections: [
+        { _id: electionId, status: "active", countryId: "US", electionType: "president" },
+      ],
     });
     const res = await processFieldOfficeUpkeep(db);
     expect(res).toEqual({ campaignsCharged: 1, officesClosedInsolvent: 0, officesSwept: 0 });
@@ -90,7 +92,9 @@ describe("processFieldOfficeUpkeep", () => {
     const { db, collections } = stubDb({
       campaignFieldOffices: [newest, oldest],
       campaigns: [{ _id: campaignId, funds: upkeep * 1.5, status: "active" }],
-      elections: [{ _id: electionId, status: "active", countryId: "US", electionType: "senate" }],
+      elections: [
+        { _id: electionId, status: "active", countryId: "US", electionType: "president" },
+      ],
     });
     const res = await processFieldOfficeUpkeep(db);
     expect(res.officesClosedInsolvent).toBe(1);
@@ -106,12 +110,24 @@ describe("processFieldOfficeUpkeep", () => {
       ],
       campaigns: [{ _id: campaignId, funds: 0, status: "active" }],
       elections: [
-        { _id: electionId, status: "completed", countryId: "US", electionType: "senate" },
-        { _id: otherElection, status: "active", countryId: "US", electionType: "senate" },
+        { _id: electionId, status: "completed", countryId: "US", electionType: "president" },
+        { _id: otherElection, status: "active", countryId: "US", electionType: "president" },
       ],
     });
     const res = await processFieldOfficeUpkeep(db);
     expect(res.officesSwept).toBe(2);
+    expect(collections.campaignFieldOffices).toHaveLength(0);
+  });
+
+  it("sweeps offices in an active down-ballot race without charging for them", async () => {
+    const { db, bulk, collections } = stubDb({
+      campaignFieldOffices: [office(campaignId, electionId, 1)],
+      campaigns: [{ _id: campaignId, funds: 1_000_000, status: "active" }],
+      elections: [{ _id: electionId, status: "active", countryId: "US", electionType: "senate" }],
+    });
+    const res = await processFieldOfficeUpkeep(db);
+    expect(res).toEqual({ campaignsCharged: 0, officesClosedInsolvent: 0, officesSwept: 1 });
+    expect(bulk).toHaveLength(0);
     expect(collections.campaignFieldOffices).toHaveLength(0);
   });
 });

@@ -184,6 +184,8 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
   { prefix: "/stockmarket", namespaces: ["corporations", "nav", "tutorial"] },
   { prefix: "/commodity", namespaces: ["corporations", "nav", "tutorial"] },
   { prefix: "/campaign", namespaces: ["elections", "nav", "tutorial"] },
+  // Campaign Manager: race views, the Actions cards and the Target panel's profile copy.
+  { prefix: "/campaign-manager", namespaces: ["elections", "profile", "nav", "tutorial"] },
   { prefix: "/centralbank", namespaces: ["centralBank", "nav", "tutorial"] },
   { prefix: "/settings", namespaces: ["settings", "nav", "tutorial"] },
   // Lists and read-only rosters: their copy is server-rendered.

@@ -36,7 +36,6 @@ export const US_CONFIG: CountryConfig = {
   executiveRealmPhrase: "the United States",
   governmentType: "presidential",
   governmentTypeLabel: "Presidential Republic",
-  campaignManagerNonPresidentialEnabled: true,
   fieldOfficeScope: "county",
   coalitionThreshold: 218,
   legislature: {
