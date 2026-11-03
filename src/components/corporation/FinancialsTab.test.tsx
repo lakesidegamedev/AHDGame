@@ -112,6 +112,36 @@ describe("corporation income statement", () => {
     expect(screen.getByText("-M6400")).toBeTruthy();
     expect(screen.getByText(/Current estimates use today's sectors and budgets/)).toBeTruthy();
   });
+  it("shows the federal tax charged on bond coupon income under Federal tax", () => {
+    const props = {
+      corporation: { countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail,
+      financials: {
+        ...financials,
+        operatingIncome: 6886,
+        federalTax: 2194,
+        federalTaxByCountry: { US: 1516, JP: 678 },
+        bondCouponIncome: 4265,
+        bondCouponFederalTax: 640,
+      },
+      balanceSheet: null,
+      bondInfo: null,
+      corpId: "test",
+      periodView: "daily" as const,
+      onPeriodViewChange: vi.fn(),
+      sectors: [],
+    };
+    const view = render(<FinancialsTab {...props} />);
+    const line = screen.getByText("Of which: federal tax on bond coupon income");
+    expect(line).toBeTruthy();
+    expect(screen.getByText("Bond coupon income")).toBeTruthy();
+    expect(
+      view.container.querySelector('[title*="Includes tax on bond coupon income"]')
+    ).toBeTruthy();
+    view.rerender(
+      <FinancialsTab {...props} financials={{ ...props.financials, bondCouponFederalTax: 0 }} />
+    );
+    expect(screen.queryByText("Of which: federal tax on bond coupon income")).toBeNull();
+  });
 });
 
 describe("income statement by country", () => {

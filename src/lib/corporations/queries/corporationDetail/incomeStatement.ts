@@ -82,6 +82,8 @@ export interface IncomeStatementResult {
   displayFederalTax: number;
   /** Owner tax on pass-through profit collected at source (local, per day). */
   passThroughOwnerTaxLocal: number;
+  /** Home federal tax on bond coupon income, included in displayFederalTax (local, per day). */
+  bondCouponFederalTaxLocal: number;
   /** Banked tax losses that will offset future taxable profit (local). */
   taxLossCarryforwardLocal: number;
   /** Player-facing tax label for this corporation's legal form. */
@@ -373,7 +375,7 @@ export async function computeIncomeStatement(
   const dailyCouponIncomeLocal = anchorToCorpCapital(dailyCouponIncome, corpCurrency, corpFxRate);
 
   const corpHomeCountryFedRate = domesticFederalRateByCountry.get(corporation.countryId) ?? 0;
-  const bondCouponFedTaxLocal = Math.round(
+  let bondCouponFedTaxLocal = Math.round(
     Math.max(0, dailyCouponIncomeLocal) * corpTaxMultiplier * (corpHomeCountryFedRate / 100)
   );
   if (bondCouponFedTaxLocal > 0) {
@@ -429,6 +431,7 @@ export async function computeIncomeStatement(
     displayFederalTax = Math.round(displayFederalTax * lossCarry.taxScale);
     displayStateTax = Math.round(displayStateTax * lossCarry.taxScale);
     passThroughOwnerTaxLocal = Math.round(passThroughOwnerTaxLocal * lossCarry.taxScale);
+    bondCouponFedTaxLocal = Math.round(bondCouponFedTaxLocal * lossCarry.taxScale);
     for (const cc of Object.keys(federalTaxByCountry)) {
       federalTaxByCountry[cc] = Math.round(federalTaxByCountry[cc] * lossCarry.taxScale);
     }
@@ -603,6 +606,7 @@ export async function computeIncomeStatement(
     operatingIncome,
     displayFederalTax,
     passThroughOwnerTaxLocal,
+    bondCouponFederalTaxLocal: bondCouponFedTaxLocal,
     taxLossCarryforwardLocal,
     legalStructureTax,
     passThroughPhase,
