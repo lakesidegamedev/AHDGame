@@ -78,7 +78,8 @@ describe("AskDrawerPanel", () => {
     expect(screen.getByText("Reading the union code")).toBeTruthy();
     expect(screen.queryByText("Searching the wiki")).toBeNull();
     expect(document.querySelector("[data-ask-deck]")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+    expect(screen.queryByText(/^2 steps$/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show 2" }));
     expect(screen.getByText("Searching the wiki")).toBeTruthy();
     expect(document.querySelector("[data-keir-mood]")?.getAttribute("data-keir-mood")).toBe(
       "reading"
