@@ -75,10 +75,21 @@ it("rejects invalid discounts, unknown policies and extra fields", async () => {
     { priority: "own", discount: 0.21 },
     { priority: "bad", discount: 0 },
     { priority: "own", discount: 0, unsafe: true },
+    { priority: "own", discount: 0, transferPricing: "anything" },
   ])
     expect((await POST(request("POST", body), { params })).status).toBe(400);
   expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
 });
+it.each(["free", "cost", "market"])(
+  "persists the validated %s internal transfer mode",
+  async (transferPricing) => {
+    const body = { priority: "own", discount: 0.1, transferPricing };
+    expect((await POST(request("POST", body), { params })).status).toBe(200);
+    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(expect.anything(), {
+      $set: { internalSupplyPolicy: body, updatedAt: expect.any(Date) },
+    });
+  }
+);
 it("reports a concurrent CEO change rather than false success", async () => {
   db.collectionMocks.corporations.updateOne.mockResolvedValue({ matchedCount: 0 });
   expect((await POST(request("POST", { priority: "own", discount: 0.1 }), { params })).status).toBe(

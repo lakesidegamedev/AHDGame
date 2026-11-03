@@ -6,6 +6,8 @@
 export interface InternalSupplyPolicy {
   priority: "market" | "own" | "group";
   discount: number;
+  /** Funded own-company deliveries; unset retains the existing free transfer. */
+  transferPricing?: import("../producerMarket/internalTransferPricingRules").InternalTransferPricing;
   /** Opt in to shipping own surplus before the origin state's market buyers. */
   ownFirstAcrossStates?: boolean;
 }

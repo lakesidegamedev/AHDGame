@@ -816,7 +816,16 @@
       "ownFirstAcrossStates": "Ship eligible surplus to out-of-state plants before local market buyers",
       "ownFirstFreightWarning": "Off by default. Under Own, this ships only to your own out-of-state plants; under Group, it can also serve wholly owned subsidiaries. Local plants get priority first. Out-of-state shipping can leave other local buyers short. Freight is charged separately and can cost more than the internal discount saves; nearby purchases avoid this haul. New reservations use the previous turn's recorded deliveries.",
       "ownHaulTurn": "Own cross-state hauls, turn {turn}",
-      "ownHaulCost": "{commodity}: {origin} to {destination}, {units} units; freight ₳{cost} per unit (anchor currency)."
+      "ownHaulCost": "{commodity}: {origin} to {destination}, {units} units; freight ₳{cost} per unit (anchor currency).",
+      "transferPricing": "Internal transfer price",
+      "transferFree": "Free (default)",
+      "transferCost": "At production cost",
+      "transferMarket": "Market price less discount",
+      "pricedTransfer": "Internal deliveries record matching income for the supplying site and a charge for the receiving site. This allocates site profit without changing your company’s total cash. At cost uses the production quote’s materials, wages and site costs; market uses the supplier’s posted ask less your chosen discount.",
+      "transferIncome": "Included: income from your sites",
+      "transferCharge": "Charges from your sites",
+      "transferChargeNote": "The selected internal price for goods delivered by your other sites. The supplying site records matching income; your company’s total cash is unchanged.",
+      "transferIncomeNote": "Included in revenue: the selected internal price allocated by your other sites. No cash enters the company from these deliveries."
     },
     "governmentContracts": {
       "featureDisabled": "Government contracts are temporarily disabled. New tenders, bids and awards are paused. Existing signed contracts continue, and you can still cancel tenders or withdraw bids.",

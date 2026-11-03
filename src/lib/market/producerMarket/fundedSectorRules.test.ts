@@ -11,6 +11,23 @@ const legacy = { hourlyRevenue: 500, effectiveMargin: 40, costs: 300, hourlyGrow
 const receipt = { revenue: 100, profit: 30, producedUnits: 12.345, soldUnits: 10 };
 
 describe("funded sector result", () => {
+  it("keeps management allocations out of tax, salary, growth and valuation bases", () => {
+    const base = {
+      ...legacy,
+      fundedRegulatoryBurdenRate: 0.1,
+      fundedSizeCostPp: 5,
+      nameplateHourlyRevenue: 500,
+      nameplateHourlyGrowthCost: 10,
+    };
+    const free = fundedSectorResult(base, receipt);
+    for (const allocations of [
+      { internalSupplyIncome: 300 },
+      { internalSupplyCharge: 300 },
+      { internalSupplyIncome: 20, internalSupplyCharge: 5 },
+    ]) {
+      expect(fundedSectorResult(base, { ...receipt, ...allocations })).toEqual(free);
+    }
+  });
   it("takes revenue and producer costs from the receipt and keeps growth spend", () => {
     const r = fundedSectorResult(legacy, receipt);
     expect(r.hourlyRevenue).toBe(100);
@@ -53,6 +70,18 @@ describe("funded sector ops", () => {
     },
     { updateOne: { filter: { _id: "s2" }, update: { $set: { capitalStock: 1 } } } },
   ];
+
+  it("persists internal allocations on the same daily money basis as the site P&L", () => {
+    const priced = { ...receipt, internalSupplyIncome: 20, internalSupplyCharge: 5 };
+    const result = fundedSectorResult(legacy, priced);
+    const out = fundedSectorOps(ops, "s1", priced, result, (a) => a * 24, 24);
+    expect(out[0].updateOne.update.$set).toMatchObject({
+      plantsPnl: {
+        internalSupplyIncome: 480,
+        internalSupplyCharge: 120,
+      },
+    });
+  });
 
   it("drops settlement-owned fields and build side ops, stamps the receipt, leaves other sectors alone", () => {
     const result = fundedSectorResult(legacy, receipt);

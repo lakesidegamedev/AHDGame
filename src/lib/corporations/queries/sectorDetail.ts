@@ -134,6 +134,7 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import { buildSectorCommoditySections } from "@/lib/corporations/queries/sectorDetailCommodities";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
+import { internalTransferAccount } from "@/lib/market/producerMarket/internalTransferPricingRules";
 import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
 import {
   buildSectorAttackInfo,
@@ -1333,6 +1334,13 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         currentYear: techCurrentYear,
       });
 
+      const internalAccount = internalTransferAccount({
+        revenue: sectorEconomicRevenue(sector),
+        costs: maintenanceNet,
+        profit,
+        income: sector.plantsPnl?.internalSupplyIncome,
+        charge: sector.plantsPnl?.internalSupplyCharge,
+      });
       plants = buildSectorPlantsSection({
         bankingCommodityScale: commodityProductionCapacityScale(
           corporation.bankCharter,
@@ -1409,12 +1417,18 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         },
         money: {
           nameplateRevenueAnchor: sectorAmountAnchor(sector.revenue),
-          realizedRevenueAnchor: sectorAmountAnchor(sectorEconomicRevenue(sector)),
-          maintenanceNetAnchor: sectorAmountAnchor(maintenanceNet),
+          realizedRevenueAnchor: sectorAmountAnchor(internalAccount.revenue),
+          maintenanceNetAnchor: sectorAmountAnchor(internalAccount.costs),
           labourAnchor: sectorAmountAnchor(sectorLaborCost),
           growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
-          profitAnchor: sectorAmountAnchor(profit),
+          profitAnchor: sectorAmountAnchor(internalAccount.profit),
           inputsAnchor,
+          internalSupplyIncomeAnchor: sectorAmountAnchor(
+            sector.plantsPnl?.internalSupplyIncome ?? 0
+          ),
+          internalSupplyChargeAnchor: sectorAmountAnchor(
+            sector.plantsPnl?.internalSupplyCharge ?? 0
+          ),
           freightCostAnchor: sectorAmountAnchor(sector.freightBillingCharge ?? 0),
           freightIncomeAnchor: sectorAmountAnchor(sector.freightBillingCredit ?? 0),
           fundedComplianceAnchor:
