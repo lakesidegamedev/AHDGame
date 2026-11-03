@@ -7,6 +7,7 @@ import { getEconomyVisibleCountryIds } from "@/lib/countryAccess";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { GET, getCommodityDetailData } from "./route";
 import { buildCommodityMarketScope } from "@/app/commodity/[type]/lib/marketScope";
+import { getGameState } from "@/lib/gameState";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({
@@ -348,5 +349,64 @@ describe("advertising commodity detail", () => {
       ]);
     const data = await getCommodityDetailData("advertising");
     expect(data.marketingBudgets?.map((row) => row.name)).toEqual(["Visible"]);
+  });
+
+  it("shows a country's funded book, public buyers included, when the prices' turn has one", async () => {
+    vi.mocked(getGameState).mockResolvedValue({ currentTurn: 91, worldEpochId: "epoch" } as never);
+    db.collection("commodityPrices").findOne.mockResolvedValue({
+      commodity: "advertising",
+      basePrice: 100,
+      globalPrice: 100,
+      globalSupply: 1000,
+      globalDemand: 3000,
+      // Stored national demand only counts buyers placed in a state.
+      nationalSupply: { US: 800 },
+      nationalDemand: { US: 40 },
+      turn: 91,
+    });
+    db.collection("producerMarketOutcomes").findOne.mockResolvedValue({
+      books: [
+        {
+          countryId: "US",
+          commodity: "advertising",
+          supply: 800,
+          demand: 2500,
+          requested: 2400,
+          filled: 700,
+          imports: 0,
+          exports: 100,
+        },
+      ],
+    });
+
+    const data = await getCommodityDetailData("advertising");
+
+    expect(db.collection("producerMarketOutcomes").findOne).toHaveBeenCalledWith(
+      { _id: "epoch:91" },
+      { projection: { books: 1 } }
+    );
+    expect(data.nationalBalanceSource).toBe("funded_book");
+    expect(data.nationalDemand).toEqual({ US: 2400 });
+    expect(data.reachableBooks?.US).toMatchObject({ domesticDemand: 2400, exports: 100 });
+    const scope = buildCommodityMarketScope(data, "US");
+    expect(scope.demand).toBe(2400);
+    expect(scope.filled).toBe(700);
+    expect(scope.demandBasis).toBe("funded_orders");
+  });
+
+  it("keeps the stored national figures when the turn has no funded book", async () => {
+    vi.mocked(getGameState).mockResolvedValue({ currentTurn: 91, worldEpochId: "epoch" } as never);
+    db.collection("commodityPrices").findOne.mockResolvedValue({
+      basePrice: 100,
+      globalDemand: 3000,
+      nationalDemand: { US: 40 },
+      turn: 91,
+    });
+    db.collection("producerMarketOutcomes").findOne.mockResolvedValue(null);
+
+    const data = await getCommodityDetailData("advertising");
+
+    expect(data.nationalBalanceSource).toBe("modelled");
+    expect(data.nationalDemand).toEqual({ US: 40 });
   });
 });

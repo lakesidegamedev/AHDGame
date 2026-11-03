@@ -1,3 +1,4 @@
+import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
@@ -160,6 +161,11 @@ export interface CommodityFlow {
    * the plant's asking price, in ₳.
    */
   ownSite?: { units: number; share: number; valueAnchor: number };
+  /**
+   * Supply rows, CEO only: why part of this output went unsold last turn, from
+   * the plant's ask against what buyers in its book paid (#5450).
+   */
+  unsold?: UnsoldReading;
   /**
    * Demand rows, CEO only, short inputs only: the company's other sites made
    * this input last turn, and why that output did not cover this plant.

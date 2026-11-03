@@ -1,5 +1,9 @@
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
+import type {
+  FundedCountryMarket,
+  NationalBalanceSource,
+} from "@/lib/market/producerMarket/fundedCountryViewRules";
 
 export interface HistoryPoint {
   turn: number;
@@ -76,6 +80,14 @@ export interface CommodityDetail {
   nationalDemand?: Record<string, number>;
   /** Authoritative per-country market prices from the turn engine. */
   nationalPrices?: Record<string, number>;
+  /**
+   * "funded_book": nationalSupply/nationalDemand are what each country's
+   * producers offered and buyers ordered on last turn's funded market, public
+   * and military buyers included. "modelled": the stored national totals.
+   */
+  nationalBalanceSource?: NationalBalanceSource;
+  /** Per-country funded market, present only when the source is "funded_book". */
+  fundedCountryBooks?: Record<string, FundedCountryMarket>;
   /**
    * Per-country reachable market book for this commodity (ticket #1077): own
    * production against the demand that country's sellers can actually serve.

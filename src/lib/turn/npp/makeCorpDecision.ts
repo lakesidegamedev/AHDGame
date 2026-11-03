@@ -126,7 +126,8 @@ import {
   depositAwarePriceRatioOf,
   ESSENTIAL_SHORTAGE_SCORE,
   hasEnterableHeadroom,
-  sectorPeakShortageScore,
+  plantPeakShortageScore,
+  plantShortageScore,
   sectorInputPressure,
   sectorShortageScore,
   type CommodityPriceRatioFn,
@@ -1495,16 +1496,11 @@ export function makeNppCorpDecision(
           placementSignals?.statePriceRatioOf?.(commodity, sector.stateId) ??
           priceRatioOf(commodity, cid)
       );
-      const stateShortage = sectorShortageScore(
-        sector.sectorType,
-        sectorCountryId,
-        statePriceRatioOf
-      );
-      const peakStateShortage = sectorPeakShortageScore(
-        sector.sectorType,
-        sectorCountryId,
-        statePriceRatioOf
-      );
+      // A mine is also scored only on what its recipe sells: an oil and gas
+      // well must not grow on a coal or rare earth shortage while crude sits
+      // at the price floor (rules/plantOutputShortage).
+      const stateShortage = plantShortageScore(sector, sectorCountryId, statePriceRatioOf);
+      const peakStateShortage = plantPeakShortageScore(sector, sectorCountryId, statePriceRatioOf);
       const criticalShortage = peakStateShortage >= ESSENTIAL_SHORTAGE_SCORE;
       const interventionPriority = fragileReinvestmentPriority(
         sector,

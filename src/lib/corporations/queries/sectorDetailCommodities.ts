@@ -4,6 +4,7 @@
  * motion; no behavior change).
  */
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
+import { unsoldReadingsFor } from "@/lib/corporations/rules/unsoldReason";
 import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
@@ -110,6 +111,11 @@ export async function buildSectorCommoditySections(args: {
   governorCap?: number | null;
   /** Current game turn; own-site deliveries only count from last turn's receipt. */
   currentTurn?: number;
+  /**
+   * Last turn's average price buyers paid per book lane (producerMarketOutcomes),
+   * for saying why an output went unsold (issue #5448). Absent: no reason shown.
+   */
+  laneClearingPrices?: Readonly<Record<string, number | undefined>>;
 }) {
   const {
     sector,
@@ -202,6 +208,23 @@ export async function buildSectorCommoditySections(args: {
     : [];
   const ownSiteByCommodity = new Map(ownSiteProducts.map((p) => [p.commodity, p] as const));
 
+  // Why an output went unsold last turn: its ask against what buyers in its
+  // book paid, summed over every plant and book on the receipt. CEO-only, like
+  // the own-site figures; needs a fresh receipt.
+  const unsoldReadings = unsoldReadingsFor({
+    isCeo,
+    receipt: sector.producerSettlement,
+    currentTurn: args.currentTurn ?? 0,
+    laneClearingPrices: args.laneClearingPrices,
+    // Still short worldwide while this plant's own market is covered: the
+    // buyers are in another state (local services) or another country.
+    shortElsewhere: (commodity) => {
+      const world = globalBalances.get(commodity as CommodityType);
+      if (!world || !(world.demand > 0) || world.supply >= world.demand * 0.95) return null;
+      return isStateScopedCommodity(commodity as CommodityType) ? "state" : "country";
+    },
+  });
+
   // Last turn's per-output clear rates (written by the clearing pass). Absent
   // on sectors that predate the field or when clearing never ran.
   const soldByCommodity: Partial<Record<string, number>> =
@@ -289,6 +312,7 @@ export async function buildSectorCommoditySections(args: {
       ...(market.clearingEnabled && hasRevenueSplit
         ? { revenueShare: revenueShareByCommodity[f.commodity] ?? 0 }
         : {}),
+      ...(unsoldReadings.has(f.commodity) ? { unsold: unsoldReadings.get(f.commodity) } : {}),
       ...(ownSiteByCommodity.has(f.commodity)
         ? { ownSite: ownSiteByCommodity.get(f.commodity) }
         : {}),

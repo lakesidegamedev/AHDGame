@@ -1,6 +1,8 @@
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { getDb } from "@/lib/mongodb";
+import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import { fundedReachableBookEntries } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CommodityFlow as CommodityFlowDoc } from "@/lib/db/types/commodityFlow";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
@@ -172,7 +174,8 @@ export async function getCommodityDetailData(
     // Only the heavy payload renders the map, so the light header request does
     // not pay for this read.
     const reachableBooks = includeHeavy ? await loadReachableBooks(db) : null;
-    const currentTurn = (await getGameState())?.currentTurn ?? 1;
+    const gameState = await getGameState(db);
+    const currentTurn = gameState?.currentTurn ?? 1;
     const targetTurn = Math.max(1, currentTurn - TURNS_PER_YEAR);
 
     // Parallel fetches
@@ -218,6 +221,13 @@ export async function getCommodityDetailData(
             .toArray()
         : Promise.resolve([] as SourcingNetworkDoc[]),
     ]);
+    // Country views read the funded country book of the price row's turn when
+    // there is one: stored nationalDemand misses buyers with no state (public,
+    // military and investment orders). See fundedCountryViewRules.
+    const nationalView =
+      includeHeavy && currentPrice
+        ? (await withFundedNationalBalances(db, [currentPrice], gameState?.worldEpochId))[0]
+        : null;
 
     let allSectors: CorporateSector[] = [];
     let allCorps: Pick<
@@ -979,13 +989,20 @@ export async function getCommodityDetailData(
       stateDemand: includeHeavy ? filterStateMap(currentPrice?.stateDemand ?? {}) : {},
       ...(freightNetwork ? { freightNetwork } : {}),
       nationalPrices: includeHeavy ? (currentPrice?.nationalPrices ?? {}) : {},
-      nationalSupply: includeHeavy ? (currentPrice?.nationalSupply ?? {}) : {},
-      nationalDemand: includeHeavy ? (currentPrice?.nationalDemand ?? {}) : {},
+      nationalSupply: nationalView?.nationalSupply ?? {},
+      nationalDemand: nationalView?.nationalDemand ?? {},
+      nationalBalanceSource: nationalView?.nationalBalanceSource,
+      fundedCountryBooks: nationalView?.fundedCountryBooks,
       // Per-country reachable books for the map's Reachable lens (ticket
       // #1077). Heavy-only: the light payload drives the header, which does not
       // render the map. Undefined rather than {} when no book is persisted, so
       // the client can tell "not available yet" from "every market is empty".
-      reachableBooks: includeHeavy ? reachableBooksFor(reachableBooks, commodity) : undefined,
+      // A funded turn shows the funded book the price phase priced from.
+      reachableBooks: nationalView?.fundedCountryBooks
+        ? fundedReachableBookEntries(nationalView.fundedCountryBooks)
+        : includeHeavy
+          ? reachableBooksFor(reachableBooks, commodity)
+          : undefined,
       turn: currentPrice?.turn ?? 0,
       history: history.map((h: CommodityPriceHistory) => ({
         turn: h.turn,
