@@ -19,7 +19,9 @@ import { assessMaturityLiquidity } from "./rules/maturityLiquidity";
 import type { CorpCapitalCurrencyInfo } from "@/lib/currency/corporationCapital";
 import {
   fxRateForCorpFromMap,
+  fxRateForSectorHostFromMap,
   resolveCorpLiquidCurrencyCode,
+  resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
@@ -130,6 +132,12 @@ export function sumCorporateSectorPerTurnIncome(
 /**
  * Sum annual gross revenue across all sectors for a corporation, in ₳.
  * Revenue only — does not subtract maintenance, growth costs, or taxes.
+ *
+ * Each sector's revenue is stored in its HOST-state currency, not the owner's
+ * home currency (see {@link resolveSectorHostCurrencyCode}), so every sector is
+ * converted with its own host code/rate. Converting a foreign-owned sector with
+ * the corp's currency, as this used to, quoted a yen sector's revenue as dollars
+ * and massively overstated the per-issuance bond cap (issue #5399).
  */
 export function sumCorporateSectorAnnualRevenue(
   sectors: CorporateSector[],
@@ -138,12 +146,12 @@ export function sumCorporateSectorAnnualRevenue(
   fxByCurrency?: ReadonlyMap<CurrencyCode, number>
 ): number {
   const id = corporationId.toString();
-  const code = corp ? resolveCorpLiquidCurrencyCode(corp) : undefined;
-  const rate = corp && fxByCurrency ? fxRateForCorpFromMap(corp, fxByCurrency) : 1;
   let annual = 0;
   for (const s of sectors) {
     if (s.corporationId.toString() !== id) continue;
     if (!s.countryId) continue;
+    const code = resolveSectorHostCurrencyCode(s, corp);
+    const rate = fxByCurrency ? fxRateForSectorHostFromMap(s, corp, fxByCurrency) : 1;
     const revenueAnchor = readCorpEconomicAnchor(sectorEconomicRevenue(s), code, rate);
     annual += (revenueAnchor / TURNS_PER_DAY) * TURNS_PER_YEAR;
   }
