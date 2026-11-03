@@ -54,6 +54,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerCreditStuckTurns: "",
   producerClearingReferenceStage: "",
   producerFundedBookStage: "",
+  producerNationalPublicDemandStage: "",
   producerProcurementSpillStage: "",
   producerProcurementSpillShare: "",
   producerShortageGrowthStage: "",

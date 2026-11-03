@@ -23,6 +23,7 @@ export function producerStageEnv(
         producerCreditStuckTurns?: number;
         producerClearingReferenceStage?: number;
         producerFundedBookStage?: number;
+        producerNationalPublicDemandStage?: number;
         producerProcurementSpillStage?: number;
         producerProcurementSpillShare?: number;
         producerShortageGrowthStage?: number;
@@ -42,6 +43,7 @@ export function producerStageEnv(
     idleRetireStage: config?.producerIdleRetireStage,
     decommissionGrantShare: config?.decommissionGrantShare,
     fundedBookStage: config?.producerFundedBookStage,
+    nationalPublicDemandStage: config?.producerNationalPublicDemandStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
     jointRunStage: config?.producerJointRunStage,

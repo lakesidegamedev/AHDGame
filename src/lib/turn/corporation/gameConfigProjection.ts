@@ -40,6 +40,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerCreditStuckTurns: 1,
   producerClearingReferenceStage: 1,
   producerFundedBookStage: 1,
+  producerNationalPublicDemandStage: 1,
   producerProcurementSpillStage: 1,
   producerProcurementSpillShare: 1,
   producerShortageGrowthStage: 1,

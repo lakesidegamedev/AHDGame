@@ -92,6 +92,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
 import {
   fundedLedgers,
+  withStatelessCountryDemand,
   PRODUCER_MARKET_OUTCOMES,
   type FundedLedgerRow,
 } from "@/lib/market/producerMarket/fundedLedgerRules";
@@ -1108,7 +1109,13 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     for (const [stateId, m] of funded.byState)
       byState.set(stateId, new Map([...m].map(([c, b]) => [c as CommodityType, b])));
     byCountry.clear();
-    for (const [countryId, m] of aggregateByCountry(byState, stateToCountry))
+    // Public, military and investment buyers order from national wallets with
+    // no state. Their rows name a country only when the producer turn ran with
+    // producerNationalPublicDemandStage on; otherwise this adds nothing.
+    for (const [countryId, m] of withStatelessCountryDemand(
+      aggregateByCountry(byState, stateToCountry),
+      funded.statelessByCountry
+    ))
       byCountry.set(countryId, m);
     fundedBookRows = outcomes.books;
   }
