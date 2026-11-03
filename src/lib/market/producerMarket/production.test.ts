@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
 import { MINOR_INPUT_SHORTFALL_PREMIUM } from "./makeDoRules";
+import { fundedInputThroughput } from "./fundedSectorRules";
 
 const plant = (changes: Partial<ProductionPlan> = {}): ProductionPlan => ({
   id: "plant",
@@ -708,6 +709,8 @@ describe("receipt-backed production", () => {
     const r = result.producers[0];
     expect(r.producedUnits).toBeCloseTo(25);
     expect(r.billedRunShare).toBeCloseTo(0.25);
+    // The sector's input gauge names the input that cut the run.
+    expect(r.bindingInput).toBe("energy");
     // Wages: a quarter of 20. Site: cold floor 2 plus a quarter of the running 8.
     expect(r.labourPaid).toBeCloseTo(5);
     expect(r.otherOperatingPaid).toBeCloseTo(4);
@@ -1354,5 +1357,88 @@ describe("minor inputs in make-do", () => {
     const r = result.producers[0];
     expect(r.producedUnits).toBeCloseTo(25, 9);
     expect(r.minorInputPremium).toBeUndefined();
+  });
+});
+
+describe("own freight and the input gauge", () => {
+  it("feeds a sister plant in the same state and leaves no input cut to report", () => {
+    const freight = plant({
+      id: "logistics",
+      stateId: "CT",
+      inputs: [],
+      outputs: [
+        {
+          commodity: "freight",
+          unitsPerOutput: 1,
+          book: "country:US",
+          policy: { kind: "manual", unitPrice: 50 },
+          referenceUnitPrice: 50,
+          storable: false,
+        },
+      ],
+      capacityUnits: 10,
+    });
+    const chemicals = plant({
+      id: "chemicals",
+      stateId: "CT",
+      inputs: [
+        { commodity: "freight", unitsPerOutput: 0.05, book: "country:US", maximumUnitPrice: 60 },
+      ],
+    });
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [freight, chemicals],
+      ownSitesFirst: true,
+    });
+    const chem = result.producers.find((p) => p.id === "chemicals")!;
+    expect(chem.producedUnits).toBeCloseTo(100);
+    expect(chem.runCutBy).toBeUndefined();
+    expect(fundedInputThroughput(chem)).toEqual({
+      throughputFactor: 1,
+      throughputBindingInput: null,
+    });
+    // The freight went to the sister plant as an internal delivery, not a sale.
+    const shipped = result.producers.find((p) => p.id === "logistics")!.products[0];
+    expect(shipped.internalDeliveredUnits).toBeCloseTo(5);
+    expect(shipped.soldUnits).toBeCloseTo(0);
+  });
+
+  it("names the input that cut the run when own freight falls short", () => {
+    const freight = plant({
+      id: "logistics",
+      stateId: "CT",
+      inputs: [],
+      outputs: [
+        {
+          commodity: "freight",
+          unitsPerOutput: 1,
+          book: "country:US",
+          policy: { kind: "manual", unitPrice: 50 },
+          referenceUnitPrice: 50,
+          storable: false,
+        },
+      ],
+      capacityUnits: 2,
+    });
+    const chemicals = plant({
+      id: "chemicals",
+      stateId: "CT",
+      inputs: [
+        { commodity: "freight", unitsPerOutput: 0.05, book: "country:US", maximumUnitPrice: 60 },
+      ],
+    });
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [freight, chemicals],
+      ownSitesFirst: true,
+    });
+    const chem = result.producers.find((p) => p.id === "chemicals")!;
+    expect(chem.producedUnits).toBeCloseTo(40);
+    expect(fundedInputThroughput(chem)).toEqual({
+      throughputFactor: 0.4,
+      throughputBindingInput: "freight",
+    });
   });
 });

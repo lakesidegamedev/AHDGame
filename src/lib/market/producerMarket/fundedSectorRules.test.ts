@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   fundedCashIncome,
   fundedDemandThrottle,
+  fundedInputThroughput,
   fundedSectorOps,
   fundedSectorResult,
   SETTLEMENT_OWNED_SECTOR_FIELDS,
@@ -54,6 +55,9 @@ describe("funded sector ops", () => {
             realizedRevenue: 999,
             inventoryUnits: { food: 4 },
             capitalStock: 7,
+            // The legacy gauge, pinned at its governor floor: the receipt owns it.
+            throughputFactor: 0.85,
+            throughputBindingInput: "freight",
             "buildQueue.0.onlineTurn": 3,
             wageLevel: 1.1,
           },
@@ -126,6 +130,44 @@ describe("funded demand throttle", () => {
     expect(fundedDemandThrottle(0, 0)).toBe(1);
     expect(fundedDemandThrottle(10, Number.NaN)).toBe(1);
     expect(fundedDemandThrottle(Number.NaN, 100)).toBe(0);
+  });
+});
+
+describe("funded input throughput", () => {
+  it("reads the input-cut run share and the scarcest input", () => {
+    expect(
+      fundedInputThroughput({ billedRunShare: 0.4321, runCutBy: ["inputs"], bindingInput: "iron" })
+    ).toEqual({ throughputFactor: 0.432, throughputBindingInput: "iron" });
+  });
+
+  it("reports a plant whose inputs all arrived as unconstrained", () => {
+    // An own-site freight fill covered the whole order: no run cut, no gauge.
+    expect(fundedInputThroughput({})).toEqual({
+      throughputFactor: 1,
+      throughputBindingInput: null,
+    });
+    expect(fundedInputThroughput(null)).toEqual({
+      throughputFactor: 1,
+      throughputBindingInput: null,
+    });
+  });
+
+  it("does not count a cash cut as an input shortage", () => {
+    expect(fundedInputThroughput({ billedRunShare: 0.5, runCutBy: ["cash"] })).toEqual({
+      throughputFactor: 1,
+      throughputBindingInput: null,
+    });
+  });
+
+  it("clamps and keeps a cut without a named input", () => {
+    expect(fundedInputThroughput({ billedRunShare: -1, runCutBy: ["cash", "inputs"] })).toEqual({
+      throughputFactor: 0,
+      throughputBindingInput: null,
+    });
+    expect(fundedInputThroughput({ billedRunShare: Number.NaN, runCutBy: ["inputs"] })).toEqual({
+      throughputFactor: 1,
+      throughputBindingInput: null,
+    });
   });
 });
 
