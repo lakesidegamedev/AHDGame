@@ -29,12 +29,12 @@ export const PROVIDER_LINK_CONTEXT_TTL_SECONDS = 600;
  * Cookies already cap near 4KB; these sit well under that while far above
  * real values (24-char canonical account id, 64-char CSRF state).
  */
-export const MAX_PROVIDER_LINK_USER_ID_LENGTH = 256;
-export const MAX_PROVIDER_LINK_STATE_LENGTH = 1024;
+const MAX_PROVIDER_LINK_USER_ID_LENGTH = 256;
+const MAX_PROVIDER_LINK_STATE_LENGTH = 1024;
 
-export const GOOGLE_PROVIDER_LINK_CONTEXT_COOKIE = "google_oauth_link_ctx";
-export const DISCORD_PROVIDER_LINK_CONTEXT_COOKIE = "discord_oauth_link_ctx";
-export const APPLE_PROVIDER_LINK_CONTEXT_COOKIE = "apple_oauth_link_ctx";
+const GOOGLE_PROVIDER_LINK_CONTEXT_COOKIE = "google_oauth_link_ctx";
+const DISCORD_PROVIDER_LINK_CONTEXT_COOKIE = "discord_oauth_link_ctx";
+const APPLE_PROVIDER_LINK_CONTEXT_COOKIE = "apple_oauth_link_ctx";
 
 /** Cookie name carrying the link-intent envelope for a provider. */
 export function providerLinkContextCookieName(provider: ProviderLinkProvider): string {

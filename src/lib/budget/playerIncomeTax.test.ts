@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Character } from "@/lib/db/types";
+import type { Character, GameState } from "@/lib/db/types";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { processPlayerIncomeTax } from "./playerIncomeTax";
 import { deriveLedgerEntry } from "@/lib/ledger/deriveFromTx";
 import type { DerivableTx } from "@/lib/ledger/deriveFromTx";
+import { loadPlayerIncomeTaxSummary } from "./playerIncomeTaxSummary";
 import { settlePlayerIncomeTaxAssessments } from "./playerIncomeTaxSettlement";
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+  netStockProceeds,
+} from "./stockSaleWithholding";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 function fixture() {
@@ -77,6 +83,132 @@ async function seedStockTaxCredit(db: Db, id: ObjectId, assessmentTurn: number) 
   );
 }
 describe("player income-tax settlement", () => {
+  it("does not roll installments back when an old delivery resumes after a later payment", async () => {
+    const { db, memory, id } = fixture();
+    await db
+      .collection("characters")
+      .updateOne({ _id: id }, { $set: { "currencyBalances.personal.USD": 10 } });
+    const collection = memory.collection("playerIncomeTaxAssessments");
+    const original = collection.bulkWrite.bind(collection);
+    let blocked = false;
+    let release!: () => void;
+    let reached!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const atWrite = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    vi.spyOn(collection, "bulkWrite").mockImplementation(async (ops) => {
+      if (!blocked && JSON.stringify(ops).includes('"collectedFederal"')) {
+        blocked = true;
+        reached();
+        await waiting;
+      }
+      return original(ops);
+    });
+    const delayed = processPlayerIncomeTax(db, 1, now, state, true).catch((error) => error);
+    await atWrite;
+    await processPlayerIncomeTax(db, 1, now, state, true);
+    await db
+      .collection("characters")
+      .updateOne({ _id: id }, { $set: { "currencyBalances.personal.USD": 7 } });
+    await processPlayerIncomeTax(db, 2, now, state, true);
+    release();
+    expect(await delayed).toBeInstanceOf(Error);
+    const assessment = await db
+      .collection("playerIncomeTaxAssessments")
+      .findOne({ status: "unpaid" });
+    expect(assessment!.collectedFederal + assessment!.collectedRegional).toBe(17);
+    expect(assessment!.collectedTurn).toBe(2);
+    expect(
+      (await db.collection("characters").findOne({ _id: id }))!.currencyBalances.personal.USD
+    ).toBe(0);
+  });
+  it("collects old debt in installments with separate retry-safe receipts", async () => {
+    const { db, id } = fixture();
+    await db
+      .collection("characters")
+      .updateOne({ _id: id }, { $set: { "currencyBalances.personal.USD": 10 } });
+    await processPlayerIncomeTax(db, 1, now, state, true, true);
+    const first = await db.collection("playerIncomeTaxAssessments").findOne({ status: "unpaid" });
+    expect(first!.federal + first!.regional).toBe(35);
+    expect(first!.collectedFederal + first!.collectedRegional).toBe(10);
+    await processPlayerIncomeTax(db, 1, now, state, true, true);
+    expect(
+      (await db.collection("characters").findOne({ _id: id }))!.currencyBalances.personal.USD
+    ).toBe(0);
+    await db
+      .collection("characters")
+      .updateOne({ _id: id }, { $set: { "currencyBalances.personal.USD": 7 } });
+    await processPlayerIncomeTax(db, 2, now, state, true, true);
+    await db
+      .collection("characters")
+      .updateOne({ _id: id }, { $set: { "currencyBalances.personal.USD": 100 } });
+    await processPlayerIncomeTax(db, 3, now, state, true, true);
+    const paid = await db.collection("playerIncomeTaxAssessments").findOne({ _id: first!._id });
+    expect(paid!.status).toBe("paid");
+    expect(paid!.collectedFederal + paid!.collectedRegional).toBe(35);
+    expect(
+      (await db.collection("characters").findOne({ _id: id }))!.currencyBalances.personal.USD
+    ).toBe(82);
+    expect((await db.collection("federalBudget").findOne({}))!.treasuryBalance).toBeCloseTo(130);
+    expect((await db.collection("stateBudgets").findOne({}))!.balance).toBeCloseTo(15);
+    expect(
+      await db.collection("financialTxLog").countDocuments({ type: "player_income_tax" })
+    ).toBe(3);
+  });
+  it("delivers withheld tax even after net proceeds are spent, without a second debit", async () => {
+    const { db, id } = fixture();
+    await db
+      .collection<Pick<GameState, "_id" | "stockHoldingTaxStartTurn" | "forexEnabled">>("gameState")
+      .insertOne({ _id: "current", stockHoldingTaxStartTurn: 0, forexEnabled: true });
+    await db.collection("financialTxLog").deleteMany({});
+    const contexts = await loadStockWithholdingContexts(db, [{ id, collection: "characters" }], 1);
+    const receipt = withholdStockReceipt(
+      {
+        id: "withheld-sale",
+        version: 1,
+        saleTurn: 1,
+        assessmentTurn: 2,
+        amount: 10000,
+        anchorAmount: 10000,
+        currencyCode: "USD",
+        incomeAmount: 0,
+        capitalAmount: 1000,
+        costBasisAnchor: 9000,
+      },
+      contexts.get("characters:" + id.toHexString())
+    );
+    expect(netStockProceeds(10000, receipt)).toBe(9850);
+    await db.collection<Character>("characters").updateOne(
+      { _id: id },
+      {
+        $set: { "currencyBalances.personal.USD": 0 },
+        $push: { pendingStockTaxReceipts: receipt },
+      }
+    );
+    const actor = (await db.collection<Character>("characters").findOne({ _id: id }))!;
+    expect((await loadPlayerIncomeTaxSummary(db, actor, 1)).assessments).toMatchObject([
+      { withheldAtSource: true, paidTax: 150, remainingTax: 0 },
+    ]);
+    await processPlayerIncomeTax(db, 2, now, state, true, true);
+    await processPlayerIncomeTax(db, 2, now, state, true, true);
+    expect(
+      (await db.collection("characters").findOne({ _id: id }))!.currencyBalances.personal.USD
+    ).toBe(0);
+    expect((await db.collection("federalBudget").findOne({}))!.treasuryBalance).toBe(200);
+    expect((await db.collection("stateBudgets").findOne({}))!.balance).toBe(60);
+    expect(
+      await db
+        .collection("playerIncomeTaxAssessments")
+        .countDocuments({ withheldAtSource: true, status: "paid" })
+    ).toBe(1);
+    expect(
+      await db.collection("financialTxLog").countDocuments({ type: "player_capital_gains_tax" })
+    ).toBe(1);
+    expect((await loadPlayerIncomeTaxSummary(db, actor, 2)).assessments).toHaveLength(1);
+  });
   it("settles and replays a dividend whose capital sum differs by floating-point roundoff", async () => {
     const { db, id } = fixture();
     const amount = 0.3;

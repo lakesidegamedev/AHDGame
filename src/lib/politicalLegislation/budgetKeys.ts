@@ -10,10 +10,7 @@
 import type { PoliticalMetricCategoryId } from "../politicalMetrics/types";
 import type { LawCountryId } from "./types";
 
-export const BUDGET_KEY_BY_CATEGORY: Record<
-  LawCountryId,
-  Record<PoliticalMetricCategoryId, string>
-> = {
+const BUDGET_KEY_BY_CATEGORY: Record<LawCountryId, Record<PoliticalMetricCategoryId, string>> = {
   US: {
     economy: "other",
     education: "education",

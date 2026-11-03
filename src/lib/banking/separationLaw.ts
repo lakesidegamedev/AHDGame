@@ -78,10 +78,7 @@ export async function getLegalCharterTypes(
       .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
     db
       .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { commandEconomyEnabled: 1, playerAdvancedBankChartersEnabled: 1 } }
-      ),
+      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
   ]);
   if (
     isCommandEconomy(
@@ -92,12 +89,7 @@ export async function getLegalCharterTypes(
   ) {
     return [];
   }
-  // Advanced charters (investment / universal) are withheld from players until
-  // explicitly enabled; retail is the only type on offer meanwhile. Gates both
-  // new charters and type switches, which both consult this function.
-  if (!config?.playerAdvancedBankChartersEnabled) {
-    return ["retail"];
-  }
+  // Gates both new charters and type switches, which both consult this function.
   const policy = await getBankingSeparationPolicy(db, countryId);
   return policy === "separated" ? ["retail", "investment"] : ["retail", "investment", "universal"];
 }

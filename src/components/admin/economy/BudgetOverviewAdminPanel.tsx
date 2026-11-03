@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { BudgetDisplay } from "@/components/budget/BudgetDisplay";
 import type { FederalBudget } from "@/lib/db/types/budget";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 

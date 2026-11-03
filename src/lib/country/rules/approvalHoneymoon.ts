@@ -29,8 +29,11 @@ export function expectationsRampTurns(
     : DEFAULT_EXPECTATIONS_RAMP_TURNS;
 }
 
+/** Approval penalty for each acting (unconfirmed) secretary, in approval points. */
+export const ACTING_APPOINTMENT_PENALTY = 0.5;
+
 /** Approval penalty for a country with no cabinet seat filled. */
-export const NO_CABINET_PENALTY = 7.5;
+const NO_CABINET_PENALTY = 7.5;
 
 /**
  * The public expectations modifier for a head of government who took office on

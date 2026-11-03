@@ -229,6 +229,9 @@ describe("settleExtractionContracts", () => {
     });
     setContractQueries(db, [offer], []);
     seedCommon(db);
+    db.collectionMocks["extractionContracts"]!.bulkWrite.mockResolvedValueOnce({
+      matchedCount: 1,
+    });
 
     const settle = await loadFn();
     const result = await settle(db as unknown as Db, 13, NOW);
@@ -237,6 +240,24 @@ describe("settleExtractionContracts", () => {
     const op = db.collectionMocks["extractionContracts"]!.bulkWrite.mock.calls[0][0][0];
     expect(op.updateOne.update.$set.status).toBe("expired");
     expect(op.updateOne.update.$set.revokedTurn).toBe(13);
+    // An offer accepted or revoked after the read is not stamped expired.
+    expect(op.updateOne.filter).toMatchObject({
+      status: "offered",
+      revokedTurn: { $exists: false },
+    });
+  });
+
+  it("does not count an offer accepted between the read and the expiry write", async () => {
+    setContractQueries(db, [makeContract({ status: "offered", offerExpiresTurn: 10 })], []);
+    seedCommon(db);
+    db.collectionMocks["extractionContracts"]!.bulkWrite.mockResolvedValueOnce({
+      matchedCount: 0,
+    });
+
+    const settle = await loadFn();
+    const result = await settle(db as unknown as Db, 13, NOW);
+
+    expect(result.offersExpired).toBe(0);
   });
 
   it("expires a contract at term end without charging a royalty that turn", async () => {

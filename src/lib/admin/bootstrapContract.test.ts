@@ -184,6 +184,21 @@ describe("bootstrap contract: seed manifest", () => {
     expect(getCollectionCategory("migrations")).toBe("preserved");
   });
 
+  it("initializes counties after state/cohort seeding and preserves reference-only refresh stocks", () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), "src/lib/admin/bootstrapGameWorld.ts"),
+      "utf8"
+    );
+    const populations = source.indexOf(
+      "await seedAllCountryData(db, resetReference, log, preset, options.run)"
+    );
+    const counties = source.indexOf("await seedCountyPopulations(db,");
+    expect(populations).toBeGreaterThan(-1);
+    expect(counties).toBeGreaterThan(populations);
+    expect(source.slice(counties, counties + 150)).toContain(
+      "replace: !seedOnly || resetReference, preset"
+    );
+  });
   it("forces the idempotent fund bootstrap after reset drops fund documents", () => {
     const source = fs.readFileSync(
       path.resolve(process.cwd(), "src/lib/admin/bootstrapGameWorld.ts"),

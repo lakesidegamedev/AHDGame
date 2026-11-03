@@ -8,7 +8,7 @@ import type { RegionCode } from "./types";
  * (guarded by a test) — adding a country forces adding its region here.
  * `sat` (South Atlantic) and `arc` (Arctic) have no sovereign home nation.
  */
-export const COUNTRY_HOME_REGION: Record<string, RegionCode> = {
+const COUNTRY_HOME_REGION: Record<string, RegionCode> = {
   // North America (noa)
   US: "noa",
   CA: "noa",

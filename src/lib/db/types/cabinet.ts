@@ -4,7 +4,14 @@ import type { WhippedFromVoteMap } from "./legislation";
 import type { IterationStampFields } from "./gameState";
 
 export type CabinetNominationStatus =
-  "proposed" | "active" | "confirmed" | "rejected" | "withdrawn";
+  "proposed" | "active" | "awaiting_choice" | "confirmed" | "rejected" | "withdrawn";
+
+/**
+ * Why a nomination failed. A nominee who won the vote can still lose the seat
+ * to a conflict of office, and that has to be distinguishable from a defeat at
+ * the ballot so the player and the record can say which happened.
+ */
+export type CabinetNominationRejectionReason = "senate_vote" | "incompatible_bank_office";
 
 export interface CabinetMember extends IterationStampFields {
   _id: ObjectId;
@@ -80,6 +87,12 @@ export interface CabinetNomination extends IterationStampFields {
   votingEndsOnTurn?: number;
   confirmedAt?: Date;
   rejectedAt?: Date;
+  /** Set on rejection; absent on legacy and non-rejected docs. */
+  rejectionReason?: CabinetNominationRejectionReason;
+  /** When the nominee was offered a seat blocked by a central bank office. */
+  choiceOfferedAt?: Date;
+  /** Turn on which an unanswered seat offer lapses. */
+  choiceExpiresOnTurn?: number;
   proposedAt: Date;
   createdAt: Date;
   updatedAt: Date;

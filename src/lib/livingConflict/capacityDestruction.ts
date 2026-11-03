@@ -20,7 +20,7 @@ import {
   type CapacityRegionInput,
 } from "./rules/capacityDestruction";
 
-export const CONFLICT_CAPACITY_OBLIGATIONS = "conflictCapacityObligations";
+const CONFLICT_CAPACITY_OBLIGATIONS = "conflictCapacityObligations";
 
 const indexReadiness = new WeakMap<Db, Promise<void>>();
 async function ensureCapacityIndexes(db: Db): Promise<void> {

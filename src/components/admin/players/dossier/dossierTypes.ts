@@ -193,14 +193,6 @@ export interface MoneyGraphResponse {
   currentTurn: number;
 }
 
-// ─── Severity / risk scales (lockstep with altTypes.ts severity colors) ────
-
-export const SEVERITY_HEX: Record<SuspiciousSeverity, string> = {
-  high: "#f87171", // red-400 — danger, same reservation as altTypes
-  medium: "#facc15", // yellow-400
-  low: "#60a5fa", // blue-400
-};
-
 export const SEVERITY_BADGE: Record<SuspiciousSeverity, string> = {
   high: "border border-red-400/25 bg-red-500/10 text-red-400",
   medium: "border border-yellow-400/25 bg-yellow-500/10 text-yellow-400",

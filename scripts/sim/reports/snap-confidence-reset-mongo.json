@@ -1,0 +1,26 @@
+{
+  "kind": "isolated local Mongo qualification of confidence reset step",
+  "countries": 4,
+  "baselineWithoutReset": {
+    "commands": 0,
+    "requestBytes": 0,
+    "responseBytes": 0
+  },
+  "initialReset": {
+    "commands": 1,
+    "requestBytes": 1721,
+    "responseBytes": 35
+  },
+  "twoConcurrentRetries": {
+    "commands": 2,
+    "requestBytes": 3442,
+    "responseBytes": 70
+  },
+  "verified": {
+    "exactly50": true,
+    "higherConfidenceAlsoReset": true,
+    "retriesPreserveLaterDrift": true,
+    "historyRecordedOnce": true
+  },
+  "scope": "Only the added reset step is measured. No complete-world phase timing or multiplayer latency claim."
+}

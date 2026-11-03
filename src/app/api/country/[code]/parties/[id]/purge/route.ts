@@ -57,7 +57,7 @@ export async function POST(
     if (!authResult.ok) return authResult.response;
     const { character: chair, userId } = authResult.user;
 
-    const rateLimit = checkRateLimit(userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/country/[code]/parties/[id]/purge:${userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, bodySchema);

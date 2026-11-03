@@ -13,7 +13,6 @@
 
 import {
   COUNTRY_CONFIGS,
-  isParliamentarySystem,
   isPresidentialGovernmentType,
   type CountryId,
   type GovernmentType,
@@ -44,7 +43,7 @@ import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 
 // ─── Capability catalogue ────────────────────────────────────────────────────
 
-export const CAPABILITY_IDS = [
+const CAPABILITY_IDS = [
   "fullAutonomousTier",
   "institutionsConfigured",
   "regionsAuthored",
@@ -951,9 +950,4 @@ export function resolvePresetIdFromGameState(
 ): string {
   const preset = gameState?.preset?.trim();
   return preset && preset.length > 0 ? preset : fallback;
-}
-
-/** Helper used by callers that already know government shape. */
-export function isParliamentaryArchetypeCountry(countryId: CountryId): boolean {
-  return isParliamentarySystem(COUNTRY_CONFIGS[countryId]);
 }

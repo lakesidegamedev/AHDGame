@@ -26,7 +26,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (!auth.ok) return auth.response;
     const authUser = auth.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/whitehouse/vp-nomination/[id]/withdraw:${authUser.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();

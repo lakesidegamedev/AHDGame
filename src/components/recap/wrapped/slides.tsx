@@ -968,5 +968,3 @@ export const SLIDES: Record<string, (p: SlideProps) => ReactNode> = {
   awards: AwardsSlide,
   persona: PersonaSlide,
 };
-
-export { seasonName };

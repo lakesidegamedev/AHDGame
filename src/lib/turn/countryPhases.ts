@@ -112,6 +112,7 @@ import {
   updateSeatCountsOnly,
   syncRulingPartyIdFromFormedGovernment,
 } from "@/lib/turn/parliamentaryGovernment";
+import type { CompletedSnapConfidence } from "./snapConfidence";
 import { processPMVacancyDeadlines } from "@/lib/turn/pmVacancyDeadline";
 import { appointNppPrimeMinister } from "@/lib/nppAutonomy/appointNppPrimeMinister";
 
@@ -467,9 +468,14 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
 export async function runPostElectionGovernmentPhases(
   db: Db,
   gameNow: Date,
-  generalResolved: number
-): Promise<{ governmentFormed: Partial<Record<CountryId, boolean>> }> {
+  generalResolved: number,
+  currentTurn?: number
+): Promise<{
+  governmentFormed: Partial<Record<CountryId, boolean>>;
+  completedSnaps: CompletedSnapConfidence[];
+}> {
   const governmentFormed: Partial<Record<CountryId, boolean>> = {};
+  const completedSnaps: CompletedSnapConfidence[] = [];
   const preset = await getGameStatePreset(db);
 
   if (generalResolved > 0) {
@@ -483,34 +489,67 @@ export async function runPostElectionGovernmentPhases(
     );
     const parliamentary = new Set(getParliamentaryCountryIds(preset));
 
+    const electionTypes = [
+      ...new Set(
+        countryIds.flatMap((id) => {
+          const key = getCountryConfig(id, preset).legislature.lowerChamber.key;
+          return [key, `snap_${key}`];
+        })
+      ),
+    ];
+    const [recent, live] = await Promise.all([
+      db
+        .collection<Election>("elections")
+        .find(
+          {
+            countryId: { $in: countryIds },
+            electionType: { $in: electionTypes },
+            status: { $in: ["completed", "resolved"] },
+            updatedAt: { $gte: new Date(gameNow.getTime() - MS_PER_TURN) },
+          },
+          { projection: { countryId: 1, electionType: 1, cycle: 1, startTurn: 1, endTurn: 1 } }
+        )
+        .sort({ updatedAt: -1, _id: -1 })
+        .toArray(),
+      db
+        .collection<Election>("elections")
+        .find(
+          {
+            countryId: { $in: countryIds },
+            electionType: { $in: electionTypes },
+            status: { $in: ["active", "upcoming"] },
+          },
+          { projection: { countryId: 1, electionType: 1, cycle: 1, startTurn: 1 } }
+        )
+        .toArray(),
+    ]);
+    const recentByCountry = new Map<CountryId, Election>();
+    for (const election of recent) {
+      const lower = getCountryConfig(election.countryId, preset).legislature.lowerChamber.key;
+      if (
+        (election.electionType === lower || election.electionType === `snap_${lower}`) &&
+        !recentByCountry.has(election.countryId)
+      )
+        recentByCountry.set(election.countryId, election);
+    }
+    const liveSlates = new Set(live.map((e) => `${e.countryId}:${e.electionType}:${e.cycle}`));
+
+    const liveSnaps = new Set(live.map((e) => `${e.countryId}:${e.electionType}:${e.startTurn}`));
+
     for (const countryId of countryIds) {
       const config = getCountryConfig(countryId, preset);
       const lowerChamberKey = config.legislature.lowerChamber.key;
       const snapKey = `snap_${lowerChamberKey}`;
 
-      const recentElection = await db.collection<Election>("elections").findOne({
-        countryId,
-        electionType: { $in: [lowerChamberKey, snapKey] },
-        status: { $in: ["completed", "resolved"] },
-        updatedAt: { $gte: new Date(gameNow.getTime() - MS_PER_TURN) },
-      });
-
+      const recentElection = recentByCountry.get(countryId);
       if (!recentElection) continue;
-
-      // Lower-chamber generals are per-region (UK Commons, JP Shūgiin, …). A
-      // single region resolving must not dissolve legislation or open a
-      // confidence motion while other regions of the same cycle are still
-      // voting. Next-cycle races already staged as upcoming have a different
-      // `cycle` and do not block.
-      if (typeof recentElection.cycle === "number") {
-        const slateStillLive = await db.collection<Election>("elections").findOne({
-          countryId,
-          electionType: recentElection.electionType,
-          cycle: recentElection.cycle,
-          status: { $in: ["active", "upcoming"] },
-        });
-        if (slateStillLive) continue;
-      }
+      // A next-cycle staged race must not block completion of this slate.
+      if (
+        recentElection.electionType === snapKey
+          ? liveSnaps.has(`${countryId}:${snapKey}:${recentElection.startTurn}`)
+          : liveSlates.has(`${countryId}:${recentElection.electionType}:${recentElection.cycle}`)
+      )
+        continue;
 
       // Dissolution slate-clearing (Goal 4): runs for every country with a
       // lower chamber. VONC cancel is idempotent / safe no-op for countries
@@ -526,11 +565,27 @@ export async function runPostElectionGovernmentPhases(
         await openConfidenceMotionForIncumbent(db, countryId, gameNow);
         await updateSeatCountsOnly(db, countryId, gameNow);
         governmentFormed[countryId] = true;
+        const completedTurn = currentTurn ?? recentElection.endTurn;
+        if (
+          recentElection.electionType === snapKey &&
+          typeof recentElection.startTurn === "number" &&
+          Number.isSafeInteger(recentElection.startTurn) &&
+          recentElection.startTurn >= 0 &&
+          typeof completedTurn === "number" &&
+          Number.isSafeInteger(completedTurn) &&
+          completedTurn > 0
+        ) {
+          completedSnaps.push({
+            countryId,
+            startTurn: recentElection.startTurn,
+            turn: completedTurn,
+          });
+        }
       }
     }
   }
 
-  return { governmentFormed };
+  return { governmentFormed, completedSnaps };
 }
 
 /**

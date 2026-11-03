@@ -25,14 +25,14 @@ import {
  */
 
 /** Characters older than this stop being tracked: onboarding is over. */
-export const ONBOARDING_TRACKING_WINDOW_DAYS = 30;
+const ONBOARDING_TRACKING_WINDOW_DAYS = 30;
 
 /** Turn the founding elections end; later characters joined a running world. */
 export const FOUNDING_WINDOW_TURNS = 48;
 
 export type StampableCharacter = OnboardingCharacter & Pick<Character, "createdAt" | "createdTurn">;
 
-export function isWithinOnboardingWindow(
+function isWithinOnboardingWindow(
   character: Pick<Character, "createdAt">,
   now: number = Date.now()
 ): boolean {

@@ -12,13 +12,13 @@
  */
 
 /** Loss share above which the loss term starts. Same line the event triggers on. */
-export const LOSS_TERM_START = 0.4;
+const LOSS_TERM_START = 0.4;
 /** Approval points per 1.0 of loss share above the start. */
-export const LOSS_TERM_PER_UNIT = 4;
+const LOSS_TERM_PER_UNIT = 4;
 /** Approval points per percentage point of unemployment above its level at the event's start. */
-export const UNEMPLOYMENT_TERM_PER_PP = 0.5;
+const UNEMPLOYMENT_TERM_PER_PP = 0.5;
 /** Each term is capped here. */
-export const TERM_CAP = 2;
+const TERM_CAP = 2;
 /** The whole chip is capped here, per country. */
 export const COUNTRY_CAP = 4;
 /** Turns the chip fades out over after the event closes. */

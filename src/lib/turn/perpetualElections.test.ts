@@ -20,11 +20,11 @@ describe("perpetualElections", () => {
     it("House is 96h (2 years), shorter than Senate (288h) and Governor (192h)", async () => {
       const { DEFAULT_DURATIONS } = await import("./perpetualElections");
       expect(DEFAULT_DURATIONS.house.durationHours).toBe(96);
-      expect(DEFAULT_DURATIONS.house.primaryDurationHours).toBe(48);
+      expect(DEFAULT_DURATIONS.house.primaryDurationHours).toBe(72);
       expect(DEFAULT_DURATIONS.senate.durationHours).toBe(288);
       expect(DEFAULT_DURATIONS.governor.durationHours).toBe(192);
       expect(DEFAULT_DURATIONS.president.durationHours).toBe(192);
-      expect(DEFAULT_DURATIONS.president.primaryDurationHours).toBe(144);
+      expect(DEFAULT_DURATIONS.president.primaryDurationHours).toBe(168);
     });
 
     it("House completes 3x per Senate cycle, 2x per Governor cycle", async () => {
@@ -917,8 +917,8 @@ describe("perpetualElections", () => {
     });
 
     it("spawns 'active' when currentTurn is inside the canonical active window with ≥24h primary remaining", async () => {
-      // Canonical Class 1 cycle 2: startTurn=315, primaryEndTurn=387, endTurn=459.
-      // currentTurn=348 → remainingPrimary = 39h ≥ 24h, general = 72h ≥ 24h. Spawn.
+      // Canonical Class 1 cycle 2: startTurn=315, primaryEndTurn=435, endTurn=459.
+      // currentTurn=348 → remainingPrimary = 87h ≥ 24h, general = 24h. Spawn.
       const currentTurn = 348;
       const now = new Date("2026-03-01T00:00:00Z");
 
@@ -953,7 +953,7 @@ describe("perpetualElections", () => {
       expect(new Date(inserted[0].startTime!).getTime()).toBe(now.getTime());
       // primaryEnd / end stay canonical so the general lands on its LARP year.
       expect(new Date(inserted[0].primaryEndTime!).getTime()).toBe(
-        now.getTime() + (387 - currentTurn) * MS
+        now.getTime() + (435 - currentTurn) * MS
       );
       expect(new Date(inserted[0].endTime!).getTime()).toBe(
         now.getTime() + (459 - currentTurn) * MS
@@ -1018,9 +1018,9 @@ describe("perpetualElections", () => {
     });
 
     it("skips a canonical cycle when <24h of primary would remain, advancing to the next half-election", async () => {
-      // Canonical Class 1 cycle 2: primaryEndTurn=387. currentTurn=368 ⇒ remainingPrimary = 19h.
+      // Canonical Class 1 cycle 2: primaryEndTurn=435. currentTurn=416 ⇒ remainingPrimary = 19h.
       // Gate should skip cycle 2 and spawn cycle 3 (endTurn=747) instead.
-      const currentTurn = 368;
+      const currentTurn = 416;
       const now = new Date("2026-03-15T00:00:00Z");
 
       const resolved: Election = {

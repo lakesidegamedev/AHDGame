@@ -113,6 +113,39 @@ describe("corporation action visibility", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it("renders the status the page already fetched instead of asking again", async () => {
+    const { fetchJson } = await import("@/lib/observability/fetchJson");
+    render(
+      <NationalizationStatusCard
+        corpId="1"
+        hasExposure
+        status={{
+          hasStatus: true,
+          canBid: false,
+          pendingTaking: {
+            deadlineTurn: 44,
+            turnsLeft: 2,
+            tier: "state",
+            method: "bill",
+            triggers: [],
+            curableTriggers: [],
+            isSector: false,
+          },
+          billsInVoting: [],
+          isSpunOut: false,
+          privatizedAtTurn: null,
+          goldenSharePercent: 0,
+          auctionOpen: false,
+          auction: null,
+        }}
+      />
+    );
+    expect(
+      await screen.findByText("Nationalization is pending and is due on turn 44.")
+    ).toBeTruthy();
+    expect(fetchJson).not.toHaveBeenCalled();
+  });
+
   it("uses server exposure when private holdings are absent from the page", async () => {
     vi.mocked(fetchJson).mockResolvedValue({
       hasStatus: true,

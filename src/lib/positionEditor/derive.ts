@@ -71,7 +71,7 @@ export function editorConfigFromSeed(
 }
 
 /** Reduce an editor config back to the engine's Layer1Config (shares only). */
-export function toLayer1Config(cfg: EditorStateConfig): Layer1Config {
+function toLayer1Config(cfg: EditorStateConfig): Layer1Config {
   const out: Record<string, Record<string, number>> = {};
   for (const dim of cfg.dims) {
     out[dim] = {};
@@ -112,7 +112,7 @@ export function editorTurnoutTable(cfg: EditorStateConfig): Record<string, Recor
 const turnoutFromEditor = editorTurnoutTable;
 
 /** Extract the per-archetype composition (Layer-1 weights + civic multiplier). */
-export function editorCompositionTable(
+function editorCompositionTable(
   cfg: EditorStateConfig
 ): Record<string, { weights: { dim: string; key: string; w: number }[]; civicMultiplier: number }> {
   const out: Record<

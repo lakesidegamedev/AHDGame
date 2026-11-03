@@ -1,64 +1,92 @@
 export const rpgStatsContent = `# RPG Stats & Debates
 
-Your character has **seven stats** that make two politicians with identical money and offices play differently. Stats decide how far your campaign dollars stretch, how many actions you get each turn, and whether you win an election debate. You set them at character creation and then *shape them through play*: the things you do repeatedly get stronger, and the things you neglect slip away.
+Two politicians with the same money and offices can play very differently, and the seven stats are why. Stats change how much your actions deliver, how big an action stockpile you can hold (see [Core Systems](/wiki/core-systems)), and how you do in election debates. You set them when you create the character, and they grow slowly with the actions you repeat, as described in [Stats and Actions](/wiki/stats-actions).
 
-## The seven stats
+## What a stat point is worth
 
-Every stat runs from **1 to 10**. Most of them give a smooth effectiveness bonus, roughly **−18% at 1, neutral at 5 to 6, and +18% at 10**, applied to the actions they govern. Energy is the exception: instead of a percentage it hands you more actions per turn.
+Each stat runs from 1 to 10. Six of them are an **effectiveness multiplier** applied to what the action produces. Some also divide the money cost of specific actions by the same multiplier; those cases are named in the table below. Energy is the exception: it raises your action stockpile limits.
 
-| Stat | What it does | How you raise it |
+| Stat | Multiplier |
+| --- | --- |
+| 1 | 0.82x (18% less) |
+| 2 | 0.86x |
+| 3 | 0.90x |
+| 4 | 0.94x |
+| 5 | 0.98x |
+| 6 | 1.02x |
+| 7 | 1.06x |
+| 8 | 1.10x |
+| 9 | 1.14x |
+| 10 | 1.18x (18% more) |
+
+\`\`\`
+multiplier = 1 + (stat - 5.5) x 0.04
+\`\`\`
+
+### The seven stats
+
+| Stat | What it does | What trains it |
 | --- | --- | --- |
-| **Charisma** | More political influence per **Campaign**, more favorability per **ad**, better relationships/favors when courting NPP politicians. Powers the *Remain above the fray* debate move. | **Campaign** and **Advertise**. |
-| **Debate** | Drives your overall debate score and powers the *Attack* debate move. | **Debate Prep** action and **debating in elections** (see below). |
-| **Energy** | Raises your **per-turn action cap (200 → 250)** and how many unused actions you can **bank between turns (100 → 125)**. | Stay **active**: accrues on every action; only sustained play keeps it up. |
-| **Fundraising** | More money per **Fundraise** and a cheaper cost to **expand your donor network**. | **Fundraise** and **Build Donor Base**. |
-| **Business Acumen** | Lowers the growth cost of sectors in any **corporation you run as CEO**, and softens how much high interest rates inflate that cost. | Hold a **CEO seat**: a *more profitable* corp trains it faster. |
-| **Statecraft** | Better **party-whip success** (~±9 pts), longer **filibusters**, stronger **ministerial** policy effects. Powers the *Tout accomplishments* debate move. | **Whip** votes and **invoke filibusters**. |
-| **Intellect** | Cheaper **Quick/Full polls** and softens the rising fund cost of repeated **Campaigning**. | **Run polls**. |
+| **Charisma** | More political influence per Campaign, more favorability per ad, bigger gains from [Political Capital](/wiki/political-capital) meetings and boosts. Powers the *Above the fray* debate move | Campaign, Advertise |
+| **Debate** | Powers the *Attack* debate move | Debate Prep, debating |
+| **Energy** | Raises your action stockpile cap from 200 to 250 and the point where hoarding starts costing you from 100 to 125 | Any action except Debate Prep |
+| **Fundraising** | More money per Fundraise (see [Fundraising and Ads](/wiki/fundraising-ads)), cheaper donor base expansion | Fundraise, Build Donor Base |
+| **Business Acumen** | Cheaper sector growth, capacity builds and expansions in [corporations](/wiki/corporations) you run as CEO, and high interest rates raise the growth cost less | Holding a CEO seat |
+| **Statecraft** | Party whip success from -9 to +9 points ([Voting and Whips](/wiki/voting-and-whips)), longer filibusters ([Cloture and Filibuster](/wiki/cloture-and-filibuster): the 12 hour delay runs from 9.8 hours at Statecraft 1 to 14.2 at 10), stronger ministerial orders. Powers the *Tout accomplishments* debate move | Whipping, filibusters |
+| **Intellect** | Cheaper Quick and Full [polls](/wiki/polling), and a lower money cost for Campaigning | Running polls |
 
-## How stats grow and decay
+Energy does not change how many actions each turn gives you. It changes how many you can save. Above the bank point you lose 4 actions per turn. At Energy 5 the cap is 222 and the bank point is 111, and both rise in a straight line to 250 and 125 at Energy 10.
 
-Stats aren't fixed: they drift with how you play. This is *stat* drift (your numbers moving up and down); it does **not** change your character's ideology or positions.
+### How stats grow and fade
 
-- **Use it.** Each time you perform a stat's action you bank a little progress toward the next point. Do it enough and the stat ticks up.
-- **Or lose it.** Any stat you **don't** engage on a given turn slips back toward 1 by a small amount each turn. Train a stat that turn and you're safe: active play never costs you the stat you just worked.
-- **Energy is stamina, not a skill.** It earns progress from *every* action, so it only avoids decay when you do **enough in a turn** (about two actions' worth). Coast and it bleeds down.
-- **Business Acumen scales with how well your corp runs.** A money-losing corp barely teaches you; a highly profitable one trains it up to twice as fast.
-- **Debate is on its own clock.** It has no idle-per-turn decay. Instead it drops **−1 every 72 hours** if you stop practicing, so it rewards staying in the ring.
+- Every qualifying action adds 0.03 progress to its stat, and the turn adds it in. About 34 Fundraise actions raise Fundraising by a full point. Energy gets 0.03 from every action except Debate Prep.
+- Business Acumen grows once per turn while you are CEO, scaled by that corporation's profit margin: 0.5x if it loses money, 1x up to a 10% margin, 1.5x up to 25%, 2x above that. At best it takes about 17 turns for a point.
+- Stats do not decay from idleness. The one exception is **Debate**, which loses 1 point every 72 hours of real time on a fixed clock, down to a floor of 1. Practice does not pause the clock, it only gives you chances to earn the point back.
+- Debate rises two ways. Debate Prep costs 1 action and has a 15% chance of +1. Each debate you take part in gives a practice roll for +1: 30% if you won, 15% if you lost or drew.
 
-## Election debates
+### Election debates
 
-When you're a candidate in an election, an opponent can **challenge you to a debate** (a coin-flip chance each event pass). You then have **12 hours** to pick **one strategy** before it auto-resolves. Each strategy leans on a different stat and scores \`your stat × a base reward + a luck roll\`; the two sides' picks are compared to swing favorability. The base reward is the same for all three, so your **strongest stat** usually points to your best choice.
+When you are a candidate, an opponent may challenge you; the challenge is rolled in the same pass as [player random events](/wiki/player-events), and a debate this turn blocks a normal offer. Each turn there is a flat 50% chance (your stats do not change it), and a candidate can be drawn into at most 3 debates per election. You get **12 hours** to choose one strategy. Each strategy scores \`8 x your stat's multiplier + a random roll\`, and the two sides' scores are compared.
 
-| Strategy | Stat used | Risk / reward |
-| --- | --- | --- |
-| **Attack opponent** | Debate | Swingiest: a wide luck roll gives the highest ceiling, but it can backfire and read as bullying. |
-| **Remain above the fray** | Charisma | A safe floor with limited upside: stays presidential. |
-| **Tout accomplishments** | Statecraft | Scales with your **real record** (offices held, bills passed). Strong if your résumé is real, a backfire if it's thin. |
+| Strategy | Stat | Roll range | In practice |
+| --- | --- | --- | --- |
+| Attack opponent | Debate | -6 to +10 | Highest ceiling, can lose badly |
+| Remain above the fray | Charisma | -1 to +2 | Safe, small upside |
+| Tout accomplishments | Statecraft | -3 to +4 | Base 8 is scaled by your record |
 
-So Debate isn't the only stat that wins debates: a charismatic candidate leads with *Above the fray*, and a strong résumé makes *Tout* the play, without ever going on the attack.
+Tout's base is multiplied by a record factor: 0 offices held is -0.3 (a backfire), 1 office is 0.22, 2 offices is 0.74, and 3 or more is 1.0.
+
+A gap under 2 points is a draw. Otherwise the winner gains and the loser loses favorability equal to 3 plus 1 for every further 4 points of gap, up to 8, which feeds into [Election Mechanics](/wiki/election-mechanics). If you do not choose in 12 hours, the game picks your best-fitting strategy for you.
+
+### Dana picks a debate strategy
+
+Dana has Debate 8, Charisma 6 and Statecraft 5, and has held one office. Her options average:
+
+- Attack: 8 x 1.10 = 8.8, plus a roll of -6 to +10 (average +2). About 10.8, but anywhere from 2.8 to 18.8.
+- Above the fray: 8 x 1.02 = 8.16, plus -1 to +2. About 8.7, between 7.2 and 10.2.
+- Tout: 8 x 0.22 x 0.98 = 1.7, plus -3 to +4. About 2.2.
+
+She attacks for the best average, or goes above the fray if she cannot afford a bad result. If she scores 14 against an opponent's 9, the gap is 5, so the swing is 3 + 0 = 3 favorability each way. A 12 point gap would give 3 + 2 = 5.
 
 ## Building your character
 
-At creation you distribute a **28-point budget** across the seven stats. Every stat starts at a floor of **1**, which spends 7 points and leaves you **21 free points** to place. You can't dump everything into one stat (the cap is 10), so a build is a set of trade-offs:
+- **Allocate stats at creation.** You have 28 points across the seven stats. Each starts at 1, which spends 7 and leaves 21 free to place. The cap is 10 per stat.
+- **Reallocate once.** On your own profile, the Stats panel has one free full reallocation per character. It rewrites the 28 point spread and clears earned growth, and it resets the Debate clock. Characters that existed before stats were introduced were given a suggested build to confirm.
+- **Train what you use.** Repeat the action that matches the stat you want.
+- **Take Debate Prep.** One action, 15% for +1 Debate. Worth it only when a debate is close.
+- **Answer debate challenges.** They arrive as events. Pick the strategy that matches your strongest stat.
 
-- A **campaign machine** leans Charisma + Fundraising + Energy.
-- A **legislator** leans Statecraft + Debate to dominate the floor and the debate stage.
-- A **mogul** leans Business Acumen + Intellect to run corporations and polls cheaply.
+Typical builds:
 
-Whatever you pick at creation is only a starting point: play steers your stats from there, so a build you neglect won't stay strong.
+- **Campaign machine:** Charisma, Fundraising, Energy.
+- **Legislator:** Statecraft and Debate.
+- **Mogul:** Business Acumen and Intellect.
 
-## Strategic takeaways
+Tips:
 
-- **Specialize.** Because effectiveness swings ±18% and decay punishes neglect, a few strong stats beat seven mediocre ones.
-- **Train what you use.** Your day-to-day actions quietly level the matching stat: fundraisers get better at fundraising, whips get better at statecraft.
-- **Keep Energy fed.** It's the only stat that buys you *more actions*; let it slide and everything else gets harder.
-- **Don't ghost a debate.** Letting the 12-hour timer run resolves it without your input, so pick strategies that match your strong stats and your record.
+- A few strong stats beat seven middling ones, because each point is worth only 4%.
+- Debate falls away on its own clock, so train it shortly before an election rather than months ahead.
+- Letting a debate expire is not a disaster, since the game picks your best fit.
 
-## Related systems
-
-- **[Player Random Events](/wiki/player-events)**: the event system that delivers debate challenges
-- **[Election Mechanics](/wiki/election-mechanics)**: where debates and election efficacy pay off
-- **[Crisis Interaction](/wiki/crisis-interaction)**: a separate optional layer
-- **[Core Systems](/wiki/core-systems)**: turn structure and the action economy Energy expands
+Applies in every world; characters made before the stat system arrived have a suggested build they can confirm, and non-player politicians use neutral stats (5.5) in debates. Last checked 2026-10-29, version 1.18.0. Exact rules: no separate design page covers the stat constants yet, so the tables on this page are the reference.
 `;

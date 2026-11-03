@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440" role="img" font-family="system-ui, sans-serif">
+<title>How approval is built</title>
+<desc>State metrics become per-metric contributions, a state score, named conditions and a smoothed state rating; states are averaged by population, national modifiers are applied, and the result feeds elections.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="439" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="40" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="120.0" y="69.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">1. State metrics</text>
+<text x="120.0" y="86.5" text-anchor="middle" font-size="13" fill="#18181b">10 categories, scored per</text>
+<text x="120.0" y="103.5" text-anchor="middle" font-size="13" fill="#18181b">state</text>
+<rect x="280" y="40" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="380.0" y="61.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">2. Metric contribution</text>
+<text x="380.0" y="78.0" text-anchor="middle" font-size="13" fill="#18181b">each metric against the</text>
+<text x="380.0" y="95.0" text-anchor="middle" font-size="13" fill="#18181b">national average, at most</text>
+<text x="380.0" y="112.0" text-anchor="middle" font-size="13" fill="#18181b">2 points either way</text>
+<rect x="540" y="40" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="640.0" y="69.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">3. State score</text>
+<text x="640.0" y="86.5" text-anchor="middle" font-size="13" fill="#18181b">weighted by what matters</text>
+<text x="640.0" y="103.5" text-anchor="middle" font-size="13" fill="#18181b">to local voters</text>
+<rect x="540" y="170" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="640.0" y="191.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">4. Named conditions</text>
+<text x="640.0" y="208.0" text-anchor="middle" font-size="13" fill="#18181b">patterns such as Economic</text>
+<text x="640.0" y="225.0" text-anchor="middle" font-size="13" fill="#18181b">Boom or Recession add or</text>
+<text x="640.0" y="242.0" text-anchor="middle" font-size="13" fill="#18181b">subtract</text>
+<rect x="280" y="170" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="380.0" y="191.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">5. Smoothing</text>
+<text x="380.0" y="208.0" text-anchor="middle" font-size="13" fill="#18181b">a state's stored rating</text>
+<text x="380.0" y="225.0" text-anchor="middle" font-size="13" fill="#18181b">moves at most 2 points a</text>
+<text x="380.0" y="242.0" text-anchor="middle" font-size="13" fill="#18181b">turn</text>
+<rect x="20" y="170" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="120.0" y="199.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">6. National figure</text>
+<text x="120.0" y="216.5" text-anchor="middle" font-size="13" fill="#18181b">states averaged by</text>
+<text x="120.0" y="233.5" text-anchor="middle" font-size="13" fill="#18181b">population</text>
+<rect x="20" y="300" width="200" height="84" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="120.0" y="321.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">7. National modifiers</text>
+<text x="120.0" y="338.0" text-anchor="middle" font-size="13" fill="#18181b">cabinet gaps, war,</text>
+<text x="120.0" y="355.0" text-anchor="middle" font-size="13" fill="#18181b">expectations; applied at</text>
+<text x="120.0" y="372.0" text-anchor="middle" font-size="13" fill="#18181b">once</text>
+<rect x="280" y="300" width="200" height="84" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="380.0" y="329.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">8. Stored rating</text>
+<text x="380.0" y="346.5" text-anchor="middle" font-size="13" fill="#18181b">what the Approval page</text>
+<text x="380.0" y="363.5" text-anchor="middle" font-size="13" fill="#18181b">shows</text>
+<rect x="540" y="300" width="200" height="84" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="640.0" y="329.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">9. Elections</text>
+<text x="640.0" y="346.5" text-anchor="middle" font-size="13" fill="#18181b">approval scales the vote</text>
+<text x="640.0" y="363.5" text-anchor="middle" font-size="13" fill="#18181b">pool</text>
+<path d="M220,82 L280,82" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M480,82 L540,82" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M640,124 L640,170" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M540,212 L480,212" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M280,212 L220,212" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M120,254 L120,300" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M220,342 L280,342" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M480,342 L540,342" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+</svg>

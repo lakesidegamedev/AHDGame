@@ -9,6 +9,11 @@
  * and allocate seats to the highest quotients in descending order until seats are exhausted.
  */
 
+/** Share of the national vote a party needs to take list seats (5%). */
+export const BUNDESTAG_VOTE_THRESHOLD = 0.05;
+/** Direct mandates that let a party take list seats even below the vote threshold. */
+export const DIRECT_MANDATE_EXCEPTION = 3;
+
 export interface VoteShare {
   partyId: string;
   votes: number;
@@ -37,7 +42,7 @@ export function allocateViaSainteLague(
     minDirectMandates?: Record<string, number>;
   } = {}
 ): SeatAllocationResult {
-  const { minVoteShare = 0.05, minDirectMandates = {} } = options;
+  const { minVoteShare = BUNDESTAG_VOTE_THRESHOLD, minDirectMandates = {} } = options;
 
   // Compute total votes and filter by threshold
   const totalVotes = voteShares.reduce((sum, v) => sum + v.votes, 0);
@@ -45,7 +50,7 @@ export function allocateViaSainteLague(
 
   const eligible = voteShares.filter((v) => {
     const hasEnoughVotes = v.votes >= threshold;
-    const hasEnoughDirectMandates = (minDirectMandates[v.partyId] ?? 0) >= 3;
+    const hasEnoughDirectMandates = (minDirectMandates[v.partyId] ?? 0) >= DIRECT_MANDATE_EXCEPTION;
     return hasEnoughVotes || hasEnoughDirectMandates;
   });
 

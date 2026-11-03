@@ -29,7 +29,7 @@ import {
   isSpecialCommonsElection,
   officeKeyForElectionType,
 } from "@/lib/utils/electionLabels";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { triggerLeadershipElectionsAfterChamberVote } from "@/lib/congress/leadershipElections";
 import { resolvePresidentElection } from "@/lib/turn/election/presidentResolution";
 import { resolveNGPresidentElection } from "@/lib/turn/election/ngPresidentResolution";

@@ -76,7 +76,7 @@ export const FIRST_CLOSE_ET_HOUR = Math.min(...Object.values(US_POLL_CLOSE_ET_HO
 export const LAST_CLOSE_ET_HOUR = Math.max(...Object.values(US_POLL_CLOSE_ET_HOURS));
 
 /** Fallback for a unit missing from the table (mid-evening batch). */
-export const DEFAULT_CLOSE_ET_HOUR = 21;
+const DEFAULT_CLOSE_ET_HOUR = 21;
 
 /** "ME_CD1" and "NE_CD2" close with their parent state. */
 export function pollCloseEtHour(unitId: string): number {

@@ -66,7 +66,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireHumanSessionWithCharacter(request);
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/elections/[id]/contingent-vote:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const character = auth.user.character;
 

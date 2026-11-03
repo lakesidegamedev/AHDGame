@@ -1,4 +1,5 @@
-import { getOfficeTypeConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getOfficeTypeConfig } from "@/lib/constants/countryClientConfig";
 
 /**
  * True when a country's president is elected on a ticket with a running mate

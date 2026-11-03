@@ -1,6 +1,7 @@
 import { ProducerSupplyPool } from "./supplyPoolRules";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
+import { nextAutoAsk } from "./autoAskRules";
 /**
  * Every producer sells delivered units at its posted price. Manual, cost-plus
  * and automatic quotes share the same funded order book and trade receipts.
@@ -23,6 +24,8 @@ export interface ProducerOffer {
   deliverableUnits?: number;
   /** Country the selling site is in; the funded book places supply here. */
   countryId?: string;
+  /** State the selling site is in; freight clears against local demand first. */
+  stateId?: string;
 }
 
 export interface PurchaseOrder {
@@ -46,6 +49,8 @@ export interface PurchaseOrder {
   quantityGroup?: { id: string; maximumUnits: number };
   /** Country the buying site is in; the funded book places demand here. */
   countryId?: string;
+  /** State the buying site is in; a freight order takes local sellers first. */
+  stateId?: string;
 }
 
 export interface ProducerTrade {
@@ -80,8 +85,25 @@ export interface ProducerTradeReceipt {
     sellerCountry?: string;
     /** Country of the buying site, when known. */
     buyerCountry?: string;
+    /** Set when every seller in the fill is in this state (a state-first freight fill). */
+    sellerState?: string;
+    /**
+     * Own-sites-first tier of an internal transfer: 0 the buyer's state, 1 the
+     * buyer's country outside that state, 2 anywhere else. Absent = all own offers.
+     */
+    ownTier?: 0 | 1 | 2;
   }>;
   tradeCount: number;
+}
+
+/** Own-sites-first distance tier of a seller for a buyer: state, country, anywhere else. */
+export function ownTierOf(
+  order: Pick<PurchaseOrder, "stateId" | "countryId">,
+  offer: Pick<ProducerOffer, "stateId" | "countryId">
+): 0 | 1 | 2 {
+  if (order.stateId && offer.stateId === order.stateId) return 0;
+  if (order.countryId && offer.countryId === order.countryId) return 1;
+  return 2;
 }
 
 /** Expand supplier-level trades for audits or route and contract accounting without retaining a matrix. */
@@ -132,7 +154,9 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     const matchesOrder = (offer: ProducerOffer) =>
       (offer.accountId === order.accountId) === internal &&
       (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
-      (!eligible || eligible.has(offer.id));
+      (!eligible || eligible.has(offer.id)) &&
+      (!fill.sellerState || offer.stateId === fill.sellerState) &&
+      (fill.ownTier == null || ownTierOf(order, offer) === fill.ownTier);
     // Internal transfers and contract/supplier orders ignore the posted price
     // and keep the full-book scan. An ordinary public order takes exactly the
     // offers posted at the fill's price, which the bucket already holds.
@@ -144,8 +168,11 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
               matchesOrder(offer) &&
               (internal || (order.contractUnitPrice ?? offer.unitPrice) === fill.unitPrice)
           );
+    // A state-first fill draws on one state's offers individually, never on
+    // the shared price pool, so its sellers are replayed one by one.
     const pooled =
       !internal &&
+      !fill.sellerState &&
       !order.eligibleOfferIds &&
       !order.supplierOfferId &&
       order.contractUnitPrice == null
@@ -258,6 +285,19 @@ export function settleProducerMarket(input: {
   orders: readonly PurchaseOrder[];
   /** Build the per-country funded book from these orders and fills (see fundedBookRules). */
   trackCountryBooks?: boolean;
+  /**
+   * Intra-turn credit per buyer, settled from its own sales before the turn
+   * closes (salesAdvanceRules). A buyer may spend past its cash by this much,
+   * so its closing cash can be negative; the caller settles it. Absent = none.
+   */
+  credit?: Readonly<Record<string, number>>;
+  /**
+   * gameConfig.producerOwnSitesFirstStage >= 1: before any outside order, each
+   * company's own sites take its own output, nearest first (same state, same
+   * country, anywhere eligible). Absent = the own fill happens only when the
+   * company's order comes up in id order.
+   */
+  ownSitesFirst?: boolean;
 }): ProducerMarketResult {
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
@@ -266,6 +306,25 @@ export function settleProducerMarket(input: {
   const cash = new Map(input.accounts.map((a) => [a.id, nonNegative(a.cash, "operating cash")]));
   // Opening budgets prevent a circular chain of unfunded sales from financing itself.
   const budgets = new Map(cash);
+  const floors = new Map<string, number>();
+  for (const [id, line] of Object.entries(input.credit ?? {})) {
+    if (!cash.has(id)) throw new Error("Unknown credit account");
+    const amount = nonNegative(line, "intra-turn credit");
+    if (amount > 0) {
+      budgets.set(id, budgets.get(id)! + amount);
+      floors.set(id, -amount);
+    }
+  }
+  const debit = (id: string, amount: number) =>
+    cash.set(id, Math.max(floors.get(id) ?? 0, cash.get(id)! - amount));
+  const credited = (id: string, amount: number) => {
+    const next = cash.get(id)! + amount;
+    const floor = floors.get(id);
+    if (floor == null) return nonNegative(next, "closing seller cash");
+    if (!Number.isFinite(next) || next < floor - Math.max(1e-9, -floor * 1e-12))
+      throw new Error("Invalid closing seller cash");
+    return next;
+  };
   const poolByOffer = new Map<string, ProducerSupplyPool>();
   const poolsByBook = new Map<string, Map<number, ProducerSupplyPool>>();
   // Offers behind each pooled price level, so a pooled fill can name the
@@ -442,10 +501,170 @@ export function settleProducerMarket(input: {
       Number(!!b.supplierOfferId) - Number(!!a.supplierOfferId) ||
       compareId(a.id, b.id)
   );
+  // State-first freight: a local buyer clears against its own state's offers
+  // before the national book pass, so a remote buyer sorted earlier cannot
+  // take the stock a local buyer needs. Indexed per book and state in the
+  // book's (price, id) order.
+  const freightByState = new Map<string, Map<string, Map<number, ProducerOffer[]>>>();
+  for (const offer of input.offers) {
+    if (offer.commodity !== "freight" || !offer.stateId) continue;
+    const key = bookKey(offer.commodity, offer.book);
+    const byState = freightByState.get(key) ?? new Map<string, Map<number, ProducerOffer[]>>();
+    const byPrice = byState.get(offer.stateId) ?? new Map<number, ProducerOffer[]>();
+    const level = byPrice.get(offer.unitPrice) ?? [];
+    level.push(offer);
+    byPrice.set(offer.unitPrice, level);
+    byState.set(offer.stateId, byPrice);
+    freightByState.set(key, byState);
+  }
+  for (const byState of freightByState.values())
+    for (const byPrice of byState.values())
+      for (const level of byPrice.values()) level.sort((a, b) => compareId(a.id, b.id));
+  /** The state-first pass for one freight order: its own state's offers only. */
+  const fillStateFreight = (
+    order: PurchaseOrder,
+    openingWanted: number,
+    openingBudget: number
+  ): { wanted: number; orderBudget: number } => {
+    let wanted = openingWanted;
+    let orderBudget = openingBudget;
+    // A named supplier, a contract or an eligibility filter keeps its ordinary
+    // pass: it has no free choice of sellers to reorder.
+    const stateId = order.stateId;
+    if (
+      !stateId ||
+      order.eligibleOfferIds ||
+      order.supplierOfferId ||
+      order.contractUnitPrice != null
+    )
+      return { wanted, orderBudget };
+    const byPrice = freightByState.get(bookKey(order.commodity, order.book))?.get(stateId);
+    if (!byPrice) return { wanted, orderBudget };
+    const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
+    const key = bookKey(order.commodity, order.book);
+    for (const [price, offers] of [...byPrice].sort(([a], [b]) => a - b)) {
+      if (!(wanted > 0) || price > order.maximumUnitPrice) break;
+      const rows = offers.filter((offer) => offer.accountId !== order.accountId);
+      const total = rows.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
+      const budget = Math.min(budgets.get(order.accountId)!, orderBudget);
+      const take = Math.min(wanted, total, price > 0 ? budget / price : wanted);
+      if (!(take > 0)) continue;
+      const amount = take * price;
+      if (!Number.isFinite(amount)) throw new Error("Non-finite trade value");
+      fills.push(
+        fillsWithCountries(
+          order,
+          { orderId: order.id, kind: "sale", unitPrice: price, units: take, sellerState: stateId },
+          rows
+        )
+      );
+      const observed = prices.get(key) ?? {
+        commodity: order.commodity,
+        book: order.book,
+        units: 0,
+        value: 0,
+        unitPrice: 0,
+      };
+      observed.units += take;
+      observed.value += amount;
+      observed.unitPrice = observed.value / observed.units;
+      prices.set(key, observed);
+      const buyer = orderResults.get(order.id)!;
+      buyer.deliveredUnits += take;
+      buyer.cost += amount;
+      for (const offer of rows) {
+        const available = remaining.get(offer.id);
+        const units = Math.min(available, (take / total) * available);
+        if (!(units > 0)) continue;
+        recordDelivery(offer, order, units);
+        tradeCount++;
+        remaining.set(offer.id, Math.max(0, available - units));
+        wanted = Math.max(0, wanted - units);
+        if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - units);
+        const spent = units * price;
+        orderBudget = Math.max(0, orderBudget - spent);
+        budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - spent));
+        debit(order.accountId, spent);
+        cash.set(offer.accountId, credited(offer.accountId, spent));
+        const seller = offerResults.get(offer.id)!;
+        seller.soldUnits += units;
+        seller.deliveredUnits += units;
+        seller.revenue += spent;
+      }
+    }
+    return { wanted, orderBudget };
+  };
+  const carried = new Map<string, { wanted: number; orderBudget: number }>();
+  // Phase 0 (ownSitesFirst): a company's own sites take its own output before
+  // any outside order, nearest first. Without it the own fill below runs only
+  // when the company's order comes up in id order, so an outside order sorted
+  // earlier could buy the stock out (tickets 1755, 1757). Named suppliers,
+  // contracts and reservation groups keep their ordinary pass: agreements
+  // reserve before own supply.
+  if (input.ownSitesFirst) {
+    for (const order of orders) {
+      if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
+      const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
+      const own = (
+        ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
+      ).filter((offer) => !eligible || eligible.has(offer.id));
+      if (own.length === 0) continue;
+      let wanted = order.units;
+      for (const ownTier of [0, 1, 2] as const) {
+        const tier = own.filter((offer) => ownTierOf(order, offer) === ownTier);
+        if (!(wanted > 0)) break;
+        const total = tier.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
+        const take = Math.min(wanted, total);
+        if (!(take > 0)) continue;
+        fills.push(
+          fillsWithCountries(
+            order,
+            { orderId: order.id, kind: "internalTransfer", unitPrice: 0, units: take, ownTier },
+            tier
+          )
+        );
+        for (const offer of tier) {
+          const available = remaining.get(offer.id);
+          const units = Math.min(available, (take / total) * available);
+          if (!(units > 0)) continue;
+          recordDelivery(offer, order, units);
+          remaining.set(offer.id, Math.max(0, available - units));
+          const seller = offerResults.get(offer.id)!;
+          seller.internalDeliveredUnits += units;
+          seller.deliveredUnits += units;
+          tradeCount++;
+        }
+        orderResults.get(order.id)!.deliveredUnits += take;
+        wanted = Math.max(0, wanted - take);
+      }
+      if (wanted < order.units)
+        carried.set(order.id, { wanted, orderBudget: order.maximumSpend ?? Number.MAX_VALUE });
+    }
+  }
+  // Phase 1: every freight order with a state clears its own state's offers
+  // first, carrying its residual target and budget into the ordinary pass.
+  for (const order of orders) {
+    if (order.commodity !== "freight" || !order.stateId) continue;
+    const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
+    const prior = carried.get(order.id);
+    const wanted = prior
+      ? prior.wanted
+      : Math.min(order.units, quantityGroup?.remaining ?? order.units);
+    carried.set(
+      order.id,
+      fillStateFreight(order, wanted, prior?.orderBudget ?? order.maximumSpend ?? Number.MAX_VALUE)
+    );
+  }
+  // Phase 2: the ordinary book pass over every order at its residual target.
   for (const order of orders) {
     const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
-    let wanted = Math.min(order.units, quantityGroup?.remaining ?? order.units);
-    let orderBudget = order.maximumSpend ?? Number.MAX_VALUE;
+    const carriedOrder = carried.get(order.id);
+    let wanted = carriedOrder
+      ? carriedOrder.wanted
+      : Math.min(order.units, quantityGroup?.remaining ?? order.units);
+    let orderBudget = carriedOrder
+      ? carriedOrder.orderBudget
+      : (order.maximumSpend ?? Number.MAX_VALUE);
     const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
     const key = bookKey(order.commodity, order.book);
     if (!eligible && !order.supplierOfferId && order.contractUnitPrice == null) {
@@ -506,7 +725,7 @@ export function settleProducerMarket(input: {
         if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - take);
         orderBudget = Math.max(0, orderBudget - amount);
         budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - amount));
-        cash.set(order.accountId, Math.max(0, cash.get(order.accountId)! - amount));
+        debit(order.accountId, amount);
         const buyer = orderResults.get(order.id)!;
         buyer.deliveredUnits += take;
         buyer.cost += amount;
@@ -592,11 +811,8 @@ export function settleProducerMarket(input: {
           if (!internal) {
             orderBudget = Math.max(0, orderBudget - amount);
             budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - amount));
-            cash.set(order.accountId, Math.max(0, cash.get(order.accountId)! - amount));
-            cash.set(
-              offer.accountId,
-              nonNegative(cash.get(offer.accountId)! + amount, "closing seller cash")
-            );
+            debit(order.accountId, amount);
+            cash.set(offer.accountId, credited(offer.accountId, amount));
           }
           const buyer = orderResults.get(order.id)!;
           buyer.deliveredUnits += units;
@@ -619,10 +835,7 @@ export function settleProducerMarket(input: {
     seller.soldUnits += units;
     seller.deliveredUnits += units;
     seller.revenue += amount;
-    cash.set(
-      offer.accountId,
-      nonNegative(cash.get(offer.accountId)! + amount, "closing seller cash")
-    );
+    cash.set(offer.accountId, credited(offer.accountId, amount));
   }
   if (tracked) {
     for (const [key, units] of deliveredAcross) {
@@ -692,9 +905,32 @@ function priceVolumes(rows: readonly { price: number; units: number }[]) {
 export function quoteProducer(input: {
   policy: ProducerQuotePolicy;
   referenceUnitPrice: number;
+  /**
+   * What buyers actually paid for this commodity in this book last turn. An
+   * automatic ask anchors here; absent (no trade) it falls back to the reference.
+   */
+  clearingUnitPrice?: number;
+  /** This output sold nothing last turn: an automatic ask drops its markup. */
+  soldNothingLastTurn?: boolean;
   variableUnitCost: number;
   fixedCost: number;
   offeredUnits: number;
+  /**
+   * Sell-through memory for an automatic ask (see autoAskRules). When present,
+   * the controller owns the price instead of the profit-maximum candidate
+   * search, which is how a seller that sold its whole offer can ask for more
+   * and how a raise the book rejected is given back. Absent keeps the
+   * historical estimator, which cannot raise a price at all.
+   */
+  autoAsk?: {
+    memory: { ask: number; previousAsk: number } | null;
+    /** Units the last ask actually sold. */
+    soldUnits: number;
+    /** Units the last ask offered. */
+    offeredUnits: number;
+    /** Fractional raise per sell-out step; defaults inside the controller. */
+    step?: number;
+  };
   demand: readonly { maximumUnitPrice: number; units: number }[];
   competitors: readonly { unitPrice: number; units: number }[];
 }): {
@@ -731,14 +967,52 @@ export function quoteProducer(input: {
     return estimate(nonNegative(input.policy.unitPrice, "manual price"));
   const markup = input.policy.kind === "costPlus" ? input.policy.markup : input.policy.targetMarkup;
   if (!Number.isFinite(markup) || markup < -1) throw new Error("Invalid target markup");
-  const target = (breakEven ?? reference) * (1 + markup);
-  if (input.policy.kind === "costPlus") return estimate(target);
-  const candidates = new Set([reference, target]);
+  if (input.policy.kind === "costPlus") return estimate((breakEven ?? reference) * (1 + markup));
+  // An automatic seller prices off the market, never above what buyers paid last
+  // turn plus its markup. The estimate below treats every bid in the book as one this
+  // seller can reach, so in a short world book the highest far-away ceiling looked
+  // like the best ask; the plant posted it and sold nothing (ticket 1728). The
+  // reference price alone is not enough either: it can sit well above the clearing,
+  // and a plant asking it sold nothing while the book traded below. A plant whose
+  // costs are above the market sells at the market and takes the loss.
+  const clearing = input.clearingUnitPrice;
+  const anchor =
+    clearing != null && Number.isFinite(clearing) && clearing > 0 ? clearing : reference;
+  // A seller that sold nothing last turn asks no more than the clearing, so an ask
+  // stuck above the book steps down instead of repeating.
+  const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  // Sell-through feedback (autoAskRules). With ask memory the controller decides
+  // the price: sold out climbs one step, the deadband holds, a shortfall reverts
+  // to the previous ask or steps down. Without memory the estimator below still
+  // runs. The controller replaces the profit search, so the demand book only
+  // bounds the price through the ceiling and the ask moves one step per turn.
+  // The loop closes where the caller stores `rememberAutoAsk(memory, decision)`
+  // for next turn; nothing stores it yet, so no caller passes `autoAsk`. Note
+  // that production.ts applies `markedDownAsk` after this returns, so the posted
+  // price can sit below the one chosen here.
+  if (input.autoAsk) {
+    // Last turn's clearing includes this plant's own sales, so where it sets the
+    // price a sell-out raise lifts the clearing and the ceiling with it, and the
+    // step cap never binds. Bound the controller by the reference price too.
+    const controllerCeiling = reference > 0 ? Math.min(ceiling, reference * (1 + markup)) : ceiling;
+    const decided = nextAutoAsk({
+      memory: input.autoAsk.memory,
+      soldUnits: input.autoAsk.soldUnits,
+      offeredUnits: input.autoAsk.offeredUnits,
+      ...(input.autoAsk.step != null ? { step: input.autoAsk.step } : {}),
+      ceiling: controllerCeiling,
+    });
+    // The controller reads a non-positive ceiling as unbounded, but here a zero
+    // ceiling (no anchor price, or a -100% markup) is a real cap of zero.
+    if (decided) return estimate(Math.min(decided.ask, controllerCeiling));
+  }
+  const candidates = new Set([reference, anchor, ceiling]);
   for (const seller of input.competitors)
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
   for (const order of input.demand)
     candidates.add(nonNegative(order.maximumUnitPrice, "demand limit"));
   return [...candidates]
+    .filter((price) => price <= ceiling)
     .map(estimate)
     .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice)[0];
 }

@@ -6,6 +6,7 @@ import {
   COMMODITY_DOMINANCE_MULT_AT_DOUBLE,
   COMMODITY_DOMINANCE_MULT_AT_PARITY,
   DUMPING_GUARD_SOLD_SHARE,
+  commodityDominanceMarket,
   commodityDominanceMultiplier,
   commodityDominanceRatio,
   dominanceMultiplierForOrder,
@@ -173,5 +174,86 @@ describe("dumping guard", () => {
     expect(guardedPricingPosture(-0.2, true)).toBe(0);
     expect(guardedPricingPosture(0.15, true)).toBe(0.15);
     expect(guardedPricingPosture(-0.2, false)).toBe(-0.2);
+  });
+});
+
+describe("commodityDominanceRatio for goods sold only where they are made", () => {
+  const logistics = (id: string, stateId: string, capitalStock: number) =>
+    ({
+      _id: id,
+      sectorType: "logistics",
+      capitalStock,
+      queuedUnits: 0,
+      strategyId: null,
+      stateId,
+    }) as CommodityDominanceSector;
+  const base = {
+    commodities: ["freight" as const],
+    targetSectorId: "tx",
+    targetStateId: "TX",
+    extraUnits: 0,
+    isNatcorp: false,
+    turn: 10,
+  };
+
+  it("measures freight against the target state and counts only capacity there", () => {
+    const sectors = [logistics("tx", "TX", 100), logistics("ca", "CA", 100_000)];
+    const tiny = commodityDominanceRatio({
+      ...base,
+      sectors: [logistics("tx", "TX", 100)],
+      demandOf: () => 1,
+    });
+    const local = commodityDominanceRatio({
+      ...base,
+      sectors,
+      // World demand is tiny next to the firm's idle fleet elsewhere: the old
+      // reading charged the TX build for the CA capacity.
+      demandOf: () => 1,
+      stateDemandOf: (_c, stateId) => (stateId === "TX" ? 1 : null),
+    });
+    expect(local.commodity).toBe("freight");
+    // Only the TX sector counts: same ratio as a firm that owns TX alone.
+    expect(local.ratio).toBeCloseTo(tiny.ratio, 9);
+    const world = commodityDominanceRatio({ ...base, sectors, demandOf: () => 1 });
+    expect(world.ratio).toBeGreaterThan(local.ratio * 100);
+  });
+
+  it("falls back to world demand when the state has no reading", () => {
+    const sectors = [logistics("tx", "TX", 100), logistics("ca", "CA", 100)];
+    const fallback = commodityDominanceRatio({
+      ...base,
+      sectors,
+      demandOf: () => 10,
+      stateDemandOf: () => null,
+    });
+    const world = commodityDominanceRatio({ ...base, sectors, demandOf: () => 10 });
+    expect(fallback.ratio).toBeCloseTo(world.ratio, 9);
+  });
+
+  it("keeps remote services on world demand", () => {
+    expect(
+      commodityDominanceMarket({
+        commodity: "consulting_services",
+        targetStateId: "TX",
+        worldDemand: 500,
+        stateDemand: 5,
+      })
+    ).toEqual({ demand: 500, stateId: null });
+    expect(
+      commodityDominanceMarket({
+        commodity: "freight",
+        targetStateId: "TX",
+        worldDemand: 500,
+        stateDemand: 5,
+      })
+    ).toEqual({ demand: 5, stateId: "TX" });
+    expect(
+      commodityDominanceMarket({
+        commodity: "freight",
+        targetStateId: "TX",
+        worldDemand: 500,
+        stateDemand: 0,
+      })
+    ).toBeNull();
   });
 });

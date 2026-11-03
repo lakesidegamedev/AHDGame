@@ -6680,8 +6680,7 @@ const MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] = [
  * (seedMacroCountries.ts's own invariant), so a real INI state-holding corp
  * would contradict Spain's new abstract-economy classification. Kept here,
  * not seeded by {@link generateCountryOwnedSeedData}, as inert reference for a
- * possible future Tier-2 migration — same treatment as
- * DORMANT_REPROMOTED_EUROPE_1953_MACRO_SPECS in macro/europe1953.ts.
+ * possible future Tier-2 migration.
  */
 export const DORMANT_MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] = [
   // Spain — INI (Instituto Nacional de Industria, 1941), Franco's autarky-era

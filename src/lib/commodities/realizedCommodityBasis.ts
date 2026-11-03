@@ -54,7 +54,7 @@ export const REALIZED_COMMODITY_ROUNDING_DECIMALS = 2;
 export const REALIZED_COMMODITY_ROUNDING_UNIT = 0.01;
 
 /** Small float epsilon added on top of pure rounding headroom. */
-export const REALIZED_COMMODITY_EPSILON = 1e-6;
+const REALIZED_COMMODITY_EPSILON = 1e-6;
 
 /**
  * Maximum expected absolute gap between the same realized volume reported on

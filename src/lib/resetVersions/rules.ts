@@ -13,7 +13,7 @@ export type ResetV2Readiness = Readonly<Partial<Record<ResetSystem, boolean>>>;
 export const RESET_V2_OPENING_COUNTRIES = ["US", "UK", "JP", "IE"] as const;
 
 /** Countries whose reviewed v2 boards are created only when independence occurs. */
-export const RESET_V2_SUCCESSOR_COUNTRIES = ["SCO", "WAL"] as const;
+const RESET_V2_SUCCESSOR_COUNTRIES = ["SCO", "WAL"] as const;
 
 export const RESET_V2_COUNTRIES = [
   ...RESET_V2_OPENING_COUNTRIES,
@@ -66,13 +66,6 @@ export interface ResetVersionState {
   resetVersionSeeds?: Partial<Record<ResetSystem, ResetSystemSeedReceipt>>;
   resetSystemSelections?: Partial<Record<ResetSystem, ResetSystemVersion>>;
 }
-
-export const RESET_SYSTEM_VERSION_FIELDS = {
-  metrics: "metricsSystemVersion",
-  legislation: "legislationSystemVersion",
-  cabinet: "cabinetSystemVersion",
-  demographics: "demographicsSystemVersion",
-} as const satisfies Record<ResetSystem, string>;
 
 /** Read persisted state without trusting missing or malformed values. */
 export function resolveResetSystemVersion(value: unknown, v2Ready: boolean): ResetSystemVersion {

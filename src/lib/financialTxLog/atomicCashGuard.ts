@@ -1,9 +1,10 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 export type DebitResult = { ok: true; newBalance: number } | { ok: false; error: string };
 
-type CashGuardOptions = { session?: ClientSession };
+type CashGuardOptions = { session?: ClientSession; corporateObligation?: boolean };
 
 function mongoOptions(options?: CashGuardOptions): { session: ClientSession } | undefined {
   return options?.session ? { session: options.session } : undefined;
@@ -120,14 +121,21 @@ export async function atomicallyDebitCorpLiquidCapital(
   if (!Number.isFinite(amountInCorpCapitalUnits) || amountInCorpCapitalUnits <= 0) {
     return { ok: false, error: "Invalid amount" };
   }
-  const result = await db
-    .collection("corporations")
-    .findOneAndUpdate(
-      { _id: corporationId, liquidCapital: { $gte: amountInCorpCapitalUnits } },
-      { $inc: { liquidCapital: -amountInCorpCapitalUnits }, $set: { updatedAt: new Date() } },
-      { returnDocument: "after", projection: { liquidCapital: 1 }, ...mongoOptions(options) }
-    );
-  if (!result) return { ok: false, error: "Insufficient corporate funds" };
+  const result = await db.collection("corporations").findOneAndUpdate(
+    {
+      _id: corporationId,
+      liquidCapital: { $gte: amountInCorpCapitalUnits },
+      ...(options?.corporateObligation ? {} : corporateDiscretionaryCashGuard()),
+    },
+    { $inc: { liquidCapital: -amountInCorpCapitalUnits }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after", projection: { liquidCapital: 1 }, ...mongoOptions(options) }
+  );
+  if (!result)
+    return {
+      ok: false,
+      error:
+        "Insufficient spendable corporate funds, or taxes and operating payables must settle first",
+    };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { ok: true, newBalance: (result as any).liquidCapital ?? 0 };
 }
@@ -294,14 +302,14 @@ export async function debitCorpShareEscrowFloored(
   corporationId: ObjectId,
   amount: number,
   options?: CashGuardOptions
-): Promise<EscrowDebitSplit> {
+): Promise<EscrowDebitSplit | null> {
   if (!Number.isFinite(amount) || amount <= 0) {
     return { escrowDebited: 0, treasuryDebited: 0 };
   }
   const now = new Date();
   // returnDocument:"before" gives the pre-state so we can report the exact split.
   const before = await db.collection("corporations").findOneAndUpdate(
-    { _id: corporationId },
+    { _id: corporationId, ...corporateDiscretionaryCashGuard() },
     [
       {
         $set: {
@@ -333,6 +341,7 @@ export async function debitCorpShareEscrowFloored(
       ...mongoOptions(options),
     }
   );
+  if (!before) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const preEscrow = before ? ((before as any).shareEscrowBalance ?? 0) : 0;
   const escrowDebited = Math.min(amount, Math.max(0, preEscrow));
@@ -360,6 +369,7 @@ export async function debitCorpShareEscrowCapped(
   const before = await db.collection("corporations").findOneAndUpdate(
     {
       _id: corporationId,
+      $and: [corporateDiscretionaryCashGuard()],
       $expr: {
         $gte: [
           {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { CountryFlag } from "@/components/CountryFlag";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { centralBankApiUrl, centralBankUrl } from "@/lib/urls";
 import { PlayerSelector } from "@/components/PlayerSelector";

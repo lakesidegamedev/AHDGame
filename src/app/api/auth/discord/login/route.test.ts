@@ -102,19 +102,19 @@ describe("GET /api/auth/discord/login: redirect host", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.DISCORD_CLIENT_ID = "client";
-    // Production drifted to the www host; the Discord app registers the apex.
+    // Production registers the www host; it must reach Discord unchanged.
     process.env.DISCORD_REDIRECT_URI =
       "https://www.ahousedividedgame.com/api/auth/discord/callback";
   });
 
-  it("sends the registered apex redirect even when the environment says www", async () => {
+  it("sends the configured www redirect unchanged", async () => {
     const { getDiscordOAuthUrl } = await import("@/lib/discord");
     const { GET } = await import("./route");
     await GET(new Request("https://ahousedividedgame.com/api/auth/discord/login"));
 
     expect(getDiscordOAuthUrl).toHaveBeenCalledWith(
       expect.any(String),
-      "https://ahousedividedgame.com/api/auth/discord/callback",
+      "https://www.ahousedividedgame.com/api/auth/discord/callback",
       "client"
     );
   });

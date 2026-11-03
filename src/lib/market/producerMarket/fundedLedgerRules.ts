@@ -10,6 +10,7 @@
  * Pure: settlement outcomes in, ledger rows out.
  */
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
+import { commodityStateKey } from "./laneKey";
 /** Settled funded supply and demand per turn, read by the price phase. */
 export const PRODUCER_MARKET_OUTCOMES = "producerMarketOutcomes";
 
@@ -41,7 +42,7 @@ export function fundedLedgerRows(input: {
 }): FundedLedgerRow[] {
   const rows = new Map<string, FundedLedgerRow>();
   const row = (commodity: string, stateId: string | null) => {
-    const key = JSON.stringify([commodity, stateId]);
+    const key = commodityStateKey(commodity, stateId);
     const r = rows.get(key) ?? { commodity, stateId, supply: 0, demand: 0 };
     rows.set(key, r);
     return r;

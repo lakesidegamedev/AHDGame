@@ -18,7 +18,7 @@ import {
   moderatedBillText,
   stateBillProvisionSchema,
 } from "@/lib/api/schemas/congress";
-import { MAX_PROVISIONS } from "@shared/constants/legislation";
+import { MAX_PROVISIONS, STATE_BILL_CATEGORIES } from "@shared/constants/legislation";
 import type {
   GovernorQueuedBill,
   NPP,
@@ -52,7 +52,7 @@ export async function POST(
         targetNppId: z.string().refine((v) => ObjectId.isValid(v), "Invalid targetNppId"),
         title: moderatedBillTitle(z.string().min(1).max(200)),
         summary: moderatedBillText(z.string().min(1).max(2000)),
-        category: z.string().optional(),
+        category: z.enum(STATE_BILL_CATEGORIES).optional(),
         legislationTypeId: z.string().optional(),
         effectDirection: z.number().optional(),
         // Strict provision validation (audit S6): only sub-national provision

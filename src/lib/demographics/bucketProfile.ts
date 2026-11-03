@@ -1,7 +1,9 @@
 import { deriveGranularElectorateUnits } from "./granularElectorate";
 import { getTurnoutTargetsForCountry } from "./turnoutTargets";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
+import type { Layer1PositionOverlay, Layer1TurnoutOverlay } from "@/lib/db/types/demographics";
 import type { EraYearContext } from "./granularElectorate";
+import type { LegislativePriorities } from "./legislativePriorities/rules";
 
 /**
  * Per-bucket view of a region's electorate, for the demographics tab.
@@ -26,6 +28,8 @@ export interface BucketRow {
   socialLean: number;
   /** Turnout rate for this bucket, 0-100. */
   turnout: number;
+  /** Display-only requests, attached by the region page rather than the vote path. */
+  legislativePriorities?: LegislativePriorities | null;
 }
 
 export interface BucketProfileSection {
@@ -43,15 +47,17 @@ export function getBucketProfileForRegion(
   stateId: string,
   preset: string | undefined,
   turnoutDoc?: StateDemographicTurnout | null,
-  yearCtx?: EraYearContext
+  yearCtx?: EraYearContext,
+  positionOverlay?: Layer1PositionOverlay | null,
+  turnoutOverlay?: Layer1TurnoutOverlay | null
 ): BucketProfileSection[] | null {
   const derived = deriveGranularElectorateUnits(
     countryId,
     stateId,
     preset,
     turnoutDoc,
-    null,
-    null,
+    positionOverlay,
+    turnoutOverlay,
     yearCtx
   );
   if (!derived || derived.units.length === 0) return null;

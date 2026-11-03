@@ -107,10 +107,7 @@ import {
 } from "@/lib/corporations/portfolioAnchorValuation";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
-import {
-  buildMarketShareBySectorId,
-  buildNationalDominanceShareBySectorId,
-} from "@/lib/corporations/marketShare";
+import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -150,6 +147,7 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { ownRouteKey, recordedGroupRouteMembers } from "@/lib/market/internalSupply/rules";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
+import { countBlockEmbargoes, tradeEligibilityScope } from "./rules/tradeEligibilityScope";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -265,6 +263,11 @@ export async function buildCorporationLookups(
             // Money-move settlement history: most of each document's bytes,
             // read only by the settlement protocol under its own projection.
             ...SETTLEMENT_HISTORY_EXCLUDED,
+            // Per-order political advertising receipts: written by the money
+            // move that pays the seller, then never read back (the guard is
+            // the move key). Two kilobytes of pure write-only history on every
+            // corporation, decoded by every turn read.
+            politicalMediaReceipts: 0,
             groupSupplyBasis: 0,
             ...(options?.mediaEditorialEnabled === true ? {} : { editorialStance: 0 }),
             ...(options?.productLinesV2Enabled === true
@@ -290,6 +293,12 @@ export async function buildCorporationLookups(
     // sectorTurn as a complete overwrite and never reads the prior value.
     // `soldByCommodity` IS read: the demand throttle values last turn's sales
     // leg by leg (ticket 1370), so it must not be projected out.
+    // `constructionFinancing` and `constructionPropertyTransition` are the
+    // construction-lending claim on the sector: no turn module reads either
+    // field (the banking commands do, under their own projections), so the
+    // whole turn pays to decode them for nothing. Nothing writes a sector back
+    // as a whole document either: sectorTurn emits targeted $set/$inc/$pull/
+    // $push ops, so an excluded field cannot be blanked by a write-back.
     db
       .collection<CorporateSector>("corporateSectors")
       .find(
@@ -297,6 +306,8 @@ export async function buildCorporationLookups(
         {
           projection: {
             plantsPnl: 0,
+            constructionFinancing: 0,
+            constructionPropertyTransition: 0,
             ...(options?.explicitPlantCostsEnabled === true
               ? {}
               : { pricingMode: 0, costPlusCostBasis: 0 }),
@@ -555,9 +566,24 @@ export async function buildCorporationLookups(
     if (options?.plantsEnabled && sector.transitionFromStrategyId) {
       Object.assign(
         sector,
+        // The retool basis reads a dozen fields; spreading the whole sector
+        // document copied every telemetry block it carries, per retooling
+        // sector, on a 14,000-row world.
         retoolProductionMeasurements({
-          ...sector,
+          sectorType: sector.sectorType,
+          industryModel: sector.industryModel,
+          mediaDiscriminator: sector.mediaDiscriminator,
+          strategyId: sector.strategyId,
+          transitionFromStrategyId: sector.transitionFromStrategyId,
+          transitionStartTurn: sector.transitionStartTurn,
+          retoolRescaleApplied: sector.retoolRescaleApplied,
           currentTurn: options.productionTurn ?? embargoTurn,
+          operatingCapacityTurn: sector.operatingCapacityTurn,
+          operatingCapacityUnits: sector.operatingCapacityUnits,
+          capitalStock: sector.capitalStock,
+          producedUnits: sector.producedUnits,
+          soldUnits: sector.soldUnits,
+          contractAchievableUnits: sector.contractAchievableUnits,
         })
       );
     }
@@ -1093,6 +1119,7 @@ export async function buildCorporationLookups(
       honestBalanceSheetsStage?: number;
       fundedOverheadStage?: number;
       fundedHeadcountStage?: number;
+      fundedValuationStage?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
@@ -1106,6 +1133,7 @@ export async function buildCorporationLookups(
           honestBalanceSheetsStage: 1,
           fundedOverheadStage: 1,
           fundedHeadcountStage: 1,
+          fundedValuationStage: 1,
         },
       }
     );
@@ -1201,51 +1229,68 @@ export async function buildCorporationLookups(
   // keep the single worldwide book: postwar-integrated trade is the modern
   // baseline, and partitioning it would only re-derive the same world market
   // with extra moving parts. See market/tradePartition.ts for book semantics.
+  //
+  // Route eligibility is a different question from book partitioning: it says
+  // who may buy from whom inside whatever book clears the sale. That is where
+  // an embargo belongs, and it is not era-specific, so a modern world with an
+  // active block embargo now builds the affinity graph too. A modern world without
+  // one still builds nothing, which keeps this a no-op there.
+  const tradeScope = tradeEligibilityScope({
+    eraUnitScale,
+    activeBlockEmbargoCount: countBlockEmbargoes(activeEmbargoDocs),
+  });
   let countryClearingBooks: ReturnType<typeof buildCountryClearingBooks> | null = null;
   let tradeRoutes: CorporationLookups["tradeRoutes"] = null;
-  if (eraUnitScale !== 1) {
+  if (tradeScope.routes) {
     const blocsByCountry = new Map<string, Set<string>>();
     for (const m of orgMembershipDocs) {
       if (!m.countryId || !m.organizationId) continue;
       if (!blocsByCountry.has(m.countryId)) blocsByCountry.set(m.countryId, new Set());
       blocsByCountry.get(m.countryId)!.add(String(m.organizationId));
     }
-    // Iron curtain (mirrors commodityPriceTurn): planned economies trade only
-    // among themselves; membership from the engine's MARKETIZATION_SCHEDULE via
-    // isCurtained, so the curtain lifts on the historical marketization dates
-    // and the Tito-split exemption keeps Yugoslavia trading with the open world.
-    const [curtainCfg, curtainState, countries] = await Promise.all([
-      db
-        .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-      getRegisteredCountryIds(db),
-    ]);
-    const curtainEnabled = curtainCfg?.commandEconomyEnabled === true;
-    const curtainYear = curtainState?.currentYear ?? null;
-    const curtainedCountries = new Set<string>(
-      countries.filter((c) => isCurtained(c, curtainYear, curtainEnabled))
-    );
+    let countries: CountryId[] = [];
+    let curtainedCountries: ReadonlySet<string> | undefined;
+    if (tradeScope.countryBooks) {
+      // Iron curtain (mirrors commodityPriceTurn): planned economies trade only
+      // among themselves; membership from the engine's MARKETIZATION_SCHEDULE via
+      // isCurtained, so the curtain lifts on the historical marketization dates
+      // and the Tito-split exemption keeps Yugoslavia trading with the open world.
+      const [curtainCfg, curtainState, registeredCountries] = await Promise.all([
+        db
+          .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
+          .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+        db
+          .collection<GameState>("gameState")
+          .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+        getRegisteredCountryIds(db),
+      ]);
+      const curtainEnabled = curtainCfg?.commandEconomyEnabled === true;
+      const curtainYear = curtainState?.currentYear ?? null;
+      countries = registeredCountries;
+      curtainedCountries = new Set<string>(
+        countries.filter((c) => isCurtained(c, curtainYear, curtainEnabled))
+      );
+    }
     const { affinityFor, capUnitsFor, importCostMultiplierFor } = buildTradeAffinity({
       ftaPairs: activeFtaPairs,
       blocsByCountry,
       tariffs: allTariffs,
       embargoes: activeEmbargoDocs,
-      curtainedCountries,
+      ...(curtainedCountries ? { curtainedCountries } : {}),
     });
     tradeRoutes = { affinityFor, importCostMultiplierFor };
-    countryClearingBooks = buildCountryClearingBooks({
-      countries,
-      nationalBalances: nationalCommodityBalancesByCountry,
-      affinityFor,
-      capUnitsFor,
-      importCostMultiplierFor,
-    });
-    // The stored national balances are post-trade; the price turn's persisted
-    // reachable books are the pre-trade clearing the books are meant to be.
-    overlayReachableClearingBooks(countryClearingBooks, tradeSnapshotDoc?.books);
+    if (tradeScope.countryBooks) {
+      countryClearingBooks = buildCountryClearingBooks({
+        countries,
+        nationalBalances: nationalCommodityBalancesByCountry,
+        affinityFor,
+        capUnitsFor,
+        importCostMultiplierFor,
+      });
+      // The stored national balances are post-trade; the price turn's persisted
+      // reachable books are the pre-trade clearing the books are meant to be.
+      overlayReachableClearingBooks(countryClearingBooks, tradeSnapshotDoc?.books);
+    }
   }
   const unmetForeignDemandByCountry = new Map<string, Map<CommodityType, number>>();
   for (const [countryId, byCommodity] of Object.entries(tradeSnapshotDoc?.books ?? {})) {
@@ -1258,7 +1303,7 @@ export async function buildCorporationLookups(
     }
     if (row.size > 0) unmetForeignDemandByCountry.set(countryId, row);
   }
-  const marketShareBySectorId = buildMarketShareBySectorId({
+  const { marketShareBySectorId, nationalDominanceShareBySectorId } = buildSectorShareMaps({
     sectors: allSectors,
     corpById,
     stateById,
@@ -1266,16 +1311,6 @@ export async function buildCorporationLookups(
     exchangeRatesByCurrency,
     preset: marketSharePreset,
     plantsEnabled: options?.plantsEnabled === true,
-  });
-  // National dominance share (revenue-basis, era-cancelling) so antitrust tolls
-  // charge on max(local, national) and geographic spread can't dodge them.
-  const nationalDominanceShareBySectorId = buildNationalDominanceShareBySectorId({
-    sectors: allSectors,
-    corpById,
-    stateById,
-    unownedSectors: unownedSectorDocs,
-    exchangeRatesByCurrency,
-    preset: marketSharePreset,
   });
   // Running dominance cost reads the control group's combined shares.
   const dominanceRunningCost =
@@ -1790,6 +1825,8 @@ export async function buildCorporationLookups(
       typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 0,
     fundedHeadcountStage:
       typeof overheadCfg?.fundedHeadcountStage === "number" ? overheadCfg.fundedHeadcountStage : 0,
+    fundedValuationStage:
+      typeof overheadCfg?.fundedValuationStage === "number" ? overheadCfg.fundedValuationStage : 0,
     dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
     soeSizeCostByCorpId,
     dominanceRunningCost,

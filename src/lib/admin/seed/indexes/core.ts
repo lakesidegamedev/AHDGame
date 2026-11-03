@@ -29,6 +29,13 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
   log("Core indexes:");
   await ensureIndex(
     db,
+    "counties",
+    { countryId: 1, stateId: 1 },
+    { name: "counties_country_state" },
+    log
+  );
+  await ensureIndex(
+    db,
     "contestRounds",
     { status: 1, "standings.userId": 1, settledAt: -1 },
     { name: "contestRounds_account_history" },
@@ -297,6 +304,13 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
   // Registration IP-policy collection (see registrationGate.ts).
   await ensureIndex(db, "bannedIps", { ip: 1 }, { unique: true, name: "bannedIps_ip" }, log);
   await ensureIndex(db, "bannedIps", { bannedAt: -1 }, { name: "bannedIps_bannedAt" }, log);
+  await ensureIndex(
+    db,
+    "bannedDevices",
+    { kind: 1, value: 1 },
+    { unique: true, name: "bannedDevices_kind_value" },
+    log
+  );
 
   await ensureGovernmentContractIndexes(db);
   log("Core indexes ensured");

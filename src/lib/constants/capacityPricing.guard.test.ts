@@ -46,6 +46,11 @@ const REGISTRY: Record<string, { count: number; expect: Expectation; why: string
     expect: "sector",
     why: "computeBuildCost forwards its own required strategyId to capacityPricePerUnit.",
   },
+  "src/lib/remediation/defects/AHD-whole-plants-conversion.ts": {
+    count: 1,
+    expect: "sector",
+    why: "The whole-plants conversion's list-price fallback values a sector's own existing part-plant, so it reads that sector's strategy.",
+  },
   "src/lib/corporations/sectorProfitBasis.ts": {
     count: 1,
     expect: "sector",
@@ -66,20 +71,15 @@ const REGISTRY: Record<string, { count: number; expect: Expectation; why: string
     expect: "sector",
     why: "The player build command. This is the site the exploit was bought through.",
   },
-  "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
+  "src/lib/corporations/rules/marketEntry.ts": {
     count: 1,
     expect: "null-greenfield",
-    why: "Founds a new sector; expandSector never sets a strategyId, so it runs the sector-type default.",
+    why: "The founding quote shared by expandSector and expand-suggestions; a founded sector never has a strategyId, so it runs the sector-type default.",
   },
   "src/lib/corporations/queries/sectorDetailSections.ts": {
     count: 2,
     expect: "sector",
     why: "The build quote a player is shown. Must equal what buildCapacity charges.",
-  },
-  "src/app/api/corporations/[id]/expand-suggestions/route.ts": {
-    count: 1,
-    expect: "null-greenfield",
-    why: "Suggests founding a sector that does not exist yet.",
   },
   "src/lib/economy/soe.ts": {
     count: 1,

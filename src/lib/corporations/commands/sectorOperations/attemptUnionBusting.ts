@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
@@ -22,6 +23,8 @@ import { sectorEconomicScale } from "@/lib/corporations/sectorProfitBasis";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { notifyUnionOfBustingAttempt } from "@/lib/unions/unionBustingNotice";
+import { emitTx } from "@/lib/financialTxLog/emit";
+import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 
 export type AttemptUnionBustingResult =
   | {
@@ -175,13 +178,15 @@ export async function attemptUnionBusting(
           .updateOne(sectorFilter, sectorSet, { session });
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
-        const corpUpdate = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id, liquidCapital: { $gte: cashCost } },
-            { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } },
-            { session }
-          );
+        const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+          {
+            _id: corporation._id,
+            liquidCapital: { $gte: cashCost },
+            ...corporateDiscretionaryCashGuard(),
+          },
+          { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } },
+          { session }
+        );
         if (corpUpdate.modifiedCount === 0) throw new Error("INSUFFICIENT_FUNDS");
       },
       async () => {
@@ -191,12 +196,14 @@ export async function attemptUnionBusting(
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
         try {
-          const corpUpdate = await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corporation._id, liquidCapital: { $gte: cashCost } },
-              { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } }
-            );
+          const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+            {
+              _id: corporation._id,
+              liquidCapital: { $gte: cashCost },
+              ...corporateDiscretionaryCashGuard(),
+            },
+            { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } }
+          );
           if (corpUpdate.modifiedCount === 0) {
             await db
               .collection<CorporateSector>("corporateSectors")
@@ -222,6 +229,31 @@ export async function attemptUnionBusting(
     }
     throw error;
   }
+
+  // The cash debit above committed: record it in the corporation's finance
+  // history so the spend is visible (ticket #1689: a ~$4M bust read as missing
+  // money because no row existed). emitTx never throws.
+  await emitTx(db, {
+    type: "corp_union_busting_cost",
+    turn: currentTurn,
+    createdAt: now,
+    subjectType: "corporation",
+    subjectId: corporation._id,
+    subjectName: corporation.name ?? "Corporation",
+    ...(corporation.sequentialId !== undefined
+      ? { subjectSequentialId: corporation.sequentialId }
+      : {}),
+    amount: -cashCost,
+    currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
+    meta: {
+      sectorId,
+      sectorType: sector.sectorType,
+      countryId,
+      success,
+      unionizationBefore: priorUnionization,
+      unionizationAfter: newUnionization,
+    },
+  });
 
   // `countryId` is the one resolved above the ban gate: the same answer the
   // legality check used, so a bust can never be permitted under one country's

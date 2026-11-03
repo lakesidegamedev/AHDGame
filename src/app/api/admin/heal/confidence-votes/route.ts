@@ -124,10 +124,9 @@ export async function POST() {
         .toArray();
 
       // Qualifying parties for auto-aye: nominating party or coalition parties
-      const qualifyingPartyIds: Set<string> =
-        vote.formationType === "coalition" && vote.coalitionPartyIds
-          ? new Set(vote.coalitionPartyIds)
-          : new Set([vote.nomineePartyId]);
+      const qualifyingPartyIds: Set<string> = vote.coalitionPartyIds?.length
+        ? new Set(vote.coalitionPartyIds)
+        : new Set([vote.nomineePartyId]);
 
       let autoAyeCount = 0;
       const votesUpdate: Record<string, "aye"> = {};

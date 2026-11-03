@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="420" viewBox="0 0 780 420" role="img" font-family="system-ui, sans-serif">
+<title>Crisis decision flow</title>
+<desc>How a crisis decision card moves from the first question through options to the next question, a funding step or the end, with auto-resolve on expiry.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="24" width="150" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="95.0" y="49.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Crisis starts</text>
+<rect x="210" y="24" width="180" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="300.0" y="41.0" font-size="13" text-anchor="middle" fill="#18181b">Interaction record</text>
+<text x="300.0" y="58.0" font-size="13" text-anchor="middle" fill="#18181b">opened</text>
+<rect x="430" y="24" width="330" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="595.0" y="49.5" font-size="13" text-anchor="middle" fill="#18181b">Active node: a question with options</text>
+<path d="M170 46 L210 46" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M390 46 L430 46" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="430" y="110" width="330" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="595.0" y="135.5" font-size="13" text-anchor="middle" fill="#18181b">Player with the right office picks an option</text>
+<path d="M595 68 L595 110" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M595 154 L595 178 L110 178 L110 200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M595 178 L340 178 L340 200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M595 178 L640 178 L640 200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="120" y="194" font-size="12" text-anchor="start" fill="#52525b">option leads to</text>
+<text x="120" y="208" font-size="12" text-anchor="start" fill="#52525b">another node</text>
+<text x="350" y="194" font-size="12" text-anchor="start" fill="#52525b">option needs money</text>
+<text x="650" y="194" font-size="12" text-anchor="start" fill="#52525b">last node</text>
+<rect x="20" y="214" width="180" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="110.0" y="234.0" font-size="13" text-anchor="middle" fill="#18181b">Next node: the</text>
+<text x="110.0" y="251.0" font-size="13" text-anchor="middle" fill="#18181b">question step repeats</text>
+<rect x="250" y="214" width="180" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="340.0" y="234.0" font-size="13" text-anchor="middle" fill="#18181b">Funding step: treasury</text>
+<text x="340.0" y="251.0" font-size="13" text-anchor="middle" fill="#18181b">balance checked</text>
+<rect x="560" y="214" width="200" height="50" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="660.0" y="242.5" font-size="13" text-anchor="middle" fill="#18181b">End: effects settle</text>
+<path d="M340 264 L340 300" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="348" y="287" font-size="12" text-anchor="start" fill="#52525b">enough funds</text>
+<rect x="230" y="300" width="220" height="60" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="340.0" y="325.0" font-size="13" text-anchor="middle" fill="#18181b">Treasury debited, amount</text>
+<text x="340.0" y="342.0" font-size="13" text-anchor="middle" fill="#18181b">added to the fund total</text>
+<path d="M430 239 L465 239 L465 330 L480 330" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="472" y="226" font-size="12" text-anchor="start" fill="#52525b">short</text>
+<rect x="480" y="300" width="280" height="60" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="620.0" y="325.0" font-size="13" text-anchor="middle" fill="#18181b">Short of funds: option blocked, shows</text>
+<text x="620.0" y="342.0" font-size="13" text-anchor="middle" fill="#18181b">required against held</text>
+<path d="M760 46 L772 46 L772 252 L760 252" fill="none" stroke="#52525b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#mg)"/>
+<text x="20" y="392" font-size="12" text-anchor="start" fill="#52525b">Dashed grey line: if the window closes unanswered, the default option resolves and the crisis moves on.</text>
+<rect x="20" y="332" width="0" height="0" fill="none"/>
+</svg>

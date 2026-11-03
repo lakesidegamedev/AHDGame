@@ -20,7 +20,7 @@ const clamp = (v: number, lo: number, hi: number): number =>
 /** A healthy SOE meets its plan (fulfillment = 1.0). This is the drift baseline. */
 export const SOE_PERF_BASELINE = 1.0;
 /** Capacity headroom over the plan target at seed (matches the 10% sector convention). */
-export const SOE_CAPACITY_HEADROOM = 1.1;
+const SOE_CAPACITY_HEADROOM = 1.1;
 /** Ceiling on reported plan fulfillment so a runaway overshoot can't dominate the mean. */
 export const MAX_PLAN_FULFILLMENT = 2.0;
 
@@ -58,7 +58,7 @@ export function aggregatePlanFulfillment(
  * [0, MAX_PLAN_FULFILLMENT]. Capacity of 0 (or non-finite) → SOE_PERF_BASELINE
  * (no information; neither adds nor relieves pressure).
  */
-export function capacityUtilisation(soe: Pick<SoeState, "output" | "capacity">): number {
+function capacityUtilisation(soe: Pick<SoeState, "output" | "capacity">): number {
   const capacity = soe.capacity;
   if (!Number.isFinite(capacity) || capacity <= 0) return SOE_PERF_BASELINE;
   const out = Number.isFinite(soe.output) ? soe.output : 0;
@@ -183,18 +183,18 @@ export function makeAdoptedSoeState(
  * / TURNS_PER_YEAR (an annual credit programme spread across the year's turns).
  * P3-tunable.
  */
-export const CREDIT_INTENSITY = 0.15;
+const CREDIT_INTENSITY = 0.15;
 /** New productive CAPACITY built per unit of directed credit (investment 1:1). */
 export const CAPACITY_PER_CREDIT = 1.0;
 /** Extra OUTPUT a unit of directed credit yields THIS turn (capacity leads output
  *  so growth compounds over subsequent turns, not all at once). P3-tunable. */
-export const OUTPUT_PER_CREDIT = 0.5;
+const OUTPUT_PER_CREDIT = 0.5;
 /** Every SOE gets at least this weight so a floor of credit flows even to
  *  on-plan sectors (keeps strategic capacity from starving). */
-export const CREDIT_ALLOCATION_FLOOR = 0.15;
+const CREDIT_ALLOCATION_FLOOR = 0.15;
 /** Fraction of directed credit backed by real household savings (the rest is
  *  monetized → overhang). 0.4 ⇒ 60% of credit prints money. P3-tunable. */
-export const CREDIT_SAVINGS_COVERAGE = 0.4;
+const CREDIT_SAVINGS_COVERAGE = 0.4;
 
 /**
  * Gosbank's per-turn directed-credit budget for one country, in the same

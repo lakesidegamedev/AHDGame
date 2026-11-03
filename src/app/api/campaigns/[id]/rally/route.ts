@@ -11,8 +11,7 @@ interface RouteParams {
 }
 
 // POST /api/campaigns/[id]/rally — Fire a one-shot rally event for the
-// campaign's candidate. 60% of the race-family-scaled
-// SUPPORT_RALLY_FULL_VALUE applies to candidate.support immediately;
+// campaign's candidate. 60% of SUPPORT_RALLY_FULL_VALUE applies to candidate.support immediately;
 // remaining 40% queues as a 4-turn drip via supportAccrual.
 // Auth: requireAuthWithCharacter (must be campaign manager or nominee)
 // Errors: 400, 401, 403, 404, 409, 429
@@ -29,7 +28,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     // Tighter rate limit than upgrades — rallies are throttled to 1/turn
     // via lastRallyTurn, but request-level rate-limit prevents abuse.
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/campaigns/[id]/rally:${auth.user.userId}`, 60, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const user = auth.user;
 

@@ -1,6 +1,10 @@
 import { Metadata } from "next";
 import type { CountryId, CountryStatus } from "@/lib/constants/countries";
 import { getAllCountryAccess } from "@/lib/countryAccess";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { resolveCountryAvailability } from "@/lib/countryAvailability";
+import { WORLD_ROADMAP_COUNTRIES } from "@/lib/worldCountryRegistry";
+import type { NationRow } from "./components/NationsTable";
 import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { getNationWorldSnapshots } from "@/lib/world/nationWorldSnapshots";
@@ -52,10 +56,23 @@ export default async function WorldPage() {
     loadBlocMapData(db, preset),
     loadLegacyServiceSnapshots(db, preset),
   ]);
+  // Availability depends on the full country registry. Resolve it here so the
+  // client table receives plain values instead of shipping that registry.
+  const rows: NationRow[] = (Object.keys(countryAccess) as CountryId[]).map((id) => {
+    const config = COUNTRY_CLIENT_CONFIGS[id];
+    return {
+      id,
+      availability: resolveCountryAvailability(id, countryAccess[id]),
+      snapshot: nationSnapshots[id],
+      governmentTypeLabel: config.governmentTypeLabel,
+      executiveTitle: config.executiveTitle,
+    };
+  });
   return (
     <WorldClient
+      rows={rows}
+      roadmap={WORLD_ROADMAP_COUNTRIES}
       countryAccess={countryAccess}
-      nationSnapshots={nationSnapshots}
       conflictsEnabled={!!gameState?.conflictsEnabled}
       worldEntities={worldEntities}
       blocMapData={blocMapData}

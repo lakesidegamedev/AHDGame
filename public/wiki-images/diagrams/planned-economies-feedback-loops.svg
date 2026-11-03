@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" font-family="system-ui, sans-serif">
+<title>Planned economy feedback loops</title>
+<desc>The reform spiral runs from underfunded state enterprises to a collapsing command economy. Stable orthodoxy keeps hitting targets and holds the dial. Repression pushes the black market down but bleeds legitimacy while the shortage remains.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="329" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="10" y="24" font-size="13" text-anchor="start" fill="#dc2626" font-weight="700">Reform spiral: a mismanaged state collapses early</text>
+<rect x="10" y="34" width="110" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="65.0" y="60.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Underfund</text>
+<text x="65.0" y="76.5" font-size="13" text-anchor="middle" fill="#18181b">the SOEs</text>
+<path d="M122 64 L134 64" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="136" y="34" width="110" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="191.0" y="60.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Plan</text>
+<text x="191.0" y="76.5" font-size="13" text-anchor="middle" fill="#18181b">missed</text>
+<path d="M248 64 L260 64" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="262" y="34" width="110" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="317.0" y="60.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Shortages</text>
+<text x="317.0" y="76.5" font-size="13" text-anchor="middle" fill="#18181b">grow</text>
+<path d="M374 64 L386 64" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="388" y="34" width="110" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="443.0" y="60.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Black market</text>
+<text x="443.0" y="76.5" font-size="13" text-anchor="middle" fill="#18181b">swells</text>
+<path d="M500 64 L512 64" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="514" y="34" width="110" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="569.0" y="52.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Marketization</text>
+<text x="569.0" y="68.5" font-size="13" text-anchor="middle" fill="#18181b">rises</text>
+<text x="569.0" y="84.5" font-size="12" text-anchor="middle" fill="#3f3f46">rules creep in</text>
+<path d="M626 64 L638 64" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="640" y="34" width="110" height="60" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="695.0" y="52.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Command</text>
+<text x="695.0" y="68.5" font-size="13" text-anchor="middle" fill="#18181b">economy</text>
+<text x="695.0" y="84.5" font-size="13" text-anchor="middle" fill="#18181b">unwinds</text>
+<text x="10" y="134" font-size="13" text-anchor="start" fill="#2563eb" font-weight="700">Stable orthodoxy: the dial holds</text>
+<rect x="10" y="144" width="150" height="58" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="85.0" y="169.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Fund the</text>
+<text x="85.0" y="185.6" font-size="13" text-anchor="middle" fill="#18181b">right sectors</text>
+<path d="M162 173 L198 173" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="200" y="144" width="150" height="58" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="275.0" y="169.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Hit the</text>
+<text x="275.0" y="185.6" font-size="13" text-anchor="middle" fill="#18181b">targets</text>
+<path d="M352 173 L388 173" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="390" y="144" width="150" height="58" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="465.0" y="169.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Black market</text>
+<text x="465.0" y="185.6" font-size="13" text-anchor="middle" fill="#18181b">stays contained</text>
+<path d="M542 173 L578 173" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="580" y="144" width="150" height="58" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="655.0" y="169.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">The dial</text>
+<text x="655.0" y="185.6" font-size="13" text-anchor="middle" fill="#18181b">holds</text>
+<path d="M655 204 L655 222 L85 222 L85 204" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="380" y="216" font-size="12" text-anchor="middle" fill="#52525b">keep running it well</text>
+<text x="10" y="258" font-size="13" text-anchor="start" fill="#52525b" font-weight="700">Repression: a hardliner choice that treats the symptom</text>
+<rect x="10" y="268" width="200" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="110.0" y="289.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Repression set</text>
+<text x="110.0" y="305.6" font-size="12" text-anchor="middle" fill="#3f3f46">by the government</text>
+<path d="M212 293 L268 293" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="270" y="268" width="230" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="385.0" y="289.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Black market forced down</text>
+<text x="385.0" y="305.6" font-size="12" text-anchor="middle" fill="#3f3f46">drift to market slows</text>
+<path d="M502 293 L538 293" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="540" y="268" width="210" height="50" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="645.0" y="289.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Legitimacy bleeds</text>
+<text x="645.0" y="305.6" font-size="12" text-anchor="middle" fill="#3f3f46">the shortage remains</text>
+</svg>

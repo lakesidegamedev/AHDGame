@@ -17,7 +17,7 @@ function stableIndex(value: string, length: number): number {
 
 /** Select one filed nominee per party and district. NPP regional slates supply
  * nominees for seats with no named filing, without creating duplicate people. */
-export function buildHuDistrictSlate(
+function buildHuDistrictSlate(
   regionId: string,
   candidates: ReadonlyArray<HuBallotCandidate>
 ): Record<string, Record<string, string>> {

@@ -27,6 +27,7 @@ import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/comman
 import { loadCountryPresentationOverrides } from "@/lib/country/countryIdentity";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -421,8 +422,15 @@ export async function GET(request: Request) {
       }),
     ]);
 
+    // Under plants a market is entered by building, so the unowned view's
+    // revenue is a legacy pool figure, not an amount available to buy. The
+    // page labels it that way; room to build lives on the state board and the
+    // expansion screen.
+    const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+
     return NextResponse.json({
       view,
+      plantsMode,
       sort,
       dir,
       page: clampedPage,

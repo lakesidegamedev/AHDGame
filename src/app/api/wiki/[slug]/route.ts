@@ -85,7 +85,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    const rateLimit = checkRateLimit(user.userId, 30, 60_000);
+    const rateLimit = checkRateLimit(`api/wiki/[slug]:${user.userId}`, 30, 60_000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { slug } = await context.params;

@@ -179,7 +179,6 @@ function fixture(type: "retail" | "investment" | "universal" = "investment") {
     {
       _id: "default",
       indexFundsMode: "full",
-      playerFundSponsorshipEnabled: false,
       auditLog: false,
     },
   ]);
@@ -377,10 +376,11 @@ describe("bank fund eligibility and segregation", () => {
     ).toBe(false);
     f.sponsor.bankCharter!.status = "revoked";
     expect(bankMayManageFunds(f.sponsor.bankCharter)).toBe(false);
-    // A revoked charter counts as no charter: no longer refused as a bank...
-    expect(await fundCreationEligibility(f.db, f.sponsor)).not.toMatch(/active/);
-    // ...but picking companies still needs an active bank.
-    expect((await charterFund(f.db, f.creation)).ok).toBe(false);
+    // A revoked charter counts as no charter, so the sponsor is refused as a
+    // bank and, as an ordinary financial corporation, may still sponsor funds.
+    // The picked-stock contract still needs an active charter; the parameterised
+    // charter-verdict test above covers that refusal.
+    expect(await fundCreationEligibility(f.db, f.sponsor)).toBeNull();
   });
   it("matches creation capability when the charter fee cannot settle", async () => {
     const f = fixture();

@@ -34,7 +34,7 @@ export interface HistoricalRosterEntry {
 }
 
 /** Presets with authored real-person rosters. */
-export const ROSTERED_PRESETS = ["1991-default", "2019-default"] as const;
+const ROSTERED_PRESETS = ["1991-default", "2019-default"] as const;
 export type RosteredPreset = (typeof ROSTERED_PRESETS)[number];
 
 export function isRosteredPreset(presetId: string): presetId is RosteredPreset {

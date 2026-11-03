@@ -9,7 +9,8 @@ import { useParams } from "next/navigation";
 import { useToast } from "@/contexts/ToastContext";
 import { BillPageErrorBoundary } from "@/components/BillPageErrorBoundary";
 import { BillDetailSkeleton } from "./components/BillDetailSkeleton";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { BillProvisionsSection } from "@/components/legislature/BillProvisionsSection";
 import { BillProposalChip } from "@/components/bills/BillProposalChip";
@@ -156,7 +157,7 @@ function BillDetailContent() {
   // Legacy bills may omit countryId; fall back to UK for state-scoped UK bills, otherwise US.
   const resolvedCountryId: CountryId =
     bill.countryId ?? (bill.stateId?.startsWith("uk_") ? "UK" : "US");
-  const legislature = getCountryConfig(resolvedCountryId, preset).legislature;
+  const legislature = getCountryClientConfig(resolvedCountryId, preset).legislature;
   // Skip bicameral tally tabs and second-chamber/executive-override sections
   // when the country's legislature only runs the lower chamber for the player
   // loop (UK Commons, DE Bundestag, IE Dáil, CN NPC). Driven by the

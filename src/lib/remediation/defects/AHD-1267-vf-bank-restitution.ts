@@ -83,7 +83,7 @@ export const HUNT_RESIDUAL_USD = 52_290_000;
 /** Household book stranded out of the money supply, $M precision. */
 export const NPC_RETURN_USD = 71_110_000;
 
-export const RESTITUTION_CURRENCY: CurrencyCode = "USD";
+const RESTITUTION_CURRENCY: CurrencyCode = "USD";
 
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
 

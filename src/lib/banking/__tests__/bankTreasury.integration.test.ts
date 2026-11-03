@@ -25,7 +25,6 @@ const BOND = new ObjectId("bbbbbbbbbbbbbbbbbbbbbbbb");
 const TURN = 100;
 const POLICY = resolveBankingPolicy({
   privateBankingEnabled: true,
-  bankTreasuryEnabled: true,
   savingsAccountsMode: "off",
 });
 
@@ -36,9 +35,7 @@ function treasuryReceipt(db: InMemoryDb, id: string): BankTreasuryTradeReceipt |
 
 function world(): InMemoryDb {
   const db = createInMemoryDb();
-  db.seed("gameConfig", [
-    { _id: "default", privateBankingEnabled: true, bankTreasuryEnabled: true },
-  ]);
+  db.seed("gameConfig", [{ _id: "default", privateBankingEnabled: true }]);
   db.seed("centralBanks", [
     { _id: "US", countryId: "US", primeRate: 4, bankReserveRequirement: 0.1 },
   ]);
@@ -308,14 +305,13 @@ describe("funded bank treasury settlement", () => {
     expect(balance(db).bond.publicFloat).toBe(99);
   });
 
-  it("does not touch storage when automatic bill buying is disabled", async () => {
+  it("does not touch storage when private banking is off", async () => {
     const collection = vi.fn(() => {
       throw new Error("disabled treasury read");
     });
     const db = { collection } as unknown as Db;
     const disabled = resolveBankingPolicy({
-      privateBankingEnabled: true,
-      bankTreasuryEnabled: false,
+      privateBankingEnabled: false,
       savingsAccountsMode: "off",
     });
     await expect(sweepBankTreasury(db, BANK, disabled, TURN)).resolves.toEqual({
@@ -518,13 +514,13 @@ describe("funded bank treasury settlement", () => {
     expect(balance(db).cash).toBe(10_000);
   });
 
-  it("does not query treasury data when the feature is off", async () => {
+  it("does not query treasury data when private banking is off", async () => {
     const db = {
       collection: () => {
         throw new Error("feature-off treasury read");
       },
     };
-    const disabled = resolveBankingPolicy({ privateBankingEnabled: true });
+    const disabled = resolveBankingPolicy({ privateBankingEnabled: false });
     await expect(
       getBankTreasuryOverview(db as unknown as Db, BANK, disabled, TURN)
     ).resolves.toBeNull();
@@ -919,12 +915,47 @@ describe("funded bank treasury settlement", () => {
     expect(after.mark).toBe(0);
     expect(after.cash).toBeGreaterThan(90_000);
   });
+
+  it("closes a failed estate without trying to sell a bond already in redemption", async () => {
+    const db = world();
+    const buy = await tradeBankTreasuryBill(db as unknown as Db, {
+      bankId: BANK,
+      bondId: BOND,
+      side: "buy",
+      units: 5,
+      turn: TURN,
+      policy: POLICY,
+      tradeId: "treasury-estate-due-buy",
+    });
+    expect(buy.status).toBe("completed");
+    // The bond falls due and its maturity quote freezes: holder trades refuse
+    // from here, and the lot is paid at par through the bank maturity claim.
+    const bond = db.collection("bonds").docs[0] as unknown as Bond;
+    bond.maturityTurn = TURN;
+    (bond as unknown as Record<string, unknown>).sovereignMaturityClaim = {
+      id: `sovereign-maturity:${BOND.toHexString()}:${TURN}`,
+      dueTurn: TURN,
+    };
+    await db
+      .collection("corporations")
+      .updateOne(
+        { _id: BANK },
+        { $set: { "bankCharter.status": "failed", "bankCharter.failedTurn": TURN } }
+      );
+    const result = await returnDepositBook(db as unknown as Db, BANK, {
+      cause: "failure",
+      turn: TURN,
+      releaseResidualToOwner: false,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.returned).toBe(true);
+    // The lot stays for the maturity claim to redeem; nothing was sold.
+    expect(balance(db).bond.holders).toHaveLength(1);
+  });
 });
 
 const PRIMARY_POLICY = resolveBankingPolicy({
   privateBankingEnabled: true,
-  bankTreasuryEnabled: true,
-  bankSovereignPrimaryEnabled: true,
   treasuryCashLedgerEnabled: true,
   bankPropTradingEnabled: true,
 });
@@ -954,7 +985,6 @@ function primaryWorld() {
   db.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
   Object.assign(db.collection("gameConfig").docs[0], {
     treasuryCashLedgerEnabled: true,
-    bankSovereignPrimaryEnabled: true,
   });
   return db;
 }
@@ -1226,8 +1256,7 @@ describe("investment-bank sovereign primary subscriptions", () => {
     });
     await expect(tradeBankTreasuryBill(crash.db, primaryTicket)).rejects.toThrow("crash");
     Object.assign(db.collection("gameConfig").docs[0], {
-      bankSovereignPrimaryEnabled: false,
-      bankTreasuryEnabled: false,
+      privateBankingEnabled: false,
       treasuryCashLedgerEnabled: false,
     });
     const result = await resumeSettlement(

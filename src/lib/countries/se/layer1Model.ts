@@ -16,7 +16,7 @@ import { seRegionCensusData, type SERegionLayer1 } from "@/lib/seeds/se/seRegion
 import { seRegionCensusData1953 } from "@/lib/seeds/se/seRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const SE_GROUP_IDS = [
+const SE_GROUP_IDS = [
   "blue_collar_sap",
   "public_sector_left",
   "business_conservative",
@@ -218,6 +218,3 @@ export function getSeModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-export const seLayer1Model: CountryLayer1Model = getSeModel("1979");
-export const seGroupIds = [...SE_GROUP_IDS];

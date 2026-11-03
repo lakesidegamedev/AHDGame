@@ -35,21 +35,22 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-function openStaffMenu() {
+async function openStaffMenu() {
   fireEvent.click(screen.getByRole("button", { name: /staff/i }));
+  await screen.findByRole("menuitem", { name: "Admin Panel" });
 }
 
 describe("StaffDropdown singleplayer owner entry", () => {
-  it("links the owner to /singleplayer/admin", () => {
+  it("links the owner to /singleplayer/admin", async () => {
     render(<StaffDropdown isAdmin isSingleplayerOwner />);
-    openStaffMenu();
+    await openStaffMenu();
     const entry = screen.getByRole("menuitem", { name: "Local World" });
     expect(entry.getAttribute("href")).toBe("/singleplayer/admin");
   });
 
-  it("hides the entry from a multiplayer admin", () => {
+  it("hides the entry from a multiplayer admin", async () => {
     render(<StaffDropdown isAdmin />);
-    openStaffMenu();
+    await openStaffMenu();
     expect(screen.queryByRole("menuitem", { name: "Local World" })).toBeNull();
     // Hosted console links are unaffected.
     expect(screen.getByRole("menuitem", { name: "Admin Panel" })).toBeTruthy();

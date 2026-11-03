@@ -5,7 +5,7 @@ export interface OpenVote {
   payload?: Record<string, unknown>;
 }
 
-export const VOTE_LABEL: Record<string, string> = {
+const VOTE_LABEL: Record<string, string> = {
   governance_change: "Restructuring",
   dissolution: "Dissolution",
   relocation: "Relocation",

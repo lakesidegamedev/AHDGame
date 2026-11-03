@@ -3,7 +3,7 @@
  * statutory county map. These fixed district counts preserve all 106 mandates
  * and keep filing IDs stable as simulated population changes.
  */
-export const HU_DISTRICTS_BY_REGION = {
+const HU_DISTRICTS_BY_REGION = {
   HU_BUD: 21,
   HU_PES: 10,
   HU_TRW: 22,

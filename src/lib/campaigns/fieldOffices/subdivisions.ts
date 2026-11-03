@@ -7,8 +7,7 @@ import type { LiveStateLean } from "./liveLean";
  *
  * The geometry and baseline PVI come from the committed subdivision files
  * (`src/data/counties/{ST}.json`), with the lean swapped for the world's era
- * baseline (`src/data/county-leans`). Region scope has no subdivisions; offices
- * attach to the region itself.
+ * baseline (`src/data/county-leans`).
  */
 
 /** Data directory per scope. Add a scope here to give it a map. */
@@ -41,12 +40,13 @@ export async function loadFieldOfficeRegionMap(
   scope: FieldOfficeScope,
   regionId: string,
   live: LiveStateLean | null,
-  preset: string | null
+  preset: string | null,
+  countyPopulations?: ReadonlyMap<string, number>
 ): Promise<FieldOfficeRegionMap | null> {
   const dir = SUBDIVISION_DATA_DIR[scope];
   // regionId feeds a filesystem path; only region-code shapes get through.
   if (!dir || !/^[A-Z]{2,3}$/.test(regionId)) return null;
-  const file = await loadSubdivisionFile(dir, regionId, { preset });
+  const file = await loadSubdivisionFile(dir, regionId, { preset, countyPopulations });
   if (!file || file.subdivisions.length === 0) return null;
 
   const total = file.subdivisions.reduce((s, c) => s + (c.electorate || 0), 0);

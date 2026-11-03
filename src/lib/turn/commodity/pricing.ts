@@ -13,9 +13,11 @@ import {
 } from "@/lib/constants/commodities";
 import { costPassThroughMultiplier } from "@/lib/market/costPassThrough";
 import { computeGlobalCommodityPrice } from "@/lib/market/globalCommodityPrice";
+import { clampFundedPrice } from "@/lib/market/fundedPriceClamp";
 import { getPriceSoftKnee } from "@/lib/constants/commodities";
 import {
   updateScarcityMultiplier,
+  updateScarcityMultiplierFunded,
   updateScarcityMultiplierMomentum,
 } from "@/lib/market/scarcityDrift";
 import { COMMODITY_FIX_STAGE, commodityFixStageActive } from "@/lib/market/commodityFixStages";
@@ -79,6 +81,14 @@ export interface CommodityPricingContext {
   scarcityDriftEnabled: boolean;
   /** Commodity treadmill fix stage (0..6); >= 1 switches the ratchet to momentum mode. */
   commodityFixStage?: number;
+  /**
+   * Funded producer turn: the ledger is the funded market's real book, so the
+   * scarcity multipliers move by updateScarcityMultiplierFunded instead of the
+   * formula-era level or momentum ratchet.
+   */
+  fundedPricing?: boolean;
+  /** Funded price pace (gameConfig.producerPriceMaxMove / producerPriceMaxMultiplier). */
+  fundedPricePace?: { maxMove?: number; maxMultiplier?: number };
   /** Market recovery stage; stages 3 and 4 damp price memory. */
   marketRecoveryStage?: number;
   commandEconomyEnabled: boolean;
@@ -138,6 +148,8 @@ export function priceCommodity(
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
+    fundedPricing,
+    fundedPricePace,
     marketRecoveryStage,
     commandEconomyEnabled,
     priceCurrentYear,
@@ -172,13 +184,19 @@ export function priceCommodity(
   // Momentum mode (commodity treadmill fix stage 1): the ratchet integrates
   // the CHANGE in imbalance against a trailing window, so a residual pinned by
   // the final-demand caps no longer reads as an ever-worsening shortage.
-  const momentumMode = commodityFixStageActive(
-    commodityFixStage,
-    COMMODITY_FIX_STAGE.RATCHET_MOMENTUM
-  );
+  const momentumMode =
+    !fundedPricing &&
+    commodityFixStageActive(commodityFixStage, COMMODITY_FIX_STAGE.RATCHET_MOMENTUM);
   let scarcityImbalanceHistory: number[] | undefined;
   let scarcityMult = 1;
-  if (scarcityDriftEnabled && momentumMode) {
+  if (scarcityDriftEnabled && fundedPricing) {
+    scarcityMult = updateScarcityMultiplierFunded(
+      existing?.scarcityMult,
+      globalBal.supply,
+      globalBal.demand,
+      fundedPricePace
+    );
+  } else if (scarcityDriftEnabled && momentumMode) {
     const next = updateScarcityMultiplierMomentum(
       existing?.scarcityMult,
       globalBal.supply,
@@ -212,7 +230,14 @@ export function priceCommodity(
       const book = reachableBooks.get(countryId)?.get(commodity);
       if (!book || (book.supply <= 0 && book.demand <= 0)) continue;
       const prevCountry = existing?.scarcityMultByCountry?.[countryId] ?? existing?.scarcityMult;
-      if (momentumMode) {
+      if (fundedPricing) {
+        scarcityMultByCountry[countryId] = updateScarcityMultiplierFunded(
+          prevCountry,
+          book.supply,
+          book.demand,
+          fundedPricePace
+        );
+      } else if (momentumMode) {
         const next = updateScarcityMultiplierMomentum(
           prevCountry,
           book.supply + NATIONAL_COMMODITY_STABILIZER,
@@ -267,7 +292,14 @@ export function priceCommodity(
     hardPeg: existing?.hardPeg ?? undefined,
     nudge: nudgeMap.get(commodity) ?? undefined,
   });
-  const globalMktPrice = globalResult.appliedPrice;
+  // Funded turns: the configured pace bounds the published price, not only
+  // the scarcity multiplier. Admin pegs and nudges are never clamped.
+  const paced = (next: number, previous: number | undefined) =>
+    fundedPricing ? clampFundedPrice(next, previous, nominalBasePrice, fundedPricePace) : next;
+  const globalPegged = existing?.hardPeg != null || nudgeMap.has(commodity);
+  const globalMktPrice = globalPegged
+    ? globalResult.appliedPrice
+    : paced(globalResult.appliedPrice, existing?.globalPrice);
   const effBasePrice = globalResult.effectiveBasePrice;
   const priceAttribution = globalResult.attribution;
   appliedGlobalPrices.set(commodity, globalMktPrice);
@@ -305,9 +337,9 @@ export function priceCommodity(
       nationalPrices[countryId] = marketNationalPrice;
     }
     // Partial adjustment from last turn's price damps the exporter cobweb (#4605).
-    nationalPrices[countryId] = adjustNationalPrice(
-      existing?.nationalPrices?.[countryId],
-      nationalPrices[countryId]
+    nationalPrices[countryId] = paced(
+      adjustNationalPrice(existing?.nationalPrices?.[countryId], nationalPrices[countryId]),
+      existing?.nationalPrices?.[countryId]
     );
     nationalSupply[countryId] = Math.round(bal.supply * 100) / 100;
     nationalDemand[countryId] = Math.round(bal.demand * 100) / 100;
@@ -431,10 +463,12 @@ export function priceCommodity(
         );
       }
       const previousPrice = existing?.statePrices?.[stateId] ?? targetPrice;
-      statePrice =
+      statePrice = paced(
         Math.round(
           (previousPrice + COMMODITY_PRICE_DRIFT_RATE * (targetPrice - previousPrice)) * 100
-        ) / 100;
+        ) / 100,
+        existing?.statePrices?.[stateId]
+      );
     }
 
     statePrices[stateId] = statePrice;

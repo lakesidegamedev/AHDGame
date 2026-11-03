@@ -5,10 +5,7 @@
  */
 
 import type { OfficeType } from "@/lib/db/types";
-import {
-  gdpBaselinePerCapita,
-  resolveCampaignGdpBaseline,
-} from "@/lib/campaigns/rules/gdpBaseline";
+import { gdpBaselinePerCapita } from "@/lib/campaigns/rules/gdpBaseline";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
 // Population tier thresholds
@@ -17,7 +14,7 @@ const MEDIUM_POPULATION_MAX = 8_000_000;
 const LARGE_POPULATION_MAX = 20_000_000;
 
 // Base fund generation rates per hour
-export const FUND_GENERATION_RATES = {
+const FUND_GENERATION_RATES = {
   small: 5_000, // <2M population
   medium: 10_000, // 2-8M population
   large: 20_000, // 8-20M population
@@ -38,7 +35,7 @@ export const DONOR_BASE_BONUS_PER_LEVEL = {
 // Flat fund generation bonuses for holding office (per hour).
 // Keyed by OfficeType.type string — open Record so UK and future country offices
 // can be added without touching the type signature.
-export const OFFICE_FUND_BONUS: Record<string, number> = {
+const OFFICE_FUND_BONUS: Record<string, number> = {
   // US offices
   house: 5_000, // +$5k/hr for House members
   senate: 15_000, // +$15k/hr for Senators
@@ -87,7 +84,7 @@ export function getFundGenerationRate(population: number): number {
  * Higher state influence (name recognition) means more donor engagement.
  * At 0% influence: 1.0x. At 50%: 1.5x. At 100%: 2.0x.
  */
-export function getInfluenceMultiplier(stateInfluence: number): number {
+function getInfluenceMultiplier(stateInfluence: number): number {
   return 1 + Math.max(0, Math.min(100, stateInfluence)) / 100;
 }
 
@@ -112,7 +109,7 @@ export function getDonorBaseBonus(
  * Get the office holder bonus for fund generation
  * Returns a flat amount based on office type, regardless of state or seats held
  */
-export function getOfficeFundBonus(currentOffice: OfficeType | null): number {
+function getOfficeFundBonus(currentOffice: OfficeType | null): number {
   if (!currentOffice) return 0;
   return OFFICE_FUND_BONUS[currentOffice.type] || 0;
 }
@@ -136,15 +133,12 @@ export function getGdpBaseline(countryId: string, preset?: string): number {
   return gdpBaselinePerCapita(countryId, preset);
 }
 
-export { resolveCampaignGdpBaseline };
-
 /**
  * Era price level (#2119) is re-exported here so the income shell — the turn
  * phase that already imports `projectCharacterGeneration` from this module —
  * can resolve the flag-gated scalar from one import:
  * `resolveCampaignPriceLevel(gameConfig.campaignEraPriceLevelEnabled, preset)`.
  */
-export { eraPriceLevelFor, resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 
 /**
  * GDP-per-capita income scalar for fund generation.

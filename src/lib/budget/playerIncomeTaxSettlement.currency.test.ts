@@ -64,6 +64,17 @@ function fixture(overrides: Array<Record<string, unknown>>, rates = { USD: 1, GB
 }
 
 describe("planTaxFunding", () => {
+  it("uses the largest anchor balance first, dividing by local units per anchor", () => {
+    const plan = planTaxFunding({
+      owed: 10,
+      sourceFx: 1,
+      currency: "USD",
+      primaryAvailable: 0,
+      available: { JPY: 100, GBP: 20 },
+      rates: { JPY: 100, GBP: 0.5 },
+    });
+    expect(plan.converted).toEqual([{ currency: "GBP", amount: 5, anchorAmount: 10 }]);
+  });
   it("keeps a fully funded assessed wallet on today's single debit", () => {
     expect(
       planTaxFunding({
@@ -115,6 +126,28 @@ describe("planTaxFunding", () => {
 });
 
 describe("settlePlayerIncomeTaxAssessments funding", () => {
+  it("collects only the outstanding remainder of a partially paid assessment", async () => {
+    const { db } = fixture([{ collectedFederal: 75, collectedRegional: 25 }]);
+    await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, true, 60, true);
+    const a = await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" });
+    expect(a).toMatchObject({ status: "paid", collectedFederal: 150, collectedRegional: 50 });
+    const character = await db.collection("characters").findOne({});
+    expect(character?.currencyBalances.personal).toMatchObject({ USD: 0, GBP: 1000 });
+    expect((await db.collection("federalBudget").findOne({}))?.treasuryBalance).toBe(75);
+  });
+  it("converts against the current wallet quote and balances the ledger after rates move", async () => {
+    const { db } = fixture([{ sourceFx: 2, walletFx: 4 }]);
+    await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, true, 60, true);
+    const character = await db.collection("characters").findOne({});
+    expect(character?.currencyBalances.personal).toMatchObject({ USD: 0, GBP: 962.5 });
+    const entries = await db.collection("ledgerEntries").find({}).toArray();
+    for (const entry of entries)
+      expect(
+        Math.abs(
+          entry.legs.reduce((n: number, leg: { anchorAmount: number }) => n + leg.anchorAmount, 0)
+        )
+      ).toBeLessThan(1e-6);
+  });
   it("collects a short assessed wallet from another wallet and credits the same tax", async () => {
     const { db } = fixture([{}]);
     await settlePlayerIncomeTaxAssessments(db, 2, now, "w1", true, true, 60, true);
@@ -156,7 +189,7 @@ describe("settlePlayerIncomeTaxAssessments funding", () => {
     );
     expect(accounts.some((account) => account === "sink:income_tax_rounding:GBP")).toBe(true);
   });
-  it("moves no money when no wallet can cover the liability", async () => {
+  it("preserves partial collection when other wallets cannot close the liability", async () => {
     const { db } = fixture([{}]);
     await db
       .collection("characters")
@@ -165,10 +198,11 @@ describe("settlePlayerIncomeTaxAssessments funding", () => {
     expect((await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" }))?.status).toBe(
       "unpaid"
     );
-    expect((await db.collection("characters").findOne({}))?.currencyBalances.personal.USD).toBe(
-      100
-    );
-    expect(await db.collection("financialTxLog").countDocuments({})).toBe(0);
+    expect((await db.collection("characters").findOne({}))?.currencyBalances.personal.USD).toBe(0);
+    const assessment = await db.collection("playerIncomeTaxAssessments").findOne({ _id: "a1" });
+    expect(assessment?.collectedFederal).toBe(75);
+    expect(assessment?.collectedRegional).toBe(25);
+    expect((await db.collection("federalBudget").findOne({}))?.treasuryBalance).toBe(75);
   });
   it("does not spend one payer's converted balance twice", async () => {
     const { db } = fixture([{}, { turn: 2, _id: "b2" }]);

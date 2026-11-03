@@ -93,6 +93,40 @@ it("shows fluctuation and idle-capacity warnings even when an order fits today's
   expect(screen.getByText(/not demand reserved for your company/)).toBeTruthy();
 });
 
+describe("BuildCapacityDialog plant size", () => {
+  it("orders vehicle plants for a manufacturing sector on a vehicle strategy", () => {
+    const { onSubmit } = renderDialog(vi.fn(), {
+      ...plants,
+      capacityUnits: 41.7,
+      strategyId: "vehicle_assembly",
+    } as PlantsData);
+    // Owned count uses the same size as the ledger: 41 vehicle plants.
+    expect(screen.getByText(/You run 41 plants here now/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Build 1 plant/ }));
+    // One plant is one vehicle unit, exactly what the queue counts as one plant.
+    expect(onSubmit).toHaveBeenCalledWith(plantSizeUnits("manufacturing_vehicles"), undefined);
+  });
+
+  it("orders vehicle plants for a vehicle-model sector", () => {
+    const onSubmit = vi.fn();
+    render(
+      <BuildCapacityDialog
+        open
+        onClose={vi.fn()}
+        plants={plants}
+        sectorType="manufacturing"
+        industryModel="vehicles"
+        sectorLabel="Manufacturing"
+        submitting={false}
+        errorMessage=""
+        onSubmit={onSubmit}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Build 1 plant/ }));
+    expect(onSubmit).toHaveBeenCalledWith(1, undefined);
+  });
+});
+
 describe("BuildCapacityDialog count control", () => {
   it("does not mount finance controls or query lenders without the gated payload", () => {
     const fetch = vi.fn();

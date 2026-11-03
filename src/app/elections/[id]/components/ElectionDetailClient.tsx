@@ -1,45 +1,85 @@
 "use client";
 
-import { BgFoundingConstituencyPicker } from "./BgFoundingConstituencyPicker";
-import { Hu1991ConstituencyPicker } from "./Hu1991ConstituencyPicker";
 import Link from "next/link";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useToast } from "@/contexts/ToastContext";
 import { useSignedIn } from "@/contexts/AuthDataContext";
 import { resolveElectionYear } from "@/lib/utils/formatters";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
 import { ElectionNavigation } from "./ElectionNavigation";
-import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
 import { ElectionHeader } from "./ElectionHeader";
 import { AdminSection } from "./AdminSection";
 import { ElectionScheduleCard } from "./ElectionScheduleCard";
 import { PrimaryPhaseNote } from "./PrimaryPhaseNote";
-import { UpcomingElectionView } from "./UpcomingElectionView";
-import { GeneralPhaseView } from "./GeneralPhaseView";
-import { PrimaryPhaseView } from "./PrimaryPhaseView";
+import dynamic from "next/dynamic";
+// Mutually exclusive phase bodies: an election is upcoming, in a primary, or in
+// its general phase. They are loaded on demand.
+const PhaseFallback = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const UpcomingElectionView = dynamic(
+  () => import("./UpcomingElectionView").then((m) => m.UpcomingElectionView),
+  { loading: PhaseFallback }
+);
+const GeneralPhaseView = dynamic(
+  () => import("./GeneralPhaseView").then((m) => m.GeneralPhaseView),
+  { loading: PhaseFallback }
+);
+const PrimaryPhaseView = dynamic(
+  () => import("./PrimaryPhaseView").then((m) => m.PrimaryPhaseView),
+  { loading: PhaseFallback }
+);
 import { PrimaryMapPills } from "./PrimaryMapPills";
 import { ElectionDetailSkeleton } from "./ElectionDetailSkeleton";
-import { StateOrganizationTab } from "@/app/political-operations/components/StateOrganizationTab";
 import type { ElectionDetail } from "./ElectionDetailTypes";
 import BackButton from "@/components/BackButton";
-import { PrimaryBlendView } from "../blend/PrimaryBlendView";
-import { GeneralBlendView } from "../blend/GeneralBlendView";
-import { presidentialTitle } from "../blend/PresidentialStage";
+import { presidentialTitle } from "../blend/presidentialTitle";
 import { presidentialResultsLive } from "../blend/liveState";
-import { ResultsBlendView } from "../blend/ResultsBlendView";
 import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types";
 import { BLEND } from "@/components/blend/tokens";
-import { NightBroadcast } from "../night/NightBroadcast";
 import { useNightWatch } from "../night/useNightBroadcast";
 import { isNightWindow } from "../night/nightModel";
-import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { getStoredConsent } from "@/components/CookieConsent";
-import { huDistrictIds } from "@/lib/countries/hu/rules/constituencies2014";
-import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useRaceEntry } from "@/components/elections/raceEntry/useRaceEntry";
+
+// The stage screens are mutually exclusive: a race is concluded, in its general
+// phase, in its primary, or in the final-night broadcast, and exactly one of
+// them renders. Each gets its own chunk behind the same skeleton the page
+// already shows while results load, so a reader only downloads the screen they
+// are looking at instead of all four (about 130 KB of source). The state
+// organisation panel is likewise only reached from the US presidential
+// upcoming view.
+const StageFallback = () => <ElectionDetailSkeleton />;
+
+const ResultsBlendView = dynamic(
+  () => import("../blend/ResultsBlendView").then((m) => m.ResultsBlendView),
+  { loading: StageFallback }
+);
+const GeneralBlendView = dynamic(
+  () => import("../blend/GeneralBlendView").then((m) => m.GeneralBlendView),
+  { loading: StageFallback }
+);
+const PrimaryBlendView = dynamic(
+  () => import("../blend/PrimaryBlendView").then((m) => m.PrimaryBlendView),
+  { loading: StageFallback }
+);
+const NightBroadcast = dynamic(
+  () => import("../night/NightBroadcast").then((m) => m.NightBroadcast),
+  { loading: StageFallback }
+);
+const StateOrganizationTab = dynamic(
+  () =>
+    import("@/app/political-operations/components/StateOrganizationTab").then(
+      (m) => m.StateOrganizationTab
+    ),
+  {
+    loading: () => <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />,
+  }
+);
 
 interface ElectionDetailClientProps {
   id: string;
@@ -52,7 +92,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const router = useRouter();
   const searchParams = useSearchParams();
   const cycle = searchParams.get("cycle");
-  const { showToast } = useToast();
   const { confirm: confirmDialog, dialog: confirmDialogNode } = useConfirmDialog();
 
   const [election, setElection] = useState<ElectionDetail | null>(initialElection);
@@ -62,7 +101,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const [resultsFailedId, setResultsFailedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(initialElection === null);
   const [error, setError] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const fallbackCountry = searchParams.get("country")?.toUpperCase() === "UK" ? "uk" : "us";
 
@@ -291,146 +329,13 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
     };
   }, [fetchElection, fetchWire]);
 
-  const [huDistrictId, setHuDistrictId] = useState("");
-  const handleEnter = async () => {
-    if (!election) return;
-    let constituencyId: string | undefined;
-    let japanShugiinListOrder: number | undefined;
-    const japanMixed = election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
-    if (
-      election.countryId === "HU" &&
-      election.electionType === "nationalAssembly" &&
-      election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1"
-    ) {
-      const districts = huDistrictIds(election.state);
-      const answer = window.prompt(`Choose your constituency number (1-${districts.length}).`);
-      if (answer === null) return;
-      const number = Number(answer.trim());
-      if (!Number.isInteger(number) || number < 1 || number > districts.length) {
-        showToast("Choose a valid constituency number in this region.", "error");
-        return;
-      }
-      constituencyId = districts[number - 1];
-    }
-    if (japanMixed) {
-      const districts = JP_SHUGIIN_1994_CONSTITUENCIES.filter(
-        (district) => district.regionId === election.state
-      );
-      const districtAnswer = window.prompt(
-        `Choose a constituency number (1-${districts.length}; blank for party-list only). See the statutory map on this page.`
-      );
-      if (districtAnswer === null) return;
-      if (districtAnswer.trim()) {
-        const number = Number(districtAnswer.trim());
-        if (!Number.isInteger(number) || number < 1 || number > districts.length) {
-          showToast("Choose a valid Shugiin constituency number.", "error");
-          return;
-        }
-        constituencyId = districts[number - 1].id;
-      }
-      const listAnswer = window.prompt("Party-list position (1-300; blank for constituency only).");
-      if (listAnswer === null) return;
-      if (listAnswer.trim()) {
-        const rank = Number(listAnswer.trim());
-        if (!Number.isInteger(rank) || rank < 1 || rank > 300) {
-          showToast("Choose a valid party-list position.", "error");
-          return;
-        }
-        japanShugiinListOrder = rank;
-      }
-      if (!constituencyId && japanShugiinListOrder == null) {
-        showToast("Choose a constituency, a party-list position, or both.", "error");
-        return;
-      }
-    }
-    if (
-      !(await confirmDialog({
-        title: "Enter this race?",
-        message: "This will register your character as a candidate.",
-        confirmLabel: "Enter race",
-      }))
-    )
-      return;
-    setActionLoading(true);
-    try {
-      const res = await fetch(`/api/elections/${id}/enter`, {
-        method: "POST",
-        ...(japanMixed
-          ? {
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ...(constituencyId ? { constituencyId } : {}),
-                ...(japanShugiinListOrder != null ? { japanShugiinListOrder } : {}),
-              }),
-            }
-          : constituencyId
-            ? {
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ constituencyId }),
-              }
-            : (election.hungarianAssemblyRound?.round === 1 ||
-                  election.bulgarianFoundingRound?.round === 1 ||
-                  Boolean(election.bulgarianFoundingRound?.newNominationDistrictIds?.length)) &&
-                huDistrictId
-              ? {
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ constituencyId: huDistrictId }),
-                }
-              : {}),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message ?? "Entered race", "success");
-        void import("@/lib/analytics/capture")
-          .then(({ captureProductEvent }) => captureProductEvent("election_entered"))
-          .catch(() => {});
-        await fetchElection();
-      } else {
-        showToast(apiErrorText(data, "Failed to enter race"), "error");
-      }
-    } catch {
-      showToast("Network error — please try again", "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!election) return;
-    // Phase decides the consequence wording: general-phase withdrawals
-    // destroy accumulated votes; primary withdrawals do not.
-    const phase: "primary" | "general" | "unknown" = election.inPrimary
-      ? "primary"
-      : election.isEnded
-        ? "unknown"
-        : "general";
-    if (
-      !(await confirmDialog({
-        title: "Confirm withdrawal",
-        message: buildWithdrawalConfirmMessage(phase),
-        confirmLabel: "Withdraw",
-        destructive: true,
-      }))
-    )
-      return;
-    setActionLoading(true);
-    try {
-      const res = await fetch(`/api/elections/${id}/withdraw`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message ?? "Withdrawn from race", "success");
-        await fetchElection();
-      } else {
-        showToast(apiErrorText(data, "Failed to withdraw"), "error");
-      }
-    } catch {
-      showToast("Network error — please try again", "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const raceEntry = useRaceEntry(election, {
+    confirm: confirmDialog,
+    onDone: fetchElection,
+  });
+  const handleEnter = raceEntry.enter;
+  const handleWithdraw = raceEntry.withdraw;
+  const actionLoading = raceEntry.busy;
 
   if (loading) return <ElectionDetailSkeleton />;
 
@@ -457,10 +362,8 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const localIsEnded = election.isEnded;
 
   const amInRace = election.allCandidates.some((c) => c.isYou);
-  // Entry is only open during the primary phase for all candidates.
-  const entryPhaseOpen = localInPrimary;
-  const canEnter = entryPhaseOpen && !amInRace && !localIsEnded && election.myCharId !== null;
-  const canWithdraw = amInRace && !localIsEnded;
+  // Entry is only open during the primary phase (shared rules, raceEntry/entryRules).
+  const { canEnter, canWithdraw } = raceEntry;
 
   // Election year = the year the general election takes place (voting year).
   // Prefers the baked `electionYear` on the doc (set at spawn under the active
@@ -497,24 +400,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const stageRailTop = (
     <div>
       <ElectionNavigation election={election} showLiveLink={presidentialResultsLive(election)} />
-      {canEnter &&
-        (election.bulgarianFoundingRound?.round === 1 ||
-          Boolean(election.bulgarianFoundingRound?.newNominationDistrictIds?.length)) && (
-          <BgFoundingConstituencyPicker
-            allowedDistrictIds={election.bulgarianFoundingRound?.newNominationDistrictIds}
-            regionId={election.state}
-            value={huDistrictId}
-            onChange={setHuDistrictId}
-          />
-        )}
-      {canEnter && election.hungarianAssemblyRound?.round === 1 && (
-        <Hu1991ConstituencyPicker
-          allowedDistrictIds={election.hungarianAssemblyRound?.vacancyDistrictIds}
-          regionId={election.state}
-          value={huDistrictId}
-          onChange={setHuDistrictId}
-        />
-      )}
       <p className="mb-1 text-xs text-muted">
         <Link href="/wiki/reference-offices" className="text-primary hover:underline">
           What the presidency can do
@@ -704,24 +589,6 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
         <ElectionNavigation election={election} />
         {confirmDialogNode}
 
-        {canEnter &&
-          (election.bulgarianFoundingRound?.round === 1 ||
-            Boolean(election.bulgarianFoundingRound?.newNominationDistrictIds?.length)) && (
-            <BgFoundingConstituencyPicker
-              allowedDistrictIds={election.bulgarianFoundingRound?.newNominationDistrictIds}
-              regionId={election.state}
-              value={huDistrictId}
-              onChange={setHuDistrictId}
-            />
-          )}
-        {canEnter && election.hungarianAssemblyRound?.round === 1 && (
-          <Hu1991ConstituencyPicker
-            allowedDistrictIds={election.hungarianAssemblyRound?.vacancyDistrictIds}
-            regionId={election.state}
-            value={huDistrictId}
-            onChange={setHuDistrictId}
-          />
-        )}
         <ElectionHeader
           election={election}
           electionYear={electionYear}

@@ -25,7 +25,7 @@ import {
   type FederationSettlementApplicationRecord,
 } from "./runtimeEntities";
 
-export const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
+const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
 
 export interface FederationLegacyServiceTurn {
   _id: string;

@@ -71,7 +71,6 @@ describe("snapshotApprovalsForTurn", () => {
     wire({ documented: ACTIVE });
     db.collection("gameConfig").findOne.mockResolvedValue({
       privateBankingEnabled: true,
-      bankFailurePoliticsEnabled: true,
     });
     db.collection("bankFailurePoliticalEvents").find.mockReturnValue(
       cursorOf([

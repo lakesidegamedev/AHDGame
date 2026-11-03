@@ -10,9 +10,9 @@ import type { PlantsData, Financials, CorporationRef } from "../types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct, PLANTS_CLOCK_NOTE } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
-import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { DELIVERY_LIMITED_MIN_SHARE } from "@/components/corporation/plantsPresentation";
 import {
   FREIGHT_CLASS_LABELS,
@@ -79,6 +79,7 @@ export default function MarketMoneyPanel({
   const offered = plants.producedUnits ?? 0;
   const sold = plants.soldUnits ?? 0;
   const unsold = plants.unsoldUnits ?? 0;
+  const ownSite = plants.ownSiteUnits ?? 0;
   // Delivery-limited share: made, offered, and no freight network could carry
   // it. Without naming it this reads as a demand failure on every surface, and
   // the two failures call for opposite responses: cut output, versus move more
@@ -291,6 +292,12 @@ export default function MarketMoneyPanel({
           }
         />
       </div>
+      {ownSite >= 0.5 && (
+        <p className="mt-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-body-sm text-foreground">
+          {fmtUnits(ownSite)} units went free to your company&apos;s own sites that use them. They
+          are not sales, so they earn nothing here, but those sites did not have to buy them.
+        </p>
+      )}
       {unsold > 0 && (
         <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
           {fmtUnits(unsold)} units went unsold.{" "}

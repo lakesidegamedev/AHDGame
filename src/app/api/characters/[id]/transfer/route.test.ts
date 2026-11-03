@@ -187,10 +187,10 @@ describe("POST /api/characters/[id]/transfer", () => {
     });
   });
 
-  it("blocks a new character (within the 24-turn barrier) with 403", async () => {
+  it("blocks a new character (within the 48-turn barrier) with 403", async () => {
     await setup();
 
-    // getGameTime mock reports currentTurn 100; createdTurn 90 → 14 turns remain.
+    // getGameTime mock reports currentTurn 100; createdTurn 90 → 38 turns remain.
     const { getCharacterByUserId } = await import("@/lib/db/characterLookup");
     vi.mocked(getCharacterByUserId).mockResolvedValue({
       _id: senderId,

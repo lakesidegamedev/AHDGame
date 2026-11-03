@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import type { WikiPage } from "@/lib/db/types";
 
 export const WIKI_CREATE_COOLDOWN_HOURS = 12;
-export const WIKI_CREATE_COOLDOWN_MS = WIKI_CREATE_COOLDOWN_HOURS * 60 * 60 * 1000;
+const WIKI_CREATE_COOLDOWN_MS = WIKI_CREATE_COOLDOWN_HOURS * 60 * 60 * 1000;
 
 export interface CooldownResult {
   ok: boolean;

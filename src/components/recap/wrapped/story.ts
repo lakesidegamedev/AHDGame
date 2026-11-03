@@ -31,7 +31,7 @@ export interface StorySlide {
   ms: number;
 }
 
-export const ACTION_LABELS: Record<ActionType, string> = {
+const ACTION_LABELS: Record<ActionType, string> = {
   fundraise: "Fundraising",
   campaign: "Campaigning",
   advertise: "Advertising",

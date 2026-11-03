@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   getDemographicCategoriesForCountry,
   resolveCanvassGroup,
-  getVoterGroupBaselines,
   getVoterArchetypeCategoriesForCountry,
   getAllVoterArchetypeIds,
   getAllVoterArchetypeOptions,
@@ -70,14 +69,6 @@ describe("countryDemographics SSOT", () => {
       categoryKey: "race",
     });
     expect(resolveCanvassGroup("US", "race", "komeito_faithful")).toBeNull();
-  });
-
-  it("getVoterGroupBaselines returns the seed baselines for voter-group countries and null for US", () => {
-    const jp = getVoterGroupBaselines("JP");
-    expect(jp).not.toBeNull();
-    expect(jp!.komeito_faithful).toBe(72);
-    expect(getVoterGroupBaselines("US")).toBeNull();
-    expect(getVoterGroupBaselines("DD")!.party_nomenklatura).toBe(96);
   });
 });
 

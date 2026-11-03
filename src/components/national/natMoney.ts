@@ -1,6 +1,5 @@
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
-export { currencySymbolSep } from "@/lib/currency/symbolSep";
 
 /**
  * Resolve a currency code to its display symbol (¥, $, £, €, ₦, …), falling back

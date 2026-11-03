@@ -27,6 +27,7 @@ import type { CostAnchorCountryId } from "@/lib/politicalLegislation/types";
 import { buildAxisEvents, replayAxesTimeline } from "@/lib/policy/axesTimeline";
 import { loadCountryLegislationTypes } from "@/lib/policy/nationalPolicyRecords";
 import { resolveExecutiveOffice } from "@/lib/states/regionalExecutive";
+import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import type { PolicyProvenance } from "@/lib/policy/policyRecordPayload";
 
 /**
@@ -118,6 +119,8 @@ export async function loadRegionPolicyRecordPayload(
       annualCost,
     };
   }
+
+  Object.assign(provenance, await loadResetLawProvenance(db, countryId, "regional", regionId));
 
   return { points, events, era, provenance };
 }

@@ -27,6 +27,7 @@ import {
   roundTripProfilingEnabled,
 } from "@/lib/observability/mongoRoundTrips";
 import { isSingleplayer } from "@/lib/singleplayer";
+import { isTurnWorkerProcess } from "@/lib/turn/turnWorkerHandoff";
 
 /** Driver chatter that carries no diagnostic value — never instrumented. */
 const IGNORED_COMMANDS = new Set([
@@ -187,9 +188,17 @@ let attachedClients = new WeakSet<MongoClient>();
  * disabled without a hosting marker), and first-run world creation issues
  * tens of thousands of commands on a player's machine, where per-command
  * bookkeeping is pure cost on the critical path.
+ *
+ * Off in the turn worker too unless OBSERVABILITY_DB_MONITOR=true. With command
+ * monitoring on, the driver fully decodes every reply a second time for the
+ * succeeded event, on top of the cursor's own decode. A turn issues about 30k
+ * commands, so that doubled every read's decode and garbage for breadcrumbs
+ * Sentry keeps the last 100 of. On a production copy the corporation phase ran
+ * 130 s with it on and 108 s with it off.
  */
 export function mongoMonitorWanted(env: Record<string, string | undefined> = process.env): boolean {
   if (env.OBSERVABILITY_DB_MONITOR === "false") return false;
+  if (isTurnWorkerProcess(env) && env.OBSERVABILITY_DB_MONITOR !== "true") return false;
   return !isSingleplayer(env);
 }
 

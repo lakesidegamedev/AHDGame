@@ -14,11 +14,11 @@
 import type { BillProvision } from "@/lib/db/types/legislation";
 
 /** Stake weight for running a company in the sector. */
-export const CEO_STAKE = 1;
+const CEO_STAKE = 1;
 /** Stake weight for a meaningful shareholding. */
-export const HOLDER_STAKE = 0.5;
+const HOLDER_STAKE = 0.5;
 /** Smallest share of a company that counts as a stake. */
-export const HOLDING_MIN_FRACTION = 0.01;
+const HOLDING_MIN_FRACTION = 0.01;
 /** Force per unit of stake-weighted effect, and the cap either way. */
 export const BUSINESS_INTEREST_FORCE = 40;
 

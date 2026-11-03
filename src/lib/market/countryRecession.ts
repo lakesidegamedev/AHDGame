@@ -24,7 +24,7 @@ export interface CountryRecession {
   announcedAtTurn?: number;
 }
 
-export const COUNTRY_RECESSION_MAX_CUT_PCT = 50;
+const COUNTRY_RECESSION_MAX_CUT_PCT = 50;
 
 function isValid(r: CountryRecession | null | undefined): r is CountryRecession {
   return (
@@ -48,7 +48,7 @@ export function countryRecessionsFrom(
 }
 
 /** Whether the recession's window covers this turn. */
-export function recessionActive(r: CountryRecession, turn: number): boolean {
+function recessionActive(r: CountryRecession, turn: number): boolean {
   const turns = Math.floor(r.turns);
   return turn >= r.startTurn && turn < r.startTurn + turns;
 }

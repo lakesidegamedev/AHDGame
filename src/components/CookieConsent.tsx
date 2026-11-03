@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button } from "@/components/ui/Button";
 import { shouldRenderGooglePrivacyMessaging } from "@/lib/googlePrivacyMessaging";
 
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";

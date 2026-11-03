@@ -119,7 +119,7 @@ import { resetSystemVersionsFrom } from "@/lib/resetVersions/rules";
 import { reconcileResetLawEnactments } from "@/lib/resetLegislation/reconcileEnactments";
 import { processFederationFacilityPaymentTurn } from "@/lib/world/succession/facilityPaymentTurn";
 import { processDefenceWindfallRecoveryTurn } from "@/lib/turn/defenceWindfallRecoveryTurn";
-import { recomputeSharePricesAfterBondTurn } from "@/lib/turn/corporation/recomputeSharePrices";
+import { recomputeTurnSharePrices } from "@/lib/turn/corporation/recomputeSharePrices";
 import { processSavingsInterestTurn } from "@/lib/turn/savingsInterestTurn";
 import { processNpcBankPolicyTurn } from "@/lib/banking/npcBanks";
 import { processBankingTurn } from "@/lib/turn/bankingTurn";
@@ -577,7 +577,15 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           ),
           runtime.runPhase("commodityPrices", () => processCommodityPriceTurn(newTurn)),
         ]);
-        if (captureV2SovereignCash) {
+        if (captureV2SovereignCash && runtime.isPhaseEligible?.("bondTurn") === false) {
+          // A phase predicate (sim profile, timed economy pause) kept bondTurn
+          // from running, so there are no sovereign flows to settle this turn.
+          await runtime.markPhaseSkipped(
+            "resetTreasuryCash",
+            "conditional",
+            "skipped: bondTurn is outside the phase eligibility predicate"
+          );
+        } else if (captureV2SovereignCash) {
           // On a crash resume this is the result bondTurn stored with its
           // completed status, never a rerun and never an assumed zero (#3429).
           const bondFlows = runtime.requirePhaseResult(
@@ -684,9 +692,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           };
         }
 
-        await runtime.runPhase("recomputeSharePrices", () =>
-          recomputeSharePricesAfterBondTurn(newTurn)
-        );
+        await runtime.runPhase("recomputeSharePrices", () => recomputeTurnSharePrices(newTurn));
 
         // Private-bank solvency/flight/contagion - AFTER recomputeSharePrices so
         // prop-book marking (phase 7) can land against fresh prices with this
@@ -1413,7 +1419,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           const { processRuLegislatureTransition } =
             await import("@/lib/countries/ru/ruLegislatureTransition");
           await processRuLegislatureTransition(db, context.gameState, newTurn, gameNow);
-          return runPostElectionGovernmentPhases(db, gameNow, generalResolved ?? 0);
+          return runPostElectionGovernmentPhases(db, gameNow, generalResolved ?? 0, newTurn);
         });
         const govFormedMap = govResult?.governmentFormed ?? {};
 
@@ -1449,7 +1455,12 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           runParliamentaryGovernmentPhases(gameNow, newTurn)
         );
         await runtime.runPhase("parliamentaryGovernmentConfidence", () =>
-          runParliamentaryGovernmentConfidencePhase(db, gameNow, newTurn)
+          runParliamentaryGovernmentConfidencePhase(
+            db,
+            gameNow,
+            newTurn,
+            govResult?.completedSnaps ?? []
+          )
         );
         await runtime.runPhase("parliamentaryVacancyWatcher", () =>
           runParliamentaryVacancyWatcher(gameNow, newTurn)

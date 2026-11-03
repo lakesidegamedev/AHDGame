@@ -1,42 +1,52 @@
 export const fomcContent = `# FOMC / Rate-Setting Board
 
-The **US Federal Reserve** seats a **7-member rate-setting committee**, the FOMC. The chair still proposes policy. The committee has to agree. It is the Fed's institution alone: every other central bank keeps its single-governor or government-controlled model, so the Bank of England, the Bundesbank or ECB, the Bank of Japan and the rest can have their rate set or legislated by their own governments and parliaments as before. Command economies keep a passive monobank. See [Central Banks](/wiki/central-banks) for scrutiny, regimes, and the prime rate's economic effects.
+In the United States no single person can move the interest rate. A seven-seat board, the FOMC, meets every 8 turns, the chair proposes a hike, cut or hold, and the governors vote. If you play a US character, a seat on this board is the closest thing to a hand on the dollar's price of money. Every other central bank keeps its single-governor or government-controlled model, and command economies keep a passive monobank. See [Central Banks](/wiki/central-banks) for scrutiny, the exchange-rate regime and what the rate does.
 
-## Board
+## Who sits on the board
 
-- **7 seats**, chair included. Odd on purpose so majorities are clean.
-- Seat 1 is the chair seat.
-- Occupants are players, NPPs, or vacant. Vacant seats do not count toward motion votes.
-- Terms are **192 turns** (4 game years), staggered so the whole board does not open at once.
-- **The engine does not staff the board.** When a governor's or the chair's term runs out, the seat falls **vacant** and waits for the President to nominate a successor and the Senate to confirm them. The chair seat is never auto-appointed either.
+A new world opens with all seven seats held by technocrat NPP governors, alternating hawk and dove, on staggered terms that run out one after another over the first 192 turns. After that the engine never restocks a seat: when a term runs out the seat falls vacant and stays that way until the President nominates and the Senate confirms a successor.
 
-## Vacant seats
+| What | Value |
+| --- | --- |
+| Seats | 7, chair included (seat 1 is the chair seat) |
+| Term | 192 turns (4 game years) from confirmation. The opening technocrat terms are staggered so seats do not all open together |
+| Meeting | Every 8 turns (6 per game year) |
+| Player voting window | 24 hours, which is the same as the 24-turn deadline |
+| To pass | A strict majority of seated governors |
+| Rate changes per term | 16. Holds are free |
+| Wait between rate changes | 6 turns |
+| Move size | Same limits as any chair: up to 0.75 up, 1.75 down, 3 up when inflation is 5 points over target |
 
-A motion needs a **strict majority of seated governors** to pass. Vacant seats do not count, while seated governors without a ballot abstain. The committee can open meetings whenever at least one governor is seated. If no governors are seated, meetings pause and the **chair sets the rate directly** using the ordinary central-bank chair controls on the Overview page, bound by the usual cooldown and per-change size limits. Meetings resume once a governor is confirmed.
+To get a governor seat as a player you need a nomination from the President and a Senate majority. There is no lobbying pool and no draw for governor seats. As President, you nominate a player or an NPP to any seat, optionally making them chair, and assign hawk or dove. A seat can have one nomination before the Senate at a time, and a cabinet member cannot be nominated. The nomination appears in the Senate confirmations panel with the nominee, the seat, whether they are a player or NPP, the running tally and the closing time. Sitting Senators vote For, Against or Abstain; NPP senators vote along party lines, and the vote closes after 24 turns. A confirmed nominee takes the seat, replacing anyone sitting there, with a fresh 192-turn term. A rejected one leaves the seat as it was, and the President is told they can nominate again. See [Confirmation Process](/wiki/confirmation-process).
 
-For a **player chair**, direct control appears as the normal Prime Rate adjuster. For an **autonomous (NPP) chair**, the Taylor-rule auto-setter takes over, exactly as for any single-governor bank.
+The chair seat has a second route. When it falls vacant, the chair draw on [Central Banks](/wiki/central-banks) runs over the President's chair nominations, with lobbying, and a player who accepts takes seat 1. With no one nominated the chair stays vacant; the Fed never gets an autonomous caretaker chair.
 
-## Nominations
+Vacant seats do not count toward a majority, so five seated governors need three votes. A governor without a ballot abstains, which makes the board lean toward holding when members do not show up.
 
-The President nominates a chair or governor; the nomination appears in a **Senate confirmations** panel on the FOMC committee page with the nominee, the seat, whether they are a player or an NPP, the running tally and the closing time. Sitting Senators cast For, Against or Abstain there, and confirmation is decided by those votes. See [Confirmation Process](/wiki/confirmation-process).
+If **no governors are seated**, meetings pause and the chair sets the rate directly with the normal Prime Rate controls, under the usual wait and size limits. An autonomous (NPP) chair does the same through its Taylor-rule setter. Meetings resume once a governor is confirmed.
 
-## Meetings
+## How a meeting plays out
 
-Meetings open every **8 turns** (6 per game year) when the board is due.
+1. A meeting opens when the board is due and at least one governor is seated.
+2. The chair's motion is set automatically from the chair's own reading of inflation and growth (from [National Metrics](/wiki/national-metrics)): hike, cut or hold, with a signed rate change. If the 16-change cap is reached or the 6-turn wait is still running, the motion is a hold.
+3. NPP seats vote at once, from the same rule an autonomous chair uses, tilted hawk (leans to hike) or dove (leans to cut).
+4. Player governors vote within 24 hours. No ballot counts as an abstain.
+5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A decision reached on the turn the meeting opens takes effect the next turn; a decision reached on a later turn takes effect at once.
+6. If it passes, the rate moves and the change counts toward the 16.
 
-The chair proposes **hike**, **cut**, or **hold**, with a signed rate delta (0 for a hold), and can use **Table your motion** to replace the automatic motion with their own before any seated governor has voted. Player seats get a **24-hour** window to ballot, and a no-show is an abstain. NPP seats auto-vote from the same rule the autonomous chair uses, tilted hawk or dove, when the meeting opens. The motion carries as soon as every seated player has voted, or at the 24-turn deadline if some have not, and never on the turn the meeting opened.
+![Flow of an FOMC meeting from the due date and automatic motion through NPP and player votes to a majority decision that moves the rate or fails.](/wiki-images/diagrams/fomc-meeting-flow.svg)
 
-A motion passes on a **strict majority of seated governors**. Vacancies do not count; seated governors without a ballot abstain, so the committee is biased toward holding when members do not vote.
+Picture a board with five seats filled (three NPP governors and two players, one of them the chair) and two seats vacant. A majority of five is 3. The chair's automatic motion is a 0.50 hike. The NPP seats vote when the meeting opens: hike, hike, hold. One player then votes hike, which makes 3 votes. The motion is decided at once. If that vote came on the opening turn it takes effect the next turn; on any later turn it takes effect immediately. If the NPPs had voted hold, hold, hold, the motion could reach at most 2 votes with both players behind it, so it would fail early.
 
-## Rate-change cap
+## Your vote and your motion
 
-Executed hikes and cuts (not holds) are capped at **16 per term**. After that the board can still meet and hold.
+Open the FOMC tab on the Central Bank page during a meeting and cast hike, cut or hold. You are agreeing with the motion only if your vote matches its direction.
 
-Rate changes also obey the chair's usual cooldown and size limits; see [Central Banks](/wiki/central-banks).
+A player chair can replace the automatic motion with their own, but only before any player governor has voted. The new motion still has to respect the size limits and the 16-change cap. The cap exists to stop a board from using the rate as a constant dial; after 16 moves in a term it can still meet and hold.
 
-## Chair selection
+Vote early, since a decided motion can close before the deadline. Count seated governors, because a board with two vacancies needs fewer votes than a full one. NPP seats have already voted when a meeting opens, so before you table a motion against the way most of them lean, expect it to fail.
 
-When the chair's term expires the seat falls vacant. The President nominates and the Senate confirms, as above; there is no draw, no lobbying pool and no machine candidate. Central banks outside the United States keep the governor-selection model described on [Central Banks](/wiki/central-banks).
+A passed motion sets the US prime rate, and the chair term, scrutiny, wait and move sizes in [Central Banks](/wiki/central-banks) bound what the committee can do. A new prime rate moves the dollar's target on [Currency Exchange](/wiki/currency-exchange).
 
-See also: [Central Banks](/wiki/central-banks), [National Metrics](/wiki/national-metrics), [Currency Exchange](/wiki/currency-exchange).
+Live in US worlds only. Every other country uses the governor or government model, and command economies have no committee. Last checked 2026-10-29, version 1.18.0. Exact rules: [Monetary system (design)](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html)
 `;

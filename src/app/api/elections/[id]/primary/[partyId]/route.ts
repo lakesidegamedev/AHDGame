@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // parties here must not spend the budget they need to act.
     // Spectators are budgeted per address, since the board is not cheap to build.
     const rateLimit = checkRateLimit(
-      user ? user.userId : `anon:${clientIpFromRequest(request)}`,
+      `api/elections/[id]/primary/[partyId]:${user ? user.userId : `anon:${clientIpFromRequest(request)}`}`,
       60,
       60000
     );

@@ -3,7 +3,7 @@
  *
  * Next's standalone file trace copies source, tests, and markdown the local
  * game never reads. Keep only what launch.mjs + server.js need at runtime:
- * the standalone server, traced node_modules (including generated mongodb
+ * the standalone server, traced node_modules (including generated external
  * aliases), .next, public, launch.mjs, and the JSON/changelog files the
  * compiled server still opens from disk.
  */
@@ -48,7 +48,15 @@ const REQUIRED_PATHS = [
 
 const CACHE_DIRS = [path.join(".next", "cache")];
 
-const ALIAS_PATTERN = /require\("([a-z0-9][a-z0-9-]+-[a-f0-9]{16})"\)/g;
+// Turbopack loads server externals under a hashed alias, optionally scoped and
+// with a subpath, through several loaders: require("mongodb-438b504308ffa4be"),
+// require("@sentry/server-runtime-injection-e7acc8d92084955d/register"),
+// await e.y("sharp-20c6a5da84e2135f"). The alias resolves through a
+// `.next/node_modules` symlink that installers drop, so packaging materializes
+// each one as a real copy of its package. Any quoted hashed name whose base
+// package is installed counts, whatever loader references it.
+const ALIAS_PATTERN =
+  /["']((?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*-[a-f0-9]{16})(?:\/[^"']*)?["']/g;
 
 export function toPosix(rel) {
   return rel.split(path.sep).join("/");
@@ -130,25 +138,28 @@ export function classifyPayloadPath(relPosix) {
   return "drop";
 }
 
-export function findRequiredMongodbAliases(root) {
+export function findRequiredExternalAliases(root) {
   const chunkDir = path.join(root, ".next", "server", "chunks");
   const aliases = new Set();
   if (!existsSync(chunkDir)) return aliases;
   for (const entry of readdirSync(chunkDir)) {
     if (!entry.endsWith(".js")) continue;
     const source = readFileSync(path.join(chunkDir, entry), "utf8");
-    for (const match of source.matchAll(ALIAS_PATTERN)) aliases.add(match[1]);
+    for (const match of source.matchAll(ALIAS_PATTERN)) {
+      const base = match[1].replace(/-[a-f0-9]{16}$/, "");
+      if (existsSync(path.join(root, "node_modules", ...base.split("/")))) aliases.add(match[1]);
+    }
   }
   return aliases;
 }
 
-export function materializeMongodbAliases(root) {
-  const aliases = findRequiredMongodbAliases(root);
+export function materializeExternalAliases(root) {
+  const aliases = findRequiredExternalAliases(root);
   const created = [];
   for (const alias of aliases) {
     const base = alias.replace(/-[a-f0-9]{16}$/, "");
-    const from = path.join(root, "node_modules", base);
-    const to = path.join(root, "node_modules", alias);
+    const from = path.join(root, "node_modules", ...base.split("/"));
+    const to = path.join(root, "node_modules", ...alias.split("/"));
     if (existsSync(from) && !existsSync(to)) {
       cpSync(from, to, { recursive: true });
       created.push(alias);
@@ -206,9 +217,9 @@ export function inspectPayload(root, { nativePlatform } = {}) {
   for (const req of REQUIRED_PATHS) {
     if (!existsSync(path.join(root, ...req.split("/")))) missing.push(req);
   }
-  const aliases = findRequiredMongodbAliases(root);
+  const aliases = findRequiredExternalAliases(root);
   for (const alias of aliases) {
-    if (!existsSync(path.join(root, "node_modules", alias))) {
+    if (!existsSync(path.join(root, "node_modules", ...alias.split("/")))) {
       missing.push(`node_modules/${alias}`);
     }
   }

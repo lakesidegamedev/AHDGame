@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { ImfInstitutionSeedForm } from "@/components/admin/economy/ImfInstitutionSeedForm";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -241,7 +242,7 @@ export function SetupPanel() {
                       : "border-card-border bg-card text-muted hover:text-foreground"
                   }`}
                 >
-                  {COUNTRY_CONFIGS[s as CountryId]?.name ?? "All countries"}
+                  {COUNTRY_CLIENT_CONFIGS[s as CountryId]?.name ?? "All countries"}
                 </button>
               ))}
             </div>

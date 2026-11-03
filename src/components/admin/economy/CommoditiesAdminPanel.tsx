@@ -3,8 +3,8 @@
 import { InlineError } from "@/components/ui/InlineError";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
-import type { CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 
 interface CommodityRow {

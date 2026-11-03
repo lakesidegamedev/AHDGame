@@ -37,6 +37,7 @@ import {
   accumulateLabourDemand,
   filledWorkers,
   glideStaffingFactor,
+  relativeWageBid,
   staffingFactorFromTightness,
   type LabourDemandByState,
 } from "@/lib/labour/labourMarket";
@@ -112,13 +113,13 @@ export function resolveSectorLabourProductionEffects(
   // Glided from last turn's value rather than snapped to target, so a state
   // that newly reads oversubscribed loses output over ten turns instead of one.
   // See LABOUR_STAFFING_MAX_TURN_MOVE for why this is not capacityHaircutFactor.
+  const sectorWage = labour.wagesEnabled ? clampWageLevel(sector.wageLevel ?? 1) : 1;
+  const stateWage = labour.wagesEnabled ? stateDemandWageIndex : 1;
+  // Pay above the state's going rate fills openings faster, not only a larger share.
   const staffingFactor = glideStaffingFactor(
-    staffingFactorFromTightness(
-      stateLabourTightness,
-      labour.wagesEnabled ? clampWageLevel(sector.wageLevel ?? 1) : 1,
-      labour.wagesEnabled ? stateDemandWageIndex : 1
-    ),
-    sector.labourStaffingFactor
+    staffingFactorFromTightness(stateLabourTightness, sectorWage, stateWage),
+    sector.labourStaffingFactor,
+    labour.wagesEnabled ? relativeWageBid(sectorWage, stateWage) : 1
   );
 
   return {

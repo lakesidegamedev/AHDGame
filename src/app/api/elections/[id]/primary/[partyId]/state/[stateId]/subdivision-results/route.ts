@@ -1,3 +1,4 @@
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -85,6 +86,9 @@ export async function GET(request: Request, { params }: RouteParams) {
     // County leans follow the world's era, as on the general county map.
     const file = await loadSubdivisionFile("counties", regionId, {
       preset: await getGameStatePresetOrDefault(db),
+      ...(election.status === "active"
+        ? { countyPopulations: await loadCountyPopulationMap(db, regionId) }
+        : {}),
     });
     if (!file) return errorResponse(404, "County data not available for this state");
 

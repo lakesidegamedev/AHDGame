@@ -43,7 +43,7 @@ describe("profile role views", () => {
     expect(screen.getByText("Commissioned in turn 7")).toBeTruthy();
     expect(screen.getByText(/specialization has not yet/)).toBeTruthy();
   });
-  it("keeps former service visible without editing privileges", () => {
+  it("keeps former service visible without editing privileges", async () => {
     render(
       shell({
         general: { level: 2, xp: 120, pts: 0 },
@@ -51,7 +51,8 @@ describe("profile role views", () => {
       })
     );
     fireEvent.click(screen.getByRole("tab", { name: "Military" }));
-    expect(screen.getByText("Read-only military")).toBeTruthy();
+    // GeneralProfileClient loads on demand, so it resolves after the tab paints.
+    expect(await screen.findByText("Read-only military")).toBeTruthy();
     expect(screen.getByText("Dismissed in turn 21")).toBeTruthy();
   });
   it("enables the investor-only view on another profile without exposing owner finances", () => {

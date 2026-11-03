@@ -14,7 +14,7 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import { normalizeShares, type AlignmentShares } from "@/lib/alignment/normalize";
 
-export const CUSTOM_BLOC_FOUNDING_SHARE = 60;
+const CUSTOM_BLOC_FOUNDING_SHARE = 60;
 
 export interface CustomBlocTopologyInput {
   organizationId: string;

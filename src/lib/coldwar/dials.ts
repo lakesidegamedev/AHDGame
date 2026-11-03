@@ -68,7 +68,7 @@ function fromVietnam(dials: VietnamDials): ColdWarDials {
 }
 
 /** DEFCON implied by a tension reading. Tension alone never reaches DEFCON 1. */
-export function defconFromTension(tension: number): number {
+function defconFromTension(tension: number): number {
   if (tension >= 85) return 2;
   if (tension >= 65) return 3;
   if (tension >= 45) return 4;
@@ -76,7 +76,7 @@ export function defconFromTension(tension: number): number {
 }
 
 /** The dials a bare tension reading implies, with no war on any ladder. */
-export function fromTension(tension: number): ColdWarDials {
+function fromTension(tension: number): ColdWarDials {
   return {
     defcon: defconFromTension(tension),
     cohesionWest: PEACETIME_DIALS.cohesionWest,

@@ -12,13 +12,12 @@ import type {
   NPPPersonality,
   PolicyPositions,
   OfficeType,
-  StatePartyOrg,
   PoliticalParty,
   LegislationType,
 } from "@/lib/db/types";
 import { generateUniqueNPPNameAndGender } from "./nameGenerator";
 import type { NPPGender, NPPEthnicity } from "@/lib/db/types";
-import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countries";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { deriveDomainPositions } from "./domainPositions";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
@@ -618,92 +617,6 @@ export function calculateNPPsToGenerate(totalElections: number, partyOrg: number
 }
 
 /**
- * Check if an NPP should be generated for a single race (random)
- * Note: For bulk generation, use calculateNPPsToGenerate instead
- * @param partyOrg Party organization level (0-100)
- * @returns true if an NPP should be generated
- * @deprecated Use calculateNPPsToGenerate for deterministic generation
- */
-export function shouldGenerateNPP(partyOrg: number): boolean {
-  // Candidate availability = partyOrg / 100
-  // Higher org = higher chance of fielding a candidate
-  return Math.random() < partyOrg / 100;
-}
-
-/**
- * Generate NPPs for an election
- * @param stateId State abbreviation
- * @param electionType Type of election
- * @param parties Array of party IDs to generate for
- */
-export async function generateNPPsForElection(
-  stateId: string,
-  electionType: "senate" | "house" | "governor" | "commons",
-  parties?: string[],
-  countryId: CountryId = "US"
-): Promise<NPP[]> {
-  const db = await getDb();
-  const generatedNPPs: NPP[] = [];
-
-  // Default parties based on country — parliamentary systems use UK-style parties
-  const countryConfig = COUNTRY_CONFIGS[countryId];
-  const defaultParties = isParliamentarySystem(countryConfig)
-    ? ["uk_labour", "uk_conservative"]
-    : ["democrat", "republican"];
-  const partiesToUse = parties ?? defaultParties;
-
-  for (const partyId of partiesToUse) {
-    // Get state party org
-    const statePartyKey = `${stateId}_${partyId}`;
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
-      _id: statePartyKey,
-    });
-
-    // No statePartyOrg row → the party has no seeded presence in this state:
-    // do not field. The old `?? 50` default handed a party with NO org row a
-    // BETTER org than parties with real single-digit org (1953 UK Liberals at
-    // 7-12), and let regional parties contest states they don't operate in.
-    if (!statePartyOrg) continue;
-    if (statePartyOrg.hasPresence === false) continue;
-    const partyOrg = Math.max(0, statePartyOrg.organization ?? 0);
-
-    // Check if we should generate an NPP
-    if (shouldGenerateNPP(partyOrg)) {
-      const quality = calculateQualityBonus(partyOrg);
-
-      // Create office type based on election
-      let targetOffice: OfficeType | undefined;
-      switch (electionType) {
-        case "senate":
-          targetOffice = { type: "senate", state: stateId };
-          break;
-        case "house":
-          targetOffice = { type: "house", state: stateId, seatsHeld: 1 };
-          break;
-        case "governor":
-          targetOffice = { type: "governor", state: stateId };
-          break;
-        case "commons":
-          targetOffice = { type: "commons", state: stateId };
-          break;
-      }
-
-      const npp = await createNPP({
-        state: stateId,
-        party: partyId,
-        countryId,
-        targetOffice,
-        quality,
-      });
-
-      generatedNPPs.push(npp);
-    }
-  }
-
-  return generatedNPPs;
-}
-
-/**
  * Get all active (non-retired) NPPs
  */
 export async function getActiveNPPs(): Promise<NPP[]> {
@@ -728,25 +641,6 @@ export async function getNPPsWithOffice(): Promise<NPP[]> {
     .collection<NPP>("npps")
     .find({ currentOffice: { $ne: null }, retiredAt: null })
     .toArray();
-}
-
-/**
- * Retire an NPP
- */
-export async function retireNPP(nppId: ObjectId): Promise<void> {
-  const db = await getDb();
-  const now = new Date();
-
-  await db.collection<NPP>("npps").updateOne(
-    { _id: nppId },
-    {
-      $set: {
-        retiredAt: now,
-        currentOffice: null,
-        updatedAt: now,
-      },
-    }
-  );
 }
 
 // ── Technocrat NPP spawn ──────────────────────────────────────────────────────
@@ -809,22 +703,4 @@ export async function spawnTechnocratNpp(db: Db, countryId: CountryId, role: str
   };
   await db.collection<NPP>("npps").insertOne(doc);
   return doc;
-}
-
-/**
- * Update NPP's office
- */
-export async function updateNPPOffice(nppId: ObjectId, office: OfficeType | null): Promise<void> {
-  const db = await getDb();
-  const now = new Date();
-
-  await db.collection<NPP>("npps").updateOne(
-    { _id: nppId },
-    {
-      $set: {
-        currentOffice: office,
-        updatedAt: now,
-      },
-    }
-  );
 }

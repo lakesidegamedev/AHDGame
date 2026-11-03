@@ -9,6 +9,8 @@ import {
   type RegionPartyPosition,
 } from "@/lib/demographics/preferredParty";
 import type { BucketProfileSection } from "@/lib/demographics/bucketProfile";
+import type { LegislativePriorities } from "@/lib/demographics/legislativePriorities/rules";
+import { LegislativePrioritiesEditor } from "./LegislativePrioritiesEditor";
 
 /**
  * Strategy board for a region's electorate, read in Layer-1 buckets.
@@ -32,6 +34,7 @@ interface BucketRowView {
   economicLean: number;
   socialLean: number;
   turnout: number;
+  legislativePriorities?: LegislativePriorities | null;
   matches: PartyMatch[];
   lean: ReturnType<typeof classifyLean>;
 }
@@ -91,11 +94,31 @@ function initials(name: string): string {
 export function ElectorateDossier({
   profile,
   regionParties,
+  isAdmin = false,
+  countryId,
+  regionId,
 }: {
   profile: BucketProfileSection[];
   regionParties: RegionPartyPosition[];
+  isAdmin?: boolean;
+  countryId?: string;
+  regionId?: string;
 }) {
-  const [view, setView] = useState<"simple" | "analyst">("simple");
+  const [view, setView] = useState<"simple" | "analyst" | "admin">("simple");
+  const canEdit =
+    isAdmin &&
+    Boolean(countryId && regionId) &&
+    ["US", "UK", "JP"].includes(countryId?.toUpperCase() ?? "");
+  const activeView = view === "admin" && !canEdit ? "simple" : view;
+  const [savedPriorities, setSavedPriorities] = useState<
+    Record<
+      string,
+      {
+        priorities: LegislativePriorities;
+        source: LegislativePriorities | null | undefined;
+      }
+    >
+  >({});
   const [dim, setDim] = useState<string>(profile[0]?.dim ?? "");
 
   const section = profile.find((s) => s.dim === dim) ?? profile[0] ?? null;
@@ -115,6 +138,7 @@ export function ElectorateDossier({
           economicLean: b.economicLean,
           socialLean: b.socialLean,
           turnout: b.turnout,
+          legislativePriorities: b.legislativePriorities,
           matches,
           lean: classifyLean(matches),
         };
@@ -164,6 +188,13 @@ export function ElectorateDossier({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = groups.find((g) => g.id === selectedId) ?? groups[0] ?? null;
+  const selectedKey = `${countryId}:${regionId}:${selected?.id}`;
+  const optimistic = savedPriorities[selectedKey];
+  // A fresh server profile is authoritative over an older optimistic save.
+  const selectedPriorities =
+    optimistic && optimistic.source === selected?.legislativePriorities
+      ? optimistic.priorities
+      : selected?.legislativePriorities;
 
   if (!section || groups.length === 0) return null;
 
@@ -182,12 +213,18 @@ export function ElectorateDossier({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-card-border bg-card-muted/30 px-4 py-3">
         <span className="text-body-sm font-medium text-muted">Electorate — strategy board</span>
         <div className="flex overflow-hidden rounded-lg border border-card-border">
-          {(["simple", "analyst"] as const).map((v) => (
+          {(["simple", "analyst", ...(canEdit ? ["admin" as const] : [])] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={`px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                view === v ? "bg-primary/15 text-primary" : "text-muted hover:text-foreground"
+                v === "admin"
+                  ? activeView === v
+                    ? "bg-red-500/20 text-red-400"
+                    : "bg-red-500/5 text-red-400 hover:bg-red-500/10"
+                  : activeView === v
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted hover:text-foreground"
               }`}
             >
               {v}
@@ -433,8 +470,62 @@ export function ElectorateDossier({
               </div>
             </div>
 
+            {activeView === "admin" && canEdit && countryId && regionId && selectedPriorities && (
+              <LegislativePrioritiesEditor
+                key={selectedKey}
+                countryId={countryId.toUpperCase()}
+                regionId={regionId}
+                bucketId={selected.id}
+                onSaved={(priorities) =>
+                  setSavedPriorities((current) => ({
+                    ...current,
+                    [selectedKey]: { priorities, source: selected.legislativePriorities },
+                  }))
+                }
+              />
+            )}
+            {activeView === "admin" && canEdit && !selectedPriorities && (
+              <p className="mb-4 text-xs text-muted">
+                Legislative priorities are not configured for this group.
+              </p>
+            )}
+            {selectedPriorities && activeView !== "admin" && (
+              <section aria-label="Legislative priorities" className="mb-4">
+                <h4 className="mb-2 text-body-sm font-medium text-muted">Legislative priorities</h4>
+                <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-3">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                    Primary
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {selectedPriorities.primary.lawName}
+                  </div>
+                  <div className="mt-1 text-xs text-muted">
+                    Desired level: {selectedPriorities.primary.policyOptionName}
+                  </div>
+                </div>
+                <div className="mb-2 mt-3 text-[10px] font-bold uppercase tracking-wide text-muted">
+                  Secondary
+                </div>
+                <ul className="space-y-2">
+                  {selectedPriorities.secondary.map((priority) => (
+                    <li
+                      key={priority.lawTypeId}
+                      className="rounded-xl border border-card-border px-3 py-2.5"
+                    >
+                      <div className="text-xs font-semibold text-foreground">
+                        {priority.lawName}
+                      </div>
+                      <div className="mt-1 text-xs text-muted">
+                        Desired level: {priority.policyOptionName}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {/* Analyst-only party detail */}
-            {view === "analyst" && (
+            {activeView === "analyst" && (
               <>
                 {selected.matches.length > 0 && (
                   <div className="mb-4">

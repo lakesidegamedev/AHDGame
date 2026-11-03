@@ -84,19 +84,19 @@ export const CONTEST_PRIZES_MODERN: Readonly<Record<ContestKind, number>> = {
  * Corporations opening below this modern-era value sit out the round. A shell
  * at the share price floor can post four-digit growth from pocket change.
  */
-export const CORP_MIN_OPENING_MODERN = 250_000;
+const CORP_MIN_OPENING_MODERN = 250_000;
 
 /** Characters opening below this modern-era net worth sit out the wealth round, for the same reason. */
-export const WEALTH_MIN_OPENING_MODERN = 250_000;
+const WEALTH_MIN_OPENING_MODERN = 250_000;
 
 /** A character younger than this when a round opens enters the rookie contest. */
-export const ROOKIE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const ROOKIE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 /** A corporation enters the comeback contest after losing at least this share of its value in a week. */
-export const COMEBACK_MIN_DROP = 0.1;
+const COMEBACK_MIN_DROP = 0.1;
 
 /** Stored standings per round; the page shows the top of this list. */
-export const CONTEST_STANDINGS_LIMIT = 250;
+const CONTEST_STANDINGS_LIMIT = 250;
 
 export function contestPrizeAnchor(kind: ContestKind, preset?: string): number {
   return getEraNominalAmount(CONTEST_PRIZES_MODERN[kind], preset);

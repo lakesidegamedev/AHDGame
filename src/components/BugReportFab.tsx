@@ -1,11 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useReducer, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { FeedbackModal } from "@/components/FeedbackModal";
 import { useChromeSuppressed } from "@/hooks/useChromeSuppressed";
 import { isChromeHiddenPath } from "@/lib/constants/layoutPaths";
 import type { DisplayMode } from "@/lib/displayMode";
+
+// Only mounts when the player opens the reporter, so the form and its API
+// client stay out of the first-load chunk. The FAB itself is unchanged.
+const FeedbackModal = dynamic(
+  () => import("@/components/FeedbackModal").then((module) => module.FeedbackModal),
+  { ssr: false }
+);
 
 interface FabState {
   feedbackOpen: boolean;
@@ -145,13 +152,15 @@ export function BugReportFab({ displayMode }: { displayMode?: DisplayMode | null
         <span className="sr-only">Report a bug</span>
       </button>
 
-      <FeedbackModal
-        isOpen={state.feedbackOpen}
-        onClose={handleCloseFeedback}
-        initialScreenshotDataUrl={state.screenshotDataUrl}
-        autoCaptureFailed={state.screenshotCaptureFailed}
-        initialType="bug"
-      />
+      {state.feedbackOpen && (
+        <FeedbackModal
+          isOpen
+          onClose={handleCloseFeedback}
+          initialScreenshotDataUrl={state.screenshotDataUrl}
+          autoCaptureFailed={state.screenshotCaptureFailed}
+          initialType="bug"
+        />
+      )}
     </>
   );
 }

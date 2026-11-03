@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400" role="img" font-family="system-ui, sans-serif">
+<title>Index listing lifecycle</title>
+<desc>A candidate corporation is listed if it clears the float, size and solvency checks; it is dropped after three misses in a row, or can petition the index committee for a waiver.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="399" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="30" width="130" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="85.0" y="44.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Candidate</text>
+<text x="85.0" y="61.0" text-anchor="middle" font-size="13" fill="#18181b">a corporation</text>
+<text x="85.0" y="78.0" text-anchor="middle" font-size="13" fill="#18181b">in the index's</text>
+<text x="85.0" y="95.0" text-anchor="middle" font-size="13" fill="#18181b">country</text>
+<path d="M150,65 L190,65" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="30" width="230" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="305.0" y="61.0" text-anchor="middle" font-size="13" fill="#18181b">Clears float (15%), size (5%</text>
+<text x="305.0" y="78.0" text-anchor="middle" font-size="13" fill="#18181b">of the median) and solvency?</text>
+<path d="M420,55 L560,55" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="490" y="48" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">yes</text>
+<rect x="560" y="30" width="220" height="70" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="670.0" y="61.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Listed</text>
+<text x="670.0" y="78.0" text-anchor="middle" font-size="13" fill="#18181b">the fund buys its shares</text>
+<path d="M305,100 L305,150" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="313" y="130" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">no</text>
+<rect x="190" y="150" width="230" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="305.0" y="172.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Petition the committee</text>
+<text x="305.0" y="189.5" text-anchor="middle" font-size="13" fill="#18181b">float or size only; solvency</text>
+<text x="305.0" y="206.5" text-anchor="middle" font-size="13" fill="#18181b">cannot be waived</text>
+<path d="M305,220 L305,280" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="280" width="230" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="305.0" y="311.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Ruling within 12 turns</text>
+<text x="305.0" y="328.0" text-anchor="middle" font-size="13" fill="#18181b">granted or refused</text>
+<path d="M420,315 L470,315 L470,82 L560,82" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="480" y="250" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">granted:</text>
+<text x="480" y="264" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">waiver</text>
+<text x="480" y="278" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">lasts</text>
+<text x="480" y="292" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">48 turns</text>
+<rect x="560" y="150" width="220" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="670.0" y="174.0" text-anchor="middle" font-size="13" fill="#18181b">Fails a check at an</text>
+<text x="670.0" y="191.0" text-anchor="middle" font-size="13" fill="#18181b">observation</text>
+<path d="M640,100 L640,150" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="648" y="130" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">later</text>
+<path d="M700,150 L700,100" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="708" y="125" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">recovers:</text>
+<text x="708" y="139" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">count resets</text>
+<rect x="560" y="280" width="220" height="70" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="670.0" y="294.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Dropped</text>
+<text x="670.0" y="311.0" text-anchor="middle" font-size="13" fill="#18181b">after three misses in a row;</text>
+<text x="670.0" y="328.0" text-anchor="middle" font-size="13" fill="#18181b">the fund sells and records</text>
+<text x="670.0" y="345.0" text-anchor="middle" font-size="13" fill="#18181b">which standard was missed</text>
+<path d="M640,206 L640,280" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="648" y="246" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">third miss</text>
+</svg>

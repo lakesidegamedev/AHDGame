@@ -21,17 +21,6 @@ export type MilitaryAction =
   | { type: "AUTO_ASSIGN" }
   | { type: "CREATE_COMMAND"; draft: CommandDraft };
 
-/** Fresh empty state — commands are seeded from persisted per-country data by the page. */
-export function initialMilitaryState(): MilitaryState {
-  return {
-    commands: [],
-    selectedId: null,
-    selectedRegionId: null,
-    filter: "coverage",
-    assignMode: false,
-  };
-}
-
 export function militaryReducer(state: MilitaryState, action: MilitaryAction): MilitaryState {
   switch (action.type) {
     case "SELECT":

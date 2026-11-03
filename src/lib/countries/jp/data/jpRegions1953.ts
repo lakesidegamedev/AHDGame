@@ -1,6 +1,6 @@
 /**
  * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
+ * Each era seed is self-contained. This file MUST NOT be derived from
  * another era's region data. All values are authored for 1953 directly.
  * Type-only imports are allowed.
  *

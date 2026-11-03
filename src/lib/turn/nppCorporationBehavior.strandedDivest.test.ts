@@ -113,6 +113,42 @@ describe("NPP stranded-plant divest (section 1b)", () => {
     }
   );
 
+  describe("on a funded world", () => {
+    const EPOCH = "epoch-1";
+    const decideFunded = (sectors: CorporateSector[]) =>
+      makeNppCorpDecision(
+        {
+          corp: corp(),
+          sectors,
+          turn: TURN,
+          now: new Date(),
+          modifiers: ceoArchetypeModifiers("cautious"),
+          fundedWorldEpoch: EPOCH,
+        },
+        new Map<string, UnownedSector[]>(),
+        noState,
+        atBase,
+        plantsCtx,
+        undefined
+      );
+    const receipt = (sold: number) =>
+      ({
+        producerSettlement: { worldEpoch: EPOCH, offeredUnits: 100, soldUnits: sold },
+      }) as unknown as Partial<CorporateSector>;
+
+    it("keeps a sold-out plant whose legacy shadow reads stranded", () => {
+      const soldOut = stranded(receipt(100));
+      const d = decideFunded([soldOut, sector()]);
+      expect(d.divestedSectorIds ?? []).not.toContainEqual(soldOut._id);
+    });
+
+    it("still exits a plant that left most of its offer unsold", () => {
+      const unsold = stranded(receipt(20));
+      const d = decideFunded([unsold, sector()]);
+      expect(d.divestedSectorIds).toContainEqual(unsold._id);
+    });
+  });
+
   it("divests a non-core plant stranded for STRANDED_DIVEST_TURNS", () => {
     const bad = stranded();
     const d = decide(corp(), [bad, sector()]);

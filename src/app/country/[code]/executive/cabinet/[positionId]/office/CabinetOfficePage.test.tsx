@@ -148,7 +148,7 @@ describe("CabinetOfficePage tabs", () => {
     expect(screen.queryByText(/^3\/\d /)).toBeNull();
   });
 
-  it("defaults to Overview (ministerial orders) and switches to Treasury (fiscal panels)", () => {
+  it("defaults to Overview (ministerial orders) and switches to Treasury (fiscal panels)", async () => {
     render(<CabinetOfficePage />);
     expect(screen.getByRole("heading", { name: "Secretary of the Treasury" })).toBeTruthy();
     // Overview is the default tab — ministerial orders always render there.
@@ -158,14 +158,15 @@ describe("CabinetOfficePage tabs", () => {
     fireEvent.click(screen.getByText("Treasury"));
 
     // Treasury now holds the fiscal panels (state enterprises); the monetary panels
-    // (bond profile / FX transfer) relocated to the Monetary flagship tab.
-    expect(screen.getByText("ENTERPRISES")).toBeTruthy();
+    // (bond profile / FX transfer) relocated to the Monetary flagship tab. The
+    // treasury panels are lazy chunks, so the assertion waits for them to land.
+    expect(await screen.findByText("ENTERPRISES")).toBeTruthy();
     expect(screen.queryByText("ORDERS")).toBeNull();
     expect(screen.queryByText("FX")).toBeNull();
     expect(screen.queryByText("BOND")).toBeNull();
   });
 
-  it("moves department account and allocation panels to the Allocations tab", () => {
+  it("moves department account and allocation panels to the Allocations tab", async () => {
     office.departmentFinances = [
       {
         enabled: true,
@@ -181,7 +182,7 @@ describe("CabinetOfficePage tabs", () => {
     expect(screen.getByRole("button", { name: "Allocations" })).toBeTruthy();
     expect(screen.queryByText("DEPARTMENT FINANCE PANEL")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Allocations" }));
-    expect(screen.getByText("DEPARTMENT FINANCE PANEL")).toBeTruthy();
+    expect(await screen.findByText("DEPARTMENT FINANCE PANEL")).toBeTruthy();
     expect(screen.getByText(/Not every department has program allocations/)).toBeTruthy();
   });
 });

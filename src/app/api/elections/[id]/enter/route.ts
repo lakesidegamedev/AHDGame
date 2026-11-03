@@ -694,9 +694,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Create campaign doc immediately so fundraising / ground-game / media UI
-    // works from the moment a candidate enters — but only for US presidential
-    // (the only race type the Campaign Manager system covers). Idempotent: no-op
-    // if a campaign already exists for this candidate + election.
+    // works from the moment a candidate enters. Only presidential races get one:
+    // Campaign Manager is the presidential campaign system (isCampaignEligible).
+    // Idempotent: no-op if a campaign already exists for this candidate + election.
     if (isCampaignEligibleElection(election)) {
       await createInitialCampaign({
         db,

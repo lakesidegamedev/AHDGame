@@ -49,7 +49,7 @@ export function resolveProducerPath(input: ProducerPathInput): ProducerPath {
   return "funded";
 }
 
-export const PRODUCER_PATH_CLAIMS = "producerPathClaims";
+const PRODUCER_PATH_CLAIMS = "producerPathClaims";
 
 /** Reads the config, opening marker and latch, then resolves. */
 export async function loadProducerPath(

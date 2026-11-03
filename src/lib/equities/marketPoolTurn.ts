@@ -8,8 +8,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { debitEquityPoolGated, EQUITY_POOL_M2_SHARE } from "./marketPool";
 import { poolConservationResidual } from "./poolConservation";
 
-export const EQUITY_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
-export const EQUITY_POOL_SWEEP_TO_MULTIPLE = 1.5;
+const EQUITY_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
+const EQUITY_POOL_SWEEP_TO_MULTIPLE = 1.5;
 
 /**
  * Per-turn cash move for an equity market pool. SWEEP ONLY.

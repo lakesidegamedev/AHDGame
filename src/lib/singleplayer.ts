@@ -100,14 +100,6 @@ export function isLocalMongoUri(uri: string): boolean {
   });
 }
 
-/**
- * Whether singleplayer has been requested. Requesting it is not the same as
- * being allowed it: call `assertSingleplayerAllowed` before acting on this.
- */
-export function singleplayerRequested(env: SingleplayerEnv = process.env): boolean {
-  return flagIsSet(env.SINGLEPLAYER);
-}
-
 export class SingleplayerNotAllowedError extends Error {
   constructor(signals: string[]) {
     super(

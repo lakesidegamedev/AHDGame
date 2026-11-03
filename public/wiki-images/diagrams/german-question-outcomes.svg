@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="470" viewBox="0 0 800 470" role="img" font-family="system-ui, sans-serif">
+<title>German Question outcomes</title>
+<desc>If the East wins the German Question, West German offices convert to East German institutions in a single one-party Germany with no election; if East Germany collapses, it becomes a parliamentary republic.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="469" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="280" y="20" width="240" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="400.0" y="45.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">German Question resolves</text>
+<path d="M210 166 L210 196" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="110" width="380" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="210.0" y="133.0" font-size="13" text-anchor="middle" fill="#18181b">East wins: a settlement on the diplomatic track, or</text>
+<text x="210.0" y="150.0" font-size="13" text-anchor="middle" fill="#18181b">a war the question attached to</text>
+<rect x="440" y="110" width="340" height="56" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="610.0" y="141.5" font-size="13" text-anchor="middle" fill="#18181b">East collapses</text>
+<path d="M400 64 L400 86 L210 86 L210 110" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M400 86 L610 86 L610 110" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="20" y="196" width="380" height="38" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="210.0" font-size="12" text-anchor="middle" fill="#18181b">Bundestag members take Volkskammer seats, rescaled onto</text>
+<text x="210.0" y="226.0" font-size="12" text-anchor="middle" fill="#18181b">the new chamber sizes</text>
+<rect x="20" y="248" width="380" height="38" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="262.0" font-size="12" text-anchor="middle" fill="#18181b">Landtage become land assemblies; Minister-Presidents</text>
+<text x="210.0" y="278.0" font-size="12" text-anchor="middle" fill="#18181b">become Land First Secretaries</text>
+<path d="M210 234 L210 248" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="300" width="380" height="38" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="322.0" font-size="12" text-anchor="middle" fill="#18181b">East Berlin folds into Berlin</text>
+<path d="M210 286 L210 300" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="352" width="380" height="38" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="210.0" y="366.0" font-size="12" text-anchor="middle" fill="#18181b">One-party unified state: the East parties govern,</text>
+<text x="210.0" y="382.0" font-size="12" text-anchor="middle" fill="#18181b">western parties are barred</text>
+<path d="M210 338 L210 352" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="404" width="380" height="38" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="210.0" y="418.0" font-size="12" text-anchor="middle" fill="#18181b">No election is called: the chamber carried across is</text>
+<text x="210.0" y="434.0" font-size="12" text-anchor="middle" fill="#18181b">the settlement</text>
+<path d="M210 390 L210 404" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="440" y="196" width="340" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="610.0" y="219.0" font-size="13" text-anchor="middle" fill="#18181b">Parliamentary republic: the democratisation</text>
+<text x="610.0" y="236.0" font-size="13" text-anchor="middle" fill="#18181b">path. The conversion is one-way.</text>
+<path d="M610 166 L610 196" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+</svg>

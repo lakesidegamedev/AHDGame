@@ -1,3 +1,4 @@
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { ApiError, badRequest, notFound } from "@/lib/api/errors";
@@ -24,7 +25,7 @@ import type {
 import { fieldOfficeYield } from "./effects";
 import { loadLiveStateLean } from "./liveLean";
 import {
-  getFieldOfficeCap,
+  FIELD_OFFICE_CAP,
   getFieldOfficeCostAnchor,
   getFieldOfficeRules,
   type FieldOfficeScopeRules,
@@ -120,18 +121,12 @@ export async function openFieldOffice(params: {
     campaign,
     countryId: election.countryId,
     regionId,
-    regionName: region.name,
     subdivisionId: params.subdivisionId ?? null,
   });
 
   const offices = db.collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION);
-  const inRegion = await offices.countDocuments({ campaignId, regionId });
-  if (inRegion >= rules.maxPerRegion) {
-    throw badRequest(`At most ${rules.maxPerRegion} offices per region`);
-  }
-
-  const cap = getFieldOfficeCap(election.electionType);
-  const cost = getFieldOfficeCostAnchor(rules, election.electionType);
+  const cap = FIELD_OFFICE_CAP;
+  const cost = getFieldOfficeCostAnchor(rules);
   const [rates, priceLevel, preset, turn] = await Promise.all([
     loadCampaignCurrencyRates(db),
     loadCampaignPriceLevel(db),
@@ -229,7 +224,6 @@ async function resolvePlacement(
     campaign: Campaign;
     countryId: string;
     regionId: string;
-    regionName: string;
     subdivisionId: string | null;
   }
 ): Promise<{
@@ -238,15 +232,18 @@ async function resolvePlacement(
   electorateShare: number;
   yieldFactor: number;
 }> {
-  if (args.rules.scope === "region") {
-    return { subdivisionId: null, label: args.regionName, electorateShare: 0, yieldFactor: 1 };
-  }
   if (!args.subdivisionId) throw badRequest("Pick a county for the office");
   const [live, preset] = await Promise.all([
     loadLiveStateLean(db, args.countryId),
     getGameStatePresetOrDefault(db),
   ]);
-  const map = await loadFieldOfficeRegionMap(args.rules.scope, args.regionId, live, preset);
+  const map = await loadFieldOfficeRegionMap(
+    args.rules.scope,
+    args.regionId,
+    live,
+    preset,
+    await loadCountyPopulationMap(db, args.regionId)
+  );
   const sub = map?.subdivisions.find((s) => s.id === args.subdivisionId);
   if (!map || !sub) throw badRequest("That county is not in this state");
   const orientation = await loadCampaignOrientation(db, args.campaign, args.countryId);

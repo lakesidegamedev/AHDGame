@@ -28,7 +28,7 @@ import { getFoundingFxRate } from "@/lib/corporations/foundingCosts";
  * modest war chest, a serious dent in a large one. Founding a union is meant to
  * cost a politician something they would otherwise spend on themselves.
  */
-export const UNION_FOUNDING_COST_CAMPAIGN_FUNDS = 500_000;
+const UNION_FOUNDING_COST_CAMPAIGN_FUNDS = 500_000;
 
 /**
  * Action points a founding costs. Chartering the union is the paperwork.

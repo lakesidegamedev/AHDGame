@@ -1,26 +1,25 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useClickOutside } from "@/hooks/useClickOutside";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { DROPDOWN_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
-import { visibleWorldNavItems, type WorldNavOpts } from "@/components/navbar/worldNavItems";
+import { NavPanelSkeleton } from "@/components/navbar/NavPanelSkeleton";
+import { type WorldNavOpts } from "@/components/navbar/worldNavItems";
+
+const WorldDropdownPanel = dynamic(
+  () => import("./WorldDropdownPanel").then((m) => m.WorldDropdownPanel),
+  { ssr: false, loading: () => <NavPanelSkeleton rows={8} /> }
+);
+
+const preloadPanel = () => import("./WorldDropdownPanel");
 
 interface WorldDropdownProps extends WorldNavOpts {
   isUKContext?: boolean;
 }
 
-export function WorldDropdown({
-  isUKContext: _isUKContext = false,
-  countryId = "US",
-  myCorporationId = null,
-  myCorporationHasGroup = false,
-  myUnionId = null,
-  conflictsEnabled = false,
-  unionsEnabled = false,
-  settlementCrisisLive = false,
-}: WorldDropdownProps) {
+export function WorldDropdown(props: WorldDropdownProps) {
   const t = useTranslations("nav");
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -28,28 +27,12 @@ export function WorldDropdown({
   const closeDropdown = useCallback(() => setIsOpen(false), []);
   useClickOutside(dropdownRef, isOpen, closeDropdown, { closeOnEscape: true });
 
-  const items = visibleWorldNavItems({
-    countryId,
-    myCorporationId,
-    myCorporationHasGroup,
-    myUnionId,
-    conflictsEnabled,
-    unionsEnabled,
-    settlementCrisisLive,
-  });
-  const corporate = items.filter((i) => i.section === "corporate");
-  const leaderboard = items.filter((i) => i.section === "leaderboard");
-  const main = items.filter((i) => i.section === "main");
-
-  const linkClass =
-    "flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60";
-  const primaryLinkClass =
-    "flex items-center gap-2 px-4 py-2.5 text-sm text-primary transition-colors hover:bg-background/60";
-
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        onPointerEnter={preloadPanel}
+        onFocus={preloadPanel}
         className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -70,66 +53,7 @@ export function WorldDropdown({
           role="menu"
           className={`absolute right-0 z-50 mt-2 w-56 rounded-xl border border-card-border bg-card shadow-modal ${DROPDOWN_PANEL_CLASS}`}
         >
-          <div className="py-1">
-            {corporate.length > 0 && (
-              <div className="mb-1 border-b border-card-border pb-1">
-                <p className="px-4 pt-2 pb-1 text-body-sm font-medium text-muted">
-                  {t("menus.world.headers.corporate")}
-                </p>
-                {corporate.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className={primaryLinkClass}
-                    role="menuitem"
-                  >
-                    {t(item.labelKey)}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {leaderboard.length > 0 && (
-              <div className="mb-1 border-b border-card-border pb-1">
-                <div className="flex items-center gap-2 px-4 pt-2 pb-1">
-                  <p className="text-body-sm font-medium text-muted">
-                    {t("menus.world.headers.leaderboard")}
-                  </p>
-                  <span className="rounded-full bg-warning/15 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-warning">
-                    Beta
-                  </span>
-                </div>
-                {leaderboard.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className={linkClass}
-                    role="menuitem"
-                  >
-                    {t(item.labelKey)}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {main.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={
-                  item.parentId != null
-                    ? `${linkClass} ml-3 border-l border-card-border pl-3`
-                    : linkClass
-                }
-                role="menuitem"
-              >
-                {t(item.labelKey)}
-              </Link>
-            ))}
-          </div>
+          <WorldDropdownPanel {...props} onClose={closeDropdown} />
         </div>
       )}
     </div>

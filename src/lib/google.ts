@@ -1,4 +1,4 @@
-export const GOOGLE_OAUTH_SCOPES = "openid email profile";
+const GOOGLE_OAUTH_SCOPES = "openid email profile";
 
 /** Build the Google OAuth 2.0 authorization URL the login/link routes redirect to. */
 export function getGoogleOAuthUrl(state: string, redirectUri: string, clientId: string): string {

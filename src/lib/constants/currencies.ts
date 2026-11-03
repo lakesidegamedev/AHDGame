@@ -42,41 +42,17 @@ import { WAL_ECONOMY } from "@/lib/countries/wal/economy";
 import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
+import { CURRENCY_ANCHOR_COUNTRY, COUNTRY_CURRENCY_MAP, type CurrencyCode } from "./currencyCodes";
 
-/**
- * Currency codes for all countries — active and future.
- * Active v1: USD, GBP, JPY. Future: CAD, EUR (added when those countries launch).
- */
-export type CurrencyCode =
-  | "USD"
-  | "GBP"
-  | "JPY"
-  | "CAD"
-  | "EUR"
-  | "IEP"
-  | "BRL"
-  | "CNY"
-  | "NGN"
-  | "HUF"
-  | "PLZ"
-  | "ROL"
-  | "PLN"
-  | "RON"
-  | "YUD"
-  | "BGL"
-  | "BGN"
-  | "CSK"
-  | "SUR"
-  | "RUB"
-  | "FRF"
-  | "ITL"
-  | "ESP"
-  | "SEK"
-  | "TRL"
-  | "GRD"
-  | "ATS"
-  | "FIM"
-  | "DDM";
+export type { CurrencyCode } from "./currencyCodes";
+export {
+  CURRENCY_ANCHOR_COUNTRY,
+  CURRENCY_SYMBOLS,
+  COUNTRY_CURRENCY_MAP,
+  FOREX_ACTIVE_COUNTRIES,
+  FOREX_ACTIVE_CURRENCIES,
+  getEraAwareCurrencySymbol,
+} from "./currencyCodes";
 
 /** Zod-compatible tuple for CurrencyCode validation */
 export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] = [
@@ -111,42 +87,6 @@ export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] 
   "DDM",
 ];
 
-/** Map country → home currency. Authoritative source for this mapping. */
-export const COUNTRY_CURRENCY_MAP: Record<CountryId, CurrencyCode> = {
-  US: US_ECONOMY.currencyCode,
-  UK: UK_ECONOMY.currencyCode,
-  JP: JP_ECONOMY.currencyCode,
-  DE: DE_ECONOMY.currencyCode,
-  // Irish pound (Saorstát/IEP). Distinct from EUR so 1953 Bretton Woods par
-  // (1:1 GBP) can have its own exchangeRates doc without colliding with DE's DM/EUR rate.
-  // Euro displays convert with the EUR rate; the stored IEP denomination stays intact.
-  IE: IE_ECONOMY.currencyCode,
-  BR: BR_ECONOMY.currencyCode,
-  CN: CN_ECONOMY.currencyCode,
-  NG: NG_ECONOMY.currencyCode,
-  HU: HU_ECONOMY.currencyCode,
-  PL: PL_ECONOMY.currencyCode,
-  RO: RO_ECONOMY.currencyCode,
-  YU: YU_ECONOMY.currencyCode,
-  BG: BG_ECONOMY.currencyCode,
-  BLR: BLR_ECONOMY.currencyCode,
-  UKR: UKR_ECONOMY.currencyCode,
-  CS: CS_ECONOMY.currencyCode,
-  BAL: BAL_ECONOMY.currencyCode,
-  RU: RU_ECONOMY.currencyCode,
-  FR: FR_ECONOMY.currencyCode,
-  IT: IT_ECONOMY.currencyCode,
-  ES: ES_ECONOMY.currencyCode,
-  SE: SE_ECONOMY.currencyCode,
-  TR: TR_ECONOMY.currencyCode,
-  GR: GR_ECONOMY.currencyCode,
-  AT: AT_ECONOMY.currencyCode,
-  FI: FI_ECONOMY.currencyCode,
-  DD: DD_ECONOMY.currencyCode,
-  SCO: SCO_ECONOMY.currencyCode, // sterlingized — shares the UK's GBP (anchor stays UK)
-  WAL: WAL_ECONOMY.currencyCode, // sterlingized — shares the UK's GBP (anchor stays UK)
-};
-
 /**
  * The single country that "anchors" each currency — i.e. the one whose
  * `exchangeRates` doc holds the live rate and central bank for that currency.
@@ -158,38 +98,6 @@ export const COUNTRY_CURRENCY_MAP: Record<CountryId, CurrencyCode> = {
  * CAD has no launched country, so it resolves to US (USD parity) — matching the
  * legacy fallback.
  */
-export const CURRENCY_ANCHOR_COUNTRY: Record<CurrencyCode, CountryId> = {
-  USD: "US",
-  GBP: "UK",
-  JPY: "JP",
-  CAD: "US", // no launched CAD country; USD-parity fallback
-  EUR: "DE",
-  IEP: "IE",
-  BRL: "BR",
-  CNY: "CN",
-  NGN: "NG",
-  HUF: "HU",
-  PLZ: "PL",
-  ROL: "RO",
-  PLN: "PL",
-  RON: "RO",
-  YUD: "YU",
-  BGL: "BG",
-  BGN: "BG",
-  CSK: "CS",
-  SUR: "RU", // Soviet ruble — anchor is the USSR/Russia entity (shared by RU + BY + BAL)
-  RUB: "RU", // Modern Russian ruble — same RU anchor, active only in the 2027 preset (see getSeedCurrencyCode)
-  FRF: "FR",
-  ITL: "IT",
-  ESP: "ES",
-  SEK: "SE",
-  TRL: "TR",
-  GRD: "GR",
-  ATS: "AT",
-  FIM: "FI",
-  DDM: "DD",
-};
-
 /**
  * The country whose central bank / exchange-rate doc backs a currency.
  * National prime rate / savings APY / FX rate lookups use this (one country per
@@ -212,59 +120,6 @@ export function getCountryIdForCurrency(code: CurrencyCode): CountryId {
 // their currencies. Central-bank coverage is a separate preset-aware scope; see
 // presetMonetaryScope. DD remains here for Cold-War DDM support but is excluded
 // from post-reunification central-bank seeding.
-export const FOREX_ACTIVE_COUNTRIES: CountryId[] = [
-  "US",
-  "UK",
-  "JP",
-  "DE",
-  "IE",
-  "CN",
-  "BR",
-  "NG",
-  "RU",
-  "DD",
-  "FR",
-  "IT",
-  "ES",
-  "SE",
-  "TR",
-  "GR",
-  "AT",
-  "FI",
-];
-
-/** Only currencies that participate in forex */
-export const FOREX_ACTIVE_CURRENCIES: CurrencyCode[] = [
-  "USD",
-  "GBP",
-  "JPY",
-  "EUR",
-  "IEP",
-  "CNY",
-  "BRL",
-  "NGN",
-  "SUR",
-  "RUB",
-  "DDM",
-  "FRF",
-  "ITL",
-  "ESP",
-  "SEK",
-  "TRL",
-  "GRD",
-  "ATS",
-  "FIM",
-  "PLZ",
-  "HUF",
-  "ROL",
-  "BGL",
-  "CSK",
-  "YUD",
-  "PLN",
-  "RON",
-  "BGN",
-];
-
 /** Zod-compatible tuple for ACTIVE currencies only (used in forex route schemas) */
 export const ZOD_ACTIVE_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] = [
   "USD",
@@ -835,68 +690,6 @@ export const SPREAD_FEE_RESERVE_RATIO = 0.5;
 /** Fraction of spread fees deposited to the central bank (revenue + reserves) */
 export const SPREAD_FEE_CENTRAL_BANK_RATIO =
   SPREAD_FEE_FOREX_REVENUE_RATIO + SPREAD_FEE_RESERVE_RATIO;
-
-/** Human-readable currency symbols for display */
-export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
-  USD: "$",
-  GBP: "£",
-  JPY: "¥",
-  CAD: "C$",
-  EUR: "€",
-  IEP: "IR£",
-  BRL: "R$",
-  CNY: "¥",
-  NGN: "₦",
-  HUF: "Ft",
-  PLZ: "zł",
-  ROL: "lei",
-  PLN: "zł",
-  RON: "lei",
-  YUD: "din",
-  BGL: "лв",
-  BGN: "лв",
-  CSK: "Kčs",
-  SUR: "руб",
-  RUB: "₽",
-  FRF: "₣",
-  ITL: "₤",
-  ESP: "₧",
-  SEK: "kr",
-  TRL: "₺",
-  GRD: "₯",
-  ATS: "öS",
-  FIM: "mk",
-  DDM: "M",
-};
-
-/** Presets where the Eurozone currency union had not yet been formed.
- *  EUR did not exist; DE used DM, IE used IEP. */
-const PRE_EUROZONE_PRESETS = new Set<string>(["1953-default", "1979-default", "1991-default"]);
-
-/** Presets where Brazil's Real (BRL) had not yet replaced the Cruzeiro.
- *  The Real was introduced 1 July 1994. */
-const PRE_REAL_PRESETS = new Set<string>(["1953-default", "1979-default", "1991-default"]);
-
-/**
- * Symbol for an amount already denominated in `code`. A symbol-only call must
- * never relabel IEP as EUR, or normalized EUR/BRL units as marks/cruzeiros.
- * Local historical presentation with amount conversion lives in currency/rules/display.
- */
-export function getEraAwareCurrencySymbol(
-  code: CurrencyCode,
-  preset: string,
-  eurozoneEnabled: boolean,
-  _anchorCountryId?: CountryId
-): string {
-  // 1953 stores actual marks; 1979/1991 store EUR-equivalent German units.
-  if (code === "EUR" && preset === "1953-default") return "DM";
-  if (code === "EUR" && !eurozoneEnabled && PRE_EUROZONE_PRESETS.has(preset)) return "€ eq.";
-  // Modern presets seeded IEP as a normalized euro-scale accounting unit.
-  if (code === "IEP" && !PRE_EUROZONE_PRESETS.has(preset)) return "€ eq.";
-  if (code === "BRL" && preset === "1953-default") return "Cr$";
-  if (code === "BRL" && PRE_REAL_PRESETS.has(preset)) return "BRL eq.";
-  return CURRENCY_SYMBOLS[code] ?? code;
-}
 
 /**
  * Seed-time home currency for a country in a preset. Era-blind

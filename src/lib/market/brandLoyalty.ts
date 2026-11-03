@@ -17,7 +17,7 @@
 
 // ── Tunables (defaults; see the plan's constants table for ranges) ───────────
 export const LOYALTY_MAX = 100;
-export const LOYALTY_MIN = 0;
+const LOYALTY_MIN = 0;
 /** Loyalty gained per turn when consistently priced, delivering, and contested. */
 export const ACCRUAL_RATE = 1.0;
 /** How far posture may drift from the corp's own norm and still count as consistent. */
@@ -33,13 +33,13 @@ export const DECAY_ERRATIC_DOWNWARD_FACTOR = 0.5;
 /** Per-turn loyalty loss when the corp fails to sell enough of its book. */
 export const DECAY_UNDERDELIVER = 1.0;
 /** Fill (revenue-weighted soldFraction) below which under-delivery bites. */
-export const UNDERDELIVER_FILL = 0.35;
+const UNDERDELIVER_FILL = 0.35;
 /** Fill at or above which accrual is allowed (you actually delivered). */
-export const DELIVER_FILL = 0.5;
+const DELIVER_FILL = 0.5;
 /** Per-turn drift toward 0 when neither accruing nor penalized. */
 export const DECAY_IDLE = 0.25;
 /** EMA weight for the corp's own posture norm (~10-turn price-identity memory). */
-export const POSTURE_NORM_ALPHA = 0.1;
+const POSTURE_NORM_ALPHA = 0.1;
 /** Share of each market's demand that is "loyal-type" and split by relative loyalty. */
 export const LOYAL_POOL_FRACTION = 0.4;
 /** A rival must post at least this much cheaper to count as a genuine contest. */
@@ -47,12 +47,12 @@ export const CONTEST_GAP = 0.05;
 /** Loyalty below this earns no protected slice (noise floor). */
 export const SLICE_NOISE_FLOOR = 5;
 /** Boeing rule: strength of the facility-loss loyalty hit. */
-export const FACILITY_LOSS_FACTOR = 1.0;
+const FACILITY_LOSS_FACTOR = 1.0;
 
 // ── Hidden 5-label scale (players never see the number) ──────────────────────
 export type LoyaltyLabel = "Unknown" | "Emerging" | "Respected" | "Trusted" | "Iconic";
 /** Lower bound (inclusive) of each label band. */
-export const LOYALTY_LABEL_BANDS: ReadonlyArray<readonly [number, LoyaltyLabel]> = [
+const LOYALTY_LABEL_BANDS: ReadonlyArray<readonly [number, LoyaltyLabel]> = [
   [90, "Iconic"],
   [70, "Trusted"],
   [45, "Respected"],

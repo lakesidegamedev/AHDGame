@@ -17,7 +17,7 @@ import { ddRegionCensusData, type DDRegionLayer1 } from "@/lib/seeds/dd/ddRegion
 import { ddRegionCensusData1953 } from "@/lib/seeds/dd/ddRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const DD_GROUP_IDS = [
+const DD_GROUP_IDS = [
   "party_nomenklatura",
   "industrial_worker",
   "collective_farmer",
@@ -205,6 +205,3 @@ export function getDdModel(era: EraId): CountryLayer1Model {
     census: convertCensus(census),
   };
 }
-
-export const ddLayer1Model: CountryLayer1Model = getDdModel("1979");
-export const ddGroupIds = [...DD_GROUP_IDS];

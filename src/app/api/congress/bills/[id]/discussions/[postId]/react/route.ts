@@ -20,7 +20,11 @@ export async function POST(
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 60, 60000);
+    const rateLimit = checkRateLimit(
+      `api/congress/bills/[id]/discussions/[postId]/react:${auth.user.userId}`,
+      60,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, reactSchema);

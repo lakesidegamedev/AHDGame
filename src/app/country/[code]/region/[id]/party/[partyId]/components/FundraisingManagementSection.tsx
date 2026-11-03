@@ -12,7 +12,7 @@ import { useTurnoutTargetSections } from "@/hooks/useTurnoutTargetSections";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import type { StatePartyData } from "./types";
 import { fmt } from "./helpers";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   getEffectivePlayerPayoutCap,
   PAYOUT_CAP_MULTI_OFFICER_MULTIPLIER,

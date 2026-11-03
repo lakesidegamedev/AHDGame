@@ -73,6 +73,79 @@ export function supplyAgreementSectorStates(
  * which has never been through `sectorTurn` and so does not yet carry the
  * production-policy output curve.
  */
+/**
+ * A sector's effective output mix: the recipe after transition blending and the
+ * hardware input relief, exactly as the capacity and achievable legs price it.
+ * Split out so a caller that prices several commodities for the same sector
+ * resolves it once instead of once per commodity.
+ */
+export function supplierCommoditySupplyMix(
+  sector: SupplyAgreementCapacitySector,
+  turn: number
+): Partial<Record<CommodityType, number>> {
+  return (
+    getEffectiveStrategyRatesForOperatingModel(
+      sector.sectorType,
+      sector.strategyId ?? "standard",
+      sector.transitionFromStrategyId,
+      sector.transitionStartTurn,
+      turn,
+      sector.industryModel,
+      sector.mediaDiscriminator
+    ).supply ?? {}
+  );
+}
+
+/**
+ * Scaled output units a plant's NAMEPLATE capacity stands for, before the
+ * commodity mix split. Every leg of this chain is a multiplier on capacity, so
+ * pricing a hypothetical stock (an order, a queued build) is this same call
+ * with a different `capacityUnits` — never a re-derivation of the rates, which
+ * is the expensive half of the calculation.
+ */
+export function supplierScaledCapacityUnits(args: {
+  sector: SupplyAgreementCapacitySector;
+  isNatcorp: boolean;
+  turn: number;
+  currentYear?: number | null;
+  commandEconomyEnabled?: boolean | null;
+  /** Nameplate capacity to price; defaults to the sector's own stock. */
+  capacityUnits?: number | null;
+}): number {
+  const { sector } = args;
+  if (sector.mothballed === true) return 0;
+  const capacity =
+    (typeof args.capacityUnits === "number"
+      ? args.capacityUnits
+      : typeof sector.capitalStock === "number"
+        ? sector.capitalStock
+        : 0) *
+    retoolOperatingCapacityRatio({ ...sector, currentTurn: args.turn }) *
+    activeCapacityFraction({ activeCapacityPercent: sector.activeCapacityPercent });
+  if (!(capacity > 0)) return 0;
+  // A command economy's media makes state information rather than advertising,
+  // and media supply is derated in every economy.
+  const plannedEconomy = isPlannedEconomy(
+    sector.countryId,
+    args.currentYear,
+    args.commandEconomyEnabled
+  );
+  return (
+    plantsCapacityScaledUnits({
+      capacityUnits: capacity,
+      isNatcorp: args.isNatcorp,
+      productionPolicyLevel: sector.productionPolicyLevel,
+      embargoSupplyFactor:
+        embargoSupplyFactorFor(sector) *
+        plannedEconomyMediaSupplyFactor(
+          sector.sectorType,
+          plannedEconomy,
+          sector.mediaDiscriminator
+        ),
+    }) ?? 0
+  );
+}
+
 export function computeSupplierCommodityCapacityUnits(args: {
   sectors: readonly SupplyAgreementCapacitySector[];
   commodity: CommodityType;
@@ -84,44 +157,23 @@ export function computeSupplierCommodityCapacityUnits(args: {
   commandEconomyEnabled?: boolean | null;
   /** State-scoped contract: count only the plants in this state. */
   stateId?: string | null;
+  /** Per-sector mix memo shared across commodities; see supplierCommoditySupplyMix. */
+  supplyMixOf?: (sector: SupplyAgreementCapacitySector) => Partial<Record<CommodityType, number>>;
 }): number {
   let capacityUnits = 0;
   for (const s of supplyAgreementSectorsInScope(args.sectors, args.stateId)) {
-    if (s.mothballed === true) continue;
-    const capacity =
-      (typeof s.capitalStock === "number" ? s.capitalStock : 0) *
-      retoolOperatingCapacityRatio({ ...s, currentTurn: args.turn }) *
-      activeCapacityFraction({ activeCapacityPercent: s.activeCapacityPercent });
-    if (!(capacity > 0)) continue;
-    const rates = getEffectiveStrategyRatesForOperatingModel(
-      s.sectorType,
-      s.strategyId ?? "standard",
-      s.transitionFromStrategyId,
-      s.transitionStartTurn,
-      args.turn,
-      s.industryModel,
-      s.mediaDiscriminator
-    );
-    const plannedEconomy = isPlannedEconomy(
-      s.countryId,
-      args.currentYear,
-      args.commandEconomyEnabled
-    );
-    // The output mix and the supply derate BOTH have to match the production
-    // sink, or the head-room sits on a base the supplier can never reach and
-    // the shortfall leg bills them for the gap every turn. A command economy's
-    // media makes state information rather than advertising, and media supply
-    // is derated in every economy.
-    const supplyMix = rates.supply ?? {};
-    const scaled =
-      plantsCapacityScaledUnits({
-        capacityUnits: capacity,
-        isNatcorp: args.isNatcorp,
-        productionPolicyLevel: s.productionPolicyLevel,
-        embargoSupplyFactor:
-          embargoSupplyFactorFor(s) *
-          plannedEconomyMediaSupplyFactor(s.sectorType, plannedEconomy, s.mediaDiscriminator),
-      }) ?? 0;
+    const scaled = supplierScaledCapacityUnits({
+      sector: s,
+      isNatcorp: args.isNatcorp,
+      turn: args.turn,
+      currentYear: args.currentYear,
+      commandEconomyEnabled: args.commandEconomyEnabled,
+    });
+    if (!(scaled > 0)) continue;
+    // The output mix has to match the production sink, or the head-room sits on
+    // a base the supplier can never reach and the shortfall leg bills them for
+    // the gap every turn.
+    const supplyMix = args.supplyMixOf?.(s) ?? supplierCommoditySupplyMix(s, args.turn);
     capacityUnits += scaled * commodityMixWeight(supplyMix, COMMODITY_BASE_PRICES, args.commodity);
   }
   return capacityUnits;

@@ -31,14 +31,18 @@ import {
   type SectorSortKey,
   type SortDir,
 } from "./sectorSortUtils";
-import { CAPACITY_UNIT_LABEL, FillChip, formatUnits } from "./plantsPresentation";
+import {
+  CAPACITY_UNIT_LABEL,
+  RunningSoldReading,
+  formatUnits,
+  sectorPlantCount,
+} from "./plantsPresentation";
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
 import {
   buildOnePhrase,
   capitalizeFacility,
   facilityPlural,
 } from "@/lib/constants/facilityVocabulary";
-import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
 import { SectorTypeDossier } from "./SectorTypeDossier";
 import { SectorStrategyPanel } from "./SectorStrategyPanel";
 import type { SectorTypeMetricContext } from "./sectorTypeMetrics";
@@ -69,8 +73,14 @@ interface SectorsTabProps {
   logisticsStrength: number;
   onAbandonSector: (sectorId: string) => void;
   abandoningSectorId: string | null;
+  /** Plants tier, CEO: mothball or reactivate a sector from its row menu. */
+  onMothballSector?: (sectorId: string, action: "mothball" | "reactivate") => void;
+  /** Sectors with a mothball or reactivate request in flight. */
+  mothballingSectorIds?: ReadonlySet<string>;
   sectorsMessage: { type: "error" | "success"; text: string } | null;
   onStrategyChange?: (sectorId: string, strategyId: string) => void;
+  /** May change sector strategies; defaults to isCeo (the controlling parent's CEO also may). */
+  canChangeStrategy?: boolean;
   strategyUpdatingSectorId?: string | null;
   onGrowthChange?: (sectorId: string, newRate: number) => void;
   growthUpdatingSectorId?: string | null;
@@ -110,8 +120,11 @@ export default function SectorsTab({
   logisticsStrength,
   onAbandonSector,
   abandoningSectorId,
+  onMothballSector,
+  mothballingSectorIds,
   sectorsMessage,
   onStrategyChange,
+  canChangeStrategy,
   strategyUpdatingSectorId,
   onGrowthChange,
   growthUpdatingSectorId,
@@ -515,7 +528,10 @@ export default function SectorsTab({
                     setOpenSectorMenuId((cur) => (cur === sector._id ? null : sector._id))
                   }
                   onAbandonSector={onAbandonSector}
+                  onMothballSector={onMothballSector}
+                  mothballingSectorIds={mothballingSectorIds}
                   onStrategyChange={onStrategyChange}
+                  canChangeStrategy={canChangeStrategy ?? isCeo}
                   onGrowthChange={onGrowthChange}
                   onCancelTransition={onCancelTransition}
                   fmtMoney={fmtMoney}
@@ -547,16 +563,7 @@ export default function SectorsTab({
                   (sum, s) => sum + (s.capacityUnits ?? 0),
                   0
                 );
-                const totalSites = sortedSectors.reduce(
-                  (sum, s) =>
-                    sum +
-                    (s.plantCount ??
-                      facilitiesFromUnits(
-                        s.sectorType as OperatingSectorType,
-                        s.capacityUnits ?? 0
-                      )),
-                  0
-                );
+                const totalSites = sortedSectors.reduce((sum, s) => sum + sectorPlantCount(s), 0);
                 const totalProduced = sortedSectors.reduce(
                   (sum, s) => sum + (s.producedUnits ?? 0),
                   0
@@ -578,17 +585,18 @@ export default function SectorsTab({
                     <span></span>
                     <span
                       className={`${cellNum} text-right text-foreground`}
-                      title={CAPACITY_UNIT_LABEL}
+                      title={`${formatUnits(totalCapacity)} ${CAPACITY_UNIT_LABEL} at full run`}
                     >
-                      {formatUnits(totalCapacity)}
+                      {totalSites.toLocaleString("en-US")} {totalSites === 1 ? "plant" : "plants"}
                     </span>
-                    <span className={`${cellNum} text-right text-muted`}>
-                      {totalSites.toLocaleString("en-US")}
-                    </span>
-                    <span className="flex justify-end">
-                      <FillChip
+                    <span className="flex flex-col items-end text-right">
+                      <RunningSoldReading
+                        produced={totalProduced}
+                        capacity={totalCapacity}
                         fill={hasExactFill ? corpFill : null}
                         band={fillRateBand(corpFill)}
+                        plantCount={totalSites}
+                        className="items-end"
                       />
                     </span>
                     <span className={`${cellNum} text-right text-foreground`}>

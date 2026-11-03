@@ -115,7 +115,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/whip:${authResult.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const authData = authResult.user;
 

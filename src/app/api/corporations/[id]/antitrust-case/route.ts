@@ -54,7 +54,11 @@ export async function POST(request: Request, { params }: RouteParams): Promise<N
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/antitrust-case:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const db = await getDb();
     const resolved = await resolveCorporation(db, (await params).id);

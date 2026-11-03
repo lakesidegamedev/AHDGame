@@ -139,6 +139,8 @@ describe("GET /api/client-nav", () => {
                 _id: userId,
                 role: "player",
                 isAdmin: false,
+                experimentalFeatures: true,
+                desktopNavigationLayout: "standard",
                 activeCharacterId: null,
                 activeCharacterType: "character",
                 activeImperialCharacterId: null,
@@ -260,6 +262,8 @@ describe("GET /api/client-nav", () => {
       );
       expect(json.myCorporationType).toBeNull();
       expect(json.myCorporationCountryId).toBeNull();
+      expect(json.user.experimentalFeatures).toBe(true);
+      expect(json.user.desktopNavigationLayout).toBe("standard");
       expect(json.user.forexEnabled).toBe(true);
       expect(json.user.singleplayer).toBe(singleplayer);
       expect(json.user.isAdmin).toBe(false);
@@ -275,6 +279,7 @@ describe("GET /api/client-nav", () => {
         tintColor: null,
         // Fixture character has no statsAllocated → grandfather flag is true.
         needsStatAllocation: true,
+        needsWealthTierRepick: false,
       });
     }
   );

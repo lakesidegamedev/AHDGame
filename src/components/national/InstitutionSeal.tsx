@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ExecutiveSeal } from "@/lib/constants/executiveSeals";
 import { NationalSeal } from "@/components/national/NationalSeal";
 import { hexToRgba } from "@/components/national/identityColor";

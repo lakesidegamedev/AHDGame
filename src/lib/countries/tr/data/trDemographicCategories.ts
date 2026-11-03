@@ -1,21 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * Turkey Voter Archetypes — 7 groups across the 1979 pre-coup spectrum.
- *   defaultEconomicLean: -5 (statist/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (secular/Kemalist) … +5 (religious/traditional)
- * demographicProfileId "tr_archetypes"; category _id "tr_voterGroups".
- */
-export const TR_VOTER_GROUP_BASELINES: Record<string, number> = {
-  kemalist_secular: 76,
-  conservative_religious: 74,
-  nationalist: 72,
-  urban_worker: 74,
-  rural_peasant: 72,
-  kurdish_minority: 65,
-  business_liberal: 78,
-};
-
 export const trDemographicCategories: DemographicCategory[] = [
   {
     _id: "tr_voterGroups",

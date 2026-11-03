@@ -549,6 +549,83 @@ describe("stockExchangeSnapshot", () => {
       }
     });
 
+    it("asks for one row per corporation per comparison target, not the whole window", async () => {
+      // The old pipeline matched every row in the 48-turn window (about 96k
+      // rows in production) and picked three points from each corporation's
+      // array. Each target is now its own bounded, index-ordered branch.
+      const corpId = new ObjectId();
+      const historyChain = createMockChain([]);
+      mockCollection
+        .mockReturnValueOnce(createMockChain([createCorporation({ _id: corpId })]))
+        .mockReturnValueOnce(createMockChain([createCharacter()]))
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(historyChain)
+        .mockReturnValueOnce(createMockChain([createStateMetrics()]))
+        .mockReturnValueOnce(createMockChain([createState()]))
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(createMockChain([]));
+
+      vi.mocked(getPublicShareQuote).mockReturnValue(100);
+      vi.mocked(getRoundedPublicMarketCap).mockReturnValue(100000);
+
+      await generateStockExchangeSnapshots(100, mockDb);
+
+      const pipeline = historyChain.aggregate.mock.calls[0][0] as Array<Record<string, any>>;
+      const branches = [
+        pipeline.slice(0, 4),
+        ...pipeline.flatMap((stage) =>
+          stage.$unionWith ? [stage.$unionWith.pipeline as Array<Record<string, any>>] : []
+        ),
+      ];
+      const atOrBeforeBounds = branches
+        .map((branch) => branch[0].$match.turn?.$lte)
+        .filter((bound) => bound != null);
+      expect(atOrBeforeBounds).toEqual([99, 76, 52]);
+      // No at-or-before branch reads a whole turn window: each is a $lte bound.
+      for (const branch of branches.slice(0, 3)) {
+        expect(branch[0].$match.turn?.$gte).toBeUndefined();
+      }
+      const earliestBranch = branches[3];
+      expect(earliestBranch[0].$match.turn).toEqual({ $gte: 52 });
+      expect(earliestBranch[1].$sort).toEqual({ corporationId: -1, turn: 1 });
+    });
+
+    it("falls back to the earliest row when no row is at or before the target", async () => {
+      // A corporation listed inside the 48-turn window has no row at or before
+      // turn-48, so the 48h comparison uses its oldest row.
+      const corpId = new ObjectId();
+      mockCollection
+        .mockReturnValueOnce(createMockChain([createCorporation({ _id: corpId, sharePrice: 50 })]))
+        .mockReturnValueOnce(createMockChain([createCharacter()]))
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(
+          createMockChain([
+            {
+              _id: corpId,
+              h1: { turn: 99, sharePrice: 100, totalShares: 1000 },
+              earliest: { turn: 60, sharePrice: 40, totalShares: 1000 },
+            },
+          ])
+        )
+        .mockReturnValueOnce(createMockChain([createStateMetrics()]))
+        .mockReturnValueOnce(createMockChain([createState()]))
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(createMockChain([]));
+
+      vi.mocked(getPublicShareQuote).mockImplementation((corp) => corp.sharePrice ?? 100);
+      vi.mocked(getRoundedPublicMarketCap).mockReturnValue(50000);
+
+      await generateStockExchangeSnapshots(100, mockDb);
+
+      const updateCall = mockUpdateOne.mock.calls.find((c) => c[0]?._id === "global");
+      const listing = updateCall![1].$set.listings[0];
+      expect(listing.priceChange1h).toBe(-50); // (50 - 100) / 100
+      expect(listing.priceChange24h).toBe(25); // (50 - 40) / 40
+      expect(listing.priceChange48h).toBe(25);
+    });
+
     it("identifies natcorps correctly", async () => {
       const natcorp = createCorporation({ countryOwnerId: "US" });
       const regularCorp = createCorporation({ countryOwnerId: null });

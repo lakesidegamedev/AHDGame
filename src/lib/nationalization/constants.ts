@@ -78,9 +78,6 @@ export const MONOPOLY_SHARE_THRESHOLD = 0.75;
 /** Cap on how many sector types a country may hold designated strategic at once. */
 export const MAX_STRATEGIC_SECTOR_DESIGNATIONS = 5;
 
-/** Vote fraction for the supermajority override (P4). */
-export const SUPERMAJORITY_THRESHOLD = 2 / 3;
-
 /** Turns a CEO seat must be vacant before the distress trigger fires. */
 export const DISTRESS_VACANT_CEO_TURNS = 72;
 
@@ -110,9 +107,6 @@ export const NATIONALIZATION_MAX_TRANSITION_HIT = 0.5;
 
 /** Turns over which the productivity drag linearly recovers to normal. */
 export const NATIONALIZATION_TRANSITION_TURNS = 120;
-
-/** NPV discount rate for sector valuation — matches the existing corp NPV rate. */
-export const NPV_ANNUAL_DISCOUNT_RATE = 0.25;
 
 // ── SOE operations (Phase 2, spec §11) ──────────────────────────────────────
 

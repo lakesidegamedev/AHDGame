@@ -4,7 +4,7 @@ import type { ConflictDoc } from "@/lib/db/types/conflict";
 
 /** A resolved defeat remains politically visible for three in-game years. */
 export const WAR_DEFEAT_WINDOW_TURNS = 3 * TURNS_PER_YEAR;
-export const WAR_DEFEAT_PENALTY = -5;
+const WAR_DEFEAT_PENALTY = -5;
 export const WAR_DEFEAT_PENALTY_CAP = -10;
 
 function round1(value: number): number {

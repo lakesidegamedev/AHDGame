@@ -32,9 +32,9 @@ export const UK_REGIONAL_COUNCIL_COHORT_BY_REGION: Readonly<
   WMI: 5,
 };
 
-export const UK_REGIONAL_COUNCIL_COHORT_COUNT = 5;
+const UK_REGIONAL_COUNCIL_COHORT_COUNT = 5;
 
-export function getUKRegionalCouncilCohort(
+function getUKRegionalCouncilCohort(
   regionId: string | null | undefined
 ): UKRegionalCouncilCohort | undefined {
   if (!regionId) return undefined;

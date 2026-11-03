@@ -93,7 +93,7 @@ export function industryConversionFields(
     mediaDiscriminator: to.mediaDiscriminator,
     strategyId: toStrategyId,
     capitalStock: stock,
-    ...seedPlantLedger(to.sectorType, stock, to.industryModel, to.mediaDiscriminator),
+    ...seedPlantLedger({ ...to, strategyId: toStrategyId }, stock),
     buildQueue: rescaleBuildQueueForStrategyChange(from.buildQueue ?? [], ratio),
     // Old products' asking policies do not apply to the new outputs.
     producerQuotes: {},

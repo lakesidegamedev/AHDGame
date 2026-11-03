@@ -4,7 +4,7 @@ import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { resolveGroupRows } from "@/lib/corporations/groups/groupMembership";
 import { CEO_ARCHETYPE_MODIFIERS } from "@/lib/npp/ceoArchetype";
 import { groupOperator } from "@/lib/corporations/groups/operator";
-import { computeSupplyAgreementBuyerDemand } from "@/lib/corporations/groups/rules/inputDemand";
+import { computeSupplyAgreementSectorDemand } from "@/lib/corporations/groups/rules/inputDemand";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import {
   commodityMixWeight,
@@ -114,6 +114,8 @@ export function buildGroupSupplyContext(
     rows.set(key, (rows.get(key) ?? 0) + agreement.volumeCap);
     contractedByBuyer.set(agreement.buyerCorpId, rows);
   }
+  // The era price table is one object per world, not one per sector.
+  const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
   for (const [corpId, sectors] of lookups.sectorsByCorp) {
     const corp = lookups.corpById.get(corpId);
     if (!corp || corp.suspended) continue;
@@ -127,23 +129,29 @@ export function buildGroupSupplyContext(
         resolveSectorHostCurrencyCode(sector, corp),
         fxRateForSectorHostFromMap(sector, corp, lookups.exchangeRatesByCurrency)
       );
-      const demand = computeSupplyAgreementBuyerDemand({
+      const demand = computeSupplyAgreementSectorDemand({
         preset: lookups.preset,
         hardwareInputReliefStartTurn: lookups.hardwareInputReliefStartTurn,
+        sector: {
+          corporationId: corpId,
+          sectorType: sector.sectorType,
+          industryModel: sector.industryModel,
+          mediaDiscriminator: sector.mediaDiscriminator,
+          revenueAnchor,
+          strategyId: sector.strategyId,
+          transitionFromStrategyId: sector.transitionFromStrategyId,
+          transitionStartTurn: sector.transitionStartTurn,
+          productionPolicyLevel: sector.productionPolicyLevel,
+          producedUnits: sector.producedUnits,
+          capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,
+          mothballed: sector.mothballed,
+          isNatcorp: !!corp.countryOwnerId,
+        },
         currentTurn: turn,
         unitScale: lookups.eraUnitScale,
         plantsEnabled: true,
-        sectors: [
-          {
-            ...sector,
-            corporationId: corpId,
-            revenueAnchor,
-            capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,
-            isNatcorp: !!corp.countryOwnerId,
-          },
-        ],
-      }).get(corpId);
-      for (const [commodity, units] of demand ?? []) {
+      });
+      for (const [commodity, units] of demand) {
         if (commodity.includes("@")) continue;
         const contracted = contractedByBuyer.get(corpId);
         // State-addressed obligations consume their lane before a corporation-wide obligation.
@@ -189,12 +197,7 @@ export function buildGroupSupplyContext(
       for (const commodity of Object.keys(rates.supply ?? {}) as CommodityType[])
         byCommodity.set(
           commodity,
-          Math.max(0, output ?? 0) *
-            commodityMixWeight(
-              rates.supply ?? {},
-              eraScaledBasePrices(lookups.eraUnitScale),
-              commodity
-            )
+          Math.max(0, output ?? 0) * commodityMixWeight(rates.supply ?? {}, basePrices, commodity)
         );
       physicalBySectorCommodity.set(sectorId, byCommodity);
     }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { CampaignerPicker } from "@/components/party/CampaignerPicker";
 import { StatePartyLeadershipManager } from "@/components/StatePartyLeadershipManager";
-import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
+import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countryClientConfig";
 import { regionPartyApiUrl } from "@/lib/urls";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import { partyUrl } from "@/lib/urls";

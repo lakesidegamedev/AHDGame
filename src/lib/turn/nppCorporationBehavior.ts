@@ -1,4 +1,5 @@
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
+import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { loadGroupDirectionMembership } from "./npp/groupDirectionMembership";
 /**
  * NPP corporation decisions use shared market and funding observations.
@@ -24,7 +25,11 @@ import type { Corporation, CorporateSector, GameState, ExchangeRate } from "@/li
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
-import { buildActiveMarketBuckets, markMarketsActive } from "@/lib/turn/npp/marketSignals";
+import {
+  buildActiveMarketBuckets,
+  createPlacementSectorFacts,
+  markMarketsActive,
+} from "@/lib/turn/npp/marketSignals";
 
 export {
   sectorShortageScore,
@@ -57,11 +62,16 @@ import type { ManufacturingProductProject } from "@/lib/products/manufacturingPr
 import { labourAtLeast, isLabourSystemMode } from "@/lib/labour/modes";
 
 import {
+  bucketKey,
   computeStateControlledBuckets,
   loadNationalCorpIds,
 } from "@/lib/nationalization/stateControlledBuckets";
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import {
+  foundingInputAvailability,
+  type FoundingRecipeWorld,
+} from "@/lib/turn/npp/foundingRecipeChoice";
 
 import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDominanceSectors";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
@@ -96,7 +106,7 @@ import {
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
 import { loadNppBehaviorConfig } from "@/lib/turn/npp/behaviorConfig";
-import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
+import { nppAutonomyAtLeast, withNppAutonomySnapshot } from "@/lib/nppAutonomy/featureFlag";
 import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
 import {
   boundNppConstructionFinanceCandidates,
@@ -166,6 +176,7 @@ import {
   DEFAULT_ARCHETYPE,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { createReinvestPoolLookup } from "@/lib/turn/npp/reinvestCandidatePool";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -266,17 +277,23 @@ export async function processNppCorporationDecisions(
     allSectors,
     commodityPriceDocs
   );
-  const { priceRatioOf, statePriceRatioOf, stateDemandOf } = buildNppPriceSignals(priceByCommodity);
+  const { priceRatioOf, statePriceRatioOf, stateDemandOf, stateInputAvailabilityOf } =
+    buildNppPriceSignals(priceByCommodity);
 
   const placementSignals = await loadNppPlacementSignals(db, turn, allSectors, statePriceRatioOf);
   placementSignals.stateDemandOf = stateDemandOf;
+  placementSignals.stateInputAvailabilityOf = stateInputAvailabilityOf;
+  // The whole cohort ranks the same unowned snapshot, so the price-derived
+  // shortage scores are resolved once for the turn instead of per corp. Market
+  // size stays live inside the scan: founding draws move it during the pass.
+  placementSignals.sectorFacts = createPlacementSectorFacts();
 
   const { open: openUnowned, blocked } = await partitionOpenMarkets(db, unownedSectors);
 
   const { unownedByCountry, unownedIndex } = indexOpenUnownedSectors(openUnowned);
 
   // NPPs cannot auto-expand into state-controlled buckets; players still may.
-  const [nationalCorpIds, globalSectors] = await Promise.all([
+  const [nationalCorpIds, globalSectors, strategyGate] = await Promise.all([
     loadNationalCorpIds(db),
     db
       .collection<CorporateSector>("corporateSectors")
@@ -299,16 +316,62 @@ export async function processNppCorporationDecisions(
             capitalStock: 1,
             // Physical saturation per cell: see rules/marketSaturation.
             demandThrottleFactor: 1,
+            // Funded worlds read sell-through from the receipt instead.
+            "producerSettlement.worldEpoch": 1,
+            "producerSettlement.offeredUnits": 1,
+            "producerSettlement.soldUnits": 1,
           },
         }
       )
       .toArray(),
+    // Cohort-wide kill switch, read once. Absent means ON.
+    db.collection<GameState>("gameState").findOne(
+      { _id: "current" },
+      {
+        projection: {
+          nppCorpStrategyEnabled: 1,
+          frontierEntryExperimentEnabled: 1,
+          subsidiaryCorporationsEnabled: 1,
+          worldEpochId: 1,
+          producerOpening: 1,
+          currentYear: 1,
+          startingYear: 1,
+          currentTurn: 1,
+        },
+      }
+    ),
   ]);
+  // Funded-market transition window, for AI use of the free conversion.
+  const transitionFirstFundedTurn =
+    strategyGate?.producerOpening &&
+    strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
+      ? strategyGate.producerOpening.turn + 1
+      : undefined;
+  // The funded world's epoch: NPP demand readings use funded sell-through there.
+  const fundedWorldEpoch =
+    transitionFirstFundedTurn != null ? (strategyGate?.worldEpochId ?? undefined) : undefined;
   const stateControlled = computeStateControlledBuckets(globalSectors, nationalCorpIds);
   placementSignals.activeMarketBuckets = buildActiveMarketBuckets(globalSectors);
-  const saturationIndex = buildMarketSaturationIndex(globalSectors);
-  placementSignals.marketSaturationOf = (cell, excluding) =>
-    marketSaturationOf(saturationIndex, cell, excluding);
+  const saturationIndex = buildMarketSaturationIndex(globalSectors, fundedWorldEpoch);
+  // The index is a snapshot of this turn's sectors and nothing in the pass
+  // writes it, so a cell's saturation is one number for the whole cohort. The
+  // entry scan asks for it on every candidate of every corporation. The
+  // `excluding` form is a single plant's own view and stays uncached.
+  const saturationByCell = new Map<string, number | null>();
+  placementSignals.marketSaturationOf = (cell, excluding) => {
+    if (excluding) return marketSaturationOf(saturationIndex, cell, excluding, fundedWorldEpoch);
+    const key = bucketKey(
+      cell.stateId,
+      cell.sectorType,
+      cell.industryModel,
+      cell.mediaDiscriminator
+    );
+    const cached = saturationByCell.get(key);
+    if (cached !== undefined) return cached;
+    const value = marketSaturationOf(saturationIndex, cell);
+    saturationByCell.set(key, value);
+    return value;
+  };
   // Last turn's state and national books, already loaded as price docs.
   // Same-type NPP builders per country, for the essential-shortage valve.
   const sameTypeNpp = new Set<string>();
@@ -364,6 +427,11 @@ export async function processNppCorporationDecisions(
     }))
   );
 
+  // One unowned-pool index for the whole cohort; each corporation's reinvest
+  // decision reads it and the draws the loop applies stay visible through the
+  // shared row objects, exactly as the per-corporation copies did.
+  const reinvestPoolFor = createReinvestPoolLookup(unownedByCountry);
+
   const manufacturingProductProjectState = await loadNppProductProjectsV2(db, nppCorps);
   const plantsEnabled = manufacturingProductProjectState.plantsEnabled;
   let plants: NppPlantsContext | undefined;
@@ -394,6 +462,7 @@ export async function processNppCorporationDecisions(
         commandEconomyEnabled?: boolean;
         producerConversionPaceShare?: number;
         producerFundedRestartStage?: number;
+        wholePlantsStage?: number;
       }>("gameConfig")
       .findOne(
         { _id: "default" as never },
@@ -402,6 +471,7 @@ export async function processNppCorporationDecisions(
             commandEconomyEnabled: 1,
             producerConversionPaceShare: 1,
             producerFundedRestartStage: 1,
+            wholePlantsStage: 1,
           },
         }
       );
@@ -415,8 +485,11 @@ export async function processNppCorporationDecisions(
       primeRateOf: (cid) => primeByCountry.get(cid) ?? 0,
       costOfLivingOf: (sid) => colByState.get(sid) ?? null,
       commodityDemandOf: (commodity) => priceByCommodity.get(commodity)?.globalDemand ?? null,
+      commodityStateDemandOf: (commodity, stateId) =>
+        priceByCommodity.get(commodity)?.stateDemand?.[stateId] ?? null,
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
+      ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
     if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;
@@ -492,25 +565,42 @@ export async function processNppCorporationDecisions(
     preloaded
   );
 
-  // Cohort-wide kill switch, read once. Absent means ON.
-  const strategyGate = await db.collection<GameState>("gameState").findOne(
-    { _id: "current" },
-    {
-      projection: {
-        nppCorpStrategyEnabled: 1,
-        frontierEntryExperimentEnabled: 1,
-        subsidiaryCorporationsEnabled: 1,
-        worldEpochId: 1,
-        producerOpening: 1,
-      },
-    }
-  );
-  // Funded-market transition window, for AI use of the free conversion.
-  const transitionFirstFundedTurn =
-    strategyGate?.producerOpening &&
-    strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
-      ? strategyGate.producerOpening.turn + 1
+  // Funded market: AI entrants build the recipe whose outputs are short. The
+  // era gate needs the in-game year whether or not tech trees are on.
+  const fundedRecipeWorld: FoundingRecipeWorld | undefined =
+    transitionFirstFundedTurn != null
+      ? {
+          currentYear:
+            strategyGate?.currentYear ??
+            (strategyGate?.startingYear ?? STARTING_YEAR) +
+              Math.floor(((strategyGate?.currentTurn ?? turn) - 1) / TURNS_PER_YEAR),
+          techTreesEnabled,
+        }
       : undefined;
+  // Founding never lands a plant its state cannot supply: the recipe it would
+  // build is read against last turn's delivered input fill there. One value
+  // per state and lane for the whole cohort; nothing in the pass moves it.
+  const foundingInputByCell = new Map<string, number | null>();
+  placementSignals.foundingInputAvailabilityOf = (candidate) => {
+    const lane = getOperatingSectorType(
+      candidate.sectorType,
+      candidate.industryModel,
+      candidate.mediaDiscriminator
+    );
+    const key = `${candidate.stateId}|${lane}`;
+    const cached = foundingInputByCell.get(key);
+    if (cached !== undefined) return cached;
+    const value = foundingInputAvailability(
+      lane,
+      candidate.countryId,
+      (commodity, countryId) =>
+        statePriceRatioOf(commodity, candidate.stateId) ?? priceRatioOf(commodity, countryId),
+      fundedRecipeWorld,
+      { stateId: candidate.stateId, availabilityOf: stateInputAvailabilityOf }
+    );
+    foundingInputByCell.set(key, value);
+    return value;
+  };
   // Shortage per recipe from the latest funded settlement, for AI restarts.
   const recipePressureByKey =
     fundedRestartStage >= 1 && transitionFirstFundedTurn != null && strategyGate?.worldEpochId
@@ -563,11 +653,18 @@ export async function processNppCorporationDecisions(
 
   const autopilotAlerts: Array<{ corp: Corporation; kinds: CorpAutopilotAdvisory[] }> = [];
 
-  // NPP engine 6 corporate decisions, resolved once per country.
-  const engineSixByCountry = new Map<string, boolean>();
-  for (const countryId of new Set(nppCorps.map((corp) => corp.countryId))) {
-    engineSixByCountry.set(countryId, await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL));
-  }
+  // NPP engine 6 corporate decisions, resolved once per country. The snapshot
+  // reads the world's autonomy level once instead of once per country, and the
+  // per-country enablement reads run together rather than in sequence.
+  const engineSixByCountry = await withNppAutonomySnapshot(db, async () => {
+    const engineSix = new Map<string, boolean>();
+    const countryIds = [...new Set(nppCorps.map((corp) => corp.countryId))];
+    const levels = await Promise.all(
+      countryIds.map((countryId) => nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL))
+    );
+    countryIds.forEach((countryId, index) => engineSix.set(countryId, levels[index] === true));
+    return engineSix;
+  });
 
   // v2: one cohort bundle for the relocation-bond credit fan. Absent on v1,
   // where `resolveNppMarketEntryCredit` reads per corporation.
@@ -640,8 +737,11 @@ export async function processNppCorporationDecisions(
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,
+      fundedRecipeWorld,
+      fundedWorldEpoch,
       conversionBudgetOf:
         conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
+      reinvestPoolFor,
       fundedRestartPressureOf: recipePressureByKey
         ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
         : undefined,

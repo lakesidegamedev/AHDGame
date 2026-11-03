@@ -29,6 +29,13 @@ describe("holding market values", () => {
     });
     expect(() => holdingMarketSnapshotValues(1, 2)).toThrow();
   });
+  it("accepts rounding noise on a large all short-term portfolio", () => {
+    const total = 0.3 * 7e9;
+    const short = 0.1 * 3 * 7e9;
+    expect(short).toBeGreaterThan(total + 1e-7);
+    expect(holdingMarketSnapshotValues(total, short)).toMatchObject({ longTermStockValue: 0 });
+    expect(() => holdingMarketSnapshotValues(1e9, 1e9 * 1.001)).toThrow();
+  });
   it("moves value at exactly 48 turns and preserves the combined total", () => {
     const position = {
       shares: 10,

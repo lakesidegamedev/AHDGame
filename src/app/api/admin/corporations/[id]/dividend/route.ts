@@ -14,6 +14,7 @@ import type { Corporation, Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { dividendShareBasis, dividendShareFraction } from "@/lib/corporations/rules/dividendShares";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -40,9 +41,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     // Build per-character payouts (only character shareholders, not corp-owned shares)
     const charPayouts = new Map<string, number>();
+    const { denominator } = dividendShareBasis(
+      corp,
+      corp.shareholders.map((sh) => sh.shares)
+    );
     for (const sh of corp.shareholders) {
       if (!sh.characterId) continue;
-      const proportion = sh.shares / corp.totalShares;
+      const proportion = dividendShareFraction(sh.shares, denominator);
       const amount = totalPayout * proportion;
       if (amount > 0) {
         const key = sh.characterId.toString();

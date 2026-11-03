@@ -7,7 +7,7 @@ import {
   formatTimeUntilCompact,
   endTimeToGameYear,
   formatDateLocal,
-} from "@/lib/utils/formatters";
+} from "@/lib/utils/formattersCore";
 import { STARTING_YEAR, MS_PER_TURN } from "@/lib/constants/turnTime";
 import { formatRemainingTurns as formatRemainingTurnsLabel } from "@/lib/time/formatRemainingTurns";
 import type { GameClock } from "@/lib/time/gameClock.server";

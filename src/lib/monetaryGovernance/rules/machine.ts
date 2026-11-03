@@ -254,7 +254,7 @@ function resolveMeetingInto(
 }
 
 /** Current execution constraints apply even when a meeting opened under different policy. */
-export function committeeRateExecutionRefusal(
+function committeeRateExecutionRefusal(
   state: Pick<
     JurisdictionState,
     "commandEconomy" | "fxCommitment" | "primeRate" | "rateChangesThisTerm" | "lastRateChangeTurn"

@@ -1,3 +1,4 @@
+import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
@@ -30,6 +31,7 @@ import {
   withBankingTelemetryBatch,
 } from "@/lib/banking/telemetry";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { computeNpcDepositShare, equityCappedDepositCeiling } from "@/lib/banking/deposits";
 import { domesticDepositRetention } from "@/lib/centralBank/marketEffects";
 import {
@@ -45,6 +47,7 @@ import {
   ARREARS_DEFAULT_TURNS,
   MAX_NPC_FLOW_PER_TURN_FRACTION,
   npcFlowDelta,
+  npcBulkInstalment,
   fundedNpcFlowDelta,
   perTurnInterest,
 } from "@/lib/banking/rules/loans";
@@ -175,7 +178,13 @@ async function runBankingTurn(
   // for deposit-taking charters; loan servicing runs for any charter with a
   // loan book.
   const [corps, banks] = await Promise.all([
-    db.collection<Corporation>("corporations").find({ "bankCharter.status": "active" }).toArray(),
+    // The banking stages read the charter, cash and deposit book. The
+    // settlement stamps on the same document are most of its bytes and are
+    // only read by the journal, under its own projection.
+    db
+      .collection<Corporation>("corporations")
+      .find({ "bankCharter.status": "active" }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
+      .toArray(),
     db
       .collection<CentralBank>("centralBanks")
       .find({})
@@ -336,7 +345,7 @@ async function runBankingTurn(
   const deadBankResult = await processDeadBankLoans(
     db,
     turn,
-    async (loan, bank, target, trackInsuranceRecovery, txEntries) => {
+    async (loan, bank, target, trackInsuranceRecovery, txEntries, prefetch) => {
       if (loan.borrowerType === "npcBulk") {
         const recovered = await serviceDeadNpcBulkLoan(
           db,
@@ -344,12 +353,16 @@ async function runBankingTurn(
           loan,
           bank.currency,
           target,
-          trackInsuranceRecovery
+          trackInsuranceRecovery,
+          prefetch?.householdPool
         );
-        summary.loanInterestCollected += recovered.interest;
-        summary.loanPrincipalRepaid += recovered.principal;
-        summary.defaultsWrittenOff += recovered.writtenOff;
-        return { collected: recovered.collected };
+        return {
+          collected: recovered.collected,
+          interestCollected: recovered.interest,
+          principalRepaid: recovered.principal,
+          writtenOff: recovered.writtenOff,
+          ...(recovered.replayed ? { replayed: true } : {}),
+        };
       }
       const serviced = await servicePlayerLoan(
         db,
@@ -360,15 +373,24 @@ async function runBankingTurn(
         bank.name,
         target,
         trackInsuranceRecovery,
-        txEntries
+        txEntries,
+        prefetch?.borrower
       );
-      summary.loanInterestCollected += serviced.interestCollected;
-      summary.loanPrincipalRepaid += serviced.principalRepaid;
-      summary.defaultsWrittenOff += serviced.writtenOff;
-      return { collected: serviced.bankCredit };
+      return {
+        collected: serviced.bankCredit,
+        interestCollected: serviced.interestCollected,
+        principalRepaid: serviced.principalRepaid,
+        writtenOff: serviced.writtenOff,
+        paidLocal: serviced.paidLocal,
+        replayed: serviced.replayed,
+        partial: serviced.partial,
+      };
     }
   );
   summary.deadBankLoansServiced = deadBankResult.loansServiced;
+  summary.loanInterestCollected += deadBankResult.interestCollected;
+  summary.loanPrincipalRepaid += deadBankResult.principalRepaid;
+  summary.defaultsWrittenOff += deadBankResult.defaultsWrittenOff;
   summary.deadBankRecoveredToEstate = deadBankResult.recoveredToEstate;
   summary.deadBankRecoveredToInsurer = deadBankResult.recoveredToInsurer;
   recordBankingStage(db, turn, "deadBankLoans", Date.now() - deadBankStarted);
@@ -741,6 +763,8 @@ async function processOneBank(
   // keeps recipient writes batched and recovery verifies every target receipt.
   const interestMoveKey = turnMoveKey("deposit-interest", bankIdHex, turn);
   let playerInterestSettled = 0;
+  let playerInterestWithheld = 0;
+  const netInterestByCharacter = new Map<string, number>();
   let legacyInterestDebit = 0;
   let legacyNewCredits = new Map<string, number>();
   let npcInterestPaid = roundSavingsAmount(npcInterestDue * interestScale, currency);
@@ -761,48 +785,28 @@ async function processOneBank(
     const credits = playerCredits
       .map((pc) => ({ pc, paid: roundSavingsAmount(pc.interest * interestScale, currency) }))
       .filter(({ paid }) => paid > 0);
-    const settled = await settleTransition(db, {
-      key: interestMoveKey,
-      kind: "deposit_interest",
+    const settledIncome = await creditIncomeAfterTax(
+      db,
+      "bank-interest:" + bankIdHex,
       turn,
-      currency,
-      legs: [],
-      projections: [
-        ...credits.map(({ pc, paid }) => ({
-          collection: "savingsAccounts",
-          filter: { ownerType: "character", ownerId: oid(pc.characterId.toString()), currency },
-          update: {
-            $inc: { balance: paid, interestEarned: paid, version: 1 },
-            $set: { lastSettlementKey: interestMoveKey, lastSettledTurn: turn },
-          },
-          note: "deposit interest credited to the account",
-        })),
-        ...credits.map(({ pc, paid }) => ({
-          collection: "characters",
-          filter: { _id: oid(pc.characterId.toString()) },
-          update: {
-            $inc: {
-              [`currencyBalances.savings.${currency}`]: paid,
-              [`currencyBalances.interestEarned.${currency}`]: paid,
-            },
-          },
-          note: "legacy savings projection follows the account",
-        })),
-        {
-          collection: "corporations",
-          filter: { _id: oid(bankIdHex) },
-          update: { $inc: { "bankCharter.playerDeposits": playerInterestPaid } },
-          note: "the bank's player-deposit liability grows by the interest",
-        },
-      ],
-      event: {
-        kind: "account.interest_paid",
-        command: "bank.turn.depositInterest",
-        amount: playerInterestPaid,
-      },
-    });
-    if (settled.status === "applied" || settled.status === "replayed") {
-      playerInterestSettled = playerInterestPaid;
+      new Date(),
+      credits.map(({ pc, paid }) => ({
+        characterId: pc.characterId,
+        ownerCollection: "characters" as const,
+        currency,
+        gross: paid,
+        income: paid,
+        destination: "currencyBalances.savings." + currency,
+        interest: { authoritative: true, bankId: corp._id },
+      }))
+    );
+    const withheld = settledIncome.reduce((sum, credit) => sum + credit.gross - credit.net, 0);
+    for (const credit of settledIncome)
+      netInterestByCharacter.set(credit.characterId.toHexString(), credit.net);
+    playerInterestWithheld = withheld;
+    cashReserves = Math.max(0, cashReserves - withheld);
+    playerInterestSettled = playerInterestPaid;
+    {
       const thresholds = caches.txThresholds ?? (await loadTxThresholds(db));
       await emitTxBulk(
         db,
@@ -818,12 +822,14 @@ async function processOneBank(
           counterpartyType: "corporation" as const,
           counterpartyId: corp._id,
           counterpartyName: corp.name,
-          meta: { ratePercent: playerRatePercent, retainedAsBacking: true },
+          meta: {
+            ratePercent: playerRatePercent,
+            retainedAsBacking: true,
+            incomeTaxAtSource: true,
+          },
         })),
         thresholds
       );
-    } else {
-      result.depositInterestShortfall += playerInterestPaid;
     }
   } else if (policy.savingsAccounts !== "authoritative") {
     const settled = await settleLegacyDepositInterest(db, {
@@ -845,6 +851,7 @@ async function processOneBank(
         .filter((credit) => credit.amount > 0),
     });
     playerInterestSettled = settled.paid;
+    playerInterestWithheld = settled.withheld ?? 0;
     legacyInterestDebit = settled.newlyDebited;
     legacyNewCredits = settled.newlyCredited;
     npcInterestPaid = settled.npcInterestPaid;
@@ -897,7 +904,9 @@ async function processOneBank(
       ] ?? 0;
     paidByCharId.set(
       id,
-      policy.savingsAccounts === "authoritative" ? paid : (legacyNewCredits.get(id) ?? 0)
+      policy.savingsAccounts === "authoritative"
+        ? (netInterestByCharacter.get(id) ?? paid)
+        : (legacyNewCredits.get(id) ?? 0)
     );
   }
   const premiumBasis = await insurancePremiumBasisForTurn(db, {
@@ -910,7 +919,7 @@ async function processOneBank(
     npcDeposits,
     playerDepositsAreLiabilities,
     playerDeposits,
-    playerInterestSettled,
+    playerInterestSettled: playerInterestSettled - playerInterestWithheld,
     cashReserves,
   });
   const premium = await settleInsurancePremiumForTurn(
@@ -984,7 +993,7 @@ async function processOneBank(
   stageDone("householdBook");
 
   // (f) Recompute aggregates + stamp lastBankingTurn (END of bank pass)
-  const finalPlayerDeposits = playerDeposits + playerInterestSettled;
+  const finalPlayerDeposits = playerDeposits + playerInterestSettled - playerInterestWithheld;
   const totalDeposits = finalPlayerDeposits + npcDeposits;
   const baseBankingIncome =
     result.loanInterestCollected +
@@ -1280,7 +1289,10 @@ async function serviceNpcBulkBook(
       projections?: { projection: TransitionProjection }[];
       event?: { meta?: { originationFees?: number; interestPaid?: number; writtenOff?: number } };
     }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: settlementKey });
+    // A finished settlement re-arms from its own quote (legs, projections,
+    // event meta). Its receipt history and stamps are never read here and are
+    // most of the record's bytes.
+    .findOne({ _id: settlementKey }, { projection: { legs: 1, projections: 1, "event.meta": 1 } });
   if (recorded) {
     // The original quote owns the cash AND the book. A retry can see a pool
     // already debited by that quote, so it must finish the recorded writes
@@ -1605,39 +1617,51 @@ async function serviceNpcBulkBook(
   return { cashReserves, totalLoans, interestCollected, feesCollected, writtenOff, shortfall };
 }
 
-async function serviceDeadNpcBulkLoan(
+/**
+ * The per-loan path for one household tranche of a wound-up bank. The batch
+ * takes the same decision through `npcBulkInstalment`; this stays for a
+ * tranche the pooled debit could not carry, and for the tests that compare the
+ * two.
+ */
+export async function serviceDeadNpcBulkLoan(
   db: Db,
   turn: number,
   loan: BankLoan,
   currency: CurrencyCode,
   creditTarget: MoneyTarget,
-  trackInsuranceRecovery: boolean
-): Promise<{ collected: number; interest: number; principal: number; writtenOff: number }> {
+  trackInsuranceRecovery: boolean,
+  preloadedHouseholdPool?: number
+): Promise<{
+  collected: number;
+  interest: number;
+  principal: number;
+  writtenOff: number;
+  replayed?: boolean;
+  partial?: boolean;
+}> {
   const empty = { collected: 0, interest: 0, principal: 0, writtenOff: 0 };
   if (loan.lastProcessedTurn === turn) return empty;
 
   const cbDocId = getBankId(getCountryIdForCurrency(currency));
-  const cb = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: cbDocId }, { projection: { externalBroadMoney: 1 } });
-  const pool = Math.max(0, cb?.externalBroadMoney ?? 0);
-  const current = Math.max(0, loan.outstanding ?? 0);
-  const principalDelta = fundedNpcFlowDelta(current, 0, {
-    cashReserves: 0,
-    requiredReserves: 0,
+  const cb =
+    preloadedHouseholdPool === undefined
+      ? await db
+          .collection<CentralBank>("centralBanks")
+          .findOne({ _id: cbDocId }, { projection: { externalBroadMoney: 1 } })
+      : undefined;
+  const pool =
+    preloadedHouseholdPool === undefined
+      ? Math.max(0, cb?.externalBroadMoney ?? 0)
+      : Math.max(0, preloadedHouseholdPool);
+  const defaultRate = getCreditBand(loan.creditBand).defaultRatePercent;
+  const instalment = npcBulkInstalment({
+    outstanding: loan.outstanding ?? 0,
+    ratePercent: loan.ratePercent ?? 0,
+    defaultRatePercent: defaultRate,
+    currency,
     householdPool: pool,
   });
-  const principal = Math.min(current, Math.max(0, -principalDelta));
-  const afterPrincipal = Math.max(0, current - principal);
-  const interestDue = perTurnInterest(afterPrincipal, loan.ratePercent, currency);
-  const interest = Math.min(interestDue, Math.max(0, pool - principal));
-  const defaultRate = getCreditBand(loan.creditBand).defaultRatePercent;
-  const writtenOff = Math.min(
-    afterPrincipal,
-    (afterPrincipal * (defaultRate / 100)) / TURNS_PER_YEAR
-  );
-  const outstanding = Math.max(0, afterPrincipal - writtenOff);
-  const collected = principal + interest;
+  const { principal, interest, writtenOff, outstanding, collected } = instalment;
   const key = `npc-loan-service:${loan._id.toString()}:${turn}`;
   const settled = await settleTransition(db, {
     key,
@@ -1700,6 +1724,6 @@ async function serviceDeadNpcBulkLoan(
   if (settled.status === "partial" || settled.status === "rejected" || settled.error) {
     throw new Error(settled.error ?? "Resolved household loan recovery could not settle");
   }
-  if (settled.status === "replayed") return empty;
+  if (settled.status === "replayed") return { ...empty, replayed: true };
   return { collected, interest, principal, writtenOff };
 }

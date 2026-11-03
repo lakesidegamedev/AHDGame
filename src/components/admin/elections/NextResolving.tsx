@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountrySelection, ElectionData } from "./electionsAdminTypes";
 
@@ -81,7 +81,7 @@ export function NextResolving({
       <div className="text-[11px]">
         {visible.map(({ election: e, isPrimaryNext, unitsLeft, unit }) => {
           const flagCountry =
-            isGlobal && e.countryId ? (e.countryId as keyof typeof COUNTRY_CONFIGS) : null;
+            isGlobal && e.countryId ? (e.countryId as keyof typeof COUNTRY_CLIENT_CONFIGS) : null;
           const classLabel =
             e.electionType === "senate" && e.senateClass
               ? ` Cls ${e.senateClass}`

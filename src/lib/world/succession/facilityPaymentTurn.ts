@@ -24,7 +24,7 @@ import {
   validateAppliedEntityStates,
 } from "./runtimeEntities";
 
-export const FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION = "federationFacilityPaymentTurns";
+const FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION = "federationFacilityPaymentTurns";
 interface PaymentFirm {
   _id: ObjectId;
   countryId?: string;

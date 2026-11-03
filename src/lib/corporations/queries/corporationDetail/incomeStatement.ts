@@ -31,7 +31,6 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
 import { bankBookEquity, bankNpvFromPerTurnIncome, bankValuation } from "@/lib/banking/valuation";
-import { bankNpvBoostMultiplier } from "@/lib/corporations/rules/marketBoost";
 import {
   TURNS_PER_DAY,
   MIN_SHARE_PRICE,
@@ -41,6 +40,10 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { computeTechAssetValueAnchor } from "@/lib/corporations/techAssetValue";
 import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
+import {
+  loadRdDevelopmentProjects,
+  type RdDevelopmentFundingProject,
+} from "@/lib/corporations/rdDevelopmentFunding";
 import { loadStrengthUpkeepStage } from "@/lib/corporations/strengthUpkeep";
 
 export interface SectorTaxLine {
@@ -79,6 +82,8 @@ export interface IncomeStatementResult {
   displayFederalTax: number;
   /** Owner tax on pass-through profit collected at source (local, per day). */
   passThroughOwnerTaxLocal: number;
+  /** Home federal tax on bond coupon income, included in displayFederalTax (local, per day). */
+  bondCouponFederalTaxLocal: number;
   /** Banked tax losses that will offset future taxable profit (local). */
   taxLossCarryforwardLocal: number;
   /** Player-facing tax label for this corporation's legal form. */
@@ -108,8 +113,11 @@ export interface IncomeStatementResult {
   currentLogisticsStrength: number;
   currentRdScore: number;
   marketingStrengthGrowth: number;
+  marketingDecayRate: number;
   logisticsStrengthNetChange: number;
   rdScoreNetChange: number;
+  /** Active product projects that the R&D budget pays before generic research. */
+  rdDevelopmentProjects: RdDevelopmentFundingProject[];
   totalShares: number;
   marketCapitalization: number;
   currentSharePrice: number;
@@ -286,6 +294,14 @@ export async function computeIncomeStatement(
     passThroughPhase,
     corporation
   );
+  const corpCurrency = resolveCorpLiquidCurrencyCode(corporation);
+  const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
+  const dailyInterestLocal = anchorToCorpCapital(dailyInterestAnchor, corpCurrency, corpFxRate);
+  // Interest paid on the corporation's own bonds is deductible, apportioned by
+  // revenue share like other overhead (as the turn charges it). National
+  // enterprises have their issuer interest waived, so they deduct nothing.
+  const deductibleBondInterestLocal = corporation.countryOwnerId ? 0 : dailyInterestLocal;
+  const corpLevelTaxCosts = corpLevelCosts + deductibleBondInterestLocal;
   let consolidatedTaxableNet = 0;
 
   let displayFederalTax = 0;
@@ -298,7 +314,7 @@ export async function computeIncomeStatement(
   for (const sd of sectorDetails) {
     const revenueShare =
       sectorRevenueTotal > 0 ? (sd.financialRevenue ?? sd.revenue ?? 0) / sectorRevenueTotal : 0;
-    const sectorNetIncome = (sd.profit ?? 0) - corpLevelCosts * revenueShare;
+    const sectorNetIncome = (sd.profit ?? 0) - corpLevelTaxCosts * revenueShare;
     consolidatedTaxableNet += sectorNetIncome;
     const sectorTaxable = Math.max(0, sectorNetIncome);
     const sectorCountry = sd.countryId ?? corporation.countryId;
@@ -329,8 +345,6 @@ export async function computeIncomeStatement(
     });
   }
 
-  const corpCurrency = resolveCorpLiquidCurrencyCode(corporation);
-  const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
   const bankingPolicy = await bankingPolicyPromise;
   const activeBankCharter =
     corporation.bankCharter?.status === "active" ? corporation.bankCharter : null;
@@ -356,20 +370,17 @@ export async function computeIncomeStatement(
     corpCurrency,
     corpFxRate
   );
-  // Same phased bank-NPV boost as the share-price path so the corp page
-  // agrees with the market quote. Below the window the multiplier is 1.
   const bankNpvLocal = anchorToCorpCapital(
-    bankNpvFromPerTurnIncome(bankIncomePerTurnAnchor, bankNpvBoostMultiplier(currentTurn)),
+    bankNpvFromPerTurnIncome(bankIncomePerTurnAnchor),
     corpCurrency,
     corpFxRate
   );
   const bankBookEquityLocal = anchorToCorpCapital(bankBookEquityAnchor, corpCurrency, corpFxRate);
   const bankValuationLocal = anchorToCorpCapital(bankValuationAnchor, corpCurrency, corpFxRate);
-  const dailyInterestLocal = anchorToCorpCapital(dailyInterestAnchor, corpCurrency, corpFxRate);
   const dailyCouponIncomeLocal = anchorToCorpCapital(dailyCouponIncome, corpCurrency, corpFxRate);
 
   const corpHomeCountryFedRate = domesticFederalRateByCountry.get(corporation.countryId) ?? 0;
-  const bondCouponFedTaxLocal = Math.round(
+  let bondCouponFedTaxLocal = Math.round(
     Math.max(0, dailyCouponIncomeLocal) * corpTaxMultiplier * (corpHomeCountryFedRate / 100)
   );
   if (bondCouponFedTaxLocal > 0) {
@@ -425,6 +436,7 @@ export async function computeIncomeStatement(
     displayFederalTax = Math.round(displayFederalTax * lossCarry.taxScale);
     displayStateTax = Math.round(displayStateTax * lossCarry.taxScale);
     passThroughOwnerTaxLocal = Math.round(passThroughOwnerTaxLocal * lossCarry.taxScale);
+    bondCouponFedTaxLocal = Math.round(bondCouponFedTaxLocal * lossCarry.taxScale);
     for (const cc of Object.keys(federalTaxByCountry)) {
       federalTaxByCountry[cc] = Math.round(federalTaxByCountry[cc] * lossCarry.taxScale);
     }
@@ -462,20 +474,26 @@ export async function computeIncomeStatement(
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
   const currentRdScore = corporation.rdScore ?? 0;
   const strengthUpkeepStage = await loadStrengthUpkeepStage(db);
-  const { marketingStrengthGrowth, logisticsStrengthNetChange, rdScoreNetChange } =
-    calculateCorpStrengthProjection(
-      {
-        marketingBudget: corporation.marketingBudget,
-        marketingStrength: corporation.marketingStrength ?? 0,
-        logisticsBudget,
-        logisticsStrength: currentLogisticsStrength,
-        rdBudget: corporation.rdBudget ?? 0,
-        rdScore: currentRdScore,
-        liquidCurrencyCode: corpCurrency,
-        strengthUpkeepStage,
-      },
-      corpFxRate
-    );
+  const rdDevelopmentProjects = await loadRdDevelopmentProjects(db, String(corporation._id));
+  const {
+    marketingStrengthGrowth,
+    marketingDecayRate,
+    logisticsStrengthNetChange,
+    rdScoreNetChange,
+  } = calculateCorpStrengthProjection(
+    {
+      marketingBudget: corporation.marketingBudget,
+      marketingStrength: corporation.marketingStrength ?? 0,
+      logisticsBudget,
+      logisticsStrength: currentLogisticsStrength,
+      rdBudget: corporation.rdBudget ?? 0,
+      rdScore: currentRdScore,
+      liquidCurrencyCode: corpCurrency,
+      strengthUpkeepStage,
+      rdDevelopmentProjects,
+    },
+    corpFxRate
+  );
 
   const totalShares = corporation.totalShares ?? 10_000_000;
   const marketCapitalization = getRoundedPublicMarketCap(corporation, totalShares);
@@ -593,6 +611,7 @@ export async function computeIncomeStatement(
     operatingIncome,
     displayFederalTax,
     passThroughOwnerTaxLocal,
+    bondCouponFederalTaxLocal: bondCouponFedTaxLocal,
     taxLossCarryforwardLocal,
     legalStructureTax,
     passThroughPhase,
@@ -618,8 +637,10 @@ export async function computeIncomeStatement(
     currentLogisticsStrength,
     currentRdScore,
     marketingStrengthGrowth,
+    marketingDecayRate,
     logisticsStrengthNetChange,
     rdScoreNetChange,
+    rdDevelopmentProjects,
     totalShares,
     marketCapitalization,
     currentSharePrice,

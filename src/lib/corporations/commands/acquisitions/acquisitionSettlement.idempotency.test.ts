@@ -581,3 +581,18 @@ describe("pinned payout math", () => {
     expect(w.price - delivered).toBe(3);
   });
 });
+
+// These fixtures exercise settlement/recovery, including legacy negotiated prices.
+// The independent safeguards suite exercises real valuation and first-run rejection.
+vi.mock("./referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({
+    valuationAnchor: 0,
+    minimumPriceAnchor: 0,
+    liquidCapitalAnchor: 0,
+    sectorNpvAnchor: 0,
+    portfolioAnchor: 0,
+    bankEquityAnchor: 0,
+    debtAnchor: 0,
+  }),
+  referenceValuationAnchor: vi.fn().mockResolvedValue(0),
+}));

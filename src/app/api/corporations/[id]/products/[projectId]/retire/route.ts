@@ -19,7 +19,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    const limit = checkRateLimit(auth.user.userId, 20, 60_000);
+    const limit = checkRateLimit(
+      `api/corporations/[id]/products/[projectId]/retire:${auth.user.userId}`,
+      20,
+      60_000
+    );
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);
     const { id, projectId } = await params;
     const db = await getDb();

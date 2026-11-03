@@ -70,7 +70,10 @@ describe("inMemoryDb document paths", () => {
     db.seed("sectors", [{ _id: "plant", capitalStock: quantum * 1.5 }]);
     await db
       .collection("sectors")
-      .updateOne({ _id: "plant" }, plantCapacityDeltaPipeline("manufacturing", quantum * 1.25));
+      .updateOne(
+        { _id: "plant" },
+        plantCapacityDeltaPipeline({ sectorType: "manufacturing" }, quantum * 1.25)
+      );
     expect(db.collection("sectors").docs[0]).toMatchObject({
       capitalStock: quantum * 2.75,
       plantCount: 2,
@@ -78,7 +81,10 @@ describe("inMemoryDb document paths", () => {
     });
     await db
       .collection("sectors")
-      .updateOne({ _id: "plant" }, plantCapacityDeltaPipeline("manufacturing", -quantum * 2));
+      .updateOne(
+        { _id: "plant" },
+        plantCapacityDeltaPipeline({ sectorType: "manufacturing" }, -quantum * 2)
+      );
     expect(db.collection("sectors").docs[0]).toMatchObject({
       capitalStock: quantum * 0.75,
       plantCount: 1,
@@ -86,7 +92,10 @@ describe("inMemoryDb document paths", () => {
     });
     await db
       .collection("sectors")
-      .updateOne({ _id: "plant" }, plantCapacityDeltaPipeline("manufacturing", -quantum));
+      .updateOne(
+        { _id: "plant" },
+        plantCapacityDeltaPipeline({ sectorType: "manufacturing" }, -quantum)
+      );
     expect(db.collection("sectors").docs[0]).toMatchObject({
       capitalStock: 0,
       plantCount: 0,

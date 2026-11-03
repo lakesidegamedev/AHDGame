@@ -37,6 +37,8 @@ export interface SectorPlantFields {
   sectorType?: CorporationType | null;
   industryModel?: string | null;
   mediaDiscriminator?: MediaDiscriminator | null;
+  /** Decides plant size alongside the lane (vehicle recipes build vehicle plants). */
+  strategyId?: string | null;
   capitalStock?: number | null;
   operatingCapacityUnits?: number | null;
   operatingCapacityTurn?: number | null;
@@ -96,8 +98,7 @@ const queue = (s: SectorPlantFields): SectorBuildOrder[] =>
 
 const count = (s: SectorPlantFields): number => {
   if (s.sectorType)
-    return seedPlantLedger(s.sectorType, s.capitalStock, s.industryModel, s.mediaDiscriminator)
-      .plantCount;
+    return seedPlantLedger({ ...s, sectorType: s.sectorType }, s.capitalStock).plantCount;
   if (Number.isInteger(s.plantCount) && (s.plantCount ?? 0) >= 0) {
     return s.plantCount as number;
   }
@@ -106,8 +107,7 @@ const count = (s: SectorPlantFields): number => {
 
 const remainder = (s: SectorPlantFields): number => {
   if (s.sectorType)
-    return seedPlantLedger(s.sectorType, s.capitalStock, s.industryModel, s.mediaDiscriminator)
-      .plantUnitRemainder;
+    return seedPlantLedger({ ...s, sectorType: s.sectorType }, s.capitalStock).plantUnitRemainder;
   return typeof s.plantUnitRemainder === "number" &&
     Number.isFinite(s.plantUnitRemainder) &&
     s.plantUnitRemainder > 0
@@ -197,10 +197,13 @@ export function mergeSectorPlantFields(
   const capitalStock = num(survivor.capitalStock) + num(incoming.capitalStock);
   const mergedLedger = sectorType
     ? seedPlantLedger(
-        sectorType,
-        capitalStock,
-        survivor.industryModel ?? incoming.industryModel,
-        survivor.mediaDiscriminator ?? incoming.mediaDiscriminator
+        {
+          sectorType,
+          industryModel: survivor.industryModel ?? incoming.industryModel,
+          mediaDiscriminator: survivor.mediaDiscriminator ?? incoming.mediaDiscriminator,
+          strategyId: survivor.strategyId ?? incoming.strategyId,
+        },
+        capitalStock
       )
     : null;
   return {
@@ -250,12 +253,7 @@ export function mergeSectorPlantFields(
  */
 export function identitySectorPlantFields(sector: SectorPlantFields): SectorPlantFieldsUpdate {
   const ledger = sector.sectorType
-    ? seedPlantLedger(
-        sector.sectorType,
-        sector.capitalStock,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
+    ? seedPlantLedger({ ...sector, sectorType: sector.sectorType }, sector.capitalStock)
     : null;
   return {
     capitalStock: num(sector.capitalStock),
@@ -310,12 +308,7 @@ export function carveSectorPlantFields(
     : f;
   const capitalStock = num(sector.capitalStock) * stockFraction;
   const ledger = sector.sectorType
-    ? seedPlantLedger(
-        sector.sectorType,
-        capitalStock,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
+    ? seedPlantLedger({ ...sector, sectorType: sector.sectorType }, capitalStock)
     : null;
   return {
     capitalStock,

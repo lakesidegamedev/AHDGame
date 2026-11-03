@@ -10,9 +10,9 @@ import {
 } from "@/lib/constants/currencies";
 
 export const DEFENCE_MAX_PRESSURE = VOLUME_PRESSURE_CAP * VOLUME_DIRECTION_WEIGHT;
-export const DEFENCE_MIN_MARKET_DEPTH = 20_000_000;
-export const DEFENCE_DEFAULT_RESERVE_BUDGET = 0.1;
-export const PEG_DEFENCE_TOLERANCE = 0.0005;
+const DEFENCE_MIN_MARKET_DEPTH = 20_000_000;
+const DEFENCE_DEFAULT_RESERVE_BUDGET = 0.1;
+const PEG_DEFENCE_TOLERANCE = 0.0005;
 
 export interface DefencePolicy {
   floor: number;

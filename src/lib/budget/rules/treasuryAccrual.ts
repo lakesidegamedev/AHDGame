@@ -10,7 +10,7 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { LedgerLeg } from "@/lib/ledger/types";
 
-export function treasuryAccrualReceipt(
+function treasuryAccrualReceipt(
   input: Omit<TreasuryAccrualReceipt, "cashDelta" | "components"> & {
     annualRevenue: number;
     annualPrimarySpending: number;

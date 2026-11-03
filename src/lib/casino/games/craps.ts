@@ -5,7 +5,6 @@ import { rollInt, type Rng } from "../rng";
  * game's own: 1.41% on pass, 1.36% on don't pass (a come-out 12 pushes).
  */
 export type CrapsBet = "pass" | "dontpass";
-export const CRAPS_MAX_MULTIPLIER = 2;
 /** A point can in principle run forever; stop and void the round past this many rolls. */
 const MAX_ROLLS = 500;
 

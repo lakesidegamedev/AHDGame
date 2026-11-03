@@ -63,8 +63,17 @@ export const CONTROL_PANEL_BUCKETS: SettingsBucket[] = [
   {
     id: "interface",
     ...bucketKeys("interface"),
-    sectionIds: ["appearance"],
-    quickKeywords: ["theme", "accessibility", "language", "contrast", "motion", "status bar"],
+    sectionIds: ["appearance", "experimental"],
+    quickKeywords: [
+      "theme",
+      "accessibility",
+      "language",
+      "contrast",
+      "motion",
+      "status bar",
+      "experimental",
+      "ask",
+    ],
   },
   {
     id: "audio",
@@ -110,6 +119,7 @@ export function sectionMatchesQuery(section: SectionDef, query: string, localize
     "campaign-song": "audio music profile song autoplay",
     "royal-anthem": "audio music profile anthem",
     "api-keys": "automation developer data",
+    experimental: "experimental beta preview ask drawer assistant",
     "retired-characters": "history records archive wrapped",
   };
   return `${localizedText} ${section.id.replaceAll("-", " ")} ${aliases[section.id] ?? ""}`

@@ -8,6 +8,7 @@ import {
   closeShadowTurn,
   plantEconomyShare,
   resolveShadowContinuity,
+  scopeNeutralBook,
   shadowBook,
   SHADOW_STATE_SCHEMA_VERSION,
   type ShadowCarryState,
@@ -74,6 +75,10 @@ describe("country-wide freight", () => {
     expect(shadowBook("state:ca", "freight", "us")).toBe("country:us");
     expect(shadowBook("state:ca", "healthcare_services", "us")).toBe("state:ca");
     expect(shadowBook("world", "freight", "us")).toBe("world");
+  });
+  it("moves construction services to the country book too", () => {
+    expect(shadowBook("state:ny", "construction_services", "us")).toBe("country:us");
+    expect(shadowBook("state:ny", "real_estate_services", "us")).toBe("state:ny");
   });
 });
 
@@ -240,5 +245,16 @@ describe("closed shadow turn", () => {
     expect(close.accounts.b).toBeCloseTo(44);
     expect(close.stateRemitted).toBeCloseTo(6);
     expect(close.accounts.hh).toBe(0);
+  });
+});
+
+describe("scope-neutral book", () => {
+  it("makes a carried state book comparable with its country book for scoped commodities only", () => {
+    expect(scopeNeutralBook("state:DC", "construction_services")).toBe(
+      scopeNeutralBook("country:US", "construction_services")
+    );
+    expect(scopeNeutralBook("state:DC", "freight")).toBe(scopeNeutralBook("country:US", "freight"));
+    expect(scopeNeutralBook("world", "construction_services")).toBe("world");
+    expect(scopeNeutralBook("state:DC", "steel")).toBe("state:DC");
   });
 });

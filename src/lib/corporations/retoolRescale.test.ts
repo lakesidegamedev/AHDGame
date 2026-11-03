@@ -20,12 +20,41 @@ describe("retoolRescaleFields", () => {
     expect(RATIO).not.toBe(1);
     expect(set.retoolRescaleApplied).toBe(true);
     expect(set.capitalStock).toBeCloseTo(capitalStock * RATIO, 6);
-    expect(set).toMatchObject(seedPlantLedger("extraction", set.capitalStock));
+    expect(set).toMatchObject(seedPlantLedger({ sectorType: "extraction" }, set.capitalStock));
     expect(set.otherOpexPerUnitAnchor).toBeCloseTo(otherOpexPerUnitAnchor / RATIO, 8);
     expect((set.otherOpexPerUnitAnchor ?? 0) * (set.capitalStock ?? 0)).toBeCloseTo(
       otherOpexPerUnitAnchor * capitalStock,
       6
     );
+  });
+
+  it("re-derives the plant count on the vehicle plant size when retooling onto a vehicle recipe", () => {
+    const capitalStock = 1_000;
+    const set = retoolRescaleFields({
+      sectorType: "manufacturing",
+      fromStrategyId: "standard",
+      toStrategyId: "vehicle_assembly",
+      plantsEnabled: true,
+      capitalStock,
+    });
+    const ratio = capacityRescaleRatio("manufacturing", "standard", "vehicle_assembly");
+    // 1,000 steel units (40 plants of 25) are worth 20 vehicle units: 20 vehicle plants.
+    expect(set.capitalStock).toBeCloseTo(capitalStock * ratio, 6);
+    expect(set.plantCount).toBe(Math.floor(capitalStock * ratio));
+    expect(set).toMatchObject(
+      seedPlantLedger({ sectorType: "manufacturing_vehicles" }, set.capitalStock)
+    );
+
+    // And back: vehicle units return to steel-sized plants.
+    const back = retoolRescaleFields({
+      sectorType: "manufacturing",
+      fromStrategyId: "vehicle_assembly",
+      toStrategyId: "standard",
+      plantsEnabled: true,
+      capitalStock: set.capitalStock,
+    });
+    expect(back.capitalStock).toBeCloseTo(capitalStock, 6);
+    expect(back.plantCount).toBe(40);
   });
 
   it("writes nothing capacity-related below plants, and records that the rescale did not run", () => {

@@ -238,13 +238,17 @@ export async function executeNppSectorAttack(
   // Credit the attacker's matching sector (existing or new). Read BEFORE the
   // defender is written so the P5 basis transfer sees both sides' pre-attack state.
   const stateId = targetSector.stateId;
-  const existing = await db.collection<CorporateSector>("corporateSectors").findOne({
-    stateId,
-    sectorType: targetSector.sectorType,
-    industryModel: targetSector.industryModel ?? null,
-    mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
-    corporationId: attacker._id,
-  });
+  // Only the match is wanted: the found sector is credited in place by _id.
+  const existing = await db.collection<Pick<CorporateSector, "_id">>("corporateSectors").findOne(
+    {
+      stateId,
+      sectorType: targetSector.sectorType,
+      industryModel: targetSector.industryModel ?? null,
+      mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
+      corporationId: attacker._id,
+    },
+    { projection: { _id: 1 } }
+  );
 
   // Reduce the defender's revenue.
   await db
@@ -539,23 +543,10 @@ export async function runNppCorporateAttacks(
   currentTurn: number,
   now: Date
 ): Promise<number> {
-  // Economic aggression is DECOUPLED from the political autonomy tier: raising
-  // political autonomy (e.g. to v3 for government formation) must NOT also make
-  // NPP corps launch sector attacks against owned player/NPP sectors. At the
-  // current stage NPPs should only expand into UNOWNED market, so corporate
-  // attacks require an explicit opt-in and are OFF by default. The per-attacker
-  // nppAutonomyAtLeast(v2) gate still applies on top when enabled.
-  const cfg = await db
-    .collection("gameConfig")
-    .findOne({ _id: "default" } as Record<string, unknown>, {
-      projection: { nppCorporateAttacksEnabled: 1 },
-    });
-  if (
-    (cfg as { nppCorporateAttacksEnabled?: boolean } | null)?.nppCorporateAttacksEnabled !== true
-  ) {
-    return 0;
-  }
-
+  // Economic aggression is decoupled from the political autonomy tier: this
+  // phase carries its own per-attacker nppAutonomyAtLeast(v2) gate, so raising
+  // political autonomy (e.g. to v3 for government formation) does not by itself
+  // make NPP corps attack owned sectors.
   const nppCorps = await db
     .collection<Corporation>("corporations")
     .find(

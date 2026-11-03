@@ -127,3 +127,22 @@ describe("capitalInjection", () => {
     expect(refundCorpLiquidCapital).toHaveBeenCalledWith(db, parentId, 1_000);
   });
 });
+
+it("blocks parent cash transfers during the controller's first 48 turns", async () => {
+  const { db } = makeDb();
+  const guardedDb = {
+    collection: (name: string) =>
+      name === "characters"
+        ? { findOne: vi.fn().mockResolvedValue({ createdTurn: 100 }) }
+        : db.collection(name),
+  } as unknown as Db;
+  const result = await capitalInjection(guardedDb, {
+    sub: sub(),
+    callerUserId,
+    amount: 1000,
+    turn: 147,
+    now: new Date(),
+  });
+  expect(result).toMatchObject({ ok: false, status: 403 });
+  expect(atomicallyDebitCorpLiquidCapital).not.toHaveBeenCalled();
+});

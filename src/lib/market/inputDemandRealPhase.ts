@@ -18,7 +18,7 @@ import type { GameConfig } from "@/lib/db/types";
 export const INPUT_DEMAND_REAL_PHASE_TURNS = 24;
 
 /** Price legs outside this band are treated as noise (thin or one-off sales). */
-export const INPUT_DEMAND_PRICE_LEG_MIN = 0.5;
+const INPUT_DEMAND_PRICE_LEG_MIN = 0.5;
 export const INPUT_DEMAND_PRICE_LEG_MAX = 4;
 
 /** Progress in [0, 1] through the phase-in; 0 before it starts. */

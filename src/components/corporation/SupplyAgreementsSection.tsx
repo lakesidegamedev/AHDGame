@@ -14,6 +14,7 @@ import {
   CONTRACT_SHORTFALL_PENALTY,
   SUPPLY_AGREEMENT_DURATION_MAX_TURNS,
   SUPPLY_AGREEMENT_DURATION_MIN_TURNS,
+  AI_SUPPLIER_MAX_DISCOUNT,
   SUPPLY_AGREEMENT_PRICE_BAND,
 } from "@/lib/db/types/supplyAgreement";
 import { useToast } from "@/contexts/ToastContext";
@@ -25,6 +26,7 @@ import {
   type NegotiateDraft,
 } from "@/lib/corporations/supplyExchange/negotiateLink";
 import { sortByRegionLabel } from "@/lib/regionOptions";
+import { agreementDeliveryStatus } from "@/lib/corporations/supplyExchange/rules/deliveryStatus";
 
 interface SupplyAgreement {
   _id: string;
@@ -51,6 +53,8 @@ interface SupplyAgreement {
   offers?: SupplyAgreementOffer[];
   lastDeliveryTurn?: number;
   lastDeliveredUnits?: number;
+  /** Buyer demand the last delivery was allocated against. */
+  lastBuyerConsumptionUnits?: number;
   /** #1147: what the last settlement charged for, and the ceiling it used. */
   lastShortfallUnits?: number;
   lastAchievableUnits?: number;
@@ -99,6 +103,7 @@ interface CounterDraft {
 }
 
 const BAND_PCT = Math.round(SUPPLY_AGREEMENT_PRICE_BAND * 100);
+const AI_FLOOR_PCT = Math.round(AI_SUPPLIER_MAX_DISCOUNT * 100);
 const SHORTFALL_PENALTY_PCT = Math.round(CONTRACT_SHORTFALL_PENALTY * 100);
 const MIN_DURATION_TURNS = SUPPLY_AGREEMENT_DURATION_MIN_TURNS;
 const MAX_DURATION_TURNS = SUPPLY_AGREEMENT_DURATION_MAX_TURNS;
@@ -142,6 +147,10 @@ export default function SupplyAgreementsSection({
     Partial<Record<CommodityType, Record<string, StateCapacitySnapshot>>>
   >({});
   const [stateId, setStateId] = useState("");
+  /** States where this corporation's own plants use each local service; absent before plants. */
+  const [buyerStatesByCommodity, setBuyerStatesByCommodity] = useState<
+    Partial<Record<CommodityType, Array<{ id: string; name: string }>>> | undefined
+  >(undefined);
   const [capacityByCommodity, setCapacityByCommodity] = useState<
     Partial<Record<CommodityType, CapacitySnapshot>>
   >({});
@@ -174,10 +183,14 @@ export default function SupplyAgreementsSection({
           agreements: SupplyAgreement[];
           capacityByCommodity?: Partial<Record<CommodityType, CapacitySnapshot>>;
           capacityByState?: Partial<Record<CommodityType, Record<string, StateCapacitySnapshot>>>;
+          buyerStatesByCommodity?: Partial<
+            Record<CommodityType, Array<{ id: string; name: string }>>
+          >;
         };
         setAgreements(data.agreements ?? []);
         setCapacityByCommodity(data.capacityByCommodity ?? {});
         setCapacityByState(data.capacityByState ?? {});
+        setBuyerStatesByCommodity(data.buyerStatesByCommodity);
       }
     } catch {
       // ignore — render empty state
@@ -427,6 +440,11 @@ export default function SupplyAgreementsSection({
         ([, snapshot]) => snapshot.stateName
       )
     : [];
+  // The buyer can only name a state where its own plants use the service.
+  const buyerStateOptions =
+    requiresState && buyerStatesByCommodity
+      ? sortByRegionLabel(buyerStatesByCommodity[commodity] ?? [], (state) => state.name)
+      : undefined;
   const selectedCapacity = requiresState
     ? proposalRole === "supplier"
       ? stateId
@@ -453,6 +471,32 @@ export default function SupplyAgreementsSection({
       return `${currency} ${Math.round(value).toLocaleString(locale)}`;
     }
   };
+
+  // Why the last settlement fell short of the cap, in the reader's terms.
+  function renderDeliveryStatus(a: SupplyAgreement, role: "supplier" | "buyer") {
+    const status = agreementDeliveryStatus(a);
+    if (!status) return null;
+    const values = {
+      commodity: COMMODITY_LABELS[a.commodity],
+      state: a.stateId ?? "",
+      unit: COMMODITY_UNITS[a.commodity],
+      cap: formatUnits(a.volumeCap),
+      achievable: status.code === "supplierProducedLess" ? formatUnits(status.achievable) : "",
+      used: status.code === "buyerUsedLess" ? formatUnits(status.used) : "",
+    };
+    const key =
+      status.code === "buyerCannotReceive"
+        ? status.stateScoped && a.stateId
+          ? "cannotReceiveLocal"
+          : "cannotReceive"
+        : status.code;
+    const blocking = status.code === "buyerCannotReceive" || status.code === "supplierProducedNone";
+    return (
+      <p className={`text-xs ${blocking ? "text-danger" : "text-warning"}`} role="status">
+        {t(`delivery.${role}.${key}`, values)}
+      </p>
+    );
+  }
 
   function renderAgreement(a: SupplyAgreement, role: "supplier" | "buyer") {
     const currentOffer: SupplyAgreementOffer = a.currentOffer ??
@@ -572,6 +616,8 @@ export default function SupplyAgreementsSection({
             )}
           </p>
         )}
+
+        {(a.status === "active" || a.status === "cancelling") && renderDeliveryStatus(a, role)}
 
         {a.status === "cancelling" && a.cancelEffectiveTurn != null && (
           <p className="text-xs text-warning">
@@ -959,6 +1005,24 @@ export default function SupplyAgreementsSection({
                         </option>
                       ))}
                     </select>
+                  ) : buyerStateOptions ? (
+                    <select
+                      value={stateId}
+                      onChange={(e) => setStateId(e.target.value)}
+                      disabled={buyerStateOptions.length === 0}
+                      className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none disabled:opacity-60"
+                    >
+                      <option value="">
+                        {buyerStateOptions.length === 0
+                          ? t("negotiation.noBuyerPlantsForService")
+                          : t("negotiation.selectState")}
+                      </option>
+                      {buyerStateOptions.map((state) => (
+                        <option key={state.id} value={state.id}>
+                          {state.name} ({state.id})
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <input
                       type="text"
@@ -1032,7 +1096,7 @@ export default function SupplyAgreementsSection({
               className="w-full accent-primary"
             />
             <p className="text-[11px] text-muted">
-              {t("negotiation.priceHelp", { band: BAND_PCT })}
+              {t("negotiation.priceHelp", { band: BAND_PCT, aiFloor: AI_FLOOR_PCT })}
             </p>
           </div>
 

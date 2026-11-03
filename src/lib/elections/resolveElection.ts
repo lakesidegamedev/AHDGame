@@ -46,6 +46,7 @@ import type {
   ElectionDeps,
 } from "./electionResponseTypes";
 import { _enrichElection, fetchDepsForElection } from "./enrichElection";
+import { adjacentElectionsQuery } from "./adjacentElections";
 import { resolvedSeatsEstimate } from "@/lib/elections/resolvedSeatsEstimate";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
 import {
@@ -83,15 +84,6 @@ export function isSeatId(id: string): boolean {
   if (!/^[A-Z]{2}$/i.test(parts[0])) return false;
   return true;
 }
-
-const ADJACENT_ELECTION_TYPE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
-  commons: ["commons", "snap_commons"],
-  snap_commons: ["commons", "snap_commons"],
-  bundestag: ["bundestag", "snap_bundestag"],
-  snap_bundestag: ["bundestag", "snap_bundestag"],
-  shugiin: ["shugiin", "snap_shugiin"],
-  snap_shugiin: ["shugiin", "snap_shugiin"],
-};
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -170,21 +162,9 @@ export async function resolveElection(
   let adjacentElections: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null =
     null;
   if (isFull) {
-    const adjacentTypes = ADJACENT_ELECTION_TYPE_FAMILIES[election.electionType];
-    const adjacentQuery: Record<string, unknown> = election.seatId
-      ? { seatId: election.seatId, status: { $ne: "cancelled" } }
-      : {
-          ...(election.countryId ? { countryId: election.countryId } : {}),
-          state: election.state,
-          electionType: adjacentTypes ? { $in: adjacentTypes } : election.electionType,
-          status: { $ne: "cancelled" },
-        };
-    if (!election.seatId && election.senateClass != null) {
-      adjacentQuery.senateClass = election.senateClass;
-    }
     adjacentElections = await db
       .collection<Election>("elections")
-      .find(adjacentQuery)
+      .find(adjacentElectionsQuery(election))
       .sort({ cycle: 1 })
       .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({
         _id: 1,
@@ -216,6 +196,18 @@ export async function resolveElection(
  * @param elections - Pre-fetched Election documents to resolve
  * @param options   - { view, userId, isAdmin }
  */
+/** Run one read per election, a batch at a time so a 500-row page cannot drain the pool. */
+async function perElectionInBatches<T>(
+  electionIds: MongoObjectId[],
+  read: (electionId: MongoObjectId) => Promise<T>
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < electionIds.length; i += 25) {
+    out.push(...(await Promise.all(electionIds.slice(i, i + 25).map(read))));
+  }
+  return out;
+}
+
 export async function resolveElections(
   db: Db,
   elections: Election[],
@@ -429,20 +421,20 @@ export async function resolveElections(
       // Only the last 72 turns per election are kept (see snapsLimited),
       // so cap the fetch in the DB instead of loading full history and
       // slicing in JS. 144 rows: a split turn holds an early and a rest row.
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
-        .aggregate<PrimarySnapshot>([
-          { $match: { electionId: { $in: electionIds } } },
-          { $sort: { electionId: 1, recordedAt: -1 } },
-          {
-            $group: { _id: "$electionId", docs: { $push: "$$ROOT" } },
-          },
-          { $project: { docs: { $slice: ["$docs", 144] } } },
-          { $unwind: "$docs" },
-          { $replaceRoot: { newRoot: "$docs" } },
-          { $sort: { recordedAt: 1 } },
-        ])
-        .toArray(),
+      // One index-bounded read per election: a $group over the $in match
+      // loaded every snapshot of every listed race before slicing.
+      perElectionInBatches(electionIds, (electionId) =>
+        db
+          .collection<PrimarySnapshot>("primarySnapshots")
+          .find({ electionId })
+          .sort({ recordedAt: -1 })
+          .limit(144)
+          .toArray()
+      ).then((perElection) =>
+        perElection
+          .flat()
+          .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())
+      ),
       db
         .collection<Campaign>("campaigns")
         .find(
@@ -512,16 +504,18 @@ export async function resolveElections(
   const latestSnapshotByElection = new Map<string, PrimarySnapshot>();
 
   if (!isFull) {
-    const latestSnapshotAgg = await db
-      .collection<PrimarySnapshot>("primarySnapshots")
-      .aggregate<{ _id: MongoObjectId; doc: PrimarySnapshot }>([
-        { $match: { electionId: { $in: electionIds } } },
-        { $sort: { recordedAt: -1 } },
-        { $group: { _id: "$electionId", doc: { $first: "$$ROOT" } } },
-      ])
-      .toArray();
-    for (const row of latestSnapshotAgg) {
-      latestSnapshotByElection.set(row._id.toString(), row.doc);
+    // The newest row per election straight off the { electionId, recordedAt }
+    // index. Sorting the whole $in match and grouping read every snapshot.
+    const latestRows = await perElectionInBatches(electionIds, (electionId) =>
+      db
+        .collection<PrimarySnapshot>("primarySnapshots")
+        .find({ electionId })
+        .sort({ recordedAt: -1 })
+        .limit(1)
+        .next()
+    );
+    for (const doc of latestRows) {
+      if (doc) latestSnapshotByElection.set(doc.electionId.toString(), doc);
     }
   } else {
     // Full view: pick last snapshot per election from the already-fetched array

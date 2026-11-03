@@ -14,6 +14,7 @@ vi.mock("@/lib/equities/primaryMarket", () => ({
   prepareEquityPrimaryPlacement: placementMocks.prepare,
   planEquityPrimaryPlacement: placementMocks.plan,
   refundPreparedEquityPlacement: placementMocks.refund,
+  recordCappedPrimaryPlacement: vi.fn(),
 }));
 
 vi.mock("@/lib/banking/underwritingSettlement", () => ({

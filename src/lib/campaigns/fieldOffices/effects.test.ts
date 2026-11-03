@@ -3,15 +3,14 @@ import { fieldOfficeRamp, fieldOfficeRegionEffect, fieldOfficeYield } from "./ef
 import { FIELD_OFFICE_RAMP_TURNS, getFieldOfficeRules, getFieldOfficeScope } from "./rules";
 
 const county = getFieldOfficeRules("US")!;
-const region = getFieldOfficeRules("UK")!;
 
 describe("field office scope registry", () => {
-  it("maps US to counties and UK / JP to regions", () => {
+  it("maps US to counties", () => {
     expect(getFieldOfficeScope("US")).toBe("county");
-    expect(getFieldOfficeScope("UK")).toBe("region");
-    expect(getFieldOfficeScope("JP")).toBe("region");
   });
-  it("leaves countries without a scope off", () => {
+  it("leaves countries without a presidential campaign off", () => {
+    expect(getFieldOfficeScope("UK")).toBeNull();
+    expect(getFieldOfficeScope("JP")).toBeNull();
     expect(getFieldOfficeScope("DE")).toBeNull();
     expect(getFieldOfficeRules("NOPE")).toBeNull();
   });
@@ -53,13 +52,6 @@ describe("fieldOfficeRegionEffect", () => {
     const bigFriendly = fieldOfficeRegionEffect([mature(0.2, 1.5)], county, 10).localPct;
     expect(big).toBeCloseTo(small * 10);
     expect(bigFriendly).toBeCloseTo(big * 1.5);
-  });
-
-  it("gives region scope no local term and a smaller cap", () => {
-    const eff = fieldOfficeRegionEffect([mature(0.5), mature(0.5), mature(0.5)], region, 10);
-    expect(eff.localPct).toBe(0);
-    expect(eff.regionalPct).toBeLessThan(region.regionCapPct);
-    expect(region.regionCapPct).toBeLessThan(county.regionCapPct);
   });
 
   it("counts a fresh office at a fraction of its strength", () => {

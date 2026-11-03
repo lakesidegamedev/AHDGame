@@ -11,7 +11,7 @@ import type {
 } from "./caucusTypes";
 import { apiBase, relationshipBadge, recruitStatusTone, formatHoursMinutes } from "./caucusUtils";
 import { useChairSubtabState } from "./useChairSubtabState";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   countDistinctOfficers,
   formatPayoutCap,

@@ -27,17 +27,3 @@ export const UA_REGION_CODES = [
   "UKR_SOU",
   "UKR_WES",
 ] as const;
-
-/** Compact on-map labels - the long names overflow the small map tiles. */
-export const UA_LABEL_OVERRIDES: Record<string, string> = {
-  UKR_KYI: "Kyiv",
-  UKR_WES: "West",
-  UKR_POD: "Podolia",
-  UKR_DON: "Donbas",
-  UKR_DNI: "Dnieper",
-  UKR_SOU: "South",
-};
-
-export function isUkraineRegion(code: string): boolean {
-  return (UA_REGION_CODES as readonly string[]).includes(code);
-}

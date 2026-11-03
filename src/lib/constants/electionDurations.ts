@@ -4,33 +4,27 @@
  * `durationHours`        = total active-election window (primary + general).
  * `primaryDurationHours` = PRIMARY phase length (not general — see PATCH-route
  *                          note below).
- * `generalDurationHours` = GENERAL phase length (trailing 24-72h window).
+ * `generalDurationHours` = GENERAL phase length (trailing 24-turn window).
  *
  * 48 turns = 1 game year. One turn fires every real-world hour, so
  * `durationHours` doubles as "how many real hours until the election ends."
  *
- * ⚠ Historical quirk: the stored `primaryDurationHours` field on election docs
- * has been used inconsistently across the code base. Current spawn sites
- * ({@link ./turn/perpetualElections.ts}) write `dur - generalDurationHours`
- * (= primary length), matching what this constant records. The PATCH handler
- * in `/api/admin/country/[code]/elections/route.ts` has a comment that
- * contradicts this — do not follow that comment. The canonical meaning is
- * PRIMARY length.
+ * Stored election primaryDurationHours also records the PRIMARY length.
  */
 export const DEFAULT_DURATIONS: Record<
   string,
   { durationHours: number; primaryDurationHours: number; generalDurationHours: number }
 > = {
-  house: { durationHours: 96, primaryDurationHours: 48, generalDurationHours: 48 }, // 2 years (1yr primary + 1yr general)
-  senate: { durationHours: 288, primaryDurationHours: 240, generalDurationHours: 48 }, // 6 years (5yr primary + 1yr general)
-  governor: { durationHours: 192, primaryDurationHours: 144, generalDurationHours: 48 }, // 4 years (3yr primary + 1yr general)
-  stateSenate: { durationHours: 192, primaryDurationHours: 144, generalDurationHours: 48 }, // 4 years (3yr primary + 1yr general)
-  president: { durationHours: 192, primaryDurationHours: 144, generalDurationHours: 48 }, // 4 years (3yr primary + 1yr general)
+  house: { durationHours: 96, primaryDurationHours: 72, generalDurationHours: 24 }, // 2 years (72-turn primary + 24-turn general)
+  senate: { durationHours: 288, primaryDurationHours: 264, generalDurationHours: 24 }, // 6 years (264-turn primary + 24-turn general)
+  governor: { durationHours: 192, primaryDurationHours: 168, generalDurationHours: 24 }, // 4 years (168-turn primary + 24-turn general)
+  stateSenate: { durationHours: 192, primaryDurationHours: 168, generalDurationHours: 24 }, // 4 years (168-turn primary + 24-turn general)
+  president: { durationHours: 192, primaryDurationHours: 168, generalDurationHours: 24 }, // 4 years (168-turn primary + 24-turn general)
   commons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 }, // 48h election (24h primary + 24h general); 5-year cycle gap handled in ensureUKElections
   regionalCouncil: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 }, // synchronized with Commons cycle
   // JP election types
-  shugiin: { durationHours: 192, primaryDurationHours: 144, generalDurationHours: 48 }, // 4 game-years (3yr primary + 1yr general)
-  sangiin: { durationHours: 144, primaryDurationHours: 72, generalDurationHours: 72 }, // half-elections every 3 game-years
+  shugiin: { durationHours: 192, primaryDurationHours: 168, generalDurationHours: 24 }, // 4 game-years (168-turn primary + 24-turn general)
+  sangiin: { durationHours: 144, primaryDurationHours: 120, generalDurationHours: 24 }, // half-elections every 3 game-years
   // DE election type (4-year Bundestag cycle, mirrors UK commons spacing)
   bundestag: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 }, // 48h election; 4-year gap handled in ensureDEElections
   // DE Landtag: 48h election (24h primary + 24h general); 5-year staggered cycles per Land handled in ensureDELandtagElections
@@ -44,9 +38,9 @@ export const DEFAULT_DURATIONS: Record<
   snap_bundestag: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 }, // DE Chancellor-triggered snap election
   // Shared snap election duration for any parliamentary country's lower chamber (fallback)
   snap_lowerChamber: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
-  // Governor by-election (mid-term vacancy fill) — general-only, no primary; the
+  // Governor by-election (mid-term vacancy fill) — 24-turn filing/primary and 24-turn general; the
   // spawner sets timing directly, this entry just registers the type.
-  special_governor: { durationHours: 48, primaryDurationHours: 0, generalDurationHours: 48 },
+  special_governor: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // Commons by-election (#860) — compressed regular race like its governor
   // cousin, but WITH a filing/primary window so candidates can file. Mirrors
   // the regular Commons 24h + 24h split; the spawner sets timing directly.

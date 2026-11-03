@@ -40,8 +40,9 @@ import { CN_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/cn/data/cnBucketAff
  * - Buckets are not mutually exclusive the way archetypes were. A cell picks up
  *   the sum of every bucket it matches, one per dimension.
  *
- * From here on this file is the source and is hand-edited: once the archetype
- * tables are gone there is nothing left to regenerate from.
+ * From here on this file is the source and is hand-edited: the archetype
+ * tables it was generated from are gone, so there is nothing left to
+ * regenerate from.
  */
 
 /** Per-country, per-domain bucket affinities. Countries absent fall back to US. */

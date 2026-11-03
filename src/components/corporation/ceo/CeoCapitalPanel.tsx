@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { Slider } from "@/components/ui";
-import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporations";
+import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporationsClient";
 import { scaleMoney } from "@/lib/constants/moneyTimescale";
 import type { CorporationDetail, Financials } from "../CorporationPageTypes";
 import ShareIssuanceModal from "../shares/ShareIssuanceModal";

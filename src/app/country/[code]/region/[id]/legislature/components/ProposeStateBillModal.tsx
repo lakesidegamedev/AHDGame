@@ -6,7 +6,8 @@ import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { regionApiSubUrl } from "@/lib/urls";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import {
   STATE_BILL_CATEGORIES,
   SUBSIDY_BILL_CATEGORIES,
@@ -28,14 +29,13 @@ import {
 import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import { useWorldFlags } from "@/hooks/useWorldFlags";
-import { LegislationSystemGate } from "@/components/legislation/LegislationSystemGate";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 
 function LegacyProposeStateBillModal({
   stateId,
   countryId,
   adminOverride,
+  proposeViaPartyNpp = false,
   blockedProvisions,
   onClose,
   onSuccess,
@@ -43,6 +43,8 @@ function LegacyProposeStateBillModal({
   stateId: string;
   countryId: string;
   adminOverride: boolean;
+  proposeViaPartyNpp?: boolean;
+  legislationVersion: "v1" | "v2";
   blockedProvisions?: { legislationTypeId: string; policyOptionId: string }[];
   onClose: () => void;
   onSuccess: () => void;
@@ -91,7 +93,7 @@ function LegacyProposeStateBillModal({
   const blockedProvisionKeys = new Set(
     (blockedProvisions ?? []).map((bp) => `${bp.legislationTypeId}:${bp.policyOptionId}`)
   );
-  const countryConfig = getCountryConfig(countryId as CountryId);
+  const countryConfig = getCountryClientConfig(countryId as CountryId);
   const country = countryConfig.id.toLowerCase();
   // Use "Regional" for regional-model sub-national tiers (e.g. UK Regional Councils);
   // "State" for the US-style state model (which also has a sub-national chamber).
@@ -252,6 +254,7 @@ function LegacyProposeStateBillModal({
           category,
           provisions: bodyProvisions,
           adminOverride,
+          proposeViaPartyNpp,
         }),
       });
 
@@ -739,23 +742,19 @@ function LegacyProposeStateBillModal({
 }
 
 export function ProposeStateBillModal(props: Parameters<typeof LegacyProposeStateBillModal>[0]) {
-  const flags = useWorldFlags();
   const countryId = props.countryId.toUpperCase() as CountryId;
-  if (!flags.loaded || flags.failed) {
-    return <LegislationSystemGate failed={flags.failed} onClose={props.onClose} />;
-  }
-  const useV2 =
-    flags.resetSystemVersions.legislation === "v2" && flags.resetV2Countries.includes(countryId);
-  if (useV2) {
+  if (props.legislationVersion === "v2") {
     return (
       <GuidedLegislationModal
         countryId={countryId}
         endpoint={`/api/country/${countryId}/region/${encodeURIComponent(props.stateId)}/legislature/bills`}
+        offerSubsidies={true}
         scope="regional"
         regionId={props.stateId}
         chambers={[]}
         initialChamber="regional"
         adminOverride={props.adminOverride}
+        proposeViaPartyNpp={props.proposeViaPartyNpp}
         onClose={props.onClose}
         onSuccess={props.onSuccess}
       />

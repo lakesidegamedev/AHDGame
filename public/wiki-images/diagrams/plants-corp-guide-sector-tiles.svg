@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="342" viewBox="0 0 760 342" role="img" font-family="system-ui, sans-serif">
+<title>Reading the three sector tiles</title>
+<desc>The Selling, Per unit made and Break even tiles on a sector Market and money panel, with what each reading means.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="341" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="230" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="135.0" y="44.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Selling</text>
+<text x="135.0" y="60.5" font-size="12" text-anchor="middle" fill="#3f3f46">share of output buyers take</text>
+<rect x="20" y="96" width="230" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="135.0" y="123.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">50% or more</text>
+<text x="135.0" y="139.6" font-size="12" text-anchor="middle" fill="#3f3f46">buyers take your output</text>
+<rect x="20" y="172" width="230" height="62" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="135.0" y="191.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Below 50%: amber</text>
+<text x="135.0" y="207.6" font-size="12" text-anchor="middle" fill="#3f3f46">market does not want</text>
+<text x="135.0" y="223.6" font-size="12" text-anchor="middle" fill="#3f3f46">that much of what you make</text>
+<rect x="265" y="20" width="230" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="380.0" y="44.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Per unit made</text>
+<text x="380.0" y="60.5" font-size="12" text-anchor="middle" fill="#3f3f46">earns vs costs per unit</text>
+<rect x="265" y="96" width="230" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="123.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Earns above costs</text>
+<text x="380.0" y="139.6" font-size="12" text-anchor="middle" fill="#3f3f46">unsold units count as zero</text>
+<rect x="265" y="172" width="230" height="62" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="380.0" y="191.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Earns below costs</text>
+<text x="380.0" y="207.6" font-size="12" text-anchor="middle" fill="#3f3f46">every unit loses money</text>
+<text x="380.0" y="223.6" font-size="12" text-anchor="middle" fill="#3f3f46">at today's fills</text>
+<rect x="510" y="20" width="230" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="625.0" y="44.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Break even</text>
+<text x="625.0" y="60.5" font-size="12" text-anchor="middle" fill="#3f3f46">spend sunk vs what clears</text>
+<rect x="510" y="96" width="230" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="625.0" y="115.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">A turn count</text>
+<text x="625.0" y="131.6" font-size="12" text-anchor="middle" fill="#3f3f46">profit repays the spend</text>
+<text x="625.0" y="147.6" font-size="12" text-anchor="middle" fill="#3f3f46">in that many turns</text>
+<rect x="510" y="172" width="230" height="62" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="625.0" y="199.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Profitable now</text>
+<text x="625.0" y="215.6" font-size="12" text-anchor="middle" fill="#3f3f46">nothing left to pay back</text>
+<rect x="510" y="248" width="230" height="62" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="625.0" y="267.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Not at current fills</text>
+<text x="625.0" y="283.6" font-size="12" text-anchor="middle" fill="#3f3f46">more sales help, not</text>
+<text x="625.0" y="299.6" font-size="12" text-anchor="middle" fill="#3f3f46">more capacity</text>
+</svg>

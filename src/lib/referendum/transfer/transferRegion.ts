@@ -173,6 +173,10 @@ async function transferRegionInTransaction(
   await carryNorthernIrelandMPs(db, carriedMPs, new Date());
   const rescoped = await rescopeRegionToCountry(db, regionId, fromCountryId, toCountryId);
   await convertRegionDoc(db, { regionId, toCountryId, province, displayName, votingSystem });
+  // Departing UK regions no longer use the Westminster constituency layer.
+  // Population remains on the transferred state and cohort documents.
+  if (fromCountryId === "UK" && toCountryId !== "UK")
+    await db.collection("counties").deleteMany({ countryId: "UK", stateId: regionId });
   if (fromCountryId === "UK" && toCountryId === "IE") {
     await transferResetV2RegionToIreland(db, regionId, currencyScale);
   }

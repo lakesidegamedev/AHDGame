@@ -376,7 +376,7 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
 
 /** Every known actor-gated mechanic id. Reports and probes must resolve through
  * `assertKnownActorMechanic`; adding a mechanic means adding it here. */
-export const ACTOR_GATED_MECHANIC_IDS: readonly string[] = ACTOR_GATED_MECHANICS.map((m) => m.id);
+const ACTOR_GATED_MECHANIC_IDS: readonly string[] = ACTOR_GATED_MECHANICS.map((m) => m.id);
 
 /** Every source seam the registry pins, flattened across mechanics. The drift
  * guard test reads each file and asserts its anchor is still present, so a
@@ -493,7 +493,7 @@ function evidenceFor(id: string, s: ActorPopulationSnapshot): string {
  * materialized in the world. The deterministic plan exists, but zero synthetic
  * characters means actor-gated paths are UNREACHABLE here — the manifest must
  * not claim them covered just because the mode flag was set. */
-export const SYNTHETIC_UNSEEDED_REASON =
+const SYNTHETIC_UNSEEDED_REASON =
   "synthetic mode was requested but this world contains zero synthetic characters, " +
   "so the deterministic actor plan was not materialized and actor-gated paths " +
   "stay UNREACHABLE here, not covered.";

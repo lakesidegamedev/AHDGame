@@ -17,7 +17,7 @@ interface StateData {
   povertyRate: number;
 }
 
-export async function getStateData(db: Db, countryId?: CountryId): Promise<StateData[]> {
+async function getStateData(db: Db, countryId?: CountryId): Promise<StateData[]> {
   const states = await db
     .collection("states")
     .find(countryId ? { countryId } : {})
@@ -49,7 +49,7 @@ export async function getStateData(db: Db, countryId?: CountryId): Promise<State
   });
 }
 
-export function calculateFormulaDistribution(
+function calculateFormulaDistribution(
   program: FormulaGrant,
   poolAmount: number,
   states: StateData[]

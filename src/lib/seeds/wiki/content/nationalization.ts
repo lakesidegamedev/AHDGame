@@ -1,87 +1,107 @@
-export const nationalizationContent = `# Nationalization & National Corporations
+export const nationalizationContent = `# Nationalization
 
-Nationalization is the **state-ownership lifecycle**: a government can take a private corporation (or one of its sectors) into public hands, run it as a state-owned enterprise, and later sell it back to the market. Every country has a single central **National Corporation** that absorbs what the state takes over, plus optional split-offs for individual sector types.
+If you own a company in a country that decides it wants it, you get 48 turns of notice and, with luck, full value. If you let your CEO seat sit empty for 72 turns, you may get neither. Nationalization is how a government takes a private corporation, or one of its sectors, into public hands. The state pays the owners (or does not), the assets move into the country's [National Corporation](/wiki/national-corporations), and taking a player-owned company costs the country investor confidence. Later the state can sell assets back to the market, which is called privatization.
 
 \`\`\`
 private corp ──(nationalize: absorb)──▶  National Corporation  ──(privatize: spin out)──▶  new private corp
 \`\`\`
 
-The two directions are inverses of one another. Nationalizing folds a target's sectors, assets, and bonds into the country's National Corporation and dissolves the original shell. Privatizing carves a new, independently named corporation back out and floats it to investors.
+A taking has four parts: a **trigger** that makes the target eligible, an **authority** that orders it, a **compensation tier** that sets the payout, and **consequences** for confidence and politics.
 
-## When the state can take a corporation
+![Lifecycle of a nationalization: trigger, executive or legislative authority, compensation tier, absorption into the National Corporation and a privatization lockout, with investor confidence falling on each taking.](/wiki-images/diagrams/nationalization-lifecycle.svg)
 
-Unowned and NPC assets can be nationalized freely. A **player-owned** corporation is protected: the state may only reach it when one of four conditions unlocks the target.
+## Can they take my company?
 
-| Trigger | Condition | Notice |
+Unowned and computer-run (NPC) assets can be taken at any time. A **player-owned** corporation is protected. It can only be taken by one of two routes. Distress, market share and sector all decide who can be taken, as read from [Corporations](/wiki/corporations).
+
+| Route | Who orders it | Reaches | Tiers | Notice |
+| --- | --- | --- | --- | --- |
+| **Executive** | Head of government, from the Nationalize tab | NPC and unowned assets, and player companies in financial distress | Discounted or Seizure | None for distress |
+| **Legislative** | A nationalization bill passed by the legislature | Any corporation in the country | Fair | 48 turns for a player company; NPC takings and industry-wide sector bills take effect at once |
+
+A player company counts as **in distress** when its CEO seat has been empty for 72 turns, or it has been insolvent (negative cash) or had a defaulted bond for 72 turns. A solvent company cannot be taken by the executive. It needs a bill (see [Bills and Legislation](/wiki/bills-legislation); a passed nationalization bill orders the Fair-tier taking).
+
+A bill-based taking is labelled by why the target qualified: sitting in a **strategic sector** (a type of business the head of government has marked strategic, up to 5 at a time), holding **75% or more** of one state's market for a sector type (a monopoly), or neither, in which case it is simply a legislative vote. Monopoly and distress takings count as popular. The others do not.
+
+If you own the targeted company:
+
+1. Keep your CEO seat filled and your cash positive. An empty CEO seat or 72 turns of insolvency or a defaulted bond opens you to the executive route.
+2. Watch your market share. At 75% or more in a sector market you qualify as a monopoly.
+3. Check which sectors are strategic on your country page. If yours is, you are always a candidate for a bill.
+4. Lobby or vote against a nationalization bill before it passes. Once it passes, a 48-turn notice starts and you get a notification. A legislative taking cannot be cancelled by changing your company. Dissolving the company before the deadline ends it, but you lose the company anyway.
+5. Use the notice to prepare: shareholders can sell, and the CEO can plan.
+
+## What the owners are paid
+
+Shareholders are paid a share of the target's value, pro rata by shares held.
+
+| Tier | Payout | Typical route |
 | --- | --- | --- |
-| **Financial distress** | The CEO seat has been vacant for 72 turns, or insolvency or a defaulted bond has accumulated 72 financial-distress turns. | Seized once the grace condition is complete, with no further notice. |
-| **Strategic sector** | The corp operates in a sector the government has designated strategic. | 48 turns. |
-| **Monopoly** | The corp holds 75% or more of a national sector market. | 48 turns. |
-| **Supermajority vote** | The legislature passes a taking with a two-thirds majority. | 48 turns. |
+| **Fair** | 1.0 times value | Legislative bill |
+| **Discounted** | 0.5 times value | Executive |
+| **Seizure** | Nothing | Executive, maximum political cost |
 
-The **notice window** is counterplay. When a strategic, monopoly, or supermajority taking is filed, the target owner sees a pending notice and has those turns to respond before the taking completes. Financial-distress takings are immediate.
+Value is the corporation's tangible book value: what its plants and capacity are worth, plus other assets, minus its debt. The state takes over the corporation's bonds and keeps paying coupons, so bondholders are not defaulted. The company shell is dissolved. Any cash beyond the buyout goes to the CEO, except in a seizure or when the CEO seat is vacant. The treasury pays the compensation and receives remittance afterwards, see [National Budget](/wiki/national-budget).
 
-Each country starts with a set of **default strategic sectors** flavored to its economy (for example, defense and technology for the United States, financial and energy for the United Kingdom). A head of government can designate further sectors strategic through executive action or legislation.
+Take a company with sector plants worth 400 million, 100 million of other assets and 150 million of debt. The 150 million of debt first absorbs the 100 million of other assets and then 50 million of plant value, so **value is 350 million**.
 
-## Authority: who pulls the trigger
+- Legislative Fair taking: shareholders receive 350 million.
+- Executive Discounted taking (distressed company): 175 million.
+- Executive Seizure: nothing.
 
-There are two authority paths, and the path determines how much the state must pay.
+Now take the investor-confidence cost, with a neutral government and a state that owns little. A Fair taking of a strategic-sector company costs **8 points**. A Fair taking of a monopoly costs **2 points** because it is popular. A Discounted taking of a distressed company costs about **5.3 points**, and a Seizure of one costs **14 points**.
 
-**Executive**: fast and unilateral, available to the head of government for emergencies, but limited in reach and politically expensive when used as a seizure. Executive takings can apply discounted or token compensation.
+## What a taking does to the country
 
-**Legislative**: slow and durable. A taking enacted through a bill carries full statutory weight and is expected to pay a **fair** buyout. The supermajority path is a special legislative route that unlocks any target with a two-thirds vote.
+Every country has an **investor confidence** score from 0 to 100. It heals toward **70** by 5% of the gap each turn. From 50 it is back to about 58 after 10 turns and 66 after 30. Taking a player-owned company pushes it down (NPC and unowned takings cost nothing), and the push is multiplied by the **State Ownership Concentration Index** (SOCI), the share of the economy the state already owns:
 
-## Compensation tiers
+- Up to **35**, takings cost the base amount.
+- Above 35, the multiplier rises along a curve to 3.5 at SOCI 100. At SOCI 50 it is about 1.13.
+- On a bill-based taking, a statist governing party pays as little as half the cost, and a market-liberal one as much as 1.5 times. The executive route is scored as neutral.
 
-Shareholders are paid against the target's valuation, scaled by the tier the authority used.
+\`\`\`wiki-chart
+nationalization-cost-multiplier
+\`\`\`
 
-| Tier | Shareholders receive | Typical path |
-| --- | --- | --- |
-| **Fair** | Full valuation. | Legislative buyout. |
-| **Discounted** | Half valuation. | Executive emergency. |
-| **Seizure** | Nothing. | Executive seizure (maximum political cost). |
+\`\`\`wiki-chart
+nationalization-confidence-recovery
+\`\`\`
 
-Compensation follows the world's market-system mode. Fresh worlds use plants:
-Fair compensation is 1.0x replacement-cost tangible book, with the Discounted
-and Seizure tiers applying their stated reductions. The legacy pre-plants path
-uses capitalized earnings and its historical 5x going-concern premium. Do not
-apply that 5x multiplier to plants valuation.
+Low confidence is not cosmetic. Below 70 it feeds three live systems, in proportion to the gap:
 
-## Investor confidence
+| At confidence 0 | Effect |
+| --- | --- |
+| Private company margins | -6 points of margin (state companies exempt) |
+| Government borrowing | +3 points on sovereign interest |
+| New company founding cost | +25% |
 
-Every country carries an **investor-confidence index** from 0 to 100, healing toward a baseline of 70 a little each turn. Takings push it down: a fairly-paid buyout barely moves it, while an uncompensated seizure takes a large bite. A statist government pays less confidence for a taking; a market-liberal one pays more. Popular takings (rescuing a distressed firm, breaking up a monopoly) can even nudge public trust upward.
+At confidence 62 (8 points down) that is about -0.7 margin points, +0.3 points of interest and +2.9% to found a company. The borrowing cost shows up in [Sovereign Bonds](/wiki/sovereign-bonds).
 
-Confidence is not cosmetic. As it falls below baseline it feeds three real pressures:
+An unpopular taking of a player company also lowers public trust, and legitimacy in countries with a leader confidence model (see [Government Approval](/wiki/government-approval)). A popular one (a distress rescue or monopoly break-up) lifts public trust while the state owns little, and turns negative as SOCI climbs. The freshly taken sector suffers a **transition shock**: 15% of its revenue is deleted once, and output starts 15% down and recovers over 120 turns. At high SOCI the output drag gets deeper (up to 50%) and lasts longer; the 15% cut stays fixed. State-owned corporations cannot be bought and are outside merger review ([Corporate Mergers](/wiki/corporate-mergers)).
 
-1. **Expropriation risk** drags private corporate margins (state-owned enterprises are exempt).
-2. **Sovereign risk premium** raises the interest rate the government pays on new debt.
-3. **Founding surcharge** raises the cost to incorporate a new company in that country, up to +25% at rock-bottom confidence.
+## Ordering a taking
 
-Privatizing sends the opposite, pro-market signal and restores some confidence.
+The head of government opens the Nationalize tab on a National Corporation page, picks the target and, for an executive taking, the tier. You can only use the executive route on a distressed or NPC target. For a solvent company, push a nationalization bill through the legislature. Mark sectors strategic from the same tab, up to 5 at once. Adding one arms the strategic trigger for bills. Both powers sit with the head of government; the finance minister in the [Cabinet](/wiki/cabinet) runs privatization.
 
-## Operating a state-owned enterprise
+Legislators vote on nationalization bills. A passed bill pays Fair, so it is the expensive, defensible option.
 
-Once absorbed, sectors run under the National Corporation rather than as a sprawl of separate firms. SOE behavior is distinct from a private corp:
+## Selling it back: privatization
 
-- **Dynamic efficiency.** Instead of a flat penalty, an SOE's margin drag scales with governance. A well-run, transparent, low-corruption state runs its enterprises close to private efficiency; a corrupt one bleeds margin.
-- **Public-service mandates.** A National Corporation's sectors can be put under mandates that nudge state metrics (employment, infrastructure reliability, cost of living) at a small but compounding per-turn rate.
-- **Price controls.** A price-controlled mandate trades extra margin drag for a stronger public-service contribution.
-- **Treasury backing.** SOE operating profit is remitted into the national budget as public-enterprise revenue.
+The finance minister runs privatization from the Privatization tab. It carves part of a National Corporation's sector into a new named corporation and floats it by IPO or auction.
 
-The finance minister (Secretary of the Treasury, Chancellor, and equivalents) manages the country's National Corporations: appointing CEOs, splitting a sector type off into its own named enterprise, and merging one back in.
+| Rule | Value |
+| --- | --- |
+| Carve size per spin-out | 10% to 100% of the holding |
+| Share of the regional market the new company may hold | no more than 30% |
+| Golden share kept by the state | up to 40% |
+| Auction bid window | 48 turns |
+| Cooldown before a privatized company can be retaken | 168 turns |
+| Cooldown before a newly taken sector can be privatized | 168 turns |
+| Confidence gain on completion | +5 |
 
-For the full operating manual, covering the National Corporation page and its tabs, public-service mandates, the CEO's four operating levers, the two-actor financing model, treasury backing and remittance, dynamic efficiency, and state-ownership concentration, see the companion page on [National Corporations](/wiki/national-corporations).
+A National Corporation holding most of a market must therefore sell in several steps. Privatizing is the way to bring SOCI down and win back confidence, which makes room for more takings, and market-leaning governments are rewarded politically for it. The privatize tab is hidden in command-economy eras, where there is no private sector to sell into.
 
-## Privatization
+Live in every world and country with players enabled. Fair compensation is the target's tangible book value (replacement cost of its plants, plus other assets, minus debt). Worlds still on the older earnings-based economy price takings from capitalized earnings with a larger premium.
 
-Privatization is the inverse operation: the state carves a fraction of a sector out of the National Corporation into a **brand-new corporation** with its own name, then floats it by IPO or auction.
-
-- **Carve fraction** of the National Corporation's holding in a sector is between 10% and 100% per spin-out. That's a separate cap from the anti-monopoly rule: a spun-out corp can never end up controlling more than 30% of the whole (state, sector-type) market, so a National Corp that dominates a market is forced into several separate spin-outs even though any single carve fraction could be as high as 100%.
-- **Golden share.** The state may retain up to 40% of a spun-out corporation to keep a strategic foothold.
-- **Auctions** run for a bid window of 48 turns.
-- **Cooldowns.** A privatized corp cannot be re-nationalized for 168 turns, and a freshly absorbed sector cannot be privatized for 168 turns, preventing churn in either direction.
-
-## Political weight
-
-Nationalization is never free. Beyond investor confidence, a taking can cost regime legitimacy and government approval, scaled by how unpopular it is and by the government's ideological lean. Statist governments find takings cheaper and privatizations costlier; market-liberal governments find the reverse. Plan the politics before you plan the takeover.
+Last checked 2026-10-29, version 1.18.0. Exact constants: \`src/lib/nationalization/constants.ts\` in the open source repository (no design page covers nationalization yet). See also: [Glossary](/wiki/glossary)
 `;

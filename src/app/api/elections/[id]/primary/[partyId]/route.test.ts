@@ -154,7 +154,7 @@ describe("GET /api/elections/[id]/primary/[partyId]", () => {
     const res = await callRoute(ELECTION_OID.toString(), "1");
     expect(res.status).toBe(200);
     expect(vi.mocked(buildPrimaryPartyDetail).mock.calls[0][1].viewer).toBeNull();
-    expect(String(vi.mocked(checkRateLimit).mock.calls[0][0])).toMatch(/^anon:/);
+    expect(String(vi.mocked(checkRateLimit).mock.calls[0][0])).toMatch(/\]:anon:/);
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
@@ -168,7 +168,9 @@ describe("GET /api/elections/[id]/primary/[partyId]", () => {
     // parties here must not leave them unable to camp in a state.
     const { checkRateLimit } = await import("@/lib/api/rateLimit");
     await callRoute(ELECTION_OID.toString(), "1");
-    expect(vi.mocked(checkRateLimit).mock.calls[0][0]).toBe(USER_ID);
+    expect(vi.mocked(checkRateLimit).mock.calls[0][0]).toBe(
+      `api/elections/[id]/primary/[partyId]:${USER_ID}`
+    );
   });
 
   it("rate limits", async () => {

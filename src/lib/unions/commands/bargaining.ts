@@ -522,7 +522,7 @@ export async function persistBargainingCounter(
   return campaignResult(next);
 }
 
-export async function persistBargainingDispute(
+async function persistBargainingDispute(
   db: Db,
   campaign: BargainingCampaign,
   currentTurn: number

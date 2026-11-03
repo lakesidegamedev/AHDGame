@@ -3,13 +3,14 @@ import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { euroPolicyBankId } from "@/lib/currency/euro/rules";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Db } from "mongodb";
-import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 
 export function getBankId(countryId: CountryId): string {
-  return COUNTRY_CONFIGS[countryId]?.centralBank.sharedBankId ?? countryId;
+  return COUNTRY_CLIENT_CONFIGS[countryId]?.centralBank.sharedBankId ?? countryId;
 }
 
 /**
@@ -84,7 +85,7 @@ export function getConfiguredSharedBankMemberCountries(
   bankId: string,
   intorgId?: string
 ): CountryId[] {
-  return COUNTRY_ORDER.map((id) => COUNTRY_CONFIGS[id])
+  return COUNTRY_ORDER.map((id) => COUNTRY_CLIENT_CONFIGS[id])
     .filter((config) => {
       const configBankId = config.centralBank.sharedBankId ?? config.id;
       if (configBankId !== bankId) return false;
@@ -94,15 +95,9 @@ export function getConfiguredSharedBankMemberCountries(
     .map((config) => config.id);
 }
 
-export function getRepresentativeCentralBankCountry(intorgId: string): CountryId | null {
-  return (
-    COUNTRY_ORDER.map((id) => COUNTRY_CONFIGS[id])
-      .filter((config) => config.centralBank.centralBankIntorgId === intorgId)
-      .map((config) => config.id)[0] ?? null
-  );
-}
+export { getRepresentativeCentralBankCountry } from "./intorgRepresentative";
 
-export async function getIntorgMemberCountries(db: Db, intorgId: string): Promise<CountryId[]> {
+async function getIntorgMemberCountries(db: Db, intorgId: string): Promise<CountryId[]> {
   const builtIn = INTERNATIONAL_ORGANIZATIONS[intorgId as keyof typeof INTERNATIONAL_ORGANIZATIONS];
   const defaults = (builtIn?.foundingMembers ?? []) as CountryId[];
   const docs = await db
@@ -111,12 +106,8 @@ export async function getIntorgMemberCountries(db: Db, intorgId: string): Promis
     .project<{ countryId: CountryId }>({ countryId: 1 })
     .toArray();
   return [...new Set([...defaults, ...docs.map((d) => d.countryId)])].filter(
-    (countryId): countryId is CountryId => countryId in COUNTRY_CONFIGS
+    (countryId): countryId is CountryId => countryId in COUNTRY_CLIENT_CONFIGS
   );
-}
-
-export async function getIntorgBankForOrg(db: Db, orgId: string): Promise<CentralBank | null> {
-  return db.collection<CentralBank>("centralBanks").findOne({ intorgId: orgId });
 }
 
 function getDefaultBank(
@@ -124,7 +115,7 @@ function getDefaultBank(
   now: Date,
   startingYear?: number
 ): Omit<CentralBank, "_id"> {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   return {
     countryId,
     chairCharacterId: null,
@@ -167,7 +158,7 @@ export async function getCentralBankScope(
   intorgId?: string;
   currencyCode?: CurrencyCode;
 }> {
-  const intorgId = COUNTRY_CONFIGS[countryId]?.centralBank.centralBankIntorgId;
+  const intorgId = COUNTRY_CLIENT_CONFIGS[countryId]?.centralBank.centralBankIntorgId;
   const bankId = getBankId(countryId);
   if (!intorgId) return { bankId, memberCountries: [countryId] };
 
@@ -202,7 +193,7 @@ export async function getMonetaryPolicyScope(
   if (union && euroPolicyBankId(countryId, union) === union.authorityId) {
     return {
       bankId: union.authorityId,
-      memberCountries: (Object.keys(COUNTRY_CONFIGS) as CountryId[]).filter(
+      memberCountries: (Object.keys(COUNTRY_CLIENT_CONFIGS) as CountryId[]).filter(
         (country) => euroPolicyBankId(country, union) === union.authorityId
       ),
       intorgId: "EU",

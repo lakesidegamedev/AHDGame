@@ -23,6 +23,18 @@ describe("conditional Desire forecasts", () => {
       expect(previous >= 60).toBe(turn === forecast.turnsToThreshold);
     }
   });
+  it("uses stance-independent Westminster approval in the dashboard forecast", () => {
+    const forecast = forecastIndependenceDesire({
+      previous: 36.13,
+      policy: "independence",
+      westminsterPolicy: "independence",
+      regionalApproval: 33.9,
+      nationalApproval: 29.2,
+      inflationPercent: 6,
+    });
+    expect(forecast.annualChange).toBe(3.8688);
+    expect(forecast.turnsToThreshold).toBe(297);
+  });
   it("accounts for bounds and an already met threshold", () => {
     const forecast = forecastIndependenceDesire({ ...inputs, previous: 99.99 });
     expect(forecast.annualChange).toBe(0.01);

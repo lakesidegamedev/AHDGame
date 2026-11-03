@@ -386,19 +386,3 @@ export async function isCountryAccessible(
   const { enabledForPlayers } = await getCountryAccess(countryId);
   return enabledForPlayers;
 }
-
-/**
- * Check whether economy-only pages for a country are visible to the user.
- *
- * Returns true for: admins (always), fully-enabled countries, or countries
- * in economy-preview mode. Political pages should still use
- * `isCountryAccessible()` — this helper is only for economy routes.
- */
-export async function isCountryEconomyVisible(
-  countryId: CountryId,
-  isAdmin: boolean
-): Promise<boolean> {
-  if (isAdmin) return true;
-  const { enabledForPlayers, economyPreview } = await getCountryAccess(countryId);
-  return enabledForPlayers || economyPreview;
-}

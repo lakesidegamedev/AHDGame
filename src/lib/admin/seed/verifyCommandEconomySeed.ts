@@ -79,11 +79,23 @@ export async function verifyCommandEconomySeed(
     ),
   ];
 
+  // A federation whose breakup applied left the command economy; its successor
+  // state is seeded without state enterprises.
+  const dissolved = new Set(
+    (
+      await db
+        .collection<{ _id: string; sourceEntityId: string }>("federationSettlementApplications")
+        .find({ presetId: preset, status: "applied" }, { projection: { sourceEntityId: 1 } })
+        .toArray()
+    ).map((row) => row.sourceEntityId)
+  );
+
   const countries: CommandEconomyCountryReport[] = [];
   const issues: string[] = [];
   const fatal: CountryId[] = [];
 
   for (const countryId of seededCountryIds) {
+    if (dissolved.has(countryId)) continue;
     const expected = commandEconomySoeSectors(countryId);
     if (expected.length === 0) continue;
     if (!isCommandEconomy(countryId, startingYear, true)) continue;

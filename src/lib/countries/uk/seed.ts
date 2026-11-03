@@ -1,3 +1,4 @@
+import { statePopulationUpdate } from "@/lib/admin/seed/rules/statePopulationUpdate";
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import { ObjectId, type Db } from "mongodb";
 import type {
@@ -57,7 +58,13 @@ export async function seedUKRegions(
   );
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
-    return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
+    return {
+      updateOne: {
+        filter: { _id },
+        update: statePopulationUpdate(regionData, reset),
+        upsert: true,
+      },
+    };
   });
   if (regionOps.length > 0)
     await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });

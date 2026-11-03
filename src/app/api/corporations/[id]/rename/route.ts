@@ -1,3 +1,4 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/corporations/[id]/rename:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -113,8 +114,12 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const oldName = corporation.name;
 
-    await db.collection<Corporation>("corporations").updateOne(
-      { _id: corporation._id },
+    const renamed = await db.collection<Corporation>("corporations").updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: costInCorpCurrency },
+        ...corporateDiscretionaryCashGuard(),
+      },
       {
         $set: {
           name: newName,
@@ -127,6 +132,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         },
       }
     );
+
+    if (renamed.matchedCount !== 1)
+      return errorResponse(
+        409,
+        "Insufficient spendable corporate funds, or outstanding taxes and payables."
+      );
 
     logWireEvent(
       "corporation_renamed",

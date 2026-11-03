@@ -45,7 +45,7 @@ const contextSchema = z
   })
   .passthrough();
 
-export const feedbackBugSchema = z.object({
+const feedbackBugSchema = z.object({
   type: z.literal("bug"),
   category: z.enum(BUG_CATEGORIES),
   title: z.string().min(1, "Title required").max(200),
@@ -60,7 +60,7 @@ export const feedbackBugSchema = z.object({
   sentryEventId: z.string().uuid().optional(),
 });
 
-export const feedbackSuggestionSchema = z.object({
+const feedbackSuggestionSchema = z.object({
   type: z.literal("suggestion"),
   category: z.enum(SUGGESTION_CATEGORIES),
   title: z.string().min(1, "Title required").max(200),

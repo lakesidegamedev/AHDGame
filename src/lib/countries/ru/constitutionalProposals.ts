@@ -13,7 +13,7 @@ import {
   type RussianConstitutionalDecisionKind,
 } from "./rules/constitutionalDecisions";
 
-export const RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION = "russianConstitutionalProposals";
+const RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION = "russianConstitutionalProposals";
 export interface RussianConstitutionalProposal {
   _id: string;
   preset: "1991-default";

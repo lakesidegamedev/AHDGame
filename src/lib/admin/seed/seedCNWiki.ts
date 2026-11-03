@@ -197,6 +197,8 @@ In game terms, this is handled through the standard confidence-of-the-legislatur
 ];
 
 export async function seedCNWiki(db: Db) {
+  // Bootstrap runs again after a reset. Existing community content belongs to
+  // the preserved wiki, including edits, publication state and view counts.
   const coll = db.collection<WikiPage>("wikiPages");
   const now = new Date();
 
@@ -204,7 +206,8 @@ export async function seedCNWiki(db: Db) {
     await coll.updateOne(
       { slug: page.slug },
       {
-        $set: {
+        $setOnInsert: {
+          _id: new ObjectId(),
           ...page,
           status: "published",
           featured: false,
@@ -212,9 +215,6 @@ export async function seedCNWiki(db: Db) {
           viewCount: 0,
           createdAt: now,
           updatedAt: now,
-        },
-        $setOnInsert: {
-          _id: new ObjectId(),
         },
       },
       { upsert: true }

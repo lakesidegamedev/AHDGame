@@ -17,7 +17,7 @@ import { frRegionCensusData, type FRRegionLayer1 } from "@/lib/seeds/fr/frRegion
 import { frRegionCensusData1953 } from "@/lib/seeds/fr/frRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const FR_GROUP_IDS = [
+const FR_GROUP_IDS = [
   "bourgeois_right",
   "catholic_conservative",
   "centrist_liberal",
@@ -205,6 +205,3 @@ export function getFrModel(era: EraId): CountryLayer1Model {
     census: convertCensus(census),
   };
 }
-
-export const frLayer1Model: CountryLayer1Model = getFrModel("1979");
-export const frGroupIds = [...FR_GROUP_IDS];

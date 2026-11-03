@@ -3,7 +3,6 @@ import type {
   CommandPosture,
   SupplyPriority,
   MilitaryCommand,
-  MilitaryOperation,
   MilitaryState,
 } from "./types";
 import { COMMAND_TYPES } from "./config";
@@ -19,23 +18,6 @@ export interface CommandDraft {
   commandingGeneralId: string | null;
   posture: CommandPosture;
   supply: SupplyPriority;
-}
-
-// Commands start empty per country — the defense minister builds the structure
-// (the US-flavored mockup seed was retired in the W3 wiring). Kept as an exported
-// empty array so any residual importer still type-checks.
-export const SEED_COMMANDS: MilitaryCommand[] = [];
-
-// Operations are display-only flavor; wired into the turn system in a later
-// sub-project (W6). Empty until then.
-export const SEED_OPERATIONS: MilitaryOperation[] = [];
-
-/**
- * All 12 postures are currently valid for every command type. Reserved hook for
- * future per-type restriction (backend spec enumerates postures per type).
- */
-export function isPostureValidForType(_type: CommandType, _posture: CommandPosture): boolean {
-  return true;
 }
 
 /**
@@ -118,7 +100,7 @@ export function validateDraft(draft: CommandDraft, state: MilitaryState): string
  *
  * Derived from state rather than a counter, so it is deterministic without a global.
  */
-export function nextCommandId(existing: MilitaryCommand[]): string {
+function nextCommandId(existing: MilitaryCommand[]): string {
   const taken = new Set(existing.map((c) => c.id));
   let n = existing.reduce((max, c) => {
     const m = /^cmd(\d+)$/.exec(c.id);

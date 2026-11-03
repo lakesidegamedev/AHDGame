@@ -4,6 +4,21 @@ import { oid, type BankingTransition } from "./boundary";
 
 export type FacilityKind = "cbMargin" | "discountWindow";
 
+/**
+ * CB margin principal that accrues interest: the whole line minus the
+ * interest-free part that arrived as a central-bank liquidity injection.
+ */
+export function interestBearingCbMarginDebt(charter: {
+  cbMarginDebt?: number | null;
+  cbLiquidityAdvanceDebt?: number | null;
+}): number {
+  const debt = Number.isFinite(charter.cbMarginDebt) ? Math.max(0, charter.cbMarginDebt!) : 0;
+  const advance = Number.isFinite(charter.cbLiquidityAdvanceDebt)
+    ? Math.max(0, charter.cbLiquidityAdvanceDebt!)
+    : 0;
+  return Math.max(0, debt - Math.min(debt, advance));
+}
+
 export function facilityInterestTransition(input: {
   key: string;
   bankId: string;

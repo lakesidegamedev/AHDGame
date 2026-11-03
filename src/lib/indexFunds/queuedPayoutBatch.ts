@@ -1,11 +1,11 @@
 /**
- * Queued NPP redemption payouts settled together.
+ * Queued NPP and holder redemption payouts settled together.
  *
- * Paying each queued NPP redemption through its own durable money move cost
- * about 30 round trips, so a pass could only afford a few hundred claims while
- * NPP rebalancing queued thousands per cycle and the queue grew without bound.
- * A batch pays the same claims, at the same pro-rata amounts and in the same
- * order, through one receipt: one fund debit, one credit per NPP, and every
+ * Paying each queued redemption through its own durable money move cost about
+ * 30 round trips, so a pass could only afford a few hundred claims while NPP
+ * rebalancing queued thousands per cycle and the queue grew without bound. A
+ * batch pays the same claims, at the same pro-rata amounts and in the same
+ * order, through one receipt: one fund debit, one credit per holder, and every
  * member's own receipts.
  *
  * Each member is frozen first with its exact payout (`payoutBatch`), so the
@@ -24,6 +24,7 @@ import {
   payoutReceiptDocs,
   payoutReceiptIds,
   type ClaimedRedemption,
+  type HolderCreditTarget,
   type QueuedPayoutAuditContext,
 } from "./queuedPayoutSettlement";
 
@@ -32,10 +33,19 @@ const QUEUE = "indexFundRedemptionQueue";
 /** Members per batch receipt. Bounds the journal record and its receipt writes. */
 export const QUEUED_PAYOUT_BATCH_MAX = 250;
 
+/** Collections a batched payout can credit. Anything else needs reconciliation. */
+type BatchCreditCollection = "npps" | "characters" | "imperialCharacters";
+const BATCH_CREDIT_COLLECTIONS: ReadonlySet<BatchCreditCollection> = new Set([
+  "npps",
+  "characters",
+  "imperialCharacters",
+]);
+
 /** The exact payout a batch member was frozen with. */
 export interface PayoutBatchMarker {
   key: string;
   paidAmount: number;
+  credit: number;
   units: number;
   remainingUnits: number;
   nav: number;
@@ -47,6 +57,10 @@ export interface PayoutBatchMember {
   entry: ClaimedRedemption;
   claimId: string;
   paidAmount: number;
+  /** Amount credited at the holder, in the holder's own currency. */
+  credit: number;
+  /** Where that credit lands, resolved once by the caller that priced it. */
+  creditTarget: HolderCreditTarget;
   units: number;
   remainingUnits: number;
   nav: number;
@@ -54,9 +68,19 @@ export interface PayoutBatchMember {
   nppCurrency: CurrencyCode;
 }
 
-type MarkedEntry = Pick<ClaimedRedemption, "_id" | "nppId" | "processingTurn"> & {
+type MarkedEntry = Pick<
+  ClaimedRedemption,
+  "_id" | "nppId" | "characterId" | "imperialCharacterId" | "processingTurn"
+> & {
   payoutBatch: PayoutBatchMarker;
 };
+
+/** The balance a member's payout credits, as a collection-qualified key. */
+function memberHolderKey(entry: MarkedEntry): string {
+  if (entry.characterId) return `characters:${String(entry.characterId)}`;
+  if (entry.imperialCharacterId) return `imperialCharacters:${String(entry.imperialCharacterId)}`;
+  return `npps:${String(entry.nppId)}`;
+}
 
 type BatchJournalRecord = {
   _id: string;
@@ -75,25 +99,39 @@ type BatchJournalRecord = {
 };
 
 /**
- * A queued payout can join a batch when it is an NPP claim whose units left
- * the fund at request time: its credit is the anchor amount itself (no FX
- * legs) and its debit carries no unit-supply guard.
+ * A queued payout can join a batch when its units left the fund at request time
+ * (so the fund debit carries no unit-supply guard) and its holder is one this
+ * batch can credit. Legacy rows that still burn units in the debit stay on the
+ * single-claim path, because each one changes the fund's unit supply.
  */
 export function isBatchablePayout(entry: ClaimedRedemption): boolean {
-  return (
-    entry.holderKind === "npp" &&
-    entry.nppId !== undefined &&
-    entry.characterId === undefined &&
-    entry.imperialCharacterId === undefined &&
-    entry.unitsBurnedAtRequest === true
-  );
+  if (entry.unitsBurnedAtRequest !== true) return false;
+  if (entry.holderKind === "npp")
+    return (
+      entry.nppId !== undefined &&
+      entry.characterId === undefined &&
+      entry.imperialCharacterId === undefined
+    );
+  if (entry.holderKind === "character")
+    return (
+      entry.characterId !== undefined &&
+      entry.nppId === undefined &&
+      entry.imperialCharacterId === undefined
+    );
+  if (entry.holderKind === "imperial_character")
+    return (
+      entry.imperialCharacterId !== undefined &&
+      entry.nppId === undefined &&
+      entry.characterId === undefined
+    );
+  return false;
 }
 
 function landed(result: { status: string; error?: string }) {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
 }
 
-/** One balanced receipt: the fund pays the sum, each NPP receives its own sum. */
+/** One balanced receipt: the fund pays the sum, each holder receives its own sum. */
 function batchPlan(
   fund: IndexFund,
   members: PayoutBatchMember[],
@@ -102,26 +140,38 @@ function batchPlan(
   audit: QueuedPayoutAuditContext
 ): BankingTransition {
   const now = new Date();
-  const credits = new Map<string, { id: ObjectId; amount: number }>();
+  const credits = new Map<
+    string,
+    { id: ObjectId; collection: string; path: string; amount: number }
+  >();
   const fundRows: Record<string, unknown>[] = [];
   const financialRows: Record<string, unknown>[] = [];
   const ledgerRows: Record<string, unknown>[] = [];
   const auditRows: Record<string, unknown>[] = [];
   let total = 0;
+  let credited = 0;
   for (const member of members) {
-    const nppId = member.entry.nppId!;
     total += member.paidAmount;
-    const credit = credits.get(String(nppId)) ?? { id: nppId, amount: 0 };
-    credit.amount += member.paidAmount;
-    credits.set(String(nppId), credit);
+    credited += member.credit;
+    const holderId =
+      member.entry.characterId ?? member.entry.imperialCharacterId ?? member.entry.nppId!;
+    const creditKey = `${member.creditTarget.collection}:${String(holderId)}`;
+    const credit = credits.get(creditKey) ?? {
+      id: holderId,
+      collection: member.creditTarget.collection,
+      path: member.creditTarget.path,
+      amount: 0,
+    };
+    credit.amount += member.credit;
+    credits.set(creditKey, credit);
     const receipts = payoutReceiptDocs({
       fund,
       entry: member.entry,
       receiptKey: `${key}:${member.entry._id}`,
       settlementKey: key,
-      holderId: nppId,
+      holderId,
       holder: member.holder,
-      credit: member.paidAmount,
+      credit: member.credit,
       paidAmount: member.paidAmount,
       units: member.units,
       remainingUnits: member.remainingUnits,
@@ -146,6 +196,21 @@ function batchPlan(
       ? [{ collection: "actionAuditLog", inserts: auditRows, note: "Queued payout audits" }]
       : []),
   ];
+  // A fund that pays in another currency converts at payout time; the anchor
+  // side leaves the fund and the native side lands in wallets. One burn and one
+  // mint state that conversion for the whole book, exactly as each single claim
+  // states it for itself.
+  const fxLegs: BankingTransition["legs"] =
+    credited === total
+      ? []
+      : [
+          {
+            kind: "burn",
+            amount: total,
+            note: "Anchor side of the frozen fund-to-wallet conversion",
+          },
+          { kind: "mint", amount: credited, note: "Native side of the same frozen conversion" },
+        ];
   return {
     key,
     kind: "fund_queued_redemption_batch",
@@ -158,16 +223,17 @@ function batchPlan(
         collection: "indexFunds",
         path: "cashAnchor",
         filter: { _id: fund._id },
-        note: "Queued NPP payouts, paid together",
+        note: "Queued payouts, paid together",
       },
       ...[...credits.values()].map((credit) => ({
         kind: "credit" as const,
         amount: credit.amount,
-        collection: "npps",
-        path: "nppInvestmentCashAnchor",
+        collection: credit.collection,
+        path: credit.path,
         filter: { _id: credit.id },
-        note: "This NPP's queued payouts",
+        note: "This holder's queued payouts",
       })),
+      ...fxLegs,
     ],
     projections,
     event: {
@@ -232,28 +298,46 @@ async function rejectedWithoutCash(db: Db, key: string) {
   return record?.status === "rejected" && record.legs.every((leg) => !leg.applied);
 }
 
+/** Count in-flight receipts for undelivered credits in one holder collection. */
+async function inFlightCreditReceipts(
+  db: Db,
+  collection: BatchCreditCollection,
+  ids: unknown[],
+  key: string
+): Promise<number> {
+  return db.collection(collection).countDocuments({
+    _id: { $in: ids },
+    "pendingMoneyMoveReceipt.key": key,
+  } as Document);
+}
+
 /**
  * Credits the batch can no longer deliver: the fund debit landed, and each
- * undelivered credit was refused, lost its NPP mid-pass ("no target"), or was
- * never attempted because an earlier one stopped delivery. Returns undefined
- * when any undelivered target still holds an in-flight receipt for this
- * move: that credit may have landed, so only reconciliation may decide.
+ * undelivered credit was refused, lost its holder mid-pass ("no target"), or
+ * was never attempted because an earlier one stopped delivery. Returns
+ * undefined when any undelivered target still holds an in-flight receipt for
+ * this move: that credit may have landed, so only reconciliation may decide.
  */
 async function undeliverableCredits(db: Db, record: BatchJournalRecord) {
   const debit = record.legs.find((leg) => leg.kind === "debit");
   if (record.status !== "partial" || !debit?.applied || debit.collection !== "indexFunds")
     return undefined;
   const open = record.legs.filter((leg) => leg.kind === "credit" && !leg.applied);
-  if (!open.length || open.some((leg) => leg.collection !== "npps")) return undefined;
-  const inFlight = await db.collection("npps").countDocuments({
-    _id: { $in: open.map((leg) => leg.filter?._id) },
-    "pendingMoneyMoveReceipt.key": record._id,
-  } as Document);
-  return inFlight ? undefined : open;
+  if (
+    !open.length ||
+    open.some((leg) => !BATCH_CREDIT_COLLECTIONS.has(leg.collection as BatchCreditCollection))
+  )
+    return undefined;
+  for (const collection of BATCH_CREDIT_COLLECTIONS) {
+    const ids = open.filter((leg) => leg.collection === collection).map((leg) => leg.filter?._id);
+    if (!ids.length) continue;
+    if (await inFlightCreditReceipts(db, collection, ids, record._id)) return undefined;
+  }
+  return open;
 }
 
 /**
- * Settle a batch whose credits cannot all be delivered (an NPP disappeared
+ * Settle a batch whose credits cannot all be delivered (a holder disappeared
  * mid-pass). Return the undelivered amount to the fund, publish the receipts
  * of the members that were paid, and close the original receipt so its
  * undelivered legs are never retried; then close the paid members and release
@@ -269,18 +353,32 @@ async function compensateRefusals(
   const refused = new Map<string, number>();
   for (const leg of record.legs) {
     if (leg.kind !== "credit" || leg.applied) continue;
-    const id = String(leg.filter?._id);
-    refused.set(id, (refused.get(id) ?? 0) + leg.amount);
+    const key = `${String(leg.collection)}:${String(leg.filter?._id)}`;
+    refused.set(key, (refused.get(key) ?? 0) + leg.amount);
   }
   const debit = record.legs.find((leg) => leg.kind === "debit")!;
-  const paid = members.filter((m) => !refused.has(String(m.nppId)));
-  const unpaid = members.filter((m) => refused.has(String(m.nppId)));
+  const paid = members.filter((m) => !refused.has(memberHolderKey(m)));
+  const unpaid = members.filter((m) => refused.has(memberHolderKey(m)));
   const keep = new Set(paid.flatMap((m) => payoutReceiptIds(`${record._id}:${m._id}`)));
   const receipts = (record.projections ?? []).flatMap(({ projection }) => {
     const rows = (projection.inserts ?? []).filter((row) => keep.has(String(row._id)));
     return rows.length ? [{ ...projection, inserts: rows }] : [];
   });
-  const amount = [...refused.values()].reduce((sum, value) => sum + value, 0);
+  // The refund is what the fund actually paid out, in anchor, for the members
+  // whose credit never landed. Their credit is native, so summing the refused
+  // legs would return the wrong amount for a converted payout. A refused leg
+  // whose queue row is gone falls back to its own amount.
+  const refundByHolder = new Map<string, number>();
+  for (const member of unpaid) {
+    const holderKey = memberHolderKey(member);
+    refundByHolder.set(
+      holderKey,
+      (refundByHolder.get(holderKey) ?? 0) + member.payoutBatch.paidAmount
+    );
+  }
+  let amount = 0;
+  for (const [holderKey, refusedAmount] of refused)
+    amount += refundByHolder.get(holderKey) ?? refusedAmount;
   const refund: BankingTransition = {
     key: `${record._id}:refund`,
     kind: "fund_redemption_refund",
@@ -293,7 +391,7 @@ async function compensateRefusals(
         collection: "indexFunds",
         filter: { _id: debit.filter?._id },
         path: "cashAnchor",
-        note: "Return the refused NPP payouts to the fund",
+        note: "Return the refused payouts to the fund",
       },
       { kind: "mint", amount, note: "Contra for the undelivered part of the original debit" },
     ],
@@ -351,8 +449,9 @@ async function conclude(
 }
 
 /**
- * Pay claimed, frozen-amount NPP payouts through one receipt. Returns how many
- * members were paid. Members whose claim was lost to recovery are left alone.
+ * Pay claimed, frozen-amount queued payouts through one receipt. Returns how
+ * many members were paid. Members whose claim was lost to recovery are left
+ * alone.
  */
 export async function settleQueuedPayoutBatch(
   db: Db,
@@ -368,6 +467,8 @@ export async function settleQueuedPayoutBatch(
       isBatchablePayout(m.entry) &&
       Number.isFinite(m.paidAmount) &&
       m.paidAmount > 0 &&
+      Number.isFinite(m.credit) &&
+      m.credit > 0 &&
       Number.isFinite(m.nav) &&
       m.nav > 0
   );
@@ -378,6 +479,7 @@ export async function settleQueuedPayoutBatch(
     marker: {
       key,
       paidAmount: m.paidAmount,
+      credit: m.credit,
       units: m.units,
       remainingUnits: m.remainingUnits,
       nav: m.nav,
@@ -430,6 +532,8 @@ export async function settleQueuedPayoutBatch(
     members.map((m) => ({
       _id: m.member.entry._id,
       nppId: m.member.entry.nppId,
+      characterId: m.member.entry.characterId,
+      imperialCharacterId: m.member.entry.imperialCharacterId,
       processingTurn: m.member.entry.processingTurn,
       payoutBatch: m.marker,
     })),

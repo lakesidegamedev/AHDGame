@@ -9,20 +9,11 @@ import type {
   StateBillProvision,
 } from "@/lib/db/types";
 import { getSubNationalLegislatureKey, type CountryId } from "@/lib/constants/countries";
-import {
-  STATE_TERMINAL_STATUSES,
-  checkDuplicateProvisions,
-  checkCurrentPolicyLevel,
-} from "@/lib/congress/billProposalLimits";
-import {
-  BILL_PROPOSE_ACTION_COST,
-  countProvisionsChargedNationalInfluence,
-  getProvisionCostTotal,
-  SUBSIDY_BILL_CATEGORIES,
-} from "@shared/constants/legislation";
-import type { BillCategory } from "@shared/constants/legislation";
+import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
+import { BILL_PROPOSE_ACTION_COST, getProvisionCostTotal } from "@shared/constants/legislation";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { stampTaxSliderProvisions } from "@/lib/politicalLegislation/taxSlider";
+import { getGameState } from "@/lib/gameState";
+import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -106,65 +97,22 @@ export async function queueBill(
     return { status: 400, body: { error: "NPP already has an active bill in flight." } };
   }
 
-  let stampedProvisions = provisions;
-  if (provisions && provisions.length > 0) {
-    const stamped = await stampTaxSliderProvisions(db, provisions, countryId, stateId);
-    if (!stamped.ok) {
-      return { status: 400, body: { error: stamped.error } };
-    }
-    stampedProvisions = stamped.provisions;
-  }
-
-  // Policy-provision guards: refuse to queue a bill that proposes the current
-  // policy level or duplicates a provision already in flight in this state.
-  // Mirrors proposeStateBill so direct-propose and queued-via-NPP have parity.
-  const policyProvisionsForCheck = (stampedProvisions ?? [])
-    .filter(
-      (p): p is { legislationTypeId: string; policyOptionId?: string; effectDirection: number } =>
-        !("type" in p) || (p.type !== "subsidy" && p.type !== "end_subsidy")
-    )
-    .filter((p) => p.legislationTypeId);
-
-  const duplicateCheck = await checkDuplicateProvisions(
-    db,
-    "stateBills",
-    { stateId, status: { $nin: STATE_TERMINAL_STATUSES } },
-    policyProvisionsForCheck
-  );
-  if (duplicateCheck) {
-    return { status: 409, body: { error: duplicateCheck.error } };
-  }
-
-  const currentLevelCheck = await checkCurrentPolicyLevel(db, stateId, policyProvisionsForCheck);
-  if (currentLevelCheck) {
-    return { status: 409, body: { error: currentLevelCheck.error } };
-  }
-
-  // Cost calculation mirrors proposeStateBill.
-  const policyCount = (stampedProvisions ?? []).filter(
-    (p) => !("type" in p) || (p.type !== "subsidy" && p.type !== "end_subsidy")
-  ).length;
-  const subsidyCount = (stampedProvisions ?? []).filter(
-    (p) => "type" in p && (p.type === "subsidy" || p.type === "end_subsidy")
-  ).length;
-
-  if (subsidyCount > 0 && category && !SUBSIDY_BILL_CATEGORIES.has(category as BillCategory)) {
-    return {
-      status: 400,
-      body: { error: "Subsidy provisions can only be included in industry bills." },
-    };
-  }
-  if (category === "industry" && subsidyCount === 0) {
-    return {
-      status: 400,
-      body: { error: "Industry bills must contain at least one subsidy provision." },
-    };
-  }
-
-  const influenceCount = countProvisionsChargedNationalInfluence({
-    policyProvisionCount: policyCount,
-    subsidyProvisionCount: subsidyCount,
+  // The same provision gate a direct proposal runs: reviewed v2 law selections
+  // are resolved against the region's catalog and frozen with the snapshot
+  // enactment needs, tax rates are stamped, and subsidies, duplicates and the
+  // current law are checked.
+  const validation = await validateStateBillProvisions(db, {
+    countryId,
+    stateId: stateId.toUpperCase(),
+    gameState: await getGameState(db),
+    category,
+    provisions,
   });
+  if (!validation.ok) {
+    return { status: validation.status, body: { error: validation.error } };
+  }
+  const { provisions: stampedProvisions, influenceProvisionCount: influenceCount } = validation;
+
   const npiCost = getProvisionCostTotal(influenceCount);
   const actionCost = BILL_PROPOSE_ACTION_COST;
 

@@ -43,7 +43,7 @@ import {
 import { classifyPartialMoneyMove, type PartialMoneyMoveSource } from "./moneyMoves";
 
 /** Real account kinds whose balances the reset removes or rewrites. */
-export const DESTROYED_ACCOUNT_KINDS: readonly string[] = Object.freeze([
+const DESTROYED_ACCOUNT_KINDS: readonly string[] = Object.freeze([
   "character",
   "character_savings",
   "corporation",
@@ -65,6 +65,8 @@ export interface EconomyResetSource {
   };
   wipeCounts: Record<string, number>;
   partialWipeCounts: Record<string, number>;
+  /** Rows in the reference collections the reset reseeds (commodityPrices, exchangeRates). */
+  reseedCounts: Record<string, number>;
   campaignRates: CampaignCurrencyRates;
   /** Live local-per-anchor rate by currency. */
   anchorRates: Record<string, number>;
@@ -121,7 +123,7 @@ export interface EconomyResetSource {
 }
 
 /** Round to a fixed precision so float noise never changes the digest. */
-export function roundAmount(value: number): number {
+function roundAmount(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.round(value * 1e6) / 1e6;
 }
@@ -141,7 +143,7 @@ function byId<T extends { id: string }>(rows: T[]): T[] {
  * yet in EUR. On a kept budget that would rescale live fiscal state, so a
  * member treasury that is not already in EUR blocks the reset.
  */
-export function currencyTopologyBlockers(
+function currencyTopologyBlockers(
   budgets: { countryId: string; storedCurrencyCode: string | null }[],
   preset: string
 ): string[] {
@@ -320,6 +322,9 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
     partialWipe: Object.keys(source.partialWipeCounts)
       .sort()
       .map((collection) => ({ collection, count: source.partialWipeCounts[collection] })),
+    reseed: Object.keys(source.reseedCounts)
+      .sort()
+      .map((collection) => ({ collection, count: source.reseedCounts[collection] })),
     characters,
     imperialCharacterIds: [...source.imperialCharacterIds].sort(),
     nppIdsWithMoney: source.npps

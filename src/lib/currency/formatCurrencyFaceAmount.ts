@@ -1,5 +1,4 @@
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
-import type { CurrencyCode } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
 
 /**

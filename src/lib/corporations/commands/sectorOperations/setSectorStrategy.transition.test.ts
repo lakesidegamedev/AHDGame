@@ -10,6 +10,7 @@ vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({
   resolveCorporation: vi.fn(),
   requireCeo: vi.fn().mockReturnValue(null),
+  requireCeoOrDirectingParent: vi.fn().mockResolvedValue({ ok: true, directingParentId: null }),
 }));
 vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ ok: true }),

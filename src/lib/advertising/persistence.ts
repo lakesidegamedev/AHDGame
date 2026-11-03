@@ -350,12 +350,6 @@ export async function updateAdvertisingAgreementPersistent(
   return current ? { ok: true, agreement: current } : { ok: false, reason: "not_found" };
 }
 
-/** Agreements settling on the given turn (active or cancelling, in window). */
-export async function getSettlingAdvertisingAgreements(db: Db): Promise<AdvertisingAgreement[]> {
-  const collection = db.collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION);
-  return collection.find({ status: { $in: ["active", "cancelling"] } } as never).toArray();
-}
-
 /** Every agreement touching one corporation, newest first. */
 export async function getAdvertisingAgreementsForCorp(
   db: Db,
@@ -439,20 +433,8 @@ export async function upsertAdvertisingSettlement(
   );
 }
 
-/** Latest settlement for one corporation, if any. */
-export async function getLatestAdvertisingSettlement(
-  db: Db,
-  corporationId: string
-): Promise<AdvertisingSettlement | null> {
-  const collection = db.collection<AdvertisingSettlement>(ADVERTISING_SETTLEMENTS_COLLECTION);
-  const rows = await collection
-    .find({ corporationId } as never, { sort: { turn: -1 }, limit: 1 } as never)
-    .toArray();
-  return rows[0] ?? null;
-}
-
 /** Settlement documents older than this many turns are dropped. */
-export const AD_SETTLEMENT_RETENTION_TURNS = 8;
+const AD_SETTLEMENT_RETENTION_TURNS = 8;
 
 /** One bounded deleteMany keeps the settlement collection from growing per turn. */
 export async function pruneAdvertisingSettlements(db: Db, turn: number): Promise<void> {

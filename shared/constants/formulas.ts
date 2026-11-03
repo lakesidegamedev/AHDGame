@@ -6,8 +6,9 @@
  * live in src/lib/actions.ts as the single source of truth.
  */
 
-/** Favorability is stable at or below this value unless other systems reduce it. */
-export const FAVORABILITY_NATURAL_DECAY_THRESHOLD = 60;
+import { FAVORABILITY_NATURAL_DECAY_THRESHOLD } from "./thresholds";
+
+export { FAVORABILITY_NATURAL_DECAY_THRESHOLD } from "./thresholds";
 
 /** Political influence decays by 0.75% of current value per turn. */
 export const POLITICAL_INFLUENCE_DECAY_RATE = 0.0075;

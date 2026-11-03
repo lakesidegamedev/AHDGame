@@ -8,6 +8,11 @@ vi.mock("@/lib/mechanicalLaws/guards", () => ({
   assertSubsidiaryWithinCap: vi.fn().mockResolvedValue(null),
   wouldGainControl: vi.fn().mockReturnValue(false),
 }));
+// Keep legacy merge/NAV fixtures focused on their own behavior. The complete
+// valuation loader and accounting rules run in acquisitionSafeguards.test.ts.
+vi.mock("@/lib/corporations/commands/acquisitions/referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({ minimumPriceAnchor: 0, portfolioAnchor: 0 }),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireCorporationActions", () => ({
   requireCorporationActionsEnabled: vi.fn(),

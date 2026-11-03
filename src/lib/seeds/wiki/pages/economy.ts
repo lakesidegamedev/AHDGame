@@ -110,6 +110,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "unions",
+    designDocUrl: "design/labour.html",
     title: "Unions",
     description:
       "Sector unionization, standing labour premiums, strikes, union law, player-run unions, and union-busting: phased behind labour tiers.",
@@ -162,6 +163,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "commodities",
+    designDocUrl: "design/commodities.html",
     title: "Commodities",
     description:
       "The 27-commodity market: supply, demand, dynamic pricing, three-tier margin blends, storage, and how shortages affect corporate margins.",
@@ -280,6 +282,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "central-banks",
+    designDocUrl: "design/monetary-system-as-shipped.html",
     title: "Central Banks",
     description:
       "The Central Bank Chair position, prime rate mechanics, the policy cockpit, rate decisions, scrutiny, FX defense, and how interest rates ripple through the economy.",
@@ -292,6 +295,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "fomc",
+    designDocUrl: "design/monetary-system-as-shipped.html",
     title: "FOMC / Rate-Setting Board",
     description:
       "The US Federal Reserve's 7-seat committee: presidential nominations confirmed by the Senate, meetings every 8 turns, 24-hour player votes, majority of seated governors, 16 rate changes per 192-turn term.",
@@ -369,6 +373,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "index-funds",
+    designDocUrl: "design/stock-market.html",
     title: "Index Funds",
     description:
       "Passive investment vehicles that track a market basket: NAV, subscribe/redeem, and the 75/25 dividend pass-through.",
@@ -380,6 +385,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "line-of-credit",
+    designDocUrl: "design/monetary-system-as-shipped.html",
     title: "Line of Credit",
     description:
       "Borrowing against your credit score from the central bank: composite scoring, spread curve, funding sources, and garnishment.",
@@ -391,6 +397,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "savings-interest",
+    designDocUrl: "design/monetary-system-as-shipped.html",
     title: "Savings & Interest",
     description:
       "How idle cash earns interest at half the inflation-adjusted real rate, accruing every turn and crediting quarterly.",
@@ -402,6 +409,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "sovereign-default",
+    designDocUrl: "design/sovereign-bonds.html",
     title: "Sovereign Default",
     description:
       "The sovereign default crisis pipeline: failed auctions, demand penalty curve, resolution paths, default scar, and recovery floor.",
@@ -413,6 +421,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "imf",
+    designDocUrl: "design/imf-corporate-bailout.html",
     title: "Corporate IMF Restructuring",
     description:
       "The admin corporate rescue: bond haircut, IMF equity dilution, income-capped facility payments, and operating restrictions.",
@@ -424,6 +433,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "corporate-mergers",
+    designDocUrl: "design/corporate-mergers-and-acquisitions.html",
     title: "Corporate Mergers & Acquisitions",
     description:
       "Proposing and accepting whole-corporation acquisitions: reference valuation, shareholder buyout, and the merger review gate that can block or condition a deal.",
@@ -436,6 +446,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "subsidiary-corporations",
+    designDocUrl: "design/subsidiary-corporations.html",
     title: "Subsidiary Corporations",
     description:
       "Formalizing voting control over another player's corporation: capital injection, dividend floors, CEO appointment, spin-offs, and group tax relief.",
@@ -447,6 +458,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "pensions",
+    designDocUrl: "design/pensions.html",
     title: "Pensions",
     description:
       "Union-bargained occupational pensions: employer contributions, deficit top-ups, benefit payments, and how a scheme's funding health is measured.",
@@ -458,6 +470,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "imf-sovereign-facility",
+    designDocUrl: "design/imf-sovereign-facility.html",
     title: "IMF Sovereign Facility",
     description:
       "The country-level IMF bailout after a sovereign default crisis: loan sizing, income-capture repayment, and the IMF board's override window.",
@@ -469,6 +482,7 @@ export const economyPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "interbank-lending",
+    designDocUrl: "design/interbank-and-bank-resolution.html",
     title: "Interbank Lending",
     description:
       "Bank-to-bank lending, the central bank margin line, and what happens to a failed bank's outstanding loan book.",

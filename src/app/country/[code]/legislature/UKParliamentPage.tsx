@@ -21,7 +21,7 @@ import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import { LeaderCard } from "@/components/legislature/LeaderCard";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import LegislatureHeader from "./components/shared/LegislatureHeader";
 import {
   useLegislatureData,

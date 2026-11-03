@@ -48,6 +48,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "declaring-war",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Declaring War",
     description:
       "War is legislation: the two-thirds bill, war goals, who may file, the 120-turn cooldown, truces, treaty allies pulled in by mutual defence, joining an existing war, and opening forces.",
@@ -60,6 +61,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "military-units",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Units, Recruitment & Procurement",
     description:
       "Domains, branches and era gating, unit costs and upkeep, plus defence contracts, committed appropriations, supplier pricing, equipment grades, and production lines.",
@@ -72,6 +74,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "manpower-conscription",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Manpower & Conscription",
     description:
       "The manpower pool and its ceiling, the five-rung reserve-law ladder, trained versus conscript replacements, and why rebuilding veterans with conscripts degrades them.",
@@ -84,6 +87,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "generals",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Generals & the Officer Corps",
     description:
       "Commissioning, the five ranks and their XP thresholds, all four sources of skill points, the 115-node trait tree, derived specialisation, and dismissal.",
@@ -97,6 +101,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "national-doctrine",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "National Doctrine",
     description:
       "Your nation's permanent way of fighting: 12 points against 128 nodes, decade gating, prerequisites, and how doctrine boosts your generals' traits.",
@@ -109,6 +114,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "military-commands",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Commands & Command Structure",
     description:
       "Commands, the 19 strategic regions, capacity and effectiveness, Commanding Generals, Theater Commanders and the authority they take from the defence seat.",
@@ -121,6 +127,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "fighting-a-battle",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Fighting a Battle",
     description:
       "The operational loop: deploying through generals, reading the two odds bars, declaring an offensive, the defender's window, coalitions, retreat and battle reports.",
@@ -134,6 +141,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "occupation-and-victory",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Occupation, Territory & Victory",
     description:
       "The control meter, why a war opens at the defender's pole, supply derived from the front's displacement, winding down, the front map, and what winning outright opens.",
@@ -146,6 +154,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "peace-and-truces",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Peace, Indemnities & Truces",
     description:
       "Bilateral peace offers, the 72-turn window, the four terms (white peace, indemnity, regime change, demilitarisation), asking an enemy to leave, dictating terms after an outright win, and the 240-turn truce that follows any war.",
@@ -171,6 +180,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "defence-procurement",
+    designDocUrl: "design/defence-procurement.html",
     title: "Defence Procurement",
     description:
       "How defence contracts turn the appropriation into materiel: quarterly contracting windows, the one-third supplier cap, the self-dealing disclosure and penalty, what it costs a minister to tear a contract up, and the per-turn spend cap that throttles delivery.",
@@ -183,6 +193,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "nuclear-programme",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "The Nuclear Programme",
     description:
       "The bomb as a defence-seat project: entry gates, the device ladder and its public tests, delivery legs, production rates and warhead costs, the defence-budget funding path, and covert programmes.",
@@ -195,6 +206,7 @@ export const militaryPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "cold-war-tension",
+    designDocUrl: "design/conflict-system-as-shipped.html",
     title: "Cold War Tension",
     description:
       "The world's shared 0 to 100 tension gauge: its five bands, what raises and lowers it, and how it drives readiness, procurement demand, and detente goodwill.",

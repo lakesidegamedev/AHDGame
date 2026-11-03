@@ -1,6 +1,6 @@
 import { clamp } from "@/lib/numeric/rules";
 import type { CountryId } from "@/lib/constants/countries";
-import { getMajorPartiesForRegion } from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, getMajorPartiesForRegion } from "@/lib/constants/countries";
 import { FPTP_SPOILER_RATE } from "../constants";
 import { partitionMajorParties } from "../majorParties";
 
@@ -16,6 +16,29 @@ export interface SpoilerTransferOptions {
   parentRegionId?: string;
   spoilerRate?: number;
   useOrgAwareSpoiler?: boolean;
+}
+
+export interface SpoilerGateOptions {
+  votingSystem?: string;
+  isOnePartyState?: boolean;
+  countryId?: CountryId;
+}
+
+/**
+ * Whether the FPTP spoiler step runs for a general election. RCV removes the
+ * spoiler. One-party states skip it too: the regime multiplier already encodes
+ * ruling-vs-approved dominance, so "third party bleeds the major" does not
+ * describe that landscape. Prefer the runtime `isOnePartyState` (resolved from
+ * countryState by the caller, so a mid-game conversion takes effect at once);
+ * the compile-time config is only a fallback for hand-built fixtures.
+ */
+export function shouldApplyFptpSpoiler(options: SpoilerGateOptions = {}): boolean {
+  if (options.votingSystem === "rcv") return false;
+  const isOnePartyState =
+    options.isOnePartyState ??
+    (options.countryId != null &&
+      COUNTRY_CONFIGS[options.countryId]?.governmentType === "onePartyState");
+  return !isOnePartyState;
 }
 
 function spoilerOrgFactor(thirdPartyOrg: number | undefined, majorOrg: number | undefined): number {

@@ -2,7 +2,7 @@
 
 import { InlineError } from "@/components/ui/InlineError";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { COUNTRY_ORDER } from "@/lib/constants/countries";
+import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
 import { NppV1ReadinessPanel } from "./NppV1ReadinessPanel";
 
 type NppRow = {

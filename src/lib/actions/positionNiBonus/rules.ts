@@ -33,7 +33,7 @@ export const CONGRESS_LEADER_NI_BONUS: Partial<Record<LeadershipRole, number>> =
  * Presiding officers run the floor, the party leaders on both sides fight it,
  * and the remaining officers carry a smaller load.
  */
-export const LEADERSHIP_ACTION_BONUS: Partial<Record<LeadershipRole, number>> = {
+const LEADERSHIP_ACTION_BONUS: Partial<Record<LeadershipRole, number>> = {
   speaker_of_the_house: 3,
   speaker_of_the_bundestag: 3,
   chair_npcsc: 3,
@@ -52,7 +52,7 @@ export const LEADERSHIP_ACTION_BONUS: Partial<Record<LeadershipRole, number>> = 
 };
 
 /** Leader of the Opposition: same floor role as a minority leader. */
-export const OPPOSITION_LEADER_ACTION_BONUS = 2;
+const OPPOSITION_LEADER_ACTION_BONUS = 2;
 /** Shadow cabinet member: mirrors the cabinet's +1. */
 export const SHADOW_CABINET_ACTION_BONUS = 1;
 /** Seated Supreme Court justice: stacks on any other office held. */
@@ -80,23 +80,23 @@ export function resolveLeadershipActionBonus({
 }
 
 /** Party offices. */
-export const PARTY_CHAIR_NI_BONUS = 2.0;
-export const PARTY_SUB_CHAIR_NI_BONUS = 1.5;
-export const STATE_PARTY_CHAIR_NI_BONUS = 0.5;
+const PARTY_CHAIR_NI_BONUS = 2.0;
+const PARTY_SUB_CHAIR_NI_BONUS = 1.5;
+const STATE_PARTY_CHAIR_NI_BONUS = 0.5;
 /** Central bank chair: the cabinet tier. */
-export const CENTRAL_BANK_CHAIR_NI_BONUS = CABINET_NI_BONUS;
+const CENTRAL_BANK_CHAIR_NI_BONUS = CABINET_NI_BONUS;
 
 /** CEO of one of the 10 largest listed corporations in their country. */
-export const MAJOR_CEO_NI_BONUS = 0.3;
+const MAJOR_CEO_NI_BONUS = 0.3;
 /** CEO of any other qualifying corporation. */
-export const CEO_NI_BONUS = 0.15;
+const CEO_NI_BONUS = 0.15;
 export type CeoNiTier = "major" | "standard";
 
 /**
  * Leading an international organisation is a separate stage from domestic
  * office, so it adds on top of the domestic tier instead of competing with it.
  */
-export const ORG_HEAD_NI_BONUS = 1.0;
+const ORG_HEAD_NI_BONUS = 1.0;
 
 export interface PositionNiBonusInput {
   currentOfficeType?: string;

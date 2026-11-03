@@ -39,7 +39,7 @@ import { CareerHistory } from "@/app/profile/components/CareerHistory";
 import { ProfileSocial } from "@/app/profile/components/ProfileSocial";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { getAuthUserWithCharacter } from "@/lib/auth";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import {
   calculateFavorabilityAboveThresholdPenalty,
   calculateNetNationalInfluencePerTurn,
@@ -88,6 +88,7 @@ import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstant
 import { countryElectionsUrl, countryUrl, politiciansUrl, regionUrl } from "@/lib/urls";
 import { truncate, loadCharacterByUrlId } from "./characterLoaders";
 import { buildPublicSummary, getCharacterById, type OverviewStatItem } from "./characterData";
+import { raceHref } from "@/lib/campaignManager/links";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -775,10 +776,17 @@ export default async function CharacterPage({ params }: PageProps) {
 
             <CareerHistory
               character={{
-                careerHistory: character.careerHistory,
+                // Titles are resolved here, where the country registry is
+                // already loaded, rather than in the browser bundle.
+                careerHistory: (character.careerHistory ?? []).map((event) =>
+                  event.office
+                    ? { ...event, officeLabel: getOfficeLabel(event.office, character.countryId) }
+                    : event
+                ),
                 currentOffice: character.currentOffice,
                 countryId: character.countryId,
               }}
+              currentOfficeLabel={officeLabel}
               partyNames={partyNames}
               gameDateAnchor={gameDateAnchor}
               partyHistory={partyHistory}
@@ -791,7 +799,10 @@ export default async function CharacterPage({ params }: PageProps) {
                   {candidateElections.map(({ election, candidacy }) => (
                     <li key={candidacy._id.toString()} className="py-2">
                       <Link
-                        href={`/elections/${election._id.toString()}`}
+                        href={raceHref({
+                          id: election._id.toString(),
+                          electionType: election.electionType,
+                        })}
                         className={`text-body-sm ${PROFILE_LINK_CLASS}`}
                       >
                         {formatElectionTypeLabel(election.electionType, character.countryId)}

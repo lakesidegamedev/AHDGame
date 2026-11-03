@@ -1,6 +1,7 @@
 /**
  * Shell for the commodity-level build toll: loads a firm's sectors (with their
- * queues) and world demand, then hands them to the pure rules in
+ * queues) and world demand (plus the target state's demand for commodities
+ * that only sell where they are made), then hands them to the pure rules in
  * `rules/commodityDominance.ts`. Used by the build command, the build quote and
  * anything else that must price a build the way the server charges it.
  */
@@ -16,11 +17,14 @@ import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sect
 import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import type { CommodityTollModel } from "@/lib/corporations/rules/commodityDominanceRamp";
 import {
+  commodityDominanceMarket,
   commodityDominanceRatio,
+  sectorInDominanceMarket,
   type CommodityDominanceResult,
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
+import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
@@ -72,7 +76,11 @@ export interface CommodityDominanceContext {
   commodities: CommodityType[];
   /** World demand per commodity (units/day), absent when unknown. */
   demand: Partial<Record<CommodityType, number>>;
+  /** Target state's demand per state-scoped commodity, absent when unknown. */
+  stateDemand?: Partial<Record<CommodityType, number>>;
   targetSectorId: string;
+  /** State the target sector sits in, for state-scoped commodities. */
+  targetStateId?: string | null;
   isNatcorp: boolean;
   turn: number;
   currentYear: number;
@@ -182,21 +190,54 @@ export async function loadCommodityDominanceContext(
       .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;
     const sectors = (rows as FirmSectorRow[]).map((r) => toDominanceSector(r, args.turn));
-    const target = sectors.find((s) => String(s._id) === String(args.sector._id));
-    if (!target) return null;
-    const commodities = sectorOutputCommodities(target, args.turn);
+    const targetIndex = sectors.findIndex((s) => String(s._id) === String(args.sector._id));
+    if (targetIndex < 0) return null;
+    // Price the toll on the strategy the ORDER will run, not the trailing
+    // retool blend. A sector part-way through standard -> iron_mining still
+    // reports the old diversified mix to production, so counting that mix
+    // charged an iron mine for its timber/rare-earth byproducts: a firm with
+    // 26k units of queued extraction capacity was quoted 40x because 1.5% of
+    // its transitional mix was timber against a 36 unit/day world market.
+    // The new units land after the retool and will make iron only. Other
+    // sectors of the firm keep their live effective mix, because they are not
+    // being expanded and their current output is real.
+    const pricedSectors = sectors.map((sector, index) =>
+      index === targetIndex
+        ? { ...sector, transitionFromStrategyId: null, transitionStartTurn: null }
+        : sector
+    );
+    const pricedTarget = pricedSectors[targetIndex];
+    const commodities = sectorOutputCommodities(pricedTarget, args.turn);
     if (commodities.length === 0) return null;
+    const targetStateId = pricedTarget.stateId ? String(pricedTarget.stateId) : null;
+    const readsState = targetStateId != null && commodities.some(isStateScopedCommodity);
     const priceDocs = await db
       .collection<CommodityPrice>("commodityPrices")
-      .find({ commodity: { $in: commodities } }, { projection: { commodity: 1, globalDemand: 1 } })
+      .find(
+        { commodity: { $in: commodities } },
+        {
+          projection: {
+            commodity: 1,
+            globalDemand: 1,
+            ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
+          },
+        }
+      )
       .toArray();
     const demand: Partial<Record<CommodityType, number>> = {};
-    for (const doc of priceDocs) demand[doc.commodity] = doc.globalDemand;
+    const stateDemand: Partial<Record<CommodityType, number>> = {};
+    for (const doc of priceDocs) {
+      demand[doc.commodity] = doc.globalDemand;
+      const local = targetStateId ? doc.stateDemand?.[targetStateId] : undefined;
+      if (typeof local === "number") stateDemand[doc.commodity] = local;
+    }
     return {
-      sectors,
+      sectors: pricedSectors,
       commodities,
       demand,
+      stateDemand,
       targetSectorId: String(args.sector._id),
+      targetStateId,
       isNatcorp: !!args.corporation.countryOwnerId,
       turn: args.turn,
       currentYear: args.currentYear,
@@ -217,7 +258,9 @@ export function commodityDominanceFor(
     sectors: ctx.sectors,
     commodities: ctx.commodities,
     demandOf: (c) => ctx.demand[c],
+    stateDemandOf: (c) => ctx.stateDemand?.[c],
     targetSectorId: ctx.targetSectorId,
+    targetStateId: ctx.targetStateId,
     extraUnits,
     isNatcorp: ctx.isNatcorp,
     turn: ctx.turn,
@@ -235,11 +278,18 @@ export function commodityTollModels(ctx: CommodityDominanceContext): CommodityTo
   const probe = 1e6;
   const models: CommodityTollModel[] = [];
   for (const commodity of ctx.commodities) {
-    const demandUnits = ctx.demand[commodity];
-    if (!(typeof demandUnits === "number" && demandUnits > 0)) continue;
+    const market = commodityDominanceMarket({
+      commodity,
+      targetStateId: ctx.targetStateId,
+      worldDemand: ctx.demand[commodity],
+      stateDemand: ctx.stateDemand?.[commodity],
+    });
+    if (!market) continue;
+    const demandUnits = market.demand;
+    const marketSectors = ctx.sectors.filter((s) => sectorInDominanceMarket(s, market));
     const potentialAt = (extra: number): number =>
       computeSupplierCommodityCapacityUnits({
-        sectors: ctx.sectors.map((s) => ({
+        sectors: marketSectors.map((s) => ({
           ...s,
           capitalStock:
             (s.capitalStock ?? 0) +

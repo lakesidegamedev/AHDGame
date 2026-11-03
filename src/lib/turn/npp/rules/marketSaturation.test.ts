@@ -182,3 +182,71 @@ describe("canFoundAsBuilder", () => {
     expect(canFoundAsBuilder({ ...base, ceoType: "character" })).toBe(false);
   });
 });
+
+describe("funded world saturation reads sell-through", () => {
+  const EPOCH = "epoch-1";
+  const receipt = (offered: number, sold: number, worldEpoch = EPOCH) => ({
+    worldEpoch,
+    capacityUnits: 100,
+    offeredUnits: offered,
+    soldUnits: sold,
+  });
+  const cell = { stateId: "TN", sectorType: "logistics" };
+
+  it("does not read a sold-out, input-starved cell as saturated", () => {
+    // Inputs hold the plants at a quarter of nameplate; every unit made sells.
+    const sectors = [
+      plant({ demandThrottleFactor: 0.25, producerSettlement: receipt(25, 25) }),
+      plant({ demandThrottleFactor: 0.2, producerSettlement: receipt(20, 20) }),
+    ];
+    expect(isMarketSaturated(marketSaturationOf(buildMarketSaturationIndex(sectors), cell))).toBe(
+      true
+    );
+    const funded = buildMarketSaturationIndex(sectors, EPOCH);
+    expect(marketSaturationOf(funded, cell)).toBe(1);
+    expect(isMarketSaturated(marketSaturationOf(funded, cell))).toBe(false);
+  });
+
+  it("still reads unsold output as saturation", () => {
+    const funded = buildMarketSaturationIndex(
+      [plant({ demandThrottleFactor: 0.5, producerSettlement: receipt(100, 50) })],
+      EPOCH
+    );
+    expect(marketSaturationOf(funded, cell)).toBeCloseTo(0.5, 10);
+    expect(isMarketSaturated(marketSaturationOf(funded, cell))).toBe(true);
+  });
+
+  it("gives no evidence without a receipt from this world", () => {
+    const funded = buildMarketSaturationIndex(
+      [
+        plant({ demandThrottleFactor: 0.1 }),
+        plant({ demandThrottleFactor: 0.1, producerSettlement: receipt(100, 10, "old") }),
+        plant({ demandThrottleFactor: 0, producerSettlement: receipt(0, 0) }),
+      ],
+      EPOCH
+    );
+    expect(marketSaturationOf(funded, cell)).toBeNull();
+  });
+
+  it("excludes the deciding plant on the same reading", () => {
+    const own = plant({ demandThrottleFactor: 0.1, producerSettlement: receipt(100, 10) });
+    const funded = buildMarketSaturationIndex(
+      [own, plant({ demandThrottleFactor: 0.25, producerSettlement: receipt(25, 25) })],
+      EPOCH
+    );
+    expect(marketSaturationOf(funded, cell, own, EPOCH)).toBe(1);
+  });
+
+  it("floor mothballing judges sell-through, not sold over capacity", () => {
+    const starved = {
+      demandThrottleFactor: 0.1,
+      demandIdleTurns: NPP_FLOOR_MOTHBALL_TURNS,
+      producerSettlement: receipt(10, 10),
+    };
+    expect(isStuckAtThrottleFloor(starved)).toBe(true);
+    expect(isStuckAtThrottleFloor(starved, EPOCH)).toBe(false);
+    expect(
+      isStuckAtThrottleFloor({ ...starved, producerSettlement: receipt(100, 10) }, EPOCH)
+    ).toBe(true);
+  });
+});

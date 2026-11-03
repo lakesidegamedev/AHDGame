@@ -14,6 +14,12 @@ import {
   loadLatestSourcedImportAggregates,
 } from "@/lib/budget/revenue";
 import { isFtaActive, type FtaPairSet, type FtaCoverage } from "./ftaOverrides";
+import {
+  blendWeightsForRate,
+  domesticMalusForRate,
+  foreignMarginModifierForRate,
+  splitCaptureMultiplierForRate,
+} from "./rules/tariffCurves";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getCurrentTurn } from "@/lib/currentTurn";
@@ -244,12 +250,7 @@ export function getTariffBlendWeights(
 
   // Tariff pressure shifts weight from global to national linearly while keeping the
   // local/state component fixed. 38% tariffs produce a 38% move along that curve.
-  const T = Math.min(100, blendRate);
-  const tariffEffect = T / 100;
-  const localWeight = 0.25;
-  const nationalWeight = 0.25 + tariffEffect * 0.25;
-  const globalWeight = 0.5 - tariffEffect * 0.25;
-  return { globalWeight, nationalWeight, localWeight };
+  return blendWeightsForRate(blendRate);
 }
 
 /**
@@ -316,7 +317,7 @@ export function getForeignTariffMarginModifier(
   // Halved: a 40% tariff gives -20pp margin penalty, not -40pp.
   // Full 1:1 ratio made tariffs too punitive for foreign corps operating
   // in the tariff country, effectively killing their margins.
-  return -rate / 2;
+  return foreignMarginModifierForRate(rate);
 }
 
 /**
@@ -364,9 +365,7 @@ export function getDomesticTariffMalus(
       total += rate * (1 - sectorShare);
     }
   }
-  const T = Math.min(100, total);
-  const malus = -(T / 100) * 10;
-  return Object.is(malus, -0) ? 0 : malus;
+  return domesticMalusForRate(total);
 }
 
 /**
@@ -383,11 +382,7 @@ export function getSplitCaptureMultiplier(
   effectiveTariffRate: number,
   isDomesticSplittingForeign: boolean
 ): number {
-  const T = Math.max(0, Math.min(100, effectiveTariffRate));
-  if (isDomesticSplittingForeign) {
-    return 1.0 + (T / 100) * 0.5;
-  }
-  return 1.0 - (T / 100) * 0.5;
+  return splitCaptureMultiplierForRate(effectiveTariffRate, isDomesticSplittingForeign);
 }
 
 /** Match the same tariff scope in enactment and idempotent reconciliation. */

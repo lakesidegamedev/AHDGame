@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { COMMODITY_LABELS, COMMODITY_ICONS, type CommodityType } from "@/lib/constants/commodities";
+import {
+  COMMODITY_LABELS,
+  COMMODITY_ICONS,
+  type CommodityType,
+} from "@/lib/constants/commoditiesCore";
 import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
 import { directionMark, directionToneClass } from "../lib/ledgerFormat";
 

@@ -11,6 +11,9 @@
  * `computeCabinetNominationTally`, and `didPass` so confirmation behaves exactly
  * like a cabinet confirmation.
  */
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
+
+import { requiresCabinetIndependence } from "@/lib/cabinet/rules/officeCompatibility";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
@@ -91,10 +94,21 @@ async function installConfirmedSeat(
   db: Awaited<ReturnType<typeof getDb>>,
   nom: FomcNomination,
   now: Date,
-  currentTurn: number
-): Promise<void> {
+  currentTurn: number,
+  cabinetHolders: ReadonlySet<string>
+): Promise<boolean> {
   const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: nom.bankId });
-  if (!bank?.fomcBoard) return;
+  const targetSeat = bank?.fomcBoard?.find((seat) => seat.seatId === nom.seatId);
+  if (!bank?.fomcBoard || !targetSeat) return false;
+  if (
+    nom.nomineeCharacterId &&
+    cabinetHolders.has(nom.nomineeCharacterId.toString()) &&
+    requiresCabinetIndependence(
+      bank.countryId ?? nom.countryId,
+      nom.makeChair || targetSeat.isChair
+    )
+  )
+    return false;
 
   // A fresh term is load-bearing: keeping the outgoing seat's (often already
   // expired) term made `refreshExpiredSeats` replace the confirmed nominee
@@ -138,6 +152,7 @@ async function installConfirmedSeat(
   }
 
   await db.collection<CentralBank>("centralBanks").updateOne({ _id: nom.bankId }, { $set: set });
+  return true;
 }
 
 export async function processFomcNominationLifecycle(
@@ -204,16 +219,21 @@ export async function processFomcNominationLifecycle(
     .find({ status: "active", votingEndsOnTurn: { $lte: currentTurn } })
     .toArray();
 
+  const cabinetHolders = await getIncompatibleOfficeHolders(
+    db,
+    "bank",
+    expired.flatMap((n) => (n.nomineeCharacterId ? [n.nomineeCharacterId] : []))
+  );
   const notifications: NotificationInput[] = [];
 
   for (const nom of expired) {
     result.nominationsProcessed++;
     const reTally = await computeCabinetNominationTally(db, nom.countryId, nom.votes);
-    const passed = didPass(reTally.votesFor, reTally.votesAgainst);
+    let passed = didPass(reTally.votesFor, reTally.votesAgainst);
+    if (passed) passed = await installConfirmedSeat(db, nom, now, currentTurn, cabinetHolders);
     const seatLabel = nom.makeChair ? "Fed Chair" : `FOMC seat ${nom.seatId}`;
 
     if (passed) {
-      await installConfirmedSeat(db, nom, now, currentTurn);
       await db
         .collection<FomcNomination>("fomcNominations")
         .updateOne(

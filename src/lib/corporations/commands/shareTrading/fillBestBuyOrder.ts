@@ -1,6 +1,12 @@
+import { getCorpFxRate } from "@/lib/currency/corporationCapital";
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+} from "@/lib/budget/stockSaleWithholding";
 import type { Db, ObjectId } from "mongodb";
 import {
   chooseHoldingTerm,
+  anchorHoldingPosition,
   positionHoldingTerms,
   takeHoldingShares,
   type HoldingTerm,
@@ -34,6 +40,8 @@ export type BestBuyOrderFillResult =
       orderId: ObjectId;
       shares: number;
       proceedsAnchor: number;
+      withheldTaxAnchor: number;
+      netProceedsAnchor: number;
       proceedsInHomeCurrency: number;
       pricePerShareLocal: number;
     };
@@ -67,6 +75,12 @@ export async function fillBestBuyOrderForMarketSell(input: {
     .limit(12)
     .toArray();
 
+  const contexts = await loadStockWithholdingContexts(
+    db,
+    candidates.length ? [{ id: seller.id, collection: seller.collectionName }] : [],
+    turn
+  );
+  const issuerFx = candidates.length ? await getCorpFxRate(db, corporation) : 1;
   for (let order of candidates) {
     if (!order.placerFundId || !(order.escrowAnchor && order.escrowAnchor > 0)) continue;
     const provider = await db
@@ -94,7 +108,11 @@ export async function fillBestBuyOrderForMarketSell(input: {
         ? row.imperialCharacterId?.equals(seller.id)
         : row.characterId?.equals(seller.id)
     );
-    const position = positionHoldingTerms(holder ?? { shares: 0 }, turn, proceedsAnchor / shares);
+    const position = positionHoldingTerms(
+      anchorHoldingPosition(holder ?? { shares: 0 }, issuerFx),
+      turn,
+      proceedsAnchor / shares
+    );
     const sellerHoldingTerms = takeHoldingShares(
       position,
       shares,
@@ -109,13 +127,16 @@ export async function fillBestBuyOrderForMarketSell(input: {
         previousFillKey: order.lastShareFillKey,
       },
       sellerHoldingTerms,
-      stockTax: stockSaleTaxReceipt({
-        holdingTerms: sellerHoldingTerms,
-        proceedsAnchor,
-        proceedsCredited: proceedsInHomeCurrency,
-        saleTurn: turn,
-        assessmentTurn: turn + 1,
-      }),
+      stockTax: withholdStockReceipt(
+        stockSaleTaxReceipt({
+          holdingTerms: sellerHoldingTerms,
+          proceedsAnchor,
+          proceedsCredited: proceedsInHomeCurrency,
+          saleTurn: turn,
+          assessmentTurn: turn + 1,
+        }),
+        contexts.get(seller.collectionName + ":" + seller.id.toHexString())
+      ),
       version: 1,
       orderIdHex: order._id.toHexString(),
       corpIdHex: corporation._id.toHexString(),
@@ -229,6 +250,11 @@ export async function fillBestBuyOrderForMarketSell(input: {
       shares,
       proceedsAnchor,
       proceedsInHomeCurrency,
+      withheldTaxAnchor:
+        (fillPlan.stockTax?.withholding?.walletAmount ?? 0) / (forexEnabled ? sellerFxRate : 1),
+      netProceedsAnchor:
+        proceedsAnchor -
+        (fillPlan.stockTax?.withholding?.walletAmount ?? 0) / (forexEnabled ? sellerFxRate : 1),
       pricePerShareLocal: order.pricePerShare,
     };
   }

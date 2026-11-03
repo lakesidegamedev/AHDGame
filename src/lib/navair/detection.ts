@@ -56,32 +56,3 @@ export function detectionFromPresence(
 
   return level;
 }
-
-/**
- * Whether `observer` can put a weapon on something in `region`.
- *
- * Knowing a fleet exists is not the same as being able to hit it, and this is the line
- * between the two.
- */
-export function canTarget(detectionLevel: number): boolean {
-  return detectionLevel >= R.STRIKE.minDetection;
-}
-
-/**
- * What a side is told about enemy strength, given how well it can see.
- *
- * Force composition is fogged in this game by design, so this returns a band and never a
- * number. At low detection the band is deliberately wide: a commander who has not scouted
- * should be uncertain, not merely less precise.
- */
-export function enemyBand(own: number, enemy: number, detectionLevel: number): string {
-  if (detectionLevel <= 0) return "No contact";
-  if (enemy <= 0) return "No forces detected";
-  if (detectionLevel === 1) return "Unidentified contacts";
-  const r = enemy / Math.max(1, own);
-  if (r < 0.5) return "Token resistance";
-  if (r < 0.85) return "Weaker force";
-  if (r <= 1.2) return "Evenly matched";
-  if (r <= 2.0) return "Stronger force";
-  return "Overwhelming force";
-}

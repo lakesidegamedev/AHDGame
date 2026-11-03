@@ -6,7 +6,7 @@ export {
   type DependencyRetirement,
 } from "./retirement";
 export { computeMacroContribution, PLANNED_MARKET_LEAKAGE } from "./kernel";
-export { AUSTRIA_ENTITY_ID, buildAustria1953Seed, getAustria1953MacroCountry } from "./austria1953";
+export { AUSTRIA_ENTITY_ID, getAustria1953MacroCountry } from "./austria1953";
 export {
   EUROPE_1953_MACRO_ENTITY_IDS,
   EUROPE_1953_MACRO_SPECS,
@@ -77,7 +77,7 @@ export {
 } from "./roster1953";
 export { seedMacroCountries, MACRO_FORBIDDEN_SEED_COLLECTIONS } from "./seedMacroCountries";
 export { processMacroCountryTurn } from "./macroCountryTurn";
-export { loadActiveMacroContributions, applyMacroContributionsToGlobal } from "./contributions";
+export { applyMacroContributionsToGlobal } from "./contributions";
 export { getMacroCountryDiagnostics } from "./diagnostics";
 export type {
   MacroCountryState,

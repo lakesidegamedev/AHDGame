@@ -35,6 +35,8 @@ export const NOTIFICATION_TYPES = [
   "bill_vote_open",
   "bill_passed_chamber",
   "crisis",
+  /** A crisis in your home state ended. Informational, never pushed. */
+  "crisis_resolved",
   "bill_failed_chamber",
   "bill_enrolled",
   "bill_signed",

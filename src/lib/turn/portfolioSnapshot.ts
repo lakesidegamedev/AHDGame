@@ -167,20 +167,23 @@ export async function snapshotPortfolioValues(
       const charId = sh.characterId?.toString() ?? sh.imperialCharacterId?.toString();
       if (!charId) continue;
       const stockValueLocal = sh.shares * price;
-      const stockValue = corpLiquidCapitalToAnchor(stockValueLocal, corp, corpFxRate);
-      if (trackTerms) {
-        const bucket = holdingMarketValues(
-          sh,
-          turn,
-          corpLiquidCapitalToAnchor(price, corp, corpFxRate)
-        );
+      // Value the total and the short/long split through one conversion.
+      // (shares * price) / fx and shares * (price / fx) differ by a rounding
+      // step, and at large holdings that step exceeds the snapshot guard's
+      // fixed tolerance, so the split route supplies the total too.
+      const anchorSharePrice = corpLiquidCapitalToAnchor(price, corp, corpFxRate);
+      const termValues = trackTerms ? holdingMarketValues(sh, turn, anchorSharePrice) : undefined;
+      const stockValue = termValues
+        ? termValues.stockValue
+        : corpLiquidCapitalToAnchor(stockValueLocal, corp, corpFxRate);
+      if (termValues) {
         const previous = stockTermValues.get(charId) ?? {
           shortTermStockValue: 0,
           longTermStockValue: 0,
         };
         stockTermValues.set(charId, {
-          shortTermStockValue: previous.shortTermStockValue + bucket.shortTermStockValue,
-          longTermStockValue: previous.longTermStockValue + bucket.longTermStockValue,
+          shortTermStockValue: previous.shortTermStockValue + termValues.shortTermStockValue,
+          longTermStockValue: previous.longTermStockValue + termValues.longTermStockValue,
         });
       }
       const existing = portfolioMap.get(charId) ?? {

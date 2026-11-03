@@ -1,30 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { InternationalOrganizationId } from "@/lib/constants/internationalOrganizations";
-import {
-  DEFAULT_ALERT_POSTURE,
-  postureEffect,
-  type AlertPosture,
-} from "@/lib/constants/orgPosture";
+import { postureEffect, type AlertPosture } from "@/lib/constants/orgPosture";
 import { getOrganizationPosturesCollection } from "@/lib/db/collections";
 import { getMembers } from "@/lib/internationalOrganizations/service";
-
-/**
- * Alliance alert posture state + its member-wide metric effect. The posture doc
- * is the SSOT (read live each turn); the effect is fed into the per-state metric
- * turn driver's `targetNudges`, the same seam directives use, so it persists
- * while set and relaxes smoothly when the posture returns to standard.
- */
-
-/** Read an org's current posture, defaulting to `standard` when unset. */
-export async function getOrganizationPosture(
-  db: Db,
-  organizationId: InternationalOrganizationId
-): Promise<AlertPosture> {
-  const col = await getOrganizationPosturesCollection(db);
-  const row = await col.findOne({ organizationId });
-  return row?.posture ?? DEFAULT_ALERT_POSTURE;
-}
 
 /** Set an org's posture; creates the row if absent. */
 export async function setOrganizationPosture(

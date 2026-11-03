@@ -32,9 +32,9 @@ export const CONSCRIPTION_OPTIONS: ConscriptionOption[] = [
 ];
 
 /** Fraction of an inducted cohort that is actually fit/available to serve. */
-export const CONSCRIPTION_FITNESS_RATE = 0.65;
+const CONSCRIPTION_FITNESS_RATE = 0.65;
 /** Hard realism ceiling: active force never exceeds this fraction of labor (§4.5.2). */
-export const CONSCRIPTION_CEILING_FRACTION = 0.025;
+const CONSCRIPTION_CEILING_FRACTION = 0.025;
 
 const MIN_BAND = 18;
 const MAX_BAND = 29;

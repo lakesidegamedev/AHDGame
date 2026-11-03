@@ -31,7 +31,7 @@ export const CAPITAL_DEPRECIATION_PER_TURN = 0.0005;
  * impaired, not dipping. Bounds the high-water mark so an early-life peak cannot
  * become a permanent ghost valuation. See {@link advanceCapitalBookAnchor}.
  */
-export const CAPITAL_BOOK_ANCHOR_MAX_NPV_MULTIPLE = 5;
+const CAPITAL_BOOK_ANCHOR_MAX_NPV_MULTIPLE = 5;
 
 /**
  * Share of the gap between the anchor and current NPV closed each turn while NPV
@@ -40,7 +40,7 @@ export const CAPITAL_BOOK_ANCHOR_MAX_NPV_MULTIPLE = 5;
  * market cap converges onto what current profit supports. See
  * {@link advanceCapitalBookAnchor}.
  */
-export const CAPITAL_BOOK_ANCHOR_CONVERGENCE_PER_TURN = 0.04;
+const CAPITAL_BOOK_ANCHOR_CONVERGENCE_PER_TURN = 0.04;
 
 /**
  * Launch-safety governor for the clearing/capital revenue leg.

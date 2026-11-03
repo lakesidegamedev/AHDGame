@@ -9,6 +9,12 @@
  * so this notice describes a payload that is genuinely absent rather than
  * hiding one that arrived.
  */
+/** "A and B", or "A, B and C" once a country has three viewing offices. */
+function joinTitles(titles: string[]): string {
+  if (titles.length <= 2) return titles.join(" and ");
+  return `${titles.slice(0, -1).join(", ")} and ${titles[titles.length - 1]}`;
+}
+
 export function RestrictedOfficeNotice({
   seatName,
   allowedTitles,
@@ -23,7 +29,7 @@ export function RestrictedOfficeNotice({
   // once per title, so the titles join first and the country is appended once.
   const holders =
     allowedTitles.length > 0
-      ? `${allowedTitles.join(" and ")}${countryName ? ` of ${countryName}` : ""}`
+      ? `${joinTitles(allowedTitles)}${countryName ? ` of ${countryName}` : ""}`
       : null;
 
   const explanation = holders

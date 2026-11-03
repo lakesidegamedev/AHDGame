@@ -531,7 +531,12 @@ export function decideBankCommand(
                 ...corpFilter(snapshot.bankId),
                 "bankCharter.cbMarginDebt": { $gte: repay },
               },
-              update: { $inc: { "bankCharter.cbMarginDebt": -repay } },
+              update: {
+                $inc: { "bankCharter.cbMarginDebt": -repay },
+                // Repayment retires the interest-bearing part first; the
+                // interest-free injected part never exceeds what is left.
+                $min: { "bankCharter.cbLiquidityAdvanceDebt": debt - repay },
+              },
               note: "margin principal repaid",
             },
             {

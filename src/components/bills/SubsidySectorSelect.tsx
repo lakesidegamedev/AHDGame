@@ -1,6 +1,9 @@
 "use client";
 
-import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+} from "@/lib/constants/corporationsClient";
 
 /**
  * Shared sector dropdown for subsidy/end-subsidy bill provisions. Renders the

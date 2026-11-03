@@ -1,150 +1,71 @@
 import type { CountryId } from "./countries";
-import type { UnitDomain, Posture, MilitaryUnit, UnitEquipment } from "@/lib/db/types/militaryUnit";
+import type { UnitDomain, MilitaryUnit } from "@/lib/db/types/militaryUnit";
+import { JP_CABINET_SEAT_IDS, JP_MILITARY_BRANCHES } from "@/lib/countries/jp/institutionsFacts";
+import { US_MILITARY_BRANCHES, US_CABINET_SEAT_IDS } from "@/lib/countries/us/institutionsFacts";
+import { UK_MILITARY_BRANCHES, UK_CABINET_SEAT_IDS } from "@/lib/countries/uk/institutionsFacts";
+import { DE_CABINET_SEAT_IDS, DE_MILITARY_BRANCHES } from "@/lib/countries/de/institutionsFacts";
+import { CN_CABINET_SEAT_IDS, CN_MILITARY_BRANCHES } from "@/lib/countries/cn/institutionsFacts";
+import { IE_CABINET_SEAT_IDS, IE_MILITARY_BRANCHES } from "@/lib/countries/ie/institutionsFacts";
+import { RU_CABINET_SEAT_IDS, RU_MILITARY_BRANCHES } from "@/lib/countries/ru/institutionsFacts";
+import { DD_CABINET_SEAT_IDS, DD_MILITARY_BRANCHES } from "@/lib/countries/dd/institutionsFacts";
+import { NG_CABINET_SEAT_IDS, NG_MILITARY_BRANCHES } from "@/lib/countries/ng/institutionsFacts";
+import { BR_CABINET_SEAT_IDS, BR_MILITARY_BRANCHES } from "@/lib/countries/br/institutionsFacts";
+import { FR_CABINET_SEAT_IDS, FR_MILITARY_BRANCHES } from "@/lib/countries/fr/institutionsFacts";
+import { IT_CABINET_SEAT_IDS, IT_MILITARY_BRANCHES } from "@/lib/countries/it/institutionsFacts";
+import { ES_CABINET_SEAT_IDS, ES_MILITARY_BRANCHES } from "@/lib/countries/es/institutionsFacts";
+import { SE_CABINET_SEAT_IDS, SE_MILITARY_BRANCHES } from "@/lib/countries/se/institutionsFacts";
+import { TR_CABINET_SEAT_IDS, TR_MILITARY_BRANCHES } from "@/lib/countries/tr/institutionsFacts";
+import { GR_CABINET_SEAT_IDS, GR_MILITARY_BRANCHES } from "@/lib/countries/gr/institutionsFacts";
+import { AT_CABINET_SEAT_IDS, AT_MILITARY_BRANCHES } from "@/lib/countries/at/institutionsFacts";
+import { FI_CABINET_SEAT_IDS, FI_MILITARY_BRANCHES } from "@/lib/countries/fi/institutionsFacts";
+import { PL_CABINET_SEAT_IDS, PL_MILITARY_BRANCHES } from "@/lib/countries/pl/institutionsFacts";
+import { HU_CABINET_SEAT_IDS, HU_MILITARY_BRANCHES } from "@/lib/countries/hu/institutionsFacts";
+import { RO_CABINET_SEAT_IDS, RO_MILITARY_BRANCHES } from "@/lib/countries/ro/institutionsFacts";
+import { YU_CABINET_SEAT_IDS, YU_MILITARY_BRANCHES } from "@/lib/countries/yu/institutionsFacts";
+import { BG_CABINET_SEAT_IDS, BG_MILITARY_BRANCHES } from "@/lib/countries/bg/institutionsFacts";
+import { CS_CABINET_SEAT_IDS, CS_MILITARY_BRANCHES } from "@/lib/countries/cs/institutionsFacts";
+import { SCO_CABINET_SEAT_IDS, SCO_MILITARY_BRANCHES } from "@/lib/countries/sco/institutionsFacts";
+import { WAL_CABINET_SEAT_IDS, WAL_MILITARY_BRANCHES } from "@/lib/countries/wal/institutionsFacts";
+import { BLR_CABINET_SEAT_IDS, BLR_MILITARY_BRANCHES } from "@/lib/countries/blr/institutionsFacts";
+import { UKR_CABINET_SEAT_IDS, UKR_MILITARY_BRANCHES } from "@/lib/countries/ukr/institutionsFacts";
+import { BAL_CABINET_SEAT_IDS, BAL_MILITARY_BRANCHES } from "@/lib/countries/bal/institutionsFacts";
+
 import {
-  JP_CABINET_SEAT_IDS,
-  JP_MILITARY_BRANCHES,
-  JP_MILITARY_SCALE,
-} from "@/lib/countries/jp/institutionsFacts";
-import {
-  US_MILITARY_BRANCHES,
-  US_CABINET_SEAT_IDS,
-  US_MILITARY_SCALE,
-} from "@/lib/countries/us/institutionsFacts";
-import {
-  UK_MILITARY_BRANCHES,
-  UK_CABINET_SEAT_IDS,
-  UK_MILITARY_SCALE,
-} from "@/lib/countries/uk/institutionsFacts";
-import {
-  DE_CABINET_SEAT_IDS,
-  DE_MILITARY_BRANCHES,
-  DE_MILITARY_SCALE,
-} from "@/lib/countries/de/institutionsFacts";
-import {
-  CN_CABINET_SEAT_IDS,
-  CN_MILITARY_BRANCHES,
-  CN_MILITARY_SCALE,
-} from "@/lib/countries/cn/institutionsFacts";
-import {
-  IE_CABINET_SEAT_IDS,
-  IE_MILITARY_BRANCHES,
-  IE_MILITARY_SCALE,
-} from "@/lib/countries/ie/institutionsFacts";
-import {
-  RU_CABINET_SEAT_IDS,
-  RU_MILITARY_BRANCHES,
-  RU_MILITARY_SCALE,
-} from "@/lib/countries/ru/institutionsFacts";
-import {
-  DD_CABINET_SEAT_IDS,
-  DD_MILITARY_BRANCHES,
-  DD_MILITARY_SCALE,
-} from "@/lib/countries/dd/institutionsFacts";
-import {
-  NG_CABINET_SEAT_IDS,
-  NG_MILITARY_BRANCHES,
-  NG_MILITARY_SCALE,
-} from "@/lib/countries/ng/institutionsFacts";
-import {
-  BR_CABINET_SEAT_IDS,
-  BR_MILITARY_BRANCHES,
-  BR_MILITARY_SCALE,
-} from "@/lib/countries/br/institutionsFacts";
-import {
-  FR_CABINET_SEAT_IDS,
-  FR_MILITARY_BRANCHES,
-  FR_MILITARY_SCALE,
-} from "@/lib/countries/fr/institutionsFacts";
-import {
-  IT_CABINET_SEAT_IDS,
-  IT_MILITARY_BRANCHES,
-  IT_MILITARY_SCALE,
-} from "@/lib/countries/it/institutionsFacts";
-import {
-  ES_CABINET_SEAT_IDS,
-  ES_MILITARY_BRANCHES,
-  ES_MILITARY_SCALE,
-} from "@/lib/countries/es/institutionsFacts";
-import {
-  SE_CABINET_SEAT_IDS,
-  SE_MILITARY_BRANCHES,
-  SE_MILITARY_SCALE,
-} from "@/lib/countries/se/institutionsFacts";
-import {
-  TR_CABINET_SEAT_IDS,
-  TR_MILITARY_BRANCHES,
-  TR_MILITARY_SCALE,
-} from "@/lib/countries/tr/institutionsFacts";
-import {
-  GR_CABINET_SEAT_IDS,
-  GR_MILITARY_BRANCHES,
-  GR_MILITARY_SCALE,
-} from "@/lib/countries/gr/institutionsFacts";
-import {
-  AT_CABINET_SEAT_IDS,
-  AT_MILITARY_BRANCHES,
-  AT_MILITARY_SCALE,
-} from "@/lib/countries/at/institutionsFacts";
-import {
-  FI_CABINET_SEAT_IDS,
-  FI_MILITARY_BRANCHES,
-  FI_MILITARY_SCALE,
-} from "@/lib/countries/fi/institutionsFacts";
-import {
-  PL_CABINET_SEAT_IDS,
-  PL_MILITARY_BRANCHES,
-  PL_MILITARY_SCALE,
-} from "@/lib/countries/pl/institutionsFacts";
-import {
-  HU_CABINET_SEAT_IDS,
-  HU_MILITARY_BRANCHES,
-  HU_MILITARY_SCALE,
-} from "@/lib/countries/hu/institutionsFacts";
-import {
-  RO_CABINET_SEAT_IDS,
-  RO_MILITARY_BRANCHES,
-  RO_MILITARY_SCALE,
-} from "@/lib/countries/ro/institutionsFacts";
-import {
-  YU_CABINET_SEAT_IDS,
-  YU_MILITARY_BRANCHES,
-  YU_MILITARY_SCALE,
-} from "@/lib/countries/yu/institutionsFacts";
-import {
-  BG_CABINET_SEAT_IDS,
-  BG_MILITARY_BRANCHES,
-  BG_MILITARY_SCALE,
-} from "@/lib/countries/bg/institutionsFacts";
-import {
-  CS_CABINET_SEAT_IDS,
-  CS_MILITARY_BRANCHES,
-  CS_MILITARY_SCALE,
-} from "@/lib/countries/cs/institutionsFacts";
-import {
-  SCO_CABINET_SEAT_IDS,
-  SCO_MILITARY_BRANCHES,
-  SCO_MILITARY_SCALE,
-} from "@/lib/countries/sco/institutionsFacts";
-import {
-  WAL_CABINET_SEAT_IDS,
-  WAL_MILITARY_BRANCHES,
-  WAL_MILITARY_SCALE,
-} from "@/lib/countries/wal/institutionsFacts";
-import {
-  BLR_CABINET_SEAT_IDS,
-  BLR_MILITARY_BRANCHES,
-  BLR_MILITARY_SCALE,
-} from "@/lib/countries/blr/institutionsFacts";
-import {
-  UKR_CABINET_SEAT_IDS,
-  UKR_MILITARY_BRANCHES,
-  UKR_MILITARY_SCALE,
-} from "@/lib/countries/ukr/institutionsFacts";
-import {
-  BAL_CABINET_SEAT_IDS,
-  BAL_MILITARY_BRANCHES,
-  BAL_MILITARY_SCALE,
-} from "@/lib/countries/bal/institutionsFacts";
+  POSTURES,
+  TECH_TIERS,
+  TECH_UPKEEP_MULT,
+  MILITARY_COUNTRY_SCALE,
+  UNIT_TYPES,
+  VETM,
+  computeEffectivePower,
+  eqAvg,
+  getUnitArchetype,
+  getUnitTypesForYear,
+  isMilitaryEraActive,
+  postureDef,
+  techPowerMult,
+  techUpkeepMult,
+  type PostureDef,
+  type UnitArchetype,
+} from "./militaryCore";
+
+export {
+  MILITARY_COUNTRY_SCALE,
+  POSTURES,
+  TECH_TIERS,
+  TECH_UPKEEP_MULT,
+  UNIT_TYPES,
+  VETM,
+  computeEffectivePower,
+  eqAvg,
+  getUnitArchetype,
+  getUnitTypesForYear,
+  isMilitaryEraActive,
+  postureDef,
+  techPowerMult,
+  techUpkeepMult,
+};
+export type { PostureDef, UnitArchetype };
 
 export interface Branch {
   id: string;
@@ -163,266 +84,6 @@ export interface Branch {
    */
   dissolvedYear?: number;
 }
-export interface UnitArchetype {
-  type: string;
-  icon: string;
-  cost: number;
-  upkeep: number;
-  personnel: number;
-  power: number;
-  /** Optional era gate; same semantics as Branch.establishedYear. */
-  establishedYear?: number;
-  /** Optional era gate; same semantics as Branch.dissolvedYear. */
-  dissolvedYear?: number;
-}
-export interface PostureDef {
-  id: Posture;
-  label: string;
-  upkeepMult: number;
-  powerMult: number;
-}
-
-export const POSTURES: PostureDef[] = [
-  { id: "garrison", label: "Garrison", upkeepMult: 0.85, powerMult: 0.9 },
-  { id: "standard", label: "Standard", upkeepMult: 1.0, powerMult: 1.0 },
-  { id: "forward", label: "Forward-Deployed", upkeepMult: 1.25, powerMult: 1.12 },
-  { id: "alert", label: "High Alert", upkeepMult: 1.5, powerMult: 1.22 },
-];
-
-export const TECH_TIERS = ["Legacy", "Standard", "Modernized", "Cutting-Edge"];
-/** effective tech multiplier = 0.8 + tier*0.08 (tier 0..3 → 0.8..1.04) */
-export function techPowerMult(tier: number): number {
-  return 0.8 + tier * 0.08;
-}
-
-/**
- * What a tech tier does to a unit's running cost, index = techTier 0..3.
- *
- * Modernisation used to be pure upside: a tier bought +8% power and a political
- * `defenseIndustry` bump, cost nothing to buy, and cost nothing to keep — so the only
- * question was how fast a nation could click through it.
- *
- * Deliberately steeper than `techPowerMult`: Legacy → Cutting-Edge is ×1.30 power for
- * ×1.71 upkeep. A modern division is better than an old one and worse value than two of
- * them, which is the choice this is meant to create. Cheap legacy kit is a real option
- * for a nation that needs mass.
- */
-export const TECH_UPKEEP_MULT = [0.85, 1.0, 1.2, 1.45];
-
-/** Upkeep multiplier for a tier, defaulting a malformed tier to Standard (never free). */
-export function techUpkeepMult(tier: number): number {
-  return TECH_UPKEEP_MULT[tier] ?? 1;
-}
-
-/** Veterancy power multiplier, index = vet 0..4 (Green..Elite). Canonical home; combat.ts re-exports. */
-export const VETM = [0.9, 1.0, 1.08, 1.16, 1.25];
-
-/**
- * Average of a unit's three equipment tracks.
- *
- * Tolerates a missing or partial `equipment` (legacy/unmigrated units) so one
- * malformed unit degrades to zero rather than throwing — a data anomaly must not
- * take down the whole force-aggregation path (and with it the SecDef office).
- */
-export function eqAvg(e?: Partial<UnitEquipment> | null): number {
-  if (!e) return 0;
-  return ((e.firepower ?? 0) + (e.protection ?? 0) + (e.support ?? 0)) / 3;
-}
-
-export const UNIT_TYPES: Record<UnitDomain, UnitArchetype[]> = {
-  ground: [
-    {
-      type: "Armored Division",
-      icon: "tank",
-      cost: 4200,
-      upkeep: 180,
-      personnel: 15000,
-      power: 92,
-    },
-    {
-      type: "Mechanized Brigade",
-      icon: "tank",
-      cost: 2100,
-      upkeep: 95,
-      personnel: 4500,
-      power: 61,
-    },
-    {
-      type: "Infantry Division",
-      icon: "soldier",
-      cost: 1600,
-      upkeep: 70,
-      personnel: 12000,
-      power: 48,
-    },
-    {
-      type: "Artillery Regiment",
-      icon: "artillery",
-      cost: 1300,
-      upkeep: 55,
-      personnel: 3000,
-      power: 44,
-    },
-    {
-      type: "Special Forces Group",
-      icon: "soldier",
-      cost: 2400,
-      upkeep: 120,
-      personnel: 1400,
-      power: 78,
-    },
-    {
-      type: "Air Defense Battalion",
-      icon: "missile",
-      cost: 1900,
-      upkeep: 88,
-      personnel: 900,
-      power: 57,
-    },
-  ],
-  naval: [
-    {
-      type: "Carrier Strike Group",
-      icon: "carrier",
-      cost: 13800,
-      upkeep: 620,
-      personnel: 7500,
-      power: 99,
-    },
-    {
-      type: "Guided-Missile Destroyer",
-      icon: "ship",
-      cost: 2200,
-      upkeep: 110,
-      personnel: 330,
-      power: 64,
-    },
-    { type: "Attack Submarine", icon: "sub", cost: 3400, upkeep: 150, personnel: 130, power: 81 },
-    { type: "Frigate Squadron", icon: "ship", cost: 1700, upkeep: 80, personnel: 600, power: 49 },
-    {
-      type: "Amphibious Group",
-      icon: "carrier",
-      cost: 4100,
-      upkeep: 190,
-      personnel: 2800,
-      power: 70,
-    },
-  ],
-  air: [
-    { type: "Fighter Wing", icon: "jet", cost: 5600, upkeep: 250, personnel: 1800, power: 88 },
-    { type: "Bomber Squadron", icon: "jet", cost: 4800, upkeep: 220, personnel: 900, power: 84 },
-    {
-      type: "Airlift Wing",
-      icon: "transport",
-      cost: 2300,
-      upkeep: 100,
-      personnel: 1500,
-      power: 38,
-    },
-    {
-      type: "Air Defense Wing",
-      icon: "missile",
-      cost: 2600,
-      upkeep: 115,
-      personnel: 1100,
-      power: 66,
-    },
-    // MQ-1 Predator entered USAF service 1995 (USAF Historical Research Agency).
-    {
-      type: "Drone Command",
-      icon: "drone",
-      cost: 1900,
-      upkeep: 70,
-      personnel: 600,
-      power: 59,
-      establishedYear: 1995,
-    },
-  ],
-  rocket: [
-    {
-      type: "Ballistic Missile Brigade",
-      icon: "missile",
-      cost: 6200,
-      upkeep: 240,
-      personnel: 1200,
-      power: 95,
-    },
-    {
-      type: "Cruise Missile Regiment",
-      icon: "missile",
-      cost: 3100,
-      upkeep: 130,
-      personnel: 800,
-      power: 72,
-    },
-    {
-      type: "Strategic Deterrent Force",
-      icon: "missile",
-      cost: 9800,
-      upkeep: 410,
-      personnel: 2000,
-      power: 100,
-    },
-  ],
-  // Space-domain archetypes only make sense alongside a space branch (USSF 2019 /
-  // PLA SSF 2016). Gate at 2019 so a stray recruit path cannot invent them earlier.
-  space: [
-    {
-      type: "Orbital Surveillance Delta",
-      icon: "satellite",
-      cost: 3800,
-      upkeep: 160,
-      personnel: 700,
-      power: 74,
-      establishedYear: 2019,
-    },
-    {
-      type: "Launch Operations Delta",
-      icon: "satellite",
-      cost: 2900,
-      upkeep: 120,
-      personnel: 500,
-      power: 52,
-      establishedYear: 2019,
-    },
-    {
-      type: "Space Defense Squadron",
-      icon: "satellite",
-      cost: 4400,
-      upkeep: 190,
-      personnel: 900,
-      power: 80,
-      establishedYear: 2019,
-    },
-  ],
-  marine: [
-    {
-      type: "Marine Expeditionary Unit",
-      icon: "soldier",
-      cost: 3200,
-      upkeep: 150,
-      personnel: 2200,
-      power: 76,
-    },
-    {
-      type: "Marine Division",
-      icon: "soldier",
-      cost: 4600,
-      upkeep: 210,
-      personnel: 18000,
-      power: 83,
-    },
-    {
-      type: "Littoral Combat Team",
-      icon: "ship",
-      cost: 1800,
-      upkeep: 85,
-      personnel: 1100,
-      power: 54,
-    },
-  ],
-};
-
 export const MILITARY_BRANCHES_BY_COUNTRY: Record<CountryId, Branch[]> = {
   US: US_MILITARY_BRANCHES,
   CN: CN_MILITARY_BRANCHES,
@@ -484,42 +145,6 @@ export const MILITARY_BRANCHES_BY_COUNTRY: Record<CountryId, Branch[]> = {
  * the two stay symmetric. NOT a force-SIZE knob: roster size comes from the
  * authored order of battle. (Ported from prototype: US 2.6, CN 2.0, JP 1.4.)
  */
-export const MILITARY_COUNTRY_SCALE: Record<CountryId, number> = {
-  US: US_MILITARY_SCALE,
-  CN: CN_MILITARY_SCALE,
-  JP: JP_MILITARY_SCALE,
-  UK: UK_MILITARY_SCALE,
-  DE: DE_MILITARY_SCALE,
-  IE: IE_MILITARY_SCALE,
-  BR: BR_MILITARY_SCALE,
-  NG: NG_MILITARY_SCALE,
-  HU: HU_MILITARY_SCALE,
-  PL: PL_MILITARY_SCALE,
-  RO: RO_MILITARY_SCALE,
-  YU: YU_MILITARY_SCALE,
-  BG: BG_MILITARY_SCALE,
-  // Union republics buy at all-Union prices, so no discount against RU's scale;
-  // their force is small because the order of battle is small, not because
-  // equipment is cheap.
-  UKR: UKR_MILITARY_SCALE,
-  BLR: BLR_MILITARY_SCALE,
-  CS: CS_MILITARY_SCALE,
-  BAL: BAL_MILITARY_SCALE,
-  RU: RU_MILITARY_SCALE,
-  FR: FR_MILITARY_SCALE,
-  IT: IT_MILITARY_SCALE,
-  ES: ES_MILITARY_SCALE,
-  SE: SE_MILITARY_SCALE,
-  TR: TR_MILITARY_SCALE,
-  GR: GR_MILITARY_SCALE,
-  AT: AT_MILITARY_SCALE,
-  FI: FI_MILITARY_SCALE,
-  DD: DD_MILITARY_SCALE,
-  SCO: SCO_MILITARY_SCALE,
-  WAL: WAL_MILITARY_SCALE,
-};
-
-/** Defense cabinet position per country. */
 export const DEFENSE_POSITION_BY_COUNTRY: Record<CountryId, string | null> = {
   US: US_CABINET_SEAT_IDS.defense,
   UK: UK_CABINET_SEAT_IDS.defense,
@@ -569,16 +194,6 @@ export const DEFENSE_ENVELOPE_FALLBACK_GDP_FRACTION = 0.03;
  * always active. Matches international-org founding: active iff
  * establishedYear <= liveYear < dissolvedYear (dissolvedYear exclusive).
  */
-export function isMilitaryEraActive(
-  def: Pick<Branch, "establishedYear" | "dissolvedYear">,
-  liveYear: number | null | undefined
-): boolean {
-  if (liveYear == null) return true;
-  if (def.establishedYear != null && liveYear < def.establishedYear) return false;
-  if (def.dissolvedYear != null && liveYear >= def.dissolvedYear) return false;
-  return true;
-}
-
 /**
  * Branches for a country. With `liveYear`, applies established/dissolved gates.
  * Without a year (UI / legacy callers), omits dissolved predecessors so the
@@ -592,47 +207,6 @@ export function getBranches(countryId: string, liveYear?: number | null): Branch
   return all.filter((b) => isMilitaryEraActive(b, liveYear));
 }
 
-/** Unit archetypes for a domain, optionally filtered to those active in `liveYear`. */
-export function getUnitTypesForYear(domain: UnitDomain, liveYear?: number | null): UnitArchetype[] {
-  const all = UNIT_TYPES[domain] ?? [];
-  if (liveYear == null) return all;
-  return all.filter((t) => isMilitaryEraActive(t, liveYear));
-}
-export function getUnitArchetype(domain: UnitDomain, type: string): UnitArchetype | undefined {
-  return UNIT_TYPES[domain]?.find((u) => u.type === type);
-}
-export function postureDef(p: Posture): PostureDef {
-  return POSTURES.find((x) => x.id === p) ?? POSTURES[1];
-}
-/**
- * Strength (personnel ÷ archetype establishment), clamped 0..1. A unit at half
- * strength fights at half power.
- *
- * Optional by design: `personnel`/`domain`/`type` absent — or an unknown archetype —
- * means "assume full strength" (×1), never zero. Unmigrated or malformed units must
- * degrade gracefully rather than silently losing all combat power. An explicit
- * `personnel: 0` is a real zero.
- */
-function strengthRatio(unit: Partial<Pick<MilitaryUnit, "personnel" | "domain" | "type">>): number {
-  if (unit.personnel == null || !unit.domain || !unit.type) return 1;
-  const establishment = getUnitArchetype(unit.domain, unit.type)?.personnel;
-  if (!establishment || establishment <= 0) return 1;
-  return Math.max(0, Math.min(1, unit.personnel / establishment));
-}
-
-export function computeEffectivePower(
-  unit: Pick<MilitaryUnit, "basePower" | "posture" | "techTier" | "vet" | "equipment"> &
-    Partial<Pick<MilitaryUnit, "personnel" | "domain" | "type">>
-): number {
-  return Math.round(
-    unit.basePower *
-      postureDef(unit.posture).powerMult *
-      techPowerMult(unit.techTier) *
-      VETM[unit.vet] *
-      (1 + eqAvg(unit.equipment) * 0.03) *
-      strengthRatio(unit)
-  );
-}
 /**
  * A unit's running cost.
  *

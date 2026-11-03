@@ -134,7 +134,7 @@ export const CORP_GROUPS: CorpGroupDef[] = [
 ];
 
 /** Every tab id, mapped to the group that now holds it. */
-export const CORP_TAB_GROUP: Record<CorpTabId, CorpGroupId> = CORP_GROUPS.reduce(
+const CORP_TAB_GROUP: Record<CorpTabId, CorpGroupId> = CORP_GROUPS.reduce(
   (acc, group) => {
     for (const tabId of group.tabIds) acc[tabId] = group.id;
     return acc;
@@ -146,7 +146,7 @@ export const CORP_TAB_GROUP: Record<CorpTabId, CorpGroupId> = CORP_GROUPS.reduce
  * Where a tab id lives in the new nav. Groups whose only member is the tab
  * itself (Overview, CEO Office) render no sub-tab bar, so their sub id is "".
  */
-export function corpTabLocation(tabId: CorpTabId): ResolvedTabs {
+function corpTabLocation(tabId: CorpTabId): ResolvedTabs {
   const group = CORP_GROUPS.find((g) => g.id === CORP_TAB_GROUP[tabId]);
   if (!group) return { superTab: "overview", subTab: "" };
   return { superTab: group.id, subTab: group.tabIds.length > 1 ? tabId : "" };

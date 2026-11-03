@@ -51,7 +51,6 @@ import type {
 import {
   INTERNATIONAL_ORGANIZATION_ORDER,
   INTERNATIONAL_ORGANIZATIONS,
-  ORG_PROPOSAL_VOTING_TURNS,
   getOrganizationDef,
   isBuiltInInternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
@@ -120,7 +119,7 @@ export interface OrganizationSummary {
   pendingLeadershipElections: OrganizationLeadershipElection[];
 }
 
-export function customOrgToDef(org: CustomInternationalOrganization): InternationalOrganizationDef {
+function customOrgToDef(org: CustomInternationalOrganization): InternationalOrganizationDef {
   return {
     id: org.id,
     name: org.name,
@@ -136,7 +135,7 @@ export function customOrgToDef(org: CustomInternationalOrganization): Internatio
   };
 }
 
-export async function loadCustomOrganizations(db: Db): Promise<CustomInternationalOrganization[]> {
+async function loadCustomOrganizations(db: Db): Promise<CustomInternationalOrganization[]> {
   const col = await getCustomInternationalOrganizationsCollection(db);
   return col.find({}).sort({ createdOnTurn: 1 }).toArray();
 }
@@ -666,8 +665,6 @@ export async function recordOrgHistoryEvent(
     details: details ?? {},
   });
 }
-
-export const PROPOSAL_VOTE_WINDOW_TURNS = ORG_PROPOSAL_VOTING_TURNS;
 
 /**
  * Unilaterally withdraw a country from an org. Side-effects:

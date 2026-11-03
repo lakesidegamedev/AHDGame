@@ -419,11 +419,13 @@ async function notifyAffectedPlayers(
       ? crisis.wireMessageOnStart?.trim() || truncate(crisis.description, 160)
       : crisis.wireMessageOnEnd?.trim() || `The ${crisis.name} has eased.`;
 
-  const title = type === "crisis_start" ? crisis.name : `${crisis.name} — Resolved`;
+  const title = type === "crisis_start" ? crisis.name : `${crisis.name} is over`;
 
+  // The end of a crisis is news, not a task: its own type keeps it out of the
+  // action-required filter and off the lock screen.
   const notifications = userIds.map((userId) => ({
     userId: new ObjectId(userId),
-    type: "crisis" as const,
+    type: type === "crisis_start" ? ("crisis" as const) : ("crisis_resolved" as const),
     title,
     message,
     metadata: { crisisId: crisis._id.toString() },

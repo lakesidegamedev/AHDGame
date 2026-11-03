@@ -58,7 +58,8 @@ import {
   BillFiscalImpactStrip,
   LawProvisionComparison,
 } from "@/components/bills/LawProvisionComparison";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
@@ -156,6 +157,7 @@ function LegacyProposeLegislationModal({
   defaultChamber,
   domesticOnlyLabel = "Domestic corporations only",
   hasActiveBill = false,
+  proposeViaPartyNpp = false,
   onClose,
   onSuccess,
 }: {
@@ -169,6 +171,7 @@ function LegacyProposeLegislationModal({
   domesticOnlyLabel?: string;
   /** Player already has a bill in voting — modal stays browsable, submit blocked. */
   hasActiveBill?: boolean;
+  proposeViaPartyNpp?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -240,7 +243,7 @@ function LegacyProposeLegislationModal({
     setElectoralLaw((current) => ({ ...current, [key]: value }));
   }
   const canProposeJapanShugiinReform =
-    countryId === COUNTRY_CONFIGS.JP.id &&
+    countryId === COUNTRY_CLIENT_CONFIGS.JP.id &&
     worldFlags.preset === "1991-default" &&
     (worldFlags.currentYear ?? 0) >= 1994;
   // Central bank independence — opt-in, economy category. grant hands
@@ -503,6 +506,7 @@ function LegacyProposeLegislationModal({
           title: title.trim(),
           summary: summary.trim(),
           chamber: billChamber,
+          ...(proposeViaPartyNpp ? { proposeViaPartyNpp: true } : {}),
           category: cat,
           provisions: provisionsPayload,
         },
@@ -1303,6 +1307,11 @@ export function ProposeLegislationModal(
         chambers={props.chambers}
         initialChamber={props.defaultChamber ?? props.chambers[0]?.value ?? ""}
         adminOverride={props.adminOverride}
+        offerSubsidies={true}
+        proposeViaPartyNpp={props.proposeViaPartyNpp}
+        canSubmit={props.adminOverride === true || !props.hasActiveBill}
+        hasActiveBill={props.hasActiveBill}
+        domesticOnlyLabel={props.domesticOnlyLabel}
         onClose={props.onClose}
         onSuccess={props.onSuccess}
       />

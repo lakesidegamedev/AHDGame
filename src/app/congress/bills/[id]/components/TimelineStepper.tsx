@@ -1,5 +1,5 @@
 import type { BillDetail } from "../types";
-import { getCountryConfig } from "@/lib/constants/countries";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { LocalTime } from "@/components/time/LocalTime";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
@@ -18,7 +18,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
   const countryId =
     bill.countryId ?? (bill.stateId ? inferCountryIdFromStateId(bill.stateId) : undefined);
   const preset = useActivePreset();
-  const config = countryId ? getCountryConfig(countryId, preset) : null;
+  const config = countryId ? getCountryClientConfig(countryId, preset) : null;
   // Single-chamber legislative loops (UK Commons, DE Bundestag, CN NPC, IE Dáil)
   // enact straight from the origin vote — no "Passed Origin" / second-chamber
   // step, and the vote label comes from the chamber's own name.

@@ -57,7 +57,9 @@ describe("turn progress placement", () => {
       join(dirname(fileURLToPath(import.meta.url)), "../../app/layout.tsx"),
       "utf8"
     );
-    expect(layout).toMatch(/\{!isWikiSubdomain && singleplayer && <TurnProgressToast \/>\}/);
-    expect(layout).not.toMatch(/\{!isWikiSubdomain && <TurnProgressToast \/>\}/);
+    expect(layout).toMatch(
+      /\{!isWikiSubdomain && singleplayer && <(Deferred)?TurnProgressToast \/>\}/
+    );
+    expect(layout).not.toMatch(/\{!isWikiSubdomain && <(Deferred)?TurnProgressToast \/>\}/);
   });
 });

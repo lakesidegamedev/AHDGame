@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { type CurrencyCode, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { type CurrencyCode, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import { formatCompactNumber } from "@/lib/utils/formatters";
+import { formatCompactNumber } from "@/lib/utils/formattersCore";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { PROFILE_LINK_CLASS } from "./profileStyles";
 

@@ -46,4 +46,45 @@ describe("summarizeBuildQueue", () => {
     );
     expect(summary?.unitsOrdered).toBe(300);
   });
+
+  it("reports the per-turn arrival of smooth orders and the last finish turn", () => {
+    const summary = summarizeBuildQueue(
+      [
+        order({ unitsOrdered: 100, startTurn: 0, onlineTurn: 50, smooth: true }),
+        order({ unitsOrdered: 40, startTurn: 0, onlineTurn: 80 }),
+      ],
+      10
+    );
+    expect(summary?.unitsPerTurn).toBeCloseTo(2, 10);
+    expect(summary?.lastOnlineTurn).toBe(80);
+    expect(summary?.nextOnlineTurn).toBe(50);
+  });
+
+  it("reports no per-turn arrival for an order under one whole plant (ticket 1753)", () => {
+    const summary = summarizeBuildQueue(
+      [
+        order({
+          unitsOrdered: 193,
+          plantUnits: 250,
+          startTurn: 606,
+          onlineTurn: 614,
+          smooth: true,
+        }),
+      ],
+      608
+    );
+    expect(summary?.unitsPerTurn).toBe(0);
+    expect(summary?.unitsRemaining).toBeCloseTo(193, 9);
+    expect(summary?.lastOnlineTurn).toBe(614);
+  });
+
+  it("reports when a stepped order next lands, before its finish turn", () => {
+    const summary = summarizeBuildQueue(
+      [order({ unitsOrdered: 200, plantUnits: 100, startTurn: 0, onlineTurn: 6, smooth: true })],
+      1
+    );
+    expect(summary?.unitsPerTurn).toBe(0);
+    expect(summary?.nextArrivalTurn).toBe(3);
+    expect(summary?.lastOnlineTurn).toBe(6);
+  });
 });

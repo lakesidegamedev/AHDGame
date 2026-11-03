@@ -1,7 +1,6 @@
 import type { LegacyScoreBreakdown } from "../legacyLeaderboardTypes";
 
 export const CAREER_SCORE_VERSION = 2;
-export const CAREER_SCORE_MAX = 5_000;
 export interface CareerScoreInputs {
   nationalInfluence: number;
   partyInfluence: number;

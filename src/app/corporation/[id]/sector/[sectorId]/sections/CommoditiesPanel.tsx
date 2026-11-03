@@ -4,7 +4,7 @@ import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import ShortageBadge from "../components/ShortageBadge";
 import { THROUGHPUT_MIN } from "@/lib/market/throughput";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   getCommodityDisplayCurrency,

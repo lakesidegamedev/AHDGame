@@ -11,7 +11,7 @@ export function epsilonFor(magnitudes: number[]): number {
   return Math.max(0.01, 1e-9 * maxMag);
 }
 
-export function anchorResidual(legs: Pick<LedgerLeg, "anchorAmount">[]): number {
+function anchorResidual(legs: Pick<LedgerLeg, "anchorAmount">[]): number {
   return legs.reduce((sum, leg) => sum + leg.anchorAmount, 0);
 }
 

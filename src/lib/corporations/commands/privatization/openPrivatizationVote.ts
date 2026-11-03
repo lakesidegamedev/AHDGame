@@ -1,3 +1,5 @@
+import { referenceValuation } from "../acquisitions/referenceValuation";
+import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
 import {
@@ -25,6 +27,7 @@ import {
 } from "../takeovers/rules/bankNavFloor";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import { executeFundOnlyBuyout } from "./fundOnlyBuyout";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 export interface OpenPrivatizationVoteInput {
   db: Db;
@@ -64,6 +67,14 @@ export async function openPrivatizationVote(
   input: OpenPrivatizationVoteInput
 ): Promise<OpenPrivatizationVoteResult> {
   const { db, corporation, character, currentTurn, forexEnabled } = input;
+
+  const transferRestriction = await controllerTransferBarrierError(
+    db,
+    corporation,
+    currentTurn,
+    new Date()
+  );
+  if (transferRestriction) return { ok: false, error: transferRestriction, status: 403 };
 
   if (corporation.isPrivate) {
     return { ok: false, error: "Corporation is already private", status: 400 };
@@ -107,12 +118,10 @@ export async function openPrivatizationVote(
     return { ok: false, error: "A privatization vote is already open", status: 400 };
   }
 
-  const unplacedIpoShares =
-    corporation.pendingShareIssuance?.issuedUpfront &&
-    corporation.pendingShareIssuance.source === "ipo"
-      ? corporation.pendingShareIssuance.remainingShares
-      : 0;
-  const nonCeoShares = corporation.totalShares - ceoShares - unplacedIpoShares;
+  const nonCeoShares = Math.max(
+    0,
+    corporation.totalShares - ceoShares - unplacedIpoShares(corporation)
+  );
 
   // CEO holds 100% — no minority holders to buy out, skip the vote entirely.
   if (nonCeoShares === 0) {
@@ -164,7 +173,7 @@ export async function openPrivatizationVote(
   );
   if (
     !hasNonCeoCharOrCorp &&
-    (corporation.publicFloat ?? 0) - unplacedIpoShares === 0 &&
+    (corporation.publicFloat ?? 0) - unplacedIpoShares(corporation) === 0 &&
     hasFundHolders
   ) {
     const buyout = await executeFundOnlyBuyout(db, corporation, currentTurn);
@@ -222,6 +231,18 @@ export async function openPrivatizationVote(
     } catch {
       // Floor infra unavailable: proceed at the market locked price.
     }
+  }
+  const assetFloor = await referenceValuation(db, corporation);
+  if (assetFloor.minimumPriceAnchor > 0) {
+    const assetFloorFx = await loadFxRatesByCurrency(db);
+    lockedBuyoutPrice = Math.max(
+      lockedBuyoutPrice,
+      anchorToCorpCapital(
+        assetFloor.minimumPriceAnchor / Math.max(1, corporation.totalShares),
+        lockedCurrency,
+        fxRateForCorpFromMap(corporation, assetFloorFx)
+      )
+    );
   }
   const totalReservedCash = Math.ceil(nonCeoShares * lockedBuyoutPrice);
 

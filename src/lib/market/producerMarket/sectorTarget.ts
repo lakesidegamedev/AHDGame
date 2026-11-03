@@ -9,5 +9,8 @@ export interface ProducerSectorTarget {
   capacity: ProducerCapacityState;
   operatingRecipeRatio: number;
   recessionCapacityFactor: number;
-  plantType: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">;
+  plantType: Pick<
+    CorporateSector,
+    "sectorType" | "industryModel" | "mediaDiscriminator" | "strategyId"
+  >;
 }

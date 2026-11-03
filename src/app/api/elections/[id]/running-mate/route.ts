@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { user } = auth;
     const character = user.character;
 
-    const rateLimit = checkRateLimit(user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/elections/[id]/running-mate:${user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id: electionId } = await params;

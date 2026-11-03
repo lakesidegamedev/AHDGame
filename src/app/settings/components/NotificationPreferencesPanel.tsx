@@ -4,7 +4,19 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { NOTIFICATION_TYPES, type NotificationType } from "@/lib/db/types/notifications";
 import { LocalTime } from "@/components/time/LocalTime";
+import { categoryOf, type InboxCategory } from "@/lib/inbox/categories";
+import { deliveryOf } from "@/lib/inbox/delivery";
 import { SettingsSwitch } from "./SettingsSwitch";
+
+const GROUP_ORDER: InboxCategory[] = [
+  "crisis",
+  "legislation",
+  "election",
+  "party",
+  "standing",
+  "treasury",
+  "system",
+];
 
 interface Preferences {
   muteMail?: boolean;
@@ -128,45 +140,75 @@ export function NotificationPreferencesPanel() {
             onChange={(event) => setSearch(event.target.value)}
             className="my-3 w-full rounded-lg border border-card-border bg-card p-3 text-sm"
           />
-          <div className="grid max-h-96 gap-x-6 overflow-y-auto md:grid-cols-2">
-            {NOTIFICATION_TYPES.filter((type) =>
-              t(`types.${type}`).toLowerCase().includes(search.toLowerCase())
-            ).map((type) => {
-              const snooze = preferences.snoozedTypes.find(
-                (entry) => entry.type === type && Date.parse(entry.until) > Date.now()
+          <div className="max-h-[28rem] overflow-y-auto pr-1">
+            {(() => {
+              const query = search.trim().toLowerCase();
+              const visible = NOTIFICATION_TYPES.filter((type) =>
+                t(`types.${type}`).toLowerCase().includes(query)
               );
-              return (
-                <div
-                  key={type}
-                  className="flex items-center justify-between gap-3 border-b border-card-border py-2"
-                >
-                  <div>
-                    <p className="text-sm">{t(`types.${type}`)}</p>
-                    {snooze && (
-                      <>
-                        <p className="text-xs text-muted">
-                          {t.rich("snoozed", { time: () => <LocalTime value={snooze.until} /> })}
-                        </p>
-                        <button
-                          type="button"
-                          disabled={saving}
-                          className="text-xs text-primary"
-                          onClick={() => void update(type, "unsnooze")}
-                        >
-                          {t("resume", { name: t(`types.${type}`) })}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  <SettingsSwitch
-                    label={t(`types.${type}`)}
-                    checked={!preferences.mutedTypes.includes(type)}
-                    disabled={saving}
-                    onChange={(enabled) => void update(type, enabled ? "unmute" : "mute")}
-                  />
-                </div>
-              );
-            })}
+              if (visible.length === 0)
+                return <p className="py-3 text-sm text-muted">{t("noMatch")}</p>;
+              // Grouped like the inbox chips so a player can find "elections"
+              // without reading 140 rows, with the alerts that also reach the
+              // phone marked.
+              return GROUP_ORDER.map((group) => {
+                const rows = visible.filter((type) => categoryOf(type) === group);
+                if (rows.length === 0) return null;
+                return (
+                  <section key={group} aria-labelledby={`notification-group-${group}`}>
+                    <h4
+                      id={`notification-group-${group}`}
+                      className="sticky top-0 z-10 bg-background/95 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
+                    >
+                      {t(`groups.${group}`)}
+                    </h4>
+                    <div className="grid gap-x-6 md:grid-cols-2">
+                      {rows.map((type) => {
+                        const snooze = preferences.snoozedTypes.find(
+                          (entry) => entry.type === type && Date.parse(entry.until) > Date.now()
+                        );
+                        return (
+                          <div
+                            key={type}
+                            className="flex items-center justify-between gap-3 border-b border-card-border py-2"
+                          >
+                            <div>
+                              <p className="text-sm">{t(`types.${type}`)}</p>
+                              {deliveryOf(type) === "push" && (
+                                <p className="text-xs text-primary">{t("pushTag")}</p>
+                              )}
+                              {snooze && (
+                                <>
+                                  <p className="text-xs text-muted">
+                                    {t.rich("snoozed", {
+                                      time: () => <LocalTime value={snooze.until} />,
+                                    })}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    className="text-xs text-primary"
+                                    onClick={() => void update(type, "unsnooze")}
+                                  >
+                                    {t("resume", { name: t(`types.${type}`) })}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                            <SettingsSwitch
+                              label={t(`types.${type}`)}
+                              checked={!preferences.mutedTypes.includes(type)}
+                              disabled={saving}
+                              onChange={(enabled) => void update(type, enabled ? "unmute" : "mute")}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              });
+            })()}
           </div>
           <p className="mt-2 text-xs" role="status">
             {message ? t(message) : ""}

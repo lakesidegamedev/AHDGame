@@ -21,24 +21,6 @@ export const DECADES = [
   "2040s",
 ] as const;
 
-export const ERAS = [
-  "Industrial War Foundations",
-  "Great War Doctrine",
-  "Interwar Experimentation",
-  "Mechanization & Rearmament",
-  "Total War",
-  "Nuclear Age & Jet Warfare",
-  "Counterinsurgency & Missiles",
-  "Precision & Professionalization",
-  "Air-Land Battle & Networks",
-  "Post-Cold War Expeditionary",
-  "Counterterror & Network-Centric",
-  "Drone, Cyber & Hybrid",
-  "Transparent Battlefield",
-  "Autonomous & AI",
-  "Fully Integrated Multi-Domain",
-] as const;
-
 export const ERASHORT = [
   "Industrial",
   "Great War",
@@ -56,9 +38,6 @@ export const ERASHORT = [
   "Autonomous",
   "Integrated",
 ] as const;
-
-/** Default "current era" from the design (1940s). Wiring derives this from game time. */
-export const DESIGN_CURRENT_ERA = 4;
 
 export const GRP: Record<string, { label: string; color: string }> = {
   army: { label: "Army", color: "#5a86c4" },

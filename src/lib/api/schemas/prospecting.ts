@@ -36,7 +36,7 @@ export const governmentProspectSchema = z.object({
 });
 
 /** POST /api/contracts/extraction/offer */
-export const issueContractOfferSchema = z.object({
+const issueContractOfferSchema = z.object({
   countryId: z.enum(ZOD_COUNTRY_ENUM),
   stateId: stateIdSchema,
   corporationId: schemas.objectId,

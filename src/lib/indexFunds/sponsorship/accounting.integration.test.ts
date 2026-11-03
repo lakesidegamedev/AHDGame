@@ -15,6 +15,8 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
     await db.collection("financialTxLog").insertOne({ _id: new ObjectId(), ...entry });
     return "applied";
   }),
+  // The fee path now loads the thresholds once for the whole pass.
+  loadTxThresholds: vi.fn(async () => ({})),
 }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn(async () => true) }));
 vi.mock("@/lib/currency/corporationCapital", async (original) => ({
@@ -65,9 +67,7 @@ function fixture() {
   } as Corporation;
   memory.seed("corporations", [sponsor as unknown as Record<string, unknown>]);
   memory.seed("exchangeRates", [{ _id: new ObjectId(), currencyCode: "USD", rate: 1.7 }]);
-  memory.seed("gameConfig", [
-    { _id: "default", playerFundSponsorshipEnabled: true, indexFundsMode: "full" },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", indexFundsMode: "full" }]);
   memory.seed("corporateSectors", [
     { _id: new ObjectId(), corporationId: sponsor._id, sectorType: "financial" },
   ]);

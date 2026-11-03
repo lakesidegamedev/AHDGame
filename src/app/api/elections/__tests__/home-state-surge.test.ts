@@ -16,6 +16,7 @@ vi.mock("jose", () => ({
 vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ ok: true }),
   ELECTION_LIMITS: { maxRequests: 10, windowMs: 60000 },
+  CAMPAIGN_ACTION_LIMITS: { maxRequests: 60, windowMs: 60000 },
 }));
 
 vi.mock("@/lib/api/requireAuth", () => ({

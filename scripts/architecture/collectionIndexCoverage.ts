@@ -1,5 +1,7 @@
 /** New world collections need a bootstrap index plan or a reviewed primary-key policy. */
 export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
+  electoratePriorityOverrides:
+    "Preserved admin-authored content keyed by country:region:dimension:group _id. Each save/delete uses one _id; region pages read only the bounded $in list of that region's authored bucket ids. No secondary scans or indexes; MongoDB supplies the _id index on first write.",
   producerEconomyTurnChunks:
     "Immutable receipt chunks are written by SHA-256 _id and read only by the bounded list of hashes in one frozen turn manifest. Reset deletes all chunks; there are no secondary scans or TTL queries.",
   fundWritedownCompensationLedger: "Retired world receipts have no active secondary access path.",
@@ -28,6 +30,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   productAdvertisingClearing: "One pool per family and currency, read and upserted by _id.",
   productAdvertisingPayables:
     "Holds only owed payables, deleted once cleared; the clearing reads its family's small owed set.",
+  productAdvertisingAllocations:
+    "One frozen per-seller table per funded order, read once by the clearing that prices it; the payable and its table are deleted together.",
   productAdvertisingClearances: "Append-only receipts, inserted and looked up by payable _id.",
   turnWorkerControl:
     "One singleton (_id 'current'): the turn worker's heartbeat and the single open admin turn request, read and written by _id.",

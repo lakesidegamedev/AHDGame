@@ -415,10 +415,16 @@ export function allocateShareholderPool(
   shareholderPool: number,
   nameById: Map<string, string>
 ): ShareholderAllocation {
-  const totalShares = corp.totalShares ?? 0;
-  if (totalShares <= 0 || shareholderPool <= 0) {
+  if ((corp.totalShares ?? 0) <= 0 || shareholderPool <= 0) {
     return { characterRows: [], corporationRows: [], fundRows: [], publicFloatRow: null };
   }
+  // Divide by every share on the register, not just the stored total, so a
+  // register that drifted above totalShares cannot pay out more than the pool.
+  const totalShares = Math.max(
+    corp.totalShares ?? 0,
+    (corp.shareholders ?? []).reduce((sum, sh) => sum + Math.max(0, sh.shares), 0) +
+      Math.max(0, corp.publicFloat ?? 0)
+  );
 
   const characterRows: ShareholderPayoutRow[] = [];
   const corporationRows: CorporateShareholderPayoutRow[] = [];

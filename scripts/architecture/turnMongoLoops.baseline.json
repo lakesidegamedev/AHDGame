@@ -142,7 +142,7 @@
     "b3187f2feb4226d96a84b5bd90f36a2049d7603be6203c59508c3d4202950433": 1,
     "6d079f21778fb07aba0cfebdd67eaf06db5cc62a734f8be820e942e7e1059757": 1,
     "d381e9ccac838088771e4cabfc531c447a0bcfa9d544809474d003f8fafb0043": 1,
-    "1ad8dc2af684231fdc3b0f1ebdd3c45ecc04d6566626b1192e6c05aec7e53c7f": 1,
+    "5ba2a0a1b74a08badd943832de751bdf7a43357a67aef186ed4ce9d44d201342": 1,
     "7bedb8713d4a66bfba1f5f38b9ce0044c7a81ab529f832a258f0346850382fbf": 1,
     "e73243bed4b541ff5e4c2ff4ec836a2639c3d906612e2fd7e5c3616fe0d3a6da": 1,
     "5a8c0d062ecad3d9fdd51c0117251f74f72e6bfd76fcefe422dbb50e3ce62e7f": 1,
@@ -163,13 +163,13 @@
     "3dd41c663056c7d689ddc736f506217c62368f3d9504ce70ad5327b94b037b5c": 1,
     "7ad5bb1b2694bf1d94cefca4b1b04147140d5444a77b0adbb65461c42a194dc0": 1,
     "bd06f82ea352bfa2a6a6f2555d85feaf3870d94cba2529bfcb1637099860e72f": 1,
-    "ce312b2c5c112f4e0656ad36cda567da6a39e23de5cbcf9b81c6b67ded9059b8": 1,
+    "9e8ae2af3b5ce449faab4ac8104ab3418ec9732dd7288ad9488ffcf98ee8d4cd": 1,
     "a36fc4170fbf5cc4dcd6eb708c9822668c1235982e8394490a97315d13791c60": 1,
     "8ef8a438e9dfa19da8b73916af50496bb69100dbc1f56c1fd56d0690322ba3ea": 1,
     "aac01e9c382029b98523f66b00add47ebd0601174978c1666cd103af97f97c78": 1,
     "f4224b8240845b57e766ee5bdb418cbb42984429a9f34fad846ad5553dd11a37": 1,
     "a6e4841829cefb5ce0ad1bd089a68084df967c4968a4de80e18e9cb63e5e406a": 1,
-    "220d32729b9a21ce656ed8aa9e8a13b4ffa79322c9ea47c10aaf6342177062b7": 1,
+    "4fcd7856e8a24a4457baa56cf196eca0755a7c03545fed72a16e1489bed0a033": 1,
     "2b9bf114e1279b5afb41e133db016b239bfe00997a4bc13d68b46b982a947201": 1,
     "f01540aa996b62ac45900f1fa932b9beafd0095285ddde54d640e8a7922e65ae": 1,
     "e6362272e873201241e480bc0d8e813cdb11d4d01a2aa30abb7851a0db1c2af8": 1,
@@ -305,7 +305,7 @@
     "377c0a3e5d17da8745824ddb5fc217834e88956ebf4f66bb29810c32b2e2fa33": 1,
     "3ce4ee468bd963f9eb65dc4bb8e8d183523058a2042459da527b8ab6a44e072f": 1,
     "e34041d9e049565c421670d7b365ab198a0c792b1936da96daefb18535cc48ca": 1,
-    "4ff8b5e251c3f30a531974e2d7e1d8c71db455598ee4cdf506c507f22fc06adf": 1,
+    "8a0aa58392556d9c3a85fe0f637dfeb0ca80ff7376ab8a74c8a52d128ec394d4": 1,
     "7339dad52e27f26f0caa60ef91e5443b4acc37ec23858c1fe3d436b9746d3aaa": 1,
     "5a2a5ce4dfb68c3249a49fc58d4786e48f566be3c0f60a5882d8d457aee432dc": 1,
     "eac51beba8da1ed6cefc0a7d5316485a23076bf0e30f87c3025134cd1d081a89": 1,
@@ -422,9 +422,9 @@
     "86eb0f4c1501e3caeb87306a252efc78c68ed671868f24c73e056a8992a4527d": 1,
     "b5f4fff1677b135febc02a02dbe25f3ec4eb2bc8efc3adecc8f93547679926c4": 1,
     "4da550d779aeb29af9d7c4075154306c48cb835cd8a2bb56abf6c7d536ce9277": 2,
-    "d1e6523b9e89e410c409244a1d774b05371fddd1d49d0be1e9e452c484b8a1ec": 1,
-    "5a5cad10b21805a9f676ffc9aff41d336efbb7591638b3b667d2eded5d6465b8": 1,
-    "6485c3ade7a8a0b91dc349b18edcc6d1500f26bc59bfc57bd3a04d2dbd63cc4e": 1,
+    "c574e52d6b6bfd240c0663965bfda3a52ffeea30a42fdac3bb88ac98e13c1c3d": 1,
+    "b7eec63af8fe8992136451e6b146114b33e47af7ceb54c5b45ef46610985e600": 1,
+    "2aa92551c9fb7c0ae0aceabf39d1ca742aad6b65fe7f52f66e4bb0d16240bb95": 1,
     "493bf8fbee58dbe0cf2201bed803fe8b23700f96c8e2138c09dca7c53215273f": 1,
     "7fd3c995cd71069e10dd50e0a1111201dd208fd48d51b757146c03f2b4cdb43c": 1,
     "4bb911bf7150c318234ac063adb0d54cda24593edf0630f7e4c54002e8d7ed08": 1,
@@ -639,7 +639,7 @@
     "911bce362bcb45ba801bfeddcb3f70419e8b0f671bd44bb5d2204f7f6e726a33": 1,
     "8aa2251cc0ee1f391f32514380a48b8d07bba50f8f5cd80c5870adcf88c1ffe4": 1,
     "7a8589225f55da755d718f6f45da8434774eecf24e3ef50c7d7d7a9bd6f8402e": 1,
-    "efb6462d6d19e82234befba005d5c80329de0cbcb7adb71ff58297b187285dbd": 1,
+    "8ccaf682d926831967269ad935b57f14e0b73150e7e07c94928fe926de7ed61c": 1,
     "9a34a41e465abd0c573380fd66dc3fc32bb998f96994ea90ad1dbe18d36f6863": 1,
     "b10923cb39140180f4d10ec8e879917201404591b87f7f795f9e20d137060774": 1,
     "8425cc180d72aea91201a2ded75d0adf78aed0273443b90296cb03111ba29c87": 1,
@@ -675,7 +675,7 @@
     "e54ef0dc8a1525b6ea8904bb3e860c6282b9e49f23a9f687633ba83328afd1ad": 1,
     "a9ede6674d692d5180505a301712299bb9a0fadd03e15dd1923e2a5d29194472": 1,
     "7879fff949225c0c8a92dc6f2d926e9d25779281386bf392cb351432446c3e47": 1,
-    "5a5eb0a74ba31d29109f1b85850290e6aebdb28aad86e67eb3c43f65b66e683d": 1,
+    "28b8481843172e0158631aa352ca7c67afcc754f1e0bea52d53ea65d31eee37b": 1,
     "2f9e842027f9a9b9f56119c9c1807f0a7cac53fbfa196de3deb3850bb2af7a7d": 1,
     "7ad8f1ad1fc256ef9d1054f229e410d52637d583d303e6b59c54878f3f5a807d": 1,
     "65e3ca1ee5f3ccfa8996ab7ee5180c6704508823fe28494e5f3a5b3aa056327c": 1,
@@ -1683,8 +1683,8 @@
       "file": "src/lib/nationalization/nationalizeSectorWide.ts",
       "operation": "updateOne",
       "owner": "nationalizeSectorWide",
-      "expression": "sectors.updateOne({ _id: ns._id }, { $inc: { revenue: captureLocal, ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}), }, $set: { ...(captureUnits > 0 ? seedPlantLedger(params.sectorType, (ns.capitalStock ?? 0) + captureUnits, params.industryModel, params.mediaDiscriminator) : {}), nationalizedAtTurn: params.consequence.turn, nationalizationTransitionMultiplier: transitionMultiplier, sectorNationalizationScope: params.scope, sectorNationalizationCarveFraction: f, updatedAt: now, }, })",
-      "fingerprint": "1ad8dc2af684231fdc3b0f1ebdd3c45ecc04d6566626b1192e6c05aec7e53c7f"
+      "expression": "sectors.updateOne({ _id: ns._id }, { $inc: { revenue: captureLocal, ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}), }, $set: { ...(captureUnits > 0 ? seedPlantLedger({ ...params, strategyId: ns.strategyId }, (ns.capitalStock ?? 0) + captureUnits) : {}), nationalizedAtTurn: params.consequence.turn, nationalizationTransitionMultiplier: transitionMultiplier, sectorNationalizationScope: params.scope, sectorNationalizationCarveFraction: f, updatedAt: now, }, })",
+      "fingerprint": "5ba2a0a1b74a08badd943832de751bdf7a43357a67aef186ed4ce9d44d201342"
     },
     {
       "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
@@ -1829,9 +1829,9 @@
     {
       "file": "src/lib/indexFunds/nppRedemption.ts",
       "operation": "updateOne",
-      "owner": "processNppFundRedemptions",
+      "owner": "applyNppRedemptionsSequentially",
       "expression": "db .collection<IndexFund>(FUND_COLLECTION) .updateOne({ _id: intent.fundId, unitSupply: { $gte: intent.units } }, { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } })",
-      "fingerprint": "ce312b2c5c112f4e0656ad36cda567da6a39e23de5cbcf9b81c6b67ded9059b8"
+      "fingerprint": "9e8ae2af3b5ce449faab4ac8104ab3418ec9732dd7288ad9488ffcf98ee8d4cd"
     },
     {
       "file": "src/lib/indexFunds/domesticSovereignCoverage/ensure.ts",
@@ -1871,9 +1871,9 @@
     {
       "file": "src/lib/indexFunds/processQueuedRedemptions.ts",
       "operation": "find",
-      "owner": "processQueuedRedemptions",
+      "owner": "prepareQueuedRedemptionPass",
       "expression": "db .collection(collection) .find({ _id: { $in: ids } })",
-      "fingerprint": "220d32729b9a21ce656ed8aa9e8a13b4ffa79322c9ea47c10aaf6342177062b7"
+      "fingerprint": "4fcd7856e8a24a4457baa56cf196eca0755a7c03545fed72a16e1489bed0a033"
     },
     {
       "file": "src/lib/indexFunds/processQueuedRedemptions.ts",
@@ -2845,8 +2845,8 @@
       "file": "src/lib/turn/defenceDeliveryTurn.ts",
       "operation": "findOne",
       "owner": "applyDefenceDeliveries",
-      "expression": "db.collection<Corporation>(\"corporations\").findOne({ _id: contract.corporationId })",
-      "fingerprint": "4ff8b5e251c3f30a531974e2d7e1d8c71db455598ee4cdf506c507f22fc06adf"
+      "expression": "db .collection<Corporation>(\"corporations\") .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED })",
+      "fingerprint": "8a0aa58392556d9c3a85fe0f637dfeb0ca80ff7376ab8a74c8a52d128ec394d4"
     },
     {
       "file": "src/lib/turn/defenceDeliveryTurn.ts",
@@ -3712,23 +3712,23 @@
     {
       "file": "src/lib/politicalMedia/journal.ts",
       "operation": "findOne",
-      "owner": "applyPoliticalMediaOrderEffect",
+      "owner": "applyPoliticalMediaOrderEffectToOrder",
       "expression": "targets.findOne({ _id: targetId, [effectReceiptPath]: true })",
-      "fingerprint": "d1e6523b9e89e410c409244a1d774b05371fddd1d49d0be1e9e452c484b8a1ec"
+      "fingerprint": "c574e52d6b6bfd240c0663965bfda3a52ffeea30a42fdac3bb88ac98e13c1c3d"
     },
     {
       "file": "src/lib/politicalMedia/journal.ts",
       "operation": "findOne",
-      "owner": "applyPoliticalMediaOrderEffect",
+      "owner": "applyPoliticalMediaOrderEffectToOrder",
       "expression": "targets.findOne({ _id: targetId }, { projection: { targetedAds: 1, targetedAdsRevision: 1 } })",
-      "fingerprint": "5a5cad10b21805a9f676ffc9aff41d336efbb7591638b3b667d2eded5d6465b8"
+      "fingerprint": "b7eec63af8fe8992136451e6b146114b33e47af7ceb54c5b45ef46610985e600"
     },
     {
       "file": "src/lib/politicalMedia/journal.ts",
       "operation": "updateOne",
-      "owner": "applyPoliticalMediaOrderEffect",
+      "owner": "applyPoliticalMediaOrderEffectToOrder",
       "expression": "targets.updateOne({ _id: targetId, [effectReceiptPath]: { $exists: false }, ...revisionFilter }, { $set: { targetedAds: nextAds, targetedAdsRevision: revision + 1, [effectReceiptPath]: true, }, })",
-      "fingerprint": "6485c3ade7a8a0b91dc349b18edcc6d1500f26bc59bfc57bd3a04d2dbd63cc4e"
+      "fingerprint": "2aa92551c9fb7c0ae0aceabf39d1ca742aad6b65fe7f52f66e4bb0d16240bb95"
     },
     {
       "file": "src/lib/equities/primaryMarket.ts",
@@ -5316,8 +5316,8 @@
       "file": "src/lib/nationalization/reverseNationalization.ts",
       "operation": "updateOne",
       "owner": "reverseNationalizationTaking",
-      "expression": "sectorsCol.updateOne({ _id: sector._id }, { $set: { corporationId: priorOwner._id, ...(typeof prov.formerRevenue === \"number\" ? { revenue: prov.formerRevenue } : {}), ...(typeof prov.formerCapitalStock === \"number\" ? { capitalStock: prov.formerCapitalStock, ...seedPlantLedger(sector.sectorType, prov.formerCapitalStock, sector.industryModel, sector.mediaDiscriminator), } : {}), updatedAt: now, }, $unset: { absorbedAtTurn: \"\", nationalizedAtTurn: \"\", nationalizationTransitionMultiplier: \"\", nationalizationProvenance: \"\", }, })",
-      "fingerprint": "efb6462d6d19e82234befba005d5c80329de0cbcb7adb71ff58297b187285dbd"
+      "expression": "sectorsCol.updateOne({ _id: sector._id }, { $set: { corporationId: priorOwner._id, ...(typeof prov.formerRevenue === \"number\" ? { revenue: prov.formerRevenue } : {}), ...(typeof prov.formerCapitalStock === \"number\" ? { capitalStock: prov.formerCapitalStock, ...seedPlantLedger(sector, prov.formerCapitalStock), } : {}), updatedAt: now, }, $unset: { absorbedAtTurn: \"\", nationalizedAtTurn: \"\", nationalizationTransitionMultiplier: \"\", nationalizationProvenance: \"\", }, })",
+      "fingerprint": "8ccaf682d926831967269ad935b57f14e0b73150e7e07c94928fe926de7ed61c"
     },
     {
       "file": "src/lib/nationalization/reverseNationalization.ts",
@@ -5583,7 +5583,7 @@
       "operation": "findOne",
       "owner": "settleBudget",
       "expression": "db.collection<FederalBudget>(\"federalBudget\").findOne({ _id: b._id })",
-      "fingerprint": "5a5eb0a74ba31d29109f1b85850290e6aebdb28aad86e67eb3c43f65b66e683d"
+      "fingerprint": "28b8481843172e0158631aa352ca7c67afcc754f1e0bea52d53ea65d31eee37b"
     }
   ],
   "adoptedReleaseCommit": "81812055b6",

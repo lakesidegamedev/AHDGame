@@ -46,7 +46,7 @@ export type ForeignInvestmentRule =
  *   this share of any national industry;
  * - ban: foreign-controlled subsidiaries may not operate here.
  */
-export const FOREIGN_INVESTMENT_RULE_BY_LEVEL: readonly ForeignInvestmentRule[] = [
+const FOREIGN_INVESTMENT_RULE_BY_LEVEL: readonly ForeignInvestmentRule[] = [
   { kind: "open" },
   { kind: "screening" },
   { kind: "cap", maxIndustrySharePct: 25 },

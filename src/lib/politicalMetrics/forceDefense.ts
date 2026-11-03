@@ -12,7 +12,7 @@ import { FORCE_EFFECT } from "@/lib/constants/military";
  */
 
 /** Per-family scale (playtest-tunable): ~0.3 → a baseline force ≈ 3-point steady-state. */
-export const DEFENSE_W = {
+const DEFENSE_W = {
   armedForces: 0.3,
   security: 0.3,
   projection: 0.3,

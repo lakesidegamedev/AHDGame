@@ -19,22 +19,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * demographicProfileId: "uk_archetypes"
  */
-// Baseline turnout rates for UK voter groups (from 2019 GE data)
-export const UK_VOTER_GROUP_BASELINES: Record<string, number> = {
-  post_industrial_workers: 57,
-  urban_progressives: 72,
-  suburban_homeowners: 70,
-  young_renters: 52,
-  rural_traditionalists: 71,
-  retirees: 73,
-  public_sector: 68,
-  moderate_centrists: 67,
-  populist_right: 55,
-  green_activists: 61,
-  small_business: 70,
-  new_britons: 50,
-};
-
 export const ukDemographicCategories: DemographicCategory[] = [
   {
     _id: "uk_voterGroups",

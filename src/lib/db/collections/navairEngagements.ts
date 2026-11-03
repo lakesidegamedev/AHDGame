@@ -23,7 +23,7 @@ export interface NavairEngagementDoc {
   sunk: string[];
 }
 
-export function getNavairEngagementsCollection(db: Db) {
+function getNavairEngagementsCollection(db: Db) {
   return db.collection<NavairEngagementDoc>("navairEngagements");
 }
 

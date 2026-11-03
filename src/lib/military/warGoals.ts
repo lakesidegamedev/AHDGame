@@ -17,6 +17,9 @@
  */
 export const WAR_DECLARATION_COOLDOWN_TURNS = 120;
 
+/** Turns the chambers have to vote on a war declaration bill (one turn is one hour). */
+export const WAR_DECLARATION_VOTE_WINDOW_TURNS = 24;
+
 export type WarGoal = "conquest" | "regime_change" | "punitive" | "liberation";
 
 export interface WarGoalOption {

@@ -153,7 +153,7 @@ export function PositionMapView() {
         <div>
           <h1 className="text-2xl text-foreground">Position editor</h1>
           <p className="mt-0.5 text-sm text-muted">
-            Author Layer-1 demographic positions, turnout, and archetype composition by state.
+            Author Layer-1 demographic positions and turnout by state.
           </p>
         </div>
         <Button

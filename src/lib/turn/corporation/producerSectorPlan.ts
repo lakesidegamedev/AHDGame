@@ -1,11 +1,17 @@
 /** Map a reconciled sector and explicit physical/cost facts into the one funded market. */
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 import type { CorporateSector } from "@/lib/db/types";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
+import { clampPricingPosture } from "@/lib/market/costPlusPricing/rules";
 import { isStorable } from "@/lib/market/inventory";
-import { advanceProducerCapacity } from "@/lib/market/producerMarket/capacityRules";
+import {
+  advanceProducerCapacity,
+  PRODUCER_CATCH_UP_TURNS,
+} from "@/lib/market/producerMarket/capacityRules";
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import type { ProductionPlan } from "@/lib/market/producerMarket/production";
+import type { ProducerQuotePolicy } from "@/lib/market/producerMarket/rules";
 import type { ProducerSectorTarget } from "@/lib/market/producerMarket/sectorTarget";
 
 type SectorFacts = Pick<
@@ -15,6 +21,7 @@ type SectorFacts = Pick<
   | "sectorType"
   | "industryModel"
   | "mediaDiscriminator"
+  | "strategyId"
   | "capitalStock"
   | "capacityBookAnchor"
   | "buildQueue"
@@ -23,7 +30,29 @@ type SectorFacts = Pick<
   | "producerCapacity"
   | "producerInventory"
   | "producerQuotes"
->;
+  | "plantUnitRemainder"
+  | "plantWearUnits"
+  | "pricingPosture"
+  | "pricingMode"
+> &
+  Partial<Pick<CorporateSector, "stateId">>;
+
+/**
+ * The quote a sector posts without an explicit producer quote: automatic, with
+ * the CEO's pricing posture as its markup over the market reference. Cost-plus
+ * mode reads posture as a markup over cost, which this policy does not model,
+ * so it stays at the market.
+ */
+function defaultQuotePolicy(sector: SectorFacts): ProducerQuotePolicy {
+  const posture = sector.pricingPosture;
+  return {
+    kind: "automatic",
+    targetMarkup:
+      sector.pricingMode !== "costPlus" && typeof posture === "number"
+        ? clampPricingPosture(posture)
+        : 0,
+  };
+}
 
 /** Preparation error for a sector with no physical stock yet; it produces nothing. */
 export const NO_PHYSICAL_CAPACITY = "Producer sector requires physical stock and paid basis";
@@ -50,16 +79,29 @@ export function prepareProducerSector(input: {
   otherOperatingCost: number;
   labourRecipientAccountId: string;
   operatingRecipientAccountId: string;
+  /** gameConfig.wholePlantsStage on: capacity moves in whole plants. */
+  wholePlants?: boolean;
+  /**
+   * Last settled producer turn when it lags the previous turn because an
+   * economy step failed. A plant may open anywhere from it to the previous
+   * turn; absent means the previous turn exactly.
+   */
+  openingTurn?: number;
 }): { plan: ProductionPlan; target: ProducerSectorTarget } {
   const { sector } = input;
   const generation = sector.producerCapacity;
   const inventory = sector.producerInventory;
+  const oldest = input.openingTurn ?? input.turn - 1;
   if (
+    !Number.isSafeInteger(oldest) ||
+    oldest > input.turn - 1 ||
+    oldest < input.turn - 1 - PRODUCER_CATCH_UP_TURNS ||
     !generation ||
     !inventory ||
     generation.worldEpoch !== input.worldEpoch ||
     inventory.worldEpoch !== input.worldEpoch ||
-    generation.turn !== input.turn - 1 ||
+    generation.turn > input.turn - 1 ||
+    generation.turn < oldest ||
     inventory.turn !== generation.turn
   )
     throw new Error("Producer sector requires a reconciled opening generation");
@@ -81,6 +123,15 @@ export function prepareProducerSector(input: {
       ownedDailyUnits: sector.capitalStock,
       paidBookAnchor: sector.capacityBookAnchor,
       buildQueue: sector.buildQueue,
+      ...(input.wholePlants
+        ? {
+            wholePlants: {
+              plantUnits: plantSizeForSector(sector),
+              creditUnits: Math.max(0, sector.plantUnitRemainder ?? 0),
+              wearUnits: Math.max(0, sector.plantWearUnits ?? 0),
+            },
+          }
+        : {}),
     },
     operatingRecipeRatio: input.operatingRecipeRatio,
     recessionCapacityFactor: input.recessionCapacityFactor,
@@ -88,6 +139,8 @@ export function prepareProducerSector(input: {
       sectorType: sector.sectorType,
       industryModel: sector.industryModel,
       mediaDiscriminator: sector.mediaDiscriminator,
+      // Plant size follows the recipe; a vehicle strategy builds vehicle plants.
+      strategyId: sector.strategyId,
     },
   };
   const activeFraction = activeCapacityFraction(sector);
@@ -119,7 +172,7 @@ export function prepareProducerSector(input: {
         commodity,
         unitsPerOutput,
         book: market.book,
-        policy: sector.producerQuotes?.[commodity] ?? { kind: "automatic", targetMarkup: 0 },
+        policy: sector.producerQuotes?.[commodity] ?? defaultQuotePolicy(sector),
         referenceUnitPrice: market.referenceUnitPrice,
         storable: isStorable(commodity),
       };
@@ -148,7 +201,7 @@ export function prepareProducerSector(input: {
       commodity,
       unitsPerOutput: 0,
       book: market.book,
-      policy: sector.producerQuotes?.[commodity] ?? { kind: "automatic", targetMarkup: 0 },
+      policy: sector.producerQuotes?.[commodity] ?? defaultQuotePolicy(sector),
       referenceUnitPrice: market.referenceUnitPrice,
       storable: true,
       ...(retainedUnitCost != null ? { retainedUnitCost } : {}),
@@ -159,6 +212,7 @@ export function prepareProducerSector(input: {
     plan: {
       id,
       accountId: target.corporationId,
+      stateId: sector.stateId,
       capacityUnits: capacity.capacityUnits,
       activeFraction,
       outputMultiplier: input.outputMultiplier,

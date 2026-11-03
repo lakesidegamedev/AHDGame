@@ -10,11 +10,11 @@ import {
   GUBERNATORIAL_ACTION_CAP,
   GUBERNATORIAL_ACTION_REGEN_INTERVAL,
 } from "@/lib/constants/governorOffice";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   getExecutiveOrderName,
   getExecutiveOrderNamePlural,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 
 export interface ActiveOrder {
   _id: string;

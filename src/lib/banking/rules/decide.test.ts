@@ -92,15 +92,17 @@ describe("capital injection and upstream", () => {
       allowed: false,
       refusal: { code: "cap", cap: "distributable" },
     });
-    const rich = snapshot({ charter: retail({ totalLoans: 3_500_000, cashReserves: 900_000 }) });
-    // equity = 0.9M + 3.5M - 4M = 0.4M; surplus = 0.9M - 0.4M = 0.5M; distributable 0.4M
+    const rich = snapshot({ charter: retail({ totalLoans: 3_500_000, cashReserves: 1_600_000 }) });
+    // equity = 1.6M + 3.5M - 4M = 1.1M; surplus = 1.6M - 0.4M = 1.2M. The bank keeps the
+    // capital that clears the stress test on 3.5M of loans: 15% loss (525k) plus 6% of
+    // the remaining 2.975M (178.5k) = 703.5k, so 1.1M - 703.5k = 396.5k may leave.
     const decision = balanced(decide({ type: "upstream_cash", amount: 10_000_000 }, rich));
-    expect(decision.transition.legs[0].amount).toBe(400_000);
+    expect(decision.transition.legs[0].amount).toBe(396_500);
     expect(decision.transition.legs[0].filter).toMatchObject({
-      "bankCharter.cashReserves": { $gte: 400_000 + 400_000 },
+      "bankCharter.cashReserves": { $gte: 396_500 + 400_000 },
     });
     expect(decision.transition.projections[0].update).toEqual({
-      $inc: { "bankCharter.postedCapital": -400_000 },
+      $inc: { "bankCharter.postedCapital": -396_500 },
     });
   });
 
@@ -167,6 +169,22 @@ describe("central bank facilities", () => {
     });
     const decision = balanced(decide({ type: "draw_cb_margin", amount: 50_000 }, universal));
     expect(decision.transition.legs.map((l) => l.kind)).toEqual(["mint", "credit"]);
+  });
+
+  it("repays the interest-bearing margin first and keeps the injected part within the line (#1694)", () => {
+    const universal = snapshot({
+      charter: retail({
+        type: "universal",
+        cashReserves: 1_000_000,
+        cbMarginDebt: 500_000,
+        cbLiquidityAdvanceDebt: 300_000,
+      }),
+    });
+    const decision = balanced(decide({ type: "repay_cb_margin", amount: 400_000 }, universal));
+    expect(decision.transition.projections[0].update).toEqual({
+      $inc: { "bankCharter.cbMarginDebt": -400_000 },
+      $min: { "bankCharter.cbLiquidityAdvanceDebt": 100_000 },
+    });
   });
 
   it("denies every facility when banking is off, with the switch as the reason", () => {

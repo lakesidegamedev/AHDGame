@@ -21,7 +21,7 @@ export interface EuropeanIntegrationState {
   treatyEffectiveTurn?: number;
 }
 
-export const COMMUNITY_FOUNDERS = ["BE", "DE", "FR", "IT", "LU", "NL"] as const;
+const COMMUNITY_FOUNDERS = ["BE", "DE", "FR", "IT", "LU", "NL"] as const;
 export const COMMUNITY_MEMBERS_1979 = [...COMMUNITY_FOUNDERS, "DK", "IE", "UK"] as const;
 export const COMMUNITY_MEMBERS_1991 = [...COMMUNITY_MEMBERS_1979, "GR", "ES", "PT"] as const;
 

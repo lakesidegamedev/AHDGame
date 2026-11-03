@@ -43,6 +43,8 @@ export interface PolicyRecordResponse {
   /** Where this active policy came from — bill enactment, an executive order,
    *  or an expired/rescinded order revert. Only populated for policy records. */
   enactedByKind?: "bill" | "order" | "expiry" | null;
+  /** Enacting bill for reset-era program laws, so the row can link back to it. */
+  enactedByBillId?: string | null;
   /** Set when enactedByKind === "order" — info needed to label the active order. */
   activeOrder?: {
     orderId: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { ReferendumConsentCard, type ConsentReferendum } from "./ReferendumConsentCard";
 
 interface ConsentResponse {

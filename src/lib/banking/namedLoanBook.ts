@@ -4,8 +4,8 @@
  * A bank services its plain loan book in one journaled move per turn (N
  * borrower debits, one summed credit, one projection per loan), and its
  * construction book in a second one held under a single bank lease. Loans
- * another receipt still owns and dead-bank recoveries keep the per-loan path
- * because they own their own locks and credit targets.
+ * another receipt still owns keep the per-loan path because they own their own
+ * locks.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation } from "@/lib/db/types";
@@ -13,7 +13,6 @@ import type { BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
 import { loanServiceTransition, loanServiceKey } from "@/lib/banking/rules/loanServicing";
-import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import {
   acquireConstructionLoanLock,
@@ -26,6 +25,12 @@ import {
 import { emitTx, emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loanCharterEpochFilter } from "@/lib/banking/loanEpoch";
+import {
+  batchedLoanServiceMove,
+  loanRepaymentTxEntry,
+  recordLoanServiceBatch,
+  type LoanServiceBatchRow,
+} from "@/lib/banking/loanServiceBatch";
 
 export type LoanServiceResult = {
   interestCollected: number;
@@ -40,32 +45,6 @@ export type LoanServiceResult = {
   /** Some legs landed but the move did not finish; the preload may be stale. */
   partial: boolean;
 };
-
-function loanRepaymentTxEntry(args: {
-  loan: BankLoan;
-  turn: number;
-  currency: CurrencyCode;
-  bankCorporationId: ObjectId;
-  bankName: string;
-  borrowerName: string;
-  payment: number;
-  settlementId: string;
-}): TxInput {
-  return {
-    type: "bank_loan_repayment",
-    turn: args.turn,
-    createdAt: new Date(),
-    subjectType: args.loan.borrowerType === "character" ? "character" : "corporation",
-    subjectId: args.loan.borrowerId,
-    subjectName: args.borrowerName,
-    amount: -args.payment,
-    currencyCode: args.currency,
-    counterpartyType: "corporation",
-    counterpartyId: args.bankCorporationId,
-    counterpartyName: args.bankName,
-    meta: { loanId: args.loan._id.toString(), settlementId: args.settlementId },
-  };
-}
 
 export async function servicePlayerLoan(
   db: Db,
@@ -261,61 +240,6 @@ async function readBorrowerAvailable(
   };
 }
 
-type BatchDecision = {
-  loan: BankLoan;
-  decision: ReturnType<typeof loanServiceTransition>["decision"];
-  transition: ReturnType<typeof loanServiceTransition>["transition"];
-  borrowerKey: string;
-};
-
-/**
- * The legs and projections of one bank-level servicing move. One debit per
- * borrower (and currency) rather than one per loan: the decisions already
- * capped each payment against the running balance, so the sum is what the
- * serial per-loan debits would have taken. Unique targets are what lets the
- * journal deliver the whole run in a batch. Each loan's own book increment
- * folds into one, applied under `totalLoansFilter`.
- */
-function batchedServiceMove(
-  decisions: readonly BatchDecision[],
-  creditTarget: MoneyTarget,
-  totalLoansFilter: Record<string, unknown>
-): { legs: TransitionLeg[]; projections: TransitionProjection[] } {
-  const totalPayment = decisions.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0);
-  const debitByTarget = new Map<string, TransitionLeg>();
-  for (const row of decisions) {
-    for (const leg of row.transition.legs) {
-      if (leg.kind !== "debit") continue;
-      const key = `${leg.collection}\u0000${String(leg.filter?._id)}\u0000${leg.path}`;
-      const existing = debitByTarget.get(key);
-      if (existing) existing.amount += leg.amount;
-      else debitByTarget.set(key, { ...leg });
-    }
-  }
-  const legs: TransitionLeg[] = [...debitByTarget.values()];
-  // Stable sort by collection so the batched delivery can group whole runs.
-  legs.sort((a, b) => String(a.collection).localeCompare(String(b.collection)));
-  if (totalPayment > 0) legs.push({ kind: "credit", amount: totalPayment, ...creditTarget });
-  const projections = decisions.flatMap((row) =>
-    row.transition.projections.filter((projection) => {
-      if (projection.collection !== "corporations") return true;
-      const update = "update" in projection ? projection.update : undefined;
-      if (!update || typeof update !== "object") return true;
-      const inc = (update as { $inc?: Record<string, unknown> }).$inc;
-      return !inc || !("bankCharter.totalLoans" in inc);
-    })
-  );
-  const totalLoansDelta = decisions.reduce((sum, row) => sum + row.decision.totalLoansDelta, 0);
-  if (totalLoansDelta !== 0)
-    projections.push({
-      collection: "corporations",
-      filter: totalLoansFilter,
-      update: { $inc: { "bankCharter.totalLoans": totalLoansDelta } },
-      note: "Advance the named loan book under the batch servicing receipt",
-    });
-  return { legs, projections };
-}
-
 export async function serviceNamedLoanBook(
   db: Db,
   turn: number,
@@ -466,7 +390,7 @@ export async function serviceNamedLoanBook(
     note: "instalment reaches the lending bank",
   };
   const decide = async (batchLoans: readonly BankLoan[], target: MoneyTarget) => {
-    const decisions: BatchDecision[] = [];
+    const decisions: LoanServiceBatchRow[] = [];
     for (const loan of batchLoans) {
       const key = borrowerKeyOf(loan);
       const preloaded = borrowerState.get(key);
@@ -485,42 +409,25 @@ export async function serviceNamedLoanBook(
     return decisions;
   };
   // Counts and ledger rows for a batch whose journal applied.
-  const recordApplied = (decisions: readonly BatchDecision[], settlementId: string) => {
-    for (const row of decisions) {
-      total.interestCollected += row.decision.interestPaid;
-      total.principalRepaid += row.decision.principalPaid;
-      total.writtenOff += row.decision.writtenOff;
-      total.totalLoansDelta += row.decision.totalLoansDelta;
-      total.bankCredit += Math.max(0, row.decision.payment);
-      if (row.decision.payment > 0) {
-        txEntries.push(
-          loanRepaymentTxEntry({
-            loan: row.loan,
-            turn,
-            currency,
-            bankCorporationId: row.loan.bankCorporationId,
-            bankName: corp.name,
-            borrowerName: borrowerState.get(row.borrowerKey)?.name ?? "Borrower",
-            payment: row.decision.payment,
-            settlementId,
-          })
-        );
-      }
-      emitBankingAuditEvent(
-        {
-          ...row.transition.event,
-          turn,
-          outcome: "ok",
-          currency,
-          bankId: corp._id.toString(),
-          settlementId,
-        },
-        db
-      );
-    }
+  const recordApplied = (decisions: readonly LoanServiceBatchRow[], settlementId: string) => {
+    const recorded = recordLoanServiceBatch({
+      db,
+      rows: decisions,
+      turn,
+      currency,
+      bankName: corp.name,
+      settlementId,
+      borrowerName: (row) => borrowerState.get(row.borrowerKey)?.name ?? "Borrower",
+    });
+    total.interestCollected += recorded.totals.interestCollected;
+    total.principalRepaid += recorded.totals.principalRepaid;
+    total.writtenOff += recorded.totals.writtenOff;
+    total.totalLoansDelta += recorded.totals.totalLoansDelta;
+    total.bankCredit += recorded.totals.bankCredit;
+    txEntries.push(...recorded.txEntries);
   };
   // A refused batch moved nothing: each loan retries on its own key and guard.
-  const servicePerLoan = async (decisions: readonly BatchDecision[]) => {
+  const servicePerLoan = async (decisions: readonly LoanServiceBatchRow[]) => {
     for (const row of decisions) {
       const loanResult = await servicePlayerLoan(
         db,
@@ -546,9 +453,11 @@ export async function serviceNamedLoanBook(
   if (decisions.length > 0) {
     const batchKey = `loan-service-batch:${corp._id.toString()}:${turn}`;
     const settled = await settleTransition(db, {
-      ...batchedServiceMove(decisions, creditTarget, {
-        _id: corp._id,
-        "bankCharter.charteredTurn": charteredTurn,
+      ...batchedLoanServiceMove(decisions, creditTarget, {
+        totalLoansFilter: {
+          _id: corp._id,
+          "bankCharter.charteredTurn": charteredTurn,
+        },
       }),
       key: batchKey,
       kind: "loan_service_batch",
@@ -674,7 +583,7 @@ export async function serviceNamedLoanBook(
     };
     const rows = await decide(due, target);
     const settled = await settleTransition(db, {
-      ...batchedServiceMove(rows, target, target.filter),
+      ...batchedLoanServiceMove(rows, target, { totalLoansFilter: target.filter }),
       key,
       kind: "loan_service_construction_batch",
       turn,

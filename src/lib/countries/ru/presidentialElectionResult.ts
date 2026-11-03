@@ -13,7 +13,7 @@ import type {
   GameState,
   NPP,
 } from "@/lib/db/types";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+
 import {
   decideRussianPresidentialResult,
   type RussianPresidentialResult,
@@ -288,12 +288,4 @@ export async function materializeRussianPresidentialElectionResult(input: {
     throw new Error("Russian presidential ballot changed during certification");
   await results.insertOne(record, { session });
   return record;
-}
-export async function certifyRussianPresidentialElection(
-  input: Omit<Parameters<typeof materializeRussianPresidentialElectionResult>[0], "session">
-) {
-  return runRequiredTransaction(
-    (session) => materializeRussianPresidentialElectionResult({ ...input, session }),
-    { client: input.db.client }
-  );
 }

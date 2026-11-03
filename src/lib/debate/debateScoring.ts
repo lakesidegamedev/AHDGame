@@ -83,12 +83,12 @@ export const DEBATE_CHALLENGE_CHANCE = 0.5;
 export const DEBATE_MAX_PER_ELECTION = 3;
 
 /** Draw threshold: totals within this margin are a tie. */
-export const DEBATE_DRAW_THRESHOLD = 2;
+const DEBATE_DRAW_THRESHOLD = 2;
 /** Favorability swing bounds for a decisive result. */
 export const DEBATE_MIN_SWING = 3;
 export const DEBATE_MAX_SWING = 8;
 /** Points of margin beyond the draw threshold per +1 of favorability swing. */
-export const DEBATE_MARGIN_PER_SWING = 4;
+const DEBATE_MARGIN_PER_SWING = 4;
 
 function statOf(side: DebateSide, key: StatKey): number {
   return side.stats?.[key] ?? NEUTRAL_STAT;
@@ -131,7 +131,7 @@ export function scoreSide(side: DebateSide, rng: () => number): number {
  * Expected (roll-free) value of a strategy for a side — its scaled base reward.
  * Used by the AI opponent to rank archetypes by fit.
  */
-export function expectedStrategyValue(side: DebateSide, strategy: DebateStrategy): number {
+function expectedStrategyValue(side: DebateSide, strategy: DebateStrategy): number {
   return scoreStrategy(side, strategy, 0);
 }
 

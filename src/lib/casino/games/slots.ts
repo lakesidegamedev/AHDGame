@@ -32,7 +32,7 @@ export const SLOT_WEIGHTS: Record<SlotSymbol, number> = {
   WILD: 2,
 };
 
-export const SLOT_TRIPLES: Record<SlotSymbol, { multiplier: number; name: string }> = {
+const SLOT_TRIPLES: Record<SlotSymbol, { multiplier: number; name: string }> = {
   WILD: { multiplier: 250, name: "Wild Jackpot" },
   DIAMOND: { multiplier: 180, name: "Diamond Jackpot" },
   SEVEN: { multiplier: 90, name: "Lucky Sevens" },
@@ -44,7 +44,7 @@ export const SLOT_TRIPLES: Record<SlotSymbol, { multiplier: number; name: string
   CHERRY: { multiplier: 2.5, name: "Cherry Bomb" },
 };
 
-export const SLOT_DOUBLES: Record<Exclude<SlotSymbol, "WILD">, number> = {
+const SLOT_DOUBLES: Record<Exclude<SlotSymbol, "WILD">, number> = {
   DIAMOND: 3.5,
   SEVEN: 2.5,
   STAR: 1.1,

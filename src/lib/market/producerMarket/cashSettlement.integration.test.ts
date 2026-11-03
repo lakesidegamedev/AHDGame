@@ -100,12 +100,23 @@ describe("producer cash on the durable settlement journal", () => {
     expect(memory.collection("producerEconomyAccounts").docs[0].cash).toBe(0);
   });
 
-  it("stops on a changed opening balance and cannot draw on a bank reserve to cover it", async () => {
+  it("settles the turn's change on a balance that moved but still covers the debit", async () => {
     const { memory, transition } = world();
+    // A player spent company cash between the opening read and the write.
     memory.collection("corporations").docs[0].liquidCapital = 1900;
+    const result = await settleTransition(memory as unknown as Db, transition);
+    expect(["applied", "replayed"]).toContain(result.status);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1700);
+    expect(memory.collection("producerEconomyAccounts").docs[0].cash).toBe(10000);
+  });
+
+  it("stops when the moved balance cannot cover the debit and cannot draw on a bank reserve", async () => {
+    const { memory, transition } = world();
+    memory.collection("corporations").docs[0].liquidCapital = 100;
     const result = await settleTransition(memory as unknown as Db, transition);
     expect(["partial", "rejected"]).toContain(result.status);
     expect(memory.collection("producerEconomyAccounts").docs[0].cash).toBe(0);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(100);
     expect(memory.collection("corporations").docs[0].bankCharter).toMatchObject({
       cashReserves: 5000,
     });

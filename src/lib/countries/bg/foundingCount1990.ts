@@ -50,7 +50,7 @@ export interface BgFoundingAssemblyRecord {
   settled?: ReturnType<typeof import("./rules/foundingMandates1990").settleBgFoundingMandates>;
 }
 
-export async function materializeBgFoundingFirstCount(input: {
+async function materializeBgFoundingFirstCount(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="400" viewBox="0 0 760 400" role="img" font-family="system-ui, sans-serif">
+<title>National Corporation money flow</title>
+<desc>Operating profit is split between cash the corporation keeps and a remittance to the national budget; the CEO can draw from the budget within a cap, and the treasury covers losses by restoring cash to zero.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="399" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="30" y="40" width="230" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="145.0" y="66.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Sector operating profit</text>
+<text x="145.0" y="83.0" text-anchor="middle" font-size="13" fill="#18181b">each turn</text>
+<rect x="30" y="260" width="230" height="70" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="145.0" y="291.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">National Corporation</text>
+<text x="145.0" y="308.0" text-anchor="middle" font-size="13" fill="#18181b">its working cash</text>
+<rect x="500" y="150" width="230" height="200" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="615.0" y="229.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">National budget</text>
+<text x="615.0" y="246.0" text-anchor="middle" font-size="13" fill="#18181b">receives the remittance, pays</text>
+<text x="615.0" y="263.0" text-anchor="middle" font-size="13" fill="#18181b">any treasury draw, and covers</text>
+<text x="615.0" y="280.0" text-anchor="middle" font-size="13" fill="#18181b">losses</text>
+<path d="M145,100 L145,260" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="153" y="170" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">retained share:</text>
+<text x="153" y="184" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">0% to 75%, the</text>
+<text x="153" y="198" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">CEO's choice</text>
+<path d="M260,70 L615,70 L615,150" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="440" y="62" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">remitted: at least 25%</text>
+<path d="M500,285 L260,285" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="380" y="278" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">CEO draw, up to the cap</text>
+<path d="M500,318 L260,318" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="380" y="336" text-anchor="middle" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">loss: treasury pays,</text>
+<text x="380" y="350" text-anchor="middle" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">cash restored to zero</text>
+</svg>

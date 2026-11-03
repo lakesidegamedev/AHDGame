@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mocks.showToast }),
 }));
+vi.mock("@/lib/hooks/useEnabledCountryIds", () => ({
+  useEnabledCountryIds: () => ["US", "UK", "JP"],
+}));
 
 vi.mock("@/components/bills/BillAutoFailWarning", () => ({
   postBillProposalWithElectionConfirmation: mocks.postBill,
@@ -135,7 +138,13 @@ function renderModal(
   onSuccess = vi.fn(),
   countryId: "US" | "JP" | "UK" = "US",
   onClose = vi.fn(),
-  options: { canSubmit?: boolean; hasActiveBill?: boolean; scope?: "national" | "regional" } = {}
+  options: {
+    canSubmit?: boolean;
+    hasActiveBill?: boolean;
+    scope?: "national" | "regional";
+    proposeViaPartyNpp?: boolean;
+    offerTrade?: boolean;
+  } = {}
 ) {
   render(
     <NextIntlClientProvider locale="en" messages={messages}>
@@ -154,6 +163,8 @@ function renderModal(
         ]}
         initialChamber="house"
         canSubmit={options.canSubmit}
+        proposeViaPartyNpp={options.proposeViaPartyNpp}
+        offerTrade={options.offerTrade}
         hasActiveBill={options.hasActiveBill}
         onClose={onClose}
         onSuccess={onSuccess}
@@ -180,19 +191,102 @@ afterEach(() => {
 });
 
 describe("GuidedLegislationModal", () => {
+  it.each(["embargo", "end_embargo"] as const)("submits a national Trade %s", async (action) => {
+    stubCatalog();
+    mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+    renderModal();
+    fireEvent.change(await screen.findByLabelText("Policy domain"), { target: { value: "Trade" } });
+    expect(screen.queryByRole("option", { name: /US/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    expect(mocks.showToast).toHaveBeenCalledWith(
+      expect.stringContaining("target country"),
+      "error"
+    );
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: action } });
+    fireEvent.change(screen.getByLabelText("Target country"), { target: { value: "JP" } });
+    fireEvent.change(screen.getByLabelText("Direction"), { target: { value: "export" } });
+    if (action === "embargo") {
+      fireEvent.change(screen.getByLabelText("Restriction"), { target: { value: "cap" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+      expect(mocks.showToast).toHaveBeenCalledWith(
+        expect.stringContaining("non-negative cap"),
+        "error"
+      );
+      fireEvent.change(screen.getByLabelText("Cap (units)"), { target: { value: "1000" } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Trade Restriction Act" },
+    });
+    expect(screen.getByText(/Costs 10 action points and 0 national influence/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Change trade restrictions." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+    await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
+    expect(mocks.postBill.mock.calls[0][0].body).toMatchObject({
+      category: "trade",
+      provisions: [
+        {
+          type: action,
+          targetCountry: "JP",
+          commodity: "all",
+          direction: "export",
+          ...(action === "embargo" ? { mode: "cap", cap: 1000 } : {}),
+        },
+      ],
+    });
+    if (action === "end_embargo")
+      expect(mocks.postBill.mock.calls[0][0].body.provisions[0]).not.toHaveProperty("mode");
+    fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+    expect(
+      screen.getByLabelText("Target country").getAttribute("value") ??
+        (screen.getByLabelText("Target country") as HTMLSelectElement).value
+    ).toBe("JP");
+  });
+
+  it.each([{ scope: "regional" as const }, { scope: "national" as const, offerTrade: false }])(
+    "hides Trade for unsupported endpoints (%j)",
+    async (options) => {
+      stubCatalog();
+      renderModal(vi.fn(), "UK", vi.fn(), options);
+      await screen.findByLabelText("Policy domain");
+      await waitFor(() => expect(screen.getByRole("option", { name: "Subsidies" })).toBeTruthy());
+      expect(screen.queryByRole("option", { name: "Trade" })).toBeNull();
+    }
+  );
+
+  it("rejects mixing embargoes into a policy draft", async () => {
+    stubCatalog();
+    renderModal();
+    await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+    fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+    fireEvent.change(await screen.findByLabelText("Policy domain"), { target: { value: "Trade" } });
+    fireEvent.change(screen.getByLabelText("Target country"), { target: { value: "JP" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    expect(mocks.showToast).toHaveBeenCalledWith(
+      "Embargoes require a separate national Trade bill.",
+      "error"
+    );
+    expect(mocks.postBill).not.toHaveBeenCalled();
+  });
   it.each([
-    ["regional", "economy"],
-    ["national", "trade"],
+    ["regional", "economy", "Economy, Work, Trade and Financial Affairs"],
+    ["national", "economy", "Economy, Work, Trade and Financial Affairs"],
+    ["regional", "economy", "Economy, work, trade, and fiscal affairs"],
+    ["national", "economy", "Economy, work, trade, and fiscal affairs"],
   ] as const)(
     "submits the economic domain using a valid %s category",
-    async (scope, expectedCategory) => {
-      const domain = "Economy, Work, Trade and Financial Affairs";
+    async (scope, expectedCategory, domain) => {
       stubCatalog({
         ...catalog,
         families: [{ ...catalog.families[0], domain, title: "Household Relief and Work Credits" }],
       });
       mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
-      renderModal(vi.fn(), scope === "regional" ? "UK" : "US", vi.fn(), { scope });
+      renderModal(vi.fn(), scope === "regional" ? "UK" : "US", vi.fn(), {
+        scope,
+        proposeViaPartyNpp: true,
+      });
       await addProvision(domain, "Household Relief and Work Credits", "Community clinic expansion");
       fireEvent.change(screen.getByLabelText("Bill title"), {
         target: { value: "Household Support Act" },
@@ -204,6 +298,7 @@ describe("GuidedLegislationModal", () => {
       await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
       const request = mocks.postBill.mock.calls[0][0];
       expect(request.body.category).toBe(expectedCategory);
+      expect(request.body.proposeViaPartyNpp).toBe(true);
       expect(request.body.provisions[0]).toEqual({
         type: "reset_law",
         familyId: "L19",
@@ -590,6 +685,26 @@ describe("GuidedLegislationModal", () => {
     });
   });
 
+  it("hides the Subsidies domain where the endpoint takes only reviewed laws and taxes", async () => {
+    stubCatalog();
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <GuidedLegislationModal
+          countryId="JP"
+          endpoint="/api/country/jp/legislature/cabinet-bills"
+          chambers={[]}
+          initialChamber="cabinet"
+          offerSubsidies={false}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+
+    await screen.findByRole("option", { name: "Health and care" });
+    expect(screen.queryByRole("option", { name: "Subsidies" })).toBeNull();
+  });
+
   it("does not offer tax instruments that lack exact-rate metadata", async () => {
     stubCatalog({
       ...catalog,
@@ -608,5 +723,146 @@ describe("GuidedLegislationModal", () => {
     const domain = await screen.findByLabelText("Policy domain");
     expect(screen.queryByRole("option", { name: "Taxes" })).toBeNull();
     expect(domain).toBeTruthy();
+  });
+
+  it.each(["national", "regional"] as const)(
+    "drafts subsidies and mixed bills at %s scope",
+    async (scope) => {
+      stubCatalog();
+      mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+      renderModal(vi.fn(), scope === "regional" ? "UK" : "US", vi.fn(), { scope });
+      const domesticLabel =
+        scope === "regional"
+          ? "Companies headquartered in this region only"
+          : "Domestic companies only";
+
+      fireEvent.change(await screen.findByLabelText("Policy domain"), {
+        target: { value: "Subsidies" },
+      });
+      fireEvent.click(screen.getByText("Grant a subsidy").closest("button")!);
+      fireEvent.change(screen.getByLabelText("Coverage"), { target: { value: "sector" } });
+      const review = screen.getByRole("button", { name: "Review" });
+      expect(review.hasAttribute("disabled")).toBe(true);
+      fireEvent.change(screen.getByLabelText("Sector"), { target: { value: "manufacturing" } });
+      fireEvent.click(screen.getByLabelText(domesticLabel));
+      fireEvent.click(screen.getByRole("button", { name: "Review" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+      expect(screen.getByText("Grant subsidy: Manufacturing")).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+      fireEvent.change(await screen.findByLabelText("Policy domain"), {
+        target: { value: "Subsidies" },
+      });
+      fireEvent.click(screen.getByText("End a subsidy").closest("button")!);
+      expect(screen.queryByLabelText(domesticLabel)).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Review" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+
+      fireEvent.change(screen.getByLabelText("Bill title"), {
+        target: { value: "Industrial Support Act" },
+      });
+      fireEvent.change(screen.getByLabelText("Summary"), {
+        target: { value: "Support domestic manufacturing." },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+      await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
+      expect(mocks.postBill.mock.calls[0][0].body).toMatchObject({
+        category: "industry",
+        provisions: [
+          {
+            type: "subsidy",
+            scopeType: "sector",
+            targetSectorType: "manufacturing",
+            domesticOnly: true,
+          },
+          { type: "end_subsidy", scopeType: "economy_wide" },
+        ],
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+      await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+      fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+      await waitFor(() => expect(mocks.postBill).toHaveBeenCalledTimes(2));
+      expect(mocks.postBill.mock.calls[1][0].body.category).toBe("custom");
+      expect(mocks.postBill.mock.calls[1][0].body.provisions).toHaveLength(3);
+    }
+  );
+
+  it("submits a chair-directed regional bill without a governor queue or client-chosen NPP", async () => {
+    stubCatalog();
+    mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+    renderModal(vi.fn(), "UK", vi.fn(), { scope: "regional", proposeViaPartyNpp: true });
+    await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Regional Clinics Act" },
+    });
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Expand regional clinics." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+    await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
+    const request = mocks.postBill.mock.calls[0][0];
+    expect(request.url).toBe("/api/country/UK/region/NIR/legislature/bills");
+    expect(request.body.proposeViaPartyNpp).toBe(true);
+    expect(request.body.targetNppId).toBeUndefined();
+    expect(request.body.provisions[0]).toMatchObject({ scope: "regional", regionId: "NIR" });
+  });
+
+  it("automatically queues a governor bill for an eligible party NPP without offering flavor-only bills", async () => {
+    stubCatalog();
+    mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+    const onSuccess = vi.fn();
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <GuidedLegislationModal
+          countryId="UK"
+          endpoint="/api/country/uk/region/sco/office/legislation/queue"
+          scope="regional"
+          regionId="SCO"
+          chambers={[]}
+          initialChamber="regional"
+          queue={{
+            eligibleNpps: [
+              { _id: "npp-1", name: "Morag Campbell" },
+              { _id: "npp-2", name: "Second party legislator" },
+            ],
+          }}
+          onClose={vi.fn()}
+          onSuccess={onSuccess}
+        />
+      </NextIntlClientProvider>
+    );
+
+    expect(screen.getByRole("heading", { name: "Queue a bill" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Custom Bill" })).toBeNull();
+    await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+    expect(screen.queryByLabelText("Originating chamber")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Clinic Access Act" },
+    });
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Expand community clinics." },
+    });
+    const queueButton = screen.getByRole("button", { name: "Queue bill" });
+    expect(queueButton.hasAttribute("disabled")).toBe(false);
+    expect(screen.queryByLabelText("Introducing NPP")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Queue bill" }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce());
+    const request = mocks.postBill.mock.calls[0][0];
+    expect(request.url).toBe("/api/country/uk/region/sco/office/legislation/queue");
+    expect(request.body).toMatchObject({
+      targetNppId: "npp-1",
+      provisions: [
+        {
+          type: "reset_law",
+          familyId: "L19",
+          scope: "regional",
+          regionId: "SCO",
+          choice: "center_left",
+        },
+      ],
+    });
+    expect(mocks.showToast).toHaveBeenCalledWith("Bill queued.", "success");
   });
 });

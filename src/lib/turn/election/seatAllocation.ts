@@ -2,7 +2,8 @@ import { HOUSE_SEATS, UK_COMMONS_SEATS, UK_REGIONAL_COUNCIL_SEATS } from "@/lib/
 import { allocateBlocListSeats } from "./blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import { getMultiSeatMinShare } from "./rules/seatEligibility";
-import { COUNTRY_CONFIGS, type ElectionMethod } from "@/lib/constants/countries";
+import { type ElectionMethod } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 export { getMultiSeatMinShare } from "./rules/seatEligibility";
 
@@ -251,7 +252,7 @@ export function allocateSeats(
   // current proportional rule so projections and final resolution agree
   // throughout the rollout.
   const isJapanShugiin =
-    countryId === COUNTRY_CONFIGS.JP.id &&
+    countryId === COUNTRY_CLIENT_CONFIGS.JP.id &&
     (electionType === "shugiin" || electionType === "snap_shugiin");
 
   if (isMultiSeat && allocationMethod === "sntv" && !isJapanShugiin) {

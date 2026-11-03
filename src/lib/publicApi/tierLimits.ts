@@ -15,7 +15,7 @@ import { isPatreonActive, type PatreonTier } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
 
 /** Multiplier applied to the base public-read allowance, per active tier. */
-export const PUBLIC_API_TIER_MULTIPLIERS: Record<Exclude<PatreonTier, null>, number> = {
+const PUBLIC_API_TIER_MULTIPLIERS: Record<Exclude<PatreonTier, null>, number> = {
   supporter: 1,
   "supporter-plus": 1.5,
   "supporter-plus-plus": 3,

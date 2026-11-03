@@ -2,6 +2,10 @@
  * Election vote tally accumulation and initialization.
  */
 
+import {
+  LEGISLATIVE_APPROVAL_VOTE_SLOPE,
+  approvalVoteMultiplier,
+} from "@/lib/electionEngine/approvalVoteMultiplier";
 import { isHu1991AssemblyCampaign } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianDumaVoteTotals } from "@/lib/countries/ru/rules/assemblyVoteIncrement";
 import { russianCouncilVoteTotals } from "@/lib/countries/ru/rules/councilVoteTotals";
@@ -75,6 +79,7 @@ import {
   type EnrichmentParty,
 } from "./candidateEnrichment";
 import type { AccumulateVoteTurnPreload } from "./types";
+import { getCountryState } from "@/lib/countryState";
 import { loadPartyGroupFavorability } from "@/lib/governorOffice/address/partyGroupFavorabilityLoader";
 import {
   buildGranularElectorateSubstrate,
@@ -414,7 +419,8 @@ export async function accumulateVoteTurn(
     electionCountryId,
     officeKeyForElectionType(election.electionType as string, electionCountryId)
   );
-  const strengthMultiplier = (1 + (approvalDecimal - 0.5) * 0.2) * officeStrength;
+  const strengthMultiplier =
+    approvalVoteMultiplier(approvalDecimal, LEGISLATIVE_APPROVAL_VOTE_SLOPE) * officeStrength;
   const effectiveTurnPool = turnPool * strengthMultiplier;
 
   // ── Granular-cell electorate substrate ─────────────────────────────────────
@@ -803,6 +809,16 @@ export async function accumulateVoteTurn(
     groups: deriveGroupLeans(effCategories, effDemographics),
   });
 
+  // Runtime one-party flag for the FPTP spoiler gate, so a mid-game conversion
+  // takes effect at once (the compile-time config is wrong for converted worlds).
+  // The batched path preloads it; the standalone path reads cached countryState.
+  const isOnePartyState =
+    isGeneralElection &&
+    (
+      options?.preload?.enrichmentCountryConfigByElection?.get(electionId.toString()) ??
+      (await getCountryState(db, electionCountryId))
+    ).governmentType === "onePartyState";
+
   const { votesPerCandidate, sharesPct } = distributeFn(
     effEnriched,
     effEffectiveTurnPool,
@@ -816,6 +832,7 @@ export async function accumulateVoteTurn(
       useNationalInfluenceForReach: false,
       votingSystem: state.votingSystem ?? "fptp",
       isGeneralElection,
+      isOnePartyState,
       countryId: electionCountryId,
       currentStateId: stateId,
       parentRegionId: state.parentRegionId,

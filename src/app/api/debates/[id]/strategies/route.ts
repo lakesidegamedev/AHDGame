@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireHumanSessionWithCharacter(request);
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60_000);
+    const rateLimit = checkRateLimit(`api/debates/[id]/strategies:${auth.user.userId}`, 30, 60_000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, bodySchema);

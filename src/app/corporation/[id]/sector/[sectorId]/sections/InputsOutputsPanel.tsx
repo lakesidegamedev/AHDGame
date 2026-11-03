@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { ArrowDownToLine, ArrowUpFromLine, Pickaxe } from "lucide-react";
-import type { CountryId } from "@/lib/constants/countries";
-import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { THROUGHPUT_MIN } from "@/lib/market/throughput";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -18,6 +18,7 @@ import { perProductSalePrices } from "../lib/perProductSalePrice";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
+import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
 
 interface InputsOutputsPanelProps {
   commodities: CommoditiesData;
@@ -77,6 +78,26 @@ export default function InputsOutputsPanel({
   // availability ratio on the rows above is uncapped and is not the throttle.
   const throttleApplied = commodities.throughput?.applied ?? null;
   const throttleFloor = commodities.throughput?.floor ?? THROUGHPUT_MIN;
+  // The callout under the input rows has to explain the run meter's "waiting on
+  // inputs" slice, which is the settlement's input shortfall, not the
+  // availability throttle quoted above (ticket 1754). These can diverge sharply:
+  // a turn where availability was barely trimmed can still have lost most of its
+  // run because the plant could not buy enough of the input. Read the slice off
+  // the same idle causes the meter draws.
+  const inputIdleShare =
+    plants.capacityUnits != null && plants.capacityUnits > 0
+      ? Math.min(
+          1,
+          Math.max(
+            0,
+            (plants.idleCauses?.find((c) => c.cause === "inputs")?.units ?? 0) /
+              plants.capacityUnits
+          )
+        )
+      : null;
+  const showsInputShortfall =
+    commodities.throughput?.bindingInput != null &&
+    ((inputIdleShare ?? 0) > 0.005 || (throttleApplied != null && throttleApplied < 0.999));
   const inputBillSharePct =
     plants.pnl && plants.pnl.revenueAnchor > 0
       ? (plants.pnl.inputsAnchor / plants.pnl.revenueAnchor) * 100
@@ -197,22 +218,38 @@ export default function InputsOutputsPanel({
             </ul>
           )}
           {costliest && <InputOffersHint flow={costliest} />}
-          {throttleApplied != null &&
-            throttleApplied < 0.999 &&
-            commodities.throughput?.bindingInput && (
-              <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
-                Last turn, short supply of{" "}
-                <span className="font-semibold">
-                  {COMMODITY_LABELS[commodities.throughput.bindingInput as CommodityType] ??
-                    commodities.throughput.bindingInput}
-                </span>{" "}
-                was the binding input. That was the &quot;waiting on inputs&quot; slice in the run
-                meter above. Your plants ran at{" "}
-                <span className="font-semibold tabular-nums">{fmtPct(throttleApplied)}</span> of
-                what they could have. A shortage never cuts you below {fmtPct(throttleFloor)}, so a
-                worse world number than that does not bite any harder.
-              </p>
-            )}
+          {showsInputShortfall && commodities.throughput?.bindingInput && (
+            <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
+              Last turn, short supply of{" "}
+              <span className="font-semibold">
+                {COMMODITY_LABELS[commodities.throughput.bindingInput as CommodityType] ??
+                  commodities.throughput.bindingInput}
+              </span>{" "}
+              was the binding input.{" "}
+              {inputIdleShare != null && inputIdleShare > 0.005 ? (
+                <>
+                  It held{" "}
+                  <span className="font-semibold tabular-nums">{fmtPct(inputIdleShare)}</span> of
+                  your capacity idle, which is the &quot;waiting on inputs&quot; slice in the run
+                  meter above.
+                </>
+              ) : (
+                <>It is the &quot;waiting on inputs&quot; slice in the run meter above.</>
+              )}{" "}
+              The availability limit the game put on these plants was{" "}
+              {throttleApplied != null && throttleApplied < 0.999 ? (
+                <>
+                  <span className="font-semibold tabular-nums">{fmtPct(throttleApplied)}</span>, and
+                  a shortage never takes that limit below {fmtPct(throttleFloor)}
+                </>
+              ) : (
+                <>never lower than {fmtPct(throttleFloor)}</>
+              )}
+              . That floor sits under the limit, not under the run: when the input you can actually
+              buy falls short, the run can still be cut below it.
+            </p>
+          )}
+          <OwnSupplyNotes demands={commodities.demands} />
         </section>
 
         {/* Outputs ──────────────────────────────────────────────────────────*/}
@@ -238,8 +275,14 @@ export default function InputsOutputsPanel({
                   )}
                   right={(() => {
                     const share = soldShareFor(f);
-                    if (share == null) return null;
+                    const ownSite = f.ownSite;
+                    if (share == null && !ownSite) return null;
                     const perOutput = f.soldFraction != null;
+                    const ownSiteText = ownSite
+                      ? `${ownSiteLabel(ownSite.share)}: ${fmtUnits(ownSite.units)} used by your company (about ${price(ownSite.valueAnchor)} ${currencyCode} at your asking price)`
+                      : null;
+                    if (share == null)
+                      return <span className="text-body-xs text-muted">{ownSiteText}</span>;
                     return (
                       <InfoTooltip
                         width={280}
@@ -250,6 +293,7 @@ export default function InputsOutputsPanel({
                             }`}
                           >
                             {fmtPct(share)} sold
+                            {ownSite ? ` · ${ownSiteLabel(ownSite.share)}` : ""}
                           </span>
                         }
                       >
@@ -263,6 +307,12 @@ export default function InputsOutputsPanel({
                             ? "This is this output on its own. Each thing you make can clear at a different rate, so read the rows against each other to find the one that is not moving."
                             : "This sector has not cleared a turn yet, so this is the average across everything you make, not this output on its own."}
                         </p>
+                        {ownSiteText && (
+                          <p className="mt-1 text-muted">
+                            {ownSiteText}. No money changes hands for that part, so it adds no
+                            revenue here. It is supplying your other sites, not going unsold.
+                          </p>
+                        )}
                       </InfoTooltip>
                     );
                   })()}
@@ -344,6 +394,81 @@ export default function InputsOutputsPanel({
           )}
         </dl>
       </DetailsDisclosure>
+    </div>
+  );
+}
+
+function listNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The company page nets output against use across every site, so it can show
+ * a surplus of an input this plant is short of. This says why that output did
+ * not reach this plant last turn: one collapsed block for every such input, so
+ * several short inputs do not stack paragraphs under the table.
+ */
+function OwnSupplyNotes({ demands }: { demands: readonly CommodityFlow[] }) {
+  const rows = demands.filter(
+    (f): f is CommodityFlow & { ownSupply: NonNullable<CommodityFlow["ownSupply"]> } =>
+      !!f.ownSupply && f.inputAvailability != null && f.inputAvailability < 0.999
+  );
+  if (rows.length === 0) return null;
+  return (
+    <details
+      data-own-supply-notes
+      className="mt-2 rounded-lg border border-card-border bg-background/40 px-3 py-2 text-body-sm text-foreground"
+    >
+      <summary className="cursor-pointer">
+        Your company makes {listNames(rows.map((f) => f.label))} too. Why it did not cover this
+        plant
+      </summary>
+      {rows.map((f) => (
+        <OwnSupplyNote key={f.commodity} label={f.label} ownSupply={f.ownSupply} />
+      ))}
+    </details>
+  );
+}
+
+function OwnSupplyNote({
+  label,
+  ownSupply,
+}: {
+  label: string;
+  ownSupply: NonNullable<CommodityFlow["ownSupply"]>;
+}) {
+  const where = listNames(ownSupply.sourceStateNames);
+  const reasons = new Set(ownSupply.reasons);
+  return (
+    <div data-own-supply-note={ownSupply.reasons.join(" ")} className="mt-2">
+      <p>
+        <span className="font-semibold">{label}</span>, made in {where}:
+      </p>
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted">
+        {reasons.has("market_priority") && (
+          <li>
+            Your supply policy sells it on the market first. Choose own plants first in the CEO
+            office to send it to your own plants before anyone else.
+          </li>
+        )}
+        {reasons.has("no_route") && (
+          <li>
+            None of it was hauled to this region. Your own output only reaches another region along
+            freight that actually ran for your company, so this plant bought from the world market
+            instead.
+          </li>
+        )}
+        {reasons.has("agreement_reserved") && (
+          <li>
+            A supply agreement covers part of what this plant needs. Your own plants do not fill
+            that part, so when the contract delivers short, the gap is bought on the market.
+          </li>
+        )}
+        {reasons.has("not_enough") && (
+          <li>Some of your own output reached this region, but not enough to cover this plant.</li>
+        )}
+      </ul>
     </div>
   );
 }

@@ -349,6 +349,28 @@ describe("processBankSolvencyTurn", () => {
     expect(db.collectionMocks.corporations!.updateOne).not.toHaveBeenCalled();
   });
 
+  it("leaves an unfinished flight receipt for recovery without decoding it", async () => {
+    // Nothing to fly (the book is already empty), but the prior band still asks
+    // the question, and an open receipt means a debit may be half-delivered.
+    const corp = makeBankCorp(
+      makeCharter({ npcDeposits: 0, cashReserves: 1_000_000, warningBand: "amber" }),
+      { liquidCapital: 40_000 }
+    );
+    seedBanks([corp]);
+    persisted.collection("centralBanks").docs[0].bankReserveRequirement = 0.1;
+    const flightKey = `solvency-deposit-flight:${corp._id.toString()}:${TURN}`;
+    await persisted
+      .collection("bankMoneyMoves")
+      .insertOne({ _id: flightKey, status: "partial", legs: [] });
+
+    await processBankSolvencyTurn(db as unknown as Db, TURN);
+
+    expect(db.collectionMocks.bankMoneyMoves!.findOne).toHaveBeenCalledWith(
+      { _id: flightKey, status: "partial" },
+      { projection: { _id: 1 } }
+    );
+  });
+
   it("amber band triggers 10% NPC flight with money conservation", async () => {
     // Flight keys on the PRIOR published band, so the fixture sets it directly.
     // Cash must cover the outflow: deposits carry their cash now, so a bank

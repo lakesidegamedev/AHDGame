@@ -1,3 +1,5 @@
+import { NationalImpeachmentAction } from "@/components/legislation/NationalImpeachmentAction";
+import { NationalPartyBillAction } from "@/components/legislation/NationalPartyBillAction";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -99,17 +101,21 @@ export default async function LegislaturePage({ params }: PageProps) {
   const hungarianElectoralDecisions =
     id === "HU" && (await getGameStatePreset(await getDb())) === "1991-default";
   return (
-    <LegislatureClient
-      countryId={id}
-      legislatureName={ru?.name ?? bgName}
-      generic={ru?.generic}
-      hungarianElectoralDecisions={hungarianElectoralDecisions}
-      bulgarianConstitutionalDecision={
-        id === "BG" && (await getGameStatePreset(await getDb())) === "1991-default"
-      }
-      romanianElectoralDecision={
-        id === "RO" && (await getGameStatePreset(await getDb())) === "1991-default"
-      }
-    />
+    <>
+      <NationalPartyBillAction countryId={id} />
+      <NationalImpeachmentAction countryId={id} />
+      <LegislatureClient
+        countryId={id}
+        legislatureName={ru?.name ?? bgName}
+        generic={ru?.generic}
+        hungarianElectoralDecisions={hungarianElectoralDecisions}
+        bulgarianConstitutionalDecision={
+          id === "BG" && (await getGameStatePreset(await getDb())) === "1991-default"
+        }
+        romanianElectoralDecision={
+          id === "RO" && (await getGameStatePreset(await getDb())) === "1991-default"
+        }
+      />
+    </>
   );
 }

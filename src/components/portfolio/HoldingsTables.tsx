@@ -9,6 +9,7 @@ import {
   type ShareHoldingTerms,
 } from "@/lib/corporations/rules/holdingTerms";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatSignedPercent } from "@/lib/utils/formatters";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
@@ -231,8 +232,7 @@ export function StocksTable({
                             {formatAmount(norm(h.unrealizedPnl, h.currencyCode), h.currencyCode)}
                             {h.unrealizedPnlPct != null && (
                               <span className="block text-[10px] opacity-75">
-                                {h.unrealizedPnlPct >= 0 ? "+" : ""}
-                                {h.unrealizedPnlPct}%
+                                {formatSignedPercent(h.unrealizedPnlPct)}
                               </span>
                             )}
                           </>

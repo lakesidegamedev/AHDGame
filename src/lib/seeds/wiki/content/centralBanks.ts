@@ -1,374 +1,169 @@
 export const centralBanksContent = `# Central Banks
 
-Each active country has a central bank with an appointed **Central Bank Chair**, a player-held position that controls the country's prime interest rate. The prime rate ripples through bond prices, corporate margins, exchange rates, and inflation.
+One player in each country decides what money costs. The **Central Bank Chair** sets the **prime interest rate**, and that single number moves savings yields, loan costs, bond coupons, the exchange rate and inflation. The price of the job is **scrutiny**, a public score built from inflation and growth: miss on either and the bank is believed less, and everything the chair does gets more expensive.
 
-Fully command economies run a passive monobank instead: the automatic rate setter does not fire. See [Planned / Command Economies](/wiki/planned-economies).
+Fully command economies run a passive monobank instead and the automatic rate setter does not fire. See [Planned / Command Economies](/wiki/planned-economies). The US Federal Reserve is run by a committee, covered on [FOMC / Rate-Setting Board](/wiki/fomc).
 
-## The policy cockpit
+## Getting the chair
 
-The Chair has five levers. They are not interchangeable, and the order matters.
+**Nominations.** The holder of the country's executive office (President, Prime Minister or equivalent) nominates, at 1 action each, up to 3 player characters from their own country. Nominations open in the final 48 turns of a chair's term, whenever the seat is vacant, and at any time while an autonomous caretaker holds it. The head of government cannot be nominated, and neither can a cabinet member: leave the cabinet first. On a bank shared by several countries, each member's head of government nominates from their own country into the one pool.
 
-| Lever | What it moves | Best used for | What it costs |
-| --- | --- | --- | --- |
-| **Prime rate** | Credit costs, inflation expectations, exchange rate, corporate margins | The default tool for inflation and demand | One change every 6 turns; scrutiny when you are wrong or late |
-| **Reserve requirement** | How much private banks may lend against deposits | Credit running hot or cold when the rate is constrained | Bank profitability and lending capacity |
-| **QE / QT** | Money stock, bond prices, liquidity | Broken bond markets, or a rate already at its bound | Bond-market risk and a lag before real activity responds |
-| **FX band** | The exchange rate | Defending a peg or a published corridor | Reserves, and failure infamy if the band breaks |
-| **Independence** | Who sets the rate | A government that wants direct control | Institutional scrutiny: 12 for a rate override, 18 for dismissal, 22 for a statute |
+**The draw.** The draw runs when a term ends, when the seat is vacated (resignation, dismissal or removal), and for a bank that has never had a chair. It picks one nominee at random. Lobbying shifts the odds: weight is 1 + lobbying / 500,000, so 500,000 of lobbying doubles a nominee's weight. Any character in the bank's country can lobby, but only for someone already nominated, and pays in the bank's currency. Sitting heads of government, their deputies, ceremonial heads of state and cabinet members are skipped by the draw. A chair's acceptance clears every nomination and all lobbying.
 
-QE and QT are not growth buttons. They move money and bond prices first, and real activity later. The prime rate is the instrument you will use most turns.
+**Accepting.** The chosen player has **24 turns to accept**, and cannot accept while holding an executive office or a cabinet seat. If you decline, or let the clock run out, the draw repeats without you for that cycle. The 192-turn term starts when you accept.
 
-## The Central Bank Chair role
+**No nominee.** If no one is eligible, the seat is left vacant or, when NPP autonomy is on, an autonomous caretaker is seated for a 192-turn term. The caretaker serves that whole term: nominations stay open, but the draw that can replace it runs only when the term ends. The caretaker sets the rate by rule, weighing measured slack (the output gap and unemployment), until a player takes over. The US Fed chair never gets a caretaker; it stays vacant until a nomination succeeds.
 
-The Chair is the most economically powerful non-executive position in the game. Unlike elected offices, it is an **appointed** position with a 4-year term (192 turns).
+**Leaving.** A chair can resign, and the head of government can dismiss a player chair (see below). A chair who takes executive office (head of government, deputy or ceremonial head of state) is removed on the next turn. A chair who moves country resigns the post (see [Relocation](/wiki/relocation)). Each of these opens the draw.
 
-**Benefits of holding the Chair:**
-- The cabinet tier of national political influence: +1.5 per turn (position tiers do not stack, so you get your highest one)
-- +3 actions per turn, stacking on any other office you hold
-- A platform to set monetary policy
+In the US the chair is seat 1 of the FOMC board. The President fills it either by nominating to that seat for a Senate vote (see [FOMC / Rate-Setting Board](/wiki/fomc) and [Confirmation Process](/wiki/confirmation-process)) or, when the seat falls vacant, through the draw above.
 
-**Drawbacks:**
-- Chair infamy (scrutiny) rises when inflation or GDP growth deviate from targets
-- High infamy costs 1.5 actions per turn
-- Poor monetary policy is politically visible: it affects your favorability
+Is it worth it? You gain +3 actions and the influence, and you risk losing 1.5 actions per turn once scrutiny passes 25, so the net is +1.5. Position bonuses do not stack: your national influence is the highest tier you hold, while the +3 actions stack with any other office.
 
-## How infamy works
+## The limits you work inside
 
-The Chair's infamy (scrutiny) tracks how well you are managing the economy. Each turn:
+Each turn the game scores the chair, and each time the chair acts the game checks the move against hard limits.
 
-\`\`\`
-scrutinyDelta = (inflationRate − targetInflation) × 0.5
-              + (2.0 − gdpGrowth) × 0.5           // slow growth → more scrutiny
-\`\`\`
-
-The GDP growth target is **2.0%**. Inflation targets are country-specific monetary baselines; most developed markets target **2.0%**, while countries such as Japan, Brazil, and Nigeria use different baselines. Every 1% deviation from either target moves infamy by 0.5 points per turn.
-
-Natural decay is **5% per turn** (same as character infamy). Good economic conditions let infamy fall naturally; bad conditions push it up faster than decay.
-
-**Positive effects (infamy reduction) are dampened at high scrutiny:**
-\`\`\`
-dampener = max(0.1, 1 − chairInfamy / 150)
-\`\`\`
-
-At infamy 75, positive effects are cut in half. At infamy 150+, they are reduced to 10%. Once scrutiny climbs, it is hard to shed.
-
-**Infamy penalty threshold:** Above 25 infamy, the Chair loses 1.5 actions each turn. National political influence is not affected.
-
-**Scrutiny gain is capped at 8 per turn.** One catastrophic print cannot take a clean bank to ruin. A bad record has to be earned over time, and you can see it coming.
-
-## What scrutiny costs the economy
-
-Scrutiny is not only a tax on the Chair's standing. It changes how much a rate move is believed.
-
-A rate change shifts inflation expectations by a multiplier of \`0.6 + 0.4 x credibility\`, where credibility is \`1 - scrutiny/100\`. A spotless bank gets the full effect. A completely discredited one still gets 60% of it.
-
-The floor is deliberate, and so is the narrowness. Loan rates, corporate cost of capital and bond pricing are untouched by scrutiny: a discredited bank can still cause a recession with a big enough hike. What it has lost is the ability to talk inflation down cheaply. Policy always works. It just costs more to be believed.
-
-## Buying your way back: resolve
-
-The way out is not results. It is nerve.
-
-Each turn the bank's stance is checked against the rate corridor: above-target inflation calls for a restrictive stance, below-target for accommodative, inside the band for neutral. Hold the correct stance for **3 consecutive turns** and scrutiny falls by **6**, whether or not inflation has responded yet. Then the clock restarts.
-
-This is the escape hatch, and it is deliberately an action you control rather than an outcome you do not. A Chair willing to hold an unpopular line can always climb out. Break the stance and the streak resets to zero, and the relief has to be earned again.
-
-### Term survival checklist
-
-- [ ] **Scrutiny below 25.** Above that you lose 1.5 actions a turn and your inflation expectations multiplier starts to weaken.
-- [ ] **Inflation within about one point of target.** A small miss is normal; a persistent miss is what builds scrutiny.
-- [ ] **Growth near 2% or better.** Slow growth adds scrutiny even when inflation is calm.
-- [ ] **A stance you can defend.** Above-target inflation needs a restrictive stance, below-target needs accommodative. Hold it for three turns and the bank recovers 6 scrutiny.
-- [ ] **Reserves for one turn of defense.** A band with no reserves is a promise you cannot keep.
-- [ ] **No open FX breach.** A breach adds 15 infamy and tells the market the band is not credible.
-- [ ] **A rate you can still move.** If you are pinned at 0% or 25%, the rate is no longer your lever. QE, QT, and the reserve requirement are.
-
-## Independence, and what it costs to take it
-
-A government can take control of its central bank. Each route has a price, paid in scrutiny by the **institution**, not the person.
-
-| What the government does | Scrutiny added |
+| What | Value |
 | --- | --- |
-| Sets the prime rate directly (only possible while the bank is government-controlled) | 12 |
-| Dismisses the sitting Chair before their term ends | 18 |
-| Revokes the bank's independence by statute | 22 |
+| Prime rate range | 0% to 25%, in steps of 0.25 |
+| Largest hike in one move | 0.75 points, or 3 points while inflation is at least 5 points over target |
+| Largest cut in one move | 1.75 points. A cut bigger than 0.75 costs 10 scrutiny |
+| Wait between rate changes | 6 turns |
+| Chair term | 192 turns (4 game years) |
+| Time to accept a nomination | 24 turns |
+| Scrutiny that costs you actions | Above 25: you lose 1.5 actions per turn |
+| Chair bonus | +3 actions per turn, plus the cabinet tier of national influence (+1.5 per turn) |
+| Scrutiny gain | Capped at 8 per turn. Decays 5% per turn |
+| Relief for holding a correct stance | 6 scrutiny after 3 turns in a row |
+| Price of government interference | 12 for a rate override, 18 for dismissal, 22 for a statute |
+| Scrutiny kept through a handover | x0.75 when a pick is proposed and x0.75 again when it is accepted (about 56%). x0.75 if the seat is left vacant |
+| Currency regime change | Once per 48 turns |
+| FX band: narrowing or cancelling | 6-turn cooldown. Failed defence adds 15 scrutiny |
+| Reserve requirement | 5% to 95%. Default 10% (modern worlds) or 20% (historical) |
+| QE, QT and other money operations | One operation per 6 turns |
 
-The ladder is ordered by how far the act goes. Overriding one decision is a disagreement. Removing the person who makes them is a statement about who the bank answers to. A statute outlasts the government that passed it.
-
-**Chair turnover is not a laundromat.** When a term expires, or a Chair resigns, the institution keeps **75%** of its scrutiny: the new Chair inherits most of the record, and gets a modest honeymoon. A **dismissal** keeps all of it and adds 18 on top, so firing the Chair is always worse than waiting them out. There is no arrangement of people that erases what the bank did.
-
-**Granting independence refunds nothing.** Otherwise granting and revoking in a loop would launder scrutiny. The only way down is resolve.
-
-Some countries start with the government in charge. The Bank of England had no operational independence until 1997, so a British world starting before then opens with the Treasury setting Bank Rate, and Parliament can legislate the transfer either way. The calendar never does it for you: a 1953 world played past 1997 still needs the statute.
-
-A bank shared across countries, like the European Central Bank, cannot have its independence legislated by one member's parliament.
-
-## Exchange-rate regimes and the impossible trinity
-
-The Chair declares the currency's regime: **float**, **band**, or **peg**. The choice is not a label. It is governed by the impossible trinity, and it costs something.
-
-A country cannot have all three of:
-
-1. a fixed exchange rate,
-2. free movement of capital,
-3. an independent monetary policy.
-
-Pick any two.
-
-| Regime | Capital account | What you get | What you give up |
-| --- | --- | --- | --- |
-| Float | Open | Independent rate, free capital | A stable exchange rate |
-| Peg or band | Open | Stable rate, free capital | **The policy rate** |
-| Peg or band | Closed (capital controls) | Stable rate, independent rate | Free movement of capital |
-
-**Peg your currency with an open capital account and the policy rate is no longer yours.** Attempts to change it are refused, because the rate is whatever defending the peg requires. Two ways back: float the currency, or impose capital controls and accept what that does to your economy. Both are moves you can make the same turn, and the refusal names them.
-
-**A band counts as a commitment.** A Chair who has promised to defend a corridor has promised to spend reserves defending it, and cannot also claim the rate is free. Treating a band as a float would make it a free option: commit publicly, defend nothing.
-
-**Floating with capital controls is a waste, and the game says so.** You give up a stable rate *and* free capital to buy an independence a float already gave you for nothing. It is a legal configuration, just a bad one, and the card names it rather than dressing it up as a trade.
-
-**A regime cannot be changed more than once a game year.** A regime nobody believes is not a regime.
-
-Declaring a float cancels any standing intervention band. They are contradictory promises, and leaving the band behind would keep the constraint binding against a commitment the Chair just withdrew.
-
-## Chair selection
-
-**United States.** The Federal Reserve is staffed by appointment, not by the engine. When the chair's term (or any governor's) expires the seat falls vacant, the President nominates a successor, and the Senate votes on the nomination from the FOMC committee page. Nothing below in this section applies to the Fed; see [FOMC / Rate-Setting Board](/wiki/fomc).
-
-**Everywhere else.** When a term expires, a new Chair is selected from a single pool: characters nominated by the country's executives (PM/Chancellor/President). An earlier version of this system also drew 30% of picks from a wealth pool (the nation's richest players); that pool has been removed, a Chair is now always someone the executive put forward, not whoever the leaderboard says is rich this turn.
-
-Lobbying funds shift weights within the pool: spending ₳500,000 on lobbying **doubles** your selection weight.
-
-The selected candidate must **accept** the offer. If they decline, the next eligible candidate is offered the post. Political pool declines re-run the weighted draw with decliners excluded.
-
-**Term length:** 192 turns (4 game years)
-**Nomination window:** Opens during the last 48 turns of the current term
+![Map of the chair's five levers (prime rate, reserve requirement, QE and QT, FX band, independence) with what each moves first and what it reaches next.](/wiki-images/diagrams/central-banks-lever-map.svg)
 
 ## Setting the prime rate
 
-The Chair sets monetary policy by adjusting the prime rate. The prime rate can be set between **0% and 25%** in **0.25% increments** (e.g., 2.00%, 2.25%, 2.50%). This is done through the character's available actions on the Central Bank page. A single move can raise the rate by at most **0.75 points** and cut it by at most **1.75 points**, with one change every 6 turns. When inflation is at least **5 points above target**, the hike limit widens to **3 points** for as long as that holds, so a bank can catch up with runaway inflation in a few moves; the Central Bank page shows the range you can use this turn. Cuts below the normal 0.75 point band cost scrutiny. At the US Federal Reserve the Chair proposes and the FOMC votes (see [FOMC / Rate-Setting Board](/wiki/fomc)); every other bank's governor sets the rate alone, or the government does where the bank is not independent. When a bank's chair is computer-controlled, its automatic rate setter now targets measured slack: it weighs the output gap and unemployment, not raw GDP growth.
+The Overview tab on the Central Bank page is where the rate lives. Check the real rate (prime minus inflation) against the neutral rate shown there, and check slack: high unemployment makes a cut less inflationary. Then move within the limits.
 
 \`\`\`guide-screenshot
 central-bank
 \`\`\`
 
-*The Federal Reserve page. The header shows the prime rate, inflation, savings flow, and reserves. The rate corridor below shows the prime rate against the inflation band, and the left panel shows the Chair's term and public scrutiny.*
+*The Federal Reserve page. The header shows the prime rate, inflation, savings flow, and reserves. The rate corridor shows the prime rate against the inflation band, and the left panel shows the Chair's term and public scrutiny.*
 
-### A rate decision in five steps
+If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank, a command economy, or (at the US Fed) a seated board, since only the FOMC can change the rate while governors sit.
 
-1. **Work out the real rate.** Real rate = prime rate minus inflation. A 2% prime rate with 5% inflation is a negative real rate, which is accommodative even if the number looks normal.
-2. **Compare it with neutral.** The page shows the country's neutral prime rate. Above neutral is restrictive; below is accommodative; at neutral is roughly neutral.
-3. **Check slack.** High unemployment and a negative output gap mean a cut is less inflationary. An overheating economy with low unemployment means a hike is doing real work.
-4. **Check the exchange-rate regime.** If the currency is pegged or banded with an open capital account, the policy rate is not yours to set. Float or impose capital controls first.
-5. **Move within the limits and hold the stance.** You can raise 0.75 points or cut 1.75 points per move, with 6 turns between moves. Once you are on the correct side of the corridor, hold it for three turns to earn the 6-point scrutiny reduction.
+Rules of thumb that hold up:
 
-The prime rate affects:
+- Compare the real rate with neutral, not the nominal rate. A 2% prime with 5% inflation is loose.
+- Hike early. A bank that waits for inflation to peak has already lost credibility.
+- Do not cut into a supply shock. Easier credit does not make oil or food.
+- Do not defend a band the market does not believe, and cancel it before reserves run dry.
+- Do not fire a chair to reset scrutiny. Waiting costs less.
 
-### 1. Corporate bond costs
+## Scrutiny: the chair's report card
 
-Coupon rates on new corporate bonds = prime rate + credit spread. Raising rates makes borrowing more expensive for corporations, reducing expansion capacity. Lower rates make bonds cheap and encourage investment.
-
-### 2. Sovereign bond coupon rate
-
-Sovereign bonds pay the prime rate plus a term premium for longer maturities, plus any central-bank credibility spread the issuing bank has accumulated: \`coupon = primeRate + termPremium + credibilitySpread\`. New bond issuances each quarter carry whatever that combined rate works out to. Higher rates, longer terms, or a discredited bank all mean the government pays more interest, widening the deficit.
-
-### 3. Exchange rates
-
-The prime rate is one of four macro factors that drive the exchange rate target. In multiplayer, floating rates advance halfway at half past each hour, with the hourly turn applying the rest of the step. The full macro target formula is:
+Scrutiny (0 to 100) is the chair's public record. Each turn:
 
 \`\`\`
-macroTarget = baseRate × multiplier
-
-multiplier = 1
-  − (primeRate − baselinePrime) × 0.02
-  + (inflation − baselineInflation) × 0.015
-  − (gdpGrowth − baselineGdpGrowth) × 0.01
-  − (tradeGrowth − baselineTradeGrowth) × 0.005
+scrutinyDelta = (inflation - targetInflation) x 0.5 + (2.0 - gdpGrowth) x 0.5
 \`\`\`
 
-- **Prime rate**: higher rates strengthen currency (lower target rate); sensitivity 0.02
-- **Inflation**: higher inflation weakens currency (higher target rate); sensitivity 0.015
-- **GDP growth**: stronger growth strengthens currency; sensitivity 0.01
-- **Trade growth**: trade surplus strengthens currency; sensitivity 0.005
+The growth target is 2.0%. Inflation targets are set per country (most developed markets use 2.0%). A miss pushes scrutiny up, good numbers push it down, and 5% of the existing score fades each turn. When the delta is a relief, it is dampened as scrutiny rises: it is multiplied by max(0.1, 1 - scrutiny / 150), so at 75 scrutiny, good news counts half.
 
-The actual rate converges toward this target at **5% per turn**, so a full rate shock takes roughly one game year (~48 turns) to work through. The half-hour update exposes half of this step; the hourly turn completes it. On top of macro drift, two additional forces apply each turn:
+Take a chair with 20 scrutiny facing 4% inflation (target 2%) and 1% growth. The delta is (4 - 2) x 0.5 + (2 - 1) x 0.5 = +1.5. Next turn: 20 x 0.95 + 1.5 = 20.5. A bad month adds up, but a single bad turn can never add more than 8.
 
-- **Volume pressure**: net buy/sell activity creates a short-term offset capped at **±5%** per turn. Volume accounts for **20%** of rate direction; macro fundamentals account for **80%**.
-- **Random noise**: ±0.4% per-turn jitter prevents perfectly predictable movement.
+Scrutiny is not only a score. A discredited bank is believed less, which costs the country:
 
-**Guardrails** clamp the final rate to **±50% of the base rate** (floor = 0.5× base, ceiling = 1.5× base).
+- Rate moves shift inflation expectations by 0.6 + 0.4 x (1 - scrutiny / 100) of their full effect. A spotless bank gets all of it, a ruined one 60%.
+- New sovereign bond coupons carry up to 1.5 extra points at 100 scrutiny, in a straight line (1.5 x scrutiny / 100).
+- An FX defence buys 70% to 100% of its normal market effect, and the reserve cost is the same either way.
+- Domestic banks capture 80% to 100% of the household deposits they would otherwise win.
 
-### 4. Inflation
+\`\`\`wiki-chart
+central-bank-scrutiny-multipliers
+\`\`\`
 
-The prime rate is a direct inflation management tool. High rates dampen borrowing and spending, reducing inflationary pressure. The inflation model uses GDP growth data and the prime rate, advances halfway at half past each hour, and completes the step on the hourly turn.
+Policy still works at any scrutiny. A discredited bank can still cause a recession with a big enough hike. It just costs more to be believed.
 
-### 5. Corporate profit margins (via inflation)
+### Buying your way back: resolve
 
-Inflation affects all corporate sector margins:
+Results are slow, nerve is not. If your prime rate sits within half a point of the bank's policy target (set from the neutral rate, inflation, and growth) for **3 turns in a row**, scrutiny falls by 6, whatever inflation does. The streak then restarts. Break it and it resets to zero. The chair panel shows your streak.
+
+At 40 scrutiny with inflation on target and growth at 2%, three correct turns go 40, 38.0, 36.1, then 34.3 - 6 = 28.3.
+
+### When the government takes the wheel
+
+A government can take control of its bank. The price is paid in scrutiny by the **institution**, not the person: 12 to set the rate directly (only while the bank is government-controlled), 18 to dismiss the sitting chair, 22 to revoke independence by statute. Granting independence refunds nothing, so repeated grants and revocations cannot launder the score.
+
+Changing the person does not reset the score. In a handover through the draw, scrutiny is multiplied by 0.75 when a pick is proposed and again when the pick accepts, so about 56% survives; a seat left vacant for lack of nominees also takes x0.75. Resigning cuts nothing by itself. A dismissal adds 18 before the replacement draw starts, so firing a chair always costs more than waiting the term out. Only a player chair can be dismissed.
+
+While a bank is government-controlled the chair is still chosen the usual way, but only the head of government or the finance minister can move the rate. The Bank of England had no operational independence until 1997, so a British world that starts earlier opens with the Treasury setting Bank Rate, and Parliament must legislate the change. Time passing does not do it. Granting independence gives the Bank of England back to its single governor; only the US bank gets a rate committee. A bank shared across countries, like the European Central Bank, cannot have its independence legislated by one member, and a euro member's own independence law leaves rate-setting with the euro authority.
+
+## Money operations and bank reserves
+
+**Money operations (Money supply tab).** QE has the bank buy units of one of the country's sovereign bonds from the public at market price, and the cash it pays is new money. QT sells bank-held units back and destroys the cash. You choose the bond and the number of units, limited by the units available. At most one operation per 6 turns. Holdings lift that bond's price by half the bank's share of the issue, up to 20%. These move money and bond prices first and real activity later, so use them when the bond market is broken or the rate is stuck, not as a growth button. Liquidity injections are capped at 3% of GDP and direct treasury advances at 1% of GDP.
+
+![Central Bank Money supply tab with M1 and M2, the monetary stock and bond holdings](/wiki-images/screens/central-banks-money-supply.webp)
+
+**Reserve requirement (Reserves tab).** Where [Private Banking](/wiki/private-banking) is open, the chair sets what share of deposits banks must hold back, from 5% to 95%. A bank's lendable room is deposits x (1 - requirement) minus loans. Raise it and banks at the old limit are frozen out of new lending. Lower it and room opens at once.
+
+**Deposit insurance fund (Insurance tab).** The fund is paid for by banks, not by the state, and bank premiums into it come through Private Banking. Each bank starts at 0.4% a year on insured deposits (once the fund has paid out claims, that base moves toward the losses it has actually seen, up to 2%), split across the turns, scaled by 0.5x to 3x depending on how thin its reserves are against the requirement. Deposits are insured up to a cap anchored at 5,000,000 in modern reference terms and scaled per currency and era. When a bank fails, insured balances are kept whole from the recovery pool, then the fund, then treasury cash, and any shortfall is funded by bonds. The expense shows in the federal budget, see [National Budget](/wiki/national-budget).
+
+## The currency regime and defending it
+
+**Choose the regime (currency regime panel on the Central Bank page).** Float, band, or peg. A country cannot have a fixed rate, free capital and its own policy rate at once. Peg or band with open capital and the policy rate is no longer yours: rate changes are refused until you float or impose capital controls. Floating with capital controls is legal but wasteful. Floating cancels any standing band. A regime can change once per 48 turns.
+
+**Defend the currency (FX intervention tab).** Post a floor, a ceiling, and an optional maximum spend per turn. Blank means 10% of usable reserves; zero pauses spending. When the market rate leaves the band, the bank sells or buys to push it back, with at most 1% of rate pressure per turn (a peg has a 0.05% tolerance). Selling draws the currency's spread-fee reserves first, then Forex Revenue, then the general Reserve Balance. Buying the home currency needs foreign reserves; treasury cash alone cannot defend a weak currency. If the rate is still outside the band after all reserves are spent, scrutiny rises by 15 once per breach. Widening a band is free, but narrowing or cancelling waits 6 turns. The Finance Minister can move up to 0.5% of annual federal revenue per turn into reserves. Market pressure on the currency decides whether a band holds; pegged or banded currencies are also covered on [Currency Exchange](/wiki/currency-exchange).
+
+![Central Bank FX intervention tab with the currency regime and the spread fee strength control](/wiki-images/screens/central-banks-fx-intervention.webp)
+
+## Where a rate move lands
+
+The prime rate feeds several systems at once:
+
+- **Bonds.** New corporate bonds pay prime plus a credit spread. Sovereign bonds pay prime plus a term premium plus any credibility spread from scrutiny, so the prime rate sets the coupon on each new issue in the [National Budget](/wiki/national-budget). See [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds). Policy rates also move the price of the sovereign bonds held in an [Index Fund](/wiki/index-funds) reserve. Inflation and currency falls reduce bond demand and can block the Monetize path above 8% inflation, see [Sovereign Default](/wiki/sovereign-default).
+- **Savings and credit.** Savings pay half the real rate and lines of credit are priced off prime. Central bank savings interest creates new money, line draws create money and repayments retire it, and interest feeds bank reserves. See [Savings & Interest](/wiki/savings-interest) and [Line of Credit](/wiki/line-of-credit). The margin line banks use for trading books costs prime plus 1.5 points, with draws creating money and repayments retiring it. See [Interbank Lending](/wiki/interbank-lending).
+- **Exchange rate.** Higher rates strengthen the currency, inflation weakens it, growth strengthens it. A rate shock closes about 5% of the gap per turn, roughly 91% after 48 turns, on top of noise and trade pressure, with a final clamp of 50% below to 50% above the base rate (80% either way once a Bretton Woods world has floated).
+- **Inflation and margins.** High rates cool borrowing and spending. Inflation changes every sector's profit margin, so inflation and the prime rate move margins and growth costs across [Corporations](/wiki/corporations):
+
+\`\`\`wiki-chart
+inflation-corporate-margin-effect
+\`\`\`
+
+\`\`\`wiki-chart
+rate-shock-pass-through
+\`\`\`
 
 | Inflation | Margin effect |
 | --- | --- |
+| Below 0% | 2 points lost for each point below zero |
 | 0% | +2% |
 | 1% | +1% |
-| 2% (target) | 0% |
-| 5% | −3% |
-| 7% | −5% |
-| 10%+ | −8% (cap) |
+| 2% | 0% |
+| 5% | -3% |
+| 7% | -5% |
+| 10% or more | -8% (cap) |
 
-Below the 2% target, the bonus scales linearly from 0% at target to +2% at 0% inflation. Above target, the penalty scales linearly to −8% at 10% inflation, then caps.
+- **Corporate growth and share prices.** Revenue growth costs scale with the prime rate, so higher rates slow organic expansion. The prime rate is the base of every company's cost of capital, which sets earnings power and growth premium on the [Stock Market](/wiki/stock-market). Rate rises lower company values, and the [Market Safeguards](/wiki/market-safeguards) excuse that fall.
 
-### 6. Corporate growth costs
-
-Revenue growth costs scale with the prime rate. Higher rates increase the cost of growing each sector's revenue, slowing organic expansion across all corporations.
-
-## Central bank and fiscal policy
-
-The Chair does not control fiscal policy: that requires legislation passed through the legislature. But monetary and fiscal policy interact:
-
-- High deficit spending stimulates the economy (boosting growth and margins) but can fuel inflation
-- High inflation forces the Chair to raise rates, which raises borrowing costs, which can slow growth
-- High national debt crowds out private investment, reducing margins across all sectors
-
-A Chair who raises rates aggressively to fight inflation may tip the economy into a slowdown, but a Chair too slow to act lets inflation compound. Both mistakes play out in real time, across every active country at once.
-
-## FX intervention (standing band policy)
-
-The Chair can post a **soft-band intervention policy**: a floor and ceiling around the current exchange rate. When the market rate moves outside this band, the central bank automatically defends it by injecting synthetic trade volume, drawing on reserves to push the rate back toward the band.
-
-### Setting the band
-
-Access the Central Bank page and set:
-- **Floor**: minimum acceptable rate (stronger than this triggers selling)
-- **Ceiling**: maximum acceptable rate (weaker than this triggers buying)
-- **Maximum spend per turn**: an optional limit in the home currency. Leave blank for an automatic budget of 10% of usable directional reserves per turn; zero pauses spending.
-
-The live preview estimates next-turn spending and the defended rate as you type. Suggested bands near the current rate or fundamentals are starting points, not guaranteed targets. Market flow, fundamentals and reserves can change before settlement.
-
-**Policy change rules:**
-- **Widening** the band (making it looser) is free if it does not increase the spending limit.
-- **Narrowing or cancelling** the band requires a **6-turn cooldown** after the last policy change. This mirrors the prime-rate cadence and prevents rapid-fire policy whipsawing.
-
-The band **persists across chair transitions**. A new chair inherits the previous band and must wait out any active cooldown before tightening it.
-
-### How defense works
-
-Each turn, if the published rate is outside the band:
-
-1. The game estimates the pressure needed to reach the nearest band edge, without overshooting it. A declared peg has a tolerance of 0.05% on either side.
-2. Reserve cost equals useful pressure times market depth, divided by credibility adherence. Depth is at least 20 million internal anchor units, or recorded daily buy plus sell volume if larger.
-3. Spending is capped by the chair's per-turn budget and usable reserves. Intervention contributes at most 1% rate pressure before credibility effects, and combined organic and intervention pressure is also capped at 1%.
-4. The rate is recomputed using the same market noise as the unassisted quote. Spending beyond useful movement is not charged.
-5. Funding and the resulting rate are recorded with a recoverable settlement receipt, preventing a retried turn from spending twice.
-
-Buying the home currency requires priced foreign reserves. Selling requires domestic funds. These are exchanges: foreign assets are sold for domestic currency, or domestic currency for foreign assets, at the settlement conversion rate. Domestic treasury funds alone cannot defend a weak currency by buying it.
-
-**Reserve draw order for sell-side defense:**
-- The currency-specific **spread-fee reserve pool** is spent first.
-- **Forex Revenue** is spent next.
-- The general **Reserve Balance** is tapped last.
-
-### Reserve pools
-
-| Pool | Source | Purpose |
-| --- | --- | --- |
-| Spread-fee reserve balances | 50% of spread fees, credited by currency | First sell-defense pool |
-| Forex Revenue | 25% of spread fees on every currency trade | Second intervention pool |
-| Reserve Balance | Treasury transfers | Final buffer |
-
-**Spread fee split:** On every currency trade, 25% of the spread is destroyed.
-Another 25% becomes forex revenue, and 50% enters the currency-specific
-\`spreadFeeReserveBalances\` pool.
-
-**Treasury → FX Reserve Transfer:** The Finance Minister (US Secretary of the Treasury, UK Chancellor, JP/DE Finance Minister) can move federal surplus into the reserve balance. This action is capped at **0.5% of annual federal revenue per turn** and rate-limited to once per turn. It is config-driven via \`financeMinisterCabinetId\`, so future countries wire up automatically by setting that field.
-
-### Failure and infamy
-
-If the rate is **still outside the band after spending all available reserves**, the seated Chair receives an **intervention failure**:
-
-- **+15 infamy** charged once per breach cycle (deduped so you don't get stacked penalties every turn)
-- A system mail notifies the Chair that reserves are depleted
-- The band remains posted; the Chair must restore the required directional reserves or review the commitment. Treasury transfers replenish domestic funds, not foreign assets.
-
-If no reserves are available at all when the breach occurs, failure infamy still fires: the band was undefended.
-
-**IMF lock:** If the country is under an IMF bailout (\`chairControlsLocked\` is true), the Chair **cannot change** the intervention policy, but ongoing defense continues to fire if a band was already posted.
-
-### Intervention history
-
-The Central Bank page shows a running log of recent interventions:
-- Turn number
-- Direction (buy / sell)
-- Reserves spent
-- Funding source (forex revenue, reserve balance, or mixed)
-- Rate before and after
-
-History is retained for the last 24 intervention events per currency.
-
-## The reserve requirement
-
-Where [Private Banking](/wiki/private-banking) is enabled, the rate and QE are not the Chair's only levers. The central bank also sets a **reserve requirement**: the fraction of deposits every private bank in the currency must hold back instead of lending.
-
-The Chair (or an admin) sets it from the **Reserve tab** on the Central Bank page. It can be set anywhere between **5% and 95%**; out-of-range values are refused rather than clamped. Until a Chair touches it, the era default applies: **10%** in modern worlds, **20%** in historical ones.
-
-The mechanic is exactly what it sounds like. A private bank's lendable headroom is:
-
-\`\`\`
-headroom = max(0, totalDeposits × (1 − reserveRatio) − totalLoans)
-\`\`\`
-
-Raise the ratio and every bank in the currency has less room to lend against the same deposit base; banks already at the old limit are frozen out of new lending until deposits grow or loans run off. Lower it and headroom opens up at once. This makes the requirement the third monetary lever next to the prime rate and QE: the rate prices credit, QE moves the money stock, the reserve requirement caps how much private credit the deposit base can carry at all.
-
-It also feeds insurance pricing: a bank holding thin reserves against the requirement pays a higher deposit-insurance premium (see below), so the ratio disciplines banks even before it binds them.
-
-## The deposit insurance fund
-
-Each currency with private banking carries a national **deposit insurance fund**. It is premium-funded, not appropriated: no money sits in it that banks did not pay in.
-
-**Premiums.** Every turn, each chartered bank pays a premium on its insured deposits. The base rate is **0.4% annually**, split across the turns of the game year, then risk-weighted by reserve cover:
-
-\`\`\`
-riskWeight = clamp(2 − actualReserveRatio / requiredReserveRatio, 0.5, 3)
-\`\`\`
-
-A bank holding exactly its required reserves pays the base rate. Thin reserves pay up to **3x**; a heavily reserved bank pays as little as **0.5x**. Running your bank hot is legal, but it is not free.
-
-**The insured cap.** Deposits are insured up to a per-depositor cap, anchored at **₳5,000,000** in modern USD reference terms and scaled to each currency and era the same way charter capital is. Balances above the cap are not the fund's problem.
-
-**When a bank fails.** The failed bank's remaining cash and posted capital form a recovery pool. Insured balances are kept whole; excess above the cap is paid pro rata from whatever recovery remains, and the unpaid part is a haircut the depositor eats. The bill for the kept balances is funded in strict order: recovery pool first, then the insurance fund, then available government treasury cash. If cash is short, the government issues bonds to the currency bond pool. The expense appears in the federal budget's depositInsurance line. If the pool cannot fund the needed bonds, the estate stays unresolved until funds are available.
-
-The Central Bank page's Insurance tab surfaces the fund: its balance, lifetime premiums collected, payouts, and how much the Treasury has ever been made to cover.
-
-## Savings and credit lines
-
-The central bank system also manages player savings accounts and lines of
-credit. Central-bank savings interest is created onto
-\`externalBroadMoney\` and \`netMoneyCreatedLifetime\`; it is not paid from
-\`reserveBalance\`. The **savings APY is half the real rate** (prime rate minus
-inflation), with the real rate floored at 0.5 percentage points so it can never
-go negative or near zero.
-
-During the current pricing phase-in, central-bank-held deposits also receive a
-temporary bonus that reaches 0.25 percentage points over 8 turns. Private-bank
-deposit rates remain controlled by their own charters.
+The chair does not control fiscal policy, which needs legislation. But the two interact: deficits lift growth and can fuel inflation, which forces hikes, which raise borrowing costs. Inflation, growth and unemployment from [National Metrics](/wiki/national-metrics) feed scrutiny and the rate target, and rates cool or heat inflation in return.
 
 ## Country differences
 
 | Bank | Who sets the rate | What is different |
 | --- | --- | --- |
-| **US Federal Reserve** | Chair proposes, FOMC votes | Board terms, nominations, and committee motions. The Chair alone cannot move the rate. |
-| **Bank of England** | Treasury before 1997, then the Bank | Independence is a statute, not a date. A world played past 1997 still needs the law. |
-| **Euro area** | Shared central bank | One policy rate for every member. A national parliament cannot legislate the shared bank's independence. |
-| **Command economies** | The plan | The automatic rate setter does not fire. See [Planned / Command Economies](/wiki/planned-economies). |
-| **Other national banks** | The seated Chair, or the government where the bank is not independent | The Chair sets the rate alone, subject to the same move limits and scrutiny. |
+| US Federal Reserve | Chair proposes, FOMC votes | Board terms, nominations by the President, Senate confirmation. The chair alone cannot move the rate. The move size, wait and scrutiny rules cap what the [committee](/wiki/fomc) can do. |
+| Bank of England | Treasury in worlds that start before 1997, until Parliament grants independence; the Bank in worlds that start in 1997 or later | Independence is a statute, not a date. |
+| Euro area | Shared central bank | One policy rate for every member. |
+| Command economies | The plan | No automatic rate setter. |
+| Other national banks | The seated Chair, or the government where the bank is not independent | Same move limits and scrutiny. |
 
-## Common mistakes
+Live in every world that has an active central bank. The euro area shares one bank in worlds that have the euro (from 1999). Savings, lines of credit, FX intervention and money operations need the country's currency to be one of the tradable currencies, which covers the 18 main ones. The reserve requirement and insurance fund apply in worlds where private banking is open.
 
-- **Pegging with an open capital account, then trying to set the rate.** The peg wins. Float or impose capital controls first.
-- **Watching the nominal rate instead of the real rate.** A 2% prime rate with 5% inflation is loose, not neutral.
-- **Hiking too late.** Scrutiny compounds. A bank that waits for inflation to peak has already lost credibility.
-- **Cutting into a supply shock.** Easier credit does not create oil, food, or steel. It can make the inflation worse.
-- **Burning reserves on a band the market does not believe.** A band defended past exhaustion adds 15 infamy and still breaks.
-- **Firing the Chair to reset scrutiny.** A dismissal keeps 100% of the record and adds 18. Term turnover keeps 75%. Waiting is cheaper.
-- **Using QE as a growth button.** QE moves money and bond prices first. Real activity responds later, if at all.
-
-See also: [Currency Exchange](/wiki/currency-exchange), [National Metrics](/wiki/national-metrics), [Sovereign Bonds](/wiki/sovereign-bonds), [Corporate Bonds](/wiki/corporate-bonds), [Private Banking](/wiki/private-banking), [Government Approval](/wiki/government-approval), [Planned / Command Economies](/wiki/planned-economies), [FOMC / Rate-Setting Board](/wiki/fomc)
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Monetary system (design)](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html)
 `;

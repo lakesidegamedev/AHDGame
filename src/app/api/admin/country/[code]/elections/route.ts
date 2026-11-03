@@ -18,6 +18,7 @@ import { SENATE_CLASSES, STATE_SENATE_SEATS } from "@/lib/constants";
 import { isUsElectoralState } from "@/lib/constants/states";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { adjustElectionDurations } from "@/lib/elections/rules/timerAdjustment";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
@@ -288,43 +289,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     for (const election of elections) {
       const updates: Record<string, unknown> = { updatedAt: now };
 
-      // Current DB values: durationHours = total, primaryDurationHours = general phase length (offset from end)
       const defaults = DEFAULT_DURATIONS[election.electionType] ?? DEFAULT_DURATIONS.house;
-      const currentTotal = election.durationHours ?? defaults.durationHours;
-      const currentGeneral = election.primaryDurationHours ?? defaults.primaryDurationHours;
-      const currentPrimary = currentTotal - currentGeneral;
-
-      // Apply action using the new primaryHours/generalHours inputs
-      let newPrimary = currentPrimary;
-      let newGeneral = currentGeneral;
-
-      if (action === "set") {
-        if (primaryHours !== undefined) newPrimary = primaryHours;
-        if (generalHours !== undefined) newGeneral = generalHours;
-      } else if (action === "add") {
-        if (primaryHours !== undefined) newPrimary += primaryHours;
-        if (generalHours !== undefined) newGeneral += generalHours;
-      } else if (action === "subtract") {
-        if (primaryHours !== undefined) newPrimary = Math.max(0, newPrimary - primaryHours);
-        if (generalHours !== undefined) newGeneral = Math.max(0, newGeneral - generalHours);
-      }
-
-      // Ensure at least 1 hour total
-      const newTotal = Math.max(1, newPrimary + newGeneral);
-      // DB field: primaryDurationHours = general phase length (offset from end)
-      const newPrimaryDurationHours = newGeneral;
-
+      const timing = adjustElectionDurations(election, defaults, {
+        action,
+        primaryHours,
+        generalHours,
+      });
+      const newTotal = timing.durationHours;
+      const newGeneral = timing.generalDurationHours;
       updates.durationHours = newTotal;
-      updates.primaryDurationHours = newPrimaryDurationHours;
+      updates.primaryDurationHours = timing.primaryDurationHours;
 
       // Recalculate times
       // When action="set", reset startTime to now so election activates immediately
       // For "add"/"subtract", preserve existing startTime
       const startTime = action === "set" ? now : election.startTime || now;
       const newEndTime = new Date(startTime.getTime() + newTotal * 60 * 60 * 1000);
-      const newPrimaryEndTime = new Date(
-        newEndTime.getTime() - newPrimaryDurationHours * 60 * 60 * 1000
-      );
+      const newPrimaryEndTime = new Date(newEndTime.getTime() - newGeneral * 60 * 60 * 1000);
 
       updates.startTime = startTime;
       updates.endTime = newEndTime;
@@ -341,7 +322,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
       const newEndTurn = startTurnVal + newTotal;
       updates.startTurn = startTurnVal;
       updates.endTurn = newEndTurn;
-      updates.primaryEndTurn = newEndTurn - newPrimaryDurationHours;
+      updates.primaryEndTurn = newEndTurn - newGeneral;
 
       // Keep status consistent with the start turn so the UI doesn't render the
       // "upcoming + start in the past" intermediate state until the next

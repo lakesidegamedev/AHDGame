@@ -2,50 +2,94 @@
 
 import { abandonSectorRequest } from "@/lib/corporations/abandonSectorClient";
 import { useEffect, useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { trackAction } from "@/lib/observability/actionBreadcrumb";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";
-import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporations";
+import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporationsClient";
 import { useToast } from "@/contexts/ToastContext";
 import { useSectorPageState } from "./useSectorPageState";
 import HeroCard from "./components/HeroCard";
 import FinancialVisibilityNotice from "./components/FinancialVisibilityNotice";
 import FinancialsPanel from "./sections/FinancialsPanel";
-import StrategyPanel from "./sections/StrategyPanel";
-import MarginsPanel from "./sections/MarginsPanel";
-import CommoditiesPanel from "./sections/CommoditiesPanel";
 import MarketPositionPanel from "./sections/MarketPositionPanel";
 import AttackPanel from "./sections/AttackPanel";
-import ProductionPolicyPanel from "./sections/ProductionPolicyPanel";
-import WageLevelPanel from "./sections/WageLevelPanel";
-import PricingPanel from "./sections/PricingPanel";
-import CapitalPanel from "./sections/CapitalPanel";
-import MarketRewardBanner from "./sections/MarketRewardBanner";
-import StrandedPlantBanner from "./sections/StrandedPlantBanner";
-import RetoolHintBanner from "./sections/RetoolHintBanner";
-import InventoryPanel from "./sections/InventoryPanel";
-import UnionBustingPanel from "./sections/UnionBustingPanel";
-import { OrganizeSectorAction } from "@/components/unions/OrganizeSectorAction";
 import { EditorialStancePanel } from "@/components/corporation/EditorialStancePanel";
-import ManagementPanel from "./sections/ManagementPanel";
-import AbandonPanel from "./sections/AbandonPanel";
-import ForSalePanel from "./sections/ForSalePanel";
-import ResourceCapacityPanel from "./sections/ResourceCapacityPanel";
 import PlantPanel from "./sections/PlantPanel";
 import MarketMoneyPanel from "./sections/MarketMoneyPanel";
-import InputsOutputsPanel from "./sections/InputsOutputsPanel";
-import BuildCapacityDialog from "./components/BuildCapacityDialog";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { ArrowLeft } from "lucide-react";
 import { apiErrorText } from "@/lib/errors/catalog";
 import SectorWorkspaceTabs, { type WorkspaceTab } from "./components/SectorWorkspaceTabs";
+
+// Only the workspace's overview tab is open on arrival. Operations, market,
+// people and management each carry their own heavy tree (the strategy
+// projection, the wage and pricing rules, the capacity dialog), so they mount
+// on demand. The fallback matches the tab body's column so nothing jumps.
+const PanelFallback = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-10 w-48 rounded-lg" />
+    <Skeleton className="h-48 w-full rounded-xl" />
+  </div>
+);
+
+const StrategyPanel = dynamic(() => import("./sections/StrategyPanel"), { loading: PanelFallback });
+const MarginsPanel = dynamic(() => import("./sections/MarginsPanel"), { loading: PanelFallback });
+const CommoditiesPanel = dynamic(() => import("./sections/CommoditiesPanel"), {
+  loading: PanelFallback,
+});
+const ProductionPolicyPanel = dynamic(() => import("./sections/ProductionPolicyPanel"), {
+  loading: PanelFallback,
+});
+const WageLevelPanel = dynamic(() => import("./sections/WageLevelPanel"), {
+  loading: PanelFallback,
+});
+const PricingPanel = dynamic(() => import("./sections/PricingPanel"), { loading: PanelFallback });
+const CapitalPanel = dynamic(() => import("./sections/CapitalPanel"), { loading: PanelFallback });
+const InventoryPanel = dynamic(() => import("./sections/InventoryPanel"), {
+  loading: PanelFallback,
+});
+const UnionBustingPanel = dynamic(() => import("./sections/UnionBustingPanel"), {
+  loading: PanelFallback,
+});
+const ManagementPanel = dynamic(() => import("./sections/ManagementPanel"), {
+  loading: PanelFallback,
+});
+const AbandonPanel = dynamic(() => import("./sections/AbandonPanel"), { loading: PanelFallback });
+const ResourceCapacityPanel = dynamic(() => import("./sections/ResourceCapacityPanel"), {
+  loading: PanelFallback,
+});
+const InputsOutputsPanel = dynamic(() => import("./sections/InputsOutputsPanel"), {
+  loading: PanelFallback,
+});
+const BuildCapacityDialog = dynamic(() => import("./components/BuildCapacityDialog"), {
+  ssr: false,
+});
+const OrganizeSectorAction = dynamic(
+  () =>
+    import("@/components/unions/OrganizeSectorAction").then((m) => ({
+      default: m.OrganizeSectorAction,
+    })),
+  { loading: PanelFallback }
+);
+
+// The for-sale card only exists on a sector that is actually listed, and the
+// condition banners render only when their trigger fires (a stranded plant, a
+// retool hint, a market reward). Each loads on its own instead of dragging the
+// corporation catalog, the freight class and the commodity catalog into every
+// sector view.
+const ForSalePanel = dynamic(() => import("./sections/ForSalePanel"));
+const StrandedPlantBanner = dynamic(() => import("./sections/StrandedPlantBanner"));
+const RetoolHintBanner = dynamic(() => import("./sections/RetoolHintBanner"));
+const MarketRewardBanner = dynamic(() => import("./sections/MarketRewardBanner"));
 
 export default function SectorDetailPage() {
   const params = useParams();
@@ -83,6 +127,7 @@ export default function SectorDetailPage() {
     plants,
     plantsEnabled,
     isCeo,
+    parentDirection,
     strategy,
     loading,
     error,
@@ -153,6 +198,7 @@ export default function SectorDetailPage() {
         dispatch({ type: "SET_PLANTS_ENABLED", value: data.plantsEnabled === true });
         dispatch({ type: "SET_STRATEGY", value: data.strategy ?? null });
         dispatch({ type: "SET_IS_CEO", value: data.isCeo ?? false });
+        dispatch({ type: "SET_PARENT_DIRECTION", value: data.parentDirection ?? null });
         dispatch({ type: "SET_ATTACK_INFO", value: data.attackInfo ?? null });
         dispatch({
           type: "SET_STATE_RESOURCES",
@@ -732,11 +778,14 @@ export default function SectorDetailPage() {
                     marketSupplies={commodities?.supplies ?? []}
                     freightState={commodities?.freightState}
                     sectorType={sector.sectorType}
+                    industryModel={sector.industryModel}
                     mediaDiscriminator={sector.mediaDiscriminator}
                     mediaAdvertisingCampaignFactor={sector.mediaAdvertisingCampaignFactor}
                     unionId={sector.unionId}
                     unionName={sector.unionName}
                     averageWageLevel={sector.wageLevel ?? 1}
+                    stateLabourMarket={sector.stateLabourMarket}
+                    stateName={sector.stateName}
                     isCeo={isCeo}
                     busy={capacityBusy}
                     message={capacityMessage}
@@ -850,12 +899,28 @@ export default function SectorDetailPage() {
                 Set strategy, output, investment and pricing from one workspace.
               </p>
             </div>
+            {parentDirection && (
+              <p className="rounded border border-card-border bg-card px-4 py-3 text-sm text-muted">
+                Managed by{" "}
+                <Link
+                  href={`/corporation/${parentDirection.parentPathId}`}
+                  className="font-medium text-foreground hover:underline"
+                >
+                  {parentDirection.parentName}
+                </Link>
+                . As its parent&apos;s CEO you can change this sector&apos;s strategy.
+                {parentDirection.protectedUntilTurn != null &&
+                (gameTurn?.currentTurn ?? 0) < parentDirection.protectedUntilTurn
+                  ? ` The AI manager keeps your choice until turn ${parentDirection.protectedUntilTurn}.`
+                  : ` The AI manager keeps a strategy you choose for ${PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS} turns.`}
+              </p>
+            )}
             {strategy && (
               <StrategyPanel
                 strategy={strategy}
                 sector={sector}
                 corporation={corporation}
-                isCeo={isCeo}
+                isCeo={isCeo || parentDirection != null}
                 strategyUpdating={strategyUpdating}
                 cancelTransitionLoading={cancelTransitionLoading}
                 onStrategyChange={handleStrategyChange}
@@ -1112,7 +1177,11 @@ export default function SectorDetailPage() {
             open={buildOpen}
             onClose={() => setBuildOpen(false)}
             plants={plants}
+            stateLabourMarket={sector.stateLabourMarket}
+            stateName={sector.stateName}
             sectorType={sector.sectorType}
+            industryModel={sector.industryModel}
+            mediaDiscriminator={sector.mediaDiscriminator}
             sectorLabel={sector.displayName || sector.sectorLabel}
             submitting={capacityBusy}
             errorMessage={capacityMessage}

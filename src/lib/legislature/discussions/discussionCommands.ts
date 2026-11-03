@@ -21,7 +21,7 @@ interface CreateInput {
 }
 
 /** Human-readable 403 message for a non-legislator attempting to post. */
-export function eligibilityDeniedMessage(scope: BillDiscussionScope): string {
+function eligibilityDeniedMessage(scope: BillDiscussionScope): string {
   const config = getCountryConfig(scope.countryId);
   if (scope.kind === "national") {
     return `Only ${config.legislature.name} members can post a discussion on this bill.`;

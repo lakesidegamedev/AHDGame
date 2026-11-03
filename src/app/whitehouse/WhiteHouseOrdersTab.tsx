@@ -12,11 +12,11 @@ import { IssueOrderModal } from "@/app/country/[code]/region/[id]/office/tabs/or
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import type { OfficePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { OfficePoolTopUpButton } from "@/components/officials/OfficePoolTopUpButton";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   getExecutiveOrderName,
   getExecutiveOrderNamePlural,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 
 interface OrderShape<TStatus extends string = "active" | "expired" | "rescinded" | "superseded"> {
   _id: string;

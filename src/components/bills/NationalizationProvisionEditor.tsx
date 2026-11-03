@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { privateEnterpriseBlockedByYear } from "@/lib/economy/queries/privateEnterpriseRegime";
-import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+} from "@/lib/constants/corporationsClient";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { getBillPassRule } from "@/lib/congress/billPassRule";
 import { CARVE_FRACTION_MIN, CARVE_FRACTION_MAX } from "@/lib/nationalization/constants";
@@ -195,7 +199,7 @@ export function NationalizationProvisionEditor({
 
   const hasNatPriv = value.some((r) => r.type === "nationalize" || r.type === "privatize");
   const passRule = getBillPassRule(
-    getCountryConfig(countryCode.toUpperCase() as CountryId).governmentType,
+    getCountryClientConfig(countryCode.toUpperCase() as CountryId).governmentType,
     hasNatPriv
   );
 

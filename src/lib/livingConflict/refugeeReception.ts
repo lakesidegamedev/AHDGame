@@ -20,7 +20,7 @@ import {
   type RefugeeReceptionResult,
 } from "./rules/refugeeReception";
 
-export const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
+const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
   batchId: string;
   createdAt: Date;
@@ -28,7 +28,7 @@ interface RefugeeReceptionHistory extends RefugeeReceptionResult {
 
 const indexReadiness = new WeakMap<Db, Promise<void>>();
 
-export async function ensureRefugeeReceptionIndexes(db: Db): Promise<void> {
+async function ensureRefugeeReceptionIndexes(db: Db): Promise<void> {
   let ready = indexReadiness.get(db);
   if (!ready) {
     ready = (async () => {

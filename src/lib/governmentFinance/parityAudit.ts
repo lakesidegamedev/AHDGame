@@ -1,8 +1,8 @@
 import type { LegislationType } from "@/lib/db/types/legislation";
 import type { DepartmentCountryId, DepartmentDefinition, PortfolioId } from "./departmentCatalog";
 
-export const INITIAL_PARITY_COUNTRIES = ["US", "UK", "JP"] as const;
-export const REQUIRED_PARITY_PORTFOLIOS: readonly PortfolioId[] = [
+const INITIAL_PARITY_COUNTRIES = ["US", "UK", "JP"] as const;
+const REQUIRED_PARITY_PORTFOLIOS: readonly PortfolioId[] = [
   "finance",
   "foreign_affairs",
   "defense",

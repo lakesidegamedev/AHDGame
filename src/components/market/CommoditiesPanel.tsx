@@ -4,14 +4,23 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
-import { PanelState, pctText, toneClass } from "./marketUi";
+import { PanelState, pctText, toneClass, vsBasePct } from "./marketUi";
 
-export function vsBasePct(c: Pick<CommodityData, "globalPrice" | "basePrice">): number | null {
-  return c.basePrice > 0 ? (c.globalPrice / c.basePrice - 1) * 100 : null;
-}
-
-function balance(c: CommodityData): { label: string; tone: string } {
+function balance(c: CommodityData): { label: string; tone: string; title?: string } {
   if (c.globalDemand <= 0 && c.globalSupply <= 0) return { label: "No trade", tone: "text-muted" };
+  // A good sold only inside each state has no world balance a plant can sell
+  // into: name the states that are short instead of a world total.
+  const local = c.stateShortage;
+  if (local && local.tradingStates > 0) {
+    const title = `Sold only inside each state: a plant sells to buyers in its own state, not the world. ${local.shortStates} of ${local.tradingStates} states trading it are short. The supply and demand totals add every state together.`;
+    return local.shortStates > 0
+      ? {
+          label: `Short in ${local.shortStates} of ${local.tradingStates} states`,
+          tone: "text-error",
+          title,
+        }
+      : { label: "Supplied in every state", tone: "text-success", title };
+  }
   const ratio = c.globalSupply / Math.max(c.globalDemand, 1e-9);
   if (ratio < 0.95) return { label: "Short", tone: "text-error" };
   if (ratio > 1.05) return { label: "Surplus", tone: "text-success" };
@@ -83,7 +92,9 @@ export function CommoditiesPanel({
                       {Math.round(c.globalSupply).toLocaleString()} /{" "}
                       {Math.round(c.globalDemand).toLocaleString()}
                     </td>
-                    <td className={`px-3 py-2 text-xs font-medium ${bal.tone}`}>{bal.label}</td>
+                    <td className={`px-3 py-2 text-xs font-medium ${bal.tone}`} title={bal.title}>
+                      {bal.label}
+                    </td>
                     <td className="px-3 py-2 text-right text-xs">
                       <Link
                         href={`/commodity/${c.commodity}`}

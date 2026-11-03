@@ -23,7 +23,7 @@ import {
 } from "./actorCoverage";
 
 /** Plan version stamped wherever the plan is recorded; bump on role changes. */
-export const SYNTHETIC_ACTOR_PLAN_VERSION = 1;
+const SYNTHETIC_ACTOR_PLAN_VERSION = 1;
 
 /** Accepted `--actors` values. */
 export const SIM_ACTOR_MODES: readonly SimActorMode[] = ["pure-npp", "synthetic"];

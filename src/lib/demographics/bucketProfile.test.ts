@@ -56,6 +56,49 @@ describe("bucket profile", () => {
     expect(lowOf(boosted)).toBeGreaterThan(lowOf(base));
   });
 
+  it("uses accumulated checkpoint overlays with the live year, matching the engine's base units", () => {
+    const context = { year: 2000, startingYear: 1953 };
+    const positions = { race: { black: { economicLean: -1, socialLean: -2 } } };
+    const turnout = { race: { black: 40 } };
+    const units = deriveGranularElectorateUnits(
+      "US",
+      "MS",
+      "1953-default",
+      null,
+      positions,
+      turnout,
+      context
+    )!.units;
+    const profile = getBucketProfileForRegion(
+      "US",
+      "MS",
+      "1953-default",
+      null,
+      context,
+      positions,
+      turnout
+    )!;
+    for (const section of profile) {
+      expect(
+        section.buckets.reduce((sum, b) => sum + (b.sharePct * b.economicLean) / 100, 0)
+      ).toBeCloseTo(
+        units.reduce((sum, u) => sum + u.share * u.economicLean, 0),
+        8
+      );
+      expect(
+        section.buckets.reduce((sum, b) => sum + (b.sharePct * b.turnout) / 100, 0)
+      ).toBeCloseTo(
+        units.reduce((sum, u) => sum + u.share * u.turnout, 0),
+        8
+      );
+    }
+    const black = (p: typeof profile) =>
+      p.find((s) => s.dim === "race")!.buckets.find((b) => b.id === "race:black")!;
+    expect(black(profile).turnout).toBeGreaterThan(
+      black(getBucketProfileForRegion("US", "MS", "1953-default", null, context)!).turnout
+    );
+  });
+
   it("returns null for a region with no Layer-1 substrate", () => {
     expect(getBucketProfileForRegion("ZZ", "NOWHERE", PRESET)).toBeNull();
   });

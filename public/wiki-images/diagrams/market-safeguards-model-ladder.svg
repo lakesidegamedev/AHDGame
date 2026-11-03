@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="380" viewBox="0 0 780 380" role="img" font-family="system-ui, sans-serif">
+<title>Market model safeguard ladder</title>
+<desc>When the trip test fires, the market model steps back: Plants to Capital, Clearing or Capital to Ledger, then the safeguard switches off.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="379" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="40" y="30" width="200" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="140.0" y="55.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Plants model (newest)</text>
+<rect x="40" y="150" width="200" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="140.0" y="175.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Capital model</text>
+<rect x="300" y="150" width="200" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="400.0" y="175.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Clearing model</text>
+<rect x="170" y="270" width="200" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="270.0" y="295.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Ledger model</text>
+<path d="M140 74 L140 150" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="148" y="116" font-size="12" text-anchor="start" fill="#52525b">trip: one step back</text>
+<path d="M140 194 L140 232 L270 232 L270 270" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="125" y="226" font-size="12" text-anchor="end" fill="#52525b">trip</text>
+<path d="M400 194 L400 232 L300 232 L300 270" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="410" y="226" font-size="12" text-anchor="start" fill="#52525b">trip</text>
+<rect x="540" y="30" width="220" height="150" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="650.0" y="52.0" font-size="12" text-anchor="middle" fill="#18181b">Trip test, after a 5 turn</text>
+<text x="650.0" y="68.0" font-size="12" text-anchor="middle" fill="#18181b">grace period</text>
+<text x="650.0" y="84.0" font-size="12" text-anchor="middle" fill="#18181b">Market value against fair</text>
+<text x="650.0" y="100.0" font-size="12" text-anchor="middle" fill="#18181b">value, which is what company</text>
+<text x="650.0" y="116.0" font-size="12" text-anchor="middle" fill="#18181b">fundamentals justify. A fall</text>
+<text x="650.0" y="132.0" font-size="12" text-anchor="middle" fill="#18181b">they explain is excused. An</text>
+<text x="650.0" y="148.0" font-size="12" text-anchor="middle" fill="#18181b">unexplained fall of 25% or</text>
+<text x="650.0" y="164.0" font-size="12" text-anchor="middle" fill="#18181b">more trips it.</text>
+<rect x="540" y="230" width="220" height="84" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="650.0" y="251.0" font-size="12" text-anchor="middle" fill="#18181b">After a trip the safeguard</text>
+<text x="650.0" y="267.0" font-size="12" text-anchor="middle" fill="#18181b">switches itself off. Bringing</text>
+<text x="650.0" y="283.0" font-size="12" text-anchor="middle" fill="#18181b">a newer model back is a</text>
+<text x="650.0" y="299.0" font-size="12" text-anchor="middle" fill="#18181b">deliberate operator decision.</text>
+<path d="M370 292 L540 292" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+</svg>

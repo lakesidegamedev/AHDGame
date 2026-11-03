@@ -1,10 +1,13 @@
-"use client";
-import { useSearchParams, useParams } from "next/navigation";
 import { redirect } from "next/navigation";
+import { countryScopedUrl, type RedirectSearchParams } from "@/lib/countryRedirect";
 
-export default function PartyRedirect() {
-  const searchParams = useSearchParams();
-  const { id } = useParams();
-  const country = searchParams.get("country")?.toLowerCase() || "us";
-  redirect(`/country/${country}/parties/${id}`);
+export default async function PartyRedirect({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<RedirectSearchParams>;
+}) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  redirect(countryScopedUrl(`parties/${id}`, query));
 }

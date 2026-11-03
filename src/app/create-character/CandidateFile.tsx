@@ -13,7 +13,7 @@ import {
   type CompassPoint,
 } from "@/lib/registration/alignment";
 import { PartyLogo } from "@/components/PartyLogo";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { EDUCATION_OPTIONS, GENDER_OPTIONS, RACE_OPTIONS, labelFor } from "./creatorOptions";
 import { ALLOWED_IMAGE_TYPES, type PickedImage } from "./useImagePick";
 

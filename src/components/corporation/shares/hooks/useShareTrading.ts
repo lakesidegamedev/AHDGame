@@ -178,7 +178,7 @@ export function useShareTrading({
       const data = await res.json();
       if (res.ok) {
         setActionSuccess(
-          `Sold ${sellSharesAmount.toLocaleString()} shares for ${formatFull(data.proceeds)}`
+          `Sold ${sellSharesAmount.toLocaleString()} shares. Gross ${formatFull(data.proceeds)}; tax withheld ${formatFull(data.withheldTax ?? 0)}; cash received ${formatFull(data.netProceeds ?? data.proceeds)}.`
         );
         setSellSharesAmount(0);
         onRefresh();

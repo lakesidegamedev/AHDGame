@@ -21,7 +21,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { settleHu1991Mandates } from "./rules/mandates1991";
 
-export const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
+const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
   _id: string;
   countryId: "HU";
@@ -33,7 +33,7 @@ function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
 
-export async function materializeHu1991AssemblySeating(input: {
+async function materializeHu1991AssemblySeating(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

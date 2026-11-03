@@ -59,47 +59,6 @@ async function findPartyByElectionPartyId(
   return db.collection<PoliticalParty>("politicalParties").findOne({ sequentialId, countryId });
 }
 
-// ─── Create ──────────────────────────────────────────────────────────────────
-
-export async function createCommitteeElection(
-  partyId: string,
-  countryId: CountryId,
-  currentTurn: number,
-  durationTurns = COMMITTEE_ELECTION_DURATION_TURNS,
-  effectiveNow = new Date()
-): Promise<ObjectId> {
-  const db = await getDb();
-  const now = new Date(effectiveNow);
-  const window = createTurnBackedWindow({ currentTurn, durationTurns, effectiveNow: now });
-
-  const election: Omit<NationalCommitteeElection, "_id"> = {
-    partyId,
-    countryId,
-    status: "voting",
-    startTime: window.startTime,
-    endTime: window.endTime,
-    startTurn: window.startTurn,
-    endTurn: window.endTurn,
-    durationTurns,
-    winnerIds: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const result = await db.collection("nationalCommitteeElections").insertOne(election);
-
-  console.log(
-    `[NationalCommitteeElections] Created committee election for ${countryId}:${partyId} ` +
-      `(turns ${currentTurn}–${currentTurn + durationTurns})`
-  );
-
-  await notifyCommitteeElectionOpened(partyId, countryId);
-
-  return result.insertedId;
-}
-
-// ─── Create Missing ──────────────────────────────────────────────────────────
-
 export async function createMissingCommitteeElections(
   currentTurn: number,
   durationTurns = COMMITTEE_ELECTION_DURATION_TURNS,

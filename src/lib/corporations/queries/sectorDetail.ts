@@ -19,7 +19,12 @@ import { getAuthUser } from "@/lib/auth";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import {
+  corporationPathIdFromDoc,
+  resolveCorporation,
+  requireCeo,
+} from "@/lib/api/corporations/resolveQuery";
+import { canDirectSubsidiaryAsParent } from "@/lib/corporations/subsidiaries/authorization";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
@@ -31,10 +36,13 @@ import { isLabourWagesEnabled, isLabourFullMode } from "@/lib/labour/featureFlag
 import { undergroundUnrestVisible } from "@/lib/unions/enforcementCosts";
 import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
 import {
+  clampWageLevel,
   sectorWageLevel,
   MEDIAN_SECTOR_WAGE_LEVEL,
   minWageFloorMultiplier,
 } from "@/lib/labour/laborCost";
+import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
+import { buildStateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import type {
   Corporation,
   CorporateSector,
@@ -97,6 +105,10 @@ import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
+import {
+  explainOwnSupplyReach,
+  type OwnSupplyRow,
+} from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -243,18 +255,36 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // The CEO of the controlling parent is an insider of its subsidiary, same
     // rule GET /api/corporations/[id] applies (ticket 1423).
     let isParentCeo = false;
+    let parentDirection: {
+      parentName: string;
+      parentPathId: string;
+      protectedUntilTurn: number | null;
+    } | null = null;
     const controllingParent = user && !isCeo ? getControllingCorporateParent(corporation) : null;
     if (user && controllingParent) {
       const parentCorp = await db
         .collection<Corporation>("corporations")
         .findOne(
           { _id: controllingParent.corporationId },
-          { projection: { userId: 1, ceoVacant: 1 } }
+          { projection: { userId: 1, ceoVacant: 1, name: 1, sequentialId: 1 } }
         );
       isParentCeo =
         !!parentCorp &&
         parentCorp.ceoVacant !== true &&
         parentCorp.userId?.toString() === user.userId;
+      // The parent CEO may retool an AI-run managed subsidiary's sectors; the
+      // strategy command re-checks the same rule.
+      if (
+        parentCorp &&
+        isParentCeo &&
+        (await canDirectSubsidiaryAsParent(db, new ObjectId(user.userId), corporation))
+      ) {
+        parentDirection = {
+          parentName: parentCorp.name,
+          parentPathId: corporationPathIdFromDoc(parentCorp),
+          protectedUntilTurn: sector.parentDirectedStrategy?.untilTurn ?? null,
+        };
+      }
     }
     const shouldRedact =
       !isParentCeo &&
@@ -351,7 +381,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           .findOne({ _id: sector.stateId, countryId: sector.countryId }),
         db
           .collection<State>("states")
-          .find({}, { projection: { _id: 1, countryId: 1 } })
+          .find({}, { projection: { _id: 1, countryId: 1, name: 1 } })
           .toArray(),
         findMergedRegionMetrics(db, { _id: sector.stateId, countryId: sector.countryId }),
         corporation.ceoType === "imperial"
@@ -403,6 +433,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 capitalStock: 1,
                 buildQueue: 1,
                 freightBillingCharge: 1,
+                // What each site made last turn, for the own-supply reason on inputs.
+                "producerSettlement.turn": 1,
+                "producerSettlement.products.commodity": 1,
+                "producerSettlement.products.producedUnits": 1,
               },
             }
           )
@@ -826,6 +860,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       capital,
       throughput,
     } = await buildSectorCommoditySections({
+      currentTurn,
       sector,
       // Commodity flows run in ₳; normalize the sector's host-currency revenue
       // to ₳ at its host rate before passing in.
@@ -928,6 +963,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const plantsEnabled = marketAtLeast(marketMode, "plants");
     let plants: Awaited<ReturnType<typeof buildSectorPlantsSection>> | null = null;
     let freightState: { observedLoad: number; capacity: number; turn: number | null } | undefined;
+    const ownSupplyByCommodity = new Map<string, OwnSupplyRow>();
     if (plantsEnabled && !shouldRedact && !publicFinancialFog) {
       const [latestSourcingNetwork] = await db
         .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
@@ -935,6 +971,22 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         .sort({ turn: -1 })
         .limit(1)
         .toArray();
+      if (isCeo) {
+        await explainOwnSupplyReach({
+          db,
+          corporation,
+          sector,
+          siblings: allCorpSectors,
+          shortInputs: demandsWithShortage
+            .filter((d) => typeof d.inputAvailability === "number" && d.inputAvailability < 0.999)
+            .map((d) => d.commodity),
+          stateNameById: new Map(allStates.map((s) => [s._id, s.name ?? s._id])),
+          ownRouteDelivered: latestSourcingNetwork?.ownRouteDelivered ?? [],
+          ownRouteTurn: latestSourcingNetwork?.turn ?? null,
+          currentTurn,
+          out: ownSupplyByCommodity,
+        });
+      }
       const observedFreight = latestSourcingNetwork?.freightTeuByState[sector.stateId];
       const freightPrice = commodityPrices.find((price) => price.commodity === "freight");
       freightState = {
@@ -1365,6 +1417,12 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           inputsAnchor,
           freightCostAnchor: sectorAmountAnchor(sector.freightBillingCharge ?? 0),
           freightIncomeAnchor: sectorAmountAnchor(sector.freightBillingCredit ?? 0),
+          fundedComplianceAnchor:
+            sector.plantsPnl?.source === "funded" &&
+            typeof sector.plantsPnl.compliance === "number" &&
+            Number.isFinite(sector.plantsPnl.compliance)
+              ? sectorAmountAnchor(sector.plantsPnl.compliance)
+              : null,
           // Ticket 1122: the turn's own lines, normalized to ₳. Present on any
           // sector that has run a plants turn since the field shipped; the
           // builder falls back to reconstruction when it is null.
@@ -1548,6 +1606,19 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         workersDesired:
           sector.workersDesired ?? calculateWorkers(sectorRevenueAnchor, metrics.workforceSkill),
         labourStaffingFactor: sector.labourStaffingFactor ?? 1,
+        // The state's shared labour pool: workers available against workers
+        // every employer there wants. State aggregates are public, so this is
+        // not redacted with the sector's own workforce figures.
+        stateLabourMarket: buildStateLabourPoolView({
+          laborForce: stateMetrics?.economic?.laborForce?.value,
+          labourDemand: stateMetrics?.economic?.labourDemand?.value,
+          coverageTightness: stateMetrics?.economic?.labourTightness?.value,
+          allocatedTightness: employmentStaffingTightness(stateMetrics?.labourEmployment),
+          corporateEmployed: stateMetrics?.labourEmployment?.corporateEmployed,
+          demandWageIndex: stateMetrics?.economic?.labourDemandWageIndex?.value,
+          wagesEnabled: labourWagesEnabled,
+          sectorWageLevel: clampWageLevel(sector.wageLevel ?? 1),
+        }),
         productionPolicy: sector.productionPolicy ?? 0,
         productionPolicyLevel: sector.productionPolicyLevel ?? 0,
         // Labour system: CEO wage-level lever (1.0 = baseline), the sector's pay
@@ -1644,7 +1715,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       plants,
       commodities: {
         supplies,
-        demands: demandsWithShortage,
+        demands: demandsWithShortage.map((d) => {
+          const ownSupply = ownSupplyByCommodity.get(d.commodity);
+          return ownSupply ? { ...d, ownSupply } : d;
+        }),
         ...(freightState ? { freightState } : {}),
         commodityMarginModifier: mods.commodityModifier,
         commoditySupplyDemandBlendPct: blendPct,
@@ -1731,6 +1805,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         unownedPercent,
       },
       isCeo,
+      parentDirection,
       labourEnabled: labourWagesEnabled,
       // Gates the union-busting UI panel; that mechanic requires "full" tier,
       // one above the wage-slider's "wages" tier.

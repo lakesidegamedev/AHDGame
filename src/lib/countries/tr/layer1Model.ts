@@ -17,7 +17,7 @@ import { trRegionCensusDataModern } from "./data/trRegionCensusDataModern";
 import { trRegionCensusData1953 } from "@/lib/seeds/tr/trRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const TR_GROUP_IDS = [
+const TR_GROUP_IDS = [
   "kemalist_secular",
   "conservative_religious",
   "nationalist",
@@ -220,6 +220,3 @@ export function getTrModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-export const trLayer1Model: CountryLayer1Model = getTrModel("1979");
-export const trGroupIds = [...TR_GROUP_IDS];

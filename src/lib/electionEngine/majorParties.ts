@@ -17,10 +17,7 @@ export interface MajorPartyCandidateLike {
   partyAbbr?: string;
 }
 
-export function isMajorPartyCandidate(
-  c: MajorPartyCandidateLike,
-  majorSet: ReadonlySet<string>
-): boolean {
+function isMajorPartyCandidate(c: MajorPartyCandidateLike, majorSet: ReadonlySet<string>): boolean {
   if (majorSet.has(c.party)) return true;
   return typeof c.partyAbbr === "string" && majorSet.has(c.partyAbbr);
 }

@@ -19,6 +19,8 @@ import {
 } from "@/lib/constants/commodities";
 import { computeRollingAnnualizedPercentChange } from "@/lib/utils/rollingAnnualizedChange";
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import { stateShortage } from "@/lib/market/rules/stateShortage";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 
 /**
@@ -170,6 +172,17 @@ export async function GET(request: Request) {
         exchangeDemand: Math.round(exchangeDemand * 100) / 100,
         statePrices: relevantStatePrices,
         stateSupply: relevantStateSupply,
+        // Goods sold only inside each state: how many of those states are short.
+        // The world figure above can read deeply short while most states are full.
+        ...(isStateScopedCommodity(commodity) && data
+          ? {
+              stateShortage: stateShortage(
+                data.stateSupply ?? {},
+                data.stateDemand ?? {},
+                isRelevantState
+              ),
+            }
+          : {}),
         priceChange: (() => {
           const globalPrice = data?.globalPrice ?? basePrice;
           const reference =

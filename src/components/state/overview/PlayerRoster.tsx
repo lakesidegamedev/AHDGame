@@ -8,7 +8,7 @@ import { ResponsiveTable, type ResponsiveTableColumn, ListRowSkeleton } from "@/
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { regionApiSubUrl } from "@/lib/urls";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { StateRosterResult, StateRosterRow } from "@/lib/states/overview/getStateRoster";
 
 /**

@@ -1,16 +1,11 @@
-import type { CorporationType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
-import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector, type PlantSizingSector } from "@/lib/constants/facilityQuantum";
 
 export interface PlantLedgerState {
   plantCount: number;
   plantUnitRemainder: number;
 }
 
-interface PlantLedgerSector {
-  sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
+interface PlantLedgerSector extends PlantSizingSector {
   plantCount?: number | null;
   plantUnitRemainder?: number | null;
 }
@@ -30,17 +25,18 @@ function wholeNonNegative(value: number | null | undefined): number {
  * floor capacity by the sector facility quantum, with one small plant for any
  * positive holding below a full quantum. The remainder is construction credit
  * toward the next whole plant and never participates in PvP by itself.
+ *
+ * Plant size follows the sector's lane AND its strategy, so pass the strategy
+ * the sector will hold after this write (the target strategy on a retool).
  */
 export function seedPlantLedger(
-  sectorType: CorporationType,
-  capitalStock: number | null | undefined,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  sector: PlantSizingSector,
+  capitalStock: number | null | undefined
 ): PlantLedgerState {
   const stock = finiteNonNegative(capitalStock);
   if (stock <= 0) return { plantCount: 0, plantUnitRemainder: 0 };
 
-  const quantum = plantSizeUnits(sectorType, industryModel, mediaDiscriminator);
+  const quantum = plantSizeForSector(sector);
   if (stock < quantum) return { plantCount: 1, plantUnitRemainder: 0 };
 
   const plantCount = Math.floor(stock / quantum);
@@ -56,13 +52,11 @@ export function seedPlantLedger(
  * cannot persist a plant count seeded from a stale application snapshot.
  */
 export function plantCapacityDeltaPipeline(
-  sectorType: CorporationType,
+  sector: PlantSizingSector,
   delta: number,
-  setFields: Record<string, unknown> = {},
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  setFields: Record<string, unknown> = {}
 ): Array<Record<string, unknown>> {
-  const quantum = plantSizeUnits(sectorType, industryModel, mediaDiscriminator);
+  const quantum = plantSizeForSector(sector);
   const stock = "$capitalStock";
   const count = { $floor: { $divide: [stock, quantum] } };
   return [
@@ -98,14 +92,67 @@ export function plantCapacityDeltaPipeline(
 }
 
 /**
+ * Whole-plants twin of `plantCapacityDeltaPipeline`, same call shape. Off (the
+ * default) it IS that pipeline, so today's behaviour is unchanged. On, a gain
+ * is construction credit: the stock is snapped to whole plants (surplus to
+ * credit, a positive holding below one plant rounds up to one), the delta is
+ * added to `plantUnitRemainder`, and every full plant of credit becomes a
+ * plant. Negative deltas are not wear here; losses go through the turn.
+ */
+export function plantChangePipeline(
+  sector: PlantSizingSector,
+  delta: number,
+  setFields: Record<string, unknown> = {},
+  options: { wholePlants?: boolean } = {}
+): Array<Record<string, unknown>> {
+  if (!options.wholePlants) return plantCapacityDeltaPipeline(sector, delta, setFields);
+  const size = plantSizeForSector(sector);
+  const gain = Number.isFinite(delta) && delta > 0 ? delta : 0;
+  const stock = { $max: [0, { $ifNull: ["$capitalStock", 0] }] };
+  const floored = { $floor: { $add: [{ $divide: [stock, size] }, 1e-9] } };
+  const basePlants = {
+    $cond: [{ $lte: [stock, 0] }, 0, { $cond: [{ $lt: [floored, 1] }, 1, floored] }],
+  };
+  return [
+    {
+      $set: {
+        __wpBase: basePlants,
+        __wpCredit: {
+          $add: [
+            { $max: [0, { $ifNull: ["$plantUnitRemainder", 0] }] },
+            { $max: [0, { $subtract: [stock, { $multiply: [basePlants, size] }] }] },
+            gain,
+          ],
+        },
+      },
+    },
+    {
+      $set: {
+        __wpAdded: { $floor: { $add: [{ $divide: ["$__wpCredit", size] }, 1e-9] } },
+      },
+    },
+    {
+      $set: {
+        ...setFields,
+        plantCount: { $add: ["$__wpBase", "$__wpAdded"] },
+        capitalStock: { $multiply: [{ $add: ["$__wpBase", "$__wpAdded"] }, size] },
+        plantUnitRemainder: {
+          $max: [0, { $subtract: ["$__wpCredit", { $multiply: ["$__wpAdded", size] }] }],
+        },
+        plantWearUnits: { $max: [0, { $ifNull: ["$plantWearUnits", 0] }] },
+      },
+    },
+    { $unset: ["__wpBase", "__wpCredit", "__wpAdded"] },
+  ];
+}
+
+/**
  * Advance the construction ledger with newly delivered capacity.
  * Turn writers reconcile the persisted count from final capitalStock after
  * depreciation, so this helper is only for computations before that write.
  */
 export function advancePlantLedger(input: {
-  sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
+  sector: PlantSizingSector;
   plantCount: number | null | undefined;
   plantUnitRemainder: number | null | undefined;
   currentCapitalStock: number | null | undefined;
@@ -116,13 +163,8 @@ export function advancePlantLedger(input: {
         plantCount: wholeNonNegative(input.plantCount),
         plantUnitRemainder: finiteNonNegative(input.plantUnitRemainder),
       }
-    : seedPlantLedger(
-        input.sectorType,
-        input.currentCapitalStock,
-        input.industryModel,
-        input.mediaDiscriminator
-      );
-  const quantum = plantSizeUnits(input.sectorType, input.industryModel, input.mediaDiscriminator);
+    : seedPlantLedger(input.sector, input.currentCapitalStock);
+  const quantum = plantSizeForSector(input.sector);
   const accumulated = seeded.plantUnitRemainder + finiteNonNegative(input.deliveredUnits);
   const completedPlants = Math.floor(accumulated / quantum);
 
@@ -139,9 +181,7 @@ export function advanceSectorPlantLedger(
   deliveredUnits: number
 ): PlantLedgerState {
   return advancePlantLedger({
-    sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
-    mediaDiscriminator: sector.mediaDiscriminator,
+    sector,
     plantCount: sector.plantCount,
     plantUnitRemainder: sector.plantUnitRemainder,
     currentCapitalStock,

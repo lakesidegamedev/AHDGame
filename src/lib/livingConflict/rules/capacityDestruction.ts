@@ -21,10 +21,10 @@ import type {
 } from "@/lib/db/types/conflictCapacity";
 
 /** Local currency units per local-currency million of capital. */
-export const CAPITAL_UNIT_LOCAL = 1_000_000;
-export const MAX_REGION_CAPITAL_SHARE = 0.1;
-export const MAX_OUTSTANDING_SHARE = 0.5;
-export const MAX_REPAIR_TURNS = 480;
+const CAPITAL_UNIT_LOCAL = 1_000_000;
+const MAX_REGION_CAPITAL_SHARE = 0.1;
+const MAX_OUTSTANDING_SHARE = 0.5;
+const MAX_REPAIR_TURNS = 480;
 /** Capital and repair quantities are stored to a thousandth of a million. */
 const PRECISION = 1000;
 

@@ -4,6 +4,29 @@ Most wars do not end by conquest. Twenty unanswered decisive wins is a very long
 
 Peace in A House Divided is a bilateral deal between **two countries**, not between two sides. You are ending *your own participation* in a war. Everybody else keeps fighting.
 
+## A peace offer in short
+
+One country offers another a settlement for one war. The other can accept, reject, or let the 72-turn window lapse. If accepted, one term applies, the leaver stands down, and a 240-turn truce starts between the two. The war carries on for everyone else.
+
+![Lifecycle of a peace offer from choosing terms through a 72 turn window, accept, reject or withdraw, revalidation and applying payment, stand down, roster removal and a 240 turn truce.](/wiki-images/diagrams/peace-and-truces-offer-lifecycle.svg)
+
+### The numbers
+
+| What | Value |
+| --- | --- |
+| Offer window | 72 turns (three real days) |
+| Terms per settlement | Exactly 1 |
+| Indemnity ceiling | 2 times the payer's annual GDP |
+| Demilitarisation length | 240 turns by default, 1 to 480 |
+| Truce after any war | 240 turns, every pair on opposite sides |
+| Victor's window to name terms | 24 turns |
+| Who can answer an offer | Only the country it was made to |
+| Who can withdraw an offer | Only the country that made it |
+
+### Country X buys its way out
+
+Country X has a GDP of 3,000,000 in its own currency units, so its indemnity ceiling is 6,000,000. It is losing a war to Y and offers a payment of 150,000, which is 5% of its yearly GDP and well under the ceiling. Y accepts on turn 1030, inside the 72 turns. 150,000 leaves X's treasury and is credited to Y, converted from X's currency. X's generals are un-posted and its units go back to reserve. X comes off its side's roster. A truce runs from turn 1030 to turn 1270 between X and Y. If X was the only country on its side, the war ends and Y is recorded as the winner.
+
 ## Who negotiates
 
 Peace is **not** the defence seat's job.
@@ -70,17 +93,17 @@ Status quo ante. Neither side is recorded as having won, no money moves, no gove
 
 ### Regime change
 
-The country changes its system of government. A one-party state becomes a democracy, or a democracy becomes a one-party state: the conversion runs both ways.
+The country changes its system of government. A one-party state becomes a democracy, or a democracy becomes a one-party state (see [One-Party States](/wiki/one-party-states)): the conversion runs both ways.
 
 **Its legislature is dissolved and fresh elections are called.** The sitting government falls with it. There is a short interregnum before the campaign opens, so the fall is visible rather than instant.
 
-**A crown survives.** A parliamentary monarchy that loses a war loses its government, not its monarch. A settlement can also never install a monarchy: there is no dynasty for a treaty to seat.
+A settlement can never install a monarchy: there is no dynasty for a treaty to seat.
 
 **The rest of the calendar is left alone.** The dissolution brings one election forward. Every later election stays on the date it already had, and where that date now falls too close to run a nomination period, that election waits for the following cycle instead.
 
 ### Demilitarisation
 
-The country may award no new defence contracts, and no company may accept a new order from it, for a set number of turns. The default is **240 turns**, the same length as the truce, so the bar on re-arming and the bar on re-declaring lapse together; the offerer may set anything from one turn up to **480**.
+The country may award no new defence contracts (see [Defence Procurement](/wiki/defence-procurement)), and no company may accept a new order from it, for a set number of turns. The default is **240 turns**, the same length as the truce, so the bar on re-arming and the bar on re-declaring lapse together; the offerer may set anything from one turn up to **480**.
 
 **What it has already bought still arrives.** Live contracts keep delivering and orders already placed can still be wound down. This is a bar on re-arming, not a teardown: the army decays through ordinary upkeep while nothing new comes in to replace it.
 
@@ -147,79 +170,48 @@ In order:
 5. **A 240-turn truce is recorded** between the two parties.
 6. **If the leaver was the last country on their side, the war ends outright**: the other side wins, and every remaining cross-side pair is truced too.
 
+The settlement changes rosters and can end the conflict (see [Conflicts & the Military System](/wiki/conflicts-overview)), and ending a war stops its effects on approval, though exhaustion heals slowly (see [Government Approval](/wiki/government-approval)).
+
 That last point is how most negotiated wars actually finish. A two-country war has one country per side, so **the first accepted peace offer ends it**.
 
 ## Winning outright: dictating terms
 
-A war does not only end by agreement. If your front runs all the way to the end of the track, you have taken every inch of contested ground and the war is won.
+If your front runs all the way to the end of the track, the war is won, but it does not end on the spot. The fighting stops, every unit goes back to reserve, and you have **24 turns** to name one term from the same four. Nobody has to agree. If the window lapses, the war ends with a zero indemnity recorded as a dictated settlement, and the victor is still recorded as the winner. The full sequence is on [Occupation, Territory & Victory](/wiki/occupation-and-victory).
 
-**Winning does not end the war on the spot.** The fighting stops, every unit goes back to reserve, and the war moves into a state where it is waiting on one thing: your terms.
+Only the country that started the war on the winning side names the terms, and they land on the country that started it on the losing side. Allies who joined later get the truce and nothing else. A banner on your country's pages counts down the window, and you act from the war's own record page under **World, Conflicts**. A war against an insurgency, or one whose losing founder already left on a separate peace, skips this window and ends at once.
 
-**You get 24 turns to name them.** The same four terms are available, and you still pick exactly one. The difference is that nobody has to agree: a country with no ground left is not in a position to refuse.
+## Why it is country-by-country
 
-**If the window lapses, the war ends with nothing taken.** Miss it and you get the victory and the truce, and no term at all. The war record will say so.
-
-**Only one country can impose.** The country that started the war on the winning side is the one that names the terms, and they land on the country that started it on the losing side. Allies who joined a war somebody else began get the truce and nothing else. A coalition of five does not get five settlements.
-
-**Where to do it:** the war's own record page, at **World → Conflicts**. A banner appears under the navigation on your country's pages while the window is open, counting down the turns.
-
-**There are two exceptions**, and in both the war simply ends the moment the front runs out, exactly as it always did:
-
-- **An insurgency.** There is no government on the other side to impose anything on.
-- **A war whose founder already left.** If the country that started the losing side has already taken a separate peace, nobody is left holding the claim, and it does not pass to whoever joined later.
-
-## Why it is country-by-country, not side-by-side
-
-Whole-side peace has a fatal failure mode: **one inactive country on a roster could never consent**, and would freeze the war permanently for everybody.
-
-Bilateral peace also follows the consent rule the rest of the system uses: **no player commits another player's army**. Your ally can leave a war without your permission, and you can stay in one they have abandoned.
-
-The practical consequence: **a coalition can be dismantled one member at a time.** Buying out the weakest member of an enemy alliance is a real strategy, and cheaper than beating all of them.
+Whole-side peace fails because one inactive country on a roster could never consent, and would freeze the war for everybody. Bilateral peace also follows the consent rule used across the system: no player commits another player's army. Your ally can leave a war without your permission, and you can stay in one they have abandoned. A coalition can be dismantled one member at a time.
 
 ## The 240-turn truce
 
-Every war ending, negotiated, conceded, or won outright, records a **240-turn truce** (about ten real days) between the parties. Neither may declare war on the other until it lapses.
-
-**It is not a negotiated term.** Neither party can trade it away, shorten it, or refuse it. It is a consequence of the war ending, not a clause in the deal.
-
-It exists to stop a country that has just been beaten from being re-declared on the moment the attacker's 120-turn declaration cooldown lapses, at the point it is least able to resist. **The truce deliberately outlasts the cooldown by 120 turns.**
-
-Truces are recorded for **every cross-side pair** when a war ends, not just the principals: otherwise an ally who did the fighting would be free to re-declare while the principal waited. Same-side pairs are never truced; they were not at war with each other.
-
-Your declaration panel lists your live truces and greys out the countries you cannot target, so the bar is visible before you plan a campaign around it.
+Every war ending, negotiated, conceded or won outright, records a 240-turn truce between the parties. Neither may declare war on the other until it lapses. It is not a negotiated term and cannot be traded away. It stops a beaten country being re-declared on the moment the attacker's 120-turn cooldown lapses, so it outlasts the cooldown by 120 turns on purpose. Truces cover every pair on opposite sides, not only the principals. Same-side pairs are never truced. The truce bars either country from re-declaring; the full rules are on [Declaring War](/wiki/declaring-war), where your declaration is what you are now unwinding.
 
 ## Timing: when to sue for peace
 
-**Watch the war's status.** A conflict flips to **Winding Down** when the front has travelled about three-quarters of the way from where it started. That is a public signal:
+**Watch the war's status.** A conflict flips to **Winding Down** when the front has travelled about three-quarters of the way from where it started. If that is against you, your offer is about to get much more expensive. If it is in your favour, you can demand more.
 
-- If it is winding down **against you**, your offer is about to get much more expensive. Move now.
-- If it is winding down **in your favour**, you can demand more, or refuse and finish the job.
+**Offer early in a losing war.** Territorial position is public, and once you are visibly winding down your leverage is gone.
 
-**Watch your own attrition.** If your veteran formations are being ground down and rebuilt with conscripts, you may be losing the war you are technically winning. Cheap peace now can be better than an expensive victory in twenty turns.
+**Use white peace liberally.** It ends a stalemate and buys a 240-turn truce at no cost.
 
-**Watch the whole board.** A war you are winning still consumes upkeep, manpower and ministerial attention. Paying to disengage from a won war so you can face a real threat elsewhere is a perfectly good use of money.
+**Buy out the coalition's weakest link,** or pay to leave a war you have stopped wanting.
 
-**Remember the truce is an asset.** Ten real days of guaranteed non-aggression from a rival is worth a great deal. Sometimes a white peace exists to buy the truce, not to end the fighting.
+**Do not expect to negotiate with an insurgency.** Generated forces have no government to address.
 
-## Practical guidance
+**Make sure a foreign minister exists.** A country with no head of government and no foreign seat holder cannot negotiate peace at all.
 
-**Make sure your foreign minister exists.** A country with no head of government and no foreign seat holder cannot negotiate peace at all, and a defence secretary who filed the declaration cannot fix that themselves.
+## Who does what
 
-**Offer early in a losing war.** Territorial position is public. Once you are visibly winding down, your leverage is gone.
+- **Head of government or foreign seat holder:** make, answer and withdraw offers. Executive shell, **Foreign Affairs** tab, or the foreign office **Overview** tab.
+- **Victor:** name a term within 24 turns.
 
-**Use white peace liberally.** A settlement that ends a stalemate and buys a 240-turn truce costs nothing and is often the best available outcome.
+**Questions that come up.** *Who makes peace, the defence minister or the foreign minister?* The foreign minister or the head of government. *I made an offer by mistake, how do I withdraw it?* The country that made it can withdraw it while it is pending. *Why can I not declare on them again?* The truce. *Can I make peace with only one enemy of the alliance?* Yes, every offer is between two countries, and the war goes on for the rest.
 
-**Buy out the coalition's weakest link.** You do not have to beat an alliance. You have to make the cheapest member leave.
+## See also
 
-**Pay to leave a won war.** Winning is not free. If a war has stopped serving your interests, an indemnity you pay to disengage may be far cheaper than the upkeep of continuing.
-
-**Do not expect to negotiate with an insurgency.** Generated forces have no government to address. Those wars end territorially or not at all.
-
-**Track the 72 turns.** An offer that lapses has to be re-made, and in the meantime the front may have moved against you.
-
-## Next
-
-- [Occupation, Territory & Victory](/wiki/occupation-and-victory): the other way wars end.
-- [Declaring War](/wiki/declaring-war): the cooldown and truce bars, from the other side.
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): a negotiated ending in context.
+
+Works in every world and era. You cannot negotiate with an insurgency or other generated force. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Ending a war
 `;

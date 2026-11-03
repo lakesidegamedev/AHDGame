@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="770" height="456" viewBox="0 0 770 456" role="img" font-family="system-ui, sans-serif">
+<title>Corporate bond default flow</title>
+<desc>When a coupon or maturity payment leaves liquid capital negative, escrow and a solvency check can stop a default; otherwise the bond defaults and the corporation refinances, restructures or dissolves.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="769" height="455" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="16" width="260" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="150.0" y="36.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Coupon or maturity payment</text>
+<text x="150.0" y="52.5" font-size="12" text-anchor="middle" fill="#3f3f46">due this turn</text>
+<rect x="20" y="100" width="260" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="150.0" y="124.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Liquid capital negative?</text>
+<text x="150.0" y="140.6" font-size="12" text-anchor="middle" fill="#3f3f46">after the payment</text>
+<rect x="20" y="190" width="260" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="150.0" y="214.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Escrow covers the shortfall?</text>
+<text x="150.0" y="230.6" font-size="12" text-anchor="middle" fill="#3f3f46">bond buyback escrow</text>
+<rect x="20" y="280" width="260" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="150.0" y="304.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Assets still exceed debt?</text>
+<text x="150.0" y="320.6" font-size="12" text-anchor="middle" fill="#3f3f46">solvency check</text>
+<path d="M150 64 L150 98" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M150 156 L150 188" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="160" y="176" font-size="12" text-anchor="start" fill="#52525b">yes</text>
+<path d="M150 246 L150 278" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="160" y="266" font-size="12" text-anchor="start" fill="#52525b">no</text>
+<rect x="400" y="100" width="250" height="236" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="525.0" y="190.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">No default</text>
+<text x="525.0" y="206.6" font-size="12" text-anchor="middle" fill="#3f3f46">the payment settles</text>
+<text x="525.0" y="222.6" font-size="13" text-anchor="middle" fill="#18181b"></text>
+<text x="525.0" y="238.6" font-size="12" text-anchor="middle" fill="#3f3f46">illiquid, not insolvent,</text>
+<text x="525.0" y="254.6" font-size="12" text-anchor="middle" fill="#3f3f46">so the bond stays good</text>
+<path d="M280 128 L398 128" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="340" y="120" font-size="12" text-anchor="middle" fill="#52525b">no</text>
+<path d="M280 218 L398 218" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="340" y="210" font-size="12" text-anchor="middle" fill="#52525b">yes</text>
+<path d="M280 308 L398 308" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="340" y="300" font-size="12" text-anchor="middle" fill="#52525b">yes</text>
+<rect x="20" y="376" width="240" height="66" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="140.0" y="397.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Default</text>
+<text x="140.0" y="413.6" font-size="12" text-anchor="middle" fill="#3f3f46">bondholders unpaid that turn;</text>
+<text x="140.0" y="429.6" font-size="12" text-anchor="middle" fill="#3f3f46">rating locked at CCC for 96 turns</text>
+<path d="M150 336 L150 374" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="160" y="360" font-size="12" text-anchor="start" fill="#52525b">no</text>
+<text x="290" y="372" font-size="12" text-anchor="start" fill="#52525b">If the CEO does not resolve it, the turn processor tries, in order:</text>
+<rect x="290" y="382" width="136" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="358.0" y="400.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">1 Refinance</text>
+<text x="358.0" y="416.6" font-size="12" text-anchor="middle" fill="#3f3f46">new bond for the</text>
+<text x="358.0" y="432.6" font-size="12" text-anchor="middle" fill="#3f3f46">defaulted principal</text>
+<path d="M428 412 L438 412" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="440" y="382" width="136" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="508.0" y="400.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">2 Restructure</text>
+<text x="508.0" y="416.6" font-size="12" text-anchor="middle" fill="#3f3f46">sell the fewest</text>
+<text x="508.0" y="432.6" font-size="12" text-anchor="middle" fill="#3f3f46">sectors to repay it</text>
+<path d="M578 412 L588 412" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="590" y="382" width="136" height="60" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="658.0" y="400.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">3 Dissolution</text>
+<text x="658.0" y="416.6" font-size="12" text-anchor="middle" fill="#3f3f46">if neither works,</text>
+<text x="658.0" y="432.6" font-size="12" text-anchor="middle" fill="#3f3f46">the default stands</text>
+<path d="M262 409 L288 409" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+</svg>

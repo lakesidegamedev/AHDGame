@@ -37,4 +37,17 @@ describe("deposit-taker insolvency", () => {
       })
     ).toBe(true);
   });
+  it("meets a run from sovereign treasuries when the vault is empty (incident 1694)", () => {
+    // Greenbaum Group, turn 438: flight emptied a $1.3B vault while the bank
+    // held $15.8B of marked treasuries and positive equity.
+    const greenbaum = {
+      priorBand: "red" as const,
+      cashReserves: 0,
+      requiredLiquidity: 3_000_000_000,
+      netAssets: 3_000_000_000,
+    };
+    expect(depositTakerFails(greenbaum)).toBe(true);
+    expect(depositTakerFails({ ...greenbaum, liquidSecurities: 15_800_000_000 })).toBe(false);
+    expect(depositTakerFails({ ...greenbaum, liquidSecurities: 1_000_000_000 })).toBe(true);
+  });
 });

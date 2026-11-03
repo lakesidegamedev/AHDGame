@@ -12,7 +12,7 @@
  * Add a new entry here when a country ships a directly-elected nationwide
  * executive race (e.g. BR President once activated).
  */
-export const NATIONWIDE_DIRECT_EXECUTIVE_ELECTION_TYPES: ReadonlySet<string> = new Set([
+const NATIONWIDE_DIRECT_EXECUTIVE_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "president", // US
   "uachtaran", // IE
 ]);
@@ -41,7 +41,7 @@ export function isNationwideDirectExecutiveElection(
  * the configured direct-plurality model; exact preference-transfer fidelity is
  * a later electoral-system upgrade, not a reason to leave the office vacant.
  */
-export const ENTRY_BLOCKED_ELECTION_TYPES: ReadonlySet<string> = new Set();
+const ENTRY_BLOCKED_ELECTION_TYPES: ReadonlySet<string> = new Set();
 
 export function isElectionTypeEntryBlocked(electionType: string): boolean {
   return ENTRY_BLOCKED_ELECTION_TYPES.has(electionType);

@@ -31,27 +31,16 @@ beforeEach(() => {
 });
 
 describe("planPoolCashMoves", () => {
-  it("lets two percent of the shortfall in when short", () => {
-    expect(planPoolCashMoves({ cashLocal: 50, targetCashLocal: 100 })).toEqual({
-      inflow: 1,
-      sweep: 0,
-    });
+  it("never tops a short pool up: a pool holds only what it took in", () => {
+    expect(planPoolCashMoves({ cashLocal: 50, targetCashLocal: 100 })).toEqual({ sweep: 0 });
+    expect(planPoolCashMoves({ cashLocal: 0, targetCashLocal: 100 })).toEqual({ sweep: 0 });
   });
   it("sweeps down to 1.5x target when past 2x", () => {
-    expect(planPoolCashMoves({ cashLocal: 300, targetCashLocal: 100 })).toEqual({
-      inflow: 0,
-      sweep: 150,
-    });
+    expect(planPoolCashMoves({ cashLocal: 300, targetCashLocal: 100 })).toEqual({ sweep: 150 });
   });
   it("does nothing between target and 2x target, or without a target", () => {
-    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 100 })).toEqual({
-      inflow: 0,
-      sweep: 0,
-    });
-    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 0 })).toEqual({
-      inflow: 0,
-      sweep: 0,
-    });
+    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 100 })).toEqual({ sweep: 0 });
+    expect(planPoolCashMoves({ cashLocal: 150, targetCashLocal: 0 })).toEqual({ sweep: 0 });
   });
 });
 
@@ -63,12 +52,12 @@ describe("countriesForCurrency", () => {
 });
 
 describe("processBondMarketPoolTurn", () => {
-  it("re-sizes the target from M2, lets cash flow in, and stores sovereign appetite", async () => {
+  it("re-sizes the target from M2, mints nothing into a short pool, and stores sovereign appetite", async () => {
     db.collectionMocks.bondMarketPools.find.mockReturnValue({
       toArray: async () => [{ _id: "GBP", cashLocal: 100, targetCashLocal: 5 }],
     });
-    db.collectionMocks.moneySupplySnapshots.find.mockReturnValue({
-      toArray: async () => [{ currencyCode: "GBP", m2: 10_000, turn: 583 }],
+    db.collectionMocks.moneySupplySnapshots.aggregate.mockReturnValue({
+      toArray: async () => [{ _id: "GBP", m2: 10_000, turn: 583 }],
     });
     vi.mocked(loadCountrySovereignSnapshots).mockImplementation(
       async (_db, codes) => new Map(codes.map((code) => [code, { countryCode: code } as never]))
@@ -77,13 +66,11 @@ describe("processBondMarketPoolTurn", () => {
 
     const result = await processBondMarketPoolTurn(db as unknown as Db, 584, new Date());
 
-    // Target becomes 5% of 10,000 = 500; shortfall 400 -> inflow 8.
-    expect(result.inflowLocalByCurrency.GBP).toBe(8);
-    expect(db.collectionMocks.bondMarketPools.updateOne).toHaveBeenCalledWith(
+    // Target becomes 5% of 10,000 = 500; the pool is 400 short and stays short.
+    expect(result.sweptLocalByCurrency.GBP).toBeUndefined();
+    expect(db.collectionMocks.bondMarketPools.updateOne).not.toHaveBeenCalledWith(
       { _id: "GBP" },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ cashLocal: 8, "lifetime.inflowIn": 8 }),
-      }),
+      expect.objectContaining({ $inc: expect.anything() }),
       expect.anything()
     );
     expect(db.collectionMocks.bondMarketPools.updateOne).toHaveBeenLastCalledWith(
@@ -106,7 +93,7 @@ describe("processBondMarketPoolTurn", () => {
         { _id: "USD", cashLocal: 100, targetCashLocal: 5 },
       ],
     });
-    db.collectionMocks.moneySupplySnapshots.find.mockReturnValue({ toArray: async () => [] });
+    db.collectionMocks.moneySupplySnapshots.aggregate.mockReturnValue({ toArray: async () => [] });
     vi.mocked(loadCountrySovereignSnapshots).mockImplementation(
       async (_db, codes) => new Map(codes.map((code) => [code, { countryCode: code } as never]))
     );
@@ -135,17 +122,20 @@ describe("processBondMarketPoolTurn", () => {
     ]);
     expect(expected("GBP")).toMatchObject({ UK: 0.5 });
     expect(result.poolsProcessed).toBe(2);
+    // Both pools' inputs come from one batched read per collection.
+    expect(db.collectionMocks.moneySupplySnapshots.aggregate).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.bonds.aggregate).toHaveBeenCalledTimes(1);
   });
 
   it("holds a quarter of maturing sovereign face as a working balance when that exceeds the M2 share", async () => {
     db.collectionMocks.bondMarketPools.find.mockReturnValue({
       toArray: async () => [{ _id: "GBP", cashLocal: 100, targetCashLocal: 5 }],
     });
-    db.collectionMocks.moneySupplySnapshots.find.mockReturnValue({
-      toArray: async () => [{ currencyCode: "GBP", m2: 10_000, turn: 583 }],
+    db.collectionMocks.moneySupplySnapshots.aggregate.mockReturnValue({
+      toArray: async () => [{ _id: "GBP", m2: 10_000, turn: 583 }],
     });
-    db.collectionMocks.bonds.find.mockReturnValue({
-      toArray: async () => [{ totalIssued: 4_000 }, { totalIssued: 2_000 }],
+    db.collectionMocks.bonds.aggregate.mockReturnValue({
+      toArray: async () => [{ _id: "GBP", face: 6_000 }],
     });
     vi.mocked(loadCountrySovereignSnapshots).mockResolvedValue(new Map());
 
@@ -163,7 +153,7 @@ describe("processBondMarketPoolTurn", () => {
     db.collectionMocks.bondMarketPools.find.mockReturnValue({
       toArray: async () => [{ _id: "GBP", cashLocal: 3_000, targetCashLocal: 500 }],
     });
-    db.collectionMocks.moneySupplySnapshots.find.mockReturnValue({ toArray: async () => [] });
+    db.collectionMocks.moneySupplySnapshots.aggregate.mockReturnValue({ toArray: async () => [] });
     db.collectionMocks.bondMarketPools.findOneAndUpdate.mockResolvedValue({ cashLocal: 750 });
     vi.mocked(loadCountrySovereignSnapshots).mockResolvedValue(new Map());
 

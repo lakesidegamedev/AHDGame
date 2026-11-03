@@ -10,6 +10,7 @@ import {
   listFundsByIds,
   listCharacterFundTransactions,
 } from "@/lib/indexFunds/fundQueries";
+import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
 import { INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 
 // GET /api/character/[id]/fund-portfolio — Character's fund positions and recent transactions
@@ -45,25 +46,7 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
       ...new Map(positions.map((pos) => [pos.fundId.toString(), pos.fundId])).values(),
     ];
     const funds = await listFundsByIds(db, uniqueFundIds);
-    const fundById = new Map(funds.map((fund) => [fund._id.toString(), fund]));
-    const enrichedPositions = positions.map((pos) => {
-      const fund = fundById.get(pos.fundId.toString()) ?? null;
-      return {
-        fundId: fund?.slug ?? pos.fundId.toString(),
-        slug: fund?.slug ?? null,
-        name: fund?.name ?? null,
-        tickerSymbol: fund?.tickerSymbol ?? null,
-        anchorCurrencyCode: fund?.anchorCurrencyCode ?? null,
-        units: pos.units,
-        // #857 grandfather: legacy units redeem rate-free. Default absent →
-        // full position (matches the redeem debit's `legacyUnits ?? units`).
-        legacyUnits: pos.legacyUnits ?? pos.units,
-        avgNavAnchor: pos.avgNavAnchor ?? null,
-        currentNav: fund?.quotedNav ?? null,
-        marketValueAnchor: fund ? pos.units * fund.quotedNav : null,
-        status: fund?.status ?? null,
-      };
-    });
+    const enrichedPositions = enrichFundPositions(positions, funds);
 
     // Recent transactions for this character.
     const transactions = await listCharacterFundTransactions(db, characterId, 30);

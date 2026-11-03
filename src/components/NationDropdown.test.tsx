@@ -27,12 +27,14 @@ vi.mock("@/hooks/useActiveReferendumCampaign", () => ({
   useActiveReferendumCampaign: () => false,
 }));
 
-function openDropdown() {
+async function openDropdown() {
   fireEvent.click(screen.getByRole("button", { name: /china/i }));
+  // The panel body is a next/dynamic chunk, so wait for its first rows.
+  await screen.findByText("Home Nation");
 }
 
-describe("NationDropdown — Cabinet Office entry", () => {
-  it("links to the viewer's cabinet office page, between Home and My Party", () => {
+describe("NationDropdown - Cabinet Office entry", () => {
+  it("links to the viewer's cabinet office page, between Home and My Party", async () => {
     render(
       <NationDropdown
         countryId="CN"
@@ -45,7 +47,7 @@ describe("NationDropdown — Cabinet Office entry", () => {
         }}
       />
     );
-    openDropdown();
+    await openDropdown();
 
     const officeLink = screen.getByRole("link", { name: /cabinet office/i });
     expect(officeLink.getAttribute("href")).toBe(
@@ -59,24 +61,24 @@ describe("NationDropdown — Cabinet Office entry", () => {
     ).toBeTruthy();
   });
 
-  it("hides the entry when the viewer holds no cabinet seat", () => {
+  it("hides the entry when the viewer holds no cabinet seat", async () => {
     render(<NationDropdown countryId="CN" userCountry="CN" cabinetOffice={null} />);
-    openDropdown();
+    await openDropdown();
 
     expect(screen.queryByRole("link", { name: /cabinet office/i })).toBeNull();
   });
 });
 
-describe("NationDropdown — National Details sub-sections", () => {
-  it("renders the four section headers and groups links under them", () => {
+describe("NationDropdown - National Details sub-sections", () => {
+  it("renders the four section headers and groups links under them", async () => {
     render(<NationDropdown countryId="UK" userCountry="UK" />);
     fireEvent.click(screen.getByRole("button", { name: /united kingdom/i }));
     // Flat titles render as sub-section headers (distinct from link labels);
     // CollapsibleNavSection renders them as a styled <div>.
     for (const h of ["Government", "Politics", "Other"]) {
-      const header = screen
-        .getAllByText(h)
-        .find((el) => el.tagName === "DIV" && el.className.includes("text-[11px]"));
+      const header = (await screen.findAllByText(h)).find(
+        (el) => el.tagName === "DIV" && el.className.includes("text-[11px]")
+      );
       expect(header).toBeTruthy();
     }
     // Economy is a collapsible toggle, collapsed by default.
@@ -91,10 +93,10 @@ describe("NationDropdown — National Details sub-sections", () => {
     expect(screen.queryByRole("link", { name: /^Referendums$/i })).toBeNull();
   });
 
-  it("lists country-scoped Unions inside the Economy group when enabled", () => {
+  it("lists country-scoped Unions inside the Economy group when enabled", async () => {
     render(<NationDropdown countryId="UK" userCountry="UK" unionsEnabled />);
     fireEvent.click(screen.getByRole("button", { name: /united kingdom/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Economy/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Economy/i }));
     const unions = screen.getByRole("link", { name: /^Unions$/i });
     expect(unions.getAttribute("href")).toBe("/country/uk/unions");
   });

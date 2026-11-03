@@ -3,6 +3,8 @@
  * makeNppCorpDecision uses the corporation, market signals and CEO strategy to
  * return planned sector and cash changes for the turn processor to apply.
  */
+import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
@@ -10,6 +12,7 @@ import {
 } from "@/lib/corporations/commodityDominanceContext";
 import {
   commodityDominanceRatio,
+  memoSupplyMixOf,
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
 import { groupOperator } from "@/lib/corporations/groups/operator";
@@ -70,6 +73,10 @@ import {
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { foundingUnmetSizing, isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
+import {
+  fundedSellThrough,
+  nppOperatingCapacityUnits,
+} from "@/lib/turn/npp/rules/fundedSellThrough";
 import type {
   NppCorpDecision,
   NppCorpDecisionContext,
@@ -86,6 +93,8 @@ import {
   autopilotCapexBudgetLocal,
   evaluateAutopilotGrowthGate,
 } from "./rules/autopilotReinvest";
+import { growthEvidenceGate } from "./rules/growthEvidenceGate";
+import { corpHeldByCashCut } from "./rules/cashCutHold";
 import {
   allowsNppIndustryInvestment,
   isNppDivestmentProtected,
@@ -136,7 +145,6 @@ import {
   NPP_GROWTH_DEPLOY_FRACTION,
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_GROWTH_MIN_SHORTAGE,
-  NPP_GROWTH_MIN_THROTTLE,
   NPP_GROWTH_MIN_UTILIZATION,
   NPP_REINVEST_AGGRESSION,
   NPP_REINVEST_MAINTENANCE_CASH_SHARE,
@@ -221,8 +229,11 @@ export function makeNppCorpDecision(
     ) ?? 0;
   // Commodity-level build toll, priced exactly as a player's build is: this
   // corp's potential output (owned plus queued plus the order) of each
-  // commodity the sector makes, over world demand. 0 when demand is unknown.
+  // commodity the sector makes, over world demand (state demand for freight and
+  // local services). 0 when demand is unknown.
   let dominanceSectorsCache: CommodityDominanceSector[] | undefined;
+  // One mix per sector per decision (see memoSupplyMixOf).
+  const dominanceSupplyMixOf = memoSupplyMixOf(ctx.turn);
   const commodityRatioFor = (sector: CorporateSector, extraUnits: number): number => {
     const demandOf = plants?.commodityDemandOf;
     if (!plants || !demandOf) return 0;
@@ -233,12 +244,15 @@ export function makeNppCorpDecision(
       sectors: dominanceSectorsCache,
       commodities: sectorOutputCommodities(sector, ctx.turn),
       demandOf,
+      stateDemandOf: plants.commodityStateDemandOf,
       targetSectorId: sector._id.toString(),
+      targetStateId: sector.stateId,
       extraUnits,
       isNatcorp: !!corp.countryOwnerId,
       turn: ctx.turn,
       currentYear: plants.year,
       commandEconomyEnabled: plants.commandEconomyEnabled === true,
+      supplyMixOf: dominanceSupplyMixOf,
     }).ratio;
   };
   const capacityObservations: CapacityDecisionObservation[] = [];
@@ -454,6 +468,11 @@ export function makeNppCorpDecision(
       .filter(
         (sp) =>
           (sp.sector.lowFillTurns ?? 0) >= STRANDED_DIVEST_TURNS &&
+          // lowFillTurns counts the legacy clearing shadow. On a funded world a
+          // plant is stranded only if its own settlement left output unsold:
+          // deleting a sold-out plant destroys capacity in a short market.
+          (!ctx.fundedWorldEpoch ||
+            (fundedSellThrough(sp.sector, ctx.fundedWorldEpoch) ?? 1) < 0.5) &&
           !isCoreSector(sp.sector) &&
           !hasProtectedConstructionProperty(sp.sector) &&
           !isNppDivestmentProtected(sp.sector, ctx.turn) &&
@@ -638,6 +657,7 @@ export function makeNppCorpDecision(
     divestedSectorIds,
     priceRatioOf,
     marketSaturationOf: placementSignals?.marketSaturationOf,
+    fundedWorldEpoch: ctx.fundedWorldEpoch,
   });
   sectorUpdates.push(...mothballUpdates);
   const newlyMothballedIds = new Set(
@@ -890,6 +910,8 @@ export function makeNppCorpDecision(
   // overlays this evaluation; the shared priced founding block below prices
   // whichever target survives.
   const surplusCash = liquidCapital - effectiveCashFloor;
+  // Plants idle for want of cash hold founding and every reinvestment leg.
+  const cashCutHold = corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn);
   const entry = evaluateNppEntry({
     corp,
     sectors: sectorsAfterConversion(sectors, conversionApplied),
@@ -913,6 +935,7 @@ export function makeNppCorpDecision(
     criticalLogisticsShortageEligible: ctx.criticalLogisticsShortageEligible,
     retailExpansionPaused: ctx.retailExpansionPaused,
     entryCapReached: newSectors.length >= NPP_SHORTAGE_ENTRIES_PER_TURN,
+    fundedRecipeWorld: ctx.fundedRecipeWorld,
   });
   const {
     entryCandidate,
@@ -956,6 +979,7 @@ export function makeNppCorpDecision(
   const foundingTarget = expansion ?? frontier?.target ?? null;
   const foundingBlockEntered =
     foundAllowed &&
+    !cashCutHold &&
     foundingTarget !== null &&
     newSectors.length < NPP_SHORTAGE_ENTRIES_PER_TURN &&
     (ordinaryEntry || exceptionalShortageEntry || frontier !== null);
@@ -1051,13 +1075,18 @@ export function makeNppCorpDecision(
         ? starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES
         : Math.min(headroomUnits * NPP_FOUNDING_HEADROOM_SHARE, unmetSizing.sizeCap);
       const unmetBlocksEntry = unmetSizing.blocksEntry;
-      const buildUnits =
+      const sizedUnits =
         starterUnits > 0
           ? Math.max(
               starterUnits,
               Math.floor(Math.min(sizeCap, affordableUnits, MAX_BUILD_UNITS_PER_ORDER))
             )
           : 0;
+      // Whole plants: the founding order is a whole number of starter plants.
+      const buildUnits =
+        plants?.wholePlants && starterUnits > 0
+          ? Math.max(starterUnits, floorUnitsToPlants(sizedUnits, starterUnits))
+          : sizedUnits;
       const buildAnchor = perUnitFoundingAnchor * buildUnits;
       const foundingCost = toCorpLocal(entryFeeAnchor + buildAnchor);
       entryDiagnostic = {
@@ -1140,6 +1169,7 @@ export function makeNppCorpDecision(
             startTurn: ctx.turn,
             onlineTurn: ctx.turn + buildTurns,
             smooth: true,
+            ...(plants?.wholePlants ? { plantUnits: starterUnits } : {}),
           },
         });
         unownedDraws.push({
@@ -1262,6 +1292,7 @@ export function makeNppCorpDecision(
       retailExpansionPaused: ctx.retailExpansionPaused === true,
       ordinaryEntryTargetGlutted,
       exceptionalShortageEntry,
+      cashCutHold,
       blockEntered: foundingBlockEntered,
       plantsEnabled: plants?.enabled === true,
       expansionPresent: expansion !== null,
@@ -1295,8 +1326,10 @@ export function makeNppCorpDecision(
   // carry `countryOwnerId` and no `ownershipState`, so the old local check saw
   // them as private.
   if (plants?.enabled && !isStateOwned(corp) && groupDirection?.allowInvestment !== false) {
-    // Shared-snapshot pool lookup; see reinvestCandidatePool.
-    const poolFor = createReinvestPoolLookup(unownedByCountry);
+    // Shared-snapshot pool lookup; see reinvestCandidatePool. The shell builds
+    // one for the cohort: the index is a pure function of the pool snapshot, so
+    // rebuilding it per corporation walked every unowned row again per corp.
+    const poolFor = ctx.reinvestPoolFor ?? createReinvestPoolLookup(unownedByCountry);
 
     const candidates: ReinvestCandidate[] = [];
     // Autopilot commits at most a fixed share of cash above the floor to new
@@ -1369,6 +1402,7 @@ export function makeNppCorpDecision(
           )
         ),
         property_unavailable: !!sector.forSale || hasProtectedConstructionProperty(sector),
+        cash_cut_run: cashCutHold,
       });
       if (preSizingGate) {
         observeReinvestCandidate(preSizingGate, sector, capitalStock, null, 0, null);
@@ -1422,7 +1456,9 @@ export function makeNppCorpDecision(
       // share back every turn in perpetuity; replacing the RUN capacity lets it
       // depreciate away and the plant converges on the size it can actually
       // sell.
-      const productionCapacity = sector.operatingCapacityUnits ?? capitalStock;
+      // A funded world takes the settled capacity from the receipt.
+      const productionCapacity =
+        nppOperatingCapacityUnits(sector, ctx.fundedWorldEpoch) ?? capitalStock;
       const utilizationOfOwnedCapacity =
         productionCapacity > 0
           ? Math.max(0, Math.min(1, (sector.producedUnits ?? 0) / productionCapacity))
@@ -1621,19 +1657,16 @@ export function makeNppCorpDecision(
             )
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
-      // NPP-run plants do not add growth where the market already throttles
-      // them; replacement of worn capacity still goes through below.
-      const throttledMarket =
-        !autopilot &&
-        typeof sector.demandThrottleFactor === "number" &&
-        Number.isFinite(sector.demandThrottleFactor) &&
-        sector.demandThrottleFactor < NPP_GROWTH_MIN_THROTTLE;
-      let throttleGate = false;
-      if (throttledMarket && growthUnits > 0) {
+      // Market-throttle and input-starvation evidence (rules/growthEvidenceGate)
+      // refuse the growth leg; replacement of worn capacity still goes through.
+      const evidenceGate =
+        growthUnits > 0
+          ? growthEvidenceGate(sector, { autopilot, fundedWorldEpoch: ctx.fundedWorldEpoch })
+          : null;
+      if (evidenceGate) {
         growthUnits = 0;
-        throttleGate = true;
         observeReinvestCandidate(
-          "growth_throttled_market",
+          evidenceGate,
           sector,
           capitalStock,
           headroomUnits,
@@ -1669,9 +1702,17 @@ export function makeNppCorpDecision(
           );
         }
       }
-      const units = replacementUnits + growthUnits;
+      const rawUnits = replacementUnits + growthUnits;
+      // Whole plants: an NPP orders whole plants, at least one.
+      const units =
+        plants?.wholePlants && rawUnits > 0
+          ? Math.max(
+              plantSizeForSector(sector),
+              floorUnitsToPlants(rawUnits, plantSizeForSector(sector))
+            )
+          : rawUnits;
       if (!(units > 0)) {
-        if (!autopilotGate && !throttleGate) {
+        if (!autopilotGate && !evidenceGate) {
           observeReinvestCandidate(
             "below_minimum_order",
             sector,
@@ -1804,6 +1845,7 @@ export function makeNppCorpDecision(
         startTurn: ctx.turn,
         onlineTurn: ctx.turn + buildTurns,
         smooth: true,
+        ...(plants?.wholePlants ? { plantUnits: plantSizeForSector(sector) } : {}),
       };
       if (!affordable) {
         const cashContributionLimitLocal =

@@ -56,7 +56,9 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import {
   buildRoomUnits,
   loadBuildRoomContext,
+  loadCountryQueuedUnitsByLane,
   queuedUndeliveredUnits,
+  supplyMixSharesCountryDemand,
 } from "@/lib/corporations/buildRoom";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { effectiveMarketAnchor } from "@/lib/corporations/marketShare";
@@ -360,6 +362,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     // rows can be from different-currency corps).
     const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
     const buildQueueTurn = growthGameState?.currentTurn ?? 0;
+    // Lanes whose outputs all sell into the national book have ONE room to
+    // build for the whole country, so it nets off plants under construction
+    // anywhere in the country. The expansion picker reads it the same way.
+    const countryQueuedByLane = buildRoom
+      ? await loadCountryQueuedUnitsByLane(db, state.countryId ?? countryId, buildQueueTurn)
+      : new Map<OperatingSectorType, number>();
     const economySectors = OPERATING_SECTOR_TYPES.map((sectorType) => {
       const typeSectors = sectorsByType.get(sectorType) ?? [];
       const ownedRevenue = typeSectors.reduce(
@@ -559,6 +567,34 @@ export async function GET(request: Request, { params }: RouteParams) {
           ? Math.round((estimatedCapture / effectiveTotalMarket) * 10000) / 100
           : 0;
 
+      // Plants-tier room to build in output units/day: buyers not being served,
+      // less capacity already under construction. Not the legacy unowned pool
+      // (a market can be short with an empty pool).
+      let room: { units: number; scope: "state" | "country" } | null = null;
+      if (buildRoom) {
+        const identity = operatingSectorIdentity(sectorType);
+        const supplyMix =
+          getStrategyForOperatingModel(
+            identity.sectorType,
+            "standard",
+            identity.industryModel,
+            identity.mediaDiscriminator
+          ).supply ?? {};
+        const countryShared = supplyMixSharesCountryDemand(supplyMix);
+        room = {
+          units: buildRoomUnits(
+            buildRoom.demandGapUnits(supplyMix, stateId, state.countryId ?? countryId),
+            countryShared
+              ? (countryQueuedByLane.get(sectorType) ?? 0)
+              : typeSectors.reduce(
+                  (sum, s) => sum + queuedUndeliveredUnits(s.buildQueue, buildQueueTurn),
+                  0
+                )
+          ),
+          scope: countryShared ? "country" : "state",
+        };
+      }
+
       return {
         type: sectorType,
         label: OPERATING_SECTOR_TYPE_LABELS[sectorType],
@@ -576,24 +612,9 @@ export async function GET(request: Request, { params }: RouteParams) {
         // Room to build: buyers here not being served, less capacity already
         // under construction. Not the legacy unowned pool (a market can be
         // short with an empty pool).
-        headroomUnits: buildRoom
-          ? buildRoomUnits(
-              buildRoom.demandGapUnits(
-                getStrategyForOperatingModel(
-                  operatingSectorIdentity(sectorType).sectorType,
-                  "standard",
-                  operatingSectorIdentity(sectorType).industryModel,
-                  operatingSectorIdentity(sectorType).mediaDiscriminator
-                ).supply ?? {},
-                stateId,
-                state.countryId ?? countryId
-              ),
-              typeSectors.reduce(
-                (sum, s) => sum + queuedUndeliveredUnits(s.buildQueue, buildQueueTurn),
-                0
-              )
-            )
-          : null,
+        headroomUnits: room?.units ?? null,
+        // "country" when the figure above is shared by every state in the country.
+        headroomScope: room?.scope ?? null,
         tariffEffectiveRate,
         tariffMultiplier,
         owners: redactedOwners,

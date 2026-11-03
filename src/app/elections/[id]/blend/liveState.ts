@@ -1,5 +1,5 @@
 import type { ElectionDetail } from "../components/ElectionDetailTypes";
-import { FINAL_STRETCH_TURNS } from "./generalBlendViewModel";
+import { FINAL_STRETCH_TURNS } from "./liveWindows";
 
 /**
  * Whether a presidential race has results coming in right now, which is the

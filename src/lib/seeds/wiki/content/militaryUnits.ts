@@ -1,8 +1,33 @@
 export const militaryUnitsContent = `# Units, Recruitment & Procurement
 
-Your army is a list of **formations**. Each one is a real object with a headcount, a technology level, a veterancy grade, a posture, and (once you have generals) a commander. This page covers how you get them, what they cost, and how you improve them.
+Your army is a list of **formations**. Each one is a real object with a headcount, a technology level, a veterancy grade, a posture, and (once you have generals) a commander. These are the units a war has to fight with (see [Conflicts & the Military System](/wiki/conflicts-overview)), and the reserve you hold decides how many open a new war (see [Declaring War](/wiki/declaring-war)). This page covers how you get them, what they cost, and how you improve them.
 
-Everything here is done by the **defence seat holder** from their cabinet office → **Military** tab. An **acting** secretary seated without confirmation has the same departmental powers as a confirmed holder, including military operations, generals, doctrine, the nuclear programme and defence contracts. The acting appointment still expires after 24 turns.
+Everything here is done by the **defence seat holder** from their cabinet office → **Military** tab. An **acting** secretary seated without confirmation has the same departmental powers as a confirmed holder, including military operations, generals, doctrine, the nuclear programme and defence contracts. The acting appointment expires after 24 turns.
+
+## What raising a unit takes
+
+Raising a unit takes four things, all at once: a ministerial action, enough manpower in the national pool, enough money in the defence appropriation, and a branch and unit type that exist in the current year. The unit then needs 6 turns to become operational, arrives in reserve, and costs upkeep every turn from the same appropriation until you disband it. The rest of this page covers each part.
+
+### The numbers
+
+| What | Value |
+| --- | --- |
+| Ministerial actions held | Up to 4, regain 1 every 6 turns (4 a day) |
+| Buy one extra action | 10 action points, once per turn, never above the cap of 4 |
+| Cost to recruit or upgrade | 1 ministerial action each |
+| Posture change, assign, disband | Free |
+| Build time | 6 turns; Carrier Strike Group 10 turns |
+| New unit starts at | Standard posture, veterancy Regular, 70% readiness, in reserve with no general |
+| Upgrade price, by tier you step into | 25% (Standard), 35% (Modernized), 50% (Cutting-Edge) of the build price |
+| Upkeep by posture | Garrison 0.85, Standard 1.0, Forward-Deployed 1.25, High Alert 1.5 |
+| Upkeep by tech tier | Legacy 0.85, Standard 1.0, Modernized 1.2, Cutting-Edge 1.45 |
+| Upkeep by national force tier | Reduced 0.85, Standard 1.0, Elevated 1.25 |
+| Readiness a posture settles at | Garrison 60, Standard 72, Forward-Deployed 84, High Alert 92 |
+| Readiness recovery | Up to 8 points per turn |
+
+### Buying an Infantry Division
+
+A country with a cost multiplier of 1.0 and a price-anchor GDP of 500,000 (in its own currency units) buys an Infantry Division. The price is 500,000 × (1,600 / 387,000) × 1.0 = 2,067. The division also draws 12,000 men from the manpower pool and uses 1 ministerial action. The order is refused if any one of the three is short. Six turns later it is operational. A country with a multiplier of 2.6 and a price-anchor GDP of 2,000,000 pays 2,000,000 × (1,600 / 387,000) × 2.6 = 21,499 for the same division.
 
 ## Domains and branches
 
@@ -27,6 +52,8 @@ Some consequences worth knowing before you plan a build:
 - **The US Air Force** exists from 1947; the **Space Force** from 2019.
 - **The PLA Rocket Force** dates from 1966 (as the Second Artillery Corps).
 - **Soviet Strategic Rocket Forces** from 1959; Space Forces from 1992.
+
+Naval hulls are bought here and then ordered at sea; see [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes).
 
 Unit *types* are gated the same way. **Drone Commands** require 1995. **Every space archetype** requires 2019. You cannot invent a Predator in a Cold War game.
 
@@ -93,31 +120,35 @@ Read those tables in pairs. A **Special Forces Group** is a formidable unit for 
 
 ## What a unit actually costs you
 
-A unit costs **three separate resources**, and you must have all three.
+A unit costs four separate things, and you must have all of them.
+
+\`\`\`wiki-chart
+infantry-division-price-by-country
+\`\`\`
 
 ### 1. A ministerial action
 
-Recruiting costs **one ministerial action**. Your cabinet seat holds up to **4 ministerial actions** and regains **1 every 6 turns**, banked up to that cap. Once per turn you can also spend **10 AP** to buy 1 extra action, up to the cap.
+Recruiting costs one ministerial action. Your cabinet seat holds up to 4 and regains 1 every 6 turns. Once per turn you can also spend 10 action points to buy 1 extra action, up to the cap.
 
-That is the real throttle on how fast an army can grow, and it is far tighter than money. **You can raise at most four formations a day**, no matter how large your treasury or how deep your manpower pool. An army is built over real weeks.
+\`\`\`wiki-chart
+ministerial-action-bank
+\`\`\`
 
-Upgrading also costs one, so recruiting and modernising compete for the same action pool. Setting a posture, assigning a unit to a general, and disbanding are all **free**.
+That is the real throttle on how fast an army grows. You can raise at most four formations a day, however large your treasury or manpower pool. Upgrading also costs one, so recruiting and modernising compete for the same pool. Setting a posture, assigning a unit to a general (see [Generals & the Officer Corps](/wiki/generals)) and disbanding are free.
 
 ### 2. Manpower
 
-A new unit is raised at **full establishment**, so it draws its full headcount from your national manpower pool. An Armored Division costs 15,000 men whether or not you can afford it in cash.
+A new unit is raised at full establishment, so it draws its full headcount from the national manpower pool. An Armored Division costs 15,000 men. If the pool is short, the order is refused with the exact numbers shown: "Insufficient manpower, 15,000 required, 9,400 available". There is no borrowing men. See [Manpower & Conscription](/wiki/manpower-conscription).
 
-**Manpower is the hard block.** If the pool is short, the order is refused outright with the exact numbers: there is no borrowing men. See [Manpower & Conscription](/wiki/manpower-conscription).
+### 3. Money from the defence appropriation
 
-### 3. Treasury
+The catalogue cost in the tables is not a currency amount. A unit is priced as a share of your country's own GDP, then multiplied by a per-country cost multiplier. An Infantry Division is about 0.41% of GDP before the multiplier, in every era and country.
 
-Here is the part that trips people up: **the catalogue cost above is not a currency amount.**
+Prices follow the square root of GDP growth since the game began: if GDP doubles, unit prices rise by about 41%. A growing economy slowly outruns its unit prices rather than cancelling against them.
 
-A unit is priced as a **share of your country's own GDP**, then scaled by a per-country cost multiplier. An Infantry Division is the same fraction of national output in 1953 as in 2019 and in every country: roughly 0.4% of GDP before the country multiplier.
+The price is paid from the **defence appropriation**, the pot fed by your enacted defence budget line. Contracts for equipment draw on the same pot, so unit purchase and upkeep compete with what [Defence Procurement](/wiki/defence-procurement) reserves. It is a hard limit. If the unit costs more than the appropriation holds, the order is refused: "Defence appropriation is short, 2,067 required, 1,500 available". New orders cannot be put on credit. Money already promised to a supplier under a defence contract is not available either.
 
-This is deliberate. Converting a fixed price through exchange rates fails three ways: the Eastern Bloc budget economies have no exchange rate at all, several countries hold USD-anchored GDP with local currency codes, and a converted price is still blind to whether the country can actually afford it. A share of GDP is denomination-agnostic and self-scaling.
-
-The per-country cost multiplier:
+The cost multiplier:
 
 | Multiplier | Countries |
 | --- | --- |
@@ -134,118 +165,103 @@ The per-country cost multiplier:
 | **0.9** | HU, RO, GR, FI |
 | **0.85** | NG, BG, AT |
 
-This is a **cost** multiplier, not a size multiplier. It does not make American divisions bigger; it makes them more expensive to buy and to keep. Army size comes from what you actually build.
+It is a cost multiplier, not a size multiplier. It makes American divisions more expensive to buy and keep, not bigger. Army size comes from what you build. Priced as a share of GDP, a unit costs a comparable slice of national output in every country, including Eastern Bloc economies that have no exchange rate.
 
-**Spending past your surplus is not an error.** It becomes national debt. Nobody refuses to sell you an army because you are broke: the bill simply lands on the treasury and stays there.
+### 4. Materiel from the national arsenal
+
+Each unit also needs a load of equipment, counted in **lots**. A unit needs its cost divided by 387, rounded: 4 lots for an Infantry Division, 11 for an Armored Division. Recruiting draws those lots from your national arsenal at once. A short store does not block the order. The unit is raised anyway and arrives under-equipped, and the arsenal tops it up as deliveries land. The arsenal is stocked by [defence contracts](/wiki/defence-procurement). A unit's starting tech tier also comes from the grade of the materiel it received, so it is not always Standard.
+
+The Soviet Union and East Germany have no contract market. Their state arms industry delivers a fixed 3 and 1 lots a turn respectively, straight to the store, pointed at whichever domain (ground, naval, air and so on) is furthest from a full load. That keeps an army equipped but will not keep pace with a war fought flat out.
 
 ## Building takes time
 
-A newly recruited unit is **not immediately available**:
-
-- Most units: **6 turns** to reach operational readiness.
-- **Carrier Strike Groups: 10 turns.**
-
-Until then it exists on your roster but is **excluded from battle entirely**: it does not fight and does not appear in forecasts. Six turns is six real hours. Plan your build-up before the war, not during it.
-
-A fresh unit arrives at:
-
-- **Standard** posture
-- **Tech tier 1** (Standard)
-- **Veterancy 1** (Regular)
-- **70% readiness**
-- Equipment level 1 across firepower, protection and support
-- In **reserve**, with no general
+A new unit is not available at once. Most take 6 turns to become operational, and Carrier Strike Groups take 10. Until then it is on your roster but excluded from battle: it does not fight and does not appear in forecasts. Six turns is six real hours. Plan your build-up before the war, not during it.
 
 ## The four postures
 
-Posture is a standing order for how hard a unit is being worked. It is **free** to change and takes effect immediately.
+Posture is a standing order for how hard a unit is worked. It is free to change and takes effect at once.
 
-| Posture | Effect |
-| --- | --- |
-| **Garrison** | Cheapest to maintain, weakest in the field. Home-defence footing. |
-| **Standard** | The baseline. |
-| **Forward-Deployed** | Noticeably more capable, noticeably more expensive. |
-| **High Alert** | The most capable and by far the most expensive. |
+| Posture | Upkeep | Effect |
+| --- | --- | --- |
+| **Garrison** | 0.85 | Cheapest to maintain, weakest in the field. Home-defence footing. |
+| **Standard** | 1.0 | The baseline. |
+| **Forward-Deployed** | 1.25 | Noticeably more capable, noticeably more expensive. |
+| **High Alert** | 1.5 | The most capable and by far the most expensive. |
 
 Two rules:
 
-1. **A unit at a conflict cannot be on Garrison.** It floors up to Standard automatically. Garrison is a homeland posture only.
-2. Posture forces **up** only. A unit returning to reserve keeps whatever posture it had: it does not drop back to Garrison on its own.
+1. A unit at a conflict cannot be on Garrison. It floors up to Standard automatically.
+2. Posture only forces up. A unit returning to reserve keeps its posture and does not drop back to Garrison.
 
-Posture is also visible nationally: a force sitting heavily on Forward/High Alert tilts public trust and social cohesion. A permanent war footing has a political price at home.
-
-There is a separate **national force tier** (reduced / standard / elevated) set on the defence office Overview, which multiplies readiness and upkeep across your whole army at once.
+A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once. Doctrine nodes in [National Doctrine](/wiki/national-doctrine) do not change this upkeep or readiness: a doctrine's supply-draw bonus only changes what a formation draws from a front's supply.
 
 ## Technology tiers
 
-Every unit sits at one of four tech tiers:
+Every unit sits at one of four tech tiers: **Legacy, Standard, Modernized, Cutting-Edge**. Upgrading raises the tier by one step.
 
-**Legacy → Standard → Modernized → Cutting-Edge**
+\`\`\`wiki-chart
+military-tech-tier-power-vs-upkeep
+\`\`\`
 
-Upgrading raises the tier by one step. It is not free, and it is not free *forever*:
+- **You pay up front.** The price is a share of the unit's build price, by the tier you step into: 25% to reach Standard, 35% to reach Modernized, 50% to reach Cutting-Edge. All three steps together come to 1.1 times a fresh build, so modernising from the bottom costs more than replacing the unit. Each step also costs one ministerial action.
+- **You pay for it every turn.** Upkeep goes from 0.85 at Legacy to 1.45 at Cutting-Edge, a rise of 71%, while the power gain is far smaller.
 
-- **You pay up front.** Priced through the same GDP-share model as building, at an escalating share of the unit's build cost, by the tier you are stepping *into*: **25%** to reach Standard, **35%** to reach Modernized, **50%** to reach Cutting-Edge. All three steps together come to about **1.1× a fresh build**, so modernising a formation from the bottom costs more than replacing it. Since new units arrive at Standard, a unit you build yourself faces the 35% and 50% steps.
-- **You pay for it every turn afterwards.** Higher tiers cost materially more upkeep, and the upkeep curve is **steeper than the power curve**.
+That second point is the design. A Cutting-Edge division is better than a Legacy one and worse value than two Legacy ones. Cheap old kit is a legitimate strategy for a nation that needs mass.
 
-That second point is the whole design. A Cutting-Edge division is better than a Legacy one, and worse value than two Legacy ones. **Cheap old kit is a legitimate strategy** for a nation that needs mass rather than quality.
-
-⚠️ Upkeep is derived on read, so a modernisation pass raises your *entire* running cost immediately, including on units you upgraded long ago. Check your defence envelope before a mass refit.
+Upkeep is derived on read, so a modernisation pass raises your whole running cost at once, including on units you upgraded long ago. Check your appropriation before a mass refit.
 
 ## Veterancy and strength
 
-**Veterancy** runs from Green to Elite across five grades and is earned by fighting. Veterans are meaningfully better than green troops at the same headcount. The bonus is a grade table, not a compounding multiplier: preserving an experienced formation is still one of the highest-value things you can do.
+Veterancy has five grades: **Green, Regular, Seasoned, Veteran, Elite**. Grades are earned through fighting: every battle adds experience, and 100 experience moves a unit up one grade, while the same battle costs it strength, readiness and equipment (see [Fighting a Battle](/wiki/fighting-a-battle)). A battle never lowers veterancy. Veterans are meaningfully better than green troops at the same headcount, so preserving an experienced formation is one of the most valuable things you can do. Rebuilding a veteran formation with conscripts dilutes it; see [Manpower & Conscription](/wiki/manpower-conscription).
 
-**Strength** is current personnel divided by establishment, shown as a percentage on the unit card. A unit ground down in battle fights at reduced effect in proportion to its losses. **A division at 40% strength fights like a much smaller formation**: it is not a full-power unit with a cosmetic wound.
+Strength is current personnel divided by establishment, shown on the unit card. A unit ground down in battle fights at reduced effect in proportion to its losses. A division at 40% strength fights like a much smaller formation.
 
-There is no "destroyed" state and no automatic disbanding. A mauled formation stays on the roster, keeps its general and its position, and rebuilds in place through reinforcement.
+How strong a unit is, along with its veterancy, tech and posture, all feed the next battle. There is no destroyed state and no automatic disbanding. A mauled formation stays on the roster, keeps its general and position, and rebuilds in place through reinforcement.
 
-## Upkeep and the defence envelope
+## Upkeep and the defence appropriation
 
-Every unit costs upkeep every turn, driven by its base cost, its posture, its tech tier, your national force tier, and your country's cost multiplier.
+Every unit costs upkeep every turn, set by its base upkeep, posture, tech tier, your national force tier and your country's cost multiplier. It is paid from the same defence appropriation that buys units.
 
-Your total upkeep is measured against a **defence discretionary envelope** derived from your appropriation. Coming in under it helps your budget balance; blowing through it hurts. Note that military upkeep is **not** a plain treasury spend: it pushes budget balance down while pushing your defence-industry metric up, so it is partly self-offsetting.
+Each turn the appropriation receives one forty-eighth of your annual defence line. A country at its historical starting force spends 55% of that on upkeep. Double the roster and upkeep is 110%, which drains the pot. The appropriation may then go negative by up to one full year of the line. Beyond that, unpaid upkeep becomes arrears. Arrears do not delete units. They pull each posture's readiness target down, by up to 35% if nothing is paid, and the readiness recovers when funding returns.
+
+So the more you raise, the less is left to buy with. Upkeep is also compared with your country's own starting force to set the budget-balance effect: the smaller the force against its historical size, the better the budget score. A force at its starting size still helps the score, and only one past about 1.8 times that size starts to hurt it.
 
 ## Disbanding
 
-Disbanding is **free** and instant. The unit's surviving personnel go back into the national manpower pool.
-
-**There is no cash refund.** The purchase price is gone. That unrefunded cost is what keeps unit churn expensive and stops you from cycling formations to farm anything.
+Disbanding is free and instant. The unit's surviving personnel return to the national manpower pool. There is no refund of the purchase price, which keeps unit churn expensive.
 
 ## Defence procurement contracts
 
-The defence seat publishes tenders through the Cabinet Office's **Government Contracts** tab or the country's contract board. Corporations bid eligible domestic plants and a price; after bidding closes, the government selects a winner with a public reason. The accepted bid becomes an active order. **Military > Arsenal** retains existing orders and their delivery and termination controls.
-
-Publishing a tender reserves its maximum value against the defence appropriation. A maximum price per lot below every compatible production line's minimum price is refused before any funds are reserved, and the minimum is shown in national budget units. Award converts that hold to the winning bid's actual price and releases the difference. The server refuses an order that exceeds the **uncommitted** balance. Deliveries draw down that reservation, and terminating or completing an order releases its remaining commitment after any required break fee. Recruiting and upgrading also use the uncommitted balance, so they cannot spend money already promised to a supplier.
-
-The minister publishes:
-
-- **Equipment component**
-- **Lots ordered**
-- **Maximum price per lot**, with corporate bids constrained by the permitted price band
-- **Equipment grade**, from cheap mass production to premium equipment
-
-The floor follows the supplier's current commodity and overhead costs. If input prices rise after signing, the contract can become unprofitable. A supplier with enough cash delivers at a loss; one that cannot fund the loss stalls and reports why.
-
-The contractor assigns up to four production lines from each plant across its orders. More lines increase delivery speed without changing the agreed price per lot. A plant cannot assign the same line to two contracts.
-
-Both the minister's and contractor's order books show lots ordered, built, carried, delivered, paid, and still committed. A stalled order names the reason. Awards to a corporation the minister owns or materially holds are marked on the contract, reported on the public wire, and reduce the minister's standing.
-
-An admin may pause **new** defence procurement in an emergency. Existing active contracts continue to deliver and may still be terminated under their signed rules.
-
-**Planned economies also receive state arms industry output.** Independently of tenders, the Soviet Union and East Germany receive a fixed trickle of lots every turn, delivered straight to the store and pointed at whichever branch is furthest from a full load. It is enough to keep an army equipped and fit out a new formation in a few turns, and it banks a modest war reserve in peacetime, but it will not keep up with a war fought at full pace. The Soviet arsenal out-produces the East German one several times over.
+Equipment is bought separately from units. The defence seat publishes tenders, corporations bid with their defence plants, and winning orders deliver lots of materiel to the arsenal over time. Publishing a tender reserves its maximum value against the appropriation. The full rules, including supplier limits and termination costs, are on [Defence Procurement](/wiki/defence-procurement).
 
 ## A sensible build order
 
-1. **Check your era.** Open the recruit panel and see which branches and types actually exist this year.
-2. **Check manpower before money.** Manpower refuses you outright; treasury just goes into debt.
-3. **Build infantry for mass, specialists for edge.** Cheap divisions are the efficient way to hold ground; special forces and armour are how you break it.
-4. **Build early, and build steadily.** One ministerial action every six turns plus six turns of build time means a serious army takes real weeks. The force that fights your war is the one you started long before it.
-5. **Modernise selectively.** Upgrade the formations you intend to keep and fight with. Upgrading everything triples your running costs for a modest capability gain.
-6. **Leave postures low in peacetime.** High Alert on a peacetime army burns money and erodes cohesion at home for nothing.
+1. **Check your era.** Open the recruit panel and see which branches and types exist this year.
+2. **Check manpower and the appropriation before anything else.** Both refuse you outright.
+3. **Build infantry for mass, specialists for edge.** Cheap divisions hold ground; special forces and armour break it.
+4. **Build early and steadily.** One action every six turns plus six turns of build time means a serious army takes real weeks.
+5. **Modernise selectively.** Upgrade the formations you intend to keep and fight with.
+6. **Leave postures low in peacetime.** High Alert on a peacetime army burns money and erodes cohesion for nothing.
 
-## Next
+## Running it from the Military tab
 
-- [Manpower & Conscription](/wiki/manpower-conscription): where the men come from.
+All of it is in the defence office, **Military** tab, held by the defence seat holder (or an acting holder):
+
+![Defence office Military tab with the Recruit unit panel listing unit types, build cost, personnel and the authorize button](/wiki-images/screens/military-units-recruit-panel.webp)
+
+- Recruit units (1 action, manpower, appropriation money).
+- Upgrade a unit's tech tier (1 action, 25% to 50% of its build price).
+- Set a unit's posture, or the national force tier (free).
+- Assign a unit, or a whole branch at once, to a general (free). The force load a general's command carries sets that command's capacity penalties; see [Commands & Command Structure](/wiki/military-commands).
+- Disband a unit (free, personnel return to the pool).
+
+**Questions that come up.** *Why does it say not enough manpower?* The pool holds fewer men than the unit's establishment. *How many units can I buy per day?* Four, from the action pool, unless you also buy extra actions at 10 action points each, once per turn. *Why does my unit show General Staff and not fight?* A new unit has no general and sits in reserve. Assign it to a general, and post that general to a conflict. *Is upgrading worth it?* Only for formations you will keep; see the upkeep curve above. *What does posture do?* It trades upkeep for field power and sets the readiness the unit settles at.
+
+## See also
+
+- [Manpower & Conscription](/wiki/manpower-conscription): where the men come from, and the hard limit on how many a new unit can draw.
 - [Generals & the Officer Corps](/wiki/generals): how to get a commander for these units.
 - [Fighting a Battle](/wiki/fighting-a-battle): how to actually use them.
+
+Applies in every world and era, but the catalogue narrows by year: Drone Commands need 1995 or later, space units 2019 or later, and the Soviet Union and East Germany draw state arsenal output instead of contract output. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

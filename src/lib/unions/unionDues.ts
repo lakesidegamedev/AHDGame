@@ -60,10 +60,10 @@ export const BASE_APPROVAL = 55;
  * than repays. Dues at the 10% ceiling cost 50 and no slate of services can
  * cover that, so gouging the membership is always a losing position.
  */
-export const APPROVAL_DUES_PENALTY_PER_UNIT = 500;
+const APPROVAL_DUES_PENALTY_PER_UNIT = 500;
 
 /** Most approval can move in one turn, so a slider change is felt over days rather than instantly. */
-export const APPROVAL_TREND_STEP_PER_TURN = 1.5;
+const APPROVAL_TREND_STEP_PER_TURN = 1.5;
 
 /** Sector fields needed to count members and price dues against local wages. */
 export interface UnionMemberSector {
@@ -113,7 +113,7 @@ export function averageAnnualWage(sectors: readonly UnionMemberSector[]): number
 }
 
 /** Dues as a fraction of annual wage. 0 when wages are unknown, so it cannot fabricate a penalty. */
-export function duesBurdenRatio(duesPerWorkerAnnual: number, annualWage: number): number {
+function duesBurdenRatio(duesPerWorkerAnnual: number, annualWage: number): number {
   const dues = Math.max(0, finitePositive(duesPerWorkerAnnual));
   if (annualWage <= 0) return 0;
   return dues / annualWage;

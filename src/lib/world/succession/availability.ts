@@ -1,5 +1,5 @@
 /** Historical pressure opens a proposal window; it never enacts a breakup. */
-export const FEDERATION_DECISION_OPEN_YEAR_1991 = {
+const FEDERATION_DECISION_OPEN_YEAR_1991 = {
   RU: 1991,
   YU: 1991,
   CS: 1992,

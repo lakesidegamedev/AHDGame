@@ -117,6 +117,8 @@ type EnactableBill = Pick<
   /** Bill category (e.g. "reunification") — used to skip the generic enacted webhook. */
   category?: string;
   sponsorId?: ObjectId | null;
+  proposalPayerId?: ObjectId;
+  proposedByGovernor?: StateBill["proposedByGovernor"];
   /** NPI spent at proposal time — refunded on passage */
   proposalNpiCost?: number;
   /** Action points spent at proposal time — refunded on passage */
@@ -763,11 +765,13 @@ export async function onBillEnacted(
   // Record policy reactions for all provisions
 
   // Refund proposal costs to the sponsor (capped at action cap; NPI has no hard cap)
-  if (bill.sponsorId && (bill.proposalNpiCost || bill.proposalActionCost)) {
+  const proposalPayerId =
+    bill.proposalPayerId ?? bill.proposedByGovernor?.characterId ?? bill.sponsorId;
+  if (proposalPayerId && (bill.proposalNpiCost || bill.proposalActionCost)) {
     const sponsor = await db
       .collection<Character>("characters")
       .findOne(
-        { _id: bill.sponsorId },
+        { _id: proposalPayerId },
         { projection: { actions: 1, nationalInfluence: 1, stats: 1 } }
       );
     if (sponsor) {
@@ -782,7 +786,7 @@ export async function onBillEnacted(
       if (refundNpi > 0) {
         updateOp.$inc = { nationalInfluence: refundNpi };
       }
-      await db.collection<Character>("characters").updateOne({ _id: bill.sponsorId }, updateOp);
+      await db.collection<Character>("characters").updateOne({ _id: proposalPayerId }, updateOp);
     }
   }
 

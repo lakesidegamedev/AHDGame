@@ -273,16 +273,16 @@ describe("campaign list budget preview", () => {
       trees: false,
     },
     {
+      // JP has no field-office scope (no presidency), so stray offices cost nothing.
       suspended: false,
       countryId: "JP",
-      electionType: "house",
-      officeAnchor: 1_800,
+      electionType: "president",
       preset: "1991-default",
       priceLevel: 0.35808,
       rate: 150,
       currency: "JPY",
       count: 3,
-      charged: 3,
+      charged: 0,
       trees: false,
     },
   ])(
@@ -371,8 +371,8 @@ describe("campaign list budget preview", () => {
       const { campaigns } = await res.json();
       const budget = campaigns[0].budget;
       const local = (n: number) => Math.round(n * priceLevel * rate);
-      const income = suspended ? 0 : local(calculateCampaignIncome(row as never, electionType));
-      const ops = suspended ? 0 : local(calculateMaintenanceCosts(row as never, electionType));
+      const income = suspended ? 0 : local(calculateCampaignIncome(row as never));
+      const ops = suspended ? 0 : local(calculateMaintenanceCosts(row as never));
       const offices = charged * local(officeAnchor);
       expect(campaigns[0].currencyCode).toBe(currency);
       expect(budget.income.total).toBe(income);
@@ -382,8 +382,8 @@ describe("campaign list budget preview", () => {
           ? 0
           : local(
               trees
-                ? getTreeMaintenanceCost("groundGame", row.groundGameTree, electionType)
-                : getMaintenanceCost("groundGame", row.groundGameLevel, electionType)
+                ? getTreeMaintenanceCost("groundGame", row.groundGameTree)
+                : getMaintenanceCost("groundGame", row.groundGameLevel)
             )
       );
       expect(budget.expenses.fundraisingMaintenance).toBe(
@@ -391,8 +391,8 @@ describe("campaign list budget preview", () => {
           ? 0
           : local(
               trees
-                ? getTreeMaintenanceCost("fundraising", row.fundraisingTree, electionType)
-                : getMaintenanceCost("fundraising", row.fundraisingLevel, electionType)
+                ? getTreeMaintenanceCost("fundraising", row.fundraisingTree)
+                : getMaintenanceCost("fundraising", row.fundraisingLevel)
             )
       );
       expect(budget.expenses.mediaSpendingMaintenance).toBe(
@@ -400,13 +400,13 @@ describe("campaign list budget preview", () => {
           ? 0
           : local(
               trees
-                ? getTreeMaintenanceCost("mediaSpending", row.mediaSpendingTree, electionType)
-                : getMaintenanceCost("mediaSpending", row.mediaSpendingLevel, electionType)
+                ? getTreeMaintenanceCost("mediaSpending", row.mediaSpendingTree)
+                : getMaintenanceCost("mediaSpending", row.mediaSpendingLevel)
             )
       );
       expect(budget.expenses.total).toBe(ops + offices);
       expect(campaigns[1].budget.expenses.fieldOfficeMaintenance).toBe(
-        countryId === "FR" ? 0 : local(officeAnchor)
+        countryId === "US" ? local(officeAnchor) : 0
       );
       expect(budget.netIncome).toBe(income - ops - offices);
       expect(db.collectionMocks.campaignFieldOffices!.find).toHaveBeenCalledTimes(1);

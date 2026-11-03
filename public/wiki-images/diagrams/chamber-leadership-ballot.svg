@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320" role="img" font-family="system-ui, sans-serif">
+<title>Presiding officer ballot</title>
+<desc>Open, vote, resolve: a 24 hour plurality ballot, with who may run depending on the country office, and the possible results.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="319" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="24" y="40" width="200" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="124.0" y="58.2" font-size="12" text-anchor="middle" font-weight="700">1. Open</text>
+<text x="124.0" y="74.2" font-size="12" text-anchor="middle">24 hour ballot opens after</text>
+<text x="124.0" y="90.2" font-size="12" text-anchor="middle">seats are final; sitting</text>
+<text x="124.0" y="106.2" font-size="12" text-anchor="middle">officer nominated if</text>
+<text x="124.0" y="122.2" font-size="12" text-anchor="middle">still eligible</text>
+<rect x="280" y="40" width="200" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="66.2" font-size="12" text-anchor="middle" font-weight="700">2. Vote</text>
+<text x="380.0" y="82.2" font-size="12" text-anchor="middle">Eligible members declare</text>
+<text x="380.0" y="98.2" font-size="12" text-anchor="middle">candidacy and vote;</text>
+<text x="380.0" y="114.2" font-size="12" text-anchor="middle">plurality wins</text>
+<rect x="536" y="40" width="200" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="636.0" y="74.2" font-size="12" text-anchor="middle" font-weight="700">3. Resolve</text>
+<text x="636.0" y="90.2" font-size="12" text-anchor="middle">Ballot closes after</text>
+<text x="636.0" y="106.2" font-size="12" text-anchor="middle">24 hours</text>
+<polyline points="224,86 280,86" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="480,86 536,86" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="120" y="200" width="200" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="220.0" y="226.2" font-size="12" text-anchor="middle" font-weight="700">Any seated member</text>
+<text x="220.0" y="242.2" font-size="12" text-anchor="middle">US Speaker, Bundestag,</text>
+<text x="220.0" y="258.2" font-size="12" text-anchor="middle">Nigeria, China NPCSC</text>
+<rect x="335" y="200" width="200" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="435.0" y="234.2" font-size="12" text-anchor="middle" font-weight="700">Largest single party only</text>
+<text x="435.0" y="250.2" font-size="12" text-anchor="middle">China CPPCC Chairman</text>
+<polyline points="380,132 380,150 220,150 220,200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="380,132 380,150 435,150 435,200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="580" y="156" width="160" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="660.0" y="177.2" font-size="12" text-anchor="middle">Top vote-getter wins,</text>
+<text x="660.0" y="193.2" font-size="12" text-anchor="middle">tie goes to earlier</text>
+<text x="660.0" y="209.2" font-size="12" text-anchor="middle">declaration</text>
+<rect x="580" y="246" width="160" height="56" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="660.0" y="262.2" font-size="12" text-anchor="middle">No candidates: seat</text>
+<text x="660.0" y="278.2" font-size="12" text-anchor="middle">stays vacant until</text>
+<text x="660.0" y="294.2" font-size="12" text-anchor="middle">next election</text>
+<polyline points="636,132 636,156" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="566,132 566,274 580,274" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+</g>
+</svg>

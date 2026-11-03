@@ -239,7 +239,6 @@ describe("deposit insurance", () => {
       build({ cashReserves: 0, npcDeposits: 100_000, fundBalance: 10_000 });
       Object.assign(memory.collection("gameConfig").docs[0], {
         privateBankingEnabled: true,
-        bankFailurePoliticsEnabled: true,
       });
       const result = await resolveFailedBankDepositors(memory as unknown as Db, bankId, 77);
       expect(result.resolved).toBe(true);
@@ -264,7 +263,6 @@ describe("deposit insurance", () => {
       build({ cashReserves: 0, npcDeposits: 100_000, fundBalance: 10_000 });
       Object.assign(memory.collection("gameConfig").docs[0], {
         privateBankingEnabled: true,
-        bankFailurePoliticsEnabled: true,
       });
       vi.spyOn(memory.collection("bankFailurePoliticalEvents"), "insertOne").mockRejectedValueOnce(
         new Error("interrupted political event publication")
@@ -292,7 +290,6 @@ describe("deposit insurance", () => {
       });
       Object.assign(memory.collection("gameConfig").docs[0], {
         privateBankingEnabled: true,
-        bankFailurePoliticsEnabled: true,
       });
       const result = await resolveFailedBankDepositors(memory as unknown as Db, bankId, 77);
       expect(result.resolved).toBe(false);

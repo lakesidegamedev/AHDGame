@@ -233,3 +233,16 @@ describe("conversion pacing budget", () => {
     expect(hasConversionBudget(undefined)).toBe(true);
   });
 });
+
+describe("transitionAnchorTurn", () => {
+  it("anchors at the first funded turn with the package on, a window back with it off, and never before an opening", async () => {
+    const { transitionAnchorTurn, TRANSITION_WINDOW_TURNS, inTransitionWindow } =
+      await import("./transitionRules");
+    expect(transitionAnchorTurn(undefined, false)).toBeUndefined();
+    expect(transitionAnchorTurn(413, undefined)).toBe(413);
+    expect(transitionAnchorTurn(413, true)).toBe(413);
+    const off = transitionAnchorTurn(413, false)!;
+    expect(off).toBe(413 - TRANSITION_WINDOW_TURNS);
+    expect(inTransitionWindow(413, off)).toBe(false);
+  });
+});

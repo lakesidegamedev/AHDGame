@@ -2,7 +2,7 @@ import { badRequest, notFound, unauthorized } from "@/lib/api/errors";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { createAdminLog } from "@/lib/adminLog";
 import { createNotification } from "@/lib/notifications";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getHeadOfGovernmentOfficeKey, type CountryId } from "@/lib/constants/countries";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";

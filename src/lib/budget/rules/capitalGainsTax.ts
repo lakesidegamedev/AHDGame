@@ -8,6 +8,7 @@ import {
   type IncomeTaxRates,
   type IncomeTier,
 } from "./incomeTaxTiers";
+import { stockSaleWithholding, type StockWithholding } from "./stockWithholding";
 export const CAPITAL_GAINS_TAX_KEYS = {
   low: "capitalGainsTaxLow",
   middle: "capitalGainsTaxMiddle",
@@ -41,6 +42,7 @@ export function initializeCapitalGainsTaxRates<T extends CapitalGainsTaxRates>(
 
 /** Frozen at the committed payout/sale, in the recipient's credited currency. */
 export interface StockTaxReceipt {
+  withholding?: StockWithholding;
   version: 1;
   assessmentTurn: number;
   incomeAmount: number;
@@ -69,6 +71,8 @@ export function validatePendingStockTaxReceipt(receipt: PendingStockTaxReceipt):
     ![receipt.amount, receipt.anchorAmount].every((value) => Number.isFinite(value) && value >= 0)
   )
     throw new Error("Invalid stock tax credit");
+  if (receipt.withholding && receipt.currencyCode !== receipt.withholding.context.currency)
+    throw new Error("Stock withholding currency does not match wallet credit");
   taxableStockAmounts("stock_trade_sell", receipt.amount, receipt);
 }
 export function stockTaxReceipt(value: unknown): StockTaxReceipt | undefined {
@@ -86,6 +90,18 @@ export function stockTaxReceipt(value: unknown): StockTaxReceipt | undefined {
       (!Number.isFinite(receipt.costBasisAnchor) || receipt.costBasisAnchor < 0))
   )
     throw new Error("Invalid stock tax receipt");
+  if (receipt.withholding) {
+    const expected = stockSaleWithholding(receipt, receipt.withholding.context);
+    if (
+      JSON.stringify([expected.income, expected.capital, expected.walletAmount]) !==
+      JSON.stringify([
+        receipt.withholding.income,
+        receipt.withholding.capital,
+        receipt.withholding.walletAmount,
+      ])
+    )
+      throw new Error("Invalid stock withholding receipt");
+  }
   return receipt;
 }
 /** Keep independently accumulated dividend splits within the credited proceeds. */

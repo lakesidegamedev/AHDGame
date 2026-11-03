@@ -23,6 +23,7 @@ vi.mock("@/lib/audit/recordAudit", () => ({ recordAuditBulk: vi.fn() }));
 
 import { executeCharacterAction } from "./executeAction";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
+import { checkActionAchievements, checkFundsAchievements } from "@/lib/achievements/triggers";
 
 const FUNDRAISE_AP = 3;
 
@@ -39,10 +40,11 @@ describe("executeCharacterAction: partial batch", () => {
       };
       return { ...current };
     });
+    const findOne = vi.fn(async () => ({ ...current }));
     const db = {
       collection: vi.fn((name: string) => {
         if (name === "characters") {
-          return { findOne: vi.fn(async () => ({ ...current })), findOneAndUpdate };
+          return { findOne, findOneAndUpdate };
         }
         if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
         return {
@@ -51,7 +53,7 @@ describe("executeCharacterAction: partial batch", () => {
         };
       }),
     } as unknown as Db;
-    return { db, findOneAndUpdate };
+    return { db, findOneAndUpdate, findOne };
   }
 
   const makeCharacter = (actions: number): Character =>
@@ -88,6 +90,33 @@ describe("executeCharacterAction: partial batch", () => {
     expect(res.message).toContain("Completed 2 times.");
     // Audit rows for the committed iterations are still flushed.
     expect(vi.mocked(recordAuditBulk).mock.calls[0]![0]).toHaveLength(2);
+  });
+
+  it("reuses the updated character and checks achievements once per batch", async () => {
+    const character = makeCharacter(FUNDRAISE_AP * 4);
+    const { db, findOne, findOneAndUpdate } = makeDb(character);
+    const res = await executeCharacterAction(db, {
+      character,
+      characterQuery: { _id: character._id },
+      actionType: "fundraise",
+      count: 4,
+      actor: { userId: new ObjectId(), username: "tester" },
+    });
+    expect(res.ok).toBe(true);
+    expect(findOneAndUpdate).toHaveBeenCalledTimes(4);
+    // Iterations 2-4 read the document the previous atomic update returned, so
+    // a batch of four opens no extra character reads.
+    expect(findOne).not.toHaveBeenCalled();
+    // Achievement triggers read cumulative counts: once per request is enough.
+    expect(vi.mocked(checkActionAchievements)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(checkFundsAchievements)).toHaveBeenCalledTimes(1);
+    if (!res.ok) return;
+    expect(vi.mocked(checkActionAchievements).mock.calls[0]).toEqual([
+      expect.anything(),
+      res.updatedCharacter._id,
+      "fundraise",
+      1,
+    ]);
   });
 
   it("still errors when the very first iteration is refused", async () => {

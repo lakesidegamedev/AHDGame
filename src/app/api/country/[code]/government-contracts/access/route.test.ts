@@ -83,3 +83,22 @@ it("also provides the public government denomination to signed-out viewers", asy
     corporations: [],
   });
 });
+
+it.each(["US", "UK", "JP"])(
+  "exposes the global pause in %s without blocking reads",
+  async (code) => {
+    db.collection("gameConfig");
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ governmentContractsEnabled: false });
+    ctx.context.mockResolvedValue({
+      db: db as unknown as Db,
+      countryId: code,
+      turn: 5,
+      game: { preset: "1991" },
+    });
+    const response = await GET(new Request("http://localhost"), {
+      params: Promise.resolve({ code }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ enabled: false });
+  }
+);

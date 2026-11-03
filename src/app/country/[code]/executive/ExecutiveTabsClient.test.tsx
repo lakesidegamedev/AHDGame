@@ -31,6 +31,15 @@ vi.mock("./components/ForeignAffairsTab", () => ({
   ),
 }));
 
+const ukChrome = {
+  governmentType: "parliamentaryMonarchy" as const,
+  executiveTermLimit: null,
+  hasDevolution: true,
+  ordersLabel: "Orders in Council",
+  legislatureName: "Parliament",
+  legislaturePath: "/country/uk/legislature",
+};
+
 function renderTabs(props: {
   viewerIsAdmin?: boolean;
   isOnePartyState?: boolean;
@@ -45,6 +54,7 @@ function renderTabs(props: {
           viewerIsLeader={props.viewerIsLeader ?? false}
           viewerIsAdmin={props.viewerIsAdmin ?? false}
           isOnePartyState={props.isOnePartyState}
+          chrome={ukChrome}
         />
       </ToastProvider>
     </NextIntlClientProvider>
@@ -217,6 +227,7 @@ describe("UK executive devolution navigation", () => {
           overview={<div>Overview</div>}
           viewerIsLeader={false}
           viewerIsAdmin={false}
+          chrome={ukChrome}
         />
       </NextIntlClientProvider>
     );
@@ -232,6 +243,14 @@ describe("UK executive devolution navigation", () => {
           overview={<div>German overview</div>}
           viewerIsLeader
           viewerIsAdmin={false}
+          chrome={{
+            governmentType: "parliamentaryRepublic",
+            executiveTermLimit: null,
+            hasDevolution: false,
+            ordersLabel: "Orders",
+            legislatureName: "Bundestag",
+            legislaturePath: "/country/de/legislature",
+          }}
         />
       </NextIntlClientProvider>
     );

@@ -20,6 +20,7 @@ import {
 } from "@/lib/governmentContracts/rules/presentation";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 export interface ContractAccess {
+  enabled?: boolean;
   currentTurn: number;
   currencyQuote?: ContractCurrencyQuote | null;
   defenceAnchorPrice?: number | null;
@@ -410,6 +411,7 @@ export function BidForm({
     setBusy(true);
     setError("");
     try {
+      if (!withdraw && access.enabled === false) throw new Error(t("featureDisabled"));
       if (!withdraw && extraction && !validContractQuote(quote))
         throw new Error(t("currencyUnavailable"));
       await contractPost(`/api/country/${countryId}/government-contracts/${tender._id}/bids`, {
@@ -520,7 +522,7 @@ export function BidForm({
       )}
       <div className="flex flex-wrap gap-3">
         <button
-          disabled={busy || (extraction && !validContractQuote(quote))}
+          disabled={access.enabled === false || busy || (extraction && !validContractQuote(quote))}
           className={buttonClass}
         >
           {prior && !prior.withdrawn ? t("reviseBid") : t("submitBid")}

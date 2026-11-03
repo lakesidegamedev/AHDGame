@@ -52,6 +52,12 @@ export interface TurnPhaseRuntime {
    * result is missing; neither reruns and neither becomes a zero flow (#3429).
    */
   requirePhaseResult<T>(phase: string, result: T | null, dependent: string): T;
+  /**
+   * False when the turn's phase predicate excludes the phase (a sim profile or a
+   * timed economy pause), so a dependent can skip instead of demanding a result
+   * that was never going to exist. Optional so test doubles need not implement it.
+   */
+  isPhaseEligible?(phase: string): boolean;
   /** How a crash resume answered a result-carrying phase; null when it ran normally. */
   resumeResultOutcome(phase: string): "restored" | "missing" | "interrupted" | null;
 }

@@ -1,3 +1,4 @@
+import { controllerTransferBarrierError } from "@/lib/corporations/commands/acquisitions/controllerTransferBarrier";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
@@ -53,6 +54,8 @@ export async function capitalInjection(
     .collection<Corporation>("corporations")
     .findOne({ _id: controllingParent.corporationId });
   if (!parent) return fail("Parent corporation not found.", 404);
+  const transferRestriction = await controllerTransferBarrierError(db, parent, turn, now);
+  if (transferRestriction) return fail(transferRestriction, 403);
 
   // Per-subsidiary cooldown.
   if (

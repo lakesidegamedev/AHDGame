@@ -669,8 +669,8 @@ export const CUSTOM_ORG_DEFAULT_LEADERSHIP_TERM_TURNS = DEFAULT_LEADERSHIP_TERM_
 
 /**
  * Country-by-country mapping from foreign-affairs cabinet seat ID to country.
- * Used by `requireForeignMinister` to authorize diplomatic actions. Countries
- * without a configured seat fall back to the head of government.
+ * Used by `requireForeignMinister` to authorize diplomatic actions. Only the
+ * seated (or acting) holder of the mapped seat may act.
  */
 export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | null> = {
   US: US_CABINET_SEAT_IDS.foreignAffairs,
@@ -708,10 +708,9 @@ export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | nul
   AT: AT_CABINET_SEAT_IDS.foreignAffairs,
   FI: FI_CABINET_SEAT_IDS.foreignAffairs,
   DD: DD_CABINET_SEAT_IDS.foreignAffairs,
-  // Sub-national entities. Both define `externalAffairsSecretary`, but they are left
-  // on the head-of-government fallback deliberately: neither can be a belligerent
-  // (validateDeclareWar refuses any target not enabled for players), and the
-  // diplomatic surfaces for a devolved administration are unverified. The
+  // Sub-national entities. Both define `externalAffairsSecretary`; neither can be
+  // a belligerent (validateDeclareWar refuses any target not enabled for players),
+  // and the diplomatic surfaces for a devolved administration are unverified. The
   // completeness test below carries them as named exceptions so this stays visible.
   SCO: SCO_CABINET_SEAT_IDS.foreignAffairs,
   WAL: WAL_CABINET_SEAT_IDS.foreignAffairs,
@@ -720,8 +719,8 @@ export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | nul
 /**
  * Cabinet seat that owns trade policy per country (the existing trade-stance
  * holder). Used by `requireTradeMinister` to authorize trade actions such as
- * temporary embargoes. Countries without a configured seat fall back to the
- * head of government.
+ * temporary embargoes. Only the seated (or acting) holder of the mapped seat may
+ * act.
  */
 export const TRADE_MINISTER_POSITION_BY_COUNTRY: Record<CountryId, string | null> = {
   US: US_CABINET_SEAT_IDS.tradeMinister,
@@ -751,10 +750,9 @@ export const TRADE_MINISTER_POSITION_BY_COUNTRY: Record<CountryId, string | null
   AT: AT_CABINET_SEAT_IDS.tradeMinister,
   FI: FI_CABINET_SEAT_IDS.tradeMinister,
   DD: DD_CABINET_SEAT_IDS.tradeMinister,
-  // Sub-national entities. Both define `externalAffairsSecretary`, but they are left
-  // on the head-of-government fallback deliberately: neither can be a belligerent
-  // (validateDeclareWar refuses any target not enabled for players), and the
-  // diplomatic surfaces for a devolved administration are unverified. The
+  // Sub-national entities. Both define `externalAffairsSecretary`; neither can be
+  // a belligerent (validateDeclareWar refuses any target not enabled for players),
+  // and the diplomatic surfaces for a devolved administration are unverified. The
   // completeness test below carries them as named exceptions so this stays visible.
   SCO: SCO_CABINET_SEAT_IDS.tradeMinister,
   WAL: WAL_CABINET_SEAT_IDS.tradeMinister,

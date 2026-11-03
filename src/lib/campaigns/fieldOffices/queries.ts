@@ -1,3 +1,4 @@
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import type { Db, ObjectId } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { notFound } from "@/lib/api/errors";
@@ -20,7 +21,7 @@ import { fieldOfficeRamp, fieldOfficeRegionEffect, fieldOfficeYield } from "./ef
 import { loadLiveStateLean } from "./liveLean";
 import {
   FIELD_OFFICE_RAMP_TURNS,
-  getFieldOfficeCap,
+  FIELD_OFFICE_CAP,
   getFieldOfficeCostAnchor,
   getFieldOfficeRules,
   type FieldOfficeScope,
@@ -68,7 +69,6 @@ export interface FieldOfficeView {
   currentTurn: number;
   rampTurns: number;
   cap: number;
-  maxPerRegion: number | null;
   /** Manager view only. Local currency. */
   costs: { open: number; upkeep: number; actions: number; currency: string } | null;
   funds: number | null;
@@ -143,8 +143,7 @@ export async function getFieldOfficeView(
     raceActive: election.status === "active",
     currentTurn,
     rampTurns: FIELD_OFFICE_RAMP_TURNS,
-    cap: getFieldOfficeCap(election.electionType),
-    maxPerRegion: rules && Number.isFinite(rules.maxPerRegion) ? rules.maxPerRegion : null,
+    cap: FIELD_OFFICE_CAP,
     costs: null,
     funds: canManage ? campaign.funds : null,
     actions: canManage ? campaign.actions : null,
@@ -169,7 +168,7 @@ export async function getFieldOfficeView(
   ]);
 
   if (canManage) {
-    const cost = getFieldOfficeCostAnchor(rules, election.electionType);
+    const cost = getFieldOfficeCostAnchor(rules);
     const [rates, priceLevel, preset] = await Promise.all([
       loadCampaignCurrencyRates(db),
       loadCampaignPriceLevel(db),
@@ -217,7 +216,7 @@ export async function getFieldOfficeView(
     regions[0];
   base.selectedRegionId = selected?._id ?? null;
 
-  if (selected && rules.scope === "county") {
+  if (selected) {
     const [live, preset] = await Promise.all([
       loadLiveStateLean(db, election.countryId),
       getGameStatePresetOrDefault(db),
@@ -226,7 +225,13 @@ export async function getFieldOfficeView(
     base.leanSourceLabel = countyLeanSourceLabel(preset);
     base.liveLeanYear = live?.sourceYear ?? null;
     base.liveLeanPriorYear = live?.priorYear ?? null;
-    const map = await loadFieldOfficeRegionMap(rules.scope, selected._id, live, preset);
+    const map = await loadFieldOfficeRegionMap(
+      rules.scope,
+      selected._id,
+      live,
+      preset,
+      await loadCountyPopulationMap(db, selected._id)
+    );
     if (map) {
       const orientation = canManage
         ? await loadCampaignOrientation(db, campaign as Campaign, election.countryId)

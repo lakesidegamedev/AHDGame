@@ -96,5 +96,5 @@ export function getYuSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const yuSeedConfig: EasternBlocSeedConfig = getYuSeedConfig("2019-default");
+const yuSeedConfig: EasternBlocSeedConfig = getYuSeedConfig("2019-default");
 export default yuSeedConfig;

@@ -111,24 +111,6 @@ function uniqueCountries(units: readonly NavairUnit[]): CountryId[] {
 }
 
 /**
- * A human-readable line for the war wire.
- *
- * Names the region and the margin but never the force composition, because strength is
- * fogged in this game by design. A commander learns they were outweighed, not by how
- * much of what.
- */
-export function engagementReport(outcome: EngagementOutcome, regionShort: string): string {
-  const verdict =
-    outcome.marginPct >= 45
-      ? "held the water decisively"
-      : outcome.marginPct >= 15
-        ? "held the water"
-        : "fought to a standstill";
-  const sunk = outcome.sunk.length ? ` Lost: ${outcome.sunk.join(", ")}.` : "";
-  return `Surface action in ${regionShort}. ${outcome.winner.join(", ")} ${verdict}.${sunk}`;
-}
-
-/**
  * Extra sea control a decisive action is worth beyond mere presence.
  *
  * Winning a fight should be worth more than sitting in empty water, but not so much that

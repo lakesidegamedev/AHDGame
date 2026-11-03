@@ -4,11 +4,11 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { loadSavingsApyByCurrency } from "@/lib/api/savings/savingsApy";
+import { loadSavingsApyForCharacter } from "@/lib/api/savings/savingsApy";
 import { turnsUntilSavingsCredit } from "@/lib/currency/savingsInterest";
 import { getGameState } from "@/lib/gameState";
 
-// GET /api/character/savings — APY map (half national prime) and savings account flags for the active character
+// GET /api/character/savings — APY map (what each balance earns at its holder) and savings account flags for the active character
 // Auth: requireBasicAuth
 // Errors: 401, 404
 async function handleGET() {
@@ -26,7 +26,7 @@ async function handleGET() {
       return errorResponse(404, "Character not found");
     }
 
-    const apyByCurrency = await loadSavingsApyByCurrency(db);
+    const apyByCurrency = await loadSavingsApyForCharacter(db, character);
 
     return NextResponse.json({
       apyByCurrency,

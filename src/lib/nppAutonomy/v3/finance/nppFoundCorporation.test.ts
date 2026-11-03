@@ -93,6 +93,34 @@ describe("nppFoundCorporation", () => {
     );
   });
 
+  it("passes the chosen recipe to the founding sector, and none by default", async () => {
+    vi.mocked(spawnNppCorporation).mockResolvedValue({
+      corporationId: corpId.toString(),
+      sectorId: new ObjectId().toString(),
+      nppId: founderId.toString(),
+      name: "Test Corp",
+    } as never);
+
+    await nppFoundCorporation(db, founder, "chemical_industries", FOUNDING_FEE, CURRENT_TURN, 1);
+    expect(vi.mocked(spawnNppCorporation).mock.calls[0][1]).not.toHaveProperty("initialStrategyId");
+
+    await nppFoundCorporation(
+      db,
+      founder,
+      "chemical_industries",
+      FOUNDING_FEE,
+      CURRENT_TURN,
+      1,
+      undefined,
+      undefined,
+      "fertilizers"
+    );
+    expect(vi.mocked(spawnNppCorporation).mock.calls[1][1]).toMatchObject({
+      type: "chemical_industries",
+      initialStrategyId: "fertilizers",
+    });
+  });
+
   it("skips reassignment when the founder was already the auto-selected CEO", async () => {
     vi.mocked(spawnNppCorporation).mockResolvedValue({
       corporationId: corpId.toString(),

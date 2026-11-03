@@ -32,7 +32,7 @@ import type {
 import { loadEuroAdoptionConditions } from "@/lib/currency/euro/adoption";
 import { euroAdoptionRefusal } from "@/lib/currency/euro/rules";
 import { type CountryId } from "@/lib/constants/countries";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { CommodityType } from "@/lib/constants/commodities";
 import {
   CATEGORY_TO_POLICY_DOMAINS,
@@ -194,7 +194,17 @@ export async function validateBillProvisions(
       typeof rawP === "object" && rawP !== null && "type" in rawP
         ? (rawP as { type: unknown }).type
         : undefined;
-    if (resetLegislationV2 && rawType !== undefined && rawType !== "reset_law") {
+    // Corporate subsidies and national embargoes sit outside reviewed law
+    // families. Keep their existing typed validation in v2 worlds.
+    if (
+      resetLegislationV2 &&
+      rawType !== undefined &&
+      rawType !== "reset_law" &&
+      rawType !== "subsidy" &&
+      rawType !== "end_subsidy" &&
+      rawType !== "embargo" &&
+      rawType !== "end_embargo"
+    ) {
       return {
         ok: false,
         status: 409,
@@ -331,7 +341,11 @@ export async function validateBillProvisions(
     // Handle subsidy / end_subsidy provisions
     if (rawType === "subsidy" || rawType === "end_subsidy") {
       if (
-        !SUBSIDY_BILL_CATEGORIES.has(category as Parameters<typeof SUBSIDY_BILL_CATEGORIES.has>[0])
+        !SUBSIDY_BILL_CATEGORIES.has(
+          category as Parameters<typeof SUBSIDY_BILL_CATEGORIES.has>[0]
+        ) &&
+        // A reviewed v2 draft that mixes subsidies with laws or taxes is `custom`.
+        !(resetLegislationV2 && category === "custom")
       ) {
         return {
           ok: false,
@@ -352,6 +366,12 @@ export async function validateBillProvisions(
           status: 400,
           error: "Sector-scoped subsidy provisions must specify a target sector type.",
         };
+      }
+      if (
+        p.targetSectorType &&
+        !OPERATING_SECTOR_TYPES.includes(p.targetSectorType as OperatingSectorType)
+      ) {
+        return { ok: false, status: 400, error: `Invalid sector: ${p.targetSectorType}.` };
       }
       if (p.type === "subsidy") {
         validatedSubsidyProvisions.push({

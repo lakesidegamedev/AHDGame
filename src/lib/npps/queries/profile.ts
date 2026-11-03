@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { NPP, PoliticalParty, State } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 
 export async function getNppProfile(db: Db, nppId: ObjectId) {
   const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });

@@ -68,6 +68,7 @@ describe("UK devolution reconciliation", () => {
     expect(state.lastPolicyBillId).toBe(String(bill));
     expect(state.regions.SCO.active).toBe(true);
     expect(state.regions.SCO.firstCycle).toBe(3);
+    expect(state.regions.SCO.firstElectionEndTurn).toBe(172);
     expect(writes.map((w) => w.collection)).toEqual(["ukDevolution"]);
   });
 

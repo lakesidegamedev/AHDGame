@@ -25,7 +25,11 @@ export async function POST(
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/coalitions/[id]/invite/decline:${authResult.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const { character } = authResult.user;
 

@@ -16,6 +16,7 @@ import {
   getPMAppointmentVotesCollection,
 } from "@/lib/db/collections/governmentFormation";
 import { getParliamentaryCountryConfig } from "@/lib/government/parliamentaryCountry";
+import { activeAppointmentVoteFilter } from "@/lib/government/appointmentVoteDedup";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { canTriggerNoConfidence } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
@@ -94,27 +95,16 @@ export async function proposePmAppointment(
 
     // PM votes only — an active head-of-state vote (shared collection,
     // office: "headOfState") must not block a PM nomination.
-    const dedupFilter =
-      eligibility.coalitionId != null
-        ? {
-            countryId,
-            status: "active" as const,
-            office: { $exists: false },
-            coalitionId: eligibility.coalitionId,
-          }
-        : {
-            countryId,
-            status: "active" as const,
-            office: { $exists: false },
-            coalitionId: null,
-            nomineePartyId: String(eligibility.qualifyingPartyIds[0]),
-          };
-    const existingVote = await getPMAppointmentVotesCollection(db).findOne(dedupFilter);
+    const existingVote = await getPMAppointmentVotesCollection(db).findOne(
+      activeAppointmentVoteFilter(countryId, eligibility, nominator._id, "primeMinister")
+    );
     if (existingVote) {
       throw badRequest(
-        eligibility.coalitionId != null
-          ? "Your coalition already has an active appointment vote"
-          : "Your party already has an active appointment vote"
+        existingVote.nominatedByCharacterId?.equals(nominator._id)
+          ? "You already have an active appointment vote"
+          : eligibility.coalitionId != null
+            ? "Your coalition already has an active appointment vote"
+            : "Your party already has an active appointment vote"
       );
     }
 
@@ -142,7 +132,7 @@ export async function proposePmAppointment(
     const nomineePartyId = parseInt(nomineePartyStr, 10);
     if (!eligibility.qualifyingPartyIds.includes(nomineePartyId)) {
       throw forbidden(
-        eligibility.formationType === "coalition"
+        eligibility.coalitionId != null
           ? "Nominee must be a member of one of the coalition parties"
           : "Nominee must be a member of your party"
       );
@@ -232,24 +222,17 @@ export async function proposeHosAppointment(
   }
 
   // One active head-of-state vote per party/coalition (PM dedup parity).
-  const dedupFilter =
-    eligibility.coalitionId != null
-      ? {
-          countryId,
-          status: "active" as const,
-          office: "headOfState" as const,
-          coalitionId: eligibility.coalitionId,
-        }
-      : {
-          countryId,
-          status: "active" as const,
-          office: "headOfState" as const,
-          coalitionId: null,
-          nomineePartyId: String(eligibility.qualifyingPartyIds[0]),
-        };
-  const existingVote = await getPMAppointmentVotesCollection(db).findOne(dedupFilter);
+  const existingVote = await getPMAppointmentVotesCollection(db).findOne(
+    activeAppointmentVoteFilter(countryId, eligibility, nominator._id, "headOfState")
+  );
   if (existingVote) {
-    throw badRequest("Your party already has an active head-of-state appointment vote");
+    throw badRequest(
+      existingVote.nominatedByCharacterId?.equals(nominator._id)
+        ? "You already have an active head-of-state appointment vote"
+        : eligibility.coalitionId != null
+          ? "Your coalition already has an active head-of-state appointment vote"
+          : "Your party already has an active head-of-state appointment vote"
+    );
   }
 
   // Nominee is either a player character or an NPP holding a joint-sitting
@@ -301,7 +284,7 @@ export async function proposeHosAppointment(
   const nomineePartyId = parseInt(nomineePartyStr, 10);
   if (!eligibility.qualifyingPartyIds.includes(nomineePartyId)) {
     throw forbidden(
-      eligibility.formationType === "coalition"
+      eligibility.coalitionId != null
         ? "Nominee must be a member of one of the coalition parties"
         : "Nominee must be a member of your party"
     );

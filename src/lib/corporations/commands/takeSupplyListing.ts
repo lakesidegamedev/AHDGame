@@ -1,3 +1,4 @@
+import { controllerTransferBarrierError } from "./acquisitions/controllerTransferBarrier";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -19,6 +20,7 @@ import {
   validateCapacity,
 } from "@/lib/corporations/commands/supplyAgreements";
 import {
+  checkSupplyAgreementReach,
   checkSupplyContractParties,
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
@@ -53,6 +55,9 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
 
     const listings = db.collection<SupplyListing>("supplyListings");
     const turn = await getCurrentTurn(db);
+    const transferRestriction = await controllerTransferBarrierError(db, taker, turn, new Date());
+    if (transferRestriction) return errorResponse(403, transferRestriction);
+
     const listing = await listings.findOne({ _id: parsed.data.listingId });
     if (!listing || listing.expiresAtTurn <= turn) {
       return errorResponse(404, "This offer is no longer available");
@@ -96,6 +101,13 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       commodity: listing.commodity,
     });
     if (partiesError) return errorResponse(403, partiesError);
+    const reachError = await checkSupplyAgreementReach(db, {
+      buyer,
+      commodity: listing.commodity,
+      stateId: listing.stateId,
+      readerIsBuyer: buyer._id.equals(taker._id),
+    });
+    if (reachError) return errorResponse(409, reachError);
 
     const remaining = listing.volumeCap - parsed.data.volume;
     const consumesListing = remaining < LISTING_DUST_UNITS;

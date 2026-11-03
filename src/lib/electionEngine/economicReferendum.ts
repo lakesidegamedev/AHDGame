@@ -119,7 +119,7 @@ export const NATURAL_UNEMPLOYMENT_PCT = 6;
 /** Poverty baseline; above this the incumbent starts paying. */
 export const POVERTY_BASELINE_PCT = 20;
 /** Real-income trend anchor: flat real incomes are neutral. */
-export const INCOME_TREND_ANCHOR_PCT = 0;
+const INCOME_TREND_ANCHOR_PCT = 0;
 
 /** Share points lost per point of unemployment above the natural rate. */
 export const UNEMPLOYMENT_SLOPE = 0.6;

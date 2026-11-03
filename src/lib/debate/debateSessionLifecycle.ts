@@ -23,7 +23,7 @@ function neutralStats(): CharacterStats {
 }
 
 /** Derive a debate record from a character (offices held; bills-passed is a future hook). */
-export function characterDebateRecord(
+function characterDebateRecord(
   character: Pick<Character, "careerHistory" | "currentOffice">
 ): DebateRecord {
   const elected = character.careerHistory?.filter((e) => e.type === "elected").length ?? 0;

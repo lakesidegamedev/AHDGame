@@ -22,7 +22,6 @@ import { isUserActive } from "@/lib/players/playerActivity";
 import { LEADERSHIP_INACTIVE_TURN_THRESHOLD } from "@/lib/statePartyElections";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import {
-  notifyNationalMembersElectionOpened,
   notifyNationalMembersElectionsOpenedBatch,
   notifyNationalLeadershipElected,
   notifyNationalLeadershipLost,
@@ -69,47 +68,6 @@ const POSITION_FIELD: Record<
   viceChair: "viceChairId",
   treasurer: "treasurerId",
 };
-
-// ─── Create ──────────────────────────────────────────────────────────────────
-
-export async function createNationalElection(
-  partyId: string,
-  countryId: CountryId,
-  position: NationalPartyElectionPosition,
-  currentTurn: number,
-  durationTurns = NATIONAL_ELECTION_DURATION_TURNS,
-  effectiveNow = new Date()
-): Promise<ObjectId> {
-  const db = await getDb();
-  const now = new Date(effectiveNow);
-  const window = createTurnBackedWindow({ currentTurn, durationTurns, effectiveNow: now });
-
-  const election: Omit<NationalPartyElection, "_id"> = {
-    partyId,
-    countryId,
-    position,
-    status: "voting",
-    startTime: window.startTime,
-    endTime: window.endTime,
-    startTurn: window.startTurn,
-    endTurn: window.endTurn,
-    durationTurns,
-    winnerId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const result = await db.collection("nationalPartyElections").insertOne(election);
-
-  console.log(
-    `[NationalPartyElections] Created ${position} election for ${countryId}:${partyId} ` +
-      `(turns ${currentTurn}–${currentTurn + durationTurns})`
-  );
-
-  await notifyNationalMembersElectionOpened(partyId, countryId, position, durationTurns);
-
-  return result.insertedId;
-}
 
 // ─── Create Missing ──────────────────────────────────────────────────────────
 

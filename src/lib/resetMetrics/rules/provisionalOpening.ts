@@ -27,8 +27,6 @@ export interface ProvisionalRegionInput {
   populationGrowth: number | null;
 }
 
-export const provisionalRegionalIds = ["02", "15", "16", "18", "20", "24", "49", "54"] as const;
-
 // National observations anchor regional shape. The regional deviations and
 // the remaining component estimates are provisional, not historical series.
 export const opening1991Anchors: Record<

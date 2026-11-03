@@ -5,7 +5,7 @@ import { UK_GEOGRAPHY } from "@/lib/countries/uk/geography";
 import { deriveCountryBoard } from "./deriveFamilies";
 import type { PoliticalMetricId } from "../types";
 
-export const TEXTURE_1991_BOUND = 12;
+const TEXTURE_1991_BOUND = 12;
 export function deriveRegionalTexture1991() {
   const result: Record<string, Record<string, Partial<Record<PoliticalMetricId, number>>>> = {};
   for (const cc of ["US", "UK"] as const) {

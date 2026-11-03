@@ -1,3 +1,8 @@
+import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
+import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
+import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
+import { navCustomization } from "@/lib/navigation/navCustomization";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { NextResponse } from "next/server";
@@ -41,6 +46,7 @@ import type {
 } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
+import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -215,6 +221,15 @@ export async function GET() {
             statusBarLayout: 1,
             corpOverviewMode: 1,
             enableExperimentalUI: 1,
+            experimentalFeatures: 1,
+            desktopNavigationLayout: 1,
+            mobileNavigationLayout: 1,
+            widgetLayout: 1,
+            widgetTrayOpen: 1,
+            widgetWatchlist: 1,
+            askDrawerSide: 1,
+            askDrawerHidden: 1,
+            navCustomization: 1,
             patreonTier: 1,
             patreonExpiresAt: 1,
             patreonProfileBorder: 1,
@@ -298,6 +313,7 @@ export async function GET() {
         avatarUrl: 1,
         profileHeaderImageUrl: 1,
         statsAllocated: 1,
+        wealthTierRepickPending: 1,
         unionLeaderOf: 1,
       },
     });
@@ -704,7 +720,7 @@ export async function GET() {
       pendingSeasonRecapId = pendingRecap?._id.toString() ?? null;
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         user: {
           id: userId,
@@ -726,6 +742,15 @@ export async function GET() {
           corpOverviewMode: user.corpOverviewMode ?? null,
           // New interface is the default; only an explicit opt-out (false) is classic.
           enableExperimentalUI: user.enableExperimentalUI !== false,
+          experimentalFeatures: user.experimentalFeatures === true,
+          desktopNavigationLayout: desktopNavigationLayout(user.desktopNavigationLayout),
+          mobileNavigationLayout: mobileNavigationLayout(user.mobileNavigationLayout),
+          widgetLayout: widgetLayout(user.widgetLayout),
+          widgetTrayOpen: user.widgetTrayOpen === true,
+          widgetWatchlist: widgetWatchlist(user.widgetWatchlist),
+          askDrawerSide: user.askDrawerSide === "left" ? "left" : "right",
+          askDrawerHidden: user.askDrawerHidden === true,
+          navCustomization: navCustomization(user.navCustomization),
           patreonTier: user.patreonTier ?? null,
           isPatronActive: isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null),
           sandboxTesterAccess: sandboxTesterAccessEnabled && !!user.sandboxAccessGrantedAt,
@@ -745,6 +770,8 @@ export async function GET() {
                 // Grandfather flag: drives the blocking stat-allocation modal.
                 // Gated behind the RPG-stats feature flag.
                 needsStatAllocation: rpgStatsEnabled && !character.statsAllocated,
+                // One-time wealth background re-pick after an economy reset.
+                needsWealthTierRepick: character.wealthTierRepickPending === true,
               }
             : null,
         },
@@ -784,6 +811,10 @@ export async function GET() {
       },
       { headers: { "Cache-Control": "private, max-age=5, no-transform" } }
     );
+    // Mirror the opt-in onto the cookie the root template reads. Running here,
+    // on every app load, is what carries a toggle made on another device to
+    // this browser.
+    return applyExperimentalUiCookie(response, user?.experimentalFeatures === true);
   } catch (error) {
     return handleRouteError(error);
   }

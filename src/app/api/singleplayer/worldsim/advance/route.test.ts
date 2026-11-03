@@ -6,18 +6,21 @@ const {
   getDb,
   getSingleplayerConfig,
   getSingleplayerWorldAvailability,
+  maybeAutosave,
 } = vi.hoisted(() => ({
   requireSingleplayer: vi.fn(),
   advanceWorldsim: vi.fn(),
   getDb: vi.fn(),
   getSingleplayerWorldAvailability: vi.fn(),
   getSingleplayerConfig: vi.fn(),
+  maybeAutosave: vi.fn(),
 }));
 
 vi.mock("@/lib/api/requireSingleplayer", () => ({ requireSingleplayer }));
 vi.mock("@/lib/singleplayerOperator", () => ({ getSingleplayerWorldAvailability }));
 vi.mock("@/lib/mongodb", () => ({ getDb }));
 vi.mock("@/lib/singleplayerServer", () => ({ getSingleplayerConfig }));
+vi.mock("@/lib/singleplayer/saves", () => ({ maybeAutosave }));
 vi.mock("@/lib/singleplayerWorld", () => ({
   MAX_WORLD_SIM_BATCH_TURNS: 12,
   advanceWorldsim,
@@ -35,6 +38,7 @@ describe("POST /api/singleplayer/worldsim/advance", () => {
     });
     getSingleplayerConfig.mockResolvedValue({ mode: "worldsim" });
     advanceWorldsim.mockResolvedValue({ completed: 2, finalTurn: 3, results: [] });
+    maybeAutosave.mockResolvedValue(null);
   });
 
   it("validates turns before invoking the real turn runner", async () => {
@@ -61,5 +65,6 @@ describe("POST /api/singleplayer/worldsim/advance", () => {
 
     expect(response.status).toBe(200);
     expect(advanceWorldsim).toHaveBeenCalledWith(2);
+    expect(maybeAutosave).toHaveBeenCalledWith(expect.anything(), 3);
   });
 });

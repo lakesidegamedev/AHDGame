@@ -540,4 +540,98 @@ describe("funded sovereign maturity receipt", () => {
         .map((row) => row.status)
     ).toEqual(["rejected", "applied"]);
   });
+
+  it("keeps an overdue due-turn claim and pays it once when cash arrives", async () => {
+    const memory = setup();
+    const id = new ObjectId();
+    const holderId = new ObjectId();
+    const overdueBond = {
+      _id: id,
+      issuerType: "sovereign",
+      countryId: "US",
+      corporationId: new ObjectId(),
+      currencyCode: "USD",
+      totalIssued: 1_000,
+      couponRate: 0,
+      maturityTurn: 48,
+      matured: false,
+      defaulted: false,
+      publicFloat: 0,
+      holders: [{ characterId: holderId, units: 1 }],
+    } as unknown as Bond;
+    await memory
+      .collection("federalBudget")
+      .updateOne({ _id: "federal" }, { $set: { treasuryCashLocal: 0, "debt.principal": 1_000 } });
+    memory.seed("bonds", [overdueBond as unknown as Record<string, unknown>]);
+    memory.seed("characters", [{ _id: holderId, cashOnHand: 0 }]);
+    const args = {
+      bond: overdueBond,
+      turn: 60,
+      dueTurn: 48,
+      currencyCode: "USD" as const,
+      treasuryLocalPerAnchor: 1,
+      nonBankRepaymentLocal: 1_000,
+      holderLegs: [
+        {
+          collection: "characters",
+          filter: { _id: holderId },
+          path: "cashOnHand",
+          amount: 1_000,
+          currencyCode: "USD" as const,
+          localPerAnchor: 1,
+          note: "Pay the original character holder from the frozen claim",
+        },
+      ],
+      now: new Date("2026-02-01T00:00:00.000Z"),
+    };
+
+    // Twelve turns overdue and still unfunded: nothing moves, the claim stays
+    // frozen on its due turn and the holder is not paid in arrears.
+    const overdue = await settleFundedSovereignBondMaturity(memory as unknown as Db, args);
+    expect(overdue).toBeNull();
+    expect(memory.collection("bonds").docs[0]).toMatchObject({
+      matured: false,
+      holders: [{ characterId: holderId, units: 1 }],
+      sovereignMaturityClaim: {
+        id: `sovereign-maturity:${id.toHexString()}:48`,
+        dueTurn: 48,
+        amountLocal: 1_000,
+        escrowLocal: 0,
+      },
+    });
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(0);
+    expect(memory.collection("bankMoneyMoves").docs).toHaveLength(0);
+
+    await memory
+      .collection("federalBudget")
+      .updateOne({ _id: "federal" }, { $set: { treasuryCashLocal: 1_000 } });
+    const settled = await settleFundedSovereignBondMaturity(memory as unknown as Db, {
+      ...args,
+      turn: 61,
+      now: new Date("2026-02-08T00:00:00.000Z"),
+    });
+
+    expect(settled?.status).toBe("applied");
+    expect(settled?.forcedRolloverFaceLocal).toBe(0);
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(1_000);
+    expect(memory.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 0,
+      debt: { principal: 0 },
+    });
+    expect(memory.collection("bonds").docs[0]).toMatchObject({
+      matured: true,
+      redeemedAtTurn: 61,
+      holders: [],
+      sovereignMaturityClaim: { paid: true, escrowLocal: 0 },
+    });
+
+    // A replay on a later turn pays nothing a second time.
+    const replay = await settleFundedSovereignBondMaturity(memory as unknown as Db, {
+      ...args,
+      turn: 62,
+      now: new Date("2026-02-15T00:00:00.000Z"),
+    });
+    expect(replay?.status).toBe("applied");
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(1_000);
+  });
 });

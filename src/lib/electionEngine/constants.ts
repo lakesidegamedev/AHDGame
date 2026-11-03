@@ -341,14 +341,6 @@ export function homeStateSurgeMultiplier(input: {
 }
 
 /**
- * Per-tick projection bonus added to a candidate's primary score for their
- * `primaryCampaignState`. With TICK_CAP=5, a fully-camped candidate gets +7.5
- * score in that state's projection — meaningful relative to the ~65-point
- * max primary score, so pre-stagger camping shifts state projections visibly.
- */
-export const PRIMARY_CAMPAIGN_TICK_VALUE = 1.5;
-
-/**
  * Per-tick multiplicative bump to a candidate's in-state vote share during the
  * stagger window. 0.05 × 5-tick cap = +25% in-state bump — sustained
  * camping becomes a meaningful lever a player can spend to overcome a
@@ -499,7 +491,7 @@ export const STATE_ORG_COST_FUNDS = 250_000;
  * worse value. A $271M treasury can dominate a handful of chosen states, not
  * all 50.
  */
-export const STATE_ORG_COST_GROWTH = 1.35;
+const STATE_ORG_COST_GROWTH = 1.35;
 
 /**
  * Cash cost to buy the level that takes a state from `currentLevel` to

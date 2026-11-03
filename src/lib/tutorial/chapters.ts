@@ -12,7 +12,6 @@ import {
   unionsUrl,
 } from "@/lib/urls";
 import {
-  TUTORIAL_CHAPTER_IDS,
   chapterIdsForPlan,
   stepVisibleForExperience,
   type TutorialChapterId,
@@ -650,13 +649,6 @@ export function estimateTourMinutes(plan: TutorialPlan): number {
     (total, id) => total + TUTORIAL_CHAPTERS[id].estimatedMinutes,
     0
   );
-}
-
-/** Guard so a stored progress chapterId from an older build cannot crash a render. */
-export function getChapter(id: string): TutorialChapter | undefined {
-  return (TUTORIAL_CHAPTER_IDS as readonly string[]).includes(id)
-    ? TUTORIAL_CHAPTERS[id as TutorialChapterId]
-    : undefined;
 }
 
 export interface ResolvedChapter extends TutorialChapter {

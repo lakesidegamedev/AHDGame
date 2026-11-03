@@ -21,6 +21,8 @@ import type {
   ParliamentaryGovernment,
   PoliticalParty,
 } from "@/lib/db/types";
+import { getExecutiveOrderNamePlural } from "@/lib/constants/countryClientConfig";
+import { getExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getParliamentaryExecutiveSurface } from "@/lib/constants/parliamentaryExecutiveSurface";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
@@ -670,6 +672,14 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
         viewerIsLeader={viewerIsLeader}
         viewerIsAdmin={viewerIsAdmin}
         overview={overview}
+        chrome={{
+          governmentType: config.governmentType,
+          executiveTermLimit: getExecutiveTermLimit(countryId),
+          hasDevolution: config.id === "UK",
+          ordersLabel: getExecutiveOrderNamePlural(countryId),
+          legislatureName: config.legislature.name,
+          legislaturePath: config.legislature.path,
+        }}
       />
     </UKGovernmentLayout>
   );

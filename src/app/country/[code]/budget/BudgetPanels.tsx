@@ -17,6 +17,8 @@ export type DisplayEnactedLaw = EnactedLaw & { annualCost?: number };
 
 export interface BudgetData {
   budget: FederalBudget;
+  /** Era-dollar rate for this country and world preset, resolved by the server. */
+  usdExchangeRate?: number;
   primeRate: number;
   turnsUntilFY: number;
   stateGrantBreakdown: { stateId: string; stateName: string; federalGrants: number }[];

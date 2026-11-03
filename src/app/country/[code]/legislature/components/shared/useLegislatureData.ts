@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
 import { legislatureApiUrl } from "@/lib/urls";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 
 /**

@@ -219,6 +219,8 @@ describe("POST /api/corporations/[id]/shares/sell — character seller", () => {
       orderId,
       shares: 100,
       proceedsAnchor: 980,
+      withheldTaxAnchor: 80,
+      netProceedsAnchor: 900,
       proceedsInHomeCurrency: 980,
       pricePerShareLocal: 9.8,
     });
@@ -238,6 +240,8 @@ describe("POST /api/corporations/[id]/shares/sell — character seller", () => {
       success: true,
       sharesSold: 100,
       proceeds: 980,
+      withheldTax: 80,
+      netProceeds: 900,
       pricePerShare: 9.8,
       execution: "order_book",
     });

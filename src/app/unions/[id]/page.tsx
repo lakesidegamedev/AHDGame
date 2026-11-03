@@ -168,7 +168,19 @@ function UnionDashboard({ id }: { id: string }) {
         const meData = await meRes.json();
         const charId = meData.character?.id ?? meData.character?._id ?? null;
         setMyCharacterId(charId);
-        setIsLeader(meData.character?.unionLeaderOf === id);
+        // `Union.ownerId` is the source of truth for leadership;
+        // `Character.unionLeaderOf` is only its denormalized cache. Keying off
+        // the cache hid the whole Leader actions panel, including the Resign
+        // leadership control, from a real head whenever the two had drifted
+        // apart (a crashed claim, a stale write from a previous world). Fall
+        // back to the cache only when the union read itself failed, so a
+        // transient error does not also hide the panel.
+        const unionOwnerId = unionRes.ok ? (unionData.union?.ownerId ?? null) : null;
+        setIsLeader(
+          unionRes.ok
+            ? Boolean(charId && unionOwnerId && String(unionOwnerId) === String(charId))
+            : meData.character?.unionLeaderOf === id
+        );
         setMyActions(
           typeof meData.character?.actions === "number" ? meData.character.actions : null
         );

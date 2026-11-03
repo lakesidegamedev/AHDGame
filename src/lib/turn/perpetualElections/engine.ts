@@ -58,7 +58,7 @@ export async function ngElectionsLive(db: Db): Promise<boolean> {
 // etc.) that import DEFAULT_DURATIONS from this module keep working.
 
 export function getGeneralWindow(electionType: string): number {
-  return DEFAULT_DURATIONS[electionType]?.generalDurationHours ?? 48;
+  return DEFAULT_DURATIONS[electionType]?.generalDurationHours ?? 24;
 }
 
 /**
@@ -974,11 +974,30 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
 export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
   const db = await getDb();
 
+  // A Bulgarian founding race stays `completed` until its count is seated, and a
+  // pending count reopens a runoff that needs the first-round candidacies still
+  // active. Sweeping them first leaves every runoff without candidates, so the
+  // count never settles and the founding phase never ends.
+  // Collection name mirrors BG_FOUNDING_COUNTS_COLLECTION; importing it would pull
+  // the Bulgarian count code into this module's client-reachable import graph.
+  const unseatedBgFounding = await db
+    .collection<{ electionIds?: string[]; runoffElectionIds?: string[] }>(
+      "bgFoundingAssemblyCounts"
+    )
+    .find({ seatedAtTurn: null }, { projection: { electionIds: 1, runoffElectionIds: 1 } })
+    .toArray();
+  const heldBgIds = new Set(
+    unseatedBgFounding.flatMap((row) => [
+      ...(row.electionIds ?? []),
+      ...(row.runoffElectionIds ?? []),
+    ])
+  );
+
   const completedElectionIds = await db
     .collection<Election>("elections")
     .find({ status: "completed" }, { projection: { _id: 1 } })
     .toArray()
-    .then((docs) => docs.map((d) => d._id));
+    .then((docs) => docs.map((d) => d._id).filter((id) => !heldBgIds.has(id.toHexString())));
 
   if (completedElectionIds.length === 0) return;
 

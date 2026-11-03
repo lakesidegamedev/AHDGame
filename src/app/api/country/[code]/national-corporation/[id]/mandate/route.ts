@@ -1,5 +1,5 @@
 // POST /api/country/[code]/national-corporation/[id]/mandate
-// Finance-minister-equivalent (fallback head of government) sets a National
+// Finance-minister-equivalent sets a National
 // Corporation's public-service posture: corp-wide default, a per-sector override,
 // or clearing a sector back to the default. Spec §11.4 / §24.
 // Auth: requireAuthWithCharacter + assertTreasuryAuthority
@@ -50,7 +50,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/national-corporation/[id]/mandate:${auth.user.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code, id } = await params;
@@ -78,7 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const corpId = target._id;
 
     // The seated CEO runs the corporation and may set its mandates, as may the
-    // finance minister / head of government (treasury authority).
+    // finance minister (treasury authority).
     const viewerIsCeo =
       !target.ceoVacant && target.ceoId != null && target.ceoId.equals(auth.user.character._id);
     const authorized =
@@ -86,7 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!authorized) {
       return errorResponse(
         403,
-        "Only the seated CEO, the Secretary of the Treasury (or equivalent), or the head of government may set a National Corporation mandate."
+        "Only the seated CEO or the Secretary of the Treasury (or equivalent) may set a National Corporation mandate."
       );
     }
 

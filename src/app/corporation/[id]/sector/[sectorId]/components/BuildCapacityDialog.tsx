@@ -20,21 +20,29 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { AlertTriangle, ChevronDown, Info, TrendingUp } from "lucide-react";
 import type { PlantsData } from "../types";
 import { fmtUnits, fmtMult, fmtPct } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
   facilityPlural,
   facilitySingular,
   facilityVocabulary,
 } from "@/lib/constants/facilityVocabulary";
-import { facilitiesFromUnits, plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
+import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
+import { poolOversubscribed } from "./StateLabourPool";
 
 interface BuildCapacityDialogProps {
   open: boolean;
   onClose: () => void;
   plants: PlantsData;
+  /** The state's shared labour pool, for the unfilled-jobs warning. */
+  stateLabourMarket?: StateLabourPoolView | null;
+  stateName?: string;
   /** Drives the facility noun throughout the dialog. */
   sectorType: OperatingSectorType;
+  /** With `plants.strategyId`, decides plant size, so the dialog sizes plants like the queue and ledger. */
+  industryModel?: string | null;
+  mediaDiscriminator?: string | null;
   sectorLabel: string;
   submitting: boolean;
   /** Server-side error text from the last attempt, or empty. */
@@ -80,7 +88,11 @@ export default function BuildCapacityDialog({
   open,
   onClose,
   plants,
+  stateLabourMarket,
+  stateName,
   sectorType,
+  industryModel,
+  mediaDiscriminator,
   sectorLabel,
   submitting,
   errorMessage,
@@ -94,7 +106,7 @@ export default function BuildCapacityDialog({
     plants.labourStaffingFactor ??
     (workersDesired > 0 ? Math.min(1, plants.workers / workersDesired) : 1);
   // The dialog counts FACILITIES (the multi-build lever); the API stays in
-  // units. One facility = plantSizeUnits(type) units — see facilityQuantum.ts
+  // units. One facility = plantSizeForSector(sector) units; see facilityQuantum.ts
   // for why a "power station" is not one ₳92/day unit.
   const [count, setCount] = useState(1);
   const [financingChoice, setFinancingChoice] = useState<ConstructionFinanceChoice | null>(null);
@@ -121,7 +133,13 @@ export default function BuildCapacityDialog({
   const vocab = facilityVocabulary(sectorType);
   const site = facilitySingular(sectorType);
   const sites = facilityPlural(sectorType);
-  const unitsPerFacility = plantSizeUnits(sectorType);
+  const strategyId = plants.strategyId;
+  const unitsPerFacility = plantSizeForSector({
+    sectorType,
+    industryModel,
+    mediaDiscriminator,
+    strategyId,
+  });
   const q = plants.buildQuote;
   const money = (anchor: number) => formatAmount(anchor);
 
@@ -186,7 +204,11 @@ export default function BuildCapacityDialog({
 
   const maxAffordableFacilities = Math.floor(q.maxAffordableUnits / unitsPerFacility);
   const ownedFacilities =
-    plants.plantCount ?? facilitiesFromUnits(sectorType, plants.capacityUnits ?? 0);
+    plants.plantCount ??
+    plantsFromUnitsForSector(
+      { sectorType, industryModel, mediaDiscriminator, strategyId },
+      plants.capacityUnits ?? 0
+    );
   const buyersRoomUnits = Math.max(
     0,
     Math.min(plants.headroomUnits, plants.measuredDemandGapUnits ?? 0)
@@ -314,9 +336,7 @@ export default function BuildCapacityDialog({
                 aria-describedby="build-count-help"
                 className="w-full bg-transparent text-center text-heading font-bold tabular-nums text-foreground focus:outline-none"
               />
-              <p className="text-body-xs text-muted">
-                {count === 1 ? site : sites} · {fmtUnits(unitsPerFacility)} units/day each
-              </p>
+              <p className="text-body-xs text-muted">{count === 1 ? site : sites}</p>
             </div>
             <StepButton
               label={`${vocab.buildVerb} one more ${site}`}
@@ -375,10 +395,10 @@ export default function BuildCapacityDialog({
 
         <div className="grid grid-cols-3 gap-2">
           <Tile
-            label={t("addedCapacity")}
-            value={`+${fmtUnits(preview.safeUnits)}`}
-            unit={t("unitsPerDay")}
-            help={t("addedCapacityHelp")}
+            label={`${capitalizeFacility(sites)} when done`}
+            value={fmtUnits(ownedFacilities + preview.safeCount)}
+            unit={`+${fmtUnits(preview.safeCount)}`}
+            help={`${capitalizeFacility(sites)} you will run once this order is fully built. The new ${preview.safeCount === 1 ? site : sites} add about ${fmtUnits(preview.safeUnits)} units of output a day.`}
           />
           <Tile
             label={t("rampTitle")}
@@ -515,7 +535,7 @@ export default function BuildCapacityDialog({
               <CostLeg
                 label={`Base price per ${site}`}
                 value={money(q.unitPriceAnchor * unitsPerFacility)}
-                help={`The standing price of one ${site} (${fmtUnits(unitsPerFacility)} units/day of capacity) in this industry, at this point in history.`}
+                help={`The standing price of one ${site} in this industry, at this point in history. One ${site} makes about ${fmtUnits(unitsPerFacility)} units a day.`}
               />
               <CostLeg
                 label="Your market share"
@@ -611,6 +631,14 @@ export default function BuildCapacityDialog({
               This sector currently fills {fmtPct(labourStaffingFactor)} of its jobs. Building this
               adds {fmtUnits(preview.workersNeeded)} wanted workers, but those jobs may remain
               vacant unless you raise pay or the local workforce grows.
+              {stateLabourMarket && poolOversubscribed(stateLabourMarket) && (
+                <>
+                  {" "}
+                  {stateName ?? "This state"} has {fmtUnits(stateLabourMarket.labourForce)} workers
+                  and its employers already want {fmtUnits(stateLabourMarket.labourDemand)}. Pay
+                  only moves your share of that pool.
+                </>
+              )}
             </span>
           </p>
         )}

@@ -1,6 +1,7 @@
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { NextResponse } from "next/server";
 import { holdingCostBasis, scaleHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import { scalePendingIssuanceForStructureChange } from "@/lib/corporations/rules/dividendShares";
 import { ObjectId } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
@@ -57,7 +58,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/shares/consolidate:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -173,6 +178,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
       corporation;
 
+    const freshEligibility = corporationCanRestructureShares(freshCorporation);
+    if (!freshEligibility.ok) return errorResponse(409, freshEligibility.reason);
     const accounted = sumAccountedOutstandingShares(freshCorporation);
     if (accounted !== oldTotal) {
       return errorResponse(
@@ -297,8 +304,31 @@ export async function POST(request: Request, { params }: RouteParams) {
       lastShareStructureTurn: currentTurn,
       updatedAt: now,
     };
+    // A pending issuance is counted in shares too. Leaving it at the old count
+    // let an upfront IPO remainder exceed the consolidated float and total,
+    // which collapsed the placed-share basis that dividends divide by.
+    if (freshCorporation.pendingShareIssuance) {
+      $set.pendingShareIssuance = scalePendingIssuanceForStructureChange(
+        freshCorporation.pendingShareIssuance,
+        oldTotal,
+        targetTotalShares,
+        newPublicFloat
+      );
+    }
 
-    await db.collection<Corporation>("corporations").updateOne({ _id: corporation._id }, { $set });
+    const restructure = await db.collection<Corporation>("corporations").updateOne(
+      {
+        _id: corporation._id,
+        totalShares: oldTotal,
+        "pendingShareIssuance.remainingShares": { $not: { $gt: 0 } },
+      },
+      { $set }
+    );
+    if (restructure.matchedCount !== 1)
+      return errorResponse(
+        409,
+        "Share structure or pending issuance changed. Refresh and try again."
+      );
 
     // Rescale this turn's history row too. Between turns the market tick
     // recomputes prices in the split cooldown using this turn's persisted

@@ -101,4 +101,21 @@ describe("computeConfidence", () => {
     );
     expect(low.confidence).toBeGreaterThanOrEqual(0);
   });
+
+  it("counts sovereign treasuries as liquid cover (incident 1694)", () => {
+    const vaultOnly = computeConfidence(
+      baseInput({ cashReserves: 0, cashBackedDeposits: 10_000_000, totalLoans: 2_000_000 })
+    );
+    const withTreasuries = computeConfidence(
+      baseInput({
+        cashReserves: 0,
+        liquidSecurities: 9_000_000,
+        cashBackedDeposits: 10_000_000,
+        totalLoans: 2_000_000,
+      })
+    );
+    expect(vaultOnly.band).toBe("red");
+    expect(withTreasuries.confidence).toBeGreaterThan(vaultOnly.confidence);
+    expect(withTreasuries.band).not.toBe("red");
+  });
 });

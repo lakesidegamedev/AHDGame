@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       return errorResponse(status, `API key ${apiAuth.reason.replace("_", " ")}`);
     }
 
-    const rateLimit = checkRateLimit(apiAuth.ownerUserId, 20, 60000);
+    const rateLimit = checkRateLimit(`api/v1/transfer:${apiAuth.ownerUserId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, apiTransferSchema);
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "You cannot transfer funds to politicians from other countries");
     }
 
-    // New characters cannot send money for their first 24 turns (anti-abuse).
+    // New characters cannot send money for their first 48 turns (anti-abuse).
     const gameTime = await getGameTime();
     const barrier = getNewCharacterTransferBarrier(
       sender,

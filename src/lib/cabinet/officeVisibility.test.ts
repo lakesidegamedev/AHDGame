@@ -284,7 +284,68 @@ describe("resolveCabinetOfficeVisibility", () => {
   });
 });
 
+describe("resolveCabinetOfficeVisibility: Chief Cabinet Secretary (ticket 1686)", () => {
+  let db: MockDb;
+
+  beforeEach(() => {
+    db = createMockDb();
+    seatHeadOfState(db, null);
+    crownImperial(db, null);
+    vi.mocked(getHeadOfGovernmentCharacterId).mockResolvedValue(null);
+  });
+
+  it("lets Japan's Chief Cabinet Secretary view but not act in another office", async () => {
+    const ccs = new ObjectId();
+    db.collection("cabinetMembers");
+    db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({ _id: new ObjectId() });
+
+    const result = await resolveCabinetOfficeVisibility(db as unknown as Db, {
+      countryId: "JP",
+      holderCharacterId: new ObjectId(),
+      viewerCharacterId: ccs,
+      isAdmin: false,
+    });
+
+    expect(result).toEqual({ canView: true, canAct: false, viewerRole: "cabinetCoordinator" });
+    expect(db.collectionMocks.cabinetMembers.findOne).toHaveBeenCalledWith(
+      { countryId: "JP", positionId: "chief_cabinet_secretary", characterId: ccs },
+      { projection: { _id: 1 } }
+    );
+  });
+
+  it("hides the office from a Japanese minister who is not the Chief Cabinet Secretary", async () => {
+    db.collection("cabinetMembers");
+    db.collectionMocks.cabinetMembers.findOne.mockResolvedValue(null);
+
+    const result = await resolveCabinetOfficeVisibility(db as unknown as Db, {
+      countryId: "JP",
+      holderCharacterId: new ObjectId(),
+      viewerCharacterId: new ObjectId(),
+      isAdmin: false,
+    });
+
+    expect(result.canView).toBe(false);
+  });
+
+  it("does not look for a coordinator seat in a country without one", async () => {
+    db.collection("cabinetMembers");
+
+    await resolveCabinetOfficeVisibility(db as unknown as Db, {
+      countryId: "US",
+      holderCharacterId: new ObjectId(),
+      viewerCharacterId: new ObjectId(),
+      isAdmin: false,
+    });
+
+    expect(db.collectionMocks.cabinetMembers.findOne).not.toHaveBeenCalled();
+  });
+});
+
 describe("cabinetOfficeViewerTitles", () => {
+  it("names Japan's Chief Cabinet Secretary among the viewers", () => {
+    expect(cabinetOfficeViewerTitles("JP")).toContain("Chief Cabinet Secretary");
+  });
+
   it("names only the president where the office fuses both roles", () => {
     expect(cabinetOfficeViewerTitles("US")).toEqual(["President"]);
   });

@@ -227,6 +227,8 @@ export interface CorporationLookups {
   fundedOverheadStage?: number;
   /** gameConfig.fundedHeadcountStage; absent = off. */
   fundedHeadcountStage?: number;
+  /** gameConfig.fundedValuationStage; absent = off. */
+  fundedValuationStage?: number;
   /**
    * gameConfig.honestBalanceSheetsStage and, from stage 1, each corporation's
    * outstanding bank construction-loan principal in anchor units. Absent = off.
@@ -379,6 +381,8 @@ export interface CorporationLookups {
   placementRevenuePhaseStartTurn?: number;
   /** countryId → this turn's recession capacity factor (absent = 1). See countryRecession.ts. */
   recessionCapacityFactorByCountry?: Map<string, number>;
+  /** gameConfig.wholePlantsStage on: capacity is kept to whole plants (corporations/wholePlants). */
+  wholePlantsOn?: boolean;
   /**
    * sectorId → revenue-weighted extraction capacity utilization (0..1) and the
    * most-binding resource, derived from computeExtractionCapacityMultipliers.
@@ -457,6 +461,13 @@ export interface CorpSnapshot {
   income: number;
   /** Net operating cash delta in the corporation's liquid currency for this turn. */
   operatingCashIncomeLocal?: number;
+  deferredProducerDistributions?: {
+    walletId: string;
+    worldEpoch: string;
+    amountAnchor: number;
+    currency: CurrencyCode;
+    localPerAnchor: number;
+  }[];
   /**
    * Funded producer turn: producer profit the settlement already moved as cash
    * and witnessed in its own ledger entry (anchor). The legacy cash witness
@@ -509,6 +520,12 @@ export interface CorpSnapshot {
   actualSharePrice: number;
   totalShares: number;
   sectorNPV: number;
+  /**
+   * Funded valuation (gameConfig.fundedValuationStage >= 1): units sold this
+   * turn at each sector's fixed base mix price, anchor. The share price growth
+   * premium reads its trend. Absent when the stage is off.
+   */
+  realOutputAnchor?: number;
   creditComposite: number;
   creditRating: string;
   /** Diagnostic margin data for debugging cost/revenue spikes */

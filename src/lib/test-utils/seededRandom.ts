@@ -17,7 +17,7 @@ export interface SeededRandom {
   money(min: number, max: number): number;
 }
 
-export function seededRandom(seed: number): SeededRandom {
+function seededRandom(seed: number): SeededRandom {
   let state = seed >>> 0;
   const next = () => {
     state = (state + 0x6d2b79f5) >>> 0;

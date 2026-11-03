@@ -33,7 +33,11 @@ async function toggle(request: Request, { params }: RouteParams, enable: boolean
   const auth = await requireBasicAuth();
   if (!auth.ok) return auth.response;
 
-  const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+  const rateLimit = checkRateLimit(
+    `api/corporations/[id]/autopilot:${auth.user.userId}`,
+    10,
+    60000
+  );
   if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
   const db = await getDb();

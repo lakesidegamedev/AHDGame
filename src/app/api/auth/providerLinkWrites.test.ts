@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
     getOAuthStateCookieOptions: vi.fn(async () => ({})),
     requireBasicAuth: vi.fn(),
     getDb: vi.fn(),
+    findConfig: vi.fn(),
     findOne: vi.fn(),
     updateOne: vi.fn(),
     exchangeGoogleCode: vi.fn(),
@@ -163,12 +164,16 @@ beforeEach(() => {
   process.env.DISCORD_CLIENT_SECRET = "test-secret";
   process.env.DISCORD_REDIRECT_URI = "https://game.example.invalid/api/auth/discord/callback";
   mocks.getDb.mockResolvedValue({
-    collection: () => ({
-      findOne: mocks.findOne,
-      updateOne: mocks.updateOne,
-      insertOne: vi.fn(async () => ({})),
-    }),
+    collection: (name: string) =>
+      name === "gameConfig"
+        ? { findOne: mocks.findConfig }
+        : {
+            findOne: mocks.findOne,
+            updateOne: mocks.updateOne,
+            insertOne: vi.fn(async () => ({})),
+          },
   });
+  mocks.findConfig.mockResolvedValue(null);
   freshAccount(null);
   mocks.updateOne.mockResolvedValue({ acknowledged: true, matchedCount: 1 });
   mocks.getAuthUser.mockResolvedValue({ userId });
@@ -656,6 +661,22 @@ describe("google unlink", () => {
 });
 
 describe("discord unlink", () => {
+  it("blocks required Discord unlink without changing credentials", async () => {
+    freshAccount(account({ discordId: "d1" }));
+    mocks.findConfig.mockResolvedValue({ discordLinkRequiredForCharacter: true });
+    const res = await discordUnlink();
+    expect(res.status).toBe(403);
+    expect(res.headers.get("Cache-Control")).toContain("no-store");
+    expect(mocks.updateOne).not.toHaveBeenCalled();
+    expect(mocks.invalidateCachedUser).not.toHaveBeenCalled();
+  });
+  it("allows unlink when the requirement is disabled", async () => {
+    freshAccount(account({ discordId: "d1" }));
+    mocks.findConfig.mockResolvedValue({ discordLinkRequiredForCharacter: false });
+    expect((await discordUnlink()).status).toBe(200);
+    expect(mocks.updateOne).toHaveBeenCalledTimes(1);
+  });
+
   it("binds the write to the full credential snapshot and revokes sessions", async () => {
     freshAccount(account({ password: "", googleId: "g1", discordId: "d1" }));
     const res = await discordUnlink();

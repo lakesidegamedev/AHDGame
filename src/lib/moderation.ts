@@ -60,7 +60,8 @@ const SLUR_PATTERNS: RegExp[] = [
   /\bmick\b/i,
   /\bwop\b/i,
   /\bdago\b/i,
-  /\bguinea\b/i,
+  // "guinea" is not listed: it is a country name, and blocking it refused every
+  // mention of Guinea, Equatorial Guinea and Papua New Guinea.
 
   // LGBT slurs
   /\bf[a@4]+gg?[o0]+t/i,
@@ -75,6 +76,23 @@ const SLUR_PATTERNS: RegExp[] = [
   /\bprot[e3]stant\s*scum\b/i,
   /\binfid[e3]l\b/i,
 ];
+
+// Country, people and place names that share letters with a slur pattern
+// (Niger matches the n-word pattern). They are blanked out before matching so
+// the names pass while the slur and its misspellings stay blocked. Only exact
+// spellings are listed, so substitutions such as "n1ger" are still caught.
+const PLACE_NAME_ALLOWLIST: RegExp[] = [
+  /\bniger(?:ia|ians?|iens?|ois)?\b/gi,
+  /\b(?:papua\s+new\s+|new\s+|equatorial\s+)?guinea(?:[-\s]+bissau(?:ans?)?|ns?)?\b/gi,
+];
+
+/**
+ * Blanks allowlisted place names so slur patterns cannot match inside them.
+ * Shared with the wiki content filter.
+ */
+export function maskPlaceNames(text: string): string {
+  return PLACE_NAME_ALLOWLIST.reduce((out, pattern) => out.replace(pattern, " "), text);
+}
 
 // Short list for names and display names only. Keep this narrower than the slur
 // filter so ordinary words like "ass" or "Dick" remain valid.
@@ -95,7 +113,8 @@ const MODERATE_PROFANITY_PATTERNS: RegExp[] = [
  * Returns true if the text contains a blocked slur.
  */
 export function containsSlur(text: string): boolean {
-  return SLUR_PATTERNS.some((pattern) => pattern.test(text));
+  const masked = maskPlaceNames(text);
+  return SLUR_PATTERNS.some((pattern) => pattern.test(masked));
 }
 
 /**

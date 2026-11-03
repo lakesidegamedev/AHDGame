@@ -1153,3 +1153,8 @@ describe("processBankingTurn", () => {
     expect(liveCorp.bankCharter!.depositCeiling).toBe(600_000);
   });
 });
+
+vi.mock("@/lib/budget/incomePayout", async () => {
+  const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+  return { creditIncomeAfterTax: vi.fn(untaxedIncomePayout) };
+});

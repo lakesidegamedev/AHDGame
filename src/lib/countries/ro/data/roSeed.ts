@@ -91,5 +91,5 @@ export function getRoSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const roSeedConfig: EasternBlocSeedConfig = getRoSeedConfig("2019-default");
+const roSeedConfig: EasternBlocSeedConfig = getRoSeedConfig("2019-default");
 export default roSeedConfig;

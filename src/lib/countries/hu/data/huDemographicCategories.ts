@@ -1,28 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * Hungary Voter Archetypes — 6 groups across the Third-Republic spectrum
- * (2027 world). Post-1989 cleavages: the national-conservative rural base vs
- * the Budapest liberal professional class, a residual industrial left, a
- * green youth, and a distinct Roma minority concentrated in the northeast
- * and the Plain with structurally lower turnout.
- *   defaultEconomicLean: -5 (redistributive/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (liberal/progressive) … +5 (traditional/national)
- * demographicProfileId "hu_archetypes"; category _id "hu_voterGroups".
- *
- * Cold-War HU worlds seed this same category id from the shared
- * makeEasternBlocCategories builder instead (one world runs one preset, so
- * the two contents never coexist).
- */
-export const HU_VOTER_GROUP_BASELINES: Record<string, number> = {
-  national_conservative: 74,
-  christian_rural: 72,
-  urban_liberal: 70,
-  socialist_left: 68,
-  green_youth: 64,
-  roma_minority: 52,
-};
-
 export const huDemographicCategories: DemographicCategory[] = [
   {
     _id: "hu_voterGroups",

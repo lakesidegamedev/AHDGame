@@ -225,7 +225,7 @@ async function buybackCappedByCash(db: Db): Promise<boolean> {
  * Settle the issuer side of a float SELL.
  * - escrow mode: debit the market-making escrow FLOORED at zero — escrow can
  *   only spend the buyer cash it actually collected; any shortfall is drawn
- *   from real `liquidCapital`. Never blocks the trade (always `ok:true`), and
+ *   from real `liquidCapital`. Blocks while withholding or payables are outstanding; otherwise
  *   `shareEscrowBalance` can no longer go negative (no more minted cash). The
  *   returned `split` records how much came from escrow vs treasury so a
  *   rollback can reverse both legs exactly.
@@ -279,7 +279,7 @@ export async function settleFloatSellDebit(
       return split ? { ok: true, split } : { ok: false };
     }
     const split = await debitCorpShareEscrowFloored(db, corp._id, amountLocal, options);
-    return { ok: true, split };
+    return split ? { ok: true, split } : { ok: false };
   }
   const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, amountLocal, options);
   return { ok: debit.ok };

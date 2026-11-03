@@ -38,7 +38,7 @@ export const NO_CONFIDENCE_LIFECYCLE_MECHANIC_ID = "uk-no-confidence-lifecycle";
 export const NO_CONFIDENCE_COUNTRY_ID = "UK" as const;
 
 /** Preset the bounded experiment in #2103 runs against. */
-export const NO_CONFIDENCE_PRESET = "1979-default";
+const NO_CONFIDENCE_PRESET = "1979-default";
 
 /** Fixed deterministic ballot totals for every seed. */
 export const NO_CONFIDENCE_FIXED_TOTALS = { votesFor: 3, votesAgainst: 2 } as const;

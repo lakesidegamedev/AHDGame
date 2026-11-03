@@ -25,6 +25,10 @@ vi.mock("@/lib/unions/unionBustingNotice", () => ({
   notifyUnionOfBustingAttempt: vi.fn().mockResolvedValue(0),
 }));
 
+vi.mock("@/lib/financialTxLog/emit", () => ({
+  emitTx: vi.fn().mockResolvedValue("applied"),
+}));
+
 vi.mock("@/lib/labour/unionBusting", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/labour/unionBusting")>();
   return { ...actual, rollD100: vi.fn() };
@@ -183,6 +187,47 @@ describe("attemptUnionBusting", () => {
     const [corpFilter, corpUpdate] = corpUpdateOne.mock.calls[0];
     expect(corpFilter._id).toStrictEqual(corp._id);
     expect(corpUpdate.$inc.liquidCapital).toBeLessThan(0);
+  });
+
+  it("records the cash spent in the corporation's finance history (ticket #1689)", async () => {
+    const { rollD100 } = await import("@/lib/labour/unionBusting");
+    const { emitTx } = await import("@/lib/financialTxLog/emit");
+    vi.mocked(emitTx).mockClear();
+    vi.mocked(rollD100).mockReturnValue(100); // backfire still costs the cash
+
+    const corp = makeCorp({ name: "Pfizer" });
+    const sector = makeSector(corp._id, { unionization: 50 });
+    const { db, corpUpdateOne } = mockDb({ sector });
+
+    const result = await attemptUnionBusting(db, corp, sector._id.toString(), 10);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(emitTx).toHaveBeenCalledOnce();
+    const entry = vi.mocked(emitTx).mock.calls[0][1];
+    expect(entry).toMatchObject({
+      type: "corp_union_busting_cost",
+      turn: 10,
+      subjectType: "corporation",
+      subjectId: corp._id,
+      subjectName: "Pfizer",
+      amount: -result.cashSpent,
+      currencyCode: "USD",
+      meta: { success: false, unionizationBefore: 50 },
+    });
+    expect(corpUpdateOne.mock.calls[0][1].$inc.liquidCapital).toBe(-result.cashSpent);
+  });
+
+  it("does not record a finance row when the attempt is rejected", async () => {
+    const { emitTx } = await import("@/lib/financialTxLog/emit");
+    vi.mocked(emitTx).mockClear();
+    const corp = makeCorp({ liquidCapital: 0 });
+    const sector = makeSector(corp._id, { unionization: 50 });
+    const { db } = mockDb({ sector });
+
+    const result = await attemptUnionBusting(db, corp, sector._id.toString(), 10);
+    expect(result.ok).toBe(false);
+    expect(emitTx).not.toHaveBeenCalled();
   });
 
   it("tells the union which employer attempted the bust, and how it went", async () => {

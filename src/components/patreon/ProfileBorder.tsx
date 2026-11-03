@@ -1,5 +1,5 @@
-import type { ProfileBorderKey } from "@/lib/db/types";
-import { PATREON_HIGHLIGHT_COLORS } from "@/lib/db/types";
+import type { ProfileBorderKey } from "@/lib/db/types/patreon";
+import { PATREON_HIGHLIGHT_COLORS } from "@/lib/db/types/patreon";
 
 function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace("#", "");

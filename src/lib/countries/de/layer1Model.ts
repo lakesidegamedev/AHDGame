@@ -42,7 +42,7 @@ import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const DE_GROUP_IDS = [
+const DE_GROUP_IDS = [
   "katholische_konservative",
   "gewerkschafter",
   "urbane_progressive",

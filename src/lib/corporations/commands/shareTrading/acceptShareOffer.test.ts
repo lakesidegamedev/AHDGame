@@ -108,6 +108,63 @@ async function fixture() {
 }
 beforeEach(() => vi.clearAllMocks());
 describe("private share settlement", () => {
+  it("recovers a crash after net cash credit without charging again when tax rates change", async () => {
+    const { db, memory, sellerId, buyerId, listingId, accept } = await fixture();
+    await db
+      .collection("characters")
+      .updateOne(
+        { _id: sellerId },
+        { $set: { homeState: "US_CA", incomeTaxStartTurn: 0, incomeTier: "high" } }
+      );
+    await db
+      .collection("federalBudget")
+      .insertOne({ countryId: "US", currencyCode: "USD", taxRates: { incomeTax: 30 } });
+    const receipts = memory.collection(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+    const original = receipts.updateOne.bind(receipts);
+    let interrupted = false;
+    vi.spyOn(receipts, "updateOne").mockImplementation(async (filter, update, options) => {
+      if (!interrupted && JSON.stringify(update).includes('"shareFillMoneyPlan.outcome"')) {
+        interrupted = true;
+        throw new Error("Synthetic crash after cash credit");
+      }
+      return original(filter, update, options);
+    });
+    expect((await accept()).status).toBe(500);
+    expect((await db.collection("characters").findOne({ _id: sellerId }))!.cashOnHand).toBe(33);
+    await db.collection("federalBudget").updateOne({}, { $set: { "taxRates.incomeTax": 90 } });
+    const listing = await db.collection("shareListings").findOne({ _id: listingId });
+    await recoverShareFillAttempt(db, listing!.activeShareFillKey);
+    await recoverShareFillAttempt(db, listing!.activeShareFillKey);
+    const seller = await db.collection("characters").findOne({ _id: sellerId });
+    expect(seller!.cashOnHand).toBe(33);
+    expect(seller!.pendingStockTaxReceipts).toHaveLength(1);
+    expect(seller!.pendingStockTaxReceipts[0].withholding.walletAmount).toBe(7);
+    expect((await db.collection("characters").findOne({ _id: buyerId }))!.cashOnHand).toBe(60);
+  });
+  it("withholds profit tax in the same atomic cash credit as a private sale", async () => {
+    const { db, sellerId, buyerId, accept } = await fixture();
+    await db
+      .collection("characters")
+      .updateOne(
+        { _id: sellerId },
+        { $set: { homeState: "US_CA", incomeTaxStartTurn: 0, incomeTier: "high" } }
+      );
+    await db
+      .collection("federalBudget")
+      .insertOne({ countryId: "US", currencyCode: "USD", taxRates: { incomeTax: 30 } });
+    const response = await accept();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ proceeds: 40, withheldTax: 7, netProceeds: 33 });
+    const seller = await db.collection("characters").findOne({ _id: sellerId });
+    // Four shares sell for 40, with basis 16. National tax floors 24 * 30% to 7.
+    expect(seller!.cashOnHand).toBe(33);
+    expect(seller!.pendingStockTaxReceipts[0]).toMatchObject({
+      amount: 40,
+      incomeAmount: 24,
+      withholding: { walletAmount: 7 },
+    });
+    expect((await db.collection("characters").findOne({ _id: buyerId }))!.cashOnHand).toBe(60);
+  });
   it("settles prepaid escrow once, preserves remaining age and basis, and credits taxable gains with seller cash", async () => {
     const { db, sellerId, buyerId, listingId, accept } = await fixture();
     expect((await accept()).status).toBe(200);

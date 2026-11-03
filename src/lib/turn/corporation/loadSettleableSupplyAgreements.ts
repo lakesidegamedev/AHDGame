@@ -10,7 +10,8 @@ import type { Db, ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationExit } from "@/lib/db/types/corporationExit";
-import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
+import { supplyAgreementsExpiredNotification } from "@/lib/corporations/supplyExchange/notifications";
+import { createNotifications } from "@/lib/notifications";
 import { clampAgreementPremium, type SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import {
   isStateScopedCommodity,
@@ -65,23 +66,26 @@ async function notifyExpiredAgreements(
       .find({ _id: { $in: corpIds } }, { projection: { userId: 1 } })
       .toArray();
     const byId = new Map(corps.map((c) => [c._id.toString(), c]));
-    await Promise.all(
-      expired.flatMap((a) =>
-        [a.supplierCorpId, a.buyerCorpId].flatMap((id) => {
-          const recipient = byId.get(id.toString());
-          return recipient
-            ? [
-                notifySupplyAgreementEvent({
-                  recipient,
-                  agreementId: a._id!,
-                  commodity: a.commodity,
-                  event: "expired",
-                }),
-              ]
-            : [];
-        })
-      )
-    );
+    // One insertMany for the whole expiry pass, and one alert per corporation
+    // rather than per agreement: a 48-turn contract book retires a large batch
+    // of agreements together.
+    const endedByCorp = new Map<string, { _id: ObjectId; commodity: CommodityType }[]>();
+    for (const a of expired) {
+      for (const id of [a.supplierCorpId, a.buyerCorpId]) {
+        const key = id.toString();
+        const list = endedByCorp.get(key) ?? [];
+        list.push({ _id: a._id!, commodity: a.commodity });
+        endedByCorp.set(key, list);
+      }
+    }
+    const inputs = [...endedByCorp.entries()].flatMap(([corpId, agreements]) => {
+      const recipient = byId.get(corpId);
+      const input = recipient
+        ? supplyAgreementsExpiredNotification({ recipient, agreements })
+        : null;
+      return input ? [input] : [];
+    });
+    await createNotifications(inputs);
   } catch (err) {
     console.error("[loadSettleableSupplyAgreements] expiry notifications failed:", err);
   }

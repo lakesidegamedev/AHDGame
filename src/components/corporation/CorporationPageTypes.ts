@@ -197,6 +197,8 @@ export interface CorporationDetail {
   marketingStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   marketingStrengthGrowth?: number;
+  /** Share of marketing strength lost per turn (0 before decay is on). Redacted like growth. */
+  marketingDecayRate?: number;
   /**
    * Brand loyalty (Package A) player-facing 5-label scale. Present for everyone
    * when the feature is on for this corp; absent ⇒ hide the indicator. The RAW
@@ -219,6 +221,14 @@ export interface CorporationDetail {
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   rdScoreNetChange?: number;
+  /** Active product projects paid from the R&D budget before generic research. */
+  rdDevelopmentProjects?: {
+    id: string;
+    stage: string;
+    paidAnchor: number;
+    thresholdAnchor: number;
+    label: string;
+  }[];
   marketCapitalization: number;
   logoUrl?: string;
   headerImageUrl?: string;
@@ -355,6 +365,8 @@ export interface CorporationDetail {
   legalStructureTaxLabel?: string;
   /** Pass-through tax reform progress 0 to 1 (0 before it starts). */
   passThroughTaxPhase?: number;
+  /** Reform start turn, supplied only for affected legal structures. */
+  passThroughTaxStartTurn?: number;
   /** Owner tax on pass-through profit collected at source (per day). */
   passThroughOwnerTax?: number;
   /** Active legal structure ID (defaults to country default when absent). */
@@ -390,6 +402,8 @@ export interface CorporationDetail {
   canFormalizeAsSubsidiary?: boolean;
   /** Viewer is CEO of the corp controlling this formalized subsidiary (may appoint CEO, inject capital, set floor, release). */
   canManageAsParent?: boolean;
+  /** Viewer is the controlling parent's CEO of this AI-run subsidiary: may retool and set the logo. */
+  canDirectAsParent?: boolean;
   /** Viewer is CEO of this (parent-eligible) corp and may spin off a sector into a new subsidiary. */
   canSpinOff?: boolean;
   /**
@@ -560,6 +574,8 @@ export interface Financials {
   /** Banked tax losses offsetting up to 80% of future taxable profit. */
   taxLossCarryforward?: number;
   passThroughOwnerTax?: number;
+  /** Part of federal tax charged at the home rate on bond coupon income. */
+  bondCouponFederalTax?: number;
   /** Federal tax broken down by sector country (for tooltip display). */
   federalTaxByCountry: Record<string, number>;
   /** Revenue and the costs of each country's own sectors, largest revenue first. */
@@ -811,6 +827,12 @@ export interface SectorDetail {
   fillRate?: number | null;
   /** Coarse fill band. Present for everyone who can see the sector at all. */
   fillRateBand?: FillRateBand | null;
+  /**
+   * Share of output (0-1) handed to the company's own other sites last turn.
+   * No sale and no revenue, so Sold reads low while the plant is fully used.
+   * Insider-only; null when none.
+   */
+  ownSiteShare?: number | null;
   /**
    * Share of offered output (0-1) no freight network could place. The part of
    * the fill shortfall that is a DELIVERY failure rather than a demand

@@ -44,13 +44,6 @@ export const SUGGESTION_GAME_SYSTEM_LABELS: Record<SuggestionGameSystem, string>
   meta_other: "Other / meta",
 };
 
-export const STATUS_LABELS: Record<string, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  resolved: "Resolved",
-  wont_fix: "Won't fix",
-};
-
 export const SUGGESTION_CATEGORY_COLORS: Record<SuggestionCategory, string> = {
   feature_request: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   ui_improvement: "bg-sky-500/15 text-sky-400 border-sky-500/30",

@@ -40,7 +40,7 @@ import type { EngineNodeContext, RegistryNode } from "../types";
 // putting baseline spend near the middle of the response curve (~51%) instead
 // of pinned at the ceiling (~99.8%), while max realistic spend now reaches
 // ~81% — a real ~30-point spread a player's bills can move.
-export const INFRA_SPEND_HALF_SAT = 1200;
+const INFRA_SPEND_HALF_SAT = 1200;
 
 const spendResp = (ctx: EngineNodeContext): number =>
   fundingResponse(ctx.spending["infrastructure"] ?? 0, INFRA_SPEND_HALF_SAT, 100); // 0..100
@@ -190,7 +190,7 @@ export const roadConditionNode: RegistryNode = {
   },
 };
 
-export const publicTransitNode: RegistryNode = {
+const publicTransitNode: RegistryNode = {
   id: "infrastructure.publicTransit",
   categoryId: "infrastructure",
   metricId: "publicTransit",
@@ -216,7 +216,7 @@ export const broadbandAccessNode: RegistryNode = {
   compute: capitalCompute("infrastructure.broadbandAccess", 45, 55, 0.03, 0.9, 75),
 };
 
-export const waterQualityNode: RegistryNode = {
+const waterQualityNode: RegistryNode = {
   id: "infrastructure.waterQuality",
   categoryId: "infrastructure",
   metricId: "waterQuality",

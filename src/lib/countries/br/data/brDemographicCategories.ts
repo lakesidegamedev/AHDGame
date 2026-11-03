@@ -16,17 +16,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * demographicProfileId: "br_archetypes"
  */
-export const BR_VOTER_GROUP_BASELINES: Record<string, number> = {
-  evangelical_conservative: 80,
-  working_class_pt: 76,
-  rural_agribusiness: 72,
-  urban_middle_class: 78,
-  urban_poor: 68,
-  afro_brazilian: 62,
-  business_financial: 82,
-  young_progressive: 54,
-};
-
 export const brDemographicCategories: DemographicCategory[] = [
   {
     _id: "br_voterGroups",

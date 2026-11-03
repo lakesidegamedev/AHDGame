@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" viewBox="0 0 720 300" role="img" font-family="system-ui, sans-serif">
+<title>Upkeep against the discretionary envelope</title>
+<desc>Total upkeep of what you built is compared with the discretionary envelope: under it tilts the budget balance metric positive, over it tilts negative.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="299" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="195" y="16" width="330" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="360.0" y="34.2" font-size="12" text-anchor="middle" font-weight="700">Discretionary envelope</text>
+<text x="360.0" y="50.2" font-size="12" text-anchor="middle">estates: 4% of appropriation, 3,500 to 5,000</text>
+<rect x="40" y="90" width="318" height="96" fill="#eff6ff" stroke="#2563eb"/>
+<rect x="362" y="90" width="318" height="96" fill="#fef2f2" stroke="#dc2626"/>
+<polyline points="360,60 360,90" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="199" y="124" font-size="13" text-anchor="middle" fill="#18181b">Under the envelope</text>
+<text x="199" y="141" font-size="13" text-anchor="middle" fill="#18181b">small positive tilt</text>
+<text x="199" y="158" font-size="13" text-anchor="middle" fill="#18181b">to budget balance</text>
+<text x="521" y="114" font-size="13" text-anchor="middle" fill="#18181b">Over the envelope</text>
+<text x="521" y="131" font-size="13" text-anchor="middle" fill="#18181b">negative tilt grows with</text>
+<text x="521" y="148" font-size="13" text-anchor="middle" fill="#18181b">the overshoot (at most 0.05</text>
+<text x="521" y="165" font-size="13" text-anchor="middle" fill="#18181b">per turn at full scale)</text>
+<polyline points="40,210 680,210" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="680" y="230" font-size="12" text-anchor="end" fill="#52525b">total upkeep of what you built</text>
+<text x="360" y="262" font-size="12" text-anchor="middle" fill="#52525b">Upkeep is modelled pressure on the budget balance metric,</text>
+<text x="360" y="278" font-size="12" text-anchor="middle" fill="#52525b">not an actual withdrawal from the federal budget.</text>
+</g>
+</svg>

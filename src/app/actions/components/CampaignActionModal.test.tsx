@@ -16,7 +16,7 @@ afterEach(cleanup);
 
 it.each(["targetedAds", "canvass"] as const)(
   "opens %s in an accessible dismissible window",
-  (action) => {
+  async (action) => {
     const close = vi.fn();
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
@@ -29,8 +29,9 @@ it.each(["targetedAds", "canvass"] as const)(
       </NextIntlClientProvider>
     );
     expect(screen.getByRole("dialog").getAttribute("aria-modal")).toBe("true");
+    // The panel is code-split, so it resolves after the dialog paints.
     expect(
-      screen.getByText(action === "canvass" ? "Canvassing controls" : "Ad controls")
+      await screen.findByText(action === "canvass" ? "Canvassing controls" : "Ad controls")
     ).toBeDefined();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(close).toHaveBeenCalledOnce();

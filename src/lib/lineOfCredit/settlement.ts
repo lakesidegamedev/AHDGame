@@ -70,6 +70,22 @@ export async function loadLocSettlement(db: Db, key: string) {
     .findOne({ _id: key, kind: "line_of_credit" });
 }
 
+/**
+ * The same records for many keys in one `$in` read. Callers that would
+ * otherwise issue one lookup per character per turn use this instead.
+ */
+export async function loadLocSettlements(
+  db: Db,
+  keys: readonly string[]
+): Promise<Map<string, LocRecord>> {
+  if (keys.length === 0) return new Map();
+  const rows = await db
+    .collection<LocRecord>(MONEY_MOVE_COLLECTION)
+    .find({ _id: { $in: [...new Set(keys)] }, kind: "line_of_credit" })
+    .toArray();
+  return new Map(rows.map((row) => [row._id, row]));
+}
+
 async function recordsFor(db: Db, key: string, plan: LocPlan) {
   for (const currency of new Set(plan.effect.flows.map((flow) => flow.currency))) {
     const flows = plan.effect.flows.filter((flow) => flow.currency === currency);

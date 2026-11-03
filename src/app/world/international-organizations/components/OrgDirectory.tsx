@@ -1,6 +1,6 @@
 "use client";
 
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { ORGANIZATION_CATEGORIES, ORGANIZATION_CATEGORY_META } from "@/lib/constants/orgCategory";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
 import { OrgCard } from "./OrgCard";

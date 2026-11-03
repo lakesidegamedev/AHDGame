@@ -15,7 +15,7 @@ export {
 } from "./ledger";
 export { explainSphereEffects } from "./readModel";
 export { getAustria1953SphereMembership } from "./austria1953";
-export { applySphereRoutedMacroContributions, loadTaggedMacroContributions } from "./apply";
+export { applySphereRoutedMacroContributions } from "./apply";
 export {
   isEligibleSphereSponsor,
   listEligibleSphereSponsors,

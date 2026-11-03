@@ -72,13 +72,6 @@ export function distance(from: RegionId, to: RegionId): number {
   return Infinity;
 }
 
-/** Hops to the nearest region in `targets`, or Infinity. */
-export function distanceToAny(from: RegionId, targets: RegionId[]): number {
-  let best = Infinity;
-  for (const t of targets) best = Math.min(best, distance(from, t));
-  return best;
-}
-
 /** Can a fleet sit here? Land regions are closed to naval assets. */
 export function isWaterAccessible(id: RegionId): boolean {
   const r = region(id);

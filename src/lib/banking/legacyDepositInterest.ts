@@ -1,3 +1,4 @@
+import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 /**
  * Legacy bank savings interest credits each saver from a fixed payment plan.
  * Bank cash, saver balances and transaction records carry receipts, so an
@@ -28,6 +29,8 @@ interface Credit {
   name: string;
 }
 interface Plan {
+  incomeTaxAtSource?: boolean;
+  withheld?: number;
   bankId: ObjectId;
   bankGuard: Document;
   currency: CurrencyCode;
@@ -48,6 +51,7 @@ interface InterestBalanceDocument {
   settledKeys?: string[];
 }
 export interface LegacyInterestResult {
+  withheld?: number;
   paid: number;
   npcInterestPaid: number;
   shortfall: number;
@@ -97,7 +101,7 @@ export async function settleLegacyDepositInterest(
       counterpartyType: "corporation",
       counterpartyId: input.bankId,
       counterpartyName: input.bankName,
-      meta: { ratePercent: input.ratePercent, settlementKey: input.key },
+      meta: { ratePercent: input.ratePercent, settlementKey: input.key, incomeTaxAtSource: true },
     }));
     const [thresholds, cadence, rates, config] = await Promise.all([
       loadTxThresholds(db),
@@ -136,6 +140,7 @@ export async function settleLegacyDepositInterest(
       "bankCharter.charteredTurn": input.charteredTurn,
     };
     const plan: Plan = {
+      incomeTaxAtSource: true,
       bankId: input.bankId,
       bankGuard,
       currency: input.currency,
@@ -193,6 +198,7 @@ async function deliverLegacyDepositInterest(
 ): Promise<LegacyInterestResult> {
   const plan = record.legacyInterestBatch!;
   const result: LegacyInterestResult = {
+    withheld: plan.withheld ?? 0,
     paid: plan.paid,
     shortfall: plan.shortfall,
     npcInterestPaid: plan.npcInterestPaid,
@@ -233,30 +239,53 @@ async function deliverLegacyDepositInterest(
   )
     throw new Error("Bank could not fund the original legacy interest allocation");
 
-  await db.collection<InterestBalanceDocument>("characters").bulkWrite(
-    plan.credits.map((credit, i) => ({
-      updateOne: {
-        filter: {
-          _id: credit.characterId,
-          [SETTLED_KEYS_FIELD]: { $ne: legStamp(record._id, i + 1) },
-        },
-        update: {
-          $inc: {
-            [`currencyBalances.savings.${plan.currency}`]: credit.amount,
-            [`currencyBalances.interestEarned.${plan.currency}`]: credit.amount,
+  const netCreditsByCharacter = new Map<string, number>();
+  if (plan.incomeTaxAtSource) {
+    const incomeCredits = await creditIncomeAfterTax(
+      db,
+      "bank-interest:" + plan.bankId.toHexString(),
+      record.turn as number,
+      (record.createdAt as Date) ?? new Date(),
+      plan.credits.map((credit, i) => ({
+        characterId: credit.characterId,
+        ownerCollection: "characters" as const,
+        currency: plan.currency,
+        gross: credit.amount,
+        income: credit.amount,
+        destination: "currencyBalances.savings." + plan.currency,
+        interest: {},
+        settledReceipt: { key: legStamp(record._id, i + 1), cap: SETTLED_KEYS_CAP },
+      }))
+    );
+    result.withheld = incomeCredits.reduce((sum, credit) => sum + credit.gross - credit.net, 0);
+    for (const credit of incomeCredits)
+      netCreditsByCharacter.set(credit.characterId.toHexString(), credit.net);
+  } else {
+    await db.collection<InterestBalanceDocument>("characters").bulkWrite(
+      plan.credits.map((credit, i) => ({
+        updateOne: {
+          filter: {
+            _id: credit.characterId,
+            [SETTLED_KEYS_FIELD]: { $ne: legStamp(record._id, i + 1) },
           },
-          $push: {
-            [SETTLED_KEYS_FIELD]: {
-              $each: [legStamp(record._id, i + 1)],
-              $slice: -SETTLED_KEYS_CAP,
+          update: {
+            $inc: {
+              [`currencyBalances.savings.${plan.currency}`]: credit.amount,
+              [`currencyBalances.interestEarned.${plan.currency}`]: credit.amount,
             },
+            $push: {
+              [SETTLED_KEYS_FIELD]: {
+                $each: [legStamp(record._id, i + 1)],
+                $slice: -SETTLED_KEYS_CAP,
+              },
+            },
+            $set: { updatedAt: new Date() },
           },
-          $set: { updatedAt: new Date() },
         },
-      },
-    })),
-    { ordered: false }
-  );
+      })),
+      { ordered: false }
+    );
+  }
   const after = await db
     .collection<InterestBalanceDocument>("characters")
     .find(
@@ -273,7 +302,7 @@ async function deliverLegacyDepositInterest(
         "Legacy interest batch incomplete; original allocations retained for recovery"
       );
     if (!(before.get(id)?.[SETTLED_KEYS_FIELD] ?? []).includes(stamp))
-      result.newlyCredited.set(id, credit.amount);
+      result.newlyCredited.set(id, netCreditsByCharacter.get(id) ?? credit.amount);
   }
   await persistReceipts(db, "financialTxLog", plan.receipts);
   await persistReceipts(db, "ledgerEntries", plan.ledgerReceipts);
@@ -282,6 +311,7 @@ async function deliverLegacyDepositInterest(
     {
       $set: {
         status: "applied",
+        "legacyInterestBatch.withheld": result.withheld ?? 0,
         completedAt: new Date(),
         ...Object.fromEntries(
           [0, ...plan.credits.map((_, i) => i + 1)].map((i) => [`legs.${i}.applied`, true])

@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findOne } = vi.hoisted(() => ({ findOne: vi.fn() }));
+const { findOne, configFindOne } = vi.hoisted(() => ({
+  findOne: vi.fn(),
+  configFindOne: vi.fn(),
+}));
 vi.mock("@/lib/db/collections", () => ({
   getGameStateCollection: vi.fn(async () => ({ findOne })),
+  getGameConfigCollection: vi.fn(async () => ({ findOne: configFindOne })),
 }));
 vi.mock("@/lib/api/errors", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/errors")>()),
@@ -56,6 +60,29 @@ describe("GET /api/game/turn/status", () => {
     expect((await response.json()).currentTurn).toBe(2);
     expect(findOne).toHaveBeenCalledTimes(2);
     vi.mocked(isSingleplayer).mockReturnValue(false);
+  });
+
+  it("reports the scheduled economy pause window", async () => {
+    findOne.mockResolvedValue({ currentTurn: 10, isProcessing: false, isActive: true });
+    configFindOne.mockResolvedValueOnce({ economyPauseUntilTurn: 34 });
+    const { GET } = await import("./route");
+    const body = await (await GET(new Request("http://localhost/api/game/turn/status"))).json();
+    expect(body.economyPause).toEqual({
+      paused: true,
+      resumesAtTurn: 34,
+      turnsRemaining: 24,
+    });
+  });
+
+  it("reports no economy pause on a world without the field", async () => {
+    findOne.mockResolvedValue({ currentTurn: 10, isProcessing: false, isActive: true });
+    const { GET } = await import("./route");
+    const body = await (await GET(new Request("http://localhost/api/game/turn/status"))).json();
+    expect(body.economyPause).toEqual({
+      paused: false,
+      resumesAtTurn: null,
+      turnsRemaining: 0,
+    });
   });
 
   it("retries a rejected read instead of retaining a rejected promise", async () => {

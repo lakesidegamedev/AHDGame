@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   consent: null as "accepted" | "rejected" | null,
+  distinctId: "anonymous",
   posthog: {
     init: vi.fn(),
     capture: vi.fn(),
@@ -40,8 +41,13 @@ vi.mock("posthog-js", () => ({
     opt_in_capturing: state.posthog.optIn,
     opt_out_capturing: state.posthog.optOut,
     has_opted_out_capturing: () => false,
-    reset: state.posthog.reset,
-    identify: state.posthog.identify,
+    reset: state.posthog.reset.mockImplementation(() => {
+      state.distinctId = "anonymous";
+    }),
+    identify: state.posthog.identify.mockImplementation((id: string) => {
+      state.distinctId = id;
+    }),
+    get_distinct_id: () => state.distinctId,
     set_config: state.posthog.setConfig,
     on: state.posthog.on,
   },
@@ -235,7 +241,10 @@ describe("analytics fan-out", () => {
     await captureProductEvent("party_joined");
 
     await stopAnalyticsCapture();
-    expect(state.posthog.setConfig).toHaveBeenCalledWith({ disable_surveys: true });
+    expect(state.posthog.setConfig).toHaveBeenCalledWith({
+      disable_surveys: true,
+      advanced_enable_surveys: false,
+    });
     expect(state.posthog.optOut).toHaveBeenCalled();
     expect(state.amplitude.setOptOut).toHaveBeenCalledWith(true);
   });

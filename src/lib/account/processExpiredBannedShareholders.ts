@@ -8,7 +8,7 @@ import { releaseCharacterHeldSharesToFloat } from "@/lib/corporations/releaseCha
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 
-export const BANNED_SHARE_RELEASE_GRACE_MS = 48 * 60 * 60 * 1000;
+const BANNED_SHARE_RELEASE_GRACE_MS = 48 * 60 * 60 * 1000;
 
 export interface ProcessExpiredBannedShareholdersOptions {
   now: Date;

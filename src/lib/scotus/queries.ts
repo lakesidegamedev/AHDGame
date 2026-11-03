@@ -79,19 +79,6 @@ export async function getScotusCaseHistory(
     .toArray();
 }
 
-/** Full Docket (pending + decided) for a preset — used alongside case history for a complete timeline view. */
-export async function getScotusDocket(
-  db: Db,
-  countryId: CountryId,
-  preset: string
-): Promise<DocketCase[]> {
-  return db
-    .collection<DocketCase>("docketCases")
-    .find({ countryId, preset })
-    .sort({ decisionYear: 1 })
-    .toArray();
-}
-
 /** Pending Docket cases the Court has yet to rule on, soonest decision year first. */
 export async function getScotusUpcomingCases(
   db: Db,

@@ -434,7 +434,7 @@ function allocateCandidateSeatsWithinParty(
   return seats;
 }
 
-export function allocateLandtagSeatsToCandidates(
+function allocateLandtagSeatsToCandidates(
   candidates: ElectionCandidate[],
   tally: ElectionVoteTally,
   totalSeats: number

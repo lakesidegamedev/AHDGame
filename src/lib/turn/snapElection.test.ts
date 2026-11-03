@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 
 vi.mock("@/lib/analytics/officeTransitionAnalytics", () => ({
@@ -65,6 +66,17 @@ function setupMocks(opts: {
     ...db.collection("governmentFormations"),
     findOne: vi.fn().mockResolvedValue(opts.govDoc),
     updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+    findOneAndUpdate: vi.fn().mockImplementation((_filter, update) => {
+      if (
+        _filter.lastSnapElectionTurn != null
+          ? _filter.lastSnapElectionTurn !== opts.govDoc.lastSnapElectionTurn
+          : opts.govDoc.lastSnapElectionTurn != null
+      )
+        return Promise.resolve(null);
+      const previous = { ...opts.govDoc };
+      Object.assign(opts.govDoc, update.$set);
+      return Promise.resolve(previous);
+    }),
   } as MockDb["collectionMocks"][string];
 
   // elections — find (to-cancel, returns ids), updateMany (cancel by _id),
@@ -160,6 +172,211 @@ beforeEach(async () => {
 });
 
 describe("triggerSnapElection", () => {
+  it("serializes concurrent starts and preserves the live batch on a later retry", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("gameState", [
+      { _id: "current", currentTurn: 100, preset: "1991-default", startingYear: 1991 },
+    ]);
+    memory.seed("governmentFormations", [
+      {
+        _id: "UK",
+        countryId: "UK",
+        status: "pending",
+        pmCharacterId: null,
+        lastSnapElectionTurn: null,
+        snapElectionsUsed: 0,
+      },
+    ]);
+    memory.seed("states", [
+      { _id: "R1", countryId: "UK" },
+      { _id: "R2", countryId: "UK" },
+    ]);
+    memory.seed("seats", [
+      { _id: "s1", state: "R1", countryId: "UK", electionType: "commons", totalSeats: 41 },
+      { _id: "s2", state: "R2", countryId: "UK", electionType: "commons", totalSeats: 53 },
+    ]);
+    const database = memory as unknown as Db;
+    const options = { reason: "auto-snap" as const, bypassLimits: true };
+    const starts = await Promise.all(
+      [1, 2].map(() => triggerSnapElection(database, "UK", new Date("2026-10-29"), options))
+    );
+    expect(starts.map((r) => r.electionsSpawned).sort()).toEqual([0, 2]);
+    const races = await database.collection("elections").find({}).sort({ _id: 1 }).toArray();
+    expect(races).toHaveLength(2);
+    expect(races.map((r) => r.totalSeats)).toEqual([41, 53]);
+    const candidate = {
+      _id: new ObjectId(),
+      electionId: races[0]._id,
+      status: "active",
+      votes: 123,
+    };
+    await database.collection("electionCandidates").insertOne(candidate);
+    const government = await database.collection("governmentFormations").findOne({});
+    await database.collection("gameState").updateOne({}, { $set: { currentTurn: 101 } });
+    const retry = await triggerSnapElection(database, "UK", new Date("2026-10-30"), options);
+    expect(retry.electionsSpawned).toBe(0);
+    expect(await database.collection("elections").find({}).sort({ _id: 1 }).toArray()).toEqual(
+      races
+    );
+    expect(await database.collection("electionCandidates").findOne({ _id: candidate._id })).toEqual(
+      candidate
+    );
+    expect(await database.collection("governmentFormations").findOne({})).toEqual(government);
+  });
+  it.each(["pm-trigger", "admin", "regime-change"] as const)(
+    "preserves %s announcements",
+    async (reason) => {
+      db.collectionMocks.elections.findOne.mockResolvedValue({ _id: new ObjectId() });
+      const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+      await triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
+        reason,
+        bypassLimits: true,
+      });
+      expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
+    }
+  );
+  it.each(["UK", "JP", "DE"] as const)(
+    "announces %s vacancy snap start once across hourly visits, then announces a new start",
+    async (countryId) => {
+      setupMocks({
+        currentTurn: 100,
+        govDoc: {
+          _id: countryId,
+          countryId,
+          status: "pending",
+          pmCharacterId: null,
+          lastSnapElectionTurn: null,
+        },
+        regions: [{ _id: "test" }],
+      });
+      let hasLiveSnap = false;
+      db.collectionMocks.elections.findOne.mockImplementation(async () =>
+        hasLiveSnap ? { _id: new ObjectId() } : null
+      );
+      db.collectionMocks.elections.insertMany.mockImplementation(async () => {
+        hasLiveSnap = true;
+        return { insertedIds: {} };
+      });
+      const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+      await triggerSnapElection(db as unknown as Db, countryId, new Date("2026-10-27"), {
+        reason: "auto-snap",
+        bypassLimits: true,
+      });
+      db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: 101 });
+      await triggerSnapElection(db as unknown as Db, countryId, new Date("2026-10-28"), {
+        reason: "auto-snap",
+        bypassLimits: true,
+      });
+      expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
+      expect(db.collectionMocks.elections.insertMany).toHaveBeenCalledTimes(1);
+      const { unformGovernmentAndVacatePM, resetParliamentaryGovernmentAfterElection } =
+        await import("@/lib/turn/parliamentaryGovernment");
+      expect(unformGovernmentAndVacatePM).toHaveBeenCalledTimes(1);
+      expect(resetParliamentaryGovernmentAfterElection).toHaveBeenCalledTimes(1);
+
+      // Completion removes the live snap. A later vacancy can announce its own start.
+      hasLiveSnap = false;
+      db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: 300 });
+      await triggerSnapElection(db as unknown as Db, countryId, new Date("2026-11-01"), {
+        reason: "auto-snap",
+        bypassLimits: true,
+      });
+      expect(sendCountryGameEvent).toHaveBeenCalledTimes(2);
+    }
+  );
+
+  it("announces only once when concurrent vacancy starts both read no live election", async () => {
+    db.collectionMocks.elections.findOne.mockResolvedValue(null);
+    const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+    await Promise.all(
+      [1, 2].map(() =>
+        triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
+          reason: "auto-snap",
+          bypassLimits: true,
+        })
+      )
+    );
+    expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.elections.insertMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not resend an announcement for a snap already running before a restart", async () => {
+    db.collectionMocks.elections.findOne.mockResolvedValue({ _id: new ObjectId() });
+    const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+    await triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
+      reason: "auto-snap",
+      bypassLimits: true,
+    });
+    expect(sendCountryGameEvent).not.toHaveBeenCalled();
+    expect(db.collectionMocks.elections.insertMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks.elections.updateMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks.governmentFormations.updateOne).not.toHaveBeenCalled();
+    const { unformGovernmentAndVacatePM, failInProgressBills } =
+      await import("@/lib/turn/parliamentaryGovernment");
+    expect(unformGovernmentAndVacatePM).not.toHaveBeenCalled();
+    expect(failInProgressBills).not.toHaveBeenCalled();
+  });
+
+  it("leaves all election and government data untouched when another start wins the claim", async () => {
+    db.collectionMocks.governmentFormations.findOneAndUpdate.mockResolvedValue(null);
+    const result = await triggerSnapElection(db as unknown as Db, "JP", new Date(), {
+      reason: "auto-snap",
+      bypassLimits: true,
+    });
+    expect(result.electionsSpawned).toBe(0);
+    expect(db.collectionMocks.elections.insertMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks.elections.updateMany).not.toHaveBeenCalled();
+    const { unformGovernmentAndVacatePM } = await import("@/lib/turn/parliamentaryGovernment");
+    expect(unformGovernmentAndVacatePM).not.toHaveBeenCalled();
+  });
+
+  it.each(["UK", "JP", "DE"] as const)(
+    "keeps %s to one batch through 48 hourly retries",
+    async (countryId) => {
+      setupMocks({
+        currentTurn: 100,
+        govDoc: { _id: countryId, countryId, status: "pending", pmCharacterId: null },
+        regions: [{ _id: "R1" }, { _id: "R2" }],
+      });
+      let live = false;
+      db.collectionMocks.elections.findOne.mockImplementation(async () =>
+        live ? { _id: new ObjectId() } : null
+      );
+      db.collectionMocks.elections.insertMany.mockImplementation(async () => {
+        live = true;
+        return { insertedIds: {} };
+      });
+      for (let turn = 100; turn < 148; turn++) {
+        db.collectionMocks.gameState.findOne.mockResolvedValue({
+          _id: "current",
+          currentTurn: turn,
+        });
+        const result = await triggerSnapElection(
+          db as unknown as Db,
+          countryId,
+          new Date("2026-10-29"),
+          { reason: "auto-snap", bypassLimits: true }
+        );
+        expect(result.electionsSpawned).toBe(turn === 100 ? 2 : 0);
+      }
+      expect(db.collectionMocks.elections.insertMany).toHaveBeenCalledTimes(1);
+      const { unformGovernmentAndVacatePM } = await import("@/lib/turn/parliamentaryGovernment");
+      expect(unformGovernmentAndVacatePM).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("can retry a failed pre-spawn start on a later turn", async () => {
+    db.collectionMocks.elections.insertMany.mockRejectedValueOnce(new Error("temporary failure"));
+    const opts = { reason: "auto-snap" as const, bypassLimits: true };
+    await expect(triggerSnapElection(db as unknown as Db, "JP", new Date(), opts)).rejects.toThrow(
+      "temporary failure"
+    );
+    const sameTurn = await triggerSnapElection(db as unknown as Db, "JP", new Date(), opts);
+    expect(sameTurn.electionsSpawned).toBe(0);
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: 101 });
+    const retry = await triggerSnapElection(db as unknown as Db, "JP", new Date(), opts);
+    expect(retry.electionsSpawned).toBe(2);
+  });
   it("spawns snap_shugiin elections and increments counters for JP", async () => {
     const result = await triggerSnapElection(db as unknown as Db, "JP", new Date(), {
       reason: "pm-trigger",

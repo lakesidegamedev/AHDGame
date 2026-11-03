@@ -2,7 +2,7 @@ import { clampWithUpperPriority as clamp, round4 } from "@/lib/numeric/rules";
 /** Dealer half-spread around the turn-priced equity fair value. */
 export const EQUITY_POOL_HALF_SPREAD = 0.01;
 /** How strongly a cash shortfall moves both sides of the quote down. */
-export const EQUITY_POOL_CASH_SKEW_RATE = 0.05;
+const EQUITY_POOL_CASH_SKEW_RATE = 0.05;
 /** Maximum quote movement caused by the pool's cash position. */
 export const EQUITY_POOL_CASH_SKEW_CAP = 0.03;
 
@@ -14,7 +14,7 @@ export interface EquityPoolQuote {
   cashSkew: number;
 }
 
-export function equityPoolCashSkew(cashLocal: number, targetCashLocal: number): number {
+function equityPoolCashSkew(cashLocal: number, targetCashLocal: number): number {
   if (!(targetCashLocal > 0)) return 0;
   const cash = Number.isFinite(cashLocal) && cashLocal > 0 ? cashLocal : 0;
   const shortfallShare = clamp((targetCashLocal - cash) / targetCashLocal, -1, 1);

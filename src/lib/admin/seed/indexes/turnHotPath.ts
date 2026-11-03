@@ -3,7 +3,7 @@ import { ensureIndex } from "./helpers";
 
 // Equality/range prefixes used by turn queries. Keep these in bootstrap and
 // the existing-world installer so a reset cannot reintroduce collection scans.
-export const TURN_HOT_PATH_INDEXES: ReadonlyArray<{
+const TURN_HOT_PATH_INDEXES: ReadonlyArray<{
   collection: string;
   key: IndexSpecification;
   name: string;
@@ -35,6 +35,18 @@ export const TURN_HOT_PATH_INDEXES: ReadonlyArray<{
     key: { turn: 1, state: 1 },
     name: "offTypeHandovers_turn_state",
   },
+  // The bond pool's working-balance probe sums live sovereign face maturing in
+  // the next issuance interval. The leading matured flag keeps it on live paper
+  // and the maturity range stays inside the index.
+  {
+    collection: "bonds",
+    key: { matured: 1, maturityTurn: 1 },
+    name: "bonds_matured_maturityTurn",
+  },
+  // The commodity phase reads one year of new debt issuance and the bond turn
+  // reads this turn's at-par issues. Without this prefix both walk every bond
+  // ever issued.
+  { collection: "bonds", key: { issuedAtTurn: 1 }, name: "bonds_issuedAtTurn" },
 ];
 
 export async function seedTurnHotPathIndexes(db: Db, log: (msg: string) => void) {

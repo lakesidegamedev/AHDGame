@@ -96,7 +96,7 @@ beforeEach(() => {
 
 describe("proposeAcquisitionOffer outcome", () => {
   it("stores no outcome on a merge offer, keeping the legacy document shape", async () => {
-    const r = await propose(corp(TGT, "TargetCo"), 500_000);
+    const r = await propose(corp(TGT, "TargetCo", { liquidCapital: 100_000 }), 500_000);
     expect(r.ok).toBe(true);
     expect("outcome" in inserted()).toBe(false);
     expect(checkSubsidiaryAcquisition).not.toHaveBeenCalled();
@@ -104,7 +104,11 @@ describe("proposeAcquisitionOffer outcome", () => {
   });
 
   it("stores the subsidiary outcome and tells the target's CEO what is on offer", async () => {
-    const r = await propose(corp(TGT, "TargetCo"), 500_000, "subsidiary");
+    const r = await propose(
+      corp(TGT, "TargetCo", { liquidCapital: 100_000 }),
+      500_000,
+      "subsidiary"
+    );
     expect(r.ok).toBe(true);
     expect(inserted().outcome).toBe("subsidiary");
     expect(checkSubsidiaryAcquisition).toHaveBeenCalledTimes(1);
@@ -119,7 +123,11 @@ describe("proposeAcquisitionOffer outcome", () => {
       error: "That corporation controls other corporations, and subsidiaries cannot be chained.",
       status: 400,
     });
-    const r = await propose(corp(TGT, "TargetCo"), 500_000, "subsidiary");
+    const r = await propose(
+      corp(TGT, "TargetCo", { liquidCapital: 100_000 }),
+      500_000,
+      "subsidiary"
+    );
     expect(r).toMatchObject({ ok: false, status: 400 });
     expect(db.collectionMocks.acquisitionOffers!.insertOne).not.toHaveBeenCalled();
   });
@@ -187,4 +195,23 @@ describe("listDealsForCorp outcome", () => {
     const { outgoing } = await listDealsForCorp(db as unknown as Db, ACQ);
     expect(outgoing.map((o) => o.outcome)).toEqual(["merge", "subsidiary"]);
   });
+});
+
+describe("proposeAcquisitionOffer player-run price floor", () => {
+  it("refuses a price below what the target holds in cash", async () => {
+    const r = await propose(corp(TGT, "TargetCo", { liquidCapital: 20_000_000 }), 1_000_000);
+    expect(r).toMatchObject({ ok: false, status: 400 });
+    if (!r.ok) expect(r.error).toMatch(/at least ₳20,000,000/);
+    expect(db.collectionMocks.acquisitionOffers!.insertOne).not.toHaveBeenCalled();
+  });
+
+  it.each([{ foundedAtTurn: 200 }, { foundedAtTurn: 150, lastIpoTurn: 200 }])(
+    "refuses a target founded or floated this turn (%o)",
+    async (extra) => {
+      const r = await propose(corp(TGT, "TargetCo", { liquidCapital: 100_000, ...extra }), 500_000);
+      expect(r).toMatchObject({ ok: false, status: 400 });
+      if (!r.ok) expect(r.error).toMatch(/founded or floated this turn/);
+      expect(db.collectionMocks.acquisitionOffers!.insertOne).not.toHaveBeenCalled();
+    }
+  );
 });

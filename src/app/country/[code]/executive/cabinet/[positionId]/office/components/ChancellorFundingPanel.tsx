@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input, Slider } from "@/components/ui";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { sortByRegionLabel } from "@/lib/regionOptions";
@@ -68,7 +69,7 @@ export function ChancellorFundingPanel({
   onUpdate,
 }: ChancellorFundingPanelProps) {
   const countryId = countryCode.toUpperCase() as CountryId;
-  const countryConfig = getCountryConfig(countryId);
+  const countryConfig = getCountryClientConfig(countryId);
   const symbol = CURRENCY_SYMBOLS[COUNTRY_CURRENCY_MAP[countryId]] ?? "$";
   const panelTitle =
     countryConfig.executiveTitle === "President"

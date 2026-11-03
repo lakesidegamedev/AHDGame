@@ -205,7 +205,7 @@ export async function checkCharterEligibility(
     reasons.push("Private bank charters are not available in a command economy");
   } else if (!legalTypes.includes(requestedType)) {
     // When only retail is on offer the withheld types are gated globally
-    // (playerAdvancedBankChartersEnabled), not by this nation's separation law.
+    // by player charter access, not by this nation's separation law.
     reasons.push(
       legalTypes.length === 1 && legalTypes[0] === "retail"
         ? "Only retail bank charters are available right now."

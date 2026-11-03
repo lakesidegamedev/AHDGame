@@ -15,7 +15,7 @@ export const CONFIDENCE_MIN = 0;
 export const CONFIDENCE_MAX = 100;
 export const CONFIDENCE_START = 100;
 /** Share of the remaining distance to full confidence restored on formation. */
-export const CONFIDENCE_FORMATION_RECOVERY = 0.1;
+const CONFIDENCE_FORMATION_RECOVERY = 0.1;
 
 /** One-off downward shocks. */
 export const CONFIDENCE_HITS = {
@@ -31,7 +31,7 @@ export const CONFIDENCE_HITS = {
   ministerResigned: 12,
 } as const;
 
-export const CONFIDENCE_GAINS = {
+const CONFIDENCE_GAINS = {
   /** Passing the government's central annual programme restores authority. */
   budgetPass: 10,
 } as const;
@@ -93,11 +93,11 @@ export function applyConfidenceEvent(gauge: number, event: ConfidenceEvent): num
 /** Approval at/above which the gauge recovers; below which it erodes on its own. */
 export const CONFIDENCE_APPROVAL_PIVOT = 50;
 /** Max recovery per turn (at 100 approval). */
-export const CONFIDENCE_MAX_RECOVERY_PER_TURN = 5;
+const CONFIDENCE_MAX_RECOVERY_PER_TURN = 5;
 /** Max self-erosion per turn (at 0 approval). */
-export const CONFIDENCE_MAX_EROSION_PER_TURN = 2;
+const CONFIDENCE_MAX_EROSION_PER_TURN = 2;
 /** Broken-promise bleed at a fully-broken manifesto (meter 0), per turn. */
-export const CONFIDENCE_BROKEN_PROMISE_BLEED = 3;
+const CONFIDENCE_BROKEN_PROMISE_BLEED = 3;
 
 /**
  * Approval-based erosion ramps from zero when the head takes office to full

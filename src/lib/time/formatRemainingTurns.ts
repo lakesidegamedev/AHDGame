@@ -1,5 +1,5 @@
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { formatTimeRemaining, type TimeRemaining } from "@/lib/utils/formatters";
+import { formatTimeRemaining, type TimeRemaining } from "@/lib/utils/formattersCore";
 
 /**
  * Compact wall-clock estimate for a whole number of turns (1 turn = 1 game-hour).

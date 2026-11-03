@@ -9,6 +9,8 @@
  * submissions outright, so avoid anything that has non-profane uses.
  */
 
+import { maskPlaceNames } from "@/lib/moderation";
+
 // Hard-block regexes. Use word boundaries so we don't trip on substrings
 // inside legitimate words (e.g. "scunthorpe"). Entries here should be things
 // a moderator would always reject.
@@ -45,9 +47,11 @@ export interface ContentFilterInput {
  * user-facing message when it should be rejected.
  */
 export function screenWikiContent(input: ContentFilterInput): ContentFilterResult {
-  const haystack = [input.title, input.description, input.content, ...(input.tags ?? [])]
+  const text = [input.title, input.description, input.content, ...(input.tags ?? [])]
     .join("\n")
     .toLowerCase();
+  // Country names such as Niger share letters with a slur pattern.
+  const haystack = maskPlaceNames(text);
 
   for (const pattern of HARD_BLOCK_PATTERNS) {
     if (pattern.test(haystack)) {

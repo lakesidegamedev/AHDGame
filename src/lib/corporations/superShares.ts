@@ -1,4 +1,5 @@
 import type { Corporation, Shareholder } from "@/lib/db/types/corporation";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 /**
  * Founder supershares (dual-class structure, S#33).
@@ -88,16 +89,17 @@ export function totalVotingPower(
   // shapes (e.g. ShareholderInfo with string characterIds) qualify too.
   corp: Pick<Corporation, "superShareMultiplier" | "totalShares"> & {
     shareholders?: Array<Pick<Shareholder, "shares" | "superShares">>;
+    publicFloat?: number | null;
     pendingShareIssuance?: Corporation["pendingShareIssuance"];
     pendingIpoShares?: number;
   }
 ): number {
   // Issued IPO inventory has no owner and cannot vote until placed.
-  const unplacedIpoShares =
+  const unplaced =
     corp.pendingShareIssuance?.issuedUpfront && corp.pendingShareIssuance.source === "ipo"
-      ? corp.pendingShareIssuance.remainingShares
+      ? unplacedIpoShares({ ...corp, publicFloat: corp.publicFloat ?? corp.totalShares })
       : (corp.pendingIpoShares ?? 0);
-  const total = Math.max(0, (corp.totalShares ?? 0) - unplacedIpoShares);
+  const total = Math.max(0, (corp.totalShares ?? 0) - unplaced);
   if (!hasSuperShares(corp)) return total;
   const multiplier = corp.superShareMultiplier as number;
   const bonus = (corp.shareholders ?? []).reduce(

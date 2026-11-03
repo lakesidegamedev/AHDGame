@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CountrySectorMixEntry } from "@/lib/economy/sectorMix";
 import { avgGrowthTone, formatAvgGrowth } from "@/lib/economy/sectorGrowth";
 import { regionUrl } from "@/lib/urls";

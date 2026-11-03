@@ -51,7 +51,11 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/sectorOperations/bulkSetSectorOperations:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

@@ -1,116 +1,103 @@
 export const globalResponseCrisesContent = `# Global Response Crises
 
-Global Response Crises are persistent international campaigns. They turn historical pressure such as Vietnam, proxy wars, disasters, pandemics, and nuclear alerts into recurring government decisions with consequences that survive the current response window.
+Your country has a seat in a crisis that will not be over in a day: Vietnam, Berlin, Congo, a pandemic, a nuclear alert. You get a decision card and a window to answer it. Whatever you pick is remembered, the damage it causes outlasts the window, and the sum of everyone's choices moves [global tension](/wiki/cold-war-tension), your treasury, your standing with other governments and sometimes whether a real war breaks out.
+
+## Reading World Conflicts
 
 Open the system at [World Conflicts](/world/conflicts). The page separates three things:
 
 - **Global tension** shows how dangerous the whole international system is.
-- **Response campaigns** show the active historical or emergent situations and their current stage.
+- **Response campaigns** show the active situations and their current stage.
 - **Shooting wars** show conflicts where military units can actually fight.
 
-These layers affect each other, but they are not the same thing. A proxy campaign can exist before it opens a shooting war. A nuclear buildup can raise tension without creating a battlefield.
+They affect each other but are not the same. A proxy campaign can exist before it opens a shooting war. A nuclear buildup can raise tension without any battlefield.
 
-## International Response Desk
+## Answering a window
 
-The International Response Desk on **World Conflicts** lists every open international response campaign. A card can say **National** even though it appears here. National means that your government owns its response choice; it does not mean the crisis or its consequences stop at your border.
+The head of state of a country with a role in the campaign picks an option from the card on **World Crises** or your actions page. The International Response Desk on **World Conflicts** lists every open campaign. A card marked "National" means your government owns its own choice. The effects still spread past your border. Each country with a role answers separately, and one government's response does not close another's window. The same response cannot be applied twice, even if you submit it twice.
 
-Each desk card shows how long the window has been open, which governments can shape the shared outcome, and a link to the complete response. Ordinary domestic crises, such as a national industrial strike, stay on the Crises and Actions pages and do not appear on this desk.
-
-## Campaign stages
-
-Every response campaign moves through five stages:
-
-| Stage | What it means |
+| Item | Value |
 | --- | --- |
-| Posture | Governments assess the situation and establish their opening position. |
-| Mobilization | Aid, forces, logistics, and covert networks begin to move. |
-| Operations | The campaign is active and its human and strategic costs grow each turn. |
-| Settlement | Pressure is moving toward an end state. |
-| Aftermath | Immediate fighting or emergency pressure falls, while lasting damage recovers slowly. |
+| Response window (most campaigns) | 24 turns, which is 24 hours of real time |
+| Response window (pandemic) | 12 turns |
+| Northern Ireland party negotiation and ratification windows | 8 turns |
+| Consequence tracks and country memory | 0 to 100 each |
 
-A campaign also records its cycle and turns in the current stage. A later response window continues that history instead of starting from a blank card.
+If you do not answer, your role's authored default option is counted toward the shared outcome. It costs you nothing and records no commitment. In Vietnam it is "Hold the line" for the United States and "Maintain support" for the Soviet Union, so your commitment stays where it is. The pandemic is the exception: only answers actually given count toward its outcome. The campaign continues and can open another window later. Activity is your lever, not a requirement.
 
-## What your choices remember
+### Locked options
 
-The system keeps country-specific memory:
+An option can need military readiness, logistics, domestic support, intelligence confidence, or the right campaign stage. Money is not a gate: a response's cost comes out of the treasury, and whatever the treasury cannot cover is borrowed. A locked option lists every unmet requirement, in the form "Needs logistics" followed by the minimum. Build up the named capability, or wait for the right stage. The server checks your live country state again when you submit, so an old browser tab cannot bypass a capability you lost.
 
-- Credibility
-- War weariness
-- Military commitment
-- Humanitarian commitment
-- Covert exposure
-- The last response and commitment type
+Briefings are not equal. Your role and intelligence confidence decide how narrow your risk estimate is; nobody sees the exact figure. Covert options hide your choice from other governments, and they are cheaper, but each carries an authored chance of exposure when the window resolves, and an exposed covert choice is shown to everyone. Use them when you can afford the reveal.
 
-This memory changes later options and outcomes. A government that repeatedly commits forces builds a different position from one that funds relief or stays out. Duplicate submissions cannot apply the same commitment twice.
+Cheap holds are often right early. In Vietnam, costs and political damage scale with the rung, so a deep commitment late is much more expensive than the same choice early. [Crisis Interaction](/wiki/crisis-interaction) supplies the decision cards these windows run on, and chained campaigns advance through its decision system.
 
-## Capacity and locked options
+## What the game remembers
 
-Options can require enough treasury capacity, military readiness, logistics, domestic support, intelligence confidence, or the correct campaign stage. A locked choice explains every unmet requirement. The system checks the live country state again when the choice is submitted, so an old browser tab cannot bypass a lost capability.
+Each country keeps its own memory: credibility, war weariness, military commitment, humanitarian commitment and covert exposure, plus the last response and commitment type. A government that repeatedly commits forces ends up in a different position from one that funds relief or stays out. The memory exists so a crisis is a story over many windows instead of a string of unrelated pop-ups. A campaign also records its cycle and turns in the current stage, so a later response window continues the history instead of starting blank.
 
-Countries do not receive identical information. Your role, intelligence confidence, and campaign exposure determine what the briefing reveals. Covert options can hide intent, but exposure risk raises the chance that later consequences become public and damage credibility.
+## The five stages
 
-## Persistent consequences
+A campaign moves through five stages. Between your decisions, the stage slowly pushes its damage tracks up or down every turn (the pandemic runs its own model instead of this drift). Your own decisions and the authored outcomes add one-off jumps on top of this drift.
 
-Campaign consequences run from 0 to 100:
+![The five campaign stages in order with the consequence tracks each one raises or lowers every turn, and how campaigns connect to national doctrine, the nuclear programme, global tension and defence procurement.](/wiki-images/diagrams/global-response-crises-stage-flow.svg)
 
-- Civilian strain
-- Refugees
-- Infrastructure damage
-- Arms proliferation
-- Regional spillover
-- Casualties
-- Settlement momentum
+| Stage | What it means | Change per turn |
+| --- | --- | --- |
+| Posture | Governments assess the situation and set an opening position. | None |
+| Mobilization | Aid, forces, logistics and covert networks begin to move. | Arms proliferation +0.4, regional spillover +0.2 |
+| Operations | Active campaign, human and strategic costs grow. | Civilian strain +0.7, refugees +0.4, infrastructure damage +0.45, casualties +0.6, regional spillover +0.25, settlement momentum +0.15 |
+| Settlement | Pressure moves toward an end state. | Civilian strain -0.35, refugees -0.15, settlement momentum +0.5 |
+| Aftermath | Emergency pressure falls, lasting damage recovers slowly. | Civilian strain -0.5, refugees -0.25, infrastructure damage -0.15, regional spillover -0.2, settlement momentum -0.25 |
 
-Mobilization grows proliferation and spillover. Operations increase human and physical damage each turn. Settlement improves settlement momentum. Aftermath reduces several pressures slowly rather than erasing them at once.
+Most campaigns have no negotiation mini-game: settlement comes from campaign state, accumulated consequences and authored outcomes. Northern Ireland is the exception, with short negotiation and ratification windows for its parties.
 
-## Global tension
+### Vietnam and the road to war
 
-The Global Tension Index runs from 0 to 100:
+Does a Vietnam escalation drag you into war? No. At the air-campaign rung the system can open a real North Vietnam versus South Vietnam conflict, but the superpowers stay patrons unless another mechanic makes them belligerents. High escalation can open a real shooting war in [Conflicts & the Military System](/wiki/conflicts-overview), but pulling support below that rung winds the front down. Reaching zero closes the chain permanently.
 
-| Reading | Band |
+## How tension is set
+
+Discrete events (escalation, nuclear tests, crisis outcomes) move the reading immediately. Between events it eases down toward a pressure floor, which adds up the standing sources of danger, and it can never sit below that floor. Outcomes and escalation in campaigns move both the reading and the floor, and the resulting level raises strategic procurement demand in [Defence Procurement](/wiki/defence-procurement).
+
+| Item | Value |
 | --- | --- |
-| 0 to 14.9 | Detente |
-| 15 to 34.9 | Calm |
-| 35 to 59.9 | Elevated |
-| 60 to 79.9 | Crisis |
-| 80 to 100 | Brink |
+| Tension bands | Detente 0 to 14.9, Calm 15 to 34.9, Elevated 35 to 59.9, Crisis 60 to 79.9, Brink 80 to 100 |
+| Tension floor: baseline | 12 |
+| Tension floor: Vietnam escalation | 4 per rung, capped at 30 |
+| Tension floor: active crises (any kind, national ones included) | 3 each, capped at 12 |
+| Tension floor: world warheads | 1.2 times the square root of total warheads, capped at 18 (reached at 225 warheads) |
+| Tension movement toward the floor | 8% of the gap per turn when the reading is above the floor; when the floor is above the reading, the reading jumps straight to it that turn |
 
-Events such as escalation, nuclear tests, and crisis outcomes move the current reading immediately. Between events, tension moves toward a pressure floor. The floor is made from:
+On top of those, every active shooting war adds to the floor, weighted by intensity. A war with nuclear-armed countries on opposite sides holds the floor at Crisis on its own for as long as it burns. A long war that stays below hot intensity sheds part of that shock after twelve turns, but never below a substantial residual.
 
-- A baseline of 12
-- 4 points for each Vietnam escalation rung, capped at 30
-- 3 points for each active international response crisis, capped at 12
-- 1.2 times the square root of the total world warhead stockpile, capped at 18
-- Every active shooting war, weighted by its intensity. A war with nuclear-armed countries on opposing sides holds the floor at CRISIS on its own for as long as it burns; a long war that stays below hot intensity slowly sheds part of that shock after twelve turns, but never below a substantial residual.
+\`\`\`wiki-chart
+tension-floor-by-arsenal
+\`\`\`
 
-The page shows each driver (including a WARS card), the floor, and whether the current reading is rising or easing toward it. Declaring a war also spikes the reading immediately: hardest for a war between nuclear powers, less for any other interstate war, least for the rest. Tension also sets the displayed DEFCON posture, strategic procurement pressure, and detente penalty.
+The page shows each driver, the floor, and whether the reading is rising or easing toward it. Declaring a war also spikes the reading immediately: most for a war between nuclear powers, less for any other interstate war, least for the rest. Tension then sets the displayed DEFCON posture, strategic procurement pressure and the detente goodwill penalty.
 
-## Nuclear connection
+### A world in 1966
 
-The nuclear system is a real input, not flavor text. Nuclear tests create immediate tension events. The combined world stockpile raises the standing tension floor. A nuclear alert campaign cannot open until at least two countries have both warheads and an adopted delivery system, so an empty world cannot invent a superpower standoff.
+A world is in 1966 with Vietnam at rung 3, two active crises, no shooting war, and 400 warheads in total.
 
-The United States, Soviet Union or Russia, and United Kingdom receive game-scaled historical baseline programs when the world is created. Baselines follow the live game year. They include zero automatic production, so future growth still requires a defence decision and available budget. A migration fills a missing baseline only; it never replaces an existing country's warheads, research, or production order.
+- Baseline: 12
+- Vietnam: 3 rungs times 4 = 12
+- Crises: 2 times 3 = 6
+- Warheads: 1.2 times the square root of 400 (20) = 24, capped at 18
 
-Defence ministers manage the program in the Defence Office. The conventional **Nuclear Delivery** doctrine unlocks the nuclear tree. Device nodes require public tests. Delivery nodes are adopted quietly. A stockpile with no delivery leg has no deterrence score.
+The floor is 12 + 12 + 6 + 18 = 48, which is Elevated. If the reading sits at 30, it jumps to 48 at the next turn's tension step. A nuclear test then pushes it up at once, and the floor stops it from ever relaxing below 48 while those pressures last.
 
-## Vietnam
+At that rung, deepening the commitment costs 0.15% of smoothed GDP (0.0005 times the rung, three rungs). Covert support costs 60% of that, 0.09%. Holding the line is free.
 
-Vietnam is the first full campaign family. It can progress from advisers and materiel through air operations, ground commitment, and prolonged war. The United States and Soviet Union answer separately. One response does not close the other country's window.
+## Lowering tension and running the nuclear programme
 
-At the air-campaign rung, the system can open a real North Vietnam versus South Vietnam conflict. The superpowers remain patrons unless another mechanic makes them belligerents. Pulling support below that rung winds the front down. Reaching zero closes the chain permanently.
+Choose de-escalating options in campaigns, avoid tests, and end wars. Relief cannot cross the floor, so the standing causes (warheads, wars, open campaigns) have to shrink first.
 
-There is no negotiation mini-game in Global Response Crises. Settlement is driven by campaign state, accumulated consequences, and authored response outcomes.
+Defence ministers run the [Nuclear Programme](/wiki/nuclear-programme) in the Defence Office. In a country able to run one, the conventional Nuclear Delivery doctrine in [National Doctrine](/wiki/national-doctrine) unlocks the tree. Device nodes need public tests, delivery nodes are adopted quietly. A stockpile with no delivery leg has no deterrence. Warheads raise the tension floor, and tests spike the reading. The shared [Cold War Tension](/wiki/cold-war-tension) reading in turn sets DEFCON, procurement pressure and the detente penalty.
 
-## Defaults and missed windows
+The nuclear alert campaign cannot open until at least two countries have both warheads and an adopted delivery system, so an empty world cannot invent a superpower standoff. The United States, Soviet Union or Russia and United Kingdom receive scaled historical baseline programs at world creation, with zero automatic production, so growth still needs a defence decision and budget.
 
-Response windows expire. If a government does not act, the authored cautious default resolves for that country. The campaign continues, records the outcome, and can open another window later. This prevents an inactive office holder from freezing the world system.
-
-The release 1.3 campaign flag is enabled for new worlds. Existing worlds receive an idempotent migration that enables the conflict flags, creates missing campaign rows, completes legacy campaign state, initializes missing tension, and inserts missing nuclear baselines.
-
-## Related systems
-
-- [Conflicts & the Military System](/wiki/conflicts-overview)
-- [Crisis Interaction](/wiki/crisis-interaction)
-- [National Doctrine](/wiki/national-doctrine)
-- [Defence Procurement](/wiki/defence-procurement)
+Applies in every world that has the Cold War and conflict layers, with the campaign families available from the year each one begins: Berlin 1958, Congo 1960, Suez 1956, oil disruption 1956, nuclear alert 1957, Vietnam 1955, Yugoslav dissolution 1991, Northern Ireland 1991, terrorism 1998, global financial crisis 2007, Arab uprisings 2010, Russia-Ukraine 2013 and the pandemic 2018. A world only sees the families that have started by its current year, and each family closes after its last year (Berlin after 1963, Congo after 1965, Suez after 1962, Vietnam, oil and nuclear alert after 1975), so a modern world never sees the early Cold War ones. Last checked 2026-10-29, version 1.18.0. Exact rules: [Global response crises (as shipped)](https://docs.lakesidegames.net/design/global-response-crises-as-shipped.html)
 `;

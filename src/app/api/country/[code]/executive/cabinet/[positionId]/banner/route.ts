@@ -26,7 +26,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/executive/cabinet/[positionId]/banner:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code, positionId } = await params;

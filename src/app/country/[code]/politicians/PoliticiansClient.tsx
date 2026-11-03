@@ -2,7 +2,8 @@
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getPartyLabel } from "@/lib/utils/politics";
@@ -24,7 +25,7 @@ type OfficeFilter = "all" | "federal_exec" | "congress" | "state" | "citizen";
 
 function getOfficeFilters(countryCode: string): { value: OfficeFilter; label: string }[] {
   const cid = countryCode.toUpperCase() as CountryId;
-  const config = COUNTRY_CONFIGS[cid];
+  const config = COUNTRY_CLIENT_CONFIGS[cid];
   const legislatureName = config?.legislature?.name ?? "Congress";
   const isUS = cid === "US";
   const subNationalLabel = isUS ? "State" : "Region";

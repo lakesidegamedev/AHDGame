@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchSovereignStatus } from "./sovereignStatusRequest";
 
 const RECOVERY_FLOOR_TURNS = 48;
 const RECOVERY_DISCIPLINE_REQUIRED_STREAK = 5;
@@ -26,14 +27,11 @@ export function SovereignRecoveryProgressPanel({ countryCode }: Props) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      try {
-        const res = await fetch(`/api/country/${countryCode}/sovereign-status`);
-        if (!res.ok) return;
-        const data = (await res.json()) as RecoveryStatus & Record<string, unknown>;
-        if (!cancelled) setStatus(data);
-      } catch {
-        // ignore
-      }
+      // Shared with the other sovereign panels on the page: one request.
+      const result = await fetchSovereignStatus(countryCode);
+      if (!result.ok || !result.data) return;
+      const data = result.data as unknown as RecoveryStatus & Record<string, unknown>;
+      if (!cancelled) setStatus(data);
     }
     void load();
     return () => {

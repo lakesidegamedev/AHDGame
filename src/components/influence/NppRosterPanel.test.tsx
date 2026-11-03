@@ -140,6 +140,27 @@ describe("NppRosterPanel", () => {
     // Selection is retained (not cleared) so the player can run another action.
     expect(screen.getByText("2 selected")).toBeTruthy();
   });
+
+  it("sends a bulk action as one batch when the panel supports it", async () => {
+    const onExecute = vi.fn().mockResolvedValue({ ok: true });
+    const onExecuteBulk = vi.fn().mockResolvedValue({ ok: true });
+    render(
+      <NppRosterPanel
+        scope="national"
+        npps={NPPS.map((n) => ({ ...n, homeState: "CA" }))}
+        actions={ACTIONS}
+        onExecute={onExecute}
+        onExecuteBulk={onExecuteBulk}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Select all/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Boost Loyalty" }));
+    fireEvent.click(screen.getByRole("button", { name: /Confirm/ }));
+
+    await waitFor(() => expect(onExecuteBulk).toHaveBeenCalledTimes(1));
+    expect(onExecuteBulk.mock.calls[0][0]).toHaveLength(2);
+    expect(onExecute).not.toHaveBeenCalled();
+  });
 });
 
 it("opens the linked NPP in its region and preserves a closed drawer on refresh", () => {
@@ -175,4 +196,21 @@ it("does not open an NPP outside the authorized roster", () => {
     />
   );
   expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+});
+
+it("sends ten repeats for one NPP in one callback and shows multiplied costs", async () => {
+  const onExecute = vi.fn().mockResolvedValue({ ok: true });
+  render(
+    <NppRosterPanel
+      scope="state"
+      initialNppId="a"
+      actions={ACTIONS}
+      npps={NPPS.map((n) => ({ ...n, homeState: "CA" }))}
+      onExecute={onExecute}
+    />
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "x10" }));
+  const button = screen.getByRole("button", { name: /Boost Loyalty.*10 AP/ });
+  fireEvent.click(button);
+  await waitFor(() => expect(onExecute).toHaveBeenCalledWith("a", "boost_loyalty", 10));
 });

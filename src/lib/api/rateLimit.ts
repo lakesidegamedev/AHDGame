@@ -139,6 +139,20 @@ export const CONGRESS_LIMITS = { maxRequests: 30, windowMs: 60_000 };
 /** Limit for election actions (enter, withdraw, vote) per user. */
 export const ELECTION_LIMITS = { maxRequests: 20, windowMs: 60_000 };
 
+/**
+ * Repeatable campaign actions (travel, state attacks, surges). Action points
+ * and money already bound how much a player can do; this only stops runaway
+ * scripts. Entering, withdrawing and voting stay on ELECTION_LIMITS.
+ */
+export const CAMPAIGN_ACTION_LIMITS = { maxRequests: 60, windowMs: 60_000 };
+
+/**
+ * Party NPP management (national and state panels share one counter). Each
+ * stat button is one request and party managers click through dozens of NPPs
+ * a turn, while NPP action points are the real cap.
+ */
+export const NPP_MANAGEMENT_LIMITS = { maxRequests: 120, windowMs: 60_000 };
+
 /** Limit for savings wallet mutations (open, deposit, withdraw) per user. */
 export const SAVINGS_WALLET_LIMITS = { maxRequests: 30, windowMs: 60_000 };
 

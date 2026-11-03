@@ -62,7 +62,6 @@ export const PL_1991_BUDGET_LAW_MILLION_PLZ = {
  */
 export const PL_1991_NOMINAL_GDP_OLD_PLZ = 904_856_405_000_000;
 export const PL_JANUARY_1991_PLZ_PER_USD = 9_500;
-export const PL_1991_ANNUAL_AVERAGE_PLZ_PER_USD = 10_576.0583333333;
 
 /**
  * IMF national-authority series for actual 1991 general-government operations,

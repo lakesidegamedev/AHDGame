@@ -17,7 +17,7 @@ export async function POST(_request: Request, _context: RouteParams) {
       return errorResponse(403, "Player-run unions are not enabled.");
     }
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/unions/[id]/strike:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     return errorResponse(

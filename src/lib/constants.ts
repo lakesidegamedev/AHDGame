@@ -71,7 +71,7 @@ export type StateAbbreviation = (typeof US_STATES)[number];
  * Representative landmark/landscape photos for each state.
  * All URLs verified via the Wikipedia pageimages API. Freely licensed via Wikimedia Commons.
  */
-export const STATE_IMAGES: Record<string, string> = {
+const STATE_IMAGES: Record<string, string> = {
   AL: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Birmingham_cityscape_view_2010.jpg/1280px-Birmingham_cityscape_view_2010.jpg",
   AK: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Wonder_Lake_and_Denali.jpg/1280px-Wonder_Lake_and_Denali.jpg",
   AZ: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Canyon_River_Tree_%28165872763%29.jpeg/1280px-Canyon_River_Tree_%28165872763%29.jpeg",
@@ -152,7 +152,7 @@ export {
 /**
  * Official descriptors for each state (e.g. "State of", "Commonwealth of")
  */
-export const STATE_DESCRIPTORS: Record<string, string> = {
+const STATE_DESCRIPTORS: Record<string, string> = {
   KY: "The Commonwealth of",
   MA: "The Commonwealth of",
   PA: "The Commonwealth of",

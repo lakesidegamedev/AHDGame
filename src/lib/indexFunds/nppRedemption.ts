@@ -24,11 +24,20 @@
  * its pre-flag behavior.
  */
 
-import { ObjectId, type Db } from "mongodb";
-import type { GameConfig, IndexFund, IndexFundPosition } from "@/lib/db/types";
+import { ObjectId, type ClientSession, type Db } from "mongodb";
+import type {
+  GameConfig,
+  IndexFund,
+  IndexFundPosition,
+  IndexFundRedemptionQueueEntry,
+  IndexFundTransaction,
+} from "@/lib/db/types";
+import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
 import {
   FUND_COLLECTION,
   FUND_POSITION_COLLECTION,
+  FUND_REDEMPTION_QUEUE_COLLECTION,
+  FUND_TRANSACTION_COLLECTION,
   creditFundPosition,
   debitFundPosition,
   enqueueRedemption,
@@ -201,42 +210,238 @@ export async function processNppFundRedemptions(
     .toArray();
   for (const doc of cashDocs) cashByNppId.set(doc._id.toString(), doc.nppInvestmentCashAnchor ?? 0);
 
+  // Plan every intent up front. The planner is pure, so this is the same set
+  // of intents, in the same per-NPP order, the lanes below used to plan inline.
   const now = new Date();
+  const planned: PlannedNppRedemption[] = [];
+  for (const nppId of candidateNppIds) {
+    const nppKey = nppId.toString();
+    const archetype = options.archetypesByNppId.get(nppKey);
+    if (!archetype) continue;
+
+    const heldPositions: NppHeldFundPosition[] = [];
+    for (const position of positionsByNppId.get(nppKey) ?? []) {
+      const fund = fundById.get(String(position.fundId));
+      if (!fund || !Number.isFinite(fund.quotedNav) || fund.quotedNav <= 0) continue;
+      heldPositions.push({
+        fundId: position.fundId,
+        units: position.units ?? 0,
+        quotedNav: fund.quotedNav,
+      });
+    }
+
+    const intents = planNppFundRedemptions({
+      archetype,
+      cashAnchor: cashByNppId.get(nppKey) ?? 0,
+      positions: heldPositions,
+    });
+    for (const intent of intents) {
+      const fund = fundById.get(intent.fundId.toString());
+      if (fund) planned.push({ nppId, intent, quotedNav: fund.quotedNav });
+    }
+  }
+  if (planned.length === 0) return { redemptionsQueued, unitsRedeemed, errors };
+
+  // Fast path: every intent in one transaction, one bulk write per collection.
+  // It commits only when every guard the per-intent path checks would pass, so
+  // the end state is the one the per-intent path reaches when nothing skips.
+  // Any miss aborts the whole batch and the per-intent path below runs instead.
+  const batched = await applyNppRedemptionsAtomically(db, planned, now);
+  if (batched.status === "applied") {
+    for (const p of planned) unitsRedeemed += p.intent.units;
+    return { redemptionsQueued: planned.length, unitsRedeemed, errors };
+  }
+  if (batched.status === "failed") {
+    // The commit may or may not have landed, so re-running could redeem twice.
+    // The intents are re-planned from fresh positions on the next pass.
+    errors.push(`NPP redemptions batch: ${batched.message}`);
+    return { redemptionsQueued, unitsRedeemed, errors };
+  }
+
+  const sequential = await applyNppRedemptionsSequentially(db, planned, now);
+  redemptionsQueued += sequential.redemptionsQueued;
+  unitsRedeemed += sequential.unitsRedeemed;
+  errors.push(...sequential.errors);
+  return { redemptionsQueued, unitsRedeemed, errors };
+}
+
+export type PlannedNppRedemption = {
+  nppId: ObjectId;
+  intent: NppRedemptionIntent;
+  quotedNav: number;
+};
+
+/** Thrown inside the batch transaction when a guard misses, to abort it. */
+class NppRedemptionGuardMiss extends Error {}
+
+type AtomicOutcome =
+  { status: "applied" } | { status: "unavailable" } | { status: "failed"; message: string };
+
+async function applyNppRedemptionsAtomically(
+  db: Db,
+  planned: PlannedNppRedemption[],
+  now: Date
+): Promise<AtomicOutcome> {
+  const client = (db as { client?: { startSession?: () => ClientSession } }).client;
+  if (typeof client?.startSession !== "function") return { status: "unavailable" };
+  let supported = false;
+  try {
+    supported = await assertTransactionSupportAtBoot();
+  } catch {
+    supported = false;
+  }
+  if (!supported) return { status: "unavailable" };
+
+  const session = client.startSession();
+  try {
+    await session.withTransaction(() => writeNppRedemptionBatch(db, planned, now, session));
+    return { status: "applied" };
+  } catch (err) {
+    if (err instanceof NppRedemptionGuardMiss) return { status: "unavailable" };
+    return { status: "failed", message: err instanceof Error ? err.message : String(err) };
+  } finally {
+    await session.endSession();
+  }
+}
+
+/**
+ * The writes of every planned redemption as one bulk call per collection, in
+ * the order the per-intent path issues them. Throws NppRedemptionGuardMiss when
+ * any position debit or supply burn would have been skipped, so the caller's
+ * transaction rolls the batch back. Exported for the equivalence test.
+ */
+export async function writeNppRedemptionBatch(
+  db: Db,
+  planned: PlannedNppRedemption[],
+  now: Date,
+  session?: ClientSession
+): Promise<void> {
+  const opts = session ? { session } : {};
+  const identity = (p: PlannedNppRedemption) => ({
+    fundId: p.intent.fundId,
+    holderKind: "npp" as const,
+    nppId: p.nppId,
+  });
+
+  // Same balance-gated pipeline debit as debitFundPosition, in intent order,
+  // stamped with the clock at the debit as debitFundPosition stamps it.
+  const debitedAt = new Date();
+  const debit = await db.collection(FUND_POSITION_COLLECTION).bulkWrite(
+    planned.map((p) => ({
+      updateOne: {
+        filter: { ...identity(p), units: { $gte: p.intent.units } },
+        update: [
+          {
+            $set: {
+              units: { $subtract: ["$units", p.intent.units] },
+              legacyUnits: {
+                $max: [0, { $subtract: [{ $ifNull: ["$legacyUnits", "$units"] }, p.intent.units] }],
+              },
+              updatedAt: debitedAt,
+            },
+          },
+        ],
+      },
+    })),
+    { ordered: true, ...opts }
+  );
+  if (debit.matchedCount !== planned.length) throw new NppRedemptionGuardMiss();
+
+  // debitFundPosition removes a position the debit took to zero.
+  await db.collection(FUND_POSITION_COLLECTION).bulkWrite(
+    planned.map((p) => ({ deleteOne: { filter: { ...identity(p), units: { $lte: 0 } } } })),
+    { ordered: true, ...opts }
+  );
+
+  // Guarded supply burn per intent, as the per-intent path does it.
+  const burn = await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(
+    planned.map((p) => ({
+      updateOne: {
+        filter: { _id: p.intent.fundId, unitSupply: { $gte: p.intent.units } },
+        update: { $inc: { unitSupply: -p.intent.units }, $set: { updatedAt: now } },
+      },
+    })),
+    { ordered: true, ...opts }
+  );
+  if (burn.matchedCount !== planned.length) throw new NppRedemptionGuardMiss();
+
+  await db.collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION).insertMany(
+    planned.map((p) => queueEntryFor(p, now) as IndexFundRedemptionQueueEntry),
+    { ordered: true, ...opts }
+  );
+  await db.collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION).insertMany(
+    planned.map((p) => queuedTransactionFor(p, now) as IndexFundTransaction),
+    { ordered: true, ...opts }
+  );
+}
+
+function queueEntryFor(
+  p: PlannedNppRedemption,
+  now: Date
+): Omit<IndexFundRedemptionQueueEntry, "_id"> {
+  return {
+    fundId: p.intent.fundId,
+    holderKind: "npp",
+    nppId: p.nppId,
+    units: p.intent.units,
+    requestedNavAnchor: p.quotedNav,
+    requestedAmountAnchor: p.intent.units * p.quotedNav,
+    paidAmountAnchor: 0,
+    unitsBurnedAtRequest: true,
+    status: "queued",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function queuedTransactionFor(
+  p: PlannedNppRedemption,
+  now: Date
+): Omit<IndexFundTransaction, "_id"> {
+  return {
+    fundId: p.intent.fundId,
+    kind: "redemption_queued",
+    holderKind: "npp",
+    nppId: p.nppId,
+    units: p.intent.units,
+    navAnchor: p.quotedNav,
+    amountAnchor: p.intent.units * p.quotedNav,
+    note: "NPP autonomous rebalance redemption queued",
+    createdAt: now,
+  };
+}
+
+/**
+ * The per-intent path: each debit and burn is its own guarded write, so a
+ * miss skips only that intent. Used on standalone Mongo and whenever the
+ * batch would have skipped something. Exported for the equivalence test.
+ */
+export async function applyNppRedemptionsSequentially(
+  db: Db,
+  planned: PlannedNppRedemption[],
+  now: Date
+): Promise<NppRedemptionPassResult> {
+  let redemptionsQueued = 0;
+  let unitsRedeemed = 0;
+  const byNpp = new Map<string, PlannedNppRedemption[]>();
+  for (const p of planned) {
+    const key = p.nppId.toString();
+    const list = byNpp.get(key);
+    if (list) list.push(p);
+    else byNpp.set(key, [p]);
+  }
   // NPPs are independent: each owns its positions, the fund supply burn is an
   // atomic guarded increment, and the queue and transaction rows are inserts.
   // Running NPPs in bounded lanes keeps every intent's writes in their
   // original order and only overlaps the round trips of different NPPs.
   const perNppErrors = await boundedParallelMap(
-    candidateNppIds,
+    [...byNpp.values()],
     NPP_REDEMPTION_CONCURRENCY,
-    async (nppId): Promise<string[]> => {
+    async (items): Promise<string[]> => {
       const nppErrors: string[] = [];
-      const nppKey = nppId.toString();
-      const archetype = options.archetypesByNppId.get(nppKey);
-      if (!archetype) return nppErrors;
-
-      const heldPositions: NppHeldFundPosition[] = [];
-      for (const position of positionsByNppId.get(nppKey) ?? []) {
-        const fund = fundById.get(String(position.fundId));
-        if (!fund || !Number.isFinite(fund.quotedNav) || fund.quotedNav <= 0) continue;
-        heldPositions.push({
-          fundId: position.fundId,
-          units: position.units ?? 0,
-          quotedNav: fund.quotedNav,
-        });
-      }
-
-      const intents = planNppFundRedemptions({
-        archetype,
-        cashAnchor: cashByNppId.get(nppKey) ?? 0,
-        positions: heldPositions,
-      });
-
-      for (const intent of intents) {
+      for (const p of items) {
+        const { nppId, intent } = p;
         try {
-          const fund = fundById.get(intent.fundId.toString());
-          if (!fund) continue;
-
           // Atomic, balance-gated debit: the sole guarantee that we never remove
           // more units than the NPP holds. A failed debit means a concurrent
           // change drained the position — skip rather than over-redeem.
@@ -259,48 +464,23 @@ export async function processNppFundRedemptions(
               "npp",
               { nppId },
               intent.units,
-              fund.quotedNav
+              p.quotedNav
             );
             continue;
           }
 
-          const amountAnchor = intent.units * fund.quotedNav;
-          await enqueueRedemption(db, {
-            fundId: intent.fundId,
-            holderKind: "npp",
-            nppId,
-            units: intent.units,
-            requestedNavAnchor: fund.quotedNav,
-            requestedAmountAnchor: amountAnchor,
-            paidAmountAnchor: 0,
-            unitsBurnedAtRequest: true,
-            status: "queued",
-            createdAt: now,
-            updatedAt: now,
-          });
-          await insertFundTransaction(db, {
-            fundId: intent.fundId,
-            kind: "redemption_queued",
-            holderKind: "npp",
-            nppId,
-            units: intent.units,
-            navAnchor: fund.quotedNav,
-            amountAnchor,
-            note: "NPP autonomous rebalance redemption queued",
-            createdAt: now,
-          });
+          await enqueueRedemption(db, queueEntryFor(p, now));
+          await insertFundTransaction(db, queuedTransactionFor(p, now));
 
           redemptionsQueued++;
           unitsRedeemed += intent.units;
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          nppErrors.push(`NPP ${nppKey} redemption: ${message}`);
+          nppErrors.push(`NPP ${nppId.toString()} redemption: ${message}`);
         }
       }
       return nppErrors;
     }
   );
-  for (const list of perNppErrors) errors.push(...list);
-
-  return { redemptionsQueued, unitsRedeemed, errors };
+  return { redemptionsQueued, unitsRedeemed, errors: perNppErrors.flat() };
 }

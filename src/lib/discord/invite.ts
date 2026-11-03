@@ -30,7 +30,3 @@ export function normalizeDiscordInviteUrl(value: string | null | undefined): str
     return null;
   }
 }
-
-export function isDiscordInviteUrl(value: string | null | undefined): boolean {
-  return normalizeDiscordInviteUrl(value) !== null;
-}

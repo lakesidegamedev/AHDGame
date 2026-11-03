@@ -2,8 +2,13 @@ import { describe, it, expect } from "vitest";
 import {
   FACILITY_TARGET_DAILY_REVENUE_ANCHOR,
   facilitiesFromUnits,
+  plantSizeForSector,
+  plantSizeMongoExpr,
   plantSizeUnits,
+  plantsFromUnitsForSector,
 } from "./facilityQuantum";
+import { SECTOR_STRATEGIES } from "./sectorStrategies";
+import { revenuePerCapacityUnitForStrategy } from "./capacityEconomy";
 import { CORPORATION_TYPES } from "./corporations";
 import { revenuePerCapacityUnit } from "./capacityEconomy";
 
@@ -58,5 +63,54 @@ describe("facilitiesFromUnits", () => {
     expect(revenuePerCapacityUnit("manufacturing", 1, "vehicles")).toBe(
       revenuePerCapacityUnit("manufacturing_vehicles", 1)
     );
+  });
+});
+
+describe("plantSizeForSector", () => {
+  it("sizes a vehicle recipe on a plain manufacturing sector as a vehicle plant", () => {
+    for (const strategyId of ["vehicle_assembly", "vehicle_heavy_machinery"]) {
+      const sector = { sectorType: "manufacturing", strategyId };
+      expect(plantSizeForSector(sector)).toBe(plantSizeUnits("manufacturing_vehicles"));
+      expect(plantSizeForSector(sector)).toBe(
+        plantSizeForSector({ sectorType: "manufacturing", industryModel: "vehicles" })
+      );
+      // 41.7 vehicle units are 41 vehicle plants, not 1 steel plant.
+      expect(plantsFromUnitsForSector(sector, 41.7)).toBe(41);
+    }
+    expect(plantSizeForSector({ sectorType: "manufacturing", strategyId: "standard" })).toBe(25);
+    expect(plantSizeForSector({ sectorType: "manufacturing" })).toBe(25);
+  });
+
+  it("maps every manufacturing recipe that makes vehicles to the vehicle plant size", () => {
+    for (const strategy of SECTOR_STRATEGIES.manufacturing) {
+      if (!((strategy.supply.vehicles ?? 0) > 0)) continue;
+      expect(plantSizeForSector({ sectorType: "manufacturing", strategyId: strategy.id })).toBe(
+        plantSizeUnits("manufacturing_vehicles")
+      );
+    }
+  });
+
+  it("prices a vehicle-recipe plant like a vehicle-model plant", () => {
+    const rpu = revenuePerCapacityUnitForStrategy("manufacturing", "vehicle_assembly", 1);
+    const nameplate =
+      rpu * plantSizeForSector({ sectorType: "manufacturing", strategyId: "vehicle_assembly" });
+    expect(nameplate).toBe(
+      revenuePerCapacityUnitForStrategy("manufacturing", "standard", 1, "vehicles") *
+        plantSizeUnits("manufacturing_vehicles")
+    );
+  });
+
+  it("gives bulk updates a per-document size that matches the per-sector helper", () => {
+    expect(plantSizeMongoExpr({ sectorType: "energy" })).toBe(250);
+    expect(plantSizeMongoExpr({ sectorType: "manufacturing", industryModel: "vehicles" })).toBe(1);
+    expect(plantSizeMongoExpr({ sectorType: "manufacturing" })).toEqual({
+      $switch: {
+        branches: [
+          { case: { $eq: ["$strategyId", "vehicle_assembly"] }, then: 1 },
+          { case: { $eq: ["$strategyId", "vehicle_heavy_machinery"] }, then: 1 },
+        ],
+        default: 25,
+      },
+    });
   });
 });

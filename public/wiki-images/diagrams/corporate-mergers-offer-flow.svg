@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="790" height="450" viewBox="0 0 790 450" role="img" font-family="system-ui, sans-serif">
+<title>Acquisition offer flow</title>
+<desc>An offer is answered by the target; if the combined share trips the review level the deal goes to the minister, who clears, clears with a sell-down order, or blocks it; cleared deals close.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="789" height="449" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="30" y="30" width="140" height="74" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="100.0" y="54.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Offer</text>
+<text x="100.0" y="71.5" text-anchor="middle" font-size="13" fill="#18181b">open for 24</text>
+<text x="100.0" y="88.5" text-anchor="middle" font-size="13" fill="#18181b">turns</text>
+<path d="M170,67 L220,67" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="220" y="30" width="200" height="74" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="320.0" y="46.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Target answers</text>
+<text x="320.0" y="63.0" text-anchor="middle" font-size="13" fill="#18181b">player accepts or</text>
+<text x="320.0" y="80.0" text-anchor="middle" font-size="13" fill="#18181b">rejects; computer accepts</text>
+<text x="320.0" y="97.0" text-anchor="middle" font-size="13" fill="#18181b">at its asking price</text>
+<path d="M420,67 L480,67" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="450" y="60" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">accepts</text>
+<rect x="480" y="30" width="240" height="74" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="600.0" y="63.0" text-anchor="middle" font-size="13" fill="#18181b">Combined share of an industry</text>
+<text x="600.0" y="80.0" text-anchor="middle" font-size="13" fill="#18181b">over the trip level?</text>
+<path d="M320,104 L320,156" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="328" y="134" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">rejects or lapses</text>
+<rect x="220" y="156" width="200" height="44" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="320.0" y="182.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">No deal</text>
+<path d="M600,104 L600,156" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="608" y="134" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">yes</text>
+<rect x="480" y="156" width="260" height="74" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="610.0" y="180.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Referred to the minister</text>
+<text x="610.0" y="197.5" text-anchor="middle" font-size="13" fill="#18181b">if no ruling in 6 turns, the</text>
+<text x="610.0" y="214.5" text-anchor="middle" font-size="13" fill="#18181b">published bands decide</text>
+<path d="M540,230 L540,262 L300,262 L300,284" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="420" y="256" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">cleared</text>
+<path d="M600,230 L600,284" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="608" y="258" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">cleared with</text>
+<text x="608" y="272" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">a sell-down</text>
+<path d="M735,230 L735,284" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="743" y="258" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">blocked</text>
+<rect x="220" y="284" width="160" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="300.0" y="310.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Cleared</text>
+<rect x="500" y="284" width="180" height="74" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="590.0" y="308.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Sell-down order</text>
+<text x="590.0" y="325.5" text-anchor="middle" font-size="13" fill="#18181b">12 turns to get below</text>
+<text x="590.0" y="342.5" text-anchor="middle" font-size="13" fill="#18181b">the trip level</text>
+<rect x="695" y="284" width="80" height="44" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="735.0" y="310.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Final</text>
+<path d="M300,328 L300,380" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M590,358 L590,366 L440,366 L440,380" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="30" y="380" width="730" height="56" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="395.0" y="404.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Close</text>
+<text x="395.0" y="421.0" text-anchor="middle" font-size="13" fill="#18181b">price paid, target's shareholders cashed out, target's cash and sectors move to the buyer</text>
+<path d="M720,67 L770,67 L770,408 L760,408" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="758" y="60" text-anchor="end" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">no</text>
+</svg>

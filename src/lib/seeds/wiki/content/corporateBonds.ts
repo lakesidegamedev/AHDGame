@@ -1,27 +1,30 @@
 export const corporateBondsContent = `# Corporate Bonds
 
-Corporations can issue bonds to raise liquid capital. Bonds are fixed-income debt instruments: the issuing corporation receives cash immediately, then pays periodic coupon interest to bondholders until the bond matures, at which point the full face value is returned.
+You want to build a new plant and you do not want to sell shares to pay for it. A **corporate bond** is the alternative: a loan a corporation takes from the public. The company gets the cash now, pays interest (a **coupon**) every turn, and repays the full face value in one lump sum on the maturity date. Players can buy bonds for steady income. If the corporation cannot pay, the bond **defaults** and the company's rating and options suffer.
 
 ## Issuing a bond
 
-Only the CEO can issue bonds. Access the bond panel from the corporation page.
+Only the CEO can issue bonds, from the Credit & Bonds tab (under Finance) of the corporation page. Each bond unit has a face value of 1,000 in the bond's currency. The currency's bond market buys as many units as its cash and your rating allow at issue; those units sit in the public float, where any player or corporation can buy them. Any units it cannot take stay unplaced and sell turn by turn as the market's cash allows. The coupon is set by the prime rate, the corporation's credit rating and the term. The form shows the exact rate for each of the three terms before you commit.
+
+![Bonds tab issue form showing the rate by maturity, the issuance cap and the debt headroom](/wiki-images/screens/corporate-bonds-issue-form.webp)
 
 | Parameter | Details |
 | --- | --- |
-| Minimum issuance | anchor currency 100,000 |
-| Maximum total debt | 2x equity, and never more than what the corporation could realise by selling up (its plants at book, its cash, and the bonds it holds). The second cap is usually the binding one for a built-out corporation, and it is the same test the insolvency check applies, so a corporation inside its quoted ceiling cannot be judged insolvent. The Bonds tab says which limit is binding. Refinancing defaulted debt is exempt, since it adds no debt. |
-| Unit face value | anchor currency 1,000 per bond unit |
+| Minimum issuance | ₳100,000 |
+| Maximum total debt | 2x equity, and never more than what the corporation could realise by selling up (its plants at book, its cash, and the bonds it holds). The second cap is usually the binding one for a built-out corporation, and it is the same test the insolvency check applies, so a corporation inside its quoted ceiling cannot be judged insolvent. When that second cap is the binding one, the issue form says so. Refinancing defaulted debt is exempt, since it adds no debt. |
+| Maximum per issue | 25% of annual revenue, with a floor of ₳500,000,000 |
+| Unit face value | 1,000 per bond unit, in the bond's currency |
 | Maturity options | 96 turns (2 years), 240 turns (5 years), 336 turns (7 years) |
 | Coupon rate | prime rate + credit spread + 1.0pp + term premium (see below) |
 | Issuance cooldown | 24 turns between issuances for publicly-listed corporations; 12 turns for private corporations |
 
-**Blocked while under IMF restructuring:** If your corporation is under an active corporate IMF restructuring, you cannot issue new bonds or refinance defaulted debt until the restructuring ends. This is separate from a country's sovereign IMF facility.
+**Blocked while under IMF restructuring:** If your corporation is under an active [corporate IMF restructuring](/wiki/imf), you cannot issue new bonds or refinance defaulted debt until the restructuring ends, and existing bonds are removed during a rescue. This is separate from a country's sovereign IMF facility.
 
-Corporate bonds are issued in the corporation's home currency (see [Currency Exchange](/wiki/currency-exchange)). The proceeds go directly to corporate liquid capital. Bond units enter the **public float** and can be purchased by any player or corporation.
+Corporate bonds are issued in the corporation's home currency (see [Currency Exchange](/wiki/currency-exchange)). The proceeds for the units the market takes go directly to corporate liquid capital, and later placements of unplaced units are credited as they sell. A bond moved abroad with the corporation stays in the currency it was issued in. A subsidiary keeps its own bonds, which lets a bonded company be bought as a [subsidiary](/wiki/subsidiary-corporations).
 
-**What borrowing actually costs.** The corporation receives the whole face value in cash at issuance, pays a coupon every turn, and then repays the **whole face value in one payment on the maturity turn**, not gradually. Both the coupon and that repayment are charged on every unit issued, including units nobody bought. The issue card prices the principal due at maturity beside the interest, and a standing notice on every tab of the corporation page names the next principal falling due, turning into a warning once it is within 24 turns and saying so outright when liquid capital is already below the amount owed. A bond moved abroad with the corporation stays in the currency it was issued in.
+Issuing makes sense to fund rapid expansion when your credit rating is strong (cheap debt beats diluting equity), to bridge a temporary cash crunch, or to finance an HQ relocation (cross-country moves cost 14% of market cap; a 7-year relocation bond is offered as an alternative payment method).
 
-## Credit rating and coupon rate
+## What the coupon will be
 
 Your corporation has a **credit rating** (0-100 composite score) based on four weighted factors:
 
@@ -32,13 +35,9 @@ Your corporation has a **credit rating** (0-100 composite score) based on four w
 | Profitability | 25% | Return on equity |
 | Liquidity | 20% | Liquid capital relative to short-term obligations |
 
-The credit spread added to the prime rate reflects this score. A highly profitable corporation with low debt pays a coupon close to the prime rate. A heavily indebted or loss-making corporation pays a significantly higher spread.
+The credit spread added to the prime rate reflects this score. A highly profitable corporation with low debt pays a coupon close to the prime rate. A heavily indebted or loss-making corporation pays a significantly higher spread. The country's [central bank](/wiki/central-banks) sets the prime rate. A change moves the coupon on every new issue and the price of every existing bond, but a bond's coupon is fixed for its whole life once issued.
 
-Credit scores use **inertia smoothing** (changes phase in gradually instead of jumping instantly): each turn the new raw score is blended 75% new + 25% previous. This prevents a single bad turn from instantly nuking your rating.
-
-If your corporation has previously defaulted on a bond, a **credit penalty** applies for **96 turns**, locking your rating at CCC and capping your composite score.
-
-## Term premium
+Credit scores use **inertia smoothing** (changes phase in gradually instead of jumping instantly): each turn the new raw score is blended 75% new + 25% previous. This prevents a single bad turn from instantly nuking your rating. If your corporation has previously defaulted on a bond, a **credit penalty** applies for **96 turns**, locking your rating at CCC and capping your composite score. Debt, profit, liquidity and equity on your [corporation](/wiki/corporations) are what the rating reads.
 
 Longer bonds command a higher coupon to compensate investors for locking up capital. The term premium is added on top of the credit-spread formula:
 
@@ -55,38 +54,32 @@ A BBB-rated corporation (credit spread 3.0pp) with a prime rate of 3.0% would pa
 - 5yr: 3.0 + 3.0 + 1.0 + 1.00 = **8.00%**
 - 7yr: 3.0 + 3.0 + 1.0 + 1.75 = **8.75%**
 
-The bond issuance form shows the exact rate for each duration before you commit.
+## Coupons, and the lump sum at the end
 
-## Per-turn coupon payments
+The corporation receives the face value in cash for every unit the market takes, pays a coupon every turn, and then repays the **whole face value in one payment on the maturity turn**, not gradually. Plan cash for it. Both the coupon and that repayment are charged on every placed unit, including units still sitting in the public float that no player has bought. Units that were never placed cost nothing. The issue card prices the principal due at maturity beside the interest, and the CEO sees a standing notice above every tab of the corporation page naming the next principal falling due. It reads "Due soon" once the repayment is within 24 turns, says so whenever current cash (or projected cash, if the corporation is retaining earnings) falls short of the amount owed, and becomes a warning that cannot be dismissed once a shortfall is within 48 turns.
 
-Each turn, the bond pays a fraction of its annual coupon to all current bondholders:
+Each turn the bond pays all current bondholders a share of its annual coupon: the face value times the coupon rate, divided by 48 turns a year. For a ₳100,000 bond at 8% coupon rate with 48 turns per year:
+- Annual coupon: ₳8,000
+- Per-turn payment: ₳8,000 / 48 ≈ ₳166.67
 
+Payments are made from corporate liquid capital. If the corporation's liquid capital falls below zero after coupon payments and it also fails the solvency check, the bond **defaults** (see below).
+
+A BBB-rated corporation issues **₳10,000,000** of 7-year (336 turn) bonds, which is 10,000 units. The prime rate is 3.0%, the credit spread is 3.0 points, the corporate premium is 1.0 and the 7-year term premium is 1.75, so the coupon is **8.75%**.
+
+- Annual coupon: ₳10,000,000 x 8.75% = ₳875,000.
+- Per turn (48 turns a year): ₳875,000 / 48 = about **₳18,229**.
+- Over 7 years the corporation pays about ₳6,125,000 in interest.
+- On turn 336 it must also repay **₳10,000,000 in one payment**. If that payment drives liquid capital below zero and the corporation's assets do not cover its debt, the bond defaults.
+
+A buyer who pays par for 100 units (₳100,000) earns about ₳1,823 a turn in coupons and gets the ₳100,000 back at maturity.
+
+## Bond prices after issue
+
+Bond market prices fluctuate based on the current effective rate and time to maturity. The price is a fraction of face value (1.0 = par). It is the present value of the remaining coupons plus the present value of the face value returned at maturity, discounted at the current effective rate. The result is clamped between 0.05 and 2.0.
+
+\`\`\`wiki-chart
+corporate-bond-price-by-market-rate
 \`\`\`
-perTurnPayment = (faceValue x couponRate / 100) / turnsPerYear
-\`\`\`
-
-For a anchor currency 100,000 bond at 8% coupon rate with 48 turns per year:
-- Annual coupon: anchor currency 8,000
-- Per-turn payment: anchor currency 8,000 / 48 ≈ anchor currency 166.67
-
-Payments are made from corporate liquid capital. If the corporation's liquid capital falls below zero after coupon payments, the bond **defaults**.
-
-## Bond market price
-
-Bond market prices fluctuate based on the current effective rate and time to maturity. The price is computed as a fraction of face value (1.0 = par):
-
-\`\`\`
-r = currentRate / 100          // effective annual rate as decimal
-c = couponRate / 100           // coupon as decimal
-n = yearsRemaining
-
-discountFactor = (1 + r) ^ -n
-annuityFactor = (1 - discountFactor) / r
-
-price = c x annuityFactor + discountFactor
-\`\`\`
-
-This is the present value of remaining coupon payments plus the present value of the face value returned at maturity. The result is clamped between 0.05 and 2.0.
 
 **Key relationships:**
 - When rates **rise**, existing bond prices **fall** (your fixed coupon is worth less relative to new issuances)
@@ -94,68 +87,54 @@ This is the present value of remaining coupon payments plus the present value of
 - As a bond approaches maturity, its price converges toward par (1.0) regardless of rate movements. This **pull-to-par** effect dampens price volatility for bonds near maturity.
 - If the bond defaults, its market price is fixed at **0.1** (10 cents on the dollar)
 
-## Buying and selling bonds
+Bond holdings and debt also feed the [Stock Market](/wiki/stock-market) share price calculation, so defaults hurt it, and bond prices and defaults move the value of an [index fund](/wiki/index-funds) reserve.
+
+## Buying, holding and buying back
 
 Any player or corporation can buy bond units from the public float:
 
-- **Players:** Payment from personal cash. Coupon payments received as personal income each turn.
-- **Corporations:** Payment from liquid capital. Coupon payments received as corporate income. Add \`?corporationId=\` to buy for your corporation.
-- **NPP caretaker CEOs:** When the corp is profitable and cash sits above one day of revenue, they buy high-coupon home-currency paper from the public float (a quarter of the surplus per turn). They will not buy the corp's own issue, and a loss-making corp keeps the cash as runway.
+- **Players:** Payment from personal cash. Coupon payments received as personal income each turn. A [line of credit](/wiki/line-of-credit) counts that coupon income toward what you can borrow against, and a frozen line redirects it to the loan.
+- **Corporations:** Payment from liquid capital. Coupon payments received as corporate income. Choose your corporation as the buyer to buy from its treasury.
+- **NPP caretaker CEOs:** When the corp is profitable and cash sits above one day of revenue, they spend surplus cash on high-coupon home-currency paper from the public float. They will not buy the corp's own issue, and a loss-making corp keeps the cash as runway.
+
+Buying suits steady income with minimal management, rate speculation (buy long-duration bonds when rates are high and prices are depressed, profit when rates fall), or distressed debt (buy defaulted bonds cheaply from the float and wait for the default to be cured at face value).
 
 CEOs can also **buy back** their own bonds from the public float to reduce outstanding debt:
-- Non-defaulted bonds: buyback at current **market price**
-- Defaulted bonds: buyback at **face value** (anchor currency 1,000/unit), which prevents buying distressed debt at a discount and immediately retiring it for a profit
+- Non-defaulted bonds: buyback at the bond market's current **asking price**
+- Defaulted bonds: buyback at **face value** (1,000 per unit), which prevents buying distressed debt at a discount and immediately retiring it for a profit
 
-## Default
+The Credit & Bonds tab lists the bonds your corporation has **issued** (outstanding debt). The bonds it **holds** in other companies are on the corporation's portfolio page, in the Bonds section, with issuer names, units held and current market values.
 
-A bond defaults when the corporation's liquid capital goes negative after a coupon payment **or a maturity repayment** (the lump-sum principal is the trigger people miss), AND it fails a solvency check: the corporation's bond portfolio counts as an asset here, and a corporation whose actions are paused is never declared insolvent while paused, though its coupons and maturities still settle. A positive bond buyback escrow can cover the shortfall first, and a corp whose total assets (valued the same way the restructure planner values them) still exceed its debt is judged illiquid rather than insolvent and does not default. Only a corp that fails both checks actually defaults. On default:
+## When a bond defaults
 
-- Bondholders receive no payment that turn
+A bond defaults when the corporation's liquid capital goes negative after a coupon payment **or a maturity repayment** (the lump-sum principal is the trigger people miss), AND it fails a solvency check: the corporation's bond portfolio counts as an asset here, and while the game team has paused corporation actions no corporation is declared insolvent, though coupons and maturities still settle. A positive share buyback escrow can cover the shortfall first, and a corp whose total assets (valued the same way the restructure planner values them) still exceed its debt is judged illiquid rather than insolvent and does not default. Only a corp that fails both checks actually defaults. On default:
+
+- Coupons stop from the next turn, and a maturity repayment that caused the default is not paid out. If the issuer is later dissolved, bondholders are paid ahead of shareholders from what the assets realise.
 - The corporation's credit rating takes a **96-turn penalty**, locking it at CCC
-- **Defaulted bonds can still be traded** on the open market at distressed prices (fixed at 0.1)
+- **Defaulted units left in the public float can still be bought** at the distressed price (fixed at 0.1), but holders cannot sell a defaulted bond back to the market
 - CEOs **cannot** buy their own corporation's bonds at all (prevents self-dealing)
+
+The game team can also place a corporation with outstanding bond principal into [IMF restructuring](/wiki/imf), for example after a default.
+
+![How a missed coupon or maturity payment leads through escrow and a solvency check to default, then refinance, restructure or dissolution.](/wiki-images/diagrams/corporate-bonds-default-flow.svg)
 
 ### Refinancing defaulted debt
 
-A CEO can **refinance** defaulted bonds by issuing a new bond for the full defaulted principal and migrating holders to it. This bypasses the normal issuance cooldown but still enforces the 2x equity leverage cap. A corporation can refinance defaulted debt at most **2 times** in its lifetime. If the limit is reached, dissolution is the only remaining option.
+A CEO can **refinance** defaulted bonds by issuing a new bond for the full defaulted principal and migrating holders to it. This bypasses the normal issuance cooldown but still enforces the 2x equity leverage cap. A corporation can refinance defaulted debt at most **2 times** in its lifetime. Once the limit is reached, the CEO can still pay the defaulted principal from cash, restructure by selling sectors, or dissolve.
 
-**National corporations** (government-owned) cannot refinance defaulted bonds or pay them off with cash: only private corporations have these restructuring options.
+**National corporations** (government-owned) cannot refinance defaulted bonds, pay them off with cash or restructure: only private corporations have these options.
 
-### Auto-resolving lingering defaults
+### If the CEO does nothing
 
-If a corporation defaults and the CEO does not resolve the crisis, the turn processor auto-resolves it on a later turn (once the default is at least one turn old, so the CEO had a turn to act in the crisis modal). National and IMF-managed corporations are never auto-resolved. Resolution is tried in this order:
+If a corporation defaults and the CEO does not resolve the crisis, the turn processor auto-resolves it on a later turn (once the default is at least one turn old, so the CEO had a turn to act in the crisis modal). That is why a replacement bond can appear after a default you ignored. National and IMF-managed corporations are never auto-resolved. Resolution is tried in this order:
 
 1. **Refinance (no sale):** if the corp is within its leverage limits and hasn't hit the refinance cap, a replacement bond is issued and holders are rolled into it. This preserves every sector, the least destructive outcome.
 2. **Restructure (sell):** if refinance isn't feasible, the turn processor sells the **minimum number of sectors** needed, at orderly-sale salvage values, to repay **100% of defaulted principal**, cures the defaulted bonds, and keeps the corporation alive with its remaining sectors.
 3. **Stand for dissolution:** if neither works, the default stands until the CEO dissolves and settles.
 
-The CEO is notified and an audit entry is written for every auto-resolution.
+The CEO is notified and an audit entry is written for every auto-resolution. This closes the loophole of defaulting and ignoring the crisis when the balance sheet still has enough asset value (or refinancing headroom) to make creditors whole.
 
-This closes the loophole of defaulting and ignoring the crisis when the balance sheet still has enough asset value (or refinancing headroom) to make creditors whole.
+Distressed bond speculators can buy defaulted units from the float at 0.1 and wait for the cure: a cash payoff or a restructure repays holders at face value, and a refinance rolls them into the new bond at par. A dissolution pays only what the assets cover.
 
-Distressed bond speculators can buy defaulted bonds cheaply and wait for the CEO to buy them back at face value, making a profit on the spread.
-
-## Bond holdings
-
-From your corporation page (Bonds tab) you can see:
-- Bonds your corporation has **issued** (outstanding debt)
-- Bonds your corporation **holds** in other companies (investment portfolio)
-
-The portfolio view shows issuer names, units held, and current market values.
-
-## Strategic considerations
-
-**When to issue bonds:**
-- Fund rapid expansion: cheap debt is better than diluting equity if your credit rating is strong
-- Bridge a temporary cash crunch while revenue catches up to growth costs
-- Finance HQ relocation (cross-country moves cost 14% of market cap; a 7-year relocation bond is offered as an alternative payment method)
-
-**When to buy bonds:**
-- Steady income with minimal management: coupon payments arrive each turn automatically
-- Rate speculation: buy long-duration bonds when rates are high (prices are depressed), profit when rates fall and prices rise
-- Distressed debt: buy defaulted corporate bonds cheaply, wait for CEO buyback at face value
-
-**Watch the prime rate:** The [Central Bank Chair](/wiki/central-banks) sets the prime rate each turn they act. Rate changes ripple directly into all bond market prices.
-
-See also: [Corporations](/wiki/corporations), [Sovereign Bonds](/wiki/sovereign-bonds), [Central Banks](/wiki/central-banks), [Stock Market](/wiki/stock-market)
+Applies in every world with private corporations; interest rates follow each country's central bank and the era's money. Last checked 2026-10-30, version 1.18.0. Exact rules: [Corporate Bond Defaults design page](https://docs.lakesidegames.net/design/corporate-bond-defaults.html)
 `;

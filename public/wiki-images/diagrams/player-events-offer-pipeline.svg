@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" role="img" font-family="system-ui, sans-serif">
+<title>Per-turn event offer for a character</title>
+<desc>The checks each turn decides whether a character is offered a personal random event, and how a broadcast moment bypasses the spacing cooldown.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="330" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="185.0" y="43.5" font-size="13" text-anchor="middle" fill="#18181b">1. Overdue events resolve on their default</text>
+<path d="M185 60 L185 72" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="72" width="330" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="185.0" y="95.5" font-size="13" text-anchor="middle" fill="#18181b">2. In an election debate this turn?</text>
+<path d="M185 112 L185 124" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="124" width="330" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="185.0" y="147.5" font-size="13" text-anchor="middle" fill="#18181b">3. Already holding a pending event?</text>
+<path d="M185 164 L185 176" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="176" width="330" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="185.0" y="199.5" font-size="13" text-anchor="middle" fill="#18181b">4. Still on the spacing cooldown?</text>
+<path d="M185 216 L185 228" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="228" width="330" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="185.0" y="243.0" font-size="13" text-anchor="middle" fill="#18181b">5. Keep events that fit: role, country,</text>
+<text x="185.0" y="260.0" font-size="13" text-anchor="middle" fill="#18181b">year, kind cooldown</text>
+<path d="M185 268 L185 280" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="280" width="330" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="185.0" y="303.5" font-size="13" text-anchor="middle" fill="#18181b">6. Pick one by weight</text>
+<path d="M185 320 L185 332" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="332" width="330" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="185.0" y="355.5" font-size="13" text-anchor="middle" fill="#18181b">7. Offer it, fix the dice roll, notify</text>
+<rect x="430" y="72" width="180" height="144" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="520.0" y="122.0" font-size="13" text-anchor="middle" fill="#18181b">Skipped this turn</text>
+<text x="520.0" y="139.0" font-size="13" text-anchor="middle" fill="#18181b"></text>
+<text x="520.0" y="156.0" font-size="13" text-anchor="middle" fill="#18181b">The next turn runs the</text>
+<text x="520.0" y="173.0" font-size="13" text-anchor="middle" fill="#18181b">same checks again</text>
+<path d="M350 92 L430 92" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="390" y="87" font-size="12" text-anchor="middle" fill="#52525b">yes</text>
+<path d="M350 144 L430 144" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="390" y="139" font-size="12" text-anchor="middle" fill="#52525b">yes</text>
+<path d="M350 196 L430 196" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="390" y="191" font-size="12" text-anchor="middle" fill="#52525b">yes</text>
+<rect x="500" y="250" width="280" height="150" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="640.0" y="288.0" font-size="12" text-anchor="middle" fill="#18181b">Broadcast moment (a shared historic</text>
+<text x="640.0" y="304.0" font-size="12" text-anchor="middle" fill="#18181b">year)</text>
+<text x="640.0" y="320.0" font-size="12" text-anchor="middle" fill="#18181b">Delivered to every eligible character,</text>
+<text x="640.0" y="336.0" font-size="12" text-anchor="middle" fill="#18181b">at most one per turn, once per world.</text>
+<text x="640.0" y="352.0" font-size="12" text-anchor="middle" fill="#18181b">Ignores the spacing cooldown; a pending</text>
+<text x="640.0" y="368.0" font-size="12" text-anchor="middle" fill="#18181b">event resolves on its default.</text>
+<path d="M500 352 L350 352" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="425" y="344" font-size="12" text-anchor="middle" fill="#52525b">goes straight to the offer</text>
+</svg>

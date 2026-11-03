@@ -47,3 +47,13 @@ describe("stock cover markdown", () => {
     expect(writeDownUnits(1000, Number.POSITIVE_INFINITY, policy)).toBeCloseTo(20, 12);
   });
 });
+
+describe("cappedStockUnitCost", () => {
+  it("caps a runaway unit cost at a multiple of the reference price and leaves sane costs alone", async () => {
+    const { cappedStockUnitCost, MAX_STOCK_COST_MULTIPLE } = await import("./stockCoverRules");
+    expect(cappedStockUnitCost(6.2e15, 272)).toBe(MAX_STOCK_COST_MULTIPLE * 272);
+    expect(cappedStockUnitCost(250, 272)).toBe(250);
+    expect(cappedStockUnitCost(250, 0)).toBe(250);
+    expect(cappedStockUnitCost(Number.NaN, 272)).toBe(0);
+  });
+});

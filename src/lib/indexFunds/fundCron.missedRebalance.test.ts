@@ -158,4 +158,49 @@ describe("index fund cron missed rebalance", () => {
     expect(result.errors).toEqual([]);
     expect(result.rebalances).toBe(0);
   }, 120_000);
+
+  it("warns on the fund's stagger turn only while a queued redemption blocks later catch-up turns", async () => {
+    const w = world();
+    const staggerTurn = TURNS_PER_DAY * 10 + staggerPhase(String(w.fund._id), TURNS_PER_DAY);
+    const queuedRow = (units: number): IndexFundRedemptionQueueEntry => ({
+      _id: new ObjectId(),
+      fundId: w.fund._id,
+      holderKind: "npp",
+      nppId: w.npp._id,
+      units,
+      requestedNavAnchor: 100,
+      requestedAmountAnchor: 100 * units,
+      paidAmountAnchor: 0,
+      status: "queued",
+      unitsBurnedAtRequest: true,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    // One payout claim per pass, so the second row keeps the fund blocked on
+    // the following, catch-up turn as well.
+    await w.db
+      .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+      .insertMany([queuedRow(10), queuedRow(10)]);
+
+    const scheduled = await runIndexFundCron(w.db, {
+      currentTurn: staggerTurn,
+      queuedRedemptionClaimsPerPass: 1,
+    });
+    expect(scheduled.rebalances).toBe(0);
+    expect(scheduled.redemptionsPaid).toBe(1);
+    expect(scheduled.errors).toEqual([
+      `Fund ${w.fund.slug}: rebalance deferred, queued redemptions pending`,
+    ]);
+
+    // The queue still blocks the catch-up turn; saying the same thing again on
+    // every turn tells nobody anything new.
+    const catchUp = await runIndexFundCron(w.db, {
+      currentTurn: staggerTurn + 1,
+      queuedRedemptionClaimsPerPass: 1,
+    });
+    expect(catchUp.rebalances).toBe(0);
+    expect(catchUp.redemptionsPaid).toBe(1);
+    expect(catchUp.errors).toEqual([]);
+    expect((await getFundById(w.db, w.fund._id))?.lastRebalancedAt).toEqual(w.staleRebalance);
+  }, 120_000);
 });

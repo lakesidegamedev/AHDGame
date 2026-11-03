@@ -30,7 +30,7 @@ export interface ReleaseNote {
  * hundred changes is a wall. These are the arcs a release actually has, and a
  * note lands in one by the tags its author already wrote.
  */
-export const RELEASE_SECTIONS: { name: string; tags: string[] }[] = [
+const RELEASE_SECTIONS: { name: string; tags: string[] }[] = [
   {
     name: "Elections and campaigns",
     tags: [
@@ -126,7 +126,7 @@ export const RELEASE_SECTIONS: { name: string; tags: string[] }[] = [
   },
 ];
 
-export const OTHER_SECTION = "Other changes";
+const OTHER_SECTION = "Other changes";
 
 export function sectionForNote(note: Pick<ReleaseNote, "tags">): string {
   const tags = note.tags.map((t) => t.toLowerCase());
@@ -139,7 +139,7 @@ export function sectionForNote(note: Pick<ReleaseNote, "tags">): string {
 const BADGE_RANK: Record<string, number> = { major: 0, minor: 1, patch: 2, hotfix: 3 };
 
 /** Biggest change first inside a section, then oldest, then alphabetical. */
-export function compareNotes(a: ReleaseNote, b: ReleaseNote): number {
+function compareNotes(a: ReleaseNote, b: ReleaseNote): number {
   const rank = (n: ReleaseNote) =>
     Math.min(...(n.badges.length > 0 ? n.badges : ["patch"]).map((x) => BADGE_RANK[x] ?? 2));
   return rank(a) - rank(b) || a.date.localeCompare(b.date) || a.title.localeCompare(b.title);

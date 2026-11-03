@@ -63,6 +63,53 @@ export function redirectUnclaimableSovereignMaturityLeg(
   };
 }
 
+/** Live payee ids already resolved for a whole maturity wave, keyed `${collection}:${id}`. */
+export interface SovereignMaturityLiveTargets {
+  live: ReadonlySet<string>;
+  /** Collections the preload read in full; anything else is still queried per settlement. */
+  collections: ReadonlySet<string>;
+}
+
+/**
+ * Resolve every payee named by a maturity wave in one read per collection. The
+ * per-bond resolver asks once per holder kind for every maturing bond, which is
+ * the read that repeats hundreds of times on a ladder maturity turn.
+ */
+export async function loadSovereignMaturityLiveTargets(
+  db: Db,
+  legGroups: Iterable<readonly SovereignMaturityCashLeg[]>
+): Promise<SovereignMaturityLiveTargets> {
+  const idsByCollection = new Map<string, unknown[]>();
+  for (const legs of legGroups) {
+    for (const leg of legs) {
+      if (!SOVEREIGN_MATURITY_HOLDER_COLLECTIONS.has(leg.collection) || !(leg.amount > 0)) continue;
+      const ids = idsByCollection.get(leg.collection) ?? [];
+      ids.push(leg.filter._id);
+      idsByCollection.set(leg.collection, ids);
+    }
+  }
+  const live = new Set<string>();
+  const collections = new Set<string>();
+  const readCollection = async (name: string) => {
+    const ids = idsByCollection.get(name);
+    if (!ids?.length) return;
+    collections.add(name);
+    const rows = await db
+      .collection<{ _id: unknown }>(name)
+      .find({ _id: { $in: ids } } as never, { projection: { _id: 1 } })
+      .toArray();
+    for (const row of rows) live.add(`${name}:${String(row._id)}`);
+  };
+  await Promise.all([
+    readCollection("characters"),
+    readCollection("imperialCharacters"),
+    readCollection("corporations"),
+    readCollection("indexFunds"),
+    readCollection("npps"),
+  ]);
+  return { live, collections };
+}
+
 /**
  * Resolve frozen holder legs to targets that exist at payout time. A frozen
  * quote can outlive its payees (an NPP culled by a party merge) and can carry
@@ -73,7 +120,8 @@ export function redirectUnclaimableSovereignMaturityLeg(
 export async function resolveSovereignMaturityPayoutLegs(
   db: Db,
   legs: readonly SovereignMaturityCashLeg[],
-  pool: { currencyCode: CurrencyCode; localPerAnchor: number }
+  pool: { currencyCode: CurrencyCode; localPerAnchor: number },
+  preloaded?: SovereignMaturityLiveTargets
 ): Promise<SovereignMaturityCashLeg[]> {
   const idsByCollection = new Map<string, unknown[]>();
   for (const leg of legs) {
@@ -86,22 +134,23 @@ export async function resolveSovereignMaturityPayoutLegs(
   const liveIds = async (name: string, collection: Collection<{ _id: unknown }>) => {
     const ids = idsByCollection.get(name);
     if (!ids?.length) return [];
+    if (preloaded?.collections.has(name)) return [];
     const rows = await collection
       .find({ _id: { $in: ids } } as never, { projection: { _id: 1 } })
       .toArray();
     return rows.map((row) => `${name}:${String(row._id)}`);
   };
-  const live = new Set(
-    (
-      await Promise.all([
-        liveIds("characters", db.collection<{ _id: unknown }>("characters")),
-        liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
-        liveIds("corporations", db.collection<{ _id: unknown }>("corporations")),
-        liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
-        liveIds("npps", db.collection<{ _id: unknown }>("npps")),
-      ])
-    ).flat()
-  );
+  const live = new Set<string>(preloaded?.live ?? []);
+  for (const id of (
+    await Promise.all([
+      liveIds("characters", db.collection<{ _id: unknown }>("characters")),
+      liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
+      liveIds("corporations", db.collection<{ _id: unknown }>("corporations")),
+      liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
+      liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+    ])
+  ).flat())
+    live.add(id);
   return legs.map((leg) => {
     if (leg.collection === "centralBanks") {
       const bankId = sovereignMaturityCentralBankId(String(leg.filter._id));

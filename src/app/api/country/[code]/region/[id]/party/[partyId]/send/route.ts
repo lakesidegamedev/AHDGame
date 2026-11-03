@@ -55,7 +55,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!auth.ok) return auth.response;
     const authUser = auth.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/region/[id]/party/[partyId]/send:${authUser.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, sendFundsSchema);

@@ -2,10 +2,10 @@
  * Faster builds for plants whose output is in deep shortage.
  *
  * Construction is a pure function of an order's `startTurn`/`onlineTurn`
- * (see corporations/buildDelivery.ts). While `gameConfig.shortageBuildSpeedupEnabled`
- * is on, each outstanding order in a sector whose own output clears into a
- * market more than SHORTAGE_BUILD_UNMET_THRESHOLD unmet has its REMAINING
- * build time multiplied by SHORTAGE_BUILD_TIME_FACTOR, once per order. The
+ * (see corporations/buildDelivery.ts). Each outstanding order in a sector
+ * whose own output clears into a market more than SHORTAGE_BUILD_UNMET_THRESHOLD
+ * unmet has its REMAINING build time multiplied by SHORTAGE_BUILD_TIME_FACTOR,
+ * once per order. The
  * window is rewritten so the share already delivered at the current turn is
  * unchanged: no capacity or construction-in-progress jumps, the rest of the
  * order just arrives sooner. Covers orders placed before the switch and new
@@ -69,12 +69,13 @@ export function acceleratedBuildWindow(
  * immutable identity so a concurrently placed order is never touched.
  */
 export function shortageBuildSpeedupOps(args: {
-  enabled: boolean;
   sectorId: unknown;
   outstanding: readonly SectorBuildOrder[];
   currentTurn: number;
   unmetShare: number;
   now: Date;
+  /** Remaining-time multiplier; defaults to SHORTAGE_BUILD_TIME_FACTOR. */
+  factor?: number;
 }): Array<{
   updateOne: {
     filter: Record<string, unknown>;
@@ -82,11 +83,12 @@ export function shortageBuildSpeedupOps(args: {
     arrayFilters: Record<string, unknown>[];
   };
 }> {
-  const { enabled, sectorId, outstanding, currentTurn, unmetShare, now } = args;
-  if (!enabled || !(unmetShare > SHORTAGE_BUILD_UNMET_THRESHOLD)) return [];
+  const { sectorId, outstanding, currentTurn, unmetShare, now } = args;
+  const factor = args.factor ?? SHORTAGE_BUILD_TIME_FACTOR;
+  if (!(unmetShare > SHORTAGE_BUILD_UNMET_THRESHOLD)) return [];
   const ops = [];
   for (const order of outstanding) {
-    const next = acceleratedBuildWindow(order, currentTurn);
+    const next = acceleratedBuildWindow(order, currentTurn, factor);
     if (!next) continue;
     ops.push({
       updateOne: {
@@ -111,4 +113,41 @@ export function shortageBuildSpeedupOps(args: {
     });
   }
   return ops;
+}
+
+/**
+ * Funded-turn build speedup. The legacy pass reads the formula ledger, which a
+ * funded turn does not produce, so on funded worlds the speedup never fired.
+ * Here each plant's shortage is its main product's measured book pressure
+ * (units asked over delivered, see shortageGrowthRules), turned into an unmet
+ * share (1 - 1/pressure), and its outstanding orders are shortened by
+ * `factor` once, through the same window rewrite as the legacy rule.
+ */
+export function fundedShortageBuildOps(args: {
+  sectors: readonly {
+    _id: unknown;
+    buildQueue?: readonly SectorBuildOrder[] | null;
+    mothballed?: boolean | null;
+    pressure: number | undefined;
+  }[];
+  currentTurn: number;
+  factor: number | undefined;
+  now: Date;
+}): ReturnType<typeof shortageBuildSpeedupOps> {
+  const factor = args.factor;
+  if (!(typeof factor === "number" && factor > 0 && factor < 1)) return [];
+  return args.sectors.flatMap((s) => {
+    const pressure = s.pressure;
+    if (s.mothballed === true || !(typeof pressure === "number" && pressure > 1)) return [];
+    const outstanding = (s.buildQueue ?? []).filter((o) => o.onlineTurn > args.currentTurn);
+    if (outstanding.length === 0) return [];
+    return shortageBuildSpeedupOps({
+      sectorId: s._id,
+      outstanding,
+      currentTurn: args.currentTurn,
+      unmetShare: 1 - 1 / pressure,
+      now: args.now,
+      factor,
+    });
+  });
 }

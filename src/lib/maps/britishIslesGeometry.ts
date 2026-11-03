@@ -23,7 +23,7 @@ export const UK_REGION_CODES = [
   "NIR",
 ] as const;
 
-export const IE_REGION_CODES = ["DUB", "KIL", "MID", "WEX", "LIM", "COR", "GAL", "DON"] as const;
+const IE_REGION_CODES = ["DUB", "KIL", "MID", "WEX", "LIM", "COR", "GAL", "DON"] as const;
 
 export const BRITISH_ISLES_REGION_CODES: string[] = [...UK_REGION_CODES, ...IE_REGION_CODES];
 

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="290" viewBox="0 0 760 290" role="img" font-family="system-ui, sans-serif">
+<title>Currency trading tiers and where the spread goes</title>
+<desc>Three trading tiers charge different spreads. Each spread fee splits into 25 percent destroyed, 25 percent central bank forex revenue and 50 percent to that currency reserve pool.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="289" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="250" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="145.0" y="40.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Tier 1: market maker</text>
+<text x="145.0" y="56.5" font-size="12" text-anchor="middle" fill="#3f3f46">1% spread, instant fill</text>
+<text x="145.0" y="72.5" font-size="12" text-anchor="middle" fill="#3f3f46">always available</text>
+<path d="M272 52 L296 52 L296 142 L320 142" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="110" width="250" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="145.0" y="130.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Tier 2: public limit order</text>
+<text x="145.0" y="146.6" font-size="12" text-anchor="middle" fill="#3f3f46">0.64% spread, fills when</text>
+<text x="145.0" y="162.6" font-size="12" text-anchor="middle" fill="#3f3f46">the rate meets your limit</text>
+<path d="M272 142 L296 142 L296 142 L320 142" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="200" width="250" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="145.0" y="220.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Tier 3: direct player trade</text>
+<text x="145.0" y="236.6" font-size="12" text-anchor="middle" fill="#3f3f46">0.36% spread, fills when</text>
+<text x="145.0" y="252.6" font-size="12" text-anchor="middle" fill="#3f3f46">the target player accepts</text>
+<path d="M272 232 L296 232 L296 142 L320 142" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="322" y="108" width="150" height="68" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="397.0" y="138.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Spread fee</text>
+<text x="397.0" y="154.6" font-size="12" text-anchor="middle" fill="#3f3f46">split three ways</text>
+<rect x="530" y="20" width="210" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="635.0" y="48.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">25% destroyed</text>
+<text x="635.0" y="64.5" font-size="12" text-anchor="middle" fill="#3f3f46">deflationary sink</text>
+<path d="M474 142 L502 142 L502 52 L528 52" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="530" y="110" width="210" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="635.0" y="130.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">25% forex revenue</text>
+<text x="635.0" y="146.6" font-size="12" text-anchor="middle" fill="#3f3f46">booked to the currency's</text>
+<text x="635.0" y="162.6" font-size="12" text-anchor="middle" fill="#3f3f46">central bank</text>
+<path d="M474 142 L502 142 L502 142 L528 142" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="530" y="200" width="210" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="635.0" y="220.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">50% reserve pool</text>
+<text x="635.0" y="236.6" font-size="12" text-anchor="middle" fill="#3f3f46">that currency's own pool,</text>
+<text x="635.0" y="252.6" font-size="12" text-anchor="middle" fill="#3f3f46">separate from general reserves</text>
+<path d="M474 142 L502 142 L502 232 L528 232" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+</svg>

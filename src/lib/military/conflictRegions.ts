@@ -41,13 +41,3 @@ export function extendConflict<T extends { region: RegionCode; extendedRegions?:
   if (!canExtendConflictTo(conflict, target)) return conflict;
   return { ...conflict, extendedRegions: [...(conflict.extendedRegions ?? []), target] };
 }
-
-/**
- * Whether two regions are close enough to be one theatre.
- *
- * Used when deciding if a newly joined belligerent's ground extends the existing war or
- * opens a separate one.
- */
-export function regionsFormOneTheatre(a: RegionCode, b: RegionCode): boolean {
-  return a === b || regionNeighbors(a).includes(b);
-}

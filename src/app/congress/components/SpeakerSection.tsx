@@ -5,7 +5,7 @@ import { Avatar } from "@/components/Avatar";
 import { PartyChip, formatPartyState } from "./CongressShared";
 import { ElectionDropdown } from "./LeadershipShared";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { SpeakerResponse } from "@/lib/congress/types";
 import { useGameClock } from "@/contexts/useGameClock";
 import { LocalTime } from "@/components/time/LocalTime";

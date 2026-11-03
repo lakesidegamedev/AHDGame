@@ -58,7 +58,7 @@ export const CABINET_GAMEPLAY_FAMILIES: Readonly<Record<string, PoliticalMetricI
   "S:workLifeBalance": "economy.workerSecurity",
 };
 
-export function cabinetActionScopeApplies(scope: string, regionId?: string): boolean {
+function cabinetActionScopeApplies(scope: string, regionId?: string): boolean {
   if (scope === "Nat") return true;
   // The current owner model has regional services, but no separate veteran cohort board.
   if (scope === "Vet") return regionId !== undefined;

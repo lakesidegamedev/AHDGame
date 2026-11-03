@@ -5,7 +5,7 @@ import type { MarketCapTick } from "@/lib/db/types/marketCapTick";
 const QUARTER_MS = 15 * 60_000;
 
 /** Start of the 15-minute slot containing `now` (UTC). */
-export function quarterSlotStart(now: Date): Date {
+function quarterSlotStart(now: Date): Date {
   return new Date(Math.floor(now.getTime() / QUARTER_MS) * QUARTER_MS);
 }
 

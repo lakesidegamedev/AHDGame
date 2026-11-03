@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { MetricCategoryId } from "@/lib/db/types";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { MetricFilter } from "./components/GlobeMetricPanel";
 import { hasBlocData } from "./worldBlocs";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";

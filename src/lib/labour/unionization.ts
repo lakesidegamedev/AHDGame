@@ -54,14 +54,7 @@ export const UNIONIZATION_MINWAGE_WEIGHT = 20;
  * organizing is meant to be a real, independent lever, not one that only
  * matters on top of pre-existing economic distress.
  */
-export const UNIONIZATION_LAW_WEIGHT = 0.6;
-/**
- * Approval at which a representing union neither helps nor hurts its sector's
- * density under the old signed-around-50 formula. Kept so older call sites
- * and comments that still mention "neutral approval" have a name; represented
- * density now tracks approval directly (see {@link unionizationDriftTarget}).
- */
-export const UNIONIZATION_APPROVAL_NEUTRAL = 50;
+const UNIONIZATION_LAW_WEIGHT = 0.6;
 
 export interface UnionizationDriftInputs {
   /** CEO wage-level slider (1.0 = baseline). Absent/non-finite ⇒ 1 (neutral). */

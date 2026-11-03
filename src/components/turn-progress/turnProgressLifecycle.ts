@@ -5,7 +5,7 @@ import { classifyTurnActivity, type TurnActivityId } from "./turnProgressPresent
 export const TURN_PROGRESS_STALE_MS = 30 * 60 * 1000;
 
 /** Heartbeat age after which the worker is treated as lost, not still running. */
-export const TURN_PROGRESS_HEARTBEAT_GRACE_MS = 2 * 60 * 1000;
+const TURN_PROGRESS_HEARTBEAT_GRACE_MS = 2 * 60 * 1000;
 
 export type TurnProgressStatus = TurnStatus & {
   singleplayer?: boolean;
@@ -57,7 +57,7 @@ export type TurnProgressEvent =
   | { type: "retry"; nowMs: number }
   | { type: "reset" };
 
-export const HIDDEN_VIEW: TurnProgressView = {
+const HIDDEN_VIEW: TurnProgressView = {
   kind: "hidden",
   sessionKey: null,
   targetTurn: null,
@@ -68,7 +68,7 @@ export const HIDDEN_VIEW: TurnProgressView = {
   errorMessage: null,
 };
 
-export const INITIAL_TURN_PROGRESS_MEMORY: TurnProgressMemory = {
+const INITIAL_TURN_PROGRESS_MEMORY: TurnProgressMemory = {
   dismissedKey: null,
   completedKey: null,
   cancelledKey: null,
@@ -93,7 +93,7 @@ export function measuredProgress(status: TurnProgressStatus | null): number | nu
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-export function toEpochMs(value: string | Date | null | undefined): number | null {
+function toEpochMs(value: string | Date | null | undefined): number | null {
   if (value == null) return null;
   if (value instanceof Date) {
     const ms = value.getTime();

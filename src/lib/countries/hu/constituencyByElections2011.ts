@@ -89,7 +89,7 @@ async function cancelJobs(
       { session }
     );
 }
-export async function materializeHuModernByElectionOpening(input: {
+async function materializeHuModernByElectionOpening(input: {
   db: Db;
   session: ClientSession;
   turn: number;
@@ -366,7 +366,7 @@ export async function openHuModernByElections(db: Db, turn: number, now: Date): 
   );
 }
 
-export async function materializeHuModernByElectionResolution(input: {
+async function materializeHuModernByElectionResolution(input: {
   db: Db;
   session: ClientSession;
   receiptId: string;

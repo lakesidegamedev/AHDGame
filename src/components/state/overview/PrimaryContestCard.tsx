@@ -65,11 +65,3 @@ export function ContestedPrimariesCard({ vm }: { vm: OverviewViewModel }) {
     </section>
   );
 }
-
-/**
- * @deprecated Backwards-compat alias — prefer the new name.
- * The card was repurposed from "single primary winner" to "list of
- * contested primaries". Kept exported under the old name to avoid
- * breaking unrelated imports during the transition.
- */
-export const PrimaryContestCard = ContestedPrimariesCard;

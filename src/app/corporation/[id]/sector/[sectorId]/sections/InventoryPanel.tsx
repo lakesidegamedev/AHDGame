@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
-import type { CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 interface InventoryPanelProps {

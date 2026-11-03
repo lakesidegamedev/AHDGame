@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getLegislatureSeal } from "@/lib/constants/legislatureSeals";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 

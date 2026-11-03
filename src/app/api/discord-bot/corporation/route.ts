@@ -12,7 +12,6 @@ import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
-  calcMarketingGrowth,
   getUnemploymentMarginModifier,
   getStateSectorSpecializationMarginBonus,
   calculateWorkers,
@@ -21,6 +20,8 @@ import {
   MAX_DIVIDEND_RATE,
 } from "@/lib/constants/corporations";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
+import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
+import { loadStrengthUpkeepStage } from "@/lib/corporations/strengthUpkeep";
 import { loadCorporationDetailView } from "@/lib/corporations/queries/corporationDetail";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
@@ -255,9 +256,15 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const totalCosts = f.totalCosts;
   const income = netIncome;
 
-  const marketingStrengthGrowth = calcMarketingGrowth(
-    corporation.marketingBudget,
-    corporation.marketingStrength ?? 0
+  // Same projection as the website: anchor-converted budget, net of decay.
+  const { marketingStrengthGrowth } = calculateCorpStrengthProjection(
+    {
+      marketingBudget: corporation.marketingBudget,
+      marketingStrength: corporation.marketingStrength ?? 0,
+      liquidCurrencyCode: corpCurrency,
+      strengthUpkeepStage: await loadStrengthUpkeepStage(db),
+    },
+    corpFxRate
   );
 
   const totalShares = corporation.totalShares ?? 10_000_000;

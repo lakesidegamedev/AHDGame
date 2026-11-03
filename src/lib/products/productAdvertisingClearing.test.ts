@@ -8,9 +8,11 @@ import {
   settleProductAdvertisingObligations,
 } from "./mediaProductAdvertisingSettlement";
 import {
+  PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION,
   PRODUCT_ADVERTISING_CLEARING_COLLECTION,
   PRODUCT_ADVERTISING_PAYABLES_COLLECTION,
   productAdvertisingClearingTransition,
+  resolveProductAdvertisingPayables,
   type ProductAdvertisingPayable,
 } from "./productAdvertisingClearing";
 import {
@@ -324,10 +326,13 @@ describe("product advertising clearing pool", () => {
     await settleProductAdvertisingObligations(store, [buyer._id], 60, "media", {
       skipClearing: true,
     });
-    const owed = (await db
-      .collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION)
-      .find({})
-      .toArray()) as unknown as ProductAdvertisingPayable[];
+    const owed = await resolveProductAdvertisingPayables(
+      store,
+      (await db
+        .collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION)
+        .find({})
+        .toArray()) as unknown as ProductAdvertisingPayable[]
+    );
     // The seller moves after the eligibility read: the journal guard refuses.
     await db
       .collection("corporations")
@@ -436,8 +441,11 @@ describe("product advertising clearing pool", () => {
     );
 
     const records = (await db.collection("bankMoneyMoves").find({}).toArray()) as Array<{
+      _id: string;
       kind: string;
-      legs: unknown[];
+      status?: string;
+      legs: Array<{ kind: string; amount: number; applied?: boolean }>;
+      projections?: Array<{ projection: { insert?: Record<string, unknown> } }>;
     }>;
     const legs = records.reduce((sum, record) => sum + record.legs.length, 0);
     const legacyLegs = ORDERS * (1 + SELLERS);
@@ -450,5 +458,189 @@ describe("product advertising clearing pool", () => {
       expect(Math.abs(paid - total)).toBeLessThan(1e-9);
     }
     expect(await poolTotal(db)).toBeLessThan(1e-9);
+
+    // Every order's receipt names its full seller set, and its journal record
+    // carries totals only: the per-seller table is stored once, not inside the
+    // record every projection of that move reads back.
+    const buyerRows = await db
+      .collection("corporations")
+      .find({ _id: { $in: buyers.map((buyer) => buyer._id) } })
+      .toArray();
+    expect(buyerRows).toHaveLength(ORDERS);
+    for (const [index, row] of buyerRows.entries()) {
+      expect(row.mediaProductAdvertisingReceiptV1).toMatchObject({
+        projectId: orders[index].projectId,
+        turn: 199,
+        amountAnchor: orders[index].amountAnchor,
+      });
+      expect(
+        (row.mediaProductAdvertisingReceiptV1 as { sellerCorporationIds?: string[] })
+          .sellerCorporationIds
+      ).toHaveLength(SELLERS);
+    }
+    const orderRecords = records.filter((record) => record.kind === ORDER);
+    expect(orderRecords).toHaveLength(ORDERS);
+    for (const record of orderRecords) {
+      const frozen = JSON.stringify(record);
+      expect(frozen).not.toContain("sellerAllocations");
+      expect(frozen.length).toBeLessThan(16_000);
+      expect(record.status).toBe("applied");
+    }
+    expect(await db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION).countDocuments({})).toBe(0);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      0
+    );
+  });
+
+  it("stores one frozen seller table per order, outside the journal record", async () => {
+    const buyer = corp("USD", 1);
+    const sellers = [corp("USD", 1), corp("EUR", 0.9), corp("GBP", 0.8), corp("CAD", 1.35)];
+    const first = order(buyer, sellers, 50, 90, "first");
+    const db = createInMemoryDb();
+    seedWorld(db, [{ buyer, obligations: [first] }], sellers);
+
+    await settleProductAdvertisingObligations(db as unknown as Db, [buyer._id], 90, "media", {
+      skipClearing: true,
+    });
+
+    const payable = await db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION).findOne({});
+    const key = `media-product-advertising:90:${buyer._id.toHexString()}:first`;
+    expect(payable?._id).toBe(key);
+    // The payable carries the order's totals and no per-seller split.
+    expect(payable).not.toHaveProperty("sellerAllocations");
+    expect(payable?.poolAmountLocal).toBe(first.buyerAmountLocal);
+    const table = await db
+      .collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
+      .findOne({ _id: key });
+    expect(table?.turn).toBe(90);
+    expect(table?.family).toBe("media");
+    expect(
+      (table?.sellerAllocations as Array<{ corporationId: string }>).map(
+        (seller) => seller.corporationId
+      )
+    ).toEqual(first.sellerAllocations.map((seller) => seller.corporationId));
+
+    // The clearing prices the payable from that table and then removes both.
+    await settleProductAdvertisingObligations(db as unknown as Db, [buyer._id], 90);
+    for (const [sellerId, total] of expectedSellerTotals([first]))
+      expect(await cash(db, new ObjectId(sellerId))).toBeCloseTo(total, 9);
+    expect(await poolTotal(db)).toBeLessThan(1e-9);
+    expect(await db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION).countDocuments({})).toBe(0);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      0
+    );
+  });
+
+  it("resumes an order whose payable insert never landed", async () => {
+    const buyer = corp("USD", 1);
+    const sellers = [corp("USD", 1), corp("EUR", 0.9), corp("GBP", 0.8), corp("CAD", 1.35)];
+    const first = order(buyer, sellers, 90, 100, "first");
+    const db = createInMemoryDb();
+    seedWorld(db, [{ buyer, obligations: [first] }], sellers);
+    const store = db as unknown as Db;
+    const payables = db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION);
+    const realInsertOne = payables.insertOne.bind(payables);
+    let armed = true;
+    payables.insertOne = async (doc) => {
+      if (armed) {
+        armed = false;
+        throw new Error("process killed before the payable landed");
+      }
+      return realInsertOne(doc);
+    };
+
+    await settleProductAdvertisingObligations(store, [buyer._id], 100, "media", {
+      skipClearing: true,
+    });
+
+    // The debit and the pool credit landed, nothing is owed yet, and the table
+    // quoted for the order is already durable.
+    expect(await cash(db, buyer._id)).toBeCloseTo(1_000_000 - 90, 9);
+    for (const seller of sellers) expect(await cash(db, seller._id)).toBe(0);
+    expect(await poolTotal(db)).toBeCloseTo(90, 9);
+    const [stuck] = await journalRecords(db, ORDER);
+    expect(stuck.status).toBe("partial");
+    expect(await db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION).countDocuments({})).toBe(0);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      1
+    );
+
+    // The next turn finishes the record from the same table and pays once.
+    await settleProductAdvertisingObligations(store, [buyer._id], 101);
+    for (const [sellerId, total] of expectedSellerTotals([first]))
+      expect(await cash(db, new ObjectId(sellerId))).toBeCloseTo(total, 9);
+    expect(await cash(db, buyer._id)).toBeCloseTo(1_000_000 - 90, 9);
+    expect((await journalRecords(db, ORDER)).map((record) => record.status)).toEqual(["applied"]);
+    expect(await poolTotal(db)).toBeLessThan(1e-9);
+    expect(await db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION).countDocuments({})).toBe(0);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      0
+    );
+  });
+
+  it("settles once when the claim never happened, reusing the written table", async () => {
+    const buyer = corp("USD", 1);
+    const sellers = [corp("USD", 1), corp("EUR", 0.9)];
+    const first = order(buyer, sellers, 40, 110, "first");
+    const db = createInMemoryDb();
+    seedWorld(db, [{ buyer, obligations: [first] }], sellers);
+    const store = db as unknown as Db;
+    const journal = db.collection("bankMoneyMoves");
+    const realInsertOne = journal.insertOne.bind(journal);
+    let armed = true;
+    journal.insertOne = async (doc) => {
+      if (armed) {
+        armed = false;
+        throw new Error("process killed before the claim");
+      }
+      return realInsertOne(doc);
+    };
+
+    await expect(
+      settleProductAdvertisingObligations(store, [buyer._id], 110, "media", { skipClearing: true })
+    ).rejects.toThrow("process killed");
+    expect(await cash(db, buyer._id)).toBe(1_000_000);
+    expect(await journalRecords(db, ORDER)).toHaveLength(0);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      1
+    );
+
+    await settleProductAdvertisingObligations(store, [buyer._id], 110);
+    for (const [sellerId, total] of expectedSellerTotals([first]))
+      expect(await cash(db, new ObjectId(sellerId))).toBeCloseTo(total, 9);
+    expect(await cash(db, buyer._id)).toBeCloseTo(1_000_000 - 40, 9);
+    expect(await journalRecords(db, ORDER)).toHaveLength(1);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      0
+    );
+  });
+
+  it("drops the table of an order it discards for a missing witness", async () => {
+    const buyer = corp("USD", 1);
+    const seller = corp("USD", 1);
+    const witnessed = order(buyer, [seller], 25, 120, "withdrawn");
+    const legacy = {
+      ...witnessed,
+      sellerAllocations: witnessed.sellerAllocations.map(
+        ({ denomination: _denomination, ...allocation }) => allocation
+      ),
+    };
+    const db = createInMemoryDb();
+    seedWorld(db, [{ buyer, obligations: [] }], [seller]);
+    await db
+      .collection("corporations")
+      .updateOne({ _id: buyer._id }, { $set: { mediaProductAdvertisingObligationsV1: [legacy] } });
+
+    await settleProductAdvertisingObligations(db as unknown as Db, [buyer._id], 120);
+
+    expect(await cash(db, buyer._id)).toBe(1_000_000);
+    expect(await cash(db, seller._id)).toBe(0);
+    expect(await db.collection(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION).countDocuments({})).toBe(
+      0
+    );
+    expect(
+      (await db.collection("corporations").findOne({ _id: buyer._id }))
+        ?.mediaProductAdvertisingObligationsV1
+    ).toEqual([]);
   });
 });

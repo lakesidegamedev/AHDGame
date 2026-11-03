@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { postBillProposalWithElectionConfirmation } from "@/components/bills/BillAutoFailWarning";
 import { useEntityName } from "./useEntityName";
 import { CountryFlag } from "@/components/CountryFlag";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
 import { orgProposingCountry } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";

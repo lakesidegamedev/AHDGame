@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { INDEX_TARGETS } from "@/lib/admin/seed/indexTargets";
 
@@ -618,9 +619,9 @@ export function UniversalSeeder() {
     targetScope: SeedTarget["scope"],
     countryKey: CountryId
   ): boolean => {
-    const abbr = COUNTRY_CONFIGS[countryKey].id;
+    const abbr = COUNTRY_CLIENT_CONFIGS[countryKey].id;
     // SeedTarget has no scope = US-only content; treat as matching US only
-    if (!targetScope) return abbr === COUNTRY_CONFIGS.US.id;
+    if (!targetScope) return abbr === COUNTRY_CLIENT_CONFIGS.US.id;
     return targetScope === abbr || targetScope === "both";
   };
 
@@ -821,7 +822,7 @@ export function UniversalSeeder() {
                         !hasTargets ? "No seed data available for this country yet" : undefined
                       }
                     >
-                      {s === "all" ? "All" : (COUNTRY_CONFIGS[s as CountryId]?.name ?? s)}
+                      {s === "all" ? "All" : (COUNTRY_CLIENT_CONFIGS[s as CountryId]?.name ?? s)}
                       {!hasTargets && <span className="ml-1 text-xs opacity-60">(no data)</span>}
                     </button>
                   );
@@ -895,11 +896,11 @@ export function UniversalSeeder() {
                     }`}
                     title={
                       !hasTargets
-                        ? `No seed targets for ${COUNTRY_CONFIGS[cid]?.name ?? cid}`
+                        ? `No seed targets for ${COUNTRY_CLIENT_CONFIGS[cid]?.name ?? cid}`
                         : undefined
                     }
                   >
-                    {COUNTRY_CONFIGS[cid]?.name ?? cid}
+                    {COUNTRY_CLIENT_CONFIGS[cid]?.name ?? cid}
                   </button>
                 );
               })}

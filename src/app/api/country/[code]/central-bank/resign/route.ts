@@ -23,7 +23,11 @@ export async function POST(request: Request, context: RouteContext) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/central-bank/resign:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code } = await context.params;

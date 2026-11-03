@@ -103,6 +103,7 @@ async function main() {
         warnings: result.plan.warnings,
         wipe: result.plan.wipe,
         partialWipe: result.plan.partialWipe,
+        reseed: result.plan.reseed,
         characters: result.plan.characters.length,
         sovereignBondsRehomed: result.plan.sovereignBonds.length,
         couponClaimsPatched: result.plan.couponClaims.length,

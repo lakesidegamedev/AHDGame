@@ -1,12 +1,19 @@
 /**
  * Exchange Registry — config-driven stock exchange lookups.
  *
- * All mappings are derived from COUNTRY_CONFIGS.exchangeName.
+ * All mappings are derived from the country registry's exchangeName.
  * Adding a country with an exchangeName automatically registers its exchange.
  * No hardcoded NYSE/FTSE/Nikkei values outside this file and countries.ts.
+ *
+ * Reads `COUNTRY_DISPLAY_LABELS` rather than the full registry: the generated
+ * projection carries `exchangeName` and `exchangeKind`, and this module is on
+ * the stock market and election page graphs. Importing `countries.ts` here
+ * pulled every country's institutions, economy and era files into those
+ * bundles for two string fields.
  */
 
-import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "./countries";
+import { COUNTRY_ORDER, type CountryId } from "./countriesCore";
+import { COUNTRY_DISPLAY_LABELS } from "./countryDisplayLabels";
 
 export interface ExchangeInfo {
   countryId: CountryId;
@@ -32,20 +39,22 @@ function toApiKey(exchangeName: string): string {
  * One row per COUNTRY that declares an exchangeName.
  *
  * Iterates COUNTRY_ORDER first (so display order is stable and matches the rest
- * of the app), then any remaining COUNTRY_CONFIGS key. That tail matters:
+ * of the app), then any remaining configured country key. That tail matters:
  * SCO, WAL, BAL and BLR are configured countries that are deliberately absent
  * from COUNTRY_ORDER, and building only from COUNTRY_ORDER left them with no
- * resolvable exchange at all — so their corporations fell through to whatever
+ * resolvable exchange at all, so their corporations fell through to whatever
  * fallback the caller used (NYSE).
  */
 function buildCountryEntries(): ExchangeInfo[] {
   const ordered: CountryId[] = [
     ...COUNTRY_ORDER,
-    ...(Object.keys(COUNTRY_CONFIGS) as CountryId[]).filter((id) => !COUNTRY_ORDER.includes(id)),
+    ...(Object.keys(COUNTRY_DISPLAY_LABELS) as CountryId[]).filter(
+      (id) => !COUNTRY_ORDER.includes(id)
+    ),
   ];
 
   return ordered
-    .map((id) => [id, COUNTRY_CONFIGS[id]] as const)
+    .map((id) => [id, COUNTRY_DISPLAY_LABELS[id]] as const)
     .filter(([, config]) => config?.exchangeName)
     .map(([id, config]) => ({
       countryId: id,

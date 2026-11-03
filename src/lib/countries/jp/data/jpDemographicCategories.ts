@@ -16,19 +16,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * demographicProfileId: "jp_archetypes"
  */
-export const JP_VOTER_GROUP_BASELINES: Record<string, number> = {
-  salaryman_conservative: 65,
-  urban_progressive: 68,
-  rural_traditionalist: 70,
-  young_urban: 48,
-  retiree: 74,
-  public_sector: 66,
-  small_business: 68,
-  komeito_faithful: 72,
-  reform_populist: 55,
-  working_mothers: 58,
-};
-
 export const jpDemographicCategories: DemographicCategory[] = [
   {
     _id: "jp_voterGroups",

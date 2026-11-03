@@ -3,7 +3,8 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { Button } from "@/components/ui/Button";
@@ -68,6 +69,8 @@ interface Snapshot {
   incomePerTurnFace: number;
   dtiLimitInternal: number;
   netWorthLimitInternal: number;
+  /** Why shares in a company you control count for less toward the limit. */
+  collateralNote?: string;
   perPlayerLimitInternal: number;
   perPlayerAvailableInternal: number;
 }
@@ -101,7 +104,7 @@ interface Props {
 }
 
 export function CentralBankLoanTab({ countryId }: Props) {
-  const config = getCountryConfig(countryId);
+  const config = getCountryClientConfig(countryId);
   const cbCurrency = COUNTRY_CURRENCY_MAP[countryId];
   const sym = CURRENCY_SYMBOLS[cbCurrency] ?? "$";
   const { formatAmount } = useCurrency();
@@ -436,6 +439,9 @@ export function CentralBankLoanTab({ countryId }: Props) {
                 ? "No income history yet, so you can only borrow against what you own. The income cap grows as bond coupons, salary, or dividends build up over the last 48 turns."
                 : "Your limit is the lower of the two caps above. The income cap grows as bond coupons, salary, or dividends build up over the last 48 turns."}
             </p>
+            {s.collateralNote && (
+              <p className="mt-1 max-w-3xl text-body-sm text-muted">{s.collateralNote}</p>
+            )}
           </CentralBankSection>
 
           {/* The account is interactive (open it, choose how it pays), so it keeps a card. */}

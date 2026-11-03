@@ -36,7 +36,7 @@ const FLOWS = {
 };
 
 /** The real resourceAndFinanceStart adapter, with bondTurn returning `bond`. */
-async function runWithBondResult(bond: unknown) {
+async function runWithBondResult(bond: unknown, bondEligible?: boolean) {
   settleResetTreasuryCashTurn.mockClear();
   const adapter = getTurnPhaseRegistry().find((entry) => entry.key === "resourceAndFinanceStart")!;
   const runtime = {
@@ -48,6 +48,9 @@ async function runWithBondResult(bond: unknown) {
     markPhaseSkipped: vi.fn(async () => {}),
     requirePhaseResult: vi.fn((_phase: string, result: unknown) => result),
     resumeResultOutcome: vi.fn(() => "restored"),
+    ...(bondEligible === undefined
+      ? {}
+      : { isPhaseEligible: vi.fn((phase: string) => phase !== "bondTurn" || bondEligible) }),
   };
   const context = {
     db: {},
@@ -62,7 +65,8 @@ async function runWithBondResult(bond: unknown) {
     phaseResults: {},
     warnings: [],
   } as never;
-  return adapter.execute(context, runtime as never);
+  await adapter.execute(context, runtime as never);
+  return runtime;
 }
 
 describe("V2 treasury cash needs complete bond flows (#3429)", () => {
@@ -77,5 +81,21 @@ describe("V2 treasury cash needs complete bond flows (#3429)", () => {
   it("settles once from a complete result", async () => {
     await runWithBondResult({ ...COUNTERS, ...FLOWS });
     expect(settleResetTreasuryCashTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips settlement when a phase predicate kept bondTurn from running", async () => {
+    const runtime = await runWithBondResult(null, false);
+    expect(settleResetTreasuryCashTurn).not.toHaveBeenCalled();
+    expect(runtime.requirePhaseResult).not.toHaveBeenCalled();
+    expect(runtime.markPhaseSkipped).toHaveBeenCalledWith(
+      "resetTreasuryCash",
+      "conditional",
+      expect.stringContaining("bondTurn")
+    );
+  });
+
+  it("still demands the result when bondTurn was eligible", async () => {
+    await expect(runWithBondResult(null, true)).rejects.toThrow();
+    expect(settleResetTreasuryCashTurn).not.toHaveBeenCalled();
   });
 });

@@ -23,7 +23,7 @@ export interface IncomeTaxRates {
 }
 export type IncomeShares = Record<IncomeTier, number>;
 /** Relative earnings, not currency thresholds or shares of people. */
-export const RELATIVE_INCOME: IncomeShares = { low: 0.5, middle: 1, high: 2 };
+const RELATIVE_INCOME: IncomeShares = { low: 0.5, middle: 1, high: 2 };
 export const DEFAULT_INCOME_POPULATION: IncomeShares = { low: 30, middle: 50, high: 20 };
 export function isIncomeTier(value: unknown): value is IncomeTier {
   return typeof value === "string" && INCOME_TIERS.some((tier) => tier === value);

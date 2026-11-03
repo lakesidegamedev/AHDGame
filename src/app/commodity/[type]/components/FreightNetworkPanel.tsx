@@ -1,6 +1,6 @@
 import type { CommodityDetail } from "../types";
 import type { CountryId } from "@/lib/constants/countries";
-import { getStateDisplayName } from "@/lib/commodity-map";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { formatUnits } from "../lib/helpers";
 import { useTranslations } from "next-intl";
 

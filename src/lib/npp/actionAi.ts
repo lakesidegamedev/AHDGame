@@ -53,7 +53,7 @@ export const NPP_ACTION_COSTS = {
  * forever, just more slowly — the cost side needs to close off the ratchet
  * too, not just the gain side.
  */
-export const NPP_CAMPAIGN_FUND_COST_BASE = 5_000;
+const NPP_CAMPAIGN_FUND_COST_BASE = 5_000;
 
 export const NPP_FUND_COSTS = {
   buildDonorBase: [10_000, 25_000, 50_000, 75_000, 100_000],

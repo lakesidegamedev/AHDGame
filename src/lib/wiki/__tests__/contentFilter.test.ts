@@ -19,6 +19,25 @@ describe("screenWikiContent", () => {
     expect(result.reason).toMatch(/community rules/i);
   });
 
+  it("accepts country names that share letters with a slur", () => {
+    expect(
+      screenWikiContent({
+        ...baseInput,
+        title: "Niger",
+        content: `${baseInput.content} Niger, Nigeria, Guinea, Equatorial Guinea and Papua New Guinea signed.`,
+        tags: ["niger", "papua new guinea"],
+      })
+    ).toEqual({ ok: true });
+  });
+
+  it("still rejects the slur when a country name is also present", () => {
+    const result = screenWikiContent({
+      ...baseInput,
+      content: `${baseInput.content} Niger n1gger`,
+    });
+    expect(result.ok).toBe(false);
+  });
+
   it("rejects slurs in the title", () => {
     const result = screenWikiContent({ ...baseInput, title: "F4ggot brigade" });
     expect(result.ok).toBe(false);

@@ -62,7 +62,7 @@ export function applyEconomicPull(base: number, pull: number): number {
 }
 
 /** Maximum annual migration-rate bonus from an undersupplied labour market. */
-export const LABOUR_SHORTAGE_MIGRATION_MAX_PCT = 0.5;
+const LABOUR_SHORTAGE_MIGRATION_MAX_PCT = 0.5;
 
 /**
  * Extra annual migration pull from jobs that cannot be filled locally.
@@ -81,6 +81,72 @@ export function labourShortageMigrationBonusPct(
   return Math.min(LABOUR_SHORTAGE_MIGRATION_MAX_PCT, (1 - 1 / tightness) * 0.4 * wage);
 }
 
+/** Five reviewed law positions, ordered most open to most restrictive. */
+export type MigrationLawPosition =
+  "far_left" | "center_left" | "center" | "center_right" | "far_right";
+
+/**
+ * Entry and residence (law family L49): how widely the country admits family,
+ * protected and skills entrants. Scales a region's policy inflow; the values
+ * are the family's authored country-relative entry access. Emigration is left
+ * alone: narrowing admissions does not push residents out.
+ */
+const ENTRY_ACCESS_MIGRATION_FACTOR: Record<MigrationLawPosition, number> = {
+  far_left: 1.7,
+  center_left: 1.3,
+  center: 1,
+  center_right: 0.8,
+  far_right: 0.5,
+};
+
+export function entryAccessMigrationPct(
+  policyMigrationPct: number,
+  position: MigrationLawPosition | null | undefined
+): number {
+  if (!(policyMigrationPct > 0)) return policyMigrationPct;
+  return policyMigrationPct * ENTRY_ACCESS_MIGRATION_FACTOR[position ?? "center"];
+}
+
+/**
+ * Labour migration (law family L52): work visas sized to jobs local workers
+ * cannot fill. `perShortage` is annual % of population per unit of shortage
+ * (1 - 1/tightness); `maxPct` caps it. The center row is the pre-law shortage
+ * pull exactly, including its rule that it only adds to a region that already
+ * takes in migrants. The two open rows recruit even where residents are
+ * leaving, which is what lets a short-staffed, emigrating region refill.
+ */
+export const LABOUR_MIGRATION_RULES: Record<
+  MigrationLawPosition,
+  { perShortage: number; maxPct: number; recruitsIntoEmigration: boolean }
+> = {
+  far_left: { perShortage: 4, maxPct: 3, recruitsIntoEmigration: true },
+  center_left: { perShortage: 2, maxPct: 1.5, recruitsIntoEmigration: true },
+  center: {
+    perShortage: 0.4,
+    maxPct: LABOUR_SHORTAGE_MIGRATION_MAX_PCT,
+    recruitsIntoEmigration: false,
+  },
+  center_right: { perShortage: 0.2, maxPct: 0.25, recruitsIntoEmigration: false },
+  far_right: { perShortage: 0, maxPct: 0, recruitsIntoEmigration: false },
+};
+
+/** Annual % of population admitted on work visas this turn. */
+export function labourMigrationPct(
+  position: MigrationLawPosition | null | undefined,
+  tightness: number | undefined | null,
+  wageIndex: number | undefined | null,
+  policyMigrationPct: number
+): number {
+  const rule = LABOUR_MIGRATION_RULES[position ?? "center"];
+  if (!rule.recruitsIntoEmigration && !(policyMigrationPct > 0)) return 0;
+  if (typeof tightness !== "number" || !Number.isFinite(tightness) || tightness <= 1) return 0;
+  const wage =
+    typeof wageIndex === "number" && Number.isFinite(wageIndex)
+      ? Math.max(0.5, Math.min(1.5, wageIndex))
+      : 1;
+  return Math.min(rule.maxPct, (1 - 1 / tightness) * rule.perShortage * wage);
+}
+
 // ── Conservation + caps (design 2026-06-16) ────────────────────────────────
 // The cohort flow consumes per-region `migrationRate` as a literal annual net %
 // and adds it to the national headcount with no global renormalization. Two
@@ -96,11 +162,25 @@ export const MAX_NET_MIGRATION_PCT_PER_YEAR = 1.5;
 /** The modeled bloc may net at most this much immigration from the unmodeled ROW, %/yr. */
 export const WORLD_NET_MIGRATION_PCT_PER_YEAR = 0.3;
 
-/** Clamp a per-turn net-migration figure to ±MAX_NET_MIGRATION_PCT_PER_YEAR of the region pop. */
-export function capNetMigrants(net: number, pop: number, turnsPerYear: number): number {
+/**
+ * Clamp a per-turn net-migration figure to ±MAX_NET_MIGRATION_PCT_PER_YEAR of the region pop.
+ * `labourVisaPct` raises the inflow ceiling by the work-visa intake, so an open
+ * labour-migration law is not swallowed by the general cap. It never widens
+ * the outflow side.
+ */
+export function capNetMigrants(
+  net: number,
+  pop: number,
+  turnsPerYear: number,
+  labourVisaPct = 0
+): number {
   if (!(pop > 0) || !(turnsPerYear > 0)) return 0;
   const cap = ((MAX_NET_MIGRATION_PCT_PER_YEAR / 100) * pop) / turnsPerYear;
-  return Math.max(-cap, Math.min(cap, net));
+  const visaHeadroom =
+    Number.isFinite(labourVisaPct) && labourVisaPct > 0
+      ? ((labourVisaPct / 100) * pop) / turnsPerYear
+      : 0;
+  return Math.max(-cap, Math.min(cap + visaHeadroom, net));
 }
 
 /**

@@ -12,7 +12,7 @@ import { nppCandidateStrength } from "./candidatePlacement";
 export const CONSOLIDATION_WINDOW_TURNS = 12;
 
 /** An NPP below this share of its party leader's strength withdraws. */
-export const CONSOLIDATION_TRAILING_RATIO = 0.6;
+const CONSOLIDATION_TRAILING_RATIO = 0.6;
 
 export interface ConsolidationEntrant {
   candidateId: string;

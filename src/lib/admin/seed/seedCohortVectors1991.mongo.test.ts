@@ -1,3 +1,4 @@
+import { seedCountyPopulations } from "@/lib/counties/seed";
 /**
  * #3369: 1991 cohort coverage for the eleven countries without a census bundle,
  * against an isolated mongod. Covers an empty database, a reset over an existing
@@ -120,6 +121,7 @@ describe.runIf(REAL_MONGO_ENABLED)("1991 cohort coverage against isolated mongod
     const stats = await seedCohortVectors(db, "1991-default", () => {}, { replace: true });
     expect(stats.skipped).toEqual([]);
     expect(stats.covered).toBe(87);
+    await seedCountyPopulations(db, { replace: true });
     await expectStocksMatchOpening();
     await expectBoundedTurns(3);
   }, 120_000);
@@ -137,6 +139,7 @@ describe.runIf(REAL_MONGO_ENABLED)("1991 cohort coverage against isolated mongod
       { _id: "RU_RETIRED", countryId: "RU", ages: scaled(1_000_000) },
     ]);
     await seedCohortVectors(db, "1991-default", () => {}, { replace: true });
+    await seedCountyPopulations(db, { replace: true });
     await expectStocksMatchOpening();
     expect(
       await db.collection<Stock>("regionDemographics").countDocuments({ _id: "RU_RETIRED" })

@@ -6,7 +6,7 @@ import type { CountryId } from "@/lib/constants/countries";
  * supplies the escalating cost of deficit spending, so keep a modest real
  * borrowing lane instead of letting nominal growth silently close it.
  */
-export const DD_MIN_BORROWING_LIMIT_TO_GDP = 0.4;
+const DD_MIN_BORROWING_LIMIT_TO_GDP = 0.4;
 
 export function effectiveBorrowingLimit(input: {
   countryId: CountryId | string;

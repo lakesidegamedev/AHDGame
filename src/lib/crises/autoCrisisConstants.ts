@@ -1,17 +1,3 @@
-/**
- * Tuning constants for the automatic economic/political crisis triggers and the
- * shared cooldown ledger. Natural-disaster cadence lives in
- * `autoDisasterConstants.ts`; this file governs Tiers A/B/C (condition + random)
- * and the per-template disaster cooldown.
- *
- * Metric scales (confirmed against the reference seed presets):
- *   gdpGrowth / unemploymentRate / inflationRate / powerGridReliability: percent
- *   approval: 0–100. fxDepreciation: percent drop over a window.
- */
-
-/** Default per-template cooldown when a template/config omits one. */
-export const DEFAULT_CRISIS_COOLDOWN_TURNS = 144;
-
 /** Per-template cooldown for the regional disaster pool when a template omits
  *  `disasterCooldownTurns`. Stops the same disaster type recurring in a country
  *  too soon (separate from the per-country disaster cadence). */

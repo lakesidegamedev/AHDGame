@@ -46,7 +46,7 @@ export function Toast({ message, variant = "success", duration = 4000, onClose }
       style={{
         animation: exiting ? "toastOut 0.22s ease forwards" : "toastIn 0.25s ease forwards",
       }}
-      className={`pointer-events-none fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-[100] -translate-x-1/2 flex w-max max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg sm:max-w-sm ${variantStyles[variant]}`}
+      className={`pointer-events-none fixed bottom-[max(calc(5rem+env(safe-area-inset-bottom)),calc(var(--status-bar-height,0px)+0.75rem))] left-1/2 z-[100] -translate-x-1/2 flex w-max max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg sm:max-w-sm ${variantStyles[variant]}`}
     >
       <span className="flex-1">{message}</span>
       <button

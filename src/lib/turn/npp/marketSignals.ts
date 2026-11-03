@@ -34,6 +34,8 @@ import {
 } from "@/lib/constants/commodities";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
+import { isInputStarved } from "@/lib/turn/npp/rules/inputAvailability";
+import { isStateShortfallCommodity } from "@/lib/turn/npp/rules/stateShortfallSignal";
 
 // Macro-aware production policy (SP5). A +33% price premium saturates to the
 // +25 policy bound; sub-5% moves are ignored so the policy does not churn on
@@ -242,12 +244,56 @@ export interface PlacementSignals {
     },
     options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
   ) => number | null;
+  /** Turn-scoped memo of per-candidate facts that do not move during the pass. */
+  sectorFacts?: PlacementSectorFacts;
+  /**
+   * Delivered share of an input's demand in a state last turn, in [0, 1]; null
+   * when unknown. The same lagged fill the corporation turn throttles against.
+   */
+  stateInputAvailabilityOf?: (commodity: CommodityType, stateId: string) => number | null;
+  /**
+   * Expected fill of the scarcest input of the recipe a founding would build in
+   * a candidate cell (foundingRecipeChoice.foundingInputAvailability); null
+   * when not gated. A starved cell is never founded into: the plant could not
+   * run, whatever its output sells for (rules/inputAvailability).
+   */
+  foundingInputAvailabilityOf?: (candidate: UnownedSector) => number | null;
   /**
    * Whether an NPP corp whose primary or secondary type is `sectorType`
    * operates in `countryId`. Gates the essential-shortage valve: it crosses a
    * corp's own field only when no same-type builder exists there.
    */
   hasSameTypeNppIn?: (countryId: string, sectorType: string) => boolean;
+}
+
+/**
+ * Candidate facts that depend only on the turn's snapshot: the two shortage
+ * scores behind the ranking. Every NPP corp ranks the same pool, so re-deriving
+ * them per corp spent a handful of price reads on each candidate a few hundred
+ * times a turn.
+ *
+ * Market SIZE and the fragile score are deliberately NOT here: both read the
+ * pool's live headroom, which founding draws move between corporations in the
+ * same pass. Remembering them would hand a later corp the market an earlier one
+ * already built into.
+ */
+export interface PlacementSectorFacts {
+  shortage: Map<string, number>;
+  peakShortage: Map<string, number>;
+}
+
+export function createPlacementSectorFacts(): PlacementSectorFacts {
+  return { shortage: new Map(), peakShortage: new Map() };
+}
+
+/** Read a remembered value, or compute and remember it. */
+function remembered(store: Map<string, number> | undefined, key: string, compute: () => number) {
+  if (!store) return compute();
+  const cached = store.get(key);
+  if (cached !== undefined) return cached;
+  const value = compute();
+  store.set(key, value);
+  return value;
 }
 
 export function buildActiveMarketBuckets(sectors: readonly CorporateSector[]): Set<string> {
@@ -381,6 +427,7 @@ export interface CandidateExclusionStats {
   stateControlledExcluded?: number;
   depositExcluded?: number;
   saturatedExcluded?: number;
+  inputStarvedExcluded?: number;
 }
 
 export function findBestUnownedSector(
@@ -441,6 +488,7 @@ export function findBestUnownedSector(
     stats.stateControlledExcluded = 0;
     stats.depositExcluded = 0;
     stats.saturatedExcluded = 0;
+    stats.inputStarvedExcluded = 0;
   }
   for (const us of countryUnowned) {
     if (
@@ -470,6 +518,12 @@ export function findBestUnownedSector(
     // no buyers for another plant whatever the price ratio says.
     if (isMarketSaturated(signals?.marketSaturationOf?.(us))) {
       if (stats) stats.saturatedExcluded! += 1;
+      continue;
+    }
+    // A plant whose scarcest input the state cannot deliver runs a fraction of
+    // nameplate and deepens the shortage starving it.
+    if (isInputStarved(signals?.foundingInputAvailabilityOf?.(us))) {
+      if (stats) stats.inputStarvedExcluded! += 1;
       continue;
     }
     candidates.push(us);
@@ -519,14 +573,18 @@ export function findBestUnownedSector(
   // Shortage at the candidate's own state when a state price exists, country
   // otherwise. This is what routes a founding to the state that is actually
   // starved instead of treating every state in the country as one market.
+  const facts = signals?.sectorFacts;
+  const factKey = (c: UnownedSector) => `${c._id ? String(c._id) : ""}|${countryId}`;
   const shortageOf = (c: UnownedSector) =>
-    sectorShortageScore(
-      getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
-      countryId,
-      depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) => {
-        const stateRatio = signals?.statePriceRatioOf?.(commodity, c.stateId);
-        return stateRatio ?? priceRatioOf(commodity, cid);
-      })
+    remembered(facts?.shortage, factKey(c), () =>
+      sectorShortageScore(
+        getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+        countryId,
+        depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) => {
+          const stateRatio = signals?.statePriceRatioOf?.(commodity, c.stateId);
+          return stateRatio ?? priceRatioOf(commodity, cid);
+        })
+      )
     );
   const score = (c: UnownedSector) => {
     // Extraction ranks on deposit x shortage (via marketSizeOf); demand-side
@@ -535,6 +593,21 @@ export function findBestUnownedSector(
     if (c.stateId === hqState) s *= HQ_STATE_SCORE_BONUS;
     return s;
   };
+  // Every tier below ranks the same candidate list again, and a sort compares
+  // pairs, so calling these straight from a comparator re-derived a candidate's
+  // market size, shortage score and deposit headroom O(n log n) times per tier
+  // for values that depend only on the candidate. One value each, per scan.
+  const memoOf = <T>(compute: (candidate: UnownedSector) => T) => {
+    const cache = new Map<UnownedSector, T>();
+    return (candidate: UnownedSector): T => {
+      if (cache.has(candidate)) return cache.get(candidate)!;
+      const value = compute(candidate);
+      cache.set(candidate, value);
+      return value;
+    };
+  };
+  const candidateScore = memoOf(score);
+  const byScore = (a: UnownedSector, b: UnownedSector) => candidateScore(b) - candidateScore(a);
   const candidatePriceRatioOf =
     (c: UnownedSector): CommodityPriceRatioFn =>
     (commodity, cid) =>
@@ -565,20 +638,33 @@ export function findBestUnownedSector(
   // genuine single-input crisis behind a co-product. The essential-shortage
   // override gates on the peak so freight at 2.0x triggers logistics even
   // though consulting is at base.
+  // Freight reads its own state: a national average of 107% hid states that
+  // were 9% supplied, and freight cannot be shipped in from the surplus ones.
   const peakShortageOf = (c: UnownedSector): number =>
-    sectorPeakShortageScore(
-      getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
-      countryId,
-      depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, priceRatioOf)
+    remembered(facts?.peakShortage, factKey(c), () =>
+      sectorPeakShortageScore(
+        getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+        countryId,
+        depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) =>
+          isStateShortfallCommodity(commodity)
+            ? (signals?.statePriceRatioOf?.(commodity, c.stateId) ?? priceRatioOf(commodity, cid))
+            : priceRatioOf(commodity, cid)
+        )
+      )
     );
+  const candidatePeakShortage = memoOf(peakShortageOf);
+  const candidateFragileScore = memoOf(fragileScore);
+  const byFragileScore = (a: UnownedSector, b: UnownedSector) =>
+    candidateFragileScore(b) - candidateFragileScore(a);
   // Highest market-weighted score wins; the HQ state gets a score bonus, not
   // the old unconditional first pick (see HQ_STATE_SCORE_BONUS).
-  const best = (list: UnownedSector[]) => list.sort((a, b) => score(b) - score(a))[0];
+  const best = (list: UnownedSector[]) => list.sort(byScore)[0];
 
-  const physicallyShort = (c: UnownedSector) =>
+  const physicallyShort = memoOf((c: UnownedSector) =>
     isPhysicallyShort(signals?.unmetDemandUnitsOf, () =>
       signals!.unmetDemandUnitsOf!(c, { aggregate: "max" })
-    );
+    )
+  );
 
   const isPrimary = (c: UnownedSector) =>
     c.sectorType === primaryType && (c.industryModel ?? null) === (primaryIndustryModel ?? null);
@@ -593,7 +679,7 @@ export function findBestUnownedSector(
       (c) => fragileScore(c) > 0 && (inType(c) || physicallyShort(c))
     );
     if (fragileCandidates.length > 0) {
-      return fragileCandidates.sort((a, b) => fragileScore(b) - fragileScore(a))[0];
+      return fragileCandidates.sort(byFragileScore)[0];
     }
   }
 
@@ -607,9 +693,11 @@ export function findBestUnownedSector(
     signals?.hasSameTypeNppIn ? !signals.hasSameTypeNppIn(c.countryId, c.sectorType) : true;
   const critical = entryCandidates.filter(
     (c) =>
-      physicallyShort(c) && peakShortageOf(c) >= ESSENTIAL_SHORTAGE_SCORE && noSameTypeBuilder(c)
+      physicallyShort(c) &&
+      candidatePeakShortage(c) >= ESSENTIAL_SHORTAGE_SCORE &&
+      noSameTypeBuilder(c)
   );
-  if (critical.length > 0) return critical.sort((a, b) => score(b) - score(a))[0];
+  if (critical.length > 0) return critical.sort(byScore)[0];
 
   // Then the corp's own field. A sector outside the primary or secondary type
   // carries SECTOR_TYPE_MISMATCH_PENALTY (-15pp) for as long as it runs: on
@@ -627,9 +715,9 @@ export function findBestUnownedSector(
   // A corp with no market in its own field may still fill another essential
   // shortage, physically confirmed.
   const otherCritical = entryCandidates.filter(
-    (c) => physicallyShort(c) && peakShortageOf(c) >= ESSENTIAL_SHORTAGE_SCORE
+    (c) => physicallyShort(c) && candidatePeakShortage(c) >= ESSENTIAL_SHORTAGE_SCORE
   );
-  if (otherCritical.length > 0) return otherCritical.sort((a, b) => score(b) - score(a))[0];
+  if (otherCritical.length > 0) return otherCritical.sort(byScore)[0];
 
   // No open-market tier for founding: a sector outside the corp's primary or
   // secondary type carries SECTOR_TYPE_MISMATCH_PENALTY (-15pp) for as long as

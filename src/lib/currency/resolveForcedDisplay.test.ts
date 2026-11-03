@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { resolveForcedDisplay } from "./resolveForcedDisplay";
+import { buildCurrencyBaselineRates } from "./baselineRates";
 
 const RATES = { USD: 1.06, GBP: 0.77, JPY: 112 };
+const BASELINES = buildCurrencyBaselineRates();
 
 describe("resolveForcedDisplay", () => {
   it("converts an internal amount to the requested currency, ignoring viewer preference", () => {
@@ -12,22 +14,28 @@ describe("resolveForcedDisplay", () => {
 
   it("falls back to the BASELINE local rate when rates are null — never the anchor symbol", () => {
     // US baseline: 1 local unit = 1 USD ≈ 1 anchor.
-    expect(resolveForcedDisplay(42, "USD", null)).toEqual({ value: 42, symbol: "$" });
+    expect(resolveForcedDisplay(42, "USD", null, undefined, false, BASELINES)).toEqual({
+      value: 42,
+      symbol: "$",
+    });
     // JP baseline: usdExchangeRate 0.00943 USD/JPY → ≈106 JPY per anchor.
-    const jp = resolveForcedDisplay(1000, "JPY", null);
+    const jp = resolveForcedDisplay(1000, "JPY", null, undefined, false, BASELINES);
     expect(jp.symbol).toBe("¥");
     expect(jp.value).toBeCloseTo(1000 / 0.00943, 0);
   });
 
   it("falls back to the baseline rate when the requested currency has no live rate entry", () => {
-    const eur = resolveForcedDisplay(42, "EUR", RATES);
+    const eur = resolveForcedDisplay(42, "EUR", RATES, undefined, false, BASELINES);
     expect(eur.symbol).toBe("€");
     // CAD has no launched country config yet — stays on the last-resort path.
-    expect(resolveForcedDisplay(42, "CAD", RATES).symbol).toBe("₳");
+    expect(resolveForcedDisplay(42, "CAD", RATES, undefined, false, BASELINES).symbol).toBe("₳");
   });
 
   it("last-resort anchor passthrough only for a currency no config knows", () => {
-    expect(resolveForcedDisplay(42, "XXX" as never, null)).toEqual({ value: 42, symbol: "₳" });
+    expect(resolveForcedDisplay(42, "XXX" as never, null, undefined, false, BASELINES)).toEqual({
+      value: 42,
+      symbol: "₳",
+    });
   });
 
   it("passes zero and negative amounts through unchanged before conversion", () => {

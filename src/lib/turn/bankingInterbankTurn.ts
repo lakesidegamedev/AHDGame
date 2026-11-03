@@ -26,6 +26,7 @@ import type {
   TransitionProjection,
 } from "@/lib/banking/rules/boundary";
 import { cbMarginRatePercent } from "@/lib/banking/interbank";
+import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
 import { discountWindowRatePercent } from "@/lib/banking/discountWindow";
 import { getCashReserves } from "@/lib/banking/bankCash";
 import type { BankingTurnSummary } from "./bankingTurn";
@@ -136,7 +137,11 @@ export async function serviceInterbankAndCbMargin(
     let availableCash = getCashReserves(charter);
     for (const facility of ["cbMargin", "discountWindow"] as const) {
       const enabled = facility === "discountWindow" || propTrading;
-      const debt = Math.max(0, charter[`${facility}Debt`] ?? 0);
+      // Injected liquidity is owed but interest-free (#1694).
+      const debt =
+        facility === "cbMargin"
+          ? interestBearingCbMarginDebt(charter)
+          : Math.max(0, charter.discountWindowDebt ?? 0);
       const stamp =
         facility === "cbMargin" ? charter.lastCbMarginTurn : charter.lastDiscountWindowTurn;
       if (!enabled || debt <= 0 || stamp === turn) continue;

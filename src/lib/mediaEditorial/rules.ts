@@ -9,8 +9,8 @@ export interface EditorialPosition {
 }
 
 export const EDITORIAL_POSITION_LIMIT = 5;
-export const EDITORIAL_MAX_AUDIENCE_LOSS = 0.25;
-export const EDITORIAL_MAX_FAVORABILITY_PER_TURN = 0.5;
+const EDITORIAL_MAX_AUDIENCE_LOSS = 0.25;
+const EDITORIAL_MAX_FAVORABILITY_PER_TURN = 0.5;
 
 function boundedAxis(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;

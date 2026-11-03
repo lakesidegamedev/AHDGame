@@ -28,7 +28,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/coalitions:${authResult.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const userData = authResult.user;
     const character = userData.character;

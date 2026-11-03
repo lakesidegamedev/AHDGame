@@ -11,12 +11,15 @@ import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isR2Enabled, uploadFile, deleteByPrefix, deleteFileByUrl } from "@/lib/r2";
 import { parseFormData } from "@/lib/api/validate";
 import { loadGroupManagement } from "@/lib/corporations/groups/management";
-import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import {
+  resolveCorporation,
+  requireCeoOrDirectingParent,
+} from "@/lib/api/corporations/resolveQuery";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
 
-// POST /api/upload/corporation-logo — Uploads a corporation logo image; the requester must be the active CEO of a corporation.
+// POST /api/upload/corporation-logo — Uploads a corporation logo image; the requester must be the active CEO of the corporation, or the controlling parent's CEO of an AI-run managed subsidiary.
 // Auth: requireBasicAuth
 // Errors: 400, 401, 429
 export async function POST(request: Request) {
@@ -25,7 +28,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const authUser = auth.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/upload/corporation-logo:${authUser.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseFormData(request);
@@ -54,12 +57,18 @@ export async function POST(request: Request) {
     // the upload looks like it did nothing.
     const corporationId = formData.get("corporationId");
     let corporation: Corporation | null;
+    let directingParentId: ObjectId | null = null;
 
     if (typeof corporationId === "string" && corporationId.length > 0) {
       const resolved = await resolveCorporation(db, corporationId);
       if (!resolved.ok) return resolved.response;
-      const ceoCheck = requireCeo(resolved.corporation, authUser.userId);
-      if (ceoCheck) return ceoCheck;
+      const authorized = await requireCeoOrDirectingParent(
+        db,
+        resolved.corporation,
+        authUser.userId
+      );
+      if (!authorized.ok) return authorized.response;
+      directingParentId = authorized.directingParentId;
       corporation = resolved.corporation;
     } else {
       // Legacy callers that send no target. Use userId directly — consistent
@@ -83,6 +92,9 @@ export async function POST(request: Request) {
       return errorResponse(400, "Choose the parent corporation for the group logo.");
     }
     const groupTarget = target === "group";
+    if (groupTarget && directingParentId) {
+      return errorResponse(403, "Only the parent CEO can change the group logo.");
+    }
     if (groupTarget) {
       const origin = assertSameOrigin(request);
       if (origin) return origin;
@@ -159,6 +171,15 @@ export async function POST(request: Request) {
       {
         $set: {
           [groupTarget ? "groupManagement.logoUrl" : "logoUrl"]: url,
+          ...(directingParentId
+            ? {
+                logoSetByParent: {
+                  byCorporationId: directingParentId,
+                  byUserId: new ObjectId(authUser.userId),
+                  at: new Date(),
+                },
+              }
+            : {}),
           updatedAt: new Date(),
         },
       }

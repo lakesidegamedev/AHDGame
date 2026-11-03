@@ -437,10 +437,6 @@ export function getLearningPathBySlug(slug: string): LearningPath | undefined {
   return LEARNING_PATHS.find((p) => p.slug === slug);
 }
 
-export function getAllLearningPaths(): LearningPath[] {
-  return LEARNING_PATHS;
-}
-
 /**
  * Return all learning paths with country-specific pages filtered out for
  * players who don't have those countries enabled.

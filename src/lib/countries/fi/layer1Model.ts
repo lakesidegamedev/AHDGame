@@ -22,7 +22,7 @@ import { fiRegionCensusData, type FIRegionLayer1 } from "@/lib/seeds/fi/fiRegion
 import { fiRegionCensusData1953 } from "@/lib/seeds/fi/fiRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const FI_GROUP_IDS = [
+const FI_GROUP_IDS = [
   "social_democrat",
   "agrarian_centre",
   "conservative_right",
@@ -222,6 +222,3 @@ export function getFiModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-export const fiLayer1Model: CountryLayer1Model = getFiModel("1979");
-export const fiGroupIds = [...FI_GROUP_IDS];

@@ -119,7 +119,9 @@ export async function snapshotBondHistory(args: {
         createdAt: now,
       };
     });
-    await db.collection("bondHistory").insertMany(historyDocs);
+    // Unordered: a duplicate on a retried turn must not stop the other live
+    // bond snapshots from landing.
+    await db.collection("bondHistory").insertMany(historyDocs, { ordered: false });
   }
 
   return updatedBonds.length;

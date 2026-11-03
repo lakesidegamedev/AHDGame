@@ -24,6 +24,37 @@ export async function prepareManagedMongo(uri: string): Promise<void> {
   }
 }
 
+const MISMATCH_MESSAGE =
+  "The local replica set configuration does not match this launch and is not a single-node local set.";
+// replSetGetStatus code when this node is not in its own saved configuration.
+const NOT_A_MEMBER = 93;
+const NOT_YET_INITIALIZED = 94;
+
+/**
+ * The desktop client picks a free MongoDB port every time it opens a world, but
+ * the replica set stores the address it first ran on. On any later start the
+ * node no longer finds itself in that configuration and refuses to serve
+ * (status 93). The set has exactly one member and the data is local, so the
+ * safe repair is to point that member at the current address.
+ */
+async function moveSingleNodeSetToHost(admin: Pick<Admin, "command">, host: string) {
+  const { config } = await admin.command({ replSetGetConfig: 1 });
+  if (config?._id !== REPLICA_SET || config.members?.length !== 1)
+    throw new Error(MISMATCH_MESSAGE);
+  config.members[0].host = host;
+  config.version = (config.version ?? 1) + 1;
+  await admin.command({ replSetReconfig: config, force: true });
+}
+
+async function initiateLocalSet(admin: Pick<Admin, "command">, host: string) {
+  try {
+    await admin.command({ replSetInitiate: { _id: REPLICA_SET, members: [{ _id: 0, host }] } });
+  } catch (initError) {
+    // Another server worker may win first initialization.
+    if ((initError as { code?: number }).code !== 23) throw initError;
+  }
+}
+
 export async function initializeLocalReplicaSet(
   admin: Pick<Admin, "command">,
   host: string
@@ -35,17 +66,12 @@ export async function initializeLocalReplicaSet(
       status.members?.length !== 1 ||
       status.members[0].name !== host
     )
-      throw new Error(
-        "The local replica set configuration does not match this launch. Restore its original MongoDB port."
-      );
+      throw new Error(MISMATCH_MESSAGE);
   } catch (error) {
-    if ((error as { code?: number }).code !== 94) throw error;
-    try {
-      await admin.command({ replSetInitiate: { _id: REPLICA_SET, members: [{ _id: 0, host }] } });
-    } catch (initError) {
-      // Another server worker may win first initialization.
-      if ((initError as { code?: number }).code !== 23) throw initError;
-    }
+    const code = (error as { code?: number }).code;
+    if (code === NOT_A_MEMBER) await moveSingleNodeSetToHost(admin, host);
+    else if (code === NOT_YET_INITIALIZED) await initiateLocalSet(admin, host);
+    else throw error;
   }
   const deadline = performance.now() + 30_000;
   do {

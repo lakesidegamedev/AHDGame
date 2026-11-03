@@ -463,7 +463,7 @@ export function getEraEnvelope(
  * Era display names: first entry whose `until` > year wins (entry applies while
  * year < until); falls through to the base definition name / regional override.
  */
-export const METRIC_ERA_NAMES: Record<
+const METRIC_ERA_NAMES: Record<
   string,
   Array<{ until: number; name: string; shortName?: string }>
 > = {
@@ -667,10 +667,7 @@ export function getEraConditionShift(
 }
 
 /** Linear interp between anchors, clamped at both ends (mirrors the old expectations.ts). */
-export function interpolateBand(
-  anchors: BandAnchor[],
-  year: number
-): { best: number; worst: number } {
+function interpolateBand(anchors: BandAnchor[], year: number): { best: number; worst: number } {
   const first = anchors[0];
   const last = anchors[anchors.length - 1];
   if (year <= first.year) return { best: first.best, worst: first.worst };

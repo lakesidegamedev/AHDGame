@@ -520,8 +520,8 @@ export async function loadFederalBudgetDetail(params: {
     loadOrganizationContributions(db, budgetCountryId, preset),
   ]);
 
-  // Finance-Minister lens gate: only the seated finance-minister-equivalent (or
-  // head of government when the seat is vacant) sees the confidential lens.
+  // Finance-Minister lens gate: only the seated finance-minister-equivalent sees
+  // the confidential lens.
   const isFinanceMinister = characterId
     ? await assertTreasuryAuthority(db, budgetCountryId, characterId)
     : false;

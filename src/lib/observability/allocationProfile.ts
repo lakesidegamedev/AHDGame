@@ -48,7 +48,7 @@ export interface FlattenedAllocationNode {
 }
 
 export const DEFAULT_SAMPLING_INTERVAL_BYTES = 32 * 1024;
-export const DEFAULT_PROFILE_TOP_N = 25;
+const DEFAULT_PROFILE_TOP_N = 25;
 
 /**
  * Walks the V8 SamplingHeapProfile tree and flattens it into an array of

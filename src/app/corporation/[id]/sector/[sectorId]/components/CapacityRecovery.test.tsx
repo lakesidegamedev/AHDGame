@@ -16,19 +16,27 @@ describe("capacity recovery choice", () => {
     const onResize = vi.fn();
     const plants = {
       capacityUnits: 1000,
+      plantCount: 40,
       mothballed: false,
       activeCapacityPercent: 100,
       capacityRecovery: { coldUpkeepFraction: 0.05, coldUpkeepDailyAnchor: 240 },
     } as PlantsData;
     render(
       <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
-        <CapacityRecovery plants={plants} busy={false} onResize={onResize} />
+        <CapacityRecovery
+          plants={plants}
+          sizing={{ sectorType: "manufacturing" }}
+          busy={false}
+          onResize={onResize}
+        />
       </NextIntlClientProvider>
     );
     fireEvent.change(screen.getByRole("slider", { name: /Keep 100%/ }), {
       target: { value: "25" },
     });
-    expect(screen.getByText(/Active capacity: 250 units\/day/)).toBeTruthy();
+    // Counted in plants; the units stay on hover.
+    const active = screen.getByText("About 10 of 40 plants running");
+    expect(active.getAttribute("title")).toBe("250 units/day at full run");
     expect(screen.getByText(/Parked capacity upkeep: \$7.50\/turn/)).toBeTruthy();
     expect(onResize).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Apply capacity setting" }));

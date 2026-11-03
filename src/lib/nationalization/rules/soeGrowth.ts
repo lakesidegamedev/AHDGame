@@ -32,7 +32,7 @@ export const SOE_GROWTH_MIN_ORDER_SHARE = 0.05;
 export const SOE_GROWTH_MAX_ORDER_SHARE = 0.5;
 
 /** Extra order share per point of price-over-base above the shortage threshold. */
-export const SOE_GROWTH_SHARE_PER_SHORTAGE = 0.25;
+const SOE_GROWTH_SHARE_PER_SHORTAGE = 0.25;
 
 /**
  * Growth order share for a sector at this shortage: the minimum at the
@@ -49,7 +49,7 @@ export function soeGrowthOrderShare(shortage: number): number {
 }
 
 /** Growth is skipped once sovereign debt is this close to its ceiling. */
-export const SOE_GROWTH_MAX_DEBT_TO_CEILING = 0.9;
+const SOE_GROWTH_MAX_DEBT_TO_CEILING = 0.9;
 
 /** Most of a treasury's cash one turn of growth orders may commit. */
 export const SOE_GROWTH_MAX_CASH_SHARE = 0.05;

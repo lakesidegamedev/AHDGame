@@ -35,7 +35,7 @@ import {
   nppTreasuryCurrency,
 } from "@/lib/npp/actionPoints";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";

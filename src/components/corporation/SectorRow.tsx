@@ -10,7 +10,7 @@ import {
   STRATEGY_TRANSITION_TURNS,
   CANCEL_COST_FRACTION,
 } from "@/lib/constants/sectorStrategies";
-import { type CorporationType, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type CorporationType, type OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import StrategyChangeConfirm from "./StrategyChangeConfirm";
 import { TransitionPanel } from "./TransitionPanel";
@@ -25,18 +25,21 @@ import {
 import { SECTOR_TABLE_GRID, PLANTS_SECTOR_TABLE_GRID } from "./SectorTableHeader";
 import {
   BuildQueueBadge,
-  CAPACITY_UNIT_LABEL,
   DeliveryLimitedPill,
-  FillChip,
   MothballedPill,
-  formatUnits,
+  RUNNING_SOLD_HEADING,
+  RUNNING_SOLD_HEADING_TITLE,
+  RunningSoldReading,
+  plantCountLabel,
+  plantCountTitle,
   sectorBuildUrl,
+  sectorPlantCount,
   sectorSplitUrl,
 } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
-import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
+import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
 import { CapacityChain } from "./sectors/CapacityChain";
 
@@ -55,6 +58,10 @@ export interface SectorRowProps {
   growthUpdatingSectorId?: string | null;
   onMenuToggle: () => void;
   onAbandonSector: (sectorId: string) => void;
+  /** Plants tier, CEO: mothball or reactivate from the actions menu (suggestion 412). */
+  onMothballSector?: (sectorId: string, action: "mothball" | "reactivate") => void;
+  /** Sectors with a mothball or reactivate request in flight. */
+  mothballingSectorIds?: ReadonlySet<string>;
   onStrategyChange?: (sectorId: string, strategyId: string) => void;
   onGrowthChange?: (sectorId: string, newRate: number) => void;
   onCancelTransition?: (sectorId: string) => void;
@@ -65,6 +72,8 @@ export interface SectorRowProps {
   mediaOperatingModelsEnabled?: boolean;
   /** A rival viewer may plan a split of these plants on the sector page. */
   canSplitRivalPlants?: boolean;
+  /** May change this sector's strategy; defaults to isCeo (the controlling parent's CEO also may). */
+  canChangeStrategy?: boolean;
 }
 
 export function SectorRow({
@@ -82,6 +91,8 @@ export function SectorRow({
   growthUpdatingSectorId,
   onMenuToggle,
   onAbandonSector,
+  onMothballSector,
+  mothballingSectorIds,
   onStrategyChange,
   onGrowthChange,
   onCancelTransition,
@@ -90,6 +101,7 @@ export function SectorRow({
   plantsMode = false,
   mediaOperatingModelsEnabled = false,
   canSplitRivalPlants = false,
+  canChangeStrategy = isCeo,
 }: SectorRowProps) {
   const [pendingChange, setPendingChange] = useState<{
     sectorId: string;
@@ -188,12 +200,9 @@ export function SectorRow({
   // Whole facilities are persisted ownership. Capacity can wear down without
   // deleting a plant, so only fall back to the old capacity-derived count for
   // payloads served during deployment of the ledger migration.
-  const plantCount = plantsMode
-    ? (sector.plantCount ??
-      facilitiesFromUnits(operatingSectorType as OperatingSectorType, sector.capacityUnits ?? 0))
-    : 0;
-  const plantNoun =
-    plantCount === 1 ? facilitySingular(sector.sectorType) : facilityPlural(sector.sectorType);
+  const plantCount = plantsMode ? sectorPlantCount(sector) : 0;
+  const unitsPerPlant = plantSizeForSector(sector);
+  const plantLabel = plantCountLabel(plantCount, sector.sectorType);
   // Fill-adjusted margin (query layer): profit over the FULL cost bill, not
   // over sold revenue. Under plants this is the number the row leads with:
   // `effectiveProfitMargin` divides by sold revenue only, so at a low fill it
@@ -290,7 +299,7 @@ export function SectorRow({
   );
 
   const strategySelect = (isMobile = false) =>
-    isCeo && onStrategyChange && strategies ? (
+    canChangeStrategy && onStrategyChange && strategies ? (
       <select
         value={pendingChange?.sectorId === sector._id ? pendingChange.targetStrategyId : currentId}
         onChange={(e) => {
@@ -340,7 +349,7 @@ export function SectorRow({
       cooldownRemaining={cooldownRemaining}
       isTransitioning={isTransitioning}
       isReversing={isReversing}
-      isCeo={isCeo}
+      isCeo={canChangeStrategy}
       onCancelTransition={onCancelTransition}
       cancelCostDisplay={cancelCostDisplay}
       isCancelPending={cancelPending}
@@ -415,6 +424,20 @@ export function SectorRow({
     </button>
   );
 
+  // Suggestion 412: mothball without opening the sector page.
+  const canMothball = plantsMode && isCeo && !!onMothballSector;
+  const mothballBusy = mothballingSectorIds?.has(sector._id) ?? false;
+  const mothballLabel = mothballBusy
+    ? isMothballed
+      ? "Reactivating…"
+      : "Mothballing…"
+    : isMothballed
+      ? "Reactivate"
+      : "Mothball";
+  const mothballTitle = isMothballed
+    ? "Bring these plants back into production"
+    : "Stow these plants: they make nothing and still cost upkeep";
+
   const actionsCell = (
     <div className="flex items-center justify-end gap-0.5 text-right">
       {expandButton}
@@ -452,6 +475,22 @@ export function SectorRow({
             >
               Build capacity
             </Link>
+          )}
+          {canMothball && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onMenuToggle();
+                onMothballSector!(sector._id, isMothballed ? "reactivate" : "mothball");
+              }}
+              disabled={mothballBusy}
+              aria-busy={mothballBusy}
+              className="rounded px-2 py-1 text-left text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
+              title={mothballTitle}
+            >
+              {mothballLabel}
+            </button>
           )}
           {isCeo && (
             <button
@@ -565,25 +604,34 @@ export function SectorRow({
           <div className="min-w-0">{strategySelect()}</div>
           <div className="min-w-0">{statusBadge}</div>
 
-          <div className="text-right">
+          {/* Players build and own plants, so plants are the column. Raw
+              capacity units are an engine measure and only appear on hover. */}
+          <div className="flex min-w-0 flex-col items-end text-right">
             <span
-              className={`${cellNum} text-foreground`}
-              title={`Capacity in ${CAPACITY_UNIT_LABEL}`}
+              className={`${cellNum} ${plantCount > 0 ? "text-foreground" : "text-muted"}`}
+              title={plantCountTitle(sector)}
             >
-              {formatUnits(sector.capacityUnits)}
+              {plantLabel}
             </span>
-            {buildQueue && <BuildQueueBadge queue={buildQueue} className="flex justify-end" />}
+            <BuildQueueBadge
+              queue={buildQueue}
+              plantUnits={unitsPerPlant}
+              plantSingular={facilitySingular(sector.sectorType)}
+              plantPlural={facilityPlural(sector.sectorType)}
+              className="items-end"
+            />
           </div>
 
-          <div
-            className={`${cellNum} text-right text-muted`}
-            title={`${plantCount.toLocaleString("en-US")} ${plantNoun}`}
-          >
-            {plantCount.toLocaleString("en-US")}
-          </div>
-
-          <div className="flex min-w-0 flex-col items-end">
-            <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
+          <div className="flex min-w-0 flex-col items-end text-right">
+            <RunningSoldReading
+              produced={sector.producedUnits}
+              capacity={sector.capacityUnits}
+              fill={sector.fillRate}
+              band={sector.fillRateBand}
+              ownSiteShare={sector.ownSiteShare}
+              plantCount={plantCount}
+              className="items-end"
+            />
             <DeliveryLimitedPill
               fraction={deliveryLimited}
               freightClass={sector.deliveryLimitedFreightClass}
@@ -738,19 +786,33 @@ export function SectorRow({
           {plantsMode ? (
             <>
               <div>
-                <dt className="text-[11px] text-muted">Capacity</dt>
-                <dd className={`${cellNum} text-foreground`}>
-                  {formatUnits(sector.capacityUnits)}
+                <dt className="text-[11px] text-muted">Plants</dt>
+                <dd
+                  className={`${cellNum} ${plantCount > 0 ? "text-foreground" : "text-muted"}`}
+                  title={plantCountTitle(sector)}
+                >
+                  {plantLabel}
                 </dd>
-                <dd className="text-[11px] text-muted">
-                  {plantCount.toLocaleString("en-US")} {plantNoun}
-                </dd>
-                <BuildQueueBadge queue={buildQueue} />
+                <BuildQueueBadge
+                  queue={buildQueue}
+                  plantUnits={unitsPerPlant}
+                  plantSingular={facilitySingular(sector.sectorType)}
+                  plantPlural={facilityPlural(sector.sectorType)}
+                />
               </div>
               <div>
-                <dt className="text-[11px] text-muted">Fill</dt>
+                <dt className="text-[11px] text-muted" title={RUNNING_SOLD_HEADING_TITLE}>
+                  {RUNNING_SOLD_HEADING}
+                </dt>
                 <dd>
-                  <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
+                  <RunningSoldReading
+                    produced={sector.producedUnits}
+                    capacity={sector.capacityUnits}
+                    fill={sector.fillRate}
+                    band={sector.fillRateBand}
+                    ownSiteShare={sector.ownSiteShare}
+                    plantCount={plantCount}
+                  />
                 </dd>
                 <DeliveryLimitedPill
                   fraction={deliveryLimited}
@@ -828,6 +890,20 @@ export function SectorRow({
             >
               Build capacity
             </Link>
+          )}
+          {canMothball && (
+            <button
+              type="button"
+              onClick={() =>
+                onMothballSector!(sector._id, isMothballed ? "reactivate" : "mothball")
+              }
+              disabled={mothballBusy}
+              aria-busy={mothballBusy}
+              title={mothballTitle}
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
+            >
+              {mothballLabel}
+            </button>
           )}
           <button
             type="button"

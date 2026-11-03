@@ -51,10 +51,9 @@ import {
 import {
   getWorldEntityOrThrow,
   getWorldEntityPresetManifest,
-  type WorldEntityId,
 } from "@/lib/world/worldEntityManifest";
 
-export const RELEASE_GATE_PRESET = "1953-default" as const;
+const RELEASE_GATE_PRESET = "1953-default" as const;
 /** ~20.83 in-game years at 48 turns/year. */
 export const RELEASE_GATE_TARGET_TURNS = 1000;
 
@@ -838,9 +837,4 @@ export function formatReleaseGate1953Markdown(report: ReleaseGate1953Report): st
   );
 
   return lines.join("\n");
-}
-
-/** Entity ids used by the gate (exported for tests). */
-export function releaseGateMacroEntityIds(): readonly WorldEntityId[] {
-  return ALL_1953_MACRO_ENTITY_IDS;
 }

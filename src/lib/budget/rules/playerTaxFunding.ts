@@ -60,7 +60,7 @@ export function planTaxFunding(input: TaxFundingInput): TaxFundingPlan {
         Number.isFinite(rates[code]) &&
         (rates[code] ?? 0) > 0
     )
-    .sort((a, b) => b[1] * (rates[b[0]] ?? 0) - a[1] * (rates[a[0]] ?? 0));
+    .sort((a, b) => b[1] / (rates[b[0]] ?? 1) - a[1] / (rates[a[0]] ?? 1));
   const converted: TaxFundingLeg[] = [];
   let remainingAnchor = owedAnchor - collectedAnchor;
   for (const [code, balance] of candidates) {

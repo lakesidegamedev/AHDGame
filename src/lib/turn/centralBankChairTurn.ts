@@ -48,6 +48,7 @@ import {
   resolveRecoveryDelta,
   stanceIsCorrect,
 } from "@/lib/centralBank/credibility";
+import { INFAMY_PENALTY_THRESHOLD, scrutinyReliefDampener } from "@/lib/centralBank/scrutinyRules";
 
 /** Fallback target inflation rate — deviations drive infamy */
 const TARGET_INFLATION = 2.0;
@@ -57,14 +58,6 @@ const TARGET_GROWTH = 2.0;
 const INFAMY_COEFFICIENT = 0.5;
 /** Natural decay rate per turn (5%, same as character infamy) */
 const INFAMY_DECAY = 0.95;
-/** Infamy threshold above which chair bonuses are halved */
-const INFAMY_PENALTY_THRESHOLD = 25;
-/**
- * Controls how much high scrutiny dampens positive effects (infamy reduction).
- * Multiplier = max(0.1, 1 - chairInfamy / POSITIVE_DAMPENING_SCALE)
- * At 0 infamy: 1.0x (full effect). At 75: 0.5x. At 150+: 0.1x floor.
- */
-const POSITIVE_DAMPENING_SCALE = 150;
 
 /** Action debit when infamy penalty is active (3 base - 1.5 = 1.5 net) */
 const INFAMY_ACTION_DEBIT = 1.5;
@@ -91,7 +84,7 @@ export function computeScrutinyDelta(
 
   // Dampen positive effects (negative delta = infamy reduction) at high scrutiny
   if (totalDelta < 0) {
-    const dampener = Math.max(0.1, 1 - currentInfamy / POSITIVE_DAMPENING_SCALE);
+    const dampener = scrutinyReliefDampener(currentInfamy);
     totalDelta *= dampener;
   }
 

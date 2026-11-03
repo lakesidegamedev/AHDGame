@@ -162,11 +162,3 @@ export function isCorporationCeoVoteDuplicateKey(error: unknown): boolean {
       messageMentions(error, "unique_corporation_ceo_vote_per_shareholder"))
   );
 }
-
-export function isUnionLeaderVoteDuplicateKey(error: unknown): boolean {
-  return (
-    isDuplicateKeyError(error) &&
-    ((keyPatternIncludes(error, "unionId") && keyPatternIncludes(error, "voterCharacterId")) ||
-      messageMentions(error, "unique_union_leader_vote_per_organizer"))
-  );
-}

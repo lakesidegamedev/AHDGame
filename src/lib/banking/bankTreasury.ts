@@ -53,6 +53,7 @@ import {
   primaryDocumentId,
 } from "@/lib/bonds/sovereignPrimarySettlement";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
 
 export const BANK_TREASURY_TRADES_COLLECTION = "bankTreasuryTrades";
 
@@ -223,7 +224,8 @@ async function bankCashFloor(
     playerDeposits: charter.playerDeposits ?? 0,
     playerDepositsAreLiabilities,
     discountWindowDebt: charter.discountWindowDebt ?? 0,
-    cbMarginDebt: charter.cbMarginDebt ?? 0,
+    // Interest floor counts only the interest-bearing margin line (#1694).
+    cbMarginDebt: interestBearingCbMarginDebt(charter),
     interbankLoans: interbankLoans.map((loan) => ({
       outstanding: loan.outstanding ?? 0,
       ratePercent: loan.ratePercent,
@@ -1734,6 +1736,12 @@ export async function liquidateFailedBankTreasury(
       issuerType: "sovereign",
       matured: { $ne: true },
       defaulted: { $ne: true },
+      // A due bond is being redeemed at par through the bank maturity claim,
+      // which pays this estate's vault while it is open and deposit insurance
+      // once it closes. Its frozen quote refuses holder trades, so selling it
+      // here would only fail and hold the whole waterfall.
+      maturityTurn: { $gt: turn },
+      sovereignMaturityClaim: { $exists: false },
       holders: {
         $elemMatch: {
           bankId,
@@ -1807,6 +1815,31 @@ export async function refreshBankTreasuryMark(
       { projection: { bankCharter: 1 } }
     );
   if (!bank?.bankCharter) return 0;
+  return markBankTreasury(db, bankId, bank.bankCharter, turn);
+}
+
+/**
+ * Re-mark a bank right after a sovereign maturity paid face value into its vault.
+ *
+ * The banking phase marks treasuries before the bond phase redeems them, so
+ * until the next banking phase the vault held the redemption cash AND the mark
+ * still valued the matured lots: the same money counted twice, which inflated
+ * equity, the withdrawable figure and the supervisor's rating for that window
+ * (ticket 1749: an 8.86M double count let the owner withdraw against equity the
+ * bank did not have). The mark skips matured bonds, so re-marking removes them.
+ */
+export async function remarkBankTreasuryAfterMaturity(
+  db: Db,
+  bankId: ObjectId,
+  turn: number
+): Promise<number | null> {
+  const bank = await db
+    .collection<BankState>("corporations")
+    .findOne(
+      { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
+      { projection: { bankCharter: 1 } }
+    );
+  if (!bank?.bankCharter) return null;
   return markBankTreasury(db, bankId, bank.bankCharter, turn);
 }
 

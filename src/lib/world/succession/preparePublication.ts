@@ -10,8 +10,8 @@ import {
   validateAppliedEntityStates,
 } from "./runtimeEntities";
 
-export const FEDERATION_PUBLICATION_PREPARATIONS_COLLECTION = "federationPublicationPreparations";
-export const FEDERATION_PREPARED_EFFECTS_COLLECTION = "federationPreparedEffects";
+const FEDERATION_PUBLICATION_PREPARATIONS_COLLECTION = "federationPublicationPreparations";
+const FEDERATION_PREPARED_EFFECTS_COLLECTION = "federationPreparedEffects";
 
 export type FederationPreparedEffectKind =
   | "entity-state"

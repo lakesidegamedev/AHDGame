@@ -19,10 +19,10 @@ import { resolvedSeatsEstimate } from "@/lib/elections/resolvedSeatsEstimate";
 import {
   CHAMBER_LABELS,
   NATIONAL_AGGREGATION_TYPES,
-  WESTMINSTER_STYLE_TYPES,
   computeNationalProjection,
   unitRevealOffset,
 } from "./computeResults";
+import { electionNightStyle, majorityThreshold } from "./electionNightChrome";
 import type { NationalParty, NationalRegion, NationalResults } from "./types";
 
 export {
@@ -32,6 +32,18 @@ export {
   computeNationalProjection,
 } from "./computeResults";
 
+// Anchor picking and titles live in `electionNightChrome` so a list page can
+// use them without this module's aggregation graph; re-exported for callers
+// that already import the whole façade.
+export {
+  electionNightStyle,
+  electionNightTitle,
+  isElectionNightType,
+  majorityThreshold,
+  pickElectionNightAnchor,
+  type ElectionNightAnchorCandidate,
+} from "./electionNightChrome";
+
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 const INDEPENDENT_COLOR = "#9CA3AF";
 
@@ -39,46 +51,6 @@ export interface ElectionNightPartyInfo {
   name: string;
   abbreviation: string;
   color: string;
-}
-
-export interface ElectionNightAnchorCandidate {
-  id: string;
-  electionType: string;
-  status: string;
-}
-
-/** True when this election type participates in the national election-night board. */
-export function isElectionNightType(electionType: string): boolean {
-  return NATIONAL_AGGREGATION_TYPES.has(electionType);
-}
-
-/**
- * Prefer an active national multi-seat race; fall back to a completed/resolved
- * one. Shared by country elections embeds (UK Commons, US House, …).
- */
-export function pickElectionNightAnchor(
-  elections: ElectionNightAnchorCandidate[]
-): ElectionNightAnchorCandidate | null {
-  const eligible = elections.filter((e) => isElectionNightType(e.electionType));
-  return (
-    eligible.find((e) => e.status === "active") ??
-    eligible.find((e) => e.status === "completed" || e.status === "resolved") ??
-    null
-  );
-}
-
-/** Human title for the election-night chrome (embed header / results page). */
-export function electionNightTitle(electionType: string): string {
-  const chamber = CHAMBER_LABELS[electionType];
-  return chamber ? `Election Night · ${chamber}` : "Election Night";
-}
-
-export function electionNightStyle(electionType: string): "westminster" | "generic" {
-  return WESTMINSTER_STYLE_TYPES.has(electionType) ? "westminster" : "generic";
-}
-
-export function majorityThreshold(totalSeats: number): number {
-  return Math.floor(totalSeats / 2) + 1;
 }
 
 async function loadRegionNames(db: Db, regionIds: string[]): Promise<Map<string, string>> {
@@ -129,6 +101,7 @@ export async function buildNationalElectionNight(
         countryId: election.countryId,
         electionType,
         cycle: election.cycle,
+        status: { $in: ["active", "upcoming", "completed", "resolved"] },
         ...(chamberClass ? { chamberClass } : {}),
       },
       { projection: { state: 1, totalSeats: 1, status: 1, allocationMethod: 1 } }

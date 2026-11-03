@@ -40,7 +40,7 @@ export function isBankGovernmentControlled(
 }
 
 /** Era start year for the running world, matching the SCOTUS turn's resolution. */
-export async function resolveWorldStartingYear(): Promise<number | undefined> {
+async function resolveWorldStartingYear(): Promise<number | undefined> {
   const gameState = await getGameState();
   return (
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET)

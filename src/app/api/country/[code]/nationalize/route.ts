@@ -37,7 +37,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireHumanSession(request);
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/nationalize:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code } = await params;

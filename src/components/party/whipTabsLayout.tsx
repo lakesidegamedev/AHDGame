@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useMemo, useState, type ReactNode } from "react";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useRuntimeCountryConfig } from "@/hooks/useRuntimeCountryConfig";
 
 export type WhipSubTarget = "bills" | "leadership" | "cabinet";
@@ -33,7 +34,7 @@ export function WhipTabsLayout({
   preferredBillChamberKey,
 }: WhipTabsLayoutProps) {
   const t = useTranslations("parties.whips");
-  const config = getCountryConfig(countryId.toUpperCase() as CountryId);
+  const config = getCountryClientConfig(countryId.toUpperCase() as CountryId);
   const { config: runtime } = useRuntimeCountryConfig(countryId);
 
   const chamberChips = useMemo(() => {

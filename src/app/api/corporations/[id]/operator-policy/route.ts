@@ -56,7 +56,11 @@ type Loaded =
 async function load(params: RouteParams["params"]): Promise<Loaded> {
   const auth = await requireBasicAuth();
   if (!auth.ok) return { response: auth.response };
-  const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+  const rateLimit = checkRateLimit(
+    `api/corporations/[id]/operator-policy:${auth.user.userId}`,
+    20,
+    60000
+  );
   if (!rateLimit.ok) return { response: rateLimitResponse(rateLimit.retryAfter) };
   const db = await getDb();
   const resolved = await resolveCorporation(db, (await params).id);

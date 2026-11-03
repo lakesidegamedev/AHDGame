@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { State } from "@/lib/db/types";
 import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/app/congress/components/CongressShared";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { officeLabelFor } from "@/lib/utils/officeLabel";
 import type { NPPDisplaySimple, PartyOrgDisplay } from "../StatePageTabsTypes";
 

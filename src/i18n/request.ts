@@ -42,6 +42,10 @@ const NAMESPACES = [
   "centralBank",
   "parties",
   "contests",
+  // The UK confidence gauge reads this namespace; the file shipped but was
+  // never loaded, so its copy rendered as raw keys. Found while measuring the
+  // client catalog on 2026-10-24.
+  "governmentConfidence",
 ] as const;
 
 async function loadCatalog(locale: string): Promise<Messages> {

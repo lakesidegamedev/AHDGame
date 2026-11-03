@@ -714,6 +714,11 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
 
   await seedAllCountryData(db, resetReference, log, preset, options.run);
 
+  // All state/cohort population seeds are complete. A reference-only refresh
+  // preserves live county stocks; new worlds and explicit reference resets rebuild them.
+  const { seedCountyPopulations } = await import("@/lib/counties/seed");
+  await seedCountyPopulations(db, { replace: !seedOnly || resetReference, preset });
+
   // Command Economy v2 gates RU/CN's multi-SOE seed (seedRuBudgets/seedCnBudgets,
   // below) behind `gameConfig.commandEconomyEnabled`. Tie it to era on every
   // bootstrap — see resetGameWorld.ts for the matching in-world-reset path and

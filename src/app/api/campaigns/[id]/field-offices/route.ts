@@ -61,7 +61,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!ObjectId.isValid(id)) return errorResponse(400, "Invalid campaign ID");
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/campaigns/[id]/field-offices:${auth.user.userId}`,
+      60,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const parsed = await parseJsonBody(request, openSchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);

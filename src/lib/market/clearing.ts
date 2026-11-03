@@ -16,12 +16,14 @@ import {
   reserveInternalSupply,
   finishInternalSupplyCommodity,
   type InternalSupplyClearing,
+  type InternalSupplyContextBuyer,
 } from "./internalSupply/clearing";
 import { normalizedOfferShare } from "./rules/demandAllocation";
+import { appendToBook, indexRowsById } from "./rules/bookAssembly";
+import { commodityMixWeights, mixWeightFor } from "./rules/commodityMixWeights";
 import { placementRevenueLeg } from "./placementRevenuePhase";
 import { capDeliveredMediaUnits, type MediaOwnershipMarket } from "@/lib/mediaRegulation/rules";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
-import { commodityMixWeight as mixWeight } from "@/lib/constants/commodities";
 import { priceRealizationFactor } from "@/lib/market/priceRealization";
 import { LOYAL_POOL_FRACTION, SLICE_NOISE_FLOOR } from "@/lib/market/brandLoyalty";
 import { isStateScopedCommodity, supplyAgreementScopeKey } from "@/lib/market/commodityMarketScope";
@@ -71,8 +73,8 @@ import { clampPricingPosture, costPlusPriceFactor } from "./costPlusPricing/rule
  * rate sits near zero. These thresholds make the autopilot read its own
  * lagged soldFraction before it prices.
  */
-export const AUTO_POSTURE_FILL_CHASE = 0.35;
-export const AUTO_POSTURE_FILL_HEALTHY = 0.7;
+const AUTO_POSTURE_FILL_CHASE = 0.35;
+const AUTO_POSTURE_FILL_HEALTHY = 0.7;
 
 /**
  * Quality → premium pricing coupling (Package B, qualityPremiumPricingEnabled).
@@ -433,8 +435,8 @@ export interface ClearingBookDiagnostic {
  * is exactly the pinned pharmaceuticals/ordnance shape, and canonicalization
  * leaves no legitimate way to offer thousands of units the ledger never saw.
  */
-export const CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP = 250;
-export const CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR = 2;
+const CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP = 250;
+const CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR = 2;
 
 /** Pure predicate behind ClearingBookDiagnostic.invariantBreach. */
 export function isClearingBookBreach(
@@ -498,6 +500,14 @@ export interface SectorClearingResult {
    * restate it; computeClearingFactors always populates it.
    */
   soldByCommodity?: Partial<Record<CommodityType, number>>;
+  /**
+   * Editorial audience fit actually applied to each output's offer, for outputs
+   * where it cut the offer (today: advertising for an outlet whose stance does
+   * not match its audience). The cut shrinks the offer, not demand, so a sold
+   * out outlet's fill reads below 1 and its sold-out headroom needs this
+   * restored. Absent when no output was cut.
+   */
+  editorialAvailabilityByCommodity?: Partial<Record<CommodityType, number>>;
   /**
    * Offered fraction buyers took but a media ownership law refused, overall
    * and per output. Not sold and not paid; production feedback counts it as
@@ -737,6 +747,14 @@ export function computeClearingFactors(args: {
       ...Object.keys(s.supplyRates),
       ...Object.keys(s.outputUnitsByCommodity ?? {}),
     ] as CommodityType[]);
+    // The output mix's rate/base weights are one table per sector. Rebuilding
+    // them per commodity made the split below O(commodities^2) with a fresh
+    // array per leg.
+    let mixWeights: Map<CommodityType, number> | undefined;
+    const mixWeightForSector = (commodity: CommodityType): number => {
+      mixWeights ??= commodityMixWeights(s.supplyRates, basePrices);
+      return mixWeightFor(mixWeights, commodity);
+    };
     for (const commodity of commodities) {
       const rate = s.supplyRates[commodity] ?? 0;
       const hasExactProductOffer = s.outputUnitsByCommodity != null;
@@ -770,7 +788,7 @@ export function computeClearingFactors(args: {
         args.plantsEnabled && hasExactProductOffer && typeof productUnits === "number"
           ? Math.max(0, productUnits)
           : args.plantsEnabled && typeof s.producedUnits === "number" && s.producedUnits >= 0
-            ? s.producedUnits * mixWeight(s.supplyRates, basePrices, commodity)
+            ? s.producedUnits * mixWeightForSector(commodity)
             : null;
       const physicalUnits = plantsUnits ?? (base > 0 ? (s.revenue * rate) / base : 0);
       const editorialAvailability =
@@ -787,7 +805,7 @@ export function computeClearingFactors(args: {
       // offer would use, without replacing the nameplate `units` or setting realUnits.
       const contractFillPhysical =
         typeof s.contractFillUnits === "number" && s.contractFillUnits >= 0
-          ? s.contractFillUnits * mixWeight(s.supplyRates, basePrices, commodity)
+          ? s.contractFillUnits * mixWeightForSector(commodity)
           : null;
       const contractFillUnits =
         contractFillPhysical != null ? contractFillPhysical * availability * placement : undefined;
@@ -797,33 +815,25 @@ export function computeClearingFactors(args: {
         !Number.isFinite(s.offerPlacementByCommodity?.[commodity])
       )
         continue;
-      sellersByCommodity.set(commodity, [
-        ...(sellersByCommodity.get(commodity) ?? []),
-        {
-          id: s.sectorId,
-          units,
-          physicalUnits,
-          editorialAvailability,
-          productAvailability,
-          availability,
-          posture,
-          realUnits: plantsUnits != null,
-          ...(contractFillUnits != null ? { contractFillUnits } : {}),
-          ...(s.inputCostIndex !== undefined
-            ? {
-                quotedPosture:
-                  costPlusPriceFactor(
-                    s.inputCostIndex,
-                    posture,
-                    s.inputCostShare,
-                    s.fixedCostShare
-                  ) /
-                    realizedPriceFor(commodity, s.sectorId) -
-                  1,
-              }
-            : {}),
-        },
-      ]);
+      appendToBook(sellersByCommodity, commodity, {
+        id: s.sectorId,
+        units,
+        physicalUnits,
+        editorialAvailability,
+        productAvailability,
+        availability,
+        posture,
+        realUnits: plantsUnits != null,
+        ...(contractFillUnits != null ? { contractFillUnits } : {}),
+        ...(s.inputCostIndex !== undefined
+          ? {
+              quotedPosture:
+                costPlusPriceFactor(s.inputCostIndex, posture, s.inputCostShare, s.fixedCostShare) /
+                  realizedPriceFor(commodity, s.sectorId) -
+                1,
+            }
+          : {}),
+      });
     }
   }
 
@@ -873,6 +883,30 @@ export function computeClearingFactors(args: {
   for (const [commodity, sellers] of args.groupSupply
     ? [...sellersByCommodity].sort(([a], [b]) => a.localeCompare(b))
     : sellersByCommodity) {
+    // A seller's clearing book and realized price are pure functions of
+    // (commodity, sector) for the whole commodity pass. A state-scoped market
+    // clears one book per state, so the same sector is asked again for every
+    // book it could belong to; resolving the state, the group and the price
+    // ratio on each ask made the pass quadratic in states. Memoise per
+    // commodity instead: the maps die with the commodity.
+    const bookKeyBySectorId = new Map<string, string>();
+    const realizedPriceBySectorId = new Map<string, number>();
+    const bookKeyOf = (sectorId: string): string => {
+      let key = bookKeyBySectorId.get(sectorId);
+      if (key === undefined) {
+        key = bookKeyFor(commodity, sectorId);
+        bookKeyBySectorId.set(sectorId, key);
+      }
+      return key;
+    };
+    const realizedPriceOf = (sectorId: string): number => {
+      let price = realizedPriceBySectorId.get(sectorId);
+      if (price === undefined) {
+        price = realizedPriceFor(commodity, sectorId);
+        realizedPriceBySectorId.set(sectorId, price);
+      }
+      return price;
+    };
     // Market partition: split the commodity's sellers into per-group books
     // (seller's home country) and clear each book against ITS reachable
     // balances. Without partition args this is one worldwide group ("") over
@@ -880,11 +914,25 @@ export function computeClearingFactors(args: {
     const partitioned = new Map<string, ClearingSeller[]>();
     if (args.balancesByGroup || args.stateMarkets) {
       for (const s of sellers) {
-        const g = bookKeyFor(commodity, s.id);
-        partitioned.set(g, [...(partitioned.get(g) ?? []), s]);
+        const g = bookKeyOf(s.id);
+        appendToBook(partitioned, g, s);
       }
     } else {
       partitioned.set("", sellers);
+    }
+
+    // Own-group reservations: the bridge needs the buyers of ONE book, and it
+    // used to filter the whole buyer list for every book. Group them once per
+    // commodity so a state-scoped market pays one pass, not one per state.
+    if (args.internalSupply && !args.groupSupply && args.sectorCorpId) {
+      const buyersByBook = new Map<string, InternalSupplyContextBuyer[]>();
+      for (const buyer of args.internalSupply.buyers) {
+        const key = bookKeyOf(buyer.sectorId);
+        const rows = buyersByBook.get(key);
+        if (rows) rows.push(buyer);
+        else buyersByBook.set(key, [buyer]);
+      }
+      args.internalSupply.buyersByBook = buyersByBook;
     }
 
     for (const [g, groupSellers] of partitioned) {
@@ -1041,11 +1089,10 @@ export function computeClearingFactors(args: {
       let groupUnits = 0;
       if (groupContext && args.sectorCorpId && commodity !== "advertising") {
         const buyers = (groupContext.buyersByCommodity.get(commodity) ?? []).filter(
-          (b) => bookKeyFor(commodity, b.sectorId) === g
+          (b) => bookKeyOf(b.sectorId) === g
         );
         const price =
-          (basePrices[commodity] * realizedPriceFor(commodity, groupSellers[0]?.id ?? "")) /
-          TURNS_PER_DAY;
+          (basePrices[commodity] * realizedPriceOf(groupSellers[0]?.id ?? "")) / TURNS_PER_DAY;
         const allSellers = groupSellers.map((s) => ({
           sectorId: s.id,
           memberId: args.sectorCorpId!.get(s.id) ?? "",
@@ -1072,8 +1119,11 @@ export function computeClearingFactors(args: {
             )
           : new Map<string, number>();
         for (const [rootId, basis] of groupContext.forecastByRoot ?? []) {
-          const ownSellers = allSellers.filter((s) => basis.memberIds.includes(s.memberId));
-          const ownBuyers = buyers.filter((b) => basis.memberIds.includes(b.memberId));
+          // Membership is a set test inside two filters; scanning the id list
+          // for every seller and buyer made this O(rows x members) per root.
+          const memberIds = new Set(basis.memberIds);
+          const ownSellers = allSellers.filter((s) => memberIds.has(s.memberId));
+          const ownBuyers = buyers.filter((b) => memberIds.has(b.memberId));
           if (!ownSellers.length && !ownBuyers.length) continue;
           if (
             basis.books.length >= 128 ||
@@ -1090,7 +1140,7 @@ export function computeClearingFactors(args: {
             supply: bal?.supply ?? 0,
             demand: bal?.demand ?? 0,
             unitPriceAnchor: price,
-            benchmarkFactor: realizedPriceFor(commodity, groupSellers[0]?.id ?? ""),
+            benchmarkFactor: realizedPriceOf(groupSellers[0]?.id ?? ""),
             freightSettlementActive: groupContext.freightSettlementActive,
             buyers: ownBuyers,
             sellers: ownSellers.map((s) => {
@@ -1107,7 +1157,7 @@ export function computeClearingFactors(args: {
                 quoteFactor:
                   offerPriceFactor({
                     posture: postureBySector.get(s.sectorId) ?? 0,
-                    priceLeg: realizedPriceFor(commodity, s.sectorId),
+                    priceLeg: realizedPriceOf(s.sectorId),
                     qualityPremiumEnabled: args.qualityPremiumEnabled,
                     quality:
                       sourceBySector.get(s.sectorId)?.productQualityByCommodity?.[commodity] ??
@@ -1115,7 +1165,7 @@ export function computeClearingFactors(args: {
                     inputCostIndex: sourceBySector.get(s.sectorId)?.inputCostIndex,
                     inputCostShare: sourceBySector.get(s.sectorId)?.inputCostShare,
                     fixedCostShare: sourceBySector.get(s.sectorId)?.fixedCostShare,
-                  }) / realizedPriceFor(commodity, s.sectorId),
+                  }) / realizedPriceOf(s.sectorId),
               };
             }),
           };
@@ -1191,7 +1241,7 @@ export function computeClearingFactors(args: {
             TURNS_PER_DAY;
           byCommodity.set(commodity, {
             units: (prev?.units ?? 0) + units,
-            marketFactor: realizedPriceFor(commodity, receipt.supplierSectorId),
+            marketFactor: realizedPriceOf(receipt.supplierSectorId),
           });
           groupContext.inputAllocationsBySector.set(receipt.buyerSectorId, byCommodity);
         }
@@ -1206,7 +1256,7 @@ export function computeClearingFactors(args: {
               corporationBySector: args.sectorCorpId,
               committed: contractedUnitsById,
               book: g,
-              bookForSector: (id) => bookKeyFor(commodity, id),
+              bookForSector: (id) => bookKeyOf(id),
               supply: Math.min(laggedSupply, offeredUnits),
               demand: bal?.demand ?? 0,
               reservationRoom: Math.max(
@@ -1214,8 +1264,7 @@ export function computeClearingFactors(args: {
                 demandForPass -
                   [...(contractedUnitsById?.values() ?? [])].reduce((n, u) => n + u, 0)
               ),
-              marketPrice:
-                basePrices[commodity] * realizedPriceFor(commodity, groupSellers[0]?.id ?? ""),
+              marketPrice: basePrices[commodity] * realizedPriceOf(groupSellers[0]?.id ?? ""),
             })
           : undefined;
       const groupSold = clearCommodityMarket(
@@ -1317,10 +1366,13 @@ export function computeClearingFactors(args: {
     // Settlement sink: record the contracted units that actually cleared, per
     // supplier corp, for the caller's bilateral premium settlement.
     if (args.contractSettlementOut && contractedShareBySector.size > 0) {
+      // One lookup table per commodity instead of scanning the book for every
+      // contracted sector.
+      const sellerById = indexRowsById(sellers);
       for (const [sectorId, contractedShare] of contractedShareBySector) {
         const corpId = contractedCorpBySector.get(sectorId);
         if (!corpId) continue;
-        const seller = sellers.find((x) => x.id === sectorId);
+        const seller = sellerById.get(sectorId);
         const filledFraction = sold.get(sectorId) ?? 0;
         const recordedTake = contractedTakeBySector.get(sectorId);
         const filledUnits = seller
@@ -1375,6 +1427,7 @@ export function computeClearingFactors(args: {
     const offerFactorByCommodity: Partial<Record<CommodityType, number>> = {};
     const revenueWeightByCommodity: Partial<Record<CommodityType, number>> = {};
     const regulationBlockedByCommodity: Partial<Record<CommodityType, number>> = {};
+    const editorialAvailabilityByCommodity: Partial<Record<CommodityType, number>> = {};
     let blockedSum = 0;
     const sectorGroup = args.groupBySector?.get(s.sectorId);
     const groupRatios = sectorGroup != null ? args.priceRatioByGroup?.get(sectorGroup) : undefined;
@@ -1398,6 +1451,8 @@ export function computeClearingFactors(args: {
         ? Math.max(0, Math.min(1, s.offerAvailabilityByCommodity?.[commodity] ?? 1))
         : 1;
       const availability = editorialAvailability * productAvailability;
+      if (editorialAvailability < 1)
+        editorialAvailabilityByCommodity[commodity] = editorialAvailability;
       // Placement shrank the offer; without this leg the sold fraction is a
       // share of that shrunken offer, so output nobody bought was still paid.
       const placementLeg = placementRevenueLeg(
@@ -1475,6 +1530,9 @@ export function computeClearingFactors(args: {
       factor: factorSum / rateSum,
       soldFraction: soldSum / rateSum,
       soldByCommodity,
+      ...(Object.keys(editorialAvailabilityByCommodity).length > 0
+        ? { editorialAvailabilityByCommodity }
+        : {}),
       marketSupplyShareByCommodity,
       ...(args.recordDelivery ? { deliveredUnitsByCommodity } : {}),
       ...(blockedSum > 0

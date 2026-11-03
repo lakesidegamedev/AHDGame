@@ -89,8 +89,26 @@ export function plantEconomyShare(valueAddedPerTurn: number, gdpPerTurn: number)
   return Math.min(1, Math.max(0, valueAddedPerTurn / gdpPerTurn));
 }
 
-/** Freight sells anywhere in its own country in the shadow (owner yes, 2026-10-19). */
-export const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set(["freight"]);
+/**
+ * Freight sells anywhere in its own country in the shadow (owner yes, 2026-10-19).
+ * Construction services follow (owner yes, 2026-10-30): crews travel within a
+ * country, and a state book left plants that need a trace of them idle.
+ */
+const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set([
+  "freight",
+  "construction_services",
+]);
+
+/**
+ * A stock row's book with a country-scoped commodity's state or country book
+ * collapsed to one token. Stock carried before construction services moved to
+ * the country book still names a state book; this lets that opening image be
+ * compared with the plan's country-book image without a data migration.
+ */
+export function scopeNeutralBook(book: string, commodity: string): string {
+  if (!COUNTRY_SCOPED_SHADOW_COMMODITIES.has(commodity)) return book;
+  return book.startsWith("state:") || book.startsWith("country:") ? "country-scoped" : book;
+}
 
 export function shadowBook(book: string, commodity: string, countryId: string): string {
   if (!COUNTRY_SCOPED_SHADOW_COMMODITIES.has(commodity) || !book.startsWith("state:")) return book;

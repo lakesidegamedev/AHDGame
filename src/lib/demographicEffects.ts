@@ -74,11 +74,7 @@ import {
   readLayer1TurnoutOverlay,
   type DurableShiftAccumulators,
 } from "@/lib/demographics/durableRealignment";
-import {
-  getActivePoliciesForState,
-  type ActivePolicy,
-  type LegislationTypeMap,
-} from "./policyEffects";
+import type { ActivePolicy, LegislationTypeMap } from "./policyEffects";
 
 /**
  * Population shift rate per turn at maximum policy strength.
@@ -736,123 +732,6 @@ function computeCacheUpdate(
     return null;
   }
   return lean;
-}
-
-/**
- * Process demographic shifts for a single state
- * @param db - MongoDB database instance
- * @param stateId - The state ID (e.g., "CA", "TX")
- * @param legTypeMap - Pre-fetched map of legislation type IDs to documents (optional, for batch processing)
- */
-export async function processStateDemographics(
-  db: Db,
-  stateId: string,
-  legTypeMap?: LegislationTypeMap
-): Promise<void> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
-    { _id: "current" },
-    {
-      projection: {
-        legislationDemographicEffectsV2Enabled: 1,
-        preset: 1,
-        currentYear: 1,
-        startingYear: 1,
-        eraSystemEnabled: 1,
-      },
-    }
-  );
-  const v2Enabled = isLegislationDemographicEffectsV2Enabled(gameState);
-
-  // Get active policies for this state (includes federal policies)
-  const policies = await getActivePoliciesForState(db, stateId);
-
-  // Legacy fast-path: without v2 decay there is nothing to do for a
-  // policy-less state.
-  if (policies.length === 0 && !v2Enabled) {
-    return;
-  }
-
-  // If no legTypeMap provided, fetch legislation types for this state's policies
-  let effectiveLegTypeMap = legTypeMap;
-  if (!effectiveLegTypeMap) {
-    const legislationTypesCollection = db.collection<LegislationType>("legislationTypes");
-    const uniqueLegTypeIds = [...new Set(policies.map((p) => p.legislationTypeId))];
-    const legTypes = await legislationTypesCollection
-      .find({ _id: { $in: uniqueLegTypeIds } })
-      .toArray();
-
-    effectiveLegTypeMap = new Map();
-    for (const legType of legTypes) {
-      effectiveLegTypeMap.set(legType._id, legType);
-    }
-  }
-
-  // Get current demographics for this state
-  const demographics = await db
-    .collection<StateDemographics>("stateDemographics")
-    .findOne({ _id: stateId });
-
-  if (!demographics) {
-    console.warn(`No demographics document found for state ${stateId}`);
-    return;
-  }
-
-  // Calculate cumulative shifts from all policies
-  const shifts = calculateDemographicShiftsByTarget(policies, effectiveLegTypeMap);
-
-  let baselines: Map<string, DemographicGroupBaselines> | null = null;
-  let categories: DemographicCategory[] = [];
-  let stateDefaults: StateDemographics | null = null;
-  if (v2Enabled) {
-    const [cats, defaults] = await Promise.all([
-      loadDemographicCategories(db),
-      db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId }),
-    ]);
-    categories = cats;
-    stateDefaults = defaults;
-    baselines = buildGroupBaselineMap(cats, defaults);
-  }
-
-  const updates = buildDemographicUpdates(demographics, shifts, baselines, v2Enabled);
-
-  if (Object.keys(updates).length === 0) {
-    return;
-  }
-
-  const cacheLean = v2Enabled
-    ? computeCacheUpdate(demographics, updates, categories, {
-        preset: gameState?.preset,
-        demographicDefaults: stateDefaults,
-        year: gameState?.eraSystemEnabled ? gameState.currentYear : null,
-        startingYear: gameState?.startingYear,
-      })
-    : null;
-
-  await db.collection<StateDemographics>("stateDemographics").updateOne(
-    { _id: stateId },
-    {
-      $set: {
-        ...updates,
-        ...(cacheLean
-          ? { cachedEconomicLean: cacheLean.economicLean, cachedSocialLean: cacheLean.socialLean }
-          : {}),
-        lastUpdated: new Date(),
-      },
-    }
-  );
-
-  if (cacheLean) {
-    await db.collection<State>("states").updateOne(
-      { _id: stateId },
-      {
-        $set: {
-          cachedEconomicLean: cacheLean.economicLean,
-          cachedSocialLean: cacheLean.socialLean,
-          demographicsLastUpdated: new Date(),
-        },
-      }
-    );
-  }
 }
 
 /**

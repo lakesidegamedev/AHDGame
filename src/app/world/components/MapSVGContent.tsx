@@ -11,7 +11,7 @@ import {
 import { resolveCountryAvailability } from "@/lib/countryAvailability";
 import { WORLD_COUNTRY_ISO_TO_ID, WORLD_MAPPED_COUNTRIES } from "@/lib/worldCountryRegistry";
 import type { CountryAccessMap } from "../page";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ArcSpec, HotspotSpec, StarSpec } from "@/components/landing/globeEnhancements";
 import type { WorldEntityMapSnapshot } from "@/lib/world/worldEntityMap";
 import {

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="470" viewBox="0 0 780 470" role="img" font-family="system-ui, sans-serif">
+<title>Nationalization lifecycle</title>
+<desc>A target becomes eligible, an executive order or a legislative bill authorizes the taking, a compensation tier sets the payout, the asset joins the National Corporation, and a privatization lockout follows; investor confidence falls on each taking.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="469" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="40" width="130" height="150" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="85.0" y="60.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Trigger</text>
+<text x="85.0" y="77.0" text-anchor="middle" font-size="13" fill="#18181b">the target is</text>
+<text x="85.0" y="94.0" text-anchor="middle" font-size="13" fill="#18181b">eligible:</text>
+<text x="85.0" y="111.0" text-anchor="middle" font-size="13" fill="#18181b">unowned,</text>
+<text x="85.0" y="128.0" text-anchor="middle" font-size="13" fill="#18181b">computer-run,</text>
+<text x="85.0" y="145.0" text-anchor="middle" font-size="13" fill="#18181b">or a player</text>
+<text x="85.0" y="162.0" text-anchor="middle" font-size="13" fill="#18181b">company in</text>
+<text x="85.0" y="179.0" text-anchor="middle" font-size="13" fill="#18181b">distress</text>
+<path d="M150,70 L190,70" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M150,150 L190,150" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="190" y="40" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="290.0" y="66.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Executive order</text>
+<text x="290.0" y="83.0" text-anchor="middle" font-size="13" fill="#18181b">head of government</text>
+<rect x="190" y="120" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="290.0" y="137.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Legislative bill</text>
+<text x="290.0" y="154.5" text-anchor="middle" font-size="13" fill="#18181b">any corporation; 48 turns</text>
+<text x="290.0" y="171.5" text-anchor="middle" font-size="13" fill="#18181b">of notice</text>
+<path d="M390,70 L430,90" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M390,150 L430,120" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="430" y="50" width="330" height="110" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="442" y="84.0" text-anchor="start" font-size="13" font-weight="700" fill="#18181b">Compensation tier</text>
+<text x="442" y="101.0" text-anchor="start" font-size="13" fill="#18181b">Fair: 1.0 times value (bill)</text>
+<text x="442" y="118.0" text-anchor="start" font-size="13" fill="#18181b">Discounted: 0.5 times value (executive)</text>
+<text x="442" y="135.0" text-anchor="start" font-size="13" fill="#18181b">Seizure: nothing (executive)</text>
+<path d="M595,160 L595,230" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="480" y="230" width="280" height="60" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="620.0" y="256.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Absorbed into the National</text>
+<text x="620.0" y="273.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Corporation</text>
+<path d="M480,260 L260,260" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="370" y="252" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">later, optionally</text>
+<rect x="20" y="230" width="240" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="140.0" y="247.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Privatization lockout</text>
+<text x="140.0" y="264.5" text-anchor="middle" font-size="13" fill="#18181b">168 turns before the sector can</text>
+<text x="140.0" y="281.5" text-anchor="middle" font-size="13" fill="#18181b">be privatized</text>
+<path d="M600,290 L600,370" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="608" y="335" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">each taking lowers</text>
+<text x="608" y="349" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">confidence</text>
+<path d="M140,290 L140,340 L260,340 L260,370" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="60" y="358" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">privatizing helps</text>
+<text x="60" y="372" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">restore it</text>
+<rect x="190" y="370" width="560" height="70" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="470.0" y="392.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Investor confidence</text>
+<text x="470.0" y="409.5" text-anchor="middle" font-size="13" fill="#18181b">0 to 100, heals toward 70 by 5% of the gap per turn; the drop is larger when</text>
+<text x="470.0" y="426.5" text-anchor="middle" font-size="13" fill="#18181b">the state already owns much of the economy</text>
+</svg>

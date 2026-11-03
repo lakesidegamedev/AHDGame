@@ -1,0 +1,11 @@
+# Corporate ownership safeguards
+
+Agreed acquisition prices cover the target's net assets: operating cash and positive collected share escrow, sector exit value, held securities, fund positions, loan receivables and residual bank equity, less issued bonds and IMF facility debt. Values are normalized to anchor units. Bank deposits remain bank liabilities. The portable accounting is in `rules.ts`; `referenceValuation.ts` only loads and adapts data. Missing or non-finite valuation inputs refuse pricing.
+
+The floor is checked when proposing and accepting, and again by the executor before its first settlement. A journaled retry preserves its pinned amounts so recovery never reprices money already committed. Both merge and subsidiary outcomes use the same protections. Subsidiaries keep their investments and debt. Shell mergers with investment holdings or financing liabilities that the legacy merge cannot transfer are refused until those holdings are sold or transferred because that legacy merger path does not transfer the portfolio safely.
+
+Forced minority buyouts and privatizations use the same net-asset floor per share, alongside their existing premium and bank floor. A forced merger cannot silently retire paid public float: buy it first or use the agreed-acquisition settlement that pays its funding pool. Privatization float retirement also pays that pool.
+
+The shared new-character transfer barrier is 48 raw turns from character creation. Existing wires, peer forex and peer share-order gates inherit the new duration. Personal and parent corporate injections, acquisition control transfers, private-share acceptance, sector purchases and negotiated supply/advertising commitments are covered too. Canceling existing commitments remains available. Corporate control through an NPP caretaker does not bypass its owner's restriction. Corporation creation uses the same age test, waived only while `gameState.preIteration.active` is true. The separate refounding cooldown remains effective. No extra persistent fields or collections are introduced.
+
+Qualification: `scripts/sim/corporateTransferSafeguards.ts` and its report under `scripts/sim/reports`, plus the acquisition safeguards and settlement-recovery suites. No production player data belongs in these fixtures.

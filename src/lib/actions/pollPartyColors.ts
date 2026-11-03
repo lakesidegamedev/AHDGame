@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
 
 /** Neutral fallback for independents, NPPs and parties with no stored color. */
-export const POLL_NEUTRAL_PARTY_COLOR = "#9CA3AF";
+const POLL_NEUTRAL_PARTY_COLOR = "#9CA3AF";
 
 const LEGACY_PARTY_COLORS: Record<string, string> = {
   democrat: "#3b82f6",

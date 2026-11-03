@@ -115,9 +115,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "608a3dc47d387e0099f3f2cc608ffa2d702e27450012aae433411a6e4a91e999",
+    scopeHash: "27f3566cbb8fc76753fcb05e57506cae0ee4898ff0bdc9df613b147596e914fd",
     count: 1,
-    reason: "Repository-owned seed and index registries select the collection.",
+    reason:
+      "Reviewed county reseed compatibility: only the literal states update now preserves live population. The existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",
   },
   {
     file: "src/lib/admin/seed/seedRegionMetrics.ts",
@@ -189,7 +190,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/fundedSovereignCoupons.ts",
     owner: "loadCouponTargetReadiness",
     argument: "collection",
-    scopeHash: "48a2dd8cba7416a97190e9eef4f891661012086d546d79f4f7ca6883992befdc",
+    scopeHash: "9dcec757a0d109afa8c822670edae8ac56cff606c8cb2faca65866bda627157b",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -229,7 +230,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "deliverCashLegsInBatch",
     argument: "collection",
-    scopeHash: "1266e9e88f0746aa9ae40b71ffe3c8d49ec7a7139e0627aefd9863a4f4f01754",
+    scopeHash: "6a16c7ecf19bccd9610b8a110b8a35fdc9fcda3d86f2e11fc235f5764d36c9fc",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -269,10 +270,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts",
     owner: "applyAcquisitionLeg",
     argument: "leg.collection",
-    scopeHash: "865133c464541ed054e5dfdc28be29403872ac66db44655cea9b74c7a91ab90e",
+    scopeHash: "0ca6c157583b0846a2da2d02e66888e50bcd2f89bf106105a92083ad54c2bfa8",
     count: 1,
     reason:
-      "Reviewed stock-tax receipt addition: persisted acquisition legs target the existing characters, imperialCharacters or corporations collections; the receipt shares the keyed wallet write and inherits actor reset coverage.",
+      "Reviewed corporate-tax priority guard: fresh acquirer debits reject pending withholding and existing payables; persisted acquisition legs still target only characters, imperialCharacters or corporations, retain their keyed wallet recovery, and inherit actor reset coverage.",
   },
   {
     file: "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts",
@@ -525,7 +526,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/inspect.ts",
     owner: "runCount",
     argument: "collection",
-    scopeHash: "5996ddef7bcf0e137ba10f9e42a8c6d005795a01011feb4a7af2ab1c475776cd",
+    scopeHash: "4c410412d92f0813f74070cc0e5d085a793b9b76befdbf4b64eac4d9fb99e26d",
     count: 1,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
@@ -534,7 +535,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/inspect.ts",
     owner: "runDistinct",
     argument: "collection",
-    scopeHash: "f1253c6c7c9807cf19331470700d30c734139b94ac7b74470280430c6347ece0",
+    scopeHash: "1975b6fa3d201ca052120bf831b1a476d1b4831684530cc39869f0c5de8075f0",
     count: 1,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
@@ -543,7 +544,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/inspect.ts",
     owner: "runQuery",
     argument: "spec.collection",
-    scopeHash: "9517da487e28339afe70f3db7fd9011994588e18f377cdef3e77d8d01822377c",
+    scopeHash: "dd3665c1163907cc6c3a0df3ca50c724b6525eeb743505c432b936d68e28f795",
     count: 2,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
@@ -616,6 +617,60 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     scopeHash: "1c35322704ac365a2feec9bfe2dd7bb1fa3a1a9ce2686e2120ec20dc1698d85d",
     count: 2,
     reason: "The world-transition operation iterates its explicit collection descriptors.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "<anonymous-function>",
+    argument: "done.name",
+    scopeHash: "adc11d03e63213ed779b8655209bba33c459cf3f891ff04f42f638412f208e08",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "describeCollections",
+    argument: "entry.name",
+    scopeHash: "3f05cf471f4d7bde6cdc4250ccb918c48de17918898ac732c9c3d7189d6cbe4e",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "flush",
+    argument: "current.name",
+    scopeHash: "0a010e43ad066b19fffe764da263abfcf71fa556fe4e27fe1dd9d1b9225dbed3",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "readLiveCollections",
+    argument: "entry.name",
+    scopeHash: "4388fa5b97584cae5b48387293df1b13f520355c71de48538e4089b3cb45874c",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "restoreSaveArchive",
+    argument: "descriptor.name",
+    scopeHash: "f373553af419b5d65fad397d24fd38caf0ffe3f4728029d3c68fc348fc70bd94",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
+  },
+  {
+    file: "src/lib/singleplayer/saveArchive.ts",
+    owner: "writeSaveArchive",
+    argument: "collection.name",
+    scopeHash: "11a465166e3a8407efa3bc8f15fb09f5883ad6c9d59f0052e1948635e6498609",
+    count: 1,
+    reason:
+      "Singleplayer saves copy every collection of the local world database by name, from the live database or from a save file of that world on the player's own machine. Loopback-only routes; no hosted path.",
   },
 ];
 

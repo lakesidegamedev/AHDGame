@@ -23,13 +23,13 @@ import {
 
 export const BARGAINING_DEADLINE_TURNS = 8;
 export const AGREEMENT_DURATION_MIN_TURNS = 24;
-export const AGREEMENT_DURATION_MAX_TURNS = 192;
-export const BARGAINING_MAX_OFFERS = 12;
-export const BARGAINING_MIN_COVERAGE = 20;
-export const BARGAINING_MIN_SUPPORT = 25;
-export const BARGAINING_STRIKE_RUNWAY_SCORE_CAP = 6;
+const AGREEMENT_DURATION_MAX_TURNS = 192;
+const BARGAINING_MAX_OFFERS = 12;
+const BARGAINING_MIN_COVERAGE = 20;
+const BARGAINING_MIN_SUPPORT = 25;
+const BARGAINING_STRIKE_RUNWAY_SCORE_CAP = 6;
 export const BARGAINING_MEDIATION_DELAY_TURNS = 2;
-export const BARGAINING_MEDIATION_WINDOW_TURNS = 4;
+const BARGAINING_MEDIATION_WINDOW_TURNS = 4;
 export const BARGAINING_MEDIATION_MIN_LAW_SUPPORT = 30;
 export const BARGAINING_ESCALATION_SUPPORT = {
   overtime_ban: 35,
@@ -102,7 +102,7 @@ export interface BargainingEscalationUnion {
   treasury?: number;
 }
 
-export function nextBargainingEscalationLevel(
+function nextBargainingEscalationLevel(
   level: BargainingCampaign["escalationLevel"]
 ): BargainingEscalationPlan<BargainingEscalationPlanLocal>["nextLevel"] {
   if (level === "none") return "overtime_ban";

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import { regionPartyUrl, partyUrl } from "@/lib/urls";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -258,7 +259,7 @@ export function PartyElectionsPanel() {
             <option value="">All countries</option>
             {registered.map((id) => (
               <option key={id} value={id}>
-                {COUNTRY_CONFIGS[id].name}
+                {COUNTRY_CLIENT_CONFIGS[id].name}
               </option>
             ))}
           </select>

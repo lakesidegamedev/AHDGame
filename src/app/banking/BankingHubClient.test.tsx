@@ -57,6 +57,7 @@ const payload = {
       operatorType: "player",
       charterType: "universal",
       depositRatePercent: 3.1,
+      saverApyPercent: 4.6,
       lendingRatePercent: 7.5,
       warningBand: "green",
       confidence: 0.91,
@@ -78,6 +79,7 @@ const payload = {
       operatorType: "npp",
       charterType: "retail",
       depositRatePercent: 4.0,
+      saverApyPercent: 4.0,
       lendingRatePercent: 6.0,
       warningBand: "amber",
       confidence: 0.55,
@@ -145,6 +147,7 @@ const payload = {
       operatorType: "player",
       charterType: "universal",
       depositRatePercent: 3.1,
+      saverApyPercent: 3.1,
       lendingRatePercent: 7.5,
       warningBand: "green",
       confidence: 0.91,
@@ -306,8 +309,11 @@ describe("BankingHubClient", () => {
         .getAllByRole("row")
         .filter((row) => row.textContent?.includes("Mutual") || row.textContent?.includes("Trust"));
 
-    // Default sort: savings APY descending puts Meridian (4.00%) on top.
-    expect(bankRows()[0].textContent).toContain("Meridian Mutual");
+    // The column shows what a saver earns, not the posted rate, and sorts on
+    // it: descending puts Continental (4.60% earned, 3.10% posted) on top.
+    expect(bankRows()[0].textContent).toContain("Continental Trust");
+    expect(bankRows()[0].textContent).toContain("4.60%");
+    expect(bankRows()[0].textContent).not.toContain("3.10%");
 
     // Estimated personal rate renders next to the posted base rate.
     expect(screen.getAllByText(/Est\. yours/).length).toBe(2);
@@ -317,7 +323,7 @@ describe("BankingHubClient", () => {
     expect(screen.getByText("91")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Savings APY/ }));
-    expect(bankRows()[0].textContent).toContain("Continental Trust");
+    expect(bankRows()[0].textContent).toContain("Meridian Mutual");
 
     fireEvent.click(screen.getByRole("button", { name: /Loan rate/ }));
     expect(bankRows()[0].textContent).toContain("Meridian Mutual");

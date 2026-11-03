@@ -431,3 +431,11 @@ describe("executeFundOnlyBuyout", () => {
     expect(updateOne).not.toHaveBeenCalled();
   });
 });
+
+// Isolate the existing payout/atomicity cases from balance-sheet loading.
+vi.mock("../acquisitions/referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({ minimumPriceAnchor: 0 }),
+}));
+vi.mock("../acquisitions/controllerTransferBarrier", () => ({
+  controllerTransferBarrierError: vi.fn().mockResolvedValue(null),
+}));

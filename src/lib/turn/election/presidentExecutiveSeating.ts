@@ -9,7 +9,7 @@ import type {
   CareerEvent,
   OfficeType,
 } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { clearCabinetOnTransition } from "@/lib/cabinetTransition";
 import {
   COUNTRY_CONFIGS,

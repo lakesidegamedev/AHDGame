@@ -40,9 +40,9 @@ import {
 // v2: bumped with the chapter redesign. A player who finished or skipped the
 // old flat tour still carries the v1 done flag, and reusing the key would hide
 // the new tour from them permanently.
-export const TUTORIAL_DONE_KEY = "ahd-tutorial-done-v2";
-export const TUTORIAL_STEP_KEY = "ahd-tutorial-step-v2";
-export const TUTORIAL_START_EVENT = "ahd:start-tutorial";
+const TUTORIAL_DONE_KEY = "ahd-tutorial-done-v2";
+const TUTORIAL_STEP_KEY = "ahd-tutorial-step-v2";
+const TUTORIAL_START_EVENT = "ahd:start-tutorial";
 
 /** Fire from anywhere (the /tutorial hub) to (re)start the tour. */
 export function startTutorial(chapterId?: TutorialChapterId): void {

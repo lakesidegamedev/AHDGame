@@ -52,7 +52,7 @@ export interface PoliticalAdOrderAllocation {
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Spend one quarter of a funded order for a weaker local effect when no outlet exists. */
-export const POLITICAL_MEDIA_NO_OUTLET_FALLBACK_SHARE = 0.25;
+const POLITICAL_MEDIA_NO_OUTLET_FALLBACK_SHARE = 0.25;
 
 export function politicalMediaStateKey(countryId: string, stateId: string): string {
   return `${countryId}:${stateId}`;

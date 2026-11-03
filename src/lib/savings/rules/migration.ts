@@ -113,7 +113,7 @@ function finite(value: unknown): number {
  * rollout on arithmetic nobody can act on, so dust is read as zero. A genuine
  * negative, anything a player could actually be owed or owe, still refuses.
  */
-export const MIGRATION_DUST = 0.005;
+const MIGRATION_DUST = 0.005;
 
 function clampDust(value: number): number {
   return Math.abs(value) < MIGRATION_DUST ? 0 : value;

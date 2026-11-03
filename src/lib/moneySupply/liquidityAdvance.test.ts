@@ -59,6 +59,8 @@ describe("durable liquidity advance commands", () => {
     const state = snapshot(memory);
     expect(state.banks.map((bank) => bank.bankCharter.cashReserves)).toEqual([400, 200]);
     expect(state.banks.map((bank) => bank.bankCharter.cbMarginDebt)).toEqual([300, 100]);
+    // Injected principal is recorded as the interest-free part of the line (#1694).
+    expect(state.banks.map((bank) => bank.bankCharter.cbLiquidityAdvanceDebt)).toEqual([300, 100]);
     expect(state.banks.map((bank) => bank.liquidCapital)).toEqual([17, 17]);
     expect(state.central[0]).toMatchObject({
       reserveBalance: 100,

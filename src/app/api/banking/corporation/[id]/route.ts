@@ -465,6 +465,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
       hasActiveCharter && charter && isDepositTakingCharter(charter)
         ? buildRiskReadout({
             cashReserves: sheet?.cashReserves ?? 0,
+            liquidSecurities: Math.max(0, charter.sovereignTreasuryMarkValue ?? 0),
             cashBackedDeposits: sheet?.cashBackedDeposits ?? 0,
             totalLoans: sheet?.totalLoans ?? 0,
             reserveRatioRequired: reserveRatio ?? 0,

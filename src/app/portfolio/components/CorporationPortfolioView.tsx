@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatSignedPercent } from "@/lib/utils/formatters";
 import { Skeleton } from "@/components/ui";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { PortfolioChart } from "@/components/charts/PortfolioChart";
@@ -513,8 +514,7 @@ function CorpStocksTable({
                         {formatAmount(norm(h.unrealizedPnl, h.currencyCode), h.currencyCode)}
                         {h.unrealizedPnlPct !== null && (
                           <span className="block text-[10px] opacity-75">
-                            {h.unrealizedPnlPct >= 0 ? "+" : ""}
-                            {h.unrealizedPnlPct}%
+                            {formatSignedPercent(h.unrealizedPnlPct)}
                           </span>
                         )}
                       </>

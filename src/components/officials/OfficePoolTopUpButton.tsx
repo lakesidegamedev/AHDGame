@@ -23,7 +23,7 @@ interface OfficePoolTopUpButtonProps {
 }
 
 /** Disabled reason for the holder, or null when the purchase is allowed. */
-export function officePoolTopUpDisabledReason(topUp: OfficePoolTopUpStatus): string | null {
+function officePoolTopUpDisabledReason(topUp: OfficePoolTopUpStatus): string | null {
   if (topUp.usedThisTurn) return "Already bought one this turn.";
   if (topUp.playerActions < topUp.cost) {
     return `Needs ${topUp.cost} AP (you have ${Math.floor(topUp.playerActions)}).`;

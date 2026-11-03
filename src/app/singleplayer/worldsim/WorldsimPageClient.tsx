@@ -1,8 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LandingGlobe } from "@/components/LandingGlobe";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui";
 import { apiErrorText } from "@/lib/errors/catalog";
+
+// The globe is a browser-only canvas that pulls the map registry, the metric
+// catalog and the world blocs in with it. The page reserves the map's height
+// (min 420px), so loading it separately keeps the stats below from jumping.
+const LandingGlobe = dynamic(
+  () => import("@/components/LandingGlobe").then((m) => ({ default: m.LandingGlobe })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-full min-h-[420px] w-full rounded" />,
+  }
+);
 
 interface Headline {
   turn: number;

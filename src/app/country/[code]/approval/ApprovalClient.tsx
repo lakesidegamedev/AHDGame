@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { netModifierEffect, type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import { netModifierEffect, type ActiveModifier } from "@/lib/approval/activeModifier";
 import { metricsApiUrl, approvalApiUrl, politicalMetricsUrl, regionApprovalUrl } from "@/lib/urls";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryCode } from "@/lib/country/countryCodes";
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { mergeApprovalModifiers } from "./mergeApprovalModifiers";
@@ -52,9 +55,14 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
   const t = useTranslations("layout.approval");
   const { code } = useParams<{ code: string }>();
   const rawCode = code?.toUpperCase() ?? "US";
-  const config =
-    rawCode in COUNTRY_CONFIGS ? COUNTRY_CONFIGS[rawCode as CountryId] : COUNTRY_CONFIGS.US;
-  const country = config.id;
+  // Unknown country codes render the US board, which is what the page always
+  // did; the slim helpers below answer for the same id.
+  const country: CountryId = (COUNTRY_ORDER as readonly string[]).includes(rawCode)
+    ? (rawCode as CountryId)
+    : "US";
+  const countryCode = getCountryCode(country);
+  const countryName = getCountryDisplayName(country);
+  const regionLabel = getCountryRegionLabels(country)?.singular ?? "State";
 
   const [metricsData, setMetricsData] = useState<MetricsApiResponse | null>(initialMetrics ?? null);
   const [approvalData, setApprovalData] = useState<ApprovalApiResponse | null>(
@@ -152,16 +160,16 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-4 text-xs text-muted">
           <Link
-            href={`/country/${config.code.toLowerCase()}`}
+            href={`/country/${countryCode.toLowerCase()}`}
             className="hover:text-foreground transition-colors"
           >
-            {config.name}
+            {countryName}
           </Link>
           <span>/</span>
           <span>Approval &amp; active effects</span>
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">{config.name} Approval &amp; active effects</h1>
+        <h1 className="text-2xl font-bold mb-1">{countryName} Approval &amp; active effects</h1>
         <p className="text-sm text-muted mb-8">
           National approval and the named conditions that adjust it — plus their knock-on effects on
           in-state sector profit margins.
@@ -198,15 +206,13 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                 </p>
                 <p className="text-xs text-muted mt-2">
                   {hasBreakdown
-                    ? `Population-weighted average of ${config.regionLabel.toLowerCase()} approval, plus the national adjustments below, as of the latest turn.`
-                    : `Population-weighted average of ${config.regionLabel.toLowerCase()} approval, as of the latest turn.`}
+                    ? `Population-weighted average of ${regionLabel.toLowerCase()} approval, plus the national adjustments below, as of the latest turn.`
+                    : `Population-weighted average of ${regionLabel.toLowerCase()} approval, as of the latest turn.`}
                 </p>
                 {hasBreakdown && (
                   <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-sm">
                     <div className="flex justify-between gap-4">
-                      <dt className="text-muted">
-                        {config.regionLabel} average (population weighted)
-                      </dt>
+                      <dt className="text-muted">{regionLabel} average (population weighted)</dt>
                       <dd className="tabular-nums font-medium">{stateAverage.toFixed(1)}%</dd>
                     </div>
                     {nationalAdjustments.map((m) => (
@@ -243,8 +249,8 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                   </h2>
                   {hasBreakdown && (
                     <p className="mt-1 text-xs text-muted">
-                      Already included in the {config.regionLabel.toLowerCase()} approval numbers,
-                      so not added again at national level.
+                      Already included in the {regionLabel.toLowerCase()} approval numbers, so not
+                      added again at national level.
                     </p>
                   )}
                 </div>
@@ -292,8 +298,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                 <div className="mt-5 border-t border-card-border/40 pt-4">
                   <h3 className="text-sm font-semibold text-muted">National adjustments</h3>
                   <p className="mt-1 mb-3 text-xs text-muted">
-                    Applied to the {config.regionLabel.toLowerCase()} average to give the national
-                    figure.
+                    Applied to the {regionLabel.toLowerCase()} average to give the national figure.
                   </p>
                   <ModifierList modifiers={nationalAdjustments} />
                 </div>
@@ -330,9 +335,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
             {/* State/region rankings */}
             {sortedStates.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-6 shadow-panel">
-                <h2 className="text-sm font-semibold text-muted mb-4">
-                  {config.regionLabel} rankings
-                </h2>
+                <h2 className="text-sm font-semibold text-muted mb-4">{regionLabel} rankings</h2>
                 <p className="text-xs text-muted mb-4">{t("rankingTargets")}</p>
                 <div className="space-y-1">
                   {sortedStates.map((s, i) => {
@@ -370,22 +373,22 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
         {/* Back nav */}
         <div className="mt-8 flex items-center gap-3 pt-4 border-t border-card-border/40">
           <Link
-            href={`/country/${config.code.toLowerCase()}`}
+            href={`/country/${countryCode.toLowerCase()}`}
             className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
           >
-            ← {config.name} Overview
+            ← {countryName} Overview
           </Link>
-          {(POLITICAL_METRIC_COUNTRY_IDS as readonly string[]).includes(config.id) ? (
+          {(POLITICAL_METRIC_COUNTRY_IDS as readonly string[]).includes(country) ? (
             // SP6: playables' metrics product is the political registry.
             <Link
-              href={politicalMetricsUrl(config.id)}
+              href={politicalMetricsUrl(country)}
               className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
             >
               Political metrics
             </Link>
           ) : (
             <Link
-              href={`/country/${config.code.toLowerCase()}/metrics`}
+              href={`/country/${countryCode.toLowerCase()}/metrics`}
               className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
             >
               National metrics

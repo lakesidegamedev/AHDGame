@@ -706,3 +706,143 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=playerCorp)", () =
     expect(data.availableCountries).toEqual(["RU"]);
   });
 });
+
+describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)", () => {
+  type Row = {
+    stateId: string;
+    unownedRevenue: number;
+    canAfford: boolean;
+    entry: { canEnter: boolean; reason: string | null; message: string | null } | null;
+    roomToBuildUnits: number | null;
+    roomScope: string | null;
+  };
+
+  function seedPlantsMarket(gameState: Record<string, unknown> = {}) {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+      _id: "default",
+      marketSystemMode: "plants",
+    });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 10,
+      currentYear: 1953,
+      ...gameState,
+    });
+    db.collectionMocks.unownedSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { stateId: "CA", sectorType: "real_estate", revenue: 1_200, headroomUnits: 1000 },
+        ]),
+    });
+    db.collectionMocks.states.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "CA", name: "California", countryId: "US" }]),
+    });
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.macroMetrics.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+  }
+
+  async function corpOverride(fields: Record<string, unknown>) {
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: {
+        _id: new ObjectId(),
+        userId: "user1",
+        countryId: "US",
+        type: "energy",
+        marketingStrength: 0,
+        liquidCapital: 1_000_000,
+        ...fields,
+      },
+    } as never);
+  }
+
+  async function firstRow(): Promise<{ row: Row; data: Record<string, unknown> }> {
+    const response = await GET(makeRequest("sectorType=real_estate&mode=unowned"), ctx());
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    return { row: (data.suggestions as Row[])[0], data };
+  }
+
+  it("marks an affordable market enterable and keeps legacy revenue apart from room to build", async () => {
+    seedPlantsMarket();
+    const { row, data } = await firstRow();
+    expect(row.entry).toEqual({ canEnter: true, reason: null, message: null });
+    expect(row.unownedRevenue).toBe(1_200);
+    expect(typeof row.roomToBuildUnits).toBe("number");
+    expect(row.roomScope).toBe(data.countrySharedDemand ? "country" : "state");
+  });
+
+  it("refuses with insufficient_capital when cash is short of the founding charge", async () => {
+    seedPlantsMarket();
+    await corpOverride({ liquidCapital: 0 });
+    const { row } = await firstRow();
+    expect(row.canAfford).toBe(false);
+    expect(row.entry).toMatchObject({ canEnter: false, reason: "insufficient_capital" });
+  });
+
+  it("refuses with player_control_required while non-player management runs the corp", async () => {
+    seedPlantsMarket();
+    await corpOverride({ ceoType: "npp" });
+    const { row } = await firstRow();
+    // Affordable, but the command would still refuse it.
+    expect(row.canAfford).toBe(true);
+    expect(row.entry).toEqual({
+      canEnter: false,
+      reason: "player_control_required",
+      message: "Resume player control before building plants for this corporation",
+    });
+  });
+
+  it("refuses with actions_paused while corporation actions are paused", async () => {
+    seedPlantsMarket({ corporationActionsPaused: true });
+    const { row } = await firstRow();
+    expect(row.entry).toEqual({
+      canEnter: false,
+      reason: "actions_paused",
+      message: "Corporation actions are currently paused by an admin",
+    });
+  });
+
+  it("refuses with command_economy for a state-run market listed in competitor mode", async () => {
+    seedPlantsMarket();
+    const natCorpId = new ObjectId();
+    db.collectionMocks.corporateSectors.find.mockImplementation(
+      (query: { corporationId?: { $ne?: unknown } } = {}) => {
+        const chain = { project: vi.fn().mockReturnThis(), toArray: vi.fn() };
+        if (query.corporationId && "$ne" in query.corporationId) {
+          chain.toArray.mockResolvedValue([{ stateId: "UKR" }]);
+        } else if (query.corporationId) {
+          chain.toArray.mockResolvedValue([]);
+        } else {
+          chain.toArray.mockResolvedValue([
+            { stateId: "UKR", corporationId: natCorpId, revenue: 9000 },
+          ]);
+        }
+        return chain;
+      }
+    );
+    db.collectionMocks.states.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "UKR", name: "Ukraine", countryId: "RU" }]),
+    });
+    db.collectionMocks.unownedSectors.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([{ _id: natCorpId, name: "State Energy Trust" }]),
+    });
+
+    const response = await GET(makeRequest("sectorType=energy&mode=playerCorp"), ctx());
+    const data = await response.json();
+    const ukr = (data.suggestions as Row[]).find((s) => s.stateId === "UKR");
+    expect(ukr?.entry).toMatchObject({ canEnter: false, reason: "command_economy" });
+  });
+});

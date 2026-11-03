@@ -72,7 +72,7 @@ const delayProxyPath: Record<Country, string | null> = {
 const openingNationalTfr: Record<Country, number> = { US: 2.07, UK: 1.82, JP: 1.53, IE: 2.09 };
 
 /** Gameplay assumptions, not reconstructed 1991 national energy accounts. */
-export const opening1991FuelAssumptions: Readonly<Record<Country, ProvisionalFuelOpeningInput>> = {
+const opening1991FuelAssumptions: Readonly<Record<Country, ProvisionalFuelOpeningInput>> = {
   US: { importExposurePercent: 40, emergencyBufferDays: 85, sourceDiversity: 62 },
   UK: { importExposurePercent: 12, emergencyBufferDays: 90, sourceDiversity: 65 },
   JP: { importExposurePercent: 88, emergencyBufferDays: 110, sourceDiversity: 43 },

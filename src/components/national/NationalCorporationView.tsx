@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { NationalCorporationViewModel } from "@/lib/nationalization/nationalCorporationView";
 import { NationalMasthead } from "./NationalMasthead";
 import { HeroStatsStrip } from "./HeroStatsStrip";

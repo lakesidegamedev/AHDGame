@@ -1,3 +1,4 @@
+import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -48,7 +49,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/capital-injection:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -89,6 +94,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!character) {
       return errorResponse(404, "Character not found");
     }
+
+    const barrier = await newCharacterTransferBarrierResponse(character);
+    if (barrier) return barrier;
 
     const forexEnabled = await isForexEnabled();
     const homeCurrency = getHomeCurrency(character);

@@ -12,7 +12,7 @@ import type {
   ElectionVoteTally,
   CongressLeader,
 } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { generatePoliticianFlavor } from "@/lib/wiki/politicianFlavor";
 import type { PoliticianOverride, PoliticianElectionEntry } from "@/lib/db/types";
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";

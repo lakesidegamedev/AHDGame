@@ -15,7 +15,8 @@ import {
   type SenateClassFilter,
   type LeaderStrip,
 } from "./components/CongressConstants";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import type { CongressMembersResponse } from "@/lib/congress/types";
@@ -198,7 +199,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
   ];
 
   const hero = CHAMBER_HERO[activeTab];
-  const legislature = COUNTRY_CONFIGS[countryId].legislature;
+  const legislature = COUNTRY_CLIENT_CONFIGS[countryId].legislature;
   const upperChamberLabel = legislature.upperChamber?.shortName ?? "";
   const lowerChamberLabel = legislature.lowerChamber.shortName;
 

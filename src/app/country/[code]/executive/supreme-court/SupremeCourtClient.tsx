@@ -8,7 +8,8 @@ import { Button, Skeleton } from "@/components/ui";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { useToast } from "@/contexts/ToastContext";
 import { getPartyHex } from "@/lib/utils/politics";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { legislatureUrl, executiveUrl, scotusJusticeOfficeUrl } from "@/lib/urls";
 import { SCOTUS_HERO_IMAGE_URL } from "@/lib/scotus/justiceImages";
 import { formatDeathChancePercent } from "@/lib/scotus/tenure";
@@ -72,10 +73,10 @@ function ScotusHero() {
  */
 export default function SupremeCourtClient({ countryId }: { countryId: CountryId }) {
   const code = countryId.toLowerCase();
-  const isUS = countryId === COUNTRY_CONFIGS.US.id;
+  const isUS = countryId === COUNTRY_CLIENT_CONFIGS.US.id;
   const countryQuery = `?country=${encodeURIComponent(countryId)}`;
   const senateLink =
-    countryId === COUNTRY_CONFIGS.US.id
+    countryId === COUNTRY_CLIENT_CONFIGS.US.id
       ? "/congress?chamber=senate&tab=bills"
       : legislatureUrl(countryId);
   const { showToast } = useToast();
@@ -250,7 +251,7 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
               href={executiveUrl(countryId)}
               className="mt-4 inline-block text-sm text-primary hover:underline"
             >
-              Back to {COUNTRY_CONFIGS[countryId]?.executiveTitle ?? "Executive"}
+              Back to {COUNTRY_CLIENT_CONFIGS[countryId]?.executiveTitle ?? "Executive"}
             </Link>
           </div>
         </main>

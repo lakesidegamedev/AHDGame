@@ -156,7 +156,7 @@ function satisfies(value: number, op: "lt" | "gt", threshold: number): boolean {
 }
 
 /** Evaluate a single clause against a snapshot. */
-export function evaluateClause(clause: TriggerClause, snap: NationalSnapshot): boolean {
+function evaluateClause(clause: TriggerClause, snap: NationalSnapshot): boolean {
   if (clause.metric === "fxDepreciation") {
     const dep = snap.fxDepreciation(clause.windowTurns ?? 6);
     return dep != null && satisfies(dep, clause.op, clause.threshold);

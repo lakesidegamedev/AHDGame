@@ -285,3 +285,54 @@ describe("POST /api/corporations — forex enabled", () => {
     expect(inserted.legalStructure).toBe("uk_ltd");
   });
 });
+
+vi.mock("@/lib/time/gameTime", () => ({
+  getGameTime: vi
+    .fn()
+    .mockResolvedValue({ currentTurn: 0, effectiveNow: new Date("2026-10-31T00:00:00Z") }),
+}));
+it.each([false, true])(
+  "new-character corporation creation respects founding-period exemption=%s",
+  async (founding) => {
+    const { getDb } = await import("@/lib/mongodb");
+    const { requireAuth } = await import("@/lib/api/requireAuth");
+    const { db, corpInsertOne, character } = makeDb("US");
+    const original = db.collection.getMockImplementation()!;
+    db.collection.mockImplementation((name: string) =>
+      name === "gameState"
+        ? {
+            findOne: async () => ({
+              _id: "current",
+              currentYear: 1970,
+              currentTurn: 0,
+              preIteration: { active: founding },
+            }),
+          }
+        : original(name)
+    );
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    vi.mocked(requireAuth).mockResolvedValue({
+      ok: true,
+      user: {
+        userId: new ObjectId().toString(),
+        hasCharacter: true,
+        character: { ...character, createdTurn: 0 },
+      },
+    } as never);
+    const { POST } = await import("../route");
+    const response = await POST(
+      new Request("http://localhost/api/corporations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Example Company",
+          tickerSymbol: "EXMP",
+          type: "manufacturing",
+        }),
+      })
+    );
+    expect(response.status).toBe(founding ? 201 : 403);
+    expect(corpInsertOne).toHaveBeenCalledTimes(founding ? 1 : 0);
+    if (!founding) expect((await response.json()).remainingTurns).toBe(48);
+  }
+);

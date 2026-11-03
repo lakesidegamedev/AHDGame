@@ -8,7 +8,11 @@
  * 1. Each order debits its buyer exactly as before and credits one clearing
  *    pool account in the buyer's currency. The same transition inserts the
  *    order's frozen per-seller payables, keyed by the order's settlement key,
- *    and publishes the buyer's receipt.
+ *    and publishes the buyer's receipt. The payable carries only totals: the
+ *    order's per-seller table (one allocation per advertising seller) is
+ *    written once to `productAdvertisingAllocations` under the same key, so a
+ *    journal record stays small enough that the receipt projection reading it
+ *    back does not pay for the table again.
  * 2. Once per call, every owed payable is netted by seller, currency, frozen
  *    rate and denomination witness and paid in ONE transition: one debit per
  *    pool document and one credit per seller group. Its projection inserts
@@ -66,8 +70,17 @@ export const ADVERTISING_FAMILY = {
 export const PRODUCT_ADVERTISING_CLEARING_COLLECTION = "productAdvertisingClearing";
 /** Owed per-order seller payables, inserted by stage 1 and removed once cleared. */
 export const PRODUCT_ADVERTISING_PAYABLES_COLLECTION = "productAdvertisingPayables";
+/**
+ * One document per stage-1 order holding its frozen per-seller table.
+ *
+ * The table is large (one allocation per advertising seller in the world) and
+ * is read once per clearing, by the batch that pays it. Keeping it out of the
+ * journal record is what lets the record stay small: the settle loop re-reads
+ * that record for every projection it applies.
+ */
+export const PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION = "productAdvertisingAllocations";
 /** Append-only clearance receipts, inserted by the stage 2 projection. */
-export const PRODUCT_ADVERTISING_CLEARANCES_COLLECTION = "productAdvertisingClearances";
+const PRODUCT_ADVERTISING_CLEARANCES_COLLECTION = "productAdvertisingClearances";
 /** Native cash balance field on a pool document. */
 export const CLEARING_POOL_BALANCE_PATH = "cashLocal";
 
@@ -98,14 +111,109 @@ export interface ProductAdvertisingPayable {
   poolCurrencyCode: string;
   poolLocalPerAnchor: number;
   poolAmountLocal: number;
+  /**
+   * Absent on a stage-1 order, whose table is stored once under the same `_id`
+   * in {@link PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION}. A residual payable
+   * (sellers a clearing deferred) carries its own deferred table, because no
+   * stage-1 move quoted it.
+   */
+  sellerAllocations?: ProductAdvertisingPayableAllocation[];
+}
+
+/** The per-seller table of one stage-1 order, keyed by the move that funds it. */
+export interface ProductAdvertisingAllocationTable {
+  /** The stage-1 settlement key of the order, which is also its payable `_id`. */
+  _id: string;
+  family: ProductAdvertisingFamily;
+  turn: number;
   sellerAllocations: ProductAdvertisingPayableAllocation[];
+}
+
+/** A payable whose per-seller table is resolved and ready to be priced. */
+export type ProductAdvertisingOwedPayable = ProductAdvertisingPayable & {
+  sellerAllocations: ProductAdvertisingPayableAllocation[];
+};
+
+/**
+ * Store each order's frozen per-seller table once, under the key of the move
+ * that inserts its payable. Written before the move claims its key, so a
+ * payable that exists always has its table, and a replay of the same order
+ * rewrites an identical document.
+ */
+export async function recordProductAdvertisingAllocations(
+  db: Db,
+  family: ProductAdvertisingFamily,
+  turn: number,
+  entries: readonly {
+    payableId: string;
+    sellerAllocations: ProductAdvertisingPayableAllocation[];
+  }[]
+): Promise<void> {
+  if (entries.length === 0) return;
+  await db
+    .collection<ProductAdvertisingAllocationTable>(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
+    .bulkWrite(
+      entries.map((entry) => ({
+        updateOne: {
+          filter: { _id: entry.payableId },
+          update: {
+            $set: {
+              family,
+              turn,
+              sellerAllocations: entry.sellerAllocations,
+            },
+          },
+          upsert: true,
+        },
+      })),
+      { ordered: false }
+    );
+}
+
+/** Drop tables of orders whose payable will never exist. */
+export async function dropProductAdvertisingAllocations(
+  db: Db,
+  payableIds: readonly string[]
+): Promise<void> {
+  if (payableIds.length === 0) return;
+  await db
+    .collection<ProductAdvertisingAllocationTable>(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
+    .deleteMany({ _id: { $in: [...payableIds] } });
+}
+
+/** Load the tables of payables that do not carry their own, in one read. */
+export async function resolveProductAdvertisingPayables(
+  db: Db,
+  payables: readonly ProductAdvertisingPayable[]
+): Promise<ProductAdvertisingOwedPayable[]> {
+  const unresolved = payables.filter((payable) => !payable.sellerAllocations);
+  const tables =
+    unresolved.length === 0
+      ? []
+      : ((await db
+          .collection<ProductAdvertisingAllocationTable>(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
+          .find(
+            { _id: { $in: unresolved.map((payable) => payable._id) } },
+            { projection: { _id: 1, sellerAllocations: 1 } }
+          )
+          .toArray()) as ProductAdvertisingAllocationTable[]);
+  const byId = new Map(tables.map((table) => [table._id, table.sellerAllocations]));
+  return payables.map((payable) => {
+    if (payable.sellerAllocations) return payable as ProductAdvertisingOwedPayable;
+    const table = byId.get(payable._id);
+    if (!table)
+      throw new Error(
+        `Advertising payable ${payable._id} has no frozen seller table; reconciliation is required`
+      );
+    return { ...payable, sellerAllocations: table };
+  });
 }
 
 export function clearingPoolId(family: ProductAdvertisingFamily, currencyCode: string): string {
   return `${family}:${currencyCode}`;
 }
 
-export function clearingTransitionKind(family: ProductAdvertisingFamily): string {
+function clearingTransitionKind(family: ProductAdvertisingFamily): string {
   return `${ADVERTISING_FAMILY[family].kind}.clearing`;
 }
 
@@ -162,7 +270,7 @@ function denominationKey(witness: ProductAdvertisingDenominationWitness): string
 }
 
 /** Deterministic stage 2 key: the same owed set in the same turn is the same transition. */
-export function clearingSettlementKey(
+function clearingSettlementKey(
   family: ProductAdvertisingFamily,
   turn: number,
   payableIds: readonly string[]
@@ -186,7 +294,7 @@ export function clearingSettlementKey(
 export function productAdvertisingClearingTransition(
   family: ProductAdvertisingFamily,
   turn: number,
-  payables: readonly ProductAdvertisingPayable[],
+  payables: readonly ProductAdvertisingOwedPayable[],
   poolBalances: ReadonlyMap<string, number> = new Map(),
   canPay: (allocation: ProductAdvertisingPayableAllocation) => boolean = () => true
 ): BankingTransition | null {
@@ -203,7 +311,7 @@ export function productAdvertisingClearingTransition(
       const deferredPool =
         deferred.reduce((sum, seller) => sum + seller.amountLocal / seller.localPerAnchor, 0) *
         payable.poolLocalPerAnchor;
-      const residual: ProductAdvertisingPayable | null =
+      const residual: ProductAdvertisingOwedPayable | null =
         deferred.length > 0
           ? {
               ...payable,
@@ -395,7 +503,7 @@ function paidSellerIds(record: ClearingJournalRecord | null): ObjectId[] {
 }
 
 /** Matches the raw-field guard `denominationConditions` builds, evaluated on a read row. */
-export function denominationMatches(
+function denominationMatches(
   row: { liquidCurrencyCode?: unknown; countryId?: unknown },
   witness: ProductAdvertisingDenominationWitness
 ): boolean {
@@ -412,7 +520,7 @@ export function denominationMatches(
 
 async function sellerEligibility(
   db: Db,
-  payables: readonly ProductAdvertisingPayable[]
+  payables: readonly ProductAdvertisingOwedPayable[]
 ): Promise<(allocation: ProductAdvertisingPayableAllocation) => boolean> {
   const ids = [
     ...new Set(
@@ -493,7 +601,7 @@ export async function clearProductAdvertisingPayables(
         .toArray()
     ).map((row) => row._id)
   );
-  if (cleared.size > 0) await payablesCollection.deleteMany({ _id: { $in: [...cleared] } });
+  if (cleared.size > 0) await removePaidPayables(db, [...cleared]);
   const due = owed.filter((payable) => !cleared.has(payable._id) && !inFlight.has(payable._id));
   if (due.length === 0) return [...touched.values()];
 
@@ -502,11 +610,12 @@ export async function clearProductAdvertisingPayables(
     .collection<ProductAdvertisingClearingPool>(PRODUCT_ADVERTISING_CLEARING_COLLECTION)
     .find({ _id: { $in: poolIds } }, { projection: { _id: 1, [CLEARING_POOL_BALANCE_PATH]: 1 } })
     .toArray();
-  const canPay = await sellerEligibility(db, due);
+  const payableTables = await resolveProductAdvertisingPayables(db, due);
+  const canPay = await sellerEligibility(db, payableTables);
   const transition = productAdvertisingClearingTransition(
     family,
     turn,
-    due,
+    payableTables,
     new Map(pools.map((pool) => [pool._id, pool.cashLocal])),
     canPay
   );
@@ -516,7 +625,18 @@ export async function clearProductAdvertisingPayables(
   touch(paidSellerIds(record));
   if (result.status === "applied" || record?.status === "applied") {
     const clearedIds = (transition.projections.at(-1)?.inserts ?? []).map((row) => row._id);
-    await payablesCollection.deleteMany({ _id: { $in: clearedIds as string[] } });
+    await removePaidPayables(db, clearedIds as string[]);
   }
   return [...touched.values()];
+}
+
+/** A paid payable and the seller table that priced it leave together. */
+async function removePaidPayables(db: Db, payableIds: readonly string[]): Promise<void> {
+  if (payableIds.length === 0) return;
+  await Promise.all([
+    db
+      .collection<ProductAdvertisingPayable>(PRODUCT_ADVERTISING_PAYABLES_COLLECTION)
+      .deleteMany({ _id: { $in: [...payableIds] } }),
+    dropProductAdvertisingAllocations(db, payableIds),
+  ]);
 }

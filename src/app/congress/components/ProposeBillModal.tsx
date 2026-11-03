@@ -52,7 +52,7 @@ import {
   type EmbargoProvisionInput,
 } from "@/components/bills/embargoProvisionTypes";
 import type { ChamberTab } from "./CongressConstants";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";

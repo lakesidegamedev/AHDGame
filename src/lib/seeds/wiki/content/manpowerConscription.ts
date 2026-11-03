@@ -1,10 +1,30 @@
 export const manpowerConscriptionContent = `# Manpower & Conscription
 
-Money buys equipment. **Manpower buys soldiers**, and it is usually the constraint that actually stops you.
+You can have the money for a division and still be refused, because the treasury does not hold the men. Money buys equipment. **Manpower buys soldiers**, and it is usually the constraint that actually stops you.
 
 Every nation holds a single pool of available men. Raising a unit draws its full establishment out of that pool. Every turn, the pool regenerates a little and your under-strength formations quietly refill from it. How fast all of that happens is decided by **legislation**.
 
 Manage this from the defence seat's office → **Military** tab → **Operations**.
+
+![Chain from reserve law level to stance, ceiling and regeneration and the manpower pool, which hard blocks recruiting and feeds replacement mode and its experience dilution.](/wiki-images/diagrams/manpower-conscription-chain.svg)
+
+## The numbers that cap your army
+
+| What | Value |
+| --- | --- |
+| Ceiling | 2% of total population × stance multiplier |
+| Regeneration per turn | 0.05% of population × stance multiplier |
+| Opening pool on a fresh world | 25% of the ceiling |
+| Stance multipliers | ×0.6, ×0.8, ×1.0, ×1.4, ×2.0 (volunteer to universal) |
+| Trained refill | Up to 10% of a unit's establishment per turn; replacements arrive with an experience score of 100 (one grade) |
+| Conscript refill | Up to 25% of establishment per turn, replacements arrive with zero experience |
+| Reserve law start level | Level 2 (Selective Service, ×1.0) in the four countries that have one |
+
+### A country of 100 million, filling up and rebuilding
+
+A country of 100 million people on Selective Service (×1.0) has a ceiling of 2,000,000 men and gains 50,000 a turn. It opens with 500,000. Filling the remaining 75% of the ceiling takes 30 turns, whatever the stance, because ceiling and regeneration scale together. On Universal Conscription (×2.0) the same country has a ceiling of 4,000,000 and gains 100,000 a turn. On an All-Volunteer Force (×0.6) it has 1,200,000 and gains 30,000.
+
+A 12,000-man Infantry Division at 40% strength is 4,800 men and needs 7,200 to be full. Trained replacement refills 1,200 a turn, so it takes 6 turns. Conscript replacement refills 3,000 a turn, so it takes 3 turns. For an Elite division that started with 50 experience points, the trained rebuild ends as Seasoned. The conscript rebuild ends as Regular, three grades lower than where it started.
 
 ## The pool
 
@@ -13,13 +33,19 @@ Your pool has two numbers that matter:
 - **Ceiling**: the most manpower you can ever bank. Derived from your **total population** and your conscription stance: **2% of population**, multiplied by the stance.
 - **Regeneration**: what arrives each turn. **0.05% of population**, multiplied by the stance.
 
+\`\`\`wiki-chart
+manpower-pool-refill-by-stance
+\`\`\`
+
 Both scale off population, so a large country genuinely fields more men. Both scale off the stance, so a country that mobilises its society hard gets more of them.
 
 A fresh world does not start you at the ceiling. Each nation opens with **25% of its ceiling**, enough to field a real starting army, but not enough to skip the buildup. (A country starting at one turn's regeneration was the old behaviour, and it left East Germany unable to afford a single 12,000-man division.)
 
-**Manpower is a hard block.** If you try to raise an Armored Division with 9,000 men in the pool, the order is refused with both numbers shown. You cannot borrow men, run a manpower deficit, or pay cash instead. Contrast this with the treasury, where overspending simply becomes debt.
+**Manpower is a hard block.** If you try to raise an Armored Division with 9,000 men in the pool, the order is refused with both numbers shown. You cannot borrow men, run a manpower deficit, or pay cash instead. Money has the same hard edge: a unit also has to fit inside the defence appropriation. See [Units, Recruitment & Procurement](/wiki/military-units).
 
-Disbanding a unit returns its **surviving** personnel (not its establishment) to the pool.
+Recruiting draws a unit's full establishment from the pool, and disbanding a unit returns its **surviving** personnel (not its establishment) to it, up to the ceiling. Men that would push the pool past the ceiling are lost.
+
+**The ceiling follows your population.** It is recomputed every turn from the people living in your country. If a war or a shock shrinks the population, the ceiling falls, and a pool that is above the new ceiling is cut down to it on the next turn. The national force tier (reduced, standard or elevated) does not change manpower. It only changes upkeep and readiness.
 
 ## The conscription ladder
 
@@ -50,11 +76,11 @@ You do not pick your stance from a dropdown. **It is the enacted level of your c
 
 Raising the law to level 3 gets you ×1.4 and level 4 gets you ×2.0. Dropping to level 1 or 0 costs you conscription entirely.
 
-So changing your manpower capacity means **passing a bill**. If you want to fight a long war, the reserve law is something to raise *before* you declare, not after you are already bleeding.
+So changing your manpower capacity means **passing a bill** (see [Bills & Legislation](/wiki/bills-legislation)). If you want to fight a long war, the reserve law is something to raise *before* you declare, not after you are already bleeding.
 
 The bill-proposal modal shows the consequence directly on each level: you will see \` · manpower ×2\` or \` · manpower ×0.6, no conscription\` beside the option, so you can see what a level does to replacements before you file it.
 
-**Only these four countries carry a reserve law.** Every other nation, playable or not (China, Japan, West Germany, Ireland, Brazil, Nigeria and the Eastern bloc satellites included), has no such law to legislate up or down. They fall back to a default table, which puts them on **Limited Service**, ×0.8 and no conscription. A country that can raise its reserve law therefore pulls decisively ahead of everyone else in sustainable army size, and a country that cannot has to plan its wars around a fixed pool.
+**Only these four countries carry a reserve law.** A country that merges with another can inherit one. Every other nation, playable or not (China, Japan, West Germany, Ireland, Brazil, Nigeria and the Eastern bloc satellites included), has no such law to legislate up or down. They fall back to a default table, which puts them on **Limited Service**, ×0.8 and no conscription. A country that can raise its reserve law therefore pulls decisively ahead of everyone else in sustainable army size, and a country that cannot has to plan its wars around a fixed pool.
 
 ## Replacement mode
 
@@ -70,7 +96,11 @@ Conscript rebuilds **two and a half times faster** and is available only if your
 
 ## XP dilution: the real cost of conscripts
 
-This is the mechanic that makes veteran formations precious.
+This is the mechanic that makes veteran formations precious. The demand on the pool comes from the casualties in [Fighting a Battle](/wiki/fighting-a-battle), and the replacement quality you pick decides how much veterancy a rebuilt formation keeps there.
+
+\`\`\`wiki-chart
+conscript-xp-dilution
+\`\`\`
 
 When replacements join a unit, **their inexperience is blended into the unit's own experience by headcount**. Not averaged with the old value as a formality: genuinely diluted in proportion to how much of the unit is now new bodies.
 
@@ -79,7 +109,7 @@ When replacements join a unit, **their inexperience is blended into the unit's o
 The consequences:
 
 - **Rebuilding an elite unit with conscripts genuinely degrades it.** That is intended.
-- **Trained replacements preserve quality**, at the price of rebuilding two and a half times slower.
+- **Trained replacements dilute far less.** They arrive as Regulars, so they still pull a Seasoned, Veteran or Elite formation down, just much more slowly than conscripts, at the price of rebuilding two and a half times slower.
 - **Losses on veteran units are far more expensive than losses on green ones**, because the green unit has nothing to dilute.
 - **A unit at high strength dilutes far less than one at low strength**, since fewer of its people are new. Topping a formation up early and often costs less experience than letting it be ground down and then rebuilding it in one go.
 
@@ -87,23 +117,20 @@ The strategic reading: **keep your good formations near full strength.** Pull a 
 
 ## When replacement happens
 
-Reinforcement runs on the turn tick, and its **position in the order matters**:
+Reinforcement runs on the turn tick after battles resolve and generals earn tenure points, so the sequence is fight, count losses, rebuild.
 
-1. Force effects: upkeep, readiness drift
-2. **Battles resolve**: units take casualties
-3. Generals accrue tenure points
-4. **Reinforcement**: the pool regenerates, then units top up
-
-So a turn reads **fight → count the losses → rebuild**. A formation mauled in step 2 begins recovering in step 4, on the same tick, **in place**: it does not leave the front, does not lose its general, and does not need to be pulled back.
+A formation mauled in battle begins recovering at the end of the same turn, in place: it keeps its general and position. The full turn order is on [Conflicts & the Military System](/wiki/conflicts-overview).
 
 Two details:
 
-- **Reinforcement runs for every country**, including simulated nations with no defence seat. Everyone sustains their forces; you are not fighting a static enemy.
-- **The pool is spent in roster order and can run out mid-pass.** If your pool cannot cover everything, some units top up and the rest wait for next turn. A large damaged army recovers more slowly per formation than a small one.
+- **Reinforcement runs for every country**, including nations with no player in the defence seat. Everyone sustains their forces, so you are not fighting a static enemy. If the setting is Conscript but the stance forbids it, the engine refills with trained men instead.
+- **A short pool is shared out in proportion to need.** If your pool cannot cover every damaged unit, each unit gets a share in proportion to what it would have drawn this turn. A large damaged army recovers more slowly per formation than a small one.
 
 ## Reading the panel
 
 The Operations tab shows you:
+
+![Defence office Operations panel showing the replacement manpower pool, per turn gain, ceiling and reinforcement mode](/wiki-images/screens/manpower-conscription-operations-panel.webp)
 
 - **Pool**: men available now
 - **Per turn**: your current regeneration
@@ -113,7 +140,7 @@ The Operations tab shows you:
 
 The regeneration and ceiling shown are computed with the **same formulas the turn engine uses**, so the panel cannot disagree with what actually happens.
 
-## Practical guidance
+## Planning around the pool
 
 **Manpower, not money, decides your army's size.** Work out your ceiling before you plan a force. A country that cannot bank 200,000 men cannot field a 200,000-man army no matter how rich it is.
 
@@ -121,15 +148,23 @@ The regeneration and ceiling shown are computed with the **same formulas the tur
 
 **Small elite formations are manpower-efficient.** A Special Forces Group costs 1,400 men. An Infantry Division costs 12,000. If your pool is the binding constraint, the ratio matters enormously.
 
-**Peacetime is for banking.** With no war on, regeneration accumulates toward the ceiling and gives you a mobilisation base. A nation that fights continuously never builds one.
+**Peacetime is for banking.** With no war on, regeneration accumulates toward the ceiling and gives you a mobilisation base. A nation that fights continuously never builds one, which is part of why long wars grind (see [Occupation, Territory & Victory](/wiki/occupation-and-victory)).
 
 **Switch to Trained once the emergency passes.** Conscript mode is for plugging a hole fast. Leaving it on permanently converts your whole army to green troops over time.
 
-**Watch the ceiling, not just the pool.** At the ceiling, regeneration is wasted: every turn you sit full is manpower you never receive. That is the moment to raise units or to lower the stance and save the upkeep.
+**Watch the ceiling, not just the pool.** At the ceiling, regeneration is wasted: every turn you sit full is manpower you never receive. That is the moment to raise units.
 
-## Next
+## Your three levers
+
+- **Pass a reserve-law bill** (US, UK, Russia, East Germany only) to move up or down the ladder. A war does not wait for a bill, so do it before you declare. Raising the law takes a bill, so at least its vote window.
+- **Choose a replacement mode** on the Operations panel: Off, Trained or Conscript.
+- **Bank manpower in peacetime.** Regeneration accumulates toward the ceiling.
+
+**Questions that come up.** *Why does it say not enough manpower?* Your pool is smaller than the unit's establishment. *What is the difference between Trained and Conscript?* Trained refills 10% a turn with Regular-grade men and dilutes veterancy only a little; Conscript refills 25% a turn with raw men and dilutes it heavily. *Why did my veteran division get worse?* It was rebuilt with conscripts. *How do I raise the reserve law?* Only the four countries above have one, and it is raised by legislation.
+
+## See also
 
 - [Units, Recruitment & Procurement](/wiki/military-units): what to spend the manpower on.
-- [Occupation, Territory & Victory](/wiki/occupation-and-victory): why long wars grind.
-- [Fighting a Battle](/wiki/fighting-a-battle): where the casualties come from.
+
+Every world has a manpower pool for every country. Only the United States, the United Kingdom, Russia and East Germany have a reserve law to legislate; every other country is fixed on Limited Service. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Manpower and conscription
 `;

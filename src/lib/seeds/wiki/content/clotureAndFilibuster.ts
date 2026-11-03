@@ -1,60 +1,71 @@
 export const clotureAndFilibusterContent = `# Cloture & the Filibuster
 
-## In short
+A senator can add 12 hours to a Senate vote and raise the bar to three fifths, and the 57 votes that pass a bill can fail it if 5 senators who sat it out vote Abstain instead. In the US Senate, any seated senator can filibuster a bill that is on the floor. It does not kill the bill. It extends the vote by about 12 hours and raises the bar to pass from a simple majority to **three fifths of the votes cast**, the cloture threshold. There is no separate cloture motion: cloture is the passing rule the bill is held to once it has been filibustered.
 
-In the US Senate, any seated senator can filibuster a bill that is on the floor. Doing so extends the vote by roughly 12 hours and raises the bar to pass from a simple majority to **three fifths of the votes cast**, which is the cloture threshold. There is no separate cloture motion to file: cloture is the passing rule the bill is held to once it has been filibustered. If the Senate abolishes the filibuster through the Senate Filibuster Rules Act, the bill returns to a simple majority.
+## Invoking it
 
-## Who can filibuster, and when
+1. A bill is open for a vote in the US Senate, as the origin chamber or the second chamber (see [Bills & Legislation](/wiki/bills-legislation), where a filibuster lengthens a bill's Senate stage and raises its passing bar).
+2. A senator pays 25 action points and 5 NPI and invokes the filibuster from the bill page. The Senate deadline moves back by about 12 hours. Open the bill from the Congress page and use the **Invoke filibuster** button while the bill is being voted on in the Senate. Invoking trains your Statecraft stat, and stronger Statecraft gives a longer delay (see [Rpg Stats](/wiki/rpg-stats)).
+3. When the vote closes, the bill passes only if For is at least 60 percent of For plus Against plus Abstain, rounded up to a whole vote.
+4. If the Senate has abolished the filibuster, the bill is judged by simple majority again.
 
-- **Only the US Senate.** Other countries and the US House have no filibuster.
-- **Only seated US senators.** You must hold a Senate seat when you invoke it.
-- **Only while the bill is actively before the Senate**, either as the origin chamber or as the second chamber. A bill in the House, on the President's desk, or in a veto override cannot be filibustered.
-- **Not on concurrent votes.** A bill voting in both chambers at once cannot be filibustered, because each chamber runs on its own clock.
-- **Once per senator per bill.** Several senators may each filibuster the same bill.
-- **Banned parties** in a one-party state cannot act on legislation at all, including this.
+![Decision tree of the conditions a senator must meet to invoke a filibuster, ending in the cost, the added delay and the three-fifths bar.](/wiki-images/diagrams/cloture-and-filibuster-filibuster-checks.svg)
 
-## What it costs
+![Senate bill page with the Invoke filibuster button and the seating chart for the floor vote](/wiki-images/screens/cloture-and-filibuster-senate-bill.webp)
 
-Each invocation costs **25 action points and 5 NPI**. The cost is spent even if the bill goes on to pass. Invoking the filibuster also trains your Statecraft stat through use.
+| Item | Value |
+| --- | --- |
+| Cost per invocation | 25 action points and 5 NPI, spent even if the bill passes |
+| Delay added | 12 hours at average Statecraft; about 10 hours at Statecraft 1 and 14 hours at Statecraft 10 |
+| Threshold | Smallest whole number at or above 60 percent of For + Against + Abstain |
+| Invocations | Once per senator per bill; the threshold never stacks, each extra one adds another delay |
+| Two-thirds bills | Already above cloture, so the filibuster check is skipped |
 
-## What it does to the bill
+## Why an abstention counts against you
 
-1. **The vote runs longer.** The Senate deadline moves back by about 12 hours. Strong Statecraft lengthens the delay and weak Statecraft shortens it, within a modest band around the base. Both the clock deadline and the turn deadline move together.
-2. **The passing rule changes to cloture.** When the Senate vote closes, the bill passes only if For is at least **three fifths of all votes cast**, where votes cast means For plus Against plus Abstain. The exact threshold is the smallest whole number at or above 60 percent of that total.
+A 100 seat Senate. A bill gets 57 For, 38 Against and 5 senators who never vote.
 
-Two consequences follow from the rule being based on votes cast rather than on seats:
+\`\`\`wiki-chart
+cloture-votes-required
+\`\`\`
 
-- Senators who never vote do not count against the bill. A quiet chamber does not help the filibuster.
-- **An abstention raises the bar.** Abstaining adds to the total without adding to For, so a bloc that wants to sink a filibustered bill can do it by abstaining rather than voting Against.
+- Votes cast are 95 (the 5 who never voted do not count). The bar is ceil(0.6 x 95) = 57. The bill passes with exactly 57.
+- Now suppose those 5 senators vote Abstain instead. Votes cast are 100 and the bar is 60. The same 57 For now fails.
 
-The bill's page shows the Senate seating chart with the required share lifted to 60 percent while a filibuster is active, and lists every senator who invoked it.
+So a bloc that wants to sink a filibustered bill can abstain rather than vote Against, and a sponsor must win over abstainers, not just count Against votes. The bar is based on votes cast rather than on seats so that a quiet chamber does not help a filibuster, but an abstention still counts against the bill. That makes the choice between abstaining and voting Against a real decision.
 
-## What it does not do
+How many senators vote For, Against or Abstain sets the count that is tested against 60 percent, so a filibuster raises the share of For votes a Senate bill needs and whip counts change (see [Voting & Whips](/wiki/voting-and-whips)). Floor leaders organise the whip count and the abstention strategy (see [Congress Leadership](/wiki/congress-leadership)).
 
-- It does not park or kill the bill. The vote stays open and the bill's status does not change. Whether the bill lives or dies is decided when the extended window closes.
-- It does not stack the threshold. Ten filibusters on one bill still mean one three-fifths test. Each extra invocation adds another delay to the deadline.
-- It does not touch bills that already need two thirds. Nationalization, privatization and declarations of war require two thirds of For plus Against in each chamber, and that bar already exceeds cloture, so it supersedes the filibuster check.
-- It does not apply to leadership elections, confirmations or veto overrides.
+Tips: ask supporters to vote, not to stay away, if a filibuster is likely, and ask opponents to abstain or vote Against depending on how close the count is.
+
+## Beating a filibuster
+
+- **Defeat one** by building 60 percent among votes cast, or by winning over would-be abstainers.
+- **Abolish it** by passing the Senate Filibuster Rules Act (below).
+
+### Who and when
+
+- Only the US Senate. Other countries and the US House have no filibuster.
+- Only seated senators, and only while the bill is actively before the Senate. A bill in the House, on the president's desk or in a veto override cannot be filibustered.
+- Not on concurrent votes, where both chambers vote at once on separate clocks.
+- Banned parties in a one-party state cannot act on legislation at all.
+- It never applies to leadership elections, confirmations or veto overrides.
+
+It does not park or kill the bill. The vote stays open and the status does not change. Ten filibusters on one bill still mean one three-fifths test.
 
 ## Abolishing the filibuster
 
-The **Senate Filibuster Rules Act** is a Senate-only national bill with three options:
+The **Senate Filibuster Rules Act** is a US national bill with three options. It goes through the normal national bill process, so it needs both chambers and the president like any other national bill.
 
 | Option | Effect |
 | --- | --- |
-| Nuclear Option Act | Abolishes the filibuster. Senators can no longer invoke it and any filibustered bill is judged by simple majority. |
+| Nuclear Option Act | Abolishes the filibuster. Senators cannot invoke it, and a bill already filibustered is judged by simple majority. |
 | Talking Filibuster Reform Act | Keeps the filibuster and the three-fifths threshold. |
 | Filibuster Preservation Act | Keeps the filibuster and the three-fifths threshold. |
 
-Only the abolition option changes anything mechanically. While it is in force the filibuster button is unavailable and any earlier invocations on open bills are ignored at the vote count.
+Only abolition changes anything. While it is in force the Invoke filibuster button still shows, but using it is refused, and earlier invocations on open bills are ignored at the count, so a rules change mid-vote takes effect when the vote closes.
 
-## Where to find it in game
+Live in worlds with a US-style Senate. Not used in any other country. Congress can switch it off by enacting the Nuclear Option Act.
 
-Open the bill from the Congress page. On the bill's detail page, senators see the **Filibuster** action while the bill is being voted on in the Senate. The Senate Filibuster Rules Act is proposed like any other bill from the Congress page.
-
-## Related pages
-
-- [Bills & Legislation](/wiki/bills-legislation): the full bill lifecycle
-- [Voting & Whips](/wiki/voting-and-whips): how votes and whip directives work
-- [Congress Leadership](/wiki/congress-leadership): who controls the floor
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Bills & legislation design page](https://docs.lakesidegames.net/design/bills-legislation.html) (there is no separate filibuster design page)
 `;

@@ -61,7 +61,12 @@ const financials = {
 describe("corporation income statement", () => {
   it("shows arrears separately without annualizing the balance or last-turn payment", () => {
     const props = {
-      corporation: { countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail,
+      corporation: {
+        countryId: "US",
+        liquidCurrencyCode: "USD",
+        currentTurn: 626,
+        passThroughTaxStartTurn: 626,
+      } as CorporationDetail,
       financials: { ...financials, arrears: { turn: 23, paidLastTurn: 123, remaining: 456 } },
       balanceSheet: null,
       bondInfo: null,
@@ -71,6 +76,7 @@ describe("corporation income statement", () => {
       sectors: [],
     };
     const view = render(<FinancialsTab {...props} />);
+    expect(screen.getByText(/Currently applying 4.17%/)).toBeTruthy();
     expect(screen.getByText("Arrears paid last turn")).toBeTruthy();
     expect(screen.getByText("Arrears remaining")).toBeTruthy();
     expect(screen.getByText("M123")).toBeTruthy();
@@ -105,6 +111,36 @@ describe("corporation income statement", () => {
     expect(screen.getByText("Difference from current estimate")).toBeTruthy();
     expect(screen.getByText("-M6400")).toBeTruthy();
     expect(screen.getByText(/Current estimates use today's sectors and budgets/)).toBeTruthy();
+  });
+  it("shows the federal tax charged on bond coupon income under Federal tax", () => {
+    const props = {
+      corporation: { countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail,
+      financials: {
+        ...financials,
+        operatingIncome: 6886,
+        federalTax: 2194,
+        federalTaxByCountry: { US: 1516, JP: 678 },
+        bondCouponIncome: 4265,
+        bondCouponFederalTax: 640,
+      },
+      balanceSheet: null,
+      bondInfo: null,
+      corpId: "test",
+      periodView: "daily" as const,
+      onPeriodViewChange: vi.fn(),
+      sectors: [],
+    };
+    const view = render(<FinancialsTab {...props} />);
+    const line = screen.getByText("Of which: federal tax on bond coupon income");
+    expect(line).toBeTruthy();
+    expect(screen.getByText("Bond coupon income")).toBeTruthy();
+    expect(
+      view.container.querySelector('[title*="Includes tax on bond coupon income"]')
+    ).toBeTruthy();
+    view.rerender(
+      <FinancialsTab {...props} financials={{ ...props.financials, bondCouponFederalTax: 0 }} />
+    );
+    expect(screen.queryByText("Of which: federal tax on bond coupon income")).toBeNull();
   });
 });
 

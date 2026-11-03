@@ -1,92 +1,103 @@
 export const cnOverviewContent = `# China
 
-China is a **one-party state** with a non-democratic political system. The **Premier** leads the State Council through confidence of the 2,980-seat National People's Congress, but the **Chinese Communist Party (CCP)** is the ruling party by design. No-confidence votes are blocked at runtime. The **President** is a ceremonial head of state, auto-populated as whoever currently holds the CCP chair. China is the world's second-largest economy.
+In China the ruling party cannot lose an election, so the thing that can end a leader is confidence inside the party and the mood of the public. China is a **one-party state** with a non-democratic political system and the world's second-largest economy. The **Chinese Communist Party (CCP)** is the ruling party by design. The **Premier** leads the State Council through confidence of the 2,980-seat National People's Congress, and no-confidence votes are not available.
 
----
+## What keeps a Premier in office
 
-## Government structure
+Leader transitions run through a separate **ruling-party confidence model**, which every one-party state now shares (China was the first country modelled with it). The game recomputes confidence every turn, and it replaces the parliamentary confidence vote.
 
-| Office | How Filled | Term | Seats |
-| --- | --- | --- | --- |
-| Premier (head of government) | Internal party confidence | 5 years | 1 |
-| President (ceremonial head of state) | Auto-populated as CCP chair | No fixed term | 1 |
-| NPC Delegate | FPTP regional election | 5 years | 2,980 |
-| Provincial Delegate (People's Congress) | FPTP sub-national election | 5 years | 4,000 total |
-| Governor (provincial executive) | FPTP provincial election | 5 years | 1 per province |
-| Governor of the PBoC | Appointed action | 5 years | 1 |
+- **Priority profile**: fixed ideological weights that every enacted law is scored against.
+- **Per-turn drift**: the game recomputes two scores every turn from policy effects, popular mood and the economy. **Popular legitimacy** is how the public reads the regime. **Party confidence** is how stable the ruling party is inside.
+- **Leader confidence**: a new Premier starts at **75** out of 100, gains **5** on each renewal, and is capped at **95**.
+- **Faction split**: at the third escalation stage (internal challenge), a split spawns the **"Democratic Faction of the CCP"** as a breakaway party. It is the only party the regime itself spawns; the approved parties are there from the start, and players can found new (banned) ones.
 
-The **Premier** is China's head of government, the executive office that drives the State Council.
+| Leader confidence | Band |
+| --- | --- |
+| 80 and above | Secure |
+| 65 to 79 | Stable |
+| 50 to 64 | Watchful |
+| 35 to 49 | Strained |
+| 20 to 34 | Crisis risk |
+| Below 20 | Critical: leadership challenge or forced transition |
 
-The **President** is a **ceremonial head of state**: not elected and not appointed through the Premier flow. The office is auto-populated as whoever currently holds the **CCP chair**, and updates automatically whenever the chair changes. The President carries **+0 actions per turn** and **0 party strength weight**, so the office has no mechanical weight beyond its ceremonial label.
+\`\`\`wiki-chart
+cn-leader-confidence-bands
+\`\`\`
 
----
+The Premier cannot be removed by a legislative vote mid-term. The vote-of-no-confidence path is skipped entirely for China, not fired and rejected. The Premier also cannot dissolve the NPC: there are no snap elections, and election terms are fixed at 5 years (240 turns, 10 real days).
 
-## National People's Congress
+### When the scores keep falling
+
+If the scores fall far enough for long enough, the regime moves through four stages. A single bad turn never moves it: each stage needs a stretch of turns in its zone.
+
+![Escalation chain from Stable to Forced Collapse with each stage trigger, the reform and convention off-ramps, and conversion.](/wiki-images/diagrams/one-party-states-escalation-chain.svg)
+
+| Stage | What happens | Trigger |
+| --- | --- | --- |
+| 1. Public discontent | Early warning, no immediate danger | Popular legitimacy at or below 60 for 12 turns |
+| 2. Mass unrest | The leader chooses how to respond: open dialogue, a selective concession (legalize a banned party), martial law, or ignore it | Popular legitimacy at or below 35 for 36 turns in a row, or 48 turns within a 168-turn window |
+| 3. Internal challenge | The party splits and a breakaway faction appears | Party confidence below 15 for 24 turns |
+| 4. Forced collapse | The regime falls and converts | Popular legitimacy below 15 for 72 turns |
+
+**What can the leader do?** Liberalization reforms (legalize a banned party, reduce vote multipliers, hold an honest by-election, an anti-corruption purge, a constitutional amendment) trade party confidence for popular legitimacy. A purge can also be used against the party itself. In the 4th stage the leader can **accept** the conversion, or **resist**: that bans every approved party, costs 25 party confidence and 20 popular legitimacy, and delays the conversion by 48 turns. The tiers, reforms and conversion are laid out in [One-Party States](/wiki/one-party-states).
+
+### Conversion to a republic
+
+China uses the shared **regime-conversion** system with its own collapse target: a parliamentary republic. If ruling-party confidence collapses, a constitutional convention can convert China to a parliamentary republic or presidential system. The former ruling party retains a legacy seat reservation (3 to 35% depending on path).
+
+| | Forced collapse (stage 4) | Voluntary convention |
+| --- | --- | --- |
+| Who decides | The collapse itself | The leader announces and negotiates it |
+| Target | Parliamentary republic | Parliamentary republic or presidential. One-party is not an option, since conversion only runs one way |
+| Seats kept by the former ruling party | 5% (3% if the leader resisted and legitimacy is still below 15) | 20% by default, up to 35% |
+| Former ruling party's votes | Scaled down by 20% | No penalty |
+| Time to the first election | 12 turns | 12, 24 or 48 turns (24 by default) |
+
+Conversion, whether forced, negotiated through a convention, or imposed as a regime-change peace term, is one-way. Once converted, there is no path back to one-party rule, and the conversion dissolves the NPC and holds the election it promises.
+
+## Playing outside the CCP
+
+**Can a non-CCP player play?** Yes, with limits. Parties come in three tiers: *ruling* (the CCP), *approved* (such as the China Democratic League) and *banned*. An approved party can hold seats, run for legislative offices and for Governor, vote on bills and sit in cabinet, but it cannot form government or hold the Premier or President offices. A party you create yourself starts **banned**: it cannot field candidates or vote on bills until the regime legalises it.
+
+Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. A ratified charter seeds 3 founding NPPs (computer-run politicians): one in the lead founder's home province and two in provinces the founders pick. A new party starts banned (see above).
+
+CN uses localized party-role labels: chair → **"General Secretary"**, vice chair → **"Deputy General Secretary"**, committee → **"Secretariat"**. The social axis runs from libertarian (−5) to authoritarian (+5). China starts at +3.5 and drifts toward the social stance of enacted national laws over time.
+
+## The National People's Congress
 
 The **National People's Congress** is the national legislature. Despite a bicameral name, it is **mechanically unicameral**: only the NPC participates in the player legislative loop.
 
 - **National People's Congress (NPC)**: 2,980 delegates representing provinces, municipalities, autonomous regions, the armed forces, and special administrative regions. **5-year terms. All seats contested** each cycle. This is the sole legislative body where player-contestable bills originate.
 - **CPPCC** (Chinese People's Political Consultative Conference): 2,169 members representing diverse social and economic constituencies. The CPPCC is an **advisory body** and is **not part of the player legislative loop**. It cannot block or amend bills.
 
-The coalition threshold is **1,491 seats** (a bare majority of 2,980: 2980 / 2 + 1). Since the CCP is the ruling party by design and no other party competes, this threshold is a formality: the ruling party always holds the NPC majority.
+The coalition threshold is **1,491 seats** (a bare majority of 2,980: 2980 / 2 + 1; 614 of 1,226 in the 1953 preset). Since the CCP is the ruling party by design and no other party competes, this threshold is a formality: the ruling party always holds the NPC majority.
 
----
+| Office | How filled | Term | Seats |
+| --- | --- | --- | --- |
+| Premier (head of government) | Proposed by the CCP chair, confirmed by an NPC vote, then kept by internal party confidence | No fixed term | 1 |
+| President (ceremonial head of state) | Auto-populated as CCP chair | No fixed term | 1 |
+| NPC Delegate | Regional election | 5 years | 2,980 (1,226 in 1953) |
+| Provincial Delegate (People's Congress) | Sub-national election | 5 years | 4,000 total (3,781 in 1953) |
+| Governor (provincial executive) | FPTP provincial election | 5 years | 1 per province |
+| Governor of the PBoC | Nominated by the Premier, then drawn | 4 years | 1 |
 
-## One-party constraints
+The **President** is a **ceremonial head of state**: not elected and not appointed through the Premier flow. The office is auto-populated as whoever currently holds the **CCP chair**, and updates automatically whenever the chair changes. The President carries **+0 actions per turn** and **0 party strength weight**, so the office has no mechanical weight beyond its ceremonial label.
 
-China is one-party by design. Several runtime constraints enforce this:
+### Seven candidates per region
 
-- **No-confidence votes blocked.** The vote-of-no-confidence path is skipped entirely for China, not fired and rejected. The Premier cannot be removed by a legislative vote mid-term.
-- **Single ruling party.** The CCP is marked as the ruling party at seed time. Only one party competes in elections.
-- **No snap elections.** The Premier cannot dissolve the NPC. Election terms are fixed at 5 years.
-- **Internal party confidence model.** Leader transitions are tracked separately from other countries, and the turn pipeline drives confidence drift each turn. This is the CN-specific substitute for the parliamentary confidence vote.
+NPC and Provincial People's Congress elections use the one-party primary rule. **Up to 7 candidates per party may advance from each region's primary** (one-party states advance 7, parliamentary systems 3, presidential systems 1; Governor races advance 1). The general election then shares seats across that caucus instead of collapsing to a single delegate per region, so the NPC reflects regional CCP caucus diversity rather than a single winner-take-all delegate per province. All seats are contested in each cycle (no staggered classes), terms are 5 years for both the NPC and Provincial People's Congress, and there are no snap elections. The shared election rules are in [Election Mechanics](/wiki/election-mechanics).
 
----
+## Provinces and their money
 
-## Internal party confidence
+China is organized around **Provinces**. Each has a **Provincial People's Congress**, the sub-national elected legislature, totaling 4,000 delegates across all provinces (3,781 in 1953) (5-year terms, voting on provincial legislation), and a directly elected **Governor** who is the provincial executive (+2 actions/turn, 5-year term). The provincial tier is mechanically analogous to US State Senates or UK Regional Councils, but with a CN-specific fiscal model.
 
-China was the first country modelled with a **ruling-party confidence model**, which every one-party state now shares. Instead of a legislative confidence vote, the CCP's internal dynamics drive leadership transitions:
-
-- **9-axis priority profile**: ideological weights that shift based on enacted policy.
-- **Per-turn confidence drift**: ruling-party confidence is recomputed each turn based on policy-axis effects, popular mood, and economic signals.
-- **Popular mood profile**: public-mood axis weights driving legitimacy drift.
-- **Faction split**: when Stage 3 (internal challenge) fires, an auto-faction-split spawns the **"Democratic Faction of the CCP"** as a spinoff party. This is the only path by which a second party can emerge.
-
-The **President** is auto-synced to the CCP chair: when the party chair changes, the President updates to match automatically.
-
----
-
-## Constitutional convention (regime conversion)
-
-CN runs the shared **regime-conversion / constitutional convention** system used by every one-party state, with its own collapse target. If ruling-party confidence collapses to a critical threshold, a Stage-4 forced conversion fires:
-
-- **Collapse target system**: a parliamentary republic by default.
-- **Convention allowlist**: parliamentary republic or presidential. The player can negotiate either target. One-party state is excluded from the list, since conversion only ever runs one way.
-- **Legacy seat reservation**: 20% of post-conversion legislature seats granted to the former ruling party by default. The Stage-4 forced path always uses 5% (and halves it to 3% if a "resist" decision was taken).
-- **Election delay**: 24 turns by default before the first post-conversion election.
-
-Conversion, whether forced, negotiated through a convention, or imposed as a regime-change peace term, is one-way. Once converted, there is no path back, and the conversion dissolves the NPC and holds the election it promises.
-
----
-
-## Provincial government
-
-China is organized around **Provinces**. Each province has:
-
-- A **Provincial People's Congress**: the sub-national elected legislature, totaling 4,000 delegates across all provinces. 5-year terms. Members vote on provincial legislation.
-- A **Governor**: the provincial executive, directly elected. +2 actions/turn, 5-year term.
-
-The provincial tier is mechanically analogous to US State Senates or UK Regional Councils, but with a CN-specific fiscal model.
-
-### One-party regional budget
-
-CN has a unique **two-source regional-budget model**: local tax retention plus central transfer grants:
+CN has its own **regional-budget model**. A province's money comes from four streams: its retained share of enterprise income tax, a central transfer grant, an optional resource tax, and the standing Business Tax.
 
 | Knob | Value | Description |
 | --- | --- | --- |
 | Local tax retention share | 0.40 | Share of enterprise income tax (EIT) that stays local |
 | Corporate profit ratio | 0.06 | Corporate profits as a fraction of regional GDP |
-| Central transfer per capita | 35 (CNY/year) | Default central transfer pool per capita |
+| Central transfer per capita | 35 (CNY/year; 2.77 in the 1953 preset) | Sizes the national transfer pool (this figure times the national population), split equally across provinces unless the Finance Minister sets shares |
 | Default tax rate | 25% | Fallback when no primary tax has been enacted |
 | Primary tax | Enterprise Income Tax | Enterprise income tax legislation |
 | Resource tax | Provincial Resource Tax | Optional per-region resource tax |
@@ -94,42 +105,13 @@ CN has a unique **two-source regional-budget model**: local tax retention plus c
 | Business tax consumption ratio | 0.50 | Consumption base for the standing Business Tax (营业税) |
 | Business tax rate | 24% | Standing Business Tax rate (1991-era local tax) |
 
-The **Business Tax (营业税)** was the dominant 1991-era Chinese local tax, replaced by VAT modernization over time. The **Enterprise Income Tax (EIT)** is the modern primary regional revenue stream, with 40% retained locally and 60% remitted to the central government.
+![How a Chinese province is funded: regional GDP becomes corporate profit and enterprise income tax with 40% kept locally, plus a central transfer per head of population.](/wiki-images/diagrams/cn-overview-provincial-money-flow.svg)
 
----
+The **Business Tax (营业税)** was the dominant 1991-era Chinese local tax. In the game it is always collected and needs no law. The **Enterprise Income Tax (EIT)** is the primary legislated regional revenue stream, with 40% retained locally.
 
-## How Chinese elections work
+Take a China of 1 billion people across 8 provinces: the transfer pool is 35 billion CNY, so each province gets 4.375 billion CNY however many people live there. If a province has 100 billion CNY of GDP, its corporate profits are 6 billion CNY (0.06 of GDP). At a 25% EIT rate that is 1.5 billion CNY of tax, and the province keeps 40% of it: 0.6 billion CNY. The Business Tax adds 12 billion CNY (24% of a consumption base worth half of GDP).
 
-NPC and Provincial People's Congress elections use **FPTP** with a CN-specific primary override:
-
-- **Up to 7 CCP candidates may advance from each region's primary**: the multi-seat PR general phase distributes seats across a 7-NPP-per-region caucus instead of collapsing to a single delegate per region.
-- **All seats contested** in each cycle (no staggered classes).
-- **5-year terms** for both NPC and Provincial People's Congress.
-- **No snap elections.** Terms are fixed.
-
-The 7-candidate primary override is the key CN electoral mechanic: it ensures the NPC reflects regional CCP caucus diversity rather than a single winner-take-all delegate per province.
-
----
-
-## Key Chinese mechanics
-
-**One-party by design.** The CCP is the ruling party by seed. No other party competes in elections. No-confidence votes are blocked at runtime. The Premier cannot be removed mid-term by a legislative vote.
-
-**Internal confidence, not legislative confidence.** Leadership transitions run through the internal-party confidence model shared by the one-party states, not a Dáil/Commons-style confidence vote. The 9-axis priority profile and popular mood profile drive drift each turn.
-
-**Ceremonial President auto-sync.** The President is not elected: the office auto-populates as whoever holds the CCP chair. When the chair changes, the President updates automatically.
-
-**Regime conversion is one-way.** If ruling-party confidence collapses, a constitutional convention can convert China to a parliamentary republic or presidential system. There is no path back to one-party rule. The former ruling party retains a legacy seat reservation (5 to 20% depending on path).
-
-**Party role labels.** CN uses localized party-role labels: chair → **"General Secretary"**, vice chair → **"Deputy General Secretary"**, committee → **"Secretariat"**. These override the default English labels.
-
-**Party creation routes through a charter.** Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. CN requires 2 provinces (no locked home) × 1 NPP = 2 NPPs spawned on creation. In practice, party creation is constrained by the one-party regime.
-
-**Social axis baseline +3.5.** China starts significantly authoritarian (+3.5 on a −5…+5 scale), the most authoritarian baseline of any country in the game. Drifts toward the social stance of enacted national laws over time.
-
----
-
-## Career path for Chinese players
+## Career: delegate to Premier
 
 | Stage | Target | Why |
 | --- | --- | --- |
@@ -138,11 +120,9 @@ The 7-candidate primary override is the key CN electoral mechanic: it ensures th
 | Mid-game | Governor | +2 actions/turn; controls provincial executive; 5-year term |
 | Top | Premier | +4 actions/turn; heads State Council; internal-party confidence |
 
-The Premier is the top of the ladder, but it requires internal-party confidence, not a legislative vote. The ceremonial President carries no mechanical weight (+0 actions, 0 party strength).
+The Premier is the top of the ladder, but it requires internal-party confidence, not a legislative vote. The ceremonial President carries no mechanical weight (+0 actions, 0 party strength). See [Player Progression](/wiki/player-progression) and the [Cabinet Guide](/wiki/cabinet-guide).
 
----
-
-## Currency and economy
+## Money and four starting years
 
 | Item | Detail |
 | --- | --- |
@@ -153,37 +133,24 @@ The Premier is the top of the ladder, but it requires internal-party confidence,
 | Stock exchange | SSE |
 | Finance Minister | Minister of Finance |
 
-### Economic model
+China appears in every preset, with four authored metric baselines: 1953, 1979, 1991 and 2019. Its starting economic model depends only on whether the world starts before 2005:
 
-China has **four seeded start years**: 1953, 1979, 1991, and 2019 (the default), each with its own authored national baseline and regional tilts:
-
-| Era | Model | Description |
+| Start | Model | Description |
 | --- | --- | --- |
-| 1953 | Early command economy | First Five-Year Plan, Soviet-model industrialization, near-total illiteracy |
-| 1979 | Barely-reformed command economy | Deng era opening: household responsibility system pilots, first SEZs, trade still minimal |
-| 1991 | Agrarian | Pre-reform: a developing, largely agrarian/reforming economy |
-| 2019 | Industrial powerhouse | Modern China: the world's manufacturing powerhouse |
+| 1953, 1979, 1991, 1999 | Agrarian | From the First Five-Year Plan through the early reform era |
+| 2007 onward (2019 is the default) | Industrial powerhouse | Modern China: the world's manufacturing powerhouse |
 
-A 2019-start China begins as an **industrial powerhouse** economy, the same model as Germany and Japan. A 1991-start China begins as agrarian and industrializes over time through play. Earlier starts (1953, 1979) begin further back in China's development arc, well before the reform-era opening. Sector-supported identities (e.g. **State-Capitalist**) emerge via the 67%+ state-ownership lever once the government actually nationalizes: sectors start unowned.
-
----
-
-## Key China links
-
-- [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
-- [Election Mechanics](/wiki/election-mechanics): Primary and general election rules
-- [Multi-Country Play](/wiki/multi-country-play): One-party vs parliamentary vs presidential
-- [Core Systems](/wiki/core-systems): Turn structure, action economy
-- [Player Progression](/wiki/player-progression): Career ladder details
-- [International Trade](/wiki/trade-system): CNY exchange, tariffs, FTAs
-
----
+A modern-start China begins as an **industrial powerhouse** economy, the same model as Japan. An earlier start begins as agrarian and industrializes over time through play. **State-Capitalist** takes over as the identity once state ownership of the economy reaches 67%. CNY exchange, tariffs and FTAs are covered in [International Trade](/wiki/trade-system).
 
 ## Living history
 
-The timeline below is written by the turn processor whenever a Premier transition or national-scope bill enactment happens in-game. Each entry is a real event from this save.
+The timeline below is written by the turn processor whenever a national event happens in-game: a change of leader, a national law enacted, an escalation stage, an alliance joined or left, or a region transferred. Each entry is a real event from this save.
 
 \`\`\`country-history
 CN
 \`\`\`
+
+See also: [Multi-Country Play](/wiki/multi-country-play) for one-party versus parliamentary versus presidential systems, and [Core Systems](/wiki/core-systems) for turn structure and the action economy.
+
+Playable in the 2027 preset; in every other era China runs as an economy preview, with its economy simulated but its offices closed to players. The escalation and conversion rules apply in every world. Last checked 2026-10-30, version 1.18.0.
 `;

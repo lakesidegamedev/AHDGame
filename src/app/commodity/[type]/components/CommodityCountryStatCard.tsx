@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { CountryCommodityData } from "@/lib/commodity-map";
-import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import type { CountryCommodityData } from "@/lib/commodity-map/commodityAggregation";
+import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map/commodityRegionMappings";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -49,7 +49,7 @@ export default function CommodityCountryStatCard({
 }: CommodityCountryStatCardProps) {
   const desktopRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const currencyCode = getCommodityDisplayCurrency(countryId);
   const hasRegionMap = COUNTRIES_WITH_REGION_MAPS.has(countryId);
   // Imports fill demand that home production leaves open, so a gap they close
@@ -201,7 +201,7 @@ function CardContent({
   onViewCountryPage,
   onViewCountryMap,
 }: {
-  config: (typeof COUNTRY_CONFIGS)[CountryId];
+  config: (typeof COUNTRY_CLIENT_CONFIGS)[CountryId];
   countryId: CountryId;
   commodityLabel: string;
   unit: string;

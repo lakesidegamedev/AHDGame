@@ -42,6 +42,7 @@ export const gettingStartedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "create-a-character",
+    designDocUrl: "design/getting-started.html",
     title: "Create a Character",
     description:
       "Every decision during onboarding: country (all ten playable hubs), name, home region, policy positions, starting kit, first party.",
@@ -81,6 +82,7 @@ export const gettingStartedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "the-game-loop",
+    designDocUrl: "design/turn-processing.html",
     title: "The Game Loop",
     description:
       "How much you actually need to log in: per-turn, per-day, per-cycle rhythms plus the long-term career arc.",
@@ -119,6 +121,7 @@ export const gettingStartedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "first-campaign-walkthrough",
+    designDocUrl: "design/campaign-strategy.html",
     title: "First Campaign Walkthrough",
     description:
       "Concrete week-by-week example of a new player running their first State Senate race: from Day 1 actions to election night.",
@@ -132,6 +135,7 @@ export const gettingStartedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "game-starting-state",
+    designDocUrl: "design/world-and-era-systems-as-shipped.html",
     title: "Game Starting State",
     description:
       "Starting parties, NPPs, treasuries, and legislature sizes for every country: the exact configuration a new world opens with.",

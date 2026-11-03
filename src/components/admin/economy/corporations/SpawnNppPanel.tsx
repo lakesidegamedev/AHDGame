@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dispatch } from "react";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import type { CorporationsAdminAction, CorporationsAdminState } from "../useCorporationsAdminState";
 import { apiErrorText } from "@/lib/errors/catalog";
 

@@ -15,7 +15,7 @@ import { buildSeedExpectations, expectedPrimeRate, type SeedExpectations } from 
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
-export const BASELINE_COLLECTION = "seedDiagnosticBaselines";
+const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
 
 export interface SeedDiagnosticBaseline {
@@ -43,7 +43,7 @@ function setMetric(metrics: Record<string, number>, id: string, value: number | 
  * Sum sector output for a country: unowned sector revenue + corporation revenue.
  * At fresh seed most output sits in unowned; after play it migrates to corps.
  */
-export async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
+async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
   const unowned = await db
     .collection<{ revenue?: number }>("unownedSectors")
     .find({ countryId })
@@ -64,7 +64,7 @@ export async function sumSectorAggregate(db: Db, countryId: string): Promise<num
  * Mean globalPrice/basePrice across commodityPrices docs. Returns null when
  * no usable rows exist.
  */
-export async function commodityPriceIndex(db: Db): Promise<number | null> {
+async function commodityPriceIndex(db: Db): Promise<number | null> {
   const rows = await db
     .collection<{ globalPrice?: number; basePrice?: number }>("commodityPrices")
     .find({})

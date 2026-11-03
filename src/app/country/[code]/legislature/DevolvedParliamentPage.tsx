@@ -7,7 +7,6 @@ import {
 } from "./components/shared/LegislaturePageShell";
 
 import { filterLegislatureBills } from "./components/shared/legislaturePresentation";
-
 import { useState, useEffect } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import {
@@ -17,7 +16,8 @@ import {
 import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import { LeaderCard } from "@/components/legislature/LeaderCard";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
 import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
@@ -270,7 +270,7 @@ function LeadershipTab({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) {
-  const config = getCountryConfig(countryId);
+  const config = getCountryClientConfig(countryId);
   const meta = DEVOLVED_META[countryId];
   const chamberKey = config.legislature.lowerChamber.key;
   const chamberLabel = config.legislature.name;
@@ -390,7 +390,7 @@ export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) 
           compositionOptions={{ includeAvatars: true }}
           chamberLabel={chamberLabel}
           showSeatsColumn={true}
-          regionLabel={getCountryConfig(countryId).regionLabel}
+          regionLabel={getCountryClientConfig(countryId).regionLabel}
           searchPlaceholder={`Search ${chamberLabel} members…`}
           countryId={countryId}
           parliamentChartVariant="hemicycle"

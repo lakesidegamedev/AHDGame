@@ -8,7 +8,7 @@ import {
   recommendRole,
 } from "@/lib/military/combat";
 import { rank } from "@/lib/military/generals";
-import { isAtConflict, RESERVE_THEATER_ID } from "@/lib/military/theaters";
+import { isAtConflict, RESERVE_THEATER_ID } from "@/lib/military/theaterConstants";
 import { strengthPct } from "@/lib/military/strength";
 import { learnedOf } from "@/lib/military/generalsTree";
 import { deriveSpec, specLabelOf } from "@/lib/military/deriveSpec";

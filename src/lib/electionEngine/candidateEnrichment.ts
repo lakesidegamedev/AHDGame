@@ -162,10 +162,7 @@ export async function loadCandidateEnrichmentPreload(
  * turn's vote accumulation calls enrichment once per election, so callers
  * that loop over elections load this once per country and pass it in.
  */
-export async function loadEnrichmentParties(
-  db: Db,
-  countryId?: CountryId
-): Promise<EnrichmentParty[]> {
+async function loadEnrichmentParties(db: Db, countryId?: CountryId): Promise<EnrichmentParty[]> {
   return db
     .collection<EnrichmentParty>("politicalParties")
     .find(countryId ? { countryId } : {})

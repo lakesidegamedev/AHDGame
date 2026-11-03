@@ -1,3 +1,4 @@
+import { creditEquityPool } from "@/lib/equities/marketPool";
 import type { Db, UpdateFilter, AnyBulkWriteOperation } from "mongodb";
 import {
   holdingCostBasis,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/wireEvent";
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 export interface ResolveInput {
   db: Db;
@@ -50,8 +52,8 @@ export type ResolveResult =
  * Pass condition: yes voting power > no voting power AND some voting power cast
  * (no votes = fail). Weighted by voting power (supershares count), not raw shares.
  *
- * On pass: pay each non-CEO character/corp holder, pay corp treasury for the
- * float chunk (corporate buyback semantics), consolidate cap table, flip
+ * On pass: pay each non-CEO character/corp holder, pay the equity market pool for the
+ * float chunk, consolidate cap table, flip
  * isPrivate=true, retire publicFloat shares.
  *
  * On fail: refund CEO's reserved cash, set 96-turn cooldown.
@@ -114,11 +116,14 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   const claim = await db
     .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
     .updateOne(
-      { _id: vote._id, status: "open" },
+      // The tallied votes are part of the claim: a cast that lands after the
+      // tally leaves the vote open for the next resolver to count it.
+      { _id: vote._id, status: "open", votes: vote.votes },
       { $set: { status: finalStatus, resolvedAt: now, updatedAt: now } }
     );
   if (claim.matchedCount === 0) {
-    // Another resolver already claimed this vote. Bail out — they own the side effects.
+    // Another resolver already claimed this vote, or a cast moved the tally.
+    // Bail out: the claimant owns the side effects, or the next pass recounts.
     return { resolved: false, reason: "already_resolved" };
   }
 
@@ -183,11 +188,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // ── Pass branch: settle the buyout ────────────────────────────────────────
   const ceoIdStr = corp.ceoId.toString();
   const nonCeoHolders = corp.shareholders.filter((s) => s.characterId?.toString() !== ceoIdStr);
-  const unplacedIpoShares =
-    corp.pendingShareIssuance?.issuedUpfront && corp.pendingShareIssuance.source === "ipo"
-      ? corp.pendingShareIssuance.remainingShares
-      : 0;
-  const publicFloat = Math.max(0, (corp.publicFloat ?? 0) - unplacedIpoShares);
+  const publicFloat = Math.max(0, (corp.publicFloat ?? 0) - unplacedIpoShares(corp));
 
   // #3450: index-fund holders must be paid too. Previously a fund holder had its
   // payout counted into the CEO's outflow but was NEVER credited, and its shares
@@ -278,26 +279,16 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   if (personalPayoutOps.length)
     await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
 
-  // Public float buyback: pay corp treasury for the retired float shares.
+  // The float belongs to the equity market pool, not the issuer being taken private.
   const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice);
   if (floatPayout > 0) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corp._id }, { $inc: { liquidCapital: floatPayout } });
-    void emitTx(db, {
-      type: "share_buyout_buyback",
-      turn: currentTurn,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: corp._id,
-      subjectName: corp.name,
-      amount: floatPayout,
-      currencyCode: vote.lockedBuyoutCurrency,
-      counterpartyType: "corporation",
-      counterpartyId: corp._id,
-      counterpartyName: corp.name,
-      meta: { side: "float_retired" },
-    });
+    await creditEquityPool(
+      db,
+      vote.lockedBuyoutCurrency as CurrencyCode,
+      floatPayout,
+      "purchasesIn",
+      now
+    );
   }
 
   // Consolidate cap table: CEO absorbs all non-CEO character/corp shares; float retires.

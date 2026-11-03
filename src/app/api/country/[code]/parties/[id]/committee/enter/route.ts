@@ -52,7 +52,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "Account is banned");
     }
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/committee/enter:${authResult.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const authUser = authResult.user;
 

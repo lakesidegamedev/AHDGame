@@ -200,7 +200,7 @@ export { isDegenerateFingerprint } from "@/lib/utils/degenerateFingerprints";
 
 /** Ceiling `ip_exact_nonCF` is capped to when the shared IP is hosting/proxy/
  * VPN-classified (datacenter/CGNAT stand-in) rather than residential/mobile. */
-export const IP_DATACENTER_CGNAT_CAP = 0.15;
+const IP_DATACENTER_CGNAT_CAP = 0.15;
 
 // Re-exported from a leaf module. Consumers that need ONLY the mask (the
 // identity-history reader) import `@/lib/utils/maskIp` directly, so they do not

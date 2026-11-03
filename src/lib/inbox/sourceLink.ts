@@ -1,6 +1,7 @@
 import type { NotificationType } from "@/lib/db/types/notifications";
 import { centralBankUrl } from "@/lib/urls";
-import { getRepresentativeCentralBankCountry } from "@/lib/centralBank/helpers";
+import { getRepresentativeCentralBankCountry } from "@/lib/centralBank/intorgRepresentative";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 export type InboxSource = { label: string; hint?: string; href: string };
 
@@ -46,7 +47,7 @@ export function resolveSourceLink(
   // ── Election ──────────────────────────────────────────────────────────────
   const electionId = asString(m.electionId);
   if (electionId) {
-    return { label: "View election", href: `/elections/${electionId}` };
+    return { label: "View election", href: campaignManagerHref({ race: electionId }) };
   }
 
   // ── Bill (direct billId or whip-issued targetId) ──────────────────────────
@@ -233,7 +234,7 @@ export function resolveSourceLink(
   }
 
   // ── Crisis ────────────────────────────────────────────────────────────────
-  if (type === "crisis") {
+  if (type === "crisis" || type === "crisis_resolved") {
     const crisisId = asString(m.crisisId);
     if (crisisId) {
       return { label: "View crisis", href: `/world/crises/${crisisId}` };

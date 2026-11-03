@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import type { OrgSummary } from "../orgTypes";
 import { orgHref } from "../orgRouting";
 import { Seal } from "./OrgPrimitives";

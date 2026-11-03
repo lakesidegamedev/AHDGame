@@ -4,7 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useMemo, useState } from "react";
 import { PartyLogo } from "@/components/PartyLogo";
 import { Button, Input, Modal } from "@/components/ui";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 interface CharacterOption {
   id: string;

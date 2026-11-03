@@ -36,24 +36,3 @@ export async function loadLiveStateActions(
     .find(liveActionFilter(args.electionId, args.currentTurn))
     .toArray();
 }
-
-/**
- * The same read across several races at once.
- *
- * The turn processor handles every active election in one pass rather than one
- * at a time, so it needs the whole set in a single query instead of one per
- * race.
- */
-export async function loadLiveStateActionsForElections(
-  db: Db,
-  args: { electionIds: ObjectId[]; currentTurn: number }
-): Promise<PrimaryStateAction[]> {
-  if (args.electionIds.length === 0) return [];
-  return db
-    .collection<PrimaryStateAction>("primaryStateActions")
-    .find({
-      electionId: { $in: args.electionIds },
-      expiresTurn: { $gt: args.currentTurn },
-    })
-    .toArray();
-}

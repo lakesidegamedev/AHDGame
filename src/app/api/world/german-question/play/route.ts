@@ -46,7 +46,11 @@ export async function POST(request: Request) {
     // Budgets already cap what a play can DO, so this exists to bound the read
     // amplification of hammering the endpoint with requests that get refused.
     // Well above any legitimate rate: a seat has at most 3 actions a turn.
-    const limited = checkRateLimit(auth.user.userId, 20, 60_000);
+    const limited = checkRateLimit(
+      `api/world/german-question/play:${auth.user.userId}`,
+      20,
+      60_000
+    );
     if (!limited.ok) return rateLimitResponse(limited.retryAfter);
 
     const parsed = await parseJsonBody(request, schema);

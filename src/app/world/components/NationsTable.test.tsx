@@ -40,6 +40,8 @@ const playable: NationRow = {
     economyPreview: false,
   }),
   snapshot: SNAPSHOT,
+  governmentTypeLabel: "Presidential Republic",
+  executiveTitle: "President",
 };
 
 const econOnly: NationRow = {
@@ -49,6 +51,8 @@ const econOnly: NationRow = {
     status: "active",
     economyPreview: true,
   }),
+  governmentTypeLabel: "Parliamentary Monarchy",
+  executiveTitle: "Prime Minister",
 };
 
 const hidden: NationRow = {
@@ -59,6 +63,8 @@ const hidden: NationRow = {
     economyPreview: false,
     registered: false,
   }),
+  governmentTypeLabel: "Parliamentary Republic",
+  executiveTitle: "First Minister",
 };
 
 function rowFor(name: string): HTMLElement {

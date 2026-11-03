@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getExecutiveOrderNamePlural, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   EXEC_ORDER_SLOT_CAP,
   GUBERNATORIAL_ACTION_CAP,
@@ -15,6 +15,8 @@ interface Props {
   stateId: string;
   stateName: string;
   regionalTitle: string;
+  /** Plural for the regional executive's orders, resolved on the server. */
+  ordersLabel: string;
   officeHolderName: string | null;
   gubernatorialActions: number;
   viewerIsAdmin: boolean;
@@ -56,7 +58,7 @@ export function OverviewTab(props: Props) {
           stateId={props.stateId}
         />
       </Card>
-      <Card title={getExecutiveOrderNamePlural(props.countryId)}>
+      <Card title={props.ordersLabel}>
         <ExecutiveOrdersSummary activeOrders={props.activeOrders} currentTurn={props.currentTurn} />
       </Card>
       <Card title="State of the state">

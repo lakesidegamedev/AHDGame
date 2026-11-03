@@ -52,7 +52,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 export const FILL_CLAIM_STALE_MS = 5 * 60 * 1000;
 
 /** Upper bound on orders one sweeper pass touches. */
-export const FILL_RECOVERY_SCAN_LIMIT = 50;
+const FILL_RECOVERY_SCAN_LIMIT = 50;
 
 /** Stable per-fill key. `filledAmountBefore` is the claim's concurrency token. */
 export function fillClaimKey(orderId: string, filledAmountBefore: number): string {
@@ -61,7 +61,7 @@ export function fillClaimKey(orderId: string, filledAmountBefore: number): strin
 
 /** Per-claim leg stamp. The nonce keeps a re-claim after a rollback from
  * mistaking the rolled-back attempt's stamps for its own. */
-export function fillLegStamp(key: string, nonce: string, leg: string): string {
+function fillLegStamp(key: string, nonce: string, leg: string): string {
   return `${key}#${nonce}#${leg}`;
 }
 
@@ -386,7 +386,7 @@ export interface FillLegState {
 }
 
 /** Read which legs of the intent demonstrably landed, from the stamps. */
-export async function verifyFillLegs(db: Db, intent: ProcessingFillIntent): Promise<FillLegState> {
+async function verifyFillLegs(db: Db, intent: ProcessingFillIntent): Promise<FillLegState> {
   const fillerStamp = fillLegStamp(intent.key, intent.nonce, "filler");
   const posterStamp = fillLegStamp(intent.key, intent.nonce, "poster");
   const [filler, poster] = await Promise.all([

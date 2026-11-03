@@ -342,6 +342,33 @@ export function liftedThrottleBalance(
 }
 
 /**
+ * Per-output fill with an editorial audience cut undone.
+ *
+ * Editorial stance shrinks an outlet's offer, not the buyers waiting for it: a
+ * divergent outlet sells its whole (smaller) offer, so its raw fill reads below
+ * SOLD_OUT_FILL and it can never claim the shortage headroom a neutral outlet
+ * gets, leaving it to crawl up 15% a turn into a short book. Dividing each
+ * listed output's fill by its availability restores the offer, clamped to a
+ * full fill. Missing availability leaves the fill untouched.
+ */
+export function withEditorialAvailabilityRestored<T extends string>(
+  soldByCommodity: Partial<Record<T, number>> | null | undefined,
+  editorialAvailabilityByCommodity: Partial<Record<T, number>> | null | undefined
+): Partial<Record<T, number>> | null | undefined {
+  if (!soldByCommodity || !editorialAvailabilityByCommodity) return soldByCommodity;
+  const fill: Partial<Record<T, number>> = { ...soldByCommodity };
+  for (const [commodity, availability] of Object.entries(editorialAvailabilityByCommodity) as [
+    T,
+    number,
+  ][]) {
+    const sold = fill[commodity];
+    if (typeof sold !== "number" || !(availability > 0)) continue;
+    fill[commodity] = Math.min(1, sold / availability);
+  }
+  return fill;
+}
+
+/**
  * Per-output fill for production feedback, with units a media ownership law
  * refused added back. Those units had buyers, so a capped outlet keeps its run
  * instead of reading the legal limit as weak demand. Clamped to a full fill.

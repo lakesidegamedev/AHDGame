@@ -39,7 +39,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (!(await isLabourFullMode())) {
       return errorResponse(403, "Player-run unions are not enabled.");
     }
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rateLimit = checkRateLimit(
+      `api/unions/[id]/bargaining/[campaignId]:${auth.user.userId}`,
+      20,
+      60_000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const parsed = await parseJsonBody(request, actionSchema);
     if (!parsed.success) {

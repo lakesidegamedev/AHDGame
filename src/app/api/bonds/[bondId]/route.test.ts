@@ -93,16 +93,31 @@ describe("GET /api/bonds/[bondId] institutional ownership", () => {
     db.collectionMocks.bondHistory.find.mockReturnValue(cursor([]));
 
     const { GET } = await import("./route");
+    db.collection("federalBudget")
+      .find()
+      .toArray.mockResolvedValue([
+        {
+          _id: "federal",
+          creditRating: "CCC",
+          sovereignCrisisState: "recovering",
+          lastDefaultTurn: 8,
+        },
+      ]);
     const response = await GET(new Request(`http://localhost/api/bonds/${bondId}`), {
       params: Promise.resolve({ bondId: bondId.toString() }),
     });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
-      bond: { heldUnits: number };
+      bond: { heldUnits: number; sovereignRisk: unknown };
       holders: Array<{ type: string; name: string; units: number }>;
     };
     expect(body.bond.heldUnits).toBe(35);
+    expect(body.bond.sovereignRisk).toEqual({
+      creditRating: "CCC",
+      crisisState: "recovering",
+      lastDefaultTurn: 8,
+    });
     expect(body.holders).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ type: "fund", name: "United States Bond Fund", units: 20 }),

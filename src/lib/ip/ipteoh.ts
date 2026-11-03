@@ -162,7 +162,7 @@ async function fetchFromApi(ip: string): Promise<IpDetails | null> {
  *
  * Safe to call from fire-and-forget contexts — never throws.
  */
-export async function checkIp(rawIp: string): Promise<IpDetails | null> {
+async function checkIp(rawIp: string): Promise<IpDetails | null> {
   const ip = normalizeIp(rawIp);
   if (!ip) return null;
 

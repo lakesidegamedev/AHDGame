@@ -43,6 +43,28 @@ type SwitchDef = PatchSwitchDef | TurnSwitchDef;
 
 const SWITCHES: SwitchDef[] = [
   {
+    key: "government-contracts",
+    kind: "patch",
+    url: "/api/admin/government-contracts",
+    label: "Government contracts",
+    desc: "New tenders, bids and awards in every country. Existing signed contracts, cancellation and withdrawals continue. Default enabled.",
+    confirmWhen: false,
+    confirmText:
+      "Disable new government tenders, bids and awards in every country? Existing signed contracts will continue.",
+    onLabel: "Enabled",
+    offLabel: "Disabled",
+  },
+  {
+    key: "discord-character",
+    kind: "patch",
+    url: "/api/admin/discord-character-gate",
+    label: "Discord for new characters",
+    desc: "Require a linked Discord account before creating a new character, including after resets. Existing characters remain playable. Default off.",
+    confirmWhen: true,
+    confirmText:
+      "Require Discord for all future character creation? Existing characters remain playable.",
+  },
+  {
     key: "registration",
     kind: "patch",
     url: "/api/admin/registration",

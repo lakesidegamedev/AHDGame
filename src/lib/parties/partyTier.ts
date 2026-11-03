@@ -45,11 +45,11 @@ export const TIER_EARN_REGION_ORG_PCT = 20 as const;
 /** Org% below which an earned region is lost (hysteresis floor). */
 export const TIER_LOSE_REGION_ORG_PCT = 10 as const;
 /** Fraction of a country's regions that must be earned to graduate to Major. */
-export const TIER_GRADUATION_REGION_FRACTION = 1 / 3;
+const TIER_GRADUATION_REGION_FRACTION = 1 / 3;
 /** The UK uses three of its twelve regions so a strong nation-wide party can graduate. */
 export const UK_TIER_GRADUATION_REGION_FRACTION = 1 / 4;
 /** Fraction of regions that must be below LOSE% to trigger the demotion warning. */
-export const TIER_DEMOTION_REGION_FRACTION = 2 / 3;
+const TIER_DEMOTION_REGION_FRACTION = 2 / 3;
 /** Turns a Major party may sit at-risk before demotion (240 = locked default). */
 export const MAJOR_DEMOTION_GRACE_TURNS = 240 as const;
 

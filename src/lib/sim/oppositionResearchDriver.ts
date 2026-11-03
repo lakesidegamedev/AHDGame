@@ -46,7 +46,7 @@ export const OPPO_DRIVER_TURNS = 12;
 /** Turns of post-purchase favorability effects the driver retains. */
 export const OPPO_DRIVER_EFFECT_TURNS = 4;
 /** Registry version stamped into retained evidence; bump on shape changes. */
-export const OPPO_DRIVER_VERSION = 1;
+const OPPO_DRIVER_VERSION = 1;
 
 /**
  * Exact rejection the purchase command throws when no target resolves.
@@ -352,13 +352,7 @@ export async function runOppositionResearchFlow(
 
   // Debits reconcile against the same cost helper the command gates on.
   const isGeneralPhase = isCampaignUpgradeGeneralPhase(election, gameTime.currentTurn, gameTime);
-  const cost = getEffectiveBranchCost(
-    "oppositionResearch",
-    null,
-    0,
-    election.electionType,
-    isGeneralPhase
-  );
+  const cost = getEffectiveBranchCost("oppositionResearch", null, 0, isGeneralPhase);
   if (!cost) throw new OppoDriverError("starter cost helper returned null");
   const rates = await loadCampaignCurrencyRates(db);
   const expectedFundsDebit = campaignAnchorToLocal(cost.funds, election.countryId ?? "US", rates);

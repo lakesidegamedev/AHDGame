@@ -1,26 +1,34 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { ElectionResultsResponse } from "@/lib/elections/liveResults/types";
-import { NightBroadcast } from "../../night/NightBroadcast";
 import { hasNight } from "../../night/nightModel";
-import { PresidentialResultsView } from "./PresidentialResultsView";
-import { ParliamentaryResultsView } from "./ParliamentaryResultsView";
-import { SingleWinnerResultsView } from "./SingleWinnerResultsView";
 
-/**
- * Picks the layout by what the data supports: president gets the electoral
- * college board; multi-seat chambers (or anything with a national sibling
- * aggregation) get the parliamentary board; everything else is head-to-head.
- */
+// Exactly one of these boards renders for a given election, so they are
+// code-split: /elections/[id] is a large route family and should not ship both
+// result layouts in its first load.
+const ResultsFallback = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const NightBroadcast = dynamic(
+  () => import("../../night/NightBroadcast").then((m) => m.NightBroadcast),
+  { loading: ResultsFallback }
+);
+const PresidentialResultsView = dynamic(
+  () => import("./PresidentialResultsView").then((m) => m.PresidentialResultsView),
+  { loading: ResultsFallback }
+);
+
+/** The election-night broadcast while it runs, else the presidential board. */
 export function ResultsViewRouter({ data }: { data: ElectionResultsResponse }) {
   if (hasNight(data)) {
     return <NightBroadcast data={data} concludedHref={`/elections/${data.election.id}`} />;
   }
+  // Down-ballot races redirect to Campaign Manager before this page renders
+  // (results/layout.tsx), so only the presidency arrives here.
   if (data.election.electionType === "president") {
     return <PresidentialResultsView data={data} />;
   }
-  if (data.election.totalSeats > 1 || data.national) {
-    return <ParliamentaryResultsView data={data} />;
-  }
-  return <SingleWinnerResultsView data={data} />;
+  return null;
 }

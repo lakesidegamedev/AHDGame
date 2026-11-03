@@ -58,7 +58,7 @@ export function countryPhysicalDemandSupplyGapPct(
 export const OVERHANG_CAP = 100;
 
 /** Physical scarcity adds at most six shortage points to the overhang signal. */
-export const MAX_PHYSICAL_SHORTAGE_CONTRIBUTION = 6;
+const MAX_PHYSICAL_SHORTAGE_CONTRIBUTION = 6;
 
 /**
  * Shortage index in [0, 100]. The observed demand-supply gap is expressed as

@@ -1,6 +1,6 @@
 // POST /api/country/[code]/national-corporation/[id]/appoint-ceo
 // Finance-minister-equivalent (Secretary of the Treasury / Chancellor / etc.,
-// fallback head of government) nominates a CEO for one of the country's National
+// minister) nominates a CEO for one of the country's National
 // Corporations. The nominee takes the seat via the existing
 // POST /api/corporations/[id]/ceo/accept flow. Spec §24.3.
 // Auth: requireAuthWithCharacter + assertTreasuryAuthority
@@ -31,7 +31,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/national-corporation/[id]/appoint-ceo:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code, id } = await params;
@@ -55,12 +59,12 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    // Authority: seated finance minister, or head of government if vacant.
+    // Authority: the seated finance minister only.
     const authorized = await assertTreasuryAuthority(db, countryId, auth.user.character._id);
     if (!authorized) {
       return errorResponse(
         403,
-        "Only the Secretary of the Treasury (or equivalent), or the head of government if that seat is vacant, may appoint a National Corporation CEO."
+        "Only the Secretary of the Treasury (or equivalent) may appoint a National Corporation CEO."
       );
     }
 

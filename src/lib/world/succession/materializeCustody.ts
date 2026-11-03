@@ -14,7 +14,7 @@ import {
   type FederationArchivedPublicCorporation,
 } from "./materializePublicCorporations";
 
-export const FEDERATION_CUSTODY_RECORDS_COLLECTION = "federationCustodyRecords";
+const FEDERATION_CUSTODY_RECORDS_COLLECTION = "federationCustodyRecords";
 
 export interface FederationCustodyRecord {
   _id: string;

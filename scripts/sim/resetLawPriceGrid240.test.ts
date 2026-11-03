@@ -4,10 +4,10 @@ import { runResetLawPriceGrid240 } from "./resetLawPriceGrid240";
 describe("1991 national law-price grid, 240 turns per option", () => {
   const runs = runResetLawPriceGrid240();
 
-  it("exercises all five levels of all 51 families in three countries", () => {
-    expect(runs).toHaveLength(765);
+  it("exercises all five levels of all 52 families in three countries", () => {
+    expect(runs).toHaveLength(780);
     for (const country of ["US", "UK", "JP"] as const) {
-      expect(runs.filter((run) => run.country === country)).toHaveLength(255);
+      expect(runs.filter((run) => run.country === country)).toHaveLength(260);
     }
     expect(
       runs.every(

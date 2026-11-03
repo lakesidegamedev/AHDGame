@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="420" viewBox="0 0 780 420" role="img" font-family="system-ui, sans-serif">
+<title>What a total embargo does to a corporation</title>
+<desc>A total embargo scales a sector revenue by one minus its export exposure, scales maintenance, drops the export premium and leaves fixed corporate overhead unchanged.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="380" height="48" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="210.0" y="39.0" font-size="13" text-anchor="middle" fill="#18181b">Total embargo: all commodities, blocked both</text>
+<text x="210.0" y="56.0" font-size="13" text-anchor="middle" fill="#18181b">directions</text>
+<path d="M210 68 L210 84" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="84" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="103.0" font-size="13" text-anchor="middle" fill="#18181b">Each sector has an export exposure: the share of</text>
+<text x="210.0" y="120.0" font-size="13" text-anchor="middle" fill="#18181b">its output sold abroad last turn</text>
+<path d="M210 132 L210 148" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="148" width="380" height="48" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="210.0" y="175.5" font-size="13" text-anchor="middle" fill="#18181b">Revenue is multiplied by one minus the exposure</text>
+<path d="M210 196 L210 212" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="212" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="239.5" font-size="13" text-anchor="middle" fill="#18181b">Maintenance costs scale down with the lower revenue</text>
+<path d="M210 260 L210 276" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="276" width="380" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="210.0" y="303.5" font-size="13" text-anchor="middle" fill="#18181b">Export premium margin bonus is dropped</text>
+<rect x="460" y="20" width="300" height="130" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="470" y="54.5" font-size="13" text-anchor="start" fill="#18181b">Pure exporter</text>
+<text x="470" y="71.5" font-size="13" text-anchor="start" fill="#18181b">Revenue collapses toward zero.</text>
+<text x="470" y="88.5" font-size="13" text-anchor="start" fill="#18181b"></text>
+<text x="470" y="105.5" font-size="13" text-anchor="start" fill="#18181b">Mostly local sector</text>
+<text x="470" y="122.5" font-size="13" text-anchor="start" fill="#18181b">Barely notices.</text>
+<rect x="460" y="276" width="300" height="80" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="610.0" y="302.5" font-size="13" text-anchor="middle" fill="#18181b">Fixed corporation overhead is not</text>
+<text x="610.0" y="319.5" font-size="13" text-anchor="middle" fill="#18181b">reduced: marketing, logistics, R&amp;D,</text>
+<text x="610.0" y="336.5" font-size="13" text-anchor="middle" fill="#18181b">executive pay. This is the real drag.</text>
+<path d="M400 324 L460 324" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="430" y="316" font-size="12" text-anchor="middle" fill="#52525b">but</text>
+<text x="20" y="392" font-size="12" text-anchor="start" fill="#52525b">A narrower embargo restricts trade flows but does not trigger this write-down.</text>
+</svg>

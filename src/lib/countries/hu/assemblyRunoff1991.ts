@@ -17,7 +17,7 @@ import { countHuMixed1991 } from "./rules/mixedElection1991";
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
-export async function materializeHu1991RunoffOpening(input: {
+async function materializeHu1991RunoffOpening(input: {
   db: Db;
   session: ClientSession;
   cycle: number;
@@ -193,7 +193,7 @@ export async function materializeHu1991RunoffOpening(input: {
   return ids;
 }
 
-export async function materializeHu1991RunoffCount(input: {
+async function materializeHu1991RunoffCount(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

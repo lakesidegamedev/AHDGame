@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 
 interface DiscordLinkSectionProps {
+  required?: boolean;
+  onLinked?: () => void;
+  onBeforeLink?: () => void;
   /** Initial linked state from auth data. */
   initialLinked: boolean;
   /** Current user data to show linked status. */
@@ -28,50 +31,60 @@ const DiscordIcon = (
 
 export function DiscordLinkSection({
   initialLinked,
+  required = false,
+  onLinked,
+  onBeforeLink,
   discordId,
   discordUsername,
   discordAvatar,
 }: DiscordLinkSectionProps) {
-  const [linked, setLinked] = useState(initialLinked);
+  const [oauthLinked, setLinked] = useState(false);
+  const linked = initialLinked || oauthLinked;
   const [polling, setPolling] = useState(false);
 
-  // Poll auth/me after the user returns from the Discord OAuth flow.
-  // The popup/tab opens /api/auth/discord?returnUrl=... which redirects
-  // to Discord, then back to /auth/discord/result, which auto-redirects
-  // back to the returnUrl. We detect completion by polling.
-  const startPolling = useCallback(() => {
-    setPolling(true);
-    let attempts = 0;
-    const maxAttempts = 30; // 30 seconds max
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.user?.discordId) {
-            setLinked(true);
-            setPolling(false);
-            clearInterval(interval);
-            return;
-          }
-        }
-      } catch {
-        // ignore network errors during poll
-      }
-      if (attempts >= maxAttempts) {
+  const checkLinked = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      if (res.ok && (await res.json()).user?.discordId) {
+        setLinked(true);
         setPolling(false);
-        clearInterval(interval);
+        onLinked?.();
       }
+    } catch {
+      /* Temporary connection failures can be retried. */
+    }
+  }, [onLinked]);
+  useEffect(() => {
+    if (linked) return;
+    const onFocus = () => {
+      void checkLinked();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [linked, checkLinked]);
+  useEffect(() => {
+    if (!polling || linked) return;
+    const interval = setInterval(() => {
+      void checkLinked();
     }, 1000);
-  }, []);
+    const timeout = setTimeout(() => setPolling(false), 120_000);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [polling, linked, checkLinked]);
 
   const handleLink = () => {
+    onBeforeLink?.();
     const returnUrl = window.location.pathname + window.location.search;
     const linkUrl = `/api/auth/discord?returnUrl=${encodeURIComponent(returnUrl)}`;
     // Open in a new tab so the user doesn't lose their form progress
-    window.open(linkUrl, "_blank");
-    startPolling();
+    const popup = window.open(linkUrl, "discord-account-link");
+    if (!popup) {
+      window.location.assign(linkUrl);
+      return;
+    }
+    setPolling(true);
   };
 
   const avatarUrl =
@@ -89,7 +102,9 @@ export function DiscordLinkSection({
           <h2 className="text-heading-sm font-semibold">Discord</h2>
         </div>
         <p className="ml-9 text-body-sm text-muted">
-          Optional. Link now or later from your settings page.
+          {required
+            ? "Required before creating a new character. Existing characters remain playable."
+            : "Optional. Link now or later from your settings page."}
         </p>
       </div>
       <div className="p-4 pt-3">

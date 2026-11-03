@@ -7,7 +7,7 @@ import {
   RaceList,
   type Race,
 } from "@/app/country/[code]/region/[id]/office/tabs/endorsements/RaceList";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { GUBERNATORIAL_ACTION_CAP } from "@/lib/constants/governorOffice";
 
 interface ActiveEndorsement {

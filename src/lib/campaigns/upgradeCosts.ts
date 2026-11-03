@@ -7,59 +7,6 @@ export interface UpgradeCost {
 }
 
 /**
- * Per-race-family budget scalar applied to fundraising income, upgrade
- * costs, and ongoing maintenance. The baseline magnitudes
- * (`FUNDRAISING_INCOME[10] = $5M/turn`, `L10 upgrade = $10M`) are sized
- * for a US presidential campaign. Smaller races have realistic
- * mid-six-figure to low-seven-figure budgets — scaling the curve keeps
- * the campaign manager UX coherent rather than asking a State Senate
- * candidate to raise presidential-scale money.
- *
- * Calibration:
- *   - president: 1.0× — baseline. ~$5M/turn at L10 fundraising.
- *   - governor / senate / non-US national: 0.5× — large statewide budgets.
- *   - house / regional council / landtag: 0.3× — district / regional scale.
- *   - stateSenate: 0.2× — low-six-figure district budgets.
- *   - ministerPresident: 0.4× — devolved-exec scale.
- *
- * Per-country national-legislature races (UK commons, JP shugiin /
- * sangiin, DE bundestag) sit at 0.5× — they're nationwide elections
- * but smaller per-candidate spend than US presidential.
- *
- * Unknown / missing election type degrades to 1.0× for backward compat.
- * Existing callers that don't pass `electionType` see no behavior change.
- */
-export const CAMPAIGN_FAMILY_SCALAR_BY_ELECTION_TYPE: Readonly<Record<string, number>> = {
-  president: 1.0,
-  senate: 0.5,
-  governor: 0.5,
-  commons: 0.5,
-  special_commons: 0.3,
-  shugiin: 0.5,
-  snap_shugiin: 0.5,
-  sangiin: 0.5,
-  bundestag: 0.5,
-  ministerPresident: 0.4,
-  landtag: 0.4,
-  house: 0.3,
-  regionalCouncil: 0.3,
-  stateSenate: 0.2,
-  // CN: NPC sized as a non-US national legislature; Provincial People's
-  // Congress mirrors regional-council scale.
-  npcDelegate: 0.5,
-  peoplesCongress: 0.3,
-};
-
-/**
- * Returns the budget scalar for a given election type. Backward-compat:
- * undefined / unknown election types return 1.0×.
- */
-export function getCampaignFamilyScalar(electionType: string | undefined): number {
-  if (!electionType) return 1.0;
-  return CAMPAIGN_FAMILY_SCALAR_BY_ELECTION_TYPE[electionType] ?? 1.0;
-}
-
-/**
  * Per-turn passive income indexed by fundraisingLevel (0–10).
  */
 export const FUNDRAISING_INCOME = [
@@ -539,11 +486,11 @@ export const OPS_TREES: Record<UpgradeCategory, OpsTreeDef> = {
  * levers were never a real spending decision. Upkeep is doubled and the tier-3
  * purchase is 1.5x. Fundraising and opposition research are unchanged.
  */
-export const OPS_UPKEEP_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
+const OPS_UPKEEP_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
   groundGame: 2,
   mediaSpending: 2,
 };
-export const OPS_TIER3_FUNDS_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
+const OPS_TIER3_FUNDS_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
   groundGame: 1.5,
   mediaSpending: 1.5,
 };
@@ -568,7 +515,7 @@ export function getOpsBranchMagnitude(
 /**
  * Fully-adjusted cost to buy the next tier of a branch (or the starter when
  * `branch` is null and the lever is not yet unlocked). Applies the same
- * per-race-family scalar and general-phase surcharge as `getEffectiveUpgradeCost`
+ * general-phase surcharge as `getEffectiveUpgradeCost`
  * so the UI preview and the server gate stay in lockstep. Returns null when the
  * branch is already maxed or the level is out of range.
  */
@@ -576,7 +523,6 @@ export function getEffectiveBranchCost(
   category: UpgradeCategory,
   branch: OpsBranchKey | null,
   nextLevel: number,
-  electionType: string | undefined,
   isGeneralPhase: boolean
 ): {
   funds: number;
@@ -585,17 +531,16 @@ export function getEffectiveBranchCost(
   maintenance?: number;
   lumpSum?: number;
 } | null {
-  const scalar = getCampaignFamilyScalar(electionType);
   const surge = isGeneralPhase ? GENERAL_PHASE_UPGRADE_MULTIPLIER : 1;
   if (branch === null) {
     const s = OPS_TREES[category].starter;
     return {
-      funds: Math.ceil(Math.round(s.funds * scalar) * surge),
+      funds: Math.ceil(s.funds * surge),
       actions: Math.ceil(s.actions * surge),
       effect: s.effect,
       maintenance:
         s.maintenance != null
-          ? Math.round(s.maintenance * (OPS_UPKEEP_MULTIPLIER[category] ?? 1) * scalar)
+          ? Math.round(s.maintenance * (OPS_UPKEEP_MULTIPLIER[category] ?? 1))
           : undefined,
     };
   }
@@ -605,26 +550,25 @@ export function getEffectiveBranchCost(
   const tierFunds =
     tier.level >= 3 ? tier.funds * (OPS_TIER3_FUNDS_MULTIPLIER[category] ?? 1) : tier.funds;
   return {
-    funds: Math.ceil(Math.round(tierFunds * scalar) * surge),
+    funds: Math.ceil(Math.round(tierFunds) * surge),
     actions: Math.ceil(tier.actions * surge),
     effect: tier.effect,
     maintenance:
       tier.maintenance != null
-        ? Math.round(tier.maintenance * (OPS_UPKEEP_MULTIPLIER[category] ?? 1) * scalar)
+        ? Math.round(tier.maintenance * (OPS_UPKEEP_MULTIPLIER[category] ?? 1))
         : undefined,
-    lumpSum: tier.lumpSum != null ? Math.round(tier.lumpSum * scalar) : tier.lumpSum,
+    lumpSum: tier.lumpSum != null ? Math.round(tier.lumpSum) : tier.lumpSum,
   };
 }
 
 /**
- * Total per-turn maintenance for a lever's current tree state, in anchor $
- * scaled by race family. Sums starter + each owned branch tier's maintenance,
+ * Total per-turn maintenance for a lever's current tree state, in anchor $.
+ * Sums starter + each owned branch tier's maintenance,
  * then applies any `maintReductionPct` branch on the same lever.
  */
 export function getTreeMaintenanceCost(
   category: UpgradeCategory,
-  tree: { starter: boolean; a: number; b: number; c: number } | undefined,
-  electionType?: string
+  tree: { starter: boolean; a: number; b: number; c: number } | undefined
 ): number {
   if (!tree?.starter) return 0;
   const def = OPS_TREES[category];
@@ -640,8 +584,7 @@ export function getTreeMaintenanceCost(
     }
   }
   total = total * (OPS_UPKEEP_MULTIPLIER[category] ?? 1) * (1 - reduction);
-  const scalar = getCampaignFamilyScalar(electionType);
-  return Math.round(total * scalar);
+  return Math.round(total);
 }
 
 /**
@@ -653,26 +596,12 @@ export function getMaxLevel(category: UpgradeCategory): number {
 }
 
 /**
- * Returns the upgrade cost for `category` at `level`. When `electionType`
- * is supplied, applies the per-race-family scalar from
- * `CAMPAIGN_FAMILY_SCALAR_BY_ELECTION_TYPE`. Backward-compat: no
- * scalar applied when electionType is undefined.
+ * Returns the upgrade cost for `category` at `level`, or null when out of range.
  */
-export function getUpgradeCost(
-  category: UpgradeCategory,
-  level: number,
-  electionType?: string
-): UpgradeCost | null {
+export function getUpgradeCost(category: UpgradeCategory, level: number): UpgradeCost | null {
   const costs = UPGRADE_COSTS[category];
   const base = (costs as readonly UpgradeCost[]).find((c) => c.level === level);
-  if (!base) return null;
-  const scalar = getCampaignFamilyScalar(electionType);
-  if (scalar === 1.0) return base;
-  return {
-    ...base,
-    funds: Math.round(base.funds * scalar),
-    maintenance: base.maintenance != null ? Math.round(base.maintenance * scalar) : undefined,
-  };
+  return base ?? null;
 }
 
 /**
@@ -688,9 +617,8 @@ export const GENERAL_PHASE_UPGRADE_MULTIPLIER = 1.5;
 
 /**
  * Returns the fully-adjusted cost to buy the next level of `category`, applying
- * BOTH the per-race-family budget scalar (via `getUpgradeCost`) and — when the
- * race is in its general-election phase — the `GENERAL_PHASE_UPGRADE_MULTIPLIER`
- * surcharge on funds and actions.
+ * the `GENERAL_PHASE_UPGRADE_MULTIPLIER` surcharge on funds and actions when the
+ * race is in its general-election phase.
  *
  * This is the single source of truth for what an upgrade costs. The server gate
  * and the campaign UI both call it so the "Upgrade" button only enables when the
@@ -707,10 +635,9 @@ export const GENERAL_PHASE_UPGRADE_MULTIPLIER = 1.5;
 export function getEffectiveUpgradeCost(
   category: UpgradeCategory,
   level: number,
-  electionType: string | undefined,
   isGeneralPhase: boolean
 ): UpgradeCost | null {
-  const scaled = getUpgradeCost(category, level, electionType);
+  const scaled = getUpgradeCost(category, level);
   if (!scaled) return null;
   if (!isGeneralPhase) return scaled;
   return {
@@ -720,11 +647,7 @@ export function getEffectiveUpgradeCost(
   };
 }
 
-export function getMaintenanceCost(
-  category: UpgradeCategory,
-  level: number,
-  electionType?: string
-): number {
+export function getMaintenanceCost(category: UpgradeCategory, level: number): number {
   if (level === 0) return 0;
   const costs = UPGRADE_COSTS[category];
   let total = 0;
@@ -734,6 +657,5 @@ export function getMaintenanceCost(
       total += cost.maintenance;
     }
   }
-  const scalar = getCampaignFamilyScalar(electionType);
-  return Math.round(total * scalar);
+  return Math.round(total);
 }

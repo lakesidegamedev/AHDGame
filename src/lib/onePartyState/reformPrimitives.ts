@@ -17,8 +17,8 @@ export { legalizeBannedParty } from "./partyEffectAdapters";
 /**
  * Ladder of ruling-party multipliers, from the strongest (default OPS
  * weighting) down to fully equal weight. Each successful invocation of
- * `setRulingPartyVoteMultiplierTier(db, countryId, "down")` advances
- * one step toward `RULING_MULTIPLIER_FLOOR`.
+ * `setRulingPartyVoteMultiplierTier(db, countryId, "down")` advances one
+ * step down the ladder.
  *
  * The ladder values are anchored to `DEFAULT_OPS_VOTE_MULTIPLIERS.ruling`
  * so a future tuning pass that changes the default automatically reseats
@@ -30,8 +30,6 @@ export const RULING_MULTIPLIER_LADDER = [
   1.5,
   1.0,
 ] as const;
-
-export const RULING_MULTIPLIER_FLOOR = RULING_MULTIPLIER_LADDER.at(-1)!;
 
 /**
  * Step the ruling-party vote multiplier one rung down the ladder.

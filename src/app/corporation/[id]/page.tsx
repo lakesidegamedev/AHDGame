@@ -1,6 +1,10 @@
 "use client";
 
 import { abandonSectorRequest } from "@/lib/corporations/abandonSectorClient";
+import {
+  mothballSectorRequest,
+  type MothballAction,
+} from "@/lib/corporations/mothballSectorClient";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
@@ -19,15 +23,15 @@ import BackButton from "@/components/BackButton";
 import { useToast } from "@/contexts/ToastContext";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
 import type { MoneyPeriod } from "@/lib/constants/moneyTimescale";
-import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { CorporationMasthead } from "@/components/corporation/CorporationMasthead";
+import { ParentDirectionNote } from "@/components/corporation/ParentDirectionNote";
+import { useCorporationPageData } from "./useCorporationPageData";
 import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCard";
 import { SubsidiaryManagementCard } from "@/components/corporation/SubsidiaryManagementCard";
 import { PrivatizationVotePanel } from "@/components/corporation/PrivatizationVotePanel";
 import { ManagePrivateShareholdersPanel } from "@/components/corporation/ManagePrivateShareholdersPanel";
-import PrivateSalePanel from "@/components/corporation/shares/PrivateSalePanel";
 import IndexCommitteePanel from "@/components/corporation/IndexCommitteePanel";
-import SponsoredFundPanel from "@/components/corporation/SponsoredFundPanel";
 import { NationalizationStatusCard } from "@/components/corporation/NationalizationStatusCard";
 import { CorpLedgerProvider } from "@/components/corporation/ledger/LedgerContext";
 import { NoticeStrip } from "@/components/corporation/ledger/NoticeStrip";
@@ -56,13 +60,47 @@ import {
   filterPrivateCorpBaseTabs,
   getPrivateCorpTabAccess,
 } from "@/components/corporation/privateCorpTabAccess";
-import FinancialsTab from "@/components/corporation/FinancialsTab";
+import dynamic from "next/dynamic";
+
+// Section bodies that only mount on a non-default tab are code-split: the
+// corporation page is the highest-traffic route family (67k views / 30 days),
+// and its statically imported tab bodies made up most of its 172 KB of
+// route-specific JS. Each still renders on demand with a skeleton in between.
+const SectionFallback = () => (
+  <div className="h-40 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const FinancialsTab = dynamic(() => import("@/components/corporation/FinancialsTab"), {
+  loading: SectionFallback,
+});
+const PrivateSalePanel = dynamic(() => import("@/components/corporation/shares/PrivateSalePanel"), {
+  loading: SectionFallback,
+});
+const AdvertisingAgreementsPanel = dynamic(
+  () => import("@/components/corporation/AdvertisingAgreementsPanel"),
+  { loading: SectionFallback }
+);
+const ProductStudio = dynamic(
+  () => import("@/components/corporation/ProductStudio").then((m) => m.ProductStudio),
+  { loading: SectionFallback }
+);
+const SponsoredFundPanel = dynamic(() => import("@/components/corporation/SponsoredFundPanel"), {
+  loading: SectionFallback,
+});
+const BankConsoleTab = dynamic(
+  () => import("./bank/BankConsoleTab").then((m) => m.BankConsoleTab),
+  { loading: SectionFallback }
+);
 import { AutopilotCard } from "@/components/corporation/AutopilotCard";
 import {
   corpIncomeBasis,
   scaleToPeriod,
 } from "@/components/corporation/financials/financialsModel";
-import { NationalCorporationView } from "@/components/national/NationalCorporationView";
+const NationalCorporationView = dynamic(
+  () =>
+    import("@/components/national/NationalCorporationView").then((m) => m.NationalCorporationView),
+  { loading: SectionFallback }
+);
 import {
   TabFallback,
   SectorsTab,
@@ -81,11 +119,12 @@ import {
   SupplyAgreementsSection,
   DefaultedBondCrisisModal,
 } from "@/components/corporation/CorporationPageTabs";
-import { BankConsoleTab } from "./bank/BankConsoleTab";
 import { EditorialStancePanel } from "@/components/corporation/EditorialStancePanel";
-import { ProductStudio } from "@/components/corporation/ProductStudio";
-import { LegacyProductProjects } from "@/components/corporation/LegacyProductProjects";
-import AdvertisingAgreementsPanel from "@/components/corporation/AdvertisingAgreementsPanel";
+const LegacyProductProjects = dynamic(
+  () =>
+    import("@/components/corporation/LegacyProductProjects").then((m) => m.LegacyProductProjects),
+  { loading: () => null }
+);
 import type {
   CorporationDetail,
   CEO,
@@ -201,6 +240,11 @@ export default function CorporationDetailPage() {
     corpTabIdFor(ALL_CORP_TABS, groupResolved.superTab, groupResolved.subTab) ?? "overview";
   const commoditiesTabDiscovery = useFeatureSeen(CORP_PAGE_FEATURE_KEYS.commoditiesTab);
   const { isNew: commoditiesTabIsNew, markSeen: markCommoditiesTabSeen } = commoditiesTabDiscovery;
+
+  // Started here, with the first paint, rather than in the components that render
+  // the answers: those only mount after the corporation payload lands, which put
+  // both behind a second round trip on the highest-traffic page in the game.
+  const { nationalizationStatus, openVotes } = useCorporationPageData(id, activeTab === "overview");
 
   const corpIsPrivate = !!corporation?.isPrivate;
 
@@ -620,6 +664,45 @@ export default function CorporationDetailPage() {
     }
   }
 
+  // A set, so a second row clicked while the first is in flight does not clear
+  // the first one's busy state; the ref drops a double click before re-render.
+  const [mothballingSectorIds, setMothballingSectorIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+  const mothballInFlight = useRef(new Set<string>());
+
+  // Suggestion 412: mothball or reactivate straight from the sector row's menu,
+  // through the same build route the sector page uses.
+  async function handleSectorMothball(sectorId: string, action: MothballAction) {
+    if (mothballInFlight.current.has(sectorId)) return;
+    mothballInFlight.current.add(sectorId);
+    setMothballingSectorIds(new Set(mothballInFlight.current));
+    setSectorsMessage(null);
+    try {
+      const { ok, data } = await mothballSectorRequest(String(id), sectorId, action);
+      if (ok) {
+        setSectorsMessage({
+          type: "success",
+          text:
+            action === "mothball"
+              ? "Mothballed. These plants make nothing while stowed, and still cost upkeep."
+              : "Reactivated. These plants run again.",
+        });
+        fetchCorporation();
+      } else {
+        setSectorsMessage({
+          type: "error",
+          text: apiErrorText(data, action === "mothball" ? "Mothball failed" : "Reactivate failed"),
+        });
+      }
+    } catch {
+      setSectorsMessage({ type: "error", text: "Network error" });
+    } finally {
+      mothballInFlight.current.delete(sectorId);
+      setMothballingSectorIds(new Set(mothballInFlight.current));
+    }
+  }
+
   const [cancelTransitionSectorId, setCancelTransitionSectorId] = useState<string | null>(null);
 
   async function handleCancelTransition(sectorId: string) {
@@ -986,6 +1069,14 @@ export default function CorporationDetailPage() {
             showBanner
           />
 
+          {corporation.canDirectAsParent && corporation.parentCorporation && (
+            <ParentDirectionNote
+              corpId={id}
+              parent={corporation.parentCorporation}
+              onRefresh={fetchCorporation}
+            />
+          )}
+
           {isCeo &&
             activeTab === "overview" &&
             corporation.countryId &&
@@ -1006,6 +1097,7 @@ export default function CorporationDetailPage() {
 
           <NationalizationStatusCard
             corpId={id}
+            status={nationalizationStatus}
             hasExposure={
               isCeo ||
               corporation.shareholders?.some(
@@ -1083,7 +1175,8 @@ export default function CorporationDetailPage() {
               // structures (e.g. S-Corp, capped at 100). Hidden for CEO-only
               // private structures and for public corps.
               const legalStructure = getLegalStructureForCorp({
-                countryId: corporation.countryId as import("@/lib/constants/countries").CountryId,
+                countryId:
+                  corporation.countryId as import("@/lib/constants/countriesCore").CountryId,
                 legalStructure: corporation.legalStructure as
                   import("@/lib/constants/legalStructures").LegalStructureId | undefined,
                 isPrivate: corporation.isPrivate === true,
@@ -1284,6 +1377,7 @@ export default function CorporationDetailPage() {
                         financialFogOfWar={financialFogOfWar}
                         isCeo={isCeo}
                         myCharacterId={myCharacterId}
+                        openVotes={openVotes}
                         onTrade={canTrade ? openTrade : undefined}
                       />
                       {corporation.mediaEditorialEnabled === true &&
@@ -1340,8 +1434,11 @@ export default function CorporationDetailPage() {
                         logisticsStrength={corporation.logisticsStrength}
                         onAbandonSector={handleAbandonSector}
                         abandoningSectorId={abandoningSectorId}
+                        onMothballSector={handleSectorMothball}
+                        mothballingSectorIds={mothballingSectorIds}
                         sectorsMessage={sectorsMessage}
                         onStrategyChange={handleSectorStrategyChange}
+                        canChangeStrategy={isCeo || !!corporation.canDirectAsParent}
                         strategyUpdatingSectorId={strategyUpdatingSectorId}
                         onCancelTransition={handleCancelTransition}
                         cancelTransitionSectorId={cancelTransitionSectorId}

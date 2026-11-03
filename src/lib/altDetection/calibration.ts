@@ -50,7 +50,7 @@ import { DEFAULT_ALT_SCORING_WEIGHTS, resolveAltScoringConfig } from "./config";
 /** Number of equal-width reliability bins over [0,1]. Ten 0.1-wide buckets
  * matches the confidence histogram in `runMetrics.ts` so the two reports
  * line up visually. */
-export const CALIBRATION_BIN_COUNT = 10;
+const CALIBRATION_BIN_COUNT = 10;
 
 /** Minimum dispositioned rings before the report is a reliable read. Below
  * this, a single moderator decision moves every number materially. */
@@ -59,7 +59,7 @@ export const MIN_CALIBRATION_SAMPLES = 20;
 /** Minimum rings in a bin before its gap counts toward the expected
  * calibration error. Prevents one ring in an otherwise empty bin from
  * dominating a sample-weighted average. */
-export const MIN_BIN_SAMPLES = 3;
+const MIN_BIN_SAMPLES = 3;
 
 /** Candidate cluster thresholds swept for the precision/recall trade-off. */
 const THRESHOLD_SWEEP = [0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9];

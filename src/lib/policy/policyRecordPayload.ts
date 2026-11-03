@@ -14,6 +14,7 @@ import {
   loadCountryLegislationTypes,
   nationalLawCountryQuery,
 } from "@/lib/policy/nationalPolicyRecords";
+import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
@@ -127,6 +128,8 @@ export async function loadPolicyRecordPayload(countryId: CountryId) {
         costContext && hasCostData ? calculateEnactedLawAnnualCost(law, costContext) : null,
     };
   }
+
+  Object.assign(provenance, await loadResetLawProvenance(db, countryId, "national"));
 
   return { points, events, era, provenance };
 }

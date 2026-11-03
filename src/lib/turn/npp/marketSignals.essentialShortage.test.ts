@@ -231,3 +231,51 @@ describe("governed fragile-market supply routing", () => {
     expect(treatment?.sectorType).toBe("energy");
   });
 });
+
+describe("essential-shortage valve reads each state's freight shortfall", () => {
+  it("founds logistics in the starved state while the national price looks calm", () => {
+    const freightPool = new Map([
+      [
+        "US",
+        [us("manufacturing", "PA"), us("logistics", "IL", 200_000), us("logistics", "TX", 100_000)],
+      ],
+    ]);
+    // National freight at 1.07x; TX is 9% supplied, IL in surplus. The NPP
+    // price signal folds the TX shortfall into its state ratio.
+    const stateRatio = (commodity: CommodityType, stateId: string) =>
+      commodity === "freight" ? (stateId === "TX" ? 4 : 1.07) : null;
+    const pick = findBestUnownedSector(
+      "US",
+      "PA",
+      "manufacturing",
+      null,
+      new Set(),
+      freightPool,
+      new Set(),
+      ratios({ freight: 1.07 }),
+      false,
+      1,
+      { statePriceRatioOf: stateRatio }
+    );
+    expect(pick?.sectorType).toBe("logistics");
+    expect(pick?.stateId).toBe("TX");
+  });
+
+  it("stays in its own field when no state is short", () => {
+    const freightPool = new Map([["US", [us("manufacturing", "PA"), us("logistics", "TX")]]]);
+    const pick = findBestUnownedSector(
+      "US",
+      "PA",
+      "manufacturing",
+      null,
+      new Set(),
+      freightPool,
+      new Set(),
+      ratios({ freight: 1.07 }),
+      false,
+      1,
+      { statePriceRatioOf: () => 1.07 }
+    );
+    expect(pick?.sectorType).toBe("manufacturing");
+  });
+});

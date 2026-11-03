@@ -12,18 +12,3 @@
 export const BAL_GEO_URL = "/bal-regions.json";
 
 export const BAL_REGION_CODES = ["BAL_EST", "BAL_LVA", "BAL_LTU"] as const;
-
-/**
- * Compact on-map labels. The three republics are small and sit side by side on
- * the map tile, so the full names collide; the standard three-letter forms are
- * unambiguous to anyone looking at the region.
- */
-export const BAL_LABEL_OVERRIDES: Record<string, string> = {
-  BAL_EST: "Est",
-  BAL_LVA: "Lat",
-  BAL_LTU: "Lith",
-};
-
-export function isBalticRegion(code: string): boolean {
-  return (BAL_REGION_CODES as readonly string[]).includes(code);
-}

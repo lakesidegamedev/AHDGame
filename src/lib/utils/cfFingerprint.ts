@@ -149,7 +149,7 @@ export function isEmptyCfFingerprint(cf: CfFingerprint): boolean {
  * admin/moderator surfaces to consume; not wired into the pairwise alt
  * scoring model, which only ever links two ACCOUNTS, not one account to a
  * "this looks automated" verdict. */
-export const HIGH_BOT_SCORE_THRESHOLD = 30;
+const HIGH_BOT_SCORE_THRESHOLD = 30;
 
 /** True when a captured bot score is low enough to surface as a per-account
  * "likely automated" flag. `undefined`/absent score never flags. */

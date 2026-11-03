@@ -1,5 +1,6 @@
 "use client";
 
+import { JP_REGIONS } from "@/lib/countries/jp/data/jpRegionDirectory";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -435,6 +436,7 @@ export default function StateElectionResultsPage({
     STATE_NAMES[stateUpper] ||
     UK_REGION_NAMES[stateUpper] ||
     RU_REGION_NAMES[stateUpper] ||
+    JP_REGIONS.find((r) => r.id === stateUpper)?.name ||
     stateUpper;
   const electionYear = resolveElectionYear(election, cycleCtx);
   const electionTypeLabel: Record<string, string> = {

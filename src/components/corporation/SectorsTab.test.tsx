@@ -452,8 +452,8 @@ describe("SectorsTab margins drawer", () => {
     );
     openDrawer();
     const drawer = screen.getByRole("region", { name: "Margins, Akron Works" });
-    expect(within(drawer).getByRole("heading", { name: "Capacity → net profit" })).toBeTruthy();
-    for (const line of ["Capacity", "Produced", "Sold", "Operating profit", "Net profit"]) {
+    expect(within(drawer).getByRole("heading", { name: "Plants → net profit" })).toBeTruthy();
+    for (const line of ["Plants", "Produced", "Sold", "Operating profit", "Net profit"]) {
       expect(within(drawer).getAllByText(line).length).toBeGreaterThan(0);
     }
     expect(within(drawer).getByText("Effective margin build")).toBeTruthy();
@@ -500,7 +500,146 @@ describe("SectorsTab margins drawer", () => {
     expect(screen.getAllByRole("slider").length).toBeGreaterThan(0);
     openDrawer();
     const drawer = screen.getByRole("region", { name: "Margins, Old Mill" });
-    expect(within(drawer).queryByRole("heading", { name: "Capacity → net profit" })).toBeNull();
+    expect(within(drawer).queryByRole("heading", { name: "Plants → net profit" })).toBeNull();
     expect(within(drawer).getByText("Effective margin build")).toBeTruthy();
+  });
+});
+
+describe("SectorsTab plants columns", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("leads with plants, keeps units in the tooltip, and labels running and sold", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[
+          sector({
+            _id: "w1",
+            sectorType: "manufacturing",
+            displayName: "Akron Works",
+            plantCount: 14,
+            capacityUnits: 899,
+            producedUnits: 494,
+            soldUnits: 222,
+            fillRate: 0.45,
+            fillRateBand: "low",
+          }),
+        ]}
+      />
+    );
+    const count = screen.getAllByText("14 plants")[0];
+    expect(count.getAttribute("title")).toMatch(/about 899 units of output a day/);
+    expect(screen.queryByText(/^899$/)).toBeNull();
+    expect(screen.queryByText(/% used/)).toBeNull();
+    expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("55%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("45%").length).toBeGreaterThan(0);
+  });
+
+  it("reads a sector with no plants as not running yet", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[
+          sector({
+            _id: "z1",
+            sectorType: "logistics",
+            displayName: "Hartford Depot",
+            plantCount: 0,
+            capacityUnits: 0,
+            producedUnits: 0,
+            soldUnits: 0,
+            fillRate: null,
+            fillRateBand: null,
+            workers: 0,
+          }),
+        ]}
+      />
+    );
+    expect(screen.getAllByText("No depots yet").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Not running yet").length).toBeGreaterThan(0);
+    expect(screen.queryByText("0 / 0 plants")).toBeNull();
+  });
+});
+
+describe("SectorsTab quick mothball (suggestion 412)", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("mothballs a running sector from its row", () => {
+    const onMothballSector = vi.fn();
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo
+        onMothballSector={onMothballSector}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: "Mothball" })[0]!);
+    expect(onMothballSector).toHaveBeenCalledWith("s1", "mothball");
+  });
+
+  it("offers Reactivate on a mothballed sector", () => {
+    const onMothballSector = vi.fn();
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing", mothballed: true })]}
+        isCeo
+        onMothballSector={onMothballSector}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Reactivate" })[0]!);
+    expect(onMothballSector).toHaveBeenCalledWith("s1", "reactivate");
+  });
+
+  it("shows no mothball control below the plants tier", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        plantsMode={false}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo
+        onMothballSector={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
+  });
+
+  it("marks the control busy while its request is in flight", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo
+        onMothballSector={vi.fn()}
+        mothballingSectorIds={new Set(["s1"])}
+      />
+    );
+    const busy = screen.getAllByRole("button", { name: "Mothballing…" });
+    expect(busy.length).toBeGreaterThan(0);
+    for (const b of busy) {
+      expect(b.getAttribute("aria-busy")).toBe("true");
+      expect((b as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
+  it("shows no mothball control to a viewer who is not the CEO", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[sector({ _id: "s1", sectorType: "manufacturing" })]}
+        isCeo={false}
+        onMothballSector={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
   });
 });

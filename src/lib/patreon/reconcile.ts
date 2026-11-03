@@ -93,7 +93,7 @@ export class PatreonReconcileLockBusyError extends Error {
   }
 }
 
-export class PatreonReconcileLockLostError extends Error {
+class PatreonReconcileLockLostError extends Error {
   constructor() {
     super("Patreon reconciliation lost its apply lease");
     this.name = "PatreonReconcileLockLostError";

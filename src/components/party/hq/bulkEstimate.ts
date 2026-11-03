@@ -8,6 +8,8 @@ export type BulkPreview =
   | {
       ok: true;
       effectiveCost: number;
+      pressureValue?: number;
+      sizeMultiplier?: number;
       projectedGain?: number;
       /** Cash price of this state's click. Absent on a pre-2026-09-02 response. */
       cashPrice?: number;

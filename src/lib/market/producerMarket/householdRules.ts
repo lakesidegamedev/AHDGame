@@ -1,6 +1,7 @@
 /** Household orders spend a named cash wallet, using the shared consumption basket. */
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { PurchaseOrder } from "./rules";
+import { laneKeyOf } from "./laneKey";
 
 export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> = {
   food: 0.2,
@@ -25,6 +26,8 @@ export function householdPurchaseOrders(input: {
   accountId: string;
   /** Country the spending wallet belongs to; the funded book places demand here. */
   countryId?: string;
+  /** State the spending wallet belongs to; a freight order takes local sellers first. */
+  stateId?: string;
   /** Opening wallet plus wages already paid into it. No imputed GDP or bank deposits. */
   cash: number;
   spendFraction: number;
@@ -49,7 +52,7 @@ export function householdPurchaseOrders(input: {
   let totalWeight = 0;
   const seen = new Set<string>();
   for (const p of input.products) {
-    const key = JSON.stringify([p.commodity, p.book]);
+    const key = laneKeyOf(p.commodity, p.book);
     if (
       !p.commodity ||
       !p.book ||
@@ -89,6 +92,7 @@ export function householdPurchaseOrders(input: {
         maximumSpend,
         eligibleOfferIds: p.eligibleOfferIds,
         ...(input.countryId ? { countryId: input.countryId } : {}),
+        ...(input.stateId ? { stateId: input.stateId } : {}),
       };
     });
 }

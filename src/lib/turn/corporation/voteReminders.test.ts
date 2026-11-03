@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { CorporationVote, CorporationPrivatizationVote } from "@/lib/db/types";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { processVoteReminders } from "./voteReminders";
+import { processVoteAutoResolve, processVoteReminders } from "./voteReminders";
+import { resolveCorporationVoteIfReady } from "@/lib/corporations/votes/voteService";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 const { notifyVoteEventRawMock, proposalSummaryMock } = vi.hoisted(() => ({
   notifyVoteEventRawMock: vi.fn(),
@@ -122,5 +124,33 @@ describe("processVoteReminders", () => {
       userB.toString(),
     ]);
     expect(usersByVoteId.get(privatization._id.toString())).toEqual([userD.toString()]);
+  });
+
+  it("sweeps open votes without decoding the settlement stamps on corporations", async () => {
+    const corpId = new ObjectId();
+    db.collectionMocks.corporationVotes.find.mockReturnValue({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: new ObjectId(), corporationId: corpId, status: "open", votes: [] },
+        ]),
+    });
+    db.collectionMocks.corporationPrivatizationVotes.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: corpId, countryId: "US", name: "Alpha Corp" }]),
+    });
+    vi.mocked(resolveCorporationVoteIfReady).mockResolvedValue({
+      outcome: "open",
+      claimed: true,
+    } as never);
+
+    await processVoteAutoResolve(db as unknown as Db, 100, false);
+
+    expect(db.collectionMocks.corporations.find).toHaveBeenCalledWith(
+      { _id: { $in: [corpId] } },
+      { projection: SETTLEMENT_HISTORY_EXCLUDED }
+    );
   });
 });

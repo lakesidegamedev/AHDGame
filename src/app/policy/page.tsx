@@ -1,9 +1,10 @@
-"use client";
-import { useSearchParams } from "next/navigation";
 import { redirect } from "next/navigation";
+import { countryScopedUrl, type RedirectSearchParams } from "@/lib/countryRedirect";
 
-export default function PolicyRedirect() {
-  const searchParams = useSearchParams();
-  const country = searchParams.get("country")?.toLowerCase() || "us";
-  redirect(`/country/${country}/policy`);
+export default async function PolicyRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<RedirectSearchParams>;
+}) {
+  redirect(countryScopedUrl("policy", await searchParams));
 }

@@ -91,12 +91,9 @@ export interface DriverRowVM {
   hint: string;
 }
 
-/**
- * Turns from the close within which the screen may call itself "Election
- * Night". The general runs 48 turns; a race with more than this left is a
- * campaign being polled, not a count being read out.
- */
-export const FINAL_STRETCH_TURNS = 4;
+import { FINAL_STRETCH_TURNS } from "./liveWindows";
+
+export { FINAL_STRETCH_TURNS };
 
 export interface GeneralBlendVM {
   headline: string;

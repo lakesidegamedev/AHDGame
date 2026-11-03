@@ -10,7 +10,7 @@ import type {
 } from "@/lib/db/types/livingConflictCampaign";
 import type { CrisisDecisionOption, GlobalResponseRole } from "@/lib/db/types/crisis";
 
-export const CAMPAIGN_STAGES: readonly CampaignStage[] = [
+const CAMPAIGN_STAGES: readonly CampaignStage[] = [
   "posture",
   "mobilization",
   "operations",
@@ -41,7 +41,7 @@ function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
 }
 
-export function emptyCampaignConsequences(): CampaignConsequences {
+function emptyCampaignConsequences(): CampaignConsequences {
   return {
     civilianStrain: 0,
     refugees: 0,
@@ -321,7 +321,7 @@ export interface CampaignIntelligenceAssessment {
   summary: string;
 }
 
-export function campaignRisk(state: LivingCampaignState, intensity: number): number {
+function campaignRisk(state: LivingCampaignState, intensity: number): number {
   const c = state.consequences;
   return clamp(
     intensity * 0.28 +

@@ -75,6 +75,8 @@ export interface GovernmentFormation {
   /** Shared government-confidence gauge for parliamentary executive systems. */
   confidenceGauge?: number;
   confidenceGaugeUpdatedAt?: Date;
+  /** Start turn of the last completed lower-chamber snap granted the 50-point reset. World-local. */
+  confidenceSnapStartTurn?: number;
   /** Bounded history for the executive confidence trend chart. */
   confidenceGaugeHistory?: GovernmentConfidencePoint[];
 

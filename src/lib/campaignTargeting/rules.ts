@@ -5,13 +5,13 @@
  */
 
 export const CAMPAIGN_RULES_VERSION = 1;
-export const CANVASS_BASE_BOOST = 2;
+const CANVASS_BASE_BOOST = 2;
 export const TURNOUT_CAP = 20;
-export const TURNOUT_HALF_LIFE = 6;
-export const AD_HALF_LIFE = 24;
+const TURNOUT_HALF_LIFE = 6;
+const AD_HALF_LIFE = 24;
 export const AD_BONUS_CAP = 0.25;
 export const AD_ACTION_COST = 1;
-export const AD_FUNDS_PER_ACTION = 100;
+const AD_FUNDS_PER_ACTION = 100;
 export const AD_BOOST_PER_ACTION = 0.01;
 export const AD_MAX_ACTIONS = 50;
 
@@ -79,11 +79,11 @@ export function withCampaignRules<T extends object>(
   return { ...election, campaignRulesVersion: CAMPAIGN_RULES_VERSION };
 }
 
-export function positionDistanceSquared(a: Position, b: Position): number {
+function positionDistanceSquared(a: Position, b: Position): number {
   return ((a.economicLean - b.economicLean) ** 2 + (a.socialLean - b.socialLean) ** 2) / 2;
 }
 
-export function campaignFit(candidate: Position, audience: Position): number {
+function campaignFit(candidate: Position, audience: Position): number {
   return 0.2 + 0.8 * Math.exp(-positionDistanceSquared(candidate, audience) / 18);
 }
 

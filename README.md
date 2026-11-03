@@ -93,7 +93,7 @@ npm run test:run      # Vitest unit and integration suite
 npm run test:e2e      # Playwright, needs the dev server running
 ```
 
-CI runs on every pull request and on pushes to `main`: lint plus the architecture audit, format check, typecheck, the sharded unit suite, the Next build, and a federation-transactions job against an isolated Mongo replica set. A final `verify` job requires all of them. CodeQL, Semgrep, and dependency review run separately.
+CI runs on every pull request and on pushes to `main`: lint plus the architecture audit, format check, typecheck, the sharded unit suite, the Next build, and an integration job that runs federation transactions against an isolated Mongo replica set plus the full bootstrap fixture. A final `verify` job requires all of them. CodeQL, Semgrep, and dependency review run separately.
 
 Useful entry points:
 

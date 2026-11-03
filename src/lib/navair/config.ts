@@ -16,7 +16,7 @@
  */
 
 /** Naval archetypes, verbatim from AHD UNIT_TYPES.naval. */
-export const NAVAL_TYPES = {
+const NAVAL_TYPES = {
   "Carrier Strike Group": { icon: "carrier", power: 99, personnel: 7500, speed: 2 },
   "Guided-Missile Destroyer": { icon: "ship", power: 64, personnel: 330, speed: 2 },
   "Attack Submarine": { icon: "sub", power: 81, personnel: 130, speed: 2 },
@@ -199,50 +199,12 @@ export const BASING_FACTOR: Record<BasingKey, number> = {
 /** Supply ceiling lost per point of berth demand over the available capacity. */
 export const OVERCROWD_PENALTY = 6;
 
-/**
- * Forward basing the defence ministry can buy: tenders, anchorages, fuel barges.
- *
- * The answer to a hostile-coast penalty you cannot politically fix. Deliberately slow and
- * rationed: the point is to make the player commit engineering effort several turns
- * before the blockade needs it, not to hand out a toggle that erases the constraint.
- */
-export const PORT_WORKS = {
-  /** Turns from breaking ground to the capacity arriving. */
-  buildTurns: 3,
-  /** Capacity added when it completes. */
-  capacityGain: 2,
-  /** Concurrent projects allowed. One: this is a choice, not a build queue. */
-  maxConcurrent: 1,
-} as const;
-
 /** Readiness and supply both scale combat value, and neither ever zeroes it out. */
 export const READINESS_FLOOR = 0.45;
 export const SUPPLY_FLOOR = 0.5;
 
-/**
- * The operational-tempo escalator, the same idea as AHD's `READINESS_TEMPO_K`.
- *
- * A worn formation pays up to `1 + K` times the base readiness cost for the same
- * sortie.
- *
- * Set to 3 to match AHD's existing `READINESS_TEMPO_K`, NOT to the reference's 1.2.
- * The reference softened it because its scenario is twelve turns: it measured that at
- * 3, a wing that flew twice was finished, and the cadence choice collapsed into
- * "never fly". That finding stands and is the known risk here. It is accepted because
- * a 400+ turn world has room to recover between sorties that a twelve turn one does
- * not, and because one subsystem quietly running a different tempo constant from the
- * rest of the military model is the worse failure.
- *
- * If the static replay shows air formations parking permanently, this is the first
- * constant to look at.
- */
-export const TEMPO_K = 3;
-
 /** Readiness recovered per turn beyond whatever the mission charges. */
 export const READINESS_REGEN = 6;
-
-/** Supply moves toward its ceiling by this much per turn, in both directions. */
-export const SUPPLY_STEP = 15;
 
 /** Supply ceiling = 100 - hops * this - the terrain's logistics penalty. */
 export const SUPPLY_PER_HOP = 17;

@@ -347,6 +347,37 @@ describe("country-owned corporation seeding", () => {
     expect(seeds1953.some((s) => s.countryId === "FR")).toBe(true);
     expect(seeds1953.some((s) => s.countryId === "RU")).toBe(false);
   });
+
+  it("seeds a dissolved federation as its sovereign issuer only", () => {
+    const seeds = countryCorporationSeeds({
+      preset: "1991-default",
+      nationalBudgetCountries: ["US", "RU"],
+      easternBlocEra: false,
+      dissolvedFederations: ["RU"],
+    });
+    expect(seeds.find((s) => s.countryId === "RU")).toEqual({
+      countryId: "RU",
+      mode: "successorIssuer",
+      commandAware: false,
+    });
+    // Unaffected countries keep their preset gating.
+    expect(seeds.find((s) => s.countryId === "CN")?.commandAware).toBe(true);
+  });
+
+  it("never seeds a post-breakup successor command-aware", () => {
+    const seeds = countryCorporationSeeds({
+      preset: "1979-default",
+      nationalBudgetCountries: ["RU", "CS", "YU", "PL"],
+      easternBlocEra: true,
+      dissolvedFederations: ["RU", "CS", "YU"],
+    });
+    for (const id of ["RU", "CS", "YU"])
+      expect(seeds.find((s) => s.countryId === id)).toMatchObject({
+        mode: "successorIssuer",
+        commandAware: false,
+      });
+    expect(seeds.find((s) => s.countryId === "PL")?.commandAware).toBe(true);
+  });
 });
 
 function source(overrides: Partial<EconomyResetSource> = {}): EconomyResetSource {
@@ -358,6 +389,7 @@ function source(overrides: Partial<EconomyResetSource> = {}): EconomyResetSource
     config: { commandEconomyEnabled: false, ledgerShadow: true, treasuryCashLedgerEnabled: false },
     wipeCounts: { corporations: 3, bankLoans: 1 },
     partialWipeCounts: { bonds: 1 },
+    reseedCounts: { commodityPrices: 27, exchangeRates: 23 },
     campaignRates: { USD: 1 },
     anchorRates: { USD: 1 },
     characters: [

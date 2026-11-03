@@ -3,6 +3,8 @@
  * sector detail query. Extracted verbatim from sectorDetail.ts (pure code
  * motion; no behavior change).
  */
+import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
+import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getMarketSystemMode } from "@/lib/market/featureFlag";
 import { computeThroughput, inputAvailability, THROUGHPUT_MIN } from "@/lib/market/throughput";
@@ -106,6 +108,8 @@ export async function buildSectorCommoditySections(args: {
   thisSectorMultipliers: Partial<Record<ExtractableResource, number>>;
   /** gameConfig.marketGovernorCap, as the turn processor resolves it. */
   governorCap?: number | null;
+  /** Current game turn; own-site deliveries only count from last turn's receipt. */
+  currentTurn?: number;
 }) {
   const {
     sector,
@@ -190,6 +194,13 @@ export async function buildSectorCommoditySections(args: {
   // Under clearing, the realization term lives inside the clearing factor —
   // the plain realization rows/footer would double-report the price leg.
   const marketRealizationEnabled = market.realizationEnabled && !market.clearingEnabled;
+
+  // Output this sector handed to the company's own other sites last turn. It is
+  // not a sale, so the sold share reads zero without it. CEO-only intel.
+  const ownSiteProducts = isCeo
+    ? (ownSiteDeliveries(sector.producerSettlement, args.currentTurn ?? 0)?.products ?? [])
+    : [];
+  const ownSiteByCommodity = new Map(ownSiteProducts.map((p) => [p.commodity, p] as const));
 
   // Last turn's per-output clear rates (written by the clearing pass). Absent
   // on sectors that predate the field or when clearing never ran.
@@ -278,6 +289,9 @@ export async function buildSectorCommoditySections(args: {
       ...(market.clearingEnabled && hasRevenueSplit
         ? { revenueShare: revenueShareByCommodity[f.commodity] ?? 0 }
         : {}),
+      ...(ownSiteByCommodity.has(f.commodity)
+        ? { ownSite: ownSiteByCommodity.get(f.commodity) }
+        : {}),
       capacityMultiplier,
     };
   });
@@ -312,6 +326,7 @@ export async function buildSectorCommoditySections(args: {
         posture: number | null;
         effectivePosture: number | null;
         soldFraction: number | null;
+        ownSiteFraction?: number | null;
         clearingFactor: number | null;
         brandPostureNorm?: number | null;
         costPlusEnabled?: boolean;
@@ -320,12 +335,25 @@ export async function buildSectorCommoditySections(args: {
       }
     | undefined;
   if (market.clearingEnabled) {
+    // A funded turn never runs the legacy clearing pass, so its fields keep a
+    // stale reading; last turn's funded receipt is what actually sold.
+    const funded = fundedClearingReading(sector.producerSettlement, args.currentTurn ?? 0);
     pricing = {
       posture: typeof sector.pricingPosture === "number" ? sector.pricingPosture : null,
       effectivePosture:
         typeof sector.effectivePosture === "number" ? sector.effectivePosture : null,
-      soldFraction: typeof sector.soldFraction === "number" ? sector.soldFraction : null,
-      clearingFactor: typeof sector.clearingFactor === "number" ? sector.clearingFactor : null,
+      soldFraction: funded
+        ? funded.soldFraction
+        : typeof sector.soldFraction === "number"
+          ? sector.soldFraction
+          : null,
+      // Own-site deliveries are CEO-only intel, like the per-output rows above.
+      ...(funded && isCeo ? { ownSiteFraction: funded.ownSiteFraction } : {}),
+      clearingFactor: funded
+        ? funded.clearingFactor
+        : typeof sector.clearingFactor === "number"
+          ? sector.clearingFactor
+          : null,
       // Brand loyalty (Package A): the corp's established price-identity norm,
       // exposed only to the CEO so the Pricing panel can warn about gouging
       // jumps. Corp-level (not sector-level); never sent to non-owners.

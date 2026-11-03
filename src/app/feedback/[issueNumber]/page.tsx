@@ -14,7 +14,7 @@ import { SuggestionReportButton } from "@/components/suggestions/SuggestionRepor
 import { DiscordDiscussLink } from "@/components/suggestions/DiscordDiscussLink";
 import { SUGGESTION_CATEGORY_LABELS } from "@/components/FeedbackModal/constants";
 import { LocalTime, RelativeTime } from "@/components/time/LocalTime";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 interface Detail {
   issueNumber: number;

@@ -180,3 +180,41 @@ it("shows the internal input credit as a named signed line in the plant account"
   expect(screen.getByText("+ M200")).toBeTruthy();
   expect(screen.getByText("M87900")).toBeTruthy();
 });
+
+describe("own-site deliveries (ticket 1757)", () => {
+  it("names output handed to the company's own sites and does not call it unsold", () => {
+    render(
+      <MarketMoneyPanel
+        plants={
+          {
+            producedUnits: 104,
+            soldUnits: 29,
+            ownSiteUnits: 75,
+            unsoldUnits: 0,
+            demandGapUnits: 0,
+            fillRate: 0.28,
+            pnl: {
+              revenueAnchor: 1_566,
+              inputsAnchor: 0,
+              labourAnchor: 0,
+              upkeepAnchor: 0,
+              complianceAnchor: 0,
+              otherOperatingAnchor: 0,
+              growthAndBuildAnchor: 0,
+              profitAnchor: 1_566,
+              financialEventsAnchor: 0,
+              avgSalePriceAnchor: 53.88,
+              profitPerUnitAnchor: 15,
+            },
+            truth: null,
+          } as never
+        }
+        sectorType="energy"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Exxon Mobil" }}
+      />
+    );
+    expect(screen.getByText(/75 units went free to your company's own sites/)).toBeTruthy();
+    expect(screen.queryByText(/went unsold/)).toBeNull();
+  });
+});

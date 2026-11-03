@@ -32,11 +32,6 @@ const CACHE_TTL_MS = 300_000;
 let cached: { data: MarketedWorld; expiresAt: number } | null = null;
 let inflight: Promise<MarketedWorld> | null = null;
 
-/** Test seam: drop the in-process snapshot. */
-export function invalidateMarketedWorldCache(): void {
-  cached = null;
-}
-
 async function loadMarketedWorld(db: Db): Promise<MarketedWorld> {
   const [config, gs] = await Promise.all([
     db
@@ -79,7 +74,7 @@ async function loadMarketedWorld(db: Db): Promise<MarketedWorld> {
 }
 
 /** What the public should be told, resolved from the running world. */
-export async function getMarketedWorld(dbArg?: Db): Promise<MarketedWorld> {
+async function getMarketedWorld(dbArg?: Db): Promise<MarketedWorld> {
   if (dbArg) return loadMarketedWorld(dbArg);
 
   const now = Date.now();

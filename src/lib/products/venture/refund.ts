@@ -45,7 +45,7 @@ export async function refundVentureReceipt(
 }
 
 /** Drops a settled receipt without moving money. */
-export async function clearVentureReceipt(
+async function clearVentureReceipt(
   db: Db,
   corporationId: ObjectId,
   ventureId: string,

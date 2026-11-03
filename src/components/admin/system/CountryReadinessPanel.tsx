@@ -3,7 +3,8 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 
 interface ReadinessCheck {
@@ -72,7 +73,7 @@ export function CountryReadinessPanel() {
         >
           {registered.map((id) => (
             <option key={id} value={id}>
-              {COUNTRY_CONFIGS[id].name} ({id})
+              {COUNTRY_CLIENT_CONFIGS[id].name} ({id})
             </option>
           ))}
         </select>

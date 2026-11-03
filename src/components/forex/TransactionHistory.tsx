@@ -8,7 +8,13 @@ import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 type TradeSourceUI =
-  "manual" | "direct" | "limit_order" | "auto_purchase" | "auto_dividend" | "auto_coupon";
+  | "manual"
+  | "direct"
+  | "limit_order"
+  | "auto_purchase"
+  | "auto_purchase_reversal"
+  | "auto_dividend"
+  | "auto_coupon";
 
 interface RowItem {
   kind: "row";
@@ -55,6 +61,7 @@ const SOURCE_LABEL: Record<TradeSourceUI, string> = {
   direct: "Direct",
   limit_order: "Limit",
   auto_purchase: "Auto purchase",
+  auto_purchase_reversal: "Purchase refund",
   auto_dividend: "Dividend",
   auto_coupon: "Coupon",
 };
@@ -63,6 +70,7 @@ const SOURCE_COLOR: Record<TradeSourceUI, string> = {
   direct: "bg-success/10 text-success border-success/20",
   limit_order: "bg-warning/10 text-warning border-warning/20",
   auto_purchase: "bg-muted/20 text-muted border-card-border",
+  auto_purchase_reversal: "bg-muted/20 text-muted border-card-border",
   auto_dividend: "bg-info/10 text-info border-info/20",
   auto_coupon: "bg-info/10 text-info border-info/20",
 };

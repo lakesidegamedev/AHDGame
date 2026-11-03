@@ -55,24 +55,6 @@ export interface DemographicGroup {
 // so the country demographics SSOT can import it without a runtime import cycle.
 // Re-exported here to preserve this module's long-standing public API.
 export { LAYER1_DEMOGRAPHICS } from "@/lib/demographics/usDemographics";
-import { LAYER1_DEMOGRAPHICS } from "@/lib/demographics/usDemographics";
-
-/**
- * Demographics that can be targeted by GOTV/suppression spending
- * (all Layer 1 groups except ideology, which cannot be directly targeted).
- */
-export const TARGETABLE_DEMOGRAPHICS = LAYER1_DEMOGRAPHICS.filter((d) => d.category !== "ideology");
-
-/** Unique targetable categories derived from TARGETABLE_DEMOGRAPHICS. */
-export const TARGETABLE_CATEGORIES = [...new Set(TARGETABLE_DEMOGRAPHICS.map((d) => d.category))];
-
-/** Human-readable labels for targetable demographic categories. */
-export const DEMOGRAPHIC_CATEGORY_LABELS: Record<string, string> = {
-  race: "Race",
-  age: "Age",
-  education: "Education",
-  wealth: "Wealth",
-};
 
 /**
  * Human-readable labels for demographic groups.
@@ -119,61 +101,3 @@ export function getEligibleDemographics(
     isWithinTwoPoints(partyEcon, partySocial, demo.economicLean, demo.socialLean)
   );
 }
-
-// ─── Country-Aware Helpers ────────────────────────────────────────────────────
-//
-// Country demographic categories/groups live in the SSOT
-// (`@/lib/demographics/countryDemographics`), derived from each country's seed.
-// These helpers adapt that SSOT to the shapes the party GOTV system expects.
-// US groups/leans remain defined above (LAYER1_DEMOGRAPHICS); the SSOT imports
-// them for the US profile, so this file stays the US source of truth.
-
-import { getDemographicCategoriesForCountry } from "@/lib/demographics/countryDemographics";
-
-/**
- * Returns the targetable demographics for a given country.
- * Ideology is excluded (matches the US TARGETABLE_DEMOGRAPHICS rule); voter-group
- * countries have no ideology category, so all their groups remain targetable.
- */
-export function getTargetableDemographics(countryId: string): DemographicGroup[] {
-  return getDemographicCategoriesForCountry(countryId)
-    .flatMap((cat) =>
-      cat.groups.map((g) => ({
-        category: cat.key,
-        group: g.id,
-        economicLean: g.economicLean,
-        socialLean: g.socialLean,
-      }))
-    )
-    .filter((d) => d.category !== "ideology");
-}
-
-/** Returns the targetable categories for a given country. */
-export function getTargetableCategories(countryId: string): string[] {
-  return [...new Set(getTargetableDemographics(countryId).map((d) => d.category))];
-}
-
-/** Returns category labels (key → label) for a given country. */
-export function getCategoryLabels(countryId: string): Record<string, string> {
-  return Object.fromEntries(
-    getDemographicCategoriesForCountry(countryId).map((c) => [c.key, c.label])
-  );
-}
-
-/** Returns demographic group labels (group id → name) for a given country. */
-export function getDemographicLabels(countryId: string): Record<string, string> {
-  return Object.fromEntries(
-    getDemographicCategoriesForCountry(countryId).flatMap((c) =>
-      c.groups.map((g) => [g.id, g.name])
-    )
-  );
-}
-
-/** All demographic group labels (US + every voter-group country) for display lookups. */
-export const ALL_DEMOGRAPHIC_LABELS: Record<string, string> = {
-  ...DEMOGRAPHIC_LABELS,
-  ...["UK", "JP", "DE", "IE", "CN", "BR"].reduce<Record<string, string>>(
-    (acc, country) => ({ ...acc, ...getDemographicLabels(country) }),
-    {}
-  ),
-};

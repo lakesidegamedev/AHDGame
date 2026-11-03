@@ -13,7 +13,7 @@
  *
  * Ballots accrue over the CLOSING stretch of the primary phase only (see
  * {@link primaryBallotWindow}): the "primary" phase of a seat is the whole
- * inter-election gap (a US Senate seat sits in it for 240 turns, a UK region
+ * inter-election gap (a US Senate seat sits in it for 264 turns, a UK region
  * for 200+), and nobody casts a primary ballot five years out. Accruing from
  * day one would also hand whoever filed first an unassailable pile before a
  * rival could enter.
@@ -30,7 +30,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 /**
  * The turn window over which a race accrues primary ballots: the closing
  * stretch of the primary phase, as long as the race's own general window
- * (24-72 turns by race type) and never longer than the primary itself. Score
+ * (24 turns for standard races; stored bounds for existing races) and never longer than the primary itself. Score
  * standings are still recorded every turn of the primary; ballots only start
  * counting once the window opens, so a primary count runs for as long as
  * the general count does and a late entrant faces a fair field.

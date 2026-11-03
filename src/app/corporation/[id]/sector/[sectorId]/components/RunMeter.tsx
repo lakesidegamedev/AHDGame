@@ -3,7 +3,7 @@
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { PlantIdleCause } from "../types";
 import { idleCauseMeta, IDLE_CAUSE_FILL, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 
 interface RunMeterProps {
@@ -13,10 +13,14 @@ interface RunMeterProps {
   producedUnits: number;
   /** Units that found a buyer. */
   soldUnits: number;
+  /** Output used by the company's other sites, on the same daily basis. */
+  ownSiteUnits?: number;
   /** Named reasons the rest of the capacity did not run. Sums to the idle slice. */
   idleCauses: PlantIdleCause[];
   /** Drives the facility noun in the segment help text. */
   sectorType: OperatingSectorType;
+  /** Outputs that sell only in this state; explains a demand limit beside a wider shortage. */
+  localMarketOutputs?: string[];
   /** Dim the whole meter (mothballed plants). */
   dimmed?: boolean;
 }
@@ -44,18 +48,22 @@ export default function RunMeter({
   capacityUnits,
   producedUnits,
   soldUnits,
+  ownSiteUnits = 0,
   idleCauses,
   sectorType,
+  localMarketOutputs = [],
   dimmed = false,
 }: RunMeterProps) {
   const sites = facilityPlural(sectorType);
   const causeMeta = idleCauseMeta(
     sectorType,
-    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare
+    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare,
+    localMarketOutputs
   );
   const capacity = capacityUnits > 0 ? capacityUnits : 0;
   const sold = Math.max(0, Math.min(producedUnits, soldUnits));
-  const unsold = Math.max(0, producedUnits - sold);
+  const ownSite = Math.max(0, Math.min(producedUnits - sold, ownSiteUnits));
+  const unsold = Math.max(0, producedUnits - sold - ownSite);
 
   const segments: Segment[] = [
     {
@@ -64,6 +72,13 @@ export default function RunMeter({
       units: sold,
       fill: TONE_FILL.sold,
       help: `Units your ${sites} made and buyers took. This is the only part that earns revenue.`,
+    },
+    {
+      key: "own-sites",
+      label: "Sent to your sites",
+      units: ownSite,
+      fill: "bg-sky-500",
+      help: "Output used by your company's other sites. It replaces inputs they would otherwise buy, without a sale or cash payment between your sites.",
     },
     {
       key: "unsold",

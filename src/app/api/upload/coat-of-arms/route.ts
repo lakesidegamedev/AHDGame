@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const authUser = auth.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/upload/coat-of-arms:${authUser.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseFormData(request);

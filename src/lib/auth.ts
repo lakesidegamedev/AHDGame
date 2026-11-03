@@ -199,6 +199,8 @@ function mapUserToAuthUser(user: User, payload: UserPayload): AuthUser {
     isModerator: isAdmin || user.role === "moderator",
     isBanned: user.isBanned === true,
     activeCharacterId: user.activeCharacterId ? user.activeCharacterId.toString() : null,
+    // Only present when opted in, so the rest of the auth shape is unchanged.
+    ...(user.experimentalFeatures === true ? { experimentalFeatures: true } : {}),
   };
 }
 
@@ -215,6 +217,8 @@ export interface AuthUser {
   isBanned?: boolean;
   /** Multi-profile aware: the user's currently-active character id (hex) or null. */
   activeCharacterId?: string | null;
+  /** Opt-in to experimental features, read from the account record. */
+  experimentalFeatures?: boolean;
 }
 
 export interface AuthUserWithCharacter extends AuthUser {

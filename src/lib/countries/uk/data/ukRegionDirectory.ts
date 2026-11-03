@@ -50,9 +50,6 @@ export const UK_NATIONS: UKNation[] = [
   },
 ];
 
-/** Total Westminster House of Commons seats */
-export const UK_TOTAL_CONSTITUENCIES = 650;
-
 /**
  * Major English regions (used for regional politics and metrics).
  * These correspond broadly to NUTS1 statistical regions.
@@ -157,106 +154,6 @@ export function getUKCouncilName(regionId: string): string {
   const region = UK_REGIONS.find((r) => r.id === regionId);
   return region?.councilName ?? "Regional Council";
 }
-
-/** Get the region-specific party name, e.g. "Scottish Labour Party" or "Welsh Conservative Party". */
-export function getRegionalPartyName(stateId: string, partyName: string): string {
-  const region = UK_REGIONS.find((r) => r.id === stateId);
-  if (!region) return `${stateId} ${partyName}`;
-  return `${region.adjective} ${partyName}`;
-}
-
-/**
- * UK major political parties (Westminster).
- */
-export interface UKParty {
-  id: string;
-  name: string;
-  shortName: string;
-  color: string;
-  ideology: string;
-  founded: number;
-}
-
-export const UK_PARTIES: UKParty[] = [
-  {
-    id: "LAB",
-    name: "Labour Party",
-    shortName: "Labour",
-    color: "#E4003B",
-    ideology: "Centre-left, social democracy",
-    founded: 1900,
-  },
-  {
-    id: "CON",
-    name: "Conservative Party",
-    shortName: "Conservative",
-    color: "#0087DC",
-    ideology: "Centre-right, conservatism",
-    founded: 1834,
-  },
-  {
-    id: "LD",
-    name: "Liberal Democrats",
-    shortName: "Lib Dems",
-    color: "#FAA61A",
-    ideology: "Centre, liberal democracy",
-    founded: 1988,
-  },
-  {
-    id: "SNP",
-    name: "Scottish National Party",
-    shortName: "SNP",
-    color: "#FFF95D",
-    ideology: "Centre-left, Scottish independence",
-    founded: 1934,
-  },
-  {
-    id: "PC",
-    name: "Plaid Cymru",
-    shortName: "Plaid",
-    color: "#3F8428",
-    ideology: "Centre-left, Welsh independence",
-    founded: 1925,
-  },
-  {
-    id: "GREEN",
-    name: "Green Party",
-    shortName: "Green",
-    color: "#02A95B",
-    ideology: "Left-wing, environmentalism",
-    founded: 1990,
-  },
-  {
-    id: "REF",
-    name: "Reform UK",
-    shortName: "Reform",
-    color: "#12B6CF",
-    ideology: "Right-wing, national conservatism",
-    founded: 2018,
-  },
-];
-
-/**
- * Electoral system used in Westminster general elections.
- * FPTP — First Past the Post for all UK constituencies.
- */
-export const UK_ELECTORAL_SYSTEM = "fptp" as const;
-
-/** Executive structure */
-export const UK_EXECUTIVE = {
-  headOfGovernment: "Prime Minister",
-  headOfState: "Monarch",
-  cabinet: "Cabinet",
-  government: "The Sovereign's Government",
-} as const;
-
-/** Nation flag emojis for region hero display */
-export const UK_NATION_FLAGS: Record<string, string> = {
-  ENG: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-  SCO: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-  WAL: "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-  NIR: "🇬🇧",
-};
 
 /** Representative images for UK regions (Wikimedia Commons) */
 export const UK_REGION_IMAGES: Record<string, string> = {

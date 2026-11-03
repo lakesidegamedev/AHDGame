@@ -3,7 +3,7 @@
 import { Suspense, use } from "react";
 import { PartyHubPage } from "@/app/country/[code]/parties/[id]/PartyHubPage";
 import { PartyPageSkeleton } from "@/app/country/[code]/parties/[id]/PartyPageSkeleton";
-import { canonicalRegionId } from "@/lib/constants/countries";
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 
 export default function StatePartyPage({
   params,

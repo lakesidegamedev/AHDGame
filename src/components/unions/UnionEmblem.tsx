@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { SectorGlyph } from "@/components/national/sectorIcons";
 import { getTypeColor } from "@/components/corporation/CorporationHelpers";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { unionLogoUrl } from "@/lib/unions/unionLogos";
 

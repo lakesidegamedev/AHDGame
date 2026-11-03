@@ -320,11 +320,10 @@ describe("operations", () => {
     });
     expect(buildCampaignBlendViewModel(input({ campaign: c })).ops[0].nextStep).toBeNull();
   });
-  it("adjusts the current income summary to match campaign era, currency and race", () => {
+  it("adjusts the current income summary to match campaign era and currency", () => {
     const c = campaignFixture({ fxRate: 2, priceLevel: 0.35808 });
-    c.electionInfo!.electionType = "house";
     const vm = buildCampaignBlendViewModel(input({ campaign: c }));
-    expect(vm.ops.find((o) => o.key === "fundraising")?.effect).toBe("+$58,063/turn income");
+    expect(vm.ops.find((o) => o.key === "fundraising")?.effect).toBe("+$193,542/turn income");
   });
   it("labels owned and next branch effects separately", () => {
     const c = campaignFixture();

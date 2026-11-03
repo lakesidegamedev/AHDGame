@@ -29,7 +29,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireHumanSessionWithCharacter(request);
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 5, 60000);
+    const rateLimit = checkRateLimit(
+      `api/campaigns/[id]/suspend-endorse:${auth.user.userId}`,
+      5,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, z.object({ candidateId: schemas.objectId }));

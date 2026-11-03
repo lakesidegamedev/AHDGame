@@ -43,6 +43,7 @@ export const ALWAYS_PUBLIC_API_PATHS: readonly string[] = [
   "/api/health", // infra health probe
   "/api/maintenance", // maintenance status — read by the login/maintenance pages
   "/api/error-codes", // static error reference
+  "/api/patreon/tiers", // public Patreon price list, read by the Ask service
 ];
 
 /** True when `pathname` stays reachable to anonymous reads while the gate is on. */

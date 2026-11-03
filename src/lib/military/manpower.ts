@@ -1,5 +1,5 @@
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import { getUnitArchetype } from "@/lib/constants/military";
+import { getUnitArchetype } from "@/lib/constants/militaryCore";
 import { ATTRITION } from "./config";
 
 /**

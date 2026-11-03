@@ -8,7 +8,7 @@ import { raceLabel } from "@/components/state/overview/raceLabel";
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
 export const STATE_ROSTER_DEFAULT_PAGE_SIZE = 20;
-export const STATE_ROSTER_MAX_PAGE_SIZE = 50;
+const STATE_ROSTER_MAX_PAGE_SIZE = 50;
 
 export interface StateRosterRow {
   id: string;

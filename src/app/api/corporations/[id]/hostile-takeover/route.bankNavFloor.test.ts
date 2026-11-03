@@ -8,6 +8,11 @@ vi.mock("@/lib/mechanicalLaws/guards", () => ({
   assertSubsidiaryWithinCap: vi.fn().mockResolvedValue(null),
   wouldGainControl: vi.fn().mockReturnValue(false),
 }));
+// Keep legacy merge/NAV fixtures focused on their own behavior. The complete
+// valuation loader and accounting rules run in acquisitionSafeguards.test.ts.
+vi.mock("@/lib/corporations/commands/acquisitions/referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({ minimumPriceAnchor: 0, portfolioAnchor: 0 }),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireCorporationActions", () => ({
   requireCorporationActionsEnabled: vi.fn(),
@@ -317,4 +322,38 @@ describe("hostile takeover bank-NAV floor (issue #1750)", () => {
     const expectedPayout = MINORITY_SHARES * ((BANK_EQUITY - playerDeposits) / TOTAL_SHARES);
     expect(body.minorityPayoutAnchorTotal).toBe(expectedPayout);
   }, 60_000);
+});
+
+it("applies the shared net-asset floor to a non-bank minority buyout", async () => {
+  const { parentId, targetId, holderId, parent, target, holder } = makeCorps(undefined);
+  await setupMocks({ parentId, targetId, holderId, parent, target, holder, gameConfig: null });
+  const { referenceValuation } =
+    await import("@/lib/corporations/commands/acquisitions/referenceValuation");
+  vi.mocked(referenceValuation).mockResolvedValueOnce({
+    minimumPriceAnchor: 100_000,
+    portfolioAnchor: 0,
+  } as never);
+  const response = await postTakeover(targetId, parentId);
+  expect(response.status).toBe(200);
+  expect((await response.json()).minorityPayoutAnchorTotal).toBe(3_600);
+});
+
+it("refuses to delete investment holdings during a forced merger", async () => {
+  const { parentId, targetId, holderId, parent, target, holder } = makeCorps(undefined);
+  await setupMocks({ parentId, targetId, holderId, parent, target, holder, gameConfig: null });
+  const { referenceValuation } =
+    await import("@/lib/corporations/commands/acquisitions/referenceValuation");
+  vi.mocked(referenceValuation).mockResolvedValueOnce({
+    minimumPriceAnchor: 100_000,
+    portfolioAnchor: 100_000,
+  } as never);
+  const response = await postTakeover(targetId, parentId);
+  expect(response.status).toBe(400);
+  expect((await response.json()).error).toContain("investment holdings");
+  expect(db.collectionMocks.corporations.deleteOne).not.toHaveBeenCalled();
+  const moneyWrites = db.collectionMocks.corporations.updateOne.mock.calls.filter(
+    ([, update]) =>
+      (update as { $inc?: { liquidCapital?: number } }).$inc?.liquidCapital !== undefined
+  );
+  expect(moneyWrites).toHaveLength(0);
 });

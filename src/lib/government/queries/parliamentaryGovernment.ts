@@ -6,6 +6,7 @@ import {
 } from "@/lib/db/collections/governmentFormation";
 import { checkAppointmentEligibility, tallySeatsByParty } from "@/lib/turn/parliamentaryGovernment";
 import { getParliamentaryCountryConfig } from "@/lib/government/parliamentaryCountry";
+import { activeAppointmentVoteFilter } from "@/lib/government/appointmentVoteDedup";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { ObjectId, type Db } from "mongodb";
 import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
@@ -65,20 +66,7 @@ export async function getPmAppointmentCandidates(
   // PM votes only — head-of-state votes share the collection (office:
   // "headOfState") and have their own candidates query below.
   const existingVote = await getPMAppointmentVotesCollection(db).findOne(
-    eligibility.coalitionId != null
-      ? {
-          countryId,
-          status: "active" as const,
-          office: { $exists: false },
-          coalitionId: eligibility.coalitionId,
-        }
-      : {
-          countryId,
-          status: "active" as const,
-          office: { $exists: false },
-          coalitionId: null,
-          nomineePartyId: String(eligibility.qualifyingPartyIds[0]),
-        }
+    activeAppointmentVoteFilter(countryId, eligibility, characterId, "primeMinister")
   );
 
   const lowerChamberKey = offices.lowerOfficeType;
@@ -162,20 +150,7 @@ export async function getHosAppointmentCandidates(
   }
 
   const existingVote = await getPMAppointmentVotesCollection(db).findOne(
-    eligibility.coalitionId != null
-      ? {
-          countryId,
-          status: "active" as const,
-          office: "headOfState" as const,
-          coalitionId: eligibility.coalitionId,
-        }
-      : {
-          countryId,
-          status: "active" as const,
-          office: "headOfState" as const,
-          coalitionId: null,
-          nomineePartyId: String(eligibility.qualifyingPartyIds[0]),
-        }
+    activeAppointmentVoteFilter(countryId, eligibility, characterId, "headOfState")
   );
 
   const qualifyingPartyIdStrings = eligibility.qualifyingPartyIds.map(String);

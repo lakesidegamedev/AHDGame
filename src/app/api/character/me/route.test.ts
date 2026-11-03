@@ -256,3 +256,9 @@ describe("PATCH /api/character/me onboarding step tracking", () => {
     expect(update.$set["onboarding.dismissedAt"]).toBeInstanceOf(Date);
   });
 });
+
+vi.mock("@/lib/time/gameTime", () => ({
+  getGameTime: vi
+    .fn()
+    .mockResolvedValue({ currentTurn: 100, effectiveNow: new Date("2026-10-31T00:00:00Z") }),
+}));

@@ -1,4 +1,4 @@
-import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "./constants/countries";
+import { COUNTRY_CONFIGS, type CountryId } from "./constants/countries";
 
 export type WorldMapStatus = "active" | "beta" | "planned";
 
@@ -86,5 +86,3 @@ export const WORLD_MAPPED_COUNTRIES: Record<string, WorldMappedCountry> = Object
 
 /** Countries not yet in COUNTRY_CONFIGS — shown as roadmap teaser cards only. */
 export const WORLD_ROADMAP_COUNTRIES: WorldRoadmapCountry[] = [];
-
-export const WORLD_COUNTRY_IDS = COUNTRY_ORDER;

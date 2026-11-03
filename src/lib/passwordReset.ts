@@ -13,7 +13,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 
 export const PASSWORD_RESETS_COLLECTION = "passwordResets";
-export const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const TOKEN_PREFIX = "ahdr_";
 
 export interface PasswordResetDiscordDelivery {
@@ -34,7 +34,7 @@ export interface PasswordResetDoc {
   discordDelivery: PasswordResetDiscordDelivery | null;
 }
 
-export function hashResetToken(rawToken: string): string {
+function hashResetToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 

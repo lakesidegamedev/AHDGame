@@ -39,13 +39,6 @@ export const COMMAND_TYPES: Record<
   },
 };
 
-/** Map mockup lowercase key -> enum (for porting seed data). */
-export const TYPE_FROM_MOCKUP: Record<string, CommandType> = {
-  homeland: "HOMELAND_DEFENSE",
-  regional: "REGIONAL",
-  logistics: "LOGISTICS",
-};
-
 export const POSTURES: CommandPosture[] = [
   "Defensive",
   "Deterrence",
@@ -78,17 +71,6 @@ export const POSTURE_FX: Record<CommandPosture, string[]> = {
   "Strategic Strike": ["+ deep strike", "+ deterrence"],
   "Rapid Response": ["+ reaction speed", "− sustainment depth"],
   "Training / Reserve": ["+ readiness recovery", "− not deployable"],
-};
-
-/** SVG path data for force branch icons (rendered in the detail panel). */
-export const FORCE_ICONS: Record<string, string> = {
-  army: "M4 20h16M6 20V9l6-4 6 4v11M9 20v-5h6v5",
-  armor: "M3 15h18v3H3zM5 15v-3h14v3M8 12V9h8v3M11 9V7",
-  air: "M12 3v18M3 12h18M6 8l6-5 6 5M6 16l6 5 6-5",
-  marine: "M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z",
-  navy: "M4 16l8 4 8-4M6 16V8l6-3 6 3v8M12 5v11",
-  log: "M3 8h11v8H3zM14 11h4l3 3v2h-7zM7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z",
-  missile: "M12 2c2 2 3 5 3 9v5l2 3H7l2-3v-5c0-4 1-7 3-9zM12 20v2",
 };
 
 /** Effectiveness color thresholds -> AHD status intent ("success" | "warn" | "error"). */

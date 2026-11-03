@@ -5,7 +5,7 @@ import {
   AddressTab,
   type MostRecentAddressSummary,
 } from "@/app/country/[code]/region/[id]/office/tabs/AddressTab";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { CardSkeleton, Skeleton } from "@/components/ui";
 
 interface AddressResponse {

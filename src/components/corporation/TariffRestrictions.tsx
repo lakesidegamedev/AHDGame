@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 
 interface TariffEntry {
   id: string;

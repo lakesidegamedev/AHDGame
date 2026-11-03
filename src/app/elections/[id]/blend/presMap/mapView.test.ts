@@ -6,6 +6,7 @@ import {
   isIdentityView,
   labelFits,
   panBy,
+  viewForBox,
   wheelFactor,
   zoomAt,
   zoomStep,
@@ -51,5 +52,14 @@ describe("map view", () => {
     const box = { width: 20, height: 20 };
     expect(labelFits(box, 1, 1, 22)).toBe(false);
     expect(labelFits(box, 2, 1, 22)).toBe(true);
+  });
+
+  it("centres a region too small to fit at the zoom cap", () => {
+    // A 20-unit box wants a zoom far past the cap; it must still sit mid-frame.
+    const box = { x0: 700, y0: 200, x1: 720, y1: 220 };
+    const v = viewForBox(box, W, H, {}, 0.12);
+    expect(v.k).toBe(MAX_ZOOM);
+    expect(710 * v.k + v.x).toBeCloseTo(W / 2);
+    expect(210 * v.k + v.y).toBeCloseTo(H / 2);
   });
 });

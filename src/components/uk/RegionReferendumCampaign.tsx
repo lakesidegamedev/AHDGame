@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { referendumDetailUrl } from "@/lib/urls";
 
 /** Campaign-relevant slice of a referendum from `/api/country/[code]/referendum`. */

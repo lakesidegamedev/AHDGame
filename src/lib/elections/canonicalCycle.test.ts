@@ -39,7 +39,7 @@ describe("canonicalTurnsForCycle", () => {
     it("cycle 1 ends at end of LARP year 2022 (bootstrap)", () => {
       expect(canonicalTurnsForCycle({ electionType: "house", cycle: 1 })).toEqual({
         startTurn: 1,
-        primaryEndTurn: 144,
+        primaryEndTurn: 168,
         endTurn: 192,
       });
     });
@@ -47,7 +47,7 @@ describe("canonicalTurnsForCycle", () => {
     it("cycle N advances by 96 turns (2 game-years) per cycle", () => {
       expect(canonicalTurnsForCycle({ electionType: "house", cycle: 2 })).toEqual({
         startTurn: 192,
-        primaryEndTurn: 240,
+        primaryEndTurn: 264,
         endTurn: 288, // 2024
       });
       expect(canonicalTurnsForCycle({ electionType: "house", cycle: 3 })?.endTurn).toBe(384); // 2026
@@ -194,7 +194,7 @@ describe("canonicalTurnsForCycle", () => {
         cycle: 3,
         chamberClass: 1,
       });
-      expect(turns).toEqual({ startTurn: 603, primaryEndTurn: 675, endTurn: 747 });
+      expect(turns).toEqual({ startTurn: 603, primaryEndTurn: 723, endTurn: 747 });
     });
   });
 
@@ -372,19 +372,19 @@ describe("pickNextCanonicalCycle — 24h+24h gate", () => {
       prevCycle: 2,
       currentTurn: 290,
     });
-    // Canonical Class 1 cycle 3: startTurn=603, primaryEndTurn=675, endTurn=747.
-    // At currentTurn=290 (well before canonical start), full 72h primary + 72h general remain.
-    expect(result).toEqual({ cycle: 3, startTurn: 603, primaryEndTurn: 675, endTurn: 747 });
+    // Canonical Class 1 cycle 3: startTurn=603, primaryEndTurn=723, endTurn=747.
+    // At currentTurn=290 (well before canonical start), full 120h primary + 24h general remain.
+    expect(result).toEqual({ cycle: 3, startTurn: 603, primaryEndTurn: 723, endTurn: 747 });
   });
 
   it("skips a cycle whose remaining primary would be < 24h", () => {
-    // Sangiin Class 1 cycle 2: primaryEndTurn=387, endTurn=459.
-    // currentTurn=368 leaves 19h primary — fails gate, skip to cycle 3.
+    // Sangiin Class 1 cycle 2: primaryEndTurn=435, endTurn=459.
+    // currentTurn=416 leaves 19h primary — fails gate, skip to cycle 3.
     const result = pickNextCanonicalCycle({
       electionType: "sangiin",
       chamberClass: 1,
       prevCycle: 1,
-      currentTurn: 368,
+      currentTurn: 416,
     });
     expect(result?.cycle).toBe(3);
     expect(result?.endTurn).toBe(747);
@@ -403,18 +403,18 @@ describe("pickNextCanonicalCycle — 24h+24h gate", () => {
   });
 
   it("respects the custom minPrimaryHours override", () => {
-    // With minPrimaryHours=48 and currentTurn=348 (39h primary left on cycle 2), must skip.
+    // With minPrimaryHours=48 and currentTurn=396 (39h primary left on cycle 2), must skip.
     const withDefault = pickNextCanonicalCycle({
       electionType: "sangiin",
       chamberClass: 1,
       prevCycle: 1,
-      currentTurn: 348,
+      currentTurn: 396,
     });
     const withFloor = pickNextCanonicalCycle({
       electionType: "sangiin",
       chamberClass: 1,
       prevCycle: 1,
-      currentTurn: 348,
+      currentTurn: 396,
       minPrimaryHours: 48,
     });
     expect(withDefault?.cycle).toBe(2); // 39h ≥ 24h default

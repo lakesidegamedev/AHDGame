@@ -300,6 +300,14 @@ export const createListingSchema = z.object({
   // When a listing would divest a CEO's entire remaining stake (auto-vacating
   // the seat), the route returns 409 requiresCeoVacateConfirm unless this is true.
   confirmCeoVacate: z.boolean().optional().default(false),
+  // Negotiated private sale to one named buyer at an agreed total price in the
+  // listed corporation's currency. Personal listings only.
+  negotiated: z
+    .object({
+      buyerCharacterId: schemas.objectId,
+      totalPrice: z.number().positive("Agreed price must be positive").finite(),
+    })
+    .optional(),
 });
 
 export const submitOfferSchema = z.object({

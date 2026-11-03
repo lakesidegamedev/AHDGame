@@ -2,6 +2,8 @@
  * Governments publish tenders and choose corporate bids after bidding closes.
  * Publishing holds budget or capacity; award and cancellation preserve the existing contracts' accounting.
  */
+import { isGovernmentContractsEnabled } from "./featureFlag";
+import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "./rules/featureGate";
 import { automatedDefenceBids } from "./automatedBids";
 import { notifyTenderBidders } from "./opportunityNotifications";
 import { requireCeo } from "@/lib/api/corporations/resolveQuery";
@@ -134,6 +136,8 @@ export async function publishTender(
   turn: number,
   now: Date
 ): Promise<string> {
+  if (!(await isGovernmentContractsEnabled(db)))
+    throw new ContractError(GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, 503);
   const level = await managementAuthority(db, countryId, input.terms, user);
   if (!level)
     throw new ContractError("You do not hold the authority to publish this contract.", 403);
@@ -269,6 +273,8 @@ export async function submitBid(
   turn: number,
   now: Date
 ): Promise<void> {
+  if (!input.withdraw && !(await isGovernmentContractsEnabled(db)))
+    throw new ContractError(GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, 503);
   if (!canBid(t, turn)) throw new ContractError("Bidding is closed.");
   if (
     !input.withdraw &&
@@ -396,6 +402,9 @@ async function awardLocked(
       throw new ContractError("This tender has already been awarded to another bidder.");
     return t.contractId;
   }
+  const contractsEnabled = await isGovernmentContractsEnabled(db);
+  if (t.status !== "awarding" && !contractsEnabled)
+    throw new ContractError(GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, 503);
   if (!validContractCopy(reason))
     throw new ContractError("Use plain hyphens in contract text.", 400);
   if (!canAward(t, turn) && t.status !== "awarding")
@@ -464,6 +473,8 @@ async function awardLocked(
     const settings = await loadContractIssuanceSettings(db);
     const col = db.collection<ExtractionContract>("extractionContracts");
     let contract = await col.findOne({ _id: new ObjectId(t.contractId) });
+    if (!contractsEnabled && !contract)
+      throw new ContractError(GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, 503);
     if (!settings.contractIssuanceEnabled && !contract)
       throw new ContractError("Extraction contract issuance is disabled.");
     if (!contract) {
@@ -510,7 +521,7 @@ async function awardLocked(
         turn,
         now,
         settings.treasuryCashLedgerEnabled === true,
-        settings.contractIssuanceEnabled === true
+        settings.contractIssuanceEnabled === true && contractsEnabled
       );
       if (!result.ok) {
         const removed = await col.deleteOne({

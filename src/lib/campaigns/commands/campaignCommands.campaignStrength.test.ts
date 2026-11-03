@@ -81,7 +81,7 @@ describe("contributeCampaignStrength — presidential-only gate", () => {
           campaignId,
           user: makeAuthUser(new ObjectId(), "US", 50),
         })
-      ).rejects.toThrow(/only affects presidential races/i);
+      ).rejects.toThrow(/not available for this race/i);
 
       // Refund-safe: no character debit and no campaign credit happened.
       expect(db.collection("characters").updateOne).not.toHaveBeenCalled();

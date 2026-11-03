@@ -129,7 +129,7 @@ export function actionBudgetForArchetype(
 const MIN_RESHUFFLE_SHORTFALL = 0.3;
 
 /** The agenda domains a position is accountable for (its metrics' domains). */
-export function positionDomains(
+function positionDomains(
   mechanics: Pick<CabinetPositionMechanics, "nationalMetrics" | "regionalMetrics">
 ): Set<string> {
   const out = new Set<string>();

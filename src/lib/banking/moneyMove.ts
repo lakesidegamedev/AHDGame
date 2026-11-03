@@ -731,6 +731,9 @@ async function deliverCashLegsInBatch(
   );
   for (const i of indices) {
     const leg = legs[i];
+    // Mint and burn touch no document, so one between two cash legs does not
+    // end the run. The caller still marks it, in order, from the journal loop.
+    if (leg.kind === "mint" || leg.kind === "burn") continue;
     if (
       leg.kind !== kind ||
       !leg.collection ||
@@ -909,7 +912,28 @@ async function executeMoneyMove(
   // A move this call just claimed is exactly the record it inserted, so it is
   // not read back. Every leg still re-reads the journal before it writes, so
   // a recovery worker that touched the record meanwhile is still respected.
-  const record = claimed ?? (await records.findOne({ _id: key }));
+  // The legs are replayed; the frozen settlement projections on the same
+  // record are 89 KB of its 97, are applied by the journal and never read here.
+  const record =
+    claimed ??
+    (await records.findOne(
+      { _id: key },
+      {
+        projection: {
+          kind: 1,
+          turn: 1,
+          status: 1,
+          legs: 1,
+          genericMoneyMoveVersion: 1,
+          moneyMoveBindingError: 1,
+          batchIndependentDebits: 1,
+          atomicDocument: 1,
+          legacyInterestBatch: 1,
+          locSettlement: 1,
+          treasuryReserveTransfer: 1,
+        },
+      }
+    ));
   if (!record) return { status: "rejected", applied: [], error: `no money move ${key}` };
   if (
     record.atomicDocument ||
@@ -957,12 +981,16 @@ async function executeMoneyMove(
       const rest = order.slice(n);
       batched = await deliverCashLegsInBatch(db, key, rest, record.legs, leg.kind);
       batchThrough = n;
-      while (
-        batchThrough + 1 < order.length &&
-        record.legs[order[batchThrough + 1]].kind === leg.kind &&
-        record.legs[order[batchThrough + 1]].collection === leg.collection
-      )
+      while (batchThrough + 1 < order.length) {
+        const next = record.legs[order[batchThrough + 1]];
+        if (
+          next.kind !== "mint" &&
+          next.kind !== "burn" &&
+          (next.kind !== leg.kind || next.collection !== leg.collection)
+        )
+          break;
         batchThrough++;
+      }
     }
     if (batched.has(i)) continue;
     if (leg.kind === "mint" || leg.kind === "burn") {

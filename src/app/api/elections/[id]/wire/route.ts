@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 60, 60000);
+    const rateLimit = checkRateLimit(`api/elections/[id]/wire:${auth.user.userId}`, 60, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

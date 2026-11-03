@@ -34,8 +34,8 @@ export function effectImpact(effect: CrisisEffect): number {
   return mag * FLAT_WEIGHT;
 }
 
-export const SEVERITY_HIGH_THRESHOLD = 3;
-export const SEVERITY_MEDIUM_THRESHOLD = 1;
+const SEVERITY_HIGH_THRESHOLD = 3;
+const SEVERITY_MEDIUM_THRESHOLD = 1;
 
 /**
  * Overall crisis severity, derived from the summed impact of ALL its effects

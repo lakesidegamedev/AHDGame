@@ -13,7 +13,7 @@ const EURO_ADOPTION_YEAR: Partial<Record<CountryId, number>> = {
   BG: 2026,
 };
 
-export const MODELED_EURO_MEMBERS = Object.freeze(Object.keys(EURO_ADOPTION_YEAR) as CountryId[]);
+const MODELED_EURO_MEMBERS = Object.freeze(Object.keys(EURO_ADOPTION_YEAR) as CountryId[]);
 
 export function currencyForCountryAtYear(
   countryId: CountryId,

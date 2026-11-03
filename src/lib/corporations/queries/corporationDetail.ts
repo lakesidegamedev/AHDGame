@@ -42,6 +42,7 @@ import { loadArrearsView } from "./corporationDetail/arrears";
 import { buildShareholderList, loadShareholderContext } from "./corporationDetail/shareholders";
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -105,7 +106,8 @@ export async function loadCorporationDetailView(args: {
   const { refData, sectors, blendPresenceKeys, ftaCoverage } = await loadReferenceSectors(
     db,
     corporation,
-    refDataPromise
+    refDataPromise,
+    currentTurn
   );
   const {
     commodityPrices,
@@ -308,12 +310,14 @@ export async function loadCorporationDetailView(args: {
       // Size cost on the whole control group, in margin points, as applied last turn.
       managementOverheadPp: Math.round((corporation.managementOverheadPp ?? 0) * 100) / 100,
       marketingStrengthGrowth: Math.round(income.marketingStrengthGrowth * 1000) / 1000,
+      marketingDecayRate: income.marketingDecayRate,
       logisticsBudget: income.logisticsBudget,
       logisticsStrength: income.currentLogisticsStrength,
       logisticsStrengthNetChange: Math.round(income.logisticsStrengthNetChange * 1000) / 1000,
       rdBudget: corporation.rdBudget ?? 0,
       rdScore: Math.round(income.currentRdScore * 1000) / 1000,
       rdScoreNetChange: Math.round(income.rdScoreNetChange * 1000) / 1000,
+      rdDevelopmentProjects: income.rdDevelopmentProjects,
       marketCapitalization: Math.round(income.marketCapitalization),
       logoUrl: corporation.logoUrl,
       headerImageUrl: corporation.headerImageUrl,
@@ -333,11 +337,7 @@ export async function loadCorporationDetailView(args: {
           : equityQuote.bidDepthShares,
       totalShares: income.totalShares,
       publicFloat: corporation.publicFloat ?? 0,
-      pendingIpoShares:
-        corporation.pendingShareIssuance?.source === "ipo" &&
-        corporation.pendingShareIssuance.issuedUpfront
-          ? corporation.pendingShareIssuance.remainingShares
-          : 0,
+      pendingIpoShares: unplacedIpoShares(corporation),
       shareholders,
       superShareMultiplier: corporation.superShareMultiplier ?? undefined,
       superSharesAdoptedAtTurn: corporation.superSharesAdoptedAtTurn ?? undefined,
@@ -353,6 +353,10 @@ export async function loadCorporationDetailView(args: {
       legalStructureLabel: income.corpLegalStructure.shortName,
       legalStructureTaxLabel: income.legalStructureTax,
       passThroughTaxPhase: income.passThroughPhase,
+      passThroughTaxStartTurn:
+        income.corpLegalStructure.taxTreatment === "pass_through"
+          ? gameState?.passThroughOwnerTaxStartTurn
+          : undefined,
       passThroughOwnerTax: income.passThroughOwnerTaxLocal,
       legalStructureChangeCooldownUntilTurn:
         corporation.legalStructureChangeCooldownUntilTurn ?? null,
@@ -435,6 +439,7 @@ export async function loadCorporationDetailView(args: {
       isFormalizedSubsidiary: subsidiary.isFormalizedSub,
       canFormalizeAsSubsidiary: subsidiary.canFormalizeAsSubsidiary,
       canManageAsParent: subsidiary.canManageAsParent,
+      canDirectAsParent: subsidiary.canDirectAsParent,
       canSpinOff: subsidiary.canSpinOff,
       groupStrengthTransfer: subsidiary.groupStrengthTransfer,
       spinOffCooldownTurnsRemaining: subsidiary.spinOffCooldownTurnsRemaining,

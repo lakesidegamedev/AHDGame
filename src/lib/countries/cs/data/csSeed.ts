@@ -64,5 +64,5 @@ export function getCsSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const csSeedConfig: EasternBlocSeedConfig = getCsSeedConfig("2019-default");
+const csSeedConfig: EasternBlocSeedConfig = getCsSeedConfig("2019-default");
 export default csSeedConfig;

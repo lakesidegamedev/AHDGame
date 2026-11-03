@@ -13,7 +13,12 @@ import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import { validateDeclareWar } from "@/lib/military/validateDeclareWar";
-import { warGoalLabel, type WarGoal } from "@/lib/military/warGoals";
+import {
+  WAR_DECLARATION_VOTE_WINDOW_TURNS,
+  warGoalLabel,
+  type WarGoal,
+} from "@/lib/military/warGoals";
+import { MS_PER_TURN } from "@/lib/constants/calendar";
 import type { Bill } from "@/lib/db/types/legislation";
 import type { Character } from "@/lib/db/types";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
@@ -24,7 +29,7 @@ const bodySchema = z.object({
 });
 
 /** Matches the cabinet-bill voting window; a declaration is not a rush job. */
-const VOTE_DURATION_MS = 24 * 60 * 60 * 1000;
+const VOTE_DURATION_MS = WAR_DECLARATION_VOTE_WINDOW_TURNS * MS_PER_TURN;
 
 /**
  * A declaration is its own executive act, not a "cabinet bill".

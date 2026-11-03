@@ -5,11 +5,10 @@ import { useTranslations } from "next-intl";
 import { Tooltip } from "@/components/Tooltip";
 import type { GenericGranularCell } from "@/lib/demographics/granularCells";
 import type { GranularCandidateShare } from "@/lib/actions/granularPollPayload";
+import { segmentUncertaintyBand } from "@/lib/demographics/granularPollUncertainty";
 import { DEMOGRAPHIC_LABELS } from "@/lib/seeds/demographicLabels";
 import { partyHex } from "../../pollHelpers";
 import type { PollData, StoredPoll } from "../../types";
-
-const BASE_UNCERTAINTY_BAND = 3.0; // Illustrative points, not sample-based MoE.
 
 type SortKey = string;
 
@@ -462,7 +461,7 @@ export function GranularPollPanel({ poll, pollData }: { poll: StoredPoll; pollDa
 
   const segmentUncertainty =
     segmentAggregate && segmentAggregate.share > 0
-      ? BASE_UNCERTAINTY_BAND / Math.sqrt(segmentAggregate.share)
+      ? segmentUncertaintyBand(segmentAggregate.share)
       : null;
 
   const tableColumns: { key: SortKey; label: string; numeric: boolean }[] = [

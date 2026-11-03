@@ -1,9 +1,14 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import {
+  resolveCorporation,
+  requireCeoOrDirectingParent,
+} from "@/lib/api/corporations/resolveQuery";
 import type { CorporateSector, GameState, SectorBuildOrder } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import {
@@ -45,7 +50,11 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/sectorOperations/cancelSectorStrategy:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, sectorId } = await params;
@@ -54,9 +63,11 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+    const cashBlock = requireSpendableCorporateCash(corporation);
+    if (cashBlock) return cashBlock;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
-    if (ceoCheck) return ceoCheck;
+    const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user.userId);
+    if (!authorized.ok) return authorized.response;
 
     if (!ObjectId.isValid(sectorId)) {
       return errorResponse(400, "Invalid sector ID");
@@ -186,13 +197,20 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       ? rescaleOtherOpexAnchorForRetool(sector.otherOpexPerUnitAnchor, cancelRescaleRatio)
       : null;
 
+    const debit = await db.collection("corporations").updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: cancelCostInCorpCapital },
+        ...corporateDiscretionaryCashGuard(),
+      },
+      { $inc: { liquidCapital: -cancelCostInCorpCapital }, $set: { updatedAt: new Date() } }
+    );
+    if (debit.matchedCount !== 1)
+      return errorResponse(
+        409,
+        "Insufficient spendable corporate funds, or outstanding taxes and payables."
+      );
     await Promise.all([
-      db
-        .collection("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: -cancelCostInCorpCapital }, $set: { updatedAt: new Date() } }
-        ),
       db.collection<CorporateSector>("corporateSectors").updateOne(
         { _id: sector._id },
         {
@@ -203,12 +221,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
             isReversing: true,
             ...(rescaledCapitalStock != null ? { capitalStock: rescaledCapitalStock } : {}),
             ...(rescaledCapitalStock != null
-              ? seedPlantLedger(
-                  sector.sectorType,
-                  rescaledCapitalStock,
-                  sector.industryModel,
-                  sector.mediaDiscriminator
-                )
+              ? seedPlantLedger({ ...sector, strategyId: newStrategyId }, rescaledCapitalStock)
               : {}),
             ...(rescaledBuildQueue != null ? { buildQueue: rescaledBuildQueue } : {}),
             ...(rescaledCancelOtherOpexAnchor != null

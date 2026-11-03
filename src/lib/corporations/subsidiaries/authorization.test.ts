@@ -9,7 +9,7 @@ vi.mock("./featureFlag", () => ({
   isSubsidiaryCorporationsEnabled: () => isEnabledMock(),
 }));
 
-import { canActOnCorporationAsParent } from "./authorization";
+import { canActOnCorporationAsParent, canDirectSubsidiaryAsParent } from "./authorization";
 
 const parentId = new ObjectId();
 const callerUserId = new ObjectId();
@@ -86,5 +86,26 @@ describe("canActOnCorporationAsParent", () => {
     expect(
       await canActOnCorporationAsParent(db as unknown as Db, callerUserId, emptyCapTable)
     ).toBe(true);
+  });
+});
+
+describe("canDirectSubsidiaryAsParent", () => {
+  it("lets the controlling parent's CEO direct an AI-run subsidiary", async () => {
+    const aiRun = { ...sub(60, true), ceoType: "npp" } as Corporation;
+    expect(await canDirectSubsidiaryAsParent(db as unknown as Db, callerUserId, aiRun)).toBe(true);
+  });
+
+  it("leaves a subsidiary with a sitting player CEO to that CEO", async () => {
+    const playerRun = { ...sub(60, true), ceoType: "character" } as Corporation;
+    expect(await canDirectSubsidiaryAsParent(db as unknown as Db, callerUserId, playerRun)).toBe(
+      false
+    );
+  });
+
+  it("refuses a non-controlling shareholder's CEO", async () => {
+    const minority = { ...sub(40, true), ceoType: "npp" } as Corporation;
+    expect(await canDirectSubsidiaryAsParent(db as unknown as Db, callerUserId, minority)).toBe(
+      false
+    );
   });
 });

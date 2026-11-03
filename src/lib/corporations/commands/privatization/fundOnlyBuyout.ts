@@ -1,3 +1,6 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
+import { referenceValuation } from "../acquisitions/referenceValuation";
 import type { Db } from "mongodb";
 import type { Corporation, IndexFund } from "@/lib/db/types";
 import { sellFundHoldingShares } from "@/lib/indexFunds/fundRedemptionLiquidity";
@@ -57,6 +60,13 @@ export async function executeFundOnlyBuyout(
   corporation: Corporation,
   currentTurn: number
 ): Promise<FundOnlyBuyoutResult> {
+  const transferRestriction = await controllerTransferBarrierError(
+    db,
+    corporation,
+    currentTurn,
+    new Date()
+  );
+  if (transferRestriction) return { ok: false, error: transferRestriction, status: 403 };
   const ceoIdStr = corporation.ceoId.toString();
   const fundHolders = (corporation.shareholders ?? []).filter(
     (s) => s.fundId && !s.characterId && !s.corporationId
@@ -115,6 +125,22 @@ export async function executeFundOnlyBuyout(
   // execution-price drift on the sellback. Measured against the FLOORED unit
   // price so a treasury that covers the market print but not the bank NAV it
   // would capture can never start a discounted take-private.
+  const assetFloor = await referenceValuation(db, corporation);
+  if (assetFloor.minimumPriceAnchor > 0) {
+    floorPerShareAnchor = Math.max(
+      floorPerShareAnchor,
+      assetFloor.minimumPriceAnchor / Math.max(1, corporation.totalShares)
+    );
+    const assetFloorFx = await loadFxRatesByCurrency(db);
+    floorPerShareLocal = Math.max(
+      floorPerShareLocal,
+      anchorToCorpCapital(
+        floorPerShareAnchor,
+        currency,
+        fxRateForCorpFromMap(corporation, assetFloorFx)
+      )
+    );
+  }
   const buyoutUnitLocal = Math.max(corporation.sharePrice, floorPerShareLocal);
   const estimatedCost = Math.ceil(fundShares * buyoutUnitLocal * 1.05);
   if ((corporation.liquidCapital ?? 0) < estimatedCost) {
@@ -199,12 +225,14 @@ export async function executeFundOnlyBuyout(
       fxRate = 1;
     }
     const topUpLocalTotal = anchorToCorpCapital(topUpAnchorTotal, currency, fxRate);
-    const debit = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, liquidCapital: { $gte: topUpLocalTotal } },
-        { $inc: { liquidCapital: -topUpLocalTotal }, $set: { updatedAt: now } }
-      );
+    const debit = await db.collection<Corporation>("corporations").updateOne(
+      {
+        _id: corporation._id,
+        liquidCapital: { $gte: topUpLocalTotal },
+        ...corporateDiscretionaryCashGuard(),
+      },
+      { $inc: { liquidCapital: -topUpLocalTotal }, $set: { updatedAt: now } }
+    );
     const debited = (debit.modifiedCount ?? debit.matchedCount ?? 0) > 0;
     if (!debited) {
       return {

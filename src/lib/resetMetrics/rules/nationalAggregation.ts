@@ -21,7 +21,7 @@ const GDP_WEIGHTED_IDS = new Set(["05", "06", "08", "15"]);
 const WORKING_AGE_WEIGHTED_IDS = new Set(["01", "13"]);
 const ELIGIBLE_WEIGHTED_IDS = new Set(["51"]);
 
-export function preferredNationalMetricWeight(
+function preferredNationalMetricWeight(
   metricId: string,
   region: NationalMetricRegionReading
 ): { value: number; kind: WeightKind; fallback: boolean } {

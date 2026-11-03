@@ -9,6 +9,7 @@
  * National approval: population-weighted average of all state approvals
  */
 
+import { metricApprovalContribution } from "@/lib/utils/approvalContributionRules";
 import { regionalModifierBreakdown } from "@/lib/country/rules/regionalModifierBreakdown";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
@@ -29,6 +30,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getHeadOfGovernmentReference } from "@/lib/api/headOfGovernmentReference";
 import {
+  ACTING_APPOINTMENT_PENALTY,
   PUBLIC_EXPECTATIONS_FULL_EFFECT,
   advanceHeadTenure,
   emptyCabinetSeatsModifier,
@@ -62,8 +64,6 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
-
-const ACTING_APPOINTMENT_PENALTY = 0.5;
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -227,9 +227,6 @@ export function getApprovalExcludedMetrics(preset: string, year?: number | null)
   return APPROVAL_EXCLUDED_METRICS;
 }
 
-/** Contribution per metric: max ±2. Scale factor for pct deviation. */
-const CONTRIBUTION_SCALE = 15;
-const MAX_CONTRIBUTION = 2;
 /** Default approval when metrics are missing (used for elections and display). */
 export const BASE_APPROVAL = 50;
 
@@ -412,10 +409,7 @@ export function computeStateApprovalBase(
       const denom = Math.abs(avg) < 1e-6 ? 1 : Math.abs(avg);
       const pctDiff = (value - avg) / denom;
       const signedDiff = higherBetter ? pctDiff : -pctDiff;
-      const contribution = Math.max(
-        -MAX_CONTRIBUTION,
-        Math.min(MAX_CONTRIBUTION, signedDiff * CONTRIBUTION_SCALE)
-      );
+      const contribution = metricApprovalContribution(signedDiff);
       const weight = groups
         ? effectiveMetricWeight(axisAffinityFor(metricId), groups, APPROVAL_AXIS_WEIGHT_K)
         : 1;
@@ -430,7 +424,6 @@ export function computeStateApprovalBase(
 
 /**
  * Pre-modifier national approval — pure metric comparison on flat averages maps (0–100).
- * Use calculateApprovalFromAverages for the modifier-adjusted final score.
  */
 export function computeApprovalBaseFromAverages(
   values: Record<string, Record<string, number>>,
@@ -463,10 +456,7 @@ export function computeApprovalBaseFromAverages(
       const denom = Math.abs(avg) < 1e-6 ? 1 : Math.abs(avg);
       const pctDiff = (value - avg) / denom;
       const signedDiff = higherBetter ? pctDiff : -pctDiff;
-      sum += Math.max(
-        -MAX_CONTRIBUTION,
-        Math.min(MAX_CONTRIBUTION, signedDiff * CONTRIBUTION_SCALE)
-      );
+      sum += metricApprovalContribution(signedDiff);
       count++;
     }
   }
@@ -523,32 +513,6 @@ export function calculateStateApproval(
       year,
     });
   return applyModifiers(base, [...metricModifiers, ...extraModifiers]);
-}
-
-/**
- * Score a country's national averages against global averages (all countries combined).
- * Applies named modifiers on top of the base score. Returns 0–100.
- */
-export function calculateApprovalFromAverages(
-  values: Record<string, Record<string, number>>,
-  referenceAverages: Record<string, Record<string, number>>,
-  preset?: string | null,
-  countryId?: string | null,
-  /** Live year from getEraContext (null while the era-aware flag is off). */
-  year?: number | null,
-  /** SP4: hybrid political base for LAW_COUNTRY_IDS (see calculateStateApproval). */
-  baseOverride?: number
-): number {
-  const base = Number.isFinite(baseOverride)
-    ? (baseOverride as number)
-    : computeApprovalBaseFromAverages(
-        values,
-        referenceAverages,
-        preset ?? undefined,
-        countryId,
-        year ?? null
-      );
-  return applyModifiers(base, evaluateModifiers(values, { preset, countryId, year }));
 }
 
 /**

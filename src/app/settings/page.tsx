@@ -18,7 +18,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useInterface, type InterfaceMode } from "@/contexts/InterfaceContext";
 import { useToast } from "@/contexts/ToastContext";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   ChevronDown,
   Database,
@@ -51,6 +51,8 @@ import { DangerZoneSection } from "./components/DangerZoneSection";
 import { ReferralsSection } from "./components/ReferralsSection";
 import { SupporterPerksSection } from "./components/SupporterPerksSection";
 import { ApiKeysSection } from "./components/ApiKeysSection";
+import { ExperimentalFeaturesSection } from "./components/ExperimentalFeaturesSection";
+import { AskDrawerSection } from "./components/AskDrawerSection";
 
 import {
   type CharacterData,
@@ -570,12 +572,17 @@ export function SettingsPageContent() {
         return <IdentitySection character={oauthData} onCharacterUpdate={onOauthUpdate} />;
       case "appearance":
         return (
-          <AppearanceSection
-            interfaceMode={interfaceMode}
-            interfaceModeSaving={interfaceModeSaving}
-            onInterfaceModeChange={handleInterfaceModeChange}
-          />
+          <div className="space-y-6">
+            <AppearanceSection
+              interfaceMode={interfaceMode}
+              interfaceModeSaving={interfaceModeSaving}
+              onInterfaceModeChange={handleInterfaceModeChange}
+            />
+            <AskDrawerSection />
+          </div>
         );
+      case "experimental":
+        return <ExperimentalFeaturesSection />;
       case "patreon":
         return <PatreonBenefitsSection />;
       case "supporter-perks":

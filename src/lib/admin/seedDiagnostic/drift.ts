@@ -192,7 +192,7 @@ export function classifyMetricDrift(opts: {
   return driftCheck(metricId, scope, metric, actual, expected, calendarTurn, cls);
 }
 
-export function metricClassForId(metricId: string): MetricClass {
+function metricClassForId(metricId: string): MetricClass {
   if (metricId.includes("population")) return "population";
   if (metricId.includes("forex")) return "forex";
   if (metricId.includes("primeRate") || metricId.includes("interestRate")) return "interest";

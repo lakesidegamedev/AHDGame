@@ -12,6 +12,7 @@ import {
   defaultSupplyRates,
   laborIntensity,
   revenuePerCapacityUnit,
+  revenuePerCapacityUnitForStrategy,
 } from "./capacityEconomy";
 import {
   OPERATING_SECTOR_TYPES,
@@ -115,6 +116,70 @@ describe("identity A (labour): workers per unit/day of capacity", () => {
         9
       );
     }
+  });
+});
+
+describe("laborIntensity strategy awareness (build preview staffing)", () => {
+  it("prices a non-default method's crew at that method's own RPU", () => {
+    const strategyRpu = revenuePerCapacityUnitForStrategy(
+      "manufacturing",
+      "vehicle_heavy_machinery",
+      1
+    );
+    expect(strategyRpu).toBeGreaterThan(0);
+    expect(
+      laborIntensity(
+        "manufacturing",
+        CAPACITY_ANCHOR_YEAR,
+        1,
+        null,
+        null,
+        "vehicle_heavy_machinery"
+      )
+    ).toBeCloseTo(strategyRpu / CAPACITY_REVENUE_PER_WORKER, 9);
+  });
+
+  it("no longer understates a heavy-machinery sector's crew at the ordinary factory rate", () => {
+    // Ticket 1678: the build preview showed a heavy-machinery sector's new
+    // plants at the standard factory crew. Staffing per unit follows the RPU
+    // the running method actually earns, so the ratio is the RPU ratio.
+    const heavy = laborIntensity(
+      "manufacturing",
+      CAPACITY_ANCHOR_YEAR,
+      1,
+      null,
+      null,
+      "vehicle_heavy_machinery"
+    );
+    const standard = laborIntensity(
+      "manufacturing",
+      CAPACITY_ANCHOR_YEAR,
+      1,
+      null,
+      null,
+      "standard"
+    );
+    expect(heavy).toBeGreaterThan(standard);
+    expect(heavy / standard).toBeCloseTo(
+      revenuePerCapacityUnitForStrategy("manufacturing", "vehicle_heavy_machinery", 1) /
+        revenuePerCapacityUnit("manufacturing", 1),
+      9
+    );
+  });
+
+  it("falls back to the default-strategy rate with no strategy or an unknown one", () => {
+    const standard = laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1);
+    expect(laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null, null, null)).toBeCloseTo(
+      standard,
+      12
+    );
+    expect(
+      laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null, null, "standard")
+    ).toBeCloseTo(standard, 12);
+    // Unknown ids resolve to the sector's standard method inside getStrategy.
+    expect(
+      laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null, null, "not_a_strategy")
+    ).toBeCloseTo(standard, 12);
   });
 });
 
@@ -301,5 +366,11 @@ describe("CAPACITY_BUILD_TURNS (provisional)", () => {
     );
     expect(CAPACITY_BUILD_TURNS("manufacturing")).toBeGreaterThan(CAPACITY_BUILD_TURNS("retail"));
     expect(CAPACITY_BUILD_TURNS("technology")).toBeGreaterThan(CAPACITY_BUILD_TURNS("retail"));
+  });
+
+  it("builds a freight fleet in under a game day", () => {
+    expect(CAPACITY_BUILD_TURNS("logistics")).toBe(15);
+    expect(CAPACITY_BUILD_TURNS("logistics", true)).toBe(8);
+    expect(CAPACITY_BUILD_TURNS("logistics")).toBeGreaterThan(CAPACITY_BUILD_TURNS("retail"));
   });
 });

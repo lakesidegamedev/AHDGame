@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CountryId, GovernmentType, OpsVoteMultipliers } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import {
+  type CountryId,
+  type GovernmentType,
+  type OpsVoteMultipliers,
+} from "@/lib/constants/countriesCore";
+import { COUNTRY_RUNTIME_SEED } from "@/lib/constants/countryRuntimeSeed";
 
 export interface RuntimeCountryConfig {
   countryId: CountryId;
@@ -71,13 +75,14 @@ export function useRuntimeCountryConfig(
 function seedFallback(countryId: CountryId | string | undefined): RuntimeCountryConfig | null {
   if (!countryId) return null;
   const upper = countryId.toUpperCase() as CountryId;
-  const cfg = COUNTRY_CONFIGS[upper];
-  if (!cfg) return null;
+  const seed = COUNTRY_RUNTIME_SEED[upper];
+  if (!seed) return null;
   return {
     countryId: upper,
-    governmentType: cfg.governmentType,
-    rulingPartyId: cfg.rulingPartyId ?? null,
-    opsVoteMultipliers: cfg.opsVoteMultipliers ?? null,
-    hasLeaderConfidenceModel: cfg.hasLeaderConfidenceModel ?? false,
+    governmentType: seed.governmentType,
+    rulingPartyId: seed.rulingPartyId,
+    // No country overrides the default multipliers in the seed registry.
+    opsVoteMultipliers: null,
+    hasLeaderConfidenceModel: seed.hasLeaderConfidenceModel,
   };
 }

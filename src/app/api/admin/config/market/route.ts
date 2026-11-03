@@ -69,7 +69,6 @@ const patchSchema = z.object({
   fragileMarketSupplyIntervention: economicInterventionPlanSchema.optional(),
   demographicsDemandEnabled: z.boolean().optional(),
   nppCorpsAttackable: z.boolean().optional(),
-  nppCorporateAttacksEnabled: z.boolean().optional(),
   // Structural extraction-shortage stabilizer (audit t873): lifts per-resource
   // extraction supply via EXTRACTION_OUTPUT_SCALE to neutralize the chronic
   // extractable shortage (manufacturing revenue structurally out-masses
@@ -197,7 +196,6 @@ export async function PATCH(request: Request) {
       fragileMarketSupplyIntervention,
       demographicsDemandEnabled,
       nppCorpsAttackable,
-      nppCorporateAttacksEnabled,
       extractionOutputScaleEnabled,
       commandEconomyEnabled,
       commandEconomySecondEconomyTolerance,
@@ -231,7 +229,6 @@ export async function PATCH(request: Request) {
       fragileMarketSupplyIntervention?: EconomicInterventionPlan;
       demographicsDemandEnabled?: boolean;
       nppCorpsAttackable?: boolean;
-      nppCorporateAttacksEnabled?: boolean;
       extractionOutputScaleEnabled?: boolean;
       commandEconomyEnabled?: boolean;
       commandEconomySecondEconomyTolerance?: number;
@@ -453,8 +450,6 @@ export async function PATCH(request: Request) {
       governorSet.demographicsDemandEnabled = demographicsDemandEnabled;
     if (typeof nppCorpsAttackable === "boolean")
       governorSet.nppCorpsAttackable = nppCorpsAttackable;
-    if (typeof nppCorporateAttacksEnabled === "boolean")
-      governorSet.nppCorporateAttacksEnabled = nppCorporateAttacksEnabled;
     if (typeof extractionOutputScaleEnabled === "boolean")
       governorSet.extractionOutputScaleEnabled = extractionOutputScaleEnabled;
     if (typeof commandEconomyEnabled === "boolean") {

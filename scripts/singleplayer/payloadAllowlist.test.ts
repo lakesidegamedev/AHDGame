@@ -8,7 +8,7 @@ import {
   assertPayloadAllowed,
   classifyPayloadPath,
   inspectPayload,
-  materializeMongodbAliases,
+  materializeExternalAliases,
   shouldKeepPayloadPath,
 } from "./payloadAllowlist.mjs";
 
@@ -40,11 +40,23 @@ function runtimeFixture(): string {
   touch(root, ".next/static/chunks/app.js");
   touch(root, ".next/static/chunks/app.js.map", "{}");
   touch(root, ".next/server/app.js");
-  touch(root, ".next/server/chunks/ssr.js", 'require("mongodb-438b504308ffa4be");\n');
+  touch(
+    root,
+    ".next/server/chunks/ssr.js",
+    'require("mongodb-438b504308ffa4be");\n' +
+      'require("@sentry/server-runtime-injection-e7acc8d92084955d/register");\n' +
+      'require("@aws-sdk/client-s3-ecbef8e33fd0b8f0");\n' +
+      'var i=await a.y("sharp-20c6a5da84e2135f");\n' +
+      // A hashed-looking string with no installed base package is not an alias.
+      'const id="build-0123456789abcdef";\n'
+  );
   touch(root, "public/ahd-logo.png");
   touch(root, "node_modules/mongodb/package.json", "{}");
   touch(root, "node_modules/mongodb/README.md", "drop me");
   touch(root, "node_modules/mongodb/LICENSE.md", "keep me");
+  touch(root, "node_modules/@sentry/server-runtime-injection/package.json", "{}");
+  touch(root, "node_modules/@sentry/server-runtime-injection/register.js");
+  touch(root, "node_modules/@aws-sdk/client-s3/package.json", "{}");
   touch(root, ".next/node_modules/mongodb-traced/README.md", "Dependency documentation");
   touch(root, ".next/node_modules/mongodb-traced/LICENSE.md", "Dependency license");
   touch(root, "node_modules/sharp/package.json", "{}");
@@ -101,12 +113,38 @@ describe("payload allowlist classifier", () => {
 });
 
 describe("payload allowlist apply", () => {
-  it("strips junk, materializes mongodb aliases, and passes budgets", () => {
+  it("strips junk, materializes external aliases, and passes budgets", () => {
     const root = runtimeFixture();
-    const aliases = materializeMongodbAliases(root);
-    expect(aliases.aliases).toEqual(["mongodb-438b504308ffa4be"]);
+    const aliases = materializeExternalAliases(root);
+    expect(aliases.aliases.sort()).toEqual([
+      "@aws-sdk/client-s3-ecbef8e33fd0b8f0",
+      "@sentry/server-runtime-injection-e7acc8d92084955d",
+      "mongodb-438b504308ffa4be",
+      "sharp-20c6a5da84e2135f",
+    ]);
+    expect(
+      existsSync(path.join(root, "node_modules", "sharp-20c6a5da84e2135f", "package.json"))
+    ).toBe(true);
     expect(
       existsSync(path.join(root, "node_modules", "mongodb-438b504308ffa4be", "package.json"))
+    ).toBe(true);
+    // Scoped aliases with a subpath require: the 2.7.0-era packaging missed these,
+    // and the packaged server failed every request on the missing Sentry register.
+    expect(
+      existsSync(
+        path.join(
+          root,
+          "node_modules",
+          "@sentry",
+          "server-runtime-injection-e7acc8d92084955d",
+          "register.js"
+        )
+      )
+    ).toBe(true);
+    expect(
+      existsSync(
+        path.join(root, "node_modules", "@aws-sdk", "client-s3-ecbef8e33fd0b8f0", "package.json")
+      )
     ).toBe(true);
     touch(root, ".next/static/chunks/app.js.map", "{}");
     touch(root, "node_modules/mongodb/README.md", "docs");
@@ -134,7 +172,7 @@ describe("payload allowlist apply", () => {
 
   it("fails validation when stray source or missing runtime files exceed budgets", () => {
     const root = runtimeFixture();
-    materializeMongodbAliases(root);
+    materializeExternalAliases(root);
     applyPayloadAllowlist(root);
     touch(root, "src/lib/leftover.ts");
     touch(root, "docs/plan.md");
@@ -211,7 +249,7 @@ describe("actual runtime payload artifact", () => {
         path.join(copy, ".next", "server", "chunks", "ssr.js"),
         'require("mongodb-438b504308ffa4be");\n'
       );
-      materializeMongodbAliases(copy);
+      materializeExternalAliases(copy);
       applyPayloadAllowlist(copy);
       const after = inspectPayload(copy, { nativePlatform: "linux-x64" });
       expect(

@@ -8,7 +8,7 @@ export interface TicketVisit {
 }
 
 export const SUPPORT_VISIT_LIMIT = 5;
-export const SUPPORT_VISIT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const SUPPORT_VISIT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** Keep game links only. Never retain query strings, fragments or account pages. */
 export function sanitizeSupportPath(raw: string): string | null {

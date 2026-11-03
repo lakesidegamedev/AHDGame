@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { COMMODITY_UNITS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
-import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
+import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { State } from "@/lib/db/types";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
@@ -388,14 +389,14 @@ export function ideologyLabel(axis: "economic" | "social", value: number): strin
 }
 
 export function formatPartyCreationRule(countryId: StartingCountryId): string {
-  const rule = COUNTRY_CONFIGS[countryId].partyCreationNPPs;
+  const rule = COUNTRY_CLIENT_CONFIGS[countryId].partyCreationNPPs;
   const regionCount = rule.statesRequired + (rule.lockHomeState ? 1 : 0);
   const totalNpps = regionCount * rule.nppsPerState;
   return `${regionCount} regions, ${totalNpps} NPPs`;
 }
 
 export function getGovernmentOpening(countryId: StartingCountryId): string {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   if (config.governmentType === "onePartyState") return "One-party dominance";
   if (isParliamentarySystem(config)) return "Pending formation";
   return "Fixed executive cycle";

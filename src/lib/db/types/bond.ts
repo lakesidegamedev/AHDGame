@@ -69,6 +69,8 @@ export interface Bond {
    */
   requestedUnits?: number;
   unsoldUnits?: number;
+  /** Set on a refunding issue: the sovereign maturity claim its proceeds paid. */
+  refundsSovereignMaturityClaimId?: string;
   /** Frozen issuer-selected underwriter terms for future funded primary fills. */
   primaryUnderwriting?: import("@/lib/banking/underwritingTypes").PrimaryUnderwritingOffer;
   primaryFillRatio?: number;
@@ -169,6 +171,16 @@ export interface Bond {
     };
     /** Bank epoch claims already paid or routed to insurance for this due quote. */
     paidBankClaimIds?: string[];
+    /**
+     * Face the Treasury raised in refunding issues to pay this claim when its
+     * cash fell short. Never exceeds the face the claim retires, so a refunding
+     * replaces maturing debt and never adds net principal.
+     */
+    refundedFaceLocal?: number;
+    /** Share of `refundedFaceLocal` raised for bank claims; capped at the bank lots' face. */
+    refundedBankFaceLocal?: number;
+    /** Share raised for the other holders; capped at the claim's cash amount. */
+    refundedHolderFaceLocal?: number;
     sourceHolders: BondHolder[];
     sourcePublicFloat: number;
     sourceCentralBankHoldings?: number;

@@ -85,7 +85,11 @@ export async function POST(
     const ctx = await resolveContext(request, code, electionId);
     if ("error" in ctx) return ctx.error;
 
-    const rl = checkRateLimit(String(ctx.userId), 20, 60000);
+    const rl = checkRateLimit(
+      `api/country/[code]/elections/[electionId]/manifesto:${String(ctx.userId)}`,
+      20,
+      60000
+    );
     if (!rl.ok) return rateLimitResponse(rl.retryAfter);
 
     if (!ctx.party) {

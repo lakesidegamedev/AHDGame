@@ -26,17 +26,3 @@ export function getEffectTargets(type: LegislationType): LegislationEffectTarget
   }
   return [];
 }
-
-/**
- * Strength multipliers for effect calculation
- */
-export const STRENGTH_MULTIPLIERS: Record<LegislationEffectTargetV2["strength"], number> = {
-  weak: 0.5,
-  moderate: 1.0,
-  strong: 1.5,
-};
-
-/**
- * National laws apply 1/50th effect to each state
- */
-export const NATIONAL_SCOPE_MULTIPLIER = 1 / 50;

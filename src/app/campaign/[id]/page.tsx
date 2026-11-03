@@ -2,18 +2,40 @@
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback, use } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { resolveElectionYear } from "@/lib/utils/formatters";
 import { Modal, Skeleton } from "@/components/ui";
 import type { CampaignData } from "@/lib/campaigns/dto/campaignView";
 import { TargetedAdsPanel } from "./components/TargetedAdsPanel";
-import { CanvassingPanel } from "./components/CanvassingPanel";
 import { SuspendEndorsePanel } from "./components/SuspendEndorsePanel";
-import { RunningMateSurrogatePanel } from "./components/RunningMateSurrogatePanel";
 import { CampaignRoomBriefing } from "./components/CampaignRoomBriefing";
 import { CampaignBlendClient } from "./blend/CampaignBlendClient";
 import { BLEND, BLEND_CONTAINER, FONT, BLEND_LABEL } from "@/components/blend/tokens";
+import { raceHref } from "@/lib/campaignManager/links";
+
+// The canvass panel and the running-mate surrogate block sit below the main
+// campaign view and only render for the campaign manager or a surrogate. The
+// canvass drags the demographic category catalog and the per-country archetype
+// weights in, so both mount on demand behind a card skeleton.
+const PanelFallback = () => (
+  <div className="space-y-3">
+    <Skeleton className="h-6 w-40" />
+    <Skeleton className="h-32 w-full rounded-lg" />
+  </div>
+);
+const CanvassingPanel = dynamic(
+  () => import("./components/CanvassingPanel").then((m) => ({ default: m.CanvassingPanel })),
+  { loading: PanelFallback }
+);
+const RunningMateSurrogatePanel = dynamic(
+  () =>
+    import("./components/RunningMateSurrogatePanel").then((m) => ({
+      default: m.RunningMateSurrogatePanel,
+    })),
+  { loading: PanelFallback }
+);
 import { BlendScope } from "@/components/blend/BlendScope";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
@@ -287,7 +309,13 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           className={BLEND_CONTAINER}
           style={{ ...BLEND_LABEL, paddingTop: 14, paddingBottom: 14 }}
         >
-          <Link href={`/elections/${campaign.electionId}`} style={{ color: BLEND.muted }}>
+          <Link
+            href={raceHref({
+              id: String(campaign.electionId),
+              electionType: campaign.electionInfo.electionType,
+            })}
+            style={{ color: BLEND.muted }}
+          >
             &lsaquo; {campaign.electionInfo.state}{" "}
             {campaign.electionInfo.electionType === "president"
               ? "Presidential"

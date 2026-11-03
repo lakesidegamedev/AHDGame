@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520" role="img" font-family="system-ui, sans-serif">
+<title>Peace offer lifecycle</title>
+<desc>An offer names a war, the other country, who leaves and one term, and stays open 72 turns. The recipient accepts or rejects, the offerer can withdraw, acceptance is revalidated, then the indemnity moves, the leaver stands down and leaves its roster, a 240 turn truce is recorded and the war ends if the leaver was last on its side.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="519" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">Life of a peace offer</text>
+<rect x="20" y="40" width="210" height="88" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="125.0" y="62.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Offerer chooses</text>
+<text x="125.0" y="79.0" font-size="13" fill="#18181b" text-anchor="middle">The war, the other country,</text>
+<text x="125.0" y="96.0" font-size="13" fill="#18181b" text-anchor="middle">who leaves, and exactly one</text>
+<text x="125.0" y="113.0" font-size="13" fill="#18181b" text-anchor="middle">term</text>
+<rect x="280" y="40" width="200" height="88" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="380.0" y="79.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Offer is open</text>
+<text x="380.0" y="96.0" font-size="13" fill="#18181b" text-anchor="middle">72 turns, then it lapses</text>
+<path d="M230 84 L280 84" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="540" y="34" width="200" height="34" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="640.0" y="54.0" font-size="12" fill="#18181b" text-anchor="middle">Rejected by the recipient</text>
+<path d="M480 84 L510 84 L510 51 L540 51" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="540" y="74" width="200" height="34" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="640.0" y="94.0" font-size="12" fill="#18181b" text-anchor="middle">Withdrawn by the offerer</text>
+<path d="M480 84 L510 84 L510 91 L540 91" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="540" y="114" width="200" height="34" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="640.0" y="134.0" font-size="12" fill="#18181b" text-anchor="middle">Lapses after 72 turns</text>
+<path d="M480 84 L510 84 L510 131 L540 131" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="280" y="176" width="200" height="54" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="380.0" y="189.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Accepted</text>
+<text x="380.0" y="206.5" font-size="13" fill="#18181b" text-anchor="middle">Only the recipient may</text>
+<text x="380.0" y="223.5" font-size="13" fill="#18181b" text-anchor="middle">accept</text>
+<path d="M380 128 L380 178" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="280" y="258" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="274.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Revalidated</text>
+<text x="380.0" y="291.5" font-size="13" fill="#18181b" text-anchor="middle">Refused if the war ended</text>
+<text x="380.0" y="308.5" font-size="13" fill="#18181b" text-anchor="middle">or a party left</text>
+<path d="M380 226 L380 258" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="540" y="262" width="200" height="48" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="640.0" y="289.5" font-size="13" fill="#18181b" text-anchor="middle">Stale deal applies nothing</text>
+<path d="M480 286 L540 286" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="491.2" y="270.0" width="37.5" height="15" fill="#ffffff"/>
+<text x="510.0" y="281.0" font-size="12" fill="#52525b" text-anchor="middle">fails</text>
+<path d="M380 314 L380 344" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="385" y="325" width="43.8" height="15" fill="#ffffff"/>
+<text x="388" y="336" font-size="12" fill="#52525b" text-anchor="start">passes</text>
+<rect x="20" y="344" width="170" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="105.0" y="376.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Pay</text>
+<text x="105.0" y="393.5" font-size="13" fill="#18181b" text-anchor="middle">Indemnity moves,</text>
+<text x="105.0" y="410.5" font-size="13" fill="#18181b" text-anchor="middle">converted</text>
+<path d="M190 390 L204 390" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="204" y="344" width="170" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="289.0" y="368.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Stand down</text>
+<text x="289.0" y="385.0" font-size="13" fill="#18181b" text-anchor="middle">Leaver's postings</text>
+<text x="289.0" y="402.0" font-size="13" fill="#18181b" text-anchor="middle">dropped, units to</text>
+<text x="289.0" y="419.0" font-size="13" fill="#18181b" text-anchor="middle">reserve</text>
+<path d="M374 390 L388 390" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="388" y="344" width="170" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="473.0" y="376.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Leave roster</text>
+<text x="473.0" y="393.5" font-size="13" fill="#18181b" text-anchor="middle">Leaver comes off its</text>
+<text x="473.0" y="410.5" font-size="13" fill="#18181b" text-anchor="middle">side</text>
+<path d="M558 390 L572 390" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="572" y="344" width="170" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="657.0" y="376.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Truce</text>
+<text x="657.0" y="393.5" font-size="13" fill="#18181b" text-anchor="middle">240 turns between the</text>
+<text x="657.0" y="410.5" font-size="13" fill="#18181b" text-anchor="middle">two</text>
+<rect x="20" y="462" width="720" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="380.0" y="485.5" font-size="13" fill="#18181b" text-anchor="middle">If the leaver was the last country on its side, the war ends and the other side wins</text>
+<path d="M375 436 L375 462" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+</svg>

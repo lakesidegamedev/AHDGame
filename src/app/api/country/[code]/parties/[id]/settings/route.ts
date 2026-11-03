@@ -54,7 +54,11 @@ export async function PATCH(
     if (!authResult.ok) return authResult.response;
     const authUser = authResult.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/settings:${authUser.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, updateSchema);

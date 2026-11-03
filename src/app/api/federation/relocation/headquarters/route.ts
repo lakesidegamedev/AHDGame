@@ -23,7 +23,11 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60_000);
+    const rateLimit = checkRateLimit(
+      `api/federation/relocation/headquarters:${auth.user.userId}`,
+      10,
+      60_000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);

@@ -27,7 +27,7 @@ import { ruRegionCensusData1953 } from "@/lib/seeds/ru/ruRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { getRuModernModel } from "./layer1Modern";
 
-export const SU_GROUP_IDS = [
+const SU_GROUP_IDS = [
   "party_nomenklatura",
   "industrial_worker",
   "collective_farmer",
@@ -229,6 +229,3 @@ export function getRuModel(era: EraId): CountryLayer1Model {
     census: convertCensus(census),
   };
 }
-
-export const ruLayer1Model: CountryLayer1Model = getRuModel("1979");
-export const suGroupIds = [...SU_GROUP_IDS];

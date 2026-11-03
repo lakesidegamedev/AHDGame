@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Character, NPP, State, PoliticalParty } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 
 export type PoliticianType = "character" | "npp";

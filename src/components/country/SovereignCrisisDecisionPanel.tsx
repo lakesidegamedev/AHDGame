@@ -2,6 +2,7 @@
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState } from "react";
+import { fetchSovereignStatus } from "./sovereignStatusRequest";
 
 type Choice = "bailout" | "repudiate" | "restructure" | "monetize";
 
@@ -78,30 +79,26 @@ export function SovereignCrisisDecisionPanel({ countryCode }: Props) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      try {
-        const res = await fetch(`/api/country/${countryCode}/sovereign-status`);
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          crisisState?: string;
-          openDecisionId?: string | null;
-          crisisAutoActionAt?: { turn?: number | null; realtimeMs: number } | null;
-          currentTurn?: number | null;
-          snapshot?: { inflationRate?: number };
-          activeLegislativePhase?: ActiveLegislativePhase | null;
-        };
-        if (!cancelled)
-          setStatus({
-            crisisState: data.crisisState ?? "normal",
-            openDecisionId: data.openDecisionId ?? null,
-            crisisAutoActionAt: data.crisisAutoActionAt ?? null,
-            currentTurn: data.currentTurn ?? null,
-            // sovereign-status snapshot stores inflation as fraction; convert to pp for UI
-            inflationRate: (data.snapshot?.inflationRate ?? 0) * 100,
-            activeLegislativePhase: data.activeLegislativePhase ?? null,
-          });
-      } catch {
-        // ignore
-      }
+      // Shared with the other sovereign panels on the page: one request.
+      const result = await fetchSovereignStatus(countryCode);
+      const data = (result.data ?? {}) as {
+        crisisState?: string;
+        openDecisionId?: string | null;
+        crisisAutoActionAt?: { turn?: number | null; realtimeMs: number } | null;
+        currentTurn?: number | null;
+        snapshot?: { inflationRate?: number };
+        activeLegislativePhase?: ActiveLegislativePhase | null;
+      };
+      if (!result.ok || cancelled) return;
+      setStatus({
+        crisisState: data.crisisState ?? "normal",
+        openDecisionId: data.openDecisionId ?? null,
+        crisisAutoActionAt: data.crisisAutoActionAt ?? null,
+        currentTurn: data.currentTurn ?? null,
+        // sovereign-status snapshot stores inflation as fraction; convert to pp for UI
+        inflationRate: (data.snapshot?.inflationRate ?? 0) * 100,
+        activeLegislativePhase: data.activeLegislativePhase ?? null,
+      });
     }
     void load();
     return () => {

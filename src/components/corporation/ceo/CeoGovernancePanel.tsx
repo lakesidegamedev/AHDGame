@@ -7,7 +7,7 @@ import {
   MIN_CORPORATION_DISSOLUTION_AGE_TURNS,
   RELOCATION_COST_FRACTION,
 } from "@/lib/constants/corporations";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { LEGAL_STRUCTURES, type LegalStructureId } from "@/lib/constants/legalStructures";
 import { legalStructureTaxLabel } from "@/lib/corporations/rules/passThroughTax";
 import { getLegalStructureForCorp, isListedOnlyStructure } from "@/lib/corporations/legalStructure";

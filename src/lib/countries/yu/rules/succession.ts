@@ -5,7 +5,7 @@
  * It does not itself retire the federation in alternate-history campaigns.
  * https://hudoc.echr.coe.int/app/conversion/pdf/?id=001-107425&library=ECHR
  */
-export const YU_SFRY_DISSOLUTION_CALENDAR_TURN = 64;
+const YU_SFRY_DISSOLUTION_CALENDAR_TURN = 64;
 
 export function yuDissolutionDue(preset: string | undefined, calendarTurn: number): boolean {
   return preset === "1991-default" && calendarTurn >= YU_SFRY_DISSOLUTION_CALENDAR_TURN;

@@ -2,7 +2,7 @@ import type { MetricCategoryId } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { loadNationalMetrics } from "@/lib/country/nationalMetrics";
 
-export const PUBLIC_METRIC_CATEGORIES = [
+const PUBLIC_METRIC_CATEGORIES = [
   "economic",
   "education",
   "healthcare",

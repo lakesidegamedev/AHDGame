@@ -7,8 +7,8 @@ import {
   CURRENCY_ANCHOR_COUNTRY,
   getEraAwareCurrencySymbol,
   type CurrencyCode,
-} from "@/lib/constants/currencies";
-import type { DisplayCurrencyPreference } from "@/lib/utils/formatters";
+} from "@/lib/constants/currencyCodes";
+import type { DisplayCurrencyPreference } from "@/lib/utils/formattersCore";
 
 export type DisplayRates = Partial<Record<CurrencyCode, number>>;
 export interface CurrencyDisplayContext {
@@ -19,7 +19,7 @@ export interface CurrencyDisplayContext {
 
 // Matches the normalization of INITIAL_RATES_1991 and the other German era rates.
 // https://economy-finance.ec.europa.eu/euro/eu-countries-and-euro/germany-and-euro_en
-export const MARKS_PER_EURO_ACCOUNTING_UNIT = 1.95583;
+const MARKS_PER_EURO_ACCOUNTING_UNIT = 1.95583;
 const PRE_EURO_PRESETS = new Set(["1953-default", "1979-default", "1991-default"]);
 
 export function validDisplayRate(rate: number | undefined): rate is number {

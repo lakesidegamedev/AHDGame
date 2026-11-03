@@ -3,7 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { canonicalRegionId } from "@/lib/constants/countries";
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 import { DistrictMapEditor } from "@/components/redistricting/DistrictMapEditor";
 import { DistrictCompositionSummary } from "@/components/redistricting/DistrictCompositionSummary";
 import { RedistrictingGuide } from "@/components/redistricting/RedistrictingGuide";

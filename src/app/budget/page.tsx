@@ -1,9 +1,10 @@
-"use client";
-import { useSearchParams } from "next/navigation";
 import { redirect } from "next/navigation";
+import { countryScopedUrl, type RedirectSearchParams } from "@/lib/countryRedirect";
 
-export default function BudgetRedirect() {
-  const searchParams = useSearchParams();
-  const country = searchParams.get("country")?.toLowerCase() || "us";
-  redirect(`/country/${country}/budget`);
+export default async function BudgetRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<RedirectSearchParams>;
+}) {
+  redirect(countryScopedUrl("budget", await searchParams));
 }

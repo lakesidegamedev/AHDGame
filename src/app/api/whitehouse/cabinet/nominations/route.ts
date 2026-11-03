@@ -1,6 +1,8 @@
 /**
  * POST /api/whitehouse/cabinet/nominations — President proposes a cabinet nomination
  */
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
+
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -113,6 +115,15 @@ export async function POST(request: Request) {
       if (nominee.countryId !== countryId) {
         return errorResponse(400, "Nominee must be a politician of this country");
       }
+
+      if (
+        (await getIncompatibleOfficeHolders(db, "cabinet", [nomineeOid])).has(nomineeOid.toString())
+      ) {
+        return errorResponse(
+          400,
+          "Leave the incompatible cabinet or central bank role before nomination"
+        );
+      }
       nomineeName = nominee.name;
       nomineeParty = nominee.party;
       nomineeUserId = nominee.userId;
@@ -137,7 +148,7 @@ export async function POST(request: Request) {
     await db
       .collection<CabinetNomination>("cabinetNominations")
       .updateMany(
-        { positionId, status: { $in: ["active", "proposed"] } },
+        { positionId, status: { $in: ["active", "proposed", "awaiting_choice"] } },
         { $set: { status: "withdrawn", updatedAt: now } }
       );
 

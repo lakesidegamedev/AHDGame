@@ -17,7 +17,6 @@ import {
 } from "@/lib/world/countryReadinessContract";
 import { getWorldEntityOrThrow, type WorldSimulationTier } from "@/lib/world/worldEntityManifest";
 import {
-  formatCapabilityBlocker,
   PRESET_1953,
   PROPOSED_1953_TIER1_ROSTER,
   TIER1_1953_AUTONOMOUS_RECLASSIFICATIONS,
@@ -291,11 +290,6 @@ export function resolveJapan1953MatrixRow(): Tier1MatrixRow {
   const japan = matrix.rows.find((r) => r.entityId === "JP");
   if (!japan) throw new Error("Japan missing from 1953 Tier-1 matrix.");
   return japan;
-}
-
-/** Format blockers the way the world-entity manifest stores hardBlockers. */
-export function formatMatrixBlockersForManifest(blockers: Tier1MatrixBlocker[]): string[] {
-  return blockers.map((b) => formatCapabilityBlocker(b.capabilityId, b.evidence, b.followUpIssue));
 }
 
 export type { CapabilityId };

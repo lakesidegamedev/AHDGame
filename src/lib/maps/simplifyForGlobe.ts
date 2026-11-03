@@ -12,9 +12,9 @@ type Poly = Ring[];
 type MultiPoly = Poly[];
 
 /** Degrees² — rings smaller than this vanish at globe scale. */
-export const GLOBE_MIN_RING_AREA = 0.05;
+const GLOBE_MIN_RING_AREA = 0.05;
 /** Target spacing along a ring perimeter, in degrees. */
-export const GLOBE_RING_STEP = 0.5;
+const GLOBE_RING_STEP = 0.5;
 
 function ringAreaDeg2(ring: Ring): number {
   let area = 0;

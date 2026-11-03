@@ -15,7 +15,7 @@ import {
   type ConflictCivilianLossResult,
 } from "./rules/civilianLoss";
 
-export const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
+const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
 interface CivilianLossHistory extends ConflictCivilianLossResult {
   batchId: string;
   createdAt: Date;

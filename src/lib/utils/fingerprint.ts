@@ -68,7 +68,7 @@ function asNumber(value: unknown): number | undefined {
  * versions). VERIFY the live tree during the manual smoke (Task 10) and adjust
  * the accessors if a field comes back empty.
  */
-export function extractComponents(raw: unknown): StoredFingerprintComponents {
+function extractComponents(raw: unknown): StoredFingerprintComponents {
   const c = (raw ?? {}) as Record<string, unknown>;
   const webgl = (c.webgl ?? {}) as Record<string, unknown>;
   const hardware = (c.hardware ?? {}) as Record<string, unknown>;

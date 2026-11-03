@@ -128,6 +128,52 @@ describe("portfolioSnapshot", () => {
         longTermStockValue: 0,
       });
     });
+    it("values the total and the short-term split of an all-short holding the same way", async () => {
+      const charId = new ObjectId();
+      const { isForexEnabled } = await import("@/lib/currency/featureFlag");
+      vi.mocked(isForexEnabled).mockResolvedValue(true);
+      const shares = 123_456_789;
+      const corporations = [
+        {
+          _id: new ObjectId(),
+          sharePrice: 217.31,
+          liquidCurrencyCode: "USD",
+          countryId: "US",
+          shareholders: [
+            {
+              characterId: charId,
+              shares,
+              holdingTerms: {
+                longTermShares: 0,
+                longTermCostBasisAnchor: 0,
+                shortTermLots: [{ shares, acquiredTurn: 100, costBasisAnchor: 0 }],
+              },
+            },
+          ],
+        },
+      ];
+      const usdRates = [{ currencyCode: "USD", rate: 0.92 }];
+      mockCollection.mockReturnValueOnce(createMockChain(usdRates)); // exchangeRates (forex wealth)
+      mockCollection.mockReturnValueOnce(createMockChain([])); // characters
+      mockCollection.mockReturnValueOnce(createMockChain([])); // imperialCharacters
+      mockCollection.mockReturnValueOnce(createMockChain(corporations));
+      mockCollection.mockReturnValueOnce(createMockChain([])); // bonds
+      mockCollection.mockReturnValueOnce(createMockChain(usdRates)); // exchangeRates (valuation map)
+      mockCollection.mockReturnValue({
+        ...createMockChain([]),
+        insertMany: mockInsertMany,
+      });
+
+      await expect(snapshotPortfolioValues(147, 100)).resolves.toBe(1);
+
+      const [row] = mockInsertMany.mock.calls[0][0] as Array<{
+        stockValue: number;
+        shortTermStockValue: number;
+        longTermStockValue: number;
+      }>;
+      expect(row.shortTermStockValue).toBe(row.stockValue);
+      expect(row.longTermStockValue).toBe(0);
+    });
     it("returns 0 when no corporations have shareholders", async () => {
       mockCollection.mockReturnValueOnce(createMockChain([])); // characters
       mockCollection.mockReturnValueOnce(createMockChain([])); // imperialCharacters

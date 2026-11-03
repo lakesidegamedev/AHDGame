@@ -1,11 +1,12 @@
 import type { FederalBudget } from "@/lib/db/types";
 import type { Db } from "mongodb";
-import type { CabinetEstate, EstateFundingLevel } from "@/lib/db/types/cabinetEstate";
+import type { CabinetEstate } from "@/lib/db/types/cabinetEstate";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   aggregateEstates,
   getEstateArchetype,
   fundingDef,
+  driftCondition,
   TIER_MULTIPLIER,
   ESTATE_EFFECT,
   ESTATE_UPKEEP_UNIT,
@@ -16,7 +17,7 @@ import { getCabinetMechanics } from "@/lib/constants/cabinetMechanics";
 import { resolveMetricPath } from "@/lib/cabinet/resolveMetricPath";
 import { resolvePortfolioEnvelope } from "./portfolioEnvelope";
 
-const CONDITION_DRIFT_STEP = 4;
+export { driftCondition };
 
 /** Pure: one estate's per-turn metric deltas (caller routes by siteScope). */
 export function computeEstateDeltas(estate: CabinetEstate): Record<string, number> {
@@ -31,14 +32,6 @@ export function computeEstateDeltas(estate: CabinetEstate): Record<string, numbe
     out[path] = +(base * mult).toFixed(4);
   }
   return out;
-}
-
-/** Move condition one bounded step toward its funding-level baseline. */
-export function driftCondition(current: number, fundingLevel: EstateFundingLevel): number {
-  const target = fundingDef(fundingLevel).conditionBaseline;
-  if (current < target) return Math.min(target, current + CONDITION_DRIFT_STEP);
-  if (current > target) return Math.max(target, current - CONDITION_DRIFT_STEP);
-  return current;
 }
 
 /**

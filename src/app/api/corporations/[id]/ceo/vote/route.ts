@@ -224,7 +224,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/ceo/vote:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { character: voterCharacter } = auth.user;
@@ -440,7 +444,11 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/ceo/vote:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { character: voterCharacter } = auth.user;

@@ -64,3 +64,41 @@ export function playerDepositRatePercent(
   );
   return Math.max(0, depositRatePercent - base);
 }
+
+/**
+ * Whether a charter can hold a player's savings in `currency`: active, in that
+ * currency, and deposit-taking. Any other holder pointer is stale and earns no
+ * bank premium.
+ */
+export function holdsPlayerSavings(
+  charter: Pick<BankCharter, "status" | "currency" | "type"> | null | undefined,
+  currency: string
+): boolean {
+  return (
+    charter?.status === "active" &&
+    charter.currency === currency &&
+    (charter.type === "retail" || charter.type === "universal")
+  );
+}
+
+/**
+ * Total APY a saver earns with a private bank as savings holder. Outside an
+ * authoritative currency the bank pays only its premium
+ * ({@link playerDepositRatePercent}) and savingsInterestTurn still pays the CB
+ * base on the balance, so the two add up.
+ */
+export function privateHolderSavingsApyPercent(
+  depositRatePercent: number,
+  playerDepositsAreLiabilities: boolean,
+  primeRate: number,
+  inflationRate: number,
+  centralBankApyPercent: number
+): number {
+  const bankRate = playerDepositRatePercent(
+    depositRatePercent,
+    playerDepositsAreLiabilities,
+    primeRate,
+    inflationRate
+  );
+  return bankRate + (playerDepositsAreLiabilities ? 0 : centralBankApyPercent);
+}

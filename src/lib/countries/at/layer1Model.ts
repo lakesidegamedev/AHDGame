@@ -20,7 +20,7 @@ import { atRegionCensusData, type ATRegionLayer1 } from "@/lib/seeds/at/atRegion
 import { atRegionCensusData1953 } from "@/lib/seeds/at/atRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const AT_GROUP_IDS = [
+const AT_GROUP_IDS = [
   "socialist_lager",
   "catholic_conservative",
   "national_liberal",
@@ -222,6 +222,3 @@ export function getAtModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-export const atLayer1Model: CountryLayer1Model = getAtModel("1979");
-export const atGroupIds = [...AT_GROUP_IDS];

@@ -1,4 +1,5 @@
 import { clamp } from "@/lib/numeric/rules";
+import { WAR_EXHAUSTION_FLOOR, warExhaustion } from "./rules/warExhaustionCurve";
 import type { Db } from "mongodb";
 import { navalApprovalEffect, navalApprovalLabel } from "@/lib/navair/navalApproval";
 import type { NavairUnit } from "@/lib/navair/types";
@@ -51,11 +52,7 @@ function round1(value: number): number {
  * Continuous rather than stepped, so the block never moves faster than about
  * 0.02 per turn — which is what lets the block be applied undamped.
  */
-export const WAR_EXHAUSTION_FLOOR = -25;
-
-export function warExhaustion(turnsSinceEntry: number): number {
-  return round1(clamp(1 - turnsSinceEntry / TURNS_PER_YEAR, WAR_EXHAUSTION_FLOOR, 1));
-}
+export { WAR_EXHAUSTION_FLOOR, warExhaustion };
 
 /**
  * Exhaustion moves one point per in-game year, in BOTH directions.
@@ -170,7 +167,7 @@ export function stepWarExhaustion(input: WarExhaustionStep): number {
 }
 
 /** How far war effort can swing in either direction. */
-export const WAR_EFFORT_BOUND = 2;
+const WAR_EFFORT_BOUND = 2;
 const POSITION_WEIGHT = 1.4;
 const MOMENTUM_WEIGHT = 0.6;
 /** Turns at which the front is "expected" to have reached its half-way expectation. */
@@ -266,9 +263,9 @@ export function warEffort(input: WarEffortInput): number {
 }
 
 /** How far alliance contribution can swing in either direction. */
-export const ALLIANCE_CONTRIBUTION_BOUND = 1;
+const ALLIANCE_CONTRIBUTION_BOUND = 1;
 /** Turns after entry during which a country cannot be penalised for absence. */
-export const ALLIANCE_GRACE_TURNS = 6;
+const ALLIANCE_GRACE_TURNS = 6;
 
 export interface AllianceContributionInput {
   /** Personnel this country has deployed to this conflict's theatre. */

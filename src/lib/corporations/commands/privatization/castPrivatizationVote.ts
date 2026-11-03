@@ -71,7 +71,9 @@ export async function castPrivatizationVote(input: CastVoteInput): Promise<CastV
   const updateRes = await db
     .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
     .updateOne(
-      { _id: vote._id, status: "open" },
+      // The votes array this cast was built from is the guard: a cast that
+      // landed in between must not be overwritten by this one.
+      { _id: vote._id, status: "open", votes: vote.votes },
       { $set: { votes: newVotes, updatedAt: new Date() } }
     );
   if (updateRes.matchedCount === 0) {

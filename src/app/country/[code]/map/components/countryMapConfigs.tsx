@@ -34,12 +34,10 @@ import { MapFallback } from "./MapFallback";
 import type { FreightDemandResponse } from "@/lib/logistics/types";
 import { freightHaulLoadLabel, freightHaulLoadTooltip } from "./freightHaulLoadCopy";
 
-/**
- * Countries that use the unified parliamentary map. US is intentionally
- * excluded — it carries electoral-college math, a presidential results
- * panel, and a senate split view and stays on USMapWithModes.
- */
-export type ParliamentaryMapCountryId = "UK" | "DE" | "JP" | "CN" | "BR" | "NG";
+import type { ParliamentaryMapCountryId } from "../mapVariant";
+
+export { isParliamentaryMapCountry } from "../mapVariant";
+export type { ParliamentaryMapCountryId };
 
 export interface MapModeConfig {
   id: string;
@@ -865,7 +863,3 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     buildRegionData: buildNGRegionData,
   },
 };
-
-export function isParliamentaryMapCountry(id: string): id is ParliamentaryMapCountryId {
-  return id in COUNTRY_MAP_CONFIGS;
-}

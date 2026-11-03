@@ -1,3 +1,5 @@
+import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, getMongoClient } from "@/lib/mongodb";
@@ -44,6 +46,7 @@ import {
   acquireRelocationBondFundingLease,
   hasProtectedRelocationProperty,
   relocationBondSourceSnapshotFilter,
+  relocationTransitionSectors,
   releaseRelocationBondFundingLease,
 } from "@/lib/corporations/relocationBondFunding";
 import {
@@ -84,7 +87,11 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/capitalOperations/relocateHeadquarters:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -102,6 +109,8 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+    const cashBlock = requireSpendableCorporateCash(corporation);
+    if (cashBlock) return cashBlock;
 
     if (corporation.primaryUnderwritingIncomingFunding || corporation.bankUnderwritingFunding) {
       return errorResponse(
@@ -114,18 +123,6 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       .collection<CorporateSector>("corporateSectors")
       .find({ corporationId: corporation._id })
       .toArray();
-    if (
-      hasProtectedRelocationProperty(
-        propertySectors,
-        corporation._id,
-        corporation.headquartersRelocationBondFunding
-      )
-    ) {
-      return errorResponse(
-        409,
-        "Resolve secured construction before relocating corporate headquarters"
-      );
-    }
 
     if (corporation.federationPendingHeadquartersId) {
       return errorResponse(
@@ -274,6 +271,24 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     // the move commits, on the cash path.
     const relocationSpreadAnchor = needsCurrencyConversion ? relocationCost * SECTOR_FX_SPREAD : 0;
 
+    // A construction loan is secured on its site, which stays where it is when
+    // only the headquarters moves. An in-country or same-currency move leaves the
+    // claimed sector rows untouched, so the loan may keep servicing across it.
+    const allowFinancedConstructionClaims = !needsCurrencyConversion;
+    if (
+      hasProtectedRelocationProperty(
+        propertySectors,
+        corporation._id,
+        corporation.headquartersRelocationBondFunding,
+        { allowFinancedConstructionClaims }
+      )
+    ) {
+      return errorResponse(
+        409,
+        "Resolve secured construction before relocating corporate headquarters"
+      );
+    }
+
     // ── No-mutation validations first so partial failures are minimized ──
     if (paymentMethod === "cash") {
       // Affordability check in ₳ (currency-invariant).
@@ -372,11 +387,15 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     // Currency conversion reserves these same sector rows while it runs. For
     // same-currency relocations, hold a property marker through the final
     // cash or bond write so construction cannot be claimed after the read.
+    const transitionSectors = relocationTransitionSectors(
+      propertySectors,
+      allowFinancedConstructionClaims
+    );
     const hqTransitionKeys = needsCurrencyConversion
       ? null
       : await reserveSectorsForTransition(
           db,
-          propertySectors,
+          transitionSectors,
           "headquarters_relocation",
           `headquarters:${corporation._id.toHexString()}:${normalizedTarget}`,
           true
@@ -390,7 +409,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     const releaseHqTransition = async () => {
       if (!hqTransitionKeys) return;
       await Promise.all(
-        propertySectors.map((sector, index) =>
+        transitionSectors.map((sector, index) =>
           releaseConstructionPropertyTransition(db, sector._id, hqTransitionKeys[index])
         )
       );
@@ -410,6 +429,8 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
             primaryUnderwritingIncomingFunding: { $exists: false },
             bankUnderwritingFunding: { $exists: false },
             headquartersRelocationBondFunding: { $exists: false },
+            liquidCapital: { $gte: relocationInCorpCapital },
+            ...corporateDiscretionaryCashGuard(),
           },
           {
             $set: baseCorpSet,
@@ -517,6 +538,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
         if (!session) return { status: "transactions_unavailable" as const };
         const leaseFreeFilter = {
           _id: workingCorp._id,
+          ...corporateDiscretionaryCashGuard(),
           "headquartersRelocationBondFunding.operationKey": frozenBondLease!.operationKey,
           ...relocationBondSourceSnapshotFilter(frozenBondLease!),
           ...(frozenBondLease!.ceoId

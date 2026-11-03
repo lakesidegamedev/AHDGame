@@ -15,7 +15,7 @@ import type { GameConfig } from "@/lib/db/types";
 let cached: { value: boolean; at: number } | null = null;
 const CACHE_TTL_MS = 30_000;
 
-export function isAltScoringEnabledFromConfig(
+function isAltScoringEnabledFromConfig(
   config?: Pick<GameConfig, "altScoringEnabled"> | null
 ): boolean {
   return config?.altScoringEnabled !== false;

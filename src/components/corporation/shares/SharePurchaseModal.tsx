@@ -1,4 +1,5 @@
 "use client";
+import { SaleTaxPreview } from "./SaleTaxPreview";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -729,7 +730,13 @@ export default function SharePurchaseModal({
           ...(confirmVacate ? { confirmCeoVacate: true } : {}),
         }),
       });
-      const data = (await res.json()) as { error?: string; requiresCeoVacateConfirm?: boolean };
+      const data = (await res.json()) as {
+        error?: string;
+        requiresCeoVacateConfirm?: boolean;
+        proceeds?: number;
+        withheldTax?: number;
+        netProceeds?: number;
+      };
       if (!res.ok) {
         if (res.status === 409 && data.requiresCeoVacateConfirm) {
           setCeoVacateConfirm({
@@ -746,7 +753,13 @@ export default function SharePurchaseModal({
       setCeoVacateConfirm(null);
       onSuccess();
       requestCharacterStatsRefetch();
-      onClose();
+      if (sellAsCorp) onClose();
+      else {
+        setSuccessMsg(
+          `Sold ${quantity.toLocaleString("en-US")} shares. Gross ${formatAmount(data.proceeds ?? 0)}; tax withheld ${formatAmount(data.withheldTax ?? 0)}; cash received ${formatAmount(data.netProceeds ?? data.proceeds ?? 0)}.`
+        );
+        resetQuantity(0);
+      }
     } catch {
       setError("Network error");
     } finally {
@@ -780,6 +793,8 @@ export default function SharePurchaseModal({
         filled?: boolean;
         cost?: number;
         proceeds?: number;
+        netProceeds?: number;
+        withheldTax?: number;
         escrowAmount?: number;
       };
       if (!res.ok) {
@@ -790,7 +805,7 @@ export default function SharePurchaseModal({
         const detail =
           orderSide === "buy"
             ? `Filled immediately: bought ${quantity.toLocaleString("en-US")} shares for ${formatAmount(data.cost ?? 0)}`
-            : `Filled immediately: sold ${quantity.toLocaleString("en-US")} shares for ${formatAmount(data.proceeds ?? 0)}`;
+            : `Filled immediately: sold ${quantity.toLocaleString("en-US")} shares. Gross ${formatAmount(data.proceeds ?? 0)}; tax withheld ${formatAmount(data.withheldTax ?? 0)}; cash received ${formatAmount(data.netProceeds ?? data.proceeds ?? 0)}.`;
         setSuccessMsg(detail);
         onSuccess();
         requestCharacterStatsRefetch();
@@ -943,6 +958,18 @@ export default function SharePurchaseModal({
                   }}
                 />
               )}
+            {((mode === "float" &&
+              atMarketSide === "sell" &&
+              !sellAsCorp &&
+              !sellAsInvestmentBank) ||
+              (mode === "limit" && orderSide === "sell" && !limitAsCorp)) && (
+              <SaleTaxPreview
+                corpId={corpId}
+                shares={quantity}
+                holdingTerm={holdingTerm}
+                pricePerShare={mode === "limit" ? limitPriceLocal : undefined}
+              />
+            )}
             {mode === "float" && (
               <SharePurchaseAtMarketView
                 atMarketSide={atMarketSide}

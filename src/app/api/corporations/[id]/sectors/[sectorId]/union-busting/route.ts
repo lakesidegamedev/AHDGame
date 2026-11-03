@@ -27,7 +27,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "Union-busting is not enabled.");
     }
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/sectors/[sectorId]/union-busting:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, sectorId } = await params;

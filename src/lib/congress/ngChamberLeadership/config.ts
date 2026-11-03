@@ -36,9 +36,5 @@ export const NG_ROLE_CONFIG: Record<NgChamberLeadershipRole, NgRoleConfig> = {
 
 export const NG_ROLES: NgChamberLeadershipRole[] = ["speaker_ng_reps", "president_ng_senate"];
 
-export function isNgChamberLeadershipRole(v: string): v is NgChamberLeadershipRole {
-  return v === "speaker_ng_reps" || v === "president_ng_senate";
-}
-
 export const NG_ELECTION_COLLECTION = "ngChamberLeadershipElections";
 export const NG_NOMINATION_COLLECTION = "ngChamberLeadershipNominations";

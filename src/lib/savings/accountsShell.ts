@@ -53,7 +53,6 @@ function finite(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-export { toAccountSnapshot } from "./snapshot";
 import { toAccountSnapshot } from "./snapshot";
 
 /**
@@ -119,7 +118,7 @@ export async function ensureSavingsAccount(
 }
 
 /** What the rules need to know about a holder right now. */
-export async function loadHolderSnapshot(
+async function loadHolderSnapshot(
   db: Db,
   holder: SavingsHolder,
   currency: CurrencyCode,

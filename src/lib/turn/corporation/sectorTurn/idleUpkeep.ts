@@ -52,6 +52,13 @@ import { idleUpkeepUnitPrice, ownerIdleUnits } from "@/lib/corporations/physical
  */
 export interface IdleUpkeepInput {
   sector: Pick<CorporateSector, "plantsUpkeepMarginBasisAnchor" | "activeCapacityPercent">;
+  /**
+   * Active-capacity percent the turn actually runs the plant at this sector
+   * (the NPP/autopilot operating target when one applies). Falls back to the
+   * stored field. Passing it here lets the caller keep the stored sector
+   * document immutable instead of cloning it for one read.
+   */
+  activeCapacityPercent?: number | null;
   plantsEnabled: boolean;
   mothballed: boolean;
   effectiveMargin: number;
@@ -108,7 +115,10 @@ export function computeIdleUpkeep(input: IdleUpkeepInput): IdleUpkeepResult {
     input.throughputFactor *
     input.labourOutputFactor;
 
-  const activeFraction = activeCapacityFraction({ ...input.sector, mothballed: input.mothballed });
+  const activeFraction = activeCapacityFraction({
+    mothballed: input.mothballed,
+    activeCapacityPercent: input.activeCapacityPercent ?? input.sector.activeCapacityPercent,
+  });
   const activeCapacity = input.plantsCapacity * activeFraction;
   const ownerIdleAtRun = input.plantsEnabled
     ? ownerIdleUnits({

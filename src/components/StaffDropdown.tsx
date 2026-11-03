@@ -1,17 +1,23 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useClickOutside } from "@/hooks/useClickOutside";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { DROPDOWN_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
+import { NavPanelSkeleton } from "@/components/navbar/NavPanelSkeleton";
 import {
   isStaffUser,
   visibleStaffNavItems,
   type StaffNavOpts,
 } from "@/components/navbar/staffNavItems";
 
-export { DOCS_URL } from "@/components/navbar/staffNavItems";
+const StaffDropdownPanel = dynamic(
+  () => import("./StaffDropdownPanel").then((m) => m.StaffDropdownPanel),
+  { ssr: false, loading: () => <NavPanelSkeleton rows={4} /> }
+);
+
+const preloadPanel = () => import("./StaffDropdownPanel");
 
 type StaffDropdownProps = StaffNavOpts;
 
@@ -22,11 +28,7 @@ type StaffDropdownProps = StaffNavOpts;
  * world owners also see Local World (/singleplayer/admin); singleplayer mode
  * alone never grants it. The trigger is hidden entirely for non-staff.
  */
-export function StaffDropdown({
-  isAdmin = false,
-  isModerator = false,
-  isSingleplayerOwner = false,
-}: StaffDropdownProps) {
+export function StaffDropdown(props: StaffDropdownProps) {
   const t = useTranslations("nav");
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -34,18 +36,17 @@ export function StaffDropdown({
   const closeDropdown = useCallback(() => setIsOpen(false), []);
   useClickOutside(dropdownRef, isOpen, closeDropdown, { closeOnEscape: true });
 
-  if (!isStaffUser({ isAdmin, isModerator })) return null;
+  if (!isStaffUser(props)) return null;
 
-  const visible = visibleStaffNavItems({ isAdmin, isModerator, isSingleplayerOwner });
+  const visible = visibleStaffNavItems(props);
   if (visible.length === 0) return null;
-
-  const itemClass =
-    "flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60";
 
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        onPointerEnter={preloadPanel}
+        onFocus={preloadPanel}
         className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -66,33 +67,7 @@ export function StaffDropdown({
           role="menu"
           className={`absolute right-0 z-50 mt-2 w-52 rounded-xl border border-card-border bg-card shadow-modal ${DROPDOWN_PANEL_CLASS}`}
         >
-          <div className="py-1">
-            {visible.map((item) =>
-              item.external ? (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setIsOpen(false)}
-                  className={itemClass}
-                  role="menuitem"
-                >
-                  {t(item.labelKey)}
-                </a>
-              ) : (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={itemClass}
-                  role="menuitem"
-                >
-                  {t(item.labelKey)}
-                </Link>
-              )
-            )}
-          </div>
+          <StaffDropdownPanel {...props} onClose={closeDropdown} />
         </div>
       )}
     </div>

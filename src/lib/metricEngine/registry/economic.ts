@@ -419,7 +419,7 @@ export const costOfLivingNode: RegistryNode = {
  * The phase's potential-growth basket reads PREV values (the C3 lag); this node
  * reads same-turn — a one-turn skew, irrelevant at these inertias.
  */
-export const productivityGrowthNode: RegistryNode = {
+const productivityGrowthNode: RegistryNode = {
   id: "economic.productivityGrowth",
   categoryId: "economic",
   metricId: "productivityGrowth",
@@ -512,12 +512,12 @@ export const wageGrowthNode: RegistryNode = {
  */
 export const WORLD_TRADE_BASELINE = 2.5;
 export const TARIFF_WEDGE_K = 0.15; // pp of tradeGrowth lost per 1% tariff
-export const FOREIGN_TAX_WEDGE_K = 0.03; // pp lost per 1% foreign-corporate tax
+const FOREIGN_TAX_WEDGE_K = 0.03; // pp lost per 1% foreign-corporate tax
 export const FTA_OPENNESS_K = 0.4; // pp gained per active FTA partner
 export const BLOC_MEMBER_BONUS = 1.0; // pp gained for economic-bloc membership
-export const FOREX_COMPETITIVENESS_K = 2.0; // pp per unit of currency weakness (rate/base−1)
-export const MANUFACTURING_DRIFT_K = 0.02; // pp per point of mfg competitiveness vs ref
-export const MANUFACTURING_REF = 60; // neutral manufacturingCompetitiveness
+const FOREX_COMPETITIVENESS_K = 2.0; // pp per unit of currency weakness (rate/base−1)
+const MANUFACTURING_DRIFT_K = 0.02; // pp per point of mfg competitiveness vs ref
+const MANUFACTURING_REF = 60; // neutral manufacturingCompetitiveness
 
 /**
  * tradeGrowth — the ANNUAL trade/import growth rate (display %) that compounds

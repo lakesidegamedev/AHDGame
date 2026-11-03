@@ -8,7 +8,7 @@ import {
   fertilityBasis,
   lifeFromMortalityRates,
 } from "./demographicMeasurement";
-import { fertilityPolicyIndex } from "./fertilityPolicy";
+import { fertilityPolicyIndex, FERTILITY_POLICY_MAX_BOOST } from "./fertilityPolicy";
 import { householdDistributionRollup } from "./householdDistribution";
 import { linkedOutcomeTargets } from "./linkedOutcomes";
 import { ownedHealthAccess } from "./ownedHealthAccess";
@@ -161,7 +161,7 @@ describe("age-specific demographic measurement", () => {
     let index = 45;
     for (let turn = 0; turn < 1000; turn++) index = fertilityPolicyIndex(45, index, 100);
     expect(birthRateIndexToTFR(index, 2.06) - birthRateIndexToTFR(45, 2.06)).toBeLessThanOrEqual(
-      0.240001
+      FERTILITY_POLICY_MAX_BOOST + 0.000001
     );
   });
 });

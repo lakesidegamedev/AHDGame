@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { CountryId } from "@/lib/constants/countries";
 
-const COLLECTION = "conflicts";
+export const COLLECTION = "conflicts";
 
 export function getConflictsCollection(db: Db) {
   return db.collection<ConflictDoc>(COLLECTION);

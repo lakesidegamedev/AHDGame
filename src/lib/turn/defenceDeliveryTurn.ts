@@ -29,6 +29,7 @@ import {
   getDefenseAppropriation,
 } from "@/lib/db/collections/defenseAppropriation";
 import { applyMoneyMove, MONEY_MOVE_COLLECTION, type MoneyMoveLeg } from "@/lib/banking/moneyMove";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import {
   defenceCountryTurnSpendCap,
@@ -136,7 +137,11 @@ export async function applyDefenceDeliveries(
   for (const contract of contracts) {
     const [sector, corp] = await Promise.all([
       db.collection<CorporateSector>("corporateSectors").findOne({ _id: contract.sectorId }),
-      db.collection<Corporation>("corporations").findOne({ _id: contract.corporationId }),
+      // Eligibility and payment read the corp's country, currency and cash; its
+      // settlement stamps are never read on this path and are most of the doc.
+      db
+        .collection<Corporation>("corporations")
+        .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED }),
     ]);
     if (!sector || !corp) {
       stalled++;

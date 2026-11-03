@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { loadResetLawPolicyRecords } from "@/lib/policy/resetLawPolicyRecords";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { StatePolicyRecord, GovernorExecutiveOrder, Subsidy } from "@/lib/db/types";
@@ -78,7 +79,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         })
         .filter((record): record is PolicyRecordResponse => record !== null);
       const subsidyOut = subsidies.map((subsidy) => buildSubsidyResponse(subsidy));
-      return NextResponse.json([...out, ...subsidyOut], {
+      const resetLawOut = await loadResetLawPolicyRecords(db, countryId, "regional", stateId);
+      return NextResponse.json([...out, ...resetLawOut, ...subsidyOut], {
         headers: { "Cache-Control": "no-store, max-age=0, no-transform" },
       });
     }

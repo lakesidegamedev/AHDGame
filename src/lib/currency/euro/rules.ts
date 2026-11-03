@@ -3,13 +3,13 @@
  * common currency without changing principal. National financial accounts remain
  * separate from the shared monetary authority selected by euroPolicyBankId.
  */
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { EU_EUROZONE_MEMBERS, type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import {
   COUNTRY_CURRENCY_MAP,
   getCountryIdForCurrency,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
-import { EU_EUROZONE_MEMBERS } from "@/lib/constants/countries";
 
 export interface EuroMember {
   countryId: CountryId;
@@ -166,7 +166,7 @@ export function planEuroSettlement(input: {
 export function euroPolicyBankId(countryId: CountryId, union?: EuroMonetaryUnion): string {
   const issuer = getCountryIdForCurrency(COUNTRY_CURRENCY_MAP[countryId]);
   if (union?.members[issuer]) return union.authorityId;
-  return COUNTRY_CONFIGS[countryId]?.centralBank.sharedBankId ?? countryId;
+  return COUNTRY_CLIENT_CONFIGS[countryId]?.centralBank.sharedBankId ?? countryId;
 }
 
 /** Apply links after the anchor's turn update, independent of country iteration order. */

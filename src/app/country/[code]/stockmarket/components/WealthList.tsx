@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { CountryFlag } from "@/components/CountryFlag";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { getCountryIdByName } from "@/lib/constants/countries";
+import { getCountryIdByName } from "@/lib/constants/countryClientConfig";
 import type { WealthEntry, WealthSortField, WealthSortDir } from "../types";
 
 const WEALTH_SORT_OPTIONS: { field: WealthSortField; label: string }[] = [

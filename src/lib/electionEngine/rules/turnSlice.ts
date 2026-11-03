@@ -7,7 +7,7 @@
 export type TurnSlicePart = "early" | "rest";
 
 /** Share of a turn's slice each half carries. */
-export const HALF_TURN_SLICE_FRACTION = 0.5;
+const HALF_TURN_SLICE_FRACTION = 0.5;
 
 export interface TurnSlicePlan {
   /** Absent: the whole turn in one write. */

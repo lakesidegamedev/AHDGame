@@ -12,6 +12,7 @@ import { vacatePartyLeadershipForBannedUser } from "@/lib/elections/vacatePartyL
 import { stripPartyMembershipForBannedUser } from "@/lib/account/stripPartyMembershipForBannedUser";
 import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterAndCeoCorpIds";
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
+import type { BannedDeviceKind } from "@/lib/db/types";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
 
 // POST /api/admin/users/ban — Ban or unban a user by userId.
@@ -71,6 +72,37 @@ export async function POST(request: Request) {
           },
         }
       );
+
+      // Remember the account's device signals so deleting the account does
+      // not free the device to register again.
+      const banReason = reason || "Violation of rules";
+      const deviceRows: { kind: BannedDeviceKind; value: string }[] = [];
+      if (typeof user.deviceKey === "string" && user.deviceKey) {
+        deviceRows.push({ kind: "deviceKey", value: user.deviceKey });
+      }
+      if (typeof user.trackingId === "string" && user.trackingId) {
+        deviceRows.push({ kind: "trackingId", value: user.trackingId });
+      }
+      if (deviceRows.length > 0) {
+        const bannedAt = new Date();
+        await db.collection("bannedDevices").bulkWrite(
+          deviceRows.map(({ kind, value }) => ({
+            updateOne: {
+              filter: { kind, value },
+              update: {
+                $setOnInsert: {
+                  kind,
+                  value,
+                  reason: banReason,
+                  bannedAt,
+                  bannedBy: admin.username,
+                },
+              },
+              upsert: true,
+            },
+          }))
+        );
+      }
 
       // Revoke the user's API keys. authRevokedAt kills session JWTs but the
       // key path is a separate credential channel — without this a banned

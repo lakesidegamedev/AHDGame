@@ -148,6 +148,56 @@ describe("POST /api/country/[code]/executive/cabinet/acting", () => {
     expect(res.status).toBe(409);
   });
 
+  it.each([
+    [
+      "the same President's previous term",
+      presidentId,
+      new Date(electedAt.getTime() - 1),
+      "senate_vote",
+      200,
+    ],
+    ["a different President", new ObjectId(), electedAt, "senate_vote", 200],
+    ["a nomination from this term", presidentId, electedAt, "senate_vote", 409],
+    ["a legacy Senate defeat this term", presidentId, electedAt, undefined, 409],
+    [
+      "a failed office compatibility check",
+      presidentId,
+      electedAt,
+      "incompatible_bank_office",
+      200,
+    ],
+  ])(
+    "handles %s without erasing historical nominations",
+    async (_label, proposerId, proposedAt, reason, status) => {
+      db.collectionMocks["cabinetNominations"]!.findOne.mockImplementation(async (filter) => {
+        const matches =
+          filter.proposedByPresidentId.equals(proposerId) &&
+          (!filter.proposedAt || proposedAt >= filter.proposedAt.$gte) &&
+          reason !== filter.rejectionReason.$ne;
+        return matches ? { _id: new ObjectId(), status: "rejected" } : null;
+      });
+      const res = await post({
+        positionId: "secretary_of_treasury",
+        characterId: appointeeId.toString(),
+      });
+      expect(res.status).toBe(status);
+      expect(db.collectionMocks["cabinetNominations"]!.findOne).toHaveBeenCalledWith({
+        countryId: "US",
+        positionId: "secretary_of_treasury",
+        nomineeCharacterId: appointeeId,
+        status: "rejected",
+        proposedByPresidentId: presidentId,
+        proposedAt: { $gte: electedAt },
+        rejectionReason: { $ne: "incompatible_bank_office" },
+      });
+      expect(db.collectionMocks["cabinetMembers"]!.insertOne).toHaveBeenCalledTimes(
+        status === 200 ? 1 : 0
+      );
+      expect(db.collectionMocks["cabinetNominations"]!.deleteMany).not.toHaveBeenCalled();
+      expect(db.collectionMocks["cabinetNominations"]!.updateMany).not.toHaveBeenCalled();
+    }
+  );
+
   it("leaves a pending nomination running, because acting bridges to confirmation", async () => {
     await post({ positionId: "secretary_of_treasury", characterId: appointeeId.toString() });
     expect(db.collectionMocks["cabinetNominations"]!.updateMany).not.toHaveBeenCalled();

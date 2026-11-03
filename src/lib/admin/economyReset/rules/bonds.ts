@@ -51,7 +51,7 @@ export const PRIVATE_HOLDER_COLLECTIONS: readonly string[] = Object.freeze([
 ]);
 
 /** Claim-currency value of one frozen payout leg. Anchor legs convert at the quote's rate. */
-export function maturityLegLocal(leg: MaturityClaimLeg, claim: MaturityClaimSource): number {
+function maturityLegLocal(leg: MaturityClaimLeg, claim: MaturityClaimSource): number {
   if (leg.currencyCode === claim.currency) return leg.amount;
   const perAnchor = leg.localPerAnchor > 0 ? leg.localPerAnchor : 1;
   return (leg.amount / perAnchor) * claim.treasuryLocalPerAnchor;

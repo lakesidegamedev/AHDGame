@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     const { character } = auth.user;
 
-    const rateCheck = checkRateLimit(character._id.toString(), 1, 60_000);
+    const rateCheck = checkRateLimit(`api/mail:${character._id.toString()}`, 1, 60_000);
     if (!rateCheck.ok) return rateLimitResponse(rateCheck.retryAfter);
 
     const db = await getDb();

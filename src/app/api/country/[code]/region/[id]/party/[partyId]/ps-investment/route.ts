@@ -87,7 +87,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!auth.ok) return finish(auth.response);
 
     const rateLimitStartedAt = Date.now();
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/region/[id]/party/[partyId]/ps-investment:${auth.user.userId}`,
+      60,
+      60000
+    );
     timings.authMs += Date.now() - rateLimitStartedAt;
     if (!rateLimit.ok) return finish(rateLimitResponse(rateLimit.retryAfter));
     const authUser = auth.user;

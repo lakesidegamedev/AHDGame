@@ -151,7 +151,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const authUser = auth.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/congress/leaders:${authUser.userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     if (!authUser.isAdmin) return errorResponse(403, "Admin only");

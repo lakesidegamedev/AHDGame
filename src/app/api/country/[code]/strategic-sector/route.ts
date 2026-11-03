@@ -33,7 +33,7 @@ async function authorize(request: Request, code: string): Promise<Gate> {
   const auth = await requireHumanSession(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
-  const rl = checkRateLimit(auth.user.userId, 10, 60000);
+  const rl = checkRateLimit(`api/country/[code]/strategic-sector:${auth.user.userId}`, 10, 60000);
   if (!rl.ok) return { ok: false, response: rateLimitResponse(rl.retryAfter) };
 
   const countryId = code.toUpperCase() as CountryId;

@@ -15,9 +15,9 @@ import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
  */
 
 /** How long a new character sees the panel, unless every goal is done first. */
-export const FIRST_DAYS_HOURS = 72;
+const FIRST_DAYS_HOURS = 72;
 /** One Campaign is worth about 1 influence; three gets a player off zero for good. */
-export const FIRST_DAYS_CAMPAIGN_GOAL = 3;
+const FIRST_DAYS_CAMPAIGN_GOAL = 3;
 /** Races listed; the soonest-closing first. */
 const MAX_RACES = 3;
 

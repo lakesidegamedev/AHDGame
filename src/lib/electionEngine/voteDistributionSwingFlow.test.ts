@@ -2072,3 +2072,48 @@ describe("multi-cycle simulation — US House control can change hands", () => {
     expect(aWins).toBeGreaterThan(winners.length / 2);
   });
 });
+
+describe("distributeVotesBySwingFlow — FPTP spoiler gate", () => {
+  function threeWayField(): EnrichedCandidate[] {
+    const [dem, rep] = fixtureCandidates();
+    return [
+      { ...dem!, party: "democrat" },
+      { ...rep!, party: "republican" },
+      {
+        ...dem!,
+        candidateId: "c3",
+        party: "green",
+        charEP: -2,
+        charSP: -2,
+        partyEcon: -2,
+        partySocial: -2,
+      },
+    ];
+  }
+
+  function run(options: DistributeVotesOptions) {
+    return distributeVotesBySwingFlow(
+      threeWayField(),
+      1_000_000,
+      1_000_000,
+      1_000_000,
+      fixtureDemographics(),
+      fixtureCategories(),
+      new Map(),
+      { isGeneralElection: true, countryId: "US", ...options }
+    ).votesPerCandidate;
+  }
+
+  it("moves votes from the nearest major party under FPTP", () => {
+    const fptp = run({ votingSystem: "fptp" });
+    const rcv = run({ votingSystem: "rcv" });
+    expect(fptp.c3).toBeGreaterThan(rcv.c3!);
+    expect(fptp.c1).toBeLessThan(rcv.c1!);
+  });
+
+  it("skips the spoiler in a one-party state, matching the legacy engine", () => {
+    const ops = run({ votingSystem: "fptp", isOnePartyState: true });
+    const rcv = run({ votingSystem: "rcv", isOnePartyState: true });
+    expect(ops).toEqual(rcv);
+  });
+});

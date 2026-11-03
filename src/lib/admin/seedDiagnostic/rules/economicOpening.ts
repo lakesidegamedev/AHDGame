@@ -19,8 +19,8 @@ export function reconciles(actual: number, expected: number, tolerance = 0.00000
  * A player country opens near the 0.5%-GDP deficit envelope. A surplus means
  * its program book is undersized against real receipts, so bound both sides.
  */
-export const OPENING_DEFICIT_GDP_MAX = 0.0075;
-export const OPENING_SURPLUS_GDP_MAX = 0.0025;
+const OPENING_DEFICIT_GDP_MAX = 0.0075;
+const OPENING_SURPLUS_GDP_MAX = 0.0025;
 
 export function openingBalanceWithinEnvelope(surplus: number, gdp: number): boolean {
   if (!Number.isFinite(surplus) || !Number.isFinite(gdp) || gdp <= 0) return false;

@@ -25,6 +25,7 @@ import {
   computePerPlayerNetWorthLimitInternal,
 } from "@/lib/lineOfCredit/locMath";
 import {
+  computeBankLoanDebtInternal,
   computePlayerGrossNetLocInternal,
   loadExchangeRatesMap,
 } from "@/lib/lineOfCredit/netWorth";
@@ -32,6 +33,11 @@ import { estimatePerTurnCurrencyIncomeHomeFace } from "@/lib/lineOfCredit/curren
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { getGameState } from "@/lib/gameState";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
+import { equityCashoutLimitsOn, loadEquityCashoutLimitsStage } from "@/lib/equities/cashoutLimits";
+import {
+  computeControlledEquityHaircutInternal,
+  controlledEquityCollateralNote,
+} from "@/lib/lineOfCredit/controlledEquity";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -94,6 +100,13 @@ export type LocSnapshot = {
   dtiLimitInternal: number;
   /** Equity-based ceiling for total LOC exposure. */
   netWorthLimitInternal: number;
+  /**
+   * Value of shares in companies the borrower controls left out of the
+   * equity cap (internal units). Present only while the equity cashout limits are on.
+   */
+  controlledEquityHaircutInternal?: number;
+  /** Plain explanation of that haircut for the credit limit display. */
+  collateralNote?: string;
   /** Final per-player credit ceiling = min(DTI ceiling, net-worth ceiling). */
   perPlayerLimitInternal: number;
   /** Per-player available draw: min(perPlayerLimit - outstanding, system pool remaining). */
@@ -131,12 +144,14 @@ export async function buildLocSnapshot(
   if (!forexEnabled) return null;
 
   const rates = await loadExchangeRatesMap(db);
-  const { grossInternal, locDebtInternal, netInternal } = await computePlayerGrossNetLocInternal(
-    db,
-    character,
-    true,
-    rates
-  );
+  const [{ grossInternal, locDebtInternal, netInternal: netOfLocInternal }, bankLoanDebtInternal] =
+    await Promise.all([
+      computePlayerGrossNetLocInternal(db, character, true, rates),
+      computeBankLoanDebtInternal(db, character._id, rates),
+    ]);
+  // Bank loan debt comes off net worth like credit-line debt does: the cash a
+  // bank loan paid out is already counted in gross assets.
+  const netInternal = Math.max(0, netOfLocInternal - bankLoanDebtInternal);
 
   const debtToAssetsRatio =
     grossInternal > 0 ? locDebtInternal / grossInternal : locDebtInternal > 0 ? 1 : 0;
@@ -205,7 +220,9 @@ export async function buildLocSnapshot(
     gameState ?? undefined
   );
   const incomeScore = incomeScoreFromPerTurnCurrency(incomeGuess);
-  const nwScore = netWorthScoreFromInternal(netInternal);
+  // Scored on the same net worth the turn prices service with, so the quoted
+  // spread matches the one charged.
+  const nwScore = netWorthScoreFromInternal(netOfLocInternal);
 
   const corp = await db
     .collection<Corporation>("corporations")
@@ -234,7 +251,18 @@ export async function buildLocSnapshot(
   const scheduledDebtServiceInternal = computeAutoPaymentInternal(outstanding);
 
   const dtiLimitInternal = computePerPlayerDtiLimitInternal(incomeGuess, homeRate);
-  const netWorthLimitInternal = computePerPlayerNetWorthLimitInternal(netInternal);
+  // Equity cashout limits: shares in a company the borrower controls back the
+  // equity cap only at a haircut. A lower cap blocks new draws; nothing here
+  // forces repayment of what is already borrowed.
+  const controlledEquity = equityCashoutLimitsOn(await loadEquityCashoutLimitsStage(db))
+    ? await computeControlledEquityHaircutInternal(db, character, rates, currentTurn)
+    : null;
+  const collateralNote = controlledEquity
+    ? controlledEquityCollateralNote(controlledEquity)
+    : undefined;
+  const netWorthLimitInternal = computePerPlayerNetWorthLimitInternal(
+    controlledEquity ? Math.max(0, netInternal - controlledEquity.haircutInternal) : netInternal
+  );
   // When the player has no income history (DTI cap = 0), equity alone backs the credit
   // limit. Once income accumulates over the 48-turn window, the stricter of the two caps
   // applies. This prevents equity-rich players from being completely locked out just
@@ -309,6 +337,10 @@ export async function buildLocSnapshot(
     scheduledDebtServiceInternal,
     dtiLimitInternal,
     netWorthLimitInternal,
+    ...(controlledEquity
+      ? { controlledEquityHaircutInternal: controlledEquity.haircutInternal }
+      : {}),
+    ...(collateralNote ? { collateralNote } : {}),
     perPlayerLimitInternal,
     perPlayerAvailableInternal,
     garnishedPerTurnInternal,

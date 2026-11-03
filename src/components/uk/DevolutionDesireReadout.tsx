@@ -11,7 +11,7 @@ export type DesireReadoutData = Pick<
   IndependenceDesireDriftPerRegion,
   "stateId" | "previous" | "trend" | "policy" | "westminsterPolicy" | "drivers" | "delta" | "inputs"
 >;
-export function formatDesireDrift(value: number): string {
+function formatDesireDrift(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(3)}`;
 }
 export function stanceMessageKey(stateId: string, policy: DevolutionPolicy) {

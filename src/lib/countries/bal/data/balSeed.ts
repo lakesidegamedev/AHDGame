@@ -92,5 +92,5 @@ export function getBalSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const balSeedConfig: EasternBlocSeedConfig = getBalSeedConfig("2019-default");
+const balSeedConfig: EasternBlocSeedConfig = getBalSeedConfig("2019-default");
 export default balSeedConfig;

@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/mongodb";
+import { loadResetLawPolicyRecords } from "./resetLawPolicyRecords";
 import type { Corporation, Tariff, Subsidy } from "@/lib/db/types";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
 import { assembleNationalPolicyRecords } from "@/lib/policy/nationalPolicyRecords";
@@ -142,5 +143,6 @@ export async function loadNationalPolicyRecords(
     buildTariffResponse(tariff, corporationNameById, hasSpecificTariffs)
   );
   const subsidyOut = subsidies.map((subsidy) => buildSubsidyResponse(subsidy));
-  return [...out, ...tariffOut, ...subsidyOut];
+  const resetLawOut = await loadResetLawPolicyRecords(db, countryId, "national");
+  return [...out, ...resetLawOut, ...tariffOut, ...subsidyOut];
 }

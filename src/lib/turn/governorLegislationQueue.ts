@@ -32,6 +32,45 @@ export async function processGovernorLegislationQueue(
   let cancelled = 0;
   const now = new Date();
 
+  // A reviewed v2 law family may sit in one active bill per region. Queue time
+  // checked that, but a member can propose the same family directly before the
+  // queue fires, so read the regions' active law families once and re-check.
+  const resetFamilyKey = (countryId: string, stateId: string, familyId: string) =>
+    `${countryId}:${stateId.toUpperCase()}:${familyId}`;
+  const queuedResetFamilies = (q: GovernorQueuedBill) =>
+    (q.provisions ?? []).flatMap((provision) =>
+      provision.type === "reset_law" ? [provision.familyId] : []
+    );
+  const activeResetFamilies = new Set<string>();
+  const regionsWithQueuedLaws = [
+    ...new Set(
+      pending.filter((q) => queuedResetFamilies(q).length > 0).map((q) => q.stateId.toUpperCase())
+    ),
+  ];
+  if (regionsWithQueuedLaws.length > 0) {
+    const activeLawBills = await db
+      .collection<StateBill>("stateBills")
+      .find({
+        stateId: { $in: regionsWithQueuedLaws },
+        status: { $nin: STATE_TERMINAL_STATUSES },
+        "provisions.type": "reset_law",
+      })
+      .project<Pick<StateBill, "countryId" | "stateId" | "provisions">>({
+        countryId: 1,
+        stateId: 1,
+        "provisions.type": 1,
+        "provisions.familyId": 1,
+      })
+      .toArray();
+    for (const bill of activeLawBills) {
+      for (const provision of bill.provisions ?? []) {
+        if (provision.type === "reset_law" && bill.countryId) {
+          activeResetFamilies.add(resetFamilyKey(bill.countryId, bill.stateId, provision.familyId));
+        }
+      }
+    }
+  }
+
   for (const q of pending) {
     if (!q._id) continue;
 
@@ -96,6 +135,14 @@ export async function processGovernorLegislationQueue(
         continue;
       }
     }
+    const lawFamilyKeys = queuedResetFamilies(q).map((familyId) =>
+      resetFamilyKey(q.countryId, q.stateId, familyId)
+    );
+    if (lawFamilyKeys.some((key) => activeResetFamilies.has(key))) {
+      await cancelQueue(db, q._id, "invalid_provisions");
+      cancelled++;
+      continue;
+    }
 
     // 3. Fire — insert the StateBill with NPP sponsor + governor metadata.
     // The sponsoring NPP auto-votes "for" on their own bill at fire time so
@@ -135,6 +182,7 @@ export async function processGovernorLegislationQueue(
         characterId: q.governorCharacterId,
         name: q.governorName,
       },
+      proposalPayerId: q.governorCharacterId,
       status: "active",
       votesFor: sponsorVoteWeight,
       votesAgainst: 0,
@@ -153,6 +201,7 @@ export async function processGovernorLegislationQueue(
       updatedAt: now,
     };
     await db.collection<StateBill>("stateBills").insertOne(bill);
+    for (const key of lawFamilyKeys) activeResetFamilies.add(key);
 
     await db.collection<GovernorQueuedBill>("governorLegislationQueue").updateOne(
       { _id: q._id, status: "pending" },

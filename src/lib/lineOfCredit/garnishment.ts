@@ -5,11 +5,17 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES, getCountryIdForCurrency } from "@/lib/constants/currencies";
 import type { LocGarnishmentSource } from "@/lib/db/types/locLedger";
 import { isLineOfCreditEnabled } from "./featureFlag";
-import { allocateInternalPaymentToLoc, fromInternalUnits, toInternalUnits } from "./locMath";
+import { allocateInternalPaymentToLoc, toInternalUnits } from "./locMath";
 import { loadExchangeRatesMap } from "./netWorth";
 import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
-import { loadLocSettlement, locInterestCredits, settleLocPlan, type LocEffect } from "./settlement";
+import {
+  loadLocSettlements,
+  resumeLoadedLocSettlement,
+  locInterestCredits,
+  settleLocPlan,
+  type LocEffect,
+} from "./settlement";
 import { isDeepStrictEqual } from "node:util";
 
 export interface GarnishmentResult {
@@ -41,21 +47,30 @@ export async function garnishLocFromIncome(
       { projection: { _id: 1, name: 1, countryId: 1, lineOfCredit: 1, lineOfCreditRevision: 1 } }
     )
     .toArray();
-  const rates = await loadExchangeRatesMap(db);
+  const keysById = new Map(
+    chars.map((char) => {
+      const id = char._id.toHexString();
+      return [id, `loc:garnish:${source}:${turn}:${id}`];
+    })
+  );
+  const [rates, originals] = await Promise.all([
+    loadExchangeRatesMap(db),
+    loadLocSettlements(db, [...keysById.values()]),
+  ]);
   let borrowersGarnished = 0,
     totalInternalGarnished = 0;
   for (const char of chars) {
     const id = char._id.toHexString(),
-      key = `loc:garnish:${source}:${turn}:${id}`;
+      key = keysById.get(id)!;
     const income = faceMap(charPayments.get(id));
     const auxiliary = (options?.auxiliaryPayments ?? []).map((map) => faceMap(map.get(id)));
     const request = { operation: "garnish", source, turn, income, auxiliary };
-    const original = await loadLocSettlement(db, key);
+    const original = originals.get(key);
     let result: Record<string, unknown>;
     if (original) {
       if (!isDeepStrictEqual(original.locSettlement.request, request))
         throw new Error("Accepted LOC income event changed; payout stopped for reconciliation");
-      const settled = await settleLocPlan(db, key, turn, original.locSettlement);
+      const settled = await resumeLoadedLocSettlement(db, key, original);
       if (settled.error) throw new Error(settled.error);
       result = settled.result;
     } else {
@@ -173,34 +188,40 @@ export async function garnishLocFromIncome(
             note: "Original allocated LOC-currency payment from diverted income",
           });
       }
-      const settled = await settleLocPlan(db, key, turn, {
-        characterId: char._id,
-        expectedLoc: loc,
-        expectedRevision: char.lineOfCreditRevision ?? null,
-        request,
-        createdAt: new Date(),
-        effect: {
-          locAfter: { ...loc, balances: principal, arrears },
-          walletInc: Object.fromEntries(
-            Object.entries(remaining)
-              .filter(([, amount]) => amount > 0)
-              .map(([c, amount]) => [`currencyBalances.personal.${c}`, amount])
-          ),
-          reserves: locInterestCredits(interest),
-          ledger,
-          transactions,
-          flows,
-          result: {
-            appliedInternal: allocated.appliedInternal,
-            fraction,
-            remaining,
-            conversions,
-            home: getHomeCurrency(char),
-            countryId: char.countryId,
-            rates,
+      const settled = await settleLocPlan(
+        db,
+        key,
+        turn,
+        {
+          characterId: char._id,
+          expectedLoc: loc,
+          expectedRevision: char.lineOfCreditRevision ?? null,
+          request,
+          createdAt: new Date(),
+          effect: {
+            locAfter: { ...loc, balances: principal, arrears },
+            walletInc: Object.fromEntries(
+              Object.entries(remaining)
+                .filter(([, amount]) => amount > 0)
+                .map(([c, amount]) => [`currencyBalances.personal.${c}`, amount])
+            ),
+            reserves: locInterestCredits(interest),
+            ledger,
+            transactions,
+            flows,
+            result: {
+              appliedInternal: allocated.appliedInternal,
+              fraction,
+              remaining,
+              conversions,
+              home: getHomeCurrency(char),
+              countryId: char.countryId,
+              rates,
+            },
           },
         },
-      });
+        { knownAbsent: true }
+      );
       if (settled.error) throw new Error(settled.error);
       result = settled.result;
     }
@@ -211,4 +232,3 @@ export async function garnishLocFromIncome(
   }
   return { borrowersGarnished, totalInternalGarnished };
 }
-export { fromInternalUnits };

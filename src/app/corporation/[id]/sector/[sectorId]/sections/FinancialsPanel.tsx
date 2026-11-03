@@ -6,7 +6,7 @@ import {
   GROWTH_RATE_TURNS_PER_YEAR,
   GROWTH_COST_MULTIPLIER,
   TURNS_PER_DAY,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { MONEY_PERIOD_HELP } from "@/lib/constants/moneyTimescale";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import FinRow from "../components/FinRow";

@@ -13,7 +13,7 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { HOUSEHOLD_CONSUMER_BASKET, type householdPurchaseOrders } from "./householdRules";
 
 /** Share of a household wallet spent each turn. The rest carries as savings. Tunable. */
-export const HOUSEHOLD_SPEND_FRACTION = 0.9;
+const HOUSEHOLD_SPEND_FRACTION = 0.9;
 
 export type HouseholdSpec = Omit<Parameters<typeof householdPurchaseOrders>[0], "cash">;
 
@@ -47,7 +47,7 @@ export function householdDemandSpecs(input: {
         weight,
       });
     }
-    specs.push({ accountId: w.accountId, spendFraction, products });
+    specs.push({ accountId: w.accountId, spendFraction, products, stateId: w.stateId });
   }
   return specs;
 }

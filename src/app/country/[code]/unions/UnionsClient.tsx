@@ -14,7 +14,8 @@ import { Avatar } from "@/components/Avatar";
 import { formatLocalAmountFull } from "@/lib/utils/formatters";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { countryUrl } from "@/lib/urls";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -92,7 +93,9 @@ export function UnionsClient() {
   const { code } = useParams<{ code: string }>();
   const countryParam = (code ?? "us").toUpperCase();
   const countryId: CountryId =
-    countryParam in COUNTRY_CONFIGS ? (countryParam as CountryId) : COUNTRY_CONFIGS.US.id;
+    countryParam in COUNTRY_CLIENT_CONFIGS
+      ? (countryParam as CountryId)
+      : COUNTRY_CLIENT_CONFIGS.US.id;
   const countryName = displayNameFor(countryId);
   const preset = useActivePreset();
   const eraYear = eraYearForPreset(preset);

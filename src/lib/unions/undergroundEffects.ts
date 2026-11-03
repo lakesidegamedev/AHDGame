@@ -7,9 +7,9 @@ import { undergroundStrength } from "./underground";
 /** Cells cannot create more than low, informal workplace density under a ban. */
 export const UNDERGROUND_DENSITY_CAP = 35;
 /** A legal sector can move 1.5 density points per turn; cells can move at most 0.6. */
-export const UNDERGROUND_DENSITY_GAIN_PER_TURN = 0.6;
+const UNDERGROUND_DENSITY_GAIN_PER_TURN = 0.6;
 /** Above this shadow strength, coordinated absenteeism starts reducing output. */
-export const UNDERGROUND_SLOWDOWN_THRESHOLD = 15;
+const UNDERGROUND_SLOWDOWN_THRESHOLD = 15;
 /** The strongest cell can remove at most 8% of output, far below a legal strike. */
 export const UNDERGROUND_SLOWDOWN_MAX = 0.08;
 

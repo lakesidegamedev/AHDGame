@@ -234,35 +234,6 @@ export async function loadActiveWarEmergencyMitigationPctMap(
   return byCountry;
 }
 
-/**
- * Loads active sectorDemandModifier docs for a country and returns the summed
- * pct for `sectorType`. Consumption point for the commodity engine (Phase 1+
- * wires this into `computeRawSupplyDemand`'s per-sector-type demand math —
- * that function currently aggregates globally/by-state with no countryId
- * parameter, so full wiring is deferred; see Phase 0 PR notes).
- */
-export async function getActiveSectorDemandModifierPct(
-  db: Db,
-  countryId: string,
-  sectorType: string,
-  currentTurn: number
-): Promise<number> {
-  const modifiers = await getCountryModifiersCollection(db)
-    .find({
-      countryId,
-      kind: "sectorDemandModifier",
-      sectorType,
-      expiresAtTurn: { $gt: currentTurn },
-    })
-    .project<Pick<SectorDemandCountryModifier, "sectorType" | "pct" | "expiresAtTurn">>({
-      sectorType: 1,
-      pct: 1,
-      expiresAtTurn: 1,
-    })
-    .toArray();
-  return sumActiveSectorDemandModifierPct(modifiers, sectorType, currentTurn);
-}
-
 /** Deletes modifiers that expired at or before `currentTurn`. Safe to run every turn. */
 export async function sweepExpiredCountryModifiers(db: Db, currentTurn: number): Promise<number> {
   const result = await getCountryModifiersCollection(db).deleteMany({

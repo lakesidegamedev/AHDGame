@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="318" viewBox="0 0 760 318" role="img" font-family="system-ui, sans-serif">
+<title>Private bank balance sheet and safety nets</title>
+<desc>A bank holds reserves and loans against household deposits and book equity. A red confidence band with cash below the run line ends it. The discount window lends cash, the deposit insurance fund covers a failed bank household deposits, and the Treasury covers what the fund cannot.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="317" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="12" y="12" width="450" height="268" rx="8" fill="none" stroke="#a1a1aa" stroke-dasharray="4 3"/>
+<text x="120" y="36" font-size="13" text-anchor="middle" fill="#52525b" font-weight="700">Assets</text>
+<text x="350" y="36" font-size="13" text-anchor="middle" fill="#52525b" font-weight="700">Liabilities</text>
+<rect x="24" y="46" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="124.0" y="72.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Reserves</text>
+<text x="124.0" y="88.5" font-size="12" text-anchor="middle" fill="#3f3f46">cash held against deposits</text>
+<rect x="24" y="116" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="124.0" y="134.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Loans</text>
+<text x="124.0" y="150.6" font-size="12" text-anchor="middle" fill="#3f3f46">named borrowers plus</text>
+<text x="124.0" y="166.6" font-size="12" text-anchor="middle" fill="#3f3f46">a bulk NPC loan book</text>
+<rect x="248" y="46" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="348.0" y="64.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Household deposits</text>
+<text x="348.0" y="80.5" font-size="12" text-anchor="middle" fill="#3f3f46">ceiling set by branches</text>
+<text x="348.0" y="96.5" font-size="12" text-anchor="middle" fill="#3f3f46">and book equity</text>
+<rect x="248" y="116" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="348.0" y="134.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Capital (book equity)</text>
+<text x="348.0" y="150.6" font-size="12" text-anchor="middle" fill="#3f3f46">minimum ratio: top up</text>
+<text x="348.0" y="166.6" font-size="12" text-anchor="middle" fill="#3f3f46">or lose the charter</text>
+<rect x="24" y="198" width="424" height="66" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="236.0" y="219.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Bank run</text>
+<text x="236.0" y="235.6" font-size="12" text-anchor="middle" fill="#3f3f46">confidence band red and cash below the run line</text>
+<text x="236.0" y="251.6" font-size="12" text-anchor="middle" fill="#3f3f46">(half of required reserves): the bank fails</text>
+<rect x="510" y="24" width="230" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="625.0" y="44.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Discount window</text>
+<text x="625.0" y="60.5" font-size="12" text-anchor="middle" fill="#3f3f46">prime + 3 points; adds cash</text>
+<text x="625.0" y="76.5" font-size="12" text-anchor="middle" fill="#3f3f46">but lowers confidence</text>
+<path d="M508 56 L464 56" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="510" y="128" width="230" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="625.0" y="148.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Deposit insurance fund</text>
+<text x="625.0" y="164.6" font-size="12" text-anchor="middle" fill="#3f3f46">covers the gap if a failed</text>
+<text x="625.0" y="180.6" font-size="12" text-anchor="middle" fill="#3f3f46">bank cannot return deposits</text>
+<path d="M508 160 L464 160" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="510" y="230" width="230" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="625.0" y="254.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Treasury backstop</text>
+<text x="625.0" y="270.6" font-size="12" text-anchor="middle" fill="#3f3f46">covers what the fund cannot</text>
+<path d="M625 230 L625 194" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+</svg>

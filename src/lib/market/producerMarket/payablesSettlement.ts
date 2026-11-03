@@ -65,11 +65,9 @@ export async function verifyOpeningProducerPayables(
         : byWallet.get(binding.economyAccountId);
     if (!row) throw new Error("Missing producer payable account");
     const state = row.producerPayables;
-    if (!state) {
-      if (binding.kind === "corporation")
-        throw new Error("Producer corporation requires a reconciled opening payable generation");
-      continue;
-    }
+    // No generation means nothing owed yet: a company founded after the opening
+    // has never closed a funded turn. Claims for it still fail the snapshot check.
+    if (!state) continue;
     if (
       state.worldEpoch !== input.worldEpoch ||
       !Number.isSafeInteger(state.turn) ||

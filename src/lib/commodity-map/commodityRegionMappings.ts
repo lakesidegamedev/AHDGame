@@ -5,7 +5,7 @@
  * This is the single source of truth for commodity map geography.
  */
 
-import { compactRegionCode, type CountryId } from "@/lib/constants/countries";
+import { compactRegionCode, type CountryId } from "@/lib/constants/countriesCore";
 import type { State } from "@/lib/db/types";
 import { frRegions } from "@/lib/seeds/fr/frRegions";
 import { itRegions } from "@/lib/seeds/it/itRegions";

@@ -79,6 +79,17 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
     expect(dd?.label).toBe("Germany");
   });
 
+  it("tells the page when unowned revenue is a legacy figure (plants)", async () => {
+    const { GET } = await import("./route");
+    expect((await (await GET(makeRequest("view=unowned"))).json()).plantsMode).toBe(false);
+
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+      _id: "default",
+      marketSystemMode: "plants",
+    });
+    expect((await (await GET(makeRequest("view=unowned"))).json()).plantsMode).toBe(true);
+  });
+
   it("applies the flag override alongside the name, not one without the other", async () => {
     // Half-correcting this is how a reunified Germany ends up reading "Germany"
     // under the flag of the state it replaced.

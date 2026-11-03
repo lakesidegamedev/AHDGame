@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PRIME_RATE_STEP, snapToPrimeRateGrid } from "@/lib/db/types/centralBank";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { centralBankApiUrl } from "@/lib/urls";
 import { Button } from "@/components/ui";
 import { EmptyState, Skeleton } from "@/components/ui";

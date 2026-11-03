@@ -3,11 +3,14 @@ import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import {
   applyPoliticalMediaOrderEffect,
+  applyPoliticalMediaOrderEffects,
   fundPoliticalMediaOrder,
   loadPoliticalMediaOrdersForClearing,
   politicalMediaOrderKey,
   resumePoliticalMediaOrderFunding,
   savePoliticalMediaSettlementPlan,
+  savePoliticalMediaSettlementPlans,
+  settleLoadedPoliticalMediaOrder,
   settlePoliticalMediaOrder,
 } from "./journal";
 import { settlePoliticalAdMarket } from "./market";
@@ -252,5 +255,165 @@ describe("political media order journal", () => {
       status: "open",
       escrowBalanceAnchor: 50,
     });
+  });
+});
+
+/** Fund each order in turn: every funding spends one action, so each request
+ * must quote the balance it actually finds. */
+async function fundOrders(db: Db, memory: ReturnType<typeof createInMemoryDb>, ids: string[]) {
+  memory.collection("characters").docs[0].cash = 1000;
+  let actions = 4;
+  for (const orderId of ids) {
+    const request = funding();
+    request.orderId = orderId;
+    request.payer.currentActions = actions;
+    memory.collection("characters").docs[0].actions = actions;
+    expect((await fundPoliticalMediaOrder(db, request)).status).toBe("applied");
+    actions -= 1;
+  }
+}
+
+describe("political media settlement plans saved as one turn batch", () => {
+  it("writes every plan in three round trips and keeps each order's own plan", async () => {
+    const { memory, db } = setup();
+    await fundOrders(db, memory, ["order-1", "order-2", "order-3"]);
+    const journal = memory.collection("bankMoneyMoves");
+    const find = vi.spyOn(journal, "find");
+    const bulkWrite = vi.spyOn(journal, "bulkWrite");
+
+    const saved = await savePoliticalMediaSettlementPlans(db, [
+      { orderId: "order-1", plan },
+      { orderId: "order-2", plan },
+      { orderId: "order-3", plan },
+    ]);
+
+    expect(saved.get("order-2")).toEqual(plan);
+    // One read for the whole cohort, one guarded write, one re-read.
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(bulkWrite).toHaveBeenCalledTimes(1);
+    for (const orderId of ["order-1", "order-2", "order-3"]) {
+      expect(
+        journal.docs.find((row) => row._id === politicalMediaOrderKey(orderId))?.politicalMediaOrder
+      ).toMatchObject({ status: "settling", settlementPlan: plan });
+    }
+  });
+
+  it("returns the durable plan an order already carries instead of overwriting it", async () => {
+    const { memory, db } = setup();
+    await fundOrders(db, memory, ["order-1", "order-2"]);
+    const first = {
+      ...plan,
+      deliveredAnchor: 20,
+      unfilledAnchor: 30,
+      deliveredUnits: 2,
+      sellers: [{ ...plan.sellers[0], units: 2, amountAnchor: 20, sellerLocalAmount: 30 }],
+    };
+    await savePoliticalMediaSettlementPlans(db, [{ orderId: "order-1", plan: first }]);
+
+    const saved = await savePoliticalMediaSettlementPlans(db, [
+      { orderId: "order-1", plan },
+      { orderId: "order-2", plan },
+    ]);
+
+    // The first turn's plan wins for order-1, exactly as the per-order saver did.
+    expect(saved.get("order-1")).toEqual(first);
+    expect(saved.get("order-2")).toEqual(plan);
+  });
+
+  it("refuses the batch before writing anything when an order never funded", async () => {
+    const { memory, db } = setup();
+    await fundOrders(db, memory, ["order-1"]);
+    const journal = memory.collection("bankMoneyMoves");
+    const before = JSON.stringify(journal.docs);
+
+    await expect(
+      savePoliticalMediaSettlementPlans(db, [
+        { orderId: "order-1", plan },
+        { orderId: "order-missing", plan },
+      ])
+    ).rejects.toThrow("Political media order order-missing is not fully funded.");
+    expect(JSON.stringify(journal.docs)).toBe(before);
+  });
+});
+
+/** Dates differ between two runs of the same fixture; everything else must match. */
+function plain(value: unknown): unknown {
+  if (value instanceof Date) return "<date>";
+  if (Array.isArray(value)) return value.map(plain);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, plain(item)]));
+  }
+  return value;
+}
+
+function dump(memory: ReturnType<typeof createInMemoryDb>): unknown {
+  return Object.fromEntries(
+    [...memory.collections.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, collection]) => [
+        name,
+        [...collection.docs]
+          .sort((left, right) => String(left._id).localeCompare(String(right._id)))
+          .map((doc) => plain(doc)),
+      ])
+  );
+}
+
+async function fundedWithPlan(orderIds: string[]) {
+  const env = setup();
+  await fundOrders(env.db, env.memory, orderIds);
+  await savePoliticalMediaSettlementPlans(
+    env.db,
+    orderIds.map((orderId) => ({ orderId, plan }))
+  );
+  return env;
+}
+
+describe("political media settlement from clearing-loaded orders", () => {
+  it("settles a loaded order to the same documents as the reloaded path", async () => {
+    const reloaded = await fundedWithPlan(["order-1"]);
+    await settlePoliticalMediaOrder(reloaded.db, "order-1", 12);
+
+    const loaded = await fundedWithPlan(["order-1"]);
+    const clearing = await loadPoliticalMediaOrdersForClearing(loaded.db, 12);
+    expect(clearing).toHaveLength(1);
+    await settleLoadedPoliticalMediaOrder(loaded.db, clearing[0], 12);
+
+    expect(dump(loaded.memory)).toEqual(dump(reloaded.memory));
+  });
+
+  it("skips the per-order header read when the order is already loaded", async () => {
+    const env = await fundedWithPlan(["order-1"]);
+    const clearing = await loadPoliticalMediaOrdersForClearing(env.db, 12);
+    const readOrder = vi.spyOn(env.memory.collection("bankMoneyMoves"), "findOne");
+
+    await settleLoadedPoliticalMediaOrder(env.db, clearing[0], 12);
+
+    const headerReads = readOrder.mock.calls.filter(([filter]) => {
+      const keys = Object.keys(filter as Record<string, unknown>);
+      return (
+        (filter as Record<string, unknown>)._id === politicalMediaOrderKey("order-1") &&
+        keys.includes("kind")
+      );
+    });
+    expect(headerReads).toHaveLength(0);
+  });
+
+  it("applies a cohort of effects with one read and the same result", async () => {
+    const orderIds = ["order-1", "order-2", "order-3"];
+    const perOrder = await fundedWithPlan(orderIds);
+    for (const orderId of orderIds) {
+      await settlePoliticalMediaOrder(perOrder.db, orderId, 12);
+      expect(await applyPoliticalMediaOrderEffect(perOrder.db, orderId)).toBe(true);
+    }
+
+    const batched = await fundedWithPlan(orderIds);
+    for (const orderId of orderIds) await settlePoliticalMediaOrder(batched.db, orderId, 12);
+    const find = vi.spyOn(batched.memory.collection("bankMoneyMoves"), "find");
+
+    expect(await applyPoliticalMediaOrderEffects(batched.db, orderIds)).toBe(3);
+
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(dump(batched.memory)).toEqual(dump(perOrder.memory));
   });
 });

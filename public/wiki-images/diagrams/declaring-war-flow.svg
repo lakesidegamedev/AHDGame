@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="380" viewBox="0 0 780 380" role="img" font-family="system-ui, sans-serif">
+<title>Declaring war flow</title>
+<desc>A declaration of war is filed as a bill costing 10 action points, checked, voted on for 24 turns needing two thirds in each chamber, then either passes and starts or joins a war, or fails and keeps the cooldown running.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="379" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">From filing to war</text>
+<rect x="20" y="44" width="160" height="74" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="100.0" y="76.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">File the bill</text>
+<text x="100.0" y="93.0" font-size="13" fill="#18181b" text-anchor="middle">10 action points</text>
+<rect x="230" y="44" width="170" height="74" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="315.0" y="67.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Checks</text>
+<text x="315.0" y="84.5" font-size="13" fill="#18181b" text-anchor="middle">Server checks the</text>
+<text x="315.0" y="101.5" font-size="13" fill="#18181b" text-anchor="middle">filing</text>
+<rect x="450" y="44" width="310" height="74" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="605.0" y="67.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Legislature vote</text>
+<text x="605.0" y="84.5" font-size="13" fill="#18181b" text-anchor="middle">24 turns. Two thirds of For plus Against,</text>
+<text x="605.0" y="101.5" font-size="13" fill="#18181b" text-anchor="middle">in every chamber that votes</text>
+<path d="M180 81 L230 81" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M400 81 L450 81" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="230" y="158" width="170" height="50" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="315.0" y="178.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Refused</text>
+<text x="315.0" y="195.0" font-size="13" fill="#18181b" text-anchor="middle">No cost to you</text>
+<path d="M315 118 L315 158" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="320" y="131" width="100.5" height="15" fill="#ffffff"/>
+<text x="323" y="142" font-size="12" fill="#52525b" text-anchor="start">any check fails</text>
+<rect x="300" y="254" width="230" height="114" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="415.0" y="280.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Passes</text>
+<text x="415.0" y="297.5" font-size="13" fill="#18181b" text-anchor="middle">10 AP refunded</text>
+<text x="415.0" y="314.5" font-size="13" fill="#18181b" text-anchor="middle">Conflict created or joined</text>
+<text x="415.0" y="331.5" font-size="13" fill="#18181b" text-anchor="middle">Opening forces committed</text>
+<text x="415.0" y="348.5" font-size="13" fill="#18181b" text-anchor="middle">Treaty allies enrolled</text>
+<rect x="570" y="254" width="190" height="114" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="665.0" y="289.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Fails</text>
+<text x="665.0" y="306.0" font-size="13" fill="#18181b" text-anchor="middle">10 AP lost</text>
+<text x="665.0" y="323.0" font-size="13" fill="#18181b" text-anchor="middle">120-turn cooldown keeps</text>
+<text x="665.0" y="340.0" font-size="13" fill="#18181b" text-anchor="middle">running</text>
+<path d="M580 118 L580 170 L415 170 L415 254" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="440.3" y="153" width="119.4" height="15" fill="#ffffff"/>
+<text x="500" y="164" font-size="12" fill="#52525b" text-anchor="middle">two thirds reached</text>
+<path d="M690 118 L690 254" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="695" y="179" width="75.3" height="15" fill="#ffffff"/>
+<text x="698" y="190" font-size="12" fill="#52525b" text-anchor="start">not reached</text>
+</svg>

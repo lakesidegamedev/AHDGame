@@ -126,7 +126,7 @@ export function nationalLawCountryQuery(countryId: CountryId) {
   return { countryId };
 }
 
-export function getCountryLegislationTypeQuery(countryId: CountryId) {
+function getCountryLegislationTypeQuery(countryId: CountryId) {
   const countryScope = LEGISLATION_COUNTRY_SCOPES[countryId];
   if (countryId === COUNTRY_CONFIGS.US.id) {
     return {
@@ -136,7 +136,7 @@ export function getCountryLegislationTypeQuery(countryId: CountryId) {
   return { countryScope };
 }
 
-export function matchesCountryLegislationType(
+function matchesCountryLegislationType(
   countryId: CountryId,
   legislationType: LegislationType
 ): boolean {
@@ -184,7 +184,7 @@ export async function loadCountryLegislationTypes(
   return { legislationTypes, legislationTypeMap, legislationTypeIds };
 }
 
-export function findMatchedTaxRateOption(
+function findMatchedTaxRateOption(
   options: LegislationPolicyOption[] | undefined,
   targetRate: number
 ): LegislationPolicyOption | null {
@@ -206,7 +206,7 @@ export function findMatchedTaxRateOption(
   return best;
 }
 
-export function getBudgetTaxRate(
+function getBudgetTaxRate(
   budget: FederalBudget | null,
   taxType: keyof FederalTaxRates
 ): number | undefined {
@@ -231,7 +231,7 @@ export function getBudgetTaxRate(
   return undefined;
 }
 
-export function findMatchedOption(
+function findMatchedOption(
   options: LegislationPolicyOption[] | undefined,
   economic: number,
   social: number

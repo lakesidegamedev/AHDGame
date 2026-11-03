@@ -32,10 +32,6 @@ export type OrganizeUndergroundResult =
     }
   | { ok: false; status: number; error: string };
 
-export function isUndergroundDriveMode(value: unknown): value is UndergroundDriveMode {
-  return value === "quiet" || value === "mass";
-}
-
 function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&

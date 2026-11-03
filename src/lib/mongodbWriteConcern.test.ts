@@ -16,4 +16,10 @@ describe("resolveMongoWriteConcern", () => {
   it("is ignored outside the turn worker", () => {
     expect(resolveMongoWriteConcern({ TURN_WRITE_CONCERN: "w1" })).toBeUndefined();
   });
+  it("acknowledges on apply in a singleplayer world, whatever the process", () => {
+    expect(resolveMongoWriteConcern({ SINGLEPLAYER: "1" })).toEqual({ w: 1 });
+    expect(resolveMongoWriteConcern({ SINGLEPLAYER: "1", TURN_WRITE_CONCERN: "majority" })).toEqual(
+      { w: 1 }
+    );
+  });
 });

@@ -22,8 +22,8 @@ import Link from "next/link";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
-import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
+} from "@/lib/constants/corporationsClient";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import {
   getOperatingSectorLabel,
   getSectorStrategies,

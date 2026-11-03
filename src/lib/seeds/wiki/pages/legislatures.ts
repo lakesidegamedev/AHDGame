@@ -33,6 +33,7 @@ export const legislaturesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "voting-and-whips",
+    designDocUrl: "design/party-whips.html",
     title: "Voting & Whips",
     description:
       "How legislators vote on bills, how whip directives influence NPP votes, and strategic use of abstentions and party discipline.",
@@ -58,6 +59,7 @@ export const legislaturesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "policy-effects",
+    designDocUrl: "design/policy-system.html",
     title: "Policy Effects",
     description:
       "How enacted legislation changes national and state metrics each turn: exponential decay, tick rates, federal division, and long-run equilibrium.",
@@ -84,6 +86,7 @@ export const legislaturesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "chamber-leadership",
+    designDocUrl: "design/chamber-leadership-by-country.html",
     title: "Chamber Leadership",
     description:
       "How presiding-officer elections work across countries: US Speaker, German Bundestagspräsident, Nigerian National Assembly officers, and China's CPPCC/NPCSC chairs, plus the any-seated vs largest-party eligibility split.",
@@ -122,6 +125,7 @@ export const legislaturesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "cabinet-projects",
+    designDocUrl: "design/cabinet.html",
     title: "Cabinet Projects & Buildings",
     description:
       "The estates, power plants, and infrastructure projects cabinet seats can build: what each asset does, tiers, funding, condition, and the budget envelope.",
@@ -134,6 +138,7 @@ export const legislaturesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "confirmation-process",
+    designDocUrl: "design/cabinet.html",
     title: "Confirmation Process",
     description:
       "How Senate confirmation votes work for Cabinet nominees: thresholds, NPP voting logic, tie-breakers, and blocking strategies.",

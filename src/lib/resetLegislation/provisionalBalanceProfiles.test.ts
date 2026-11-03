@@ -26,7 +26,7 @@ describe("design-only reset law balance vectors", () => {
 
   it("does not mislabel migration or rights-access vectors as measured outcomes", () => {
     expect(profiles.find((row) => row.familyId === "L49")?.responseMeaning).toMatch(
-      /not migration flow/
+      /scales policy inflow/
     );
     for (const familyId of ["L50", "L51"]) {
       expect(profiles.find((row) => row.familyId === familyId)?.responseMeaning).toMatch(

@@ -26,7 +26,7 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { Avatar } from "@/components/Avatar";
 import { CHARACTER_LOAN_SPREAD_PP, convertFaceBetweenCurrencies } from "@/lib/banking/lendingMath";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { BankCharterType } from "@/lib/db/types/bank";
 
 type HubCentralBank = {
@@ -50,6 +50,7 @@ type HubPrivateBank = {
   operatorType: "player" | "npp";
   charterType: BankCharterType;
   depositRatePercent: number;
+  saverApyPercent: number;
   lendingRatePercent: number;
   warningBand: "green" | "amber" | "red" | null;
   confidence: number | null;
@@ -880,7 +881,7 @@ function PrivateBanksTable({
             case "name":
               return bank.name.toLowerCase();
             case "depositApy":
-              return bank.charterType === "investment" ? null : bank.depositRatePercent;
+              return bank.charterType === "investment" ? null : bank.saverApyPercent;
             case "loanRate":
               return bank.charterType === "investment" ? null : bank.lendingRatePercent;
             case "health":
@@ -1038,7 +1039,7 @@ function PrivateBankRow({
       <td className="px-4 py-3.5 text-right">
         {customerBank ? (
           <span className="font-mono text-sm font-bold tabular-nums text-success">
-            {formatRatePercent(bank.depositRatePercent)}
+            {formatRatePercent(bank.saverApyPercent)}
           </span>
         ) : (
           <span className="text-xs text-muted">Not offered</span>

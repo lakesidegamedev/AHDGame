@@ -17,6 +17,7 @@ import {
   type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
 import { isMarketSaturated, isStuckAtThrottleFloor } from "@/lib/turn/npp/rules/marketSaturation";
+import { nppDemandThrottle } from "@/lib/turn/npp/rules/fundedSellThrough";
 import { chooseCostMothballSector } from "@/lib/turn/npp/costMothball";
 import type { SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import type { NppCorpDecision } from "./corpDecisionTypes";
@@ -32,6 +33,8 @@ export function buildNppGlutMothballUpdates(args: {
   priceRatioOf: CommodityPriceRatioFn;
   /** Physical cell saturation (PlacementSignals.marketSaturationOf). */
   marketSaturationOf?: PlacementSignals["marketSaturationOf"];
+  /** Funded world epoch: the floor reading is sell-through (rules/fundedSellThrough). */
+  fundedWorldEpoch?: string;
 }): NppCorpDecision["sectorUpdates"] {
   const {
     corporation: corp,
@@ -42,6 +45,7 @@ export function buildNppGlutMothballUpdates(args: {
     divestedSectorIds,
     priceRatioOf,
     marketSaturationOf,
+    fundedWorldEpoch,
   } = args;
   const sectorUpdates: NppCorpDecision["sectorUpdates"] = [];
 
@@ -136,10 +140,11 @@ export function buildNppGlutMothballUpdates(args: {
           if (sp.sector.mothballed === true) continue;
           if (divestedSectorIds.includes(sp.sector._id)) continue;
           if (sp.sector.sectorType === "extraction") continue;
-          if (!isStuckAtThrottleFloor(sp.sector)) continue;
+          if (!isStuckAtThrottleFloor(sp.sector, fundedWorldEpoch)) continue;
           if (
             floorStuck == null ||
-            (sp.sector.demandThrottleFactor ?? 1) < (floorStuck.sector.demandThrottleFactor ?? 1)
+            (nppDemandThrottle(sp.sector, fundedWorldEpoch) ?? 1) <
+              (nppDemandThrottle(floorStuck.sector, fundedWorldEpoch) ?? 1)
           ) {
             floorStuck = sp;
           }

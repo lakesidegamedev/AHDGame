@@ -28,12 +28,15 @@ const InterfaceContext = createContext<InterfaceContextValue | null>(null);
 export function AppInterfaceProvider({
   children,
   initialMode = "modern",
+  initialHasSession = false,
 }: {
   children: ReactNode;
   initialMode?: InterfaceMode;
+  /** Server hint that the request carried an auth cookie. */
+  initialHasSession?: boolean;
 }) {
   return (
-    <AuthDataProvider>
+    <AuthDataProvider hasSessionHint={initialHasSession}>
       <InterfaceProvider initialMode={initialMode}>{children}</InterfaceProvider>
     </AuthDataProvider>
   );

@@ -162,6 +162,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   "corp_prospecting_cost",
   "corp_tech_unlock",
   "corp_sector_split_cost",
+  "corp_union_busting_cost",
   "govt_prospecting_cost",
   "contract_signing_fee",
   "contract_royalty_payment",
@@ -310,6 +311,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
   corp_prospecting_cost: "Prospecting Cost",
   corp_tech_unlock: "Technology Unlock",
   corp_sector_split_cost: "Sector Split Campaign",
+  corp_union_busting_cost: "Union-Busting Attempt",
   govt_prospecting_cost: "Govt Prospecting Cost",
   contract_signing_fee: "Contract Signing Fee",
   contract_royalty_payment: "Extraction Royalty",
@@ -336,7 +338,3 @@ const _assertAllCovered: Record<_Coverage, true> = Object.fromEntries(
 ) as Record<_Coverage, true>;
 
 const _coverageCheck: Record<FinancialTxType, true> = _assertAllCovered;
-
-export function getTxTypeLabel(type: FinancialTxType): string {
-  return TX_TYPE_LABELS[type] ?? type;
-}

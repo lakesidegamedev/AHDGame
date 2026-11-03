@@ -1,4 +1,4 @@
-import { FAVORABILITY_NATURAL_DECAY_THRESHOLD } from "@shared/constants/formulas";
+import { FAVORABILITY_NATURAL_DECAY_THRESHOLD } from "@shared/constants/thresholds";
 
 // src/lib/actions/recommendationsConstants.ts
 /**

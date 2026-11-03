@@ -143,6 +143,24 @@ classification and `failure_code` semantics stay unchanged.
 | `/api/country/[code]/region/[id]/party/[partyId]/leadership`         | `party_leadership_regional`         |
 | `/api/country/[code]/region/[id]/party/[partyId]/primary-allocation` | `party_primary_allocation_regional` |
 | `/api/country/[code]/region/[id]/party/[partyId]/build-org`          | `party_build_org_regional`          |
+| `/api/elections/[id]/<action>`                                       | `election_<action>`                 |
+| `/api/campaigns/[id]/<action>`                                       | `campaign_<action>`                 |
+| `/api/canvassing`                                                    | `campaign_canvassing`               |
+| `/api/debates/[id]/strategies`                                       | `debate_strategy`                   |
+| `/api/npps/[id]/direct-action`                                       | `npp_direct_action`                 |
+| `/api/npps/[id]/boost`                                               | `npp_boost`                         |
+| `/api/country/[code]/region/[id]/party/[partyId]/<action>`           | `party_<action>_regional`           |
+| `/api/country/[code]/parties/[id]/<action>`                          | `party_<action>_national`           |
+| `/api/corporations/[id]/sectors/[sectorId]/abandon`                  | `sector_abandon`                    |
+
+`<action>` is one of a fixed list per family, with `-` and `/` written as `_`.
+Elections: `travel`, `state-attack`, `home-state-surge`, `primary-campaign`,
+`enter`, `withdraw`, `endorse`, `running-mate/travel`. Campaigns: `rally`,
+`rally-tour`, `targeted-ads`, `field-offices`, `upgrade`, `donate`, `retarget`,
+`campaign-strength`. State party: `gotv`, `suppression`, `hero`,
+`ps-investment`, `donate`, `send`. National party: `gotv`, `suppression`,
+`hero`, `registration-drive`, `bulk-org`, `recruitment/recruit`, `donate`,
+`send`. The list lives in `playerActionOperation.ts`.
 
 Only `character_action_execute` also carries `requested_action`, read from the
 request's `actionType`: `fundraise`, `campaign`, `advertise`, `buildDonorBase`,

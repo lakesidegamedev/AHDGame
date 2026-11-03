@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 import { CountryFlag } from "@/components/CountryFlag";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatUnits } from "../lib/helpers";
-import { getStateDisplayName } from "@/lib/commodity-map";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import {
   formatCommodityPrice,
   getCommodityDisplayCurrency,

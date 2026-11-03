@@ -61,21 +61,15 @@ export const INCUMBENCY_BUDGET = 0.1 as const;
 /**
  * Approval pivot for the executive incumbency curve — set to `BASE_APPROVAL`
  * so a race with no resolved approval lands exactly on the neutral
- * seat-share fallback. Above the pivot the incumbent earns a shield (cap
- * `INCUMBENCY_SHIELD_MAX` reached `INCUMBENCY_SHIELD_MAX / INCUMBENCY_APPROVAL_SLOPE`
- * points above pivot); below it suffers a drag (cap `INCUMBENCY_DRAG_MAX`).
- * Slope is 1pp of budget per approval point (budget units ×100 = pp shown).
+ * seat-share fallback. The shield above it and the drag below it are
+ * computed by `executiveIncumbencyBudget`.
  * See 2026-06-22-incumbency-approval-bonus-design.md.
  */
 // Pivot: approval an incumbent must clear to earn a shield (below it, a drag).
 // Held below the live national mean so most incumbents still get a smaller
 // shield and only the weakest (~44-46) tip into mild drag.
-export const INCUMBENCY_APPROVAL_PIVOT = 46 as const;
+const INCUMBENCY_APPROVAL_PIVOT = 46 as const;
 export const INCUMBENCY_SHIELD_MAX = 0.1 as const;
-// Severe failure continues beyond the initial drag; the full driver budget
-// remains below one even at the 0.2 maximum.
-export const INCUMBENCY_DRAG_MAX = 0.2 as const;
-export const INCUMBENCY_APPROVAL_SLOPE = 0.01 as const;
 
 /**
  * Single-seat legislative (US Senate) incumbency: a flat, officeholder-based
@@ -84,9 +78,9 @@ export const INCUMBENCY_APPROVAL_SLOPE = 0.01 as const;
  * into the election math elsewhere) and never becomes a drag. See
  * 2026-07-15-senate-incumbency-driver-design.md.
  */
-export const LEGISLATIVE_INCUMBENCY_SHIELD = 0.06 as const; // flat +6 pts
-export const LEGISLATIVE_TENURE_FATIGUE_PER_TERM = 0.01 as const; // −1 pt / term beyond first
-export const LEGISLATIVE_INCUMBENCY_MIN = 0.01 as const; // permanent +1 pt floor
+const LEGISLATIVE_INCUMBENCY_SHIELD = 0.06 as const; // flat +6 pts
+const LEGISLATIVE_TENURE_FATIGUE_PER_TERM = 0.01 as const; // −1 pt / term beyond first
+const LEGISLATIVE_INCUMBENCY_MIN = 0.01 as const; // permanent +1 pt floor
 
 /**
  * Signed incumbency budget as a function of the sitting executive's approval.

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="236" viewBox="0 0 740 236" role="img" font-family="system-ui, sans-serif">
+<title>Corporation turn flow</title>
+<desc>Ten stages each corporation passes through every turn, from production and clearing to revenue, capital, reputation, tax, salary and dividends, strength accrual, share orders and the vote sweep.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="739" height="235" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="20" y="28" font-size="15" text-anchor="start" fill="#18181b" font-weight="700">What happens to each corporation, every turn</text>
+<rect x="10" y="46" width="124" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="72.0" y="75.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">1 Production</text>
+<text x="72.0" y="91.5" font-size="12" text-anchor="middle" fill="#3f3f46">inputs gate it</text>
+<path d="M136 79 L157 79" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="159" y="46" width="124" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="221.0" y="67.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">2 Clearing</text>
+<text x="221.0" y="83.5" font-size="12" text-anchor="middle" fill="#3f3f46">at your posture,</text>
+<text x="221.0" y="99.5" font-size="12" text-anchor="middle" fill="#3f3f46">cheapest first</text>
+<path d="M285 79 L306 79" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="308" y="46" width="124" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="370.0" y="67.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">3 Revenue</text>
+<text x="370.0" y="83.5" font-size="13" text-anchor="middle" fill="#18181b">and margin</text>
+<text x="370.0" y="99.5" font-size="12" text-anchor="middle" fill="#3f3f46">modifiers apply</text>
+<path d="M434 79 L455 79" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="457" y="46" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="519.0" y="67.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">4 Capital</text>
+<text x="519.0" y="83.5" font-size="12" text-anchor="middle" fill="#3f3f46">depreciation,</text>
+<text x="519.0" y="99.5" font-size="12" text-anchor="middle" fill="#3f3f46">builds delivered</text>
+<path d="M583 79 L604 79" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="606" y="46" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="668.0" y="67.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">5 Reputation</text>
+<text x="668.0" y="83.5" font-size="12" text-anchor="middle" fill="#3f3f46">loyalty, quality</text>
+<text x="668.0" y="99.5" font-size="12" text-anchor="middle" fill="#3f3f46">update</text>
+<rect x="10" y="156" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="72.0" y="177.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">6 Tax</text>
+<text x="72.0" y="193.6" font-size="12" text-anchor="middle" fill="#3f3f46">budget bases</text>
+<text x="72.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">updated</text>
+<path d="M136 189 L157 189" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="159" y="156" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="221.0" y="177.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">7 Salary, then</text>
+<text x="221.0" y="193.6" font-size="13" text-anchor="middle" fill="#18181b">dividends</text>
+<text x="221.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">paid to holders</text>
+<path d="M285 189 L306 189" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="308" y="156" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="370.0" y="177.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">8 Strengths</text>
+<text x="370.0" y="193.6" font-size="12" text-anchor="middle" fill="#3f3f46">marketing,</text>
+<text x="370.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">logistics, R&amp;D</text>
+<path d="M434 189 L455 189" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="457" y="156" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="519.0" y="177.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">9 Share orders</text>
+<text x="519.0" y="193.6" font-size="13" text-anchor="middle" fill="#18181b">and price</text>
+<text x="519.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">history recorded</text>
+<path d="M583 189 L604 189" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="606" y="156" width="124" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="668.0" y="177.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">10 Vote sweep</text>
+<text x="668.0" y="193.6" font-size="12" text-anchor="middle" fill="#3f3f46">shareholder votes</text>
+<text x="668.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">auto-resolved</text>
+<path d="M668 112 L668 134 L72 134 L72 154" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+</svg>

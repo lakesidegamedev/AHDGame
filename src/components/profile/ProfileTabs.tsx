@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useId, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { GeneralProfileClient } from "@/app/world/conflicts/generals/GeneralProfileClient";
 import type { CharacterSubject } from "@/app/world/conflicts/generals/useCharacterGeneral";
 import type { ProfileGeneral } from "@/lib/military/generalsTree";
 import type { GeneralPosting } from "@/lib/military/generalPosting";
@@ -13,6 +13,21 @@ import {
   PROFILE_CONTAINER_CLASS,
   PROFILE_MAIN_WIDTH_CLASS,
 } from "@/app/profile/components/profileStyles";
+
+// The political view is the default and stays eager; the military and business
+// views only render when their tab is selected, so they must not ride in every
+// profile's initial JS chunk (GeneralProfileClient alone is ~790 lines).
+const GeneralProfileClient = dynamic(
+  () =>
+    import("@/app/world/conflicts/generals/GeneralProfileClient").then(
+      (m) => m.GeneralProfileClient
+    ),
+  { loading: () => <ProfileTabSkeleton /> }
+);
+
+function ProfileTabSkeleton() {
+  return <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />;
+}
 
 type ProfileView = "political" | "military" | "business";
 

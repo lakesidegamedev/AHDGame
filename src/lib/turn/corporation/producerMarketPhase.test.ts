@@ -252,15 +252,45 @@ describe("corporation producer market phase", () => {
     memory.collection("corporations").docs[0].liquidCapital = -20;
     const settled = await runCorporationProducerMarket(db, input);
     expect(corp.liquidCapital).toBe(-20);
+    // An overdrawn company staffs nothing; only its fixed site bill accrues.
     expect(settled.operatingByCorporation.get(corp._id.toHexString())).toEqual({
       revenue: 0,
-      expenses: 15,
-      profit: -15,
+      expenses: 5,
+      profit: -5,
       cashFlow: 0,
     });
-    expect(corp.producerPayables?.claims.reduce((sum, claim) => sum + claim.amount, 0)).toBe(15);
+    expect(corp.producerPayables?.claims.reduce((sum, claim) => sum + claim.amount, 0)).toBe(5);
     expect(
       memory.collection("producerEconomyAccounts").docs.every((wallet) => wallet.cash === 0)
     ).toBe(true);
   });
+});
+
+it("holds positive operating receipts out of spendable cash and replays the frozen hold", async () => {
+  const { memory, corp, input, db, household } = fixture();
+  memory.seed("producerEconomyAccounts", [
+    {
+      _id: household,
+      worldEpoch: "world",
+      kind: "households",
+      countryId: "US",
+      stateId: "US_CA",
+      currency: "USD",
+      cash: 100,
+    },
+  ]);
+  input.deferCorporateCreditsFor = new Set([corp._id.toHexString()]);
+  const result = await runCorporationProducerMarket(db, input);
+  expect(result.operatingByCorporation.get(corp._id.toHexString())!.cashFlow).toBeGreaterThan(0);
+  const stored = await db.collection("corporations").findOne({ _id: corp._id });
+  expect(stored?.liquidCapital).toBe(1000);
+  expect(stored?.pendingOperatingCash).toBeGreaterThan(0);
+  expect(corp.liquidCapital).toBe(
+    Number(stored?.liquidCapital) + Number(stored?.pendingOperatingCash)
+  );
+  input.deferCorporateCreditsFor = new Set();
+  await runCorporationProducerMarket(db, input);
+  const replayed = await db.collection("corporations").findOne({ _id: corp._id });
+  expect(replayed?.pendingOperatingCash).toBe(stored?.pendingOperatingCash);
+  expect(replayed?.liquidCapital).toBe(1000);
 });

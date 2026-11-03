@@ -17,8 +17,6 @@
 import type { CountryId } from "@/lib/constants/countries";
 import type { EconomicSystemTarget } from "@/lib/db/types/legislation";
 import {
-  COMMAND_CEILING,
-  DUAL_TRACK_CEILING,
   MARKET_LEVEL,
   MARKETIZATION_SCHEDULE,
   marketizationGravity,
@@ -48,7 +46,7 @@ export const ECONOMIC_SYSTEM_TARGET_LEVEL: Record<EconomicSystemTarget, number> 
 export const ECONOMIC_REFORM_RAMP_PER_TURN = 1.25;
 
 /** Within this many points of the target the ramp counts as complete. */
-export const ECONOMIC_REFORM_REACHED_EPSILON = 0.5;
+const ECONOMIC_REFORM_REACHED_EPSILON = 0.5;
 
 export const ECONOMIC_SYSTEM_TARGET_LABEL: Record<EconomicSystemTarget, string> = {
   dual_track: "Reform socialism (plan and market)",
@@ -113,11 +111,4 @@ export function economicReformPull(
     Math.min(ECONOMIC_REFORM_RAMP_PER_TURN, gap)
   );
   return { pull, reached: Math.abs(gap - pull) < ECONOMIC_REFORM_REACHED_EPSILON };
-}
-
-/** Player-facing name of the band a level sits in. */
-export function economicBandLabel(level: number): string {
-  if (level < COMMAND_CEILING) return "command economy";
-  if (level < DUAL_TRACK_CEILING) return "dual-track economy";
-  return "market economy";
 }

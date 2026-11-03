@@ -8,7 +8,7 @@
 // Strictly read-only: find, count and distinct. No aggregation pipelines
 // (`$merge` and `$out` write), no `$where`, no eval.
 
-import type { Db, Filter, Document, Sort } from "mongodb";
+import { ObjectId, type Db, type Filter, type Document, type Sort } from "mongodb";
 
 export const MAX_QUERY_LIMIT = 200;
 
@@ -38,10 +38,46 @@ function assertNoCodeExecution(filter: Record<string, unknown>): void {
   }
 }
 
+/**
+ * Filters arrive as JSON, which has no ObjectId or Date. Callers (agents
+ * especially) write them in Extended JSON, `{ "$oid": "..." }` and
+ * `{ "$date": "..." }`, and Mongo rejects those as unknown operators, or with
+ * "cannot nest $ under $in" inside an `$in` list. Revive those two shapes into
+ * real values so an id or date lookup works. Anything else passes through.
+ */
+export function reviveExtendedJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reviveExtendedJson);
+  if (!value || typeof value !== "object" || value instanceof ObjectId || value instanceof Date)
+    return value;
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj);
+  if (
+    keys.length === 1 &&
+    keys[0] === "$oid" &&
+    typeof obj.$oid === "string" &&
+    ObjectId.isValid(obj.$oid)
+  )
+    return new ObjectId(obj.$oid);
+  if (keys.length === 1 && keys[0] === "$date") {
+    const raw = obj.$date;
+    const date = new Date(
+      typeof raw === "object" && raw && "$numberLong" in raw
+        ? Number((raw as { $numberLong: string }).$numberLong)
+        : (raw as string | number)
+    );
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return Object.fromEntries(keys.map((k) => [k, reviveExtendedJson(obj[k])]));
+}
+
+const readFilter = (filter: Record<string, unknown> | undefined): Filter<Document> => {
+  assertNoCodeExecution(filter ?? {});
+  return reviveExtendedJson(filter ?? {}) as Filter<Document>;
+};
+
 export async function runQuery(db: Db, spec: QuerySpec): Promise<QueryResult> {
   if (!spec.collection) throw new Error("[remediation] query needs a collection");
-  const filter = (spec.filter ?? {}) as Filter<Document>;
-  assertNoCodeExecution(spec.filter ?? {});
+  const filter = readFilter(spec.filter);
 
   const limit = Math.min(spec.limit ?? 25, MAX_QUERY_LIMIT);
   const matched = await db.collection(spec.collection).countDocuments(filter);
@@ -65,8 +101,7 @@ export async function runCount(
   collection: string,
   filter: Record<string, unknown> = {}
 ): Promise<number> {
-  assertNoCodeExecution(filter);
-  return db.collection(collection).countDocuments(filter as Filter<Document>);
+  return db.collection(collection).countDocuments(readFilter(filter));
 }
 
 export async function runDistinct(
@@ -75,8 +110,7 @@ export async function runDistinct(
   field: string,
   filter: Record<string, unknown> = {}
 ): Promise<unknown[]> {
-  assertNoCodeExecution(filter);
-  const values = await db.collection(collection).distinct(field, filter as Filter<Document>);
+  const values = await db.collection(collection).distinct(field, readFilter(filter));
   return values.slice(0, MAX_QUERY_LIMIT);
 }
 

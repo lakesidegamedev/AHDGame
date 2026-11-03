@@ -173,6 +173,53 @@ describe("completeAdmittedMigration", () => {
     });
   });
 
+  it("surfaces an ambiguous source-fence commit without importing or redriving", async () => {
+    const h = harness();
+    h.source.mockResolvedValue({ status: "COMMIT_UNKNOWN" });
+    await expect(completeAdmittedMigration(INPUT, h.deps)).rejects.toMatchObject({
+      code: "completion_source_fence_unknown",
+    });
+    expect(h.redrive).not.toHaveBeenCalled();
+    expect(h.activate).not.toHaveBeenCalled();
+  });
+
+  it("accepts an exact source-fence replay without a redrive", async () => {
+    const h = harness();
+    h.source.mockResolvedValue({ status: "REPLAY_NO_MUTATION", receiptId: RECEIPT });
+    await expect(completeAdmittedMigration(INPUT, h.deps)).resolves.toEqual({
+      accountId: ACCOUNT,
+      userId: USER,
+    });
+    expect(h.redrive).not.toHaveBeenCalled();
+    expect(h.activate).toHaveBeenCalledTimes(1);
+  });
+
+  it("redrives an unavailable source fence under the same operation", async () => {
+    const h = harness();
+    h.source.mockResolvedValue({ status: "UNAVAILABLE" });
+    await expect(completeAdmittedMigration(INPUT, h.deps)).resolves.toEqual({
+      accountId: ACCOUNT,
+      userId: USER,
+    });
+    expect(h.redrive).toHaveBeenCalledWith({
+      canonicalAccountId: ACCOUNT,
+      enrollmentOperationId: OPERATION,
+      sourceAccountId: SOURCE,
+      password: "password-123",
+      provenance: "test:complete",
+    });
+  });
+
+  it("fails closed on an unavailable source proof without a password", async () => {
+    const h = harness();
+    h.source.mockResolvedValue({ status: "UNAVAILABLE" });
+    const { password: _password, ...withoutPassword } = INPUT;
+    await expect(completeAdmittedMigration(withoutPassword, h.deps)).rejects.toMatchObject({
+      code: "completion_source_fence_stale",
+    });
+    expect(h.activate).not.toHaveBeenCalled();
+  });
+
   it("fails closed on a stale source proof without a password", async () => {
     const h = harness();
     h.source.mockResolvedValue({ status: "STALE" });

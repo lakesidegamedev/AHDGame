@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { BillWhipPanelData } from "@/lib/congress/billWhipPanelData";
 import { partyApiUrl, partyUrl } from "@/lib/urls";
 import { apiErrorText } from "@/lib/errors/catalog";

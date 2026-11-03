@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { budgetUrl, metricsUrl, policyUrl } from "@/lib/urls";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 
@@ -100,7 +100,7 @@ export function RealEconomyPanel({
   formatIncome,
 }: RealEconomyPanelProps) {
   const upper = (countryId as string).toUpperCase();
-  const config = COUNTRY_CONFIGS[upper as CountryId];
+  const config = COUNTRY_CLIENT_CONFIGS[upper as CountryId];
   const regionWord = (config?.regionLabel ?? "State").toLowerCase();
   const regionRankings = `${config?.regionLabel ?? "State"} rankings`;
 

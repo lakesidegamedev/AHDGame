@@ -1,6 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { EventDefinition, EventEffect, EventInstance } from "@/lib/db/types/events";
-import { createNotification, createNotifications } from "@/lib/notifications";
+import { createNotification } from "@/lib/notifications";
 import type { EventResolveContext } from "@/lib/events/substrate/types";
 
 /** "pree.lotteryWin" → "Lottery Win". Strips the namespace, splits camelCase. */
@@ -116,28 +116,6 @@ export async function notifyPlayerEventResolved(
       reason: ctx.reason,
     },
   });
-}
-
-export async function notifyPlayerEventsResolvedBatch(
-  entries: Array<{ userId: ObjectId; instance: EventInstance; ctx: EventResolveContext }>
-): Promise<void> {
-  await createNotifications(
-    entries.map(({ userId, instance, ctx }) => {
-      const { title, message } = buildResolvedNotificationContent(instance, ctx);
-      return {
-        userId,
-        type: "player_event_resolved" as const,
-        title,
-        message,
-        metadata: {
-          instanceId: instance._id.toHexString(),
-          optionId: ctx.option.id,
-          tierLabel: ctx.tier.label,
-          reason: ctx.reason,
-        },
-      };
-    })
-  );
 }
 
 /**

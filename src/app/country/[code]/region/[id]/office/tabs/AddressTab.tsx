@@ -4,11 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeliverAddressModal } from "./address/DeliverAddressModal";
 import { turnoutTargetLabel } from "@/lib/demographics/turnoutTarget";
-import {
-  getNationalAddressName,
-  getRegionalAddressName,
-  type CountryId,
-} from "@/lib/constants/countries";
+import { type CountryId, getRegionalAddressName } from "@/lib/constants/countriesCore";
+import { getNationalAddressName } from "@/lib/constants/countryClientConfig";
 import { ADDRESS_ACTION_COST } from "@/lib/constants/governorOffice";
 
 export interface MostRecentAddressSummary {

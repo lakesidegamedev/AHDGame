@@ -42,7 +42,7 @@ export const CAREER_PHASE_TURNS = 200;
 export const IDIOSYNCRASY_JITTER = 0.1;
 
 /** Maximum additive swing on the decisiveness/temperature multiplier (±25%). */
-export const IDIOSYNCRASY_TEMPERATURE_SWING = 0.25;
+const IDIOSYNCRASY_TEMPERATURE_SWING = 0.25;
 
 const MODIFIER_FIELDS: (keyof CareerArchetypeModifiers)[] = [
   "campaignAggressionMult",

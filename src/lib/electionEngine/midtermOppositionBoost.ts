@@ -1,7 +1,5 @@
-import type { Db } from "mongodb";
-import type { CountryId } from "@/lib/constants/countries";
 import type { Election } from "@/lib/db/types";
-import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
+
 import { isUKRegionalCouncilMidterm } from "@/lib/elections/ukRegionalCouncilStagger";
 
 /** Modest nominal-share counterweight for parties outside national government. */
@@ -33,15 +31,6 @@ export function buildMidtermOppositionModifierByParty(
     }
   }
   return modifiers;
-}
-
-export async function resolveMidtermOppositionModifierByParty(
-  db: Db,
-  countryId: CountryId,
-  partyIdsInRace: ReadonlySet<string>
-): Promise<Map<string, number>> {
-  const governingPartyIds = await resolveGoverningPartyIds(db, countryId);
-  return buildMidtermOppositionModifierByParty(governingPartyIds, partyIdsInRace);
 }
 
 export function midtermOppositionModifierToPct(

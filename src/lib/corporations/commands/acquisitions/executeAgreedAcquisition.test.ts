@@ -115,6 +115,29 @@ describe("executeAgreedAcquisition", () => {
     expect(balances.acquirerSectors).toBe(0);
   });
 
+  it("pays the public-float slice to the equity market pool that holds the float", async () => {
+    const w = buildAcquisitionWorld();
+    w.memory.seed("equityMarketPools", [
+      { _id: "USD", cashLocal: 1_000, targetCashLocal: 0, lifetime: { purchasesIn: 0 } },
+    ]);
+    const r = await executeAgreedAcquisition({
+      db: w.db,
+      offer: w.offer as never,
+      currentTurn: 200,
+    });
+
+    expect(r.ok).toBe(true);
+    const b = await readBalances(w);
+    const pool = await w.memory.collection("equityMarketPools").findOne({ _id: "USD" as never });
+    expect(pool?.cashLocal).toBe(1_000 + 100_000);
+    expect((pool?.lifetime as Record<string, number>).purchasesIn).toBe(100_000);
+    expect(b.treasury).toBe(0);
+    // Money is conserved: every holder slice plus the pool slice equals the price.
+    const paid = b.charA + b.charB + b.imperial + (b.corpHolder - 1_000) + b.fundCash + 100_000;
+    expect(paid).toBe(w.price);
+    expect(b.acquirer).toBe(ACQUIRER_CASH - w.price + w.shellCash);
+  });
+
   it("happy path: debits acquirer, pays every holder bucket, moves sectors, deletes the target shell", async () => {
     const w = buildAcquisitionWorld({ sectorCount: 2 });
     const r = await executeAgreedAcquisition({
@@ -254,3 +277,18 @@ describe("executeAgreedAcquisition", () => {
     ).toBe(0);
   });
 });
+
+// These fixtures exercise settlement/recovery, including legacy negotiated prices.
+// The independent safeguards suite exercises real valuation and first-run rejection.
+vi.mock("./referenceValuation", () => ({
+  referenceValuation: vi.fn().mockResolvedValue({
+    valuationAnchor: 0,
+    minimumPriceAnchor: 0,
+    liquidCapitalAnchor: 0,
+    sectorNpvAnchor: 0,
+    portfolioAnchor: 0,
+    bankEquityAnchor: 0,
+    debtAnchor: 0,
+  }),
+  referenceValuationAnchor: vi.fn().mockResolvedValue(0),
+}));

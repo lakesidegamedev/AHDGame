@@ -36,7 +36,7 @@ import type {
   ElectedOfficial,
 } from "@/lib/db/types";
 import { getAuthUser } from "@/lib/auth";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { gameDateAnchorFromState } from "@/lib/utils/gameDate";
 import {
   calculateFullFundDistribution,
@@ -776,6 +776,17 @@ export default async function ProfilePage() {
 
   const stateLabel = homeState?.name ?? character.homeState;
 
+  // Office titles are resolved here, where the full country registry is
+  // already loaded, so the career card does not ship the cabinet tables to the
+  // browser. `getOfficeLabel` recomputes what each stored label was meant to
+  // hold, so this is the same text the card used to compute client-side.
+  const careerHistory = (character.careerHistory ?? []).map((event) =>
+    event.office
+      ? { ...event, officeLabel: getOfficeLabel(event.office, character.countryId) }
+      : event
+  );
+  const currentOfficeLabel = getOfficeLabel(character.currentOffice, character.countryId);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-16" data-replay-block>
       <ProfileTabs
@@ -969,10 +980,11 @@ export default async function ProfilePage() {
 
             <CareerHistory
               character={{
-                careerHistory: character.careerHistory,
+                careerHistory,
                 currentOffice: character.currentOffice,
                 countryId: character.countryId,
               }}
+              currentOfficeLabel={currentOfficeLabel}
               partyNames={partyNames}
               gameDateAnchor={gameDateAnchor}
               partyHistory={partyHistory}

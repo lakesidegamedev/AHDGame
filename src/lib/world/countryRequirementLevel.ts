@@ -7,11 +7,7 @@ import type { CountryEraTier } from "./eraRoster";
  * countries may still be browsable read-only, but they do not need the same
  * authored feature set as an economy-preview or player-enabled country.
  */
-export const COUNTRY_REQUIREMENT_LEVELS = [
-  "background",
-  "economy-preview",
-  "player-enabled",
-] as const;
+const COUNTRY_REQUIREMENT_LEVELS = ["background", "economy-preview", "player-enabled"] as const;
 
 export type CountryRequirementLevel = (typeof COUNTRY_REQUIREMENT_LEVELS)[number];
 

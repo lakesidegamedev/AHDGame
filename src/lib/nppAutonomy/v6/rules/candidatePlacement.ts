@@ -64,7 +64,7 @@ export function placementOrder<T>(
  * party's places its strongest NPPs in its most local races instead, where a
  * weaker party can still win seats. The same primaries are filled either way.
  */
-export const COMPETITIVE_ORG_RATIO = 0.75;
+const COMPETITIVE_ORG_RATIO = 0.75;
 
 /** Whether a party can contest the region's senior races. True without data. */
 export function partyCompetitiveInRegion(

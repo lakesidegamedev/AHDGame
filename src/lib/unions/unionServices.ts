@@ -88,10 +88,6 @@ export const UNION_SERVICES: readonly UnionService[] = [
 
 const BY_ID = new Map<UnionServiceId, UnionService>(UNION_SERVICES.map((s) => [s.id, s]));
 
-export function getUnionService(id: UnionServiceId): UnionService | undefined {
-  return BY_ID.get(id);
-}
-
 /** Drops unknown ids and duplicates, so a stale or hand-edited document cannot widen the effect. */
 export function normalizeServiceIds(ids: readonly string[] | undefined | null): UnionServiceId[] {
   if (!ids) return [];
@@ -108,7 +104,7 @@ export function normalizeServiceIds(ids: readonly string[] | undefined | null): 
  * the number of days in a game year. Getting this wrong by using 365 would
  * overstate every wage by two orders of magnitude and make dues look free.
  */
-export const GAME_DAYS_PER_YEAR = TURNS_PER_YEAR / TURNS_PER_DAY;
+const GAME_DAYS_PER_YEAR = TURNS_PER_YEAR / TURNS_PER_DAY;
 
 /** Annual wage for one member from the sector's daily `wagePerWorker`. */
 export function annualWageFromDaily(wagePerWorkerDaily: number): number {

@@ -1,197 +1,140 @@
 export const governmentApprovalContent = `# Government Approval
 
-Government approval measures how much of the population supports the current government. It is tracked per country as a percentage (0-100) and updates each turn. Low approval has real political consequences: it weakens the governing party's position and can embolden opposition action.
+Leave half your cabinet empty and you start every turn 3.75 points in the hole; leave all of it empty and it is 7.5. Drag the country into a long war and the public wears down at a point a year. Government approval is the share of a country's people who support the government, from 0 to 100, scored from how the country is actually doing rather than how popular any one politician is. It matters because it scales the votes parties win in every election.
 
-## How approval is derived
+Open a country's Approval page to see approval, disapproval and net approval, the last 20 turns of history, and every active modifier with its value. A net approval above +10 is comfortable. Below 0 is a warning. Approval and disapproval always add to 100: there is no undecided group, and net approval is approval minus disapproval.
 
-Government approval is computed from **state metrics compared against national averages**, not from the head of government's personal favorability. Every turn, the game evaluates each state's performance across 10 metric categories, compares each metric to the national average, and produces a state approval score. National approval is the population-weighted average of all state scores.
+![Country Approval page showing national approval, the state average and the regional conditions list](/wiki-images/screens/government-approval-country-approval.webp)
 
-This means approval reflects the objective condition of the country: economy, healthcare, infrastructure, safety, environment, as experienced by the population, rather than the popularity of any individual politician.
+## From state metrics to a national number
 
-> **Note:** Presidential systems formally track approval as tied to the president's standing, while parliamentary-style and one-party systems track it as tied to the PM's standing. In practice, the live system always computes approval through the aggregate metric method described below, regardless of government type.
+Each turn the game does this for every country:
 
-## Metric categories
+1. **Compare each state metric with the national average.** Every state is scored on its metrics across 10 categories (economic, education, healthcare, infrastructure, public safety, environment, social, governance, population, and media and information), all supplied by [National Metrics](/wiki/national-metrics). For each metric the game knows whether higher or lower is better. A metric that beats the national average adds points, and one that trails it subtracts them. Each metric can add or subtract at most 2 points, and a metric needs to be about 13% better or worse than average to hit that cap. A metric 10% better than average adds 1.5.
+2. **Turn the metrics into a state score.** Metrics that matter more to a state's voters (based on their economic and social leanings, see [Demographics](/wiki/demographics)) count for more, so the same national picture can score differently in a progressive and a conservative state.
+3. **Add named conditions.** Set patterns of metrics, such as Economic Boom or Recession, add or subtract points.
+4. **Step toward the result.** A state's stored rating moves toward its new score by at most 2 points a turn.
+5. **Average the states by population.** This gives the national figure.
+6. **Apply national modifiers.** Cabinet gaps, war, public expectations and a few other effects are added to the national figure. These land at once and are not smoothed.
 
-Approval walks 10 \`stateMetrics\` category buckets (including population). Some cohort metrics in population are skipped as approval terms. The live metric engine has additional country-specific nodes beyond the sample table:
+\`\`\`wiki-chart
+approval-metric-contribution
+\`\`\`
 
-| Category | Sample Metrics |
+![Pipeline from state metrics through state score, conditions and smoothing to a national figure, national modifiers, the stored rating and elections.](/wiki-images/diagrams/government-approval-pipeline.svg)
+
+The one formula worth knowing:
+
+**State score = 50 + (weighted average metric contribution x 2.5)**
+
+Because each contribution is capped at 2, metrics alone move a state at most 5 points either side of its starting point of 50. Named conditions and national modifiers do the rest. In the US, the UK, Russia, East Germany and the non-playable countries that carry a derived political board, the state base comes from that political board instead of this metric comparison, so the base shown on the Approval page may not be exactly 50. Named conditions, smoothing and national modifiers still apply on top.
+
+| Item | Value |
 | --- | --- |
-| Economic | Unemployment rate, median income, GDP growth, poverty rate, cost of living, small business formation |
-| Education | High school graduation rate, university enrollment, test performance, education spending, literacy rate, workforce skill |
-| Healthcare | Uninsured rate, affordability index, physician rate, life expectancy, preventable mortality, public health preparedness |
-| Infrastructure | Road condition, broadband access, public transit, water quality, power grid reliability, infrastructure investment gap |
-| Public Safety | Crime rate, violent crime rate, police per capita, incarceration rate, recidivism rate, public safety confidence |
-| Environment | Air quality, renewable energy, carbon emissions, recycling rate, climate resilience, protected land |
-| Social | Social mobility, income inequality, homelessness rate, food insecurity, civic participation, social cohesion |
-| Governance | Government transparency, budget balance, corruption index, voter turnout, public trust |
-| Population | Population growth, urbanization rate, median age, migration rate |
-| Media & Information | Media polarization, disinformation risk, press freedom, social media sentiment, news trust |
+| Starting score | 50 |
+| Cap on one metric's contribution | +2 or -2 |
+| Metric gap that hits the cap | about 13% from the national average |
+| Multiplier on the average contribution | 2.5 |
+| Smoothing of a state's stored rating | 2 points per turn |
+| Named conditions | 82, each worth -3 to +2 |
+| Cap on all positive modifiers together | +8 (negatives have no cap) |
+| Empty cabinet | up to -7.5, scaled by the share of seats empty |
+| Acting appointment | -0.5 each |
+| Public expectations | 0 on taking office, building to -5 over the head of government's term |
+| Union crackdown | -2 while unions are banned and a crackdown is under way |
+| History kept | last 20 turns |
 
-For each metric, the game knows whether higher values are good (e.g., GDP growth, life expectancy) or lower values are good (e.g., unemployment, crime rate). The direction is inverted for "lower is better" metrics before comparison.
+A state's metrics average a contribution of +1.2, so its score is 50 + 1.2 x 2.5 = 53.0. Economic Boom adds 2, so the target is **55.0**. Its stored rating was 48.0. It steps 2 points a turn: 50.0, 52.0, 54.0, then 55.0 on the fourth turn. The national figure is the population-weighted average of all states. Say it comes to 55.0. The head of government is halfway through a four-year term (-2.5 expectations) and 2 of 10 cabinet seats are empty (-1.5). The national approval is 55.0 - 2.5 - 1.5 = **51.0**. Filling the seats raises it to 52.5 the same turn.
 
-## The calculation
+### Named conditions
 
-### Per-metric contribution
+Each condition needs all of its metric tests to be true. Effects stack. Here are six examples with their default triggers (the triggers shift by country and era, and the Approval page lists the live ones):
 
-For every metric where both the state value and national average are available:
-
-\`\`\`
-pctDiff = (stateValue - nationalAverage) / nationalAverage
-signedDiff = higherIsBetter ? pctDiff : -pctDiff
-contribution = clamp(signedDiff * 15, -2, +2)
-\`\`\`
-
-Each metric can contribute at most +/-2 points to the score. The scale factor of 15 means a metric must be roughly 13% above average to hit the +2 cap, or 13% below to hit -2.
-
-### State approval formula
-
-\`\`\`
-baseScore = 50 + (sum of all contributions / number of metrics evaluated) * 2.5
-stateApproval = clamp(baseScore, 0, 100)
-\`\`\`
-
-If a state has no metrics data, it defaults to 50%.
-
-### National approval
-
-\`\`\`
-nationalApproval = sum(stateApproval * statePopulation) / sum(statePopulation)
-\`\`\`
-
-The national score is rounded to one decimal place and clamped to 0-100.
-
-### Named modifiers
-
-After the base metric score is computed, the system checks for **named conditions** (styled after Democracy 3) that add or subtract small bonuses when their thresholds are met. These stack: multiple active conditions sum their effects.
-
-There are **82** defined modifiers, each with 1-3 metric conditions that must all be met. Examples:
-
-| Modifier | Effect | Conditions |
+| Condition | Effect | Default trigger |
 | --- | --- | --- |
-| Economic Boom | +2 | GDP growth >= 3.0% AND unemployment <= 4.5% |
-| Recession | -3 | GDP growth <= 0% AND unemployment >= 7% |
-| Healthcare Excellence | +2 | Life expectancy >= 83 AND affordability >= 78 |
-| Healthcare System Strain | -2 | Affordability <= 48 AND preventable mortality >= 350 |
-| Low Crime Rate | +2 | Crime rate <= 2,800 AND safety confidence >= 70 |
-| Crime Wave | -2 | Crime rate >= 5,000 AND violent crime >= 380 |
-| Clean Environment | +2 | Renewable energy >= 50% AND air quality <= 25 |
-| Environmental Degradation | -2 | Air quality >= 48 AND carbon emissions >= 18 |
-| High Government Transparency | +2 | Transparency >= 78 AND public trust >= 62 |
-| High Corruption | -3 | Corruption index >= 48 AND public trust <= 35 |
-| Fiscal Crisis | -2 | Budget balance <= -5.0% of GDP |
-| Modern Infrastructure | +2 | Roads >= 80, broadband >= 90, water >= 95 |
-| Crumbling Infrastructure | -2 | Roads <= 55, water <= 80, broadband <= 68 |
-| Free Press | +1 | Press freedom >= 75 |
-| Restricted Press Freedom | -2 | Press freedom <= 40 AND disinformation risk >= 50 |
-| Strong Social Cohesion | +1 | Social cohesion >= 68 AND civic participation >= 62 |
-| Social Fragmentation | -2 | Food insecurity >= 16 AND social cohesion <= 45 |
-| Cost of Living Crisis | -2 | Cost of living >= 140 AND poverty >= 17% |
-| Population Decline | -1 | Population growth <= 0 AND migration <= 0 |
-| High Immigration Pressure | -1 | Migration rate >= 0.4% |
+| Economic Boom | +2 | GDP growth at least 3.0% and unemployment at most 4.5% |
+| Healthcare Excellence | +2 | Life expectancy at least 83 and affordability at least 78 |
+| Free Press | +1 | Press freedom at least 79 |
+| Recession | -3 | GDP growth at most 0% and unemployment at least 7% |
+| High Corruption | -3 | Corruption index at least 58 and public trust at most 35 |
+| Fiscal Crisis | -2 | Budget balance at or below -5.0% of GDP |
 
-The full set of 82 modifiers covers economic, healthcare, safety, environmental, governance, social, infrastructure, media, and demographic conditions. Effects range from -3 (severe crises) to +2 (exceptional performance), with most modifiers at +/-1.
+The other 76 cover economy, health, safety, environment, government, society, infrastructure, media and population. Most are worth 1 point either way. Fiscal Crisis is where the [National Budget](/wiki/national-budget) bites: higher debt bands also cut public trust, and a deficit worse than 5% of GDP can trigger it. Conditions moved by policy feed how people judge the government (see [Policy Effects](/wiki/policy-effects)).
 
-Modifiers are evaluated against the same flat metrics map used for the base score, so they work on both individual states and pre-computed national averages.
+## The national modifiers
 
-### Per-turn damping
+These are listed beside the rating on the Approval page, so the number always has a reason attached.
 
-Approval doesn't jump straight to its freshly-computed target each turn. Each state's stored rating is stepped toward the target by **at most 2 points per turn**, so even a modifier swing that would otherwise move approval by double digits plays out gradually over several turns rather than landing all at once.
+\`\`\`wiki-chart
+cabinet-approval-drag
+\`\`\`
 
-### National modifiers
-
-After the population-weighted state score is assembled, a set of **national modifiers** is applied in one pass, and the approval page lists every one of them beside the rating so the number always has a reason attached. The positive ones share a single ceiling on how much they can lift approval between them.
+\`\`\`wiki-chart
+war-exhaustion-curve
+\`\`\`
 
 | Modifier | What it is |
 | --- | --- |
-| National address | The head of government's active address bump |
-| International statements | Joint statements by an international organization about your country, bounded and time limited; they lift cleanly when the statement lapses |
-| War effort | How your fronts are moving against what the war was expected to do (see below) |
-| War exhaustion | The public's support for a fresh war, turning to cost after about a year of fighting |
-| Alliance contribution | For a treaty ally: what you field against what your co-belligerents field |
-| Higher public expectations | A new head of government starts with none and builds to a drag of up to -5 over their term in office |
-| Empty cabinet seats | Scales with the share of seats left empty, up to -7.5 when no seat is filled |
-| Acting appointments | Each acting cabinet member: -0.5, shown as its own line |
+| National address | A speech by the head of government gives a temporary bump |
+| International statements | A joint statement by an international organization about your country, limited in size and time |
+| War effort | How the front is moving against what the war was expected to achieve (-2 to +2) |
+| War exhaustion | Public support for fighting, starting at +1 and turning to cost |
+| War defeat | -5 after losing a war, fading to nothing over 3 game years, never more than -10 together |
+| Alliance contribution | For a treaty ally, what you field against your allies (-1 to +1) |
+| Higher public expectations | A new head of government starts at 0 and builds to -5 across their term |
+| Empty cabinet seats | -7.5 with no seat filled, less in proportion as seats fill |
+| Acting appointments | -0.5 for each acting secretary, shown together on one line |
+| Union crackdown | -2 while unions are banned and a crackdown is under way |
+| Bank failures | A recent bank failure costs approval for a while (worlds with private banking only) |
 
-An empty cabinet is heavily penalised: the empty-seat penalty scales with the share of seats left empty, reaching the full 7.5 points when no seat is filled, so a partly filled cabinet loses proportionally less. An acting secretary still holds their seat, so they are not counted as empty. The acting penalty is charged separately and stacks per member, so a cabinet with 5 acting members loses an additional 2.5 points.
+Joint statements by [International Organizations](/wiki/international-organizations) add or subtract points while they last, a union ban with a crackdown costs 2 points ([Unions](/wiki/unions)), and an unpopular taking costs approval and legitimacy ([Nationalization](/wiki/nationalization)). A map over its fairness ceiling lowers that state's approval by 2 to 5 points ([US House Redistricting & Gerrymandering](/wiki/us-house-redistricting)). Legislators who voted For an enacted bill see approval shift among population groups ([Bills & Legislation](/wiki/bills-legislation)).
 
-### War and approval
+### The cabinet bill
 
-A nation at war carries the war on its rating, in three separate lines, each of which arrives and departs a couple of points per turn rather than landing at once:
+A cabinet with 2 of 10 seats empty loses 1.5 points. The acting penalty only exists in presidential countries where cabinet picks need confirmation, since parliamentary and one-party governments fill posts directly. An acting secretary still holds the seat, so they do not count as empty. Five acting secretaries cost 2.5 points. Seat rules are in [Cabinet](/wiki/cabinet).
 
-- **War effort** judges the front against what the war was expected to do, not simply against who holds ground. A defence that gives up nothing is a political success, an invasion that stalls is a political failure, and a government putting down a rebellion is credited for winning rather than penalised for fighting at home. On a proxy front, where neither side is expected to gain, any movement counts for whoever made it.
-- **War exhaustion** is measured from the turn your own country entered, not the turn the war began. Declaring from peace rallies the public, and that support turns to cost after roughly a year of fighting and keeps deepening. Exhaustion is **carried across a peace** and heals about a point per in-game year, the same pace it accrues, so a country that ended its last war deep in exhaustion opens the next one already paying for it, and a country that never stops fighting gets no rally at all. A year of fighting takes a year of peace to forgive.
-- **Alliance contribution** applies to a country pulled in by a mutual-defence treaty. Matching your co-belligerents is neutral, sending nothing costs approval, and carrying more than your share earns it. Nobody is penalised in the first few turns, before forces could plausibly have arrived.
+Expectations build in a straight line. Halfway through a four-year term the drag is -2.5.
 
-A war going well and a tired public are opposite facts a government answers in opposite ways, which is why the block is shown per line rather than netted. A zero reading is a real reading and renders as one. When a war ends, the lines ease back out over several turns and say so while they do. Every country actually fighting is snapshotted, playable or not, so a belligerent's war rating is never scored nowhere.
+### Fighting a war
 
-## What is tracked
+War arrives as separate lines, because a war going well and a tired public are different facts that call for different answers.
 
-Each country has one approval record with:
-- **Approval rating:** 0-100, percentage of population approving
-- **Disapproval rating:** 0-100, percentage disapproving (computed as 100 - approval)
-- **Net approval:** approval minus disapproval (can be negative)
-- **Source:** always the aggregate metric method plus the national modifiers above, never personal favorability
-- **Active modifiers:** the list of national effects folded into the stored rating, so the chips on the page cannot disagree with the number beside them
-- **Carried war exhaustion:** persists between wars
-- **History:** last 20 turns of approval/net values for charting (capped at 20 entries)
+- **War effort** judges the front against what the war was expected to do, not just who holds ground. A defence that gives up nothing is a success. An invasion that stalls is a failure. Putting down a rebellion is credited as winning. How the front moves, and how long a war lasts, change approval ([Conflicts & the Military System](/wiki/conflicts-overview)), and territory won or lost changes approval at home ([Occupation, Territory & Victory](/wiki/occupation-and-victory)). Losses at sea cut war approval once fleet condition is under 70 ([Blockades](/wiki/blockades)).
+- **War exhaustion** is measured from the turn your own country entered. Entering a war from peace rallies the public by +1 on top of any exhaustion still carried, capped at +1 ([Declaring War](/wiki/declaring-war)); a country still carrying -3 opens at -2. Support then falls by 1 point per game year (48 turns), turning to cost after about a year, down to a floor of -25. Exhaustion carries over a peace and heals at the same pace it built, 1 point per game year. A country that never stops fighting never gets the rally. A year of fighting takes a year of peace to forgive. Ending a war removes the war effort and alliance lines at once, while exhaustion keeps healing ([Peace, Indemnities & Truces](/wiki/peace-and-truces)).
+- **Alliance contribution** applies to a country pulled in by a mutual-defence treaty. Matching your allies is neutral, sending nothing costs approval, and carrying more than your share earns it. Nobody is penalized in the first 6 turns after entry.
 
-The headline figure on the approval page, the history chart, the Executive page and the elections all read this one stored number.
+When a war ends, the effort and alliance lines vanish that turn; exhaustion heals at a point a year and a defeat penalty fades over three years. See [A War, Start to Finish](/wiki/a-war-start-to-finish).
 
-Approval and disapproval sum to exactly 100: there is no "undecided" category in this system.
+Active crises can add direct approval effects each turn, on top of the metric score. A major crisis can swing approval by several points a turn. See [Crisis Interaction](/wiki/crisis-interaction). Favorability changes from [Player Random Events](/wiki/player-events) feed public standing, and most responses to [World Events](/wiki/world-events) move approval up or down.
 
-## Crises and approval
+## What the head of government can do
 
-Active crises can apply **direct approval effects** each turn, adding or subtracting from the national approval rating of all affected countries. These are flat or tick-based effects applied during turn processing, after corporations and before history snapshots. A major crisis can swing approval by several points per turn independently of the metric-based calculation.
+Rank your levers by size:
 
-## Snap elections
+1. Fill the cabinet. It is worth up to 7.5 points and lands at once.
+2. Avoid acting appointments where confirmation is available. Each costs 0.5.
+3. Treat a war as an approval decision. A fresh war rallies the public once, a long one wears it down, and exhaustion follows you into the next war.
+4. Watch the named conditions. Metrics are scored against the national average, so lifting every state together barely moves the metric part; nationwide booms and slumps reach approval through conditions such as Economic Boom, Recession and High Unemployment.
+5. Close the gap in lagging states. A state that trails the national average on many metrics drags its own score, and populous states weigh most in the national figure.
 
-The wiki previously claimed that low UK government approval triggers snap elections. **This is incorrect.** Snap elections in parliamentary countries (UK, JP, DE) are triggered by:
+As opposition, track the named conditions. Rising unemployment that trips High Unemployment or Recession pulls approval down within a few turns, and the election multiplier makes that matter at the ballot box. Inflation has no direct approval term.
 
-1. **PM initiative:** A sitting Prime Minister (or Chancellor in DE) voluntarily dissolves the lower chamber.
-2. **PM vacancy deadline:** If no PM is appointed within 96 turns of the government entering "pending" status, the system auto-triggers a snap election.
+If approval is under 40, expect recovery to take time. State ratings move at most 2 points a turn, so a 10 point gap needs at least 5 turns even if every metric turns around at once. National modifiers such as the cabinet penalty are the fast fixes. If approval dropped this turn, check the modifier lines first: a war line, an empty seat or a new Recession condition shows up there.
 
-There is **no approval threshold** for snap elections. The 96-turn vacancy clock is the automatic trigger. See [Snap Elections](/wiki/snap-elections) for full mechanics.
+## What approval does to the vote
 
-For US and other fixed-term systems, low approval does not directly end a term, but it affects re-election prospects and can empower opposition members to pursue impeachment or no-confidence motions.
+Each state's approval scales the vote pool in every election there:
 
-## Reading the approval tracker
+- **Presidential elections:** the vote pool is multiplied by 1 + (approval - 0.5) x 0.5, up to 25% either way. At 70% approval that is 1.10. At 30% it is 0.90.
+- **Legislative and other elections:** the multiplier is 1 + (approval - 0.5) x 0.2, up to 10% either way. At 70% approval that is 1.04. At 30% it is 0.96.
 
-From any country's main page or government page, the approval chart shows:
-- Current approval and disapproval percentages
-- Net approval trend over the last 20 turns
-- Comparison to previous governments (historical line)
+\`\`\`wiki-chart
+approval-vote-pool-multiplier
+\`\`\`
 
-A net approval above +10 is generally considered safe political territory. Net approval below 0 (more disapproval than approval) is a warning sign.
+This applies in [General Elections](/wiki/general-elections) races, and [Election Mechanics](/wiki/election-mechanics) scales the pool for the governing party. Regional approval also pushes independence and reunification desire toward the First Minister's stance. Low Westminster approval raises separation desire and high Westminster approval lowers it, independently of Westminster's stance ([Independence and Reunification Referendums](/wiki/referendums)).
 
-## Relationship to elections
+Low approval does not trigger a snap election and does not remove the head of government. In the UK, approval below 50 does make NPP ministers more likely to resign and erodes the government's confidence gauge. Snap elections in parliamentary countries (UK, Japan, Germany) come from only two things: the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, or no Prime Minister being appointed within 96 turns of the government entering pending status. See [Snap Elections](/wiki/snap-elections).
 
-Government approval **directly scales the vote pool** in every election. Each state's government approval rating is converted to a decimal and applied as a strength multiplier:
-
-- **Presidential elections:** \`(1 + (approval - 0.5) * 0.5) *
-  officeStrength\`, a swing of up to +/-25% from the 50% baseline
-- **Legislative and other elections:** \`(1 + (approval - 0.5) * 0.2) *
-  officeStrength\`, a swing of up to +/-10%
-
-On top of this direct scaling, approval is a useful **leading indicator**:
-- Low approval reflects poor national conditions, which hurts the governing party's candidates through the direct multiplier and through primary resolution
-- Low approval motivates opposition players to run stronger campaigns and pass no-confidence votes
-- High approval gives the governing party a morale and recruitment advantage
-- Crisis-driven approval swings can signal electoral volatility
-
-## Strategic management
-
-**As head of government:**
-- Pass legislation that improves economic and social metrics: these feed directly into approval
-- Monitor the 10 metric categories; weakness in any one drags the average
-- Appoint a capable Central Bank Chair who keeps inflation near 2% and GDP growth positive
-- Form a full cabinet promptly: the -7.5 no-cabinet penalty is severe
-- Avoid acting appointments where Senate confirmation is available
-- Treat a war as an approval decision: a fresh war rallies the public once, a long one wears it down, and exhaustion follows you into the next one
-
-**As opposition:**
-- Track metric trends: if inflation rises or unemployment spikes, approval will follow downward
-- Vote against government bills that would improve key metrics
-- In the UK: monitor the PM vacancy clock, not approval thresholds, for snap election opportunities
-
-See also: [National Metrics](/wiki/national-metrics), [Demographics](/wiki/demographics), [Central Banks](/wiki/central-banks), [Snap Elections](/wiki/snap-elections), [Crisis Interaction](/wiki/crisis-interaction)
+Live in every world for every country. A world set in an earlier era ignores metrics that did not exist yet. The acting appointment penalty applies only in presidential countries with confirmation. War lines appear only for countries at war, or still carrying exhaustion from one. The union crackdown line appears only where unions are banned. Bank failure lines appear only in worlds with private banking. Last checked 2026-10-29, version 1.18.0. Exact rules: [Government Approval (design)](https://docs.lakesidegames.net/design/government-approval.html). See also: [Glossary](/wiki/glossary)
 `;

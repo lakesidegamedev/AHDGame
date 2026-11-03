@@ -63,7 +63,6 @@ describe("switchCharterType", () => {
       privateBankingEnabled: true,
       // Switching to an investment/universal charter is a player advanced-charter
       // action; enable the gate so these switch tests can reach it.
-      playerAdvancedBankChartersEnabled: true,
     });
     db.collectionMocks.gameState!.findOne.mockResolvedValue({
       _id: "current",
@@ -103,9 +102,7 @@ describe("switchCharterType", () => {
     memory.seed("gameState", [
       { _id: "current", preset: "2019-default", currentTurn: CURRENT_TURN },
     ]);
-    memory.seed("gameConfig", [
-      { _id: "default", privateBankingEnabled: true, playerAdvancedBankChartersEnabled: true },
-    ]);
+    memory.seed("gameConfig", [{ _id: "default", privateBankingEnabled: true }]);
     memory.seed("depositInsuranceFunds", [{ _id: "USD", balance: 0 }]);
     memory.seed("characters", [
       {
@@ -189,9 +186,7 @@ describe("switchCharterType", () => {
     memory.seed("gameState", [
       { _id: "current", preset: "2019-default", currentTurn: CURRENT_TURN },
     ]);
-    memory.seed("gameConfig", [
-      { _id: "default", privateBankingEnabled: true, playerAdvancedBankChartersEnabled: true },
-    ]);
+    memory.seed("gameConfig", [{ _id: "default", privateBankingEnabled: true }]);
     return memory;
   }
 

@@ -657,7 +657,7 @@ describe("POST /api/forex/direct/[requestId]", () => {
     );
   });
 
-  it("blocks a new character (within the 24-turn barrier) from accepting with 403", async () => {
+  it("blocks a new character (within the 48-turn barrier) from accepting with 403", async () => {
     await setupDb();
     const { isForexEnabled } = await import("@/lib/currency/featureFlag");
     vi.mocked(isForexEnabled).mockResolvedValue(true);
@@ -870,7 +870,7 @@ describe("POST /api/forex/direct", () => {
     expect(json.notifiedTarget).toBe(false);
   });
 
-  it("blocks a new character (within the 24-turn barrier) from initiating with 403", async () => {
+  it("blocks a new character (within the 48-turn barrier) from initiating with 403", async () => {
     await setupDb();
     const { isForexEnabled } = await import("@/lib/currency/featureFlag");
     vi.mocked(isForexEnabled).mockResolvedValue(true);

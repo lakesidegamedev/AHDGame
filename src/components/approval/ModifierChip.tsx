@@ -132,5 +132,3 @@ export function ModifierList({
     </div>
   );
 }
-
-export { ModifierChip, marginForModifier };

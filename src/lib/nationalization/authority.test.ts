@@ -6,9 +6,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 vi.mock("@/lib/constants/countries", () => ({
   getCountryConfig: vi.fn(),
 }));
-vi.mock("@/lib/governorOffice/isSittingLeader", () => ({
-  isSittingLeader: vi.fn(),
-}));
 
 let db: MockDb;
 
@@ -47,15 +44,12 @@ describe("assertTreasuryAuthority", () => {
       positionId: "secretary_of_treasury",
       characterId: seatedOther,
     });
-    const { isSittingLeader } = await import("@/lib/governorOffice/isSittingLeader");
 
     const { assertTreasuryAuthority } = await import("./authority");
     expect(await assertTreasuryAuthority(db as unknown as Db, "US", actor)).toBe(false);
-    // Filled seat short-circuits — head-of-gov fallback is NOT consulted.
-    expect(isSittingLeader).not.toHaveBeenCalled();
   });
 
-  it("falls back to head of government when the seat is vacant", async () => {
+  it("denies the head of government when the seat is vacant", async () => {
     const actor = new ObjectId();
     const { getCountryConfig } = await import("@/lib/constants/countries");
     vi.mocked(getCountryConfig).mockReturnValue({
@@ -66,20 +60,15 @@ describe("assertTreasuryAuthority", () => {
       positionId: "secretary_of_treasury",
       characterId: null, // vacant
     });
-    const { isSittingLeader } = await import("@/lib/governorOffice/isSittingLeader");
-    vi.mocked(isSittingLeader).mockResolvedValue(true);
 
     const { assertTreasuryAuthority } = await import("./authority");
-    expect(await assertTreasuryAuthority(db as unknown as Db, "US", actor)).toBe(true);
-    expect(isSittingLeader).toHaveBeenCalledWith(db, "US", actor);
+    expect(await assertTreasuryAuthority(db as unknown as Db, "US", actor)).toBe(false);
   });
 
-  it("falls back to head of government when the country has no finance portfolio", async () => {
+  it("denies action when the country has no finance portfolio", async () => {
     const actor = new ObjectId();
     const { getCountryConfig } = await import("@/lib/constants/countries");
     vi.mocked(getCountryConfig).mockReturnValue({ financeMinisterCabinetId: undefined } as never);
-    const { isSittingLeader } = await import("@/lib/governorOffice/isSittingLeader");
-    vi.mocked(isSittingLeader).mockResolvedValue(false);
 
     const { assertTreasuryAuthority } = await import("./authority");
     expect(await assertTreasuryAuthority(db as unknown as Db, "US", actor)).toBe(false);

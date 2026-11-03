@@ -30,7 +30,7 @@ export const DELETE = withNoStore(async () => {
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;
 
-    const rateLimit = checkRateLimit(userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/auth/delete-account:${userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const objectId = new ObjectId(userId);

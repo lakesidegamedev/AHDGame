@@ -9,7 +9,7 @@ export type ProducerCashBinding = {
   /** Exact stored before-image, avoiding an FX round-trip in the write guard. */
   openingCashLocal: number;
 } & (
-  | { kind: "corporation"; corporationId: string }
+  | { kind: "corporation"; corporationId: string; deferCredit?: boolean }
   | { kind: "economyAccount"; economyAccountId: string }
 );
 
@@ -107,7 +107,12 @@ export function producerCashTransition(input: {
               _id: oid(binding.corporationId),
               "producerPayables.worldEpoch": input.worldEpoch,
               liquidCurrencyCode: binding.currency,
-              liquidCapital: binding.openingCashLocal,
+              // A player can spend or receive company cash between the opening
+              // read and this write (a spin-off, a purchase). The leg moves the
+              // turn's change, so it only needs the balance to cover a debit;
+              // pinning the opening balance would refuse the frozen turn on
+              // every retry and stop the world.
+              ...(change < 0 ? { liquidCapital: { $gte: amount } } : {}),
             }
           : {
               _id: binding.economyAccountId,
@@ -115,7 +120,12 @@ export function producerCashTransition(input: {
               currency: binding.currency,
               cash: binding.openingCashLocal,
             },
-      path: binding.kind === "corporation" ? "liquidCapital" : "cash",
+      path:
+        binding.kind === "corporation"
+          ? change > 0 && binding.deferCredit
+            ? "pendingOperatingCash"
+            : "liquidCapital"
+          : "cash",
       note: `Producer operating settlement ${id}`,
     });
   }

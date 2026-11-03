@@ -7,6 +7,7 @@ import { updateCharacterCooldownLedger, updateCountryCooldownLedger } from "./co
 import { emitOutcomeNewsWire } from "./outcomeNews";
 import { getEventHandler } from "./registry";
 import { pickTier } from "./tiers";
+import { statRollAdjustment } from "./rollAdjustment";
 import type { EventResolveContext, ResolveEventHooks } from "./types";
 
 export class EventNotResolvableError extends Error {
@@ -66,7 +67,7 @@ export async function resolveEvent(
       .findOne({ _id: instance.scopeId }, { projection: { stats: 1 } });
     const statValue =
       (character?.stats as Record<string, number> | undefined)?.[option.primaryStat] ?? 5.5;
-    const delta = Math.round((statValue - 5.5) * 4);
+    const delta = statRollAdjustment(statValue);
     effectiveRoll = Math.max(1, Math.min(100, instance.roll + delta));
     if (delta !== 0) {
       statAdjustment = {

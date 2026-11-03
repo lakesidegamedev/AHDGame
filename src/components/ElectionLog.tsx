@@ -6,8 +6,9 @@ import type { ElectionLogEntry } from "@/lib/elections/electionResponseTypes";
 import { PartyLogo } from "@/components/PartyLogo";
 import { CardSkeleton, Skeleton } from "@/components/ui";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { LocalTime } from "@/components/time/LocalTime";
+import { raceHref } from "@/lib/campaignManager/links";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -312,7 +313,7 @@ function ElectionCard({ entry }: { entry: ElectionLogEntry }) {
         <div className="min-w-0">
           <div className="flex items-center flex-wrap gap-2 mb-0.5">
             <Link
-              href={`/elections/${entry.id}`}
+              href={raceHref({ id: entry.id, electionType: entry.electionType })}
               className="text-sm font-semibold hover:text-primary transition-colors"
             >
               {entry.stateName} — {typeLabel}
@@ -340,7 +341,7 @@ function ElectionCard({ entry }: { entry: ElectionLogEntry }) {
           </div>
         </div>
         <Link
-          href={`/elections/${entry.id}`}
+          href={raceHref({ id: entry.id, electionType: entry.electionType })}
           className="shrink-0 text-[10px] text-muted hover:text-primary transition-colors"
         >
           View →

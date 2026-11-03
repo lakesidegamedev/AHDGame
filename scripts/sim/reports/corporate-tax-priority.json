@@ -1,0 +1,268 @@
+{
+  "scenario": "100 anchor funded profit, 30 current tax, 250 old tax debt, 50 operating debt, optional 60 household distribution each turn",
+  "countries": 29,
+  "turns": 48,
+  "results": [
+    {
+      "country": "US",
+      "currency": "USD",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "UK",
+      "currency": "GBP",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "JP",
+      "currency": "JPY",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "DE",
+      "currency": "EUR",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "IE",
+      "currency": "IEP",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "BR",
+      "currency": "BRL",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "CN",
+      "currency": "CNY",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "NG",
+      "currency": "NGN",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "HU",
+      "currency": "HUF",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "PL",
+      "currency": "PLZ",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "RO",
+      "currency": "ROL",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "YU",
+      "currency": "YUD",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "BG",
+      "currency": "BGL",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "BLR",
+      "currency": "SUR",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "UKR",
+      "currency": "SUR",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "CS",
+      "currency": "CSK",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "BAL",
+      "currency": "SUR",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "RU",
+      "currency": "SUR",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "FR",
+      "currency": "FRF",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "IT",
+      "currency": "ITL",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "ES",
+      "currency": "ESP",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "SE",
+      "currency": "SEK",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "TR",
+      "currency": "TRL",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "GR",
+      "currency": "GRD",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "AT",
+      "currency": "ATS",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "FI",
+      "currency": "FIM",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "DD",
+      "currency": "DDM",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "SCO",
+      "currency": "GBP",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    },
+    {
+      "country": "WAL",
+      "currency": "GBP",
+      "clearedTurn": 5,
+      "taxCollectedAnchor": 1690,
+      "spendableCashAnchor": 430,
+      "householdDistributionsAnchor": 2630,
+      "shortfallTaxAnchor": 10
+    }
+  ]
+}

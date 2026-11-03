@@ -4,8 +4,8 @@
  * `productionPolicy` at 1/turn).
  */
 
-export const PRODUCTION_LEVEL_MIN = -25;
-export const PRODUCTION_LEVEL_MAX = 25;
+const PRODUCTION_LEVEL_MIN = -25;
+const PRODUCTION_LEVEL_MAX = 25;
 
 export type ProductionTone = "success" | "error" | "neutral";
 

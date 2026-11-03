@@ -45,7 +45,7 @@ describe("independence desire precision and trajectories", () => {
 
   it.each([0, 10, 25, 75, 90, 100])("caps approval contributions at %s approval", (approval) => {
     expect(Math.abs(regionalApprovalDrift(approval, "independence"))).toBeLessThanOrEqual(0.05);
-    expect(Math.abs(nationalApprovalDrift(approval))).toBeLessThanOrEqual(0.05);
+    expect(Math.abs(nationalApprovalDrift(approval))).toBeLessThanOrEqual(0.025);
   });
 
   it("changes direction when a separatist government loses its mandate", () => {

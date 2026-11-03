@@ -1,6 +1,3 @@
-import { getDb } from "@/lib/mongodb";
-import type { GameState } from "@/lib/db/types";
-
 /**
  * Master gate for the end-of-iteration Season Recap ("Wrapped"). When false or
  * absent the system is inert: `resetGameWorld` builds no recaps, voluntary/admin
@@ -15,16 +12,4 @@ export function isSeasonRecapEnabled(
   } | null
 ): boolean {
   return preloaded?.seasonRecapEnabled === true;
-}
-
-/**
- * Same gate, for callers with no gameState in hand. Prefer the sync form and
- * pass the doc you already loaded — this one costs a round trip.
- */
-export async function fetchSeasonRecapEnabled(): Promise<boolean> {
-  const db = await getDb();
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { seasonRecapEnabled: 1 } });
-  return gs?.seasonRecapEnabled === true;
 }

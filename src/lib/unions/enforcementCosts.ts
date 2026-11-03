@@ -3,7 +3,7 @@ import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import type { UnionEnforcementPosture } from "./underground";
 
 /** Crackdown administration consumes 0.1% of annual GDP, charged each turn. */
-export const CRACKDOWN_ANNUAL_GDP_SHARE = 0.001;
+const CRACKDOWN_ANNUAL_GDP_SHARE = 0.001;
 
 export function enforcementTreasuryCostPerTurn(
   gdp: number,

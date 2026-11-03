@@ -150,8 +150,9 @@ describe("foundNppCorporationsSurplus read budget", () => {
     expect(corpFindOne).toHaveBeenCalledTimes(attempts);
 
     // The command-economy blocked set loads once per sweep, not once per
-    // founding attempt inside the core.
-    expect(gameStateFindOne).toHaveBeenCalledTimes(1);
+    // founding attempt inside the core. The second gameState read is the
+    // funded-market and era facts for the founding recipe, also once per sweep.
+    expect(gameStateFindOne).toHaveBeenCalledTimes(2);
     expect(fedBudgetFind).toHaveBeenCalledTimes(1);
 
     // Every debited attempt spawns exactly once: same outcomes, fewer reads.

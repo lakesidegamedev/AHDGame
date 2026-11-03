@@ -47,7 +47,7 @@ const MAX_TIER = 3;
  * `arsenal.test.ts` pins the US case (procurement per turn, lot price, lots per turn) to the
  * measured production figures, which is the same target this calibration was always aimed at.
  */
-export const LOT_COST_UNITS = ARCHETYPE_COST_GDP_DIVISOR / 1_000; // 387 cost units per lot
+const LOT_COST_UNITS = ARCHETYPE_COST_GDP_DIVISOR / 1_000; // 387 cost units per lot
 
 export function lotsRequired(archetype: { cost: number }): number {
   return Math.max(1, Math.round(archetype.cost / LOT_COST_UNITS));

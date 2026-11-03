@@ -20,7 +20,7 @@
  * @deprecated The pre-plan axis, kept only so existing `tutorialTrack` values
  * on character documents still type-check where they are read and migrated.
  */
-export const TUTORIAL_TRACKS = ["politics", "complete"] as const;
+const TUTORIAL_TRACKS = ["politics", "complete"] as const;
 /** @deprecated See {@link TUTORIAL_TRACKS}. */
 export type TutorialTrack = (typeof TUTORIAL_TRACKS)[number];
 
@@ -73,11 +73,11 @@ export const DEFAULT_TUTORIAL_PLAN: TutorialPlan = {
   interests: [...TUTORIAL_INTERESTS],
 };
 
-export function isTutorialExperience(value: unknown): value is TutorialExperience {
+function isTutorialExperience(value: unknown): value is TutorialExperience {
   return typeof value === "string" && (TUTORIAL_EXPERIENCES as readonly string[]).includes(value);
 }
 
-export function isTutorialInterest(value: unknown): value is TutorialInterest {
+function isTutorialInterest(value: unknown): value is TutorialInterest {
   return typeof value === "string" && (TUTORIAL_INTERESTS as readonly string[]).includes(value);
 }
 

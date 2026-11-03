@@ -1,3 +1,5 @@
+import { hasPopulationSubdivisionReference } from "@/lib/counties/subdivisionReference";
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
@@ -54,9 +56,24 @@ export async function GET(
       return errorResponse(404, "Subdivision map data is not available for this election");
     }
 
+    if (
+      modeEntry.config.populationCountryId &&
+      !hasPopulationSubdivisionReference(regionId, modeEntry.config.populationCountryId)
+    )
+      return errorResponse(404, "Subdivision data not available for this region");
+
     // County leans follow the world's era (a 1991 world starts from 1984/1988).
     const data = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
       preset: await getGameStatePresetOrDefault(db),
+      ...(modeEntry.config.populationCountryId && election.status === "active"
+        ? {
+            countyPopulations: await loadCountyPopulationMap(
+              db,
+              regionId,
+              modeEntry.config.populationCountryId
+            ),
+          }
+        : {}),
     });
     if (!data) {
       return errorResponse(404, "Subdivision data not available for this region");
@@ -205,11 +222,15 @@ export async function GET(
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
       subdivisions: results.map((r) => {
         const src = subById.get(r.id);
+        // The party that led the sub-unit's baseline result, so a map can read a
+        // projected winner as a hold or a gain.
+        const baseline = Object.entries(src?.partyShares ?? {}).sort(([, a], [, b]) => b - a)[0];
         return {
           ...r,
           path: src?.path ?? "",
           leanScalar: src?.leanScalar,
           electorate: src?.electorate,
+          ...(baseline ? { baselineLeader: baseline[0] } : {}),
         };
       }),
       candidateNames: tally.candidateNames,

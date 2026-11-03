@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   NPP_ACQUISITION_PREMIUM_MULTIPLIER,
+  acquisitionBlockedAsNewThisTurn,
+  playerAcquisitionMinimumPrice,
   isNppAutoResolvableTarget,
   meetsNppAcquisitionThreshold,
   nppAcquisitionMinimumPrice,
@@ -44,5 +46,57 @@ describe("NPP acquisition rules (#217)", () => {
     expect(isNppAutoResolvableTarget({ ceoType: "character" })).toBe(false);
     expect(isNppAutoResolvableTarget({ ceoType: "imperial" })).toBe(false);
     expect(isNppAutoResolvableTarget({})).toBe(false);
+  });
+});
+
+describe("player-run acquisition guards", () => {
+  it("floors the price at the target's cash plus its other assets", () => {
+    expect(playerAcquisitionMinimumPrice({ cashAnchor: 20_000_000, otherAssetsAnchor: 0 })).toBe(
+      20_000_000
+    );
+    expect(playerAcquisitionMinimumPrice({ cashAnchor: 1_000.4, otherAssetsAnchor: 2_000 })).toBe(
+      3_001
+    );
+  });
+
+  it("never lets negative or missing parts lower the floor", () => {
+    expect(playerAcquisitionMinimumPrice({ cashAnchor: -500, otherAssetsAnchor: NaN })).toBe(0);
+  });
+
+  it("blocks a company founded or floated this turn", () => {
+    expect(acquisitionBlockedAsNewThisTurn({ foundedAtTurn: 536 }, 536)).toBe(true);
+    expect(acquisitionBlockedAsNewThisTurn({ foundedAtTurn: 500, lastIpoTurn: 536 }, 536)).toBe(
+      true
+    );
+    expect(acquisitionBlockedAsNewThisTurn({ foundedAtTurn: 535, lastIpoTurn: 535 }, 536)).toBe(
+      false
+    );
+    expect(acquisitionBlockedAsNewThisTurn({}, 536)).toBe(false);
+  });
+});
+
+describe("net asset acquisition floor", () => {
+  it("keeps the same floor when cash is moved into investments", () => {
+    expect(
+      playerAcquisitionMinimumPrice({
+        cashAnchor: 0,
+        otherAssetsAnchor: 0,
+        portfolioAnchor: 20_000_000,
+      })
+    ).toBe(20_000_000);
+  });
+  it("deducts assumed liabilities and includes bank residual equity", () => {
+    expect(
+      playerAcquisitionMinimumPrice({
+        cashAnchor: 5_000_000,
+        otherAssetsAnchor: 3_000_000,
+        portfolioAnchor: 2_000_000,
+        bankEquityAnchor: 4_000_000,
+        debtAnchor: 12_000_000,
+      })
+    ).toBe(2_000_000);
+    expect(
+      playerAcquisitionMinimumPrice({ cashAnchor: 1_000, otherAssetsAnchor: 0, debtAnchor: 2_000 })
+    ).toBe(0);
   });
 });

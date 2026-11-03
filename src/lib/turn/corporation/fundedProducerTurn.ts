@@ -42,6 +42,7 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
+import { fundedDemandThrottle } from "@/lib/market/producerMarket/fundedSectorRules";
 import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
@@ -78,9 +79,14 @@ import {
   type CaptiveProduct,
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { bookPressure, plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
-import { recipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
+import { fundedShortageBuildOps } from "./sectorTurn/shortageBuildSpeedup";
+import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
+import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
+import { PRODUCER_CATCH_UP_TURNS } from "@/lib/market/producerMarket/capacityRules";
+import type { ProducerOpeningMarker } from "@/lib/market/producerMarket/liveMode";
+import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
 import {
   createProducerWallets,
   producerWalletId,
@@ -93,6 +99,10 @@ export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening c
 
 export interface FundedProducerTurnResult {
   receiptsBySectorId: Map<string, FundedReceipt>;
+  deferredDistributions?: Map<
+    string,
+    NonNullable<import("./types").CorpSnapshot["deferredProducerDistributions"]>
+  >;
   /** Anchor per turn, by corporation id. */
   settledProfitByCorp: Map<string, number>;
   /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
@@ -104,6 +114,53 @@ export { producerStageEnv } from "./producerStageEnv";
 const PUBLIC_CARRY = "producerPublicCarry";
 
 /**
+ * The last settled funded producer turn this turn opens from. Normally the
+ * previous turn; when a turn's economy step failed before freezing, an earlier
+ * one, and the missed turns produce nothing. A frozen but unsettled turn, or a
+ * gap longer than PRODUCER_CATCH_UP_TURNS, stops the turn instead.
+ */
+export async function readProducerOpeningTurn(
+  db: Db,
+  worldEpoch: string,
+  turn: number
+): Promise<number> {
+  const last = await db
+    .collection<{ _id: string; turn: number; status: string }>("producerEconomyTurns")
+    .find({ worldEpoch, turn: { $lt: turn } }, { projection: { turn: 1, status: 1 } })
+    .sort({ turn: -1 })
+    .limit(1)
+    .next();
+  // No funded turn yet: resume from the stored opening conversion. A world
+  // switched to the funded market retroactively can be several turns past it.
+  if (!last) return readStoredOpeningTurn(db, worldEpoch, turn);
+  if (last.status !== "settled")
+    throw new Error(`Funded producer turn ${last.turn} was frozen but never settled`);
+  if (turn - 1 - last.turn > PRODUCER_CATCH_UP_TURNS)
+    throw new Error(
+      `Funded producer market last settled turn ${last.turn}, more than ${PRODUCER_CATCH_UP_TURNS} turns before turn ${turn}`
+    );
+  return last.turn;
+}
+
+/**
+ * The opening generation a world's first funded turn resumes from, when no
+ * funded turn has settled yet. The stored marker is authoritative: with no
+ * funded records, the previous turn is only right when no opening exists.
+ */
+async function readStoredOpeningTurn(db: Db, worldEpoch: string, turn: number): Promise<number> {
+  const state = await db
+    .collection<{ _id: string; producerOpening?: ProducerOpeningMarker }>("gameState")
+    .findOne({ _id: "current" }, { projection: { producerOpening: 1 } });
+  const opening = state?.producerOpening;
+  if (!opening || opening.worldEpoch !== worldEpoch) return turn - 1;
+  if (turn - 1 - opening.turn > PRODUCER_CATCH_UP_TURNS)
+    throw new Error(
+      `Funded producer market opening turn ${opening.turn} is more than ${PRODUCER_CATCH_UP_TURNS} turns before turn ${turn}`
+    );
+  return opening.turn;
+}
+
+/**
  * Last turn's kept public funding per country, capped at what each public
  * wallet really holds before this turn's funding lands, so a stale or partly
  * burned carry can never promise more than the wallet has.
@@ -111,14 +168,14 @@ const PUBLIC_CARRY = "producerPublicCarry";
 async function readPublicCarryIn(
   db: Db,
   worldEpoch: string,
-  turn: number,
+  openingTurn: number,
   countryIds: readonly string[],
   walletOf: (countryId: string) => string,
   rateOfCountry: (countryId: string) => number
 ): Promise<Map<string, LineCarry>> {
   const doc = await db
     .collection<{ _id: string; byCountry?: Record<string, LineCarry> }>(PUBLIC_CARRY)
-    .findOne({ _id: `${worldEpoch}:${turn - 1}` });
+    .findOne({ _id: `${worldEpoch}:${openingTurn}` });
   const out = new Map<string, LineCarry>();
   if (!doc?.byCountry) return out;
   const wallets = await db
@@ -147,9 +204,12 @@ export async function runFundedProducerTurn(
     seedHouseholds: boolean;
     /** First funded turn of the world (opening turn + 1), for the transition window. */
     firstFundedTurn?: number;
+    /** Hold private corporate receipts until Treasury withholding is settled. */
+    withholdCorporateTax?: boolean;
   }
 ): Promise<FundedProducerTurnResult> {
   const { lookups, worldEpoch, turn } = input;
+  const openingTurn = await readProducerOpeningTurn(db, worldEpoch, turn);
   await admitNewProducerEntrants(db, lookups, worldEpoch, turn);
   const rates = lookups.exchangeRatesByCurrency;
   const rateOf = (code: string | null | undefined) => {
@@ -186,7 +246,7 @@ export async function runFundedProducerTurn(
       ? await readPublicCarryIn(
           db,
           worldEpoch,
-          turn,
+          openingTurn,
           [...countryCurrency.keys()],
           publicWallet,
           (c) => rateOf(countryCurrency.get(c))
@@ -207,27 +267,27 @@ export async function runFundedProducerTurn(
           )
         )
       : undefined;
-  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage)
-  // and measured shortage per book (shortageGrowthStage), from one read.
+  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage),
+  // per lane (automatic asks) and measured shortage per book (shortageGrowthStage),
+  // from one read.
   const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
   const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
-  const lastOutcome =
-    clearingOn || shortageOn
-      ? await db
-          .collection<{
-            _id: string;
-            clearingPrices?: Record<string, number>;
-            bookPressure?: Record<string, number>;
-          }>(PRODUCER_MARKET_OUTCOMES)
-          .findOne(
-            { _id: `${worldEpoch}:${turn - 1}` },
-            { projection: { clearingPrices: 1, bookPressure: 1 } }
-          )
-      : null;
+  const lastOutcome = await db
+    .collection<{
+      _id: string;
+      clearingPrices?: Record<string, number>;
+      laneClearingPrices?: Record<string, number>;
+      bookPressure?: Record<string, number>;
+    }>(PRODUCER_MARKET_OUTCOMES)
+    .findOne(
+      { _id: `${worldEpoch}:${openingTurn}` },
+      { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
+    );
   const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
   const demandEnv = {
     ...input.env,
+    producerOpeningTurn: openingTurn,
     ...(lastClearing
       ? { lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
       : {}),
@@ -242,7 +302,7 @@ export async function runFundedProducerTurn(
     publicCarryIn,
     householdIncomeFloor: incomeFloor,
     openingShareByCountry,
-    carry: liveCarry(lookups, worldEpoch, turn),
+    carry: liveCarry(lookups, worldEpoch, openingTurn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
   });
@@ -601,9 +661,15 @@ export async function runFundedProducerTurn(
         });
       }
     }
+    const deferredCorporateDistributions = transfers.filter(
+      (transfer) => input.withholdCorporateTax === true && transfer.reason === "ai_dividend"
+    );
     return {
-      transfers,
+      transfers: transfers.filter(
+        (transfer) => input.withholdCorporateTax !== true || transfer.reason !== "ai_dividend"
+      ),
       meta: {
+        deferredCorporateDistributions,
         paidByCountry: paid,
         supportBySector: bySector,
         retiredBookBySector,
@@ -615,10 +681,35 @@ export async function runFundedProducerTurn(
     };
   };
 
+  // State companies hold almost no cash of their own (profit is remitted, the
+  // treasury backs losses), so on their own cash they would plan nothing and
+  // leave their plants, workers and wages idle. The owning treasury advances
+  // their full run before the market plans; what they do not spend goes back
+  // right after settlement (see stateRunAdvanceRules).
+  const stateCorpIds = new Set(
+    [...demand.ownerKindByCompany].flatMap(([id, kind]) => (kind === "state" ? [id] : []))
+  );
+  const advanceCtx = {
+    worldEpoch,
+    turn,
+    now: new Date(),
+    rates,
+    treasuryCurrency: (countryId: string) => countryCurrency.get(countryId),
+  };
+  const stateAdvances = await advanceStateRuns(db, advanceCtx, {
+    plans: demand.preparedSectors.map((p) => p.plan),
+    stateCorpIds,
+  });
+
   const settled = await runCorporationProducerMarket(db, {
     worldEpoch,
     turn,
     corporations: lookups.corporations,
+    deferCorporateCreditsFor: new Set(
+      input.withholdCorporateTax
+        ? [...demand.ownerKindByCompany].filter(([, kind]) => kind !== "state").map(([id]) => id)
+        : []
+    ),
     prepare: () => demand.preparedSectors,
     walletScopes,
     rates,
@@ -629,7 +720,20 @@ export async function runFundedProducerTurn(
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
+      ownSitesFirst: input.env.ownSitesFirst,
       stockCoverTurns: input.env.stockCoverTurns,
+      ...(lastOutcome?.laneClearingPrices
+        ? { clearingPriceByLane: lastOutcome.laneClearingPrices }
+        : {}),
+      // Private companies (player and AI) may owe wages and site bills to keep
+      // running; state companies run on the treasury advance above instead.
+      credit: {
+        accountIds: [...demand.ownerKindByCompany]
+          .flatMap(([id, kind]) => (kind === "state" ? [] : [id]))
+          .sort(),
+        ...(input.env.creditRunTurns != null ? { runTurns: input.env.creditRunTurns } : {}),
+        ...(input.env.creditStuckTurns != null ? { stuckTurns: input.env.creditStuckTurns } : {}),
+      },
       ...((input.env.fundedBookStage ?? 0) >= 1
         ? {
             countryOfProducer: (id: string) => demand.planCountry.get(id),
@@ -639,6 +743,14 @@ export async function runFundedProducerTurn(
     },
     close: closeAtSettlement,
   });
+
+  // Unspent advance returns now, before the remittance sweep later in the turn
+  // reads this cash as profit. Keep the in-memory cash the legacy pass reads in step.
+  const returned = await returnStateRunAdvances(db, advanceCtx, stateAdvances);
+  for (const [id, local] of returned) {
+    const corp = corpById.get(id);
+    if (corp) corp.liquidCapital = (corp.liquidCapital ?? 0) - local;
+  }
 
   const supportBySector =
     (settled.result.close?.meta?.supportBySector as Record<string, number> | undefined) ?? {};
@@ -666,17 +778,30 @@ export async function runFundedProducerTurn(
       { ordered: false }
     );
   const receiptsBySectorId = new Map<string, FundedReceipt>();
+  // AI saturation reads `demandThrottleFactor`; funded turns write it here.
+  const throttleBySectorId = new Map<string, number>();
   // Sectors whose plant delivered to its own company's sites (captiveDeliveryStage).
   const captiveOn = (input.env.captiveDeliveryStage ?? 0) >= 1;
   const offtakeBySectorId = new Map<string, number>();
+  // A plant whose run short inputs cut was billed wages on the share it made;
+  // its reported crew is that share of the planned crew.
+  const headcountBySectorId = new Map(demand.headcountBySectorId);
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
+    const billed =
+      r && r.worldEpoch === worldEpoch && r.turn === turn ? r.billedRunShare : undefined;
+    const planned = headcountBySectorId.get(sector._id.toHexString());
+    if (billed != null && planned)
+      headcountBySectorId.set(sector._id.toHexString(), {
+        desiredWorkers: Math.round(planned.desiredWorkers * billed),
+        workers: Math.round(planned.workers * billed),
+      });
     if (captiveOn && r && r.worldEpoch === worldEpoch && r.turn === turn)
       offtakeBySectorId.set(
         sector._id.toHexString(),
         offtakeUnits(r as { soldUnits?: number; products?: CaptiveProduct[] })
       );
-    if (r && r.worldEpoch === worldEpoch && r.turn === turn)
+    if (r && r.worldEpoch === worldEpoch && r.turn === turn) {
       receiptsBySectorId.set(sector._id.toHexString(), {
         revenue: r.revenue,
         profit: r.profit,
@@ -685,26 +810,42 @@ export async function runFundedProducerTurn(
         unsoldProductionCost: r.unsoldProductionCost ?? 0,
         transitionSupport: supportBySector[sector._id.toHexString()] ?? 0,
       });
+      throttleBySectorId.set(
+        sector._id.toHexString(),
+        fundedDemandThrottle(r.soldUnits, r.offeredUnits)
+      );
+    }
   }
-  // Consecutive zero-sales turns per settled sector (AI mothballing reads it).
-  const zeroSales: ObjectId[] = [];
-  const sold: ObjectId[] = [];
-  for (const [id, r] of receiptsBySectorId)
-    ((captiveOn ? (offtakeBySectorId.get(id) ?? r.soldUnits) : r.soldUnits) > 0
-      ? sold
-      : zeroSales
-    ).push(new ObjectId(id));
+  // Consecutive zero-sales turns per settled sector (AI mothballing reads it),
+  // and the funded demand throttle (AI saturation reads it, and the legacy pass
+  // would otherwise leave it stale), in one write per sector rather than a
+  // second round trip.
   const sectorDocs = db.collection<CorporateSector>("corporateSectors");
-  if (zeroSales.length > 0)
-    await sectorDocs.updateMany(
-      { _id: { $in: zeroSales } },
-      { $inc: { producerZeroSalesTurns: 1 } }
-    );
-  if (sold.length > 0)
-    await sectorDocs.updateMany(
-      { _id: { $in: sold }, producerZeroSalesTurns: { $gt: 0 } },
-      { $set: { producerZeroSalesTurns: 0 } }
-    );
+  const sectorUpdates: AnyBulkWriteOperation<CorporateSector>[] = [];
+  for (const [id, receipt] of receiptsBySectorId) {
+    const soldUnits = captiveOn
+      ? (offtakeBySectorId.get(id) ?? receipt.soldUnits)
+      : receipt.soldUnits;
+    const throttle = throttleBySectorId.get(id) ?? 1;
+    // Only output that found no buyer is a demand signal. A plant that made
+    // nothing (no cash, no inputs, capacity not landed yet) holds its streak,
+    // so AI mothballing does not park plants that were never able to sell.
+    sectorUpdates.push({
+      updateOne: {
+        filter: { _id: new ObjectId(id) },
+        update:
+          soldUnits > 0
+            ? { $set: { demandThrottleFactor: throttle, producerZeroSalesTurns: 0 } }
+            : receipt.producedUnits > 0
+              ? {
+                  $inc: { producerZeroSalesTurns: 1 },
+                  $set: { demandThrottleFactor: throttle },
+                }
+              : { $set: { demandThrottleFactor: throttle } },
+      },
+    });
+  }
+  if (sectorUpdates.length > 0) await sectorDocs.bulkWrite(sectorUpdates, { ordered: false });
   for (const sectorId of idleSectorIds)
     if (!receiptsBySectorId.has(sectorId))
       receiptsBySectorId.set(sectorId, { revenue: 0, profit: 0, producedUnits: 0, soldUnits: 0 });
@@ -717,7 +858,7 @@ export async function runFundedProducerTurn(
           filter: {
             _id: new ObjectId(id),
             "producerCapacity.worldEpoch": worldEpoch,
-            "producerCapacity.turn": turn - 1,
+            "producerCapacity.turn": { $gte: openingTurn, $lt: turn },
           },
           update: {
             $set: {
@@ -761,13 +902,22 @@ export async function runFundedProducerTurn(
   });
   // Measured shortage per book (shortage growth) and per recipe (AI restarts).
   const restartOn = (input.env.fundedRestartStage ?? 0) >= 1;
+  const buildFactor = input.env.shortageBuildFactor;
+  const buildSpeedupOn = typeof buildFactor === "number" && buildFactor > 0 && buildFactor < 1;
   const pressureNow =
-    shortageOn || restartOn ? bookPressure(settled.result.orderOutcomes ?? []) : undefined;
-  // World-book clearing price per commodity, for next turn's buyer references.
+    shortageOn || restartOn || buildSpeedupOn
+      ? bookPressure(settled.result.orderOutcomes ?? [])
+      : undefined;
+  const pressureByBookNow = pressureNow ? new Map(Object.entries(pressureNow)) : undefined;
+  // World-book clearing price per commodity, for next turn's buyer references, and
+  // per lane in every book, for next turn's automatic asks.
   const clearingPrices: Record<string, number> = {};
-  for (const row of settled.result.prices)
-    if (row.book === "world" && row.units > 0 && row.value > 0)
-      clearingPrices[row.commodity] = row.value / row.units;
+  const laneClearingPrices: Record<string, number> = {};
+  for (const row of settled.result.prices) {
+    if (!(row.units > 0 && row.value > 0)) continue;
+    laneClearingPrices[laneKeyOf(row.commodity, row.book)] = row.value / row.units;
+    if (row.book === "world") clearingPrices[row.commodity] = row.value / row.units;
+  }
   // Per-country funded book, on the price phase's per-turn basis. The price
   // phase reads it instead of the modelled clearing when the stage is on.
   const countryBooks =
@@ -802,12 +952,14 @@ export async function runFundedProducerTurn(
       turn,
       rows,
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
+      laneClearingPrices,
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
       ...(restartOn && pressureNow
         ? {
-            recipePressure: recipePressure(
-              settled.closingSectors.flatMap((s) => {
+            recipePressure: fundedRecipePressure({
+              // Running plants publish the shortage each reads on its main line.
+              running: settled.closingSectors.flatMap((s) => {
                 const r = s.producerSettlement;
                 if (s.mothballed === true || !r || r.turn !== turn) return [];
                 const products = (r as { products?: Parameters<typeof plantPressure>[0] }).products;
@@ -815,13 +967,27 @@ export async function runFundedProducerTurn(
                   {
                     sectorType: s.sectorType,
                     strategyId: s.strategyId,
-                    pressure: plantPressure(products, new Map(Object.entries(pressureNow))),
+                    pressure: plantPressure(products, pressureByBookNow),
                     deliveredUnits:
                       (r as { deliveredUnits?: number }).deliveredUnits ?? r.soldUnits ?? 0,
                   },
                 ];
-              })
-            ),
+              }),
+              // A recipe with no running plant publishes nothing, so a fully
+              // mothballed one reads its own output lanes instead.
+              mothballed: settled.closingSectors.flatMap((s) => {
+                const r = s.producerSettlement;
+                if (s.mothballed !== true || !r || r.turn !== turn) return [];
+                return [
+                  {
+                    sectorType: s.sectorType,
+                    strategyId: s.strategyId,
+                    products: (r as { products?: Parameters<typeof plantPressure>[0] }).products,
+                  },
+                ];
+              }),
+              pressureByBook: pressureByBookNow,
+            }),
           }
         : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
@@ -923,6 +1089,33 @@ export async function runFundedProducerTurn(
       )
     )
   );
+  // Faster construction where the funded book is short (fresh worlds start far
+  // short of real demand; gameConfig.producerShortageBuildFactor).
+  if (buildSpeedupOn && pressureNow) {
+    const pressureByBook = pressureByBookNow!;
+    const ops = fundedShortageBuildOps({
+      sectors: settled.closingSectors.map((s) => {
+        const r = s.producerSettlement;
+        return {
+          _id: s._id,
+          buildQueue: s.buildQueue,
+          mothballed: s.mothballed,
+          pressure:
+            r && r.turn === turn
+              ? plantPressure(
+                  (r as { products?: Parameters<typeof plantPressure>[0] }).products,
+                  pressureByBook
+                )
+              : undefined,
+        };
+      }),
+      currentTurn: turn,
+      factor: buildFactor,
+      now: new Date(),
+    });
+    if (ops.length > 0)
+      await db.collection("corporateSectors").bulkWrite(ops as never, { ordered: false });
+  }
   await apply(
     batchProducerMoves(
       worldEpoch,
@@ -947,11 +1140,26 @@ export async function runFundedProducerTurn(
     input.firstFundedTurn
   );
 
-  return {
-    receiptsBySectorId,
-    settledProfitByCorp,
-    headcountBySectorId: demand.headcountBySectorId,
-  };
+  const deferredDistributions = new Map<
+    string,
+    NonNullable<import("./types").CorpSnapshot["deferredProducerDistributions"]>
+  >();
+  for (const transfer of (close?.meta?.deferredCorporateDistributions ??
+    []) as SettlementClose["transfers"]) {
+    const scope = scopeById.get(transfer.toAccountId);
+    if (!scope) throw new Error("Deferred corporate distribution wallet unavailable");
+    deferredDistributions.set(transfer.fromAccountId, [
+      ...(deferredDistributions.get(transfer.fromAccountId) ?? []),
+      {
+        walletId: transfer.toAccountId,
+        worldEpoch,
+        amountAnchor: transfer.amountAnchor,
+        currency: scope.currency,
+        localPerAnchor: rateOf(scope.currency),
+      },
+    ]);
+  }
+  return { receiptsBySectorId, settledProfitByCorp, headcountBySectorId, deferredDistributions };
 }
 
 /**
@@ -1009,14 +1217,14 @@ export function planFundedClose(input: {
 
 /**
  * Live carry: physical stock and receipts live on the sector documents, cash in
- * the real accounts. Only the public-buyer basis is carried here: last turn's
- * settled plant value added per country, or on the first funded turn the
+ * the real accounts. Only the public-buyer basis is carried here: the opening
+ * turn's settled plant value added per country, or on the first funded turn the
  * legacy realized revenue the sectors recorded.
  */
 function liveCarry(
   lookups: CorporationLookups,
   worldEpoch: string,
-  turn: number
+  openingTurn: number
 ): ShadowCarryState {
   const valueAddedByCountry: Record<string, number> = {};
   for (const corp of lookups.corporations)
@@ -1024,7 +1232,7 @@ function liveCarry(
       const country = String(sector.countryId ?? corp.countryId ?? "");
       const r = sector.producerSettlement;
       let va: number;
-      if (r && r.worldEpoch === worldEpoch && r.turn === turn - 1)
+      if (r && r.worldEpoch === worldEpoch && r.turn === openingTurn)
         va = r.revenue - r.inputsConsumed;
       else {
         const rate = lookups.exchangeRatesByCurrency.get(
@@ -1038,7 +1246,7 @@ function liveCarry(
   return {
     runId: `${worldEpoch}:live`,
     worldEpoch,
-    turn: turn - 1,
+    turn: openingTurn,
     predecessorTurn: null,
     schemaVersion: 0,
     codeSha: null,

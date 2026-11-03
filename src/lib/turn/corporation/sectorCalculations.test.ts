@@ -34,9 +34,6 @@ import {
   TURNS_PER_DAY,
   MIN_SHARE_PRICE,
   softCapEffectiveMargin,
-  STOCK_BOOST_FINANCIAL_REVENUE_EXTRA,
-  STOCK_BOOST_REVENUE_TARGET,
-  STOCK_BOOST_SECTOR_NPV_TARGET,
 } from "@/lib/constants/corporations";
 // Effective margin is soft-capped on the high side, so profitMargin:100 (used
 // below as a "zero maintenance" shortcut) now realizes at ~95.2%, not 100%.
@@ -861,16 +858,17 @@ describe("marketing settlement", () => {
     const sellerAfter = (await memory
       .collection("corporations")
       .findOne({ _id: seller._id })) as unknown as Corporation | null;
-    expect(buyerAfter?.liquidCapital).toBe(990);
-    expect(sellerAfter?.liquidCapital).toBe(1_010);
+    expect(buyerAfter?.liquidCapital).toBe(1_000);
+    // The fixture independently credits 100 of settled seller income above.
+    expect(sellerAfter?.liquidCapital).toBe(1_100);
     expect(buyerAfter?.mediaProductAdvertisingReceiptV1).toBeUndefined();
-    expect(buyerAfter?.mediaProductAdvertisingObligationsV1).toEqual([]);
+    expect(buyerAfter?.mediaProductAdvertisingObligationsV1).toBeUndefined();
     const move = (await memory.collection("bankMoneyMoves").find({}).toArray()).find((row) =>
       String(row._id).startsWith("media-product-advertising:")
     );
-    expect(move?.status).toBe("rejected");
+    expect(move).toBeUndefined();
     expect(Number(buyerAfter?.liquidCapital ?? 0) + Number(sellerAfter?.liquidCapital ?? 0)).toBe(
-      2_000
+      2_100
     );
   });
 
@@ -1490,6 +1488,79 @@ describe("corporate tax deduction", () => {
     expect(usIncome).toBeCloseTo(hourlyIncome * TURNS_PER_YEAR, 0);
   });
 
+  describe("interest paid on the corporation's own bonds is deductible", () => {
+    // 10% coupon on 115,200 issued = 11,520 a year = 240 per turn (48 turns).
+    const issued = (totalIssued: number) =>
+      [
+        { couponRate: 10, totalIssued, currencyCode: "USD" },
+      ] as unknown as import("@/lib/db/types/bond").Bond[];
+    const setup = (bonds: import("@/lib/db/types/bond").Bond[] | null) => {
+      const corp = makeCorp({ headquartersState: "US-CA", countryId: "US" });
+      const sector = makeSector(corp._id, {
+        stateId: "US-CA",
+        countryId: "US",
+        revenue: 24_000, // 1000/turn
+        profitMargin: 50, // opIncome 500
+        targetGrowthRate: 0,
+        currentGrowthRate: 0,
+      });
+      const lookups = baseLookups([corp], [sector]);
+      lookups.domesticCorpTaxRateByCountry.set("US", 20);
+      lookups.domesticStateCorpTaxRateByState.set("US-CA", 10);
+      if (bonds) lookups.bondsByCorpId.set(corp._id.toString(), bonds);
+      return processSectors(lookups, 1, new Date()).corpSnapshots[0];
+    };
+
+    it("taxes profit after the interest it pays bondholders", () => {
+      const snapshot = setup(issued(115_200));
+      // Base 500 - 240 interest = 260 → federal 52, state 26.
+      expect(snapshot.perTurnBondDragOnNetIncome).toBeCloseTo(240, 6);
+      expect(snapshot.federalTaxPaid).toBeCloseTo(52, 2);
+      expect(snapshot.stateTaxPaid).toBeCloseTo(26, 2);
+      // Without bonds the same corp pays the full 100 / 50.
+      const control = setup(null);
+      expect(control.federalTaxPaid).toBeCloseTo(100, 2);
+      expect(control.stateTaxPaid).toBeCloseTo(50, 2);
+    });
+
+    it("pays no tax when interest exceeds operating profit", () => {
+      // 960/turn of interest against 500 of operating profit.
+      const snapshot = setup(issued(460_800));
+      expect(snapshot.perTurnBondDragOnNetIncome).toBeCloseTo(960, 6);
+      expect(snapshot.federalTaxPaid).toBeCloseTo(0, 6);
+      expect(snapshot.stateTaxPaid).toBeCloseTo(0, 6);
+    });
+
+    it("apportions the deduction across countries by revenue share", () => {
+      const corp = makeCorp({ headquartersState: "US-CA", countryId: "US" });
+      const usSector = makeSector(corp._id, {
+        stateId: "US-CA",
+        countryId: "US",
+        revenue: 24_000,
+        profitMargin: 50,
+        targetGrowthRate: 0,
+        currentGrowthRate: 0,
+      });
+      const ukSector = makeSector(corp._id, {
+        stateId: "UK-ENG",
+        countryId: "UK",
+        revenue: 24_000,
+        profitMargin: 50,
+        targetGrowthRate: 0,
+        currentGrowthRate: 0,
+      });
+      const lookups = baseLookups([corp], [usSector, ukSector]);
+      lookups.domesticCorpTaxRateByCountry.set("US", 20);
+      lookups.foreignCorpTaxRateByCountry.set("UK", 45);
+      lookups.bondsByCorpId.set(corp._id.toString(), issued(115_200));
+      const snapshot = processSectors(lookups, 1, new Date()).corpSnapshots[0];
+      // 240 interest split 120/120: US 380 × 20% = 76, UK 380 × 45% = 171.
+      expect(snapshot.taxPaidByCountry.get("US")).toBeCloseTo(76, 1);
+      expect(snapshot.taxPaidByCountry.get("UK")).toBeCloseTo(171, 1);
+      expect(snapshot.federalTaxPaid).toBeCloseTo(247, 1);
+    });
+  });
+
   it("neither books nor taxes coupons on a defaulted held bond, which the bond turn never pays", () => {
     // Regression: a live corp held two defaulted sovereigns. Their coupons
     // still counted as income, the coupon tax on them exceeded every coupon the
@@ -1559,6 +1630,35 @@ describe("dividend payments to shareholders", () => {
       1000 * EFF_MARGIN_100 * 0.25,
       1
     );
+    expect(result.equityPoolDividendAccruals).toHaveLength(0);
+  });
+
+  it("does not multiply dividends when stale IPO inventory exceeds post-split shares", () => {
+    const charId = new ObjectId();
+    const corp = makeCorp({
+      dividendRate: 25,
+      totalShares: 1_000_000,
+      publicFloat: 200_000,
+      shareholders: [{ characterId: charId, shares: 800_000 }],
+      pendingShareIssuance: {
+        remainingShares: 2_000_000,
+        requestedShares: 2_500_000,
+        source: "ipo",
+        issuedUpfront: true,
+        createdAtTurn: 1,
+        initialPriceLocal: 1,
+      },
+    });
+    const sector = makeSector(corp._id, {
+      revenue: 24_000,
+      profitMargin: 100,
+      targetGrowthRate: 0,
+      currentGrowthRate: 0,
+    });
+    const result = processSectors(baseLookups([corp], [sector]), 1, new Date());
+    const paid = getTotalPayment(result.dividendPayments, charId.toString());
+    expect(paid).toBeGreaterThan(0);
+    expect(paid).toBeCloseTo(result.corpSnapshots[0].dividendPaidPerTurn, 8);
     expect(result.equityPoolDividendAccruals).toHaveLength(0);
   });
 
@@ -3860,17 +3960,13 @@ describe("affordability brake vs the soft budget constraint", () => {
   });
 });
 
-// ── Stock-market boost phasing ─────────────────────────────────────────────
-// Same corp and sector processed at turn 1 (pre-window, legacy) and at a turn
-// past both boost windows: revenue lifts by the revenue target and NPV by
-// revenue × NPV targets, proving the turn path actually applies the ramp.
-
-describe("stock-market boost phasing", () => {
-  const PAST_BOOST_TURNS = 10_000;
-
-  function runAtTurn(turn: number) {
-    const corp = makeCorp();
-    const sector = makeSector(corp._id);
+// A world's clock is not an economic input: the same corp earns and is valued
+// the same at turn 1 and turn 10,000. A turn-keyed revenue or NPV ramp written
+// for one world would otherwise fire on every later world that reaches it.
+describe("turn-independent revenue and valuation", () => {
+  function runAtTurn(turn: number, type: "manufacturing" | "financial" = "manufacturing") {
+    const corp = makeCorp({ type });
+    const sector = makeSector(corp._id, { sectorType: type });
     const result = processSectors(baseLookups([corp], [sector]), turn, new Date());
     return {
       revenue: result.totalRevenueGenerated,
@@ -3878,31 +3974,12 @@ describe("stock-market boost phasing", () => {
     };
   }
 
-  it("holds turn-1 revenue and NPV at legacy values and lifts both past the windows", () => {
-    const legacy = runAtTurn(1);
-    const boosted = runAtTurn(PAST_BOOST_TURNS);
-
-    expect(legacy.revenue).toBeGreaterThan(0);
-    expect(legacy.sectorNPV).toBeGreaterThan(0);
-    expect(boosted.revenue / legacy.revenue).toBeCloseTo(STOCK_BOOST_REVENUE_TARGET, 2);
-    expect(boosted.sectorNPV / legacy.sectorNPV).toBeCloseTo(
-      STOCK_BOOST_REVENUE_TARGET * STOCK_BOOST_SECTOR_NPV_TARGET,
-      2
-    );
-  });
-
-  it("compounds the extra revenue lift on financial sectors", () => {
-    const runFinancialAtTurn = (turn: number) => {
-      const corp = makeCorp({ type: "financial" });
-      const sector = makeSector(corp._id, { sectorType: "financial" });
-      return processSectors(baseLookups([corp], [sector]), turn, new Date()).totalRevenueGenerated;
-    };
-    const legacy = runFinancialAtTurn(1);
-    const boosted = runFinancialAtTurn(PAST_BOOST_TURNS);
-    expect(boosted / legacy).toBeCloseTo(
-      STOCK_BOOST_REVENUE_TARGET * STOCK_BOOST_FINANCIAL_REVENUE_EXTRA,
-      2
-    );
+  it.each(["manufacturing", "financial"] as const)("%s earns the same at any turn", (type) => {
+    const early = runAtTurn(1, type);
+    const late = runAtTurn(10_000, type);
+    expect(early.revenue).toBeGreaterThan(0);
+    expect(late.revenue).toBeCloseTo(early.revenue, 6);
+    expect(late.sectorNPV).toBeCloseTo(early.sectorNPV, 6);
   });
 });
 
@@ -3961,4 +4038,131 @@ describe("funded producer turn", () => {
         .update.$inc.liquidCapital as number;
     expect(inc(unpaid) - inc(paid)).toBeCloseTo(30);
   });
+});
+
+describe("funded valuation (fundedValuationStage)", () => {
+  const ELECTRONICS_ONLY = {
+    growthRate: 1,
+    profitMargin: 0,
+    isTransitioning: false,
+    supply: { electronics: 1 },
+  } as unknown as ReturnType<typeof getEffectiveStrategyRates>;
+  const run = (opts: {
+    stage: number;
+    priceRatio: number;
+    receipt: { revenue: number; profit: number; producedUnits: number; soldUnits: number };
+  }) => {
+    const corp = makeCorp();
+    const sector = makeSector(corp._id, {
+      revenue: 24_000,
+      profitMargin: 50,
+      capacityBookAnchor: 500_000,
+    } as Partial<CorporateSector>);
+    const lookups = baseLookups([corp], [sector]);
+    lookups.fundedValuationStage = opts.stage;
+    lookups.priceRatioByCommodity = new Map([["electronics", opts.priceRatio]]);
+    vi.mocked(getEffectiveStrategyRates).mockReturnValueOnce(ELECTRONICS_ONLY);
+    const result = processSectors(
+      lookups,
+      1,
+      new Date(),
+      false,
+      undefined,
+      undefined,
+      { ...MARKET_DISABLED, realizationEnabled: true },
+      false,
+      false,
+      false,
+      new Set(),
+      false,
+      {
+        receiptsBySectorId: new Map([[sector._id.toString(), opts.receipt]]),
+        settledProfitByCorp: new Map([[corp._id.toString(), opts.receipt.profit]]),
+      }
+    );
+    return result.corpSnapshots[0];
+  };
+  const noSales = { revenue: 0, profit: -10, producedUnits: 0, soldUnits: 0 };
+
+  it("off: keeps the legacy nameplate valuation, which climbs with the output price", () => {
+    const flat = run({ stage: 0, priceRatio: 1, receipt: noSales });
+    const short = run({ stage: 0, priceRatio: 2.25, receipt: noSales });
+    expect(short.sectorNPV).toBeGreaterThan(flat.sectorNPV);
+    expect(flat.realOutputAnchor).toBeUndefined();
+  });
+
+  it("on: a plant with nameplate but no sales gains nothing from a price climb", () => {
+    const flat = run({ stage: 1, priceRatio: 1, receipt: noSales });
+    const short = run({ stage: 1, priceRatio: 2.25, receipt: noSales });
+    // Worth the paid basis of its capacity, at any price.
+    expect(flat.sectorNPV).toBe(500_000);
+    expect(short.sectorNPV).toBe(500_000);
+    expect(short.realOutputAnchor).toBe(0);
+  });
+
+  it("on: a plant whose settled earnings grow is worth more", () => {
+    const sells = (profit: number) =>
+      run({
+        stage: 1,
+        priceRatio: 1,
+        receipt: { revenue: 20_000, profit, producedUnits: 5, soldUnits: 5 },
+      });
+    const before = sells(4_000);
+    const after = sells(8_000);
+    expect(before.sectorNPV).toBeGreaterThan(500_000);
+    expect(after.sectorNPV).toBeGreaterThan(before.sectorNPV);
+  });
+});
+
+it("does not distribute forecast bond coupons before current tax is cash-covered", () => {
+  const charId = new ObjectId();
+  const corp = makeCorp({
+    liquidCapital: 0,
+    dividendRate: 30,
+    ceoSalary: 0,
+    marketingBudget: 0,
+    totalShares: 10_000_000,
+    shareholders: [{ characterId: charId, shares: 10_000_000 }],
+  });
+  const sector = makeSector(corp._id, { revenue: 24_000, profitMargin: 50 });
+  const lookups = baseLookups([corp], [sector]);
+  lookups.domesticCorpTaxRateByCountry.set("US", 30);
+  lookups.bondsHeldByCorpId.set(corp._id.toString(), [
+    {
+      bond: {
+        couponRate: 10,
+        currencyCode: "USD",
+      } as unknown as import("@/lib/db/types/bond").Bond,
+      units: 1_000_000,
+    },
+  ]);
+  const result = processSectors(
+    lookups,
+    1,
+    new Date(),
+    false,
+    undefined,
+    undefined,
+    MARKET_DISABLED,
+    false,
+    false,
+    false,
+    new Set(),
+    true
+  );
+  expect(result.corpSnapshots[0].federalTaxPaid).toBeGreaterThan(0);
+  expect(result.corpSnapshots[0].dividendPaidPerTurn).toBe(0);
+  expect(getTotalPayment(result.dividendPayments, charId.toString())).toBe(0);
+});
+
+it("pauses configured CEO salary while arrears remain without clearing that setting", () => {
+  const ceoId = new ObjectId();
+  const corp = makeCorp({ ceoId, ceoSalary: 1000, federalTaxArrearsAnchorByCountry: { US: 1 } });
+  const sector = makeSector(corp._id, { revenue: 24_000, profitMargin: 50 });
+  const result = processSectors(baseLookups([corp], [sector]), 1, new Date());
+  expect(result.ceoSalaryPayments.size).toBe(0);
+  const operation = result.corpOps[0];
+  if (!("updateOne" in operation) || Array.isArray(operation.updateOne.update))
+    throw new Error("Expected a corporate update");
+  expect(operation.updateOne.update.$set?.ceoSalary).toBeUndefined();
 });

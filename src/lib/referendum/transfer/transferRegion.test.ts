@@ -86,6 +86,10 @@ describe("transferRegion", () => {
       relocateToRegionId: "LON",
     });
     expect(convertRegionDoc).toHaveBeenCalledOnce();
+    expect(db.collection("counties").deleteMany).toHaveBeenCalledWith({
+      countryId: "UK",
+      stateId: "NIR",
+    });
     expect(computeNationalMetrics).toHaveBeenCalledOnce();
     // One history event per country.
     const eventCountries = vi.mocked(recordCountryEvent).mock.calls.map((c) => c[1].countryId);

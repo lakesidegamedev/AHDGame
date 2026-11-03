@@ -13,8 +13,8 @@
  * first-pass; calibrate in worldsim. See ops-knowledge `uk-rework-design-2026-08-25`.
  */
 
-export const NHS_QUALITY_MIN = 0;
-export const NHS_QUALITY_MAX = 100;
+const NHS_QUALITY_MIN = 0;
+const NHS_QUALITY_MAX = 100;
 
 /** Starting NHS quality for a world with no history. */
 export const NHS_QUALITY_START = 60;
@@ -38,7 +38,7 @@ export const NHS_QUALITY_MAX_STEP = 6;
 /** Funding ratio (1.0 = funding exactly meets demand) that maps to this target quality. */
 export const NHS_TARGET_AT_PARITY = 70;
 /** Quality target ceiling for generous funding. */
-export const NHS_TARGET_MAX = 100;
+const NHS_TARGET_MAX = 100;
 
 /**
  * Target quality for a given funding ratio (health funding / demand).

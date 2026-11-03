@@ -35,7 +35,7 @@ import type { EngineNodeContext, RegistryNode } from "../types";
  * expensive end — real slope across the whole playable range instead of a
  * flat ~100% line.
  */
-export const PS_SPEND_HALF_SAT = 900;
+const PS_SPEND_HALF_SAT = 900;
 
 const spendResp = (ctx: EngineNodeContext): number =>
   fundingResponse(ctx.spending["publicSafety"] ?? 0, PS_SPEND_HALF_SAT, 100); // 0..100

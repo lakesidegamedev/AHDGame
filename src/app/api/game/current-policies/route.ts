@@ -17,7 +17,7 @@ import { ObjectId } from "mongodb";
  * GET /api/game/current-policies?stateId=federal
  *
  * Returns current policy positions for a given state/federal level.
- * Used by bill proposal UI to calculate shift-based archetype approval previews.
+ * Used by bill proposal UI to calculate shift-based approval previews.
  */
 export async function GET(request: Request) {
   try {

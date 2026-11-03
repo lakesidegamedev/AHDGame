@@ -7,7 +7,7 @@ import { Button } from "@/components/ui";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   CENTRAL_BANK_LOBBY_DEFAULT_AMOUNT,
   CENTRAL_BANK_LOBBY_MIN_AMOUNT,

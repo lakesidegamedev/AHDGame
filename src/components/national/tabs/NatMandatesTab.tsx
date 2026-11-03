@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { EmptyState } from "@/components/ui";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import {
   SOE_PRICE_CONTROL_PENALTY,
   SOE_PRICE_CONTROL_BONUS_MULTIPLIER,

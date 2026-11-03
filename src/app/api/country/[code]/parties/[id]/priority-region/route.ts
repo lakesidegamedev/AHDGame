@@ -121,7 +121,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const { user } = authResult;
 
-    const rateLimit = checkRateLimit(user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/priority-region:${user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, setPriorityRegionSchema);

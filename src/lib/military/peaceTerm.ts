@@ -87,7 +87,7 @@ export const DEMILITARISATION_MAX_TURNS = 480;
  * printing its own key at players, which is the failure this table exists to
  * end.
  */
-export const GOVERNMENT_SYSTEM_LABELS: Record<GovernmentType, string> = {
+const GOVERNMENT_SYSTEM_LABELS: Record<GovernmentType, string> = {
   parliamentaryRepublic: "parliamentary republic",
   presidential: "presidential republic",
   onePartyState: "one-party state",

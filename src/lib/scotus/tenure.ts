@@ -22,7 +22,7 @@ export const DIVERGENT_TENURE_FLOOR_TURNS = 2 * TURNS_PER_YEAR;
  * Target median tenure after the grace period. Fifteen game-years keeps Court
  * membership durable while still allowing meaningful turnover in long games.
  */
-export const DIVERGENT_TENURE_MEDIAN_YEARS = 15;
+const DIVERGENT_TENURE_MEDIAN_YEARS = 15;
 export const DIVERGENT_TENURE_MEDIAN_TURNS = DIVERGENT_TENURE_MEDIAN_YEARS * TURNS_PER_YEAR;
 
 /** Flat per-turn departure probability calibrated to the target median. */

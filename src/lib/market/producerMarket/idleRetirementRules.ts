@@ -21,7 +21,7 @@ export const IDLE_RETIRE_GRACE_TURNS = 6;
 /** Share of the unjustified capacity retired each turn. */
 export const IDLE_RETIRE_RATE = 0.04;
 /** Room above last sales that is kept. */
-export const IDLE_RETIRE_HEADROOM = 0.2;
+const IDLE_RETIRE_HEADROOM = 0.2;
 /** Share of active capacity always kept as a probe run. */
 export const IDLE_RETIRE_PROBE_SHARE = 0.1;
 

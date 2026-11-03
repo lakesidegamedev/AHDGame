@@ -1,58 +1,51 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
-import { USMapWithModes } from "./components/USMapWithModes";
-import { UnifiedMapWithModes } from "./components/UnifiedMapWithModes";
-import { EconOnlyMapPlaceholder } from "./components/EconOnlyMapPlaceholder";
-import {
-  COUNTRY_MAP_CONFIGS,
-  isParliamentaryMapCountry,
-  type CountryMapConfig,
-} from "./components/countryMapConfigs";
+import { mapVariantFor } from "./mapVariant";
+import type { CountryMapViewConfig } from "./mapViewConfig";
 
 interface CountryMapClientProps {
   countryId: CountryId;
+  /** Server-resolved display fields, so the client does not ship the registry. */
+  config: CountryMapViewConfig;
 }
 
-/**
- * Dispatches map rendering by country:
- *   - US uses USMapWithModes (electoral-college math, presidential results
- *     panel, senate split-view; out-of-pattern relative to parliamentary maps).
- *   - UK/DE/JP/CN/BR/NG share UnifiedMapWithModes driven by COUNTRY_MAP_CONFIGS.
- *   - Anything else falls through to EconOnlyMapPlaceholder.
- *
- * The US-specific renderer is keyed in CUSTOM_MAP_RENDERERS (a Record keyed
- * by CountryId rather than a raw string-literal comparison) to satisfy the
- * no-country-literals lint rule.
- */
-const CUSTOM_MAP_RENDERERS: Partial<
-  Record<
-    CountryId,
-    (props: {
-      mapData: MapOverviewResponse | null;
-      config: ReturnType<typeof getCountryConfig>;
-      onRegionClick: (id: string) => void;
-    }) => React.ReactNode
-  >
-> = {
-  US: (props) => <USMapWithModes {...props} />,
-};
+// A country uses exactly one renderer; load the chosen one instead of shipping
+// the US electoral map, the parliamentary map and the economy placeholder (and
+// their region configs) on every country map view.
+const MapLoading = () => <div className="h-[420px] w-full animate-pulse rounded-xl bg-card" />;
+const USMapWithModes = dynamic(
+  () => import("./components/USMapWithModes").then((m) => ({ default: m.USMapWithModes })),
+  { ssr: false, loading: MapLoading }
+);
+const UnifiedMapWithModes = dynamic(
+  () =>
+    import("./components/UnifiedMapWithModes").then((m) => ({ default: m.UnifiedMapWithModes })),
+  { ssr: false, loading: MapLoading }
+);
+const EconOnlyMapPlaceholder = dynamic(
+  () =>
+    import("./components/EconOnlyMapPlaceholder").then((m) => ({
+      default: m.EconOnlyMapPlaceholder,
+    })),
+  { ssr: false, loading: MapLoading }
+);
 
-export default function CountryMapClient({ countryId }: CountryMapClientProps) {
-  return <CountryMapContent key={countryId} countryId={countryId} />;
+export default function CountryMapClient({ countryId, config }: CountryMapClientProps) {
+  return <CountryMapContent key={countryId} countryId={countryId} config={config} />;
 }
 
-function CountryMapContent({ countryId }: CountryMapClientProps) {
+function CountryMapContent({ countryId, config }: CountryMapClientProps) {
   const router = useRouter();
   const t = useTranslations("elections.atlas");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
-  const config = getCountryConfig(countryId);
   const [mapData, setMapData] = useState<MapOverviewResponse | null>(null);
 
   useEffect(() => {
@@ -76,14 +69,6 @@ function CountryMapContent({ countryId }: CountryMapClientProps) {
 
   const onRegionClick = (id: string) => router.push(regionUrl(countryId, id));
 
-  // Resolve the parliamentary config once per country. The region set is no
-  // longer preset-derived here — each map renders its live owned roster
-  // (`mapData.regions`), so DE shows West Germany's Länder in the 1979 era purely
-  // from ownership, with no era branch in this dispatcher.
-  const parliamentaryConfig = useMemo<CountryMapConfig | null>(() => {
-    return isParliamentaryMapCountry(countryId) ? COUNTRY_MAP_CONFIGS[countryId] : null;
-  }, [countryId]);
-
   if (loadState !== "ready") {
     return (
       <main className="mx-auto max-w-7xl p-8" aria-busy={loadState === "loading"}>
@@ -105,22 +90,13 @@ function CountryMapContent({ countryId }: CountryMapClientProps) {
     );
   }
 
-  const customRenderer = CUSTOM_MAP_RENDERERS[countryId];
-  if (customRenderer) {
-    return customRenderer({ mapData, config, onRegionClick });
+  const variant = mapVariantFor(countryId);
+  if (variant === "us") {
+    return <USMapWithModes mapData={mapData} config={config} onRegionClick={onRegionClick} />;
   }
-
-  if (parliamentaryConfig) {
-    return (
-      <UnifiedMapWithModes
-        mapData={mapData}
-        config={config}
-        countryConfig={parliamentaryConfig}
-        onRegionClick={onRegionClick}
-      />
-    );
+  if (variant === "parliamentary") {
+    return <UnifiedMapWithModes mapData={mapData} config={config} onRegionClick={onRegionClick} />;
   }
-
   return (
     <EconOnlyMapPlaceholder
       countryId={countryId}

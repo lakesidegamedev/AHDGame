@@ -18,7 +18,6 @@ function world() {
       _id: "default",
       privateBankingEnabled: true,
       bankPropTradingEnabled: true,
-      bankPropForexFeesEnabled: true,
     },
   ]);
   memory.seed("gameState", [{ _id: "current", currentTurn: 100 }]);
@@ -209,24 +208,5 @@ describe("funded forex prop fees", () => {
     expect(result).toEqual({ ok: false, error: "Trade would breach per-currency forex cap" });
     expect(bank(memory).bankCharter!.cashReserves).toBe(1_000_000);
     expect(memory.collection("bankMoneyMoves").docs).toHaveLength(0);
-  });
-  it("keeps legacy forex trading when the fee flag is off", async () => {
-    const memory = world();
-    memory.collection("gameConfig").docs[0].bankPropForexFeesEnabled = false;
-    memory.collection("centralBanks").docs.length = 0;
-    const reads = vi.spyOn(memory.collection("corporations"), "findOne");
-    const feeRecipientReads = vi.spyOn(memory.collection("centralBanks"), "findOne");
-    const result = await openPosition(memory as unknown as Db, BANK, ticket);
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.cost).toBe(50_000);
-    expect(feeRecipientReads).not.toHaveBeenCalled();
-    expect(reads).toHaveBeenCalledWith(
-      { _id: BANK },
-      { projection: { bankPropForexFee: 0, bankPropForexVolume: 0 } }
-    );
-    expect(bank(memory).bankPropForexVolume).toBeUndefined();
-    expect(
-      memory.collection("bankMoneyMoves").docs.filter((row) => row.kind === "bank.prop.forex.fee")
-    ).toHaveLength(0);
   });
 });

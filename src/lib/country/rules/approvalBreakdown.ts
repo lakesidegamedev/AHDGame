@@ -1,4 +1,4 @@
-import { POSITIVE_MODIFIER_NET_CAP, type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import { POSITIVE_MODIFIER_NET_CAP, type ActiveModifier } from "@/lib/approval/activeModifier";
 
 export interface ApprovalBreakdown {
   /** Population-weighted state average, before any national adjustment. */

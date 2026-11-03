@@ -35,7 +35,7 @@ import {
  */
 export const EXTREME_DISTRESS_DEBT_TO_GDP = 2.5;
 
-const DEBT_THRESHOLDS = [
+export const DEBT_THRESHOLDS = [
   {
     maxRatio: 0.6,
     rating: "AAA" as CreditRating,
@@ -103,10 +103,7 @@ const DEBT_THRESHOLDS = [
  * @deprecated Use the current smoothed debt/GDP ratio directly. The name is
  * retained so older integrations do not silently change shape.
  */
-export function normalizeDebtToGdpForRisk(
-  debtToGdpRatio: number,
-  _anchor?: SovereignRiskAnchor
-): number {
+function normalizeDebtToGdpForRisk(debtToGdpRatio: number, _anchor?: SovereignRiskAnchor): number {
   return Math.max(0, debtToGdpRatio);
 }
 

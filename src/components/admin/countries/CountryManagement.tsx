@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import {
   CONTINENT_ORDER,
   COUNTRY_CONTINENT,
@@ -31,7 +31,10 @@ export default function CountryManagement() {
   const [selectedCountry, setSelectedCountry] = useState<CountryId>(initial);
 
   const countriesInContinent = byContinent[selectedContinent];
-  const countryTabs = countriesInContinent.map((id) => ({ id, label: COUNTRY_CONFIGS[id].name }));
+  const countryTabs = countriesInContinent.map((id) => ({
+    id,
+    label: COUNTRY_CLIENT_CONFIGS[id].name,
+  }));
 
   // Switching continent jumps to its first country so the overview card stays in sync.
   const handleContinentChange = (continent: Continent) => {

@@ -512,6 +512,189 @@ describe("one funded producer market", () => {
     expect(result.prices).toEqual([]);
   });
 
+  describe("own sites first (tickets 1755, 1757)", () => {
+    // An outside order whose id sorts before the company's own order would buy
+    // the company's stock out before the own fill ran.
+    const market = (ownSitesFirst: boolean) =>
+      settleProducerMarket({
+        turn: 1,
+        accounts: [
+          { id: "corp", cash: 0 },
+          { id: "rival", cash: 1_000 },
+        ],
+        offers: [
+          {
+            id: "far",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 50,
+            countryId: "JP",
+            stateId: "KAN",
+          },
+          {
+            id: "near",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 50,
+            countryId: "US",
+            stateId: "WI",
+          },
+        ],
+        orders: [
+          {
+            id: "a-rival",
+            accountId: "rival",
+            commodity: "energy",
+            book: "world",
+            units: 10,
+            maximumUnitPrice: 60,
+            countryId: "US",
+          },
+          {
+            id: "b-corp-mine",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 4,
+            maximumUnitPrice: 60,
+            countryId: "US",
+            stateId: "WI",
+          },
+        ],
+        ...(ownSitesFirst ? { ownSitesFirst: true } : {}),
+      });
+
+    it("off: an earlier outside order takes the company's stock first", () => {
+      const result = market(false);
+      const mine = result.orders.find((o) => o.id === "b-corp-mine")!;
+      expect(mine.deliveredUnits).toBe(0);
+    });
+
+    it("on: own sites are served first, nearest seller first, and the rest sells", () => {
+      const result = market(true);
+      const mine = result.orders.find((o) => o.id === "b-corp-mine")!;
+      expect(mine.deliveredUnits).toBeCloseTo(4, 9);
+      expect(mine.cost).toBe(0);
+      const near = result.offers.find((o) => o.id === "near")!;
+      const far = result.offers.find((o) => o.id === "far")!;
+      expect(near.internalDeliveredUnits).toBeCloseTo(4, 9);
+      expect(far.internalDeliveredUnits).toBe(0);
+      expect(near.soldUnits + far.soldUnits).toBeCloseTo(6, 9);
+      const trades = [...producerTrades(result.tradeReceipt)];
+      const internal = trades.filter((t) => t.kind === "internalTransfer");
+      expect(internal).toHaveLength(1);
+      expect(internal[0]).toMatchObject({ offerId: "near", units: 4, amount: 0 });
+      expect(trades.reduce((n, t) => n + t.units, 0)).toBeCloseTo(10, 9);
+    });
+
+    it("on: falls back to the same country, then abroad", () => {
+      const result = settleProducerMarket({
+        turn: 1,
+        accounts: [{ id: "corp", cash: 0 }],
+        offers: [
+          {
+            id: "jp",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 1,
+            countryId: "JP",
+            stateId: "KAN",
+          },
+          {
+            id: "la",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 2,
+            unitPrice: 1,
+            countryId: "US",
+            stateId: "LA",
+          },
+        ],
+        orders: [
+          {
+            id: "wi",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 4,
+            maximumUnitPrice: 1,
+            countryId: "US",
+            stateId: "WI",
+          },
+        ],
+        ownSitesFirst: true,
+      });
+      expect(result.offers.find((o) => o.id === "la")!.internalDeliveredUnits).toBeCloseTo(2, 9);
+      expect(result.offers.find((o) => o.id === "jp")!.internalDeliveredUnits).toBeCloseTo(2, 9);
+      const trades = [...producerTrades(result.tradeReceipt)];
+      expect(trades.map((t) => [t.offerId, t.units])).toEqual([
+        ["la", 2],
+        ["jp", 2],
+      ]);
+    });
+
+    it("on: a named supplier contract still reserves before own supply", () => {
+      const result = settleProducerMarket({
+        turn: 1,
+        accounts: [
+          { id: "corp", cash: 100 },
+          { id: "supplier", cash: 0 },
+        ],
+        offers: [
+          {
+            id: "own",
+            accountId: "corp",
+            commodity: "steel",
+            book: "world",
+            units: 5,
+            unitPrice: 1,
+          },
+          {
+            id: "contracted",
+            accountId: "supplier",
+            commodity: "steel",
+            book: "world",
+            units: 5,
+            unitPrice: 2,
+          },
+        ],
+        orders: [
+          {
+            id: "reserved",
+            accountId: "corp",
+            commodity: "steel",
+            book: "world",
+            units: 3,
+            maximumUnitPrice: 2,
+            supplierOfferId: "contracted",
+            contractUnitPrice: 2,
+            priority: 1,
+            quantityGroup: { id: "g", maximumUnits: 3 },
+          },
+          {
+            id: "public",
+            accountId: "corp",
+            commodity: "steel",
+            book: "world",
+            units: 3,
+            maximumUnitPrice: 2,
+            quantityGroup: { id: "g", maximumUnits: 3 },
+          },
+        ],
+        ownSitesFirst: true,
+      });
+      expect(result.offers.find((o) => o.id === "contracted")!.soldUnits).toBeCloseTo(3, 9);
+      expect(result.offers.find((o) => o.id === "own")!.internalDeliveredUnits).toBe(0);
+    });
+  });
+
   it("rejects non-finite, duplicated and unbacked participant inputs", () => {
     expect(() =>
       settleProducerMarket({
@@ -605,11 +788,11 @@ describe("quote policies", () => {
       const candidates = [
         ...new Set([
           10,
-          6.6,
+          11,
           ...demand.map((d) => d.maximumUnitPrice),
           ...competitors.map((c) => c.unitPrice),
         ]),
-      ];
+      ].filter((price) => price <= 11);
       const oracle = candidates
         .map((price) => {
           const wanted = demand
@@ -635,6 +818,98 @@ describe("quote policies", () => {
       expect(quote.expectedSoldUnits).toBeCloseTo(oracle.expectedSoldUnits, 10);
       expect(quote.expectedProfit).toBeCloseTo(oracle.expectedProfit, 10);
     }
+  });
+
+  it("never asks above the market reference plus markup, however high a far bid is", () => {
+    // Ticket 1728: a short world book held one buyer bidding twice the market, and
+    // the automatic ask jumped to that ceiling and sold nothing.
+    const quote = quoteProducer({
+      ...basis,
+      demand: [{ units: 1000, maximumUnitPrice: 40 }],
+      competitors: [],
+      variableUnitCost: 30,
+      policy: { kind: "automatic", targetMarkup: 0.2 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(12);
+  });
+
+  describe("automatic asks follow last turn's clearing", () => {
+    // A short book where every buyer bids high: the estimate alone would take the
+    // ceiling, so these pin where the ceiling sits.
+    const short = {
+      ...basis,
+      referenceUnitPrice: 47.84,
+      variableUnitCost: 20,
+      fixedCost: 0,
+      demand: [{ units: 1000, maximumUnitPrice: 60 }],
+      competitors: [],
+    };
+
+    it("asks the clearing price when the reference sits above it", () => {
+      const quote = quoteProducer({
+        ...short,
+        clearingUnitPrice: 35.39,
+        policy: { kind: "automatic", targetMarkup: 0 },
+      });
+      expect(quote.unitPrice).toBeCloseTo(35.39);
+    });
+
+    it("applies the markup to the clearing price, not the reference", () => {
+      const quote = quoteProducer({
+        ...short,
+        clearingUnitPrice: 35.39,
+        policy: { kind: "automatic", targetMarkup: 0.1 },
+      });
+      expect(quote.unitPrice).toBeCloseTo(35.39 * 1.1);
+    });
+
+    it("falls back to the reference when nothing cleared", () => {
+      expect(
+        quoteProducer({ ...short, policy: { kind: "automatic", targetMarkup: 0.1 } }).unitPrice
+      ).toBeCloseTo(47.84 * 1.1);
+      expect(
+        quoteProducer({
+          ...short,
+          clearingUnitPrice: 0,
+          policy: { kind: "automatic", targetMarkup: 0.1 },
+        }).unitPrice
+      ).toBeCloseTo(47.84 * 1.1);
+    });
+
+    it("steps a seller that sold nothing down below its previous ask", () => {
+      const policy = { kind: "automatic", targetMarkup: 0.2 } as const;
+      // Last turn it asked the clearing plus markup, and buyers paid the clearing.
+      const previous = quoteProducer({ ...short, clearingUnitPrice: 35.39, policy }).unitPrice;
+      const next = quoteProducer({
+        ...short,
+        clearingUnitPrice: 35.39,
+        soldNothingLastTurn: true,
+        policy,
+      }).unitPrice;
+      expect(next).toBeLessThan(previous);
+      expect(next).toBeLessThanOrEqual(35.39);
+      // A falling book keeps pulling it down.
+      expect(
+        quoteProducer({ ...short, clearingUnitPrice: 30, soldNothingLastTurn: true, policy })
+          .unitPrice
+      ).toBeLessThanOrEqual(30);
+    });
+
+    it("keeps manual and cost-plus quotes off the clearing", () => {
+      const manual = { kind: "manual", unitPrice: 50 } as const;
+      expect(quoteProducer({ ...short, clearingUnitPrice: 35.39, policy: manual }).unitPrice).toBe(
+        50
+      );
+      const costPlus = { kind: "costPlus", markup: 0.1 } as const;
+      expect(
+        quoteProducer({
+          ...short,
+          clearingUnitPrice: 35.39,
+          soldNothingLastTurn: true,
+          policy: costPlus,
+        }).unitPrice
+      ).toBeCloseTo(quoteProducer({ ...short, policy: costPlus }).unitPrice);
+    });
   });
 
   it("does not report break-even when nothing can be produced", () => {
@@ -864,5 +1139,77 @@ describe("country-tagged funded settlement", () => {
       { countryId: "UK", commodity: "gas", supply: 0, demand: 1, imports: 0, exports: 0 },
     ]);
     expect(settleProducerMarket({ turn: 1, ...base }).countryBooks).toBeUndefined();
+  });
+});
+
+describe("automatic ask with sell-through memory", () => {
+  const basis = {
+    referenceUnitPrice: 10,
+    variableUnitCost: 4,
+    fixedCost: 200,
+    offeredUnits: 100,
+    demand: [{ units: 200, maximumUnitPrice: 20 }],
+    competitors: [{ units: 200, unitPrice: 10 }],
+  };
+  const policy = { kind: "automatic", targetMarkup: 0.5 } as const;
+  const memory = { ask: 10, previousAsk: 9 };
+
+  it("raises the ask above last turn's price after selling out", () => {
+    const flat = quoteProducer({ ...basis, policy });
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 100, offeredUnits: 100 },
+    });
+    expect(flat.unitPrice).toBeCloseTo(10);
+    expect(quote.unitPrice).toBeGreaterThan(flat.unitPrice);
+  });
+
+  it("gives a rejected raise back to the previous ask", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 40, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(9);
+  });
+
+  it("holds through the deadband rather than chasing the book", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 95, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(10);
+  });
+
+  it("keeps the estimator when no memory is passed", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory: null, soldUnits: 100, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(10);
+  });
+
+  it("bounds a sell-out by the reference price when its own sales lifted the clearing", () => {
+    // Clearing 30 is the plant's own raises feeding back; reference 10 with a
+    // 50% markup caps the controller at 15 instead of 45.
+    const soldOut = { memory: { ask: 20, previousAsk: 18 }, soldUnits: 100, offeredUnits: 100 };
+    const quote = quoteProducer({ ...basis, clearingUnitPrice: 30, policy, autoAsk: soldOut });
+    expect(quote.unitPrice).toBeCloseTo(15);
+  });
+
+  it("treats a zero ceiling as a cap, not as unbounded", () => {
+    const soldOut = { memory: { ask: 50, previousAsk: 50 }, soldUnits: 100, offeredUnits: 100 };
+    const noAnchor = quoteProducer({ ...basis, referenceUnitPrice: 0, policy, autoAsk: soldOut });
+    const fullDiscount = quoteProducer({
+      ...basis,
+      clearingUnitPrice: 10,
+      policy: { kind: "automatic", targetMarkup: -1 },
+      autoAsk: soldOut,
+    });
+    expect(noAnchor.unitPrice).toBe(0);
+    expect(fullDiscount.unitPrice).toBe(0);
   });
 });

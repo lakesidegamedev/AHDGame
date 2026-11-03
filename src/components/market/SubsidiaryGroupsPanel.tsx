@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PublicSubsidiaryGroup } from "@/lib/corporations/groups/rules/publicListing";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { PanelState } from "./marketUi";

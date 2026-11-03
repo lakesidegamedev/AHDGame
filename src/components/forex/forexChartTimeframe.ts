@@ -2,15 +2,8 @@ import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 export type ForexChartTimeframe = "24h" | "48h" | "5y" | "all";
 
-export const FOREX_CHART_TIMEFRAME_ORDER: Record<ForexChartTimeframe, number> = {
-  "24h": 0,
-  "48h": 1,
-  "5y": 2,
-  all: 3,
-};
-
 /** Last N hourly turns shown (aligned with stock market overview). */
-export const FOREX_CHART_TIMEFRAME_TURNS: Record<ForexChartTimeframe, number> = {
+const FOREX_CHART_TIMEFRAME_TURNS: Record<ForexChartTimeframe, number> = {
   "24h": TURNS_PER_DAY,
   "48h": TURNS_PER_YEAR,
   "5y": TURNS_PER_YEAR * 5,

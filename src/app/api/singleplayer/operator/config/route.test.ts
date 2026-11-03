@@ -89,6 +89,16 @@ describe("PATCH /api/singleplayer/operator/config", () => {
     });
   });
 
+  it("keeps the first-game guide's progress when settings change", async () => {
+    const guide = { inboxOpenedAt: new Date("2026-11-01T12:00:00Z") };
+    mocks.getSingleplayerConfig.mockResolvedValue({ ...currentConfig, guide });
+    await PATCH(request({ difficulty: "easy" }));
+    expect(mocks.setSingleplayerConfig).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ guide })
+    );
+  });
+
   it("rejects unknown flag keys before writes", async () => {
     const response = await PATCH(request({ featureFlags: { godModeEnabled: true } }));
 

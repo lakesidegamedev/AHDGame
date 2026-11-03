@@ -44,7 +44,7 @@ import {
 } from "@/lib/admin/seedDiagnostic";
 
 /** Trigger identifying a fresh worldsim bootstrap conformance report. */
-export const WORLDSIM_BOOTSTRAP_TRIGGER = "worldsim-post-bootstrap" as const;
+const WORLDSIM_BOOTSTRAP_TRIGGER = "worldsim-post-bootstrap" as const;
 
 export interface WorldsimBootstrapProvenance {
   runId: string;

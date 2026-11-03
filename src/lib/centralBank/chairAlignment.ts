@@ -55,7 +55,7 @@ export const NEUTRAL_CHAIR_POLICY: ChairAlignmentPolicy = {
   cutStepMult: 1,
 };
 
-export const CHAIR_ALIGNMENT_POLICY: Record<ChairAlignment, ChairAlignmentPolicy> = {
+const CHAIR_ALIGNMENT_POLICY: Record<ChairAlignment, ChairAlignmentPolicy> = {
   hawk: {
     inflationCoefMult: 1.5,
     growthCoefMult: 0.5,

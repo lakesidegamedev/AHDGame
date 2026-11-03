@@ -115,13 +115,20 @@ export function GovernmentContractsBoard({
               {t("openBoard")}
             </Link>
           )}
-          {access && (access.defence || access.nationalExtraction || access.regionalExtraction) && (
-            <button className={buttonClass} onClick={() => setPublishing((v) => !v)}>
-              {publishing ? t("closeForm") : t("publish")}
-            </button>
-          )}
+          {access &&
+            access.enabled !== false &&
+            (access.defence || access.nationalExtraction || access.regionalExtraction) && (
+              <button className={buttonClass} onClick={() => setPublishing((v) => !v)}>
+                {publishing ? t("closeForm") : t("publish")}
+              </button>
+            )}
         </div>
       </header>
+      {access?.enabled === false && (
+        <p role="status" className="rounded-xl border border-warning bg-warning/10 p-4 text-sm">
+          {t("featureDisabled")}
+        </p>
+      )}
       {focusTenderId && supplier === "all" && (
         <TenderDetails
           countryId={countryId}
@@ -139,7 +146,7 @@ export function GovernmentContractsBoard({
           </button>
         </div>
       )}
-      {publishing && access && (
+      {publishing && access && access.enabled !== false && (
         <PublishTenderForm
           countryId={countryId}
           access={access}
@@ -557,6 +564,7 @@ function TenderDetails({
             {row.tab === "closed" && (
               <button
                 disabled={
+                  (access?.enabled === false && row.status !== "awarding") ||
                   busy ||
                   !(row.winningCorporationId || selected) ||
                   (row.status !== "awarding" &&

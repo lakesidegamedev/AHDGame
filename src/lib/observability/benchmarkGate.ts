@@ -20,7 +20,7 @@
 import { attributeTurn, cadenceTier, type CadenceTier, type TurnLogLike } from "./turnAttribution";
 
 export type BenchmarkCase = CadenceTier | "electionDeadline";
-export const BENCHMARK_CASES: readonly BenchmarkCase[] = [
+const BENCHMARK_CASES: readonly BenchmarkCase[] = [
   "quiet",
   "nppAction",
   "fundRebalance",

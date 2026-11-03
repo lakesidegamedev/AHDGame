@@ -4,9 +4,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { BondMarketDemandWidget } from "../BondMarketDemandWidget";
+import { clearSovereignStatusCache } from "../sovereignStatusRequest";
 
 describe("BondMarketDemandWidget", () => {
   beforeEach(() => {
+    // The panel shares its one read of sovereign-status with the rest of the
+    // country page, so a request left hanging by one case would answer the next.
+    clearSovereignStatusCache();
     global.fetch = vi.fn();
   });
 

@@ -15,7 +15,11 @@ import {
 } from "@shared/constants/formulas";
 import { energyActionLimits, applyTurnDrift } from "@/lib/stats/statDrift";
 import { applyDebateDecay } from "@/lib/stats/debateDecay";
-import { STAT_MIN } from "@/lib/stats/statsConstants";
+import {
+  STAT_MIN,
+  ACTION_HOARD_PENALTY,
+  MIN_BASE_ACTIONS_PER_TURN,
+} from "@/lib/stats/statsConstants";
 import {
   CABINET_OFFICE_TYPES,
   cabinetOfficeTypeForCountry,
@@ -46,7 +50,6 @@ import {
   loadStatePartyChairIds,
   resolveCeoNiTier,
 } from "./actionRefreshRoles";
-const MIN_BASE_ACTIONS_PER_TURN = 4;
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -60,7 +63,6 @@ const DEFAULT_CHAIR_ACTION_BONUS = 3;
  * This prevents players from banking actions across months and then spending
  * them all in a single burst to dominate an election cycle.
  */
-const ACTION_HOARD_PENALTY = 4;
 
 /**
  * Refresh actions and apply stat updates for all characters each turn.

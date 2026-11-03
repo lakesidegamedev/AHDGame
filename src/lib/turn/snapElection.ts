@@ -67,7 +67,7 @@ import type {
   Seat,
 } from "@/lib/db/types";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
-import { snapElectionResolutionYear } from "@/lib/turn/rules/snapElection";
+import { snapElectionResolutionYear, shouldStartVacancySnap } from "@/lib/turn/rules/snapElection";
 import { japanShugiinRulesForRegion } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
 
 export const SNAP_ELECTION_LIMIT = 2;
@@ -188,6 +188,7 @@ export async function triggerSnapElection(
     throw new SnapElectionError(`Snap elections are not allowed in ${countryId}`);
   }
   const lowerChamberKey = config.legislature.lowerChamber.key;
+  const snapElectionType = `snap_${lowerChamberKey}`;
 
   const govCol = getGovernmentFormationsCollection(db);
   const gov = await govCol.findOne({ _id: countryId });
@@ -252,6 +253,46 @@ export async function triggerSnapElection(
     throw new SnapElectionError(`No election regions configured for ${countryId}`);
   }
 
+  // An automatic retry must not dissolve the chamber or spawn races again.
+  // Live races identify the same vacancy across turns and process restarts.
+  const liveVacancySnap =
+    opts.reason === "auto-snap"
+      ? await db
+          .collection<Election>("elections")
+          .findOne(
+            { countryId, electionType: snapElectionType, status: { $in: ["active", "upcoming"] } },
+            { projection: { _id: 1 } }
+          )
+      : null;
+
+  if (opts.reason === "auto-snap") {
+    const unchanged = (): TriggerSnapResult => ({
+      electionsSpawned: 0,
+      snapElectionsUsed: snapUsed,
+      snapElectionsRemaining: Math.max(0, SNAP_ELECTION_LIMIT - snapUsed),
+      snapElectionType,
+      currentTurn,
+    });
+    if (!shouldStartVacancySnap(!!liveVacancySnap, gov.lastSnapElectionTurn, currentTurn)) {
+      return unchanged();
+    }
+    // Claim the existing stamp BEFORE any dissolution side effect. Two callers
+    // that saw no live races cannot both create a batch. A failed pre-spawn
+    // attempt can retry on a later turn without a permanent lock.
+    const claimed = await govCol.findOneAndUpdate(
+      {
+        _id: countryId,
+        status: gov.status,
+        pmCharacterId: gov.pmCharacterId ?? null,
+        pmNppId: gov.pmNppId ?? null,
+        lastSnapElectionTurn: gov.lastSnapElectionTurn ?? null,
+      },
+      { $set: { lastSnapElectionTurn: currentTurn, updatedAt: now } },
+      { returnDocument: "before", projection: { _id: 1 } }
+    );
+    if (!claimed) return unchanged();
+  }
+
   // 1. Cancel active/upcoming regular lower-chamber elections for this country.
   //    Capture the affected election ids first so we can withdraw the candidate
   //    rows attached to them — leaving them `active` orphans the rows and
@@ -295,7 +336,6 @@ export async function triggerSnapElection(
   await failInProgressBills(db, countryId, now);
 
   // 3. Spawn fresh snap elections per region.
-  const snapElectionType = `snap_${lowerChamberKey}`;
   const snapDur = DEFAULT_DURATIONS[snapElectionType] ?? DEFAULT_DURATIONS.snap_lowerChamber;
   const primaryEndTurn = currentTurn + snapDur.primaryDurationHours;
   const endTurn = currentTurn + snapDur.durationHours;
@@ -414,16 +454,14 @@ export async function triggerSnapElection(
   //    of government spends on strategic dissolutions, and a settlement forced on
   //    the country from outside must not spend it. The turn is still stamped, so
   //    operators can still see that a snap fired here.
-  await govCol.updateOne(
-    { _id: countryId },
-    {
-      $set: {
-        ...(imposed ? {} : { snapElectionsUsed: snapUsed + 1 }),
-        lastSnapElectionTurn: currentTurn,
-        updatedAt: now,
-      },
-    }
-  );
+  const snapTrackingUpdate = {
+    $set: {
+      ...(imposed ? {} : { snapElectionsUsed: snapUsed + 1 }),
+      lastSnapElectionTurn: currentTurn,
+      updatedAt: now,
+    },
+  };
+  await govCol.updateOne({ _id: countryId }, snapTrackingUpdate);
 
   // 6. Vacate the sitting PM and unform the government. Must run BEFORE the
   //    reset below so the reset takes the no-sitting-PM branch and only

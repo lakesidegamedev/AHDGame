@@ -1,5 +1,6 @@
 "use client";
 
+import { quoteOrganizationBatch } from "@/lib/parties/rules/repeatedOrganization";
 import { useState } from "react";
 import { regionPartyApiUrl } from "@/lib/urls";
 import { useToast } from "@/contexts/ToastContext";
@@ -10,7 +11,7 @@ import {
 } from "@/lib/politicalStrength/strengthConstants";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { orgBuildCashPrice } from "@/lib/politicalStrength/buildOrgFunding";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { EstimateBox } from "./EstimateBox";
 import { PsSpendButtons } from "./PsSpendButtons";
 import { usePsSpendScope } from "./usePsSpendScope";
@@ -98,6 +99,7 @@ export function BuildOrgPanel({
 }: BuildOrgPanelProps) {
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [count, setCount] = useState(1);
   const [bumpKey, setBumpKey] = useState(0);
   const [lastResult, setLastResult] = useState<BuildOrgResult | null>(null);
 
@@ -123,8 +125,8 @@ export function BuildOrgPanel({
     try {
       const r = await fetch(`${apiUrl}/build-org`, {
         method: "POST",
-        headers: psPool ? { "Content-Type": "application/json" } : undefined,
-        body: psPool ? JSON.stringify({ psPool }) : undefined,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ psPool, count }),
       });
       const d = await r.json();
       if (!r.ok) {
@@ -143,7 +145,7 @@ export function BuildOrgPanel({
           ? ` (partly funded: the treasury covered ${Math.round((d.fundedFraction as number) * 100)}% of the price)`
           : "";
       showToast(
-        `+${(d.contributionUnits as number).toFixed(0)} Org unit, share ${(d.orgGain as number) >= 0 ? "+" : ""}${(d.orgGain as number).toFixed(2)}% for ${(d.psCost as number).toFixed(0)} PS${cash}${partly}`,
+        `${d.completed != null ? `${d.completed} of ${count} builds completed. ` : ""}+${(d.contributionUnits as number).toFixed(0)} Org unit, share ${(d.orgGain as number) >= 0 ? "+" : ""}${(d.orgGain as number).toFixed(2)}% for ${(d.psCost as number).toFixed(0)} PS${cash}${partly}${d.stopReason ? ` Stopped: ${d.stopReason}` : ""}`,
         "success"
       );
       onSuccess();
@@ -210,46 +212,91 @@ export function BuildOrgPanel({
   const counterAnim = bumpKey > 0 ? "ps-counter-pulse" : "";
   const tileAnim = bumpKey > 0 ? "ps-row-flash" : "";
 
+  const batchQuotes = preview?.ok
+    ? (eligibleScopes?.state && eligibleScopes?.national
+        ? (["state", "national-targeted"] as const)
+        : [preview.scope]
+      ).map((scope) => ({
+        scope,
+        ...quoteOrganizationBatch({
+          countryId: countryCode.toUpperCase() as CountryId,
+          scope,
+          pressure: preview.pressureValue,
+          count,
+          sizeMultiplier: preview.sizeMultiplier ?? 1,
+        }),
+      }))
+    : [];
   const buttons = (
-    <PsSpendButtons
-      scopes={eligibleScopes}
-      color={partyColor}
-      busy={busy}
-      label="Build organization"
-      busyLabel="Building…"
-      singleDisabled={!canBuildOrg || insufficientPs || noPresence}
-      stateDisabled={!canBuildOrg || statePoolInsufficient || noPresence}
-      nationalDisabled={!canBuildOrg || nationalPoolInsufficient || noPresence}
-      singleTitle={
-        !canBuildOrg
-          ? "Only the party chair, vice chair, or admin can build organization"
-          : noPresence
-            ? "Establish a player or elected official in this state first"
-            : insufficientPs
-              ? `Need ${nextPsCost.toFixed(0)} PS for the next build, have ${ps.toFixed(0)}`
-              : "Spend Political Strength to grow the party's Organization in this state"
-      }
-      stateTitle={
-        !canBuildOrg
-          ? "Only the party chair, vice chair, or admin can build organization"
-          : noPresence
-            ? "Establish a player or elected official in this state first"
-            : statePoolInsufficient
-              ? `Need ${nextPsCost.toFixed(0)} PS for the next build, the state party has ${statePoolPs.toFixed(0)}`
-              : `Spend the state party's PS${poolPS ? ` (has ${poolPS.statePoolPS.toFixed(0)})` : ""}${priceFor("state")}`
-      }
-      nationalTitle={
-        !canBuildOrg
-          ? "Only the party chair, vice chair, or admin can build organization"
-          : noPresence
-            ? "Establish a player or elected official in this state first"
-            : nationalPoolInsufficient
-              ? `Need ${nextPsCost.toFixed(0)} PS for the next build, the national party has ${nationalPoolPs.toFixed(0)}`
-              : `Spend the national party's PS${poolPS ? ` (has ${poolPS.nationalPoolPS.toFixed(0)})` : ""}${priceFor("national-targeted")}`
-      }
-      buttonAnim={buttonAnim}
-      onSpend={handleClick}
-    />
+    <div className="space-y-2">
+      <fieldset disabled={busy} className="flex gap-2">
+        <legend className="text-xs text-muted">Builds per click</legend>
+        {[1, 5, 10].map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={count === value}
+            onClick={() => setCount(value)}
+            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+          >
+            x{value}
+          </button>
+        ))}
+      </fieldset>
+      {count > 1 && (
+        <p className="text-xs text-muted">
+          {batchQuotes.map((quote) => (
+            <span key={quote.scope} className="block">
+              Estimated {quote.scope === "state" ? "state" : "national"} batch: {quote.psCost} PS
+              {" and "}
+              {CURRENCY_SYMBOLS[currencyCode]}
+              {Math.round(quote.cashPrice).toLocaleString("en-US")}.
+            </span>
+          ))}
+          Each build is priced separately as pressure rises. Stops when the next build cannot be
+          funded; completed builds remain charged.
+        </p>
+      )}
+      <PsSpendButtons
+        scopes={eligibleScopes}
+        color={partyColor}
+        busy={busy}
+        label="Build organization"
+        busyLabel="Building…"
+        singleDisabled={!canBuildOrg || insufficientPs || noPresence}
+        stateDisabled={!canBuildOrg || statePoolInsufficient || noPresence}
+        nationalDisabled={!canBuildOrg || nationalPoolInsufficient || noPresence}
+        singleTitle={
+          !canBuildOrg
+            ? "Only the party chair, vice chair, or admin can build organization"
+            : noPresence
+              ? "Establish a player or elected official in this state first"
+              : insufficientPs
+                ? `Need ${nextPsCost.toFixed(0)} PS for the next build, have ${ps.toFixed(0)}`
+                : "Spend Political Strength to grow the party's Organization in this state"
+        }
+        stateTitle={
+          !canBuildOrg
+            ? "Only the party chair, vice chair, or admin can build organization"
+            : noPresence
+              ? "Establish a player or elected official in this state first"
+              : statePoolInsufficient
+                ? `Need ${nextPsCost.toFixed(0)} PS for the next build, the state party has ${statePoolPs.toFixed(0)}`
+                : `Spend the state party's PS${poolPS ? ` (has ${poolPS.statePoolPS.toFixed(0)})` : ""}${priceFor("state")}`
+        }
+        nationalTitle={
+          !canBuildOrg
+            ? "Only the party chair, vice chair, or admin can build organization"
+            : noPresence
+              ? "Establish a player or elected official in this state first"
+              : nationalPoolInsufficient
+                ? `Need ${nextPsCost.toFixed(0)} PS for the next build, the national party has ${nationalPoolPs.toFixed(0)}`
+                : `Spend the national party's PS${poolPS ? ` (has ${poolPS.nationalPoolPS.toFixed(0)})` : ""}${priceFor("national-targeted")}`
+        }
+        buttonAnim={buttonAnim}
+        onSpend={handleClick}
+      />
+    </div>
   );
 
   const estimate = lastResult ? (

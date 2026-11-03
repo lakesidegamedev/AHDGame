@@ -1,9 +1,10 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import {
   MarketTickNote,
   minutesSince,
+  minutesUntilNextElectionTick,
   minutesUntilNextRefresh,
   nextQuarterAt,
 } from "./MarketTickNote";
@@ -21,6 +22,30 @@ it("counts down to the next price refresh, like the turn timer", () => {
     expect(view.container.querySelector("[title]")?.getAttribute("title")).toContain(
       "Last refresh 7 min ago"
     );
+  } finally {
+    view.unmount();
+    vi.useRealTimers();
+  }
+});
+
+it("fades between the price refresh and the next election tick every 10 seconds", () => {
+  const view = renderAt("2026-10-09T05:22:00Z", { lastMarketTickAt: "2026-10-09T05:15:00Z" });
+  try {
+    expect(view.container.textContent).toContain("Prices refresh in 8m");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(view.container.querySelector(".opacity-0")).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(view.container.textContent).toContain("Election results in 8m");
+    expect(view.container.textContent).not.toContain("Prices refresh in");
+    expect(view.container.querySelector(".opacity-0")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(view.container.textContent).toContain("Prices refresh in 8m");
   } finally {
     view.unmount();
     vi.useRealTimers();
@@ -66,6 +91,14 @@ describe("market tick note helpers", () => {
     expect(minutesUntilNextRefresh(base)).toBe(15);
     expect(minutesUntilNextRefresh(base + 14 * 60_000 + 30_000)).toBe(1);
     expect(minutesUntilNextRefresh(base + 7 * 60_000 + 1)).toBe(8);
+  });
+
+  it("counts down to the next half-hour election tick", () => {
+    const base = Date.UTC(2026, 9, 9, 20, 0, 0);
+    expect(minutesUntilNextElectionTick(base)).toBe(30);
+    expect(minutesUntilNextElectionTick(base + 22 * 60_000)).toBe(8);
+    expect(minutesUntilNextElectionTick(base + 31 * 60_000)).toBe(29);
+    expect(minutesUntilNextElectionTick(base + 59 * 60_000 + 30_000)).toBe(1);
   });
 
   it("finds the next quarter-hour boundary", () => {

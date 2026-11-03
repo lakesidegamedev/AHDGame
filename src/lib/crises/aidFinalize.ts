@@ -40,7 +40,7 @@ async function incApproval(db: Db, countryId: string, delta: number): Promise<vo
 }
 
 /** Finalize a single resolved commitment: pass = stands; fail = clawback + penalty. */
-export async function finalizeCrisisAid(
+async function finalizeCrisisAid(
   db: Db,
   commitment: CrisisAidCommitment,
   passed: boolean,

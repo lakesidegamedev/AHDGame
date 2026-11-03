@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="372" viewBox="0 0 720 372" role="img" font-family="system-ui, sans-serif">
+<title>Pension turn order</title>
+<desc>The five steps a pension scheme runs each turn: contribution, top-up, accrual, benefits and optional investment.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="371" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<text x="24" y="30" font-size="15" text-anchor="start" fill="#18181b" font-weight="700">What a pension scheme does each turn, in order</text>
+<rect x="24" y="48" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="74.5" font-size="13" text-anchor="middle">1. Contribution</text>
+<rect x="214" y="48" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="66.0" font-size="13" text-anchor="middle">Employer pays covered wage bill x bargained rate.</text>
+<text x="457.0" y="83.0" font-size="13" text-anchor="middle">Skipped if the employer cannot pay.</text>
+<polyline points="194,70.0 214,70.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,92 109.0,108" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="108" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="134.6" font-size="13" text-anchor="middle">2. Top-up</text>
+<rect x="214" y="108" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="126.0" font-size="13" text-anchor="middle">Only when funding is below 90%: the employer pays 5%</text>
+<text x="457.0" y="143.1" font-size="13" text-anchor="middle">of the gap to the 90% mark. Skipped if unaffordable.</text>
+<polyline points="194,130.0 214,130.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,152 109.0,168" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="168" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="194.6" font-size="13" text-anchor="middle">3. Accrual</text>
+<rect x="214" y="168" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="186.1" font-size="13" text-anchor="middle">The workers' claim (liabilities) grows by 8% of the</text>
+<text x="457.0" y="203.1" font-size="13" text-anchor="middle">covered wage bill, whatever happened in steps 1 and 2.</text>
+<polyline points="194,190.0 214,190.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,212 109.0,228" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="228" width="170" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="109.0" y="254.6" font-size="13" text-anchor="middle">4. Benefits</text>
+<rect x="214" y="228" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="246.1" font-size="13" text-anchor="middle">1% of claims not yet in payment start paying; 2% of the</text>
+<text x="457.0" y="263.1" font-size="13" text-anchor="middle">in-payment stock is paid, from cash on hand only.</text>
+<polyline points="194,250.0 214,250.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<polyline points="109.0,272 109.0,288" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="24" y="288" width="170" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="109.0" y="314.6" font-size="13" text-anchor="middle">5. Investment</text>
+<rect x="214" y="288" width="486" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="457.0" y="306.1" font-size="13" text-anchor="middle">Optional: buy a broad index fund. Keep 8 turns of benefits</text>
+<text x="457.0" y="323.1" font-size="13" text-anchor="middle">in cash and invest at most 90% of cash.</text>
+<polyline points="194,310.0 214,310.0" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+</g>
+</svg>

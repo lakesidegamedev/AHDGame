@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { netModifierEffect, type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import { netModifierEffect, type ActiveModifier } from "@/lib/approval/activeModifier";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { buildModifierTitle } from "@/components/approval/modifierTitle";
 

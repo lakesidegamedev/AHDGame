@@ -16,6 +16,12 @@
     },
     "guidedLegislation": {
       "customBill": "Custom Bill",
+      "nationalPartyBillHelp": "A randomly selected seated party legislator will introduce your bill in their chamber. You pay the usual proposal costs. Only one NPP bill per party may be in progress across the national legislature.",
+      "nationalPartyBillBlocked": "Your party already has an NPP bill in progress in the national legislature. Wait until it resolves before proposing another.",
+      "nationalPartyBillUnavailable": "Your party needs an active NPP holding a seat in this country's national legislature to propose through a party legislator.",
+      "proposeViaPartyNpp": "Propose through party legislator",
+      "regionalPartyBillUnavailable": "No party NPP is available to sponsor a bill here. You need a seated regional legislator without an active bill or pending governor proposal.",
+      "noEligiblePartyNpp": "No eligible party legislator is available. They must hold a seat in this region and have no bill in progress.",
       "activeBillProposalBlocked": "You already have a bill in progress. You can prepare this draft, but must wait for that bill to resolve before proposing another.",
       "startingHelp": "Start from a policy domain, a metric you want to affect, or a flavour-only custom bill.",
       "noEffects": "Custom bills contain flavour text only. They have no provisions and make no budget or metric changes.",

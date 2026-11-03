@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     const auth = await requireHumanSession(request);
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/character/allocate-stats:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     if (!(await isRpgStatsEnabled())) {

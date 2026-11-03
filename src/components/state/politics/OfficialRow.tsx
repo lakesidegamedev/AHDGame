@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import type { SerializedOfficial } from "../StatePageTabsTypes";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 
 function deriveAbbreviation(name?: string | null): string | undefined {

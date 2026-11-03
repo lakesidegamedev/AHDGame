@@ -179,6 +179,57 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
     vi.mocked(resolveOrgBuildSizeMultiplier).mockResolvedValue(1);
   });
 
+  it.each([0, -1, 1.5, 11, "5"])(
+    "rejects invalid repeat count %s without spending",
+    async (count) => {
+      const { POST } = await import("./route");
+      const { spendPoliticalStrength } =
+        await import("@/lib/parties/commands/spendPoliticalStrength");
+      const response = await POST(makeRequestWithBody({ count }), {
+        params: Promise.resolve({ code: "us", id: stateId, partyId }),
+      });
+      expect(response.status).toBe(400);
+      expect(spendPoliticalStrength).not.toHaveBeenCalled();
+    }
+  );
+
+  it("stops a repeated build when PS runs out and reports only actual charges", async () => {
+    const { POST } = await import("./route");
+    const { spendPoliticalStrength } =
+      await import("@/lib/parties/commands/spendPoliticalStrength");
+    vi.mocked(spendPoliticalStrength)
+      .mockResolvedValueOnce({
+        ok: true,
+        effectiveCost: 2,
+        newPoliticalStrength: 3,
+        newPressure: 2,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        effectiveCost: 3,
+        newPoliticalStrength: 0,
+        newPressure: 3,
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: "insufficient-ps",
+        effectiveCost: 4,
+        currentPoliticalStrength: 0,
+      });
+    const response = await POST(makeRequestWithBody({ count: 5 }), {
+      params: Promise.resolve({ code: "us", id: stateId, partyId }),
+    });
+    const result = await response.json();
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({ requested: 5, completed: 2, psCost: 5, contributionUnits: 2 });
+    expect(result.stopReason).toMatch(/Insufficient PS/);
+    const { chargeOrgBuildFunds } = await import("@/lib/parties/commands/chargeOrgBuildFunds");
+    expect(chargeOrgBuildFunds).toHaveBeenCalledTimes(2);
+    expect(result.cashCost).toBe(
+      vi.mocked(chargeOrgBuildFunds).mock.calls.reduce((sum, [input]) => sum + input.amount, 0)
+    );
+  });
+
   it("rejects invalid country code", async () => {
     const { POST } = await import("./route");
     const response = await POST(makeRequest(), {

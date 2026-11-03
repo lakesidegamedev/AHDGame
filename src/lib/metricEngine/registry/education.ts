@@ -53,7 +53,7 @@ import type { EngineNodeContext, RegistryNode } from "../types";
 // the full $6515 five-bill stacked max: 83.37%. That's real, perceptible slope
 // (0% -> 38% -> 50% -> 83%) across the whole realistic range instead of the old
 // ~99.88%-to-99.98% near-total saturation.
-export const EDU_SPEND_HALF_SAT = 1300;
+const EDU_SPEND_HALF_SAT = 1300;
 
 const spendResp = (ctx: EngineNodeContext): number =>
   fundingResponse(ctx.spending["education"] ?? 0, EDU_SPEND_HALF_SAT, 100); // 0..100
@@ -145,7 +145,7 @@ export const workforceSkillNode: RegistryNode = {
   },
 };
 
-export const gcseAttainmentNode: RegistryNode = {
+const gcseAttainmentNode: RegistryNode = {
   id: "education.gcseAttainment",
   categoryId: "education",
   metricId: "gcseAttainment",

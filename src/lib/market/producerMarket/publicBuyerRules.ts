@@ -78,12 +78,10 @@ export function publicBuyerFunding(
  *
  * Pure: budgets, shares and weights in, per-wallet amounts out (anchor per turn).
  */
-export const HOUSEHOLD_TRANSFER_CATEGORIES = ["socialSecurity", "welfare", "pensions"] as const;
+const HOUSEHOLD_TRANSFER_CATEGORIES = ["socialSecurity", "welfare", "pensions"] as const;
 
 /** Annual transfer spending: the SUM of the transfer lines (not the first alias found). */
-export function householdTransferAnnual(
-  byCategory: Record<string, number> | undefined | null
-): number {
+function householdTransferAnnual(byCategory: Record<string, number> | undefined | null): number {
   let total = 0;
   for (const key of HOUSEHOLD_TRANSFER_CATEGORIES) total += govtSpendForCategory(byCategory, [key]);
   return total;

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="420" viewBox="0 0 780 420" role="img" font-family="system-ui, sans-serif">
+<title>A war in five acts</title>
+<desc>Five acts from turn 1,000 to 1,700: peacetime, the declaration, first contact, the grind and ending it, with the main decisions in each and the page that explains them.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">Five acts, turn 1,000 to 1,700</text>
+<rect x="14" y="44" width="142" height="72" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="85.0" y="66.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Act I: Peacetime</text>
+<text x="85.0" y="83.5" font-size="13" fill="#18181b" text-anchor="middle">Turns 1,000 to</text>
+<text x="85.0" y="100.5" font-size="13" fill="#18181b" text-anchor="middle">1,150</text>
+<rect x="14" y="128" width="142" height="162" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="85.0" y="170.0" font-size="13" fill="#18181b" text-anchor="middle">Recruit units</text>
+<text x="85.0" y="187.0" font-size="13" fill="#18181b" text-anchor="middle">Spend doctrine</text>
+<text x="85.0" y="204.0" font-size="13" fill="#18181b" text-anchor="middle">points</text>
+<text x="85.0" y="221.0" font-size="13" fill="#18181b" text-anchor="middle">Commission</text>
+<text x="85.0" y="238.0" font-size="13" fill="#18181b" text-anchor="middle">generals</text>
+<text x="85.0" y="255.0" font-size="13" fill="#18181b" text-anchor="middle">Build Commands</text>
+<rect x="14" y="302" width="142" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="85.0" y="321.0" font-size="12" fill="#18181b" text-anchor="middle" font-weight="700">Explained on</text>
+<text x="85.0" y="337.0" font-size="12" fill="#18181b" text-anchor="middle">Units, Doctrine,</text>
+<text x="85.0" y="353.0" font-size="12" fill="#18181b" text-anchor="middle">Generals, Commands</text>
+<path d="M156 78 L166 78" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="166" y="44" width="142" height="72" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="237.0" y="58.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Act II: The</text>
+<text x="237.0" y="75.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">declaration</text>
+<text x="237.0" y="92.0" font-size="13" fill="#18181b" text-anchor="middle">Turns 1,150 to</text>
+<text x="237.0" y="109.0" font-size="13" fill="#18181b" text-anchor="middle">1,180</text>
+<rect x="166" y="128" width="142" height="162" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="237.0" y="195.5" font-size="13" fill="#18181b" text-anchor="middle">File the bill</text>
+<text x="237.0" y="212.5" font-size="13" fill="#18181b" text-anchor="middle">24 turn vote</text>
+<text x="237.0" y="229.5" font-size="13" fill="#18181b" text-anchor="middle">The war opens</text>
+<rect x="166" y="302" width="142" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="237.0" y="329.0" font-size="12" fill="#18181b" text-anchor="middle" font-weight="700">Explained on</text>
+<text x="237.0" y="345.0" font-size="12" fill="#18181b" text-anchor="middle">Declaring War</text>
+<path d="M308 78 L318 78" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="318" y="44" width="142" height="72" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="389.0" y="58.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Act III: First</text>
+<text x="389.0" y="75.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">contact</text>
+<text x="389.0" y="92.0" font-size="13" fill="#18181b" text-anchor="middle">Turns 1,180 to</text>
+<text x="389.0" y="109.0" font-size="13" fill="#18181b" text-anchor="middle">1,260</text>
+<rect x="318" y="128" width="142" height="162" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="389.0" y="178.5" font-size="13" fill="#18181b" text-anchor="middle">Post generals to</text>
+<text x="389.0" y="195.5" font-size="13" fill="#18181b" text-anchor="middle">the front</text>
+<text x="389.0" y="212.5" font-size="13" fill="#18181b" text-anchor="middle">Read the war room</text>
+<text x="389.0" y="229.5" font-size="13" fill="#18181b" text-anchor="middle">Declare an</text>
+<text x="389.0" y="246.5" font-size="13" fill="#18181b" text-anchor="middle">offensive</text>
+<rect x="318" y="302" width="142" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="389.0" y="329.0" font-size="12" fill="#18181b" text-anchor="middle" font-weight="700">Explained on</text>
+<text x="389.0" y="345.0" font-size="12" fill="#18181b" text-anchor="middle">Fighting a Battle</text>
+<path d="M460 78 L470 78" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="470" y="44" width="142" height="72" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="541.0" y="58.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Act IV: The</text>
+<text x="541.0" y="75.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">grind</text>
+<text x="541.0" y="92.0" font-size="13" fill="#18181b" text-anchor="middle">Turns 1,260 to</text>
+<text x="541.0" y="109.0" font-size="13" fill="#18181b" text-anchor="middle">1,600</text>
+<rect x="470" y="128" width="142" height="162" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="541.0" y="170.0" font-size="13" fill="#18181b" text-anchor="middle">Attrition and</text>
+<text x="541.0" y="187.0" font-size="13" fill="#18181b" text-anchor="middle">rebuilding</text>
+<text x="541.0" y="204.0" font-size="13" fill="#18181b" text-anchor="middle">Choose replacement</text>
+<text x="541.0" y="221.0" font-size="13" fill="#18181b" text-anchor="middle">mode</text>
+<text x="541.0" y="238.0" font-size="13" fill="#18181b" text-anchor="middle">Watch supply</text>
+<text x="541.0" y="255.0" font-size="13" fill="#18181b" text-anchor="middle">Allies join</text>
+<rect x="470" y="302" width="142" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="541.0" y="321.0" font-size="12" fill="#18181b" text-anchor="middle" font-weight="700">Explained on</text>
+<text x="541.0" y="337.0" font-size="12" fill="#18181b" text-anchor="middle">Manpower and</text>
+<text x="541.0" y="353.0" font-size="12" fill="#18181b" text-anchor="middle">Fighting a Battle</text>
+<path d="M612 78 L622 78" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="622" y="44" width="142" height="72" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="693.0" y="66.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Act V: Ending it</text>
+<text x="693.0" y="83.5" font-size="13" fill="#18181b" text-anchor="middle">Turns 1,600 to</text>
+<text x="693.0" y="100.5" font-size="13" fill="#18181b" text-anchor="middle">1,700</text>
+<rect x="622" y="128" width="142" height="162" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="693.0" y="187.0" font-size="13" fill="#18181b" text-anchor="middle">War winds down</text>
+<text x="693.0" y="204.0" font-size="13" fill="#18181b" text-anchor="middle">Offer a settlement</text>
+<text x="693.0" y="221.0" font-size="13" fill="#18181b" text-anchor="middle">Accept or reject</text>
+<text x="693.0" y="238.0" font-size="13" fill="#18181b" text-anchor="middle">A truce begins</text>
+<rect x="622" y="302" width="142" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="693.0" y="321.0" font-size="12" fill="#18181b" text-anchor="middle" font-weight="700">Explained on</text>
+<text x="693.0" y="337.0" font-size="12" fill="#18181b" text-anchor="middle">Peace, Indemnities</text>
+<text x="693.0" y="353.0" font-size="12" fill="#18181b" text-anchor="middle">and Truces</text>
+<text x="14" y="396" font-size="12" fill="#52525b" text-anchor="start">The cast and numbers in the walkthrough are invented. The order of decisions is the point.</text>
+</svg>

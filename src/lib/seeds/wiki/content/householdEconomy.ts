@@ -1,61 +1,46 @@
 export const householdEconomyContent = `# Household Demand & Price Level
 
-Households are an active part of the commodity economy. In fresh worlds, the
-household-consumption system replaces the older flat demographics demand uplift
-with a population-based consumer basket that reacts to employment, income,
-confidence, and prices.
+Your retail sector has capacity and still sells poorly. Before blaming your price, look at the customers. **Households** are the end customers of the economy: every state's population buys a basket of finished goods and services, and how much it buys depends on jobs, income, confidence and prices. This is the demand that retail, food, energy, vehicles and many other sectors ultimately sell into.
 
-## Household consumption
+## What sets the size of the basket
 
-Every state generates demand for a basket of finished goods and consumer
-services, including food, energy, retail, vehicles, electronics, medicine,
-housing, finance, networks, software, freight, and professional
-services.
+Each turn every state generates demand for a basket that includes food, energy, retail goods, vehicles, electronics, medicine, housing, finance, networks, software, freight and professional services. The size of the budget is tied to **population**, not to GDP, so countries with very different currencies stay comparable. Three state signals then adjust it, and all three are on the [National Metrics](/wiki/national-metrics) page:
 
-The total budget is anchored to population rather than nominal GDP so countries
-with different currencies remain comparable. Three state signals then adjust
-the demand level:
+- **Unemployment:** lower unemployment raises demand and high unemployment cuts it.
+- **Consumer confidence:** moves demand within a bounded range.
+- **Median income:** compared with the country's own average, never with another country's currency.
 
-- Lower unemployment raises household demand; high unemployment reduces it.
-- Consumer confidence moves demand within a bounded range.
-- Median income is compared with the country average, not with another
-  country's currency-denominated income.
+During a global financial crisis, a country's stimulus spending and bank lending also scale its households' budget. Check these first when a consumer sector sells below expectation. Hiring and wage choices move unemployment and median income through [Labour & Wages](/wiki/labour-and-wages), and policymakers who lift employment or confidence raise household demand across the board.
 
-Wealth changes the basket mix through Engel's law. Richer states spend a
-smaller share on staples and a larger share on vehicles, electronics, housing,
-finance, and software.
+Wealth changes the **mix** of the basket, not its size (Engel's law). Richer states spend a smaller share on staples and a larger share on vehicles, electronics, housing, finance and software, so sell goods that fit the local basket.
 
-## Price elasticity
+![Population sets the household budget, three state signals adjust it, then wealth changes the basket mix, elasticity and a supply cap lead to commodity demand.](/wiki-images/diagrams/household-economy-demand-flow.svg)
 
-Households buy less of a commodity when its prior global price rises above the
-era base price and more when it falls below. Staples such as food, energy,
-healthcare, and medicine are relatively inelastic. Vehicles, electronics,
-and software respond more strongly.
+| Rule | Value |
+| --- | --- |
+| Budget base | Population times a per-person spend |
+| Household demand cap per commodity | 1.5 times the previous turn's global supply of that commodity |
+| Household price index start | 1.0 |
+| Index pass-through | 75% of annual inflation, compounded each turn |
+| Turns per game year | 48 |
 
-In plants worlds, household demand is scaled onto the physical production unit
-basis. Per-commodity demand is capped at 1.5× the prior turn's global supply so a
-tiny new market cannot receive impossible demand that no build-out could satisfy.
+## When prices move
 
-## Household price index
+Households buy less of a [commodity](/wiki/commodities) when its price rises above the era's base price and more when it falls below. Staples such as food, energy, healthcare and medicine barely respond to price. Vehicles, electronics and software respond strongly. Rising prices therefore destroy some discretionary demand while staples hold up, which stabilises the market, so keep consumer goods competitive on price.
 
-Each country also carries a household price index, starting at 1.0. Every turn
-it compounds 75% of the country's annual inflation rate on a per-turn basis:
+The cap exists so a tiny new market cannot be assigned impossible demand that no amount of building could satisfy. If food had 100,000 units of world supply last turn, household demand for it cannot exceed 150,000 this turn. A glut of supply against a fixed population budget lowers your fill. Household demand is the end market for [corporations](/wiki/corporations) in retail and other consumer sectors, so it sets their fill and revenue.
 
-\`nextIndex = priorIndex * (1 + 0.75 * annualInflation / 100 / 48)\`
+## The household price index
 
-This is a price-level record, not a feedback input into inflation. The economy
-panel uses it to convert nominal median income into launch-price purchasing
-power. An index of 1.25 means the tracked household basket costs about 25% more
-than at the world's starting baseline.
+Each country also carries a household price index that starts at 1.0. Every turn it grows by 75% of the annual inflation rate, spread over 48 turns. In practice, after one game year at 8% inflation the index is 1 + 0.75 x 8% = **1.06**; after two years it is about 1.124. The index is a record of the price level, not an input into inflation.
 
-## What players should watch
+\`\`\`wiki-chart
+household-price-index-by-inflation
+\`\`\`
 
-- Consumer demand creates an end market for finished goods and services.
-- Weak employment or confidence reduces that demand even if factories have
-  ample capacity.
-- High prices destroy some discretionary demand, while staples hold up better.
-- Nominal income can rise while real household purchasing power falls if the
-  price index rises faster.
+Median income in a state rises from 50,000 to 55,000 over two game years while inflation runs at 8%. The household price index reaches about 1.124. In launch-price terms, income is 55,000 / 1.124 = **48,900**, which is lower than the 50,000 you started with. Your nominal income rose 10% but your real purchasing power fell about 2%. The economy panel shows this purchasing power figure.
 
-See also: [Commodities](/wiki/commodities), [National Metrics](/wiki/national-metrics), [Corporations](/wiki/corporations), [Planned / Command Economies](/wiki/planned-economies)
+Command economies set prices and distribution through the plan; see [Planned / Command Economies](/wiki/planned-economies).
+
+Applies in current worlds, where it replaces the older flat demographic demand uplift; older worlds created before it may still use the flat uplift. Last checked 2026-10-29, version 1.18.0. This system has no separate design page yet.
 `;

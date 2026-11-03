@@ -2,7 +2,7 @@
 
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useEffect, useState } from "react";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   getOperatingSectorType,
   getSectorStrategies,

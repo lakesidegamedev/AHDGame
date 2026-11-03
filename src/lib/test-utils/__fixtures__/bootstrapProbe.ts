@@ -78,7 +78,7 @@ export async function probeBootstrap(preset: string): Promise<BootstrapProbeResu
  * the wrong fix: nothing in the seed path calls it, so the shim would exist only
  * to serve this probe.
  */
-export async function listNonEmptyCollections(memory: InMemoryDb): Promise<string[]> {
+async function listNonEmptyCollections(memory: InMemoryDb): Promise<string[]> {
   const out: string[] = [];
   for (const name of memory.collections.keys()) {
     const count = await (memory as unknown as Db).collection(name).countDocuments({});

@@ -17,6 +17,9 @@ vi.mock("@/lib/api/corporations/resolveQuery", async () => {
   // contract is exercised rather than restated here.
   return { ...actual, resolveCorporation: vi.fn() };
 });
+vi.mock("@/lib/corporations/subsidiaries/authorization", () => ({
+  directingParentCorporationId: vi.fn(async () => null),
+}));
 vi.mock("@/lib/imageOptimize", () => ({
   IMAGE_PRESETS: { corporationLogo: {} },
   optimizeImage: vi.fn(async () => ({ buffer: Buffer.from("optimized"), ext: "png" })),
@@ -115,6 +118,53 @@ describe("POST /api/upload/corporation-logo", () => {
 
     const { POST } = await import("./route");
     const response = await POST(logoRequest(otherCorpId.toString()));
+
+    expect(response.status).toBe(403);
+    const { uploadFile } = await import("@/lib/r2");
+    expect(vi.mocked(uploadFile)).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("lets the controlling parent's CEO set an AI-run subsidiary's logo, and records it", async () => {
+    const subId = new ObjectId();
+    const parentId = new ObjectId();
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: { _id: subId, userId: new ObjectId(), ceoType: "npp" },
+    } as never);
+    const { directingParentCorporationId } =
+      await import("@/lib/corporations/subsidiaries/authorization");
+    vi.mocked(directingParentCorporationId).mockResolvedValueOnce(parentId);
+
+    const { POST } = await import("./route");
+    const response = await POST(logoRequest(subId.toString()));
+
+    expect(response.status).toBe(200);
+    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
+      { _id: subId },
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          logoUrl: expect.stringContaining(subId.toString()),
+          logoSetByParent: expect.objectContaining({
+            byCorporationId: parentId,
+            byUserId: new ObjectId(userId),
+          }),
+        }),
+      })
+    );
+  });
+
+  it("refuses a non-controlling shareholder of an AI-run corporation", async () => {
+    const subId = new ObjectId();
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: { _id: subId, userId: new ObjectId(), ceoType: "npp" },
+    } as never);
+
+    const { POST } = await import("./route");
+    const response = await POST(logoRequest(subId.toString()));
 
     expect(response.status).toBe(403);
     const { uploadFile } = await import("@/lib/r2");

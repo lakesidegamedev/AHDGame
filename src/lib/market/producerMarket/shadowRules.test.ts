@@ -121,3 +121,27 @@ describe("producer market shadow", () => {
     expect(fin.next).toBeLessThan(3);
   });
 });
+
+describe("public orders on a country book", () => {
+  it("merges state lines that land on one country book into one order", () => {
+    const orders = publicOrders(
+      [
+        {
+          accountId: "inv-at",
+          countryId: "AT",
+          lines: [
+            { commodity: "construction_services", book: "country:AT", amountLocal: 30 },
+            { commodity: "construction_services", book: "country:AT", amountLocal: 20 },
+            { commodity: "steel", book: "world", amountLocal: 10 },
+          ] as never,
+        },
+      ],
+      () => 2,
+      1.5
+    );
+    expect(orders.map((o) => [o.id, o.units, o.maximumSpend])).toEqual([
+      ["public:inv-at:construction_services:country:AT", 25, 50],
+      ["public:inv-at:steel:world", 5, 10],
+    ]);
+  });
+});

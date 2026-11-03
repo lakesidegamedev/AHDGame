@@ -57,17 +57,6 @@ export function InfluenceErrorMessage({ message }: { message: string }) {
   );
 }
 
-/**
- * Cooldown warning for influence panels.
- */
-export function InfluenceCooldownWarning({ turnsRemaining }: { turnsRemaining: number }) {
-  return (
-    <div className="mb-4 rounded-lg bg-yellow-500/20 p-3 text-sm text-yellow-400">
-      Cooldown: Wait {turnsRemaining} more turn(s) before attempting to influence this NPP again.
-    </div>
-  );
-}
-
 interface CostAndChanceSummaryProps {
   actionCost: number;
   fundCost: number;
@@ -119,65 +108,5 @@ export function CostAndChanceSummary({
         </div>
       </div>
     </div>
-  );
-}
-
-interface CharacterResourcesProps {
-  actions: number;
-  funds: number;
-  /** Optional candidate NPI to display */
-  candidateNPI?: number | null;
-}
-
-/**
- * Shared character resources display for influence panels.
- */
-export function CharacterResources({ actions, funds, candidateNPI }: CharacterResourcesProps) {
-  return (
-    <div className="mb-4 flex flex-wrap gap-4 text-sm">
-      <div>
-        <span className="text-muted">Actions: </span>
-        <span className="font-medium">{actions}</span>
-      </div>
-      <div>
-        <span className="text-muted">Funds: </span>
-        <span className="font-medium text-green-400">${funds.toLocaleString("en-US")}</span>
-      </div>
-      {candidateNPI != null && (
-        <div>
-          <span className="text-muted">Candidate national influence (NPI): </span>
-          <span className="font-medium text-purple-400">{candidateNPI.toFixed(1)}%</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface ExecuteButtonProps {
-  executing: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  label?: string;
-  executingLabel?: string;
-}
-
-/**
- * Shared execute button for influence panels.
- */
-export function ExecuteInfluenceButton({
-  executing,
-  disabled,
-  onClick,
-  label = "Attempt Influence",
-  executingLabel = "Attempting...",
-}: ExecuteButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={executing || disabled}
-      className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
-    >
-      {executing ? executingLabel : label}
-    </button>
   );
 }

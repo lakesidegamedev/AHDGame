@@ -15,7 +15,6 @@ import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
 import { calcAppeal, approvalScalar } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI, normalizeNationalReachPresidentialPrimary } from "@/lib/utils/normalizeNPI";
 import { infamyPenaltyMultiplier } from "@/lib/utils/infamy";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { calcEffectiveFavorability } from "./voteCalculations";
 import { splitGroupPoolBySlate } from "./slateAllocation";
 import {
@@ -38,7 +37,7 @@ import {
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
 import { normalizePartyInfluencePresidentialPrimary } from "@/lib/utils/normalizeNPI";
 import { effectivePartyInfluenceForPresidentialPrimary } from "@/lib/primaryScore";
-import { applyFptpSpoilerTransfers } from "./rules/spoilerTransfers";
+import { applyFptpSpoilerTransfers, shouldApplyFptpSpoiler } from "./rules/spoilerTransfers";
 
 // ─── Group-level competitive allocation (Phase 1 realism) ───────────────────
 //
@@ -306,19 +305,8 @@ export function distributeVotesByGroupLevelAllocation(
   // splitting dynamic: a nearby third party bleeds coalition voters from a major
   // party, potentially flipping the seat to the opposing major party.
   //
-  // In RCV states this step is skipped — ranked choice eliminates the spoiler.
-  // For one-party states the spoiler dynamic is also skipped: the regime
-  // multiplier already encodes ruling-vs-approved dominance by an order of
-  // magnitude, and a "third-party bleeds the major" reading misrepresents the
-  // CN-style competitive landscape entirely.
-  // Prefer the runtime override (pre-resolved from countryState by the
-  // caller) so a mid-game system conversion takes effect immediately.
-  // Falls back to COUNTRY_CONFIGS for hand-built test fixtures that don't
-  // thread a DB through.
-  const skipSpoilerForOps =
-    options?.isOnePartyState ??
-    (options?.countryId && COUNTRY_CONFIGS[options.countryId]?.governmentType === "onePartyState");
-  if (options?.isGeneralElection && options?.votingSystem !== "rcv" && !skipSpoilerForOps) {
+  // Skipped under RCV and in one-party states (see shouldApplyFptpSpoiler).
+  if (options?.isGeneralElection && shouldApplyFptpSpoiler(options)) {
     applyFptpSpoilerTransfers(enriched, votesPerCandidate, partyOrgByParty, options);
   }
 

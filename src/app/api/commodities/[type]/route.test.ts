@@ -3,7 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
-import { getEnabledCountryIds } from "@/lib/countryAccess";
+import { getEconomyVisibleCountryIds } from "@/lib/countryAccess";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { GET, getCommodityDetailData } from "./route";
 import { buildCommodityMarketScope } from "@/app/commodity/[type]/lib/marketScope";
@@ -21,7 +21,7 @@ vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
   loadFxRatesByCurrency: vi.fn(),
 }));
 
-vi.mock("@/lib/countryAccess", () => ({ getEnabledCountryIds: vi.fn() }));
+vi.mock("@/lib/countryAccess", () => ({ getEconomyVisibleCountryIds: vi.fn() }));
 
 const corpId = new ObjectId();
 
@@ -304,9 +304,35 @@ describe("advertising commodity detail", () => {
     expect(buildCommodityMarketScope(data, "US", "CA").marketingBudgets).toEqual([]);
   });
 
+  it("includes economy-preview regions for non-admin readers while keeping hidden countries out", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(null);
+    vi.mocked(getEconomyVisibleCountryIds).mockResolvedValue(["US", "DE"]);
+    db.collection("states")
+      .find()
+      .toArray.mockResolvedValue([
+        { _id: "CA", countryId: "US" },
+        { _id: "BRE", countryId: "DE" },
+        { _id: "LON", countryId: "UK" },
+      ]);
+    db.collection("corporations")
+      .find()
+      .toArray.mockResolvedValue([
+        { _id: corpId, name: "Economy preview", headquartersState: "BRE", marketingBudget: 100 },
+        {
+          _id: new ObjectId(),
+          name: "Hidden country",
+          headquartersState: "LON",
+          marketingBudget: 100,
+        },
+      ]);
+    const data = await getCommodityDetailData("advertising");
+    expect(data.marketingBudgets?.map((row) => row.name)).toEqual(["Economy preview"]);
+    expect(data.stateCountryMap).toEqual({ CA: "US", BRE: "DE" });
+  });
+
   it("omits inaccessible and unknown headquarters for non-admin readers", async () => {
     vi.mocked(getAuthUser).mockResolvedValue(null);
-    vi.mocked(getEnabledCountryIds).mockResolvedValue(["US"]);
+    vi.mocked(getEconomyVisibleCountryIds).mockResolvedValue(["US"]);
     db.collection("states")
       .find()
       .toArray.mockResolvedValue([

@@ -18,7 +18,8 @@ import MapSVGContent, {
 import MapTooltip from "@/app/world/components/MapTooltip";
 import { getMapTooltipAccessDisplay, ISO_TO_COUNTRY_ID } from "@/app/world/worldMetricHighlight";
 import { resolveCountryAvailability } from "@/lib/countryAvailability";
-import { COUNTRY_CONFIGS, type CountryId, type CountryStatus } from "@/lib/constants/countries";
+import { type CountryId, type CountryStatus } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { WORLD_MAPPED_COUNTRIES } from "@/lib/worldCountryRegistry";
 import { computeRegionBlobs } from "@/lib/maps/regionOverlay";
 import { cdnStatic } from "@/lib/images/cdnUrls";
@@ -1446,10 +1447,10 @@ export function LandingGlobe({
     ? {
         label: resolveCountryName(hoveredOverlayCountryId),
         status:
-          COUNTRY_CONFIGS[hoveredOverlayCountryId].status === "coming-soon"
+          COUNTRY_CLIENT_CONFIGS[hoveredOverlayCountryId].status === "coming-soon"
             ? ("planned" as const)
-            : COUNTRY_CONFIGS[hoveredOverlayCountryId].status,
-        path: COUNTRY_CONFIGS[hoveredOverlayCountryId].overviewPath,
+            : COUNTRY_CLIENT_CONFIGS[hoveredOverlayCountryId].status,
+        path: COUNTRY_CLIENT_CONFIGS[hoveredOverlayCountryId].overviewPath,
       }
     : hovered
       ? WORLD_MAPPED_COUNTRIES[hovered]

@@ -114,7 +114,7 @@ function frontage(ctx: BattleContext, u: CombatUnit): number {
 }
 
 /** Deterministic mulberry32-style RNG (design rng). */
-export function rng(seed: number): () => number {
+function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a += 0x6d2b79f5;
@@ -247,10 +247,10 @@ export interface AggItem {
  * far harder than keeping them fed once they are. A side that can no longer land can
  * still sustain what it already put there.
  */
-export const MARINE_SUSTAINMENT_SEA_CONTROL = 40;
+const MARINE_SUSTAINMENT_SEA_CONTROL = 40;
 
 /** What an unsupported marine formation is worth: light infantry, not a landing force. */
-export const MARINE_UNSUPPORTED_FRACTION = 0.6;
+const MARINE_UNSUPPORTED_FRACTION = 0.6;
 
 export interface SideAgg {
   mass: number;
@@ -1083,7 +1083,7 @@ export interface BattleSide extends GeneralBinding {
  * battle strip a formation that took a game year of contracts to equip; anything smaller and
  * a war would not drain the arsenal at all, which is the point of the mechanic.
  */
-export const MATERIEL_LOSS_SCALE = 1.6;
+const MATERIEL_LOSS_SCALE = 1.6;
 
 /** One nation's share of a coalition side's engagement. */
 export interface ContingentOutcome {

@@ -38,6 +38,7 @@ import { restartProductionFactor } from "../rules/restartRun";
 import {
   soldOutMarketHeadroomUnits,
   throttleSoldUnits,
+  withEditorialAvailabilityRestored,
   withRegulationBlockedFill,
 } from "../demandThrottle";
 
@@ -429,6 +430,13 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     clearingEnabled && clearing
       ? withRegulationBlockedFill(clearing.soldByCommodity, clearing.regulationBlockedByCommodity)
       : sector.soldByCommodity;
+  // Editorial stance shrank the advertising offer, not the demand behind it, so
+  // the sold-out test reads the fill with that cut undone. Only the restored
+  // fill feeds headroom; the throttle's own sales history is untouched.
+  const headroomFill =
+    clearingEnabled && clearing
+      ? withEditorialAvailabilityRestored(feedbackFill, clearing.editorialAvailabilityByCommodity)
+      : feedbackFill;
   const feedbackSold =
     clearingEnabled && clearing && sector.producedUnits != null
       ? sector.producedUnits *
@@ -499,7 +507,7 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     marketHeadroomUnits:
       throttleLegBalance && throttleLegMixWeight
         ? soldOutMarketHeadroomUnits({
-            soldByCommodity: feedbackFill,
+            soldByCommodity: headroomFill,
             supplyRates: strategySupply,
             marketShareFor: (commodity) =>
               clearing?.marketSupplyShareByCommodity?.[commodity as CommodityType],

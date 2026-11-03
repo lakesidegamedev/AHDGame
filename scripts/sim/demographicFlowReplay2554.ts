@@ -1,3 +1,4 @@
+import { seedCountyPopulations } from "@/lib/counties/seed";
 /**
  * Isolated real-Mongo replay checks for the demographic flow phase and its receipts.
  * Synthetic regions exercise interrupted publication, target writes and completion.
@@ -84,6 +85,7 @@ async function seedFixture(): Promise<Db> {
       population: { birthRate: { value: 50 }, migrationRate: { value: 0 } },
     } as never);
   }
+  await seedCountyPopulations(db);
   return db;
 }
 

@@ -60,7 +60,11 @@ export async function POST(
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/region/[id]/legislature/bills:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const billSchema = z.object({
@@ -71,6 +75,7 @@ export async function POST(
       effectDirection: z.number().optional(),
       provisions: z.array(stateBillProvisionSchema).max(MAX_PROVISIONS).optional(),
       adminOverride: z.boolean().optional(),
+      proposeViaPartyNpp: z.boolean().optional(),
     });
 
     const parsed = await parseJsonBody(request, billSchema);

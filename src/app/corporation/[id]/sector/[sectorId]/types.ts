@@ -1,7 +1,9 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { PlantSectorSplitQuote } from "@/lib/corporations/plantSectorSplit";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
+import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 
 export interface SectorData {
   _id: string;
@@ -9,6 +11,8 @@ export interface SectorData {
   countryId?: string;
   stateName: string;
   sectorType: OperatingSectorType;
+  /** Manufacturing production model, e.g. "vehicles", which sets the facility size. */
+  industryModel?: ManufacturingIndustryModel | null;
   mediaDiscriminator?: "entertainment" | null;
   /** Authoritative news-media advertising output factor from commodity accounting. */
   mediaAdvertisingCampaignFactor?: number;
@@ -25,6 +29,11 @@ export interface SectorData {
   workers: number;
   workersDesired?: number;
   labourStaffingFactor?: number;
+  /**
+   * The sector's state labour pool: workers available there against workers
+   * every employer there wants. Null when the state has no readings yet.
+   */
+  stateLabourMarket?: StateLabourPoolView | null;
   productionPolicy: number;
   productionPolicyLevel: number;
   /** Labour system: CEO wage-level lever (1.0 = baseline). */
@@ -146,6 +155,21 @@ export interface CommodityFlow {
    */
   soldFraction?: number;
   /**
+   * Supply rows, CEO only: output this plant handed to the company's own other
+   * sites last turn. Not a sale, so no revenue; `valueAnchor` is the units at
+   * the plant's asking price, in ₳.
+   */
+  ownSite?: { units: number; share: number; valueAnchor: number };
+  /**
+   * Demand rows, CEO only, short inputs only: the company's other sites made
+   * this input last turn, and why that output did not cover this plant.
+   */
+  ownSupply?: {
+    sourceStateIds: string[];
+    sourceStateNames: string[];
+    reasons: import("@/lib/corporations/rules/ownSupplyReach").OwnSupplyReachReason[];
+  };
+  /**
    * Market clearing, supply rows only: this output's share of last turn's
    * realized revenue (0-1, summing to ~1 across outputs). Splits the blended
    * average sale price into a price per product on a multi-output sector.
@@ -235,6 +259,8 @@ export interface PricingData {
   effectivePosture: number | null;
   /** Share of output that found a buyer last turn. */
   soldFraction: number | null;
+  /** Share of output handed to the company's own sites last turn (CEO only). Not a sale. */
+  ownSiteFraction?: number | null;
   /** Ramped clearing multiplier applied to realized revenue last turn. */
   clearingFactor: number | null;
   /**
@@ -585,6 +611,7 @@ export type PlantIdleCauseKey =
   | "inputs"
   | "demand"
   | "ramping"
+  | "cash"
   | "strike"
   | "disaster"
   | "policy"
@@ -609,6 +636,13 @@ export interface PlantBuildOrderView {
   unitsDelivered: number;
   /** True when this order ramps in per turn rather than landing all at once. */
   smooth: boolean;
+  /**
+   * Capacity units added on every turn of the ramp; 0 when the order lands all
+   * at once or in whole-plant steps that skip turns.
+   */
+  unitsPerTurn: number;
+  /** Next turn this order adds capacity; null once it has landed. */
+  nextArrivalTurn?: number | null;
   costPaidAnchor: number;
   startTurn: number;
   onlineTurn: number;
@@ -620,13 +654,23 @@ export interface PlantBuildOrderView {
 export interface PlantsData {
   /** Persisted whole facilities owned by this sector. */
   plantCount?: number;
+  /** The strategy the sector runs; with the lane it decides plant size. */
+  strategyId?: string | null;
   capacityUnits: number | null;
   producedUnits: number | null;
   soldUnits: number | null;
+  /** Units handed free to the company's own sites; not sales and not unsold. */
+  ownSiteUnits?: number | null;
   unsoldUnits: number | null;
   idleUnits: number | null;
   fillRate: number | null;
   idleCauses: PlantIdleCause[];
+  /**
+   * Labels of this sector's outputs that sell only in the state where they are
+   * made (construction, freight, healthcare, real estate). A shortage
+   * elsewhere cannot lift demand for these (ticket 1700).
+   */
+  localMarketOutputs?: string[];
   mothballed: boolean;
   buildQueue: PlantBuildOrderView[];
   constructionInProgressAnchor: number;

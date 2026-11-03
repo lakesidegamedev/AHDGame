@@ -1,8 +1,7 @@
 /**
- * Tests for the NPP-aware behavior of requireForeignMinister: an NPP-held
- * foreign-minister seat (null characterId) is not owned by any player actor, so
- * it must be treated like a vacant seat and fall through to the head-of-gov
- * fallback — not 403 a head of government who is otherwise authorized.
+ * Tests for requireForeignMinister and requireTradeMinister: only the seated
+ * character holder of the mapped ministry seat may act. A vacant or NPP-held
+ * seat (null characterId) authorizes nobody, including the head of government.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
@@ -17,11 +16,6 @@ import {
 } from "@/lib/constants/internationalOrganizations";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
-
-vi.mock("@/lib/api/headOfGovernment", () => ({
-  getHeadOfGovernmentCharacterId: vi.fn(),
-}));
 
 let db: MockDb;
 
@@ -36,9 +30,9 @@ describe.each([
   ["foreign", requireForeignMinister, FOREIGN_AFFAIRS_POSITION_BY_COUNTRY],
   ["trade", requireTradeMinister, TRADE_MINISTER_POSITION_BY_COUNTRY],
 ] as const)("%s minister authorization", (ministry, requireMinister, positions) => {
-  it("falls through to the head-of-gov fallback when the FM seat is NPP-held", async () => {
-    const hogCharId = new ObjectId();
-    // FM seat exists but is held by an NPP (null characterId).
+  it("denies the actor when the seat is NPP-held", async () => {
+    // A seat held by an NPP carries a null characterId, so it belongs to no
+    // player and authorizes nobody — not even the head of government.
     db.collectionMocks["cabinetMembers"]!.findOne.mockResolvedValue({
       countryId: "US",
       positionId: positions.US,
@@ -47,63 +41,63 @@ describe.each([
       nppId: new ObjectId(),
       characterName: "NPP Diplomat",
     });
-    vi.mocked(getHeadOfGovernmentCharacterId).mockResolvedValue(hogCharId);
 
-    const result = await requireMinister("US", hogCharId, "President Pat", db as unknown as Db);
+    const actor = new ObjectId();
+    const result = await requireMinister("US", actor, "President Pat", db as unknown as Db);
 
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.auth.positionId).toBe("head_of_government");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.response.status).toBe(403);
+      expect(await result.response.json()).toMatchObject({
+        error: `Only the US ${ministry} minister may perform this action.`,
+        ref: expect.any(String),
+      });
     }
   });
 
-  it("authorizes the character holder of an FM seat", async () => {
-    const fmCharId = new ObjectId();
+  it("authorizes the character holder of a seat", async () => {
+    const holderId = new ObjectId();
     db.collectionMocks["cabinetMembers"]!.findOne.mockResolvedValue({
       countryId: "US",
       positionId: positions.US,
-      characterId: fmCharId,
+      characterId: holderId,
       characterName: "Secretary Sam",
     });
 
-    const result = await requireMinister("US", fmCharId, "Secretary Sam", db as unknown as Db);
+    const result = await requireMinister("US", holderId, "Secretary Sam", db as unknown as Db);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.auth.positionId).toBe(positions.US);
     }
-    expect(getHeadOfGovernmentCharacterId).not.toHaveBeenCalled();
   });
 
-  it("forbids a non-FM actor when another player holds the FM seat", async () => {
+  it("forbids a non-minister when another player holds the seat", async () => {
     // The seat is filled by someone other than the actor — even the head of
-    // government must not act while a foreign minister is seated.
-    const seatedFmId = new ObjectId();
+    // government must not act while a minister is seated.
+    const seatedMinisterId = new ObjectId();
     const someoneElse = new ObjectId();
     db.collectionMocks["cabinetMembers"]!.findOne.mockResolvedValue({
       countryId: "CN",
       positionId: positions.CN,
-      characterId: seatedFmId,
+      characterId: seatedMinisterId,
       characterName: "Seated Minister",
     });
 
     const result = await requireMinister("CN", someoneElse, "Some Premier", db as unknown as Db);
 
     expect(result.ok).toBe(false);
-    expect(getHeadOfGovernmentCharacterId).not.toHaveBeenCalled();
   });
 
-  it("denies an empty ministry with no head of government using the existing envelope", async () => {
+  it("denies an empty ministry using the existing envelope", async () => {
     const actor = new ObjectId();
     db.collectionMocks["cabinetMembers"]!.findOne.mockResolvedValue(null);
-    vi.mocked(getHeadOfGovernmentCharacterId).mockResolvedValue(null);
     const result = await requireMinister("US", actor, "Actor", db as unknown as Db);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.response.status).toBe(403);
       expect(await result.response.json()).toMatchObject({
-        error:
-          "Only the US " + ministry + " minister or head of government may perform this action.",
+        error: `Only the US ${ministry} minister may perform this action.`,
         ref: expect.any(String),
       });
     }
@@ -118,7 +112,6 @@ it("allows trade admins without reading holders, after obtaining the database", 
   });
   expect(getDb).toHaveBeenCalledOnce();
   expect(db.collectionMocks["cabinetMembers"]!.findOne).not.toHaveBeenCalled();
-  expect(getHeadOfGovernmentCharacterId).not.toHaveBeenCalled();
 });
 
 it("preserves database acquisition failures even for trade admins", async () => {

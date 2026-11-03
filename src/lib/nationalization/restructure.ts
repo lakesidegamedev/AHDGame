@@ -160,7 +160,7 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
  * Exported so the DD/RU repair migrations can adopt split-offs that were
  * created before `splitOffSectorType` did this.
  */
-export async function attachSoeOverlayIfPlanned(
+async function attachSoeOverlayIfPlanned(
   db: Db,
   countryId: CountryId,
   corpId: ObjectId,

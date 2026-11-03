@@ -168,16 +168,20 @@ async function collectBalanceState(
   const corps = db.collection<{
     _id: ObjectId;
     liquidCapital?: number;
+    pendingOperatingCash?: number;
     liquidCurrencyCode?: CurrencyCode;
   }>("corporations");
-  const corpCursor = corps.find({}, { projection: { liquidCapital: 1, liquidCurrencyCode: 1 } });
+  const corpCursor = corps.find(
+    {},
+    { projection: { liquidCapital: 1, pendingOperatingCash: 1, liquidCurrencyCode: 1 } }
+  );
   for await (const corp of corpCursor) {
     if (typeof corp.liquidCapital !== "number") continue;
     const cur = snapshotCorporationCurrency(corp);
     add(
       balances,
       accountId("corporation", corp._id.toString(), cur),
-      toAnchor(corp.liquidCapital, cur, rates)
+      toAnchor(corp.liquidCapital + (corp.pendingOperatingCash ?? 0), cur, rates)
     );
   }
 

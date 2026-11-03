@@ -1,5 +1,5 @@
 import type { UnitDomain } from "@/lib/db/types/militaryUnit";
-import { getUnitArchetype } from "@/lib/constants/military";
+import { getUnitArchetype } from "@/lib/constants/militaryCore";
 
 /**
  * The loose shape both the domain model (`MilitaryUnit`, `domain: UnitDomain`) and the

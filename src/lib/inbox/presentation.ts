@@ -10,6 +10,7 @@ export type InboxUrgency = "urgent" | "decision" | "social" | "update";
  */
 const TYPE_LABELS: Partial<Record<NotificationType, string>> = {
   crisis: "Crisis alert",
+  crisis_resolved: "Crisis over",
   player_attack: "Reputation attack",
   player_support: "Campaign support",
   treaty_defence_invoked: "Treaty called",

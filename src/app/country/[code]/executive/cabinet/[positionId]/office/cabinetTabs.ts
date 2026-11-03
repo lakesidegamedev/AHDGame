@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
 import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanicsTypes";
 import { isMergerAuthoritySeat } from "@/lib/corporations/mergerReview/constants";
@@ -42,7 +43,7 @@ const DEFENSE_POSITION_IDS = new Set(
 );
 
 export function isFinanceMinister(countryId: string, positionId: string): boolean {
-  return COUNTRY_CONFIGS[countryId as CountryId]?.financeMinisterCabinetId === positionId;
+  return COUNTRY_CLIENT_CONFIGS[countryId as CountryId]?.financeMinisterCabinetId === positionId;
 }
 
 export function isDefenseMinister(positionId: string): boolean {

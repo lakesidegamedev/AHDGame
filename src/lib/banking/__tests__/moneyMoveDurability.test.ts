@@ -377,6 +377,27 @@ describe("durable leg outcomes", () => {
   });
 });
 
+it("resumes from the replayed legs without decoding the stored plan", async () => {
+  const f = fixture();
+  await applyMoneyMove(f.db, f.move);
+  const journalReads = vi.spyOn(f.journals, "findOne");
+  const resumed = await resumeMoneyMove(f.db, f.move.key);
+  expect(resumed.status).toBe("applied");
+  // A journal record is ~97 KB and 89 KB of it is the frozen settlement plan,
+  // which the journal applies and the primitive never reads.
+  expect(journalReads).toHaveBeenCalledWith(
+    { _id: f.move.key },
+    { projection: expect.objectContaining({ legs: 1, status: 1, turn: 1, kind: 1 }) }
+  );
+  // The in-memory double takes no options argument; the call still carries them.
+  const resumeRead = journalReads.mock.calls[0] as unknown as [
+    unknown,
+    { projection: Record<string, unknown> },
+  ];
+  expect(resumeRead[1].projection).not.toHaveProperty("projections");
+  expect(f.balances()).toEqual([990, 110]);
+});
+
 it("retains a missing-selector refusal when its claim acknowledgement is lost", async () => {
   const f = fixture();
   f.move.legs[1].filter = { state: "missing" };

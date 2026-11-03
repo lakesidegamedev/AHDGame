@@ -20,10 +20,16 @@ function Connector() {
 export function GroupChart({
   corporation,
   onSpinOff,
+  spinOffCooldownTurns = 0,
 }: {
   corporation: CorporationDetail;
   /** Present only when this corporation may spin off a subsidiary. */
   onSpinOff?: () => void;
+  /**
+   * Turns left before another spin-off is allowed. Shown on the slot so the wait
+   * is readable on the page, not only inside the spin-off dialog.
+   */
+  spinOffCooldownTurns?: number;
 }) {
   const parent = corporation.parentCorporation ?? null;
   const children = corporation.subsidiaries ?? [];
@@ -84,7 +90,11 @@ export function GroupChart({
                 >
                   <span className="font-medium">Spin off a subsidiary</span>
                   <span className="text-xs text-muted">
-                    One of your sector types becomes a new, wholly owned private subsidiary.
+                    {spinOffCooldownTurns > 0
+                      ? `Available again in ${spinOffCooldownTurns} turn${
+                          spinOffCooldownTurns === 1 ? "" : "s"
+                        }.`
+                      : "One of your sector types becomes a new, wholly owned private subsidiary."}
                   </span>
                 </button>
               </li>

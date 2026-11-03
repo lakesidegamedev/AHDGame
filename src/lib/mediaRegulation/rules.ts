@@ -27,7 +27,7 @@ export const MEDIA_AUDIENCE_ACCESS_LIMIT_BY_OPTION: readonly (number | null)[] =
   null,
   null,
 ];
-export const MEDIA_CONCENTRATION_BILL_TRIGGER = 0.65;
+const MEDIA_CONCENTRATION_BILL_TRIGGER = 0.65;
 
 /**
  * Convert the sector clearing snapshot into actual current-turn audience

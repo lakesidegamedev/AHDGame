@@ -1,40 +1,53 @@
 export const marketSafeguardsContent = `# Market Safeguards
 
-The stock market has an automated kill switch watching over it. This page covers what it watches, what trips it, and what you see when it does.
+One morning share prices go oddly flat, or oddly jumpy, with no news behind it. That can be the market safeguard at work. If the whole [stock market](/wiki/stock-market) collapses for no reason the underlying companies justify, the game steps the corporate economy back to an earlier, simpler model, so a broken market gets caught without anyone watching in real time. It works like a circuit breaker on a real exchange, and it matters to you because it can suddenly change how share prices and company revenue behave. There is no switch or panel for players.
 
-## What it is
+## What it watches
 
-The launch guard is an admin-configured safeguard that runs every turn once the market has been switched on to a live-pricing tier (clearing or above). It compares the aggregate market cap of every corporation to a reference value stamped when the guard was armed. If that comparison shows too sharp a drop, the guard automatically reverts the market to a lower, safer tier, no human has to be watching in real time for a broken market to get caught.
+Every turn the game adds up the market value of every corporation and compares it to a **reference value** taken on the first turn the newer market model was running. It also tracks what the companies are worth on their fundamentals, meaning their expected earnings ([Corporations](/wiki/corporations)) discounted by interest rates.
 
-This is not something you configure or trigger yourself. It runs in the background as a floor under the live market, the same way a real exchange's circuit breaker exists whether or not any one trader thinks about it.
+1. **Grace period.** For the first 5 turns after the reference is set, the safeguard does nothing. The new model needs a few turns of data before a drop means anything.
+2. **Fair-value check.** After that it asks how far the market has fallen compared with what fundamentals justify. A fall that fundamentals explain, such as a central bank raising rates ([Central Banks](/wiki/central-banks)), is excused.
+3. **Trip.** If the market is 25% or more below what fundamentals justify, the safeguard trips and steps the market model back one level.
+4. **Stand down.** After a trip the safeguard switches itself off. It does not keep stepping down, and bringing back the newer model is a deliberate decision by the game's operators.
 
-## What counts as "too sharp"
+![Ladder of market models where a trip steps Plants back to Capital and Clearing or Capital back to Ledger, after which the safeguard switches itself off.](/wiki-images/diagrams/market-safeguards-model-ladder.svg)
 
-The guard does not simply watch the raw price level. A market can fall for a good reason, for example a central bank tightening rates, which lowers what future earnings are worth and should pull prices down without anything being broken. The guard tries to tell that apart from an actual break:
+Fundamentals can only make the safeguard more forgiving. They excuse a fall that a lower valuation justifies, but they never lower the bar. A fall that fundamentals do not explain counts in full, including a large market-wide swing in sentiment. A hard fall for real reasons, such as a rate hike or a genuine earnings collapse, goes through unchallenged.
 
-- It tracks both the raw aggregate market cap and, once enough corporations are carrying a model-based fundamental valuation, an expected value implied by those fundamentals.
-- A fall that fundamentals justify is excused. A fall that outruns what fundamentals justify is not, and can still trip the guard even if the raw drawdown alone would have looked survivable.
-- Fundamentals can only ever make the guard more forgiving, never stricter. A market-wide sentiment swing on its own cannot permanently downgrade the market; only a drop with no fundamental basis can.
-- There is a grace window of several turns right after the guard arms, before it starts evaluating trips at all. The market needs a little time to settle after any tier change before a comparison against it means anything.
+| Item | Value |
+| --- | --- |
+| Drop that trips it | 25% below the fair-value reference |
+| Grace period | 5 turns |
+| Fundamentals trusted when | They cover at least 80% of total market value |
+| Below that coverage | The raw fall from the launch value is used instead |
 
-## What happens when it trips
+## Three bad days
 
-If the guard trips, the market tier drops one step:
+The reference market value is 1,000 and fundamentals at that moment were also 1,000. Six turns later:
 
-- From the highest tier (plants, capacity-driven pricing) it falls back to capital, the nearest tier below that still has its own growth mechanism, so the economy keeps moving rather than going flat.
-- From capital or clearing it falls back to ledger, an observability-only tier that does not move prices on its own.
+- The market falls to 700 and fundamentals have fallen to 800 because rates rose. Fair value is 800, so the drop is 1 minus 700 / 800 = 12.5%. That is under 25%, so nothing happens, even though the raw fall is 30%.
+- The market falls to 700 and fundamentals are still 1,000. Fair value stays 1,000, the drop is 30%, and the safeguard trips.
+- The market falls to 590 and fundamentals are 800. The drop is 1 minus 590 / 800 = 26.3%, so it trips even though rates explain part of the fall.
 
-The guard disarms itself once it has tripped. It does not keep re-tripping tier after tier on its own; getting the market back to a live-pricing tier is a deliberate admin decision, not something that happens automatically.
+\`\`\`wiki-chart
+market-guard-trip-line
+\`\`\`
 
-## What you see as a player
+## After a trip
 
-There is no separate player-facing panel for this. What you will notice, if the guard ever fires, is the market tier itself changing: pricing behavior shifts to whatever the safer tier does (see [Core Systems](/wiki/core-systems) and [Corporations](/wiki/corporations) for what each tier means for share pricing). Nothing about your holdings, orders, or corporate ownership is reversed or rolled back, only how prices are computed going forward changes.
+Nothing about your holdings, orders or company ownership is reversed. What changes is how prices and revenue are computed from then on, for every corporation at once, not just your portfolio. It also moves the world to an earlier market model, described in the [Market System Guide](/wiki/market-system-guide).
 
-## What this means for you
+| Item | Value |
+| --- | --- |
+| Trip result from the Plants model | Back to the Capital model |
+| Trip result from Clearing or Capital | Back to the Ledger model, which tracks flows without changing balance |
+| After a trip | The safeguard switches itself off |
 
-- A sudden change in how volatile or responsive share prices feel, without any news event behind it, can be this guard doing its job rather than a bug.
-- The guard existing does not mean the market cannot fall hard for real reasons. Rate hikes, a genuine earnings collapse, and other fundamentals-driven moves are not what it is built to stop, and it will let those through.
-- If the market tier drops, that is a system-level event affecting every corporation at once, not something specific to your portfolio.
+- From **Plants** back to **Capital**: sectors again earn revenue from invested capacity instead of from the plants they own. See [Plants Corp Guide](/wiki/plants-corp-guide).
+- From **Clearing** or **Capital** back to **Ledger**: prices and output no longer pass through market clearing or capacity limits.
 
-See also: [Corporations](/wiki/corporations), [Central Banks](/wiki/central-banks), [Corporate Bonds](/wiki/corporate-bonds).
+If prices went flat or oddly stable, the step back is a plausible reason; the market is not broken for you alone. If your corporation relies on Plants-model revenue, expect a different margin picture afterward, so keep plans flexible.
+
+Watches worlds that run the Clearing, Capital or Plants market models while the operators keep it armed. It is armed by default, but a rebuilt economy starts with it off. In a world on an earlier model there is nothing to watch. Last checked 2026-10-29, version 1.18.0. There is no separate technical page yet and the numbers above are the exact rules; for how share prices are computed, see [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html)
 `;

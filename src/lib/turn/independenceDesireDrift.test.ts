@@ -147,7 +147,7 @@ describe("computeIndependenceDesireDriftSnapshot", () => {
       westminsterPolicy: "independence",
       policy: "independence",
       regionalApproval: 100, // popular separatist FM → +0.05 mandate
-      nationalApproval: 0, // grievance against Westminster → +0.05
+      nationalApproval: 0, // grievance against Westminster -> +0.025
       inflationPercent: 6,
     });
     expect(r.next).toBe(100);
@@ -156,13 +156,13 @@ describe("computeIndependenceDesireDriftSnapshot", () => {
   it("max-positive run saturates near +0.17/turn", () => {
     // Anchored at the baseline (25) so mean reversion contributes zero. Max
     // positive = a hugely popular separatist FM (regional mandate) + support
-    // from Westminster + high inflation.
+    // from Westminster, low Westminster approval and high inflation.
     const r = computeIndependenceDesireDriftSnapshot({
       previous: 25,
       westminsterPolicy: "independence",
       policy: "independence",
       regionalApproval: 100, // mandate × +1 → +0.05
-      nationalApproval: 100, // popular supportive Westminster → +0.025
+      nationalApproval: 0, // unpopular Westminster -> +0.025 regardless of stance
       inflationPercent: 6,
     });
     // 0.05 (FM policy) + 0.05 (regional) + 0.025 (Westminster policy) + 0.025 (national) + 0.02 (inflation) + 0 (mean) = 0.17
@@ -179,7 +179,7 @@ describe("computeIndependenceDesireDriftSnapshot", () => {
       nationalApproval: 100,
       inflationPercent: 1,
     });
-    // -0.04 (FM policy) + -0.05 (regional) + -0.02 (Westminster policy) + -0.025 (national) + -0.01 (inflation) + 0 (mean) = -0.15
+    // -0.04 (FM policy) + -0.05 (regional) + -0.02 (Westminster policy) + -0.025 (national) + -0.01 (inflation) + 0 (mean) = -0.145
     expect(r.delta).toBeCloseTo(-0.145, 5);
   });
 });

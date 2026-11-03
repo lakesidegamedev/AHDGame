@@ -7,7 +7,6 @@ import {
 } from "./components/shared/LegislaturePageShell";
 
 import { filterLegislatureBills } from "./components/shared/legislaturePresentation";
-
 import { useState, useEffect } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import {
@@ -17,7 +16,8 @@ import {
 import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import { LeaderCard } from "@/components/legislature/LeaderCard";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
 import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
@@ -377,7 +377,7 @@ export function IEOireachtasPage({ countryId }: { countryId: CountryId }) {
             compositionOptions={{ includeAvatars: true }}
             chamberLabel={activeChamber === "seanad" ? "Seanad Éireann" : "Dáil Éireann"}
             showSeatsColumn={true}
-            regionLabel={getCountryConfig(countryId).regionLabel}
+            regionLabel={getCountryClientConfig(countryId).regionLabel}
             searchPlaceholder={`Search ${activeChamber === "seanad" ? "Seanad Éireann" : "Dáil Éireann"} members…`}
             countryId={countryId}
             parliamentChartVariant={activeChamber === "dail" ? "horseshoe" : "hemicycle"}

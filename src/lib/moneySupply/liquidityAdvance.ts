@@ -274,6 +274,8 @@ async function finishLiquidityAdvance(
             $inc: {
               "bankCharter.cashReserves": recipient.amount,
               "bankCharter.cbMarginDebt": recipient.amount,
+              // Interest-free: the bank did not ask for this cash (#1694).
+              "bankCharter.cbLiquidityAdvanceDebt": recipient.amount,
             },
           },
           note: "advance cash and matching debt",

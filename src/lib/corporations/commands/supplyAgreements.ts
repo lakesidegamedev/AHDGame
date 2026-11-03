@@ -1,3 +1,5 @@
+import { controllerTransferBarrierError } from "./acquisitions/controllerTransferBarrier";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -31,6 +33,7 @@ import {
 } from "@/lib/market/commodityMarketScope";
 import type { State } from "@/lib/db/types/state";
 import {
+  checkSupplyAgreementReach,
   checkSupplyContractParties,
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
@@ -206,6 +209,14 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
     const initiator = resolved.corporation;
     const ceoCheck = requireCeo(initiator, auth.user.userId);
     if (ceoCheck) return ceoCheck;
+    const transferRestriction = await controllerTransferBarrierError(
+      db,
+      initiator,
+      await getCurrentTurn(db),
+      new Date()
+    );
+    if (transferRestriction) return errorResponse(403, transferRestriction);
+
     const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
     if (gate) return gate;
 
@@ -262,6 +273,13 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
     const buyer = isSupplierInitiated ? counterparty : initiator;
     const partiesError = await checkSupplyContractParties(db, { supplier, buyer, commodity });
     if (partiesError) return errorResponse(403, partiesError);
+    const reachError = await checkSupplyAgreementReach(db, {
+      buyer,
+      commodity,
+      stateId,
+      readerIsBuyer: !isSupplierInitiated,
+    });
+    if (reachError) return errorResponse(400, reachError);
 
     let volumeCapValidated = false;
     let currentTurn = 0;
@@ -388,6 +406,14 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
 
     const body = parsed.data;
     if (body.action !== "cancel") {
+      const transferRestriction = await controllerTransferBarrierError(
+        db,
+        corp,
+        await getCurrentTurn(db),
+        new Date()
+      );
+      if (transferRestriction) return errorResponse(403, transferRestriction);
+
       const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
       if (gate) return gate;
     }
@@ -421,6 +447,13 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         commodity: agreement.commodity,
       });
       if (partiesError) return errorResponse(403, partiesError);
+      const reachError = await checkSupplyAgreementReach(db, {
+        buyer: parties.buyer,
+        commodity: agreement.commodity,
+        stateId: agreement.stateId,
+        readerIsBuyer: isBuyer,
+      });
+      if (reachError) return errorResponse(409, reachError);
       const gameState = await db
         .collection<GameState>("gameState")
         .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
@@ -512,6 +545,13 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         commodity: agreement.commodity,
       });
       if (partiesError) return errorResponse(403, partiesError);
+      const reachError = await checkSupplyAgreementReach(db, {
+        buyer: parties.buyer,
+        commodity: agreement.commodity,
+        stateId: agreement.stateId,
+        readerIsBuyer: isBuyer,
+      });
+      if (reachError) return errorResponse(409, reachError);
       let capacity: { volumeCapValidated: boolean; currentTurn: number };
       try {
         capacity = await validateCapacity(db, supplier, {

@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   LABOUR_STAFFING_MAX_TURN_MOVE,
+  LABOUR_STAFFING_MAX_TURN_RISE,
+  LABOUR_STAFFING_MAX_TURN_RISE_CAP,
+  LABOUR_STAFFING_WAGE_RISE_BONUS,
   LABOUR_UNEMPLOYMENT_TIGHTNESS_CAP_PP,
   LABOUR_UNEMPLOYMENT_TIGHTNESS_K,
   accumulateLabourDemand,
   computeLabourTightness,
   filledWorkers,
   glideStaffingFactor,
+  staffingRiseForBid,
   labourTightnessScoreFromTightness,
   labourUnemploymentTightnessPressure,
   makeLabourDemandByState,
@@ -186,8 +190,20 @@ describe("glideStaffingFactor", () => {
   });
 
   it("never moves more than the per-turn cap in either direction", () => {
-    expect(glideStaffingFactor(0, 1)).toBeCloseTo(0.9, 8);
-    expect(glideStaffingFactor(1, 0)).toBeCloseTo(0.1, 8);
+    expect(glideStaffingFactor(0, 1)).toBeCloseTo(1 - LABOUR_STAFFING_MAX_TURN_MOVE, 8);
+    expect(glideStaffingFactor(1, 0)).toBeCloseTo(LABOUR_STAFFING_MAX_TURN_RISE, 8);
+  });
+
+  it("hires faster above the going rate, never slower below it", () => {
+    expect(glideStaffingFactor(1, 0, 1.5)).toBeCloseTo(
+      LABOUR_STAFFING_MAX_TURN_RISE + 0.5 * LABOUR_STAFFING_WAGE_RISE_BONUS,
+      8
+    );
+    expect(glideStaffingFactor(1, 0, 4)).toBeCloseTo(LABOUR_STAFFING_MAX_TURN_RISE_CAP, 8);
+    expect(glideStaffingFactor(1, 0, 0.25)).toBeCloseTo(LABOUR_STAFFING_MAX_TURN_RISE, 8);
+    expect(staffingRiseForBid(Number.NaN)).toBeCloseTo(LABOUR_STAFFING_MAX_TURN_RISE, 8);
+    // Pay changes the speed only: cuts still glide at the slow rate.
+    expect(glideStaffingFactor(0, 1, 4)).toBeCloseTo(1 - LABOUR_STAFFING_MAX_TURN_MOVE, 8);
   });
 
   it("settles exactly on target instead of overshooting past it", () => {
@@ -216,9 +232,9 @@ describe("glideStaffingFactor", () => {
     expect(factor).toBeCloseTo(target, 8);
   });
 
-  it("recovers symmetrically when a state's labour market frees up", () => {
+  it("recovers within three turns at market pay when a state's labour market frees up", () => {
     let factor = 0.1;
-    for (let i = 0; i < 9; i++) factor = glideStaffingFactor(1, factor);
+    for (let i = 0; i < 3; i++) factor = glideStaffingFactor(1, factor);
     expect(factor).toBeCloseTo(1, 8);
   });
 

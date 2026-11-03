@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" role="img" font-family="system-ui, sans-serif">
+<title>National budget loop</title>
+<desc>Tax bases produce revenue and laws, grants and debt interest produce spending; the balance drives bond issuance, debt to GDP and the credit rating, which feed back into interest costs, public trust, margins, GDP and tax bases.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="499" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="40" width="200" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="120.0" y="59.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Tax bases</text>
+<text x="120.0" y="76.5" text-anchor="middle" font-size="13" fill="#18181b">income, corporate,</text>
+<text x="120.0" y="93.5" text-anchor="middle" font-size="13" fill="#18181b">payroll, tariff, sales</text>
+<path d="M220,72 L270,72" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="270" y="40" width="160" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="350.0" y="76.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Revenue</text>
+<rect x="560" y="40" width="200" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="660.0" y="59.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Spending</text>
+<text x="660.0" y="76.5" text-anchor="middle" font-size="13" fill="#18181b">laws, state grants, debt</text>
+<text x="660.0" y="93.5" text-anchor="middle" font-size="13" fill="#18181b">interest</text>
+<rect x="300" y="160" width="200" height="64" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="400.0" y="188.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Surplus or deficit</text>
+<text x="400.0" y="205.0" text-anchor="middle" font-size="13" fill="#18181b">revenue minus spending</text>
+<path d="M350,104 L350,160" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M660,104 L660,192 L500,192" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M400,224 L400,270" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="408" y="252" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">deficit</text>
+<rect x="300" y="270" width="200" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="400.0" y="289.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Bond issuance</text>
+<text x="400.0" y="306.5" text-anchor="middle" font-size="13" fill="#18181b">one quarter of the yearly</text>
+<text x="400.0" y="323.5" text-anchor="middle" font-size="13" fill="#18181b">deficit each time</text>
+<path d="M500,302 L560,302" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="560" y="270" width="200" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="660.0" y="298.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Debt-to-GDP</text>
+<text x="660.0" y="315.0" text-anchor="middle" font-size="13" fill="#18181b">debt divided by GDP</text>
+<path d="M660,334 L660,380" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="560" y="380" width="200" height="64" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="660.0" y="408.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Credit rating</text>
+<text x="660.0" y="425.0" text-anchor="middle" font-size="13" fill="#18181b">sets the borrowing rate</text>
+<path d="M560,412 L500,412" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<rect x="240" y="380" width="260" height="64" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="370.0" y="399.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Trust hit and margin drag</text>
+<text x="370.0" y="416.5" text-anchor="middle" font-size="13" fill="#18181b">lower public trust, weaker</text>
+<text x="370.0" y="433.5" text-anchor="middle" font-size="13" fill="#18181b">corporate margins</text>
+<path d="M240,412 L120,412 L120,104" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="128" y="270" text-anchor="start" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">weaker GDP,</text>
+<text x="128" y="284" text-anchor="start" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">smaller tax bases</text>
+<path d="M760,412 L788,412 L788,72 L760,72" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="779" y="240" text-anchor="middle" font-size="12" fill="#dc2626" stroke="#ffffff" stroke-width="3.5" paint-order="stroke" transform="rotate(-90 779 240)">higher debt interest</text>
+</svg>

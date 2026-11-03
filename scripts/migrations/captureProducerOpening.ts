@@ -83,6 +83,7 @@ export async function captureProducerOpening(
           seedPreset?: string;
           preset?: string;
           hardwareInputReliefStartTurn?: number;
+          producerTransitionPackageEnabled?: boolean;
           updatedAt?: Date;
         }>("gameConfig")
         .findOne(
@@ -92,6 +93,7 @@ export async function captureProducerOpening(
               seedPreset: 1,
               preset: 1,
               hardwareInputReliefStartTurn: 1,
+              producerTransitionPackageEnabled: 1,
               updatedAt: 1,
             },
           }
@@ -235,7 +237,15 @@ export async function captureProducerOpening(
         const paidBookAnchor = sector.capacityBookAnchor;
         if (!Number.isFinite(ownedDailyUnits) || ownedDailyUnits < 0)
           blockers.push(`missing-physical-capacity:${id}`);
-        if ((!Number.isFinite(paidBookAnchor) || paidBookAnchor < 0) && ownedDailyUnits !== 0)
+        // A plant founded in the completed turn has not been through a sector
+        // turn yet, so it has no paid basis. It opens at a zero basis, the same
+        // rule the funded market applies to entrants (newEntrantProducerBooks).
+        const neverProcessed = sector.operatingCapacityTurn == null;
+        if (
+          (!Number.isFinite(paidBookAnchor) || paidBookAnchor < 0) &&
+          ownedDailyUnits !== 0 &&
+          !neverProcessed
+        )
           blockers.push(`missing-paid-capacity-basis:${id}`);
         return {
           id,
@@ -286,26 +296,30 @@ export async function captureProducerOpening(
       plan = planProducerOpening(normalized);
       // Freeze the transition classification from the last settled shadow
       // turns: never a run's opening turns, whose household cushion inflates
-      // funded revenue.
-      const shadows = (
-        await db
-          .collection<{
-            _id: number;
-            turn: number;
-            runId?: string;
-            worldEpoch?: string;
-            sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
-          }>("producerMarketShadows")
-          .find(
-            { worldEpoch: String(before.worldEpochId), sectorRevenue: { $exists: true } },
-            { projection: { sectorRevenue: 1, turn: 1, runId: 1 } }
-          )
-          .sort({ _id: -1 })
-          .limit(TRANSITION_BASIS_TURNS + 4 * HOUSEHOLD_OPENING_TURNS)
-          .toArray()
-      )
-        .filter((d) => shadowTurnSettled(d.runId, d.turn, HOUSEHOLD_OPENING_TURNS))
-        .slice(0, TRANSITION_BASIS_TURNS);
+      // funded revenue. With the package switched off nothing is classified:
+      // a rebuilt economy has no over-built class to land.
+      const shadows =
+        gameConfig?.producerTransitionPackageEnabled === false
+          ? []
+          : (
+              await db
+                .collection<{
+                  _id: number;
+                  turn: number;
+                  runId?: string;
+                  worldEpoch?: string;
+                  sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
+                }>("producerMarketShadows")
+                .find(
+                  { worldEpoch: String(before.worldEpochId), sectorRevenue: { $exists: true } },
+                  { projection: { sectorRevenue: 1, turn: 1, runId: 1 } }
+                )
+                .sort({ _id: -1 })
+                .limit(TRANSITION_BASIS_TURNS + 4 * HOUSEHOLD_OPENING_TURNS)
+                .toArray()
+            )
+              .filter((d) => shadowTurnSettled(d.runId, d.turn, HOUSEHOLD_OPENING_TURNS))
+              .slice(0, TRANSITION_BASIS_TURNS);
       const samplesBySector = new Map<string, { legacy: number; funded: number }[]>();
       for (const doc of [...shadows].reverse())
         for (const row of doc.sectorRevenue ?? [])
@@ -451,6 +465,7 @@ async function captureSource(db: import("mongodb").Db) {
     transitionStartTurn: 1,
     capitalStock: 1,
     capacityBookAnchor: 1,
+    operatingCapacityTurn: 1,
     buildQueue: 1,
     inventoryUnits: 1,
     inventoryValueAnchor: 1,

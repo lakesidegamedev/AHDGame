@@ -30,6 +30,7 @@ vi.mock("@/components/Tooltip", () => ({
 }));
 
 const sector = {
+  sectorType: "technology",
   sectorLabel: "Technology",
   stateName: "California",
   countryId: "US",
@@ -91,8 +92,10 @@ describe("MarketPositionPanel NPP grouping", () => {
       />
     );
     expect(screen.getByText("Estimated room to build")).toBeTruthy();
-    expect(screen.getByText("123 units")).toBeTruthy();
-    expect(screen.queryByText("8,000 units")).toBeNull();
+    // 123 units of measured demand at 25 units a plant: about 4 new plants.
+    const room = screen.getByText(/^about 4 /);
+    expect(room.getAttribute("title")).toBe("123 units/day of unmet demand");
+    expect(screen.queryByText(/320/)).toBeNull();
   });
 
   it("does not present missing measured capacity as zero or as weighted demand", () => {

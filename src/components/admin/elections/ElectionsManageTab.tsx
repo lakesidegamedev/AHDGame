@@ -1,8 +1,8 @@
 "use client";
 
 import { useReducer, useEffect, useCallback, useMemo, useState } from "react";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import {
@@ -34,7 +34,7 @@ export function ElectionsManageTab() {
       { id: "global", label: "Global" },
       ...registered.map((id) => ({
         id: id as CountrySelection,
-        label: COUNTRY_CONFIGS[id].name,
+        label: COUNTRY_CLIENT_CONFIGS[id].name,
       })),
     ],
     [registered]
@@ -125,7 +125,9 @@ export function ElectionsManageTab() {
     }
     const filterDesc = [
       timerForm.electionType || "all types",
-      selectedCountry === "global" ? "all countries" : COUNTRY_CONFIGS[selectedCountry]?.name,
+      selectedCountry === "global"
+        ? "all countries"
+        : COUNTRY_CLIENT_CONFIGS[selectedCountry]?.name,
       timerForm.state || "all regions",
       timerForm.senateClass ? `class ${timerForm.senateClass}` : "",
       timerForm.chamberClass ? `chamber class ${timerForm.chamberClass}` : "",

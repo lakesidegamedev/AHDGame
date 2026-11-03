@@ -1,5 +1,5 @@
 /** Autonomous election entry matures in game time; human control cooldowns remain separate. */
-export const CUSTOM_PARTY_MATURATION_TURNS = 48;
+const CUSTOM_PARTY_MATURATION_TURNS = 48;
 export function customPartyMature(
   createdTurn: number | undefined,
   currentTurn: number | undefined,

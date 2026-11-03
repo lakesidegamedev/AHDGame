@@ -5,22 +5,10 @@
  * MS_PER_TURN: Wall-clock ms per turn. Cron runs hourly, so 1 turn = 1 real hour.
  * Used for election timestamps (endTime, startTime) so House 96t = 96h = 4 days.
  */
-/**
- * Game-calendar year of turn 1. Turn 1 = first week of January in this year.
- *
- * All canonical-cycle anchors (US House / Senate / President / Governor,
- * UK Commons, DE Bundestag, JP Shugiin / Sangiin) derive from this constant
- * via `(REAL_ELECTION_YEAR − STARTING_YEAR + 1) * TURNS_PER_YEAR` formulas,
- * so shifting STARTING_YEAR consistently moves every election by the same
- * number of turns. Real-world 2019 elections (UK Dec 2019 GE, JP Jul 2019
- * Sangiin Class 2) are bootstrap-skipped: the formulas reference the
- * NEXT real-world election (UK 2024, JP 2022) directly, so the 2019
- * cycle never spawns in-game.
- */
-export const STARTING_YEAR = 2019;
+import { STARTING_YEAR, TURNS_PER_YEAR } from "./calendar";
 
-/** UK starting year. Mirrors STARTING_YEAR. */
-export const UK_STARTING_YEAR = 2019;
+/** Game-calendar year of turn 1. See `calendar.ts`. */
+export { MS_PER_TURN, STARTING_YEAR, TURNS_PER_YEAR, UK_STARTING_YEAR } from "./calendar";
 
 /**
  * Every canonical reset preset, OLDEST FIRST.
@@ -88,12 +76,6 @@ export function getStartingYearForPreset(presetId: string): number {
   return STARTING_YEAR;
 }
 
-/** Milliseconds per turn (1 real hour — cron runs hourly). Used for election timestamps. */
-export const MS_PER_TURN = 60 * 60 * 1000;
-
-/** Turns per year. 48 turns = 1 year. */
-export const TURNS_PER_YEAR = 48;
-
 /**
  * Max turns retained for exchange-rate history and central-bank macro snapshots
  * (policy rate, inflation, GDP growth) used on forex charts — matches the stock
@@ -107,16 +89,16 @@ export const FOREX_AND_MACRO_CHART_HISTORY_TURNS = TURNS_PER_YEAR * 5;
  * day's worth of revenue/costs spans 24 turns).
  *
  * Sector **growth rate** compounding uses {@link GROWTH_RATE_TURNS_PER_YEAR} (48)
- * instead — one player "day" of growth is spread across a full game year of turns.
+ * instead; one player "day" of growth is spread across a full game year of turns.
  *
- * Re-exports the authoritative constant from `@/lib/constants/corporations`
- * so there's exactly one source of truth — previously this file declared `2`,
+ * Re-exports the authoritative constant from `@/lib/constants/corporationsClient`
+ * so there's exactly one source of truth; previously this file declared `2`,
  * which disagreed with every call site except stockExchangeSnapshot.ts and
  * caused the snapshot's `dailyInterestCost` to come out 12× smaller than the
  * rest of the codebase expected. The constant is intentionally re-exported
  * here so existing imports from `@/lib/constants/turnTime` keep working.
  */
-export { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
+export { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 
 /**
  * Turn at which the US House initial (Nov 2020) compressed bootstrap ends.

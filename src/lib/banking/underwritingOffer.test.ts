@@ -48,7 +48,7 @@ describe("primary underwriting mandate resolution", () => {
     };
     const result = await resolvePrimaryUnderwritingOffer(
       db,
-      resolveBankingPolicy({ privateBankingEnabled: true, bankUnderwritingEnabled: true }),
+      resolveBankingPolicy({ privateBankingEnabled: true }),
       {
         _id: issuerId,
         countryId: "US",

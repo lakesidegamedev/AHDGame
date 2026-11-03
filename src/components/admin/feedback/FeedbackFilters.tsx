@@ -1,6 +1,6 @@
 "use client";
 
-import { STAGES, STATUS_COLORS, type StatusKey } from "./types";
+import { STAGES, type StatusKey } from "./types";
 
 interface FeedbackFiltersProps {
   typeFilter: string;
@@ -92,6 +92,3 @@ export function FeedbackFilters({
     </>
   );
 }
-
-// Re-export STATUS_COLORS for convenience in FeedbackList
-export { STATUS_COLORS };

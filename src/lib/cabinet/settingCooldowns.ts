@@ -10,7 +10,7 @@
 
 export const SETTING_CHANGE_COOLDOWN_TURNS = 24;
 
-export const SETTING_COOLDOWN_FIELDS = [
+const SETTING_COOLDOWN_FIELDS = [
   "tierSetting",
   "targetRegionId",
   "targetCountryId",
@@ -19,7 +19,7 @@ export const SETTING_COOLDOWN_FIELDS = [
 
 export type SettingCooldownField = (typeof SETTING_COOLDOWN_FIELDS)[number];
 
-export const SETTING_COOLDOWN_STAMP = {
+const SETTING_COOLDOWN_STAMP = {
   tierSetting: "lastChangedTurn",
   targetRegionId: "lastRegionChangedTurn",
   targetCountryId: "lastTargetCountryChangedTurn",

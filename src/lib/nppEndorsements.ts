@@ -11,36 +11,19 @@ import type {
   NPPEndorsementWithdrawalReason,
 } from "@/lib/db/types";
 
-export const NPP_ENDORSEMENT_REEVALUATION_TURNS = 4;
-export const NPP_ENDORSEMENT_MIN_SCORE = 58;
-export const NPP_ENDORSEMENT_SWITCH_MARGIN = 12;
+const NPP_ENDORSEMENT_REEVALUATION_TURNS = 4;
 export const NPP_ENDORSEMENT_DIRECT_FAVORABILITY_PER_ENDORSEMENT = 1.5;
 export const NPP_ENDORSEMENT_DIRECT_FAVORABILITY_CAP = 6;
 
 const NATIONAL_RACE_TYPES = new Set(["president", "primeMinister", "chancellor", "uachtaran"]);
 
-export interface EndorsementCandidateProfile {
-  candidate: ElectionCandidate;
-  economicPosition: number;
-  socialPosition: number;
-  favorability: number;
-  politicalInfluence: number;
-  party: string;
-  homeState: string | null;
-  relationshipScore: number;
-}
-
 export type RequestedEndorsementLikelihood = "likely_accept" | "likely_decline";
-
-function normalizeRelationshipScore(score: number): number {
-  return clamp((score + 100) / 2, 0, 100);
-}
 
 function isNationalRace(election: Election): boolean {
   return NATIONAL_RACE_TYPES.has(election.electionType);
 }
 
-export function getNppOfficeType(npp: NPP): string | null {
+function getNppOfficeType(npp: NPP): string | null {
   if (!npp.currentOffice) return null;
   if (typeof npp.currentOffice === "string") return npp.currentOffice;
   return "type" in npp.currentOffice ? npp.currentOffice.type : null;
@@ -173,37 +156,6 @@ export function buildActiveVisibleNppEndorsementFilter(
       },
     ],
   };
-}
-
-export function scoreEndorsementCandidate(
-  npp: NPP,
-  election: Election,
-  profile: EndorsementCandidateProfile
-): number {
-  if (isSelfEndorsementCandidate(npp, profile.candidate)) {
-    return 0;
-  }
-
-  const relevance = getNppElectionRelevanceScore(npp, election);
-  if (relevance <= 0) return 0;
-
-  const ideologicalDistance =
-    Math.abs(npp.policies.economic - profile.economicPosition) +
-    Math.abs(npp.policies.social - profile.socialPosition);
-  const ideologyAlignment = 100 - clamp((ideologicalDistance / 20) * 100, 0, 100);
-  const viability = clamp(profile.favorability * 0.65 + profile.politicalInfluence * 0.35, 0, 100);
-  const relationship = normalizeRelationshipScore(profile.relationshipScore);
-  const samePartyBonus = profile.party === npp.party ? 16 : 0;
-  const homeStateBonus = profile.homeState != null && profile.homeState === npp.homeState ? 6 : 0;
-
-  return (
-    relationship * 0.28 +
-    ideologyAlignment * 0.24 +
-    clamp(relevance, 0, 40) * 0.5 +
-    viability * 0.18 +
-    samePartyBonus +
-    homeStateBonus
-  );
 }
 
 export async function withdrawNppEndorsement(
@@ -350,43 +302,4 @@ export async function upsertNppEndorsement(
       input.session ? { session: input.session } : undefined
     );
   }
-}
-
-export function getArrangedEndorsementHoldBonus(source: NPPEndorsementSource | undefined): number {
-  return source === "arranged" ? 8 : 4;
-}
-
-export function getCandidateIdentity(
-  candidate: ElectionCandidate,
-  charactersById: Map<string, Character>,
-  nppsById: Map<string, NPP>
-): {
-  economicPosition: number;
-  socialPosition: number;
-  favorability: number;
-  politicalInfluence: number;
-  homeState: string | null;
-} | null {
-  if (candidate.isNPP && candidate.nppId) {
-    const npp = nppsById.get(candidate.nppId.toString());
-    if (!npp) return null;
-    return {
-      economicPosition: npp.policies.economic,
-      socialPosition: npp.policies.social,
-      favorability: npp.favorability,
-      politicalInfluence: npp.politicalInfluence,
-      homeState: npp.homeState,
-    };
-  }
-
-  const character = charactersById.get(candidate.characterId.toString());
-  if (!character) return null;
-
-  return {
-    economicPosition: character.policies.economic,
-    socialPosition: character.policies.social,
-    favorability: character.favorability,
-    politicalInfluence: character.politicalInfluence,
-    homeState: character.homeState,
-  };
 }

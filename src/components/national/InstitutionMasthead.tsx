@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { HeroImage } from "@/components/HeroImage";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
 import type { ExecutiveSeal } from "@/lib/constants/executiveSeals";
 import { InstitutionSeal } from "@/components/national/InstitutionSeal";

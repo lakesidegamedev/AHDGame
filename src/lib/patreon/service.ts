@@ -33,7 +33,7 @@ export type SupporterStatusSnapshot = Pick<
   "supporterProvider" | "patreonUserId" | "patreonTier" | "patreonExpiresAt"
 >;
 
-export class PatreonReconcileWriteConflictError extends Error {
+class PatreonReconcileWriteConflictError extends Error {
   constructor() {
     super("Supporter status changed during Patreon reconciliation");
     this.name = "PatreonReconcileWriteConflictError";

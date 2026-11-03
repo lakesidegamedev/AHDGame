@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import {
   applyPayloadAllowlist,
   assertPayloadAllowed,
-  materializeMongodbAliases,
+  materializeExternalAliases,
 } from "./payloadAllowlist.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -120,7 +120,7 @@ export function assembleSingleplayerPayload({
   cpSync(path.join(root, "public"), path.join(out, "public"), { recursive: true });
   cpSync(path.join(root, "scripts", "singleplayer", "launch.mjs"), path.join(out, "launch.mjs"));
 
-  materializeMongodbAliases(out);
+  materializeExternalAliases(out);
   applyPayloadAllowlist(out);
   writeBuildProvenance(out, buildProvenance);
   writeFileSync(

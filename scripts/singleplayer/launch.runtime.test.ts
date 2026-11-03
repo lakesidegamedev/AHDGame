@@ -138,6 +138,20 @@ describe("OutputTail", () => {
 });
 
 describe("explainMongoExit", () => {
+  it("treats a busy database port as this world's only when its lock names a live mongod", () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), "ahd-lock-"));
+    const lock = path.join(dataDir, "mongod.lock");
+    expect(launcher.worldMongodRunning(dataDir)).toBe(false);
+    writeFileSync(lock, "");
+    expect(launcher.worldMongodRunning(dataDir)).toBe(false);
+    writeFileSync(lock, String(process.pid));
+    expect(launcher.worldMongodRunning(dataDir)).toBe(true);
+    // A pid that cannot exist: a crashed mongod leaves a stale lock behind.
+    writeFileSync(lock, "2147483646");
+    expect(launcher.worldMongodRunning(dataDir)).toBe(false);
+    rmSync(dataDir, { recursive: true, force: true });
+  });
+
   it("translates the exit codes a player can act on", () => {
     expect(launcher.explainMongoExit(48)).toMatch(/another program is using it/);
     expect(launcher.explainMongoExit(62)).toMatch(/different MongoDB version/);
@@ -225,6 +239,9 @@ describe("launcher process on a silent server", () => {
       });
     });
 
+    // The stand-in on the database port counts as this world's MongoDB.
+    mkdirSync(path.join(dir, "home", "data"), { recursive: true });
+    writeFileSync(path.join(dir, "home", "data", "mongod.lock"), String(process.pid));
     const child = spawn(
       process.execPath,
       [
@@ -304,6 +321,9 @@ describe("launcher process shutdown over the control channel", () => {
         probe.close(() => resolve(port));
       });
     });
+    // The stand-in on the database port counts as this world's MongoDB.
+    mkdirSync(path.join(dir, "home", "data"), { recursive: true });
+    writeFileSync(path.join(dir, "home", "data", "mongod.lock"), String(process.pid));
     const child = spawn(
       process.execPath,
       [
@@ -368,5 +388,16 @@ describe("resolveBindHost", () => {
     expect(launcher.resolveBindHost(["node", "launch.mjs"], { SINGLEPLAYER_HOST: "0" })).toBe(
       "127.0.0.1"
     );
+  });
+});
+
+describe("MongoDB tuning", () => {
+  it("passes only well-formed server parameters", () => {
+    const args = launcher.MONGOD_TUNING_ARGS;
+    expect(args.length % 2).toBe(0);
+    for (let i = 0; i < args.length; i += 2) {
+      expect(args[i]).toBe("--setParameter");
+      expect(args[i + 1]).toMatch(/^[A-Za-z]+=[^=\s]+$/);
+    }
   });
 });

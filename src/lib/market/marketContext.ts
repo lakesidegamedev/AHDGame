@@ -57,8 +57,6 @@ export interface MarketContext {
   commodityFixStage?: number;
   /** Market recovery program stage; see marketRecoveryStages.ts. */
   marketRecoveryStage?: number;
-  /** Halve remaining build time for orders in deep-shortage sectors. */
-  shortageBuildSpeedupEnabled?: boolean;
   /** Default off: ownership limits and censorship constrain media delivery. */
   mediaRegulationEnabled?: boolean;
   /** Default off: enacted pre-repeal US fairness doctrine affects outlet reach. */

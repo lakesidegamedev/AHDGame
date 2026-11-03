@@ -9,7 +9,7 @@ import { useAuthMe } from "@/contexts/AuthDataContext";
 import {
   RELOCATION_COST_FRACTION,
   CROSS_COUNTRY_RELOCATION_MULTIPLIER,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import {
   RELOCATION_COOLDOWN_DAYS,
   RELOCATION_COOLDOWN_TURNS,

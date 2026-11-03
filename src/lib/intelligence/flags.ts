@@ -16,13 +16,6 @@ export function nppIntelligenceFlagFrom(value: unknown): boolean {
   return value === true;
 }
 
-export async function readNppIntelligenceEnabled(db: Db): Promise<boolean> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppIntelligenceOperationsEnabled: 1 } });
-  return nppIntelligenceFlagFrom(state?.nppIntelligenceOperationsEnabled);
-}
-
 /**
  * Whether a successful military covert action has real effects.
  *

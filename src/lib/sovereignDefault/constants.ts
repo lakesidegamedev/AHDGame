@@ -65,7 +65,6 @@ export const ENTITY_DEMAND_CAP = 0.4;
 export const DEMAND_FULL_THRESHOLD = 1.0;
 export const DEMAND_UNDERSUBSCRIBED_THRESHOLD = 0.7;
 export const FAILED_AUCTION_COUNT_FOR_CRISIS = 3;
-export const WARNING_WINDOW_TURNS = 3;
 
 /**
  * Autonomous-world crisis eligibility (refs #3236).
@@ -98,8 +97,6 @@ export const EXECUTIVE_DECISION_HOURS = 12;
 export const EXECUTIVE_DECISION_TURNS = 12;
 export const LEGISLATIVE_VOTE_HOURS_PER_CHAMBER = 24;
 export const LEGISLATIVE_VOTE_TURNS_PER_CHAMBER = 24;
-export const SOVEREIGN_CRISIS_BILL_TYPE = "moneyBill" as const;
-export const SOVEREIGN_CRISIS_AUTO_SIGN_DEFAULT = true;
 
 // ============================================================================
 // Monetize gating
@@ -129,7 +126,6 @@ export const IMF_BOARD_PUBLIC_TRUST_DELTA = 0.02;
 
 export const RECOVERY_FLOOR_TURNS = 48;
 export const RECOVERY_DISCIPLINE_REQUIRED_STREAK = 5;
-export const RECOVERY_DISCIPLINE_RECHECK_TURNS = 5;
 
 /**
  * Phase 11a recovery credibility bonus: when a country exits recovery cleanly
@@ -187,22 +183,6 @@ export const REPUDIATE_FX_DEPRECIATION = 0.4;
 export const REPUDIATE_TRUST_HIT = -0.3;
 export const REPUDIATE_BOND_MARKET_PRICE = 0.05;
 export const REPUDIATE_LOCKOUT_TURNS = 48;
-/**
- * Fraction of the sovereign's OWN bond stock (`federalBudget.debt.principal`,
- * the haircut-adjusted outstanding ledger in bonds/sovereignPrincipal.ts)
- * wiped by a repudiation (refs #3813). Mirrors the
- * REPUDIATE_BOND_MARKET_PRICE haircut dealt to individual bondholders — the
- * country's own recognized liability should shrink by the same story (95%
- * gone, a small residual remains so a repudiating country isn't handed a
- * literal clean slate). Without this, `markCountryBondsRepudiated` haircuts
- * only the tradeable `bonds` collection; the aggregate stock that drives the
- * interest-rate tier and debt/GDP ratio every turn
- * (`sovereignDebtTerms`) never shrinks, so the very next
- * `processTreasuryTurn` tick recomputes the same CCC/14% tier and the spiral
- * resumes untouched by the "default." Treasury cash is separate and untouched:
- * a haircut writes down obligations, never cash (refs #1975).
- */
-export const REPUDIATE_PRINCIPAL_WRITEDOWN = 1 - REPUDIATE_BOND_MARKET_PRICE;
 
 // Restructure
 export const RESTRUCTURE_HAIRCUT = 0.4;
@@ -213,9 +193,6 @@ export const RESTRUCTURE_FX_DEPRECIATION = 0.15;
 export const RESTRUCTURE_TRUST_HIT = -0.15;
 export const RESTRUCTURE_BOND_MARKET_PRICE = 0.6;
 export const RESTRUCTURE_LOCKOUT_TURNS = 16;
-
-// Bailout
-export const BAILOUT_DIRECT_GDP_PENALTY = 0.02;
 // Remaining ~3% emergent from existing budget→metrics pipeline
 
 // ============================================================================

@@ -11,7 +11,8 @@ type DepositBank = {
   corporationId: string;
   name: string;
   currency: CurrencyCode;
-  depositRatePercent: number;
+  /** What the saver earns here, as the savings desk quotes it. */
+  saverApyPercent: number;
 };
 
 type ShowToast = (msg: string, type?: "success" | "error" | "info" | "warning") => void;
@@ -107,8 +108,8 @@ export function PrivateDepositModal({
               Deposit with {bank.name}
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Savings at this bank earn {formatRatePercent(bank.depositRatePercent)}. This routes
-              your {bank.currency} savings balance to this bank.
+              Savings at this bank earn {formatRatePercent(bank.saverApyPercent)}. This routes your{" "}
+              {bank.currency} savings balance to this bank.
             </p>
           </div>
           <button

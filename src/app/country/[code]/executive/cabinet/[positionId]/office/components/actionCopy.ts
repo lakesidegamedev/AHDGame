@@ -1,6 +1,7 @@
 "use client";
 
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 interface ActionCopy {
   singular: string;
@@ -22,7 +23,7 @@ const CABINET_COPY: ActionCopy = {
 
 export function getCabinetActionCopy(countryCodeOrId: string): ActionCopy {
   const countryId = countryCodeOrId.toUpperCase() as CountryId;
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   if (config?.governmentType === "presidential") return CABINET_COPY;
   return MINISTERIAL_COPY;
 }

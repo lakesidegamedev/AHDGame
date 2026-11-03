@@ -19,6 +19,7 @@ import type {
   SectorDetail,
   FinancialFogMeta,
 } from "./CorporationPageTypes";
+import { TaxReformNotice } from "./finance/TaxReformNotice";
 import { TariffRestrictions } from "./TariffRestrictions";
 import { SubsidyBenefits } from "./SubsidyBenefits";
 import { GroupOverviewCard } from "./GroupOverviewCard";
@@ -26,7 +27,7 @@ import { BalanceSheetRings } from "./finance/BalanceSheetRings";
 import { CountryRevenueRing } from "./finance/CountryRevenueRing";
 import { CountryStatement } from "./finance/CountryStatement";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   buildAllocation,
   cashAfterContracts,
@@ -152,7 +153,11 @@ export default function FinancialsTab({
     federalByCountry.length > 0
       ? `Federal tax by country (${MONEY_PERIOD_PER_LABEL[periodView]}): ${federalByCountry
           .map(([country, amt]) => `${country} ${money.fmt(amt * MONEY_PERIOD_FACTOR[periodView])}`)
-          .join(", ")}. Each sector pays its country's federal rate on its share of income.`
+          .join(", ")}. Each sector pays its country's federal rate on its share of income.${
+          (financials.bondCouponFederalTax ?? 0) > 0
+            ? " Includes tax on bond coupon income at the home country's rate."
+            : ""
+        }`
       : "Federal corporate income tax on profitable sectors.";
 
   const countryRows = financials.byCountry ?? [];
@@ -173,6 +178,7 @@ export default function FinancialsTab({
 
   return (
     <div className="space-y-6">
+      <TaxReformNotice corporation={corporation} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Segmented ariaLabel="Statement" options={VIEW_OPTIONS} value={view} onChange={setView} />
         <Segmented
@@ -450,6 +456,15 @@ export default function FinancialsTab({
                           amount={cost(financials.federalTax)}
                           pct={pctOf(financials.federalTax)}
                           title={federalTitle}
+                        />
+                      )}
+                      {(financials.bondCouponFederalTax ?? 0) > 0 && (
+                        <StatementLine
+                          indent
+                          label="Of which: federal tax on bond coupon income"
+                          amount={cost(financials.bondCouponFederalTax ?? 0)}
+                          pct={pctOf(financials.bondCouponFederalTax ?? 0)}
+                          title="Coupons from bonds the company holds are taxed at the home country's federal rate. The coupon income itself is listed under Interest and investment income below, not in operating income."
                         />
                       )}
                       {financials.stateTax > 0 && (

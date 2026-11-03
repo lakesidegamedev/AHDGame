@@ -105,12 +105,7 @@ export function quoteConstructionCancellation(input: {
             0,
             (sector.capacityBookAnchor ?? 0) - queue[orderIndex].costPaidAnchor * delivered
           ),
-          ...seedPlantLedger(
-            sector.sectorType,
-            stock,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          ...seedPlantLedger(sector, stock),
           constructionInProgressAnchor: queueUndeliveredCost(
             queue.filter((_, index) => index !== orderIndex),
             processedTurn

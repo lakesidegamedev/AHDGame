@@ -37,23 +37,23 @@ export const NIGHT_FIRST_CLOSE_FRACTION = 0.06;
 /** Window fraction of the last poll closing (room left so late states can count). */
 export const NIGHT_LAST_CLOSE_FRACTION = 0.7;
 /** Max +/- jitter on a close time, in window fraction. Smaller than half the closest batch gap. */
-export const NIGHT_CLOSE_JITTER = 0.008;
+const NIGHT_CLOSE_JITTER = 0.008;
 /** Window fraction a state needs after closing to reach its reporting cap. */
-export const NIGHT_RAMP_FRACTION = 0.24;
+const NIGHT_RAMP_FRACTION = 0.24;
 /** Per-state reporting cap range (percent). Never 100 inside the window. */
-export const NIGHT_REPORTING_CAP_MIN = 90;
-export const NIGHT_REPORTING_CAP_MAX = 97;
+const NIGHT_REPORTING_CAP_MIN = 90;
+const NIGHT_REPORTING_CAP_MAX = 97;
 
 /** Below this reporting % nothing is shown but "counting". */
 export const NIGHT_COUNTING_FLOOR = 1;
 /** Below this reporting % no leader is shown (too early). */
 export const NIGHT_LEADER_FLOOR = 8;
 /** A state this close (counted margin, fraction of counted vote) is "too close" once well reported. */
-export const NIGHT_TOO_CLOSE_BAND = 0.03;
-export const NIGHT_TOO_CLOSE_REPORTING = 50;
+const NIGHT_TOO_CLOSE_BAND = 0.03;
+const NIGHT_TOO_CLOSE_REPORTING = 50;
 /** Reporting needed before a call: loosest for blowouts, tightest at the call threshold. */
-export const NIGHT_CALL_REPORTING_MIN = 25;
-export const NIGHT_CALL_REPORTING_MAX = 75;
+const NIGHT_CALL_REPORTING_MIN = 25;
+const NIGHT_CALL_REPORTING_MAX = 75;
 /** Largest seeded noise on a displayed candidate share (fraction) at 0% reporting. */
 export const NIGHT_NOISE_MAX = 0.08;
 /**
@@ -211,10 +211,7 @@ function standing(votes: Record<string, number>): Standing | null {
  * remaining vote to the runner-up), and the reporting % at which the call is
  * made. Null when the state can never be called inside the window.
  */
-export function callPlan(
-  s: Standing | null,
-  finalTurnRatio: number
-): { reportingFloor: number } | null {
+function callPlan(s: Standing | null, finalTurnRatio: number): { reportingFloor: number } | null {
   if (!s) return null;
   const needed = finalTurnRatio * NIGHT_CALL_SAFETY;
   if (!Number.isFinite(needed) || s.margin <= needed) return null;

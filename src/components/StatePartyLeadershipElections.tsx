@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import { regionApiSubUrl } from "@/lib/urls";
-import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
+import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -110,7 +111,7 @@ const POSITION_ICON: Record<Position, string> = {
 
 /** Get position labels appropriate for the region type (parliamentary systems use "Regional") */
 function getPositionLabels(countryId: string): Record<Position, string> {
-  const isParliamentary = isParliamentarySystem(COUNTRY_CONFIGS[countryId as CountryId]);
+  const isParliamentary = isParliamentarySystem(COUNTRY_CLIENT_CONFIGS[countryId as CountryId]);
   return {
     chair: isParliamentary ? "Regional Chair" : "State Chair",
     viceChair: "Vice Chair",
@@ -120,7 +121,7 @@ function getPositionLabels(countryId: string): Record<Position, string> {
 
 /** Get position descriptions appropriate for the region type */
 function getPositionDescriptions(countryId: string): Record<Position, string> {
-  const isParliamentary = isParliamentarySystem(COUNTRY_CONFIGS[countryId as CountryId]);
+  const isParliamentary = isParliamentarySystem(COUNTRY_CLIENT_CONFIGS[countryId as CountryId]);
   const orgType = isParliamentary ? "regional" : "state";
   return {
     chair: `Leads the ${orgType} party. Can manage all leadership, set tax rates, and use party influence.`,

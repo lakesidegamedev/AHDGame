@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import os from "os";
 import path from "path";
 import { ObjectId, type Db } from "mongodb";
@@ -15,6 +16,11 @@ import type {
 } from "@/lib/db/types";
 import { reconcileSingleplayerHeadOfState } from "@/lib/singleplayerHeadOfState";
 import { promoteSingleplayerOwnerIfNoAdmin } from "@/lib/singleplayerOwnerAdmin";
+import { runRequiredStartupMigrations } from "@/lib/migrations/startupMigrations";
+import {
+  migrateSingleplayerWorld,
+  stampSingleplayerBaseline,
+} from "@/lib/migrations/singleplayerMigrations";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -32,6 +38,13 @@ export function singleplayerHomeDir(env: Record<string, string | undefined> = pr
   const configured = env.SINGLEPLAYER_HOME?.trim();
   if (configured) return path.resolve(configured);
   return path.join(os.homedir(), ".a-house-divided");
+}
+
+/** Written by a save-load request; the next start of the world applies it. */
+export const RESTORE_MARKER_FILE = "restore-pending.json";
+
+export function hasPendingRestore(env: Record<string, string | undefined> = process.env): boolean {
+  return existsSync(path.join(singleplayerHomeDir(env), RESTORE_MARKER_FILE));
 }
 
 export function singleplayerCdnDir(env: Record<string, string | undefined> = process.env): string {
@@ -121,6 +134,8 @@ async function clearSingleplayerMaintenance(db: Db): Promise<void> {
  * so a fresh database is playable the moment the server answers.
  */
 export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
+  await ensureSingleplayerStartupRestore(db);
+  await ensureSingleplayerWorldMigrated(db);
   const account = await ensureSingleplayerUser(db);
   // Existing worlds predate owner-admin: promote the earliest account when
   // nobody holds admin, next to the head-of-state repair below.
@@ -184,6 +199,10 @@ export async function setSingleplayerConfig(
     Object.keys(defaults).map((key) => [key, config.featureFlags?.[key] ?? defaults[key]])
   ) as Record<string, boolean>;
   const persisted: SingleplayerConfig = { ...config, featureFlags, configuredAt: new Date() };
+  // An absent guide must stay absent: the driver would store an explicit
+  // undefined as null, and a legacy world would start looking like one that
+  // offers the guide.
+  if (persisted.guide === undefined) delete persisted.guide;
   await db.collection<GameState>("gameState").updateOne(
     { _id: "current" },
     {
@@ -213,4 +232,79 @@ export async function getSingleplayerConfig(db: Db): Promise<SingleplayerConfig 
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } });
   return state?.singleplayerConfig ?? null;
+}
+
+/**
+ * Runs the required startup migrations after a local world reset, then stamps
+ * the world current with this build.
+ *
+ * A hosted reset is followed by a server restart, and startup applies these
+ * (the opening 1991 bond pools only exist at turn 1 of a fresh 1991 world, and
+ * index metadata can disappear on reset). A local "New game" keeps the same
+ * server running, so it applies them here before the first turn.
+ */
+export async function applyStartupRepairsAfterReset(
+  db: Db,
+  log: (line: string) => void = () => {}
+): Promise<string[]> {
+  const summary = await runRequiredStartupMigrations(db);
+  for (const id of summary.ranIds) {
+    log(`[startup-migrations] ${id}`);
+  }
+  // The world was just seeded by this build, so it is current with every
+  // migration the build knows; a later build applies only newer ones.
+  await stampSingleplayerBaseline(db);
+  return summary.ranIds;
+}
+
+const STARTUP_RESTORE_KEY = Symbol.for("ahd.singleplayer.startupRestore");
+
+/**
+ * Applies a requested save load, once per server start and before the world is
+ * opened, so the migration pass that follows brings an older save up to this
+ * build exactly as it does for any older world. Only the first status call of
+ * a process looks: a load requested while the world runs waits for its next
+ * start, and a concurrent second call waits for the first instead of reading
+ * a half-restored database. Imported lazily: the saves module reads this
+ * file's home directory.
+ */
+export function ensureSingleplayerStartupRestore(db: Db): Promise<void> {
+  const store = globalThis as typeof globalThis & { [STARTUP_RESTORE_KEY]?: Promise<void> };
+  store[STARTUP_RESTORE_KEY] ??= (async () => {
+    if (!hasPendingRestore()) return;
+    const { applyPendingRestore } = await import("@/lib/singleplayer/saves");
+    await applyPendingRestore(db);
+  })().catch((error: unknown) => {
+    // The marker is still there: let the next status call try again.
+    store[STARTUP_RESTORE_KEY] = undefined;
+    throw error;
+  });
+  return store[STARTUP_RESTORE_KEY];
+}
+
+// One pass per server process, shared across Next's duplicated module copies.
+const MIGRATED_KEY = Symbol.for("ahd.singleplayer.worldMigrated");
+
+/**
+ * Applies pending migrations to the local world once per server start. The
+ * launcher waits on the status route before it reports ready, so this
+ * finishes before the player is let in. A failure is logged and the world
+ * still opens: the failed migration stays pending and retries next start.
+ */
+export function ensureSingleplayerWorldMigrated(db: Db): Promise<void> {
+  const store = globalThis as typeof globalThis & { [MIGRATED_KEY]?: Promise<void> };
+  store[MIGRATED_KEY] ??= migrateSingleplayerWorld(db).then(
+    (summary) => {
+      if (summary && summary.ranIds.length > 0) {
+        console.log(`[singleplayer-migrations] ran=${summary.ranIds.join(",")}`);
+      }
+    },
+    (error: unknown) => {
+      console.error(
+        "[singleplayer-migrations] failed; the world opens and retries next start:",
+        error instanceof Error ? (error.stack ?? error.message) : error
+      );
+    }
+  );
+  return store[MIGRATED_KEY];
 }

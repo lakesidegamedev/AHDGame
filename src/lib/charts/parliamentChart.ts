@@ -39,7 +39,7 @@ function sortLR(seats: PartySeatsData[]): PartySeatsData[] {
  * @param options - Optional configuration
  * @returns SVG string
  */
-export function generateParliamentChartSVG(
+function generateParliamentChartSVG(
   seats: PartySeatsData[],
   total: number,
   options: {
@@ -155,66 +155,6 @@ export function generateParliamentChartSVG(
   ${labelsSvg}
   <!-- Dots -->
   ${circlesSvg}
-</svg>`;
-}
-
-/**
- * Generate a simple horizontal bar chart for seat distribution.
- * Useful for Discord embeds as a simpler alternative to the hemicycle.
- */
-export function generateSeatBarSVG(
-  seats: PartySeatsData[],
-  total: number,
-  options: {
-    width?: number;
-    height?: number;
-    bgColor?: string;
-    vacantColor?: string;
-  } = {}
-): string {
-  const { width = 600, height = 40, bgColor = "#1a1b26", vacantColor = "#3b3d4d" } = options;
-
-  if (total === 0) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
-      <rect width="100%" height="100%" fill="${bgColor}"/>
-      <rect x="10" y="10" width="${width - 20}" height="${height - 20}" fill="${vacantColor}" rx="4"/>
-    </svg>`;
-  }
-
-  const ordered = sortLR(seats);
-  const filled = seats.reduce((s, p) => s + p.seats, 0);
-  const vacant = total - filled;
-
-  const bars: PartySeatsData[] =
-    vacant > 0
-      ? [
-          ...ordered,
-          {
-            party: "__vacant__",
-            partyName: "Vacant",
-            partyColor: vacantColor,
-            seats: vacant,
-            economicPosition: null,
-          },
-        ]
-      : ordered;
-
-  const barHeight = height - 20;
-  const barWidth = width - 20;
-  let x = 10;
-
-  const barsSvg = bars
-    .map((p) => {
-      const w = (p.seats / total) * barWidth;
-      const rect = `<rect x="${x}" y="10" width="${w}" height="${barHeight}" fill="${p.partyColor}"/>`;
-      x += w;
-      return rect;
-    })
-    .join("\n  ");
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
-  <rect width="100%" height="100%" fill="${bgColor}"/>
-  ${barsSvg}
 </svg>`;
 }
 
@@ -357,26 +297,6 @@ export async function saveChartAsPNG(svgContent: string, filename: string): Prom
     }
   } catch (err) {
     console.error("[Charts] Failed to save chart as PNG:", err);
-    return null;
-  }
-}
-
-/**
- * Generate and save a chamber composition chart as PNG.
- * Returns the URL of the saved chart image, or null if generation fails.
- */
-export async function generateAndSaveChamberChart(
-  db: Db,
-  chamber: string,
-  totalSeatsTarget: number,
-  countryId: string = "US"
-): Promise<string | null> {
-  try {
-    const { seats } = await getChamberComposition(db, chamber, countryId);
-    const svg = generateChamberDiagramSVG(seats, totalSeatsTarget, countryId, 600);
-    return await saveChartAsPNG(svg, `${chamber}-composition`);
-  } catch (err) {
-    console.error(`[Charts] Failed to generate ${chamber} chart:`, err);
     return null;
   }
 }

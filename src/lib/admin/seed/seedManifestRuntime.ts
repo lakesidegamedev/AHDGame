@@ -20,7 +20,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "playerIncomeTaxBatches",
     category: "runtime",
     notes:
-      "One durable active tax batch per world; retained target watermarks prevent stale replay. Wiped on reset.",
+      "One active closing tax batch per world and one latest atomic income payout receipt per source. Turn watermarks prevent stale replay without retaining every payout batch. Wiped on reset.",
   },
   {
     name: "governmentTenders",
@@ -177,7 +177,13 @@ export const RUNTIME: CollectionEntry[] = [
     name: "productAdvertisingPayables",
     category: "runtime",
     notes:
-      "Owed per-order advertising seller payables, inserted with each funded order and removed once a clearing pays them. Wiped with the world.",
+      "Owed per-order advertising seller payables (totals only), inserted with each funded order and removed once a clearing pays them. Wiped with the world.",
+  },
+  {
+    name: "productAdvertisingAllocations",
+    category: "runtime",
+    notes:
+      "One frozen per-seller advertising table per funded order, written with the order's move key and removed with its payable. Wiped with the world.",
   },
   {
     name: "productAdvertisingClearances",
@@ -362,7 +368,12 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "committeeProposals", category: "runtime" },
   { name: "ministerialOrders", category: "runtime" },
   { name: "governmentApprovals", category: "runtime" },
-  { name: "governmentFormations", category: "runtime" },
+  {
+    name: "governmentFormations",
+    category: "runtime",
+    notes:
+      "World-local government state, confidence history and confidenceSnapStartTurn replay guard. Cleared on world reset so a new world's snap elections start without an old reset marker.",
+  },
   { name: "governmentAccountability", category: "runtime" },
   { name: "parliamentaryGovernments", category: "runtime" },
   { name: "ukCabinetCooldowns", category: "runtime" },
@@ -374,7 +385,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "corporations",
     category: "runtime",
     notes:
-      "Group identity, objectives, CEO-bound receiving consent and bounded private forecast inputs are embedded runtime state and reset with corporations.",
+      "Group identity, objectives, CEO-bound receiving consent, bounded private forecast inputs and pendingOperatingCash withholding holds are embedded runtime state and reset with corporations.",
   },
   { name: "corporationCeoVotes", category: "runtime" },
   { name: "corporationHistory", category: "runtime" },

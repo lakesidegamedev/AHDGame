@@ -3,13 +3,13 @@ import type { Db } from "mongodb";
 import { seedTRDemographics } from "@/lib/admin/seed/seedTR";
 import { trRegionCensusData } from "@/lib/seeds/tr/trRegionCensusData";
 import { trRegionCensusData1953 } from "@/lib/seeds/tr/trRegionCensusData1953";
-import { trRegionCensusDataModern } from "@/lib/seeds/tr/trRegionCensusDataModern";
+import { trRegionCensusDataModern } from "@/lib/countries/tr/data/trRegionCensusDataModern";
 import {
   TR_MODERN_AGE_SHARES,
   TR_MODERN_EDUCATION_SHARES,
   TR_MODERN_ETHNICITY_SHARES,
   TR_MODERN_URBANIZATION_SHARES,
-} from "@/lib/seeds/tr/trRegionCensusDataModern";
+} from "@/lib/countries/tr/data/trRegionCensusDataModern";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { TR_GEOGRAPHY } from "@/lib/countries/tr/geography";
 import { trRegions } from "@/lib/seeds/tr/trRegions";

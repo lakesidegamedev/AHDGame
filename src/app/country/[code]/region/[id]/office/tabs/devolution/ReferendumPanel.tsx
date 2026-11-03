@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
 
 /** Server-serialized summary of a region's current/most-recent referendum. */

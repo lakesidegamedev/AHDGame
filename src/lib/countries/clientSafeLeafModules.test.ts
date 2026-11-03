@@ -78,10 +78,12 @@ const INHERENTLY_HEAVY = ["src/lib/seeds/regionCensusData.ts"];
  * Hash source/target pairs, not internal import counts: a pure shared helper
  * does not add a heavy client edge. The exact hash prevents new boundary edges
  * while keeping 200-plus historical source/target pairs out of this test file.
+ * Rehashed when BgFoundingConstituencyPicker moved from the election page's
+ * folder to src/components/elections/raceEntry: same target, same count.
  */
 const LEGACY_TRANSITIVE_COUNTRY_BOUNDARY = {
   count: 205,
-  sha256: "d5f5211b8988574a88085f5d99e9378f19b57a894d8660163336bf7f71c6bcf6",
+  sha256: "40c56bb6cee9dfcdcd2ef3791391437d1cb55dff8ae0692ad48a44bc65576ac0",
 } as const;
 
 /** `import ... from` that is not `import type ... from`, and not a bare side-effect import. */
@@ -177,6 +179,8 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
    * module. This finds that case by walking the registries that client code
    * imports and checking what they pull out of the folder.
    */
+  // This scans the entire client import graph. Give the repository-wide walk
+  // its own budget when other suites are also compiling modules.
   it("does not change the exact legacy transitive heavy-module boundary", () => {
     const CLIENT_ROOTS = ["src/app", "src/components", "src/hooks", "src/contexts"];
     const clientEntries = CLIENT_ROOTS.flatMap(sourceFiles)
@@ -224,5 +228,5 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
         `\n\nIf an edge was removed, update the exact baseline. If one was added,\n` +
         `move the value to a client-safe leaf or stop the client from reaching it.\n`
     ).toEqual(LEGACY_TRANSITIVE_COUNTRY_BOUNDARY);
-  });
+  }, 60_000);
 });

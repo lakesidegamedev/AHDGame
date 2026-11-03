@@ -23,7 +23,7 @@ export const BASE_INVESTMENT_RATE = 0.2;
  * Annual depreciation, DERIVED so steady-state `K/Y = invRate/δ = target` at the
  * neutral rate (not a magic constant): δ = BASE_INVESTMENT_RATE / target ≈ 0.0667.
  */
-export const ANNUAL_DEPRECIATION = BASE_INVESTMENT_RATE / CAPITAL_OUTPUT_RATIO_TARGET;
+const ANNUAL_DEPRECIATION = BASE_INVESTMENT_RATE / CAPITAL_OUTPUT_RATIO_TARGET;
 /** Long-run neutral prime rate r* (%); at this rate investmentRate = BASE. */
 export const NEUTRAL_PRIME_RATE = 3;
 

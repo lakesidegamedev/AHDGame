@@ -255,6 +255,64 @@ describe("settleTransition", () => {
   });
 });
 
+describe("journal reads that answer one question", () => {
+  let db: InMemoryDb;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    db = world();
+  });
+
+  it("answers a replay from the durable disposition, not the stored plan", async () => {
+    await settleTransition(db as unknown as Db, loanTransition());
+    const journalReads = vi.spyOn(db.collection(MONEY_MOVE_COLLECTION), "findOne");
+    const again = await settleTransition(db as unknown as Db, loanTransition());
+    expect(again.status).toBe("replayed");
+    expect(journalReads).toHaveBeenCalledWith(
+      { _id: loanTransition().key },
+      // A journal record is ~97 KB and 89 KB of it is the frozen plan. The
+      // replay question is only "is it rejected, and which legs landed".
+      { projection: { status: 1, error: 1, "legs.applied": 1 } }
+    );
+  });
+
+  it("recovers the stored projections without decoding the legs", async () => {
+    await settleTransition(db as unknown as Db, loanTransition());
+    const journalReads = vi.spyOn(db.collection(MONEY_MOVE_COLLECTION), "findOne");
+    const recovered = await recoverProjections(db as unknown as Db, loanTransition().key);
+    // The in-memory double takes no options argument; the call still carries them.
+    const recoveryRead = journalReads.mock.calls[0] as unknown as [
+      unknown,
+      { projection: Record<string, unknown> },
+    ];
+    expect(recovered.status).toBe("applied");
+    expect(journalReads).toHaveBeenCalledWith(
+      { _id: loanTransition().key },
+      {
+        projection: expect.objectContaining({
+          kind: 1,
+          turn: 1,
+          currency: 1,
+          status: 1,
+          projections: 1,
+        }),
+      }
+    );
+    expect(recoveryRead[1].projection).not.toHaveProperty("legs");
+  });
+
+  it("lists the projection queue from its own fields", async () => {
+    const t = loanTransition();
+    t.projections[1].filter = { _id: oid(new ObjectId().toHexString()) };
+    await settleTransition(db as unknown as Db, t);
+    const journalFind = vi.spyOn(db.collection(MONEY_MOVE_COLLECTION), "find");
+    await listUnfinishedProjections(db as unknown as Db);
+    const queueRead = journalFind.mock.calls[0] as unknown as [unknown, unknown];
+    expect(queueRead[1]).toEqual({
+      projection: { kind: 1, turn: 1, projections: 1 },
+    });
+  });
+});
+
 describe("fresh settlement journal reads", () => {
   it("bounds durable acknowledgement reads while preserving the original quote", async () => {
     const db = world();

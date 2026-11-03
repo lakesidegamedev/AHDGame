@@ -8,7 +8,22 @@ import { makeNppCorpDecision } from "./makeCorpDecision";
 import { getNppCashFloorAnchor } from "./nppCashReserve";
 import { NPP_GROWTH_MIN_THROTTLE } from "./nppCorporationTuning";
 
-function decide(demandThrottleFactor: number | null, plantUnits = 80) {
+const EPOCH = "epoch-1";
+
+interface FundedRun {
+  /** Share of nameplate the plant made this turn. */
+  runShare: number;
+  /** Short inputs cut the funded run to this share (receipt billedRunShare). */
+  inputCutShare?: number;
+  /** The company's cash could not fund the whole run. */
+  cashCut?: boolean;
+  /** Share of offered units that sold. */
+  sellThrough: number;
+  /** Units offered per unit made: above 1 when held stock is also put up. */
+  offeredPerProduced?: number;
+}
+
+function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: FundedRun) {
   const modifiers = ceoArchetypeModifiers("cautious");
   const quote = computeBuildCost({
     sectorType: "retail",
@@ -51,6 +66,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80) {
     soldUnits: plantUnits,
     buildQueue: [],
     ...(demandThrottleFactor === null ? {} : { demandThrottleFactor }),
+    ...(funded ? fundedFields(plantUnits, funded) : {}),
   } as unknown as CorporateSector;
   const pool = {
     _id: new ObjectId(),
@@ -69,6 +85,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80) {
       now: new Date("2026-01-01"),
       modifiers,
       strategyLoopEnabled: false,
+      ...(funded ? { transitionFirstFundedTurn: 2, fundedWorldEpoch: EPOCH } : {}),
     },
     new Map([["US", [pool]]]),
     new Set(),
@@ -82,6 +99,37 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80) {
       costOfLivingOf: () => null,
     }
   );
+}
+
+/** Sector fields a funded turn writes: daily units from a per-turn receipt. */
+function fundedFields(plantUnits: number, run: FundedRun) {
+  const capacityPerTurn = plantUnits / 24;
+  const producedPerTurn = capacityPerTurn * run.runShare;
+  const offeredPerTurn = producedPerTurn * (run.offeredPerProduced ?? 1);
+  const soldPerTurn = offeredPerTurn * run.sellThrough;
+  return {
+    // The funded settlement writes sold / capacity here.
+    demandThrottleFactor: soldPerTurn / capacityPerTurn,
+    producedUnits: producedPerTurn * 24,
+    soldUnits: soldPerTurn * 24,
+    producerSettlement: {
+      worldEpoch: EPOCH,
+      turn: 69,
+      capacityUnits: capacityPerTurn,
+      producedUnits: producedPerTurn,
+      offeredUnits: offeredPerTurn,
+      soldUnits: soldPerTurn,
+      ...(run.inputCutShare != null || run.cashCut
+        ? {
+            ...(run.inputCutShare != null ? { billedRunShare: run.inputCutShare } : {}),
+            runCutBy: [
+              ...(run.cashCut ? ["cash"] : []),
+              ...(run.inputCutShare != null ? ["inputs"] : []),
+            ],
+          }
+        : {}),
+    },
+  };
 }
 
 const growthOf = (d: ReturnType<typeof decide>) =>
@@ -105,5 +153,71 @@ describe("NPP growth in a throttled market", () => {
     const d = decide(0.5, 100_000);
     expect(growthOf(d)).toBeGreaterThan(0);
     expect(growthOf(d)).toBeLessThan(growthOf(decide(1, 100_000)));
+  });
+});
+
+describe("NPP growth on a funded world", () => {
+  it("grows a sold-out plant running at a quarter of nameplate", () => {
+    // Throttle reads 0.25 (sold / capacity), which the legacy gate took for a glut.
+    const d = decide(null, 80, { runShare: 0.25, sellThrough: 1 });
+    expect(growthOf(d)).toBeGreaterThan(1);
+    expect(d.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(
+      false
+    );
+  });
+
+  it("still refuses growth when offered output went unsold", () => {
+    // Sells as much as it makes, but half of what it offers (stock included) is left over.
+    const d = decide(null, 80, { runShare: 1, sellThrough: 0.5, offeredPerProduced: 2 });
+    expect(growthOf(d)).toBeLessThan(1);
+    expect(d.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(true);
+  });
+
+  it("keeps the legacy throttle gate on a legacy world", () => {
+    const legacy = decide(0.25, 80);
+    expect(legacy.capacityObservations?.some((o) => o.outcome === "growth_throttled_market")).toBe(
+      true
+    );
+  });
+});
+
+describe("NPP and autopilot growth with starved inputs", () => {
+  const outcomes = (d: ReturnType<typeof decide>) =>
+    (d.capacityObservations ?? []).map((o) => o.outcome);
+
+  it("refuses growth when short inputs cut last turn's run below half", () => {
+    const d = decide(null, 80, { runShare: 0.3, sellThrough: 1, inputCutShare: 0.3 });
+    expect(growthOf(d)).toBeLessThan(1);
+    expect(outcomes(d)).toContain("growth_inputs_starved");
+  });
+
+  it("still grows when inputs only trimmed the run", () => {
+    const d = decide(null, 80, { runShare: 0.8, sellThrough: 1, inputCutShare: 0.8 });
+    expect(growthOf(d)).toBeGreaterThan(1);
+    expect(outcomes(d)).not.toContain("growth_inputs_starved");
+  });
+
+  it("keeps replacing worn capacity on a starved plant", () => {
+    const d = decide(null, 100_000, { runShare: 0.3, sellThrough: 1, inputCutShare: 0.3 });
+    expect(outcomes(d)).toContain("growth_inputs_starved");
+    expect(growthOf(d)).toBeGreaterThan(0);
+  });
+});
+
+describe("NPP builds while plants are idle for want of cash", () => {
+  const outcomes = (d: ReturnType<typeof decide>) =>
+    (d.capacityObservations ?? []).map((o) => o.outcome);
+
+  it("queues no capacity, growth or replacement, after a cash-cut run", () => {
+    const d = decide(null, 100_000, { runShare: 0.5, sellThrough: 1, cashCut: true });
+    expect(growthOf(d)).toBe(0);
+    expect(outcomes(d)).toContain("cash_cut_run");
+    expect(d.newSectors ?? []).toHaveLength(0);
+  });
+
+  it("builds as before when the run was not cut by cash", () => {
+    const d = decide(null, 100_000, { runShare: 0.5, sellThrough: 1 });
+    expect(growthOf(d)).toBeGreaterThan(0);
+    expect(outcomes(d)).not.toContain("cash_cut_run");
   });
 });

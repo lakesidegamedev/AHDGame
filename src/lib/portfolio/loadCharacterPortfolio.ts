@@ -21,7 +21,7 @@ import {
   getHomeCurrency,
 } from "@/lib/currency/characterFunds";
 import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
-import { loadSavingsApyByCurrency } from "@/lib/api/savings/savingsApy";
+import { loadSavingsApyForCharacter } from "@/lib/api/savings/savingsApy";
 import {
   estimateSavingsAccrualFromApy,
   turnsUntilSavingsCredit,
@@ -77,7 +77,19 @@ interface BondHolding {
  * component so the page can seed its initial data with a direct DB call instead
  * of a client self-fetch through the CDN.
  */
-export async function loadCharacterPortfolio(userId: string) {
+export interface LoadCharacterPortfolioOptions {
+  /**
+   * Skip the portfolio-history chart data (up to 500 snapshots, each carrying a
+   * per-row FX map). `/actions` only reads four scalar totals from this
+   * endpoint, and the history was measured at the bulk of its payload.
+   */
+  summary?: boolean;
+}
+
+export async function loadCharacterPortfolio(
+  userId: string,
+  options: LoadCharacterPortfolioOptions = {}
+) {
   const [db, forexEnabled] = await Promise.all([getDb(), isForexEnabled()]);
   const character = await getCharacterByUserId(db, userId);
 
@@ -261,53 +273,58 @@ export async function loadCharacterPortfolio(userId: string) {
   // reverse to ascending for the chart consumer. The `earliestSnapshot` query
   // intentionally remains ascending+limit(1) — it anchors the capital-gains
   // baseline, not the chart.
-  const [historyDescending, earliestSnapshot] = await Promise.all([
-    db
-      .collection<PortfolioHistory>("portfolioHistory")
-      .find({ characterId: charId })
-      .sort({ turn: -1 })
-      .limit(500)
-      .project({
-        _id: 0,
-        turn: 1,
-        totalValue: 1,
-        netValue: 1,
-        stockValue: 1,
-        shortTermStockValue: 1,
-        longTermStockValue: 1,
-        bondValue: 1,
-        cashValue: 1,
-        liquidCashValue: 1,
-        savingsCashValue: 1,
-        locDebtValue: 1,
-        incomeTaxDebtValue: 1,
-        exchangeRatesSnapshot: 1,
-      })
-      .toArray(),
-    db
-      .collection<PortfolioHistory>("portfolioHistory")
-      .find({ characterId: charId })
-      .sort({ turn: 1 })
-      .limit(1)
-      .project({
-        _id: 0,
-        turn: 1,
-        totalValue: 1,
-        netValue: 1,
-        stockValue: 1,
-        shortTermStockValue: 1,
-        longTermStockValue: 1,
-        bondValue: 1,
-        cashValue: 1,
-        liquidCashValue: 1,
-        savingsCashValue: 1,
-        locDebtValue: 1,
-        exchangeRatesSnapshot: 1,
-      })
-      .next(),
-  ]);
+  //
+  // `summary` callers (/actions) need none of this: they read four scalar
+  // totals, so both queries and the per-row FX snapshots are skipped.
+  const summaryOnly = options.summary === true;
+  const [historyDescending, earliestSnapshot] = summaryOnly
+    ? [[] as PortfolioHistory[], null as PortfolioHistory | null]
+    : await Promise.all([
+        db
+          .collection<PortfolioHistory>("portfolioHistory")
+          .find({ characterId: charId })
+          .sort({ turn: -1 })
+          .limit(500)
+          .project({
+            _id: 0,
+            turn: 1,
+            totalValue: 1,
+            netValue: 1,
+            stockValue: 1,
+            shortTermStockValue: 1,
+            longTermStockValue: 1,
+            bondValue: 1,
+            cashValue: 1,
+            liquidCashValue: 1,
+            savingsCashValue: 1,
+            locDebtValue: 1,
+            incomeTaxDebtValue: 1,
+            exchangeRatesSnapshot: 1,
+          })
+          .toArray(),
+        db
+          .collection<PortfolioHistory>("portfolioHistory")
+          .find({ characterId: charId })
+          .sort({ turn: 1 })
+          .limit(1)
+          .project({
+            _id: 0,
+            turn: 1,
+            totalValue: 1,
+            netValue: 1,
+            stockValue: 1,
+            shortTermStockValue: 1,
+            longTermStockValue: 1,
+            bondValue: 1,
+            cashValue: 1,
+            liquidCashValue: 1,
+            savingsCashValue: 1,
+            locDebtValue: 1,
+            exchangeRatesSnapshot: 1,
+          })
+          .next(),
+      ]);
   const history = historyDescending.reverse();
-
   // Load exchange rates so multi-currency personal wealth is correctly summed
   let exchangeRates: Partial<Record<CurrencyCode, number>> | undefined;
   if (forexEnabled) {
@@ -341,7 +358,7 @@ export async function loadCharacterPortfolio(userId: string) {
   const baselineValue = earliestSnapshot?.totalValue ?? combinedTotal;
   const totalCapitalGains = combinedTotal - baselineValue;
 
-  const apyByCurrency = await loadSavingsApyByCurrency(db);
+  const apyByCurrency = await loadSavingsApyForCharacter(db, character);
 
   const interestEarnedByCurrency: Partial<Record<CurrencyCode, number>> =
     forexEnabled && character.currencyBalances?.interestEarned

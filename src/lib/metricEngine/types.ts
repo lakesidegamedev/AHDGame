@@ -101,7 +101,3 @@ export function sameTurnDeps(inputs: InputRef[]): NodeId[] {
   }
   return out;
 }
-
-export function nodeKey(categoryId: MetricCategoryId, metricId: string): NodeId {
-  return `${categoryId}.${metricId}`;
-}

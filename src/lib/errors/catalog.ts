@@ -21,6 +21,11 @@ export const ERROR_CATALOG = {
     message: "You need to sign in to do that.",
     retryable: false,
   },
+  DISCORD_LINK_REQUIRED: {
+    status: 403,
+    message: "Link your Discord account before creating a new character.",
+    retryable: false,
+  },
   FORBIDDEN: {
     status: 403,
     message: "You do not have access to this.",

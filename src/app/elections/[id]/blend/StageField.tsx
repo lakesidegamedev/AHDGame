@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { BLEND, FONT } from "@/components/blend/tokens";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CandidateDetail } from "../components/ElectionDetailTypes";
 
 export interface StageFieldRow {

@@ -93,7 +93,7 @@ const validPersistedUse = (value: unknown): value is PersistedTariffUseExposure 
 };
 
 /** Sum bounded commodity purchase summaries without treating missing values as data. */
-export function combineTariffPurchaseExposure(
+function combineTariffPurchaseExposure(
   rows: readonly TariffPurchaseExposure[]
 ): TariffPurchaseExposure {
   const total = (): TariffPurchaseUseExposure => ({

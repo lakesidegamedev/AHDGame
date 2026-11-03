@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { InputHTMLAttributes, ButtonHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import { forwardRef } from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,12 @@ const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("next/image", () => ({ default: () => null }));
 vi.mock("@/components/ui", () => ({
+  Modal: ({ open, title, children }: { open: boolean; title: string; children: ReactNode }) =>
+    open ? (
+      <div role="dialog" aria-label={title}>
+        {children}
+      </div>
+    ) : null,
   Input: forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
     function SyntheticInput(props, ref) {
       return <input {...props} ref={ref} />;
@@ -26,8 +32,15 @@ vi.mock("@/components/ui", () => ({
   },
 }));
 vi.mock("@/components/PartyLogo", () => ({ PartyLogo: () => null }));
-vi.mock("./DiscordLinkSection", () => ({ DiscordLinkSection: () => null }));
+vi.mock("./DiscordLinkSection", () => ({
+  DiscordLinkSection: ({ onLinked }: { onLinked?: () => void }) => (
+    <button type="button" onClick={onLinked}>
+      Link Discord
+    </button>
+  ),
+}));
 
+let discordRequired = false;
 let authMeResponse: { ok: boolean; status: number; body: unknown } | null = null;
 let characterResponse: { ok: boolean; status: number; body: unknown } | null = null;
 
@@ -58,13 +71,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   partyRows = [];
+  discordRequired = false;
   authMeResponse = null;
   characterResponse = null;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
       let body: unknown;
-      if (url === "/api/auth/me") {
+      if (url === "/api/auth/signup-methods") {
+        body = { discordLinkRequired: discordRequired };
+      } else if (url === "/api/auth/me") {
         if (authMeResponse)
           return {
             ok: authMeResponse.ok,
@@ -330,5 +346,40 @@ describe("Creation resilience", () => {
       })
     );
     expect(localStorage.getItem("ahd:create-character-draft:u1")).not.toBeNull();
+  });
+});
+
+describe("required Discord linking", () => {
+  it("prompts an unlinked account and unlocks the draft after linking", async () => {
+    discordRequired = true;
+    render(<CreateCharacterPage />);
+    const modal = await screen.findByRole("dialog", {
+      name: "Link Discord to create your character",
+    });
+    fireEvent.click(within(modal).getByRole("button", { name: "Link Discord" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+  it("does not prompt an already linked account", async () => {
+    discordRequired = true;
+    authMeResponse = {
+      ok: true,
+      status: 200,
+      body: { user: { id: "u1", hasCharacter: false, discordId: "123456789" } },
+    };
+    render(<CreateCharacterPage />);
+    await screen.findByRole("button", { name: /United States/ });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+  it("grandfathers existing characters without requiring Discord", async () => {
+    discordRequired = true;
+    authMeResponse = {
+      ok: true,
+      status: 200,
+      body: { user: { id: "u1", hasCharacter: true, isAdmin: false } },
+    };
+    render(<CreateCharacterPage />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/profile"));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

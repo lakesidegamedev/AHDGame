@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import type { Character, Election, ElectionCandidate, State } from "@/lib/db/types";
 import { forbidden } from "@/lib/api/errors";
 
-export async function standingAdRegions(db: Db, owner: Character) {
+async function standingAdRegions(db: Db, owner: Character) {
   const candidates = await db
     .collection<ElectionCandidate>("electionCandidates")
     .find(

@@ -992,7 +992,7 @@ async function computeRawStandings(
  * Banned referees and strong alt links between referrer and referee do not
  * count. Weekly rounds and the iteration contest both use this.
  */
-export async function referralStandings(
+async function referralStandings(
   db: Db,
   playersByUser: ReadonlyMap<string, PlayerCharacter>,
   since: Date

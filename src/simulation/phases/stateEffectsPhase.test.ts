@@ -131,7 +131,7 @@ describe("stateEffectsAndNationalAggregation phase ordering", () => {
     });
   });
 
-  it("defers closing financial snapshots until the final adapter", async () => {
+  it("keeps game-read snapshots in the lock and leaves pure reporting to after it", async () => {
     const { events, runtime, context } = makeHarness();
 
     await stateEffectsAndNationalAggregationPhase.execute(context as never, runtime as never);
@@ -142,36 +142,35 @@ describe("stateEffectsAndNationalAggregation phase ordering", () => {
       return i;
     };
 
-    // Chain A keeps its order: the context resolves before its consumers.
+    // The context resolves before its consumers.
     expect(idx("end:longHorizonContext")).toBeLessThan(idx("start:metricHistory"));
     expect(idx("end:longHorizonContext")).toBeLessThan(idx("start:approvalSnapshot"));
+    for (const phase of ["metricHistory", "approvalSnapshot", "interestRateSnapshot"]) {
+      idx(`end:${phase}`);
+    }
 
     await closingFinancialSnapshotsPhase.execute(context as never, runtime as never);
-    // Closing snapshots are invoked separately, after income and taxes.
+    // Vital signs reads these two for the same turn, so they stay in the lock.
+    for (const phase of ["stockExchangeSnapshot", "wealthListSnapshot"]) {
+      expect(idx(`start:${phase}`)).toBeGreaterThan(idx("end:metricHistory"));
+    }
+
+    // Pure reporting runs after the lock is released (postLockReportingPhases.ts).
     for (const phase of [
+      "gameHealthSnapshot",
+      "partyHistorySnapshot",
+      "researchTelemetry",
       "portfolioSnapshot",
       "corpPortfolioSnapshot",
-      "stockExchangeSnapshot",
       "investorRankingSnapshot",
-      "wealthListSnapshot",
     ]) {
-      expect(idx(`start:${phase}`)).toBeGreaterThan(idx("end:gameHealthSnapshot"));
-      expect(idx(`end:${phase}`)).toBeGreaterThan(idx("end:gameHealthSnapshot"));
-    }
-    for (const phase of [
-      "metricHistory",
-      "approvalSnapshot",
-      "interestRateSnapshot",
-      "partyHistorySnapshot",
-    ]) {
-      expect(idx(`end:${phase}`)).toBeLessThan(idx("start:gameHealthSnapshot"));
+      expect(events).not.toContain(`start:${phase}`);
     }
 
     // Result bookkeeping is unchanged when the snapshot phases return null.
     expect(context.phaseResults).toMatchObject({
       metricHistory: { snapshotsTaken: 0 },
       approvalSnapshot: { countriesProcessed: 0 },
-      portfolioSnapshot: { charactersSnapshotted: 0 },
     });
   });
 });

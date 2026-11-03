@@ -1,15 +1,31 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Building2, ChartNoAxesCombined, Compass, Network, Pencil } from "lucide-react";
 import styles from "./GroupPage.module.css";
 import { GroupOverviewDashboard } from "./GroupOverviewDashboard";
+import { Skeleton } from "@/components/ui";
+
+// The supply-chain section owns its own section of the group page and drags the
+// commodity catalog and the supply-agreement board in with it, so it mounts when
+// the reader opens that section. The fallback keeps the section's height.
+const GroupSupplyChain = dynamic(
+  () => import("./GroupSupplyChain").then((m) => ({ default: m.GroupSupplyChain })),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-48 rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    ),
+  }
+);
 
 import { useTranslations } from "next-intl";
 
 import { CorporationLogo } from "../CorporationLogo";
 import { GroupOverviewCard, type GroupOverviewPayload } from "../GroupOverviewCard";
-import { GroupSupplyChain } from "./GroupSupplyChain";
 import { useGroupManagement } from "./useGroupManagement";
 import { GroupFinancialComparison } from "./GroupFinancialComparison";
 import { GroupDirections } from "./GroupDirections";

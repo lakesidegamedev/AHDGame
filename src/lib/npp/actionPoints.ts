@@ -31,7 +31,7 @@ interface NppTreasuryCost {
   recruit: number;
 }
 
-export const NPP_TREASURY_COST_BY_CURRENCY: Partial<Record<CurrencyCode, NppTreasuryCost>> = {
+const NPP_TREASURY_COST_BY_CURRENCY: Partial<Record<CurrencyCode, NppTreasuryCost>> = {
   USD: { boost: 5_000, loyalty: 12_500, recruit: 50_000 },
   GBP: { boost: 5_000, loyalty: 12_500, recruit: 50_000 },
   EUR: { boost: 5_000, loyalty: 12_500, recruit: 50_000 },
@@ -82,13 +82,13 @@ interface ScopeTierValue {
 }
 
 /** Banked pool maximum by scope × tier. */
-export const NPP_ACTION_POINT_CAP: Record<PartyScope, ScopeTierValue> = {
+const NPP_ACTION_POINT_CAP: Record<PartyScope, ScopeTierValue> = {
   national: { major: 160, minor: 80 },
   state: { major: 40, minor: 20 },
 };
 
 /** Flat passive AP regenerated per turn by scope × tier. */
-export const NPP_ACTION_POINT_REGEN: Record<PartyScope, ScopeTierValue> = {
+const NPP_ACTION_POINT_REGEN: Record<PartyScope, ScopeTierValue> = {
   national: { major: 16, minor: 8 },
   state: { major: 4, minor: 3 },
 };

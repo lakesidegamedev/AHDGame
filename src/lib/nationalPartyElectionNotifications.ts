@@ -20,37 +20,6 @@ async function findPartyByElectionPartyId(
 
 // ─── Notification helpers ────────────────────────────────────────────────────
 
-export async function notifyNationalMembersElectionOpened(
-  partyId: string,
-  countryId: CountryId,
-  position: NationalPartyElectionPosition,
-  durationTurns: number
-): Promise<void> {
-  const db = await getDb();
-  // Filter members by both partyId and countryId to avoid cross-country notifications
-  const members = await db
-    .collection<Character>("characters")
-    .find({ party: partyId, countryId })
-    .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
-    .toArray();
-
-  const label = getPartyRoleLabel(countryId, position);
-  const party = await findPartyByElectionPartyId(db, partyId, countryId);
-  const partyName = party?.name ?? partyId;
-
-  await createNotifications(
-    members.map((m) => ({
-      userId: m.userId,
-      type: "national_leadership_election_opened",
-      title: `${label} Election Open`,
-      message:
-        `A new ${label} election has opened for the ${partyName}. ` +
-        `Voting is open for ${durationTurns} turns. Declare your candidacy or cast your vote on the party page.`,
-      metadata: { partyId, countryId, position, recipientCharacterId: m._id.toString() },
-    }))
-  );
-}
-
 export async function notifyNationalMembersElectionsOpenedBatch(
   partyId: string,
   countryId: CountryId,

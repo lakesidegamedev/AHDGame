@@ -73,13 +73,10 @@ import {
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
 
 /** Fixed probe-world timestamp used when the caller does not supply `now`. */
-export const SIM_ACTOR_EPOCH_ISO = "1953-01-01T00:00:00.000Z";
+const SIM_ACTOR_EPOCH_ISO = "1953-01-01T00:00:00.000Z";
 
 /** Synthetic corporation name prefix, so seeded corps are recognizable. */
-export const SIM_CORP_NAME_PREFIX = "Sim ";
-
-/** Plan version stamped onto seeded rows alongside the synthetic run id. */
-export const SYNTHETIC_MATERIALIZATION_VERSION = 1;
+const SIM_CORP_NAME_PREFIX = "Sim ";
 
 export interface MaterializeSyntheticActorsOptions {
   seed: string;

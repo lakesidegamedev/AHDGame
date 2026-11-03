@@ -346,8 +346,8 @@ export async function takeStateBillGovernorAction(
       }
     }
 
-    await db.collection<StateBill>("stateBills").updateOne(
-      { _id: bill._id },
+    const signed = await db.collection<StateBill>("stateBills").updateOne(
+      { _id: bill._id, status: "passed" },
       {
         $set: {
           status: "enacted",
@@ -357,6 +357,10 @@ export async function takeStateBillGovernorAction(
         },
       }
     );
+
+    if (signed.modifiedCount === 0) {
+      return { status: 409, body: { error: "This bill already received a governor decision." } };
+    }
 
     const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
@@ -427,8 +431,8 @@ export async function takeStateBillGovernorAction(
   const vetoTurn = vetoGameState?.currentTurn ?? 1;
   const overrideVotingEndsOnTurn = vetoTurn + OVERRIDE_VOTING_HOURS;
   const trimmedVetoMessage = vetoMessage?.trim();
-  await db.collection<StateBill>("stateBills").updateOne(
-    { _id: bill._id },
+  const vetoed = await db.collection<StateBill>("stateBills").updateOne(
+    { _id: bill._id, status: "passed" },
     {
       $set: {
         status: "veto_override",
@@ -446,6 +450,10 @@ export async function takeStateBillGovernorAction(
       },
     }
   );
+
+  if (vetoed.modifiedCount === 0) {
+    return { status: 409, body: { error: "This bill already received a governor decision." } };
+  }
 
   await captureBillStatusChanged({
     db,

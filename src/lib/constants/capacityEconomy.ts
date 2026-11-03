@@ -452,26 +452,45 @@ export function capacityPricePerUnit(
  * IDENTITY A — workers needed to staff one unit/day of capacity in
  * `sectorType`, at the world's current `year`, at neutral workforce skill (50).
  *
- *     laborIntensity = RPU(type) / CAPACITY_REVENUE_PER_WORKER × eraLaborIndex(year)
+ *     laborIntensity = RPU(type or strategy) / CAPACITY_REVENUE_PER_WORKER × eraLaborIndex(year)
  *
  * At `year = 1953` the era index is 1.0, so a sector staffed from this table
  * carries exactly the headcount `calculateWorkers` gives it today.
+ *
+ * Pass `strategyId` for a sector that runs (or is being previewed with) a
+ * non-default production method: its units earn that method's RPU, so its crew
+ * per unit must scale with the same RPU. The build PRICE stays strategy-blind
+ * by design (D9), but staffing does not: a heavy-machinery line needs far more
+ * workers per unit than a standard factory, and showing the default crew for it
+ * understates the jobs by the ratio of the two RPUs. With no strategy, or one
+ * whose tables are empty for this sector type, this falls back to the
+ * default-strategy RPU above.
  */
 export function laborIntensity(
   sectorType: OperatingSectorType,
   year: number,
   unitScale: number,
   industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  mediaDiscriminator?: MediaDiscriminator | null,
+  strategyId?: string | null
 ): number {
   // RPU carries the era unit scale in its denominator, so workers-per-unit
   // shrinks by the same factor unit counts grow — total staffing for a given
   // real capacity is era-invariant.
-  return (
-    (revenuePerCapacityUnit(sectorType, unitScale, industryModel, mediaDiscriminator) /
-      CAPACITY_REVENUE_PER_WORKER) *
-    capacityEraLaborIndex(year)
-  );
+  const strategyRpu = strategyId
+    ? revenuePerCapacityUnitForStrategy(
+        sectorType,
+        strategyId,
+        unitScale,
+        industryModel,
+        mediaDiscriminator
+      )
+    : 0;
+  const rpu =
+    strategyRpu > 0 && Number.isFinite(strategyRpu)
+      ? strategyRpu
+      : revenuePerCapacityUnit(sectorType, unitScale, industryModel, mediaDiscriminator);
+  return (rpu / CAPACITY_REVENUE_PER_WORKER) * capacityEraLaborIndex(year);
 }
 
 // ─── Construction time ──────────────────────────────────────────────────────
@@ -503,7 +522,9 @@ const CAPACITY_BUILD_TURNS_TABLE: Record<OperatingSectorType, number> = {
   construction: 48,
   healthcare: 48,
   agriculture: 48,
-  logistics: 36,
+  // Trucks and depots, not a refinery. At 36 turns a freight shortage after a
+  // reset ran a game day and a half before any new fleet could help.
+  logistics: 15,
   media_entertainment: 24,
   media: 24,
   financial: 24,

@@ -208,12 +208,6 @@ async function loadRecentWikiPages(
     }));
 }
 
-export const getRecentWikiPages = unstable_cache(
-  async () => loadRecentWikiPages(await getAllCountryAccess()),
-  ["wiki-recent-pages"],
-  { revalidate: 120 }
-);
-
 async function loadMostViewedWikiPages(
   accessMap: Record<CountryId, CountryAccess>
 ): Promise<WikiPageSpotlight[]> {
@@ -247,12 +241,6 @@ async function loadMostViewedWikiPages(
       viewCount: p.viewCount,
     }));
 }
-
-export const getMostViewedWikiPages = unstable_cache(
-  async () => loadMostViewedWikiPages(await getAllCountryAccess()),
-  ["wiki-most-viewed-pages"],
-  { revalidate: 120 }
-);
 
 export interface WikiIndexData {
   pages: WikiPageData[];

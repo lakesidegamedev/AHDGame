@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { formatFundsCompact } from "@/lib/utils/formatters";
+import { formatFundsCompact } from "@/lib/utils/formattersCore";
 
 interface HistoryPoint {
   turn: number;

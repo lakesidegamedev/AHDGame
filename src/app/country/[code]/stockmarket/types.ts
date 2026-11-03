@@ -1,3 +1,4 @@
+import type { SovereignRiskDisclosure } from "@/lib/bonds/sovereignRiskDisclosure";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CommodityPriceAttribution } from "@/lib/market/priceAttribution";
 
@@ -100,6 +101,12 @@ export interface CommodityData {
   statePrices?: Record<string, number>;
   /** Per-state supply matching `statePrices`, used to volume-weight national averages. */
   stateSupply?: Record<string, number>;
+  /**
+   * Goods sold only inside each state (healthcare, real estate, construction,
+   * freight): how many of the states trading it are short. The world totals
+   * above add every state together, so they cannot say where a plant can sell.
+   */
+  stateShortage?: { shortStates: number; tradingStates: number };
   /** Per-state demand (scope=full only) — pairs with stateSupply for the State lens. */
   stateDemand?: Record<string, number>;
   /** Per-country supply/demand/price (scope=full only) — drives the Country lens. */
@@ -173,6 +180,7 @@ export interface WealthEntry {
 export interface BondListing {
   _id: string;
   issuerType?: "corporation" | "sovereign";
+  sovereignRisk?: SovereignRiskDisclosure | null;
   countryId?: string;
   /**
    * Canonical bond denomination (`bond.currencyCode` post-Task-18B). UI

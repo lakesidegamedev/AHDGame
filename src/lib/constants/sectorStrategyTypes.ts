@@ -9,6 +9,13 @@ export const STRATEGY_TRANSITION_TURNS = 12;
 /** Cooldown turns from initiation before another strategy change is allowed */
 export const STRATEGY_COOLDOWN_TURNS = 24;
 
+/**
+ * Turns, from initiation, that a strategy chosen by a controlling parent's CEO
+ * is shielded from the subsidiary's AI manager: twice the cooldown, so the AI
+ * leaves it alone for a further 24 turns after the parent could change it again.
+ */
+export const PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS = STRATEGY_COOLDOWN_TURNS * 2;
+
 /** Fraction of daily revenue charged when initiating a strategy change */
 export const STRATEGY_RETOOL_COST_FRACTION = 0.25;
 

@@ -101,6 +101,11 @@ export async function proposeNppEuropeanBill(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  try {
+    await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) return false;
+    throw error;
+  }
   return true;
 }

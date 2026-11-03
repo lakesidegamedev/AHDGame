@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 /**

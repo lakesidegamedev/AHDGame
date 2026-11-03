@@ -1,4 +1,5 @@
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 
 /**
  * Convert a national-budget amount (stored in the country's seed unit) into
@@ -18,7 +19,7 @@ export function budgetUsdEquivalent(
   preset?: string | null
 ): number | null {
   if (!Number.isFinite(localAmount)) return null;
-  const rate = getCountryConfig(countryId, preset ?? undefined)?.usdExchangeRate;
+  const rate = getCountryClientConfig(countryId, preset ?? undefined)?.usdExchangeRate;
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   if (Math.abs(rate - 1) < 1e-9) return null;
   const usd = localAmount * rate;

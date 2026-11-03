@@ -1,12 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Character, ElectedOfficial, NPP, OfficeType } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import {
-  COUNTRY_CONFIGS,
-  getCountryConfig,
-  isParliamentarySystem,
-  type CountryId,
-} from "@/lib/constants/countries";
+import { getCountryConfig, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import {
   appointPrimeMinister,
@@ -308,7 +303,3 @@ export async function pinnedSingleplayerHeadOfState(
     retiredAt: { $exists: false },
   });
 }
-
-export const SINGLEPLAYER_HEAD_OF_STATE_COUNTRIES = Object.values(COUNTRY_CONFIGS)
-  .filter((config) => Boolean(getSingleplayerHeadOfStateOfficeType(config.id)))
-  .map((config) => config.id);

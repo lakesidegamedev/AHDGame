@@ -1,145 +1,82 @@
 export const partyLeadershipContent = `# Party Leadership
 
-Every party has two leadership layers: **national** (chair, vice chair, treasurer) and **state** (chair, vice chair, treasurer per state). Leadership roles unlock party actions, whip authority over NPPs, and control over the party treasury.
+A party proposal needs real turnout. Every voter who does not vote counts as a no, so a rename or a merge can die without a single person opposing it. Running a party means counting your voters before you ask them anything. This page covers the three officers who hold the levers, how they get their seats, and how the national committee changes the party.
 
-## Leadership roles
+## The three officers
 
-### National party
+Every party is run by a **chair**, a **vice chair** and a **treasurer**. They exist at two levels, national and per state. Officers spend the party's money and Political Strength, whip NPPs, and decide how the party changes through committee votes.
 
-| Role | Powers |
+| Role | National party | State party |
+| --- | --- | --- |
+| **Chair** | Form and manage coalitions, whip nationally, recruit NPPs, click Build Org anywhere, set taxes and budgets | Whip NPPs in the state, set budgets, click Build Org in the state |
+| **Vice chair** | Same as the chair for whips and most actions; acts as chair if the seat is empty | Same whip and budget powers as the state chair |
+| **Treasurer** | Manage the national treasury and set the national tax rate | Set the state tax rate and manage the state treasury |
+
+Only some powers are shared by all three. Budget percentages (GOTV, suppression, registration drive) can be set by the chair, vice chair, treasurer or the national chair, from the party's treasury page; details on each action are on [Party Actions](/wiki/party-actions). Whips are for the chair and vice chair, plus chamber leaders such as Speaker or whip. A whip is free, from the party page, on a bill, a Speaker or chamber leadership vote, a PM or confidence vote, a cabinet or court nomination, a Speaker vacate motion or an impeachment. Hard whips roll once per NPP, soft whips add pressure; full rules are in [Voting & Whips](/wiki/voting-and-whips) and [NPP Behavior](/wiki/npp-behavior). Build Org is for the chair, vice chair and appointed campaigners, national or state; treasurers cannot click it ([Party Organization](/wiki/party-organization)). The chair, vice chair or treasurer sets the party's membership tax, and in approval-only parties the chair (or acting vice chair) accepts or declines requests ([Party Membership](/wiki/party-membership)). The [Party Slate](/wiki/party-slate) lets national and state chairs and vice chairs assign candidates to races.
+
+The national chair creates, joins and leaves [coalitions](/wiki/coalitions) for the party, and invites, requests, kicks, transfers and starts disband votes in [Coalition Formation](/wiki/coalition-formation).
+
+## Winning a seat
+
+- **Elections.** National and state seats are filled by member votes. A national election is open whenever none is running for that seat; the default length is **72 turns**, though a race that starts mid-cycle may run shorter so every party votes on the same cycle. State seats work the same way: a **72 turn** election opens whenever none is running for that seat, lined up with the shared cycle. Each voter casts one vote. The most votes wins, and a tie goes to the candidate who entered first.
+- **Who can run or vote.** Members with at least **24 turns** in the party. The tenure gate and the acting chair rule are in [Party Leadership & Authority](/wiki/party-leadership-authority). Brand new world-start elections are shorter (12 turns) and skip that rule.
+- **Empty built-in parties.** Joining a built-in party that has no chair makes you its chair, but only while no chair election is running for it. A chair race is usually open, so the ballot normally decides.
+- **Vice chair as chair.** If the chair seat is empty and a vice chair is in place, the vice chair acts as chair.
+- **UK leader challenges.** In UK parties, MPs can also file a leadership challenge against the sitting leader.
+
+Declare when an election opens. Leaving or switching parties vacates your seats.
+
+## The national committee
+
+The **national committee** is up to **6** members elected by party members (each voter can vote for up to 6 candidates; the election runs 168 turns unless the party has set its own duration), see [Committees](/wiki/committees). It sits beside the three officers and votes on proposals. The chair, vice chair and any committee member can propose, merges included; the treasurer can vote but cannot propose. Propose and vote in the Committee Proposals section of the party's committee tab. You can change your vote while the proposal is open, and every party member who opens the tab sees the live counts.
+
+| Item | Value |
 | --- | --- |
-| **Chair** | Form coalitions, issue national whip directives, recruit NPPs nationally |
-| **Vice Chair** | Assist chair, issue national whip directives in chair's absence |
-| **Treasurer** | Manage national treasury, set national tax rate |
+| Leadership election length (national default, state) | 72 turns by default |
+| National election length when a proposal sets it | 168 to 420 turns |
+| Tenure before you can run or vote | 24 turns |
+| Committee size | Up to 6 members |
+| Proposal voting window | 24 turns |
+| Votes needed to pass | 60% of filled voting seats, rounded up |
+| After a proposal passes, that type is locked for | 96 turns (campaigner nominations are not locked) |
+| After a position shift passes, that axis is locked for | 336 turns |
+| Position shift size | 1 step on one axis, kept inside -5 to +5 |
 
-### State party
+## How a proposal is decided
 
-| Role | Powers |
-| --- | --- |
-| **State Chair** | Issue state whip directives, set GOTV/suppression/org-building budgets |
-| **State Vice Chair** | Same whip powers as state chair |
-| **State Treasurer** | Set state tax rate, manage state treasury budget allocations |
+The voters are the committee members plus the chair, vice chair and treasurer. Empty seats are not counted. The proposal passes the moment yes votes reach **60%** of those voters, rounded up. It fails early as soon as too many have voted no for the rest to reach that number. If the 24 turns end first, every voter who did not vote counts as a **no**, so a proposal that nobody votes on always fails.
 
-## Leadership elections
+![Party proposal lifecycle: open up to 24 turns, passes at 60 percent of filled voting seats, rejected early or at expiry, with merges needing both committees.](/wiki-images/diagrams/party-leadership-proposal-lifecycle.svg)
 
-State party leadership elections are run through the **state party election** system. Elections are held for the positions of chair, vice chair, and treasurer separately.
+A party has 6 committee members, a chair, a vice chair and a treasurer, all different people: 9 voters. Yes needs 60% of 9, which is 5.4, rounded up to **6**. The chair proposes a rename. Five vote yes, one votes no, three do not vote. At turn 24 the nonvoters count as no, 5 is below 6, and the proposal fails. With 6 yes it would have passed immediately. If 4 voters vote no, it fails at once, since only 5 yes votes remain possible.
 
-### Who votes
-
-All party members in that state who are in good standing can vote. NPPs in the state do not vote in state party elections.
-
-### When they happen
-
-Leadership elections are triggered by:
-- A seat becoming vacant (the current holder leaves the party, switches parties, or their term ends)
-- An existing leader manually triggering a new election
-- Turn processing detecting a vacant leadership seat
-
-### Election duration
-
-State party elections run for a set number of turns configured on the election. Players can declare candidacy and vote during the open window. Votes can be cast once per voter; the candidate with the most votes when the window closes wins.
-
-### Score formula for state elections
-
-There is no automatic scoring formula for state leadership elections: it is a direct member vote. Each eligible voter casts one vote for one candidate. Majority wins; ties are broken by earlier entry.
-
-## What leaders can do
-
-### Whip authority
-
-State chair and vice chair can issue **whip directives** to NPPs in their state. Directives tell NPPs how to vote on specific bills or leadership elections. A **hard** whip on a bill triggers a hidden compliance roll when issued: a generous base chance, raised by the NPP's loyalty and by the whipping character's Statecraft, lowered by stubbornness, and clamped so even a stubborn NPP usually has a real chance of falling in line and a loyal one is never certain. A **soft** whip is advisory and simply weighs on the NPP's own decision. Leadership, confirmation and confidence votes are binding under a hard whip. See [Voting & Whips](/wiki/voting-and-whips) for the full mechanics.
-
-Whipping is free: no action cost. But each NPP can only be whipped **twice per target per chamber**, so choose your directives carefully.
-
-### Budget control
-
-Leadership sets how the state party's income is allocated across three spending buckets (set as percentage of incoming revenue):
-
-- **GOTV budget**: increases voter turnout for your party's demographics
-- **Suppression budget**: reduces turnout for targeted opposition demographics
-- **Org building budget**: invests in party organization score growth
-
-Only chair, vice chair, treasurer, or national chair can adjust these percentages.
-
-### NPP influence
-
-National chair, vice chair, and committee-confirmed campaigners can spend party resources to influence NPPs (boost stats, move them between states). Recruitment of new NPPs stays chair and vice chair. State chairs and vice chairs can influence same-party NPPs in their state using party action pools and treasury.
-
-## National committee proposals
-
-The national committee can vote on formal proposals to change the party. All proposals run for **24 turns** and pass or fail by **60% of filled roles** (more than half the eligible voters must vote yes or no to resolve early). If the window runs out before that threshold is hit, the proposal doesn't just lapse: it resolves anyway, with every non-voting member counted as a **nay**, so an unresolved proposal usually fails.
-
-### Who can propose and vote
-
-| Action | Eligibility |
-| --- | --- |
-| Submit any proposal | Any committee member |
-| Submit a merge proposal | National chair only |
-| Vote on proposals | Committee members **plus** the national chair, vice chair, and treasurer |
-
-National leadership (chair, vice chair, treasurer) can vote even if they are not on the committee. The eligible voter count used for majority thresholds includes all of them.
-
-### Proposal types
+Check the cooldown before you plan a rename or a duration change; a passed type is locked for 96 turns.
 
 | Type | Effect |
 | --- | --- |
 | Rename | Changes the party name and abbreviation |
-| Position shift | Moves the economic or social position by ±1 |
-| Election method | Changes how national leadership elections are tallied |
-| Election duration | Sets a custom duration for future national elections |
-| Merge | Dissolves the party by merging it into a target party |
+| Position shift | Moves the economic or social position by 1 step. The axis is locked for 336 turns afterwards; the two axes are tracked separately |
+| Election method | All members vote (default), only committee and officers vote, or all members vote with votes weighted by political influence in the party |
+| Election duration | Sets how long national officer and committee elections run, 168 to 420 turns |
+| Merge | Folds your party into another party in the same country |
 
-### Rename
+Other proposal types (such as campaigner nominations and treasury approval rules) use the same voting rule. A position shift is slow on purpose: one step, then a 336 turn lock on that axis, and it moves the party on the [ideology grid](/wiki/party-ideology).
 
-Proposes a new party name and abbreviation. If the proposal passes, the party name and abbreviation update immediately.
+## Merging
 
-### Position shift
+A merge needs a yes from **both** committees, each under the 60% rule. It is only allowed when the two parties already overlap or touch in at least one region, counting members, elected officials and active NPPs, and the combined map must keep the target's territory connected. If it passes:
 
-Proposes to move the party's **economic** or **social** position by **±1** step. The axis and direction (left/right) are locked in at proposal time. Positions are clamped to the -5 to +5 range, so you cannot shift beyond the boundary.
-
-### Election method
-
-Proposes how national leadership elections (chair, vice chair, treasurer) should be decided. Three options:
-
-| Method | Description |
+| What | What happens |
 | --- | --- |
-| All members (default) | Every party member may vote; one vote each |
-| Committee-only | Only committee members and national leadership may vote; one vote each |
-| Party influence weighted | Every party member may vote; votes are weighted by each voter's political influence within the party |
+| Players | Move to the target party. Their party influence is halved |
+| NPPs | Move over, but the target keeps all its own NPPs first and neither a region's NPP limit nor the party's national NPP cap can be exceeded; the weakest incoming NPPs beyond those limits are removed |
+| National treasury | All of it goes to the target |
+| State organization | Half of each state's Org units are added to the target's Org in that state |
+| Your party | Marked defunct. It drops out of the country's party list and the starting-party picker, and its page shows a "dissolved" notice |
 
-If passed, the new method applies the next time a leadership election opens.
+![Flow from the proposing party to the target party showing players with halved influence, NPPs under the region limit, the whole national treasury and half of each state's Org units moving over, and the proposing party marked defunct.](/wiki-images/diagrams/party-leadership-merge-outcome.svg)
 
-### Election duration
+Every party has a national and a state leadership layer, as described in [Political Parties](/wiki/political-parties).
 
-Proposes a custom duration for future national leadership elections. The minimum is **168 turns** (1 week) and the maximum is **420 turns** (2.5 weeks). The party's default before any proposal passes is **72 turns**. If passed, the custom duration is saved on the party and used when new elections are created.
-
-### Merge
-
-The chair proposes to dissolve the party by merging it into a target party. The proposal triggers **simultaneous votes** in both committees: the proposing party's committee and the target party's committee. **Both must pass** (simple majority each) for the merge to proceed.
-
-**What happens on a successful merge:**
-
-| What | How |
-| --- | --- |
-| Characters | All transferred to target party; political influence halved on transfer |
-| NPPs | All transferred to target party |
-| National treasury | 100% transferred to target party |
-| State party org | 50% of each state's organization score added to target's state org (a new record is created if the target had no presence in that state) |
-| Proposing party | Marked **defunct**: not deleted, but removed from party listings and flagged with the turn it dissolved |
-
-Defunct parties cannot be joined. Their wiki and party pages remain accessible but display a "dissolved" banner, pointing to the party they merged into.
-
-### Voting
-
-Votes are cast in the Committee Proposals section of the party page committee tab. Eligible voters (committee members plus national leadership) may vote yes or no. You can change your vote while the proposal is still open. Vote counts are visible to all eligible voters in real time.
-
-A proposal is resolved **early** as soon as one outcome is mathematically certain (e.g., yes votes exceed N/2 before all eligible voters have voted). Merge proposals wait for both committees before resolving.
-
-## Related
-
-- [Party Membership](/wiki/party-membership): Who is eligible to vote in leadership elections.
-- [Party Organization](/wiki/party-organization): What org building budget does.
-- [Party Actions](/wiki/party-actions): What the action pool funds.
-- [NPP Behavior](/wiki/npp-behavior): Full whip compliance mechanics.
-- [Coalitions](/wiki/coalitions): Coalition chair mechanics and succession.
+Live in every world and country with parties. Chamber leader whips apply where the country has those offices, and the UK adds the leader challenge. Last checked 2026-10-30, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html) and [Party Whips design page](https://docs.lakesidegames.net/design/party-whips.html)
 `;

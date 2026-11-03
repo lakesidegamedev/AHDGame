@@ -28,7 +28,7 @@ export function effectStrength(model?: EconomicModelState): number {
  * active). At full strength `saturation(1) = 0.5` simply sets the full-strength
  * magnitude: a primary GDP-weight boost of 0.5·0.5 = +25%, not the raw +50%.
  */
-export const CONCENTRATION_DIMINISH = 0.5;
+const CONCENTRATION_DIMINISH = 0.5;
 export function saturation(I: number): number {
   return Math.max(0, 1 - CONCENTRATION_DIMINISH * I);
 }

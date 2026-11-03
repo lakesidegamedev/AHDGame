@@ -64,15 +64,7 @@ export function entertainmentRescaleSet(
   if (!plantsEnabled) return set;
   if (typeof row.capitalStock === "number" && Number.isFinite(row.capitalStock)) {
     set.capitalStock = row.capitalStock * ratio;
-    Object.assign(
-      set,
-      seedPlantLedger(
-        row.sectorType,
-        set.capitalStock as number,
-        row.industryModel,
-        row.mediaDiscriminator
-      )
-    );
+    Object.assign(set, seedPlantLedger(row, set.capitalStock as number));
   }
   if (Array.isArray(row.buildQueue) && row.buildQueue.length > 0)
     set.buildQueue = rescaleBuildQueueForStrategyChange(row.buildQueue, ratio);

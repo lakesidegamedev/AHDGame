@@ -1,7 +1,7 @@
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
-export const GLOBAL_INFLATION_FLOOR_PCT = -2;
-export const GLOBAL_INFLATION_CEILING_PCT = 25;
+const GLOBAL_INFLATION_FLOOR_PCT = -2;
+const GLOBAL_INFLATION_CEILING_PCT = 25;
 
 export function medianGlobalInflation(rates: readonly number[]): number {
   const valid = rates.filter(Number.isFinite).sort((a, b) => a - b);

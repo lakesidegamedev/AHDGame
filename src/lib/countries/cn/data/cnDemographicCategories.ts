@@ -16,16 +16,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * demographicProfileId: "cn_archetypes"
  */
-export const CN_VOTER_GROUP_BASELINES: Record<string, number> = {
-  party_cadre: 95,
-  urban_professional: 88,
-  rural_peasant: 82,
-  industrial_worker: 86,
-  migrant_worker: 65,
-  entrepreneur: 90,
-  youth: 78,
-};
-
 export const cnDemographicCategories: DemographicCategory[] = [
   {
     _id: "cn_voterGroups",

@@ -42,17 +42,17 @@ export const UNDERGROUND_MASS_HEAT = 12;
 /** Heat at or above which the turn step rolls detection every turn. */
 export const HEAT_DETECTION_THRESHOLD = 30;
 /** Heat bled per idle turn (no drive that turn). Steady slow work stays dark. */
-export const HEAT_DECAY_PER_TURN = 2;
+const HEAT_DECAY_PER_TURN = 2;
 /** Recent drives add at most 20 percentage points to the detection roll. */
-export const DETECTION_CHANCE_PER_RECENT_DRIVE = 4;
+const DETECTION_CHANCE_PER_RECENT_DRIVE = 4;
 /** Turns an exposed union stays visible once detected. */
 export const EXPOSURE_LENGTH_TURNS = 6;
 export const RAID_ACTION_COST = 2;
 export const RAID_COOLDOWN_TURNS = 3;
-export const RAID_STRENGTH_DAMAGE = 10;
+const RAID_STRENGTH_DAMAGE = 10;
 export const RAID_HEAT_THRESHOLD = 70;
-export const RAID_BACKFIRE_CHANCE = 15;
-export const RAID_BACKFIRE_STRENGTH = 3;
+const RAID_BACKFIRE_CHANCE = 15;
+const RAID_BACKFIRE_STRENGTH = 3;
 export const PROSECUTION_ACTION_COST = 3;
 export const PROSECUTION_BAR_TURNS = 4;
 
@@ -84,10 +84,10 @@ export function postureDetectionChance(base: number, posture: UnionEnforcementPo
   return Math.max(0, Math.min(100, base + adjustment));
 }
 /** Share of the underground pool that converts to legal strength on repeal. */
-export const REPEAL_UNDERGROUND_HAIRCUT = 0.5;
+const REPEAL_UNDERGROUND_HAIRCUT = 0.5;
 
 /** Efficiency multiplier while exposed: illicit work is halved once visible. */
-export const EXPOSED_EFFICIENCY_MULTIPLIER = 0.5;
+const EXPOSED_EFFICIENCY_MULTIPLIER = 0.5;
 
 /** Detection chance per point of heat over threshold, capped. */
 const DETECTION_CHANCE_PER_HEAT = 2;

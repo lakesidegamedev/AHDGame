@@ -161,6 +161,9 @@ export interface Character {
   initialIncomeTier?: IncomeTier;
   /** Latest assessed tier, based on recurring personal earnings. */
   incomeTier?: IncomeTier;
+  /** Set after an economy reset: the player may re-pick their wealth background once. */
+  wealthTierRepickPending?: boolean;
+  wealthTierRepickedAt?: Date;
   /** First taxable turn; prevents retroactive taxation of receipts before rollout. */
   incomeTaxStartTurn?: number;
   /** Temporary receipts retained until an expired FX order acknowledges its refund. */

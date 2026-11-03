@@ -4,7 +4,8 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useToast } from "@/contexts/ToastContext";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { partyApiUrl, legislatureUrl } from "@/lib/urls";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { WhipTabsLayout } from "./whipTabsLayout";
@@ -91,7 +92,7 @@ export function PlayerWhipPanel({
   const [cabinetItems, setCabinetItems] = useState<LeadershipElectionItem[]>([]);
 
   const preferredBillChamberKey = useMemo(() => {
-    const config = getCountryConfig(resolvedCountryId);
+    const config = getCountryClientConfig(resolvedCountryId);
     const chamberKeys = [
       ...(config.upperElectionSystem && config.legislature.upperChamber
         ? [config.legislature.upperChamber.key]
@@ -181,7 +182,7 @@ export function PlayerWhipPanel({
   };
 
   const handleLeadershipCandidacyWhip = (election: LeadershipElectionItem, candidacyId: string) => {
-    const config = getCountryConfig(resolvedCountryId);
+    const config = getCountryClientConfig(resolvedCountryId);
     const targetType = election.type === "speaker" ? "speakerElection" : "leadershipElection";
     const isLower =
       election.type === "speaker" ||
@@ -214,7 +215,7 @@ export function PlayerWhipPanel({
      *  carries its own chamber rather than always using the lower one. */
     chamberOverride?: string
   ) => {
-    const config = getCountryConfig(resolvedCountryId);
+    const config = getCountryClientConfig(resolvedCountryId);
     postWhip(
       {
         targetType,
@@ -229,7 +230,7 @@ export function PlayerWhipPanel({
 
   const handleCabinetWhip = (item: LeadershipElectionItem, direction: "for" | "against") => {
     const nominationId = item.id;
-    const config = getCountryConfig(resolvedCountryId);
+    const config = getCountryClientConfig(resolvedCountryId);
     const chamber = config.upperElectionSystem
       ? (config.legislature.upperChamber?.key ?? config.legislature.lowerChamber.key)
       : config.legislature.lowerChamber.key;

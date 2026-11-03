@@ -6,8 +6,8 @@ export type ForeignMinisterAuth = MinisterAuth;
 export type ForeignMinisterResult = MinisterResult;
 
 /**
- * Authorize the foreign minister, or the head of government when the seat is vacant/NPP-held.
- * A seated player minister has exclusive authority, including over the head of government.
+ * Authorize the seated (or acting) foreign minister. A seated player minister has
+ * exclusive authority; the head of government has no substitution over the seat.
  * Returns the existing 403 response on failure.
  */
 export async function requireForeignMinister(

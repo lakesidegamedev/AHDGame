@@ -284,7 +284,7 @@ export function buildPollingData(
 }
 
 /** Build primary polling from live party-group softmax shares. */
-export function buildLivePrimaryPolling(
+function buildLivePrimaryPolling(
   livePrimaryByParty: readonly PartyGroup[],
   activeCandidateIdSet?: ReadonlySet<string>
 ): PollingData {

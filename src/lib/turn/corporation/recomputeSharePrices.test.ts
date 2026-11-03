@@ -11,6 +11,10 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Bond, Corporation, CorporationHistory } from "@/lib/db/types";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+const { applyMultipliers } = vi.hoisted(() => ({ applyMultipliers: vi.fn() }));
+vi.mock("@/lib/corporations/applyPriceMultipliers", () => ({
+  applyPriceMultipliers: applyMultipliers,
+}));
 
 function makeCursor(docs: unknown[]) {
   return {
@@ -117,6 +121,12 @@ describe("recomputeSharePricesAfterBondTurn", () => {
     db.collectionMocks.corporations.find.mockReturnValue(makeCursor([corp]));
     db.collectionMocks.bonds.find.mockReturnValue(makeCursor([heldBond]));
     db.collectionMocks.corporationHistory.find.mockReturnValue(makeCursor([histDoc]));
+    // Every price write carries a fundamentalSharePrice guard; with no
+    // concurrent writer each guarded op matches its corp.
+    db.collectionMocks.corporations.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+      modifiedCount: ops.length,
+    }));
 
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
@@ -163,6 +173,25 @@ describe("recomputeSharePricesAfterBondTurn", () => {
     // value (which already reflects bondTurn coupon flows), not the stale
     // pre-bondTurn snapshot the corp turn first wrote.
     expect(histOps[0].updateOne.update.$set.liquidCapital).toBe(corp.liquidCapital);
+  });
+
+  it("reads this turn's snapshot without the shareholder register", async () => {
+    // corporationHistory rows carry every shareholder and the SOE backing
+    // breakdown; the pricing pass reads four numbers from them.
+    const cursor = makeCursor([histDoc]);
+    db.collectionMocks.corporationHistory.find.mockReturnValue(cursor);
+
+    const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+    await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+
+    const projected = cursor.project.mock.calls[0][0] as Record<string, number>;
+    expect(projected.corporationId).toBe(1);
+    expect(projected.sharePrice).toBe(1);
+    expect(projected.sectorNPV).toBe(1);
+    expect(projected.perTurnBondCouponIncome).toBe(1);
+    expect(projected.perTurnBondDragOnNetIncome).toBe(1);
+    expect(projected).not.toHaveProperty("shareholders");
+    expect(projected).not.toHaveProperty("soeBacking");
   });
 
   it("reprices a corp with an unrecognized countryId instead of crashing the whole phase", async () => {
@@ -298,6 +327,61 @@ describe("recomputeSharePricesAfterBondTurn", () => {
     expect(growing).toBeGreaterThan(flat);
     // Flat history pays no premium: price is book + earnings only.
     expect(flat).toBeGreaterThan(0);
+  });
+
+  it("with funded valuation, growth comes from real output sold, not nominal sector value", async () => {
+    // A price climb raises nominal sector value on the same (or no) sales; that
+    // must not earn the growth premium. Real output growth still does.
+    db.collection("gameConfig");
+    const config = { marketSystemMode: "plants", fundedValuationStage: 1 };
+    const growthCorp = {
+      ...corp,
+      liquidCapital: 1_000_000,
+      sharePrice: 7,
+      totalShares: 1_000_000,
+      earningsHistory: [1_000_000, 1_000_000, 1_000_000],
+    } as unknown as Corporation;
+    const currentHist = {
+      ...histDoc,
+      sharePrice: 7,
+      sectorNPV: 500_000,
+      realOutputAnchor: 1_000,
+      perTurnBondCouponIncome: 0,
+      perTurnBondDragOnNetIncome: 0,
+    };
+    const runWithPriors = async (priorsIn: Array<{ npv: number; real: number }>) => {
+      vi.clearAllMocks();
+      db.collectionMocks.gameConfig.findOne.mockResolvedValue(config);
+      db.collectionMocks.corporations.find.mockReturnValue(makeCursor([growthCorp]));
+      db.collectionMocks.bonds.find.mockReturnValue(makeCursor([]));
+      const priors = priorsIn.map((p, i) => ({
+        _id: new ObjectId(),
+        corporationId: corp._id,
+        turn: turn - priorsIn.length + i,
+        sharePrice: 7,
+        sectorNPV: p.npv,
+        realOutputAnchor: p.real,
+      }));
+      db.collectionMocks.corporationHistory.find.mockImplementation(
+        (filter: { turn?: number | object } | undefined) => {
+          if (filter?.turn !== turn) return makeCursor(priors);
+          return makeCursor([currentHist]);
+        }
+      );
+      const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+      await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+      const ops = db.collectionMocks.corporations.bulkWrite.mock.calls[0][0] as Array<{
+        updateOne: { update: { $set: { sharePrice: number } } };
+      }>;
+      return ops[0].updateOne.update.$set.sharePrice;
+    };
+
+    const flat = Array.from({ length: 3 }, () => ({ npv: 500_000, real: 1_000 }));
+    const priceOnly = Array.from({ length: 3 }, () => ({ npv: 400_000, real: 1_000 }));
+    const realGrowth = Array.from({ length: 3 }, () => ({ npv: 500_000, real: 800 }));
+    const flatPrice = await runWithPriors(flat);
+    expect(await runWithPriors(priceOnly)).toBe(flatPrice);
+    expect(await runWithPriors(realGrowth)).toBeGreaterThan(flatPrice);
   });
 
   it("skips corps with no same-turn history snapshot (defensive)", async () => {
@@ -458,5 +542,63 @@ describe("recomputeSharePricesAfterBondTurn", () => {
       intraHour: true,
     });
     expect(tick).toEqual({ corpsRepriced: 0, corpsSkipped: 1 });
+  });
+
+  it("turn pass guards each price write so a mid-phase IPO or share issue wins", async () => {
+    const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+    const live = { ...corp, fundamentalSharePrice: 101.5 } as unknown as Corporation;
+    db.collectionMocks.corporations.find.mockReturnValue(makeCursor([live]));
+    db.collectionMocks.corporations.bulkWrite.mockResolvedValueOnce({ matchedCount: 0 });
+
+    const result = await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+
+    const [ops] = db.collectionMocks.corporations.bulkWrite.mock.calls[0] as [
+      Array<{ updateOne: { filter: Record<string, unknown> } }>,
+    ];
+    expect(ops[0].updateOne.filter).toMatchObject({ _id: live._id, fundamentalSharePrice: 101.5 });
+    expect(result).toEqual({ corpsRepriced: 0, corpsSkipped: 1 });
+  });
+
+  describe("recomputeTurnSharePrices", () => {
+    beforeEach(() => {
+      applyMultipliers.mockResolvedValue({ updated: 1, pulseCount: 0 });
+    });
+
+    it("applies investor sentiment on the same db after the fundamental recompute", async () => {
+      const { recomputeTurnSharePrices } = await import("./recomputeSharePrices");
+      const result = await recomputeTurnSharePrices(turn, db as unknown as Db);
+
+      // Phase telemetry/result shape is the recompute result, unchanged.
+      expect(result).toEqual({ corpsRepriced: 1, corpsSkipped: 0 });
+      expect(applyMultipliers).toHaveBeenCalledTimes(1);
+      expect(applyMultipliers).toHaveBeenCalledWith(db);
+      // The turn's exchange snapshot and live prices are built after this
+      // phase, so the multipliers must land after recompute wrote the raw price.
+      expect(applyMultipliers.mock.invocationCallOrder[0]).toBeGreaterThan(
+        db.collectionMocks.corporationHistory.bulkWrite.mock.invocationCallOrder[0]
+      );
+    });
+
+    it("leaves the raw formula price in corporationHistory", async () => {
+      // The next turn reads turn-1 history as the rate-limiter/smoothing prior,
+      // so a multiplied price there would compound every turn.
+      const { recomputeTurnSharePrices } = await import("./recomputeSharePrices");
+      await recomputeTurnSharePrices(turn, db as unknown as Db);
+
+      type CorpOps = Array<{ updateOne: { update: { $set: { sharePrice: number } } } }>;
+      type HistOps = Array<{ updateOne: { update: { $set: { sharePrice: number } } } }>;
+
+      const rawPrice = (db.collectionMocks.corporations.bulkWrite.mock.calls[0][0] as CorpOps)[0]
+        .updateOne.update.$set.sharePrice;
+      const histPrice = (
+        db.collectionMocks.corporationHistory.bulkWrite.mock.calls[0][0] as HistOps
+      )[0].updateOne.update.$set.sharePrice;
+
+      expect(histPrice).toBe(rawPrice);
+      // The helper issues no second history write of its own.
+      expect(db.collectionMocks.corporationHistory.bulkWrite).toHaveBeenCalledTimes(1);
+      expect(db.collectionMocks.corporationHistory.updateOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks.corporationHistory.updateMany).not.toHaveBeenCalled();
+    });
   });
 });

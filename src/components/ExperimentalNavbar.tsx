@@ -31,7 +31,8 @@ import { SingleplayerEndTurnButton } from "@/components/singleplayer/Singleplaye
 import { UniversalSearch } from "./UniversalSearch";
 import { Avatar } from "./Avatar";
 import { CountryFlag } from "@/components/CountryFlag";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import {
   countryUrl,
@@ -43,7 +44,6 @@ import {
   cabinetOfficeUrl,
   scotusJusticeOfficeUrl,
 } from "@/lib/urls";
-import { UK_NATIONS, UK_REGIONS } from "@/lib/constants/uk";
 import {
   HELP_DISCORD_URL,
   HELP_PATREON_URL,
@@ -66,7 +66,41 @@ import {
   navTabClassName,
 } from "@/components/navbar/experimentalNavPrimitives";
 import { ExperimentalUserMenu } from "@/components/navbar/ExperimentalUserMenu";
+import { NavSettingsMenu, NavSettingsIcon } from "@/components/navbar/NavSettingsMenu";
+import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
+import { useToast } from "@/contexts/ToastContext";
+import { useRefetchNav } from "@/contexts/AuthDataContext";
+import {
+  applySavedOrder,
+  MAX_NAV_PINS,
+  navCustomization as parseNavCustomization,
+  navGroupKey,
+  navPinKey,
+  togglePin,
+  type NavCustomization,
+} from "@/lib/navigation/navCustomization";
 import { ExperimentalMobileMenu } from "@/components/navbar/ExperimentalMobileMenu";
+import dynamic from "next/dynamic";
+
+import {
+  pixelIconForLink,
+  type DesktopNavLink,
+  type DesktopNavMenu,
+} from "@/components/navbar/desktopNavModel";
+import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import type { MobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
+import { MobileDock, type DockSheetKey } from "@/components/navbar/MobileDock";
+import { buildCampaignNavItems, isCampaignNavActive } from "@/components/navbar/campaignNav";
+import { useMobileDockModel } from "@/components/navbar/mobileDockModel";
+import {
+  buildDesktopMenus,
+  stateLegislatureLabelFor,
+  type DesktopMenuKey,
+  type NavTranslator,
+} from "@/components/navbar/dockMenus";
+import { SidebarWidget } from "@/components/sidebarWidgets/SidebarWidget";
+import { useSidebarWidgetData } from "@/components/sidebarWidgets/useSidebarWidgetData";
+import { useWidgetSetup } from "@/components/sidebarWidgets/useWidgetSetup";
 import { hasSandboxAccess } from "@/lib/sandbox/access";
 import { Wordmark, WORDMARK } from "@/components/Wordmark";
 import type {
@@ -78,10 +112,31 @@ import type {
   NavLinkRef,
   OpenKey,
 } from "@/components/navbar/experimentalNavTypes";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
+
+const NavCustomizeDialog = dynamic(
+  () =>
+    import("@/components/navbar/NavCustomizeDialog").then((module) => module.NavCustomizeDialog),
+  { ssr: false }
+);
+
+const CUSTOMIZABLE_MENUS: DesktopMenuKey[] = ["state", "nation", "world", "help", "staff"];
+
+const DesktopMegaMenu = dynamic(
+  () => import("@/components/navbar/DesktopMegaMenu").then((module) => module.DesktopMegaMenu),
+  { ssr: false }
+);
 
 export interface ExperimentalNavbarProps {
   navigationVariant?: "a" | "b";
+  desktopLayout?: DesktopNavigationLayout | null;
+  /** Phone layout for experimental users; null keeps the standard menu. */
+  mobileLayout?: MobileNavigationLayout | null;
+  /** Saved pins and group order; used by the grouped-cards layout only. */
+  navCustomization?: unknown;
   clientShell?: boolean;
+  /** The AHDClient phone app, which draws its own bottom tab bar. */
+  phoneApp?: boolean;
   /** Type the site name in on load, in mono (1991 worlds). */
   typedWordmark?: boolean;
   user?: NavLinkRef;
@@ -113,7 +168,11 @@ export interface ExperimentalNavbarProps {
 
 export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   navigationVariant = "a",
+  desktopLayout = null,
+  mobileLayout = null,
+  navCustomization: savedCustomization,
   clientShell = false,
+  phoneApp = false,
   typedWordmark = false,
   user,
   showProfile = false,
@@ -155,6 +214,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const [mobilePortalReady, setMobilePortalReady] = useState(false);
+  const [dockSheet, setDockSheet] = useState<DockSheetKey | null>(null);
   const [mobileSubOpen, setMobileSubOpen] = useState<Partial<Record<MobileSubKey, boolean>>>({});
   const [switchingCharacter, setSwitchingCharacter] = useState(false);
   const [switchingImperial, setSwitchingImperial] = useState(false);
@@ -167,7 +227,74 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const dropdownAnchorRef = useRef<HTMLDivElement>(null);
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
 
-  const nationMenuOpen = open === "nation" || open === "country";
+  // Grouped cards is the layout that carries the customisable bar: wide
+  // container, gear menu, pinned destinations and per-group order.
+  const customizableNav = desktopLayout === "cards";
+  const { showToast } = useToast();
+  const refetchNav = useRefetchNav();
+  const widgetSetup = useWidgetSetup();
+  // Prefetched with the tray's widgets so an opened menu rarely waits.
+  const menuWidgetData = useSidebarWidgetData(
+    widgetSetup.enabled && desktopLayout && desktopLayout !== "standard"
+      ? Object.values(widgetSetup.layout.nav).map(widgetSetup.resolveKey)
+      : []
+  );
+  const savedCustomizationJson = JSON.stringify(parseNavCustomization(savedCustomization));
+  const [custom, setCustom] = useState<NavCustomization>(() =>
+    parseNavCustomization(savedCustomization)
+  );
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const lastSavedRef = useRef(savedCustomizationJson);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (saveTimerRef.current) return;
+    lastSavedRef.current = savedCustomizationJson;
+    setCustom(JSON.parse(savedCustomizationJson) as NavCustomization);
+  }, [savedCustomizationJson]);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    },
+    []
+  );
+
+  // Applies at once; the account save is batched so a run of reorders is one request.
+  const updateCustom = useCallback(
+    (next: NavCustomization) => {
+      setCustom(next);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        saveTimerRef.current = null;
+        const body = JSON.stringify(next);
+        if (body === lastSavedRef.current) return;
+        fetch("/api/settings/experimental-features", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ navCustomization: next }),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error(String(response.status));
+            lastSavedRef.current = body;
+            refetchNav();
+          })
+          .catch(() => {
+            setCustom(JSON.parse(lastSavedRef.current) as NavCustomization);
+            showToast(t("customize.saveError"), "error");
+          });
+      }, 600);
+    },
+    [refetchNav, showToast, t]
+  );
+
+  // The dock replaces the menu button only for signed-in players with a character.
+  // The phone app has its own bottom tab bar; two docks stacked would leave
+  // little room for the page. The app keeps the standard phone menu.
+  const mobileDock = mobileLayout === "dock" && showProfile && !!user && !phoneApp;
+  useEffect(() => setDockSheet(null), [pathname]);
+
+  const nationMenuOpen = open === "nation" || open === "country" || dockSheet === "nation";
   const activeCharters = useActiveCharters(nationMenuOpen || mobileMenuOpen);
   const hasActiveReferendumCampaign = useActiveReferendumCampaign(
     pageCountry as CountryId,
@@ -185,7 +312,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   useEffect(() => setMobilePortalReady(true), []);
 
   useEffect(() => {
-    if (navigationVariant !== "b" || (!mobileMenuOpen && !mobileProfileOpen)) return;
+    if ((navigationVariant !== "b" && !mobileDock) || (!mobileMenuOpen && !mobileProfileOpen))
+      return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onEscape = (event: KeyboardEvent) => {
@@ -199,7 +327,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onEscape);
     };
-  }, [navigationVariant, mobileMenuOpen, mobileProfileOpen]);
+  }, [navigationVariant, mobileDock, mobileMenuOpen, mobileProfileOpen]);
 
   const toggle = useCallback((key: Exclude<OpenKey, null>) => {
     setExpandedNationSections({});
@@ -221,6 +349,12 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (
+          desktopLayout &&
+          desktopLayout !== "standard" &&
+          window.matchMedia("(min-width: 1024px)").matches
+        )
+          dropdownAnchorRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
         closeAll();
         setSearchOpen(false);
       }
@@ -232,7 +366,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       document.removeEventListener("mousedown", handlePointer);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, searchOpen, closeAll]);
+  }, [open, searchOpen, closeAll, desktopLayout]);
   const handleSignOut = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
@@ -282,7 +416,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     [switchingImperial]
   );
 
-  const countryConf = getCountryConfig(pageCountry as CountryId);
+  const countryConf = getCountryClientConfig(pageCountry as CountryId);
   // Country-context awareness (matches the classic nav): the switcher lists the
   // nations actually registered in the current game, named per the active
   // preset/era AND any runtime rename — not every non-coming-soon country with
@@ -290,15 +424,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const countryName = useCountryDisplayName();
   const switchableCountries = useEnabledCountries();
 
-  // State legislature label (UK devolution-aware).
-  const stateLegislatureLabel = (() => {
-    if (!homeState || homeState.countryId !== "UK") return t("state.legislature");
-    const nation = UK_NATIONS.find((n) => n.id === homeState.id);
-    if (nation?.devolvedBody) return nation.devolvedBody;
-    const region = UK_REGIONS.find((r) => r.id === homeState.id);
-    const parentNation = UK_NATIONS.find((n) => n.id === region?.nationId);
-    return parentNation?.devolvedBody ?? t("state.legislature");
-  })();
+  const stateLegislatureLabel = stateLegislatureLabelFor(t as unknown as NavTranslator, homeState);
 
   const canAccessSandbox =
     !user?.singleplayer &&
@@ -317,7 +443,13 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const navItems: ExperimentalNavItem[] = [];
 
   if (showProfile && !isImperialMode) {
-    navItems.push({ label: t("common.actions"), href: "/actions", icon: "Actions" });
+    // The Campaign tab holds Actions and the Campaign Manager (see campaignNav).
+    navItems.push({
+      label: t("campaignMenu.label"),
+      href: "/actions",
+      icon: "Actions",
+      key: "campaign",
+    });
   }
 
   if (showProfile && homeState) {
@@ -538,6 +670,31 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     </DropdownPanel>
   ) : null;
 
+  const campaignMenu = (
+    <DropdownPanel
+      anchorRef={dropdownAnchorRef}
+      panelRef={dropdownPanelRef}
+      align="left"
+      width="w-[300px]"
+    >
+      {buildCampaignNavItems(t).map((item) => (
+        <MenuRow
+          key={item.id}
+          href={item.href}
+          onNavigate={closeAll}
+          strong={isNavActive(pathname, item.href)}
+        >
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span>{item.label}</span>
+            <span className="text-[12px] font-normal leading-snug text-muted">
+              {item.description}
+            </span>
+          </span>
+        </MenuRow>
+      ))}
+    </DropdownPanel>
+  );
+
   const stateMenu = homeState ? (
     <DropdownPanel
       anchorRef={dropdownAnchorRef}
@@ -587,7 +744,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       )}
       {activeElection ? (
         <MenuRow
-          href={`/elections/${activeElection.seatId ?? activeElection.id}`}
+          href={campaignManagerHref({ race: activeElection.id })}
           onNavigate={closeAll}
           metaClass="text-primary"
           meta={t("common.active")}
@@ -731,9 +888,145 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     />
   ) : null;
 
+  const useDesktopMegaMenu = desktopLayout !== null && desktopLayout !== "standard";
+  // The phone dock shows these same menus as card sheets, so it builds them too.
+  const buildMenu = (key: DesktopMenuKey) =>
+    mobileDock || (useDesktopMegaMenu && (open === key || customizableNav));
+  const desktopMenus = buildDesktopMenus({
+    t: t as unknown as NavTranslator,
+    build: buildMenu,
+    showProfile,
+    pageCountry: pageCountry as CountryId,
+    userCountry: userCountry as CountryId,
+    countryName,
+    homeState,
+    currentParty,
+    activeElection,
+    cabinetOffice,
+    justiceOffice,
+    governorOffice,
+    myCorporationId,
+    myCorporationHasGroup,
+    myUnionId,
+    conflictsEnabled,
+    unionsEnabled,
+    settlementCrisisLive,
+    nationalDetailSections,
+    stateLegislatureLabel,
+    staffSubItems,
+    showWiki,
+    onOpenFeedback,
+    feedbackCapturing,
+  });
+  // Saved group order applies to the grouped-cards layout only.
+  const orderedMenu = (key: DesktopMenuKey, menu: DesktopNavMenu): DesktopNavMenu =>
+    customizableNav
+      ? {
+          ...menu,
+          groups: menu.groups.map((group) => ({
+            ...group,
+            items: applySavedOrder(group.items, custom.order[navGroupKey(key, group.id)]),
+          })),
+        }
+      : menu;
+  const openMenuKey = CUSTOMIZABLE_MENUS.find((key) => key === open);
+  const openMenu = openMenuKey ? desktopMenus[openMenuKey] : undefined;
+  const desktopMenu = openMenuKey && openMenu ? orderedMenu(openMenuKey, openMenu) : null;
+
+  const customizableMenus = customizableNav
+    ? CUSTOMIZABLE_MENUS.flatMap((key) => {
+        const menu = desktopMenus[key];
+        // Only menus that have a tab in the bar, so a pin never outlives its menu.
+        const hasTab =
+          key === "help" ||
+          (key === "staff"
+            ? !!(user?.isAdmin || user?.isModerator)
+            : navItems.some((item) => item.key === key));
+        return menu && hasTab ? [{ id: key, menu }] : [];
+      })
+    : [];
+  const pinLookup = new Map<string, DesktopNavLink>();
+  for (const { id, menu } of customizableMenus) {
+    for (const item of [...menu.groups.flatMap((group) => group.items), ...menu.shortcuts]) {
+      const key = navPinKey(id, item.id);
+      if (item.href && !item.disabled && !pinLookup.has(key)) pinLookup.set(key, item);
+    }
+  }
+  const pinnedLinks = custom.pinned.flatMap((key) => {
+    const item = pinLookup.get(key);
+    return item ? [{ key, item }] : [];
+  });
+  const pinsFull = custom.pinned.length >= MAX_NAV_PINS;
+
+  // Experimental: a widget the player placed in this menu's side column.
+  const menuWidgetKey =
+    widgetSetup.enabled && openMenuKey ? widgetSetup.layout.nav[openMenuKey] : undefined;
+  const menuWidgetFetchKey = menuWidgetKey ? widgetSetup.resolveKey(menuWidgetKey) : null;
+  const menuWidget = menuWidgetKey ? (
+    <SidebarWidget
+      compact
+      widgetKey={menuWidgetKey}
+      data={menuWidgetData.data[menuWidgetFetchKey!]}
+      loaded={menuWidgetData.loaded(menuWidgetFetchKey!)}
+      exchangeLabel={widgetSetup.options.find((option) => option.key === menuWidgetKey)?.label}
+      onNavigate={closeAll}
+    />
+  ) : undefined;
+
+  const megaPanel =
+    desktopMenu && desktopLayout && desktopLayout !== "standard" ? (
+      <DesktopMegaMenu
+        key={open}
+        menu={desktopMenu}
+        menuId={open ?? "unknown"}
+        layout={desktopLayout}
+        anchorRef={dropdownAnchorRef}
+        panelRef={dropdownPanelRef}
+        onClose={closeAll}
+        widget={menuWidget}
+        {...(customizableNav && openMenuKey
+          ? {
+              pinnedIds: new Set(
+                custom.pinned
+                  .filter((key) => key.startsWith(`${openMenuKey}:`))
+                  .map((key) => key.slice(openMenuKey.length + 1))
+              ),
+              pinsFull,
+              onTogglePin: (itemId: string) =>
+                updateCustom(togglePin(custom, navPinKey(openMenuKey, itemId))),
+              onCustomize: () => setCustomizeOpen(true),
+            }
+          : {})}
+      />
+    ) : null;
+
+  const { tabs: dockTabs, sheets: dockSheets } = useMobileDockModel({
+    enabled: mobileDock,
+    pathname,
+    pageCountry: pageCountry as CountryId,
+    countryName,
+    homeState,
+    myCorporationId,
+    isImperialMode,
+    singleplayer: !!user?.singleplayer,
+    unreadCount,
+    profileDisplayName,
+    switchableCountries,
+    menus: {
+      state: desktopMenus.state && orderedMenu("state", desktopMenus.state),
+      nation: desktopMenus.nation && orderedMenu("nation", desktopMenus.nation),
+      world: desktopMenus.world && orderedMenu("world", desktopMenus.world),
+      help: desktopMenus.help && orderedMenu("help", desktopMenus.help),
+      staff: desktopMenus.staff && orderedMenu("staff", desktopMenus.staff),
+    },
+    onClose: () => setDockSheet(null),
+    search: <UniversalSearch onNavigate={() => setDockSheet(null)} />,
+  });
+
   return (
     <>
       <nav
+        data-site-navbar
         className="ahd-navbar-enter sticky top-0 z-50 border-b pt-[env(safe-area-inset-top,0px)] border-card-border/60 bg-card/50 shadow-panel backdrop-blur-xl"
         aria-label={t("common.mainNavigation")}
         data-feedback-ignore="true"
@@ -750,7 +1043,9 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
               where a shorter nation would fit, so it broke for some players and
               not others. Below lg the drawer below handles it, and does so
               already. */}
-          <div className="mx-auto hidden min-h-[60px] max-w-7xl items-center justify-between gap-3 overflow-visible px-5 lg:flex">
+          <div
+            className={`mx-auto hidden min-h-[60px] items-center justify-between gap-3 overflow-visible lg:flex ${customizableNav ? "max-w-none px-5 2xl:px-8" : "max-w-7xl px-5"}`}
+          >
             {/* Brand */}
             <Link
               href="/profile"
@@ -785,7 +1080,10 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 aria-hidden={searchOpen ? "true" : undefined}
               >
                 {navItems.map((item) => {
-                  const active = isNavActive(pathname, item.href);
+                  const active =
+                    item.key === "campaign"
+                      ? isCampaignNavActive(pathname)
+                      : isNavActive(pathname, item.href);
                   const tabIcon = item.useFlag ? (
                     <CountryFlag country={pageCountry} size="sm" />
                   ) : (
@@ -803,7 +1101,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                           type="button"
                           onClick={() => toggle(item.key!)}
                           aria-expanded={isOpen}
-                          aria-haspopup="menu"
+                          aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
+                          data-coach={item.key === "campaign" ? "nav-actions" : undefined}
                           className={navTabClassName(active || isOpen)}
                         >
                           {tabIcon}
@@ -811,13 +1110,16 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                           <NavItemChevron open={isOpen} />
                         </button>
                         {isOpen &&
-                          (item.key === "state"
-                            ? stateMenu
-                            : item.key === "world"
-                              ? worldMenu
-                              : item.key === "nation"
-                                ? nationMenu
-                                : null)}
+                          (megaPanel ??
+                            (item.key === "campaign"
+                              ? campaignMenu
+                              : item.key === "state"
+                                ? stateMenu
+                                : item.key === "world"
+                                  ? worldMenu
+                                  : item.key === "nation"
+                                    ? nationMenu
+                                    : null))}
                       </div>
                     );
                   }
@@ -831,6 +1133,44 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     >
                       {tabIcon}
                       <NavItemLabel>{item.label}</NavItemLabel>
+                    </Link>
+                  );
+                })}
+
+                {pinnedLinks.map(({ key, item }, index) => {
+                  const active = !!item.href && !item.external && isNavActive(pathname, item.href);
+                  // Room for two pins on narrower desktops, all of them on wide screens.
+                  const visibility = index < 2 ? "hidden xl:inline-flex" : "hidden 2xl:inline-flex";
+                  const content = (
+                    <>
+                      <PixelNavIcon
+                        name={item.icon ?? pixelIconForLink(item.id)}
+                        className="mr-1.5 h-4 w-4 shrink-0"
+                      />
+                      <span className="max-w-[11rem] truncate">{item.label}</span>
+                    </>
+                  );
+                  const className = `${navTabClassName(active)} ${visibility}`;
+                  return item.external ? (
+                    <a
+                      key={key}
+                      href={item.href}
+                      target={item.href!.startsWith("mailto:") ? undefined : "_blank"}
+                      rel="noopener noreferrer"
+                      data-nav-pin={key}
+                      className={className}
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <Link
+                      key={key}
+                      href={item.href!}
+                      aria-current={active ? "page" : undefined}
+                      data-nav-pin={key}
+                      className={className}
+                    >
+                      {content}
                     </Link>
                   );
                 })}
@@ -855,14 +1195,14 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     type="button"
                     onClick={() => toggle("help")}
                     aria-expanded={open === "help"}
-                    aria-haspopup="menu"
+                    aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
                     className={navTabClassName(open === "help")}
                   >
                     <NavIcon name="Help" />
                     <NavItemLabel>{t("common.help")}</NavItemLabel>
                     <NavItemChevron open={open === "help"} />
                   </button>
-                  {open === "help" && helpMenu}
+                  {open === "help" && (megaPanel ?? helpMenu)}
                 </div>
 
                 {/* Staff — admin/mod only */}
@@ -875,14 +1215,14 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                       type="button"
                       onClick={() => toggle("staff")}
                       aria-expanded={open === "staff"}
-                      aria-haspopup="menu"
+                      aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
                       className={navTabClassName(open === "staff")}
                     >
                       <NavIcon name="Staff" />
                       <NavItemLabel>{t("common.staff")}</NavItemLabel>
                       <NavItemChevron open={open === "staff"} />
                     </button>
-                    {open === "staff" && staffMenu}
+                    {open === "staff" && (megaPanel ?? staffMenu)}
                   </div>
                 )}
               </div>
@@ -1013,6 +1353,33 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                   </Link>
                 )}
 
+                {/* Gear: settings, navigation editor, Ask Keir, theme, sign out */}
+                {user && customizableNav && (
+                  <div className="relative" ref={open === "gear" ? dropdownAnchorRef : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => toggle("gear")}
+                      aria-expanded={open === "gear"}
+                      aria-haspopup="menu"
+                      aria-label={t("settingsMenu.label")}
+                      title={t("settingsMenu.label")}
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card transition-colors hover:border-muted/50 ${open === "gear" ? "text-foreground ring-2 ring-primary/40" : "text-muted hover:text-foreground"}`}
+                    >
+                      <NavSettingsIcon />
+                    </button>
+                    {open === "gear" && (
+                      <NavSettingsMenu
+                        anchorRef={dropdownAnchorRef}
+                        panelRef={dropdownPanelRef}
+                        singleplayer={!!user.singleplayer}
+                        closeAll={closeAll}
+                        onEditNavigation={() => setCustomizeOpen(true)}
+                        onSignOut={handleSignOut}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* User / avatar dropdown */}
                 <div className="relative" ref={open === "user" ? dropdownAnchorRef : undefined}>
                   {user ? (
@@ -1077,28 +1444,40 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 }`}
               />
             </Link>
-            <div className="ml-auto flex items-center gap-1.5">
-              {showProfile && user && (
+            {mobileDock ? (
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setDockSheet((cur) => (cur === "more" ? null : "more"))}
+                  aria-label={t("common.search")}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card text-foreground transition-colors hover:bg-white/5"
+                >
+                  <PixelNavIcon name="search" className="h-4 w-4" />
+                </button>
+                <Link
+                  href="/notifications"
+                  aria-label={
+                    unreadCount
+                      ? `${t("common.notifications")} (${unreadCount})`
+                      : t("common.notifications")
+                  }
+                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card text-foreground transition-colors hover:bg-white/5"
+                >
+                  <PixelNavIcon name="bell" className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
                 <button
                   type="button"
                   onClick={() => {
-                    void captureProductEvent("navigation_profile_opened", {
-                      variant: experimentVariant,
-                    });
-                    if (navigationVariant === "a")
-                      void captureProductEvent("navigation_menu_opened", { variant: "control" });
-                    if (navigationVariant === "b") {
-                      setMobileProfileOpen((value) => !value);
-                      setMobileMenuOpen(false);
-                    } else {
-                      setMobileProfileOpen((value) => !value);
-                      setMobileMenuOpen(true);
-                    }
+                    setDockSheet(null);
+                    setMobileProfileOpen((value) => !value);
                   }}
                   aria-label={t("common.profile")}
-                  aria-expanded={navigationVariant === "b" ? mobileProfileOpen : mobileMenuOpen}
-                  // No clipping or own border: the avatar draws its supporter frame
-                  // around itself, and the clip cut it to a sliver (ticket 1386).
+                  aria-expanded={mobileProfileOpen}
                   className="relative flex h-9 w-9 items-center justify-center rounded-lg"
                 >
                   <Avatar
@@ -1110,39 +1489,75 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     className="rounded-lg"
                   />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!mobileMenuOpen)
-                    void captureProductEvent("navigation_menu_opened", {
-                      variant: experimentVariant,
-                    });
-                  setMobileProfileOpen(false);
-                  setMobileMenuOpen((v) => !v);
-                }}
-                aria-label={mobileMenuOpen ? t("common.closeMenu") : t("common.openMenu")}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="experimental-mobile-menu"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card text-foreground transition-colors hover:bg-white/5"
-              >
-                <svg
-                  className="h-[19px] w-[19px]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              </div>
+            ) : (
+              <div className="ml-auto flex items-center gap-1.5">
+                {showProfile && user && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void captureProductEvent("navigation_profile_opened", {
+                        variant: experimentVariant,
+                      });
+                      if (navigationVariant === "a")
+                        void captureProductEvent("navigation_menu_opened", { variant: "control" });
+                      if (navigationVariant === "b") {
+                        setMobileProfileOpen((value) => !value);
+                        setMobileMenuOpen(false);
+                      } else {
+                        setMobileProfileOpen((value) => !value);
+                        setMobileMenuOpen(true);
+                      }
+                    }}
+                    aria-label={t("common.profile")}
+                    aria-expanded={navigationVariant === "b" ? mobileProfileOpen : mobileMenuOpen}
+                    // No clipping or own border: the avatar draws its supporter frame
+                    // around itself, and the clip cut it to a sliver (ticket 1386).
+                    className="relative flex h-9 w-9 items-center justify-center rounded-lg"
+                  >
+                    <Avatar
+                      url={characterProfile?.avatarUrl}
+                      name={profileDisplayName}
+                      size="h-9 w-9"
+                      borderKey={characterProfile?.borderKey}
+                      tintColor={characterProfile?.tintColor}
+                      className="rounded-lg"
+                    />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!mobileMenuOpen)
+                      void captureProductEvent("navigation_menu_opened", {
+                        variant: experimentVariant,
+                      });
+                    setMobileProfileOpen(false);
+                    setMobileMenuOpen((v) => !v);
+                  }}
+                  aria-label={mobileMenuOpen ? t("common.closeMenu") : t("common.openMenu")}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="experimental-mobile-menu"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card text-foreground transition-colors hover:bg-white/5"
                 >
-                  {mobileMenuOpen ? (
-                    <path d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
-              </button>
-            </div>
+                  <svg
+                    className="h-[19px] w-[19px]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {mobileMenuOpen ? (
+                      <path d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ── Mobile menu panel ────────────────────────────────────────── */}
@@ -1194,7 +1609,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
           )}
         </div>
       </nav>
-      {navigationVariant === "b" &&
+      {(navigationVariant === "b" || mobileDock) &&
         mobilePortalReady &&
         (mobileMenuOpen || mobileProfileOpen) &&
         createPortal(
@@ -1285,6 +1700,26 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
           </div>,
           document.body
         )}
+      {mobileDock &&
+        mobilePortalReady &&
+        createPortal(
+          <MobileDock
+            tabs={dockTabs}
+            openSheet={dockSheet}
+            onOpenSheet={setDockSheet}
+            sheets={dockSheets}
+          />,
+          document.body
+        )}
+      {customizeOpen && customizableNav && (
+        <NavCustomizeDialog
+          menus={customizableMenus}
+          pinLookup={pinLookup}
+          custom={custom}
+          onChange={updateCustom}
+          onClose={() => setCustomizeOpen(false)}
+        />
+      )}
     </>
   );
 });

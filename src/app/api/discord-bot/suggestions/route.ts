@@ -46,6 +46,14 @@ const schema = z.object({
   priority: z.number().min(1).max(5).optional(),
   /** Discord user ID of the submitter — used to attribute suggestion to a linked game account. */
   discordUserId: z.string().optional(),
+  /**
+   * Game account id of the submitter, for suggestions filed through Ask Keir by a
+   * player with no Discord link. Only read when discordUserId is absent.
+   */
+  userId: z
+    .string()
+    .regex(/^[a-f0-9]{24}$/i)
+    .optional(),
   /** Discord display name — stored as reporter label when no linked account exists. */
   discordUsername: z.string().optional(),
   /** Discord global display name (from the bot) — shown in-game and on webhook embeds when unlinked. */
@@ -60,8 +68,9 @@ const schema = z.object({
 
 // POST /api/discord-bot/suggestions — Submit a suggestion from Discord (/suggest command).
 // Auth: requireBotToken (private key only)
-// Works for both linked players and unregistered Discord users.
-// Errors: 400, 401, 429
+// Works for both linked players and unregistered Discord users, and for game accounts
+// (userId) when Ask Keir files for a player without a Discord link.
+// Errors: 400, 401, 404, 429
 export async function POST(request: Request) {
   try {
     if (!requireBotToken(request, false)) {
@@ -74,10 +83,13 @@ export async function POST(request: Request) {
     }
     const body = parsed.data;
 
-    // Rate-limit per Discord user (or by a fallback key if no discordUserId)
+    // Rate-limit per Discord user, else per game account, else by a shared fallback key
+    const accountId = body.discordUserId ? undefined : body.userId?.toLowerCase();
     const rateKey = body.discordUserId
       ? `discord-suggest:${body.discordUserId}`
-      : "discord-suggest:anon";
+      : accountId
+        ? `discord-suggest:user:${accountId}`
+        : "discord-suggest:anon";
     const rateLimit = checkRateLimit(rateKey, 1, 5 * 60_000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
@@ -101,6 +113,17 @@ export async function POST(request: Request) {
         reporterUsername = user.username ?? null;
         reporterDiscordUsername = user.discordUsername ?? body.discordUsername ?? null;
       }
+    } else if (accountId) {
+      const user = await db
+        .collection<User>("users")
+        .findOne(
+          { _id: new ObjectId(accountId) },
+          { projection: { _id: 1, username: 1, discordUsername: 1 } }
+        );
+      if (!user) return errorResponse(404, "User not found.");
+      userId = user._id;
+      reporterUsername = user.username ?? null;
+      reporterDiscordUsername = user.discordUsername ?? null;
     }
 
     const now = new Date();
@@ -134,11 +157,11 @@ export async function POST(request: Request) {
       priority: body.priority,
       commentCount: 0,
       context: {
-        pathname: "/discord",
+        pathname: accountId ? "/ask" : "/discord",
         url: detailUrl,
         capturedAt: now.toISOString(),
         recentActions: [],
-        userAgent: "discord-bot",
+        userAgent: accountId ? "ask-keir" : "discord-bot",
         viewport: { width: 0, height: 0 },
       },
       status: "not_reviewed",

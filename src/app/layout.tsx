@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import {
   isClientShellUserAgent,
+  hasNativeStatusDockUserAgent,
   isInAppWebViewUserAgent,
   isIosStoreAppUserAgent,
   isStoreAppUserAgent,
@@ -13,9 +14,17 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { NavbarWrapper } from "@/components/NavbarWrapper";
 import { BugReportFab } from "@/components/BugReportFab";
+import { AskDrawer } from "@/components/askDrawer/AskDrawer";
 import { StatusBar } from "@/components/StatusBar";
-import { TurnProgressToast } from "@/components/turn-progress/TurnProgressToast";
-import { TutorialCoachMount } from "@/components/tutorial/TutorialCoachMount";
+import {
+  DeferredSeasonRecapGate,
+  DeferredStatAllocationGate,
+  DeferredWealthTierRepickGate,
+  DeferredTutorialCoachMount,
+  DeferredSingleplayerGuide,
+  DeferredTurnProgressToast,
+  DeferredNominationChoicePrompt,
+} from "@/components/DeferredShellOverlays";
 import { FeedbackProvider } from "@/contexts/FeedbackContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BrowserPreferencesProvider } from "@/contexts/BrowserPreferencesContext";
@@ -26,6 +35,7 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegisteredCountriesProvider } from "@/contexts/RegisteredCountriesContext";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { loadCountryNameOverrides } from "@/lib/country/countryIdentity";
+import { buildCurrencyBaselineRates } from "@/lib/currency/baselineRates";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { getDb } from "@/lib/mongodb";
@@ -40,11 +50,9 @@ import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { CookieConsentBanner } from "@/components/CookieConsent";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
-import { StatAllocationGate } from "@/components/stats/StatAllocationGate";
-import { SeasonRecapGate } from "@/components/recap/SeasonRecapGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
-import { PostHogTracker } from "@/components/PostHogTracker";
-import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { DeferredAnalytics } from "@/components/DeferredAnalytics";
+import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import {
   buildGoogleTagBootstrapScript,
   getAdSenseClientId,
@@ -63,7 +71,9 @@ import { nationKeywords } from "@/lib/marketing/marketedWorld";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 import { getEraConfig } from "@/components/landing/eraThemes";
 import { verifyAuth } from "@/lib/auth";
+import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { getCachedMaintenanceStatus, isMaintenanceBypassPath } from "@/lib/maintenanceStatus";
+import { pickClientNamespaces, SHELL_CLIENT_NAMESPACES } from "@/i18n/clientCatalog";
 import { resolveNavbarPageCountry } from "@/lib/navigation/resolveNavbarPageCountry";
 import "./globals.css";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -229,10 +239,19 @@ export default async function RootLayout({
   // consent prompts, no cookie banner inside an app webview.
   const isNativeApp = isInAppWebViewUserAgent(userAgent);
   const isClientShell = isClientShellUserAgent(userAgent);
+  // The 2.10 phone app shows status in its own dock; keep one bar on screen.
+  const nativeStatusDock = hasNativeStatusDockUserAgent(userAgent);
   const isStoreApp = isStoreAppUserAgent(userAgent);
   const isIosStoreApp = isIosStoreAppUserAgent(userAgent);
   const host = requestHeaders.get("host");
   const pathname = requestHeaders.get("x-pathname") ?? "/";
+  // Only a cookie's presence is checked, not its validity: this is the hint that
+  // lets the status bar start its per-user request with the first paint instead
+  // of one `/api/client-nav` round trip later. An expired token costs one
+  // request that can only 401, which the shared status request then treats as a
+  // sign-out. A singleplayer build has no session cookie and no account, and
+  // keeps its local character without this hint.
+  const hasSessionCookie = Boolean(cookieStore.get(AUTH_COOKIE_NAME)?.value);
   const displayMode = cookieStore.get("ahd-display-mode")?.value as
     "focused" | "classic" | undefined;
   const interfaceMode =
@@ -302,10 +321,21 @@ export default async function RootLayout({
   const isWikiSubdomain =
     host === "wiki.ahousedividedgame.com" || (host?.startsWith("wiki.") ?? false);
 
+  // Fallback display rates for currencies outside the forex set. Built here on
+  // the server so the client does not need the whole country config to price an
+  // economy-anchored label.
+  const currencyBaselineRates = buildCurrencyBaselineRates(activePreset);
+
   const initialPageCountry = await resolveNavbarPageCountry({
     pathname,
     search: requestHeaders.get("x-search"),
   });
+  // The root layout does not re-render on a client-side navigation, so it ships
+  // only what its own client tree renders: the navbar and the tutorial coach.
+  // `app/template.tsx` adds the rest for the current route and refreshes it on
+  // every navigation. Measured 2026-10-24: the full catalog was 70,586 bytes
+  // gzipped, almost the whole 78,378-byte /corporation/1 document.
+  const clientMessages = pickClientNamespaces(intlMessages, SHELL_CLIENT_NAMESPACES);
   const adSenseClientId = getAdSenseClientId();
   // Never load the AdSense page tag (auto ads + CMP) inside the native app
   // WebView: AdSense is not permitted in app WebViews, and its third-party
@@ -384,7 +414,7 @@ export default async function RootLayout({
         >
           {t("skipToMainContent")}
         </a>
-        <NextIntlClientProvider locale={locale} messages={intlMessages}>
+        <NextIntlClientProvider locale={locale} messages={clientMessages}>
           <RegisteredCountriesProvider
             value={{
               registered: registeredCountries,
@@ -393,8 +423,8 @@ export default async function RootLayout({
               nameOverrides: countryNameOverrides,
             }}
           >
-            <AppInterfaceProvider initialMode={interfaceMode}>
-              <CurrencyProvider>
+            <AppInterfaceProvider initialMode={interfaceMode} initialHasSession={hasSessionCookie}>
+              <CurrencyProvider baselineRates={currencyBaselineRates}>
                 <ThemeProvider>
                   <BrowserPreferencesProvider>
                     <FeedbackProvider>
@@ -404,20 +434,25 @@ export default async function RootLayout({
                             <NavbarWrapper
                               singleplayer={singleplayer}
                               clientShell={isClientShell}
+                              phoneApp={isStoreApp}
                               displayMode={displayMode}
                               initialPageCountry={initialPageCountry}
                               typedWordmark={typedWordmark}
                             />
                           )}
                           {!isWikiSubdomain && <BugReportFab displayMode={displayMode} />}
+                          {/* Experimental opt-in (Settings). Singleplayer has no Ask service. */}
+                          {!isWikiSubdomain && !singleplayer && <AskDrawer />}
                           {!isWikiSubdomain && <MassCrashAlertBanner />}
                           {!isWikiSubdomain && <MaintenancePartialBanner />}
                           {/* Admin-controlled survey strip. Not auth-gated: it must reach
                             signed-out visitors too. */}
                           {!isWikiSubdomain && <PollBannerNotice />}
                           <AuthConnectivityGate />
-                          <StatAllocationGate />
-                          <SeasonRecapGate />
+                          <DeferredStatAllocationGate />
+                          <DeferredWealthTierRepickGate />
+                          <DeferredSeasonRecapGate />
+                          <DeferredNominationChoicePrompt />
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant
                             (admin status bar / sidebars / table headers), which both
@@ -426,28 +461,35 @@ export default async function RootLayout({
                             horizontal clipping without creating a scroll container. */}
                           <main
                             id="main-content"
-                            className="min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px))]"
+                            className={
+                              nativeStatusDock
+                                ? "min-w-0 overflow-x-clip pb-4"
+                                : "min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))]"
+                            }
                             tabIndex={-1}
                           >
-                            <SiteTrafficTracker />
+                            <SiteTrafficTracker gameVersion={world.version} />
                             {!singleplayer && !isNativeApp && !isWikiSubdomain && (
-                              <PostHogTracker />
+                              <DeferredAnalytics />
                             )}
                             {children}
                           </main>
                           {!isWikiSubdomain && !isNativeApp && <AdSlot />}
                           {!isWikiSubdomain && !isNativeApp && <AdSenseSlot />}
                           {!isWikiSubdomain && <SiteFooter displayMode={displayMode} />}
-                          {!isWikiSubdomain && (
+                          {!isWikiSubdomain && !nativeStatusDock && (
                             <StatusBar
                               showOnlineStatus={!isClientShell}
                               turnStatusLink={!singleplayer}
                             />
                           )}
-                          {!isWikiSubdomain && singleplayer && <TurnProgressToast />}
-                          {!isWikiSubdomain && <TutorialCoachMount />}
+                          {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
+                          {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
+                          {!isWikiSubdomain && <DeferredTutorialCoachMount />}
                           {!isWikiSubdomain && <LiveRefreshBanner />}
-                          {!isNativeApp && <CookieConsentBanner />}
+                          {/* Singleplayer loads no analytics (see below), so there is
+                              nothing to consent to. */}
+                          {!isNativeApp && !singleplayer && <CookieConsentBanner />}
                           {/* A singleplayer build runs on the player's machine with no
                               account and nothing to measure, so none of the telemetry
                               or ad tags below have a job there.

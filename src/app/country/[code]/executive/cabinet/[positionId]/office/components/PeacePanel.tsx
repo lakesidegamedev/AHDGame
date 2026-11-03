@@ -3,7 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { SectionCard, Badge } from "./dossier";
-import { type CountryId, type GovernmentType } from "@/lib/constants/countries";
+import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { PEACE_OFFER_DURATION_TURNS, TRUCE_TURNS } from "@/lib/db/types/peaceOffer";
 import type { PeaceTerm } from "@/lib/military/peaceTerm";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";

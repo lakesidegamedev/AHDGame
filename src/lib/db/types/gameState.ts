@@ -48,6 +48,19 @@ export type NppForeignPolicyStage = "votes" | "proposals" | "trade" | "support" 
 export type SingleplayerMode = "normal" | "head-of-state" | "worldsim";
 export type SingleplayerDifficulty = "easy" | "normal" | "hard";
 
+/**
+ * Progress of the first-game guide for one local world. The object's presence
+ * means the world offers the guide; worlds saved before it existed have no
+ * field and never see it. A new world writes a fresh object, so it is offered
+ * again.
+ */
+export interface SingleplayerGuideState {
+  /** The player closed the guide. It does not return for this world. */
+  dismissedAt?: Date;
+  /** The player opened the inbox (the guide's only page-visit step). */
+  inboxOpenedAt?: Date;
+}
+
 export interface SingleplayerConfig {
   mode: SingleplayerMode;
   difficulty: SingleplayerDifficulty;
@@ -58,6 +71,8 @@ export interface SingleplayerConfig {
   permanentHeadOfState: boolean;
   /** Explicit consent for durable, per-turn long-horizon telemetry. */
   longHorizonTelemetryEnabled?: boolean;
+  /** First-game guide for a new normal-mode world. See SingleplayerGuideState. */
+  guide?: SingleplayerGuideState;
   configuredAt: Date;
 }
 

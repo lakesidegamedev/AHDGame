@@ -94,7 +94,6 @@ describe("forceFullAutonomy", () => {
       "contractIssuanceEnabled",
       "prospectingEnabled",
       "brandLoyaltyEnabled",
-      "nppCorporateAttacksEnabled",
     ]) {
       expect(cfg?.update.$set[flag], `${flag} should be enabled for the sim`).toBe(true);
     }

@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import {
   availableHoldingShares,
   chooseHoldingTerm,
+  anchorHoldingPosition,
   positionHoldingTerms,
   takeHoldingShares,
   takeReservedHoldingShares,
@@ -100,7 +101,11 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
 
     const { shares, fillAsCorporation } = parsed.data;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/fillShareOrder:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
@@ -289,7 +294,11 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
           ? row.imperialCharacterId?.equals(fillerId)
           : row.characterId?.equals(fillerId)
       );
-      const terms = positionHoldingTerms(holder ?? { shares: 0 }, currentTurn, total / shares);
+      const terms = positionHoldingTerms(
+        anchorHoldingPosition(holder ?? { shares: 0 }, targetFxRate),
+        currentTurn,
+        total / shares
+      );
       let term;
       try {
         term = chooseHoldingTerm(terms, parsed.data.holdingTerm);
@@ -311,7 +320,11 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
             currentTurn,
             total / shares
           )
-        : positionHoldingTerms(holder ?? { shares: 0 }, currentTurn, total / shares);
+        : positionHoldingTerms(
+            anchorHoldingPosition(holder ?? { shares: 0 }, targetFxRate),
+            currentTurn,
+            total / shares
+          );
       const selected = takeReservedHoldingShares(reserved, shares, currentTurn);
       sellerHoldingTerms = selected.taken;
       if (order.sharesDebitedAtCreation) remainingReservedTerms = selected.remaining;

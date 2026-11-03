@@ -5,7 +5,7 @@ import { UK_REGIONS } from "@/lib/constants/uk";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { deRegions } from "@/lib/seeds/de/deRegions";
 import { cnRegions } from "@/lib/seeds/cn/cnRegions";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type {
   ElectionsManageAction,
   ElectionsManageState,
@@ -66,7 +66,7 @@ const ALL_ELECTION_TYPES: { value: ElectionTypeFilter; label: string }[] = [
 /** Region label per country */
 function getRegionLabel(country: CountrySelection): string {
   if (country === "global") return "Region";
-  return COUNTRY_CONFIGS[country]?.regionLabel ?? "Region";
+  return COUNTRY_CLIENT_CONFIGS[country]?.regionLabel ?? "Region";
 }
 
 interface ElectionTimerFormProps {
@@ -108,7 +108,9 @@ export function ElectionTimerForm({
       <div className="mb-3 flex items-center gap-2">
         <h3 className="text-sm font-semibold text-primary">Modify timers</h3>
         <span className="rounded bg-primary/15 px-2 py-0.5 text-[9px] text-primary">
-          {isGlobal ? "Applies to all countries" : `${COUNTRY_CONFIGS[selectedCountry]?.name} only`}
+          {isGlobal
+            ? "Applies to all countries"
+            : `${COUNTRY_CLIENT_CONFIGS[selectedCountry]?.name} only`}
         </span>
       </div>
       <div className="flex flex-wrap items-end gap-2">

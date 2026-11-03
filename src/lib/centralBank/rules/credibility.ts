@@ -11,7 +11,7 @@ import {
 } from "@/lib/nppAutonomy/rules/chairRateTarget";
 
 /** Existing corridor tolerance: 0.5 percentage points around policy target. */
-export const CREDIBILITY_TARGET_BAND = 0.5;
+const CREDIBILITY_TARGET_BAND = 0.5;
 
 export function stanceMatchesTaylorTarget(params: {
   primeRate: number;

@@ -1,7 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
-export const PROMO_GRANTS_COLLECTION = "promoGrants";
+const PROMO_GRANTS_COLLECTION = "promoGrants";
 
 /** A pending attempt older than this is presumed dead and may be retried. */
 export const PROMO_GRANT_STALE_PENDING_MS = 10 * 60 * 1000;

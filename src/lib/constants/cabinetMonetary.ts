@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 /**
  * Cabinet Monetary widget tunables. The Debt Management Operation accelerates
@@ -22,5 +23,5 @@ export const DEBT_OP_COOLDOWN_TURNS = 12;
 
 /** The finance/treasury cabinet seat for a country, or null. */
 export function resolveFinancePosition(countryId: string): string | null {
-  return COUNTRY_CONFIGS[countryId as CountryId]?.financeMinisterCabinetId ?? null;
+  return COUNTRY_CLIENT_CONFIGS[countryId as CountryId]?.financeMinisterCabinetId ?? null;
 }

@@ -1,4 +1,6 @@
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
+import { COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import type { ProspectingSurvey } from "@/lib/db/types/prospectingSurvey";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { Corporation } from "@/lib/db/types/corporation";
@@ -330,7 +332,7 @@ function buildNotification(
       userId,
       type: "prospect_succeeded",
       title: "Geological Survey Succeeded",
-      message: `The survey for ${survey.resource} in ${survey.stateId} struck new deposits, expanding extractable capacity by ${capacityGained.toLocaleString()} units per turn.`,
+      message: `The ${COMMODITY_LABELS[survey.resource] ?? survey.resource} survey in ${getStateDisplayName(survey.countryId, survey.stateId)} struck new deposits, adding ${capacityGained.toLocaleString()} units per turn of extractable capacity.`,
       metadata,
     };
   }
@@ -338,7 +340,7 @@ function buildNotification(
     userId,
     type: "prospect_failed",
     title: "Geological Survey Failed",
-    message: `The survey for ${survey.resource} in ${survey.stateId} came up dry. No new capacity was found.`,
+    message: `The ${COMMODITY_LABELS[survey.resource] ?? survey.resource} survey in ${getStateDisplayName(survey.countryId, survey.stateId)} came up dry. No new capacity was found.`,
     metadata,
   };
 }

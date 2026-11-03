@@ -121,6 +121,7 @@ const mockNewNoConfidenceVotes = {
   findOne: vi.fn(),
   findOneAndUpdate: vi.fn(),
   updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+  updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
 };
 const mockGovernmentFormations = {
   findOne: vi.fn(),
@@ -564,6 +565,7 @@ describe("resolveNoConfidenceVote (new formation system)", () => {
       _id: "UK",
       status: "formed",
       activeVoteId: voteId,
+      pmCharacterId: vote.targetPmCharacterId,
     });
 
     const { resolveNoConfidenceVote } = await import("./ukGovernment");

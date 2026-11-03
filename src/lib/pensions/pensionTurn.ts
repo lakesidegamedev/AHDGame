@@ -72,7 +72,7 @@ export interface PensionTurnResult {
 }
 
 /** The scheme for a union, created on first use. */
-export async function ensurePensionScheme(
+async function ensurePensionScheme(
   db: Db,
   union: Pick<Union, "_id" | "countryId" | "name">,
   currentTurn: number
@@ -227,7 +227,9 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       });
       let paidLocal = 0;
       if (contributionLocal > 0) {
-        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal);
+        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal, {
+          corporateObligation: true,
+        });
         if (debit.ok) {
           paidLocal = contributionLocal;
         } else {
@@ -251,7 +253,9 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       let toppedUpAnchor = 0;
       let toppedUpLocal = 0;
       if (topUpLocal > 0) {
-        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal);
+        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal, {
+          corporateObligation: true,
+        });
         if (debit.ok) {
           toppedUpAnchor = topUpAnchor;
           toppedUpLocal = topUpLocal;
@@ -343,7 +347,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
  * pensions they already owe. A scheme with liabilities and no live agreement is
  * the ordinary end state of a workplace that closed.
  */
-export async function runPensionPostContributionPasses(
+async function runPensionPostContributionPasses(
   db: Db,
   currentTurn: number,
   result: PensionTurnResult

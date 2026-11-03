@@ -17,9 +17,7 @@ export { Slider } from "./Slider";
 export { ResponsiveTable, type ResponsiveTableColumn } from "./ResponsiveTable";
 export { SectionLabel } from "./SectionLabel";
 export { LoadingSpinner } from "./LoadingSpinner";
-export { PageLoader } from "./PageLoader";
-export { PageError, type PageErrorCode } from "./PageError";
-export { PageErrorBoundary } from "./PageErrorBoundary";
+export { type PageErrorCode } from "./PageError";
 export { ErrorPageContent, type RouteErrorProps } from "./ErrorPageContent";
 export { MobileSelect } from "./MobileSelect";
 export {
@@ -29,7 +27,6 @@ export {
   type HeroStatsStripLayout,
 } from "./HeroStatsStrip";
 export { Tooltip } from "./Tooltip";
-export { GlossaryTerm } from "./GlossaryTerm";
 export { Modal } from "./Modal";
 export {
   Badge,

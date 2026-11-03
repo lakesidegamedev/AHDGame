@@ -91,6 +91,12 @@ interface AuthDataContextValue {
   refetch: (isManualRetry?: boolean) => void;
   /** Shared /api/client-nav payload for global chrome consumers. */
   navData: ClientNavBootstrap | null;
+  /**
+   * Whether the browser is carrying a session, known before `/api/client-nav`
+   * resolves. Chrome that fetches per-user data uses this so its first request
+   * starts with the page instead of one bootstrap round trip behind it.
+   */
+  hasSession: boolean;
 }
 
 const AuthDataContext = createContext<AuthDataContextValue | null>(null);
@@ -134,7 +140,17 @@ function transientToErrorFlag(reason: "rate_limit" | "server" | "network"): Auth
   return "unavailable";
 }
 
-export function AuthDataProvider({ children }: { children: ReactNode }) {
+export function AuthDataProvider({
+  children,
+  hasSessionHint = false,
+}: {
+  children: ReactNode;
+  /**
+   * Server hint: the request carried an auth cookie. Only a hint, since the
+   * token may be expired, so consumers treat a 401 as a sign-out.
+   */
+  hasSessionHint?: boolean;
+}) {
   const [user, setUser] = useState<AuthMeUser | null>(null);
   const [navData, setNavData] = useState<ClientNavBootstrap | null>(null);
   const [loading, setLoading] = useState(true);
@@ -176,9 +192,10 @@ export function AuthDataProvider({ children }: { children: ReactNode }) {
 
   // Memoized so consumers only re-render when auth state actually changes,
   // not whenever the provider re-renders.
+  const hasSession = user != null || hasSessionHint;
   const value = useMemo(
-    () => ({ user, loading, authFetchError, refetch, navData }),
-    [user, loading, authFetchError, refetch, navData]
+    () => ({ user, loading, authFetchError, refetch, navData, hasSession }),
+    [user, loading, authFetchError, refetch, navData, hasSession]
   );
 
   return <AuthDataContext.Provider value={value}>{children}</AuthDataContext.Provider>;
@@ -224,6 +241,22 @@ export function useRefetchNav(): () => void {
 export function useSignedIn(): boolean {
   const ctx = useContext(AuthDataContext);
   return ctx ? Boolean(ctx.user) : true;
+}
+
+/**
+ * Whether to attempt a per-user request at all, answered without waiting for
+ * `/api/client-nav`.
+ *
+ * `useSignedIn` can only answer after the auth bootstrap resolves, which put
+ * every per-user request one round trip behind it: the status bar's first
+ * `/api/client-status` waited on the bootstrap, then took its own 200 to 350 ms
+ * round trip. The server knows from the request's cookie whether a session is
+ * even possible, so it hands that down and the request starts with the page.
+ * A stale cookie costs one request that can only 401.
+ */
+export function useHasSession(): boolean {
+  const ctx = useContext(AuthDataContext);
+  return ctx ? ctx.hasSession : true;
 }
 
 /**

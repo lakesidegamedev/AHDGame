@@ -76,9 +76,9 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
                 <div>
                   <h3 className="text-lg text-foreground">Position editor</h3>
                   <p className="mt-0.5 max-w-xl text-sm text-muted">
-                    Author Layer-1 demographic positions, turnout, and archetype composition by
-                    state, then apply them as global seed defaults. The toggle below gates whether a
-                    reseed derives leans from this model.
+                    Author Layer-1 demographic positions and turnout by state, then apply them as
+                    global seed defaults. The toggle below gates whether a reseed derives leans from
+                    this model.
                   </p>
                   <div className="mt-3">
                     <Layer1PositionsToggle />

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="340" viewBox="0 0 720 340" role="img" font-family="system-ui, sans-serif">
+<title>Party merge outcome</title>
+<desc>What moves from the proposing party to the target party when a merge passes, and what happens to the proposing party.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="339" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">What a passed merge does</text>
+<rect x="20" y="50" width="170" height="190" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="105.0" y="131.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Proposing party</text>
+<text x="105.0" y="148.5" font-size="13" fill="#18181b" text-anchor="middle">Both committees voted</text>
+<text x="105.0" y="165.5" font-size="13" fill="#18181b" text-anchor="middle">yes (60% each)</text>
+<rect x="530" y="50" width="170" height="190" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="615.0" y="131.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Target party</text>
+<text x="615.0" y="148.5" font-size="13" fill="#18181b" text-anchor="middle">Keeps all its own NPPs</text>
+<text x="615.0" y="165.5" font-size="13" fill="#18181b" text-anchor="middle">first</text>
+<path d="M190 75 L530 75" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="227.8" y="58" width="264.3" height="15" fill="#ffffff"/>
+<text x="360" y="69" font-size="12" fill="#52525b" text-anchor="middle">Players move over, party influence halved</text>
+<path d="M190 120 L530 120" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="237.3" y="103" width="245.4" height="15" fill="#ffffff"/>
+<text x="360" y="114" font-size="12" fill="#52525b" text-anchor="middle">NPPs move over, weakest extras removed</text>
+<path d="M190 165 L530 165" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="265.6" y="148" width="188.7" height="15" fill="#ffffff"/>
+<text x="360" y="159" font-size="12" fill="#52525b" text-anchor="middle">100% of the national treasury</text>
+<path d="M190 210 L530 210" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="262.5" y="193" width="195.0" height="15" fill="#ffffff"/>
+<text x="360" y="204" font-size="12" fill="#52525b" text-anchor="middle">Half of each state's Org units</text>
+<rect x="20" y="275" width="300" height="48" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="170.0" y="294.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Proposing party marked defunct</text>
+<text x="170.0" y="311.0" font-size="13" fill="#18181b" text-anchor="middle">Shown as dissolved, nobody can join</text>
+<path d="M105 240 L105 275" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="110" y="251" width="69.0" height="15" fill="#ffffff"/>
+<text x="113" y="262" font-size="12" fill="#52525b" text-anchor="start">afterwards</text>
+</svg>

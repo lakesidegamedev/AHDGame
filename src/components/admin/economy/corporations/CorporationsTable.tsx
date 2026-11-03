@@ -2,7 +2,7 @@
 
 import React, { type Dispatch } from "react";
 import { PlayerSelector } from "@/components/PlayerSelector";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import type {
   ConfirmAction,
   CorpRow,

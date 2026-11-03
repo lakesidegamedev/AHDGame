@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { MINISTERIAL_ACTION_CAP } from "@/lib/constants/cabinetMechanicsTypes";
 import { getCabinetActionCopy } from "./actionCopy";
 import { Chop, Badge } from "./dossier";

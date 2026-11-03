@@ -16,6 +16,7 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "cash"
     | "strike"
     | "disaster"
     | "policy"
@@ -39,6 +40,13 @@ export interface PlantBuildOrderView {
   unitsDelivered: number;
   /** True when this order ramps in per turn rather than landing all at once. */
   smooth: boolean;
+  /**
+   * Capacity units added on every turn of the ramp; 0 when the order lands all
+   * at once or in whole-plant steps that skip turns (`steadyUnitsPerTurn`).
+   */
+  unitsPerTurn: number;
+  /** Next turn this order adds capacity; null once it has landed (`nextArrivalTurn`). */
+  nextArrivalTurn: number | null;
   costPaidAnchor: number;
   startTurn: number;
   onlineTurn: number;
@@ -66,13 +74,17 @@ export interface PlantBuildOrderView {
 export interface SectorPlantsSection {
   /** Persisted whole facilities owned by this sector. */
   plantCount: number;
+  /** The strategy the sector runs; with the lane it decides plant size. */
+  strategyId?: string | null;
   /** Installed capacity, units/day. Null before the sector's first plants turn. */
   capacityUnits: number | null;
   /** Units the plants actually made this turn. Null until a plants turn has run. */
   producedUnits: number | null;
   /** Units that found a buyer. Null until a plants turn has run. */
   soldUnits: number | null;
-  /** producedUnits − soldUnits, floored at 0. */
+  /** Units handed free to the company's own sites (funded market). Not sales, not unsold. */
+  ownSiteUnits: number | null;
+  /** producedUnits − soldUnits − ownSiteUnits, floored at 0. */
   unsoldUnits: number | null;
   /** capacityUnits − producedUnits, floored at 0. */
   idleUnits: number | null;
@@ -80,6 +92,8 @@ export interface SectorPlantsSection {
   fillRate: number | null;
   /** Named reasons behind `idleUnits`. Sums to `idleUnits`. */
   idleCauses: PlantIdleCause[];
+  /** State-scoped output labels: these sell only in this state (ticket 1700). */
+  localMarketOutputs: string[];
   mothballed: boolean;
   /** Outstanding build orders, oldest first. */
   buildQueue: PlantBuildOrderView[];

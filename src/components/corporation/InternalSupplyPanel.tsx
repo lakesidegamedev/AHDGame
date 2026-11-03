@@ -17,6 +17,7 @@ interface PolicyView {
   parentId: string | null;
   available: boolean;
   groupCoordinationActive?: boolean;
+  fundedMarket?: boolean;
   lastTurn: number | null;
   received: Record<string, number>;
   reserved: Record<string, number>;
@@ -82,11 +83,12 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
       setBusy(false);
     }
   }
+  const funded = view?.fundedMarket === true;
   const disabled = busy || !view?.available || view.inherited;
   const changed =
     !!view &&
     (draft.priority !== view.policy.priority ||
-      draft.discount !== view.policy.discount ||
+      (!funded && draft.discount !== view.policy.discount) ||
       !!draft.ownFirstAcrossStates !== !!view.policy.ownFirstAcrossStates);
   return (
     <DenseSection title={t("title")} meta={t("timing")}>
@@ -132,27 +134,29 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
                 <option value="group">{t("group")}</option>
               </select>
             </label>
-            <label className="grid gap-1 text-sm">
-              {t("discount")}
-              <select
-                className="border border-card-border bg-background px-2 py-2"
-                aria-label={t("discount")}
-                disabled={disabled || draft.priority === "market"}
-                value={draft.discount}
-                onChange={(e) => {
-                  setDraft({ ...draft, discount: Number(e.target.value) });
-                  setSaved(false);
-                }}
-              >
-                {[...new Set([0, 0.05, 0.1, 0.15, 0.2, draft.discount])]
-                  .sort((a, b) => a - b)
-                  .map((value) => (
-                    <option key={value} value={value}>
-                      {t("discountValue", { percent: value * 100 })}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            {!funded && (
+              <label className="grid gap-1 text-sm">
+                {t("discount")}
+                <select
+                  className="border border-card-border bg-background px-2 py-2"
+                  aria-label={t("discount")}
+                  disabled={disabled || draft.priority === "market"}
+                  value={draft.discount}
+                  onChange={(e) => {
+                    setDraft({ ...draft, discount: Number(e.target.value) });
+                    setSaved(false);
+                  }}
+                >
+                  {[...new Set([0, 0.05, 0.1, 0.15, 0.2, draft.discount])]
+                    .sort((a, b) => a - b)
+                    .map((value) => (
+                      <option key={value} value={value}>
+                        {t("discountValue", { percent: value * 100 })}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
             <button
               className="border border-card-border px-3 py-2 text-sm font-medium disabled:opacity-40"
               disabled={disabled || !changed}
@@ -173,6 +177,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             />
             {t("ownFirstAcrossStates")}
           </label>
+          {funded && <p className="pb-2 text-sm text-muted">{t("freeTransfer")}</p>}
           <p className="pb-2 text-xs text-muted">{t("ownFirstFreightWarning")}</p>
           {view.ownHauls && view.ownHauls.length > 0 && (
             <div className="border-t border-card-border py-2 text-xs text-muted">
@@ -201,7 +206,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             <summary className="cursor-pointer">{t("how")}</summary>
             <div className="mt-2 space-y-2">
               <p>{t("scope")}</p>
-              <p>{t("priceNote")}</p>
+              {!funded && <p>{t("priceNote")}</p>}
               <p>{t("constraints")}</p>
             </div>
           </details>
@@ -256,7 +261,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
                   <p className="mt-1 text-xs text-muted">{t("noDeliveries")}</p>
                 )}
                 <p className="mt-2 text-xs text-muted">{t("unitsNote")}</p>
-                {view.discountCostAnchor !== 0 && (
+                {!funded && view.discountCostAnchor !== 0 && (
                   <p className="mt-1 text-xs text-muted">
                     {t(view.discountCostAnchor < 0 ? "netCredit" : "netCharge", {
                       amount: Math.abs(view.discountCostAnchor).toLocaleString(undefined, {

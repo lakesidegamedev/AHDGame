@@ -2,7 +2,32 @@ export const militaryCommandsContent = `# Commands & Command Structure
 
 A **Command** is the organisational layer between your cabinet and your battlefield. It is where the Secretary of Defense stops being the person who moves every division personally and starts being the person who appoints the people who do.
 
-This is the most administrative page in this category, and the one that decides whether your war is run by one overworked minister or by a functioning general staff.
+Get this wrong and your war is run by one overworked minister; get it right and a functioning general staff runs it. Commands carry the chain of authority behind [Conflicts & the Military System](/wiki/conflicts-overview).
+
+## Who holds which job
+
+The defence seat holder builds Commands and commissions the generals who fill them. Each Command has a Commanding General who posts generals to wars. Each war can have one Theater Commander who runs its offensives. Authority moves down the chain: once a layer is given a job, the layer above cannot do it.
+
+### The numbers
+
+| What | Value |
+| --- | --- |
+| Strategic regions | 19 |
+| Regions per Command | At most 3, for every Command type |
+| Capacity of a new Command | 18, plus 2 per region |
+| Starting base rating | 70, or 60 if created with no commander (the live no-commander penalty then applies on top) |
+| Load of one unit | Between 3 and 8 capacity points, depending on the unit |
+| Penalty for no commander | Minus 10 effectiveness |
+| Penalty for being over capacity | Minus 1.6 effectiveness per point over |
+| Lowest effectiveness | 20 |
+| Colour bands | Green 82 and above, amber 70 to 81, red below 70 |
+| Theater Commanders per conflict | 1 |
+| Theater Commander XP | Half of one average formation's award |
+| Command postures | 12 |
+
+### An overloaded Regional Command
+
+A Regional Command with three regions has capacity 18 + 3 × 2 = 24 and starts at effectiveness 70. The Secretary assigns it 2 Armored Divisions (load 8 each) and 3 Infantry Divisions (load 4 each), a load of 28. That is 4 over capacity, so the penalty is 4 × 1.6 = 6.4 and effectiveness drops to 64. If its only commander is dismissed it falls another 10, to 54. Moving one Infantry Division to a second Command brings the load to 24, and effectiveness returns to 70.
 
 ## Why Commands exist
 
@@ -24,6 +49,8 @@ Theater Commander  (one per conflict)
   declares and withdraws offensives at that front
 \`\`\`
 
+![Three tiers of authority from the defence seat holder to the Commanding General to the Theater Commander, with the hand-off where the defence seat holder loses offensive rights at that front.](/wiki-images/diagrams/military-commands-authority.svg)
+
 ## Building a Command
 
 Defence office → **Commands** tab → *Create command*. A confirmed or acting defence seat holder may build and reorganise commands and commission or dismiss the generals that fill them.
@@ -34,11 +61,11 @@ A Command has:
 | --- | --- |
 | **Name** | Yours to choose. |
 | **Type** | Homeland Defense, Regional, or Logistics. |
-| **Regions** | Which strategic regions it is responsible for. Up to **3** for Homeland Defense and Regional commands; uncapped for Logistics. |
+| **Regions** | Which strategic regions it is responsible for. Up to **3** for every command type, Logistics included. |
 | **Posture** | One of twelve standing postures. |
 | **Supply priority** | Normal, High, or Emergency. |
-| **Commanders** | Which of your commissioned generals belong to it. |
-| **Commanding General** | Which one of them leads it. |
+| **Commanders** | Which of your commissioned generals belong to it. A general may sit on several rosters. |
+| **Commanding General** | Which one of them leads it. A general can lead only one Command. |
 
 ### The three types
 
@@ -87,20 +114,26 @@ Each region carries terrain, infrastructure, port and airbase capacity, strategi
 
 Every Command has a **force capacity** and an **effectiveness rating**.
 
-**Capacity** is set when the Command is created and grows with the number of regions it covers. Each unit assigned to the Command consumes capacity in proportion to its weight: a Carrier Strike Group eats far more of a Command's capacity than a Frigate Squadron.
+\`\`\`wiki-chart
+command-effectiveness-overload
+\`\`\`
 
-**Effectiveness** starts from the Command's base rating and is reduced by:
+**Capacity** is set when the Command is created and grows with the number of regions it covers. Each unit assigned to the Command consumes capacity in proportion to its weight: a Carrier Strike Group (load 8) eats twice as much of a Command's capacity as a Frigate Squadron (load 4).
 
-- **No commander: a flat 10% penalty.** A Command with nobody leading it is materially worse than one with even a weak general.
+Units are added to a Command's own unit list from its detail panel (*Assign unit*), and that list is what fills its capacity. It is a separate list from which general a unit is assigned to (see [Units, Recruitment & Procurement](/wiki/military-units)), and a unit can sit in only one Command. **Effectiveness** starts from the Command's base rating and is reduced by:
+
+- **No commander: minus 10 effectiveness points** while the Command's roster holds no general at all. A Command created that way also starts from a base of 60 rather than 70, so it reads 50 until you add one.
 - **Over capacity**: a growing penalty the further past capacity you stack units. Overloading a Command is not free.
 
-The panel gives you an itemised breakdown (base rating, then each penalty with its cost) so you can see exactly where a low rating comes from. Effectiveness never falls below a floor, and the interface colours it green above 82 and amber above 70.
+The panel gives you an itemised breakdown (base rating, then each penalty with its cost) so you can see exactly where a low rating comes from. Effectiveness never falls below a floor of 20, and the interface colours it green at 82 or more and amber at 70 or more.
 
-The practical reading: **more Commands with reasonable loads beat one giant Command holding everything.** Capacity is per-Command, so splitting your army across a sensible structure avoids the over-capacity penalty entirely.
+In battle, only a **Logistics** Command's effectiveness counts: it scales the supply that Command delivers to fronts in its regions. The effectiveness of Homeland Defense and Regional Commands, and every Command's posture and supply priority, are organisational readouts that do not change combat.
+
+The practical reading: **more Commands with reasonable loads beat one giant Command holding everything**, and for Logistics Commands that rating is real supply. Capacity is per-Command, so splitting your units across a sensible structure avoids the over-capacity penalty entirely.
 
 ## Commanding Generals
 
-Every Command has one **Commanding General**, chosen from its own commanders. If you do not pick one at creation, the first commander you selected takes the role by default.
+Every Command has one **Commanding General**, chosen from its own commanders (generals fill the rosters, and a general's rank and traits set command fit; see [Generals & the Officer Corps](/wiki/generals)). If you do not pick one at creation, the first commander you selected takes the role by default.
 
 The CG gets their own page at \`/country/<code>/general/commands\`, reachable by a **"Manage your command →"** link on their profile's Military tab. The link only appears for actual CGs.
 
@@ -112,13 +145,13 @@ On that page the CG can:
 
 What they **cannot** do is pick which units a general has. **That is derived**: a general's force is exactly the set of units the Secretary of Defense assigned to them, and the CG's page shows it read-only.
 
-This is a deliberate split of powers. The Secretary of Defense decides *what forces exist and who holds them*. The Commanding General decides *where those forces go*.
+A general who changes country gives up their commands (see [Relocation](/wiki/relocation)). This is a deliberate split of powers. The Secretary of Defense decides *what forces exist and who holds them*. The Commanding General decides *where those forces go*.
 
 Note that a CG edits only their own Command's postings. Every Command in the country writes into one shared assignment list, and the server merges each CG's submission back into it, so two CGs working simultaneously cannot wipe each other's postings.
 
 ## Theater Commanders
 
-One general per conflict may be designated **Theater Commander**. Only one: the server refuses a second.
+The Theater Commander declares offensives (see [Fighting a Battle](/wiki/fighting-a-battle)), and a Logistics Command feeds the front's supply. One general per conflict may be designated **Theater Commander**. Only one: the server refuses a second.
 
 A TC gets two things:
 
@@ -128,7 +161,7 @@ A TC gets two things:
 
 That second point is the one that catches people out.
 
-> ⚠️ **Designating a Theater Commander locks the Secretary of Defense out of that conflict.** Until a TC exists, the defence seat holder may declare and withdraw offensives there. The moment one is named, only the TC can: the Secretary has delegated the front and cannot act over their head. Admins retain an override; nobody else does.
+> ⚠️ **Designating a Theater Commander locks the Secretary of Defense out of that conflict.** Until a TC exists, the defence seat holder may declare and withdraw offensives there. The moment one is named, only the TC can: the Secretary has delegated the front and cannot act over their head.
 
 If a TC is dismissed, the front is **vacated** rather than orphaned: nobody is auto-promoted, and authority falls back to the defence seat holder. The Secretary has quietly taken the job back and should appoint a successor.
 
@@ -148,13 +181,13 @@ All of it is weighted by **how involved you are**. A conflict where *you* are th
 
 Bands: **Low · Medium · Rising · High · Severe.**
 
-**Any region with a live conflict reads at least Medium**, even when the weighted heat would be lower: an active war is never reported as calm.
+**Any region with a pending offensive, or a battle with contact in the last 24 turns, reads at least Medium**, even when the weighted heat would be lower. A war with no offensive and no fighting for 24 turns can read lower.
 
-Regions with no live conflict and no recent fighting read **Low**. The world genuinely starts quiet; threat appears because something is happening, not because a designer decided that region is dangerous.
+Regions with no pending offensive, no recent fighting and no massed forces read **Low**. The world genuinely starts quiet; threat appears because something is happening, not because a designer decided that region is dangerous.
 
 ## Assigning units
 
-Units are attached to **generals**, not directly to Commands, and they are attached by the **Secretary of Defense** from the office → **Military** → roster. Each unit card carries an **"Assign to …"** dropdown listing your commissioned generals.
+For fighting, units are attached to **generals**, and they are attached by the **Secretary of Defense** from the office → **Military** → roster. (The Command unit list above only measures capacity; it does not move anyone.) Each unit card carries an **"Assign to …"** dropdown listing your commissioned generals.
 
 A unit shows either **"Assigned · <general>"** or **"General Staff · unassigned"**. General Staff means no general, which means reserve, which means it cannot fight.
 
@@ -167,29 +200,37 @@ A working structure looks roughly like this:
 1. **Commission several generals.** They start accruing tenure points immediately.
 2. **Build two or three Commands** with clear region responsibilities and no two Commands of the same type over one region: say a Homeland Defense command over your own region, a Regional command over where you expect to fight, and a Logistics command if you intend to fight overseas. Those last two will often cover the same region, which is intended: one holds the ground, the other sustains it.
 3. **Appoint a Commanding General to each**, ideally one whose training fits the Command's job.
-4. **Assign units to generals**, spreading the load so no Command sits over capacity.
+4. **Assign units to generals** so they deploy with them, and list units on Commands so no Command sits over capacity.
 5. **When war comes**, the relevant CG posts their generals to the conflict and names a Theater Commander.
 6. **The Theater Commander runs the fighting** from the war room or the conflict page.
 
 At that point the Secretary of Defense is doing what a defence minister should (raising forces and setting doctrine) while officers fight the war.
 
-## Practical guidance
+## Cheap mistakes to avoid
 
-**Always give a Command a commander.** The flat 10% penalty for an empty Command is the cheapest mistake on this page to avoid.
+**Always give a Command a commander.** The 10-point effectiveness penalty for an empty Command is the cheapest mistake on this page to avoid.
 
 **Do not overload one Command.** Over-capacity penalties scale. Two Commands at capacity beat one at double.
 
-**Cover your own home region first.** An uncovered home region is the gap that will hurt.
+**Cover your own home region first.** Coverage itself does not change a battle, but the coverage view is the quickest check that your structure has no gaps, and a Logistics Command only supplies fronts in the regions it covers.
 
 **Do not name a Theater Commander until you mean it.** You are handing away your own ability to declare offensives there. Name one when you have a general who deserves the front and a player who will actually log in and run it.
 
-**Pick TCs for training, not rank.** The front-wide bonus is drawn from the TC's *trained traits*. A Field Marshal with an untrained tree carries nothing to the front; a Major General with a deep, doctrine-boosted path carries real weight.
+**Pick TCs for training, not rank.** The front-wide bonus is drawn from the TC's *trained traits*. A Field Marshal with an untrained tree carries nothing to the front; a Major General with a deep trained path carries real weight.
 
 **Watch threat before you commit.** A region climbing from Low to Rising is telling you a conflict near you is heating up, usually before it becomes your problem.
 
-## Next
+## Who does what
 
-- [Fighting a Battle](/wiki/fighting-a-battle): what the Theater Commander actually does.
-- [Generals & the Officer Corps](/wiki/generals): who fills these roles.
+- **Defence seat holder:** build and change Commands, commission generals, assign units to generals. Defence office, **Commands** tab.
+- **Commanding General:** post your Command's generals to wars and name Theater Commanders, from your command page, linked from your profile's Military tab.
+- **Theater Commander:** declare and withdraw offensives at your front.
+
+**Questions that come up.** *Who assigns generals to conflicts?* The Commanding General of the Command the general belongs to. *Why is my Secretary of Defense locked out of declaring an offensive?* A Theater Commander has been named there. Dismissing the Theater Commander returns the job to the Secretary. *What happens when the Commanding General quits?* They stay in the role until dismissed or they move abroad, when the Command loses its lead. Unit posture and Command posture are different settings on different objects, as described above.
+
+## See also
+
 - [National Doctrine](/wiki/national-doctrine): what makes them better at it.
+
+Works in every world and era for every country with a defence seat; Scotland and Wales have none and so no Commands. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Commands and Theater command
 `;

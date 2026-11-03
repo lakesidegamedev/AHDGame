@@ -94,6 +94,47 @@ describe("corporation banner", () => {
   });
 });
 
+describe("corporation first paint", () => {
+  it("asks for the status strip and the vote docket before the payload resolves", async () => {
+    // The payload never resolves: everything asserted below was issued while the
+    // page was still loading, which is the whole point. Both used to be requested
+    // by components that only mount once `corporation` exists, a round trip later.
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/corporations/bad-id") return new Promise<Response>(() => {});
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CorporationDetailPage />);
+
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([input]) => String(input));
+      expect(urls).toContain("/api/corporations/bad-id/nationalization-status");
+      expect(urls).toContain("/api/corporations/bad-id/votes?status=open");
+    });
+    // Still on the skeleton: the requests did not wait for the corporation.
+    expect(screen.queryByTestId("masthead")).toBeNull();
+  });
+
+  it("leaves the vote docket alone on a tab that does not draw it", async () => {
+    search = "tab=sectors";
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL) => new Response("{}", { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CorporationDetailPage />);
+
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([input]) => String(input));
+      expect(urls).toContain("/api/corporations/bad-id/nationalization-status");
+    });
+    const urls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(urls).not.toContain("/api/corporations/bad-id/votes?status=open");
+  });
+});
+
 describe("corporation load errors", () => {
   it("shows the server request reference for a validation failure", async () => {
     vi.stubGlobal(

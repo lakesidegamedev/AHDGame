@@ -32,20 +32,18 @@ export interface AutonomousWarEntryPreparation {
 const ENTRY_MIN_READINESS = 55;
 const ENTRY_MIN_APPROVAL = 45;
 const ENTRY_MAX_DEBT_TO_GDP = 120;
-export const DEFAULT_WAR_COMMITMENT_SHARE = 0.2;
+const DEFAULT_WAR_COMMITMENT_SHARE = 0.2;
 
 /**
  * The Warsaw Pact's unified command can put a larger share of each member army
  * into one bloc operation than the default autonomous coalition commitment.
  * This changes mobilization depth, not combat quality, readiness, or casualties.
  */
-export const WAR_COMMITMENT_SHARE_BY_ORGANIZATION: Readonly<Record<string, number>> = {
+const WAR_COMMITMENT_SHARE_BY_ORGANIZATION: Readonly<Record<string, number>> = {
   WARSAW_PACT: 0.35,
 };
 export type WarCommitmentPriority = "lowest" | "highest";
-export const WAR_COMMITMENT_PRIORITY_BY_ORGANIZATION: Readonly<
-  Record<string, WarCommitmentPriority>
-> = {
+const WAR_COMMITMENT_PRIORITY_BY_ORGANIZATION: Readonly<Record<string, WarCommitmentPriority>> = {
   WARSAW_PACT: "highest",
 };
 

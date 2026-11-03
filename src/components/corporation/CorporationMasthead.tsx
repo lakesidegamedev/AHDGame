@@ -4,12 +4,18 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HeroImage } from "@/components/HeroImage";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import { MONEY_PERIOD_SUFFIX, scaleMoney, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 import { formatCompactNumber, formatMarketingStrength } from "@/lib/utils/formatters";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";
-import { CeoCorporationSettingsModal } from "./ceo/CeoCorporationSettingsModal";
+import dynamic from "next/dynamic";
+
+const CeoCorporationSettingsModal = dynamic(
+  () => import("./ceo/CeoCorporationSettingsModal").then((m) => m.CeoCorporationSettingsModal),
+  { ssr: false }
+);
 import { deriveTicker } from "./market/corpIdentity";
 import { useSharePriceHistory } from "./market/useSharePriceHistory";
 import { SmallButton, signTone, useCorpMoney } from "./dense/DenseKit";
@@ -334,6 +340,7 @@ export function CorporationMasthead({
                   Trade shares
                 </SmallButton>
               )}
+              <WatchButton kind="corporation" id={corporation.sequentialId} />
               {isCeo && (
                 <SmallButton
                   onClick={() => setSettingsOpen(true)}
@@ -427,7 +434,7 @@ export function CorporationMasthead({
         </p>
       )}
 
-      {isCeo && (
+      {isCeo && settingsOpen && (
         <CeoCorporationSettingsModal
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}

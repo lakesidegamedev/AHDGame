@@ -6,7 +6,7 @@
  * years), creating very gradual long-term reversion while policy effects and
  * player actions can sustain deviation for years if maintained continuously.
  */
-const DECAY_RATE = 0.0025;
+export const DECAY_RATE = 0.0025;
 
 /** Minimum distance to bother decaying (avoids floating point churn) */
 const DECAY_THRESHOLD = 0.001;

@@ -6,7 +6,7 @@ import { PartyLogo } from "@/components/PartyLogo";
 import { LocalTime } from "@/components/time/LocalTime";
 import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
 import type { CandidateDetail, SnapshotPoint, VoteTurnSnapshot } from "./ElectionDetailTypes";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 export function PieChart({
   slices,

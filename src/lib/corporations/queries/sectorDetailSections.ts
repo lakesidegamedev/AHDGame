@@ -43,9 +43,15 @@ import {
 } from "@/lib/tariffs/tariffEffects";
 import type { FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import { deliveredFraction, queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
+import {
+  deliveredFraction,
+  nextArrivalTurn,
+  queueUndeliveredCost,
+  steadyUnitsPerTurn,
+} from "@/lib/corporations/buildDelivery";
 import { readPlantsPnl, type PolicyStackRow } from "@/lib/corporations/plantsPnlBasis";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import {
   SPLIT_BASE_CAPTURE_FRACTION,
   UNOWNED_CAPTURE_BONUS_MULTIPLIER,
@@ -111,6 +117,9 @@ import {
 } from "@/lib/constants/techTree";
 import { COMMODITY_BASE_PRICES, computeBlendedMarginModifiers } from "@/lib/constants/commodities";
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import { sectorOutputCommodities } from "@/lib/corporations/commodityDominanceContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { projectStrategyRevenuePerTurn } from "@/lib/corporations/strategyRevenuePreview";
 import type { SectorBuildOrder } from "@/lib/db/types";
@@ -128,6 +137,10 @@ import {
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import {
+  fundedSectorProfit,
+  sectorMaintenanceAndProfit,
+} from "@/lib/corporations/rules/plantlessSector";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
 import {
   CAPACITY_BUILD_TURNS,
@@ -1203,13 +1216,19 @@ export function computeSectorMarginSection(args: {
   // `plantsPnlBasis.ts`. The inversion below stays as the fallback for sectors
   // with no persisted P&L yet, where it is the pre-existing behaviour exactly.
   const enginePnl = readPlantsPnl(sector);
-  const maintenance = enginePnl
-    ? enginePnl.operatingCost
-    : economicRevenue * (1 - effectiveMargin / 100);
-  const freightNet = (sector.freightBillingCredit ?? 0) - (sector.freightBillingCharge ?? 0);
-  const profit =
-    (enginePnl ? enginePnl.profit : economicRevenue - maintenance - sector.currentGrowthCost) +
-    freightNet;
+  // A funded settlement row carries its booked profit but not the engine's cost
+  // lines. Inverting the margin there gave zero cost to a sector that sold
+  // nothing, so a plant losing its whole bill read as losing only its growth
+  // charge. Use the booked profit, and size the bill so the page's lines
+  // (maintenance + growth) still sum back to it.
+  const { maintenance, profit } = sectorMaintenanceAndProfit({
+    engine: enginePnl,
+    fundedProfit: fundedSectorProfit(sector.plantsPnl),
+    economicRevenue,
+    effectiveMarginPct: effectiveMargin,
+    growthCost: sector.currentGrowthCost,
+    freightNet: (sector.freightBillingCredit ?? 0) - (sector.freightBillingCharge ?? 0),
+  });
 
   return {
     mods: effectiveMods,
@@ -1222,6 +1241,41 @@ export function computeSectorMarginSection(args: {
 }
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
+
+/**
+ * Idle weights from a funded settlement receipt, or null when the sector has
+ * none for the last turn (legacy worlds keep the throttle reading).
+ *
+ * A funded plant loses run for distinct reasons, and the page has to name the
+ * one the player can act on (ticket 1728): the demand plan held its run below
+ * capacity (demand, or ramping back up once it sells out), short inputs or
+ * short cash cut what it made below that plan, and unsold output is demand.
+ */
+function fundedIdleWeights(
+  receipt: CorporateSector["producerSettlement"] | null | undefined,
+  currentTurn: number
+): { cause: PlantIdleCause["cause"]; w: number }[] | null {
+  if (!receipt || !(receipt.turn >= currentTurn - 1)) return null;
+  const active = receipt.activeUnits;
+  if (!(Number.isFinite(active) && active > 0)) return null;
+  const share = (x: number) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
+  const offered = receipt.offeredUnits;
+  // Units delivered to the company's own sites found a use; they are not demand-idle.
+  const ownDelivered = (receipt.products ?? []).reduce(
+    (n, p) => n + Math.max(0, p.internalDeliveredUnits ?? 0),
+    0
+  );
+  const sellThrough = offered > 0 ? share((receipt.soldUnits + ownDelivered) / offered) : 1;
+  const runShare = share(receipt.plannedRunShare ?? 1);
+  const made = share(receipt.producedUnits / active);
+  const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
+  if (runShare < 1)
+    weights.push({ cause: sellThrough >= SOLD_OUT_FILL ? "ramping" : "demand", w: 1 - runShare });
+  const shortfall = Math.max(0, runShare - made);
+  if (shortfall > 0)
+    weights.push({ cause: (receipt.operatingArrears ?? 0) > 0 ? "cash" : "inputs", w: shortfall });
+  return weights;
+}
 
 /**
  * Build the plants-tier section. Pure: every DB-derived input is passed in, so
@@ -1289,6 +1343,11 @@ export function buildSectorPlantsSection(args: {
     inputsAnchor: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
+    /**
+     * Compliance a funded producer turn booked, in ₳. Funded rows carry no
+     * full engine P&L, so without it the line is re-derived from the share.
+     */
+    fundedComplianceAnchor?: number | null;
     /**
      * Ticket 1122: the lines the turn ACTUALLY booked, in ₳. When present every
      * money figure below is read straight off them and nothing is
@@ -1369,18 +1428,20 @@ export function buildSectorPlantsSection(args: {
   const plantCount =
     Number.isInteger(sector.plantCount) && (sector.plantCount ?? 0) >= 0
       ? (sector.plantCount as number)
-      : seedPlantLedger(
-          sector.sectorType,
-          sector.capitalStock,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        ).plantCount;
+      : seedPlantLedger(sector, sector.capitalStock).plantCount;
   const producedUnits = num(sector.producedUnits);
   const soldUnits = num(sector.soldUnits);
   const mothballed = sector.mothballed === true;
 
+  // Output handed free to the company's own sites is used, not unsold (ticket
+  // 1757): a Kanto plant that fed its owner's US mines read "75 units went
+  // unsold, the market is oversupplied" on a fully used turn.
+  const ownSiteShare = ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? 0;
+  const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
-    producedUnits != null && soldUnits != null ? nonNeg(producedUnits - soldUnits) : null;
+    producedUnits != null && soldUnits != null
+      ? nonNeg(producedUnits - soldUnits - (ownSiteUnits ?? 0))
+      : null;
   const idleUnits =
     capacityUnits != null && producedUnits != null ? nonNeg(capacityUnits - producedUnits) : null;
   const fillRate =
@@ -1425,14 +1486,19 @@ export function buildSectorPlantsSection(args: {
     }
     const idleShare = (idleUnits - coldUnits - bankUnits) / capacityUnits;
     const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
-    const throughput = num(sector.throughputFactor);
-    if (throughput != null && throughput < 1) {
-      weights.push({ cause: "inputs", w: 1 - Math.max(0, throughput) });
-    }
-    const demandThrottle = num(sector.demandThrottleFactor);
-    if (demandThrottle != null && demandThrottle < 1) {
-      const cause = fillRate != null && fillRate >= SOLD_OUT_FILL ? "ramping" : "demand";
-      weights.push({ cause, w: 1 - Math.max(0, demandThrottle) });
+    const funded = fundedIdleWeights(sector.producerSettlement, currentTurn);
+    if (funded) {
+      weights.push(...funded);
+    } else {
+      const throughput = num(sector.throughputFactor);
+      if (throughput != null && throughput < 1) {
+        weights.push({ cause: "inputs", w: 1 - Math.max(0, throughput) });
+      }
+      const demandThrottle = num(sector.demandThrottleFactor);
+      if (demandThrottle != null && demandThrottle < 1) {
+        const cause = fillRate != null && fillRate >= SOLD_OUT_FILL ? "ramping" : "demand";
+        weights.push({ cause, w: 1 - Math.max(0, demandThrottle) });
+      }
     }
     if (sector.strikeStartedAtTurn != null) {
       weights.push({ cause: "strike", w: 1 - STRIKE_REVENUE_THROTTLE });
@@ -1480,6 +1546,8 @@ export function buildSectorPlantsSection(args: {
       unitsOrdered: o.unitsOrdered,
       unitsDelivered: o.unitsOrdered * delivered,
       smooth: o.smooth === true,
+      unitsPerTurn: steadyUnitsPerTurn(o, currentTurn),
+      nextArrivalTurn: nextArrivalTurn(o, currentTurn),
       costPaidAnchor: o.costPaidAnchor,
       startTurn: o.startTurn,
       onlineTurn: o.onlineTurn,
@@ -1598,7 +1666,9 @@ export function buildSectorPlantsSection(args: {
       );
   const complianceAnchor = money.enginePnl
     ? nonNeg(money.enginePnl.compliance)
-    : nonNeg((money.realizedRevenueAnchor * Math.max(0, regulatoryBurdenPp)) / 100);
+    : money.fundedComplianceAnchor != null
+      ? nonNeg(money.fundedComplianceAnchor)
+      : nonNeg((money.realizedRevenueAnchor * Math.max(0, regulatoryBurdenPp)) / 100);
   // The input bill renders at its real size, and `otherOperating` is the SIGNED
   // remainder that makes the named lines sum back to `maintenanceNet` exactly.
   //
@@ -1727,13 +1797,18 @@ export function buildSectorPlantsSection(args: {
 
   return {
     plantCount,
+    strategyId: sector.strategyId ?? null,
     capacityUnits,
     producedUnits,
     soldUnits,
+    ownSiteUnits,
     unsoldUnits,
     idleUnits,
     fillRate,
     idleCauses,
+    localMarketOutputs: sectorOutputCommodities(sector, currentTurn)
+      .filter(isStateScopedCommodity)
+      .map((commodity) => COMMODITY_LABELS[commodity]),
     mothballed,
     activeCapacityPercent: activeFraction * 100,
     ...(upkeepUnitDailyAnchor != null
@@ -1773,7 +1848,8 @@ export function buildSectorPlantsSection(args: {
       currentYear,
       eraUnitScale,
       sector.industryModel,
-      sector.mediaDiscriminator
+      sector.mediaDiscriminator,
+      sector.strategyId
     ),
     governor: {
       active: governorTurnsRemaining > 0,

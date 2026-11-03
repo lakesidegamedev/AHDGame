@@ -386,8 +386,17 @@ describe("API Performance: Elections List", () => {
           return { find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) };
         if (name === "electionVoteTallies")
           return { find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) };
-        if (name === "primarySnapshots")
-          return { aggregate: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) };
+        if (name === "primarySnapshots") {
+          const cursor = {
+            sort: vi.fn(),
+            limit: vi.fn(),
+            toArray: vi.fn().mockResolvedValue([]),
+            next: vi.fn().mockResolvedValue(null),
+          };
+          cursor.sort.mockReturnValue(cursor);
+          cursor.limit.mockReturnValue(cursor);
+          return { find: vi.fn().mockReturnValue(cursor) };
+        }
         if (name === "gameState")
           return {
             findOne: vi.fn().mockResolvedValue({

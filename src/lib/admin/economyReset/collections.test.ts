@@ -39,7 +39,6 @@ describe("economy-only reset collection contract", () => {
     for (const name of [
       "enactedLaws",
       "resetNationalTreasuries",
-      "unions",
       "organizationFunds",
       "pensionSchemes",
       "energyPlants",
@@ -57,6 +56,14 @@ describe("economy-only reset collection contract", () => {
       "financialTxLog",
     ])
       expect(keep.has(name), name).toBe(true);
+  });
+
+  it("wipes organized labour with the corporations it organizes", () => {
+    // Unions are economy entities keyed to corporateSectors. Keeping them left
+    // old treasuries, organizers and heads attached to sectors the reset had
+    // rebuilt, so the reset now clears them and reseeds a vacant roster.
+    for (const name of ["unions", "unionOrganizers", "unionLeaderVotes", "unionEndorsements"])
+      expect(wipe.has(name), name).toBe(true);
   });
 
   it("clears the producer path latch and the money supply series", () => {

@@ -20,12 +20,11 @@ import {
   ADDRESS_TITLE_MAX_LENGTH,
   ADDRESS_BODY_MAX_LENGTH,
 } from "@/lib/constants/governorOffice";
+import { type CountryId, getRegionalAddressName } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CONFIGS,
+  COUNTRY_CLIENT_CONFIGS,
   getNationalAddressName,
-  getRegionalAddressName,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 
 interface Props {
   open: boolean;
@@ -61,7 +60,7 @@ export function DeliverAddressModal({
   // does not have, and the boost would be charged and land on nobody, which is
   // what archetype targeting already did outside the US.
   const [targetSections, setTargetSections] = useState<TurnoutTargetSection[]>([]);
-  const countryConfig = COUNTRY_CONFIGS[cid];
+  const countryConfig = COUNTRY_CLIENT_CONFIGS[cid];
   const countryName = countryConfig?.name ?? countryId;
   const headingBase = isNational ? getNationalAddressName(cid) : getRegionalAddressName(cid);
   const headingLabel = adminOverride ? `${headingBase} (Admin)` : headingBase;

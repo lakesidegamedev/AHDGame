@@ -31,7 +31,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/treasury/pending:${authResult.user.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();

@@ -38,8 +38,8 @@ import type { User } from "@/lib/db/types/user";
  * endpoint idempotent.
  */
 
-export const WATCHLIST_RECENT_ACTIONS_LIMIT = 5;
-export const WATCHLIST_NEW_LINKS_LIMIT = 10;
+const WATCHLIST_RECENT_ACTIONS_LIMIT = 5;
+const WATCHLIST_NEW_LINKS_LIMIT = 10;
 
 export interface WatchlistActivityAction {
   id: string;

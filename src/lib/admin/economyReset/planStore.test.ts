@@ -29,6 +29,7 @@ function bigPlan(): EconomyResetPlan {
     ledgerShadow: true,
     treasuryCashLedgerEnabled: false,
     wipe: [],
+    reseed: [],
     partialWipe: [],
     characters: Array.from({ length: 20_000 }, (_, i) => ({
       id: i.toString(16).padStart(24, "0"),

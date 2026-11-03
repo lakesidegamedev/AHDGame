@@ -11,8 +11,7 @@ import {
 
 export const FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION =
   "federationArchivedPublicCorporations";
-export const FEDERATION_PUBLIC_CORPORATION_REBASES_COLLECTION =
-  "federationPublicCorporationRebases";
+const FEDERATION_PUBLIC_CORPORATION_REBASES_COLLECTION = "federationPublicCorporationRebases";
 
 export interface FederationArchivedPublicCorporation {
   _id: string;

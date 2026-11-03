@@ -31,7 +31,11 @@ export async function setSectorWageLevel(request: Request, { params }: RoutePara
       return errorResponse(403, "The labour system is not enabled.");
     }
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/sectorOperations/setSectorWageLevel:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, sectorId } = await params;

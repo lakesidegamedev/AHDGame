@@ -49,7 +49,7 @@ const ANCHOR_CAP = 1e15;
 const MAX_QUALITY_BONUS = 10;
 const MAX_TECH_BONUS = 5;
 const BRAND_REF_ANCHOR = 10_000;
-export const MAX_LIVE_NPP_MEDIA_TITLES = 4;
+const MAX_LIVE_NPP_MEDIA_TITLES = 4;
 
 const STAGE_QUALITY_FACTOR: Partial<Record<ProductLifecycleStage, number>> = {
   launch: 0.25,

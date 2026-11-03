@@ -50,3 +50,20 @@ describe("balance snapshot replay", () => {
     }
   );
 });
+
+it("includes withheld operating cash in the corporation balance until settlement", async () => {
+  const memory = createInMemoryDb();
+  const id = new ObjectId();
+  memory.seed("corporations", [
+    {
+      _id: id,
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+      liquidCapital: 70,
+      pendingOperatingCash: 30,
+    },
+  ]);
+  await writeBalanceSnapshot(memory as unknown as Db, 3);
+  const stored = await memory.collection(BALANCE_SNAPSHOTS_COLLECTION).findOne({ turn: 3 });
+  expect((stored?.balances as Record<string, number>)[`corporation:${id}:USD`]).toBe(100);
+});

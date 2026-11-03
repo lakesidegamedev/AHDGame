@@ -5,6 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getTurnStatusSnapshot } from "@/lib/turn/turnStatusSnapshot";
 import { getProcessingLockState } from "@/lib/turn/processingLock";
 import { computeTurnProcessingProgress, formatTurnPhaseLabel } from "@/lib/turn/turnProgress";
+import { economyPauseStatus } from "@/lib/turn/economyPause";
 import { gameIterationId } from "@/lib/analytics/gameEventEnvelope";
 
 // GET /api/game/turn/status — Returns the current game turn, year, active status, and next scheduled turn time.
@@ -82,6 +83,9 @@ export async function GET(request: Request) {
       processingLockStaleAt: processingLockState?.staleAfterAt.toISOString() ?? null,
       corporationActionsPaused: gameState.corporationActionsPaused ?? false,
       playerTransfersPaused: gameState.playerTransfersPaused ?? false,
+      // Timed economy-only pause window (gameConfig.economyPauseUntilTurn).
+      // Players see why prices, corporations and banking are frozen.
+      economyPause: economyPauseStatus(gameState.currentTurn, gameState.economyPauseUntilTurn),
       freePartyMovesOpen: gameState.freePartyMovesOpen ?? false,
       forexEnabled: gameState.forexEnabled ?? false,
       playerRandomEventsEnabled: gameState.playerRandomEventsEnabled ?? false,

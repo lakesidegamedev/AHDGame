@@ -16,7 +16,7 @@ import { resolvePartyTier } from "@/lib/parties/partyTier";
  * this close to the target does not auto-vote for removal, whatever its party
  * label says.
  */
-export const NPP_IMPEACHMENT_STANCE_DISTANCE = 2;
+const NPP_IMPEACHMENT_STANCE_DISTANCE = 2;
 
 export interface NppImpeachmentVoteInput {
   nppParty: string | undefined;
@@ -36,7 +36,7 @@ export interface NppImpeachmentVoteInput {
  * {@link NPP_IMPEACHMENT_STANCE_DISTANCE}; null when either side is missing a
  * usable stance, which callers must treat as "no ideology signal".
  */
-export function nppStanceCloseness(
+function nppStanceCloseness(
   a: { economic: number; social: number } | undefined,
   b: { economic: number; social: number } | undefined
 ): boolean | null {

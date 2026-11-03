@@ -1,4 +1,4 @@
-import { isPatreonActive, type PatreonTier } from "@/lib/db/types";
+import { isPatreonActive, type PatreonTier } from "@/lib/db/types/patreon";
 
 function patreonExpiresAtToDate(
   expiresAt: Date | string | null | undefined

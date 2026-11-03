@@ -14,6 +14,7 @@
  * | district | Selected policy option's archetype approvals weighted by home-state |
  * | donors   | Donor base multiplied by the same policy alignment as ideology      |
  */
+import { complianceFromPersonality } from "./complianceRules";
 import { europeanIntegrationSupport } from "@/lib/internationalOrganizations/europeanIntegration/rules/nationalDecisions";
 import { applyCabinetWhipPressure } from "@/lib/resetCabinet/rules/gameplay";
 import type {
@@ -244,9 +245,10 @@ export function computeIdeologyForce(
  * existing personality model: loyal NPPs follow the whip, stubborn NPPs resist.
  */
 export function complianceMultiplier(npp: Pick<NPP, "personality">): number {
-  const loyalty = (npp.personality?.loyalty ?? 50) / 100;
-  const stubbornness = (npp.personality?.stubbornness ?? 50) / 100;
-  return loyalty * 0.7 + (1 - stubbornness) * 0.3;
+  return complianceFromPersonality(
+    npp.personality?.loyalty ?? 50,
+    npp.personality?.stubbornness ?? 50
+  );
 }
 
 const PARTY_WHIP_BASE_BY_MODE = { hard: 60, soft: 30 } as const;

@@ -53,7 +53,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
     }
     const { user } = authResult;
 
-    const rateLimit = checkRateLimit(user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/treasury/pending/[txnId]/approve:${user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     let txnOid: ObjectId;

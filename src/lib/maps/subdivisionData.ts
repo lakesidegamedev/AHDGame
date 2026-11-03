@@ -1,3 +1,4 @@
+import { countyPopulationTotal } from "@/lib/counties/rules";
 // src/lib/maps/subdivisionData.ts
 // Server-side loader for committed subdivision JSON. Normalizes per-country
 // legacy shapes (US adapters arrive with Phases 2–3) to the generic shape.
@@ -30,13 +31,29 @@ interface LegacyCdFile {
 export async function loadSubdivisionFile(
   dataDir: string,
   regionId: string,
-  options?: { preset?: string | null }
+  options?: { preset?: string | null; countyPopulations?: ReadonlyMap<string, number> }
 ): Promise<SubdivisionFile | null> {
   try {
     const filePath = join(process.cwd(), "src", "data", ...dataDir.split("/"), `${regionId}.json`);
     const raw = await readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw) as SubdivisionFile | LegacyCountyFile | LegacyCdFile;
     if ("counties" in parsed) {
+      if (
+        options?.countyPopulations &&
+        (options.countyPopulations.size !== parsed.counties.length ||
+          parsed.counties.some((c) => {
+            const population = options.countyPopulations!.get(c.fips);
+            return !Number.isSafeInteger(population) || population! < 0;
+          }))
+      )
+        throw new Error("Incomplete county population coverage");
+      if (options?.countyPopulations)
+        countyPopulationTotal(
+          parsed.counties.map((c) => ({
+            id: c.fips,
+            population: options.countyPopulations!.get(c.fips)!,
+          }))
+        );
       const eraLeans = options?.preset ? await loadCountyLeans(options.preset) : null;
       return {
         viewBox: parsed.viewBox,
@@ -44,7 +61,7 @@ export async function loadSubdivisionFile(
           id: c.fips,
           name: c.name,
           path: c.path,
-          electorate: c.population,
+          electorate: options?.countyPopulations?.get(c.fips) ?? c.population,
           leanScalar: eraLeans?.[c.fips] ?? c.cookPVI,
         })),
       };
@@ -58,6 +75,24 @@ export async function loadSubdivisionFile(
           path: d.path,
           electorate: 0,
           leanScalar: d.cookPVI,
+        })),
+      };
+    }
+    if (options?.countyPopulations) {
+      const populations = options.countyPopulations;
+      if (
+        populations.size !== parsed.subdivisions.length ||
+        parsed.subdivisions.some((s) => !populations.has(s.id))
+      )
+        throw new Error("Incomplete subdivision population coverage");
+      countyPopulationTotal(
+        parsed.subdivisions.map((s) => ({ id: s.id, population: populations.get(s.id)! }))
+      );
+      return {
+        ...parsed,
+        subdivisions: parsed.subdivisions.map((s) => ({
+          ...s,
+          electorate: populations.get(s.id)!,
         })),
       };
     }

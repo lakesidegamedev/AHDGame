@@ -1,6 +1,5 @@
 import type { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { CommodityType } from "@/lib/constants/commodities";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import {
   getOperatingSectorType,
@@ -11,6 +10,8 @@ import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvaila
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import type { CommodityPriceRatioFn } from "@/lib/turn/npp/marketSignals";
 import { isObsoleteNppParentStrategy } from "./rules/obsoleteStrategyRepair";
+import { strategyPriceScore } from "./rules/foundingRecipe";
+import { isParentDirectedStrategyProtected } from "./rules/parentDirectedStrategy";
 
 /** Effective profit margin at or below which a sector is a shift candidate. */
 export const STRATEGY_SHIFT_MARGIN_TRIGGER = -3;
@@ -19,37 +20,8 @@ export const STRATEGY_SHIFT_MIN_ADVANTAGE = 0.08;
 /** High bar for a profitable sector to retool toward a shortage. */
 export const STRATEGY_SHIFT_PROFIT_SEEK_ADVANTAGE = 0.25;
 
-/**
- * Price advantage per anchor unit of revenue. Positive scores favor recipes
- * that sell into expensive markets and buy from cheap ones. Returns null when
- * no commodity on either side has a price ratio.
- */
-export function strategyPriceScore(
-  strategy: {
-    supply: Partial<Record<CommodityType, number>>;
-    demand: Partial<Record<CommodityType, number>>;
-  },
-  countryId: string,
-  priceRatioOf: CommodityPriceRatioFn
-): number | null {
-  let score = 0;
-  let priced = false;
-  for (const [commodity, rate] of Object.entries(strategy.supply)) {
-    if (!(typeof rate === "number" && rate > 0)) continue;
-    const ratio = priceRatioOf(commodity as CommodityType, countryId);
-    if (ratio == null) continue;
-    score += rate * (ratio - 1);
-    priced = true;
-  }
-  for (const [commodity, rate] of Object.entries(strategy.demand)) {
-    if (!(typeof rate === "number" && rate > 0)) continue;
-    const ratio = priceRatioOf(commodity as CommodityType, countryId);
-    if (ratio == null) continue;
-    score -= rate * (ratio - 1);
-    priced = true;
-  }
-  return priced ? score : null;
-}
+// The retool price score is shared with founding (rules/foundingRecipe).
+export { strategyPriceScore };
 
 export interface StrategyRetoolDecision {
   sectorId: ObjectId;
@@ -91,6 +63,8 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
       continue;
     }
     if (sector.transitionFromStrategyId) continue;
+    // A controlling parent's CEO chose this strategy; the AI leaves it alone.
+    if (isParentDirectedStrategyProtected(sector, ctx.turn)) continue;
 
     const operatingType = getOperatingSectorType(
       sector.sectorType,

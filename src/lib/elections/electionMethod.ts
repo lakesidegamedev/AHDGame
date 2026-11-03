@@ -1,9 +1,9 @@
 import {
-  getCountryConfig,
   type CountryId,
   type ElectionMethod,
   type ElectionPosition,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 
 /**
  * Canonical electionType → position map. Snap variants share their base type's
@@ -105,7 +105,7 @@ export function isListTierMethod(m: ElectionMethod | undefined): boolean {
  * runtime (see the `election.countryId ?? "US"` fallbacks in generalResolution).
  * The resolver's method-dispatch intercepts call this for EVERY election before
  * those fallbacks, so an undefined here must return undefined (intercept skips)
- * rather than throwing on `getCountryConfig(undefined).electionSystems`.
+ * rather than throwing on `getCountryClientConfig(undefined).electionSystems`.
  */
 export function getElectionMethod(
   countryId: CountryId | null | undefined,
@@ -130,5 +130,5 @@ export function getElectionMethod(
     cycle >= 1
   )
     return "pr_dhondt";
-  return getCountryConfig(countryId, preset).electionSystems[position];
+  return getCountryClientConfig(countryId, preset).electionSystems[position];
 }

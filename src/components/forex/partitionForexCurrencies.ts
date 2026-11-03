@@ -1,4 +1,4 @@
-import { MARKETIZATION_SCHEDULE } from "@/lib/constants/commandEconomy";
+import { MARKETIZATION_SCHEDULE } from "@/lib/constants/marketizationSchedule";
 import { FOREX_ACTIVE_CURRENCIES, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -18,7 +18,7 @@ export type ForexRateCountry = {
  * Planned / command-schedule countries (Eastern bloc, USSR, Maoist China, …).
  * Used only for display ordering — not a trading gate.
  */
-export function isPlannedEconomyCountry(countryId: CountryId): boolean {
+function isPlannedEconomyCountry(countryId: CountryId): boolean {
   return Object.prototype.hasOwnProperty.call(MARKETIZATION_SCHEDULE, countryId);
 }
 
@@ -112,12 +112,4 @@ export function playerCurrencyCodes(
   accessByCountry: Partial<Record<CountryId, ForexCountryAccess>> | null | undefined
 ): CurrencyCode[] {
   return partitionForexRates(rates, accessByCountry).player.map((r) => r.currencyCode);
-}
-
-/** Country ids for the player-enabled partition (macro chart defaults). */
-export function playerCountryIds(
-  rates: ForexRateCountry[],
-  accessByCountry: Partial<Record<CountryId, ForexCountryAccess>> | null | undefined
-): CountryId[] {
-  return partitionForexRates(rates, accessByCountry).player.map((r) => r.countryId);
 }

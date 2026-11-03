@@ -348,7 +348,7 @@ export async function endorseBg1991ConstitutionalInitiative(
   );
 }
 
-export async function authorizeBg1991ConstitutionalProposal(
+async function authorizeBg1991ConstitutionalProposal(
   db: Db,
   game: Calendar,
   turn: number,

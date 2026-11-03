@@ -281,3 +281,53 @@ describe("POST /api/whitehouse/cabinet/nominations", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("cabinet versus central bank eligibility", () => {
+  it.each(["chair", "governor"])(
+    "rejects a sitting US %s before withdrawing or creating nominations",
+    async (role) => {
+      const userId = new ObjectId();
+      const presidentId = new ObjectId();
+      const nomineeId = new ObjectId();
+      const { requireBasicAuth } = await import("@/lib/api/requireAuth");
+      vi.mocked(requireBasicAuth).mockResolvedValue({
+        ok: true,
+        user: { userId: userId.toString() },
+      } as never);
+      db.collectionMocks.electedOfficials.findOne.mockResolvedValue({ characterId: presidentId });
+      db.collectionMocks.characters.findOne
+        .mockResolvedValueOnce({ _id: presidentId, userId, countryId: "US" })
+        .mockResolvedValueOnce({
+          _id: nomineeId,
+          userId: new ObjectId(),
+          countryId: "US",
+          name: "Nominee",
+        });
+      db.collection("centralBanks");
+      db.collectionMocks.centralBanks.find.mockReturnValue(
+        createAsyncIterableCursor([
+          {
+            countryId: "US",
+            chairCharacterId: role === "chair" ? nomineeId : null,
+            fomcBoard:
+              role === "governor" ? [{ occupantType: "player", characterId: nomineeId }] : [],
+          },
+        ]) as never
+      );
+      const { POST } = await import("./route");
+      const res = await POST(
+        new Request("http://localhost/api/whitehouse/cabinet/nominations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            positionId: "secretary_of_state",
+            nomineeCharacterId: nomineeId.toString(),
+          }),
+        })
+      );
+      expect(res.status).toBe(400);
+      expect(db.collectionMocks.cabinetNominations.updateMany).not.toHaveBeenCalled();
+      expect(db.collectionMocks.cabinetNominations.insertOne).not.toHaveBeenCalled();
+    }
+  );
+});

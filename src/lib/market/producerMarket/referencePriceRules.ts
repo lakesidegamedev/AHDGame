@@ -16,7 +16,7 @@
 
 export const REFERENCE_MAX_MOVE = 0.06;
 /** How strongly a shortage or glut share moves the price before the cap. */
-export const REFERENCE_IMBALANCE_GAIN = 0.5;
+const REFERENCE_IMBALANCE_GAIN = 0.5;
 
 export interface BookOutcome {
   /** Volume-weighted settled price this turn, or null if nothing traded. */

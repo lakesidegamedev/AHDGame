@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateCheck = checkRateLimit(auth.user.userId, 30, 60_000);
+    const rateCheck = checkRateLimit(`api/forex/orders:${auth.user.userId}`, 30, 60_000);
     if (!rateCheck.ok) return rateLimitResponse(rateCheck.retryAfter);
 
     const parsed = await parseJsonBody(request, limitOrderSchema);

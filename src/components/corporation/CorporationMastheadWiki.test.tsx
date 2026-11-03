@@ -32,6 +32,8 @@ vi.mock("@/hooks/useLocalCurrency", () => ({
 vi.mock("./ceo/CeoCorporationSettingsModal", () => ({ CeoCorporationSettingsModal: () => null }));
 vi.mock("@/contexts/AuthDataContext", () => ({
   useAuthMe: () => ({ user: { enableExperimentalUI: true } }),
+  useOptionalAuthMe: () => null,
+  useRefetchNav: () => () => undefined,
 }));
 
 function makeCorp(overrides: Partial<CorporationDetail> = {}): CorporationDetail {

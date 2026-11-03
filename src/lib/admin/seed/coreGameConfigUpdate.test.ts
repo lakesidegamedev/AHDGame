@@ -18,22 +18,15 @@ describe("1991 player banking seed settings", () => {
     expect(config.docs[0]).toMatchObject({
       privateBankingEnabled: true,
       bankPropTradingEnabled: true,
-      playerAdvancedBankChartersEnabled: true,
-      bankPropForexFeesEnabled: true,
     });
-    await config.updateOne(
-      { _id: "default" },
-      { $set: { playerAdvancedBankChartersEnabled: false, bankPropForexFeesEnabled: false } }
-    );
+    await config.updateOne({ _id: "default" }, { $set: { treasuryCashLedgerEnabled: false } });
     await config.updateOne({ _id: "default" }, coreGameConfigUpdate(false, 1991), { upsert: true });
     expect(config.docs[0]).toMatchObject({
-      playerAdvancedBankChartersEnabled: false,
-      bankPropForexFeesEnabled: false,
+      treasuryCashLedgerEnabled: false,
     });
     await config.updateOne({ _id: "default" }, coreGameConfigUpdate(true, 1991), { upsert: true });
     expect(config.docs[0]).toMatchObject({
-      playerAdvancedBankChartersEnabled: true,
-      bankPropForexFeesEnabled: true,
+      treasuryCashLedgerEnabled: true,
     });
   });
   it("leaves absent banking gates absent when topping up an existing legacy world", async () => {
@@ -42,12 +35,7 @@ describe("1991 player banking seed settings", () => {
     await db
       .collection("gameConfig")
       .updateOne({ _id: "default" }, coreGameConfigUpdate(false, 1991), { upsert: true });
-    for (const key of [
-      "privateBankingEnabled",
-      "bankPropTradingEnabled",
-      "playerAdvancedBankChartersEnabled",
-      "bankPropForexFeesEnabled",
-    ])
+    for (const key of ["privateBankingEnabled", "bankPropTradingEnabled"])
       expect(db.collection("gameConfig").docs[0]).not.toHaveProperty(key);
   });
 });

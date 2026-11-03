@@ -18,9 +18,9 @@ export interface ProcurementRestrictionDoc {
   conflictId: string;
 }
 
-const COLLECTION = "procurementRestrictions";
+export const COLLECTION = "procurementRestrictions";
 
-export function getProcurementRestrictionsCollection(db: Db) {
+function getProcurementRestrictionsCollection(db: Db) {
   return db.collection<ProcurementRestrictionDoc>(COLLECTION);
 }
 

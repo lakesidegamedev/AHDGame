@@ -29,7 +29,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/national-corporation/split:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { code } = await params;
@@ -52,7 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!authorized) {
       return errorResponse(
         403,
-        "Only the Secretary of the Treasury (or equivalent), or the head of government if that seat is vacant, may reorganize National Corporations."
+        "Only the Secretary of the Treasury (or equivalent) may reorganize National Corporations."
       );
     }
 

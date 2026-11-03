@@ -109,6 +109,12 @@ export interface MarginStackInput {
   wideCommodityBalances: CorporationLookups["globalCommodityBalances"];
   /** Raw political board for playable regions; also feeds labour headcount. */
   politicalBoard: Record<PoliticalMetricId, number> | undefined;
+  /**
+   * Flat margin charge (pp) for this turn. Resolved by the phase once from
+   * `lookups.marginLevelTrimPp` and the recovery stage, so the stack never has
+   * to copy the whole lookups object per sector.
+   */
+  marginLevelTrimPp: number;
 }
 
 export interface MarginStackResult {
@@ -138,6 +144,12 @@ export interface MarginStackResult {
   stateMetricMargin: ReturnType<typeof computeStateMetricMarginModifier>;
   typeSwitchMod: number;
   dominanceMarginPenalty: number;
+  /**
+   * Size legs a funded producer turn charges: the same cap, with the plants
+   * fade complete. The ramp only keeps the legacy flip turn identical; a
+   * funded sector has no flip to match, so it pays the running share alone.
+   */
+  fundedSizeLegs: { sprawl: number; overhead: number; dominance: number };
   negativeProductionMarginPenalty: number;
   expropriationRiskMod: number;
   economicModelAlignmentMod: number;
@@ -189,6 +201,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     strikeMarginModifier,
     wideCommodityBalances,
     politicalBoard,
+    marginLevelTrimPp,
   } = input;
   const operatingSectorType = getOperatingSectorType(
     sector.sectorType,
@@ -427,6 +440,20 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   const sprawlMod = cappedSize.sprawl;
   const managementOverheadMod = cappedSize.overhead;
   const dominanceMarginPenalty = cappedSize.dominance;
+  const fundedSizeLegs = capSizeCosts({
+    sprawl: rawSprawlMod,
+    overhead: rawManagementOverheadMod,
+    dominance: isStateOwned(corp)
+      ? 0
+      : appliedDominanceMarginPenalty({
+          localSharePct: dominanceShares.local,
+          nationalSharePct: dominanceShares.national,
+          shield: techEffects.dominanceShield,
+          plantsEnabled,
+          plantsRampLambda: 1,
+          runningScale: running?.scale ?? 0,
+        }),
+  });
   // Sustained-negative-production margin penalty: counter-driven, see
   // `getSustainedNegativeProductionPenalty`. Punishes long-term parking at
   // negative production levels without preventing tactical short-term use.
@@ -493,7 +520,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     disasterMarginMod +
     regionalConditionMarginMod +
     strikeMarginMod -
-    (lookups.marginLevelTrimPp ?? 0);
+    marginLevelTrimPp;
   // Dynamic SOE efficiency (spec §11.3) replaces the old flat −15%. Driven
   // by state governance quality + the sector's price-control posture; private
   // corps get 0. Same shared function feeds the budget estimate + display.
@@ -552,6 +579,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     stateMetricMargin,
     typeSwitchMod,
     dominanceMarginPenalty,
+    fundedSizeLegs,
     negativeProductionMarginPenalty,
     expropriationRiskMod,
     economicModelAlignmentMod,

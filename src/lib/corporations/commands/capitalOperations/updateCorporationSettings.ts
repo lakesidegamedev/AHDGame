@@ -38,7 +38,11 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/capitalOperations/updateCorporationSettings:${auth.user.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

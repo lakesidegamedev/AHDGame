@@ -223,6 +223,14 @@ export interface BankCharter {
   /** Outstanding CB margin-line principal (cash created at the CB on draw). */
   cbMarginDebt?: number;
   /**
+   * The part of `cbMarginDebt` that arrived as a central-bank liquidity
+   * injection rather than a draw the bank chose. It is still owed and
+   * repayable, but carries no interest: an injection a bank cannot refuse must
+   * not drain its capital (ticket #1694, banks failed and were revoked under
+   * injected debt they never asked for). Always <= cbMarginDebt.
+   */
+  cbLiquidityAdvanceDebt?: number;
+  /**
    * B8 discount window: outstanding emergency-liquidity principal owed to the
    * central bank. Deposit-taking charters only. Carries a penalty rate AND a
    * confidence penalty while outstanding — see `banking/discountWindow.ts`.

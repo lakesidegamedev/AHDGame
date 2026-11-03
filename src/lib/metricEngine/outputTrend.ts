@@ -22,13 +22,13 @@
  */
 
 /** Share of the predicted gap the trend level absorbs per turn (~17-turn half-life). */
-export const TREND_LEVEL_ALPHA = 0.04;
+const TREND_LEVEL_ALPHA = 0.04;
 /** How fast the trend's growth rate follows a persistent gap. */
-export const TREND_SLOPE_BETA = 0.1;
+const TREND_SLOPE_BETA = 0.1;
 /** The gap is a percent deviation; bounded so a mis-fed signal cannot run away. */
-export const TREND_GAP_BOUND: readonly [number, number] = [-15, 15];
+const TREND_GAP_BOUND: readonly [number, number] = [-15, 15];
 /** Trend growth shares the headline growth bounds (annual %). */
-export const TREND_GROWTH_BOUND: readonly [number, number] = [-15, 15];
+const TREND_GROWTH_BOUND: readonly [number, number] = [-15, 15];
 
 /** Turns over which a live world moves from the legacy headline to the measured one. */
 export const REAL_OUTPUT_BLEND_TURNS = 24;

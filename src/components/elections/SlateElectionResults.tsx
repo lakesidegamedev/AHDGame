@@ -7,7 +7,7 @@ import { PartyLogo } from "@/components/PartyLogo";
 import { GeneralPieChart } from "@/components/elections/ElectionDonut";
 import { PrimaryCardGrid } from "@/components/elections/PrimaryCard";
 import { partyUrl } from "@/lib/urls";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ElectionDisplay } from "@/lib/db/types";
 
 const SEAT_ELECTION_TYPES = new Set([

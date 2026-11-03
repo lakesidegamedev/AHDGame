@@ -7,13 +7,12 @@ import {
   type CountryContext,
 } from "@/lib/navigation/countryContext";
 
-export const PAGE_COUNTRY_OVERRIDE_EVENT = "ahd:page-country-override";
+const PAGE_COUNTRY_OVERRIDE_EVENT = "ahd:page-country-override";
 const PAGE_COUNTRY_OVERRIDE_DATASET_KEY = "ahdPageCountry";
 let nextPageCountryOverrideOwnerId = 1;
 
 type PageCountryOverrideRegistry = Map<string, CountryId>;
 
-export { resolveCountryContext, toCountryId } from "@/lib/navigation/countryContext";
 export type { CountryContext } from "@/lib/navigation/countryContext";
 
 export function getCurrentPageCountryOverride(

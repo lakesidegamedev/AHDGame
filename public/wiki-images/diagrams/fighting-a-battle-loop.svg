@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="470" viewBox="0 0 780 470" role="img" font-family="system-ui, sans-serif">
+<title>Battle loop</title>
+<desc>The offensive loop: assign units, post a general, read the war room, declare an offensive, one turn defender window, resolution, report. Allied declarations on the same front and side merge into one offensive, and an offensive with no defenders advances at full rate.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="469" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">The offensive loop</text>
+<rect x="20" y="40" width="160" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="100.0" y="64.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Assign units</text>
+<text x="100.0" y="81.0" font-size="13" fill="#18181b" text-anchor="middle">Defence seat holder</text>
+<text x="100.0" y="98.0" font-size="13" fill="#18181b" text-anchor="middle">gives units to a</text>
+<text x="100.0" y="115.0" font-size="13" fill="#18181b" text-anchor="middle">general</text>
+<rect x="210" y="40" width="160" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="290.0" y="64.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Post the general</text>
+<text x="290.0" y="81.0" font-size="13" fill="#18181b" text-anchor="middle">Commanding General</text>
+<text x="290.0" y="98.0" font-size="13" fill="#18181b" text-anchor="middle">posts it to the</text>
+<text x="290.0" y="115.0" font-size="13" fill="#18181b" text-anchor="middle">conflict</text>
+<rect x="400" y="40" width="160" height="92" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="480.0" y="72.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Read the war room</text>
+<text x="480.0" y="89.5" font-size="13" fill="#18181b" text-anchor="middle">Two odds rows,</text>
+<text x="480.0" y="106.5" font-size="13" fill="#18181b" text-anchor="middle">supply, enemy band</text>
+<rect x="590" y="40" width="160" height="92" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="670.0" y="64.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Declare offensive</text>
+<text x="670.0" y="81.0" font-size="13" fill="#18181b" text-anchor="middle">Theater Commander,</text>
+<text x="670.0" y="98.0" font-size="13" fill="#18181b" text-anchor="middle">or the defence seat</text>
+<text x="670.0" y="115.0" font-size="13" fill="#18181b" text-anchor="middle">holder if none</text>
+<path d="M180 86 L210 86" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M370 86 L400 86" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M560 86 L590 86" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="590" y="200" width="160" height="96" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="670.0" y="217.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Defender window, 1</text>
+<text x="670.0" y="234.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">turn</text>
+<text x="670.0" y="251.5" font-size="13" fill="#18181b" text-anchor="middle">Defender may</text>
+<text x="670.0" y="268.5" font-size="13" fill="#18181b" text-anchor="middle">reinforce, reshuffle</text>
+<text x="670.0" y="285.5" font-size="13" fill="#18181b" text-anchor="middle">or withdraw</text>
+<path d="M670 132 L670 200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="400" y="200" width="160" height="96" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="480.0" y="234.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Resolution</text>
+<text x="480.0" y="251.5" font-size="13" fill="#18181b" text-anchor="middle">Next turn, against</text>
+<text x="480.0" y="268.5" font-size="13" fill="#18181b" text-anchor="middle">real units</text>
+<path d="M590 248 L560 248" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="210" y="200" width="160" height="96" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="290.0" y="234.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Report</text>
+<text x="290.0" y="251.5" font-size="13" fill="#18181b" text-anchor="middle">Verdict and losses;</text>
+<text x="290.0" y="268.5" font-size="13" fill="#18181b" text-anchor="middle">control meter moves</text>
+<path d="M400 248 L370 248" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M210 248 L100 248 L100 132" fill="none" stroke="#71717a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#mn)"/>
+<rect x="103" y="179" width="113.1" height="15" fill="#ffffff"/>
+<text x="106" y="190" font-size="12" fill="#52525b" text-anchor="start">reinforce, repeat</text>
+<rect x="250" y="336" width="290" height="112" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="395.0" y="353.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Coalition merge</text>
+<text x="395.0" y="370.0" font-size="13" fill="#18181b" text-anchor="middle">Allied declarations on the same front</text>
+<text x="395.0" y="387.0" font-size="13" fill="#18181b" text-anchor="middle">and attacking side, plus standing</text>
+<text x="395.0" y="404.0" font-size="13" fill="#18181b" text-anchor="middle">orders, fight as one offensive.</text>
+<text x="395.0" y="421.0" font-size="13" fill="#18181b" text-anchor="middle">Defenders with units there are in</text>
+<text x="395.0" y="438.0" font-size="13" fill="#18181b" text-anchor="middle">automatically</text>
+<path d="M450 336 L450 296" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="455" y="301" width="43.8" height="15" fill="#ffffff"/>
+<text x="458" y="312" font-size="12" fill="#52525b" text-anchor="start">allies</text>
+<rect x="570" y="336" width="190" height="112" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="665.0" y="378.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Nobody defending</text>
+<text x="665.0" y="395.5" font-size="13" fill="#18181b" text-anchor="middle">The offensive advances at</text>
+<text x="665.0" y="412.5" font-size="13" fill="#18181b" text-anchor="middle">full rate</text>
+<path d="M530 296 L530 316 L665 316 L665 336" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="568.6" y="299" width="62.7" height="15" fill="#ffffff"/>
+<text x="600" y="310" font-size="12" fill="#52525b" text-anchor="middle">unopposed</text>
+</svg>

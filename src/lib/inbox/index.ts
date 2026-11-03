@@ -5,3 +5,4 @@ export * from "./sourceLink";
 export * from "./mailThreads";
 export * from "./inboxItem";
 export * from "./presentation";
+export * from "./delivery";

@@ -31,7 +31,9 @@ export function conditionalJson(
   // `no-transform` keeps Cloudflare from re-compressing the body with zstd,
   // whose Content-Encoding some Android WebView builds fail to decode (client
   // fetch() then throws a "Network error"). It does not affect cacheability or
-  // the ETag/304 revalidation this helper exists for.
+  // the ETag/304 revalidation this helper exists for. It does, however, suppress
+  // origin and edge compression as well (measured 2026-10-24), so a body that
+  // needs encoding must be compressed in the handler — see jsonCompression.ts.
   const cacheControl = `${init.cacheControl ?? "private, no-cache"}, no-transform`;
 
   const ifNoneMatch = request.headers.get("if-none-match");

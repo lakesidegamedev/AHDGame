@@ -12,6 +12,8 @@ export interface BlendShellProps {
   children: ReactNode;
   /** Right rail width. The design uses 296px on the campaign screen, 300px on the election screens. */
   rightWidth?: number;
+  /** Left rail width; 206px everywhere except screens whose rail holds a finder. */
+  leftWidth?: number;
   /**
    * Run the frame edge to edge: the rails hug the viewport edges, the centre
    * column takes all the width between them, and each rail sticks under the
@@ -41,6 +43,7 @@ export function BlendShell({
   right,
   children,
   rightWidth = 296,
+  leftWidth = 206,
   fullBleed = false,
 }: BlendShellProps) {
   const frame = (
@@ -56,6 +59,7 @@ export function BlendShell({
       style={
         {
           "--blend-right-width": `${rightWidth}px`,
+          "--blend-left-width": `${leftWidth}px`,
           ...(fullBleed ? {} : { border: `1px solid ${BLEND.hairline}` }),
         } as React.CSSProperties
       }
@@ -83,7 +87,7 @@ export function BlendShell({
         @media (min-width: 1024px) {
           .blend-shell {
             display: grid;
-            grid-template-columns: 206px minmax(0, 1fr) var(--blend-right-width);
+            grid-template-columns: var(--blend-left-width, 206px) minmax(0, 1fr) var(--blend-right-width);
           }
           .blend-shell--no-left { grid-template-columns: minmax(0, 1fr) var(--blend-right-width); }
           .blend-shell__rail { display: block; }

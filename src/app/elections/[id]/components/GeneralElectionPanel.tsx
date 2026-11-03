@@ -13,15 +13,12 @@ import { useToast } from "@/contexts/ToastContext";
 import { GeneralVoteCharts, type LineSeries } from "./ElectionDetailCharts";
 import { buildGeneralColors } from "@/lib/utils/politics";
 import type { CandidateDetail, GeneralVotes } from "./ElectionDetailTypes";
-import type { BlendClockRow } from "@/lib/elections/blendDetailViewModel";
-import type { RegionElectorate } from "@/lib/elections/blendRegionViewModel";
 import { KeyInsightsPanel } from "./KeyInsightsPanel";
 import { StateByStateResultsTable } from "./StateByStateResultsTable";
 import { PresidentialWinnerBanner } from "./PresidentialWinnerBanner";
 import { ElectoralCollegeBar } from "./ElectoralCollegeBar";
 import { PresidentialCandidateTable } from "./PresidentialCandidateTable";
 import { CandidateComparisonCards } from "./CandidateComparisonCards";
-import { NonPresidentialResultsPanel } from "./NonPresidentialResultsPanel";
 import { ContingentElectionPanel } from "./ContingentElectionPanel";
 import { ContingentHouseVotePanel } from "./ContingentHouseVotePanel";
 import {
@@ -42,7 +39,7 @@ import {
 } from "@/lib/campaigns/campaignStrength";
 import { campaignLocalRate, getCampaignCurrency } from "@/lib/campaigns/campaignCurrency";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /** ×1, one of the batch steps, or "as many as I can pay for right now". */
@@ -52,49 +49,23 @@ export function GeneralElectionPanel({
   tally,
   candidates,
   isEnded,
-  totalSeats,
   electionType = "governor",
-  districted,
-  cycle,
   electionId,
   myCharId,
   myEndorsedCandidateId: initialEndorsedId,
   countryId = "US",
-  afterTally,
-  regionName,
-  countryName,
-  year,
-  clockRows,
-  electorate,
-  partyDisplayById,
   showCollegeSummary = true,
   showTrends = true,
 }: {
   tally: GeneralVotes;
   candidates: CandidateDetail[];
   isEnded: boolean;
-  totalSeats: number | null;
   electionType?:
     "senate" | "house" | "stateSenate" | "governor" | "president" | "commons" | (string & {});
-  cycle?: number;
-  /** Seats decided district by district, not apportioned by statewide share. */
-  districted?: boolean;
   electionId?: string;
   myCharId?: string | null;
   myEndorsedCandidateId?: string | null;
   countryId?: CountryId;
-  /** Rendered between the tally and the trend charts (non-presidential). */
-  afterTally?: React.ReactNode;
-  /** Blend detail chrome — region, country and year for the verdict hero. */
-  regionName?: string;
-  countryName?: string;
-  year?: number | null;
-  /** Deadline rows for the Clock card, built by the caller from the game clock. */
-  clockRows?: BlendClockRow[];
-  /** Region electorate for the turnout fact. */
-  electorate?: RegionElectorate;
-  /** Party abbreviations, from the response's `partyDisplayById`. */
-  partyDisplayById?: Record<string, { abbr: string; color: string }>;
   /**
    * Whether to draw the electoral-college bar and the per-ticket table.
    *
@@ -693,45 +664,7 @@ export function GeneralElectionPanel({
     );
   }
 
-  // Non-presidential elections - keep existing layout
-  return (
-    <NonPresidentialResultsPanel
-      sorted={sorted}
-      tally={tally}
-      totalVotesCast={totalVotesCast}
-      isEnded={isEnded}
-      totalSeats={totalSeats}
-      lineSeries={lineSeries}
-      countryId={countryId}
-      electionType={electionType}
-      districted={districted}
-      cycle={cycle}
-      regionName={regionName ?? ""}
-      countryName={countryName ?? ""}
-      year={year ?? null}
-      clockRows={clockRows ?? []}
-      electorate={electorate}
-      partyDisplayById={partyDisplayById}
-      afterTally={afterTally}
-      renderEndorse={
-        canEndorse
-          ? (c) => (
-              <button
-                type="button"
-                onClick={() => handleEndorse(c.id)}
-                disabled={endorsing || c.isYou}
-                title={c.isYou ? "You cannot endorse yourself" : undefined}
-                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${
-                  endorsedCandidateId === c.id
-                    ? "border-yellow-500/40 bg-yellow-500/20 text-yellow-400"
-                    : "border-card-border text-muted hover:text-foreground"
-                }`}
-              >
-                {endorsedCandidateId === c.id ? "Endorsed" : "Endorse"}
-              </button>
-            )
-          : undefined
-      }
-    />
-  );
+  // Only the presidency renders on the election page; every other race's
+  // results live in Campaign Manager.
+  return null;
 }

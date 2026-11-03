@@ -101,6 +101,13 @@ export interface CorporationHistory {
    */
   sectorNPV?: number;
   /**
+   * Funded valuation (gameConfig.fundedValuationStage >= 1): units sold this
+   * turn at each sector's fixed base mix price (₳, not FX-converted). The
+   * share-price growth premium reads its trend, so price moves alone are not
+   * growth. Absent when the stage is off and on older snapshots.
+   */
+  realOutputAnchor?: number;
+  /**
    * Coupon income earned as a bond holder this turn (₳/turn). Persisted so
    * the post-bond-turn share-price recompute can include it in the income
    * basis. Older snapshots lack this field.

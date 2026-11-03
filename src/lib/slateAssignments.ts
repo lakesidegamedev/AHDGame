@@ -1,7 +1,7 @@
 import type { NPP } from "@/lib/db/types";
 
-export const SLATE_NPP_LOYALTY_THRESHOLD = 40;
-export const SLATE_NPP_STUBBORNNESS_THRESHOLD = 70;
+const SLATE_NPP_LOYALTY_THRESHOLD = 40;
+const SLATE_NPP_STUBBORNNESS_THRESHOLD = 70;
 
 interface SlateComplianceOptions {
   loyaltyRequirementReduction?: number;

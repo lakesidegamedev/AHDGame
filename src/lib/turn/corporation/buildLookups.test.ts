@@ -195,6 +195,44 @@ describe("buildCorporationLookups — bond holdings", () => {
     expect(result.countryClearingBooks?.has("WAL")).toBe(true);
   });
 
+  it("builds trade routes on a modern world once a block embargo is in force", async () => {
+    db.collection("tradeEmbargoes").find.mockReturnValue(
+      makeCursor([
+        {
+          sourceCountry: "US",
+          targetCountry: "JP",
+          commodity: "iron",
+          direction: "export",
+          mode: "block",
+        },
+      ])
+    );
+    const result = await buildCorporationLookups(db as unknown as Db);
+    expect(result.countryClearingBooks).toBeNull();
+    expect(result.tradeRoutes).not.toBeNull();
+    expect(result.tradeRoutes!.affinityFor("iron" as never, "US" as never, "JP" as never)).toBe(0);
+    expect(
+      result.tradeRoutes!.affinityFor("iron" as never, "JP" as never, "US" as never)
+    ).toBeGreaterThan(0);
+  });
+
+  it("builds no trade routes on a modern world whose only embargo is a cap", async () => {
+    db.collection("tradeEmbargoes").find.mockReturnValue(
+      makeCursor([
+        {
+          sourceCountry: "US",
+          targetCountry: "JP",
+          commodity: "iron",
+          direction: "export",
+          mode: "cap",
+          cap: 100,
+        },
+      ])
+    );
+    const result = await buildCorporationLookups(db as unknown as Db);
+    expect(result.tradeRoutes).toBeNull();
+  });
+
   it("includes sovereign bond holdings in bondsHeldByCorpId", async () => {
     const lookups = await buildCorporationLookups(db as unknown as Db);
 
@@ -289,6 +327,26 @@ describe("buildCorporationLookups — bond holdings", () => {
     expect(corporationProjection).toHaveProperty("manufacturingProductDevelopmentReceiptV2", 0);
     expect(corporationProjection).toHaveProperty("manufacturingProductDevelopmentPaidTurnV2", 0);
     expect(corporationProjection).toHaveProperty("mediaProductAdvertisingObligationsV1", 0);
+  });
+
+  it("excludes the construction-claim fields and write-only receipts from the turn reads", async () => {
+    await buildCorporationLookups(db as unknown as Db);
+
+    const sectorProjection =
+      db.collectionMocks.corporateSectors.find.mock.calls[0]?.[1]?.projection;
+    const corporationProjection =
+      db.collectionMocks.corporations.find.mock.calls[0]?.[1]?.projection;
+    // No turn module reads either construction field; the banking commands do,
+    // under their own projections.
+    expect(sectorProjection).toMatchObject({
+      constructionFinancing: 0,
+      constructionPropertyTransition: 0,
+    });
+    // Written by the paying money move, never read back.
+    expect(corporationProjection).toMatchObject({
+      settledKeys: 0,
+      politicalMediaReceipts: 0,
+    });
   });
 
   it("projects product output maps only when explicitly enabled", async () => {

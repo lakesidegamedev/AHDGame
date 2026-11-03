@@ -50,6 +50,9 @@ export function applyDebtLeveragePenalty(composite: number, debtToAssetsRatio: n
   return clamp(composite - penalty, 0, 100);
 }
 
+/** Prime rate (percent) below which the borrower composite feels no policy stress. */
+export const PRIME_STRESS_BASELINE_PERCENT = 2.5;
+
 /**
  * Tighter central-bank policy (prime above baseline) reduces composite; wealthier borrowers are
  * partially shielded via netWorthScore (0–100).
@@ -58,7 +61,7 @@ export function applyPrimeEnvironmentToComposite(
   composite: number,
   primePercent: number,
   netWorthScore: number,
-  baselinePrime = 2.5
+  baselinePrime = PRIME_STRESS_BASELINE_PERCENT
 ): number {
   const excess = Math.max(0, primePercent - baselinePrime);
   const rawStress = Math.min(22, excess * 5);

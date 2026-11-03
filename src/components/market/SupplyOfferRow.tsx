@@ -16,8 +16,6 @@ import {
   offerValuePerTurn,
 } from "./supplyOfferUi";
 
-export { offerPremiumLabel } from "./supplyOfferUi";
-
 export interface OfferCorporation {
   id: string;
   name: string;
@@ -28,7 +26,7 @@ const control =
   "h-8 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none";
 
 /** Column template shared by the header and every row (md and up). */
-export const OFFER_GRID =
+const OFFER_GRID =
   "md:grid md:grid-cols-[minmax(11rem,1.6fr)_5.5rem_minmax(7rem,1fr)_minmax(6rem,0.9fr)_minmax(6rem,0.9fr)_5.5rem_minmax(7rem,1fr)] md:items-center md:gap-3";
 
 export function SupplyOfferHeader() {
@@ -36,7 +34,7 @@ export function SupplyOfferHeader() {
   return (
     <div className={`hidden border-b border-card-border pb-1.5 ${OFFER_GRID}`} aria-hidden>
       <span className={cell}>Company</span>
-      <span className={cell}>Side</span>
+      <span className={cell}>Their side</span>
       <span className={cell}>Commodity</span>
       <span className={`${cell} text-right`}>Volume / turn</span>
       <span className={`${cell} text-right`}>Est. value / turn</span>
@@ -82,7 +80,13 @@ export function SupplyOfferRow({
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(apiErrorText(data, "Could not take this offer."));
       setFailed(false);
-      setMessage("Agreement started. It is active now.");
+      const quantity = Number(volume);
+      const size = Number.isFinite(quantity) ? `${formatVolume(quantity)} ` : "";
+      setMessage(
+        `Agreement started: you are ${offer.side === "sell" ? "buying" : "selling"} ${size}${
+          COMMODITY_UNITS[commodity]
+        } per turn ${offer.side === "sell" ? "from" : "to"} ${offer.corporationName}. It is active now.`
+      );
       onTaken();
     } catch (e) {
       setFailed(true);

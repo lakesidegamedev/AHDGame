@@ -173,7 +173,7 @@ function marginShock(
 
 // ── FINANCIAL / ECONOMIC ───────────────────────────────────────────────────
 
-export const BANKING_CRISIS_TEMPLATE: CrisisTemplate = {
+const BANKING_CRISIS_TEMPLATE: CrisisTemplate = {
   name: "Banking Crisis",
   heroImage:
     "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1600&q=70",
@@ -650,7 +650,7 @@ export const HURRICANE_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const EARTHQUAKE_TEMPLATE: CrisisTemplate = {
+const EARTHQUAKE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["seismic"] },
   name: "Earthquake",
@@ -753,7 +753,7 @@ export const EARTHQUAKE_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const WILDFIRE_TEMPLATE: CrisisTemplate = {
+const WILDFIRE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["wildfire"] },
   name: "Wildfire",
@@ -994,7 +994,7 @@ export const MASS_PROTESTS_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const POLITICAL_SCANDAL_TEMPLATE: CrisisTemplate = {
+const POLITICAL_SCANDAL_TEMPLATE: CrisisTemplate = {
   name: "Political Scandal",
   heroImage:
     "https://images.unsplash.com/photo-1742413628282-b8b3ff1b7557?auto=format&fit=crop&w=1600&q=70",
@@ -1077,7 +1077,7 @@ export const POLITICAL_SCANDAL_TEMPLATE: CrisisTemplate = {
 
 // ── GEOPOLITICAL / SECURITY ──────────────────────────────────────────────────
 
-export const TRADE_WAR_TEMPLATE: CrisisTemplate = {
+const TRADE_WAR_TEMPLATE: CrisisTemplate = {
   name: "Trade War",
   autoTrigger: { kind: "random", cooldownTurns: 216, scope: "global", spawnChance: 0.003 },
   heroImage:
@@ -1360,7 +1360,7 @@ export const ENERGY_CRISIS_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const REFUGEE_CRISIS_TEMPLATE: CrisisTemplate = {
+const REFUGEE_CRISIS_TEMPLATE: CrisisTemplate = {
   name: "Refugee Crisis",
   autoTrigger: { kind: "random", cooldownTurns: 216, scope: "country", spawnChance: 0.0025 },
   heroImage:
@@ -1662,7 +1662,7 @@ export const CURRENCY_CRISIS_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const DROUGHT_FAMINE_TEMPLATE: CrisisTemplate = {
+const DROUGHT_FAMINE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["arid"] },
   name: "Drought / Famine",
@@ -1742,7 +1742,7 @@ export const DROUGHT_FAMINE_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const HOUSING_COLLAPSE_TEMPLATE: CrisisTemplate = {
+const HOUSING_COLLAPSE_TEMPLATE: CrisisTemplate = {
   name: "Housing Market Collapse",
   heroImage:
     "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=70",
@@ -1820,7 +1820,7 @@ export const HOUSING_COLLAPSE_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const LABOR_STRIKES_TEMPLATE: CrisisTemplate = {
+const LABOR_STRIKES_TEMPLATE: CrisisTemplate = {
   name: "Labor Strike Wave",
   heroImage:
     "https://images.unsplash.com/photo-1511898634545-c01af8a54dd5?auto=format&fit=crop&w=1600&q=70",
@@ -1912,7 +1912,7 @@ export const LABOR_STRIKES_TEMPLATE: CrisisTemplate = {
  * settlement lands a collective agreement that stops the strike. This is the
  * template to copy when authoring future action-bearing crises.
  */
-export const STEEL_STRIKE_TEMPLATE: CrisisTemplate = {
+const STEEL_STRIKE_TEMPLATE: CrisisTemplate = {
   name: "Nationwide Steel Strike",
   heroImage:
     "https://images.unsplash.com/photo-1598299803204-b73796f43289?auto=format&fit=crop&w=1600&q=70",
@@ -2318,7 +2318,7 @@ export const UNION_BAN_GENERAL_STRIKE_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const DEBT_DEFAULT_CONTAGION_TEMPLATE: CrisisTemplate = {
+const DEBT_DEFAULT_CONTAGION_TEMPLATE: CrisisTemplate = {
   name: "Sovereign Debt Default",
   heroImage:
     "https://images.unsplash.com/photo-1760872645513-63b6846ce3c9?auto=format&fit=crop&w=1600&q=70",
@@ -2401,7 +2401,7 @@ export const DEBT_DEFAULT_CONTAGION_TEMPLATE: CrisisTemplate = {
 
 // ── ADDITIONAL TEMPLATES ─────────────────────────────────────────────────────
 
-export const SUPPLY_CHAIN_DISRUPTION_TEMPLATE: CrisisTemplate = {
+const SUPPLY_CHAIN_DISRUPTION_TEMPLATE: CrisisTemplate = {
   name: "Supply Chain Disruption",
   autoTrigger: { kind: "random", cooldownTurns: 216, scope: "global", spawnChance: 0.004 },
   heroImage:
@@ -2571,7 +2571,7 @@ export const TECH_BUBBLE_BURST_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const EXTREME_HEAT_TEMPLATE: CrisisTemplate = {
+const EXTREME_HEAT_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   name: "Extreme Heat Wave",
   heroImage:
@@ -2664,7 +2664,7 @@ export const EXTREME_HEAT_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const NUCLEAR_ACCIDENT_TEMPLATE: CrisisTemplate = {
+const NUCLEAR_ACCIDENT_TEMPLATE: CrisisTemplate = {
   name: "Nuclear Accident",
   heroImage:
     "https://images.unsplash.com/photo-1630142895963-6996ae6b3a5b?auto=format&fit=crop&w=1600&q=70",
@@ -3021,7 +3021,7 @@ export const POWER_GRID_FAILURE_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const WATER_CRISIS_TEMPLATE: CrisisTemplate = {
+const WATER_CRISIS_TEMPLATE: CrisisTemplate = {
   name: "Water Crisis",
   heroImage:
     "https://images.unsplash.com/photo-1769298315896-fc23a5dcbff8?auto=format&fit=crop&w=1600&q=70",
@@ -3308,7 +3308,7 @@ export const TSUNAMI_TEMPLATE: CrisisTemplate = {
   },
 };
 
-export const DEBT_CEILING_CRISIS_TEMPLATE: CrisisTemplate = {
+const DEBT_CEILING_CRISIS_TEMPLATE: CrisisTemplate = {
   name: "Debt Ceiling Crisis",
   heroImage:
     "https://images.unsplash.com/photo-1468254095679-bbcba94a7066?auto=format&fit=crop&w=1600&q=70",
@@ -3431,7 +3431,7 @@ export const TORNADO_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The tornadoes have passed. Cleanup and rebuilding begin.",
 };
 
-export const FLOOD_TEMPLATE: CrisisTemplate = {
+const FLOOD_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["flood"] },
   name: "Major Flood",
@@ -3455,7 +3455,7 @@ export const FLOOD_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "Floodwaters recede. Damage assessments and repairs get underway.",
 };
 
-export const VOLCANIC_ERUPTION_TEMPLATE: CrisisTemplate = {
+const VOLCANIC_ERUPTION_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["volcanic"] },
   name: "Volcanic Eruption",
@@ -3479,7 +3479,7 @@ export const VOLCANIC_ERUPTION_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The eruption subsides. Ash cleanup and recovery begin.",
 };
 
-export const WINTER_STORM_TEMPLATE: CrisisTemplate = {
+const WINTER_STORM_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["wintry"] },
   name: "Winter Storm",
@@ -3507,7 +3507,7 @@ export const WINTER_STORM_TEMPLATE: CrisisTemplate = {
 // margin hit on sectors in the affected state, which the spawner preserves and
 // which feeds the blended sector margin (see buildRegionalDisasterEffects).
 
-export const BRIDGE_COLLAPSE_TEMPLATE: CrisisTemplate = {
+const BRIDGE_COLLAPSE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   name: "Bridge Collapse",
   heroImage:
@@ -3540,7 +3540,7 @@ export const BRIDGE_COLLAPSE_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "A temporary span reopens the crossing. Full repairs continue.",
 };
 
-export const PORT_CLOSURE_TEMPLATE: CrisisTemplate = {
+const PORT_CLOSURE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["coastal"] },
   name: "Port Shutdown",
@@ -3574,7 +3574,7 @@ export const PORT_CLOSURE_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The port reopens. Backlogged cargo begins to clear.",
 };
 
-export const INDUSTRIAL_ACCIDENT_TEMPLATE: CrisisTemplate = {
+const INDUSTRIAL_ACCIDENT_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   name: "Industrial Accident",
   heroImage:
@@ -3613,7 +3613,7 @@ export const INDUSTRIAL_ACCIDENT_TEMPLATE: CrisisTemplate = {
 // effects + wire copy only, no decision tree. The regional spawner gates them by
 // `geo.requiresRegionTags` so they only strike states that carry the tag.
 
-export const DUST_STORM_TEMPLATE: CrisisTemplate = {
+const DUST_STORM_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["arid"] },
   name: "Dust Storm",
@@ -3637,7 +3637,7 @@ export const DUST_STORM_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The dust settles. Air quality slowly improves and roads reopen.",
 };
 
-export const HAILSTORM_TEMPLATE: CrisisTemplate = {
+const HAILSTORM_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["tornado"] },
   name: "Hailstorm",
@@ -3661,7 +3661,7 @@ export const HAILSTORM_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The hail clears. Insurance adjusters begin surveying the damage.",
 };
 
-export const AVALANCHE_TEMPLATE: CrisisTemplate = {
+const AVALANCHE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["wintry"] },
   name: "Avalanche",
@@ -3685,7 +3685,7 @@ export const AVALANCHE_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The road reopens. Recovery teams stand down as the slope stabilizes.",
 };
 
-export const KING_TIDE_FLOODING_TEMPLATE: CrisisTemplate = {
+const KING_TIDE_FLOODING_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["coastal"] },
   name: "King Tide Flooding",
@@ -3709,7 +3709,7 @@ export const KING_TIDE_FLOODING_TEMPLATE: CrisisTemplate = {
   wireMessageOnEnd: "The tides recede. Pumped-out streets reopen until the next cycle.",
 };
 
-export const LANDSLIDE_TEMPLATE: CrisisTemplate = {
+const LANDSLIDE_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["seismic"] },
   name: "Landslide",
@@ -3734,7 +3734,7 @@ export const LANDSLIDE_TEMPLATE: CrisisTemplate = {
     "The slope is stabilized. Crews begin clearing the slide and reconnecting utilities.",
 };
 
-export const FOREST_PEST_OUTBREAK_TEMPLATE: CrisisTemplate = {
+const FOREST_PEST_OUTBREAK_TEMPLATE: CrisisTemplate = {
   naturalDisaster: true,
   geo: { requiresRegionTags: ["wildfire"] },
   name: "Forest Pest Outbreak",
@@ -4674,7 +4674,7 @@ function vietnamRungTemplate(spec: VietnamRungSpec): CrisisTemplate {
   };
 }
 
-export const VIETNAM_ADVISORS_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
+const VIETNAM_ADVISORS_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 1,
   name: "Vietnam: Advisory Mission",
   description:
@@ -4698,7 +4698,7 @@ export const VIETNAM_ADVISORS_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   marginPressure: null,
 });
 
-export const VIETNAM_MATERIEL_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
+const VIETNAM_MATERIEL_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 2,
   name: "Vietnam: Materiel and Money",
   description:
@@ -4722,7 +4722,7 @@ export const VIETNAM_MATERIEL_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   marginPressure: null,
 });
 
-export const VIETNAM_TONKIN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
+const VIETNAM_TONKIN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 3,
   name: "Vietnam: Incident in the Gulf",
   description:
@@ -4746,7 +4746,7 @@ export const VIETNAM_TONKIN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   marginPressure: null,
 });
 
-export const VIETNAM_AIR_CAMPAIGN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
+const VIETNAM_AIR_CAMPAIGN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 4,
   name: "Vietnam: Air Campaign",
   description:
@@ -4770,7 +4770,7 @@ export const VIETNAM_AIR_CAMPAIGN_TEMPLATE: CrisisTemplate = vietnamRungTemplate
   marginPressure: -3,
 });
 
-export const VIETNAM_GROUND_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
+const VIETNAM_GROUND_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 5,
   name: "Vietnam: Ground Commitment",
   description:
@@ -4794,7 +4794,7 @@ export const VIETNAM_GROUND_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamRungTem
   marginPressure: -5,
 });
 
-export const VIETNAM_FULL_WAR_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
+const VIETNAM_FULL_WAR_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 6,
   name: "Vietnam: The Long War",
   description:
@@ -4939,7 +4939,7 @@ function vietnamCommitmentTemplate(spec: VietnamCommitmentSpec): CrisisTemplate 
   };
 }
 
-export const VIETNAM_US_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTemplate({
+const VIETNAM_US_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTemplate({
   countryId: "US",
   name: "Vietnam: The American Question",
   heroImage: VIETNAM_HERO[0],
@@ -4961,7 +4961,7 @@ export const VIETNAM_US_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentT
   wireEnd: "Washington has settled its position on Vietnam.",
 });
 
-export const VIETNAM_USSR_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTemplate({
+const VIETNAM_USSR_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTemplate({
   countryId: "RU",
   name: "Vietnam: The Question Before the Politburo",
   heroImage: VIETNAM_HERO[1],

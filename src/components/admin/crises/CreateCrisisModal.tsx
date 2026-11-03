@@ -2,10 +2,10 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import type { CorporationType } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
+import type { CorporationType } from "@/lib/constants/corporationsClient";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import type { FormEffect, FormState } from "./crisisAdminTypes";
 import { makeEmptyEffect } from "./crisisAdminTypes";
@@ -218,7 +218,7 @@ export function CreateCrisisModal({
                       }))
                     }
                   />
-                  {COUNTRY_CONFIGS[countryId].name}
+                  {COUNTRY_CLIENT_CONFIGS[countryId].name}
                 </label>
               ))}
             </div>

@@ -45,7 +45,7 @@ export const MARKET_RECOVERY_STAGE = {
 export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER;
 
 /** Share of price-memory excess (multiplier minus 1) kept at the active stage. */
-export function priceMemoryKeep(stage: number | null | undefined): number {
+function priceMemoryKeep(stage: number | null | undefined): number {
   if (marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_2)) return 0.5;
   if (marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_1)) return 0.75;
   return 1;
@@ -96,7 +96,7 @@ export function marketRecoveryStageActive(
  * shares at or below the relieved values directly. The stage number stays so
  * live worlds keep their stage, and it no longer scales anything.
  */
-export const SERVICE_LABOUR_RELIEF_FACTOR: Partial<Record<OperatingSectorType, number>> = {};
+const SERVICE_LABOUR_RELIEF_FACTOR: Partial<Record<OperatingSectorType, number>> = {};
 
 /** A sector's labour share after the stages active in this world. */
 export function stagedLaborShare(

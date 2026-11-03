@@ -21,6 +21,9 @@ const PROVIDER_LABELS: Record<SocialProvider, string> = {
 };
 
 interface AccountSectionProps {
+  discordLinkRequired?: boolean;
+  linkDiscordAfterSignup?: boolean;
+  onLinkDiscordChange?: (value: boolean) => void;
   formData: {
     email: string;
     username: string;
@@ -46,6 +49,9 @@ interface AccountSectionProps {
 
 export function AccountSection({
   formData,
+  discordLinkRequired = false,
+  linkDiscordAfterSignup = false,
+  onLinkDiscordChange,
   testMode,
   discord,
   google,
@@ -323,6 +329,27 @@ export function AccountSection({
               <p className="mt-1 text-body-sm text-muted">{t("adminKeyHint")}</p>
             </div>
           )}
+
+          <div className="sm:col-span-2 rounded-lg border border-card-border bg-card-muted p-4">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={discordLinkRequired || linkDiscordAfterSignup}
+                disabled={discordLinkRequired}
+                onChange={(e) => onLinkDiscordChange?.(e.target.checked)}
+                className="mt-1 accent-primary"
+              />
+              <span>
+                <strong>{t("linkDiscord")}</strong>{" "}
+                <span className="text-muted">
+                  {discordLinkRequired ? t("discordRequired") : t("optional")}
+                </span>
+                <span className="mt-1 block text-body-sm text-muted">
+                  {discordLinkRequired ? t("discordRequiredHint") : t("discordOptionalHint")}
+                </span>
+              </span>
+            </label>
+          </div>
 
           {/* Keep referral on the email path too — same field, shared state */}
           {bothBlocked && (

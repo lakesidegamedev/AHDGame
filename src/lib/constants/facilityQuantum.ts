@@ -61,30 +61,122 @@ const FACILITY_SIZE_UNITS: Record<OperatingSectorType, number> = {
   extraction: 250,
 };
 
-/** Capacity units in one facility of `sectorType`. Always a positive integer. */
+/**
+ * Strategies whose output is priced like a different lane than the sector
+ * type they run under. A manufacturing sector on a vehicle recipe makes
+ * vehicles, its capacity unit carries a vehicle RPU, and its plants must be
+ * vehicle plants, whether or not it carries `industryModel: "vehicles"`.
+ * `facilityQuantum.test.ts` fails if a strategy that supplies vehicles is
+ * missing here.
+ */
+const STRATEGY_PLANT_LANE: Partial<Record<string, Record<string, OperatingSectorType>>> = {
+  manufacturing: {
+    vehicle_assembly: "manufacturing_vehicles",
+    vehicle_heavy_machinery: "manufacturing_vehicles",
+  },
+};
+
+/** What a sector needs to say how big one of its plants is. */
+export interface PlantSizingSector {
+  sectorType: string;
+  industryModel?: string | null;
+  mediaDiscriminator?: string | null;
+  /** The strategy the sector runs now. Decides the lane for retooled recipes. */
+  strategyId?: string | null;
+}
+
+/** The lane whose plant size a sector uses: its operating model, then its recipe. */
+export function plantLaneForSector(sector: PlantSizingSector): OperatingSectorType {
+  const operatingType = getOperatingSectorType(
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  ) as OperatingSectorType;
+  const byStrategy = sector.strategyId
+    ? STRATEGY_PLANT_LANE[operatingType]?.[sector.strategyId]
+    : undefined;
+  return byStrategy ?? operatingType;
+}
+
+/**
+ * Capacity units in one plant of this sector. Always a positive integer.
+ * Every surface that counts plants (build dialog, build queue, the persisted
+ * ledger, tables) sizes them here so they can never disagree.
+ */
+export function plantSizeForSector(sector: PlantSizingSector): number {
+  return FACILITY_SIZE_UNITS[plantLaneForSector(sector)] ?? 1;
+}
+
+/**
+ * Plant size as a Mongo aggregation expression reading each document's own
+ * `$strategyId`, for bulk updates that span sectors of one lane on different
+ * recipes. A plain number when no recipe in the lane changes the size.
+ */
+export function plantSizeMongoExpr(
+  sector: Omit<PlantSizingSector, "strategyId">
+): number | Record<string, unknown> {
+  const laneSize = plantSizeForSector(sector);
+  const lane = plantLaneForSector(sector);
+  const branches = Object.entries(STRATEGY_PLANT_LANE[lane] ?? {})
+    .map(([strategyId, strategyLane]) => ({
+      case: { $eq: ["$strategyId", strategyId] },
+      then: FACILITY_SIZE_UNITS[strategyLane] ?? 1,
+    }))
+    .filter((branch) => branch.then !== laneSize);
+  return branches.length > 0 ? { $switch: { branches, default: laneSize } } : laneSize;
+}
+
+/**
+ * Whole plants represented by `units` of this sector's capacity, floored. A
+ * sector holding less than one plant's worth still shows 1 when it has any
+ * capacity at all: a player owns "a small plant", not "0 plants".
+ */
+export function plantsFromUnitsForSector(sector: PlantSizingSector, units: number): number {
+  if (!Number.isFinite(units) || units <= 0) return 0;
+  return Math.max(1, Math.floor(units / plantSizeForSector(sector)));
+}
+
+/** What a surface needs to count a sector's plants the way the sector page does. */
+export interface PlantReadingSector extends PlantSizingSector {
+  /** Whole plants from the persisted ledger, when the payload carries it. */
+  plantCount?: number | null;
+  /** Capacity in output units per day. */
+  capacityUnits?: number | null;
+}
+
+/**
+ * Plants a sector owns, for display. The persisted ledger first; a payload
+ * without it (or a ledger still at zero beside real capacity) counts the
+ * capacity in plants of this sector's size. Every table counts plants here so
+ * none can disagree with the sector page.
+ */
+export function sectorPlantCount(sector: PlantReadingSector): number {
+  const fromUnits = plantsFromUnitsForSector(sector, sector.capacityUnits ?? 0);
+  const ledger = sector.plantCount;
+  if (typeof ledger === "number" && Number.isFinite(ledger) && ledger >= 0) {
+    return ledger > 0 ? Math.round(ledger) : fromUnits;
+  }
+  return fromUnits;
+}
+
+/**
+ * Lane-only plant size, for callers that have no sector yet (a founding
+ * plant, a fresh seed on the standard recipe). Prefer `plantSizeForSector`.
+ */
 export function plantSizeUnits(
   sectorType: OperatingSectorType,
   industryModel?: string | null,
   mediaDiscriminator?: MediaDiscriminator | null
 ): number {
-  const operatingType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  return FACILITY_SIZE_UNITS[operatingType] ?? 1;
+  return plantSizeForSector({ sectorType, industryModel, mediaDiscriminator });
 }
 
-/**
- * Whole facilities represented by `units` of capacity, floored. A sector
- * holding less than one facility's worth still shows 1 when it has any
- * capacity at all — a player owns "a small plant", not "0 plants".
- */
+/** Lane-only plant count. Prefer `plantsFromUnitsForSector`. */
 export function facilitiesFromUnits(
   sectorType: OperatingSectorType,
   units: number,
   industryModel?: string | null,
   mediaDiscriminator?: MediaDiscriminator | null
 ): number {
-  if (!Number.isFinite(units) || units <= 0) return 0;
-  return Math.max(
-    1,
-    Math.floor(units / plantSizeUnits(sectorType, industryModel, mediaDiscriminator))
-  );
+  return plantsFromUnitsForSector({ sectorType, industryModel, mediaDiscriminator }, units);
 }

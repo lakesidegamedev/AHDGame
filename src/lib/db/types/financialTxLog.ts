@@ -111,6 +111,7 @@ export type FinancialTxType =
   | "corp_capacity_build" // corp cash → capitalized construction in progress (debit)
   | "corp_capacity_build_refund" // cancelled build returns unspent CIP to corp cash (credit)
   | "corp_sector_split_cost" // PvP campaign spend, paid whether the plant split succeeds or fails
+  | "corp_union_busting_cost" // CEO union-busting attempt, paid whether it succeeds or backfires
   | "stock_trade_buy"
   | "stock_trade_sell"
 

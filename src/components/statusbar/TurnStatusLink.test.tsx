@@ -29,6 +29,7 @@ vi.mock("@/contexts/CurrencyContext", () => ({
 vi.mock("@/contexts/AuthDataContext", () => ({
   useRefetchNav: () => () => {},
   useSignedIn: () => false,
+  useHasSession: () => false,
   useAuthMe: () => ({ user: null, loading: false }),
 }));
 vi.mock("@/contexts/CharacterStatsContext", () => ({

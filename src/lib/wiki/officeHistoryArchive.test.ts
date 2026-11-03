@@ -52,6 +52,7 @@ describe("closeOutgoingTenures", () => {
     );
     expect(closed.isCurrent).toBe(false);
     expect(closed.endTurn).toBe(97);
+    expect(closed.endDate).toEqual(ctx.anchor.lastTurnProcessed);
     expect(closed.endWeekYear).toBe(weekYearFromTurn(97, 1953));
     expect(closed.endWeekYear).toContain("1955");
     expect(closed.profileHref).toBeNull();
@@ -82,6 +83,22 @@ describe("closeOutgoingTenures", () => {
     expect(closed.map((e) => e.name)).toEqual(["Ended"]);
     expect(closed[0].endWeekYear).toBe("Week 20, 1954");
     expect(closed[0].endTurn).toBe(68);
+  });
+
+  it("closes at the reset time without rewriting an earlier departure date", () => {
+    const resetAt = new Date("2026-10-04T17:22:33Z");
+    const departure = new Date("2026-10-02T15:05:00Z");
+    const closed = closeOutgoingTenures(
+      [
+        tenure({ name: "Former", endWeekYear: "Week 2, 1954", endDate: departure }),
+        tenure({ name: "Final", endWeekYear: null }),
+      ],
+      ctx,
+      resetAt
+    );
+    expect(closed[0].endDate).toEqual(departure);
+    expect(closed[1].endDate).toEqual(resetAt);
+    expect(closed.every((entry) => entry.isCurrent === false)).toBe(true);
   });
 });
 

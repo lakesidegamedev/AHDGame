@@ -27,7 +27,7 @@ export interface AuthoredCrisis {
  * contested nation rather than fizzling, so these still fire as generic
  * flashpoints and become the real thing if those countries ever land.
  */
-export const AUTHORED_CRISES: readonly AuthoredCrisis[] = [
+const AUTHORED_CRISES: readonly AuthoredCrisis[] = [
   {
     kind: "crisis.hungarianRising",
     targetEntityId: "HU",

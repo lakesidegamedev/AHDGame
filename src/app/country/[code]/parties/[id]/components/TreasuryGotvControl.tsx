@@ -8,7 +8,7 @@ import { buildPartyTurnoutTargetCatalog } from "@/lib/demographics/partyTurnoutT
 import type { PartyData } from "./types";
 import type { TreasuryAction } from "./treasuryReducer";
 import { fmt } from "./helpers";
-import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
+import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countryClientConfig";
 
 interface TreasuryGotvControlProps {
   party: PartyData;

@@ -1,9 +1,12 @@
 name: CodeQL
 
 on:
+  # Not on pull requests (2026-10-27): CodeQL is advisory, not a required gate,
+  # and its long PR runs held hosted-runner slots the required checks queued
+  # behind. Every change is still scanned once it lands on development, and
+  # staging is skipped because it only ever carries development's trees.
   push:
-    branches: [main, staging, development]
-  pull_request:
+    branches: [main, development]
   schedule:
     - cron: "0 6 * * 1" # Weekly Monday 6am UTC
 

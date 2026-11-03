@@ -98,6 +98,8 @@ beforeEach(async () => {
         productionPolicyLevel: 0,
         stateId: "TX",
       },
+      // A buyer plant that consumes the commodity, so delivery is possible.
+      { sectorType: "construction", capitalStock: 0, strategyId: "standard", stateId: "TX" },
     ])
   );
   db.collection("corporations").findOne.mockResolvedValue(publisher());
@@ -108,6 +110,32 @@ beforeEach(async () => {
 });
 
 describe("takeSupplyListing", () => {
+  it("refuses a take the buyer's plants could never receive", async () => {
+    db.collection("supplyListings").findOne.mockResolvedValue(
+      listing({ commodity: "real_estate_services", stateId: "DC" })
+    );
+    db.collection("corporateSectors").find.mockImplementation(
+      (filter: { corporationId: ObjectId }) =>
+        createAsyncIterableCursor(
+          filter.corporationId.equals(publisherId)
+            ? [
+                {
+                  sectorType: "real_estate",
+                  capitalStock: 10_000,
+                  strategyId: "standard",
+                  stateId: "DC",
+                },
+              ]
+            : [{ sectorType: "healthcare", strategyId: "standard", stateId: "TX" }]
+        )
+    );
+    const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 5 });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toContain("Your corporation has no active plant in DC");
+    expect(db.collectionMocks.supplyListings.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.supplyAgreements.insertOne).not.toHaveBeenCalled();
+  });
+
   it("creates an active agreement and leaves the remainder on a partial take", async () => {
     const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 30 });
     expect(response.status).toBe(200);

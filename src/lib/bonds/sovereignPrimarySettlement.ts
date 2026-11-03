@@ -13,7 +13,7 @@ import {
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
-import type { TransitionProjection } from "@/lib/banking/rules/boundary";
+import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
 import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
@@ -130,12 +130,31 @@ export async function commitSovereignPrimary(
   db: Db,
   input: SovereignPrimaryFunding & { countryId: string; now: Date },
   projections: TransitionProjection[],
-  accounting: PrimaryAccountingContext
+  accounting: PrimaryAccountingContext,
+  /**
+   * Proceeds paid straight on to a claim in the same receipt instead of into
+   * Treasury cash (a refunding issue funding a bank claim escrow). The
+   * issuer's cash credit shrinks by `routedLocal` and `legs` are appended.
+   * The journal applies every debit before any credit, so a leg here may only
+   * debit cash that already exists, never the proceeds themselves.
+   */
+  route?: { routedLocal: number; legs: TransitionLeg[] }
 ): Promise<void> {
   const transition = sovereignPrimaryTransition({
     ...input,
     treasuryCashLedgerEnabled: accounting.treasuryCashLedgerEnabled === true,
   });
+  if (route && route.routedLocal > 0) {
+    const issuerCredit = transition.legs.findIndex(
+      (leg) => leg.kind === "credit" && leg.collection === "federalBudget"
+    );
+    const credit = transition.legs[issuerCredit];
+    if (!credit || route.routedLocal > credit.amount)
+      throw new Error(`Sovereign placement ${input.key} cannot route more than it raised`);
+    if (credit.amount === route.routedLocal) transition.legs.splice(issuerCredit, 1);
+    else transition.legs[issuerCredit] = { ...credit, amount: credit.amount - route.routedLocal };
+  }
+  transition.legs.push(...(route?.legs ?? []));
   transition.projections.push(...projections);
   const observedRate = primaryFinancingRate(accounting, input.countryId, input.currency);
   if (

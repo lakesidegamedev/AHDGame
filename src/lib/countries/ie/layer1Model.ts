@@ -36,7 +36,7 @@ import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const IE_GROUP_IDS = [
+const IE_GROUP_IDS = [
   "urban_professional",
   "rural_traditional",
   "working_class",

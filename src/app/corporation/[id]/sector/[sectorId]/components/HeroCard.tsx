@@ -5,7 +5,7 @@ import Link from "next/link";
 import { STATE_FLAGS } from "@/lib/constants";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { getTypeColor } from "../lib/helpers";
 import type {

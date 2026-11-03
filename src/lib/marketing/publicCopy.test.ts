@@ -96,10 +96,13 @@ describe("public copy stays derived", () => {
     // GAME_VERSION is re-exported, not re-typed. If someone pins a literal here
     // the whole scheme is back to hand-maintained strings.
     const source = read("src/lib/marketing/marketedWorld.ts");
-    expect(source).toContain("pkg.version");
-    expect(source.replace(/"1953"|"1979"|"1991"|"1999"|"2007"|"2019"|"2023"/g, "")).not.toMatch(
-      /["'`]\d+\.\d+\.\d+["'`]/
-    );
+    const versionSource = read("src/lib/marketing/gameVersion.ts");
+    expect(versionSource).toContain("pkg.version");
+    // marketedWorld still hands the same value to every marketing surface.
+    expect(source).toContain("export { GAME_VERSION }");
+    expect(
+      versionSource.replace(/"1953"|"1979"|"1991"|"1999"|"2007"|"2019"|"2023"/g, "")
+    ).not.toMatch(/["'`]\d+\.\d+\.\d+["'`]/);
     expect(GAME_VERSION).toMatch(/^\d+\.\d+\.\d+/);
   });
 });

@@ -31,8 +31,14 @@ export interface Impeachment {
   /** Set for state-scoped offices (governor): the state whose legislature tries the case. */
   state?: string;
 
-  // Filer — a sitting lower-chamber member.
-  filedByCharacterId: ObjectId;
+  // Filer: a sitting legislator. Existing character-filed records remain valid.
+  filedByCharacterId?: ObjectId;
+  /** Seated NPP sponsor for chair-directed filings. */
+  filedByNppId?: ObjectId;
+  /** Player who authorized an NPP filing. */
+  requestedByCharacterId?: ObjectId;
+  /** Public name snapshot of the player directing the NPP filer. */
+  requestedByName?: string;
   filedByName: string;
 
   // Stage machine
@@ -60,5 +66,3 @@ export interface Impeachment {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export const IMPEACHMENTS_COLLECTION = "impeachments";

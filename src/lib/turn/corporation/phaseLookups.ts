@@ -7,6 +7,7 @@ import {
   countryRecessionsFrom,
   recessionCapacityFactors,
 } from "@/lib/market/countryRecession";
+import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import type { CorporationLookups } from "./types";
 
 /**
@@ -23,6 +24,7 @@ export async function resolvePhaseLookups(
         | "extractionNoBuyerPhaseOutStartTurn"
         | "placementRevenuePhaseStartTurn"
         | "countryRecessions"
+        | "wholePlantsStage"
       >
     | null
     | undefined,
@@ -32,6 +34,7 @@ export async function resolvePhaseLookups(
     | "extractionNoBuyerPhaseOutStartTurn"
     | "placementRevenuePhaseStartTurn"
     | "recessionCapacityFactorByCountry"
+    | "wholePlantsOn"
   >
 ): Promise<void> {
   lookups.extractionNoBuyerPhaseOutStartTurn = await resolveNoBuyerPhaseOutStartTurn(
@@ -40,6 +43,7 @@ export async function resolvePhaseLookups(
     turn
   );
   lookups.placementRevenuePhaseStartTurn = placementRevenuePhaseStartTurnFrom(config);
+  lookups.wholePlantsOn = wholePlantsOn(config?.wholePlantsStage);
   const recessions = countryRecessionsFrom(config);
   lookups.recessionCapacityFactorByCountry = recessionCapacityFactors(recessions, turn);
   if (recessions.length > 0) await announceCountryRecessions(db, recessions, turn);

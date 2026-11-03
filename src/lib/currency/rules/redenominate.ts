@@ -1,10 +1,6 @@
 type NumericRecord = Record<string, number>;
 
-export function scaleMoney(value: number | undefined, scale: number): number | undefined {
-  return value === undefined ? undefined : value * scale;
-}
-
-export function scaleMoneyRecord<T extends NumericRecord>(record: T, scale: number): T {
+function scaleMoneyRecord<T extends NumericRecord>(record: T, scale: number): T {
   return Object.fromEntries(
     Object.entries(record).map(([key, value]) => [key, value * scale])
   ) as T;

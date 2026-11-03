@@ -139,6 +139,48 @@ describe("buildNationalElectionNight", () => {
     expect(seats).toEqual({ A: [73 + 70, 70], B: [53 + 56, 56] });
   });
 
+  it.each([
+    ["UK", "snap_commons"],
+    ["JP", "snap_shugiin"],
+    ["DE", "bundestag"],
+  ] as const)(
+    "excludes cancelled %s races from seats, declarations and projections",
+    async (countryId, electionType) => {
+      const db = createInMemoryDb();
+      const live = [
+        region("21", "R1", { countryId, electionType, totalSeats: 41 }),
+        region("22", "R2", { countryId, electionType, totalSeats: 53 }),
+      ];
+      const cancelled = region("23", "R1", {
+        countryId,
+        electionType,
+        totalSeats: 41,
+        status: "cancelled",
+      });
+      db.seed("elections", [...live, cancelled] as never[]);
+      db.seed("electionVoteTallies", [
+        tally(live[0], 21, 20),
+        tally(live[1], 30, 23),
+        tally(cancelled, 41, 0),
+      ]);
+      const night = await buildNationalElectionNight(
+        db as unknown as Db,
+        live[0],
+        partyMap,
+        null,
+        false
+      );
+      expect(night?.totalSeats).toBe(94);
+      expect(night?.majorityThreshold).toBe(48);
+      expect(night?.totalRegions).toBe(2);
+      expect(night?.regionsDeclared).toBe(0);
+      expect(night?.regions.map((r) => r.electionId)).toEqual(live.map((e) => e._id.toString()));
+      expect(
+        Object.fromEntries((night?.parties ?? []).map((p) => [p.party, p.projectedSeats]))
+      ).toEqual({ A: 51, B: 43 });
+    }
+  );
+
   it("leaves chambers without classes unchanged", async () => {
     const db = createInMemoryDb();
     const seats = [

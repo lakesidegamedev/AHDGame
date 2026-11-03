@@ -4332,7 +4332,7 @@
     "familyId": "L49",
     "status": "seeded-regimes",
     "currentLaw": "Border Security Act + Immigration Standards Act",
-    "legalNote": "Entry volume remains descriptive; separate visas, enforcement and processing capacity.",
+    "legalNote": "Sets who may enter and settle. Wider entry raises arrivals and narrower entry lowers them; work visas sit under Labour migration.",
     "sourceComponents": [
       {
         "sourceId": "us_border_security_enforcement",
@@ -4355,6 +4355,16 @@
         "treatment": "no-separate-source-cost"
       }
     ]
+  },
+  {
+    "key": "US:national:L52",
+    "country": "US",
+    "scope": "national",
+    "familyId": "L52",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated labour migration law",
+    "legalNote": "Employment visas sit inside the general immigration statute; no separate labour migration law.",
+    "sourceComponents": []
   },
   {
     "key": "UK:national:L49",
@@ -4388,13 +4398,23 @@
     ]
   },
   {
+    "key": "UK:national:L52",
+    "country": "UK",
+    "scope": "national",
+    "familyId": "L52",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated labour migration law",
+    "legalNote": "Work permits issued under the general immigration rules; no separate labour migration law.",
+    "sourceComponents": []
+  },
+  {
     "key": "JP:national:L49",
     "country": "JP",
     "scope": "national",
     "familyId": "L49",
     "status": "seeded-regimes",
     "currentLaw": "Immigration Policy Framework Act + Residency Standards Framework Act",
-    "legalNote": "Entry volume remains descriptive; separate visas, enforcement and processing capacity.",
+    "legalNote": "Sets who may enter and settle. Wider entry raises arrivals and narrower entry lowers them; work visas sit under Labour migration.",
     "sourceComponents": [
       {
         "sourceId": "jp_foreign_worker_policy",
@@ -4419,13 +4439,33 @@
     ]
   },
   {
+    "key": "JP:national:L52",
+    "country": "JP",
+    "scope": "national",
+    "familyId": "L52",
+    "status": "no-dedicated-law",
+    "currentLaw": "No dedicated labour migration law",
+    "legalNote": "Trainee and work residence statuses under the general immigration statute; no separate labour migration law.",
+    "sourceComponents": []
+  },
+  {
     "key": "US:regional:L49",
     "country": "US",
     "scope": "regional",
     "familyId": "L49",
     "status": "not-offered",
     "currentLaw": "Not a proposed law at this level",
-    "legalNote": "Entry volume remains descriptive; separate visas, enforcement and processing capacity.",
+    "legalNote": "Sets who may enter and settle. Wider entry raises arrivals and narrower entry lowers them; work visas sit under Labour migration.",
+    "sourceComponents": []
+  },
+  {
+    "key": "US:regional:L52",
+    "country": "US",
+    "scope": "regional",
+    "familyId": "L52",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Work visas are a national power.",
     "sourceComponents": []
   },
   {
@@ -4435,7 +4475,17 @@
     "familyId": "L49",
     "status": "not-offered",
     "currentLaw": "Not a proposed law at this level",
-    "legalNote": "Entry volume remains descriptive; separate visas, enforcement and processing capacity.",
+    "legalNote": "Sets who may enter and settle. Wider entry raises arrivals and narrower entry lowers them; work visas sit under Labour migration.",
+    "sourceComponents": []
+  },
+  {
+    "key": "UK:regional:L52",
+    "country": "UK",
+    "scope": "regional",
+    "familyId": "L52",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Work visas are a national power.",
     "sourceComponents": []
   },
   {
@@ -4445,7 +4495,17 @@
     "familyId": "L49",
     "status": "not-offered",
     "currentLaw": "Not a proposed law at this level",
-    "legalNote": "Entry volume remains descriptive; separate visas, enforcement and processing capacity.",
+    "legalNote": "Sets who may enter and settle. Wider entry raises arrivals and narrower entry lowers them; work visas sit under Labour migration.",
+    "sourceComponents": []
+  },
+  {
+    "key": "JP:regional:L52",
+    "country": "JP",
+    "scope": "regional",
+    "familyId": "L52",
+    "status": "not-offered",
+    "currentLaw": "Not a proposed law at this level",
+    "legalNote": "Work visas are a national power.",
     "sourceComponents": []
   },
   {

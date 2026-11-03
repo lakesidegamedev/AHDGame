@@ -46,6 +46,9 @@ describe("NI governance shell", () => {
       { _id: "UK" },
       expect.objectContaining({
         $set: expect.objectContaining({
+          northernIrelandPeace: expect.objectContaining({
+            assemblyFirstElectionEndTurn: 148,
+          }),
           regions: expect.objectContaining({
             NIR: { active: true, firstCycle: 3, firstElectionEndTurn: 172 },
             SCO: { active: false, firstCycle: 1 },

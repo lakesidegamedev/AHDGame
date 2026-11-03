@@ -13,7 +13,11 @@ type CareerCharacter = Pick<Character, "careerHistory" | "currentOffice" | "coun
 function renderHistory(character: CareerCharacter) {
   return render(
     <NextIntlClientProvider locale="en" messages={enProfile}>
-      <CareerHistory character={character} partyNames={{ "US:1": "Democratic Party" }} />
+      <CareerHistory
+        character={character}
+        currentOfficeLabel="State Senator (PA, 1 seat)"
+        partyNames={{ "US:1": "Democratic Party" }}
+      />
     </NextIntlClientProvider>
   );
 }
@@ -52,6 +56,7 @@ describe("CareerHistory", () => {
     const items = within(screen.getByRole("list")).getAllByRole("listitem");
     expect(items).toHaveLength(3);
     expect(items[0].textContent).toContain("Incumbent");
+    expect(items[0].textContent).toContain("State Senator (PA, 1 seat)");
     expect(items[1].textContent).toContain("Sep 1, 2026");
     expect(items[1].textContent).toMatch(/^Sep 1, 2026Elected to /);
     expect(items[2].textContent).toContain("Lost race for");

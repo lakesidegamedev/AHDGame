@@ -162,13 +162,3 @@ export function tallyMeeting(
   const decided = passed || maxPossibleAgree < needed;
   return { agree, disagree, abstain, needed, decided, passed };
 }
-
-/** NPP governors vote automatically; player governors vote live. */
-export function isAutoSeat(seat: FomcSeat): boolean {
-  return seat.occupantType === "npp";
-}
-
-/** Seats a live player controls and must be prompted to vote. */
-export function playerSeats(board: FomcSeat[]): FomcSeat[] {
-  return board.filter((s) => s.occupantType === "player");
-}

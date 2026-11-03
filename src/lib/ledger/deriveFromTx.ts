@@ -142,6 +142,7 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   corp_capacity_build: "capacity_capex",
   corp_capacity_build_refund: "capacity_capex",
   corp_sector_split_cost: "sector_split_campaign",
+  corp_union_busting_cost: "union_busting",
   // Prop trading is the same shape as capacity capex: the contra side of a buy
   // is the bank's own trading book, an ASSET account the shadow ledger does not
   // carry. Both directions share ONE reason so the reconciler nets a purchase

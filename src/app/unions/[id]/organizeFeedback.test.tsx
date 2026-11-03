@@ -26,7 +26,7 @@ const UNION = {
   countryName: "United Kingdom",
   sectorType: "telecommunications",
   sectorLabel: "Telecommunications",
-  ownerId: null as string | null,
+  ownerId: "c1" as string | null,
   pendingLeaderCharacterId: null,
   electionOpen: false,
   leadershipElectionMinStrength: 100,

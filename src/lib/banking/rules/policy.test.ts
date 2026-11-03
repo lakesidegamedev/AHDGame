@@ -33,25 +33,15 @@ describe("resolveBankingPolicy", () => {
     expect(resolveBankingPolicy({ treasuryCashLedgerEnabled: true }).treasuryCashLedger).toBe(true);
   });
 
-  it("enables Treasury holdings only explicitly with banking enabled", () => {
-    expect(resolveBankingPolicy({ bankTreasuryEnabled: true }).bankTreasury).toBe(false);
-    expect(resolveBankingPolicy({ privateBankingEnabled: true }).bankTreasury).toBe(false);
-    expect(
-      resolveBankingPolicy({ privateBankingEnabled: true, bankTreasuryEnabled: true }).bankTreasury
-    ).toBe(true);
+  it("enables Treasury holdings with banking alone", () => {
+    expect(resolveBankingPolicy({ privateBankingEnabled: true }).bankTreasury).toBe(true);
+    expect(resolveBankingPolicy({ privateBankingEnabled: false }).bankTreasury).toBe(false);
   });
-  it("enables forex fees only with their explicit flag and active prop trading", () => {
-    expect(resolveBankingPolicy({ bankPropForexFeesEnabled: true }).propForexFees).toBe(false);
+  it("enables forex fees with banking whenever prop trading is not switched off", () => {
+    expect(resolveBankingPolicy({ privateBankingEnabled: true }).propForexFees).toBe(true);
     expect(
-      resolveBankingPolicy({ privateBankingEnabled: true, bankPropForexFeesEnabled: true })
+      resolveBankingPolicy({ privateBankingEnabled: true, bankPropTradingEnabled: false })
         .propForexFees
-    ).toBe(true);
-    expect(
-      resolveBankingPolicy({
-        privateBankingEnabled: true,
-        bankPropForexFeesEnabled: true,
-        bankPropTradingEnabled: false,
-      }).propForexFees
     ).toBe(false);
   });
   it("defaults to banking off, LOC on, with a missing config document", () => {
@@ -77,17 +67,17 @@ describe("resolveBankingPolicy", () => {
   it("treats prop trading and contagion as kill switches that require banking", () => {
     expect(resolveBankingPolicy({ privateBankingEnabled: true })).toEqual({
       privateBanking: true,
-      failurePolitics: false,
+      failurePolitics: true,
       constructionFinance: false,
       propTrading: true,
-      propForexFees: false,
-      bankTreasury: false,
+      propForexFees: true,
+      bankTreasury: true,
       sovereignPrimary: false,
       treasuryCashLedger: false,
       contagion: true,
       lineOfCredit: true,
-      primaryUnderwriting: false,
-      advancedCharters: false,
+      primaryUnderwriting: true,
+      advancedCharters: true,
       savingsAccounts: "off",
       savingsReadCurrencies: [],
     });
@@ -96,7 +86,6 @@ describe("resolveBankingPolicy", () => {
         privateBankingEnabled: false,
         bankPropTradingEnabled: true,
         bankContagionEnabled: true,
-        playerAdvancedBankChartersEnabled: true,
       })
     ).toEqual(BANKING_POLICY_OFF);
     expect(
@@ -113,33 +102,19 @@ describe("resolveBankingPolicy", () => {
     expect(resolveBankingPolicy({ lineOfCreditEnabled: undefined }).lineOfCredit).toBe(true);
   });
 
-  it("enables primary underwriting only when private banking and its flag are both on", () => {
-    expect(resolveBankingPolicy({ bankUnderwritingEnabled: true }).primaryUnderwriting).toBe(false);
-    expect(
-      resolveBankingPolicy({
-        privateBankingEnabled: true,
-        bankUnderwritingEnabled: true,
-      }).primaryUnderwriting
-    ).toBe(true);
-    expect(resolveBankingPolicy({ privateBankingEnabled: true }).primaryUnderwriting).toBe(false);
+  it("enables primary underwriting with private banking alone", () => {
+    expect(resolveBankingPolicy({ privateBankingEnabled: true }).primaryUnderwriting).toBe(true);
+    expect(resolveBankingPolicy({ privateBankingEnabled: false }).primaryUnderwriting).toBe(false);
   });
 
-  it("offers advanced charters only on an explicit true with banking on", () => {
-    expect(
-      resolveBankingPolicy({ privateBankingEnabled: true, playerAdvancedBankChartersEnabled: true })
-        .advancedCharters
-    ).toBe(true);
-    expect(resolveBankingPolicy({ playerAdvancedBankChartersEnabled: true }).advancedCharters).toBe(
-      false
-    );
+  it("offers advanced charters with banking alone", () => {
+    expect(resolveBankingPolicy({ privateBankingEnabled: true }).advancedCharters).toBe(true);
+    expect(resolveBankingPolicy({ privateBankingEnabled: false }).advancedCharters).toBe(false);
   });
 
-  it("requires both private banking and explicit politics opt-in", () => {
-    expect(resolveBankingPolicy({ bankFailurePoliticsEnabled: true }).failurePolitics).toBe(false);
-    expect(
-      resolveBankingPolicy({ privateBankingEnabled: true, bankFailurePoliticsEnabled: true })
-        .failurePolitics
-    ).toBe(true);
+  it("carries funded failure politics with private banking alone", () => {
+    expect(resolveBankingPolicy({ privateBankingEnabled: true }).failurePolitics).toBe(true);
+    expect(resolveBankingPolicy({ privateBankingEnabled: false }).failurePolitics).toBe(false);
   });
 
   it("returns a frozen snapshot", () => {

@@ -18,7 +18,7 @@ export interface SettledRoundResult {
 
 const PLACE_LABELS = ["1st", "2nd", "3rd"];
 
-export function formatContestScore(kind: ContestKind, score: number): string {
+function formatContestScore(kind: ContestKind, score: number): string {
   const fmt = (digits: number) =>
     new Intl.NumberFormat("en-US", {
       maximumFractionDigits: digits,

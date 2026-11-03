@@ -125,7 +125,7 @@ export interface GaugeUpdate {
 }
 
 /** Match the public expectations ramp when scaling UK confidence erosion. */
-export function getGovernmentConfidenceErosionScale(
+function getGovernmentConfidenceErosionScale(
   countryId: CountryId,
   sinceTurn: number | null | undefined,
   currentTurn: number | null | undefined,

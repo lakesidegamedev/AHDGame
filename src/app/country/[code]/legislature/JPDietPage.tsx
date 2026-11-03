@@ -18,8 +18,8 @@ import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillAutoFailWarningBanner } from "@/components/bills/BillAutoFailWarning";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import GovernmentVotePanel from "@/components/uk/GovernmentVotePanel";
@@ -73,7 +73,7 @@ interface Props {
 }
 
 export function JPDietPage({ countryId }: Props) {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const lowerName = config?.legislature?.lowerChamber?.name ?? "Shūgiin";
   const upperName = config?.legislature?.upperChamber?.name ?? "Sangiin";
   const lowerSeats = config?.legislature?.lowerChamber?.seats ?? 465;

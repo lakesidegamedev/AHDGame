@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="436" viewBox="0 0 800 436" role="img" font-family="system-ui, sans-serif">
+<title>What a move resets and keeps</title>
+<desc>Relocating always resets Political Influence, donor level, regional posts, open candidacies, state and regional offices and CEO roles. A country change also resets national influence, party and national posts and becomes Independent. Money, holdings and reputation are kept. A combined move can carry a corporation.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="435" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="16" width="230" height="48" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="135.0" y="36.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Press Relocate here</text>
+<text x="135.0" y="52.5" font-size="12" text-anchor="middle" fill="#3f3f46">on the destination page</text>
+<path d="M252 40 L298 40" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="300" y="16" width="260" height="48" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="430.0" y="36.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">The move resolves at once</text>
+<text x="430.0" y="52.5" font-size="12" text-anchor="middle" fill="#3f3f46">72 turn cooldown starts</text>
+<path d="M430 66 L430 92 L145 92 L145 118" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M430 66 L430 92 L415 92 L415 118" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M430 66 L430 92 L690 92 L690 118" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="150" y="112" font-size="12" text-anchor="start" fill="#52525b">any move</text>
+<text x="420" y="112" font-size="12" text-anchor="start" fill="#52525b">another country only</text>
+<text x="695" y="112" font-size="12" text-anchor="start" fill="#52525b">kept</text>
+<rect x="20" y="120" width="250" height="170" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="145.0" y="153.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Always resets</text>
+<text x="145.0" y="169.6" font-size="12" text-anchor="middle" fill="#3f3f46">Political Influence to 0</text>
+<text x="145.0" y="185.6" font-size="12" text-anchor="middle" fill="#3f3f46">Donor Base level to 0</text>
+<text x="145.0" y="201.6" font-size="12" text-anchor="middle" fill="#3f3f46">(Fundraise locked)</text>
+<text x="145.0" y="217.6" font-size="12" text-anchor="middle" fill="#3f3f46">regional party posts</text>
+<text x="145.0" y="233.6" font-size="12" text-anchor="middle" fill="#3f3f46">open candidacies</text>
+<text x="145.0" y="249.6" font-size="12" text-anchor="middle" fill="#3f3f46">state and regional offices</text>
+<text x="145.0" y="265.6" font-size="12" text-anchor="middle" fill="#3f3f46">CEO roles</text>
+<rect x="290" y="120" width="250" height="170" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="415.0" y="161.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Also resets on a country change</text>
+<text x="415.0" y="177.6" font-size="12" text-anchor="middle" fill="#3f3f46">National Influence to 0</text>
+<text x="415.0" y="193.6" font-size="12" text-anchor="middle" fill="#3f3f46">Party Influence to 0;</text>
+<text x="415.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">you become Independent</text>
+<text x="415.0" y="225.6" font-size="12" text-anchor="middle" fill="#3f3f46">national party posts</text>
+<text x="415.0" y="241.6" font-size="12" text-anchor="middle" fill="#3f3f46">national offices, Bank Chair</text>
+<text x="415.0" y="257.6" font-size="12" text-anchor="middle" fill="#3f3f46">military commands</text>
+<rect x="560" y="120" width="220" height="170" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="670.0" y="145.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Kept</text>
+<text x="670.0" y="161.6" font-size="12" text-anchor="middle" fill="#3f3f46">funds and Cash on Hand</text>
+<text x="670.0" y="177.6" font-size="12" text-anchor="middle" fill="#3f3f46">(not converted)</text>
+<text x="670.0" y="193.6" font-size="12" text-anchor="middle" fill="#3f3f46">savings, shares, bonds</text>
+<text x="670.0" y="209.6" font-size="12" text-anchor="middle" fill="#3f3f46">Favorability, Infamy</text>
+<text x="670.0" y="225.6" font-size="12" text-anchor="middle" fill="#3f3f46">policy positions</text>
+<text x="670.0" y="241.6" font-size="12" text-anchor="middle" fill="#3f3f46">career history</text>
+<text x="670.0" y="257.6" font-size="12" text-anchor="middle" fill="#3f3f46">national offices and NPI,</text>
+<text x="670.0" y="273.6" font-size="12" text-anchor="middle" fill="#3f3f46">inside your own country</text>
+<text x="20" y="326" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">The CEO branch</text>
+<rect x="20" y="338" width="300" height="66" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="170.0" y="367.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">CEO roles are removed</text>
+<text x="170.0" y="383.6" font-size="12" text-anchor="middle" fill="#3f3f46">on any move</text>
+<path d="M322 371 L398 371" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="360" y="362" font-size="12" text-anchor="middle" fill="#52525b">unless</text>
+<rect x="400" y="338" width="380" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="590.0" y="359.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Combined move with your corporation</text>
+<text x="590.0" y="375.6" font-size="12" text-anchor="middle" fill="#3f3f46">7% of its market cap, same country</text>
+<text x="590.0" y="391.6" font-size="12" text-anchor="middle" fill="#3f3f46">14% of its market cap, other country</text>
+</svg>

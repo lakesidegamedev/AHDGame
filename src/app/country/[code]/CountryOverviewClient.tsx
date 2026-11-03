@@ -9,12 +9,14 @@ import { Avatar } from "@/components/Avatar";
 import { Skeleton } from "@/components/ui";
 import type { CountryAvailability, CountryAvailabilityState } from "@/lib/countryAvailability";
 import {
-  COUNTRY_CONFIGS,
-  getCountryConfig,
-  getHeadOfStateOfficeType,
   type CountryId,
   type GovernmentType,
-} from "@/lib/constants/countries";
+  getHeadOfStateOfficeType,
+} from "@/lib/constants/countriesCore";
+import {
+  COUNTRY_CLIENT_CONFIGS,
+  getCountryClientConfig,
+} from "@/lib/constants/countryClientConfig";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { useRuntimeCountryConfig } from "@/hooks/useRuntimeCountryConfig";
 import type { SpeakerDisplay, SenateLeaderDisplay } from "@/lib/congress/types";
@@ -160,11 +162,12 @@ function useCountryLeadershipData(countryId: CountryId): {
   // useMemo path in the hook so pre-conversion countries see no flash.
   const { config: runtime } = useRuntimeCountryConfig(countryId);
   const isPresidential =
-    (runtime?.governmentType ?? COUNTRY_CONFIGS[countryId].governmentType) === "presidential";
+    (runtime?.governmentType ?? COUNTRY_CLIENT_CONFIGS[countryId].governmentType) ===
+    "presidential";
   // The US congress leadership routes (/api/whitehouse, /api/congress/*) are
   // hardcoded to US data. Other presidential systems (NG, …) resolve their
   // president + presiding officers from country-scoped endpoints instead.
-  const isUS = countryId === COUNTRY_CONFIGS.US.id;
+  const isUS = countryId === COUNTRY_CLIENT_CONFIGS.US.id;
 
   useEffect(() => {
     // Guard against a slow fetch for a previous country resolving after the
@@ -391,7 +394,7 @@ export default function CountryOverviewClient({
   } | null;
 }) {
   const countryName = useCountryDisplayName();
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const activePreset = useActivePreset();
   const name = identity?.name ?? countryName(countryId);
   const governmentTypeLabel = identity?.governmentTypeLabel ?? config.governmentTypeLabel;
@@ -413,8 +416,8 @@ export default function CountryOverviewClient({
   // not exist this era, and the route — which is preset-aware — would answer null,
   // reproducing the very "Vacant" this is meant to remove.
   const hasHeadOfStateOffice =
-    getHeadOfStateOfficeType(getCountryConfig(countryId, activePreset)) !== null;
-  const isUS = countryId === COUNTRY_CONFIGS.US.id;
+    getHeadOfStateOfficeType(getCountryClientConfig(countryId, activePreset)) !== null;
+  const isUS = countryId === COUNTRY_CLIENT_CONFIGS.US.id;
   const { data: leadershipData, loading: leadershipLoading } = useCountryLeadershipData(countryId);
   const { data: axesData, loading: axesLoading } = useNationalAxesData(countryId);
   const counts = useOverviewCounts(countryId);
@@ -582,12 +585,12 @@ export default function CountryOverviewClient({
           <Link href="/world" className={NAV_BUTTON}>
             Back to world
           </Link>
-          {countryId === COUNTRY_CONFIGS.US.id && (
+          {countryId === COUNTRY_CLIENT_CONFIGS.US.id && (
             <Link href="/dashboard" className={NAV_BUTTON}>
               Go to dashboard
             </Link>
           )}
-          {countryId === COUNTRY_CONFIGS.UK.id && (
+          {countryId === COUNTRY_CLIENT_CONFIGS.UK.id && (
             <a
               href="https://discord.gg/DmF8zJJuqN"
               target="_blank"

@@ -1,8 +1,8 @@
 export const endgameGoalsContent = `# Endgame Goals
 
-A House Divided has no defined endpoint. There is no win screen, no reset, no campaign to complete. The simulation runs perpetually. But that does not mean there is nothing to aim for. This page outlines the long-term goals that give established players a direction, and how to measure whether you're achieving them.
+Once you hold a seat and the actions stop feeling scarce, the question becomes what you are playing for. A House Divided has no defined endpoint: no win screen and no campaign to complete. The simulation runs until the world itself is reset for a new iteration, and the Hall of Fame keeps your career score across resets. This page outlines the long-term goals that give established players a direction, and how to measure whether you're achieving them.
 
-## The nature of long-term goals
+## Positions to hold, not points to reach
 
 Goals in this game are better thought of as **positions to hold** rather than points to reach. Becoming president is meaningful not as an endpoint but because of the ongoing power it provides: cabinet control, legislative influence, approval ratings, foreign policy. The goal shifts from "become president" to "govern effectively as president while building toward the next objective."
 
@@ -15,7 +15,7 @@ This makes goal-setting inherently dynamic. A goal that made sense at turn 50 ma
 The highest executive office in your country. Reaching it requires:
 
 **For US President:**
-1. Accumulate NPI to 60+. NPI decays 1% per turn and settles at 100 times your per-turn gain, so this takes a national seat or party office held for roughly 80 turns; a home base alone will not get there
+1. Accumulate NPI to 60+. NPI decays 1% per turn and settles at 100 times your per-turn gain. A national seat alone (with state PI around 25) settles near 100 and passes 60 after roughly 90 turns; a home base with state PI near 100 settles near 200 on its own; combining both gets there fastest
 2. Maintain favorability 70+
 3. Build party influence and Campaign Presence in delegate-rich states
 4. Win the presidential primary: pledged delegates across the state waves, settled at a convention if nobody holds a majority
@@ -43,7 +43,7 @@ Economic dominance means controlling:
 
 2. **Central bank chair**: controlling interest rates shapes the entire economy. Fed Chair (US), Bank of England Governor (UK), ECB President (DE), Bank of Japan Governor (JP) all grant +3 actions/turn and monetary policy influence.
 
-3. **Legislative agenda**: passing bills that favor your industry sectors boosts sector revenue. Healthcare legislation boosts healthcare sectors; energy legislation boosts energy sectors.
+3. **Legislative agenda**: sector subsidies, tariffs and other laws feed into each sector's margin every turn, so passing bills aimed at your industries raises your profits.
 
 4. **Bond portfolio**: holding large sovereign bond positions in countries with healthy economies generates coupon income. Timing bond purchases around fiscal year and credit rating changes maximizes yield.
 
@@ -55,13 +55,13 @@ Economic dominance means controlling:
 
 Controlling a party means your legislative agenda passes, your candidates win seats, and your faction sets the direction for the entire country:
 
-1. **Become party chair**: win the internal party election. This requires high party-member favorability and PI.
+1. **Become party chair**: win the internal party election. Party members vote; each vote counts once, or by the voter's party influence if the party uses influence-weighted leadership elections, so you need members on your side.
 2. **Coordinate GOTV**: allocate GOTV budget to swing states and states with active player candidates.
 3. **Manage party org**: build a strong share of the total Org pool in key states. General-election weight uses that normalized share raised to the 0.2 exponent, so rivals' investment matters as much as your raw number.
-4. **Issue whip directives**: control how NPP legislators vote on bills.
+4. **Issue whip directives**: steer how NPP legislators vote on bills (each NPP rolls to comply, so whips are strong but not certain).
 5. **Run candidates**: encourage new players to join your party; coordinate which races each player runs in so you don't split primaries.
 
-**Measuring progress:** Track party seat counts in each chamber. A majority in one chamber is meaningful; a majority in both enables legislation to move freely. A dominant party controls the speaker, committee chairs, and legislative calendar.
+**Measuring progress:** Track party seat counts in each chamber. A majority in one chamber is meaningful; a majority in both enables legislation to move freely. A dominant party can elect the Speaker and the chamber's majority leadership.
 
 ---
 
@@ -72,7 +72,7 @@ For players focused on changing the game world rather than acquiring power:
 1. **Identify target metrics**: national healthcare index, environment index, economic index, education index. Each policy bill affects one or more of these.
 2. **Build a legislative pathway**: you need floor votes in every required chamber and, in presidential systems, an executive signature. Plan for each.
 3. **Coordinate whip votes**: work with party leadership on NPP votes.
-4. **Track metric history**: after a bill passes, watch the metric history chart to see if your bill is having the intended effect. Some effects take 4-8 turns to materialize.
+4. **Track metric history**: after a bill passes, watch the metric history chart to see if your bill is having the intended effect. Laws move metrics a little each turn toward a target, so the effect builds up over many turns rather than landing at once.
 5. **Sustain policy**: policies can be reversed by future legislation. Holding office or party leadership helps defend your policies from repeal.
 
 **Measuring progress:** The national metrics page (per country) shows current values and trend lines. Metric history charts show whether your policies moved the needle.
@@ -87,15 +87,15 @@ This requires:
 - **Maintaining favorability** above 65 between elections (don't go silent between campaigns)
 - **Building PI continuously** (0.75%/turn decay, faster while your party holds the national executive with low approval, means you need ongoing investment)
 - **Keeping party org high** in your home state
-- **Avoiding infamy accumulation** that reduces endorsement rates
+- **Avoiding infamy accumulation**, which drains favorability and trims your vote weight
 
-A Senator who has held their seat for 5 game years is a significant political figure: NPPs are unlikely to unseat them, and player challengers face a well-maintained incumbent's full alignment and favorability standing through every turn of the primary count.
+A Senator who has held their seat for 5 game years is a significant political figure. A sitting US Senator carries an incumbency shield in the general election (it shrinks a little with each consecutive term but never disappears), and a same-party challenger faces a well-maintained incumbent's full alignment and favorability standing through every turn of the primary count.
 
 ---
 
-## How to measure success
+## Checking whether you are compounding
 
-Since there is no score, tracking progress requires checking:
+Beyond the career score on the Hall of Fame, tracking progress means checking:
 
 | Metric | Where to find it |
 |---|---|
@@ -111,10 +111,7 @@ The game is designed so that success compounds: a higher office gives more actio
 
 ---
 
-## Related
+## Planning the route
 
-- [Advanced Strategy](/wiki/advanced-strategy): career arc planning and lever coordination.
-- [Power Player Guide](/wiki/power-player-guide): coordinating all systems at once.
-- [Multi-Country Play](/wiki/multi-country-play): cross-border ambitions.
-- [Reading the Game](/wiki/reading-the-game): using available data to make decisions.
+[Advanced Strategy](/wiki/advanced-strategy) covers career arcs and lever coordination, the [Power Player Guide](/wiki/power-player-guide) covers running all systems at once, [Multi-Country Play](/wiki/multi-country-play) covers cross-border ambitions, and [Reading the Game](/wiki/reading-the-game) covers using the available data to decide.
 `;

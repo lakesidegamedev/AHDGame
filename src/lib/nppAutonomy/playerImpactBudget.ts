@@ -73,13 +73,6 @@ export function nppSponsorLimitsForCountry(isPlayerCountry: boolean): NppSponsor
 export const NPP_CHALLENGERS_PER_COUNTRY_PER_PASS = 2;
 
 /**
- * A player candidate may be primary-challenged by an NPP at most this many times
- * per election. Being challenged once is a game; being re-challenged every pass
- * until the primary closes is harassment.
- */
-export const NPP_CHALLENGES_PER_PLAYER_CANDIDATE = 1;
-
-/**
  * Simple per-pass counter for challenger entries, scoped per country. Kept in
  * memory for the duration of one election-entry pass — the cap is about what
  * lands on a player at once, not a persistent quota.

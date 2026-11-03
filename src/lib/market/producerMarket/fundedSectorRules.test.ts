@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fundedCashIncome,
+  fundedDemandThrottle,
   fundedSectorOps,
   fundedSectorResult,
   SETTLEMENT_OWNED_SECTOR_FIELDS,
@@ -81,10 +82,93 @@ describe("funded cash income", () => {
   });
 });
 
+describe("funded demand throttle", () => {
+  it("reads the share of capacity the funded settlement sold", () => {
+    expect(fundedDemandThrottle(25, 100)).toBe(0.25);
+    expect(fundedDemandThrottle(100, 100)).toBe(1);
+  });
+
+  it("clamps a multi-output plant's combined sales at full capacity", () => {
+    expect(fundedDemandThrottle(120, 100)).toBe(1);
+    expect(fundedDemandThrottle(-5, 100)).toBe(0);
+  });
+
+  it("reads 1 when the plant could produce nothing", () => {
+    expect(fundedDemandThrottle(0, 0)).toBe(1);
+    expect(fundedDemandThrottle(10, Number.NaN)).toBe(1);
+    expect(fundedDemandThrottle(Number.NaN, 100)).toBe(0);
+  });
+});
+
 describe("funded sector result keeps policy costs", () => {
-  it("charges regulatory compliance on top of the receipt", () => {
-    const r = fundedSectorResult({ ...legacy, regulatoryBurden: 5 }, receipt);
-    expect(r.costs).toBe(85);
+  it("charges regulatory compliance on the revenue the plant sold", () => {
+    const r = fundedSectorResult(
+      { ...legacy, fundedRegulatoryBurdenRate: 0.05 },
+      receipt
+    ) as unknown as { costs: number; regulatoryBurden: number; fundedComplianceCost: number };
+    // receipt costs 70 + growth 10 + 5% of the 100 sold, not of the legacy 500
+    expect(r.costs).toBeCloseTo(85);
+    expect(r.regulatoryBurden).toBeCloseTo(5);
+    expect(r.fundedComplianceCost).toBeCloseTo(5);
+  });
+
+  it("does not charge the legacy pass's compliance figure", () => {
+    // A dominant sector: the legacy pass priced 5% of its own 500 revenue.
+    const r = fundedSectorResult({ ...legacy, regulatoryBurden: 25 }, receipt);
+    expect(r.costs).toBe(80);
+    expect(r.regulatoryBurden).toBe(0);
+  });
+
+  it("realizes growth cost against the funded revenue", () => {
+    const r = fundedSectorResult(
+      {
+        ...legacy,
+        hourlyGrowthCost: 10,
+        nameplateHourlyGrowthCost: 20,
+        nameplateHourlyRevenue: 1000,
+        growthInvestmentAnchor: 10,
+      },
+      receipt
+    );
+    // 20 at full realization x 100 / 1000 sold
+    expect(r.hourlyGrowthCost).toBeCloseTo(2);
+    expect(r.growthInvestmentAnchor).toBeCloseTo(2);
+    expect(r.costs).toBeCloseTo(72);
+  });
+
+  it("books compliance on its own plantsPnl line", () => {
+    const result = fundedSectorResult({ ...legacy, fundedRegulatoryBurdenRate: 0.05 }, receipt);
+    const out = fundedSectorOps(
+      [{ updateOne: { filter: { _id: "s1" }, update: { $set: { wageLevel: 1 } } } }],
+      "s1",
+      receipt,
+      result,
+      (a) => a * 24,
+      24
+    );
+    const set = (out[0].updateOne.update as { $set: Record<string, unknown> }).$set;
+    expect(set.plantsPnl).toMatchObject({ compliance: 120, totalCost: 2040 });
+  });
+
+  it("records the dominance penalty the funded turn applied", () => {
+    const result = fundedSectorResult({ ...legacy, fundedDominancePenaltyPp: 0 }, receipt);
+    const out = fundedSectorOps(
+      [
+        {
+          updateOne: {
+            filter: { _id: "s1" },
+            update: { $set: { dominanceMarginPenaltyPp: -6.52 } },
+          },
+        },
+      ],
+      "s1",
+      receipt,
+      result,
+      (a) => a * 24,
+      24
+    );
+    const set = (out[0].updateOne.update as { $set: Record<string, unknown> }).$set;
+    expect(set.dominanceMarginPenaltyPp).toBe(0);
   });
 });
 

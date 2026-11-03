@@ -11,12 +11,12 @@
  * gated surface (SCOTUS, Command Economy, Conflicts) drops out of the list
  * entirely rather than linking to a redirect.
  */
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CONFIGS,
-  getCountryConfig,
-  type CountryConfig,
-  type CountryId,
-} from "@/lib/constants/countries";
+  COUNTRY_CLIENT_CONFIGS,
+  getCountryClientConfig,
+  type CountryClientConfig,
+} from "@/lib/constants/countryClientConfig";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import type { OverviewCounts } from "@/lib/country/overviewCounts";
 import {
@@ -163,10 +163,10 @@ function politicsRows(input: DirectoryInput): DirectoryRow[] {
   ];
 }
 
-function governmentRows(input: DirectoryInput, config: CountryConfig): DirectoryRow[] {
+function governmentRows(input: DirectoryInput, config: CountryClientConfig): DirectoryRow[] {
   const { counts, countryId } = input;
   const isPresidential = config.governmentType === "presidential";
-  const isUS = countryId === COUNTRY_CONFIGS.US.id;
+  const isUS = countryId === COUNTRY_CLIENT_CONFIGS.US.id;
   const budget = budgetFigure(counts);
   return [
     {
@@ -217,7 +217,7 @@ function economyRows(input: DirectoryInput, currencyPrefix: string): DirectoryRo
       available: true,
     },
     {
-      label: getCountryConfig(countryId, input.preset ?? undefined).centralBank.abbreviation,
+      label: getCountryClientConfig(countryId, input.preset ?? undefined).centralBank.abbreviation,
       href: centralBankUrl(countryId),
       available: true,
       figure: counts?.primeRate != null ? `${counts.primeRate.toFixed(2)}%` : null,
@@ -254,7 +254,7 @@ function economyRows(input: DirectoryInput, currencyPrefix: string): DirectoryRo
   ];
 }
 
-function nationRows(input: DirectoryInput, config: CountryConfig): DirectoryRow[] {
+function nationRows(input: DirectoryInput, config: CountryClientConfig): DirectoryRow[] {
   const { counts, countryId } = input;
   const hasPoliticalMetrics = (POLITICAL_METRIC_COUNTRY_IDS as readonly string[]).includes(
     countryId
@@ -314,7 +314,7 @@ function nationRows(input: DirectoryInput, config: CountryConfig): DirectoryRow[
  * missing a whole area does not render an empty card.
  */
 export function buildCountryDirectory(input: DirectoryInput): DirectoryGroup[] {
-  const config = getCountryConfig(input.countryId, input.preset ?? undefined);
+  const config = getCountryClientConfig(input.countryId, input.preset ?? undefined);
   const currencyPrefix = getCurrencyPrefix(input.countryId);
   return [
     { label: "Politics", rows: politicsRows(input) },

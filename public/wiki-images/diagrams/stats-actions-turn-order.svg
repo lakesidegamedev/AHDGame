@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="262" viewBox="0 0 800 262" role="img" font-family="system-ui, sans-serif">
+<title>Per-turn resource order</title>
+<desc>Each turn actions arrive first, then Campaign Funds, then Political Influence, Infamy, Favorability and National Political Influence decay or drain. Bills, NPP behaviour and elections run afterward.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="261" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="230" height="150" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="135.0" y="59.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Actions</text>
+<text x="135.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">1 hoarding penalty if over</text>
+<text x="135.0" y="91.5" font-size="12" text-anchor="middle" fill="#3f3f46">the threshold</text>
+<text x="135.0" y="107.5" font-size="12" text-anchor="middle" fill="#3f3f46">2 base actions arrive</text>
+<text x="135.0" y="123.5" font-size="12" text-anchor="middle" fill="#3f3f46">3 office bonus actions</text>
+<text x="135.0" y="139.6" font-size="12" text-anchor="middle" fill="#3f3f46">4 party bonus from the pool</text>
+<rect x="285" y="20" width="230" height="150" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="400.0" y="83.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Campaign Funds</text>
+<text x="400.0" y="99.5" font-size="12" text-anchor="middle" fill="#3f3f46">5 base rate, donor bonus</text>
+<text x="400.0" y="115.5" font-size="12" text-anchor="middle" fill="#3f3f46">and office bonus arrive</text>
+<rect x="550" y="20" width="230" height="150" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="665.0" y="59.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Decay and drain</text>
+<text x="665.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">6 PI decays</text>
+<text x="665.0" y="91.5" font-size="12" text-anchor="middle" fill="#3f3f46">7 Infamy decays</text>
+<text x="665.0" y="107.5" font-size="12" text-anchor="middle" fill="#3f3f46">8 Favorability drains if high</text>
+<text x="665.0" y="123.5" font-size="12" text-anchor="middle" fill="#3f3f46">or Infamy is high</text>
+<text x="665.0" y="139.6" font-size="12" text-anchor="middle" fill="#3f3f46">9 NPI decays, then gains</text>
+<path d="M252 95 L283 95" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M517 95 L548 95" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="194" width="760" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="400.0" y="212.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Then, afterward</text>
+<text x="400.0" y="228.6" font-size="12" text-anchor="middle" fill="#3f3f46">bills, NPP behaviour, elections and everything else</text>
+</svg>

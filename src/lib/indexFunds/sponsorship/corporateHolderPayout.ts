@@ -15,6 +15,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { escheatUnclaimedFundCash } from "./unclaimedResidual";
 
 export async function payCorporateWindUpHolders(
   db: Db,
@@ -52,8 +53,23 @@ export async function payCorporateWindUpHolders(
       fund.seedAccounting === "paid_units"
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
-    if (!corp) throw new Error("Corporate fund holder no longer exists");
     if (amountAnchor <= 0) continue;
+    if (!corp) {
+      // The corporation was deleted without clearing its fund position. That
+      // slice has no owner to pay, so escheat it like any other unowned cash
+      // rather than rolling back every other holder's payout.
+      const escheated = await escheatUnclaimedFundCash(
+        db,
+        fund,
+        amountAnchor,
+        turn,
+        now,
+        "corporate_holder_missing",
+        { corporationId: position.corporationId }
+      );
+      if (escheated) distributedAnchor += amountAnchor;
+      continue;
+    }
     const currency = resolveCorpLiquidCurrencyCode(corp);
     const rate = forex && currency ? rates[currency] : 1;
     if (!rate || !Number.isFinite(rate) || rate <= 0)

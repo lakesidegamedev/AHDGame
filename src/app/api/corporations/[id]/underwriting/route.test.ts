@@ -28,9 +28,7 @@ function setup(enabled = true, issuerOverrides: Record<string, unknown> = {}) {
     liquidCurrencyCode: "USD",
     ...issuerOverrides,
   };
-  db.seed("gameConfig", [
-    { _id: "default", privateBankingEnabled: enabled, bankUnderwritingEnabled: enabled },
-  ]);
+  db.seed("gameConfig", [{ _id: "default", privateBankingEnabled: enabled }]);
   db.seed("gameState", [{ _id: "current", currentTurn: 41 }]);
   db.seed("corporations", [
     issuer,

@@ -17,6 +17,7 @@ import { getElectionMethod, isMultiSeatMethod } from "@/lib/elections/electionMe
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import type { CountryId, ElectionMethod } from "@/lib/constants/countries";
 import type { ElectionDisplay } from "@/lib/db/types";
+import { raceHref } from "@/lib/campaignManager/links";
 
 /** Where a race sits on the ballot. Drives the card kicker. */
 export type BlendTier = "federal" | "presidential" | "regional";
@@ -294,7 +295,7 @@ function countedVotes(election: ElectionDisplay): number {
  * maps (legacy or summary-mode records) contribute nothing rather than
  * throwing, and an id seen in several maps counts once.
  */
-export function omittedCandidateCount(election: ElectionDisplay): number {
+function omittedCandidateCount(election: ElectionDisplay): number {
   const roster = new Set((election.candidates ?? []).map((c) => c.id));
   const extra = new Set<string>();
   for (const id of Object.keys(election.polling?.sharesPct ?? {})) {
@@ -307,7 +308,7 @@ export function omittedCandidateCount(election: ElectionDisplay): number {
 }
 
 /** "+N more candidate(s)" for the omitted ids, null when the field is whole. */
-export function omittedCandidateLabel(count: number): string | null {
+function omittedCandidateLabel(count: number): string | null {
   if (count <= 0) return null;
   return count === 1 ? "+1 more candidate" : `+${count} more candidates`;
 }
@@ -852,7 +853,7 @@ export function buildBlendRegionCards(input: BlendRegionInput): BlendRaceCard[] 
 
     return {
       electionId: election.id,
-      href: hrefById[election.id] ?? `/elections/${election.id}`,
+      href: hrefById[election.id] ?? raceHref(election),
       tier,
       phase,
       title,

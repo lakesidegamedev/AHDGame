@@ -30,7 +30,7 @@ import {
 import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import type { RussianAssemblySeatingRecord, RussianAssemblyOfficeArchive } from "./assemblySeating";
 
-export const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
+const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
   _id: string;
   countryId: "RU";

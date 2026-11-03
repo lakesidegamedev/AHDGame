@@ -7,7 +7,6 @@
  * `assemble.ts` is imported by the manifest (no diagnostics cycle);
  * this barrel re-exports the full public surface for tests and admin tools.
  */
-export { build1953Tier3Registry } from "./assemble";
 export { EXPECTED_1953_ENTITIES_BY_REGION, ALL_EXPECTED_1953_ENTITY_IDS } from "./checklist1953";
 export {
   getWorldCoverageDiagnostics,

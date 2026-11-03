@@ -121,7 +121,7 @@ export async function loadSavingsMigrationInput(db: Db): Promise<MigrationInput>
   };
 }
 
-export const savingsMigrationKey = (ownerId: string, currency: string): string =>
+const savingsMigrationKey = (ownerId: string, currency: string): string =>
   `savings-migrate:${ownerId}:${currency}`;
 
 /**
@@ -239,7 +239,7 @@ export interface MigrationBatchResult {
  * `authoritative`, the plan is ok, and the currency is not yet a read cohort
  * (a currency that is already read from accounts has already migrated).
  */
-export async function applySavingsMigrationForCurrency(
+async function applySavingsMigrationForCurrency(
   db: Db,
   plan: SavingsMigrationPlan,
   input: MigrationInput,

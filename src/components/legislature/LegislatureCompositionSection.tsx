@@ -15,7 +15,7 @@ import { PartyChip } from "@/app/congress/components/CongressShared";
 import { Avatar } from "@/components/Avatar";
 import type { LegislatureMember, LegislatureCompositionSectionProps } from "./types";
 import { useCoalitionView, type CoalitionViewData } from "./useCoalitionView";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 
 type MemberSortOption = "region" | "name" | "seats";

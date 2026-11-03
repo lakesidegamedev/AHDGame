@@ -453,7 +453,7 @@ export function keyedInsertId(key: string, domain: string): ObjectId {
  * `keyedInsertId`). A duplicate key means this step already applied; anything
  * else throws.
  */
-export async function insertKeyedDoc<TSchema extends Document>(
+async function insertKeyedDoc<TSchema extends Document>(
   collection: Collection<TSchema>,
   doc: TSchema,
   options: MoneyFlowOptions = {}

@@ -25,12 +25,12 @@ export function integrityMult(integrity: number | undefined): number {
 }
 
 /** Readiness multiplier, floored so a worn formation is degraded and not deleted. */
-export function readinessMult(readiness: number): number {
+function readinessMult(readiness: number): number {
   return R.READINESS_FLOOR + (1 - R.READINESS_FLOOR) * (clamp(readiness, 0, 100) / 100);
 }
 
 /** Supply multiplier, floored for the same reason. */
-export function supplyMult(supply: number | undefined): number {
+function supplyMult(supply: number | undefined): number {
   return R.SUPPLY_FLOOR + (1 - R.SUPPLY_FLOOR) * (clamp(supply ?? 100, 0, 100) / 100);
 }
 
@@ -51,21 +51,10 @@ interface MissionWeights {
 }
 
 const NAVAL_MISSIONS = R.NAVAL_MISSIONS as unknown as Record<string, MissionWeights>;
-const AIR_MISSIONS = R.AIR_MISSIONS as unknown as Record<
-  string,
-  { label: string; readiness: number; desc: string }
->;
 
 /** Naval mission weights, or undefined when the mission is not a naval one. */
-export function navalMission(
-  mission: NavairMission | null | undefined
-): MissionWeights | undefined {
+function navalMission(mission: NavairMission | null | undefined): MissionWeights | undefined {
   return mission ? NAVAL_MISSIONS[mission] : undefined;
-}
-
-/** True when this mission is an air mission. */
-export function isAirMission(mission: NavairMission | null | undefined): boolean {
-  return !!mission && mission in AIR_MISSIONS;
 }
 
 /**
@@ -95,34 +84,9 @@ export function cv(unit: NavairUnit, weight: CvWeight): number {
   return baseCv(unit) * (w ?? 1);
 }
 
-/** How findable a formation is. Drives which hull in a group eats an incoming strike. */
-export function signature(unit: NavairUnit): number {
-  return cv(unit, "signature");
-}
-
-/** `ORGANIC_AA` by runtime type string, with the reference's 0.2 default. */
-export function organicAa(type: string): number {
-  return (R.ORGANIC_AA as Record<string, number>)[type] ?? 0.2;
-}
-
 /** `BERTH_COST` by runtime type string. */
 export function berthCostOf(type: string): number {
   return (R.BERTH_COST as Record<string, number>)[type] ?? 1;
-}
-
-/**
- * A formation's contribution to shooting down aircraft over its own region.
- *
- * A carrier ordered onto combat air patrol puts its whole wing up and defends at full
- * value; left on a naval mission it defends with the `ORGANIC_AA` share of itself. That
- * gap is the price of lane pressure, paid in exposure.
- */
-export function airDefenceOf(unit: NavairUnit): number {
-  if (unit.domain === "air") return unit.mission === "CAP" ? baseCv(unit) : 0;
-  if (unit.mission === "CAP") return baseCv(unit);
-  const share = organicAa(unit.type);
-  const escort = unit.mission === "ESCORT" ? R.ESCORT_AA_BONUS : 1;
-  return baseCv(unit) * share * escort;
 }
 
 export const alive = (u: NavairUnit): boolean => (u.integrity ?? 100) > 0;

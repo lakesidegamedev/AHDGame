@@ -13,6 +13,7 @@ export type NppMarketEntryReason =
   | "cohort_ineligible"
   | "retail_paused"
   | "glutted_market"
+  | "inputs_unavailable"
   | "entry_cap"
   | "facility_size"
   | "cash_floor"

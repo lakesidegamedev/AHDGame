@@ -1,5 +1,7 @@
 "use client";
 
+import { quoteOrganizationBatch } from "@/lib/parties/rules/repeatedOrganization";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { partyApiUrl, regionPartyApiUrl, regionPartyUrl } from "@/lib/urls";
@@ -78,6 +80,7 @@ export function StatePartyHQ({
   const [openId, setOpenId] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState<BulkMode | null>(null);
   const [busy, setBusy] = useState(false);
+  const [repeatCount, setRepeatCount] = useState(1);
   // Local copy so the bulk bar updates immediately after spends without waiting
   // on a parent refetch.
   const [nationalPs, setNationalPs] = useState(nationalPoliticalStrength);
@@ -310,11 +313,15 @@ export function StatePartyHQ({
           headers: { "Content-Type": "application/json" },
           // National HQ bulk Build Org always spends the national reserve —
           // never the per-state PS column shown in the table.
-          body: JSON.stringify({ psPool: "national" }),
+          body: JSON.stringify({ psPool: "national", count: repeatCount }),
         });
         if (res.ok) {
           done += 1;
           const d = await res.json().catch(() => ({}));
+          if (d.completed != null && d.completed < repeatCount) {
+            failed += 1;
+            firstError ||= d.stopReason ?? "Some builds could not be completed.";
+          }
           if (typeof d?.psCost === "number") spent += d.psCost;
           if (typeof d?.cashCost === "number") {
             spentCash += d.cashCost;
@@ -336,7 +343,7 @@ export function StatePartyHQ({
       const cashPart = spentCash > 0 ? ` and ${fmtLocalMoney(spentCash, countryId)}` : "";
       showToast(
         failed > 0
-          ? `Built organization in ${done} states with national party PS${cashPart} · ${failed} failed`
+          ? `Built organization in ${done} states with national party PS${cashPart} · ${failed} incomplete${firstError ? `: ${firstError}` : ""}`
           : `Built organization in ${done} states with national party PS` +
               (spent > 0 ? ` (−${spent.toFixed(0)} PS${cashPart})` : ""),
         failed > 0 ? "info" : "success"
@@ -351,10 +358,26 @@ export function StatePartyHQ({
     }
   };
 
-  const estimate = useMemo(() => {
+  const estimate = (() => {
     if (!bulkMode) return null;
-    return sumBulkEstimate({ selected: [...sel], previews: buildPreviews });
-  }, [bulkMode, sel, buildPreviews]);
+    const previews = Object.fromEntries(
+      Object.entries(buildPreviews).map(([id, preview]) => {
+        if (!preview.ok || repeatCount === 1) return [id, preview];
+        const quote = quoteOrganizationBatch({
+          countryId: countryId.toUpperCase() as CountryId,
+          scope: "national-targeted",
+          pressure: preview.pressureValue ?? Math.max(0, preview.effectiveCost - 1),
+          count: repeatCount,
+          sizeMultiplier: preview.sizeMultiplier ?? 1,
+        });
+        return [
+          id,
+          { ...preview, effectiveCost: quote.psCost, cashPrice: quote.cashPrice, projectedGain: 0 },
+        ];
+      })
+    );
+    return sumBulkEstimate({ selected: [...sel], previews });
+  })();
 
   /** Only guard when the balance is actually known — see `nationalTreasury`. */
   const overBudget =
@@ -440,11 +463,27 @@ export function StatePartyHQ({
       {/* Bulk bar (top) */}
       {sel.size > 0 && (
         <div className="sticky top-2 z-10 space-y-2 rounded-xl border border-card-border bg-card-elevated px-4 py-2 shadow-lg">
+          {canSpendPs && bulkMode && (
+            <fieldset disabled={busy} className="flex gap-2">
+              <legend className="text-xs text-muted">Builds per selected region</legend>
+              {[1, 5, 10].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={repeatCount === value}
+                  onClick={() => setRepeatCount(value)}
+                  className={`rounded border px-3 py-1 ${repeatCount === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+                >
+                  x{value}
+                </button>
+              ))}
+            </fieldset>
+          )}
           {canSpendPs && bulkMode && estimate && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border pb-2 text-xs">
               <span className="font-medium">
-                Build organization in {estimate.states} states with national party PS · Est.{" "}
-                <b className="tabular-nums">{estimate.totalPS} PS</b>
+                Build organization x{repeatCount} in each of {estimate.states} states with national
+                party PS · Est. <b className="tabular-nums">{estimate.totalPS} PS</b>
                 <span className="text-muted"> (have {nationalPs.toFixed(1)})</span>
                 {estimate.totalCash > 0 ? (
                   <>
@@ -459,7 +498,9 @@ export function StatePartyHQ({
                   </>
                 ) : null}{" "}
                 ·{" "}
-                {estimate.states > 1 ? (
+                {repeatCount > 1 ? (
+                  <span>Share gains are recalculated after each build.</span>
+                ) : estimate.states > 1 ? (
                   <>
                     avg{" "}
                     <b className="tabular-nums">

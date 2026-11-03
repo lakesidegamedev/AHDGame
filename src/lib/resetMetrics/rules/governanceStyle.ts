@@ -17,7 +17,7 @@ const POSITION_SCORES: Readonly<Record<LegislativePosition, number>> = {
 };
 
 /** V2 observations that describe democratic institutions rather than ideology. */
-export const RESET_DEMOCRATIC_HEALTH_WEIGHTS = {
+const RESET_DEMOCRATIC_HEALTH_WEIGHTS = {
   "43": 0.05, // Social cohesion
   "44": 0.15, // Civic participation beyond voting
   "47": 0.15, // Government transparency

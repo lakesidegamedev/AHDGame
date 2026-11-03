@@ -17,7 +17,7 @@ const BUDGET_VOTING_HOURS = 24;
  * connective piece between the Budget and the confidence gauge.
  */
 
-export function getUKBudgetsCollection(db: Db) {
+function getUKBudgetsCollection(db: Db) {
   return db.collection<UKBudget>("ukBudgets");
 }
 

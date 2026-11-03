@@ -18,7 +18,7 @@ export function isMarketSystemMode(value: unknown): value is MarketSystemMode {
 }
 
 /** Numeric rank of a mode (off=0 … plants=5). */
-export function marketModeRank(mode: MarketSystemMode): number {
+function marketModeRank(mode: MarketSystemMode): number {
   return MARKET_MODE_ORDER.indexOf(mode);
 }
 
@@ -63,13 +63,6 @@ export async function getMarketSystemModeForDb(db: Db): Promise<MarketSystemMode
     .collection<GameConfig>("gameConfig")
     .findOne({ _id: "default" }, { projection: { marketSystemMode: 1 } });
   return isMarketSystemMode(config?.marketSystemMode) ? config.marketSystemMode : "off";
-}
-
-/** Fix 1: realized sector revenue scaled by lagged output prices (mode ≥ "realization"). */
-export async function isMarketRealizationEnabled(
-  preloadedConfig?: Pick<GameConfig, "marketSystemMode"> | null
-): Promise<boolean> {
-  return marketAtLeast(await getMarketSystemMode(preloadedConfig), "realization");
 }
 
 /**

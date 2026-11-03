@@ -4,12 +4,12 @@ import { getEventCooldownLedgerCollection } from "@/lib/db/collections/eventCool
 import type { EventCooldownLedger } from "@/lib/db/types/events";
 import { seededCooldownTurns } from "./rng";
 
-export const PREE_COOLDOWN_TURNS_MIN = 10;
+const PREE_COOLDOWN_TURNS_MIN = 10;
 export const PREE_COOLDOWN_TURNS_MAX = 20;
 
 /** Country-scope events fire far less often than character PREE — wider default band. */
-export const COUNTRY_COOLDOWN_TURNS_MIN = 6;
-export const COUNTRY_COOLDOWN_TURNS_MAX = 16;
+const COUNTRY_COOLDOWN_TURNS_MIN = 6;
+const COUNTRY_COOLDOWN_TURNS_MAX = 16;
 
 export function isCharacterEligibleForOffer(
   ledger: EventCooldownLedger | null,

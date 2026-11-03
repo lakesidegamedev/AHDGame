@@ -9,6 +9,8 @@ import {
   MAX_NET_MIGRATION_PCT_PER_YEAR,
   WORLD_NET_MIGRATION_PCT_PER_YEAR,
   labourShortageMigrationBonusPct,
+  entryAccessMigrationPct,
+  labourMigrationPct,
 } from "./internationalMigration";
 import { totalPopulation, type AgeSexVector } from "../cohortVector";
 import { advanceCohort, type CohortInputs } from "../cohortFlows";
@@ -262,5 +264,45 @@ describe("economic pull — end-to-end additive effect over 240 turns (sim)", ()
     );
     expect(booming).toBeGreaterThan(neutral); // additive: stronger economy → more intake
     expect(depressed).toBeLessThan(neutral); // weaker economy → less intake
+  });
+});
+
+describe("migration laws", () => {
+  it("Entry and residence scales inflow but never deepens emigration", () => {
+    expect(entryAccessMigrationPct(1, "far_left")).toBeCloseTo(1.7);
+    expect(entryAccessMigrationPct(1, "center")).toBe(1);
+    expect(entryAccessMigrationPct(1, "far_right")).toBeCloseTo(0.5);
+    expect(entryAccessMigrationPct(-0.4, "far_left")).toBe(-0.4);
+    expect(entryAccessMigrationPct(-0.4, "far_right")).toBe(-0.4);
+  });
+
+  it("the center labour migration row is the old shortage pull exactly", () => {
+    for (const tightness of [0.5, 1, 1.43, 2, 10]) {
+      for (const wage of [0.8, 1, 1.3]) {
+        expect(labourMigrationPct("center", tightness, wage, 0.5)).toBeCloseTo(
+          labourShortageMigrationBonusPct(tightness, wage)
+        );
+        expect(labourMigrationPct("center", tightness, wage, -0.4)).toBe(0);
+      }
+    }
+  });
+
+  it("open labour migration recruits into a short-staffed region that is losing people", () => {
+    // Hokkaido-like: 1.43 tightness, below-average pay, net emigration.
+    const open = labourMigrationPct("far_left", 1.43, 0.95, -0.4);
+    expect(open).toBeGreaterThan(1);
+    expect(labourMigrationPct("center_left", 1.43, 0.95, -0.4)).toBeLessThan(open);
+    expect(labourMigrationPct("far_right", 1.43, 0.95, 1)).toBe(0);
+    // No shortage, no work visas, however open the law.
+    expect(labourMigrationPct("far_left", 0.9, 1, 1)).toBe(0);
+    expect(labourMigrationPct("far_left", 100, 1.5, 1)).toBe(3);
+  });
+
+  it("work-visa intake lifts only the inflow ceiling", () => {
+    const pop = 1_000_000;
+    const base = ((MAX_NET_MIGRATION_PCT_PER_YEAR / 100) * pop) / 48;
+    expect(capNetMigrants(1e9, pop, 48)).toBeCloseTo(base);
+    expect(capNetMigrants(1e9, pop, 48, 1.5)).toBeCloseTo(base * 2);
+    expect(capNetMigrants(-1e9, pop, 48, 1.5)).toBeCloseTo(-base);
   });
 });

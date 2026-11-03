@@ -36,7 +36,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return errorResponse(403, "Player-run unions are not enabled.");
     }
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(`api/unions/[id]/dues:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, duesSchema);

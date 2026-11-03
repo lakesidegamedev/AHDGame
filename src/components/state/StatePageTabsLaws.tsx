@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { State } from "@/lib/db/types";
 import type { StateTaxRates } from "@/lib/db/types/budget";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { policyApiUrl, regionApiSubUrl, regionUrl } from "@/lib/urls";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { PolicyBook } from "@/app/country/[code]/policy/components/PolicyBook";

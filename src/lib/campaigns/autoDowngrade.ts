@@ -59,9 +59,9 @@ export function computeAutoDowngrade(
     | "mediaSpendingLevel"
     | "oppositionResearchLevel"
   >,
-  input: { funds: number; income: number; electionType?: string }
+  input: { funds: number; income: number }
 ): AutoDowngradeResult {
-  const { funds, income, electionType } = input;
+  const { funds, income } = input;
   const projected = funds + income;
 
   // Working copy of each lever's tree state (or legacy level).
@@ -81,7 +81,7 @@ export function computeAutoDowngrade(
   const setFields: Record<string, unknown> = {};
   const downgrades: DowngradeEntry[] = [];
 
-  const total = () => aggregateMaintenance(trees, legacyLevels, electionType);
+  const total = () => aggregateMaintenance(trees, legacyLevels);
   let maintenance = total();
 
   // Legacy categories that carry maintenance in the old model.
@@ -201,16 +201,15 @@ function toWorking(tree: CampaignOpsTree | undefined): WorkingTree {
 
 function aggregateMaintenance(
   trees: Record<UpgradeCategory, WorkingTree>,
-  legacyLevels: Record<UpgradeCategory, number>,
-  electionType?: string
+  legacyLevels: Record<UpgradeCategory, number>
 ): number {
   let total = 0;
   for (const category of Object.keys(trees) as UpgradeCategory[]) {
     const tree = trees[category];
     if (tree.started) {
-      total += getTreeMaintenanceCost(category, tree, electionType);
+      total += getTreeMaintenanceCost(category, tree);
     } else {
-      total += getMaintenanceCost(category, legacyLevels[category], electionType);
+      total += getMaintenanceCost(category, legacyLevels[category]);
     }
   }
   return total;

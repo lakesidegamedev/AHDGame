@@ -42,7 +42,7 @@ describe("plants-corp-guide wiki content", () => {
       `${DOMINANCE_NATIONAL_SHARE_THRESHOLD}% of the national`
     );
     expect(plantsCorpGuideContent).toContain(
-      `${Math.round(INVENTORY_CARRY_COST_RATE_PER_TURN * 100)}% of its current value`
+      `${Math.round(INVENTORY_CARRY_COST_RATE_PER_TURN * 1000) / 10}% of its current value`
     );
     expect(plantsCorpGuideContent).toContain(
       `${Math.round(INVENTORY_SELL_DOWN_MIN_FILL * 100)}% of fresh output`

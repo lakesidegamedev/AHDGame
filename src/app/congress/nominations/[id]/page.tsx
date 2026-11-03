@@ -10,7 +10,7 @@ import { WhippedBadge } from "@/components/bills/WhippedBadge";
 import { NominationVotingDeadline } from "./components/NominationVotingDeadline";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 interface NominationDetail {
   id: string;

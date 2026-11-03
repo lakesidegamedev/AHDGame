@@ -1,9 +1,11 @@
+import { referenceValuation } from "./referenceValuation";
+import { controllerTransferBarrierError } from "./controllerTransferBarrier";
 import type { Db } from "mongodb";
 import {
   assertForeignControlAllowed,
   assertSubsidiaryWithinCap,
 } from "@/lib/mechanicalLaws/guards";
-import { positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
 import type {
@@ -15,6 +17,11 @@ import type {
 } from "@/lib/db/types";
 import type { IndexFund } from "@/lib/db/types";
 import type { FederalBudget } from "@/lib/db/types/budget";
+import {
+  EQUITY_MARKET_POOLS_COLLECTION,
+  type EquityMarketPool,
+} from "@/lib/db/types/equityMarketPool";
+import { equityPoolCurrency } from "@/lib/equities/marketPool";
 import type { AcquisitionOffer, AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import {
   anchorToCorpLiquidCapital,
@@ -87,8 +94,8 @@ export type ExecuteAgreedAcquisitionResult =
  * the agreed price.
  *
  * Money flow (conserved): the acquirer pays the agreed price to the target's
- * shareholders (public-float slice → the country treasury, per the shared
- * convention), then the target's own liquid cash relocates to the acquirer and
+ * shareholders (public-float slice → the equity market pool that paid for
+ * it, or the country treasury in a world without pools), then the target's own liquid cash relocates to the acquirer and
  * every sector re-parents to the acquirer; the target shell is deleted.
  *
  * Crash safety: every amount and recipient is pinned once per offer in an
@@ -165,6 +172,38 @@ async function runAgreedAcquisition(
   const outcome = acquisitionOutcomeOf(offer);
   const subsidiary = outcome === "subsidiary";
   const priorSettlement = await loadAcquisitionSettlement(db, offer._id);
+  if (!priorSettlement) {
+    for (const corporation of [acquirer, target]) {
+      const restriction = await controllerTransferBarrierError(
+        db,
+        corporation,
+        currentTurn,
+        new Date()
+      );
+      if (restriction) return { ok: false, error: restriction, status: 403 };
+    }
+    const floor = await referenceValuation(db, target);
+    if (offer.priceAnchor < floor.minimumPriceAnchor)
+      return {
+        ok: false,
+        error: `The acquisition price must be at least ₳${floor.minimumPriceAnchor.toLocaleString("en-US")} to cover the target's net assets.`,
+        status: 400,
+      };
+    if (!subsidiary && (floor.debtAnchor > 0 || (target.liquidCapital ?? 0) < 0))
+      return {
+        ok: false,
+        error:
+          "The target has outstanding bonds or financing liabilities. Repay them before merging, or acquire it as a subsidiary.",
+        status: 400,
+      };
+    if (!subsidiary && floor.portfolioAnchor > 0)
+      return {
+        ok: false,
+        error:
+          "Sell or transfer the target's investment holdings before merging, or acquire it as a subsidiary.",
+        status: 400,
+      };
+  }
 
   // Subsidiary resume: the structural write of an interrupted run already
   // landed (flag set, or the cap table is the acquirer's alone with a live
@@ -343,7 +382,8 @@ async function runAgreedAcquisition(
   const fundIds = (allocation?.fundRows ?? [])
     .filter((r) => r.payout > 0)
     .map((r) => new ObjectId(r.fundId));
-  const [chars, imperials, creditors, funds, treasury] = await Promise.all([
+  const floatPaid = Boolean(allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0);
+  const [chars, imperials, creditors, funds, treasury, equityPool] = await Promise.all([
     charIds.length > 0
       ? db
           .collection<Character>("characters")
@@ -368,10 +408,15 @@ async function runAgreedAcquisition(
           .find({ _id: { $in: fundIds } })
           .toArray()
       : [],
-    allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0
+    floatPaid
       ? db
           .collection<FederalBudget>("federalBudget")
           .findOne({ countryId: target.countryId }, { projection: { _id: 1 } })
+      : null,
+    floatPaid
+      ? db
+          .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
+          .findOne({ _id: equityPoolCurrency(target) }, { projection: { _id: 1 } })
       : null,
   ]);
   const currencyByHolderHex: Record<string, string> = {};
@@ -396,7 +441,11 @@ async function runAgreedAcquisition(
   // A subsidiary keeps its own cash: nothing relocates to the acquirer.
   const targetCashAnchor = subsidiary
     ? 0
-    : corpLiquidCapitalToAnchor(target.liquidCapital ?? 0, target, targetFxRate);
+    : corpLiquidCapitalToAnchor(
+        (target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0),
+        target,
+        targetFxRate
+      );
   const shellCashInAcquirerCapital =
     targetCashAnchor > 0
       ? Math.round(anchorToCorpLiquidCapital(targetCashAnchor, acquirer, acquirerFxRate))
@@ -419,7 +468,7 @@ async function runAgreedAcquisition(
                       [
                         owner,
                         positionHoldingTerms(
-                          holder,
+                          anchorHoldingPosition(holder, targetFxRate),
                           currentTurn,
                           corpLiquidCapitalToAnchor(target.sharePrice ?? 0, target, targetFxRate)
                         ),
@@ -456,11 +505,14 @@ async function runAgreedAcquisition(
     creditorByHolderHex,
     fundsPresentHex: funds.map((f) => f._id.toString()),
     treasuryPresent: treasury != null,
+    equityPoolPresent: equityPool != null,
     fxByCurrency: fxRecord,
     forexEnabled,
     shellCashAnchor: targetCashAnchor,
     shellCashInAcquirerCapital,
-    shellCashTargetLocal: subsidiary ? 0 : Math.round(target.liquidCapital ?? 0),
+    shellCashTargetLocal: subsidiary
+      ? 0
+      : Math.round((target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0)),
     targetCurrency: targetCurrency ?? "USD",
     ...(subsidiary ? { outcome } : {}),
   });
@@ -474,7 +526,9 @@ async function runAgreedAcquisition(
     priceAnchor: offer.priceAnchor,
     priceInAcquirerCapital,
     acquirerCurrency: acquirerCurrency ?? "USD",
-    shellCashTargetLocal: subsidiary ? 0 : Math.round(target.liquidCapital ?? 0),
+    shellCashTargetLocal: subsidiary
+      ? 0
+      : Math.round((target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0)),
     targetCurrency: targetCurrency ?? "USD",
     ...(subsidiary ? { outcome } : {}),
     // First-attempt sector count: this read precedes every move, so on the

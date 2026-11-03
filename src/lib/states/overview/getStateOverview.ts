@@ -43,6 +43,7 @@ import type {
   PartyOrgRow,
   StateOverviewResult,
 } from "./types";
+import { raceHref } from "@/lib/campaignManager/links";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -359,12 +360,12 @@ async function buildElectionDerived(args: {
           partyAbbr: party?.abbreviation ?? partyId,
           partyColor: party?.color ?? NEUTRAL_PARTY_COLOR,
           candidateCount: candList.length,
-          // Prefer the human-readable seatId (e.g. "US-house-AZ") over the
-          // raw ObjectId — matches the convention used by every other
-          // /elections/* link in the app (Navbar, country overview,
-          // electionsHelpers). Falls back to the ObjectId for legacy
-          // elections without a seatId backfilled.
-          url: `/elections/${election.seatId ?? election._id.toString()}`,
+          // Down-ballot races open in Campaign Manager; the presidency keeps its page.
+          url: raceHref({
+            id: election._id.toString(),
+            electionType: election.electionType,
+            seatId: election.seatId,
+          }),
         });
       }
       continue;
@@ -417,7 +418,11 @@ async function buildElectionDerived(args: {
       leader: toContender(ranked[0]),
       runnerUp: toContender(ranked[1]),
       contenderCount: ranked.length,
-      url: `/elections/${election.seatId ?? election._id.toString()}`,
+      url: raceHref({
+        id: election._id.toString(),
+        electionType: election.electionType,
+        seatId: election.seatId,
+      }),
     });
   }
 

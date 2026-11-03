@@ -15,7 +15,7 @@ import { useProspectingSurveys } from "@/hooks/useProspectingSurveys";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { ProspectingSurveyList } from "@/components/extraction/ProspectingSurveyList";
 import { GOVT_CONTRACT_MAX_TOTAL_SHARE } from "@/lib/constants/prospecting";
-import type { ExtractableResource } from "@/lib/constants/commodities";
+import type { ExtractableResource } from "@/lib/constants/commoditiesCore";
 
 interface ResourceSummaryRow {
   resource: ExtractableResource;

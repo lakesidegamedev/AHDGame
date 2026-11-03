@@ -49,6 +49,16 @@ describe("SubsidiaryManagementCard group", () => {
     ).toBeTruthy();
   });
 
+  it("passes the remaining spin off cooldown to the chart", () => {
+    render(
+      <SubsidiaryManagementCard
+        corporation={corp({ canSpinOff: true, spinOffCooldownTurnsRemaining: 42 })}
+        onChanged={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Available again in 42 turns.")).toBeTruthy();
+  });
+
   it("opens the spin off modal from the chart slot", () => {
     render(
       <SubsidiaryManagementCard corporation={corp({ canSpinOff: true })} onChanged={vi.fn()} />

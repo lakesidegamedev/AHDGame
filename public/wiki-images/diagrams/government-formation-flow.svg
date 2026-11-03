@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" role="img" font-family="system-ui, sans-serif">
+<title>How a parliamentary government forms</title>
+<desc>After an election, a sitting PM who kept their seat faces a confidence motion; otherwise appointment votes run until a nominee is seated, with a 96 turn clock to a snap election.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="24" y="56" width="120" height="52" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="84.0" y="78.0" font-size="13" text-anchor="middle" font-weight="700">Election</text>
+<text x="84.0" y="95.0" font-size="13" text-anchor="middle">resolves</text>
+<rect x="184" y="48" width="170" height="68" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="269.0" y="78.0" font-size="13" text-anchor="middle" font-weight="700">Did the sitting PM</text>
+<text x="269.0" y="95.0" font-size="13" text-anchor="middle">keep their seat?</text>
+<rect x="414" y="48" width="170" height="68" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="499.0" y="70.2" font-size="12" text-anchor="middle" font-weight="700">Confidence motion</text>
+<text x="499.0" y="86.2" font-size="12" text-anchor="middle">24 hours; passes if</text>
+<text x="499.0" y="102.2" font-size="12" text-anchor="middle">Aye is at least Nay</text>
+<rect x="644" y="48" width="140" height="68" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="714.0" y="78.2" font-size="12" text-anchor="middle" font-weight="700">PM stays</text>
+<text x="714.0" y="94.2" font-size="12" text-anchor="middle">government formed</text>
+<polyline points="144,82 184,82" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="354,82 414,82" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="384" y="74" font-size="12" text-anchor="middle" fill="#52525b">yes</text>
+<polyline points="584,82 644,82" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="614" y="74" font-size="12" text-anchor="middle" fill="#52525b">passes</text>
+<rect x="184" y="200" width="170" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="269.0" y="228.1" font-size="13" text-anchor="middle" font-weight="700">Government pending</text>
+<text x="269.0" y="245.1" font-size="13" text-anchor="middle">bills frozen</text>
+<polyline points="250,116 250,200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="258" y="160" font-size="12" text-anchor="start" fill="#52525b">no</text>
+<polyline points="499,116 499,158 320,158 320,200" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="410" y="150" font-size="12" text-anchor="middle" fill="#52525b">fails</text>
+<rect x="414" y="194" width="170" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="499.0" y="212.2" font-size="12" text-anchor="middle" font-weight="700">Appointment votes</text>
+<text x="499.0" y="228.2" font-size="12" text-anchor="middle">24 hours each, several</text>
+<text x="499.0" y="244.2" font-size="12" text-anchor="middle">at once; first with</text>
+<text x="499.0" y="260.2" font-size="12" text-anchor="middle">more Aye than Nay wins</text>
+<rect x="644" y="200" width="140" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="714.0" y="220.2" font-size="12" text-anchor="middle" font-weight="700">Nominee seated</text>
+<text x="714.0" y="236.2" font-size="12" text-anchor="middle">freeze lifts next</text>
+<text x="714.0" y="252.2" font-size="12" text-anchor="middle">turn</text>
+<polyline points="354,232 414,232" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="584,232 644,232" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="184" y="330" width="230" height="52" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="299.0" y="352.2" font-size="12" text-anchor="middle" font-weight="700">Snap election called</text>
+<text x="299.0" y="368.2" font-size="12" text-anchor="middle">no PM after 96 turns</text>
+<polyline points="269,264 269,330" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="277" y="302" font-size="12" text-anchor="start" fill="#52525b">clock runs out</text>
+</g>
+</svg>

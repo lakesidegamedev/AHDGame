@@ -3,9 +3,9 @@ import { primaryMetricById } from "@/lib/resetMetrics/catalog";
 import { leaveToStatesOption, resetLawFamilies, resetLawFamilyById } from "./catalog";
 
 describe("reset legislative catalog", () => {
-  it("contains 51 distinct law families with five authored policy levels", () => {
-    expect(resetLawFamilies).toHaveLength(51);
-    expect(new Set(resetLawFamilies.map((family) => family.id)).size).toBe(51);
+  it("contains 52 distinct law families with five authored policy levels", () => {
+    expect(resetLawFamilies).toHaveLength(52);
+    expect(new Set(resetLawFamilies.map((family) => family.id)).size).toBe(52);
     for (const family of resetLawFamilies) {
       expect(family.levels.map((level) => level.position)).toEqual([
         "far_left",

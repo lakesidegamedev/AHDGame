@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 /**
  * The presets that ship.
@@ -302,7 +303,7 @@ export function tierFor(preset: ShippingPreset, countryId: CountryId): CountryEr
  */
 export function countriesByTier(preset: ShippingPreset, tier: CountryEraTier): CountryId[] {
   const ordered = COUNTRY_ORDER.filter((id) => tierFor(preset, id) === tier);
-  const unregistered = (Object.keys(COUNTRY_CONFIGS) as CountryId[]).filter(
+  const unregistered = (Object.keys(COUNTRY_CLIENT_CONFIGS) as CountryId[]).filter(
     (id) => !COUNTRY_ORDER.includes(id) && tierFor(preset, id) === tier
   );
   return [...ordered, ...unregistered];

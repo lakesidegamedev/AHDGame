@@ -17,14 +17,15 @@
  */
 
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Collection, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import type { SupplyListing } from "@/lib/db/types/supplyListing";
 import { isCurtained, isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import type { CommodityType } from "@/lib/constants/commodities";
-import { SECTOR_DEMAND, SECTOR_SUPPLY } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, SECTOR_DEMAND, SECTOR_SUPPLY } from "@/lib/constants/commodities";
+import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import type {
   CorporationType,
   OperatingSectorType,
@@ -33,6 +34,7 @@ import type {
 import {
   contractCancelEffectiveTurn,
   CONTRACT_OVERCOMMIT_TOLERANCE,
+  AI_SUPPLIER_MAX_DISCOUNT,
   SUPPLY_AGREEMENT_PRICE_BAND,
   type SupplyAgreement,
 } from "@/lib/db/types/supplyAgreement";
@@ -58,7 +60,7 @@ export const NPP_CONTRACT_INPUT_SHORTAGE = 1.1;
 /** Refuse inbound premiums above this (a 20% gouge is not "honest"). */
 export const NPP_CONTRACT_MAX_ACCEPT_PREMIUM = 0.2;
 /** Discount a glutted seller offers. */
-export const NPP_CONTRACT_GLUT_PREMIUM = -0.1;
+export const NPP_CONTRACT_GLUT_PREMIUM = -AI_SUPPLIER_MAX_DISCOUNT;
 /** Premium a shortage seller charges. */
 export const NPP_CONTRACT_SHORTAGE_PREMIUM = 0.1;
 /** Share of uncommitted capacity one new contract may take. */
@@ -120,9 +122,15 @@ export type ExistingNppAgreement = {
 /** A non-NPP counterparty whose inbound proposals an NPP supplier may accept. */
 export type ExternalBuyer = { countryId: string };
 
+export type NppDeclineReason = "stateOwned" | "embargo" | "noCapacity" | "invalidVolume";
+
 export type NppAgreementDecision =
   | { action: "activate"; agreementId: string }
   | { action: "cancelNotice"; agreementId: string }
+  /** Supplier answers a player proposal with the terms it would sign. */
+  | { action: "counter"; agreementId: string; pricePremium: number; volumeCap: number }
+  /** Supplier turns a player proposal down; the reason is shown to the player. */
+  | { action: "decline"; agreementId: string; reason: NppDeclineReason }
   | {
       action: "propose";
       supplierCorpId: string;
@@ -318,6 +326,36 @@ export function decideNppSupplyAgreements(args: {
   const proposedSupplier = new Set<string>();
   const proposedBuyer = new Set<string>();
 
+  // The proposal step asks the same buyer/commodity question once per supplier,
+  // so a starved buyer was rescanned for every candidate supplier in the
+  // country. The answers depend only on the party, commodity, price ratio and
+  // state scope, all of which are fixed for this call, so memoise them.
+  const starvedCache = new Map<string, boolean>();
+  const starved = (
+    party: NppAgreementParty,
+    commodity: CommodityType,
+    priceRatio: number | null,
+    stateId?: string
+  ): boolean => {
+    const key = `${party.corpId}|${commodity}|${String(priceRatio)}|${stateId ?? NO_STATE}`;
+    const cached = starvedCache.get(key);
+    if (cached !== undefined) return cached;
+    const answer = buyerStarved(party, commodity, turn, priceRatio, stateId);
+    starvedCache.set(key, answer);
+    return answer;
+  };
+  // Same pair of outputs for the same supplier commodity every time it is asked
+  // (supply has one fill per commodity), so cache that scan too.
+  const fillCache = new Map<string, number | null>();
+  const fillOf = (party: NppAgreementParty, commodity: CommodityType): number | null => {
+    const key = `${party.corpId}|${commodity}`;
+    const cached = fillCache.get(key);
+    if (cached !== undefined) return cached;
+    const answer = sellerFill(party, commodity, turn);
+    fillCache.set(key, answer);
+    return answer;
+  };
+
   // 1. Auto-accept inbound pending proposals the NPP buyer actually needs.
   for (const a of agreements) {
     if (a.status !== "pending") continue;
@@ -347,9 +385,10 @@ export function decideNppSupplyAgreements(args: {
     acceptedBuyer.add(buyer.corpId);
   }
 
-  // 1b. An AI supplier accepts a player buyer's pending proposal when it has
-  // spare capacity, the discount is no deeper than the glut discount, and no
-  // embargo or curtain lies between the two countries.
+  // 1b. An AI supplier answers a player buyer's pending proposal the turn it
+  // sees it: accepts when it has spare capacity, the discount is no deeper than
+  // the glut discount and no embargo lies between the countries; otherwise it
+  // counters with terms it can honour, or declines with a reason.
   if (plantsEnabled && args.externalBuyers) {
     const accepted = new Map<string, number>();
     for (const a of agreements) {
@@ -358,13 +397,20 @@ export function decideNppSupplyAgreements(args: {
       const buyer = args.externalBuyers.get(a.buyerCorpId);
       if (!buyer || a.proposedByCorpId !== a.buyerCorpId) continue;
       const supplier = byId.get(a.supplierCorpId);
-      if (!supplier || supplier.isNatcorp || supplier.isPlayer) continue;
-      if (a.pricePremium < NPP_CONTRACT_GLUT_PREMIUM) continue;
-      if (a.pricePremium > SUPPLY_AGREEMENT_PRICE_BAND) continue;
+      if (!supplier || supplier.isPlayer) continue;
+      if (supplier.isNatcorp) {
+        out.push({ action: "decline", agreementId: a.id, reason: "stateOwned" });
+        continue;
+      }
       if (
         buyer.countryId !== supplier.countryId &&
         args.tradeBlocked?.(a.commodity, supplier.countryId, buyer.countryId)
       ) {
+        out.push({ action: "decline", agreementId: a.id, reason: "embargo" });
+        continue;
+      }
+      if (!(a.volumeCap > 0)) {
+        out.push({ action: "decline", agreementId: a.id, reason: "invalidVolume" });
         continue;
       }
       const capacity = computeSupplierCommodityCapacityUnits({
@@ -381,9 +427,24 @@ export function decideNppSupplyAgreements(args: {
         capacity * CONTRACT_OVERCOMMIT_TOLERANCE -
         liveBeforeAccepts!.committedVolume(supplier.corpId, a.commodity, a.stateId) -
         taken;
-      if (!(a.volumeCap > 0) || a.volumeCap > spare) continue;
-      out.push({ action: "activate", agreementId: a.id });
-      accepted.set(key, taken + a.volumeCap);
+      // Always answer within a turn: sign the proposal as written, or counter
+      // with the closest terms the supplier can honour (price no deeper than
+      // the glut discount, volume no more than its spare capacity).
+      const price = Math.min(
+        Math.max(a.pricePremium, NPP_CONTRACT_GLUT_PREMIUM),
+        SUPPLY_AGREEMENT_PRICE_BAND
+      );
+      const volume = Math.min(a.volumeCap, Math.floor(spare));
+      if (!(volume >= 1)) {
+        out.push({ action: "decline", agreementId: a.id, reason: "noCapacity" });
+        continue;
+      }
+      if (price === a.pricePremium && volume === a.volumeCap) {
+        out.push({ action: "activate", agreementId: a.id });
+        accepted.set(key, taken + a.volumeCap);
+      } else {
+        out.push({ action: "counter", agreementId: a.id, pricePremium: price, volumeCap: volume });
+      }
     }
   }
 
@@ -485,7 +546,7 @@ export function decideNppSupplyAgreements(args: {
       const volumeCap = uncommitted * NPP_CONTRACT_CAPACITY_SHARE;
       if (!(volumeCap > 0)) continue;
 
-      const fill = sellerFill(supplier, commodity, turn);
+      const fill = fillOf(supplier, commodity);
       const priceRatio = priceRatioOf(commodity, supplier.countryId);
       const premium = nppContractPremium(fill, priceRatio);
 
@@ -497,7 +558,7 @@ export function decideNppSupplyAgreements(args: {
         if (proposedBuyer.has(buyer.corpId) || acceptedBuyer.has(buyer.corpId)) continue;
         if (live.pairExists(supplier.corpId, buyer.corpId, commodity, stateId)) continue;
         const buyerRatio = priceRatioOf(commodity, buyer.countryId);
-        if (!buyerStarved(buyer, commodity, turn, buyerRatio, stateId)) continue;
+        if (!starved(buyer, commodity, buyerRatio, stateId)) continue;
         const score = (fill == null ? 0.5 : 1 - fill) + Math.max(0, (buyerRatio ?? 1) - 1);
         if (!best || score > best.score) {
           best = { buyer, commodity, stateId, volumeCap, pricePremium: premium, score };
@@ -735,6 +796,8 @@ export const NPP_SUPPLY_AGREEMENT_PROJECTION = {
   proposedByCorpId: 1,
   durationTurns: 1,
   expiresAtTurn: 1,
+  exclusive: 1,
+  currentOffer: 1,
 } as const;
 
 /**
@@ -833,7 +896,7 @@ export async function syncAiSupplyListings(
   const existingById = new Map(existing.map((e) => [e._id, e]));
   const slotByCorp = new Map<string, number>();
   const wanted = new Set<string>();
-  const writes = [];
+  const writes: AnyBulkWriteOperation<SupplyListing>[] = [];
   for (const spec of desired) {
     const id = aiListingId(spec);
     wanted.add(id);
@@ -867,11 +930,131 @@ export async function syncAiSupplyListings(
     writes.push({ replaceOne: { filter: { _id: id }, replacement: row, upsert: true } });
   }
   const stale = existing.filter((e) => !wanted.has(e._id)).map((e) => e._id);
-  await Promise.all([
-    writes.length > 0 ? collection.bulkWrite(writes, { ordered: false }) : null,
-    stale.length > 0 ? collection.deleteMany({ _id: { $in: stale }, aiListed: true }) : null,
-  ]);
+  // A wanted listing and a stale one are different rows, so both halves of the
+  // refresh travel in one unordered batch instead of two writes.
+  const ops: AnyBulkWriteOperation<SupplyListing>[] = [
+    ...writes,
+    ...stale.map((id): AnyBulkWriteOperation<SupplyListing> => ({
+      deleteOne: { filter: { _id: id, aiListed: true } },
+    })),
+  ];
+  if (ops.length > 0) await collection.bulkWrite(ops, { ordered: false });
   return { upserted: writes.length, removed: stale.length };
+}
+
+const DECLINE_TEXT: Record<NppDeclineReason, string> = {
+  stateOwned: "state-owned suppliers do not sign private supply agreements",
+  embargo: "an embargo blocks trade between the two countries",
+  noCapacity: "it has no spare capacity for this commodity right now",
+  invalidVolume: "the volume on the proposal is not valid",
+};
+
+/**
+ * Persist the supplier's answer to a player proposal. A counter is the same
+ * revision a player counter writes (supplier-authored, so the buyer can accept
+ * it); a decline withdraws the proposal. Both are guarded on the buyer's offer
+ * still being the current one, so a proposal the player amended or cancelled in
+ * the meantime is left alone.
+ */
+async function writeSupplierReplies(
+  collection: Collection<SupplyAgreement>,
+  args: {
+    counters: Extract<NppAgreementDecision, { action: "counter" }>[];
+    declines: Extract<NppAgreementDecision, { action: "decline" }>[];
+    rawById: ReadonlyMap<string, SupplyAgreement>;
+    turn: number;
+    now: Date;
+  }
+): Promise<void> {
+  const ops: AnyBulkWriteOperation<SupplyAgreement>[] = [];
+  for (const d of args.counters) {
+    const raw = args.rawById.get(d.agreementId);
+    if (!raw) continue;
+    const offer = {
+      revision: (raw.currentOffer?.revision ?? 1) + 1,
+      proposedByCorpId: raw.supplierCorpId,
+      volumeCap: d.volumeCap,
+      pricePremium: d.pricePremium,
+      exclusive: raw.exclusive ?? false,
+      ...(raw.durationTurns != null ? { durationTurns: raw.durationTurns } : {}),
+      proposedAtTurn: args.turn,
+      proposedAt: args.now,
+    };
+    ops.push({
+      updateOne: {
+        filter: { _id: raw._id!, status: "pending", proposedByCorpId: raw.buyerCorpId },
+        update: {
+          $set: {
+            volumeCap: d.volumeCap,
+            pricePremium: d.pricePremium,
+            proposedByCorpId: raw.supplierCorpId,
+            currentOffer: offer,
+            updatedAt: args.now,
+          },
+          $push: { offers: offer },
+        },
+      },
+    });
+  }
+  for (const d of args.declines) {
+    const raw = args.rawById.get(d.agreementId);
+    if (!raw) continue;
+    ops.push({
+      updateOne: {
+        filter: { _id: raw._id!, status: "pending", proposedByCorpId: raw.buyerCorpId },
+        update: { $set: { status: "cancelled", updatedAt: args.now } },
+      },
+    });
+  }
+  if (ops.length > 0) await collection.bulkWrite(ops, { ordered: false });
+}
+
+/** Tell each proposing player how the AI supplier answered. */
+async function notifySupplierReplies(args: {
+  counters: Extract<NppAgreementDecision, { action: "counter" }>[];
+  declines: Extract<NppAgreementDecision, { action: "decline" }>[];
+  rawById: ReadonlyMap<string, SupplyAgreement>;
+  nameById: ReadonlyMap<string, string | undefined>;
+  userById: ReadonlyMap<string, Corporation["userId"] | undefined>;
+}): Promise<void> {
+  const inputs: NotificationInput[] = [];
+  const label = (raw: SupplyAgreement) => COMMODITY_LABELS[raw.commodity] ?? raw.commodity;
+  const supplierName = (raw: SupplyAgreement) =>
+    args.nameById.get(raw.supplierCorpId.toString()) ?? "The supplier";
+  for (const d of args.counters) {
+    const raw = args.rawById.get(d.agreementId);
+    const userId = raw && args.userById.get(raw.buyerCorpId.toString());
+    if (!raw || !userId) continue;
+    const pct = Math.round(d.pricePremium * 100);
+    inputs.push({
+      userId,
+      type: "corp_supply_agreement_offer",
+      title: "Supply agreement countered",
+      message: `${supplierName(raw)} countered your ${label(raw)} supply proposal at ${pct > 0 ? "+" : ""}${pct}% of market for ${Math.floor(d.volumeCap)} units. AI suppliers accept at most 10% below market and only what they can spare. Accept or counter in the Commodities tab.`,
+      metadata: {
+        corporationId: raw.buyerCorpId.toString(),
+        agreementId: d.agreementId,
+        offerRevision: (raw.currentOffer?.revision ?? 1) + 1,
+      },
+    });
+  }
+  for (const d of args.declines) {
+    const raw = args.rawById.get(d.agreementId);
+    const userId = raw && args.userById.get(raw.buyerCorpId.toString());
+    if (!raw || !userId) continue;
+    inputs.push({
+      userId,
+      type: "corp_supply_agreement_update",
+      title: "Supply agreement declined",
+      message: `${supplierName(raw)} declined your ${label(raw)} supply proposal: ${DECLINE_TEXT[d.reason]}.`,
+      metadata: {
+        corporationId: raw.buyerCorpId.toString(),
+        agreementId: d.agreementId,
+        event: "declined",
+      },
+    });
+  }
+  await createNotifications(inputs);
 }
 
 /**
@@ -899,7 +1082,9 @@ export async function processNppSupplyAgreements(
     .collection<Corporation>("corporations")
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
-      { projection: { countryId: 1, countryOwnerId: 1, ownershipState: 1, ceoType: 1 } }
+      {
+        projection: { name: 1, countryId: 1, countryOwnerId: 1, ownershipState: 1, ceoType: 1 },
+      }
     )
     .toArray();
   if (nppCorps.length === 0) return { accepted: 0, cancelled: 0, proposed: 0 };
@@ -972,15 +1157,19 @@ export async function processNppSupplyAgreements(
     ),
   ];
   const externalBuyers = new Map<string, ExternalBuyer>();
+  const externalBuyerUsers = new Map<string, Corporation["userId"]>();
   if (externalBuyerIds.length > 0) {
     const docs = await db
       .collection<Corporation>("corporations")
       .find(
         { _id: { $in: externalBuyerIds.map((id) => new ObjectId(id)) } },
-        { projection: { countryId: 1 } }
+        { projection: { countryId: 1, userId: 1 } }
       )
       .toArray();
-    for (const d of docs) externalBuyers.set(d._id.toString(), { countryId: d.countryId });
+    for (const d of docs) {
+      externalBuyers.set(d._id.toString(), { countryId: d.countryId });
+      externalBuyerUsers.set(d._id.toString(), d.userId);
+    }
   }
   const sectorsByCorp = new Map<string, CorporateSector[]>();
   for (const s of sectors) {
@@ -1052,6 +1241,16 @@ export async function processNppSupplyAgreements(
     (decision): decision is Extract<NppAgreementDecision, { action: "cancelNotice" }> =>
       decision.action === "cancelNotice"
   );
+  const counters = decisions.filter(
+    (decision): decision is Extract<NppAgreementDecision, { action: "counter" }> =>
+      decision.action === "counter"
+  );
+  const declines = decisions.filter(
+    (decision): decision is Extract<NppAgreementDecision, { action: "decline" }> =>
+      decision.action === "decline"
+  );
+  const rawById = new Map(rawAgreements.map((a) => [a._id!.toString(), a] as const));
+  const nameById = new Map(nppCorps.map((c) => [c._id.toString(), c.name] as const));
   let accepted = 0;
   let cancelled = 0;
   let proposed = 0;
@@ -1088,6 +1287,7 @@ export async function processNppSupplyAgreements(
   // turn. Give each a staggered expiry; after the first pass this finds none.
   const openEnded = openEndedAiContracts(rawAgreements, nppIds);
   const [, activationResult, cancellationResult] = await Promise.all([
+    writeSupplierReplies(agreementsCollection, { counters, declines, rawById, turn, now }),
     openEnded.length > 0
       ? agreementsCollection.bulkWrite(
           openEnded.map((id) => ({
@@ -1152,6 +1352,14 @@ export async function processNppSupplyAgreements(
   if (inserts.length > 0) {
     await agreementsCollection.insertMany(inserts);
   }
+
+  await notifySupplierReplies({
+    counters,
+    declines,
+    rawById,
+    nameById,
+    userById: externalBuyerUsers,
+  });
 
   step.mark("nppSupply.write");
 

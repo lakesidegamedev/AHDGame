@@ -32,7 +32,7 @@ export interface LadderBounds {
   centerIndex: number;
 }
 
-export const LEGACY_LADDER_BOUNDS: LadderBounds = { maxIndex: 6, centerIndex: 3 };
+const LEGACY_LADDER_BOUNDS: LadderBounds = { maxIndex: 6, centerIndex: 3 };
 
 export function ladderBounds(optionCount: number | undefined | null): LadderBounds {
   if (!Number.isInteger(optionCount) || (optionCount as number) <= 0) {

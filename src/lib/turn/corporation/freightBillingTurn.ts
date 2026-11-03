@@ -109,12 +109,29 @@ export function buildFreightBillingBySector(args: {
         if (!stateCharges && !(stateRevenue > 0) && !ownRouteCharges && !groupRouteCharge) continue;
         const hostCode = resolveSectorHostCurrencyCode(sector, corp);
         const hostRate = fxRateForSectorHostFromMap(sector, corp, lookups.exchangeRatesByCurrency);
+        // Only the flow fields are read, so build that shape instead of
+        // copying the whole sector document once per billed sector.
         const units = computeSectorCommodityUnits(
           {
-            ...sector,
+            _id: sector._id,
+            sectorType: sector.sectorType,
+            stateId: sector.stateId,
+            revenue: sector.revenue,
+            strategyId: sector.strategyId,
+            transitionFromStrategyId: sector.transitionFromStrategyId,
+            transitionStartTurn: sector.transitionStartTurn,
+            industryModel: sector.industryModel,
+            mediaDiscriminator: sector.mediaDiscriminator,
             revenueAnchor: readCorpEconomicAnchor(sector.revenue, hostCode, hostRate),
             producedUnits: sector.producedUnits,
             capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,
+            mothballed: sector.mothballed,
+            productionPolicyLevel: sector.productionPolicyLevel,
+            embargoSuspended: sector.embargoSuspended,
+            embargoExportExposure: sector.embargoExportExposure,
+            militaryDivertedFraction: sector.militaryDivertedFraction,
+            militaryDivertedTurn: sector.militaryDivertedTurn,
+            countryId: sector.countryId,
           },
           currentTurn,
           {
@@ -183,6 +200,9 @@ export function buildFreightBillingBySector(args: {
  * foreign) sector neither earns nor bleeds while dormant, matching the
  * sector's `costs` leg.
  */
+/** Shared empty update for the (usual) sector that has no freight fields to write. */
+const NO_SECTOR_UPDATE: Record<string, unknown> = {};
+
 export function resolveSectorFreightBillingLegs(args: {
   market: Pick<MarketContext, "freightBillingChargeBySectorId" | "freightBillingCreditBySectorId">;
   sector: Pick<CorporateSector, "_id" | "freightBillingCharge" | "freightBillingCredit">;
@@ -202,20 +222,27 @@ export function resolveSectorFreightBillingLegs(args: {
     sectorFxRate,
     shippingCostMultiplier = 1,
   } = args;
+  const charges = market.freightBillingChargeBySectorId;
+  const credits = market.freightBillingCreditBySectorId;
+  const active = charges != null || credits != null;
+  // Freight billing off and nothing stale to clear: the common case on every
+  // world that does not bill freight. Skip the id conversion and the update.
+  if (
+    !active &&
+    typeof sector.freightBillingCharge !== "number" &&
+    typeof sector.freightBillingCredit !== "number"
+  )
+    return { charge: 0, credit: 0, sectorUpdate: NO_SECTOR_UPDATE };
   const sectorId = sector._id.toString();
   const dailyCharge = embargoLegacyMothball
     ? 0
-    : (market.freightBillingChargeBySectorId?.get(sectorId) ?? 0) *
+    : (charges?.get(sectorId) ?? 0) *
       (Number.isFinite(shippingCostMultiplier)
         ? Math.max(0, Math.min(1, shippingCostMultiplier))
         : 1);
-  const dailyCredit = embargoLegacyMothball
-    ? 0
-    : (market.freightBillingCreditBySectorId?.get(sectorId) ?? 0);
+  const dailyCredit = embargoLegacyMothball ? 0 : (credits?.get(sectorId) ?? 0);
   const charge = dailyCharge / TURNS_PER_DAY;
   const credit = dailyCredit / TURNS_PER_DAY;
-  const active =
-    market.freightBillingChargeBySectorId != null || market.freightBillingCreditBySectorId != null;
   const sectorUpdate: Record<string, unknown> = {};
   if (active) {
     sectorUpdate.freightBillingCharge = writeCorpEconomicLocal(

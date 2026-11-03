@@ -1,6 +1,7 @@
 "use client";
 
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { BondMarketDemandWidget } from "@/components/country/BondMarketDemandWidget";
 
@@ -12,7 +13,7 @@ import { BondMarketDemandWidget } from "@/components/country/BondMarketDemandWid
 export function GlobalBondMarketDemandPanel() {
   const registered = useRegisteredCountries();
   const entries = registered
-    .map((id) => [id, COUNTRY_CONFIGS[id]] as [CountryId, { name: string }])
+    .map((id) => [id, COUNTRY_CLIENT_CONFIGS[id]] as [CountryId, { name: string }])
     .sort(([a], [b]) => a.localeCompare(b));
   return (
     <section>

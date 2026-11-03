@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useGameEvents } from "@/hooks/useGameEvents";
 import { useParams } from "next/navigation";
@@ -19,18 +20,23 @@ import { MinisterCallouts } from "@/components/budget/treasury/MinisterCallouts"
 import { FiscalMechanicsNote } from "@/components/budget/treasury/FiscalMechanicsNote";
 import { DefenseFundingNote } from "@/components/budget/treasury/DefenseFundingNote";
 import { BudgetAuthoringPanel } from "@/components/uk/budget/BudgetAuthoringPanel";
-import { PlannedEconomyPanel } from "@/components/economy/PlannedEconomyPanel";
 import { Button, Skeleton, CardSkeleton, StatGridSkeleton, ListRowSkeleton } from "@/components/ui";
-import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import { concentrationStatus } from "@/lib/nationalization/concentrationStatus";
 import { getTreasuryIdentity } from "@/lib/constants/treasuryIdentity";
-import { budgetUsdEquivalent } from "@/lib/currency/budgetUsdEquivalent";
+import { budgetUsdEquivalentFromRate } from "@/lib/currency/budgetUsdEquivalentFromRate";
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { budgetApiUrl } from "@/lib/urls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
+import {
+  lawSpendingCategory,
+  otherRevenueParts,
+  otherSpendingParts,
+} from "@/lib/budget/rules/otherLineBreakdown";
 import {
   REVENUE_TO_TAX_BASE,
   COUNTRY_LABELS,
@@ -41,15 +47,21 @@ import {
   type BudgetData,
 } from "./BudgetPanels";
 
+// Planned-economy metrics render only for command economies and sit below the
+// fold, so the panel and its commodity/SOE tables load with the section.
+const PlannedEconomyPanel = dynamic(
+  () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
+  { ssr: false }
+);
+
 export function NationalBudgetClient() {
   const { code } = useParams<{ code: string }>();
-  const { preset, loaded: worldFlagsLoaded } = useWorldFlags();
+  const { loaded: worldFlagsLoaded } = useWorldFlags();
   const countryParam = code?.toUpperCase() as CountryId | undefined;
   const countryId: CountryId =
-    countryParam && countryParam in COUNTRY_CONFIGS
+    countryParam && countryParam in COUNTRY_DISPLAY_LABELS
       ? (countryParam as CountryId)
-      : COUNTRY_CONFIGS.US.id;
-  const config = getCountryConfig(countryId);
+      : ("US" as CountryId);
 
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +97,7 @@ export function NationalBudgetClient() {
   }, [countryId, selectedFY, reloadNonce]);
 
   const budgetCountryKey = (
-    countryId in COUNTRY_LABELS ? countryId : COUNTRY_CONFIGS.US.id
+    countryId in COUNTRY_LABELS ? countryId : ("US" as CountryId)
   ) as keyof typeof COUNTRY_LABELS;
   const labels = COUNTRY_LABELS[budgetCountryKey];
   const moneyPrefix = getCurrencyPrefix(countryId, data?.budget.currencyCode);
@@ -270,6 +282,7 @@ export function NationalBudgetClient() {
         amount: value,
         rate: taxRate ?? null,
         base: hasBase ? taxBase : null,
+        ...(key === "other" ? { parts: otherRevenueParts({ total: value }) } : {}),
       };
     }
   );
@@ -300,9 +313,27 @@ export function NationalBudgetClient() {
             labels.spendingDescriptions[key as keyof typeof labels.spendingDescriptions] ??
             `${label} spending.`,
           amount: value,
+          // An uncategorised law books into "other" (spending.ts), so it is
+          // listed there too rather than under no line at all.
           laws: enactedLaws
-            .filter((law) => law.budgetCategory === key)
+            .filter((law) => lawSpendingCategory(law.budgetCategory) === key)
             .map((law) => ({ title: law.title, cost: formatLawCost(law), year: law.enactedYear })),
+          // Live laws carry their annual cost, so the Other line can be added
+          // up; a historical snapshot stores only cost descriptions, so a past
+          // year lists its laws without amounts. Deliberate: Other Revenue's
+          // one described part needs no amounts, so it shows in both views.
+          ...(key === "other" && !(data.isSnapshot ?? false)
+            ? {
+                parts: otherSpendingParts({
+                  total: value,
+                  laws: (enactedLaws as DisplayEnactedLaw[])
+                    .filter(
+                      (law) => !law.isGrant && lawSpendingCategory(law.budgetCategory) === key
+                    )
+                    .map((law) => ({ title: law.title, amount: law.annualCost })),
+                }),
+              }
+            : {}),
         };
       }),
     {
@@ -392,7 +423,7 @@ export function NationalBudgetClient() {
         <TreasuryMasthead
           countryId={countryId}
           identity={treasuryIdentity}
-          executiveLabel={config.executiveLabel}
+          executiveLabel={COUNTRY_DISPLAY_LABELS[countryId].executiveLabel}
           fiscalYear={budget.fiscalYear}
           fyMin={fyMin}
           fyMax={fyMax}
@@ -426,7 +457,9 @@ export function NationalBudgetClient() {
               compare={compare}
               prev={prevFyPoint}
               toUsd={
-                worldFlagsLoaded ? (n) => budgetUsdEquivalent(n, countryId, preset) : undefined
+                worldFlagsLoaded
+                  ? (n) => budgetUsdEquivalentFromRate(n, data?.usdExchangeRate)
+                  : undefined
               }
             />
           }
@@ -451,7 +484,7 @@ export function NationalBudgetClient() {
           />
         ) : null}
 
-        {isLive && countryId === COUNTRY_CONFIGS.UK.id ? (
+        {isLive && countryId === ("UK" as CountryId) ? (
           <BudgetAuthoringPanel countryCode="uk" />
         ) : null}
 

@@ -74,7 +74,11 @@ describe("POST /api/world/german-question/play", () => {
     const { POST } = await import("./route");
     await POST(req({ actor: "seat", playId: "aid" }));
     const { checkRateLimit } = await import("@/lib/api/rateLimit");
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("user-1", 20, 60_000);
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith(
+      "api/world/german-question/play:user-1",
+      20,
+      60_000
+    );
   });
 
   it("passes the request to the guard so same-origin and bot-token checks run", async () => {

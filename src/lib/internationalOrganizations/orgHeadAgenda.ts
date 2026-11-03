@@ -48,7 +48,7 @@ import {
  * entering a conflict commit the proposing member's own forces, so they stay on
  * that member's diplomatic budget like joining and leaving do.
  */
-export const ORG_HEAD_AGENDA_PROPOSAL_TYPES: ReadonlySet<OrganizationResolutionType> = new Set([
+const ORG_HEAD_AGENDA_PROPOSAL_TYPES: ReadonlySet<OrganizationResolutionType> = new Set([
   "free_trade_agreement",
   "sanctions",
   "directive",
@@ -141,7 +141,7 @@ export async function loadOrganizationHeads(
 }
 
 /** The sitting head of one organisation, or null when the seat is vacant. */
-export async function resolveOrganizationHead(
+async function resolveOrganizationHead(
   db: Db,
   organizationId: InternationalOrganizationId
 ): Promise<OrganizationHeadSeat | null> {

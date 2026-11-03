@@ -242,7 +242,6 @@ describe("named loan servicing across charter types", () => {
     world.db.seed("corporateSectors", [
       { _id: new ObjectId(), corporationId: world.bankId, sectorType: "financial" },
     ]);
-    world.db.collection("gameConfig").docs[0].playerAdvancedBankChartersEnabled = true;
     world.db.collection("centralBanks").docs[0].externalBroadMoney = 100_000;
     const oldLoanId = new ObjectId();
     const oldNpcLoanId = new ObjectId();

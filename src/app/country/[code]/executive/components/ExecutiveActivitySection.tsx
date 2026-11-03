@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
+import { executiveUrl } from "@/lib/urls";
 import { getExecutiveSurface, termClockBadge } from "@/lib/constants/executiveSurface";
-import { getExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { executiveApiUrl } from "@/lib/urls";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { InstrumentStrip, type InstrumentTile } from "./InstrumentStrip";
@@ -51,6 +51,8 @@ export interface ExecutiveClockTile {
  */
 export function ExecutiveActivitySection({
   countryId,
+  governmentType,
+  executiveTermLimit,
   cabinetSource,
   clock,
   ledgerFooter,
@@ -58,6 +60,10 @@ export function ExecutiveActivitySection({
   children,
 }: {
   countryId: CountryId;
+  /** Static government type, so the term-limit badge mirrors the executive seat. */
+  governmentType: GovernmentType;
+  /** Static term cap for this executive seat, or null where it has none. */
+  executiveTermLimit?: number | null;
   /**
    * Which cabinet API feeds the roster — declared by the rendering hub (not
    * inferred from static config) so a runtime regime conversion keeps the
@@ -132,9 +138,7 @@ export function ExecutiveActivitySection({
   // configured executiveTermLimit applies to the head of state (e.g. IE's
   // Uachtarán), which is the page's executive only in presidential systems.
   const surfaceTermLimit =
-    COUNTRY_CONFIGS[countryId].governmentType === "presidential"
-      ? (getExecutiveTermLimit(countryId) ?? undefined)
-      : undefined;
+    governmentType === "presidential" ? (executiveTermLimit ?? undefined) : undefined;
   const badge = termClockBadge(surfaceTermLimit, clock?.currentTerm);
   const tiles: InstrumentTile[] = [
     // Clock tile renders only when the hub supplies real data — no dash tiles.
@@ -201,7 +205,7 @@ export function ExecutiveActivitySection({
             filled={roster?.filled}
             total={roster?.total}
             footer={{
-              href: `${COUNTRY_CONFIGS[countryId].executivePath}/cabinet`,
+              href: `${executiveUrl(countryId)}/cabinet`,
               label: "All positions",
             }}
           />

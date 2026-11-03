@@ -28,164 +28,15 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
  * Sector types, costs, labels, and financial parameters.
  */
 
-export const CORPORATION_TYPES = [
-  "financial",
-  "media",
-  "manufacturing",
-  "chemical_industries",
-  "healthcare",
-  "retail",
-  "technology",
-  "energy",
-  "agriculture",
-  "real_estate",
-  "construction",
-  "defense",
-  "telecommunications",
-  "logistics",
-  "extraction",
-] as const;
-
-export type CorporationType = (typeof CORPORATION_TYPES)[number];
-
-/** Specialized production models that belong to the manufacturing taxonomy. */
-export type ManufacturingIndustryModel = "vehicles";
-
-/** The entertainment operating lane inside canonical media. */
-export type MediaDiscriminator = "entertainment";
-
-/**
- * Operating lanes that carry their own economics inside a corporation type.
- * Recipes, prices, tech, plant sizes and seed weights for vehicle makers and
- * entertainment houses are keyed by these lanes. Stored rows never hold a lane
- * key: they hold the corporation type plus `industryModel` or
- * `mediaDiscriminator` (see operatingSectorIdentity).
- */
-export const SPECIALIZED_OPERATING_LANES = [
-  "manufacturing_vehicles",
-  "media_entertainment",
-] as const;
-
-export type SpecializedOperatingLane = (typeof SPECIALIZED_OPERATING_LANES)[number];
-
-/**
- * Every economic profile a sector can run under: a corporation type or a
- * specialized lane. The order is load-bearing: seeded state-enterprise ids,
- * specialization rotations and seeded random picks derive from a lane's
- * position, so the lanes sit where their economics always sat. Append only.
- */
-export const OPERATING_SECTOR_TYPES = [
-  "financial",
-  "media",
-  "manufacturing",
-  "chemical_industries",
-  "healthcare",
-  "retail",
-  "manufacturing_vehicles",
-  "technology",
-  "energy",
-  "agriculture",
-  "real_estate",
-  "construction",
-  "defense",
-  "telecommunications",
-  "media_entertainment",
-  "logistics",
-  "extraction",
-] as const satisfies readonly (CorporationType | SpecializedOperatingLane)[];
-
-export type OperatingSectorType = (typeof OPERATING_SECTOR_TYPES)[number];
-
-/** The persisted identity of an operating lane. */
-export interface OperatingSectorIdentity {
-  sectorType: CorporationType;
-  industryModel: ManufacturingIndustryModel | null;
-  mediaDiscriminator: MediaDiscriminator | null;
-}
-
-export function isCorporationType(value: unknown): value is CorporationType {
-  return typeof value === "string" && (CORPORATION_TYPES as readonly string[]).includes(value);
-}
-
-export function isOperatingSectorType(value: unknown): value is OperatingSectorType {
-  return typeof value === "string" && (OPERATING_SECTOR_TYPES as readonly string[]).includes(value);
-}
-
-/** Resolve the operating lane a persisted sector (or corporation) runs under. */
-export function operatingSectorTypeFor(
-  sectorType: CorporationType,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null
-): OperatingSectorType {
-  if (sectorType === "manufacturing" && industryModel === "vehicles") {
-    return "manufacturing_vehicles";
-  }
-  if (sectorType === "media" && mediaDiscriminator === "entertainment") {
-    return "media_entertainment";
-  }
-  return sectorType;
-}
-
-/** The fields a row stores for an operating lane. */
-export function operatingSectorIdentity(lane: OperatingSectorType): OperatingSectorIdentity {
-  if (lane === "manufacturing_vehicles") {
-    return { sectorType: "manufacturing", industryModel: "vehicles", mediaDiscriminator: null };
-  }
-  if (lane === "media_entertainment") {
-    return { sectorType: "media", industryModel: null, mediaDiscriminator: "entertainment" };
-  }
-  return { sectorType: lane, industryModel: null, mediaDiscriminator: null };
-}
-
-/**
- * Mongo filter fields selecting exactly one operating lane's rows. A plain
- * type matches rows with no model or discriminator (null matches absent).
- * Unknown values pass through as a bare sector type.
- */
-export function operatingSectorFilter(lane: OperatingSectorType): OperatingSectorIdentity;
-export function operatingSectorFilter(lane: string): {
-  sectorType: string;
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
-};
-export function operatingSectorFilter(lane: string): {
-  sectorType: string;
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
-} {
-  if (!isOperatingSectorType(lane)) return { sectorType: lane };
-  return operatingSectorIdentity(lane);
-}
-
-/** The corporation type an operating lane belongs to. */
-export function corporationTypeOfLane(lane: OperatingSectorType): CorporationType {
-  return operatingSectorIdentity(lane).sectorType;
-}
-
-export const CORPORATION_TYPE_LABELS: Record<CorporationType, string> = {
-  financial: "Financial",
-  media: "Media",
-  manufacturing: "Manufacturing",
-  chemical_industries: "Chemical Industries",
-  healthcare: "Healthcare",
-  retail: "Retail",
-  technology: "Technology",
-  energy: "Energy",
-  agriculture: "Agriculture",
-  real_estate: "Real Estate",
-  construction: "Construction",
-  defense: "Defense",
-  telecommunications: "Telecommunications",
-  logistics: "Logistics",
-  extraction: "Extraction & Mining",
-};
-
-/** Labels for operating lanes; the specialized lanes name their line of business. */
-export const OPERATING_SECTOR_TYPE_LABELS: Record<OperatingSectorType, string> = {
-  ...CORPORATION_TYPE_LABELS,
-  manufacturing_vehicles: "Automobiles",
-  media_entertainment: "Entertainment",
-};
+// Re-export the client-safe core so every existing import from this module
+// keeps working; client components import corporationsClient directly.
+export * from "./corporationsClient";
+import {
+  GROWTH_COST_MULTIPLIER,
+  OPERATING_SECTOR_TYPES,
+  TURNS_PER_DAY,
+  type OperatingSectorType,
+} from "./corporationsClient";
 
 /** Cost deducted from character funds to found a corporation */
 export const CORPORATION_FOUNDING_COST = 1_000_000;
@@ -252,12 +103,6 @@ export const RESTRUCTURE_SECTOR_SALVAGE_FRACTION = 0.85;
  * (founded before that field existed) are exempt.
  */
 export const MIN_CORPORATION_DISSOLUTION_AGE_TURNS = 24;
-
-/** Fraction of market capitalization charged to relocate corporate headquarters */
-export const RELOCATION_COST_FRACTION = 0.07;
-
-/** Multiplier applied to base relocation cost when the HQ crosses into a new country */
-export const CROSS_COUNTRY_RELOCATION_MULTIPLIER = 2;
 
 /** Flat cost in anchor currency (₳) to rename a corporation */
 export const CORPORATION_RENAME_COST = 500_000;
@@ -482,9 +327,6 @@ export function calculateWorkers(
   const skillMultiplier = 1 - ((clamped - 50) / 50) * WORKFORCE_SKILL_WORKER_MAX_ADJUSTMENT;
   return Math.max(1, Math.round(baseWorkers * skillMultiplier));
 }
-
-/** Growth cost multiplier — growthCost = revenue × growthRate × this */
-export const GROWTH_COST_MULTIPLIER = 3.0;
 
 // ─── Market Dominance Modifiers ──────────────────────────────────────────────
 // Sectors that exceed DOMINANCE_MARKET_SHARE_THRESHOLD of their (state, sectorType)
@@ -880,12 +722,6 @@ export function calculateDailyGrowthCost(
   );
 }
 
-/** Maximum growth rate a player can set (% per game year) */
-export const MAX_GROWTH_RATE = 15.0;
-
-/** Minimum growth rate — negative means deliberate downsizing (% per game year) */
-export const MIN_GROWTH_RATE = -2;
-
 /**
  * Per-turn convergence step when ticking `currentGrowthRate` toward
  * `targetGrowthRate`. Matches the ~0.5%/turn design note so a full hand-off
@@ -952,23 +788,6 @@ export const SECTOR_TYPE_COUNT = OPERATING_SECTOR_TYPES.length;
  * Downsizing returns the same amount.
  */
 export const GROWTH_ADJUST_COST_PER_PERCENT = 0.05;
-
-/**
- * Turns over which a sector growth rate is applied (compounding).
- *
- * One game year = 48 turns, so each turn applies 1/48th of the rate. This is
- * NOT a day: {@link TURNS_PER_DAY} is 24, and every money figure in the game
- * (revenue, maintenance, wages, growth cost, profit) is a *daily* rate on that
- * 24-turn clock. A game year is therefore two financial days.
- *
- * Was named `GROWTH_RATE_TURNS_PER_DAY`, which read as "48 turns per day" and
- * made the growth rate look like a daily figure in every call site and label
- * that touched it. Renamed in #3934 alongside the UI copy.
- */
-export const GROWTH_RATE_TURNS_PER_YEAR = 48;
-
-/** Turns per day — daily rates are divided by this for per-turn processing */
-export const TURNS_PER_DAY = 24;
 
 // ─── Share trading constants ──────────────────────────────────────────────────
 
@@ -1121,53 +940,10 @@ export const SECTOR_RISK_PREMIUM: Record<string, number> = {
   default: 0.05,
 };
 
-// ─── Stock-market boost (phased operating + valuation lift) ─────────────────
-// Two overlapping turn-ramped multipliers that lift the equity market without
-// a one-turn step the ±35% share-price rate limiter would have to absorb:
-//
-//   Phase A (revenue first): sector operating revenue ramps 1.0 →
-//   STOCK_BOOST_REVENUE_TARGET over STOCK_BOOST_REVENUE_RAMP_TURNS turns.
-//   Financial sectors compound an extra STOCK_BOOST_FINANCIAL_REVENUE_EXTRA,
-//   so chartered-bank parents feel the operating lift, not just the valuation.
-//   Headcount is deliberately untouched: nameplate revenue (the worker basis)
-//   is not boosted, only realized operating revenue.
-//
-//   Phase B (valuation follows): sector NPV and bank NPV ramp 1.0 → target
-//   over STOCK_BOOST_NPV_RAMP_TURNS turns, starting 40 turns after
-//   revenue so cash earnings lead and capitalized values follow. The financial
-//   cost-of-capital premium eases 0.06 → STOCK_BOOST_FINANCIAL_RISK_PREMIUM
-//   over the same window.
-//
-// The pure ramp math lives in `@/lib/corporations/rules/marketBoost`; these
-// are the tuning hooks. Judgment-call magnitudes: validate with a worldsim
-// A/B before treating as final.
-//
-// Owner-approved acceleration: at turn 1253 phase A is 40/192 complete.
-// Phase B starts at turn 1253, following phase A by 40 turns.
-
-/** First turn the operating-revenue boost applies (ramps from 1.0). */
-export const STOCK_BOOST_REVENUE_START_TURN = 1213;
-/** Turns to ramp revenue 1.0 → target (192 = 4 game years = ~8 real days). */
-export const STOCK_BOOST_REVENUE_RAMP_TURNS = 192;
-/** Steady-state operating-revenue multiplier (all sectors). */
-export const STOCK_BOOST_REVENUE_TARGET = 1.2;
-/** Extra steady-state revenue multiplier compounding on financial sectors. */
-export const STOCK_BOOST_FINANCIAL_REVENUE_EXTRA = 1.1;
-/** First turn the NPV boost applies (40 turns after phase A). */
-export const STOCK_BOOST_NPV_START_TURN = 1253;
-/** Turns to ramp NPV 1.0 → target. */
-export const STOCK_BOOST_NPV_RAMP_TURNS = 192;
-/** Steady-state sector-NPV multiplier. */
-export const STOCK_BOOST_SECTOR_NPV_TARGET = 1.3;
-/** Steady-state bank-income NPV multiplier (chartered banks only). */
-export const STOCK_BOOST_BANK_NPV_TARGET = 1.5;
-/** Financial cost-of-capital risk premium once the NPV window completes. */
-export const STOCK_BOOST_FINANCIAL_RISK_PREMIUM = 0.04;
-
-/**
- * Maximum dividend rate (%). CEOs cannot set above this; turn processing clamps existing values.
- */
-export const MAX_DIVIDEND_RATE = 25;
+/** Cost-of-capital risk premium for a corp type (the standing table, `default` fallback). */
+export function getSectorRiskPremium(corpType: string | null | undefined): number {
+  return SECTOR_RISK_PREMIUM[corpType as string] ?? SECTOR_RISK_PREMIUM.default;
+}
 
 // ─── Sector affinity sets ────────────────────────────────────────────────────
 // Each sector-specific metric only affects the listed sector types.

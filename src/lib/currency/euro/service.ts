@@ -4,7 +4,8 @@
  * refreshes the policy read caches used by national lending and savings books.
  */
 import type { AnyBulkWriteOperation, Db, Filter } from "mongodb";
-import { COUNTRY_CONFIGS, EU_EUROZONE_MEMBERS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId, EU_EUROZONE_MEMBERS } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { CentralBank } from "@/lib/db/types/centralBank";
@@ -43,7 +44,7 @@ export async function syncEuroMonetaryPolicy(db: Db, union: EuroMonetaryUnion): 
   }
   const updates: AnyBulkWriteOperation<CentralBank>[] = [];
   for (const country of Object.keys(union.members) as CountryId[]) {
-    const bankId = COUNTRY_CONFIGS[country].centralBank.sharedBankId ?? country;
+    const bankId = COUNTRY_CLIENT_CONFIGS[country].centralBank.sharedBankId ?? country;
     if (bankId === union.authorityId) continue;
     updates.push({
       updateOne: {
@@ -124,7 +125,7 @@ export async function reconcileEuroMonetaryUnion(
     if (!plan.union) return undefined;
     const bankIds = new Set(banks.map((bank) => bank._id));
     for (const country of Object.keys(plan.union.members) as CountryId[]) {
-      if (!bankIds.has(COUNTRY_CONFIGS[country].centralBank.sharedBankId ?? country)) {
+      if (!bankIds.has(COUNTRY_CLIENT_CONFIGS[country].centralBank.sharedBankId ?? country)) {
         throw new Error(`Euro accession requires the existing national bank for ${country}`);
       }
     }

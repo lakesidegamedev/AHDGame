@@ -12,7 +12,7 @@ export type MetricClass =
 export const RAMP_TURNS = 480; // 10 game-years
 
 /** Absolute magnitude-break ratio: actual > 3× or < 1/3 of expected → critical. */
-export const MAGNITUDE_BREAK_RATIO = 3;
+const MAGNITUDE_BREAK_RATIO = 3;
 
 /** Conformance Mode A relative tolerance (1%). */
 export const CONFORMANCE_REL_TOL = 0.01;
@@ -29,9 +29,6 @@ export const CONFORMANCE_POP_TOL = 0.03;
  * missing regions, not ordinary dual-source authorship noise.
  */
 export const CONFORMANCE_POP_STRUCTURAL_BREAK = 0.25;
-
-/** Sector share conformance tolerance (2%) — used when comparing to era weights. */
-export const CONFORMANCE_SECTOR_SHARE_TOL = 0.02;
 
 /** Sanity ceiling for a single sector's revenue share at turn 1. */
 export const CONFORMANCE_SECTOR_MAX_SHARE = 0.6;

@@ -92,38 +92,40 @@ beforeEach(() => {
 });
 
 describe("the Blend general page does not print the same standing twice", () => {
-  it("renders the stage and, below it, only the race detail tabs", () => {
+  it("renders the stage and, below it, only the race detail tabs", async () => {
     // The old "Also on this race" block repeated the stage: a second map, the
     // trends, the schedule. What the stage cannot hold (campaign presence,
     // trends, state drivers, turnout, the factor ledger) comes back as the
     // detail-only tab section, and nothing else of the old page does.
-    const { getByTestId, queryByTestId } = renderPage();
-    expect(getByTestId("hero")).toBeTruthy();
-    expect(getByTestId("general-phase")).toBeTruthy();
+    const { queryByTestId, findByTestId } = renderPage();
+    // The stage screens are dynamic chunks, so they land a tick after paint.
+    expect(await findByTestId("hero")).toBeTruthy();
+    // GeneralPhaseView loads on demand now, so it lands a tick after first paint.
+    await findByTestId("general-phase");
     expect(queryByTestId("schedule")).toBeNull();
     expect(generalPhaseProps).toHaveLength(1);
     expect(generalPhaseProps[0].tabbedDetail).toBe(true);
     expect(generalPhaseProps[0].detailOnly).toBe(true);
   });
 
-  it("puts only the race detail tabs under the primary stage", () => {
+  it("puts only the race detail tabs under the primary stage", async () => {
     // The primary used to mount the Campaign Presence builder below the stage,
     // which drew a second US map of its own, plus the campaigns list and a
     // Your Campaign card. The stage map carries presence, the field table
     // carries campaign operations and the rail carries your campaign. The
     // detail-only tab section (presence, factor ledger and so on) is all that
     // joins it, and hides any tab with no data yet.
-    const { getByTestId, queryByTestId } = renderPage({ inPrimary: true });
-    expect(getByTestId("primary-stage")).toBeTruthy();
+    const { queryByTestId, findByTestId } = renderPage({ inPrimary: true });
+    expect(await findByTestId("primary-stage")).toBeTruthy();
     expect(queryByTestId("presence-map")).toBeNull();
-    expect(getByTestId("general-phase")).toBeTruthy();
+    await findByTestId("general-phase");
     expect(generalPhaseProps.at(-1)?.detailOnly).toBe(true);
   });
 
-  it("keeps the presence builder on an upcoming race, where nothing else carries it", () => {
-    const { getByTestId, queryByTestId } = renderPage({ isUpcoming: true });
+  it("keeps the presence builder on an upcoming race, where nothing else carries it", async () => {
+    const { queryByTestId, findByTestId } = renderPage({ isUpcoming: true });
     expect(queryByTestId("primary-stage")).toBeNull();
-    expect(getByTestId("presence-map")).toBeTruthy();
+    expect(await findByTestId("presence-map")).toBeTruthy();
   });
 
   it("leaves both blocks whole on a race with no Blend hero above them", () => {

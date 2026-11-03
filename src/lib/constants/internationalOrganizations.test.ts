@@ -277,7 +277,7 @@ describe("FOREIGN_AFFAIRS_POSITION_BY_COUNTRY", () => {
 
   // Regression (#980): countries that define a real foreign-affairs cabinet seat
   // must map to it, not null — otherwise a player foreign minister is never
-  // recognized and only the head-of-government fallback can vote/act.
+  // recognized at all.
   it.each([
     ["CN", "minister_of_foreign_affairs", CN_CABINET_POSITIONS],
     ["IE", "minister_for_foreign_affairs", IE_CABINET_POSITIONS],
@@ -297,7 +297,7 @@ describe("FOREIGN_AFFAIRS_POSITION_BY_COUNTRY", () => {
   // listed, so a ninth country cannot go quiet the same way.
 
   /**
-   * Left on the head-of-government fallback on purpose, not by omission. Both are
+   * Left out of the derived check on purpose, not by omission. Both are
    * sub-national, neither can be a belligerent, and the diplomatic surfaces for a
    * devolved administration are unverified — see the map's own comment.
    */
@@ -327,7 +327,7 @@ describe("FOREIGN_AFFAIRS_POSITION_BY_COUNTRY", () => {
 
   it("never maps a country to a seat its own cabinet does not define", () => {
     // A seat id that is not in the country's cabinet can never match a cabinetMembers
-    // row, so requireForeignMinister would silently fall back forever.
+    // row, so requireForeignMinister could never authorize anyone.
     for (const country of ALL_COUNTRY_IDS) {
       const seat = FOREIGN_AFFAIRS_POSITION_BY_COUNTRY[country];
       if (!seat) continue;

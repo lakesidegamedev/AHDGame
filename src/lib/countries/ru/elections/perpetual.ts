@@ -29,7 +29,7 @@ export async function ensureRUSupremeSovietElections(
 }
 
 /** Election type (and seated office) of the 1991 Soviet Congress of People's Deputies. */
-export const RU_UNION_CONGRESS_ELECTION_TYPE = "unionCongressDeputy";
+const RU_UNION_CONGRESS_ELECTION_TYPE = "unionCongressDeputy";
 
 /**
  * The Union Congress elects only while it is RU's active lower chamber: after

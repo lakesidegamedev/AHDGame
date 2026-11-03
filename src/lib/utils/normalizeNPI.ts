@@ -86,7 +86,7 @@ export function normalizeNationalReachPresidentialPrimary(npi: number): number {
  * `MAX_PARTY_INFLUENCE_BONUS_PRIMARY` in the election engine (so the vote-weight
  * bonus is likewise no longer ceilinged at that constant).
  */
-export const PRESIDENTIAL_PRIMARY_PARTY_INFLUENCE_SCALE = 150;
+const PRESIDENTIAL_PRIMARY_PARTY_INFLUENCE_SCALE = 150;
 
 export function normalizePartyInfluencePresidentialPrimary(partyInfluence: number): number {
   const x = Math.max(0, partyInfluence);

@@ -33,14 +33,14 @@ export interface MergerReviewSummary {
   decisionNote?: string;
 }
 
-export const MERGER_STATUS_LABEL: Record<MergerReviewSummary["status"], string> = {
+const MERGER_STATUS_LABEL: Record<MergerReviewSummary["status"], string> = {
   pending: "Under review",
   cleared: "Cleared",
   clearedWithRemedy: "Cleared with conditions",
   blocked: "Blocked",
 };
 
-export const MERGER_DECISION_LABEL: Record<string, string> = {
+const MERGER_DECISION_LABEL: Record<string, string> = {
   cleared: "Clear",
   clearedWithRemedy: "Clear with conditions",
   blocked: "Block",

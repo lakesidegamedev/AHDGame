@@ -22,6 +22,7 @@ import {
   supplyAgreementSectorStates,
 } from "@/lib/corporations/supplyAgreementCapacity";
 import { supportsCorporationWideSupplyAgreement } from "@/lib/market/commodityMarketScope";
+import { buyerCommodityUse } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import type { State } from "@/lib/db/types/state";
 
 interface RouteParams {
@@ -107,6 +108,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const capacityByState: Partial<
       Record<CommodityType, Record<string, CapacitySnapshot & { stateName: string }>>
     > = {};
+    // Local services reach only plants in their own state, so a buyer can only
+    // contract one where its own plants consume it. These are those states.
+    const buyerStatesByCommodity: Partial<
+      Record<CommodityType, Array<{ id: string; name: string }>>
+    > = {};
     if (marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
       const [sectors, world, config] = await Promise.all([
         db
@@ -128,6 +134,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
                 countryId: 1,
                 stateId: 1,
                 contractAchievableUnits: 1,
+                industryModel: 1,
+                mediaDiscriminator: 1,
               },
             }
           )
@@ -184,6 +192,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
           byState[stateId] = { ...entry, stateName: stateNameById.get(stateId) ?? stateId };
         }
         capacityByState[commodity] = byState;
+        buyerStatesByCommodity[commodity] = buyerCommodityUse(
+          sectors,
+          commodity,
+          context.turn
+        ).states.map((stateId) => ({ id: stateId, name: stateNameById.get(stateId) ?? stateId }));
       }
     }
     return NextResponse.json({
@@ -214,6 +227,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       })),
       capacityByCommodity,
       capacityByState,
+      buyerStatesByCommodity,
     });
   } catch (error) {
     return handleRouteError(error);

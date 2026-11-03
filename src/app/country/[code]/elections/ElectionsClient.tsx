@@ -15,23 +15,24 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { toElectionDisplay, type ElectionsPageResponse } from "@/lib/elections/electionDisplay";
+import { toElectionDisplay } from "@/lib/elections/electionDisplay";
+import { fetchAllElections } from "@/lib/elections/fetchAllElections";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 import { useCountryManifestos } from "@/hooks/useCountryManifestos";
 import { useElectionActions } from "@/hooks/useElectionActions";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { getMessageStyle } from "@/lib/utils/formatters";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
+import { getMessageStyle } from "@/lib/utils/formattersCore";
 import type { CharacterBasic, ElectionDisplay, GameStateDisplay } from "@/lib/db/types";
 import type { CompositionResponse } from "@/lib/elections/electionResponseTypes";
 import { EmptyState } from "@/components/ui";
 import { isMapAvailable, selectElectionGroups } from "@/app/elections/components/electionsMapModel";
-import { ChamberComposition } from "@/app/elections/components/ChamberComposition";
-import { EmbeddedParliamentaryResults } from "@/components/elections/liveResults/EmbeddedParliamentaryResults";
 import {
   electionNightTitle,
   pickElectionNightAnchor,
-} from "@/lib/elections/liveResults/electionNight";
+} from "@/lib/elections/liveResults/electionNightChrome";
 import { resolveChamberForOffice } from "@/lib/elections/officeResolution";
 import { CommonsCarveUpPanel } from "@/components/uk/elections/CommonsCarveUpPanel";
 import { ManifestoFlavorBar } from "@/components/uk/elections/ManifestoFlavorBar";
@@ -65,40 +66,36 @@ const ElectionMap = dynamic(
   }
 );
 
-/** Must stay <= the GET /api/elections max limit so one request covers a country. */
-const ELECTIONS_PAGE_SIZE = 500;
-
-async function fetchAllElections(
-  countryId: string
-): Promise<{ elections: ElectionDisplay[]; error?: string }> {
-  const elections: ElectionDisplay[] = [];
-  let page = 1;
-
-  try {
-    for (;;) {
-      const res = await fetch(
-        `/api/elections?country=${countryId}&view=summary&limit=${ELECTIONS_PAGE_SIZE}&page=${page}`,
-        { signal: AbortSignal.timeout(15_000) }
-      );
-      if (!res.ok) {
-        console.error(`Failed to fetch elections: ${res.status}`);
-        return { elections: [], error: `Failed to fetch elections: ${res.status}` };
-      }
-
-      const data = (await res.json()) as ElectionsPageResponse;
-      const batch = Array.isArray(data.elections) ? data.elections : [];
-      elections.push(...batch.map(toElectionDisplay));
-
-      const total = typeof data.total === "number" ? data.total : elections.length;
-      if (batch.length <= 0 || page * ELECTIONS_PAGE_SIZE >= total) break;
-      page++;
-    }
-    return { elections };
-  } catch (err) {
-    console.error("Error fetching elections:", err);
-    return { elections: [], error: String(err) };
+// Chamber composition only renders once the viewer narrows to a single office,
+// so it is interaction-only. It drags in the seat chart with it; keeping the
+// panel's own frame while the chunk loads means the list below does not jump.
+const ChamberComposition = dynamic(
+  () => import("@/app/elections/components/ChamberComposition").then((m) => m.ChamberComposition),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-xl border border-card-border bg-card" />
+    ),
   }
-}
+);
+
+// Live results only render on an election night, and the embed's chain reaches
+// the turn engine's seat allocation tables. Its own loading state is the same
+// 10rem placeholder, so the lazy chunk lands in exactly the space it reserves.
+const EmbeddedParliamentaryResults = dynamic(
+  () =>
+    import("@/components/elections/liveResults/EmbeddedParliamentaryResults").then(
+      (m) => m.EmbeddedParliamentaryResults
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mb-6 h-40 animate-pulse rounded-xl border border-card-border bg-card" />
+    ),
+  }
+);
+
+/** Must stay <= the GET /api/elections max limit so one request covers a country. */
 
 interface ElectionsClientProps {
   code: string;
@@ -108,10 +105,10 @@ interface ElectionsClientProps {
 
 export default function ElectionsClient({ code, initialElections }: ElectionsClientProps) {
   const countryId = code.toUpperCase() as CountryId;
-  const config = COUNTRY_CONFIGS[countryId];
-  const countryName = config?.name ?? countryId;
-  const regionLabel = config?.regionLabel ?? "State";
-  const regionLabelPlural = config?.regionLabelPlural ?? "States";
+  const countryName = getCountryDisplayName(countryId);
+  const regionLabels = getCountryRegionLabels(countryId);
+  const regionLabel = regionLabels?.singular ?? "State";
+  const regionLabelPlural = regionLabels?.plural ?? "States";
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -186,7 +183,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
       setFetchError(null);
       try {
         const result = await fetchAllElections(countryId);
-        setElections(result.elections);
+        setElections(result.elections.map(toElectionDisplay));
         if (result.error) setFetchError(apiErrorText(result, "Request failed. Try again."));
         await fetchSecondary();
       } catch (err) {

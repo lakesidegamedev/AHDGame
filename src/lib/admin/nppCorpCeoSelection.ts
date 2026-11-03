@@ -20,7 +20,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { NppCeoTrackRecord } from "@/lib/db/types/npp";
 import { ceoRecordScore, hasGoodCeoRecord } from "@/lib/nppAutonomy/v6/rules/ceoTrackRecord";
 
-export const INDEPENDENT_PARTY = "independent";
+const INDEPENDENT_PARTY = "independent";
 
 export interface FreeNpp {
   /** NPP `_id` as a string. */

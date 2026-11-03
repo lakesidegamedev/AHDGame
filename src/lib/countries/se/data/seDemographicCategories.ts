@@ -1,21 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * Sweden Voter Archetypes — 7 groups across the 1979 Swedish-model spectrum.
- *   defaultEconomicLean: -5 (statist/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (secular/progressive) … +5 (traditional)
- * demographicProfileId "se_archetypes"; category _id "se_voterGroups".
- */
-export const SE_VOTER_GROUP_BASELINES: Record<string, number> = {
-  blue_collar_sap: 92,
-  public_sector_left: 92,
-  business_conservative: 93,
-  agrarian_centrist: 90,
-  liberal_urban: 92,
-  radical_left: 88,
-  rural_north: 90,
-};
-
 export const seDemographicCategories: DemographicCategory[] = [
   {
     _id: "se_voterGroups",

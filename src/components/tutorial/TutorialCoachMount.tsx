@@ -1,16 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
-import { useSignedIn } from "@/contexts/AuthDataContext";
+import dynamic from "next/dynamic";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import { useOptionalAuthMe, useSignedIn } from "@/contexts/AuthDataContext";
+import { useSingleplayerGuideOffered } from "@/lib/singleplayerGuideClient";
 import {
   DEFAULT_TUTORIAL_PLAN,
   resolveTutorialPlan,
   type TutorialPlan,
 } from "@/lib/onboarding/tutorialPlan";
-import { TutorialCoach } from "./TutorialCoach";
-import { captureProductEvent } from "@/lib/analytics/capture";
-import { TutorialWelcome } from "./TutorialWelcome";
+// Both surfaces render only after the character fetch resolves, so neither
+// belongs in the first-load chunk. The coach pulls the chapter plan and country
+// config with it; the welcome flow pulls the chapter catalog. A logged-out
+// visitor downloads neither, and a signed-in player fetches the coach after the
+// character request instead of blocking first paint with it.
+const TutorialCoach = dynamic(
+  () => import("./TutorialCoach").then((module) => module.TutorialCoach),
+  { ssr: false }
+);
+const TutorialWelcome = dynamic(
+  () => import("./TutorialWelcome").then((module) => module.TutorialWelcome),
+  { ssr: false }
+);
 
 /**
  * Mounts the tutorial surfaces for the signed-in character.
@@ -30,7 +42,7 @@ import { TutorialWelcome } from "./TutorialWelcome";
 const FRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Fire from anywhere (the /tutorial hub) to re-open the two-question flow. */
-export const TUTORIAL_CHOOSE_EVENT = "ahd:choose-tutorial";
+const TUTORIAL_CHOOSE_EVENT = "ahd:choose-tutorial";
 
 export function openTutorialChooser(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(TUTORIAL_CHOOSE_EVENT));
@@ -53,6 +65,11 @@ export function TutorialCoachMount() {
   /** True once the player answers in this session, so the tour starts straight away. */
   const [justChose, setJustChose] = useState(false);
   const signedIn = useSignedIn();
+  // A normal-mode local world that offers the first-game guide has its own
+  // walkthrough. Hold this one back there (the tutorial page still starts it),
+  // including while the guide's answer is pending.
+  const guideOffered = useSingleplayerGuideOffered();
+  const localGuideWorld = useOptionalAuthMe()?.navData?.user?.singleplayerMode === "normal";
 
   useEffect(() => {
     // No character to coach before sign-in; the request could only 401.
@@ -112,6 +129,7 @@ export function TutorialCoachMount() {
       body: JSON.stringify({ experience: plan.experience, interests: plan.interests }),
     });
     if (!res.ok) throw new Error("Failed to save tutorial plan");
+    const { captureProductEvent } = await import("@/lib/analytics/capture");
     void captureProductEvent("tutorial_plan_chosen", {
       experience: plan.experience,
       interest_count: plan.interests.length,
@@ -123,6 +141,7 @@ export function TutorialCoachMount() {
   }, []);
 
   if (!state) return null;
+  if (localGuideWorld && guideOffered !== false) return null;
 
   // Ask anyone who has not answered yet, not only brand new characters.
   //
