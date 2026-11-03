@@ -52,3 +52,20 @@ describe("soft price ceiling (issue #5448)", () => {
     expect(clampFundedPrice(600, 290, 100, { ...pace, softCeiling: false })).toBe(300);
   });
 });
+
+describe("soft ceiling order: soften the target, then pace (review of #5464)", () => {
+  const pace = { maxMove: 0.02, maxMultiplier: 3, softCeiling: true };
+
+  it("moves one realistic paced step toward the soft target, not below the floor of the step", () => {
+    // Target 600 on a 300 ceiling softens to about 296.4; one 2% step from 300 allows 294 to 306.
+    const next = clampFundedPrice(600, 300, 100, pace);
+    expect(next).toBeCloseTo(softCeiling(600, 300), 1);
+    expect(next).toBeGreaterThanOrEqual(294);
+  });
+
+  it("holds at the soft target over 60 turns with demand unchanged", () => {
+    let price = 300;
+    for (let turn = 0; turn < 60; turn++) price = clampFundedPrice(600, price, 100, pace);
+    expect(price).toBeCloseTo(softCeiling(600, 300), 1);
+  });
+});

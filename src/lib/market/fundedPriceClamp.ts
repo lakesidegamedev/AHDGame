@@ -55,12 +55,17 @@ export function clampFundedPrice(
     typeof pace.maxMultiplier === "number" && pace.maxMultiplier >= 1
       ? pace.maxMultiplier
       : FUNDED_SCARCITY_MAX;
-  let price = next;
+  // Soften the target, not the paced price: softening after the pace bound
+  // re-compressed an already softened price every turn, so a capped good with
+  // unchanged demand slid toward the knee (about 3.0x to 2.1x base over 60
+  // turns). Softened first, the price walks to the soft target and holds there.
+  let target = next;
+  if (pace.softCeiling && Number.isFinite(nominalBase) && nominalBase > 0)
+    target = softCeiling(target, nominalBase * ceiling);
+  let price = target;
   if (typeof previous === "number" && Number.isFinite(previous) && previous > 0)
     price = Math.min(previous * (1 + maxMove), Math.max(previous * (1 - maxMove), price));
-  if (Number.isFinite(nominalBase) && nominalBase > 0) {
-    if (pace.softCeiling) price = softCeiling(price, nominalBase * ceiling);
+  if (Number.isFinite(nominalBase) && nominalBase > 0)
     price = Math.min(nominalBase * ceiling, Math.max(nominalBase * FUNDED_SCARCITY_MIN, price));
-  }
   return Math.round(price * 100) / 100;
 }
