@@ -55,6 +55,17 @@ export interface PurchaseOrder {
   countryId?: string;
   /** State the buying site is in; a freight order takes local sellers first. */
   stateId?: string;
+  /**
+   * A lower step of a household demand curve (#5451). It buys only when a
+   * seller asks that little, so it counts as demand only for what it buys.
+   */
+  demandStep?: number;
+  /**
+   * Orders sharing a spend group draw on one budget (#5451): together they never
+   * spend more than `maximumSpend`, at any mix of fill prices. Every order in a
+   * group must carry the same limit.
+   */
+  spendGroup?: { id: string; maximumSpend: number };
 }
 
 export interface ProducerTrade {
@@ -497,10 +508,32 @@ export function settleProducerMarket(input: {
     if (order.maximumSpend != null) nonNegative(order.maximumSpend, "order spending limit");
     if (order.priority != null && !Number.isFinite(order.priority))
       throw new Error("Invalid priority");
-    if (tracked && order.countryId)
+    if (order.spendGroup) nonNegative(order.spendGroup.maximumSpend, "spend group limit");
+    // A lower demand-curve step is counted once settled, for what it bought.
+    if (tracked && order.countryId && !(order.demandStep && order.demandStep > 0))
       countryBookRow(order.countryId, order.commodity).demand += order.units;
   }
-  if (tracked) fundedDemandByCountry(input.orders, budgets, countryBookRow);
+  // Lower demand-curve steps are demand only at their own lower price, so they
+  // stay out of the requested and funded measure; what they buy is added once
+  // settled, below.
+  if (tracked)
+    fundedDemandByCountry(
+      input.orders.filter((o) => !(o.demandStep && o.demandStep > 0)),
+      budgets,
+      countryBookRow
+    );
+  // Shared budgets for spend groups: what every order in the group may still spend.
+  const spendGroupLeft = new Map<string, number>();
+  for (const order of input.orders)
+    if (order.spendGroup && !spendGroupLeft.has(order.spendGroup.id))
+      spendGroupLeft.set(order.spendGroup.id, order.spendGroup.maximumSpend);
+  const groupBudget = (order: PurchaseOrder): number =>
+    order.spendGroup ? (spendGroupLeft.get(order.spendGroup.id) ?? 0) : Number.MAX_VALUE;
+  const spendFromGroup = (order: PurchaseOrder, amount: number): void => {
+    if (!order.spendGroup || !(amount > 0)) return;
+    const left = spendGroupLeft.get(order.spendGroup.id) ?? 0;
+    spendGroupLeft.set(order.spendGroup.id, Math.max(0, left - amount));
+  };
   const orderResults = new Map<string, ProducerMarketResult["orders"][number]>(
     input.orders.map((o) => [
       o.id,
@@ -569,7 +602,7 @@ export function settleProducerMarket(input: {
       if (!(wanted > 0) || price > order.maximumUnitPrice) break;
       const rows = offers.filter((offer) => offer.accountId !== order.accountId);
       const total = rows.reduce((sum, offer) => sum + remaining.get(offer.id), 0);
-      const budget = Math.min(budgets.get(order.accountId)!, orderBudget);
+      const budget = Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order));
       const take = Math.min(wanted, total, price > 0 ? budget / price : wanted);
       if (!(take > 0)) continue;
       const amount = take * price;
@@ -607,6 +640,7 @@ export function settleProducerMarket(input: {
         const spent = units * price;
         orderBudget = Math.max(0, orderBudget - spent);
         budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - spent));
+        spendFromGroup(order, spent);
         debit(order.accountId, spent);
         cash.set(offer.accountId, credited(offer.accountId, spent));
         const seller = offerResults.get(offer.id)!;
@@ -720,7 +754,7 @@ export function settleProducerMarket(input: {
       }
       for (const [price, pool] of sortedPoolsByBook.get(key) ?? []) {
         if (!(wanted > 0) || price > order.maximumUnitPrice) break;
-        const budget = Math.min(budgets.get(order.accountId)!, orderBudget);
+        const budget = Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order));
         const take = Math.min(wanted, pool.total, price > 0 ? budget / price : wanted);
         if (!(take > 0)) continue;
         const amount = take * price;
@@ -748,6 +782,7 @@ export function settleProducerMarket(input: {
         if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - take);
         orderBudget = Math.max(0, orderBudget - amount);
         budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - amount));
+        spendFromGroup(order, amount);
         debit(order.accountId, amount);
         const buyer = orderResults.get(order.id)!;
         buyer.deliveredUnits += take;
@@ -788,7 +823,7 @@ export function settleProducerMarket(input: {
         const group = tier.filter((o) => (o.accountId === order.accountId) === internal);
         const total = group.reduce((n, o) => n + remaining.get(o.id)!, 0);
         const price = order.contractUnitPrice ?? group[0]?.unitPrice ?? 0;
-        const budget = Math.min(budgets.get(order.accountId)!, orderBudget);
+        const budget = Math.min(budgets.get(order.accountId)!, orderBudget, groupBudget(order));
         const take = Math.min(wanted, total, internal || price === 0 ? wanted : budget / price);
         if (!(take > 0) || !(total > 0)) continue;
         fills.push(
@@ -834,6 +869,7 @@ export function settleProducerMarket(input: {
           if (!internal) {
             orderBudget = Math.max(0, orderBudget - amount);
             budgets.set(order.accountId, Math.max(0, budgets.get(order.accountId)! - amount));
+            spendFromGroup(order, amount);
             debit(order.accountId, amount);
             cash.set(offer.accountId, credited(offer.accountId, amount));
           }
@@ -865,6 +901,17 @@ export function settleProducerMarket(input: {
       const [seller, buyer, commodity] = JSON.parse(key) as [string, string, string];
       countryBookRow(buyer, commodity).imports += units;
       countryBookRow(seller, commodity).exports += units;
+    }
+    for (const order of input.orders) {
+      if (!(order.demandStep && order.demandStep > 0) || !order.countryId) continue;
+      const bought = orderResults.get(order.id)?.deliveredUnits ?? 0;
+      if (!(bought > 0)) continue;
+      // What a lower step bought was asked for, paid for and received, so it
+      // joins demand, requested and funded alike.
+      const row = countryBookRow(order.countryId, order.commodity);
+      row.demand += bought;
+      row.requested = (row.requested ?? 0) + bought;
+      row.funded = (row.funded ?? 0) + bought;
     }
   }
   return {

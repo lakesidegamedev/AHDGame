@@ -2,6 +2,7 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { PurchaseOrder } from "./rules";
 import { laneKeyOf } from "./laneKey";
+import { demandElasticity, demandSteps, incomeAdjustedWeights } from "./demandCurveRules";
 
 export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> = {
   food: 0.2,
@@ -39,6 +40,12 @@ export function householdPurchaseOrders(input: {
     weight: number;
     eligibleOfferIds?: readonly string[];
   }[];
+  /**
+   * Demand curves (issue #5448). Absent: one order per good, as before. Present:
+   * basket weights shift with `incomeIndex` and each good becomes a price
+   * ladder; see demandCurveRules.
+   */
+  demandCurve?: { incomeIndex?: number };
 }): PurchaseOrder[] {
   if (
     !input.accountId ||
@@ -68,6 +75,7 @@ export function householdPurchaseOrders(input: {
   }
   if (!Number.isFinite(totalWeight)) throw new Error("Invalid household basket total");
   if (totalWeight === 0) return [];
+  if (input.demandCurve) return demandCurveOrders(input, input.demandCurve);
   return [...input.products]
     .sort((a, b) =>
       a.commodity < b.commodity
@@ -95,4 +103,64 @@ export function householdPurchaseOrders(input: {
         ...(input.stateId ? { stateId: input.stateId } : {}),
       };
     });
+}
+
+/**
+ * Ladder orders for one wallet. The top step of each good keeps the id, units
+ * and ceiling the single order had, so turning the stage on only adds units at
+ * lower prices; lower steps carry `demandStep` so the book counts them as
+ * demand only for what they buy.
+ */
+function demandCurveOrders(
+  input: Parameters<typeof householdPurchaseOrders>[0],
+  curve: { incomeIndex?: number }
+): PurchaseOrder[] {
+  const products = incomeAdjustedWeights(input.products, curve.incomeIndex ?? 1);
+  const totalWeight = products.reduce((n, p) => n + p.weight, 0);
+  if (!(totalWeight > 0)) return [];
+  const orders: PurchaseOrder[] = [];
+  for (const p of [...products].sort((a, b) =>
+    a.commodity < b.commodity
+      ? -1
+      : a.commodity > b.commodity
+        ? 1
+        : a.book < b.book
+          ? -1
+          : a.book > b.book
+            ? 1
+            : 0
+  )) {
+    const budget = input.cash * input.spendFraction * (p.weight / totalWeight);
+    // Every step of this good shares one budget in the matcher, so the steps
+    // together never spend more than the good's share at any mix of prices.
+    const spendGroup = {
+      id: JSON.stringify([input.accountId, "consumption-budget", p.commodity, p.book]),
+      maximumSpend: budget,
+    };
+    for (const step of demandSteps({
+      budget,
+      maximumUnitPrice: p.maximumUnitPrice,
+      priceElasticity: demandElasticity(p.commodity).price,
+    })) {
+      orders.push({
+        id: JSON.stringify(
+          step.step === 0
+            ? [input.accountId, "consumption", p.commodity, p.book]
+            : [input.accountId, "consumption", p.commodity, p.book, step.step]
+        ),
+        accountId: input.accountId,
+        commodity: p.commodity,
+        book: p.book,
+        units: step.units,
+        maximumUnitPrice: step.maximumUnitPrice,
+        maximumSpend: step.maximumSpend,
+        eligibleOfferIds: p.eligibleOfferIds,
+        spendGroup,
+        ...(step.step > 0 ? { demandStep: step.step } : {}),
+        ...(input.countryId ? { countryId: input.countryId } : {}),
+        ...(input.stateId ? { stateId: input.stateId } : {}),
+      });
+    }
+  }
+  return orders;
 }
