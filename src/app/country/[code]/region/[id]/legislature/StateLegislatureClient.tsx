@@ -1,5 +1,6 @@
 "use client";
 
+import ImpeachmentPanel from "@/app/whitehouse/ImpeachmentPanel";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -234,6 +235,19 @@ export function StateLegislatureClient({
             </p>
           )}
         </div>
+
+        {getCountryOfficeConfig(countryId as CountryId).governmentType === "presidential" &&
+          data?.governor?.characterId && (
+            <div className="mb-6">
+              <ImpeachmentPanel
+                countryId={countryId as CountryId}
+                office="governor"
+                state={stateId}
+                targetName={data.governor.characterName}
+                isViewerTarget={characterId === data.governor.characterId}
+              />
+            </div>
+          )}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-card-border">
