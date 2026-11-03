@@ -353,6 +353,10 @@ export async function loadCorporationDetailView(args: {
       legalStructureLabel: income.corpLegalStructure.shortName,
       legalStructureTaxLabel: income.legalStructureTax,
       passThroughTaxPhase: income.passThroughPhase,
+      passThroughTaxStartTurn:
+        income.corpLegalStructure.taxTreatment === "pass_through"
+          ? gameState?.passThroughOwnerTaxStartTurn
+          : undefined,
       passThroughOwnerTax: income.passThroughOwnerTaxLocal,
       legalStructureChangeCooldownUntilTurn:
         corporation.legalStructureChangeCooldownUntilTurn ?? null,

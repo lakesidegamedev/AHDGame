@@ -65,6 +65,35 @@ describe("loadCorporationDetailView", () => {
     db.collection("corporationHistory");
   });
 
+  it.each([
+    ["JP", "jp_gk", true],
+    ["US", "us_llc", true],
+    ["UK", "uk_llp", true],
+    ["JP", "jp_kk", false],
+    ["US", "us_c_corp", false],
+    ["UK", "uk_plc", false],
+  ] as const)(
+    "exposes the reform schedule only for affected %s %s structures",
+    async (countryId, legalStructure, affected) => {
+      db.collection("gameState").findOne.mockResolvedValue({
+        _id: "current",
+        passThroughOwnerTaxStartTurn: 626,
+      });
+      const result = await loadCorporationDetailView({
+        db: db as unknown as Db,
+        corporation: makeCorporation({
+          countryId,
+          legalStructure,
+          isPrivate: false,
+          shareholders: [],
+        }),
+        currentTurn: 626,
+        viewerUserId: null,
+      });
+      expect(result.corporation.passThroughTaxStartTurn).toBe(affected ? 626 : undefined);
+    }
+  );
+
   it("does not award the CEO a synthetic remainder for debited character reservations", async () => {
     const ceo = makeCharacter({ name: "CEO" });
     const corporation = makeCorporation({

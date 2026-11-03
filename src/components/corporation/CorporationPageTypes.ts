@@ -365,6 +365,8 @@ export interface CorporationDetail {
   legalStructureTaxLabel?: string;
   /** Pass-through tax reform progress 0 to 1 (0 before it starts). */
   passThroughTaxPhase?: number;
+  /** Reform start turn, supplied only for affected legal structures. */
+  passThroughTaxStartTurn?: number;
   /** Owner tax on pass-through profit collected at source (per day). */
   passThroughOwnerTax?: number;
   /** Active legal structure ID (defaults to country default when absent). */
