@@ -249,6 +249,7 @@ export default function InputsOutputsPanel({
               buy falls short, the run can still be cut below it.
             </p>
           )}
+          <OwnSupplyNotes demands={commodities.demands} />
         </section>
 
         {/* Outputs ──────────────────────────────────────────────────────────*/}
@@ -393,6 +394,81 @@ export default function InputsOutputsPanel({
           )}
         </dl>
       </DetailsDisclosure>
+    </div>
+  );
+}
+
+function listNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The company page nets output against use across every site, so it can show
+ * a surplus of an input this plant is short of. This says why that output did
+ * not reach this plant last turn: one collapsed block for every such input, so
+ * several short inputs do not stack paragraphs under the table.
+ */
+function OwnSupplyNotes({ demands }: { demands: readonly CommodityFlow[] }) {
+  const rows = demands.filter(
+    (f): f is CommodityFlow & { ownSupply: NonNullable<CommodityFlow["ownSupply"]> } =>
+      !!f.ownSupply && f.inputAvailability != null && f.inputAvailability < 0.999
+  );
+  if (rows.length === 0) return null;
+  return (
+    <details
+      data-own-supply-notes
+      className="mt-2 rounded-lg border border-card-border bg-background/40 px-3 py-2 text-body-sm text-foreground"
+    >
+      <summary className="cursor-pointer">
+        Your company makes {listNames(rows.map((f) => f.label))} too. Why it did not cover this
+        plant
+      </summary>
+      {rows.map((f) => (
+        <OwnSupplyNote key={f.commodity} label={f.label} ownSupply={f.ownSupply} />
+      ))}
+    </details>
+  );
+}
+
+function OwnSupplyNote({
+  label,
+  ownSupply,
+}: {
+  label: string;
+  ownSupply: NonNullable<CommodityFlow["ownSupply"]>;
+}) {
+  const where = listNames(ownSupply.sourceStateNames);
+  const reasons = new Set(ownSupply.reasons);
+  return (
+    <div data-own-supply-note={ownSupply.reasons.join(" ")} className="mt-2">
+      <p>
+        <span className="font-semibold">{label}</span>, made in {where}:
+      </p>
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted">
+        {reasons.has("market_priority") && (
+          <li>
+            Your supply policy sells it on the market first. Choose own plants first in the CEO
+            office to send it to your own plants before anyone else.
+          </li>
+        )}
+        {reasons.has("no_route") && (
+          <li>
+            None of it was hauled to this region. Your own output only reaches another region along
+            freight that actually ran for your company, so this plant bought from the world market
+            instead.
+          </li>
+        )}
+        {reasons.has("agreement_reserved") && (
+          <li>
+            A supply agreement covers part of what this plant needs. Your own plants do not fill
+            that part, so when the contract delivers short, the gap is bought on the market.
+          </li>
+        )}
+        {reasons.has("not_enough") && (
+          <li>Some of your own output reached this region, but not enough to cover this plant.</li>
+        )}
+      </ul>
     </div>
   );
 }

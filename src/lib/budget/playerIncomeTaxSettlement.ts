@@ -1,5 +1,7 @@
+import { planTaxCollection, outstandingTax, type TaxCollectionSlice } from "./rules/taxCollection";
 import { playerTaxWalletDebit } from "./rules/incomeTaxTiers";
-import { planTaxCollection, type TaxCollectionSlice } from "./rules/taxCollection";
+import { planTaxFunding, type TaxFundingLeg } from "./rules/playerTaxFunding";
+import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 /**
  * Income-tax collection batches guarded wallet debits and treasury credits.
  * One active batch freezes each payer's outcome before any treasury is credited;
@@ -20,6 +22,16 @@ interface Payer {
   debits: Record<string, number>;
   assessmentIds: string[];
 }
+interface AssessmentFunding {
+  primary: number;
+  converted: TaxFundingLeg[];
+  rounding: TaxFundingLeg | null;
+}
+interface WalletDoc {
+  _id: ObjectId;
+  cashOnHand?: number;
+  currencyBalances?: { personal?: Partial<Record<string, number>> };
+}
 type CollectionAssessment = Assessment & { collection?: TaxCollectionSlice };
 interface Batch {
   _id: string;
@@ -30,6 +42,7 @@ interface Batch {
   assessments: CollectionAssessment[];
   paidIds: string[];
   scanAfter?: string;
+  funding?: Record<string, AssessmentFunding>;
   fundedTreasury: boolean;
   ledgerShadow: boolean;
   createdAt: Date;
@@ -366,16 +379,50 @@ async function deliver(db: Db, original: Batch): Promise<void> {
     if (batch.ledgerShadow && assessments.length) {
       const entries = assessments.flatMap((assessment) => {
         const total = assessment.federal + assessment.regional;
-        const legs = [
-          {
-            account:
-              "character:" + assessment.characterId.toHexString() + ":" + assessment.currency,
-            amount: -total,
-            currencyCode: assessment.currency,
-            anchorAmount: -total / assessment.sourceFx,
-            role: "primary",
-          },
-        ];
+        const f = batch.funding?.[assessment._id];
+        const char = (code: string) =>
+          "character:" + assessment.characterId.toHexString() + ":" + code;
+        const legs = f
+          ? [
+              ...(f.primary > 0
+                ? [
+                    {
+                      account: char(assessment.currency),
+                      amount: -f.primary,
+                      currencyCode: assessment.currency,
+                      anchorAmount: -f.primary / (assessment.walletFx ?? assessment.sourceFx),
+                      role: "primary",
+                    },
+                  ]
+                : []),
+              ...f.converted.map((leg) => ({
+                account: char(leg.currency),
+                amount: -leg.amount,
+                currencyCode: leg.currency,
+                anchorAmount: -leg.anchorAmount,
+                role: "primary",
+              })),
+              ...(f.rounding
+                ? [
+                    {
+                      account: "sink:income_tax_rounding:" + f.rounding.currency,
+                      amount: f.rounding.amount,
+                      currencyCode: f.rounding.currency,
+                      anchorAmount: f.rounding.anchorAmount,
+                      role: "contra",
+                    },
+                  ]
+                : []),
+            ]
+          : [
+              {
+                account: char(assessment.currency),
+                amount: -total,
+                currencyCode: assessment.currency,
+                anchorAmount: -total / assessment.sourceFx,
+                role: "primary",
+              },
+            ];
         if (assessment.federal)
           legs.push({
             account: "government:" + assessment.countryId + ":" + assessment.nationalCurrency,
@@ -464,7 +511,8 @@ export async function settlePlayerIncomeTaxAssessments(
   worldId: string,
   fundedTreasury: boolean,
   ledgerShadow: boolean,
-  turnLengthMinutes: number
+  turnLengthMinutes: number,
+  forexEnabled = false
 ): Promise<void> {
   const batches = db.collection<Batch>("playerIncomeTaxBatches");
   let active = await batches.findOne({ _id: worldId });
@@ -495,7 +543,7 @@ export async function settlePlayerIncomeTaxAssessments(
     candidates.push(...(await scan(scanLimit - candidates.length, undefined, active.scanAfter)));
   const [regularWallets, imperialWallets] = await Promise.all([
     db
-      .collection("characters")
+      .collection<WalletDoc>("characters")
       .find(
         {
           _id: {
@@ -508,7 +556,7 @@ export async function settlePlayerIncomeTaxAssessments(
       )
       .toArray(),
     db
-      .collection("imperialCharacters")
+      .collection<WalletDoc>("imperialCharacters")
       .find(
         {
           _id: {
@@ -527,28 +575,78 @@ export async function settlePlayerIncomeTaxAssessments(
       (wallet) => ["imperialCharacters:" + wallet._id.toHexString(), wallet] as const
     ),
   ]);
-  const available = new Map<string, number>();
+  const rates: Record<string, number> = {};
+  if (forexEnabled) {
+    const quotes = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    for (const quote of quotes)
+      if (Number.isFinite(quote.rate) && quote.rate > 0) rates[quote.currencyCode] = quote.rate;
+  }
+  // Wallets are planned in candidate order so one payer's money cannot fund
+  // two assessments in one batch.
+  const personal = new Map<string, Record<string, number>>();
+  const cash = new Map<string, number>();
+  const balancesFor = (actorKey: string, wallet?: WalletDoc) => {
+    let balances = personal.get(actorKey);
+    if (!balances) {
+      balances = {};
+      for (const [code, value] of Object.entries(wallet?.currencyBalances?.personal ?? {}))
+        if (typeof value === "number" && Number.isFinite(value) && value > 0)
+          balances[code] = value;
+      personal.set(actorKey, balances);
+    }
+    return balances;
+  };
+  const funding = new Map<string, AssessmentFunding>();
   const assessments: CollectionAssessment[] = candidates.flatMap((assessment) => {
     if (assessment.withheldAtSource) return [assessment];
     const actorKey = assessment.ownerCollection + ":" + assessment.characterId.toHexString();
-    const key = actorKey + ":" + assessment.sourcePath;
     const wallet = wallets.get(actorKey);
-    const balance =
-      available.get(key) ??
-      (assessment.sourcePath === "cashOnHand"
-        ? wallet?.cashOnHand
-        : wallet?.currencyBalances?.personal?.[assessment.currency]) ??
-      0;
-    if (!Number.isFinite(balance) || balance <= 0) return [];
-    const { slice, walletDebit } = planTaxCollection(
+    const balances = balancesFor(actorKey, wallet);
+    const cashKey = actorKey + ":cashOnHand";
+    const primaryAvailable =
+      assessment.sourcePath === "cashOnHand"
+        ? (cash.get(cashKey) ?? Math.max(0, wallet?.cashOnHand ?? 0))
+        : (balances[assessment.currency] ?? 0);
+    const remaining = outstandingTax(assessment);
+    let collection = planTaxCollection(
       assessment,
-      Math.max(0, balance),
+      Number.MAX_VALUE,
       assessment.sourceFx,
       assessment.walletFx
-    );
-    if (slice.federal + slice.regional <= 0) return [];
-    available.set(key, Math.max(0, balance - walletDebit));
-    return [{ ...assessment, collection: slice }];
+    ).slice;
+    let plan = planTaxFunding({
+      owed: playerTaxWalletDebit(
+        remaining.federal + remaining.regional,
+        assessment.sourceFx,
+        assessment.walletFx
+      ),
+      sourceFx: assessment.walletFx ?? assessment.sourceFx,
+      currency: assessment.currency,
+      primaryAvailable,
+      available: balances,
+      rates,
+    });
+    if (!plan.funded) {
+      const partial = planTaxCollection(
+        assessment,
+        primaryAvailable,
+        assessment.sourceFx,
+        assessment.walletFx
+      );
+      collection = partial.slice;
+      plan = { primary: partial.walletDebit, converted: [], rounding: null, funded: true };
+    }
+    if (collection.federal + collection.regional <= 0) return [];
+    if (assessment.sourcePath === "cashOnHand") cash.set(cashKey, primaryAvailable - plan.primary);
+    else if (plan.primary > 0) balances[assessment.currency] = primaryAvailable - plan.primary;
+    for (const leg of plan.converted)
+      balances[leg.currency] = (balances[leg.currency] ?? 0) - leg.amount;
+    funding.set(assessment._id, {
+      primary: plan.primary,
+      converted: plan.converted,
+      rounding: plan.rounding,
+    });
+    return [{ ...assessment, collection }];
   });
   const payerMap = new Map<string, Payer>();
   for (const assessment of assessments) {
@@ -560,14 +658,13 @@ export async function settlePlayerIncomeTaxAssessments(
       debits: {},
       assessmentIds: [],
     };
-    payer.debits[assessment.sourcePath] =
-      (payer.debits[assessment.sourcePath] ?? 0) +
-      playerTaxWalletDebit(
-        (assessment.collection?.federal ?? assessment.federal) +
-          (assessment.collection?.regional ?? assessment.regional),
-        assessment.sourceFx,
-        assessment.walletFx
-      );
+    const plan = funding.get(assessment._id)!;
+    const debit = (path: string, amount: number) => {
+      if (amount > 0) payer.debits[path] = (payer.debits[path] ?? 0) + amount;
+    };
+    debit(assessment.sourcePath, plan.primary);
+    for (const leg of plan.converted)
+      debit("currencyBalances.personal." + leg.currency, leg.amount);
     payer.assessmentIds.push(assessment._id);
     payerMap.set(id, payer);
   }
@@ -578,6 +675,7 @@ export async function settlePlayerIncomeTaxAssessments(
     stage: "claimed",
     payers: [...payerMap.values()],
     assessments,
+    funding: Object.fromEntries(funding),
     paidIds: [],
     scanAfter: candidates.at(-1)?._id,
     fundedTreasury,

@@ -40,6 +40,8 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
 ];
 
 export interface FundedReceipt {
+  internalSupplyIncome?: number;
+  internalSupplyCharge?: number;
   /** Anchor per turn. */
   revenue: number;
   /** Anchor per turn: revenue minus inputs consumed, wages and site bills. */
@@ -87,6 +89,7 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
 ): T {
+  // Management allocations stay out of economic revenue, tax and valuation bases.
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
   const growthCost = fundedGrowthCost(legacy, revenue);
@@ -194,6 +197,12 @@ export function fundedSectorOpsAll(
           // Shown to the owner beside profit; decisions keep reading profit.
           stockAddedAtCost: daily(receipt.unsoldProductionCost ?? 0),
           transitionSupport: daily(receipt.transitionSupport ?? 0),
+          ...((receipt.internalSupplyIncome ?? 0) > 0
+            ? { internalSupplyIncome: daily(receipt.internalSupplyIncome!) }
+            : {}),
+          ...((receipt.internalSupplyCharge ?? 0) > 0
+            ? { internalSupplyCharge: daily(receipt.internalSupplyCharge!) }
+            : {}),
         },
       });
       stamped.add(id);

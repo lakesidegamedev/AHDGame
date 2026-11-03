@@ -153,3 +153,171 @@ describe("helpers", () => {
     expect(line).toBe("[fiscalScale] t3 stage=1 n=2 PL=1.00e-2^~ US=1.00e-2");
   });
 });
+
+describe("stage 2: tax and spend", () => {
+  it("collects book non-corporate revenue times the scale, shared by cash held", async () => {
+    const { bookNonCorporateRevenuePerTurn, fiscalTaxCollection } = await import("./fiscalScale");
+    const book = bookNonCorporateRevenuePerTurn({
+      total: 48_000,
+      domesticCorporateTax: 4_800,
+      foreignCorporateTax: 0,
+    });
+    expect(book).toBeCloseTo(900);
+    const tax = fiscalTaxCollection({
+      bookRevenuePerTurn: book,
+      scale: 0.1,
+      payers: [
+        { id: "b", cash: 4_800 },
+        { id: "a", cash: 1_600 },
+      ],
+    });
+    expect(tax.dueLocal).toBeCloseTo(90);
+    expect(tax.byPayer).toEqual([
+      { id: "a", amount: 22.5 },
+      { id: "b", amount: 67.5 },
+    ]);
+    expect(tax.collectedLocal).toBeCloseTo(90);
+  });
+
+  it("never takes more than the household share cap, and nothing without a scale", async () => {
+    const { fiscalTaxCollection, FISCAL_TAX_MAX_HOUSEHOLD_SHARE } = await import("./fiscalScale");
+    const capped = fiscalTaxCollection({
+      bookRevenuePerTurn: 1_000_000,
+      scale: 1,
+      payers: [{ id: "a", cash: 100 }],
+    });
+    expect(FISCAL_TAX_MAX_HOUSEHOLD_SHARE).toBe(0.1);
+    expect(capped.collectedLocal).toBeCloseTo(10);
+    expect(
+      fiscalTaxCollection({ bookRevenuePerTurn: 100, scale: null, payers: [{ id: "a", cash: 9 }] })
+        .collectedLocal
+    ).toBe(0);
+  });
+
+  it("pays public purchases up to the request, book primary times scale and cash", async () => {
+    const { treasuryPublicFunding, bookPrimarySpendingPerTurn } = await import("./fiscalScale");
+    const book = bookPrimarySpendingPerTurn({ total: 4_800, debtInterest: 480 });
+    expect(book).toBeCloseTo(90);
+    const pay = (requestedLocal: number, treasuryCashLocal: number) =>
+      treasuryPublicFunding({
+        requestedLocal,
+        bookPrimarySpendingPerTurn: book,
+        scale: 0.5,
+        treasuryCashLocal,
+      });
+    expect(pay(10, 100)).toBe(10);
+    expect(pay(100, 100)).toBeCloseTo(45);
+    expect(pay(100, 20)).toBe(20);
+  });
+});
+
+describe("stage 3: debt service split", () => {
+  const claim = {
+    id: "c",
+    dueTurn: 5,
+    amountLocal: 110,
+    holders: [
+      { kind: "publicFloat", amountLocal: 100, amountAnchor: 50 },
+      { kind: "character", amountLocal: 10, amountAnchor: 5 },
+    ],
+  };
+
+  it("scales synthetic holders and pays players at face", async () => {
+    const { claimAtFiscalScale } = await import("./fiscalScale");
+    const scaled = claimAtFiscalScale(claim, 0.01);
+    expect(scaled.holders[0]).toMatchObject({ amountLocal: 1, amountAnchor: 0.5 });
+    expect(scaled.holders[1]).toMatchObject({ amountLocal: 10, amountAnchor: 5 });
+    expect(scaled.amountLocal).toBeCloseTo(11);
+    expect(claimAtFiscalScale(claim, undefined)).toBe(claim);
+  });
+
+  it("orders player claims first, then oldest first", async () => {
+    const { fiscalScaleCouponOrder } = await import("./fiscalScale");
+    const synthetic = { ...claim, id: "s", dueTurn: 1, holders: [claim.holders[0]] };
+    const ordered = fiscalScaleCouponOrder([synthetic, { ...claim, dueTurn: 9 }, claim]);
+    expect(ordered.map((c) => `${c.id}:${c.dueTurn}`)).toEqual(["c:5", "c:9", "s:1"]);
+  });
+
+  it("widens the claim load bound by the scale", async () => {
+    const { fiscalScaleClaimLoadBound } = await import("./fiscalScale");
+    expect(fiscalScaleClaimLoadBound(10, 0.01)).toBeCloseTo(1_000);
+    expect(fiscalScaleClaimLoadBound(10, undefined)).toBe(10);
+    expect(fiscalScaleClaimLoadBound(-1, 0.5)).toBe(0);
+  });
+});
+
+describe("median fallback", () => {
+  const observed = (scale: number, source: "observed" | "carried" | "median" = "observed") => ({
+    turn: 10,
+    scale,
+    rawScale: scale,
+    capped: false,
+    source,
+    fundedOutputLocal: null,
+    smoothedFundedOutputLocal: 1,
+    bookGdpPerTurnLocal: 1,
+    history: [],
+  });
+
+  it("takes the median of countries with their own scale, ignoring borrowed ones", async () => {
+    const { medianFiscalScale } = await import("./fiscalScale");
+    expect(medianFiscalScale([observed(1e-5), observed(3e-5), observed(2e-5)])).toBe(2e-5);
+    expect(
+      medianFiscalScale([observed(1e-5), observed(3e-5, "carried"), observed(9, "median")])
+    ).toBeCloseTo(2e-5);
+    expect(medianFiscalScale([observed(9, "median")])).toBeNull();
+  });
+
+  it("stamps a borrowed state, idempotent within a turn", async () => {
+    const { medianFallbackFiscalScale } = await import("./fiscalScale");
+    const s = medianFallbackFiscalScale(null, { turn: 10, median: 2e-5, bookGdpAnnualLocal: BOOK });
+    expect(s).toMatchObject({
+      turn: 10,
+      scale: 2e-5,
+      source: "median",
+      bookGdpPerTurnLocal: 1_000,
+    });
+    expect(medianFallbackFiscalScale(s, { turn: 10, median: 5e-5, bookGdpAnnualLocal: BOOK })).toBe(
+      s
+    );
+    const next = medianFallbackFiscalScale(s, { turn: 11, median: 3e-5, bookGdpAnnualLocal: BOOK });
+    expect(next?.history.map((h) => h.scale)).toEqual([2e-5, 3e-5]);
+    expect(
+      medianFallbackFiscalScale(null, { turn: 10, median: 0, bookGdpAnnualLocal: 1 })
+    ).toBeNull();
+  });
+
+  it("leaves a borrowed scale to the caller until funded output appears, then caps the move", () => {
+    const borrowed = { ...observed(0.01, "median"), smoothedFundedOutputLocal: 0 };
+    expect(
+      nextFiscalScale(borrowed, { turn: 11, fundedOutputLocal: null, bookGdpAnnualLocal: BOOK })
+    ).toBeNull();
+    const own = nextFiscalScale(borrowed, {
+      turn: 11,
+      fundedOutputLocal: 1,
+      bookGdpAnnualLocal: BOOK,
+    });
+    // Raw 1/1000 is below the borrowed 0.01; the cap walks it down 10%.
+    expect(own).toMatchObject({ source: "observed", smoothedFundedOutputLocal: 1, capped: true });
+    expect(own!.scale).toBeCloseTo(0.01 / (1 + FISCAL_SCALE_MAX_MOVE));
+  });
+});
+
+describe("pool cash per unit of book face", () => {
+  it("is book face below stage 3 and the scale under the split", async () => {
+    const { fiscalScalePoolCashPerFace } = await import("./fiscalScale");
+    expect(fiscalScalePoolCashPerFace(2, 0.01)).toBe(1);
+    expect(fiscalScalePoolCashPerFace(3, 0.01)).toBe(0.01);
+    expect(fiscalScalePoolCashPerFace(3, undefined)).toBe(1);
+    expect(fiscalScalePoolCashPerFace(3, 0)).toBe(1);
+    expect(fiscalScalePoolCashPerFace(3, 4)).toBe(1);
+  });
+
+  it("reads a frozen claim's rate back from its pool leg", async () => {
+    const { frozenPoolCashPerFace } = await import("./fiscalScale");
+    expect(frozenPoolCashPerFace(1_000, 1_000)).toBe(1);
+    expect(frozenPoolCashPerFace(10, 1_000)).toBeCloseTo(0.01);
+    expect(frozenPoolCashPerFace(0, 1_000)).toBe(1);
+    expect(frozenPoolCashPerFace(10, 0)).toBe(1);
+  });
+});

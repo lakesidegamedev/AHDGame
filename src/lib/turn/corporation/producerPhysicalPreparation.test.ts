@@ -57,6 +57,37 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("carries pricing from the company or its inherited parent policy into the funded plan", () => {
+    const { input } = fixture();
+    input.corporation.internalSupplyPolicy = {
+      priority: "own",
+      discount: 0.1,
+      transferPricing: "market",
+    };
+    expect(prepareProducerPhysicalSector(input).prepared.plan.internalTransferPricing).toEqual({
+      mode: "market",
+      discount: 0.1,
+    });
+    expect(
+      prepareProducerPhysicalSector({
+        ...input,
+        internalSupplyPolicy: {
+          priority: "group",
+          discount: 0,
+          transferPricing: "cost",
+        },
+      }).prepared.plan.internalTransferPricing
+    ).toEqual({ mode: "cost", discount: 0 });
+    expect(
+      prepareProducerPhysicalSector({
+        ...input,
+        internalSupplyPolicy: {
+          priority: "group",
+          discount: 0,
+        },
+      }).prepared.plan.internalTransferPricing
+    ).toBeUndefined();
+  });
   it("retains sale-only quotes for stored goods outside the current production recipe", () => {
     const { input, sector } = fixture();
     sector.producerInventory!.outputStock = [

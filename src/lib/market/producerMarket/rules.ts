@@ -20,6 +20,8 @@ export interface ProducerOffer {
   book: string;
   units: number;
   unitPrice: number;
+  /** Management-account value for own-site deliveries; never a cash price. */
+  internalUnitPrice?: number;
   /** A binding delivery ceiling, independent of the asking price. */
   deliverableUnits?: number;
   /** Country the selling site is in; the funded book places supply here. */
@@ -30,6 +32,8 @@ export interface ProducerOffer {
 
 export interface PurchaseOrder {
   id: string;
+  /** Receiving plant for matched site accounting; non-plant purchases omit it. */
+  internalAccountingSiteId?: string;
   accountId: string;
   commodity: string;
   book: string;
@@ -244,8 +248,16 @@ export interface ProducerMarketResult {
     internalDeliveredUnits: number;
     deliveredUnits: number;
     revenue: number;
+    /** Internal accounting income only; it never credits the company wallet. */
+    internalValue?: number;
   }>;
-  orders: Array<{ id: string; requestedUnits: number; deliveredUnits: number; cost: number }>;
+  orders: Array<{
+    id: string;
+    requestedUnits: number;
+    deliveredUnits: number;
+    cost: number;
+    internalCost?: number;
+  }>;
   prices: Array<{
     commodity: string;
     book: string;
@@ -353,6 +365,19 @@ export function settleProducerMarket(input: {
   // than inferring them from a national balance.
   const deliveredAcross = new Map<string, number>();
   const recordDelivery = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
+    if (
+      order.internalAccountingSiteId &&
+      offer.accountId === order.accountId &&
+      (offer.internalUnitPrice ?? 0) > 0 &&
+      units > 0
+    ) {
+      const amount = units * offer.internalUnitPrice!;
+      if (!Number.isFinite(amount)) throw new Error("Invalid internal supply value");
+      const seller = offerResults.get(offer.id)!;
+      const buyer = orderResults.get(order.id)!;
+      seller.internalValue = (seller.internalValue ?? 0) + amount;
+      buyer.internalCost = (buyer.internalCost ?? 0) + amount;
+    }
     if (!tracked || !(units > 0)) return;
     const seller = offer.countryId;
     const buyer = order.countryId;
@@ -386,6 +411,8 @@ export function settleProducerMarket(input: {
   for (const offer of input.offers) {
     if (!cash.has(offer.accountId)) throw new Error("Unknown seller account");
     nonNegative(offer.unitPrice, "offer price");
+    if (offer.internalUnitPrice != null)
+      nonNegative(offer.internalUnitPrice, "internal offer price");
     const units = nonNegative(offer.units, "offer units");
     const available = Math.min(
       units,
@@ -473,13 +500,13 @@ export function settleProducerMarket(input: {
     if (tracked && order.countryId)
       countryBookRow(order.countryId, order.commodity).demand += order.units;
   }
-  const orderResults = new Map(
+  const orderResults = new Map<string, ProducerMarketResult["orders"][number]>(
     input.orders.map((o) => [
       o.id,
       { id: o.id, requestedUnits: o.units, deliveredUnits: 0, cost: 0 },
     ])
   );
-  const offerResults = new Map(
+  const offerResults = new Map<string, ProducerMarketResult["offers"][number]>(
     input.offers.map((o) => [
       o.id,
       {

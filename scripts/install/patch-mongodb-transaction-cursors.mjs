@@ -1,5 +1,5 @@
 /**
- * MongoDB 7.6.0 omits getMore maxTimeMS only when a cursor owns timeoutMS.
+ * MongoDB 7.6.0 and 7.7.0 omit getMore maxTimeMS only when a cursor owns timeoutMS.
  * Transaction-only deadlines therefore send an illegal maxTimeMS on ordinary
  * getMore. Preserve driver deadlines, suppress only that server field, and
  * fail installation on unreviewed driver changes rather than silently patching.
@@ -18,7 +18,7 @@ const replacement =
 
 export function patchMongoTransactionCursors(driverRoot) {
   const version = JSON.parse(readFileSync(join(driverRoot, "package.json"), "utf8")).version;
-  if (version !== "7.6.0")
+  if (version !== "7.6.0" && version !== "7.7.0")
     throw new Error(`Review or remove the Mongo cursor compatibility patch for driver ${version}`);
   const path = join(driverRoot, "lib/operations/get_more.js");
   const source = readFileSync(path, "utf8");
@@ -34,5 +34,5 @@ export function patchMongoTransactionCursors(driverRoot) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const require = createRequire(import.meta.url);
   patchMongoTransactionCursors(dirname(require.resolve("mongodb/package.json")));
-  console.info("Mongo transaction cursor compatibility patch verified (7.6.0)");
+  console.info("Mongo transaction cursor compatibility patch verified (7.6.0 / 7.7.0)");
 }

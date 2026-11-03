@@ -19,6 +19,11 @@ import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { sovereignPrimaryTransition, type SovereignPrimaryFunding } from "./rules/sovereignPrimary";
+import {
+  FISCAL_SCALE_STAGE,
+  fiscalScalePoolCashPerFace,
+  fiscalScaleStageActive,
+} from "@/lib/budget/rules/fiscalScale";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -29,6 +34,43 @@ export interface PrimaryAccountingContext {
   preset?: string;
   /** The turn whose closing snapshot holds cash settled under this context (#3022). */
   ledgerTurn?: number | null;
+  /**
+   * Real cash per unit of book face the bond pool pays a Treasury, by country.
+   * Only filled under the fiscal scale debt service split; absent means 1.
+   */
+  poolCashPerFace?: ReadonlyMap<string, number>;
+}
+
+/** Cash per unit of book face the pool pays this country's Treasury. */
+export function poolCashPerFace(
+  accounting: Pick<PrimaryAccountingContext, "poolCashPerFace">,
+  countryId: string | undefined
+): number {
+  return (countryId && accounting.poolCashPerFace?.get(countryId)) || 1;
+}
+
+/**
+ * Each country's pool cash per unit of book face for this turn, read once from
+ * the scale stored on its budget. Empty below stage 3, so the pool pays and is
+ * repaid at book face exactly as before.
+ */
+export async function loadPoolCashPerFaceByCountry(
+  db: Db,
+  stage: unknown
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!fiscalScaleStageActive(stage, FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT)) return out;
+  const budgets = await db
+    .collection<{ _id: string; countryId?: string; fiscalScale?: { scale?: number } }>(
+      "federalBudget"
+    )
+    .find({ "fiscalScale.scale": { $gt: 0 } }, { projection: { countryId: 1, fiscalScale: 1 } })
+    .toArray();
+  for (const budget of budgets) {
+    const k = fiscalScalePoolCashPerFace(stage, budget.fiscalScale?.scale);
+    if (k < 1) out.set(String(budget.countryId ?? budget._id), k);
+  }
+  return out;
 }
 
 /**
@@ -61,6 +103,7 @@ export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingCo
         ledgerShadow?: boolean;
         turnLengthMinutes?: number;
         treasuryCashLedgerEnabled?: boolean;
+        fiscalScaleStage?: number;
       }>("gameConfig")
       .findOne(
         { _id: "default" },
@@ -69,6 +112,7 @@ export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingCo
             ledgerShadow: 1,
             turnLengthMinutes: 1,
             treasuryCashLedgerEnabled: 1,
+            fiscalScaleStage: 1,
           },
         }
       ),
@@ -81,7 +125,9 @@ export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingCo
       .findOne({ _id: "current" }, { projection: { preset: 1 } }),
     resolveLedgerTurn(db),
   ]);
+  const poolScale = await loadPoolCashPerFaceByCountry(db, config?.fiscalScaleStage);
   return {
+    ...(poolScale.size > 0 ? { poolCashPerFace: poolScale } : {}),
     ledgerShadow: config?.ledgerShadow === true,
     treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true,
     turnLengthMinutes: config?.turnLengthMinutes ?? DEFAULT_TURN_LENGTH_MINUTES,

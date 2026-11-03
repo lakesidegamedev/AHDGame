@@ -71,14 +71,14 @@ export default function RunMeter({
       label: "Made and sold",
       units: sold,
       fill: TONE_FILL.sold,
-      help: `Units your ${sites} made and buyers took. This is the only part that earns revenue.`,
+      help: `Units your ${sites} made and outside buyers took. These sales bring money into the company.`,
     },
     {
       key: "own-sites",
       label: "Sent to your sites",
       units: ownSite,
       fill: "bg-sky-500",
-      help: "Output used by your company's other sites. It replaces inputs they would otherwise buy, without a sale or cash payment between your sites.",
+      help: "Output used by your company's other sites. The internal supply policy sets its allocated price. These deliveries do not change your company's total cash.",
     },
     {
       key: "unsold",

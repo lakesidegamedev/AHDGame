@@ -60,8 +60,12 @@ export interface FiscalScaleState {
   rawScale: number;
   /** True when the move cap held the scale back this turn. */
   capped: boolean;
-  /** "observed": this turn's funded output fed the average. "carried": it was missing. */
-  source: "observed" | "carried";
+  /**
+   * "observed": this turn's funded output fed the average. "carried": it was
+   * missing, so the last value holds. "median": the country has never had
+   * funded output, so it borrows the median scale of the countries that do.
+   */
+  source: "observed" | "carried" | "median";
   /** Funded value added this turn in local currency; null when none was settled. */
   fundedOutputLocal: number | null;
   smoothedFundedOutputLocal: number;
@@ -109,6 +113,8 @@ export function nextFiscalScale(
       ? prior
       : null;
   if (usable && usable.turn === input.turn) return usable;
+  // A borrowed median carries no funded history to smooth from.
+  const smoothingBase = usable && usable.source !== "median" ? usable : null;
 
   const observed =
     typeof input.fundedOutputLocal === "number" && Number.isFinite(input.fundedOutputLocal)
@@ -118,22 +124,23 @@ export function nextFiscalScale(
     ? input.bookGdpAnnualLocal / TURNS_PER_YEAR
     : 0;
 
-  // Nothing new to learn: keep the last value, stamped for this turn.
+  // Nothing new to learn: keep the last value, stamped for this turn. A
+  // country that only ever borrowed the median gets it again from the caller.
   if (observed === null || bookGdpPerTurnLocal <= 0) {
-    if (!usable) return null;
+    if (!smoothingBase) return null;
     return {
-      ...usable,
+      ...smoothingBase,
       turn: input.turn,
       capped: false,
       source: "carried",
       fundedOutputLocal: observed,
-      history: appendHistory(usable.history, input.turn, usable.scale),
+      history: appendHistory(smoothingBase.history, input.turn, smoothingBase.scale),
     };
   }
 
-  const smoothed = usable
-    ? usable.smoothedFundedOutputLocal +
-      (observed - usable.smoothedFundedOutputLocal) / FISCAL_SCALE_SMOOTHING_TURNS
+  const smoothed = smoothingBase
+    ? smoothingBase.smoothedFundedOutputLocal +
+      (observed - smoothingBase.smoothedFundedOutputLocal) / FISCAL_SCALE_SMOOTHING_TURNS
     : observed;
   const rawScale = Math.min(FISCAL_SCALE_CEILING, Math.max(0, smoothed / bookGdpPerTurnLocal));
   const { scale, capped } = usable
@@ -149,6 +156,53 @@ export function nextFiscalScale(
     smoothedFundedOutputLocal: smoothed,
     bookGdpPerTurnLocal,
     history: appendHistory(usable?.history, input.turn, scale),
+  };
+}
+
+/**
+ * Median of the scales measured from a country's own funded output this turn
+ * (observed or carried, never a borrowed median). Null when there are none.
+ */
+export function medianFiscalScale(states: Iterable<FiscalScaleState>): number | null {
+  const scales = [...states]
+    .filter((state) => state.source !== "median" && finitePositive(state.scale))
+    .map((state) => state.scale)
+    .sort((a, b) => a - b);
+  if (scales.length === 0) return null;
+  const mid = Math.floor(scales.length / 2);
+  return scales.length % 2 === 1 ? scales[mid] : (scales[mid - 1] + scales[mid]) / 2;
+}
+
+/**
+ * The stored state of a country with no funded output of its own: it borrows
+ * the world median scale for debt service and placement. It has no funded
+ * payers, so the tax stage collects nothing from it. Once the country settles
+ * funded output, `nextFiscalScale` starts its own average and the move cap
+ * walks the scale away from the median.
+ */
+export function medianFallbackFiscalScale(
+  prior: FiscalScaleState | null | undefined,
+  input: { turn: number; median: number; bookGdpAnnualLocal: number }
+): FiscalScaleState | null {
+  if (!finitePositive(input.median)) return null;
+  if (prior && prior.turn === input.turn) return prior;
+  const scale = Math.min(FISCAL_SCALE_CEILING, input.median);
+  return {
+    turn: input.turn,
+    scale,
+    rawScale: scale,
+    capped: false,
+    source: "median",
+    fundedOutputLocal: null,
+    smoothedFundedOutputLocal: 0,
+    bookGdpPerTurnLocal: finitePositive(input.bookGdpAnnualLocal)
+      ? input.bookGdpAnnualLocal / TURNS_PER_YEAR
+      : 0,
+    history: appendHistory(
+      prior && prior.turn < input.turn ? prior.history : undefined,
+      input.turn,
+      scale
+    ),
   };
 }
 
@@ -178,6 +232,33 @@ export function scaledAmount(bookAmount: number, scale: number | null | undefine
   return bookAmount * Math.min(FISCAL_SCALE_CEILING, scale);
 }
 
+/**
+ * Real cash per unit of book face that moves between the bond pool and a
+ * Treasury under the debt service split: what the pool pays for a primary
+ * placement and what it is repaid at maturity. Both sides use it, so the pool
+ * neither drains nor inflates on a refunding cycle. Player holders never see
+ * it. Below stage 3, or without a usable scale, it is 1 (book face).
+ */
+export function fiscalScalePoolCashPerFace(
+  stage: unknown,
+  scale: number | null | undefined
+): number {
+  if (!fiscalScaleStageActive(stage, FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT)) return 1;
+  if (typeof scale !== "number" || !Number.isFinite(scale) || scale <= 0) return 1;
+  return Math.min(FISCAL_SCALE_CEILING, scale);
+}
+
+/**
+ * The cash-per-face a frozen maturity claim already carries on its pool leg:
+ * the leg's cash over the book face of the live float. 1 for a claim frozen at
+ * book face, so a claim from before the split keeps settling as it was quoted.
+ */
+export function frozenPoolCashPerFace(poolLegAmount: number, liveFloatFaceLocal: number): number {
+  if (!(liveFloatFaceLocal > 0) || !Number.isFinite(poolLegAmount) || poolLegAmount <= 0) return 1;
+  const ratio = poolLegAmount / liveFloatFaceLocal;
+  return Number.isFinite(ratio) && ratio > 0 ? Math.min(1, ratio) : 1;
+}
+
 /** One-line digest of a turn's scales for the turn log. */
 export function fiscalScaleLogLine(
   turn: number,
@@ -189,8 +270,194 @@ export function fiscalScaleLogLine(
     .map(
       ({ countryId, state }) =>
         `${countryId}=${state.scale.toExponential(2)}${state.capped ? "^" : ""}${
-          state.source === "carried" ? "~" : ""
+          state.source === "carried" ? "~" : state.source === "median" ? "*" : ""
         }`
     );
   return `[fiscalScale] t${turn} stage=${stage} n=${states.length} ${parts.join(" ")}`;
+}
+
+// Stage 3: debt service split.
+
+/** Holders paid in the same real money players hold: always at full face. */
+const PLAYER_COUPON_HOLDER_KINDS: ReadonlySet<string> = new Set([
+  "character",
+  "imperial",
+  "corporation",
+]);
+
+interface ScalableCouponHolder {
+  kind: string;
+  amountLocal: number;
+  amountAnchor: number;
+}
+
+interface ScalableCouponClaim<H extends ScalableCouponHolder> {
+  amountLocal: number;
+  dueTurn: number;
+  holders: H[];
+}
+
+export function couponClaimHasPlayerHolder(claim: {
+  holders: ReadonlyArray<{ kind: string }>;
+}): boolean {
+  return claim.holders.some((holder) => PLAYER_COUPON_HOLDER_KINDS.has(holder.kind));
+}
+
+function usableScale(scale: number | null | undefined): scale is number {
+  return typeof scale === "number" && Number.isFinite(scale) && scale > 0;
+}
+
+/**
+ * A coupon or principal claim as it settles under the debt service split:
+ * synthetic holders (bond pool float, index funds, NPPs) at book times the
+ * scale, player holders at full face. Without a usable scale the claim settles
+ * at book, as it does today.
+ */
+export function claimAtFiscalScale<
+  H extends ScalableCouponHolder,
+  C extends ScalableCouponClaim<H>,
+>(claim: C, scale: number | null | undefined): C {
+  if (!usableScale(scale)) return claim;
+  const s = Math.min(FISCAL_SCALE_CEILING, scale);
+  if (s >= FISCAL_SCALE_CEILING) return claim;
+  const holders = claim.holders.map((holder) =>
+    PLAYER_COUPON_HOLDER_KINDS.has(holder.kind)
+      ? holder
+      : { ...holder, amountLocal: holder.amountLocal * s, amountAnchor: holder.amountAnchor * s }
+  );
+  return {
+    ...claim,
+    holders,
+    amountLocal: holders.reduce((sum, holder) => sum + holder.amountLocal, 0),
+  };
+}
+
+/** Settlement order under the split: claims owed to players first, then oldest first. */
+export function fiscalScaleCouponOrder<C extends ScalableCouponClaim<ScalableCouponHolder>>(
+  claims: readonly C[]
+): C[] {
+  return [...claims].sort(
+    (a, b) =>
+      Number(couponClaimHasPlayerHolder(b)) - Number(couponClaimHasPlayerHolder(a)) ||
+      a.dueTurn - b.dueTurn
+  );
+}
+
+/**
+ * Book amount bound for loading claims a Treasury holding `cashLocal` could
+ * settle under the split. Scaled claims cost at most book, so the bound is a
+ * superset; the payout loop and the guarded debit stay the authority.
+ */
+export function fiscalScaleClaimLoadBound(
+  cashLocal: number,
+  scale: number | null | undefined
+): number {
+  if (!Number.isFinite(cashLocal) || cashLocal <= 0) return 0;
+  if (!usableScale(scale)) return cashLocal;
+  return cashLocal / Math.min(FISCAL_SCALE_CEILING, scale);
+}
+
+/**
+ * Oldest open claims one budget loads per turn under the split, on top of every
+ * claim owed to a player and every claim a receipt already owns. The scaled
+ * bound reaches far past the cash a starved Treasury holds, which pulled its
+ * whole backlog into the phase every turn; this keeps the load near what the
+ * phase reads with the split off, and the backlog drains oldest first. It
+ * matches the claims one grouped coupon receipt can hold. A rehearsal at 500
+ * pinned every paying budget at the cap and only kept pace with new claims.
+ */
+export const FISCAL_SCALE_CLAIM_LOAD_LIMIT = 2000;
+
+/** Holder kinds paid at full face under the split, for a server-side filter. */
+export const FISCAL_SCALE_PLAYER_HOLDER_KINDS: readonly string[] = [...PLAYER_COUPON_HOLDER_KINDS];
+
+// Stage 2: tax and spend in real money.
+
+/**
+ * Largest share of a country's household cash the Treasury collects in one
+ * turn. Book revenue times the scale is the target; this keeps one turn of tax
+ * from emptying the wallets that buy the economy's output. A rehearsal at 0.2
+ * bound most countries and cut household cash by 15 to 45% a turn; 0.05 still
+ * bound every country and left budgets unable to service scaled claims.
+ */
+export const FISCAL_TAX_MAX_HOUSEHOLD_SHARE = 0.1;
+
+/** Book revenue a turn, less the corporate tax the corporate phase already collects in real money. */
+export function bookNonCorporateRevenuePerTurn(
+  revenue:
+    | {
+        total?: number;
+        domesticCorporateTax?: number;
+        foreignCorporateTax?: number;
+      }
+    | null
+    | undefined
+): number {
+  const total = revenue?.total ?? 0;
+  const corporate = (revenue?.domesticCorporateTax ?? 0) + (revenue?.foreignCorporateTax ?? 0);
+  const annual = total - Math.max(0, Number.isFinite(corporate) ? corporate : 0);
+  return Number.isFinite(annual) && annual > 0 ? annual / TURNS_PER_YEAR : 0;
+}
+
+/** Book primary spending a turn: total spending less debt interest. */
+export function bookPrimarySpendingPerTurn(
+  spending:
+    | {
+        total?: number;
+        debtInterest?: number;
+      }
+    | null
+    | undefined
+): number {
+  const annual = (spending?.total ?? 0) - (spending?.debtInterest ?? 0);
+  return Number.isFinite(annual) && annual > 0 ? annual / TURNS_PER_YEAR : 0;
+}
+
+export interface FiscalTaxPayer {
+  id: string;
+  cash: number;
+}
+
+/**
+ * Real tax due this turn from a country's household wallets, shared by cash
+ * held. Book non-corporate revenue times the scale, capped at
+ * FISCAL_TAX_MAX_HOUSEHOLD_SHARE of the cash they hold. Each wallet pays at
+ * most its own cash. Without a usable scale nothing is due.
+ */
+export function fiscalTaxCollection(input: {
+  bookRevenuePerTurn: number;
+  scale: number | null | undefined;
+  payers: readonly FiscalTaxPayer[];
+}): { dueLocal: number; collectedLocal: number; byPayer: { id: string; amount: number }[] } {
+  const dueLocal = scaledAmount(input.bookRevenuePerTurn, input.scale);
+  const payers = [...input.payers]
+    .filter((p) => Number.isFinite(p.cash) && p.cash > 0)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const held = payers.reduce((sum, p) => sum + p.cash, 0);
+  const collect = Math.min(dueLocal, held * FISCAL_TAX_MAX_HOUSEHOLD_SHARE);
+  if (!(collect > 0) || !(held > 0)) return { dueLocal, collectedLocal: 0, byPayer: [] };
+  const byPayer = payers
+    .map((p) => ({ id: p.id, amount: Math.min(p.cash, (collect * p.cash) / held) }))
+    .filter((row) => row.amount > 0);
+  return {
+    dueLocal,
+    collectedLocal: byPayer.reduce((sum, row) => sum + row.amount, 0),
+    byPayer,
+  };
+}
+
+/**
+ * Public purchases the Treasury pays for this turn: the funding the public
+ * buyer's purchase lines ask for, at most book primary spending times the
+ * scale, and at most the cash the Treasury holds.
+ */
+export function treasuryPublicFunding(input: {
+  requestedLocal: number;
+  bookPrimarySpendingPerTurn: number;
+  scale: number | null | undefined;
+  treasuryCashLocal: number;
+}): number {
+  const requested = Number.isFinite(input.requestedLocal) ? Math.max(0, input.requestedLocal) : 0;
+  const cash = Number.isFinite(input.treasuryCashLocal) ? Math.max(0, input.treasuryCashLocal) : 0;
+  return Math.min(requested, scaledAmount(input.bookPrimarySpendingPerTurn, input.scale), cash);
 }

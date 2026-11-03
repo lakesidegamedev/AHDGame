@@ -105,6 +105,10 @@ import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
+import {
+  explainOwnSupplyReach,
+  type OwnSupplyRow,
+} from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -130,6 +134,7 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import { buildSectorCommoditySections } from "@/lib/corporations/queries/sectorDetailCommodities";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
+import { internalTransferAccount } from "@/lib/market/producerMarket/internalTransferPricingRules";
 import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
 import {
   buildSectorAttackInfo,
@@ -377,7 +382,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           .findOne({ _id: sector.stateId, countryId: sector.countryId }),
         db
           .collection<State>("states")
-          .find({}, { projection: { _id: 1, countryId: 1 } })
+          .find({}, { projection: { _id: 1, countryId: 1, name: 1 } })
           .toArray(),
         findMergedRegionMetrics(db, { _id: sector.stateId, countryId: sector.countryId }),
         corporation.ceoType === "imperial"
@@ -429,6 +434,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 capitalStock: 1,
                 buildQueue: 1,
                 freightBillingCharge: 1,
+                // What each site made last turn, for the own-supply reason on inputs.
+                "producerSettlement.turn": 1,
+                "producerSettlement.products.commodity": 1,
+                "producerSettlement.products.producedUnits": 1,
               },
             }
           )
@@ -955,6 +964,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const plantsEnabled = marketAtLeast(marketMode, "plants");
     let plants: Awaited<ReturnType<typeof buildSectorPlantsSection>> | null = null;
     let freightState: { observedLoad: number; capacity: number; turn: number | null } | undefined;
+    const ownSupplyByCommodity = new Map<string, OwnSupplyRow>();
     if (plantsEnabled && !shouldRedact && !publicFinancialFog) {
       const [latestSourcingNetwork] = await db
         .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
@@ -962,6 +972,22 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         .sort({ turn: -1 })
         .limit(1)
         .toArray();
+      if (isCeo) {
+        await explainOwnSupplyReach({
+          db,
+          corporation,
+          sector,
+          siblings: allCorpSectors,
+          shortInputs: demandsWithShortage
+            .filter((d) => typeof d.inputAvailability === "number" && d.inputAvailability < 0.999)
+            .map((d) => d.commodity),
+          stateNameById: new Map(allStates.map((s) => [s._id, s.name ?? s._id])),
+          ownRouteDelivered: latestSourcingNetwork?.ownRouteDelivered ?? [],
+          ownRouteTurn: latestSourcingNetwork?.turn ?? null,
+          currentTurn,
+          out: ownSupplyByCommodity,
+        });
+      }
       const observedFreight = latestSourcingNetwork?.freightTeuByState[sector.stateId];
       const freightPrice = commodityPrices.find((price) => price.commodity === "freight");
       freightState = {
@@ -1308,6 +1334,13 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         currentYear: techCurrentYear,
       });
 
+      const internalAccount = internalTransferAccount({
+        revenue: sectorEconomicRevenue(sector),
+        costs: maintenanceNet,
+        profit,
+        income: sector.plantsPnl?.internalSupplyIncome,
+        charge: sector.plantsPnl?.internalSupplyCharge,
+      });
       plants = buildSectorPlantsSection({
         bankingCommodityScale: commodityProductionCapacityScale(
           corporation.bankCharter,
@@ -1384,12 +1417,18 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         },
         money: {
           nameplateRevenueAnchor: sectorAmountAnchor(sector.revenue),
-          realizedRevenueAnchor: sectorAmountAnchor(sectorEconomicRevenue(sector)),
-          maintenanceNetAnchor: sectorAmountAnchor(maintenanceNet),
+          realizedRevenueAnchor: sectorAmountAnchor(internalAccount.revenue),
+          maintenanceNetAnchor: sectorAmountAnchor(internalAccount.costs),
           labourAnchor: sectorAmountAnchor(sectorLaborCost),
           growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
-          profitAnchor: sectorAmountAnchor(profit),
+          profitAnchor: sectorAmountAnchor(internalAccount.profit),
           inputsAnchor,
+          internalSupplyIncomeAnchor: sectorAmountAnchor(
+            sector.plantsPnl?.internalSupplyIncome ?? 0
+          ),
+          internalSupplyChargeAnchor: sectorAmountAnchor(
+            sector.plantsPnl?.internalSupplyCharge ?? 0
+          ),
           freightCostAnchor: sectorAmountAnchor(sector.freightBillingCharge ?? 0),
           freightIncomeAnchor: sectorAmountAnchor(sector.freightBillingCredit ?? 0),
           fundedComplianceAnchor:
@@ -1690,7 +1729,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       plants,
       commodities: {
         supplies,
-        demands: demandsWithShortage,
+        demands: demandsWithShortage.map((d) => {
+          const ownSupply = ownSupplyByCommodity.get(d.commodity);
+          return ownSupply ? { ...d, ownSupply } : d;
+        }),
         ...(freightState ? { freightState } : {}),
         commodityMarginModifier: mods.commodityModifier,
         commoditySupplyDemandBlendPct: blendPct,

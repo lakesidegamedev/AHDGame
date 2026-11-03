@@ -1341,6 +1341,8 @@ export function buildSectorPlantsSection(args: {
     profitAnchor: number;
     /** Physical input bill computed from the demand rows at market prices. */
     inputsAnchor: number;
+    internalSupplyIncomeAnchor?: number;
+    internalSupplyChargeAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     /**
@@ -1656,7 +1658,9 @@ export function buildSectorPlantsSection(args: {
   const costBasis = mothballed
     ? MOTHBALL_UPKEEP_FRACTION
     : utilization + IDLE_UPKEEP_FRACTION * idleShareForBill;
-  const fullMaintenance = costBasis > 0 ? money.maintenanceNetAnchor / costBasis : 0;
+  const internalSupplyChargeAnchor = nonNeg(money.internalSupplyChargeAnchor ?? 0);
+  const fullMaintenance =
+    costBasis > 0 ? (money.maintenanceNetAnchor - internalSupplyChargeAnchor) / costBasis : 0;
   const upkeepAnchor = money.enginePnl
     ? nonNeg(money.enginePnl.upkeep)
     : nonNeg(
@@ -1706,7 +1710,11 @@ export function buildSectorPlantsSection(args: {
       // their own in the cost chain, so they sit here, exactly as the residual
       // used to carry them.
       engine.otherOpex + engine.financialLegs + engine.inventoryCarry - internalSupplyDiscountAnchor
-    : money.maintenanceNetAnchor - upkeepAnchor - complianceAnchor - inputsAnchor;
+    : money.maintenanceNetAnchor -
+      upkeepAnchor -
+      complianceAnchor -
+      inputsAnchor -
+      internalSupplyChargeAnchor;
   // The whole modifier stack as one signed line: positive is a credit that
   // lowers cost. Rendered as its own row with a drilldown, so a player can see
   // their subsidy or a live crisis as a number in the same units as the wage
@@ -1906,12 +1914,19 @@ export function buildSectorPlantsSection(args: {
       policyPp,
       otherOperatingAnchor,
       internalSupplyDiscountAnchor,
+      ...((money.internalSupplyIncomeAnchor ?? 0) > 0
+        ? { internalSupplyIncomeAnchor: money.internalSupplyIncomeAnchor }
+        : {}),
+      ...(internalSupplyChargeAnchor > 0 ? { internalSupplyChargeAnchor } : {}),
       freightCostAnchor,
       freightIncomeAnchor,
       growthAndBuildAnchor: engine ? nonNeg(engineGrowthAnchor) : nonNeg(money.growthCostAnchor),
       profitAnchor: money.profitAnchor,
       financialEventsAnchor,
-      avgSalePriceAnchor: soldUnits != null && soldUnits > 0 ? revenueAnchor / soldUnits : null,
+      avgSalePriceAnchor:
+        soldUnits != null && soldUnits > 0
+          ? (revenueAnchor - (money.internalSupplyIncomeAnchor ?? 0)) / soldUnits
+          : null,
       profitPerUnitAnchor:
         producedUnits != null && producedUnits > 0 ? money.profitAnchor / producedUnits : null,
     },
