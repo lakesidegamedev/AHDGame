@@ -158,7 +158,15 @@ export async function listSaves(home: string = singleplayerHomeDir()): Promise<S
     const meta = parseMeta(await readJson(path.join(dir, entry, META_FILE)), entry);
     if (meta && existsSync(path.join(dir, entry, ARCHIVE_FILE))) saves.push(meta);
   }
-  return saves.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+  // Newest first. Two saves in the same millisecond (a batch of fast turns)
+  // tie on createdAt; the later turn wins, so autosave counts from the right
+  // save instead of whichever the directory listed first.
+  return saves.sort(
+    (a, b) =>
+      (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0) ||
+      (b.turn ?? -1) - (a.turn ?? -1) ||
+      (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)
+  );
 }
 
 export async function getSave(
