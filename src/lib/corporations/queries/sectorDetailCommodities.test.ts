@@ -4,6 +4,7 @@ import {
   computeCapitalUsage,
   perUnitAnchorAmount,
   resolveThroughputBindingInput,
+  unsoldReadingsFor,
 } from "@/lib/corporations/queries/sectorDetailCommodities";
 
 describe("sector detail capital economics", () => {
@@ -68,5 +69,66 @@ describe("sector detail throughput attribution", () => {
     expect(resolveThroughputBindingInput(null, undefined, "real_estate_services")).toBe(
       "real_estate_services"
     );
+  });
+});
+
+describe("sector detail unsold readings (#5450)", () => {
+  const receipt = {
+    turn: 9,
+    products: [
+      {
+        commodity: "energy",
+        book: "world",
+        offeredUnits: 100,
+        deliveredUnits: 30,
+        askingUnitPrice: 12,
+      },
+      {
+        commodity: "energy",
+        book: "world",
+        offeredUnits: 100,
+        deliveredUnits: 30,
+        askingUnitPrice: 12,
+      },
+    ],
+  } as never;
+  const prices = { "energy|world": 10 };
+
+  it("reads every plant row against the lane price for its book", () => {
+    const reading = unsoldReadingsFor({
+      isCeo: true,
+      receipt,
+      currentTurn: 10,
+      laneClearingPrices: prices,
+    }).get("energy")!;
+    expect(reading).toMatchObject({ reason: "ask_above_market", marketUnitPrice: 10 });
+    expect(reading.unsoldShare).toBeCloseTo(0.7, 12);
+  });
+
+  it("shows nothing to a viewer who is not the CEO", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: false, receipt, currentTurn: 10, laneClearingPrices: prices }).size
+    ).toBe(0);
+  });
+
+  it("shows nothing for a receipt older than last turn", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: true, receipt, currentTurn: 12, laneClearingPrices: prices }).size
+    ).toBe(0);
+  });
+
+  it("shows nothing without lane prices", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: true, receipt, currentTurn: 10, laneClearingPrices: undefined })
+        .size
+    ).toBe(0);
+  });
+
+  it("reads a lane with no trades as no buyers", () => {
+    expect(
+      unsoldReadingsFor({ isCeo: true, receipt, currentTurn: 10, laneClearingPrices: {} }).get(
+        "energy"
+      )!.reason
+    ).toBe("no_buyers");
   });
 });

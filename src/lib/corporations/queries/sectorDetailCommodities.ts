@@ -4,7 +4,7 @@
  * motion; no behavior change).
  */
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
-import { unsoldReason, type UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
+import { unsoldByCommodity, type UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { fundedClearingReading } from "@/lib/corporations/fundedClearingReading";
 import { buildMarketContext } from "@/lib/market/marketContext";
@@ -116,7 +116,7 @@ export async function buildSectorCommoditySections(args: {
    * Last turn's average price buyers paid per book lane (producerMarketOutcomes),
    * for saying why an output went unsold (issue #5448). Absent: no reason shown.
    */
-  laneClearingPrices?: Readonly<Record<string, number>>;
+  laneClearingPrices?: Readonly<Record<string, number | undefined>>;
 }) {
   const {
     sector,
@@ -210,20 +210,14 @@ export async function buildSectorCommoditySections(args: {
   const ownSiteByCommodity = new Map(ownSiteProducts.map((p) => [p.commodity, p] as const));
 
   // Why an output went unsold last turn: its ask against what buyers in its
-  // book paid. CEO-only, like the own-site figures; needs a fresh receipt.
-  const receipt = sector.producerSettlement;
-  const unsoldByCommodity = new Map<string, UnsoldReading>();
-  if (isCeo && args.laneClearingPrices && receipt && receipt.turn >= (args.currentTurn ?? 0) - 1) {
-    for (const p of receipt.products ?? []) {
-      const reading = unsoldReason({
-        offeredUnits: p.offeredUnits,
-        soldUnits: (p.soldUnits ?? 0) + (p.internalDeliveredUnits ?? 0),
-        askUnitPrice: p.askingUnitPrice,
-        marketUnitPrice: args.laneClearingPrices[laneKeyOf(p.commodity, p.book)],
-      });
-      if (reading) unsoldByCommodity.set(p.commodity, reading);
-    }
-  }
+  // book paid, summed over every plant and book on the receipt. CEO-only, like
+  // the own-site figures; needs a fresh receipt.
+  const unsoldReadings = unsoldReadingsFor({
+    isCeo,
+    receipt: sector.producerSettlement,
+    currentTurn: args.currentTurn ?? 0,
+    laneClearingPrices: args.laneClearingPrices,
+  });
 
   // Last turn's per-output clear rates (written by the clearing pass). Absent
   // on sectors that predate the field or when clearing never ran.
@@ -312,7 +306,7 @@ export async function buildSectorCommoditySections(args: {
       ...(market.clearingEnabled && hasRevenueSplit
         ? { revenueShare: revenueShareByCommodity[f.commodity] ?? 0 }
         : {}),
-      ...(unsoldByCommodity.has(f.commodity) ? { unsold: unsoldByCommodity.get(f.commodity) } : {}),
+      ...(unsoldReadings.has(f.commodity) ? { unsold: unsoldReadings.get(f.commodity) } : {}),
       ...(ownSiteByCommodity.has(f.commodity)
         ? { ownSite: ownSiteByCommodity.get(f.commodity) }
         : {}),
@@ -595,4 +589,30 @@ export async function buildSectorCommoditySections(args: {
     capital,
     throughput,
   };
+}
+
+/**
+ * The unsold reading per commodity for a sector page: nothing for a non-CEO,
+ * without last turn's lane prices, or without a receipt from last turn.
+ * Exported for tests.
+ */
+export function unsoldReadingsFor(args: {
+  isCeo: boolean;
+  receipt: CorporateSector["producerSettlement"] | null | undefined;
+  currentTurn: number;
+  laneClearingPrices: Readonly<Record<string, number | undefined>> | undefined;
+}): Map<string, UnsoldReading> {
+  const { receipt, laneClearingPrices } = args;
+  if (!args.isCeo || !laneClearingPrices || !receipt || !(receipt.turn >= args.currentTurn - 1))
+    return new Map();
+  return unsoldByCommodity(
+    (receipt.products ?? []).map((p) => ({
+      commodity: p.commodity,
+      book: p.book,
+      offeredUnits: p.offeredUnits,
+      deliveredUnits: p.deliveredUnits,
+      askingUnitPrice: p.askingUnitPrice,
+    })),
+    (commodity, book) => laneClearingPrices[laneKeyOf(commodity, book)] ?? null
+  );
 }

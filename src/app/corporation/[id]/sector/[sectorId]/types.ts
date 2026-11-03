@@ -1,3 +1,4 @@
+import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
@@ -164,7 +165,7 @@ export interface CommodityFlow {
    * Supply rows, CEO only: why part of this output went unsold last turn, from
    * the plant's ask against what buyers in its book paid (issue #5448).
    */
-  unsold?: import("@/lib/corporations/rules/unsoldReason").UnsoldReading;
+  unsold?: UnsoldReading;
   /**
    * Market clearing, supply rows only: this output's share of last turn's
    * realized revenue (0-1, summing to ~1 across outputs). Splits the blended

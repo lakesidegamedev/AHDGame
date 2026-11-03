@@ -339,13 +339,63 @@ describe("InputsOutputsPanel unsold reason (issue #5448)", () => {
 
   it("says buyers were covered when the price was competitive", () => {
     const { container } = withUnsold({
-      reason: "buyers_covered",
+      reason: "buyers_exhausted",
       unsoldShare: 0.3,
       askUnitPrice: 10,
       marketUnitPrice: 10,
     });
-    expect(container.querySelector('[data-unsold-reason="buyers_covered"]')?.textContent).toContain(
-      "already supplied"
+    expect(
+      container.querySelector('[data-unsold-reason="buyers_exhausted"]')?.textContent
+    ).toContain("already supplied");
+  });
+});
+
+describe("InputsOutputsPanel unsold sentences (#5450)", () => {
+  const note = (unsold: CommodityFlow["unsold"]) => {
+    const { container } = render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          supplies: [
+            flow({
+              commodity: "energy",
+              label: "Electricity",
+              icon: "kW",
+              soldFraction: 0.5,
+              unsold,
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
     );
+    return container.querySelector("[data-unsold-reason]")?.textContent ?? "";
+  };
+
+  it("explains equal-price sharing", () => {
+    expect(
+      note({ reason: "shared_at_market", unsoldShare: 0.5, askUnitPrice: 10, marketUnitPrice: 10 })
+    ).toContain("shared between every seller asking it");
+  });
+
+  it("says nobody bought, naming the good", () => {
+    expect(
+      note({ reason: "no_buyers", unsoldShare: 1, askUnitPrice: 10, marketUnitPrice: null })
+    ).toContain("Nobody bought Electricity");
+  });
+
+  it("never turns an ask above market into a no-buyers sentence", () => {
+    const text = note({
+      reason: "ask_above_market",
+      unsoldShare: 0.5,
+      askUnitPrice: 12,
+      marketUnitPrice: null,
+    });
+    expect(text).toContain("above what buyers in this market paid");
+    expect(text).not.toContain("Nobody bought");
   });
 });

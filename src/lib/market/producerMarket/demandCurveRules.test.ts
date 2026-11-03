@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEMAND_CURVE_MAX_EXTRA_SPEND,
   DEMAND_CURVE_STEPS,
   demandSteps,
+  ladderSpendAt,
   incomeAdjustedWeights,
   householdSpendFraction,
   incomeIndexByState,
@@ -30,10 +30,25 @@ describe("demandSteps", () => {
     for (const s of steps.slice(1)) expect(s.units).toBeGreaterThan(0);
   });
 
-  it("caps the extra spending the lower steps may reserve", () => {
-    const steps = demandSteps({ budget: 1_000, maximumUnitPrice: 10, priceElasticity: 3 });
-    const extra = steps.slice(1).reduce((n, s) => n + s.maximumSpend, 0);
-    expect(extra).toBeLessThanOrEqual(1_000 * DEMAND_CURVE_MAX_EXTRA_SPEND + 1e-9);
+  it("never spends more than the good's budget at any single price (#5451)", () => {
+    for (const e of [0.25, 1, 1.3, 3]) {
+      const steps = demandSteps({ budget: 1_000, maximumUnitPrice: 10, priceElasticity: e });
+      for (const s of steps) {
+        expect(ladderSpendAt(steps, s.maximumUnitPrice)).toBeLessThanOrEqual(1_000 + 1e-9);
+      }
+    }
+  });
+
+  it("weakly increases the quantity as the price falls", () => {
+    const steps = demandSteps({ budget: 1_000, maximumUnitPrice: 10, priceElasticity: 1.3 });
+    let previous = 0;
+    for (const s of steps) {
+      const q = steps
+        .filter((x) => x.maximumUnitPrice >= s.maximumUnitPrice)
+        .reduce((n, x) => n + x.units, 0);
+      expect(q).toBeGreaterThanOrEqual(previous);
+      previous = q;
+    }
   });
 
   it("returns nothing for an empty budget or bad price", () => {

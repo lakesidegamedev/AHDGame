@@ -105,7 +105,7 @@ import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
-import { PRODUCER_MARKET_OUTCOMES } from "@/lib/market/producerMarket/fundedLedgerRules";
+import { loadReceiptLanePrices } from "@/lib/corporations/queries/receiptLanePrices";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -854,21 +854,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       throughput,
     } = await buildSectorCommoditySections({
       currentTurn,
-      // What buyers paid per book last turn, for the unsold reason (CEO only).
+      // What buyers paid per book on the receipt's turn, for the unsold reason.
+      // CEO only, and only when there is a fresh receipt to explain. Keyed by
+      // the turn engine's own `${worldEpoch}:${turn}` id: the collection also
+      // holds a per-epoch share doc and has no `turn` index.
       ...(isCeo
-        ? {
-            laneClearingPrices:
-              (
-                await db
-                  .collection<{ turn: number; laneClearingPrices?: Record<string, number> }>(
-                    PRODUCER_MARKET_OUTCOMES
-                  )
-                  .find({}, { projection: { laneClearingPrices: 1, turn: 1 } })
-                  .sort({ turn: -1 })
-                  .limit(1)
-                  .toArray()
-              )[0]?.laneClearingPrices ?? undefined,
-          }
+        ? await loadReceiptLanePrices(db, {
+            worldEpochId: gameState?.worldEpochId,
+            receiptTurn: sector.producerSettlement?.turn,
+            currentTurn,
+          })
         : {}),
       sector,
       // Commodity flows run in ₳; normalize the sector's host-currency revenue

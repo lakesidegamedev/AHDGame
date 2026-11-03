@@ -60,12 +60,6 @@ export function demandElasticity(commodity: string): DemandElasticity {
 /** Price of each ladder step as a share of the top step's ceiling. */
 export const DEMAND_CURVE_STEPS = [1, 0.85, 0.7, 0.55] as const;
 
-/**
- * Extra spending the lower steps may reserve, as a share of the good's own
- * budget. Bounds how far cheap prices can pull a household into its savings.
- */
-export const DEMAND_CURVE_MAX_EXTRA_SPEND = 0.5;
-
 /** The income index is clamped so a degenerate reading cannot zero a good. */
 export const INCOME_INDEX_MIN = 0.25;
 export const INCOME_INDEX_MAX = 4;
@@ -83,8 +77,15 @@ function positive(x: number): number {
 }
 
 /**
- * One good's ladder. The top step keeps today's ceiling and units; each lower
- * step carries only the extra units bought at its lower price.
+ * One good's ladder, inside one real budget (#5451).
+ *
+ * Quantities are incremental: step k carries only the units the household adds
+ * between step k-1's price and its own. The cumulative quantity at step k's
+ * price is `min(Q0 * share^-e, budget / price)`: the elastic demand, never more
+ * than the good's own budget buys at that price. So at any single market price
+ * every step that fills pays that price, and their total spend is at most the
+ * budget. Cheaper prices buy more units with the same money; they never fund
+ * spending beyond it. The top step is the old single order, unchanged.
  */
 export function demandSteps(input: {
   budget: number;
@@ -101,25 +102,26 @@ export function demandSteps(input: {
   const elasticity = positive(input.priceElasticity);
   if (elasticity <= 0) return steps;
   let previousUnits = baseUnits;
-  let extraSpend = 0;
-  const extraCap = budget * DEMAND_CURVE_MAX_EXTRA_SPEND;
   for (let k = 1; k < DEMAND_CURVE_STEPS.length; k++) {
     const share = DEMAND_CURVE_STEPS[k]!;
     const price = top * share;
-    const unitsAtPrice = baseUnits * Math.pow(share, -elasticity);
-    let units = unitsAtPrice - previousUnits;
-    previousUnits = unitsAtPrice;
+    const cumulative = Math.min(baseUnits * Math.pow(share, -elasticity), budget / price);
+    const units = cumulative - previousUnits;
     if (!(units > 0)) continue;
-    let spend = units * price;
-    if (extraSpend + spend > extraCap) {
-      spend = Math.max(0, extraCap - extraSpend);
-      units = spend / price;
-    }
-    if (!(units > 0)) break;
-    extraSpend += spend;
-    steps.push({ step: k, maximumUnitPrice: price, units, maximumSpend: spend });
+    previousUnits = cumulative;
+    steps.push({ step: k, maximumUnitPrice: price, units, maximumSpend: units * price });
   }
   return steps;
+}
+
+/**
+ * Most a ladder can spend if every step fills at one market price `price`:
+ * the cumulative quantity up to that price times the price. Exported so tests
+ * and previews can check the single-budget rule.
+ */
+export function ladderSpendAt(steps: readonly DemandStep[], price: number): number {
+  const units = steps.filter((s) => s.maximumUnitPrice >= price).reduce((n, s) => n + s.units, 0);
+  return units * price;
 }
 
 /** Prime rate (percent) at which households spend the base share of their cash. */

@@ -16,6 +16,7 @@ import InputOffersHint from "../components/InputOffersHint";
 import { costliestInput } from "../lib/costliestInput";
 import { perProductSalePrices } from "../lib/perProductSalePrice";
 import DetailsDisclosure from "../components/DetailsDisclosure";
+import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
@@ -329,11 +330,7 @@ export default function InputsOutputsPanel({
               >
                 <span className="font-semibold tabular-nums">{fmtPct(f.unsold.unsoldShare)}</span>{" "}
                 of your {f.label} went unsold last turn.{" "}
-                {f.unsold.reason === "ask_above_market" && f.unsold.marketUnitPrice != null
-                  ? `You asked ${price(f.unsold.askUnitPrice)} ${currencyCode}, but buyers in this market paid ${price(f.unsold.marketUnitPrice)} on average, so they bought from cheaper sellers first. A lower price would sell more.`
-                  : f.unsold.reason === "buyers_covered"
-                    ? "Your price was in line with what buyers paid, but every buyer willing to pay it was already supplied. More output here will not sell until demand grows."
-                    : "Nobody bought this in your market last turn, at any price."}
+                {unsoldSentence(f.unsold, f.label, (v) => `${price(v)} ${currencyCode}`)}
               </p>
             ) : null
           )}
@@ -412,6 +409,26 @@ export default function InputsOutputsPanel({
       </DetailsDisclosure>
     </div>
   );
+}
+
+/** One explicit sentence per unsold reason; the rule never pairs a reason with a missing price. */
+function unsoldSentence(
+  unsold: UnsoldReading,
+  label: string,
+  money: (v: number) => string
+): string {
+  switch (unsold.reason) {
+    case "ask_above_market":
+      return unsold.marketUnitPrice != null
+        ? `You asked ${money(unsold.askUnitPrice)}, but buyers in this market paid ${money(unsold.marketUnitPrice)} on average, so they bought from cheaper sellers first. A lower price would sell more.`
+        : "Your price was above what buyers in this market paid, so they bought from cheaper sellers first.";
+    case "shared_at_market":
+      return `Your price matched what buyers paid, but the buyers at that price were shared between every seller asking it. More ${label} here sells only if demand grows or you price lower.`;
+    case "buyers_exhausted":
+      return "Your price was below what buyers paid, yet every buyer willing to pay it was already supplied. More output here will not sell until demand grows.";
+    case "no_buyers":
+      return `Nobody bought ${label} in your market last turn, at any price.`;
+  }
 }
 
 function FlowRow({
