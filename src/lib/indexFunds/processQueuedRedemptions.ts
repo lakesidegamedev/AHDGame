@@ -256,17 +256,35 @@ export async function processQueuedRedemptions(
 
   for (const pendingEntry of ordered) {
     if (budget.claimsLeft <= 0) break;
-    // An entry whose holder document is gone can never be paid: both payout
-    // paths need the holder record, because the credit leg is guarded on its id
-    // and settleQueuedPayout refuses without it. Such an entry used to be
-    // fenced, break the NPP payout batch, possibly liquidate the fund for cash
-    // and be restored, every turn, forever (a merged or dissolved NPP leaves
-    // exactly this row). Leave the obligation untouched and do not spend a claim
-    // on it. Its units still leave the pro-rata denominator at this point in the
-    // order, exactly as they did after the old claim, so every entry that can
-    // pay sees the same share it saw before.
+    // A deleted holder cannot receive a payout. Burned-unit entries are cash
+    // obligations with no recipient; cancel them once without moving money or
+    // spending a payout claim. Legacy entries still own units and need manual
+    // reconciliation, so keep them queued and warn instead.
     const owedUnits = remainingRedemptionUnits(pendingEntry);
     if (owedUnits > 0 && !holderOf(pendingEntry)) {
+      if (pendingEntry.unitsBurnedAtRequest === true) {
+        const cancelled = await db
+          .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+          .updateOne(
+            {
+              _id: pendingEntry._id,
+              status: pendingEntry.status,
+              units: pendingEntry.units,
+              paidAmountAnchor: pendingEntry.paidAmountAnchor,
+              unitsBurnedAtRequest: true,
+              pendingSettlementProjection: { $exists: false },
+            },
+            { $set: { status: "cancelled", updatedAt: new Date() } }
+          );
+        if (cancelled.matchedCount)
+          console.warn(
+            `[indexfund-cron] cancelled queued redemption ${pendingEntry._id} for ${fund.slug}: holder ${holderKeyOf(pendingEntry)} no longer exists and its units left the fund at request`
+          );
+      } else {
+        console.warn(
+          `[indexfund-cron] queued redemption ${pendingEntry._id} for ${fund.slug}: holder ${holderKeyOf(pendingEntry)} no longer exists; its units were not burned at request, so the row stays queued`
+        );
+      }
       unservedUnits = Math.max(0, unservedUnits - owedUnits);
       continue;
     }

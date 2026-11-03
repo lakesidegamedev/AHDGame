@@ -99,7 +99,7 @@ describe("queued NPC redemption cash witness", () => {
     });
     expect(
       await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entry._id })
-    ).toMatchObject({ status: "queued", units: 10 });
+    ).toMatchObject({ status: "cancelled", units: 10 });
   });
   it("mirrors an anchor-stated cross-currency redemption onto the fund's own key", async () => {
     const f = world("UK");

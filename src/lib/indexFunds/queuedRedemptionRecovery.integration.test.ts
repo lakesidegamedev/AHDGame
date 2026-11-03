@@ -183,7 +183,7 @@ describe("queued payout receipt and claim boundaries", () => {
     });
     expect(
       await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entryId })
-    ).toMatchObject({ status: "queued", units: 10 });
+    ).toMatchObject({ status: "cancelled", units: 10 });
     expect(f.memory.collection(MONEY_MOVE_COLLECTION).docs).toHaveLength(0);
   });
   it("burns legacy supply with the debit and never burns it again on recovery", async () => {
