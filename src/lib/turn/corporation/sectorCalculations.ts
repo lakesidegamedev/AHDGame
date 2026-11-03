@@ -684,6 +684,25 @@ export function processSectors(
     }
     const corpLevelCosts = totalCorpCosts - sectorMaintenanceTotal;
 
+    // Per-turn bond cash flows (matches consolidated `income` on corporation API financials).
+    // Issuer interest is waived for national enterprises (government bond subsidy).
+    // Bond amounts denominate in bond.currencyCode (Task 18B); both helpers
+    // normalize to ₳ via lookups.exchangeRatesByCurrency so the corp's
+    // income math stays anchor-consistent across cross-currency holdings.
+    const issuerBonds = lookups.bondsByCorpId.get(corp._id.toString());
+    const perTurnBondInterestExpense = perTurnIssuerBondInterestExpense(
+      issuerBonds,
+      lookups.exchangeRatesByCurrency
+    );
+    const isNationalEnterprise = !!corp.countryOwnerId;
+    const perTurnBondDragOnNetIncome = isNationalEnterprise ? 0 : perTurnBondInterestExpense;
+    // Interest a corporation pays on its own bonds is deductible: it is a
+    // corp-level cost, apportioned across sectors by revenue share like the
+    // other overhead. Coupon income it earns as a holder stays taxable below,
+    // so the base is no longer asymmetric. National enterprises pay no issuer
+    // interest (waived above), so they deduct nothing.
+    const corpLevelTaxCosts = corpLevelCosts + perTurnBondDragOnNetIncome;
+
     let totalFederalTax = 0;
     let totalStateTax = 0;
     // Per-jurisdiction breakdown so each turn's history snapshot can record which countries/
@@ -717,7 +736,7 @@ export function processSectors(
     for (const s of sectorResults) {
       const revenueShare = corpRevenue > 0 ? s.hourlyRevenue / corpRevenue : 0;
       const sectorNetIncome =
-        s.hourlyRevenue * (s.effectiveMargin / 100) - corpLevelCosts * revenueShare;
+        s.hourlyRevenue * (s.effectiveMargin / 100) - corpLevelTaxCosts * revenueShare;
       consolidatedNet += sectorNetIncome;
       if (sectorNetIncome > 0) grossPositiveTaxable += sectorNetIncome;
     }
@@ -729,7 +748,7 @@ export function processSectors(
     for (const s of sectorResults) {
       const revenueShare = corpRevenue > 0 ? s.hourlyRevenue / corpRevenue : 0;
       const sectorOpIncome = s.hourlyRevenue * (s.effectiveMargin / 100);
-      const sectorNetIncome = sectorOpIncome - corpLevelCosts * revenueShare;
+      const sectorNetIncome = sectorOpIncome - corpLevelTaxCosts * revenueShare;
       const sectorTaxable = Math.max(0, sectorNetIncome) * lossOffsetScale;
       if (sectorTaxable <= 0) continue;
       // Domestic = corp HQ'd in the same country as this sector.
@@ -760,19 +779,6 @@ export function processSectors(
         targetStateMap.set(s.stateId, (targetStateMap.get(s.stateId) ?? 0) + stTax);
       }
     }
-
-    // Per-turn bond cash flows (matches consolidated `income` on corporation API financials).
-    // Issuer interest is waived for national enterprises (government bond subsidy).
-    // Bond amounts denominate in bond.currencyCode (Task 18B); both helpers
-    // normalize to ₳ via lookups.exchangeRatesByCurrency so the corp's
-    // income math stays anchor-consistent across cross-currency holdings.
-    const issuerBonds = lookups.bondsByCorpId.get(corp._id.toString());
-    const perTurnBondInterestExpense = perTurnIssuerBondInterestExpense(
-      issuerBonds,
-      lookups.exchangeRatesByCurrency
-    );
-    const isNationalEnterprise = !!corp.countryOwnerId;
-    const perTurnBondDragOnNetIncome = isNationalEnterprise ? 0 : perTurnBondInterestExpense;
 
     // Bond coupon income is taxed at the corp's home-country federal rate only
     // (state/regional never taxes bond interest — standard municipal-bond

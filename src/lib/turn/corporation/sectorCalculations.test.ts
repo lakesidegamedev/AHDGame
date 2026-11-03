@@ -1488,6 +1488,79 @@ describe("corporate tax deduction", () => {
     expect(usIncome).toBeCloseTo(hourlyIncome * TURNS_PER_YEAR, 0);
   });
 
+  describe("interest paid on the corporation's own bonds is deductible", () => {
+    // 10% coupon on 115,200 issued = 11,520 a year = 240 per turn (48 turns).
+    const issued = (totalIssued: number) =>
+      [
+        { couponRate: 10, totalIssued, currencyCode: "USD" },
+      ] as unknown as import("@/lib/db/types/bond").Bond[];
+    const setup = (bonds: import("@/lib/db/types/bond").Bond[] | null) => {
+      const corp = makeCorp({ headquartersState: "US-CA", countryId: "US" });
+      const sector = makeSector(corp._id, {
+        stateId: "US-CA",
+        countryId: "US",
+        revenue: 24_000, // 1000/turn
+        profitMargin: 50, // opIncome 500
+        targetGrowthRate: 0,
+        currentGrowthRate: 0,
+      });
+      const lookups = baseLookups([corp], [sector]);
+      lookups.domesticCorpTaxRateByCountry.set("US", 20);
+      lookups.domesticStateCorpTaxRateByState.set("US-CA", 10);
+      if (bonds) lookups.bondsByCorpId.set(corp._id.toString(), bonds);
+      return processSectors(lookups, 1, new Date()).corpSnapshots[0];
+    };
+
+    it("taxes profit after the interest it pays bondholders", () => {
+      const snapshot = setup(issued(115_200));
+      // Base 500 - 240 interest = 260 → federal 52, state 26.
+      expect(snapshot.perTurnBondDragOnNetIncome).toBeCloseTo(240, 6);
+      expect(snapshot.federalTaxPaid).toBeCloseTo(52, 2);
+      expect(snapshot.stateTaxPaid).toBeCloseTo(26, 2);
+      // Without bonds the same corp pays the full 100 / 50.
+      const control = setup(null);
+      expect(control.federalTaxPaid).toBeCloseTo(100, 2);
+      expect(control.stateTaxPaid).toBeCloseTo(50, 2);
+    });
+
+    it("pays no tax when interest exceeds operating profit", () => {
+      // 960/turn of interest against 500 of operating profit.
+      const snapshot = setup(issued(460_800));
+      expect(snapshot.perTurnBondDragOnNetIncome).toBeCloseTo(960, 6);
+      expect(snapshot.federalTaxPaid).toBeCloseTo(0, 6);
+      expect(snapshot.stateTaxPaid).toBeCloseTo(0, 6);
+    });
+
+    it("apportions the deduction across countries by revenue share", () => {
+      const corp = makeCorp({ headquartersState: "US-CA", countryId: "US" });
+      const usSector = makeSector(corp._id, {
+        stateId: "US-CA",
+        countryId: "US",
+        revenue: 24_000,
+        profitMargin: 50,
+        targetGrowthRate: 0,
+        currentGrowthRate: 0,
+      });
+      const ukSector = makeSector(corp._id, {
+        stateId: "UK-ENG",
+        countryId: "UK",
+        revenue: 24_000,
+        profitMargin: 50,
+        targetGrowthRate: 0,
+        currentGrowthRate: 0,
+      });
+      const lookups = baseLookups([corp], [usSector, ukSector]);
+      lookups.domesticCorpTaxRateByCountry.set("US", 20);
+      lookups.foreignCorpTaxRateByCountry.set("UK", 45);
+      lookups.bondsByCorpId.set(corp._id.toString(), issued(115_200));
+      const snapshot = processSectors(lookups, 1, new Date()).corpSnapshots[0];
+      // 240 interest split 120/120: US 380 × 20% = 76, UK 380 × 45% = 171.
+      expect(snapshot.taxPaidByCountry.get("US")).toBeCloseTo(76, 1);
+      expect(snapshot.taxPaidByCountry.get("UK")).toBeCloseTo(171, 1);
+      expect(snapshot.federalTaxPaid).toBeCloseTo(247, 1);
+    });
+  });
+
   it("neither books nor taxes coupons on a defaulted held bond, which the bond turn never pays", () => {
     // Regression: a live corp held two defaulted sovereigns. Their coupons
     // still counted as income, the coupon tax on them exceeded every coupon the

@@ -8,9 +8,11 @@ import {
   computeCorporateCreditAtTurn,
   corporateCashArrearsAnchor,
   isCorporateIssuerBond,
+  sumCorporateSectorAnnualRevenue,
   sumCorporateSectorPerTurnIncome,
 } from "./corporateCredit";
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
+import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calculateCreditScore } from "@/lib/constants/bonds";
 
 const corpId = new ObjectId();
@@ -316,5 +318,45 @@ describe("construction in progress in credit equity (P3a)", () => {
     expect(credit({ sectorNpv: 1_000, constructionInProgressAnchor: -500 }).totalEquity).toBe(
       1_000
     );
+  });
+});
+
+describe("sumCorporateSectorAnnualRevenue", () => {
+  const corporationId = corpId;
+  const usCorp = { countryId: "US", liquidCurrencyCode: "USD" };
+  const fx = new Map<CurrencyCode, number>([
+    ["USD", 2],
+    ["JPY", 100],
+  ]);
+
+  it("converts each sector with its host currency, not the corp's", () => {
+    // 2400 JPY a day at 100 JPY per ₳ is ₳24 a day, ₳1,152 a year.
+    const japan = baseSector({ countryId: "JP", revenue: 2400 });
+    const us = baseSector({ countryId: "US", revenue: 240 });
+    const annual = sumCorporateSectorAnnualRevenue([japan, us], corporationId, usCorp, fx);
+    const japanAnchorPerDay = 2400 / 100;
+    const usAnchorPerDay = 240 / 2;
+    const daysPerYear = TURNS_PER_YEAR / TURNS_PER_DAY;
+    expect(annual).toBeCloseTo((japanAnchorPerDay + usAnchorPerDay) * daysPerYear, 5);
+  });
+
+  it("treats a yen sector as yen rather than the owner's dollars", () => {
+    const japan = baseSector({ countryId: "JP", revenue: 2400 });
+    const annual = sumCorporateSectorAnnualRevenue([japan], corporationId, usCorp, fx);
+    expect(annual).toBeCloseTo((2400 / 100 / TURNS_PER_DAY) * TURNS_PER_YEAR, 5);
+    // The old corp-wide conversion would have read 2400 as USD.
+    expect(annual).toBeLessThan((2400 / 2 / TURNS_PER_DAY) * TURNS_PER_YEAR);
+  });
+
+  it("keeps the anchor passthrough for pre-forex callers", () => {
+    const sector = baseSector({ revenue: 48 });
+    const annual = sumCorporateSectorAnnualRevenue([sector], corporationId, null, undefined);
+    expect(annual).toBeCloseTo((48 / TURNS_PER_DAY) * TURNS_PER_YEAR, 5);
+  });
+
+  it("ignores sectors owned by another corporation", () => {
+    const other = baseSector({ corporationId: new ObjectId(), countryId: "JP", revenue: 2400 });
+    const annual = sumCorporateSectorAnnualRevenue([other], corporationId, usCorp, fx);
+    expect(annual).toBe(0);
   });
 });
