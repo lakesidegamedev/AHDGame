@@ -1685,12 +1685,14 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   opacity: 0.45;
   transform: rotate(-20deg);
 }
+/* A circle, not a rounded square: a square ring tumbles as it rotates and reads as a tilted,
+   broken card. The 36px circle fits the 36px-tall deck exactly around the 28px card. */
 .ask-deck-running::after {
   content: "";
   position: absolute;
-  inset: -3px;
-  border-radius: 10px;
-  border: 1.5px solid transparent;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 2px solid transparent;
   border-top-color: currentColor;
   animation: ask-deck-spin 1.1s linear infinite;
 }
