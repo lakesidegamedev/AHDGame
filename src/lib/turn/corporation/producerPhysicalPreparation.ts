@@ -11,6 +11,7 @@ import {
   transitionReliefEligible,
 } from "@/lib/market/producerMarket/transitionRules";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { InternalSupplyPolicy } from "@/lib/market/internalSupply/rules";
 import {
   COMMODITY_BASE_PRICES,
   COMMODITY_TYPES,
@@ -107,6 +108,8 @@ export type ProducerPhysicalEnv = Pick<
   ownSitesFirst?: boolean;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
+  /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */
+  fiscalScaleStage?: number;
   /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */
   procurementSpillShare?: number;
   /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
@@ -221,6 +224,7 @@ export function prepareProducerPhysicalSector(input: {
   worldEpoch: string;
   env: ProducerPhysicalEnv;
   corporation: Corporation;
+  internalSupplyPolicy?: InternalSupplyPolicy;
   sector: CorporateSector;
   /** One buyer policy, shared across sectors; supplied by the world host. */
   inputPriceHeadroom: number;
@@ -389,6 +393,10 @@ export function prepareProducerPhysicalSector(input: {
     wholePlants: env.wholePlants === true,
   });
   const { plan } = prepared;
+  const pricing = input.internalSupplyPolicy ?? corp.internalSupplyPolicy;
+  if (pricing?.transferPricing && pricing.transferPricing !== "free") {
+    plan.internalTransferPricing = { mode: pricing.transferPricing, discount: pricing.discount };
+  }
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
     const last = (

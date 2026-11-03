@@ -110,6 +110,16 @@ export default function MarketMoneyPanel({
   const hasPolicy = policyAnchor !== 0;
 
   const costLines: { key: string; label: string; value: number; help: string }[] = [
+    ...(pnl.internalSupplyChargeAnchor
+      ? [
+          {
+            key: "internal-transfer-charge",
+            label: supplyText("transferCharge"),
+            value: pnl.internalSupplyChargeAnchor,
+            help: supplyText("transferChargeNote"),
+          },
+        ]
+      : []),
     {
       key: "inputs",
       label: "Things you bought",
@@ -351,8 +361,17 @@ export default function MarketMoneyPanel({
           value={money(pnl.revenueAnchor)}
           tone="success"
           bold
-          help="What the units you sold earned. Nothing else in this game turns into income."
+          help="Income from outside buyers, plus any internal supply income allocated by your own sites. Internal allocations do not change the company's total cash."
         />
+        {!!pnl.internalSupplyIncomeAnchor && (
+          <Row
+            label={supplyText("transferIncome")}
+            value={money(pnl.internalSupplyIncomeAnchor)}
+            tone="success"
+            indent
+            help={supplyText("transferIncomeNote")}
+          />
+        )}
         {costLines.map((l) => (
           <Row
             key={l.key}

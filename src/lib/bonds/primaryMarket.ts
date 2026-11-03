@@ -38,6 +38,7 @@ import { getNationalBudgetId, refreshSovereignDebtTerms } from "@/lib/bonds/sove
 import { poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import {
   commitSovereignPrimary,
+  poolCashPerFace,
   existingPrimarySettlementKeys,
   loadPrimaryAccounting,
   primarySettlementExists,
@@ -341,13 +342,18 @@ export async function placeUnsoldBondUnits(
       bond.requestedUnits ?? bond.unsoldUnits ?? 0,
       bond.unsoldUnits ?? 0
     );
-    const units = Math.min(cap, Math.floor(budget / price));
+    // Under the fiscal scale split the pool pays a Treasury book price times
+    // the country's scale, the same rate it is repaid at maturity.
+    const cashPerFace =
+      bond.issuerType === "sovereign" ? poolCashPerFace(accounting, bond.countryId) : 1;
+    const units = Math.min(cap, Math.floor(budget / (price * cashPerFace)));
     if (units <= 0) continue;
 
     if (bond.issuerType === "sovereign" && bond.countryId) {
       const key = sovereignPlacementKey(bond._id, turn);
       if (recordedPlacementKeys.has(key) && (await primarySettlementExists(db, key))) continue;
-      const paid = Math.round(units * price * 100) / 100;
+      const paid = Math.round(units * price * cashPerFace * 100) / 100;
+      if (!(paid > 0)) continue;
       await commitSovereignPrimary(
         db,
         {

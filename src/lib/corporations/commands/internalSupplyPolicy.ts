@@ -23,6 +23,7 @@ export const internalSupplyPolicySchema = z
   .object({
     priority: z.enum(["market", "own", "group"]),
     discount: z.number().finite().min(0).max(0.2),
+    transferPricing: z.enum(["free", "cost", "market"]).optional(),
     ownFirstAcrossStates: z.boolean().optional(),
   })
   .strict();

@@ -269,6 +269,8 @@ export interface SectorPlantsSection {
     policyPp: number;
     otherOperatingAnchor: number;
     internalSupplyDiscountAnchor?: number;
+    internalSupplyIncomeAnchor?: number;
+    internalSupplyChargeAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     growthAndBuildAnchor: number;

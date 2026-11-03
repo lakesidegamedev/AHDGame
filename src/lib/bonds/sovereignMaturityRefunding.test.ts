@@ -106,7 +106,7 @@ describe("sovereign maturity refunding plan", () => {
         alreadyRefundedLocal: 0,
         marketCapacityUnits: 100,
       })
-    ).toEqual({ units: 2, faceLocal: 2_000 });
+    ).toEqual({ units: 2, faceLocal: 2_000, cashLocal: 2_000 });
     expect(
       planSovereignMaturityRefunding({
         shortfallLocal: 9_000,
@@ -114,7 +114,18 @@ describe("sovereign maturity refunding plan", () => {
         alreadyRefundedLocal: 4_000,
         marketCapacityUnits: 100,
       })
-    ).toEqual({ units: 6, faceLocal: 6_000 });
+    ).toEqual({ units: 6, faceLocal: 6_000, cashLocal: 6_000 });
+    // Under the fiscal scale split the pool pays a tenth of face per unit:
+    // the cash shortfall and cash cap buy ten times the book units.
+    expect(
+      planSovereignMaturityRefunding({
+        shortfallLocal: 150,
+        retiringFaceLocal: 1_000,
+        alreadyRefundedLocal: 0,
+        marketCapacityUnits: 100,
+        cashPerUnitLocal: 100,
+      })
+    ).toEqual({ units: 2, faceLocal: 2_000, cashLocal: 200 });
     expect(
       planSovereignMaturityRefunding({
         shortfallLocal: 9_000,

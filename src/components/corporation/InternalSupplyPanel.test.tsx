@@ -32,6 +32,32 @@ function show() {
     </NextIntlClientProvider>
   );
 }
+it("saves funded market pricing and its selected discount even under market priority", async () => {
+  fetcher.mockResolvedValue({ ok: true, json: async () => ({ ...view, fundedMarket: true }) });
+  show();
+  await screen.findByLabelText("Internal transfer price");
+  expect(screen.getByLabelText("Internal transfer price")).toHaveProperty("value", "free");
+  fireEvent.change(screen.getByLabelText("Internal transfer price"), {
+    target: { value: "market" },
+  });
+  fireEvent.change(screen.getByLabelText("Internal discount"), { target: { value: "0.15" } });
+  fetcher.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      policy: { priority: "market", discount: 0.15, transferPricing: "market" },
+    }),
+  });
+  fireEvent.click(screen.getByText("Save policy"));
+  await waitFor(() =>
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/corporations/12/internal-supply",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ priority: "market", discount: 0.15, transferPricing: "market" }),
+      })
+    )
+  );
+});
 it("loads the saved policy, explains physical limits quietly and displays actual delivery", async () => {
   show();
   await screen.findByText("Reserved supply, turn 12");

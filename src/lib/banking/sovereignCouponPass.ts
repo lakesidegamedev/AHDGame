@@ -22,6 +22,7 @@ import {
   SOVEREIGN_COUPON_CLAIM_PROJECTION,
   freezeDueSovereignCouponClaims,
   insertClaimRecords,
+  loadCappedSettleableOpenSovereignCouponClaims,
   loadCouponTargetReadiness,
   skipsSovereignCouponSettlement,
   sovereignCouponBudgetPriors,
@@ -67,6 +68,12 @@ export interface SovereignCouponPassInput {
   /** Cash bounds the phase took its payee locks from, by budget id. */
   cashBounds: ReadonlyMap<string, number>;
   budgets: readonly SovereignCouponPassBudget[];
+  /**
+   * Oldest claims each budget loads this pass, on top of the claims owed to a
+   * player and the ones a receipt owns (fiscal scale debt service split).
+   * Omitted, every claim within the cash bound is loaded.
+   */
+  claimLoadLimit?: number;
 }
 
 /**
@@ -235,7 +242,24 @@ export async function loadSovereignCouponPass(
   if (group.length > 0) groups.push(group);
 
   const loadedByBudget = new Map<string, FundedSovereignCouponClaim[]>();
-  for (const plans of groups) {
+  if (input.claimLoadLimit !== undefined) {
+    // Capped: two keyed reads per budget, run together, instead of one read
+    // whose scaled bounds would pull every budget's whole backlog.
+    const limit = input.claimLoadLimit;
+    const loaded = await Promise.all(
+      requests.map((plan) =>
+        loadCappedSettleableOpenSovereignCouponClaims(
+          db,
+          plan.budgetId,
+          plan.cashBound,
+          plan.queuedClaimIds,
+          limit
+        )
+      )
+    );
+    requests.forEach((plan, index) => loadedByBudget.set(plan.budgetId, loaded[index]));
+  }
+  for (const plans of input.claimLoadLimit === undefined ? groups : []) {
     const branches = plans.map((plan) => {
       const base = { budgetId: plan.budgetId, settledTurn: { $exists: false } };
       if (plan.queuedClaimIds.size === 0)

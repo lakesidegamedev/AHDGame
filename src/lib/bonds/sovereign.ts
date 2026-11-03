@@ -45,6 +45,7 @@ import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constan
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import {
+  frozenClaimPoolCashPerFace,
   resolveSovereignMaturityPayoutLegs,
   type SovereignMaturityCashLeg,
   type SovereignMaturityLiveTargets,
@@ -67,6 +68,7 @@ import {
 } from "@/lib/bonds/primaryMarket";
 import {
   commitSovereignPrimary,
+  poolCashPerFace,
   loadPrimaryAccounting,
   primaryDocumentId,
   primarySettlementExists,
@@ -1533,7 +1535,14 @@ export async function settleFundedSovereignBondMaturity(
           holderLegs: quote.holderLegs.map((leg) =>
             leg.collection === "bondMarketPools" &&
             String(leg.filter._id) === (bond.currencyCode ?? quote.currencyCode)
-              ? { ...leg, amount: Math.max(0, leg.amount - novatedUnits * BOND_UNIT_FACE_VALUE) }
+              ? {
+                  ...leg,
+                  amount: Math.max(
+                    0,
+                    leg.amount -
+                      novatedUnits * BOND_UNIT_FACE_VALUE * frozenClaimPoolCashPerFace(quote)
+                  ),
+                }
               : leg
           ),
         }
@@ -1777,18 +1786,21 @@ async function fundSovereignSeries(
     face = 0,
     annualCoupon = 0,
     placedByPool = 0;
+  // Under the fiscal scale split the pool pays book face times the scale per
+  // unit, the same rate it is repaid at maturity.
+  const poolPricePerUnit = BOND_UNIT_FACE_VALUE * poolCashPerFace(args.accounting, args.countryId);
   const funded = args.bondDocs.map((doc, index): Bond => {
     const requestedUnits = Math.floor(doc.totalIssued / BOND_UNIT_FACE_VALUE);
     const placed = planSovereignUnderwriting({
       requestedUnits,
       poolCashLocal: available,
       appetite: pool?.appetiteByCountry?.[args.countryId],
-      pricePerUnitLocal: BOND_UNIT_FACE_VALUE,
+      pricePerUnitLocal: poolPricePerUnit,
     }).placedUnits;
     const monetized = Math.min(requestedUnits - placed, monetaryCapacity);
-    available -= placed * BOND_UNIT_FACE_VALUE;
+    available -= placed * poolPricePerUnit;
     monetaryCapacity -= monetized;
-    poolCash += placed * BOND_UNIT_FACE_VALUE;
+    poolCash += placed * poolPricePerUnit;
     monetaryCash += monetized * BOND_UNIT_FACE_VALUE;
     placedByPool += placed;
     const issuedFace = (placed + monetized) * BOND_UNIT_FACE_VALUE;

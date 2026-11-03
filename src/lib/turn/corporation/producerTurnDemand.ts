@@ -11,6 +11,7 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
+import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
 import {
   householdTransferFunding,
   publicBuyerFunding,
@@ -98,6 +99,22 @@ export async function buildProducerTurnDemand(
   const tagCountry = (countryId: string | undefined) =>
     (env.fundedBookStage ?? 0) >= 1 && countryId ? { countryId } : {};
   const { lookups } = input;
+  const pricingPolicies = lookups.corporations.some(
+    (c) =>
+      c.internalSupplyPolicy?.transferPricing && c.internalSupplyPolicy.transferPricing !== "free"
+  )
+    ? resolveSupplyPolicies(
+        lookups.corporations.map((c) => ({
+          id: c._id.toString(),
+          totalShares: c.totalShares,
+          holders: (c.shareholders ?? []).map((h) => ({
+            corporationId: h.corporationId?.toString(),
+            shares: h.shares,
+          })),
+          policy: c.internalSupplyPolicy,
+        }))
+      )
+    : null;
   const base = eraScaledBasePrices(lookups.eraUnitScale);
   const refPrice = (commodity: CommodityType, stateId: string): number | null => {
     if (!isStateScopedCommodity(commodity)) {
@@ -142,6 +159,7 @@ export async function buildProducerTurnDemand(
           worldEpoch,
           env,
           corporation: corp,
+          internalSupplyPolicy: pricingPolicies?.get(corp._id.toString())?.policy,
           sector: shadowOpeningSector(sector, worldEpoch, input.turn, carry?.plants[sectorId]),
           inputPriceHeadroom: PRICE_HEADROOM,
         });

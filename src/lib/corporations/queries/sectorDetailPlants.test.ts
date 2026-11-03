@@ -61,6 +61,34 @@ const BASE_ARGS = {
 };
 
 describe("buildSectorPlantsSection", () => {
+  it("separates internal charges from other costs and excludes allocated income from sale prices", () => {
+    const s = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      sector: sectorFixture(),
+      money: {
+        ...BASE_ARGS.money,
+        realizedRevenueAnchor: 1040,
+        maintenanceNetAnchor: 650,
+        profitAnchor: 140,
+        internalSupplyIncomeAnchor: 40,
+        internalSupplyChargeAnchor: 50,
+      },
+    });
+    expect(s.pnl.internalSupplyIncomeAnchor).toBe(40);
+    expect(s.pnl.internalSupplyChargeAnchor).toBe(50);
+    expect(s.pnl.avgSalePriceAnchor).toBeCloseTo(1000 / 120, 8);
+    expect(
+      s.pnl.revenueAnchor -
+        s.pnl.inputsAnchor -
+        s.pnl.labourAnchor -
+        s.pnl.upkeepAnchor -
+        s.pnl.complianceAnchor -
+        s.pnl.otherOperatingAnchor -
+        s.pnl.growthAndBuildAnchor -
+        (s.pnl.internalSupplyChargeAnchor ?? 0)
+    ).toBeCloseTo(s.pnl.profitAnchor, 8);
+  });
   it("does not attribute all idle output to an unquantified deposit constraint", () => {
     const result = buildSectorPlantsSection({
       ...BASE_ARGS,

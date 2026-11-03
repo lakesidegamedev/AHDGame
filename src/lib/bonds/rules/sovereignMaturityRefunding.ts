@@ -26,11 +26,17 @@ export interface SovereignRefundingInput {
   alreadyRefundedLocal: number;
   /** Units the currency's bond pool will underwrite now (planSovereignUnderwriting). */
   marketCapacityUnits: number;
+  /**
+   * Cash the pool pays per unit. Book face by default; book face times the
+   * fiscal scale under the debt service split, the same rate it was repaid at.
+   * The shortfall and the caps are cash, so they are counted in it.
+   */
+  cashPerUnitLocal?: number;
 }
 
 export type SovereignRefundingPlan =
-  | { units: number; faceLocal: number; refusal?: undefined }
-  | { units: 0; faceLocal: 0; refusal: SovereignRefundingRefusal };
+  | { units: number; faceLocal: number; cashLocal: number; refusal?: undefined }
+  | { units: 0; faceLocal: 0; cashLocal: 0; refusal: SovereignRefundingRefusal };
 
 /**
  * Whole units that cover the shortfall, rounded up so the claim is fully
@@ -52,12 +58,18 @@ export function planSovereignMaturityRefunding(
   )
     return refused("invalid_input");
   if (shortfallLocal <= 0) return refused("no_shortfall");
-  const neededUnits = Math.ceil(shortfallLocal / BOND_UNIT_FACE_VALUE);
-  const capUnits = Math.floor((retiringFaceLocal - alreadyRefundedLocal) / BOND_UNIT_FACE_VALUE);
+  const unitCash =
+    typeof input.cashPerUnitLocal === "number" &&
+    Number.isFinite(input.cashPerUnitLocal) &&
+    input.cashPerUnitLocal > 0
+      ? Math.min(BOND_UNIT_FACE_VALUE, input.cashPerUnitLocal)
+      : BOND_UNIT_FACE_VALUE;
+  const neededUnits = Math.ceil(shortfallLocal / unitCash);
+  const capUnits = Math.floor((retiringFaceLocal - alreadyRefundedLocal) / unitCash);
   if (capUnits <= 0) return refused("cap_exhausted");
   const units = Math.min(neededUnits, capUnits, Math.max(0, Math.floor(marketCapacityUnits)));
   if (units <= 0) return refused("no_market_capacity");
-  return { units, faceLocal: units * BOND_UNIT_FACE_VALUE };
+  return { units, faceLocal: units * BOND_UNIT_FACE_VALUE, cashLocal: units * unitCash };
 }
 
 /** Deterministic journal key for one refunding attempt on one claim. */
@@ -70,5 +82,5 @@ export function sovereignRefundingKey(
 }
 
 function refused(refusal: SovereignRefundingRefusal): SovereignRefundingPlan {
-  return { units: 0, faceLocal: 0, refusal };
+  return { units: 0, faceLocal: 0, cashLocal: 0, refusal };
 }

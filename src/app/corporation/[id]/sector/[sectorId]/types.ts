@@ -161,6 +161,15 @@ export interface CommodityFlow {
    */
   ownSite?: { units: number; share: number; valueAnchor: number };
   /**
+   * Demand rows, CEO only, short inputs only: the company's other sites made
+   * this input last turn, and why that output did not cover this plant.
+   */
+  ownSupply?: {
+    sourceStateIds: string[];
+    sourceStateNames: string[];
+    reasons: import("@/lib/corporations/rules/ownSupplyReach").OwnSupplyReachReason[];
+  };
+  /**
    * Market clearing, supply rows only: this output's share of last turn's
    * realized revenue (0-1, summing to ~1 across outputs). Splits the blended
    * average sale price into a price per product on a multi-output sector.
@@ -753,6 +762,8 @@ export interface PlantsData {
     policyPp?: number;
     otherOperatingAnchor: number;
     internalSupplyDiscountAnchor?: number;
+    internalSupplyIncomeAnchor?: number;
+    internalSupplyChargeAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     growthAndBuildAnchor: number;
