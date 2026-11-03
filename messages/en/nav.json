@@ -22,7 +22,7 @@
       "openMenu": "Open menu",
       "closeMenu": "Close menu",
       "userMenu": "User menu",
-      "capturingScreenshot": "Capturing screenshot…",
+      "capturingScreenshot": "Capturing screenshot\u2026",
       "quickSuggest": "Quick suggest (screenshot)"
     },
     "menus": {
@@ -136,10 +136,10 @@
       "switchNationView": "Switch nation view",
       "switchNationViewCurrent": "Switch nation view: currently {country}",
       "selectNation": "Select Nation",
-      "homeBadge": "★ Home"
+      "homeBadge": "\u2605 Home"
     },
     "notifications": {
-      "openInbox": "Open inbox →",
+      "openInbox": "Open inbox \u2192",
       "awaitingInput": "{count, plural, one {# awaiting your input} other {# awaiting your input}}",
       "empty": "No notifications yet",
       "needsYou": "Needs you",
@@ -186,7 +186,7 @@
       "demographicsToast": "Set your character's background in Settings > Background"
     },
     "search": {
-      "placeholder": "Search characters, corporations, bills…",
+      "placeholder": "Search characters, corporations, bills\u2026",
       "ariaLabel": "Search characters, corporations, bills, elections",
       "noResults": "No results found for \"{query}\"",
       "trySearchingFor": "Try searching for",
@@ -199,11 +199,11 @@
       "readyTitle": "What are you looking for?",
       "emptyQueryDescription": "Search names, places, offices, legislation, companies, and markets.",
       "minimumQuery": "Enter at least two characters to search.",
-      "resultsFor": "Matches for “{query}”",
+      "resultsFor": "Matches for \u201c{query}\u201d",
       "resultCount": "{count, plural, one {# result} other {# results}}",
-      "searching": "Searching across the game…",
+      "searching": "Searching across the game\u2026",
       "noResultsTitle": "No matches found",
-      "noResultsDescription": "We could not find anything matching “{query}”. Try another spelling or a broader search.",
+      "noResultsDescription": "We could not find anything matching \u201c{query}\u201d. Try another spelling or a broader search.",
       "errorTitle": "Search is unavailable",
       "searchError": "Please try again in a moment.",
       "queryTooLong": "Search terms can be up to 200 characters.",
