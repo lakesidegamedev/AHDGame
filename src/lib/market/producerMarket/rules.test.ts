@@ -1136,7 +1136,17 @@ describe("country-tagged funded settlement", () => {
       trackCountryBooks: true,
     });
     expect(untagged.countryBooks).toEqual([
-      { countryId: "UK", commodity: "gas", supply: 0, demand: 1, imports: 0, exports: 0 },
+      {
+        countryId: "UK",
+        commodity: "gas",
+        supply: 0,
+        demand: 1,
+        imports: 0,
+        exports: 0,
+        requested: 1,
+        funded: 1,
+        filled: 1,
+      },
     ]);
     expect(settleProducerMarket({ turn: 1, ...base }).countryBooks).toBeUndefined();
   });
