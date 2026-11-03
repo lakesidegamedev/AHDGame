@@ -7,7 +7,7 @@ summary: >-
   maintainer asks for one.
 tags: [contributing]
 badges: [minor]
-areas: [docs]
+areas: [fullstack]
 ---
 
 ## What changed
