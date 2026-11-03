@@ -233,6 +233,7 @@ export async function processQueuedRedemptions(
 
   // Units still unserved in this pass. Decremented as each entry is handled so
   // the share is measured against who is still waiting, not the original queue.
+  let cancelledOrphans = 0;
   let unservedUnits = pending.reduce((sum, e) => sum + Math.max(0, e.units ?? 0), 0);
 
   // NPP payouts wait here and settle together (queuedPayoutBatch.ts). The
@@ -268,6 +269,25 @@ export async function processQueuedRedemptions(
     const owedUnits = remainingRedemptionUnits(pendingEntry);
     if (owedUnits > 0 && !holderOf(pendingEntry)) {
       unservedUnits = Math.max(0, unservedUnits - owedUnits);
+      // Nothing can ever receive this cash. Leaving the row queued kept the
+      // fund out of Pass 2/3 trading on every due turn for as long as the row
+      // existed (#4848), so write it off. Cancelled is terminal and the
+      // queued-unit aggregates only read queued/partial. No money moves; the
+      // fund keeps what it had reserved.
+      await db
+        .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+        .updateOne(
+          {
+            _id: pendingEntry._id,
+            status: pendingEntry.status,
+            units: pendingEntry.units,
+            paidAmountAnchor: pendingEntry.paidAmountAnchor,
+          },
+          {
+            $set: { status: "cancelled", cancelReason: "holder_missing", updatedAt: new Date() },
+          }
+        );
+      cancelledOrphans += 1;
       continue;
     }
     budget.claimsLeft--;
@@ -450,6 +470,11 @@ export async function processQueuedRedemptions(
     paid++;
   }
   await flushBatch();
+
+  if (cancelledOrphans > 0)
+    console.warn(
+      `[indexfund-cron] wrote off ${cancelledOrphans} queued redemption(s) for ${fund.slug}: holder no longer exists`
+    );
 
   return paid;
 }
