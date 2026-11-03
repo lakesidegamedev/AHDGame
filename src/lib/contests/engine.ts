@@ -694,6 +694,36 @@ async function sharedWeekEnd(db: Db, world: ContestWorld, opening: ContestKind[]
   return Number.isFinite(latest) && latest <= fullWeek.getTime() ? new Date(latest) : fullWeek;
 }
 
+/** Rounds whose field is read from corporation history snapshots. */
+const HISTORY_BASELINE_KINDS: ReadonlySet<ContestKind> = new Set([
+  "corp_growth_small",
+  "corp_growth_large",
+  "corp_comeback",
+]);
+
+/**
+ * A corporation round opened on a turn with no history snapshots (an
+ * economy-only reset wipes them) has an empty field and stayed empty all week
+ * (#5374). Take the baselines on the first turn that has snapshots instead;
+ * growth then counts from that turn.
+ */
+async function fillLateBaselines(
+  db: Db,
+  world: ContestWorld,
+  round: ContestRound
+): Promise<ContestRound> {
+  if (round.baselines.length > 0 || !HISTORY_BASELINE_KINDS.has(round.kind)) return round;
+  const late = (await openingBaselines(db, world, [round.kind])).get(round.kind);
+  if (!late || late.baselines.length === 0) return round;
+  return {
+    ...round,
+    baselines: late.baselines,
+    ...(late.tierBoundaryAnchor !== undefined
+      ? { tierBoundaryAnchor: late.tierBoundaryAnchor }
+      : {}),
+  };
+}
+
 async function openRounds(db: Db, world: ContestWorld, kinds: ContestKind[]): Promise<number> {
   if (kinds.length === 0) return 0;
   const last = await contestRounds(db)
@@ -1313,10 +1343,21 @@ export async function runContests(
       }
       continue;
     }
-    const { standings, baselines } = await computeStandings(db, world, round);
+    const live = await fillLateBaselines(db, world, round);
+    const { standings, baselines } = await computeStandings(db, world, live);
     await contestRounds(db).updateOne(
       { _id: round._id, status: "active" },
-      { $set: { standings, baselines, standingsTurn: turn, refreshedAt: now } }
+      {
+        $set: {
+          standings,
+          baselines,
+          ...(live.tierBoundaryAnchor !== undefined
+            ? { tierBoundaryAnchor: live.tierBoundaryAnchor }
+            : {}),
+          standingsTurn: turn,
+          refreshedAt: now,
+        },
+      }
     );
     stillActive.add(round.kind);
     summary.refreshed++;
