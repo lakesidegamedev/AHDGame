@@ -18,6 +18,11 @@
  */
 export const REQUIRED_YES_FRACTION = 0.6 as const;
 
+/** Yes votes needed to pass with `committeeSize` filled voting seats. */
+export function requiredYesVotes(committeeSize: number): number {
+  return Math.ceil(committeeSize * REQUIRED_YES_FRACTION);
+}
+
 /**
 
  * Turns a `positionShift` cooldown locks the affected axis for after a

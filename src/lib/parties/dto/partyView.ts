@@ -332,6 +332,8 @@ export interface ProposalVoteSummary {
   yes: number;
   no: number;
   notVoted: number;
+  /** Yes votes needed to pass; seats that never vote count as no at expiry. */
+  yesNeeded: number;
 }
 
 export interface ProposalView {
