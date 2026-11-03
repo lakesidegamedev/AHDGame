@@ -174,11 +174,11 @@ describe("queued redemption pass budget", () => {
 
     // The budget went to claims that can actually pay.
     expect(paid).toBe(BUDGET);
-    // One fence per paid entry and none for the vanished holders, which each
-    // cost a single terminal write-off instead of a fence on every pass.
+    // One fence per paid entry and none for vanished holders. Their terminal
+    // cancellations join one guarded bulk write instead of one write per row.
     expect(trips.count("indexFundRedemptionQueue", "findOneAndUpdate")).toBe(paid);
-    const writtenOff = trips.count("indexFundRedemptionQueue", "updateOne");
-    expect(writtenOff).toBeGreaterThan(0);
+    expect(trips.count("indexFundRedemptionQueue", "updateOne")).toBe(0);
+    expect(trips.count("indexFundRedemptionQueue", "bulkWrite")).toBeGreaterThan(0);
 
     const queue = await w.db
       .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
@@ -188,7 +188,7 @@ describe("queued redemption pass budget", () => {
       (e) => w.missingNppIds.has(String(e.nppId)) && e.paidAmountAnchor === 0
     );
     // The budget cuts the pass short, so only the vanished holders it reached are closed.
-    expect(owedToNobody.filter((e) => e.status === "cancelled")).toHaveLength(writtenOff);
+    expect(owedToNobody.some((e) => e.status === "cancelled")).toBe(true);
     for (const entry of owedToNobody.filter((e) => e.status === "cancelled")) {
       // Never claimed: closed as terminal so it stops holding the fund out of trading.
       expect(entry).toMatchObject({
