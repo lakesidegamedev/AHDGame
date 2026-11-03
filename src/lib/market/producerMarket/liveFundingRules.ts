@@ -217,6 +217,7 @@ export function treasuryPublicReturnMoves(
  * wallets into Treasury cash. Each wallet debit is guarded by its own cash.
  */
 export function fiscalTaxMove(input: {
+  worldEpoch: string;
   turn: number;
   countryId: string;
   budgetId: string;
@@ -229,7 +230,7 @@ export function fiscalTaxMove(input: {
   if (!(total > 0)) return null;
   const v = { currencyCode: input.currencyCode, localPerAnchor: input.localPerAnchor };
   return {
-    key: `fiscal-scale-tax:${input.turn}:${input.countryId}`,
+    key: `fiscal-scale-tax:${input.worldEpoch}:${input.turn}:${input.countryId}`,
     kind: "fiscal_scale_tax",
     turn: input.turn,
     legs: [

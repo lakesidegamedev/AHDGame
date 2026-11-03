@@ -201,8 +201,24 @@ describe("household transfer moves", () => {
 });
 
 describe("fiscal scale tax move", () => {
+  it("keeps retries idempotent without colliding when a world resets its turn counter", () => {
+    const input = {
+      turn: 9,
+      countryId: "US",
+      budgetId: "budget-us",
+      currencyCode: "USD",
+      localPerAnchor: 1,
+      byPayer: [{ id: "households", amount: 4 }],
+    };
+    const original = fiscalTaxMove({ ...input, worldEpoch: "world-a" })!;
+    const replay = fiscalTaxMove({ ...input, worldEpoch: "world-a" })!;
+    const reset = fiscalTaxMove({ ...input, worldEpoch: "world-b" })!;
+    expect(replay.key).toBe(original.key);
+    expect(reset.key).not.toBe(original.key);
+  });
   it("debits each wallet once into the Treasury and lands the debits as one batch", () => {
     const move = fiscalTaxMove({
+      worldEpoch: "world-a",
       turn: 9,
       countryId: "US",
       budgetId: "budget-us",

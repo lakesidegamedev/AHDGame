@@ -209,6 +209,7 @@ export async function collectFiscalTaxes(
         .map((w) => ({ id: w._id, cash: w.cash })),
     });
     const move = fiscalTaxMove({
+      worldEpoch: input.worldEpoch,
       turn: input.turn,
       countryId,
       budgetId,
