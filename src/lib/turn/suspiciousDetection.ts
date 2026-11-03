@@ -9,7 +9,10 @@ import type { Character } from "@/lib/db/types";
 import { classifyDevice } from "@/lib/utils/userAgent";
 import type { StoredFingerprintComponents } from "@/lib/utils/fingerprint";
 import { isCloudflareEdgeIp } from "@/lib/utils/cloudflareIpRanges";
-import { isDegenerateFingerprint } from "@/lib/utils/degenerateFingerprints";
+import {
+  FINGERPRINT_COMMONNESS_CEILING,
+  isDegenerateFingerprint,
+} from "@/lib/utils/degenerateFingerprints";
 import type {
   SuspiciousCharacter,
   SuspiciousFlag,
@@ -229,7 +232,12 @@ export function buildSharedAuthArtifactFlags(
 
     const fingerprintMatches = new Map<string, { username: string; matched: Set<string> }>();
     for (const fingerprint of getUserFingerprints(user)) {
-      const sharedFingerprintUsers = (fingerprintToUsers.get(fingerprint) ?? []).filter(
+      // A hash held by more accounts than the ceiling is a common handset or
+      // browser build. The caller widens the pool to every holder, so this
+      // count is corpus-wide, and the alt-detection engine scores it 0 too.
+      const holders = fingerprintToUsers.get(fingerprint) ?? [];
+      if (holders.length > FINGERPRINT_COMMONNESS_CEILING) continue;
+      const sharedFingerprintUsers = holders.filter(
         (candidate) => candidate._id.toString() !== user._id.toString()
       );
 
@@ -279,7 +287,9 @@ export function buildSharedAuthArtifactFlags(
     }
 
     // Fuzzy (near-)match: only when no exact shared_fingerprint flag fired for
-    // this character (exact supersedes fuzzy). Capped at medium regardless of N.
+    // this character (exact supersedes fuzzy). Identical canvas, WebGL and audio
+    // anchors are normal for the same browser on the same GPU model, so on its
+    // own this is a low lead to corroborate, never device-match evidence.
     const alreadyExactFlagged = flags.some((flag) => flag.type === "shared_fingerprint");
     if (!alreadyExactFlagged) {
       const myComponents = getUserComponents(user);
@@ -297,8 +307,8 @@ export function buildSharedAuthArtifactFlags(
         if (fuzzyMatches.length > 0) {
           flags.push({
             type: "shared_fingerprint",
-            severity: "medium",
-            detail: `Near-identical device fingerprint (anchors match) with ${formatUsernameList(fuzzyMatches.map((match) => match.username))}`,
+            severity: "low",
+            detail: `Same browser and graphics hardware (anchors match) with ${formatUsernameList(fuzzyMatches.map((match) => match.username))}`,
             detectedAt: now,
             evidence: {
               matchType: "fuzzy",

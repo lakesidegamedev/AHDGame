@@ -23,3 +23,13 @@ export const DEGENERATE_FINGERPRINTS: ReadonlySet<string> = new Set([
 export function isDegenerateFingerprint(fingerprint: string | null | undefined): boolean {
   return !fingerprint || DEGENERATE_FINGERPRINTS.has(fingerprint);
 }
+
+/**
+ * A fingerprint held by more than this many accounts identifies nobody. Mobile
+ * browsers are the usual cause: same handset model, OS and browser build
+ * produce an identical ThumbmarkJS hash across unrelated people, and unlike the
+ * literal sentinels in DEGENERATE_FINGERPRINTS these are real-looking hashes.
+ * The alt-detection engine, the turn's suspicious-player pass and the
+ * moderator duplicate panel all use this one ceiling.
+ */
+export const FINGERPRINT_COMMONNESS_CEILING = 8;

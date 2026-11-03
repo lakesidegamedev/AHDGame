@@ -1,4 +1,5 @@
 import type { IdentitySignalName } from "@/lib/auth/identitySignals";
+import { FINGERPRINT_COMMONNESS_CEILING } from "@/lib/utils/degenerateFingerprints";
 import type { DuplicateGroup, GroupMember, MatchReason, UserData } from "./types";
 
 /**
@@ -60,7 +61,12 @@ export const getDuplicateGroups = (users: UserData[]): DuplicateGroup[] => {
   const sharedIps = collect(["registrationIp", "lastKnownIp"]);
   const sharedTracks = collect(["trackingId"]);
   const sharedDevices = collect(["deviceKey"]);
-  const sharedFingerprints = collect(["registrationFingerprint", "lastFingerprint"]);
+  // A browser fingerprint held by more accounts than the ceiling is a common
+  // handset or browser build, not a link; the detection engine scores it 0.
+  // Counted within the accounts loaded here, which can only undercount.
+  const rareOnly = (shared: Map<string, Set<string>>) =>
+    new Map([...shared].filter(([, ids]) => ids.size <= FINGERPRINT_COMMONNESS_CEILING));
+  const sharedFingerprints = rareOnly(collect(["registrationFingerprint", "lastFingerprint"]));
 
   // Historical values come from `identityObservations` via the list endpoints.
   // They carry NO per-value eligibility annotation and need none: the server
@@ -84,7 +90,7 @@ export const getDuplicateGroups = (users: UserData[]): DuplicateGroup[] => {
   };
 
   const sharedHistoricalIps = collectHistorical("ip");
-  const sharedHistoricalFingerprints = collectHistorical("fingerprint");
+  const sharedHistoricalFingerprints = rareOnly(collectHistorical("fingerprint"));
 
   // Union-find structure
   const parent = new Map<string, string>();
