@@ -6,7 +6,7 @@ summary: >-
   "Implementation stalled" on the metrics board while it waits for its first
   annual funding round.
 tags: [legislation, metrics]
-badges: [minor]
+badges: [patch]
 areas: [frontend]
 ---
 
