@@ -5,9 +5,22 @@ import type { LawChoice, LawScope } from "./eligibility";
 import type { LawProgramDelivery } from "./programEffects";
 import { openingChoice1991 } from "./reviewCatalog";
 import type { ResetCountry } from "../fundingOwner";
+import { getTurnInYear } from "@/lib/countrySystems/fiscalCalendar";
+
+/** First turn after `turn` on which an annual funding round runs, or null if the calendar never hits it. */
+export function nextAnnualFundingTurn(turn: number, fundingTurnInYear: number): number | null {
+  for (let next = turn + 1; next <= turn + 96; next++) {
+    if (getTurnInYear(next) === fundingTurnInYear) return next;
+  }
+  return null;
+}
 
 export type MetricLawState =
-  "equilibrium" | "pushing_favorable" | "pushing_unfavorable" | "implementation_stalled";
+  | "equilibrium"
+  | "pushing_favorable"
+  | "pushing_unfavorable"
+  | "implementation_stalled"
+  | "awaiting_first_funding";
 
 export interface MetricLawStatus {
   familyId: string;
@@ -16,6 +29,8 @@ export interface MetricLawStatus {
   policyLevelTitle: string;
   state: MetricLawState;
   favorableNormalizedPoints: number | null;
+  /** Turn of the first funding round, set only while awaiting first funding and when derivable. */
+  nextFundingTurn?: number | null;
 }
 
 type CurrentProgram = Pick<
@@ -28,7 +43,12 @@ function levelTitle(family: LawFamilyDefinition, choice: LawChoice): string {
   return family.levels.find((level) => level.position === choice)?.title ?? "Current policy level";
 }
 
-function enactedState(points: number, implementationFactor: number): MetricLawState {
+function enactedState(
+  points: number,
+  implementationFactor: number,
+  awaitingFirstFunding: boolean
+): MetricLawState {
+  if (awaitingFirstFunding) return "awaiting_first_funding";
   if (implementationFactor === 0) return "implementation_stalled";
   if (Math.abs(points) < 0.00005) return "equilibrium";
   return points > 0 ? "pushing_favorable" : "pushing_unfavorable";
@@ -47,10 +67,15 @@ export function buildMetricLawStatuses(input: {
   references: Readonly<Record<string, OpeningLawReference>>;
   programs: readonly CurrentProgram[];
   delivery: readonly LawProgramDelivery[];
+  /** Turn of the next annual funding round, shown to programs that have not been funded yet. */
+  nextFundingTurn?: number | null;
 }): Readonly<Record<string, MetricLawStatus[]>> {
   const programsByFamily = new Map(input.programs.map((program) => [program.familyId, program]));
   const deliveryByFamily = new Map(
     input.delivery.map((row) => [row.familyId, row.implementationFactor])
+  );
+  const awaitingFamilies = new Set(
+    input.delivery.filter((row) => row.awaitingFirstFunding).map((row) => row.familyId)
   );
   const byMetric = new Map<string, MetricLawStatus[]>();
 
@@ -87,13 +112,15 @@ export function buildMetricLawStatuses(input: {
         const points = Number(
           ((authored?.favorableNormalizedPoints ?? 0) * implementationFactor).toFixed(4)
         );
+        const awaiting = awaitingFamilies.has(family.id) && implementationFactor === 0;
         rows.push({
           familyId: family.id,
           familyTitle: family.title,
           currentLawTitle: program.titleSnapshot,
           policyLevelTitle: levelTitle(family, program.choice),
-          state: enactedState(points, implementationFactor),
+          state: enactedState(points, implementationFactor, awaiting),
           favorableNormalizedPoints: points,
+          ...(awaiting ? { nextFundingTurn: input.nextFundingTurn ?? null } : {}),
         });
       }
       byMetric.set(metricId, rows);
