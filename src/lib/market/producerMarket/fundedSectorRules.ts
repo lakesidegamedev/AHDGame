@@ -37,6 +37,11 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
   // Written from the funded receipt: the legacy throttle reads a market the
   // funded turn never priced, and would overwrite the funded reading.
   "demandThrottleFactor",
+  // Also written from the funded receipt. The legacy gauge reads commodity
+  // balances that never see funded fills, own-site deliveries included, and
+  // sat at its 0.85 governor floor for most of the world.
+  "throughputFactor",
+  "throughputBindingInput",
 ];
 
 export interface FundedReceipt {
@@ -258,6 +263,35 @@ export function fundedDemandThrottle(
   const offered = finite(offeredUnits ?? 0);
   if (!(offered > 0)) return 1;
   return Math.max(0, Math.min(1, finite(soldUnits ?? 0) / offered));
+}
+
+/**
+ * Funded input throughput: the share of its funded run a plant made when short
+ * inputs cut it, and the scarcest input, else 1 and none. Replaces the legacy
+ * Leontief gauge on funded turns, the same way `fundedDemandThrottle` replaces
+ * the legacy demand throttle. Cash cuts are not an input shortage.
+ */
+export function fundedInputThroughput(
+  receipt:
+    | {
+        billedRunShare?: number | null;
+        runCutBy?: readonly string[] | null;
+        bindingInput?: string | null;
+      }
+    | null
+    | undefined
+): { throughputFactor: number; throughputBindingInput: string | null } {
+  const share = receipt?.billedRunShare;
+  if (
+    !receipt?.runCutBy?.includes("inputs") ||
+    typeof share !== "number" ||
+    !Number.isFinite(share)
+  )
+    return { throughputFactor: 1, throughputBindingInput: null };
+  return {
+    throughputFactor: Math.round(Math.max(0, Math.min(1, share)) * 1000) / 1000,
+    throughputBindingInput: receipt.bindingInput ?? null,
+  };
 }
 
 function rootOf(field: string): string {
