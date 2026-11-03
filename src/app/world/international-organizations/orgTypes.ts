@@ -136,6 +136,20 @@ export interface OrgWorldResponse {
   intOrgAlignmentEnabled?: boolean;
 }
 
+/**
+ * The country the viewer may act for in organisations. Every action route
+ * requires the foreign-affairs seat itself, so a head of government without
+ * it sees organisations read-only (#5115).
+ */
+export function actingCountryOf(viewer: OrgViewerInfo | null): CountryId | null {
+  return viewer?.foreignMinisterOf ?? null;
+}
+
+/** The viewer's own country for read-only display: delegation cards and highlights. */
+export function homeCountryOf(viewer: OrgViewerInfo | null): CountryId | null {
+  return viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+}
+
 export interface OrgViewerInfo {
   characterId: string | null;
   characterName?: string;
@@ -147,7 +161,7 @@ export interface OrgViewerInfo {
   diplomaticActionsRemaining: number;
   /** Per-turn diplomatic-action cap (cosmetic denominator for the UI chip). */
   diplomaticActionsPerTurn: number;
-  /** The country the budget applies to (FM/HoG country), or null if none. */
+  /** The country the budget applies to (the foreign minister's), or null if none. */
   diplomaticActionsCountryId: CountryId | null;
   /**
    * Personal agenda pools for each organisation the viewer heads. Spent before

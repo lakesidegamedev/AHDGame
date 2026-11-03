@@ -74,4 +74,13 @@ describe("FundOrgPanel", () => {
     render(<FundOrgPanel org={baseOrg} viewer={nonMemberViewer} onChange={() => {}} />);
     expect(screen.queryByText("Fund organization")).toBeNull();
   });
+
+  it("hides the fund action for a head of government without the foreign-affairs seat", () => {
+    const headOfGovernmentOnly = {
+      foreignMinisterOf: null,
+      headOfGovernmentOf: "DE",
+    } as unknown as OrgViewerInfo;
+    render(<FundOrgPanel org={baseOrg} viewer={headOfGovernmentOnly} onChange={() => {}} />);
+    expect(screen.queryByText("Fund organization")).toBeNull();
+  });
 });

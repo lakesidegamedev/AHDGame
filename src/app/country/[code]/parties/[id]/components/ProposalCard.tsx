@@ -4,9 +4,20 @@ import { useState } from "react";
 import { partyApiUrl } from "@/lib/urls";
 import type { ProposalView } from "@/lib/parties/dto/partyView";
 import { MergerNppWarning } from "./MergerNppWarning";
+import { REQUIRED_YES_FRACTION } from "@/lib/parties/proposalConstants";
 import { apiErrorText } from "@/lib/errors/catalog";
 
-function VoteBar({ yes, no, notVoted }: { yes: number; no: number; notVoted: number }) {
+function VoteBar({
+  yes,
+  no,
+  notVoted,
+  yesNeeded,
+}: {
+  yes: number;
+  no: number;
+  notVoted: number;
+  yesNeeded: number;
+}) {
   const total = yes + no + notVoted;
   if (total === 0) return <span className="text-xs text-muted">No votes yet</span>;
   const yPct = Math.round((yes / total) * 100);
@@ -21,6 +32,10 @@ function VoteBar({ yes, no, notVoted }: { yes: number; no: number; notVoted: num
         <span className="text-green-400">{yes} yes</span>
         <span className="text-red-400">{no} no</span>
         <span>{notVoted} not voted</span>
+      </div>
+      <div className="text-xs text-muted">
+        {`${yesNeeded} yes ${yesNeeded === 1 ? "vote" : "votes"} needed to pass (${Math.round(REQUIRED_YES_FRACTION * 100)}% of ${total} seats).`}{" "}
+        Seats that have not voted when the window closes count as no.
       </div>
     </div>
   );

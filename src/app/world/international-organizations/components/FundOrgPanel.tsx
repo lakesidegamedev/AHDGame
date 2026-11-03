@@ -4,7 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { useEntityName } from "../useEntityName";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -22,7 +22,7 @@ interface Props {
  */
 export function FundOrgPanel({ org, viewer, onChange }: Props) {
   const entityName = useEntityName();
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   const viewerIsMember =
     viewerFmCountry != null && org.members.some((m) => m.countryId === viewerFmCountry);
 

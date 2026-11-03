@@ -2,7 +2,7 @@
 
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { ORGANIZATION_CATEGORIES, ORGANIZATION_CATEGORY_META } from "@/lib/constants/orgCategory";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { homeCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { OrgCard } from "./OrgCard";
 
 /** Directory of all organizations, grouped by category; each card links to its page. */
@@ -13,7 +13,7 @@ export function OrgDirectory({
   orgs: OrgSummary[];
   viewer: OrgViewerInfo | null;
 }) {
-  const you = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const you = homeCountryOf(viewer);
   return (
     <div className="space-y-6">
       {ORGANIZATION_CATEGORIES.map((category) => {

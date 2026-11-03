@@ -4,7 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { MAX_ORG_DUES_RATE_ANNUAL } from "@/lib/constants/internationalOrganizations";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";
 import { formatFundAmount } from "./fundCurrency";
 import { useFundFormatter } from "./useFundFormatter";
@@ -27,7 +27,7 @@ const MAX_DUES_PCT = MAX_ORG_DUES_RATE_ANNUAL * 100;
  * the annual assessment that capitalizes the fund each turn.
  */
 export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChange }: Props) {
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   // Who tables resolutions: the FM/HoG country, or the member an org head sits
   // for (agenda pool). Votes stay on viewerFmCountry.
   const proposer = orgProposingCountry(viewer, org.id);

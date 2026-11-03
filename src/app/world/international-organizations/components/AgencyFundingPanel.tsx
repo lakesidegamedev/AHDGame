@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
 import { AGENCY_CATALOG, getAgencyDef } from "@/lib/constants/orgAgencies";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";
 import { formatFundAmount } from "./fundCurrency";
 import { useFundFormatter } from "./useFundFormatter";
@@ -33,7 +33,7 @@ export function AgencyFundingPanel({
   votingWindowTurns,
   onChange,
 }: Props) {
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   // Who tables resolutions: the FM/HoG country, or the member an org head sits
   // for (agenda pool). Votes stay on viewerFmCountry.
   const proposer = orgProposingCountry(viewer, org.id);

@@ -53,9 +53,10 @@ export async function loadViewerOrganizationRoles(params: {
 
   const headOfGovernmentOf = await findCountryHeadedBy(db, characterId);
 
-  // The diplomatic-action budget applies to the country the viewer acts for
-  // (foreign minister takes precedence over head of government).
-  const actingCountry: CountryId | null = foreignMinisterOf ?? headOfGovernmentOf;
+  // The diplomatic-action budget applies to the country the viewer acts for.
+  // Only the foreign-affairs seat holder acts: every action route requires it,
+  // so a head of government without the seat has no budget to show (#5115).
+  const actingCountry: CountryId | null = foreignMinisterOf;
   const currentTurn = await getCurrentTurn(db);
   const diplomaticActionsRemaining = actingCountry
     ? await getDiplomaticActionsRemaining(db, actingCountry, currentTurn)

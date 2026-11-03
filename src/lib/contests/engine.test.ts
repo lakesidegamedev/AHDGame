@@ -296,6 +296,35 @@ describe("runContests: opening rounds", () => {
     ]);
   });
 
+  it("fills an empty corporation field on the first turn that has history (#5374)", async () => {
+    const seed = world(
+      10,
+      { small: 400_000, mid: 2_000_000, big: 30_000_000 },
+      { alice: 5, bob: 9, carol: 1 }
+    );
+    // An economy-only reset left no history rows when the round opened.
+    const { db, data } = fakeDb({ ...seed, corporationHistory: [] });
+    await runContests(db, 10, now);
+    const opened = rounds(data).find((r) => r.kind === "corp_growth_large")!;
+    expect(opened.baselines).toEqual([]);
+
+    data.corporationHistory.push(
+      ...[
+        [corpMid, 2_000_000],
+        [corpBig, 30_000_000],
+        [corpSmall, 400_000],
+      ].map(([id, marketCap]) => ({ corporationId: id, turn: 11, marketCap, fxRateAtWrite: 1 }))
+    );
+    await runContests(db, 11, new Date(now.getTime() + 3_600_000));
+
+    const filled = rounds(data).find((r) => r.kind === "corp_growth_large")!;
+    expect(filled.baselines.map((b) => b.subjectId).sort()).toEqual(
+      [corpMid.toString(), corpBig.toString()].sort()
+    );
+    expect(filled.tierBoundaryAnchor).toBeGreaterThan(0);
+    expect(filled.standings.length).toBe(2);
+  });
+
   it("lets a racing process that read no rounds fail its insert quietly", async () => {
     const { db, data } = fakeDb(
       world(10, { small: 400_000, mid: 2e6, big: 3e7 }, { alice: 0, bob: 0, carol: 0 })

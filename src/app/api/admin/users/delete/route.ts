@@ -12,6 +12,7 @@ import { adminDeleteUserSchema } from "@/lib/api/schemas/admin";
 import { cascadeCharacterDeletion } from "@/lib/account/cascadeCharacterDeletion";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { logCharacterDeleted } from "@/lib/db/collections/activityLog";
+import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -81,6 +82,7 @@ export const POST = withNoStore(async (request: Request) => {
 
     // If character exists, clear any elected offices they hold
     if (character) {
+      const blocRowIds = await heldBlocRowIds(db, { characterId: character._id });
       await officialsCollection.updateMany(
         { characterId: character._id },
         {
@@ -92,6 +94,7 @@ export const POST = withNoStore(async (request: Request) => {
           },
         }
       );
+      await releaseVacatedBlocSeats(db, blocRowIds, new Date());
 
       // Release any corporation shareholder positions to publicFloat and vacate
       // any CEO seat held by this character BEFORE deleting the character row,
