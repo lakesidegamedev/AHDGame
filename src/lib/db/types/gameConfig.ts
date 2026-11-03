@@ -192,6 +192,13 @@ export interface GameConfig {
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
   /**
+   * Funded producer market (issue #5454): >= 1 lets a public line draw at most
+   * half its fresh outlay from the carry each turn, holding the rest for later
+   * turns, so supply landing on a long-short line does not unlock several
+   * turns of budget at once. 0 or absent = off.
+   */
+  producerPublicCarryReleaseStage?: number;
+  /**
    * Funded producer market: > 0 limits how much of last turn's run a plant may
    * shed in one turn (for example 0.15 = at most 15% a turn), so output and
    * wages follow a glut down over several turns. 0 or absent = off.
