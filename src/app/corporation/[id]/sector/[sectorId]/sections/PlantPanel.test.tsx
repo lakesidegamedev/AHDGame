@@ -39,6 +39,45 @@ const plants = {
 function noop() {}
 
 describe("PlantPanel facility sizing", () => {
+  it("shows output sent to own sites separately from unsold output in today's run", () => {
+    const { container } = render(
+      <PlantPanel
+        plants={{
+          ...plants,
+          capacityUnits: 200,
+          producedUnits: 150,
+          soldUnits: 30,
+          ownSiteUnits: 115,
+          unsoldUnits: 5,
+          idleUnits: 50,
+          idleCauses: [{ cause: "demand", units: 50 }],
+        }}
+        sectorType="chemical_industries"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+    const rows = Array.from(container.querySelectorAll("li"));
+    expect(
+      rows.find((row) => row.textContent?.includes("Sent to your sites"))?.textContent
+    ).toContain("115");
+    expect(rows.find((row) => row.textContent?.includes("Made, not sold"))?.textContent).toContain(
+      "5"
+    );
+    const bar = container.querySelector('[role="img"]');
+    expect(
+      Array.from(bar?.children ?? []).map(
+        (el) => Math.round(parseFloat((el as HTMLElement).style.width) * 10) / 10
+      )
+    ).toEqual([15, 57.5, 2.5, 25]);
+  });
+
   it("sizes a vehicle production sector at one unit per plant, not the generic manufacturing size", () => {
     const vehiclePlants = {
       ...plants,
