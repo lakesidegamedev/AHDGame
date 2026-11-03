@@ -175,6 +175,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       }));
       return summarizeSeatCycle({
         electionId: key,
+        electionType: e.electionType,
         cycle: e.cycle,
         year: resolveElectionYear(e, ctx),
         status: e.status,

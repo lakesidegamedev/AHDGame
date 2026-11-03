@@ -92,7 +92,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const [mobileTab, setMobileTab] = useState<"races" | "self">("races");
   const [sheetOpen, setSheetOpen] = useState(false);
   // My moves reports results as toasts, like the Actions page's compact view.
-  const actions = useActionsController({ viewMode: "compact" });
+  const actions = useActionsController({ viewMode: "compact", enabled: !!props.characterId });
   // The player's own favorability and influence move with every My moves action;
   // read them from the live character so the race table and Target card follow
   // without refetching every election in the country.
@@ -111,7 +111,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
   const finished = useFinishedRaces(
     props.countryId,
     shownType,
-    chosenFilter?.stage === "final",
+    (chosenFilter?.stage ?? props.initialFilter?.stage) === "final",
     props.nationalChamberKeys,
     currentTurn ?? 0
   );
@@ -249,7 +249,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     (c: SeatCycle, partyId?: string) => {
       if (!selected) return;
       setChosenFilter({
-        type: selected.electionType,
+        type: c.electionType ?? selected.electionType,
         stage: c.state === "final" ? "final" : "all",
         ...(c.state === "final" ? { year: c.year } : {}),
         regionId: selected.regionId,
@@ -307,9 +307,9 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     (id: string) => {
       setCandidateId(id);
       setPanel("target");
-      if (!isDesktop) setSheetOpen(true);
+      if (!isDesktop && props.characterId) setSheetOpen(true);
     },
-    [isDesktop]
+    [isDesktop, props.characterId]
   );
 
   const openMyRace = useCallback(() => {
@@ -336,7 +336,10 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
     color: on ? BLEND.ink : BLEND.muted,
     boxShadow: on ? `inset 0 -2px 0 ${BLEND.accent}` : "none",
   });
-  const right = (
+  const readOnlyNotice = <p style={{ padding: 16 }}>{t("readOnly")}</p>;
+  const right = !props.characterId ? (
+    readOnlyNotice
+  ) : (
     <aside aria-label={t("tabs.group")} style={{ display: "flex", flexDirection: "column" }}>
       <div
         role="tablist"
@@ -453,7 +456,8 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               countryPicker={<CountryPicker countryId={props.countryId} />}
             />
           ) : null}
-          {!isDesktop && mobileTab === "self" ? (
+          {!isDesktop && mobileTab === "self" && !props.characterId ? readOnlyNotice : null}
+          {!isDesktop && mobileTab === "self" && props.characterId ? (
             <MyMovesPanel
               controller={actions}
               myRace={myRace}
@@ -485,7 +489,9 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
                 filter={filter}
                 selectedRace={selected}
                 onSelectRegion={selectRegion}
-                onCanvass={() => actions.setCampaignAction("canvass")}
+                onCanvass={
+                  props.characterId ? () => actions.setCampaignAction("canvass") : undefined
+                }
                 turn={currentTurn}
               />
             ) : null}

@@ -35,7 +35,7 @@ export interface CampaignMapProps {
   filter: RaceFilter;
   selectedRace: CmRace | null;
   onSelectRegion: (regionId: string) => void;
-  onCanvass: () => void;
+  onCanvass?: () => void;
   /** A completed turn: sub-unit results are re-read. */
   turn?: number | null;
 }
@@ -633,7 +633,7 @@ function CountyCard({
   row: UnitRow | undefined;
   race: CmRace | null;
   canCanvass: boolean;
-  onCanvass: () => void;
+  onCanvass?: () => void;
   onClose: () => void;
 }) {
   const t = useTranslations("elections.campaignManager");
@@ -711,7 +711,7 @@ function CountyCard({
       ) : (
         <p style={{ margin: 0, fontSize: 12.5, color: BLEND.muted }}>{t("map.noResults")}</p>
       )}
-      {canCanvass ? (
+      {canCanvass && onCanvass ? (
         <button
           type="button"
           onClick={onCanvass}

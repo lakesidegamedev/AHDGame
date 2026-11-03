@@ -29,11 +29,9 @@ export default async function CampaignManagerPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await getAuthUserWithCharacter();
-  if (!user?.hasCharacter || !user.character) {
-    redirect("/unauthorized?reason=You need a character to use the Campaign Manager");
-  }
-  const character = user.character;
-  const homeCountryId = (character.countryId ?? "US") as CountryId;
+  // Results stay public; only the action controls require a character.
+  const character = user?.hasCharacter ? user.character : null;
+  const homeCountryId = (character?.countryId ?? "US") as CountryId;
   const db = await getDb();
   // Deep-link params (race, type, stage, region, year, party, country); junk is dropped.
   const { race, filter, country: countryParam } = parseCampaignManagerParams(await searchParams);
@@ -78,8 +76,8 @@ export default async function CampaignManagerPage({
       regionNounPlural={view.regionNounPlural}
       regionNames={regionNames}
       nationalChamberKeys={view.nationalChamberKeys}
-      characterId={String(character._id)}
-      homeRegionId={character.homeState ?? null}
+      characterId={character ? String(character._id) : ""}
+      homeRegionId={character?.homeState ?? null}
       initialRaceKey={race}
       initialFilter={filter}
     />

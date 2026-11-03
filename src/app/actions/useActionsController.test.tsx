@@ -72,3 +72,14 @@ describe("useActionsController", () => {
     expect(props.imageUrl).toBe(c.cardImages.campaign);
   });
 });
+
+it("does not fetch protected resources while browsing without a character", async () => {
+  const { result } = renderHook(() =>
+    useActionsController({ viewMode: "compact", enabled: false })
+  );
+  await act(async () => {
+    await result.current.fetchCharacter();
+  });
+  expect(fetch).not.toHaveBeenCalled();
+  expect(result.current.character).toBeNull();
+});

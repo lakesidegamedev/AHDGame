@@ -436,6 +436,7 @@
     },
     "campaignManager": {
       "title": "Campaign Manager",
+      "readOnly": "Sign in with a character to campaign. You can browse races and results without one.",
       "loading": "Loading races",
       "loadError": "Races could not load.",
       "retry": "Try again",

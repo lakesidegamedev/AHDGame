@@ -92,6 +92,8 @@ export interface ActionsController {
 }
 
 export interface ActionsControllerOptions {
+  /** Public race browsing must not load protected character resources. */
+  enabled?: boolean;
   /** Compact view reports results as toasts; card view flashes them on the card. */
   viewMode: ActionsViewMode;
   /** The account's saved view mode, when the auth payload carries one. */
@@ -100,6 +102,7 @@ export interface ActionsControllerOptions {
 
 export function useActionsController({
   viewMode,
+  enabled = true,
   onStoredViewMode,
 }: ActionsControllerOptions): ActionsController {
   const [campaignAction, setCampaignAction] = useState<"canvass" | "targetedAds" | null>(null);
@@ -124,6 +127,7 @@ export function useActionsController({
   }, [onStoredViewMode]);
 
   const fetchCharacter = useCallback(async () => {
+    if (!enabled) return;
     try {
       const [meRes, charRes] = await Promise.all([
         fetch("/api/auth/me"),
@@ -157,7 +161,7 @@ export function useActionsController({
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, enabled]);
 
   useEffect(() => {
     fetchCharacter();

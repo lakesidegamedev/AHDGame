@@ -36,3 +36,7 @@ areas: [fullstack]
 - **Campaign HQ is for presidential candidates.** Down-ballot races are run
   from Campaign Manager instead; existing down-ballot campaign HQs are archived
   with their leftover funds kept on record.
+
+- Public race and result links remain readable without a character; campaign actions still require one.
+- Past-race navigation follows the destination race type across regular and snap elections.
+- Links opening the Finished filter load history immediately.

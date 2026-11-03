@@ -95,6 +95,7 @@ describe("GET /api/elections/[id]/seat-history", () => {
     expect(cycles[0].state).toBe("live");
     expect(cycles[1]).toMatchObject({
       electionId: e1._id.toHexString(),
+      electionType: e1.electionType,
       year: 1988,
       state: "final",
       winner: { name: "Don Riegle", partyAbbr: "DEM", partyColor: "#2563eb" },

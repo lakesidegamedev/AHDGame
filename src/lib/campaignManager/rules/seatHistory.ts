@@ -14,6 +14,8 @@ export interface SeatPrimaryResult {
 
 export interface SeatCycleInput {
   electionId: string;
+  /** Exact race type, including snap variants, for cross-cycle navigation. */
+  electionType?: string;
   cycle: number;
   year: number | null;
   /** Election status as stored. */
@@ -32,6 +34,8 @@ export interface SeatCycleInput {
 
 export interface SeatCycle {
   electionId: string;
+  /** Exact race type, including snap variants, for cross-cycle navigation. */
+  electionType?: string;
   cycle: number;
   year: number | null;
   state: SeatCycleState;
@@ -123,6 +127,7 @@ export function summarizeSeatCycle(input: SeatCycleInput): SeatCycle {
     state === "final" && !multiSeat ? generalResult(input) : { winner: null, margin: null };
   return {
     electionId: input.electionId,
+    electionType: input.electionType,
     cycle: input.cycle,
     year: input.year,
     state,
