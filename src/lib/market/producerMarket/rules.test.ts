@@ -1141,3 +1141,75 @@ describe("country-tagged funded settlement", () => {
     expect(settleProducerMarket({ turn: 1, ...base }).countryBooks).toBeUndefined();
   });
 });
+
+describe("automatic ask with sell-through memory", () => {
+  const basis = {
+    referenceUnitPrice: 10,
+    variableUnitCost: 4,
+    fixedCost: 200,
+    offeredUnits: 100,
+    demand: [{ units: 200, maximumUnitPrice: 20 }],
+    competitors: [{ units: 200, unitPrice: 10 }],
+  };
+  const policy = { kind: "automatic", targetMarkup: 0.5 } as const;
+  const memory = { ask: 10, previousAsk: 9 };
+
+  it("raises the ask above last turn's price after selling out", () => {
+    const flat = quoteProducer({ ...basis, policy });
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 100, offeredUnits: 100 },
+    });
+    expect(flat.unitPrice).toBeCloseTo(10);
+    expect(quote.unitPrice).toBeGreaterThan(flat.unitPrice);
+  });
+
+  it("gives a rejected raise back to the previous ask", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 40, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(9);
+  });
+
+  it("holds through the deadband rather than chasing the book", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory, soldUnits: 95, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(10);
+  });
+
+  it("keeps the estimator when no memory is passed", () => {
+    const quote = quoteProducer({
+      ...basis,
+      policy,
+      autoAsk: { memory: null, soldUnits: 100, offeredUnits: 100 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(10);
+  });
+
+  it("bounds a sell-out by the reference price when its own sales lifted the clearing", () => {
+    // Clearing 30 is the plant's own raises feeding back; reference 10 with a
+    // 50% markup caps the controller at 15 instead of 45.
+    const soldOut = { memory: { ask: 20, previousAsk: 18 }, soldUnits: 100, offeredUnits: 100 };
+    const quote = quoteProducer({ ...basis, clearingUnitPrice: 30, policy, autoAsk: soldOut });
+    expect(quote.unitPrice).toBeCloseTo(15);
+  });
+
+  it("treats a zero ceiling as a cap, not as unbounded", () => {
+    const soldOut = { memory: { ask: 50, previousAsk: 50 }, soldUnits: 100, offeredUnits: 100 };
+    const noAnchor = quoteProducer({ ...basis, referenceUnitPrice: 0, policy, autoAsk: soldOut });
+    const fullDiscount = quoteProducer({
+      ...basis,
+      clearingUnitPrice: 10,
+      policy: { kind: "automatic", targetMarkup: -1 },
+      autoAsk: soldOut,
+    });
+    expect(noAnchor.unitPrice).toBe(0);
+    expect(fullDiscount.unitPrice).toBe(0);
+  });
+});

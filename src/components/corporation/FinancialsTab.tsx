@@ -19,6 +19,7 @@ import type {
   SectorDetail,
   FinancialFogMeta,
 } from "./CorporationPageTypes";
+import { TaxReformNotice } from "./finance/TaxReformNotice";
 import { TariffRestrictions } from "./TariffRestrictions";
 import { SubsidyBenefits } from "./SubsidyBenefits";
 import { GroupOverviewCard } from "./GroupOverviewCard";
@@ -173,6 +174,7 @@ export default function FinancialsTab({
 
   return (
     <div className="space-y-6">
+      <TaxReformNotice corporation={corporation} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Segmented ariaLabel="Statement" options={VIEW_OPTIONS} value={view} onChange={setView} />
         <Segmented

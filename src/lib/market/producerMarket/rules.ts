@@ -1,6 +1,7 @@
 import { ProducerSupplyPool } from "./supplyPoolRules";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
+import { nextAutoAsk } from "./autoAskRules";
 /**
  * Every producer sells delivered units at its posted price. Manual, cost-plus
  * and automatic quotes share the same funded order book and trade receipts.
@@ -914,6 +915,22 @@ export function quoteProducer(input: {
   variableUnitCost: number;
   fixedCost: number;
   offeredUnits: number;
+  /**
+   * Sell-through memory for an automatic ask (see autoAskRules). When present,
+   * the controller owns the price instead of the profit-maximum candidate
+   * search, which is how a seller that sold its whole offer can ask for more
+   * and how a raise the book rejected is given back. Absent keeps the
+   * historical estimator, which cannot raise a price at all.
+   */
+  autoAsk?: {
+    memory: { ask: number; previousAsk: number } | null;
+    /** Units the last ask actually sold. */
+    soldUnits: number;
+    /** Units the last ask offered. */
+    offeredUnits: number;
+    /** Fractional raise per sell-out step; defaults inside the controller. */
+    step?: number;
+  };
   demand: readonly { maximumUnitPrice: number; units: number }[];
   competitors: readonly { unitPrice: number; units: number }[];
 }): {
@@ -964,6 +981,31 @@ export function quoteProducer(input: {
   // A seller that sold nothing last turn asks no more than the clearing, so an ask
   // stuck above the book steps down instead of repeating.
   const ceiling = anchor * (input.soldNothingLastTurn ? Math.min(1, 1 + markup) : 1 + markup);
+  // Sell-through feedback (autoAskRules). With ask memory the controller decides
+  // the price: sold out climbs one step, the deadband holds, a shortfall reverts
+  // to the previous ask or steps down. Without memory the estimator below still
+  // runs. The controller replaces the profit search, so the demand book only
+  // bounds the price through the ceiling and the ask moves one step per turn.
+  // The loop closes where the caller stores `rememberAutoAsk(memory, decision)`
+  // for next turn; nothing stores it yet, so no caller passes `autoAsk`. Note
+  // that production.ts applies `markedDownAsk` after this returns, so the posted
+  // price can sit below the one chosen here.
+  if (input.autoAsk) {
+    // Last turn's clearing includes this plant's own sales, so where it sets the
+    // price a sell-out raise lifts the clearing and the ceiling with it, and the
+    // step cap never binds. Bound the controller by the reference price too.
+    const controllerCeiling = reference > 0 ? Math.min(ceiling, reference * (1 + markup)) : ceiling;
+    const decided = nextAutoAsk({
+      memory: input.autoAsk.memory,
+      soldUnits: input.autoAsk.soldUnits,
+      offeredUnits: input.autoAsk.offeredUnits,
+      ...(input.autoAsk.step != null ? { step: input.autoAsk.step } : {}),
+      ceiling: controllerCeiling,
+    });
+    // The controller reads a non-positive ceiling as unbounded, but here a zero
+    // ceiling (no anchor price, or a -100% markup) is a real cap of zero.
+    if (decided) return estimate(Math.min(decided.ask, controllerCeiling));
+  }
   const candidates = new Set([reference, anchor, ceiling]);
   for (const seller of input.competitors)
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
