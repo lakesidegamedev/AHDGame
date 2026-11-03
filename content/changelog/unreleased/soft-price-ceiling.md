@@ -22,5 +22,7 @@ areas: [engine]
   price a good is heading for is softened so it approaches the ceiling without
   reaching it, and the usual limit on how far a price moves in one turn applies
   after that. A deeper shortage still shows a higher price.
-- When the switch is turned on, goods now sitting on the ceiling will ease down
-  toward their softened prices over a few dozen turns.
+- When the switch is turned on, goods sitting on the ceiling ease down to about
+  85% of it within about eight turns, all in the same turns.
+- Separation is clearest between 60% of the ceiling and shortages about twice as
+  deep as the ceiling; deeper shortages still publish close to the ceiling.

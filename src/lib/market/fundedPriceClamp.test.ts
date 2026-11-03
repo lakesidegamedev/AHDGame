@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { clampFundedPrice, softCeiling } from "./fundedPriceClamp";
+import { clampFundedPrice } from "./fundedPriceClamp";
+import { softCeiling } from "./rules/softCeiling";
 
 const PACE = { maxMove: 0.02, maxMultiplier: 3 };
 
@@ -67,5 +68,15 @@ describe("soft ceiling order: soften the target, then pace (review of #5464)", (
     let price = 300;
     for (let turn = 0; turn < 60; turn++) price = clampFundedPrice(600, price, 100, pace);
     expect(price).toBeCloseTo(softCeiling(600, 300), 1);
+  });
+});
+
+describe("soft ceiling switch-on step (#5452)", () => {
+  it("brings a good pinned on the ceiling to about 85% of it within eight 2% turns", () => {
+    const pace = { maxMove: 0.02, maxMultiplier: 3, softCeiling: true };
+    let price = 300;
+    for (let turn = 0; turn < 8; turn++) price = clampFundedPrice(300, price, 100, pace);
+    expect(softCeiling(300, 300)).toBeCloseTo(255.85, 2);
+    expect(price).toBeCloseTo(255.85, 1);
   });
 });

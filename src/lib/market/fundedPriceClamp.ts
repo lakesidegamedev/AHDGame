@@ -16,28 +16,13 @@ import {
   FUNDED_SCARCITY_MAX_MOVE,
   FUNDED_SCARCITY_MIN,
 } from "./scarcityDrift";
+import { softCeiling } from "./rules/softCeiling";
 
 export interface FundedPricePace {
   maxMove?: number;
   maxMultiplier?: number;
   /** Soft ceiling (issue #5448): approach the ceiling gradually instead of pinning on it. */
   softCeiling?: boolean;
-}
-
-/** Share of the ceiling above which the soft ceiling starts to compress. */
-export const SOFT_CEILING_KNEE = 0.6;
-
-/**
- * Maps a price above the knee onto the band below the ceiling: the excess
- * decays exponentially, so a deeper shortage still reads higher but never
- * reaches the ceiling itself. Below the knee the price is unchanged.
- */
-export function softCeiling(price: number, ceiling: number): number {
-  if (!(ceiling > 0) || !Number.isFinite(price)) return price;
-  const knee = ceiling * SOFT_CEILING_KNEE;
-  if (price <= knee) return price;
-  const band = ceiling - knee;
-  return knee + band * (1 - Math.exp(-(price - knee) / band));
 }
 
 export function clampFundedPrice(
