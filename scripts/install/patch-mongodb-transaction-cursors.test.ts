@@ -8,13 +8,13 @@ import { patchMongoTransactionCursors } from "./patch-mongodb-transaction-cursor
 const require = createRequire(import.meta.url);
 const installed = dirname(require.resolve("mongodb/package.json"));
 const roots: string[] = [];
-function fixture() {
+function fixture(version = "7.6.0") {
   const root = mkdtempSync(join(tmpdir(), "ahd-mongo-cursor-patch-"));
   roots.push(root);
   mkdirSync(join(root, "lib/operations"), { recursive: true });
   const path = join(root, "lib/operations/get_more.js");
   copyFileSync(join(installed, "lib/operations/get_more.js"), path);
-  writeFileSync(join(root, "package.json"), JSON.stringify({ version: "7.6.0" }));
+  writeFileSync(join(root, "package.json"), JSON.stringify({ version }));
   return { root, path };
 }
 
@@ -71,11 +71,19 @@ describe("pinned Mongo transaction cursor compatibility", () => {
       buildOptions(path, { tailable: true, awaitData: true, omitMaxTimeMS: true })
     ).toMatchObject({ omitMaxTimeMS: true });
   });
+  it("accepts the reviewed 7.7.0 source and preserves cursor deadlines", () => {
+    const { root, path } = fixture("7.7.0");
+    patchMongoTransactionCursors(root);
+    expect(buildOptions(path, { omitMaxTimeMS: false })).toMatchObject({
+      omitMaxTimeMS: true,
+      timeoutContext: { deadline: "unchanged" },
+    });
+  });
   it("fails closed for changed source or driver versions", () => {
     const { root, path } = fixture();
     writeFileSync(path, readFileSync(path, "utf8") + "\n// changed\n");
     expect(() => patchMongoTransactionCursors(root)).toThrow("reviewed driver source");
-    writeFileSync(join(root, "package.json"), JSON.stringify({ version: "7.7.0" }));
+    writeFileSync(join(root, "package.json"), JSON.stringify({ version: "7.8.0" }));
     expect(() => patchMongoTransactionCursors(root)).toThrow("Review or remove");
   });
 });
