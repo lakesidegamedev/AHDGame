@@ -198,6 +198,15 @@ export function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: numb
     remaining,
     delivered: Math.max(0, ordered - remaining),
     perTurn: queue.unitsPerTurn > 0 ? queue.unitsPerTurn / size : null,
+    // Only worth saying when something lands before the last order finishes;
+    // otherwise "done turn N" already says it.
+    nextStepTurn:
+      queue.unitsPerTurn > 0 ||
+      queue.nextArrivalTurn == null ||
+      queue.lastOnlineTurn == null ||
+      queue.nextArrivalTurn >= queue.lastOnlineTurn
+        ? null
+        : queue.nextArrivalTurn,
   };
 }
 
@@ -215,7 +224,17 @@ export function buildProgressLabel(
     p.perTurn != null
       ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
       : "";
-  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done} Capacity is added a slice at a time, so the capacity figure rises each turn until then.`;
+  // Without a per-turn rate the capacity lands in steps (ticket 1753), so saying
+  // it rises each turn would make a build that is on schedule look stuck. The
+  // step need not be a whole plant: an order of 0.8 of a plant lands in one
+  // piece, as does a legacy all-at-once order.
+  const arrival =
+    p.perTurn != null
+      ? " Capacity is added a slice at a time, so the capacity figure rises each turn until then."
+      : p.nextStepTurn != null
+        ? ` Capacity arrives in steps, not a slice each turn: the next lands on turn ${p.nextStepTurn}.`
+        : " Capacity arrives in one piece when it is done, not a slice each turn.";
+  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done}${arrival}`;
 }
 
 export function BuildQueueBadge({
@@ -253,6 +272,12 @@ export function BuildQueueBadge({
           <span className="font-normal opacity-80">
             {formatPlantCount(p.delivered)} of {formatPlantCount(p.ordered)} in · about{" "}
             {formatPlantCount(p.perTurn)} a turn
+          </span>
+        )}
+        {p.nextStepTurn != null && (
+          <span className="font-normal opacity-80">
+            {formatPlantCount(p.delivered)} of {formatPlantCount(p.ordered)} in · next lands turn{" "}
+            {p.nextStepTurn}
           </span>
         )}
       </span>

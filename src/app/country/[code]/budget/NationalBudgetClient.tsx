@@ -33,6 +33,11 @@ import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import {
+  lawSpendingCategory,
+  otherRevenueParts,
+  otherSpendingParts,
+} from "@/lib/budget/rules/otherLineBreakdown";
+import {
   REVENUE_TO_TAX_BASE,
   COUNTRY_LABELS,
   humanizeKey,
@@ -277,6 +282,7 @@ export function NationalBudgetClient() {
         amount: value,
         rate: taxRate ?? null,
         base: hasBase ? taxBase : null,
+        ...(key === "other" ? { parts: otherRevenueParts({ total: value }) } : {}),
       };
     }
   );
@@ -307,9 +313,27 @@ export function NationalBudgetClient() {
             labels.spendingDescriptions[key as keyof typeof labels.spendingDescriptions] ??
             `${label} spending.`,
           amount: value,
+          // An uncategorised law books into "other" (spending.ts), so it is
+          // listed there too rather than under no line at all.
           laws: enactedLaws
-            .filter((law) => law.budgetCategory === key)
+            .filter((law) => lawSpendingCategory(law.budgetCategory) === key)
             .map((law) => ({ title: law.title, cost: formatLawCost(law), year: law.enactedYear })),
+          // Live laws carry their annual cost, so the Other line can be added
+          // up; a historical snapshot stores only cost descriptions, so a past
+          // year lists its laws without amounts. Deliberate: Other Revenue's
+          // one described part needs no amounts, so it shows in both views.
+          ...(key === "other" && !(data.isSnapshot ?? false)
+            ? {
+                parts: otherSpendingParts({
+                  total: value,
+                  laws: (enactedLaws as DisplayEnactedLaw[])
+                    .filter(
+                      (law) => !law.isGrant && lawSpendingCategory(law.budgetCategory) === key
+                    )
+                    .map((law) => ({ title: law.title, amount: law.annualCost })),
+                }),
+              }
+            : {}),
         };
       }),
     {
