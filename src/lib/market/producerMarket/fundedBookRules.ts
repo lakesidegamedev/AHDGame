@@ -33,6 +33,16 @@ export interface FundedCountryBookRow {
   imports: number;
   /** Units sold to a buyer in another country. */
   exports: number;
+  /**
+   * Measurement only (#5450); the price phase does not read these.
+   * `requested`: units buyers asked for, with a reservation and its public
+   * fallback counted once (`demand` adds both). `funded`: the part of
+   * `requested` the buyers' shared cash could pay for at their limit prices.
+   * `filled`: units buyers in the country actually received.
+   */
+  requested?: number;
+  funded?: number;
+  filled?: number;
 }
 
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

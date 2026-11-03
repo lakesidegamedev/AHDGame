@@ -500,6 +500,7 @@ export function settleProducerMarket(input: {
     if (tracked && order.countryId)
       countryBookRow(order.countryId, order.commodity).demand += order.units;
   }
+  if (tracked) fundedDemandByCountry(input.orders, budgets, countryBookRow);
   const orderResults = new Map<string, ProducerMarketResult["orders"][number]>(
     input.orders.map((o) => [
       o.id,
@@ -522,12 +523,7 @@ export function settleProducerMarket(input: {
   const fills: ProducerTradeReceipt["fills"] = [];
   let tradeCount = 0;
   const prices = new Map<string, ProducerMarketResult["prices"][number]>();
-  const orders = [...input.orders].sort(
-    (a, b) =>
-      (b.priority ?? 0) - (a.priority ?? 0) ||
-      Number(!!b.supplierOfferId) - Number(!!a.supplierOfferId) ||
-      compareId(a.id, b.id)
-  );
+  const orders = [...input.orders].sort(compareOrders);
   // State-first freight: a local buyer clears against its own state's offers
   // before the national book pass, so a remote buyer sorted earlier cannot
   // take the stock a local buyer needs. Indexed per book and state in the
@@ -887,8 +883,91 @@ export function settleProducerMarket(input: {
     prices: [...prices.values()].sort((a, b) =>
       compareId(bookKey(a.commodity, a.book), bookKey(b.commodity, b.book))
     ),
-    ...(tracked ? { countryBooks: sortFundedCountryBookRows([...countryBookRows.values()]) } : {}),
+    ...(tracked
+      ? {
+          countryBooks: sortFundedCountryBookRows(
+            filledByCountry(input.orders, orderResults, countryBookRow, countryBookRows)
+          ),
+        }
+      : {}),
   };
+}
+
+/**
+ * Settlement order: higher priority first, named suppliers before open
+ * orders, then id. The funded pass walks orders in this order so the budget
+ * an account spends on one order is the budget it no longer has for the next.
+ */
+const compareOrders = (a: PurchaseOrder, b: PurchaseOrder) =>
+  (b.priority ?? 0) - (a.priority ?? 0) ||
+  Number(!!b.supplierOfferId) - Number(!!a.supplierOfferId) ||
+  compareId(a.id, b.id);
+
+/**
+ * Requested and budget-backed units per buyer country (#5450). Measurement
+ * only: it reads opening budgets and never changes a fill.
+ *
+ * Requested counts a reservation group once, at most its target. Funded walks
+ * orders in settlement order against one shared budget per account (opening
+ * cash plus intra-turn credit), each order paying its contract or limit
+ * price, capped by its own spending limit and its group's remaining target.
+ * A buyer that could pay less than the limit could afford more, so funded is
+ * a lower bound at the prices buyers bid.
+ */
+function fundedDemandByCountry(
+  orders: readonly PurchaseOrder[],
+  openingBudgets: ReadonlyMap<string, number>,
+  row: (countryId: string, commodity: string) => FundedCountryBookRow
+): void {
+  const budget = new Map(openingBudgets);
+  const groupTarget = new Map<string, number>();
+  const groupAsked = new Map<string, number>();
+  for (const order of orders) {
+    if (!order.quantityGroup) continue;
+    const id = order.quantityGroup.id;
+    groupTarget.set(id, order.quantityGroup.maximumUnits);
+    groupAsked.set(id, (groupAsked.get(id) ?? 0) + order.units);
+  }
+  const groupCounted = new Set<string>();
+  const groupLeft = new Map(groupTarget);
+  for (const order of [...orders].sort(compareOrders)) {
+    if (!order.countryId) continue;
+    const book = row(order.countryId, order.commodity);
+    const group = order.quantityGroup?.id;
+    if (group === undefined) book.requested = (book.requested ?? 0) + order.units;
+    else if (!groupCounted.has(group)) {
+      groupCounted.add(group);
+      book.requested =
+        (book.requested ?? 0) + Math.min(groupTarget.get(group)!, groupAsked.get(group)!);
+    }
+    const price = order.contractUnitPrice ?? order.maximumUnitPrice;
+    let units = order.units;
+    if (group !== undefined) units = Math.min(units, groupLeft.get(group)!);
+    if (price > 0) {
+      if (order.maximumSpend != null) units = Math.min(units, order.maximumSpend / price);
+      units = Math.min(units, Math.max(0, budget.get(order.accountId) ?? 0) / price);
+    }
+    units = Math.max(0, units);
+    book.funded = (book.funded ?? 0) + units;
+    if (price > 0) budget.set(order.accountId, (budget.get(order.accountId) ?? 0) - units * price);
+    if (group !== undefined) groupLeft.set(group, groupLeft.get(group)! - units);
+  }
+}
+
+/** Units buyers in each country received, added to the tracked rows. */
+function filledByCountry(
+  orders: readonly PurchaseOrder[],
+  results: ReadonlyMap<string, ProducerMarketResult["orders"][number]>,
+  row: (countryId: string, commodity: string) => FundedCountryBookRow,
+  rows: ReadonlyMap<string, FundedCountryBookRow>
+): FundedCountryBookRow[] {
+  for (const order of orders) {
+    if (!order.countryId) continue;
+    const delivered = results.get(order.id)?.deliveredUnits ?? 0;
+    const book = row(order.countryId, order.commodity);
+    book.filled = (book.filled ?? 0) + delivered;
+  }
+  return [...rows.values()];
 }
 
 export type ProducerQuotePolicy =
