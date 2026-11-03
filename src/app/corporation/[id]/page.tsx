@@ -1,6 +1,10 @@
 "use client";
 
 import { abandonSectorRequest } from "@/lib/corporations/abandonSectorClient";
+import {
+  mothballSectorRequest,
+  type MothballAction,
+} from "@/lib/corporations/mothballSectorClient";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
@@ -657,6 +661,45 @@ export default function CorporationDetailPage() {
       setSectorsMessage({ type: "error", text: "Network error" });
     } finally {
       setStrategyUpdatingSectorId(null);
+    }
+  }
+
+  // A set, so a second row clicked while the first is in flight does not clear
+  // the first one's busy state; the ref drops a double click before re-render.
+  const [mothballingSectorIds, setMothballingSectorIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+  const mothballInFlight = useRef(new Set<string>());
+
+  // Suggestion 412: mothball or reactivate straight from the sector row's menu,
+  // through the same build route the sector page uses.
+  async function handleSectorMothball(sectorId: string, action: MothballAction) {
+    if (mothballInFlight.current.has(sectorId)) return;
+    mothballInFlight.current.add(sectorId);
+    setMothballingSectorIds(new Set(mothballInFlight.current));
+    setSectorsMessage(null);
+    try {
+      const { ok, data } = await mothballSectorRequest(String(id), sectorId, action);
+      if (ok) {
+        setSectorsMessage({
+          type: "success",
+          text:
+            action === "mothball"
+              ? "Mothballed. These plants make nothing while stowed, and still cost upkeep."
+              : "Reactivated. These plants run again.",
+        });
+        fetchCorporation();
+      } else {
+        setSectorsMessage({
+          type: "error",
+          text: apiErrorText(data, action === "mothball" ? "Mothball failed" : "Reactivate failed"),
+        });
+      }
+    } catch {
+      setSectorsMessage({ type: "error", text: "Network error" });
+    } finally {
+      mothballInFlight.current.delete(sectorId);
+      setMothballingSectorIds(new Set(mothballInFlight.current));
     }
   }
 
@@ -1391,6 +1434,8 @@ export default function CorporationDetailPage() {
                         logisticsStrength={corporation.logisticsStrength}
                         onAbandonSector={handleAbandonSector}
                         abandoningSectorId={abandoningSectorId}
+                        onMothballSector={handleSectorMothball}
+                        mothballingSectorIds={mothballingSectorIds}
                         sectorsMessage={sectorsMessage}
                         onStrategyChange={handleSectorStrategyChange}
                         canChangeStrategy={isCeo || !!corporation.canDirectAsParent}
