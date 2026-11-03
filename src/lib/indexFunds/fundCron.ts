@@ -524,17 +524,28 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       fund._id.toString(),
       { lastRebalancedAt: fund.lastRebalancedAt, nowMs, turnLengthMinutes }
     );
+  const rebalanceOverdueByADay = (
+    lastRebalancedAt: Date | undefined,
+    atMs: number,
+    minutesPerTurn: number
+  ) => {
+    if (!lastRebalancedAt) return true;
+    const ageMs = atMs - new Date(lastRebalancedAt).getTime();
+    return !(ageMs <= (2 * TURNS_PER_DAY + 1) * minutesPerTurn * 60_000);
+  };
   funds = [];
   for (const fund of await listActiveFunds(db)) {
     if (!navReadyFundIds.some((id) => id.toString() === fund._id.toString())) continue;
     if (!queuedUnitsByFundId.has(fund._id.toString())) funds.push(fund);
-    // Queued redemptions hold the fund out of trading; say so on the fund's own
-    // stagger turn. A later catch-up turn is still held, but repeating the same
-    // warning there floods the turn log without telling anyone anything new (#5083).
+    // Queued redemptions hold the fund out of trading. One held slot is routine:
+    // the queue pays down and the catch-up turn rebalances. Warn only when the
+    // fund has already missed a whole day, and only on its own stagger turn so a
+    // stuck fund says so once a day rather than every turn (#5083).
     else if (
       fund.targetConstituents.length > 0 &&
       rebalanceDue(fund) &&
-      isStaggeredTurn(fund._id.toString(), currentTurn, TURNS_PER_DAY)
+      isStaggeredTurn(fund._id.toString(), currentTurn, TURNS_PER_DAY) &&
+      rebalanceOverdueByADay(fund.lastRebalancedAt, nowMs, turnLengthMinutes)
     )
       result.errors.push(`Fund ${fund.slug}: rebalance deferred, queued redemptions pending`);
   }

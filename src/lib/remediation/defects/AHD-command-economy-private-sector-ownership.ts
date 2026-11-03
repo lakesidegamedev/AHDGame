@@ -336,11 +336,15 @@ async function survey(db: Db): Promise<Survey> {
   for (const row of KNOWN_CASES) {
     const sector = sectorById.get(row.sectorId);
     const source = corpById.get(row.sourceCorporationId) ?? null;
-    const target = await findTargetCorporation(db, row);
-    if (!target)
-      throw new Error(`no state enterprise target for ${row.countryId}/${row.sectorType}`);
+    // The audited ids belong to one world. After a reset neither the sector
+    // nor its owner exists, so there is nothing to repair and no target to
+    // require.
+    if (!sector && !source) continue;
 
     if (sector && sector.corporationId.toString() === row.sourceCorporationId) {
+      const target = await findTargetCorporation(db, row);
+      if (!target)
+        throw new Error(`no state enterprise target for ${row.countryId}/${row.sectorType}`);
       invalidIds.push(row.sectorId);
       affectedKeys.add(row.sectorId);
       const survivor = await db.collection<CorporateSector>("corporateSectors").findOne({
@@ -403,8 +407,10 @@ async function survey(db: Db): Promise<Survey> {
   const ddTarget = await db
     .collection<Corporation>("corporations")
     .findOne({ _id: new ObjectId(DD_TARGET_CORPORATION_ID) });
-  if (!ddTarget) throw new Error("East German Financial Enterprise is missing");
-  const ddCashDone = hasRepairMarker(ddTarget, "dd-shell-cash");
+  if (!ddTarget && (ddSource || openAuctions.length > 0)) {
+    throw new Error("East German Financial Enterprise is missing");
+  }
+  const ddCashDone = ddTarget ? hasRepairMarker(ddTarget, "dd-shell-cash") : false;
   const ddCashTransfer = ddSource && !ddCashDone ? Math.max(0, finite(ddSource.liquidCapital)) : 0;
   if (ddSource) {
     affectedKeys.add(KNOWN_CASES[0].sectorId);
