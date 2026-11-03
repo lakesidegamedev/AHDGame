@@ -64,6 +64,104 @@ const commodities: CommoditiesData = {
 
 const plants = { fillRate: 0.9 } as PlantsData;
 
+describe("InputsOutputsPanel own supply", () => {
+  const panel = (ownSupply: CommodityFlow["ownSupply"], inputAvailability = 0.7) =>
+    render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          demands: [
+            flow({
+              commodity: "pharmaceuticals",
+              label: "Pharmaceuticals",
+              icon: "Rx",
+              inputAvailability,
+              ownSupply,
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="JP"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+
+  it("says where own output is made and why it did not reach a short plant", () => {
+    const { container } = panel({
+      sourceStateIds: ["HOK"],
+      sourceStateNames: ["Hokkaido"],
+      reasons: ["no_route", "agreement_reserved"],
+    });
+    const note = container.querySelector("[data-own-supply-note]");
+    expect(note?.textContent).toContain("Pharmaceuticals, made in Hokkaido");
+    expect(note?.textContent).toContain("None of it was hauled to this region");
+    expect(note?.textContent).toContain("A supply agreement covers part");
+    expect(note?.textContent).not.toMatch(/[–—]/);
+  });
+
+  it("points a market-first company at its supply policy", () => {
+    panel({
+      sourceStateIds: ["HOK", "KAN"],
+      sourceStateNames: ["Hokkaido", "Kanto"],
+      reasons: ["market_priority"],
+    });
+    expect(screen.getByText(/made in Hokkaido and Kanto/)).toBeTruthy();
+    expect(screen.getByText(/Choose own plants first/)).toBeTruthy();
+  });
+
+  it("stays quiet once the input is fully covered", () => {
+    const { container } = panel(
+      { sourceStateIds: ["HOK"], sourceStateNames: ["Hokkaido"], reasons: ["no_route"] },
+      1
+    );
+    expect(container.querySelector("[data-own-supply-notes]")).toBeNull();
+  });
+
+  it("folds several short inputs into one collapsed block", () => {
+    const ownSupply = {
+      sourceStateIds: ["HOK"],
+      sourceStateNames: ["Hokkaido"],
+      reasons: ["no_route" as const],
+    };
+    const { container } = render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          demands: [
+            flow({
+              commodity: "pharmaceuticals",
+              label: "Pharmaceuticals",
+              icon: "Rx",
+              inputAvailability: 0.7,
+              ownSupply,
+            }),
+            flow({
+              commodity: "plastics",
+              label: "Plastics",
+              icon: "Pl",
+              inputAvailability: 0.6,
+              ownSupply,
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="JP"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    const blocks = container.querySelectorAll("details[data-own-supply-notes]");
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.querySelector("summary")?.textContent).toContain(
+      "makes Pharmaceuticals and Plastics too"
+    );
+    expect(blocks[0]!.querySelectorAll("[data-own-supply-note]")).toHaveLength(2);
+  });
+});
+
 describe("InputsOutputsPanel layout", () => {
   it("pairs an applied throttle with its recorded input, not the world projection", () => {
     const throttled: CommoditiesData = {
