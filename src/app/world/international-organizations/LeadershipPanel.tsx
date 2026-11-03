@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";
 import { VoteRoster } from "./VoteRoster";
 import {
@@ -39,7 +39,7 @@ interface CandidatesResponse {
 
 export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, onChange }: Props) {
   const entityName = useEntityName();
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   const viewerIsMember =
     viewerFmCountry != null && org.members.some((m) => m.countryId === viewerFmCountry);
   // Voting and nominating both go through isVotingMember on the server, so a
