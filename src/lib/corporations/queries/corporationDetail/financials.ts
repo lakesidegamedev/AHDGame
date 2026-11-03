@@ -109,6 +109,7 @@ export function buildFinancials(inputs: FinancialsInputs) {
     federalTax: inc.displayFederalTax,
     stateTax: inc.displayStateTax,
     passThroughOwnerTax: inc.passThroughOwnerTaxLocal,
+    bondCouponFederalTax: inc.bondCouponFederalTaxLocal,
     taxLossCarryforward: inc.taxLossCarryforwardLocal,
     federalTaxByCountry: inc.federalTaxByCountry,
     /** One statement per country the corporation has sectors in, largest first. */

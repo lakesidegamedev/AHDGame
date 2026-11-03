@@ -1,3 +1,4 @@
+import { NationalImpeachmentAction } from "@/components/legislation/NationalImpeachmentAction";
 import { NationalPartyBillAction } from "@/components/legislation/NationalPartyBillAction";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -102,6 +103,7 @@ export default async function LegislaturePage({ params }: PageProps) {
   return (
     <>
       <NationalPartyBillAction countryId={id} />
+      <NationalImpeachmentAction countryId={id} />
       <LegislatureClient
         countryId={id}
         legislatureName={ru?.name ?? bgName}

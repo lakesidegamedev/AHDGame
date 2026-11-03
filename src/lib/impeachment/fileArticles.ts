@@ -9,11 +9,14 @@ import {
 } from "@/lib/constants/countries";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
-import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
+import { loadImpeachmentFilingWindow } from "./filingWindow";
+import { resolvePartyImpeachmentSponsor } from "./partySponsor";
+import { governorOfficialFilter, officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { getGameState } from "@/lib/gameState";
 import { badRequest, forbidden } from "@/lib/api/errors";
 import {
   IMPEACHMENT_COOLDOWN_TURNS,
+  IMPEACHMENT_POST_ELECTION_PROTECTION_TURNS,
   IMPEACHMENT_HOUSE_VOTING_TURNS,
   IMPEACHMENT_SENATE_VOTING_TURNS,
 } from "@/lib/constants/impeachment";
@@ -21,6 +24,7 @@ import {
 export interface FileImpeachmentOpts {
   /** "president" = national two-chamber; "governor" = single state-legislature vote. */
   office: "president" | "governor";
+  proposeViaPartyNpp?: boolean;
   /** Required for "governor": the state whose legislature tries the case. */
   state?: string;
   /** Required for "president"; optional cross-check for "governor" (resolved from state). */
@@ -40,7 +44,7 @@ export interface FileImpeachmentOpts {
 export async function fileArticlesOfImpeachment(
   db: Db,
   countryId: CountryId,
-  filer: Pick<Character, "_id" | "name">,
+  filer: Pick<Character, "_id" | "name" | "party" | "countryId">,
   isAdmin: boolean,
   opts: FileImpeachmentOpts
 ): Promise<{ impeachmentId: string }> {
@@ -55,6 +59,19 @@ export async function fileArticlesOfImpeachment(
   const currentTurn = (await getGameState(db))?.currentTurn ?? 0;
   const officials = db.collection<ElectedOfficial>("electedOfficials");
 
+  const partyAccess = opts.proposeViaPartyNpp
+    ? await resolvePartyImpeachmentSponsor(db, countryId, filer, opts.office, opts.state)
+    : null;
+  if (partyAccess && !partyAccess.authorized) {
+    throw forbidden(
+      "Only an authorized party chair may direct a party legislator to file articles."
+    );
+  }
+  if (partyAccess && !partyAccess.npp) {
+    throw badRequest("No eligible party legislator is available in the filing chamber.");
+  }
+  const sponsor = partyAccess?.npp;
+
   let targetCharacterId: ObjectId;
   let initialStage: ImpeachmentStage;
   let state: string | undefined;
@@ -64,10 +81,13 @@ export async function fileArticlesOfImpeachment(
     if (!state) throw badRequest("A state is required to impeach a governor.");
 
     // Filer must be a sitting member of that state's legislature (admins bypass).
-    if (!isAdmin) {
+    if (sponsor || !isAdmin) {
       const stateChamber = getSubNationalLegislatureKey(countryId);
       const filerOfficial = await officials.findOne({
-        characterId: filer._id,
+        ...officialsCountryScope(countryId),
+        ...(sponsor
+          ? { nppId: sponsor._id, isNPP: true, seatsHeld: { $ne: 0 } }
+          : { characterId: filer._id }),
         officeType: stateChamber,
         state,
       });
@@ -101,10 +121,13 @@ export async function fileArticlesOfImpeachment(
       throw badRequest("That character is not the sitting president.");
     }
 
-    if (!isAdmin) {
+    if (sponsor || !isAdmin) {
       const lowerOffice = getLowerChamberOfficeType(countryId);
       const filerOfficial = await officials.findOne({
-        characterId: filer._id,
+        ...officialsCountryScope(countryId),
+        ...(sponsor
+          ? { nppId: sponsor._id, isNPP: true, seatsHeld: { $ne: 0 } }
+          : { characterId: filer._id }),
         officeType: lowerOffice,
       });
       if (!filerOfficial) {
@@ -119,8 +142,22 @@ export async function fileArticlesOfImpeachment(
 
   const targetChar = await db
     .collection<Character>("characters")
-    .findOne({ _id: targetCharacterId }, { projection: { _id: 1, name: 1 } });
+    .findOne({ _id: targetCharacterId }, { projection: { _id: 1, name: 1, careerHistory: 1 } });
   if (!targetChar) throw badRequest("Target character not found.");
+
+  const filingWindow = await loadImpeachmentFilingWindow(
+    db,
+    targetChar,
+    countryId,
+    opts.office,
+    state,
+    currentTurn
+  );
+  if (filingWindow.remainingTurns > 0) {
+    throw forbidden(
+      `Articles cannot be filed within ${IMPEACHMENT_POST_ELECTION_PROTECTION_TURNS} turns of this official's most recent election. Filing opens on turn ${filingWindow.eligibleOnTurn}, in ${filingWindow.remainingTurns} turns.`
+    );
+  }
 
   // One active impeachment per target.
   const active = await db
@@ -158,8 +195,14 @@ export async function fileArticlesOfImpeachment(
     targetName: targetChar.name ?? "Unknown",
     targetOffice: opts.office,
     ...(state ? { state } : {}),
-    filedByCharacterId: filer._id,
-    filedByName: filer.name,
+    ...(sponsor
+      ? {
+          filedByNppId: sponsor._id,
+          requestedByCharacterId: filer._id,
+          requestedByName: filer.name,
+        }
+      : { filedByCharacterId: filer._id }),
+    filedByName: sponsor?.name ?? filer.name,
     stage: initialStage,
     houseVotesFor: 0,
     houseVotesAgainst: 0,
