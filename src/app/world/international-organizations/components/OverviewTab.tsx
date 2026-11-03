@@ -4,7 +4,7 @@ import { MaastrichtPanel } from "./MaastrichtPanel";
 import { Badge } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
-import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
+import { homeCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { LeadershipPanel } from "../LeadershipPanel";
 import { MembershipPanel } from "../MembershipPanel";
 import { LegislationPanel } from "../LegislationPanel";
@@ -22,7 +22,7 @@ import { Ring, Meter } from "./OrgPrimitives";
 import { WarEntryStatusPanel } from "./WarEntryStatusPanel";
 
 function viewerCountry(viewer: OrgViewerInfo | null): CountryId | null {
-  return viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  return homeCountryOf(viewer);
 }
 
 /** Delegation standing card — the viewer's seat in this org. */

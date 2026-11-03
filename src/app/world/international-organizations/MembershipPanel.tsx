@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui";
 import { postBillProposalWithElectionConfirmation } from "@/components/bills/BillAutoFailWarning";
 
-import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";
 import { VoteRoster } from "./VoteRoster";
 import {
@@ -75,7 +75,7 @@ function PactEntryNotice({
  */
 export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, onChange }: Props) {
   const entityName = useEntityName();
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   const viewerIsMember =
     viewerFmCountry != null && org.members.some((m) => m.countryId === viewerFmCountry);
   // Casting a ballot goes through isVotingMember on the server; membership alone

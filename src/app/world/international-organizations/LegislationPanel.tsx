@@ -7,7 +7,7 @@ import { postBillProposalWithElectionConfirmation } from "@/components/bills/Bil
 import { useEntityName } from "./useEntityName";
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
+import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "./orgTypes";
 import { orgProposingCountry } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";
 import { VoteRoster } from "./VoteRoster";
@@ -31,7 +31,7 @@ interface Props {
  * propose form visible to member foreign ministers.
  */
 export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, onChange }: Props) {
-  const viewerFmCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
+  const viewerFmCountry = actingCountryOf(viewer);
   // Who tables resolutions: the FM/HoG country, or the member an org head sits
   // for (agenda pool). Votes stay on viewerFmCountry.
   const proposer = orgProposingCountry(viewer, org.id);
