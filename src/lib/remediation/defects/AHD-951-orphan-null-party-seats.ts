@@ -12,6 +12,17 @@
 // leaving null placeholders — so deletion is the correct repair, and the next
 // election re-contests the seats.
 //
+// UK Commons is the exception. A mid-term Commons vacancy is a durable doc in
+// `ukCommonsVacancies` whose `officialId` points at the tombstoned bloc row it
+// was vacated from: the vacancy shell keeps that row as its anchor (holder
+// fields cleared, seatsHeld intact, because `seats`/`seatsHeld` size the
+// by-election) and `special_commons` seats its winners in new rows. Deleting an
+// anchored row strands a live by-election and drops the seats it contests, so
+// every row a vacancy points at is excluded here, whatever the vacancy's
+// status — a filled or subsumed vacancy still explains its anchor. The anchor
+// set is re-read inside apply(), so a row that gains a vacancy after planning
+// is never deleted.
+//
 // Ported from scripts/heal-orphan-null-party-seats.ts, which stays as the
 // standalone escape hatch. The office-type allowlist is deliberate: a
 // null-party row on any OTHER office type may be a legitimate non-party seat,
@@ -33,6 +44,9 @@ const ORPHAN_SHAPE = {
 
 const HEAL_FILTER = { ...ORPHAN_SHAPE, officeType: { $in: HEALED_OFFICE_TYPES } };
 
+const OFFICIALS = "electedOfficials";
+const VACANCIES = "ukCommonsVacancies";
+
 interface OrphanRow {
   _id: unknown;
   countryId?: string;
@@ -41,25 +55,56 @@ interface OrphanRow {
   seatsHeld?: number;
 }
 
-async function findOrphans(db: Db): Promise<OrphanRow[]> {
-  return db
-    .collection<OrphanRow>("electedOfficials")
+interface OrphanScan {
+  /** Blocs this defect owns: shape-matched and not the anchor of a vacancy. */
+  orphans: OrphanRow[];
+  /** Shape-matched blocs left alone because a UK Commons vacancy anchors them. */
+  anchored: number;
+}
+
+/**
+ * Rows a UK Commons vacancy points at. They are live tombstones, not orphans:
+ * the vacancy shell and the additive by-election resolver keep the anchor.
+ */
+async function findVacancyAnchoredIds(db: Db, ids: unknown[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const docs = await db
+    .collection<{ officialId?: unknown }>(VACANCIES)
+    .find({ officialId: { $in: ids } }, { projection: { officialId: 1 } })
+    .toArray();
+  return new Set(docs.map((doc) => String(doc.officialId)));
+}
+
+async function scanOrphans(db: Db): Promise<OrphanScan> {
+  const candidates = await db
+    .collection<OrphanRow>(OFFICIALS)
     .find(HEAL_FILTER, { projection: { countryId: 1, officeType: 1, state: 1, seatsHeld: 1 } })
     .toArray();
+  const anchoredIds = await findVacancyAnchoredIds(
+    db,
+    candidates.map((row) => row._id)
+  );
+  const orphans = candidates.filter((row) => !anchoredIds.has(String(row._id)));
+  return { orphans, anchored: candidates.length - orphans.length };
 }
 
 async function countFlagged(db: Db): Promise<number> {
   return db
-    .collection("electedOfficials")
+    .collection(OFFICIALS)
     .countDocuments({ ...ORPHAN_SHAPE, officeType: { $nin: HEALED_OFFICE_TYPES } });
 }
 
 async function detect(db: Db): Promise<DetectResult> {
-  const orphans = await findOrphans(db);
+  const { orphans, anchored } = await scanOrphans(db);
   const flagged = await countFlagged(db);
   const phantomSeats = orphans.reduce((sum, row) => sum + (row.seatsHeld ?? 0), 0);
 
   const notes = [`${phantomSeats} phantom seats across ${orphans.length} bloc(s)`];
+  if (anchored > 0) {
+    notes.push(
+      `${anchored} shape-matched bloc(s) are UK Commons vacancy anchors and are NOT touched — a by-election still owns those seats`
+    );
+  }
   if (flagged > 0) {
     notes.push(
       `${flagged} null-party bloc(s) on OTHER office types are flagged but NOT touched — review against the seed before deleting, they may be legitimate non-party seats`
@@ -80,12 +125,12 @@ async function detect(db: Db): Promise<DetectResult> {
 }
 
 async function plan(db: Db): Promise<HealPlan> {
-  const orphans = await findOrphans(db);
+  const { orphans } = await scanOrphans(db);
   const phantomSeats = orphans.reduce((sum, row) => sum + (row.seatsHeld ?? 0), 0);
 
   return {
     affected: orphans.length,
-    touched: [{ collection: "electedOfficials", ids: orphans.map((row) => String(row._id)) }],
+    touched: [{ collection: OFFICIALS, ids: orphans.map((row) => String(row._id)) }],
     moneyDelta: 0,
     summary: `delete ${orphans.length} orphan null-party bloc(s) holding ${phantomSeats} phantom seat(s)`,
     notes: orphans
@@ -95,40 +140,42 @@ async function plan(db: Db): Promise<HealPlan> {
 }
 
 async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
-  const ids = healPlan.touched.find((t) => t.collection === "electedOfficials")?.ids ?? [];
-  // Delete by the SHAPE filter restricted to the approved ids, not by id alone.
-  // If a row stopped being an orphan between plan and apply, it survives.
-  const docs = await db
-    .collection<OrphanRow>("electedOfficials")
-    .find(HEAL_FILTER)
-    .project({ _id: 1 })
-    .toArray();
+  const ids = healPlan.touched.find((t) => t.collection === OFFICIALS)?.ids ?? [];
+  // Rescan rather than trusting the plan: delete by the SHAPE filter restricted
+  // to the approved ids, so a row that stopped being an orphan — or became a
+  // vacancy anchor — between plan and apply survives.
+  const { orphans } = await scanOrphans(db);
   const approved = new Set(ids);
-  const toDelete = docs.map((d) => d._id).filter((id) => approved.has(String(id)));
+  const toDelete = orphans.map((row) => row._id).filter((id) => approved.has(String(id)));
 
   const res = await db
-    .collection("electedOfficials")
+    .collection(OFFICIALS)
     .deleteMany({ ...HEAL_FILTER, _id: { $in: toDelete } } as Record<string, unknown>);
 
   return {
-    documentsScanned: docs.length,
+    documentsScanned: orphans.length,
     documentsDeleted: res.deletedCount,
     notes: [`deleted ${res.deletedCount} of ${ids.length} approved orphan bloc(s)`],
   };
 }
 
 async function verify(db: Db): Promise<VerifyResult> {
-  const remaining = await db.collection("electedOfficials").countDocuments(HEAL_FILTER);
+  const { orphans, anchored } = await scanOrphans(db);
+  const remaining = orphans.length;
   const flagged = await countFlagged(db);
+  const notes = [
+    remaining === 0
+      ? "no orphan null-party blocs remain on healed office types"
+      : `${remaining} orphan bloc(s) still present`,
+  ];
+  if (anchored > 0) {
+    notes.push(`${anchored} UK Commons vacancy anchor(s) remain, by design`);
+  }
+  notes.push(`${flagged} null-party bloc(s) on other office types remain, by design`);
   return {
     ok: remaining === 0,
     remaining,
-    notes: [
-      remaining === 0
-        ? "no orphan null-party blocs remain on healed office types"
-        : `${remaining} orphan bloc(s) still present`,
-      `${flagged} null-party bloc(s) on other office types remain, by design`,
-    ],
+    notes,
   };
 }
 
