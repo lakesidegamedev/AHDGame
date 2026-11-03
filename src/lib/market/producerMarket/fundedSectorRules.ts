@@ -40,6 +40,8 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
 ];
 
 export interface FundedReceipt {
+  internalSupplyIncome?: number;
+  internalSupplyCharge?: number;
   /** Anchor per turn. */
   revenue: number;
   /** Anchor per turn: revenue minus inputs consumed, wages and site bills. */
@@ -87,15 +89,20 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
 ): T {
-  const revenue = Math.max(0, finite(r.revenue));
-  const producerCosts = Math.max(0, revenue - finite(r.profit));
-  const growthCost = fundedGrowthCost(legacy, revenue);
-  const compliance = revenue * Math.max(0, finite(legacy.fundedRegulatoryBurdenRate ?? 0));
+  const externalRevenue = Math.max(0, finite(r.revenue));
+  const internalIncome = Math.max(0, finite(r.internalSupplyIncome ?? 0));
+  const internalCharge = Math.max(0, finite(r.internalSupplyCharge ?? 0));
+  const revenue = externalRevenue + internalIncome;
+  const producerCosts =
+    Math.max(0, externalRevenue - finite(r.profit) + internalIncome - internalCharge) +
+    internalCharge;
+  const growthCost = fundedGrowthCost(legacy, externalRevenue);
+  const compliance = externalRevenue * Math.max(0, finite(legacy.fundedRegulatoryBurdenRate ?? 0));
   const costs =
     producerCosts +
     growthCost +
     compliance +
-    (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
+    (externalRevenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
   return {
     ...legacy,
     hourlyRevenue: revenue,
@@ -194,6 +201,12 @@ export function fundedSectorOpsAll(
           // Shown to the owner beside profit; decisions keep reading profit.
           stockAddedAtCost: daily(receipt.unsoldProductionCost ?? 0),
           transitionSupport: daily(receipt.transitionSupport ?? 0),
+          ...((receipt.internalSupplyIncome ?? 0) > 0
+            ? { internalSupplyIncome: daily(receipt.internalSupplyIncome!) }
+            : {}),
+          ...((receipt.internalSupplyCharge ?? 0) > 0
+            ? { internalSupplyCharge: daily(receipt.internalSupplyCharge!) }
+            : {}),
         },
       });
       stamped.add(id);

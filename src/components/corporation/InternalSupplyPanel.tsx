@@ -84,11 +84,13 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
     }
   }
   const funded = view?.fundedMarket === true;
+  const pricing = draft.transferPricing ?? "free";
   const disabled = busy || !view?.available || view.inherited;
   const changed =
     !!view &&
     (draft.priority !== view.policy.priority ||
-      (!funded && draft.discount !== view.policy.discount) ||
+      ((!funded || pricing === "market") && draft.discount !== view.policy.discount) ||
+      (funded && pricing !== (view.policy.transferPricing ?? "free")) ||
       !!draft.ownFirstAcrossStates !== !!view.policy.ownFirstAcrossStates);
   return (
     <DenseSection title={t("title")} meta={t("timing")}>
@@ -113,7 +115,9 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
               </Link>
             </p>
           )}
-          <div className="grid gap-3 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <div
+            className={`grid gap-3 py-2 sm:items-end ${funded && pricing === "market" ? "sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"}`}
+          >
             <label className="grid gap-1 text-sm">
               {t("priority")}
               <select
@@ -134,13 +138,35 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
                 <option value="group">{t("group")}</option>
               </select>
             </label>
-            {!funded && (
+            {funded && (
+              <label className="grid gap-1 text-sm">
+                {t("transferPricing")}
+                <select
+                  className="border border-card-border bg-background px-2 py-2"
+                  aria-label={t("transferPricing")}
+                  disabled={disabled}
+                  value={pricing}
+                  onChange={(e) => {
+                    setDraft({
+                      ...draft,
+                      transferPricing: e.target.value as InternalSupplyPolicy["transferPricing"],
+                    });
+                    setSaved(false);
+                  }}
+                >
+                  <option value="free">{t("transferFree")}</option>
+                  <option value="cost">{t("transferCost")}</option>
+                  <option value="market">{t("transferMarket")}</option>
+                </select>
+              </label>
+            )}
+            {(!funded || pricing === "market") && (
               <label className="grid gap-1 text-sm">
                 {t("discount")}
                 <select
                   className="border border-card-border bg-background px-2 py-2"
                   aria-label={t("discount")}
-                  disabled={disabled || draft.priority === "market"}
+                  disabled={disabled || (!funded && draft.priority === "market")}
                   value={draft.discount}
                   onChange={(e) => {
                     setDraft({ ...draft, discount: Number(e.target.value) });
@@ -177,7 +203,11 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
             />
             {t("ownFirstAcrossStates")}
           </label>
-          {funded && <p className="pb-2 text-sm text-muted">{t("freeTransfer")}</p>}
+          {funded && (
+            <p className="pb-2 text-sm text-muted">
+              {t(pricing === "free" ? "freeTransfer" : "pricedTransfer")}
+            </p>
+          )}
           <p className="pb-2 text-xs text-muted">{t("ownFirstFreightWarning")}</p>
           {view.ownHauls && view.ownHauls.length > 0 && (
             <div className="border-t border-card-border py-2 text-xs text-muted">

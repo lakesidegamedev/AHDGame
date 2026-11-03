@@ -37,6 +37,86 @@ const accounts = [
   { id: "supplier", cash: 0 },
 ];
 
+describe("internal supply accounting", () => {
+  it("does not allocate site income for a company purchase outside the plant accounts", () => {
+    const producer = plant({
+      id: "energy",
+      inputs: [],
+      outputs: [
+        {
+          commodity: "energy",
+          book: "world",
+          unitsPerOutput: 1,
+          policy: { kind: "manual", unitPrice: 10 },
+          referenceUnitPrice: 10,
+          storable: true,
+        },
+      ],
+      internalTransferPricing: { mode: "cost" },
+    });
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [producer],
+      externalOrders: [
+        {
+          id: "other-company-spend",
+          accountId: "corp",
+          commodity: "energy",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 10,
+        },
+      ],
+    });
+    expect(result.producers[0].internalSupplyIncome).toBeUndefined();
+    expect(result.producers[0].internalSupplyCharge).toBeUndefined();
+    expect(result.producers[0].profit).toBe(-30);
+  });
+  it.each(["cost", "market"] as const)(
+    "balances %s allocations without changing cash or physical output",
+    (mode) => {
+      const producer = plant({
+        id: "energy",
+        inputs: [],
+        outputs: [
+          {
+            commodity: "energy",
+            book: "world",
+            unitsPerOutput: 2,
+            policy: { kind: "manual", unitPrice: 10 },
+            referenceUnitPrice: 10,
+            storable: true,
+          },
+        ],
+      });
+      const consumer = plant({ id: "consumer" });
+      const request = { turn: 1, accounts, producers: [producer, consumer], externalOrders: [] };
+      const free = advanceProducerEconomy(request);
+      const priced = advanceProducerEconomy({
+        ...request,
+        producers: [{ ...producer, internalTransferPricing: { mode, discount: 0.2 } }, consumer],
+      });
+      expect(priced.accounts).toEqual(free.accounts);
+      expect(
+        priced.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow])
+      ).toEqual(free.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow]));
+      const income = priced.producers.reduce((n, p) => n + (p.internalSupplyIncome ?? 0), 0);
+      const charge = priced.producers.reduce((n, p) => n + (p.internalSupplyCharge ?? 0), 0);
+      expect(income).toBeGreaterThan(0);
+      expect(income).toBeCloseTo(charge, 8);
+      expect(priced.producers.reduce((n, p) => n + p.profit, 0)).toBeCloseTo(
+        free.producers.reduce((n, p) => n + p.profit, 0),
+        8
+      );
+      expect(priced.producers.find((p) => p.id === "energy")!.profit).toBeCloseTo(
+        free.producers.find((p) => p.id === "energy")!.profit + income,
+        8
+      );
+    }
+  );
+});
+
 describe("receipt-backed production", () => {
   it("sells retained goods after a recipe change without producing or expensing them again", () => {
     const result = advanceProducerEconomy({

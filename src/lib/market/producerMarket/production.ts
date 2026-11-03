@@ -36,6 +36,10 @@ import { makeDoOutput, minorInputShortfallCost, minorInputs } from "./makeDoRule
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
+import {
+  internalTransferUnitPrice,
+  type InternalTransferPricing,
+} from "./internalTransferPricingRules";
 import { deferredBillFraction, salesAdvanceAmount, salesFundedRunShare } from "./salesAdvanceRules";
 
 export interface PurchasedStock {
@@ -55,6 +59,7 @@ export interface ProducedStock {
 
 export interface ProductionPlan {
   id: string;
+  internalTransferPricing?: { mode: InternalTransferPricing; discount?: number };
   accountId: string;
   /** State the plant site is in; freight buys its own state's offers first. */
   stateId?: string;
@@ -164,6 +169,9 @@ export interface ProducerInputReservation {
 
 export interface ProducerOperatingResult {
   id: string;
+  /** Matching management-account entries between own sites; no treasury cash moves. */
+  internalSupplyIncome?: number;
+  internalSupplyCharge?: number;
   capacityUnits: number;
   activeUnits: number;
   /** Physical proposal before funded order matching constrains actual production. */
@@ -754,6 +762,11 @@ export function advanceProducerEconomy(input: {
       ...(reservations.get(id) ?? []).map((r) => JSON.stringify([id, "reservation", r.id])),
     ];
   };
+  const internalAccountingAccounts = new Set(
+    plans
+      .filter((p) => p.internalTransferPricing && p.internalTransferPricing.mode !== "free")
+      .map((p) => p.accountId)
+  );
   const inputOrders = (): PurchaseOrder[] =>
     plans.flatMap((p) =>
       p.inputs.flatMap((recipe) => {
@@ -766,6 +779,9 @@ export function advanceProducerEconomy(input: {
         const quantityGroup = reserved.length ? { id, maximumUnits: units } : undefined;
         const publicOrder: PurchaseOrder = {
           id,
+          ...(internalAccountingAccounts.has(p.accountId)
+            ? { internalAccountingSiteId: p.id }
+            : {}),
           accountId: p.accountId,
           commodity: recipe.commodity,
           book: recipe.book,
@@ -798,6 +814,7 @@ export function advanceProducerEconomy(input: {
   orders.push(...inputOrders());
   const pendingQuotes: Array<{
     offer: ProducerOffer;
+    internalPricing?: ProductionPlan["internalTransferPricing"];
     quote: Parameters<typeof quoteProducer>[0];
     markdown: { factor: number; reference: number };
   }> = [];
@@ -892,6 +909,7 @@ export function advanceProducerEconomy(input: {
       });
       const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
       pendingQuotes.push({
+        ...(p.internalTransferPricing ? { internalPricing: p.internalTransferPricing } : {}),
         markdown: {
           factor: markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
           reference: output.referenceUnitPrice,
@@ -924,13 +942,21 @@ export function advanceProducerEconomy(input: {
         pending.offer.id
       ),
     });
+    const postedPrice = markedDownAsk(
+      quote.unitPrice,
+      pending.markdown.reference,
+      pending.markdown.factor
+    );
+    const internalPrice = internalTransferUnitPrice({
+      mode: pending.internalPricing?.mode,
+      discount: pending.internalPricing?.discount,
+      marketPrice: postedPrice,
+      unitCost: quote.breakEvenUnitPrice ?? pending.quote.variableUnitCost,
+    });
     offers.push({
       ...pending.offer,
-      unitPrice: markedDownAsk(
-        quote.unitPrice,
-        pending.markdown.reference,
-        pending.markdown.factor
-      ),
+      ...(internalPrice > 0 ? { internalUnitPrice: internalPrice } : {}),
+      unitPrice: postedPrice,
     });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
@@ -1195,6 +1221,7 @@ export function advanceProducerEconomy(input: {
       stocks.set(stock.commodity, previous);
     }
     let purchases = 0;
+    let internalSupplyCharge = 0;
     for (const recipe of p.inputs) {
       const bought = orderIdsForInput(p.id, recipe.commodity).reduce(
         (total, id) => {
@@ -1202,9 +1229,10 @@ export function advanceProducerEconomy(input: {
           return {
             deliveredUnits: total.deliveredUnits + order.deliveredUnits,
             cost: total.cost + order.cost,
+            internalCost: total.internalCost + (order.internalCost ?? 0),
           };
         },
-        { deliveredUnits: 0, cost: 0 }
+        { deliveredUnits: 0, cost: 0, internalCost: 0 }
       );
       const stock = stocks.get(recipe.commodity) ?? {
         commodity: recipe.commodity,
@@ -1214,6 +1242,7 @@ export function advanceProducerEconomy(input: {
       stock.units += bought.deliveredUnits;
       stock.value += bought.cost;
       purchases += bought.cost;
+      internalSupplyCharge += bought.internalCost;
       stocks.set(recipe.commodity, stock);
     }
     // Make do: the plant produces its settled plan and uses up to what it has
@@ -1266,6 +1295,7 @@ export function advanceProducerEconomy(input: {
       stock.units *= 1 - loss;
       stock.value *= 1 - loss;
     }
+    let internalSupplyIncome = 0;
     let revenue = 0,
       offeredUnits = 0,
       soldUnits = 0,
@@ -1276,6 +1306,7 @@ export function advanceProducerEconomy(input: {
     const outputStock = p.outputs.map((output) => {
       const sold = offersById.get(JSON.stringify([p.id, "output", output.commodity]))!;
       revenue += sold.revenue;
+      internalSupplyIncome += sold.internalValue ?? 0;
       offeredUnits += sold.offeredUnits;
       soldUnits += sold.soldUnits;
       deliveredUnits += sold.deliveredUnits;
@@ -1385,6 +1416,8 @@ export function advanceProducerEconomy(input: {
     );
     results.push({
       id: p.id,
+      ...(internalSupplyIncome > 0 ? { internalSupplyIncome } : {}),
+      ...(internalSupplyCharge > 0 ? { internalSupplyCharge } : {}),
       capacityUnits: p.capacityUnits,
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,
@@ -1422,7 +1455,9 @@ export function advanceProducerEconomy(input: {
       arrearsPaid,
       closingArrears,
       profit:
-        revenue -
+        revenue +
+        internalSupplyIncome -
+        internalSupplyCharge -
         consumed -
         minorInputPremium -
         inventoryWriteOff -

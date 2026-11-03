@@ -1390,6 +1390,12 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
           profitAnchor: sectorAmountAnchor(profit),
           inputsAnchor,
+          internalSupplyIncomeAnchor: sectorAmountAnchor(
+            sector.plantsPnl?.internalSupplyIncome ?? 0
+          ),
+          internalSupplyChargeAnchor: sectorAmountAnchor(
+            sector.plantsPnl?.internalSupplyCharge ?? 0
+          ),
           freightCostAnchor: sectorAmountAnchor(sector.freightBillingCharge ?? 0),
           freightIncomeAnchor: sectorAmountAnchor(sector.freightBillingCredit ?? 0),
           fundedComplianceAnchor:

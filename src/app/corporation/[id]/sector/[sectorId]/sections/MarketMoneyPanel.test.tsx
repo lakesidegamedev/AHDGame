@@ -181,6 +181,22 @@ it("shows the internal input credit as a named signed line in the plant account"
   expect(screen.getByText("M87900")).toBeTruthy();
 });
 
+it("names own-site charges and identifies allocated income already included in revenue", () => {
+  render(
+    <MarketMoneyPanel
+      plants={{
+        ...plants,
+        pnl: { ...plants.pnl, internalSupplyIncomeAnchor: 100, internalSupplyChargeAnchor: 50 },
+      }}
+      sectorType="manufacturing"
+      financials={null}
+      corporation={{ _id: "fixture", name: "Synthetic producer" }}
+    />
+  );
+  expect(screen.getByText("Included: income from your sites")).toBeTruthy();
+  expect(screen.getByText("Charges from your sites")).toBeTruthy();
+});
+
 describe("own-site deliveries (ticket 1757)", () => {
   it("names output handed to the company's own sites and does not call it unsold", () => {
     render(

@@ -1718,6 +1718,9 @@ export interface CorporateSector {
     stockAddedAtCost?: number;
     /** Funded market: transition floor support received this turn (reported beside profit). */
     transitionSupport?: number;
+    /** Matched own-site management-account entries, daily host-currency money. */
+    internalSupplyIncome?: number;
+    internalSupplyCharge?: number;
     inputs: number;
     labour: number;
     upkeep: number;
