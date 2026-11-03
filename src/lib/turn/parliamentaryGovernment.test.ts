@@ -271,6 +271,27 @@ describe("unformGovernmentAndVacatePM", () => {
     );
   });
 
+  it("cancels an active no-confidence motion when the PM leaves office", async () => {
+    setupGovMocks({
+      existing: { _id: "UK", status: "formed", pmCharacterId: new ObjectId() },
+      currentTurn: 100,
+    });
+    db.collectionMocks["noConfidenceVotes"] = {
+      ...db.collection("noConfidenceVotes"),
+      updateMany: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    } as MockDb["collectionMocks"][string];
+    const now = new Date("2026-04-21T12:00:00Z");
+
+    await unformGovernmentAndVacatePM(db as unknown as Db, "UK", now, {
+      reason: "confidence-motion-failed",
+    });
+
+    expect(db.collectionMocks["noConfidenceVotes"].updateMany).toHaveBeenCalledWith(
+      { countryId: "UK", status: "active" },
+      { $set: { status: "cancelled", closedAt: now, updatedAt: now } }
+    );
+  });
+
   it("emits the actual player PM departure on loss of confidence", async () => {
     setupGovMocks({ existing: { _id: "UK", status: "formed", formedTurn: 20 }, currentTurn: 50 });
     db.collectionMocks.characters.find.mockReturnValue({
@@ -988,6 +1009,9 @@ describe("resolveParliamentaryNoConfidenceVote — VONC-fail cancels parallel ap
 
     db.collectionMocks["governmentFormations"] = {
       ...db.collection("governmentFormations"),
+      findOne: vi
+        .fn()
+        .mockResolvedValue({ _id: "UK", status: "formed", pmCharacterId: targetPmId }),
       updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
     } as MockDb["collectionMocks"][string];
     const nomineeUserId = new ObjectId();
@@ -1022,6 +1046,64 @@ describe("resolveParliamentaryNoConfidenceVote — VONC-fail cancels parallel ap
     const batched = vi.mocked(createNotifications).mock.calls.flatMap((call) => call[0]);
     const cancelNotif = batched.find((n) => String(n.title).includes("Cancelled"));
     expect(cancelNotif).toBeDefined();
+  });
+});
+
+describe("resolveParliamentaryNoConfidenceVote — premiership vacated before the motion closed", () => {
+  it("cancels the motion and leaves replacement appointments alone", async () => {
+    const voteId = new ObjectId();
+    const targetPmId = new ObjectId();
+    const nomineeId = new ObjectId();
+
+    db.collectionMocks["noConfidenceVotes"] = {
+      ...db.collection("noConfidenceVotes"),
+      findOne: vi.fn().mockResolvedValue({
+        _id: voteId,
+        countryId: "UK",
+        status: "active",
+        votesFor: 150,
+        votesAgainst: 38,
+        votes: {},
+        targetPmCharacterId: targetPmId,
+      }),
+      updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+      findOneAndUpdate: vi.fn(),
+    } as MockDb["collectionMocks"][string];
+    db.collectionMocks["governmentFormations"] = {
+      ...db.collection("governmentFormations"),
+      findOne: vi.fn().mockResolvedValue({
+        _id: "UK",
+        status: "pending",
+        pmCharacterId: null,
+        majorityThreshold: 326,
+        totalSeats: 650,
+      }),
+      updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+    } as MockDb["collectionMocks"][string];
+    db.collectionMocks["pmAppointmentVotes"] = {
+      ...db.collection("pmAppointmentVotes"),
+      find: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          {
+            _id: new ObjectId(),
+            countryId: "UK",
+            status: "active",
+            nomineeCharacterId: nomineeId,
+          },
+        ]),
+      }),
+      updateMany: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    } as MockDb["collectionMocks"][string];
+
+    const now = new Date("2026-11-02T20:00:00Z");
+    await resolveParliamentaryNoConfidenceVote(db as unknown as Db, "UK", voteId, now);
+
+    expect(db.collectionMocks["noConfidenceVotes"].updateOne).toHaveBeenCalledWith(
+      { _id: voteId, status: "active" },
+      { $set: { status: "cancelled", closedAt: now, updatedAt: now } }
+    );
+    expect(db.collectionMocks["pmAppointmentVotes"].updateMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks["governmentFormations"].updateOne).not.toHaveBeenCalled();
   });
 });
 
