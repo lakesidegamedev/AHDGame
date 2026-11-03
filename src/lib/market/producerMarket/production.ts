@@ -184,6 +184,8 @@ export interface ProducerOperatingResult {
    * Absent when the plant made its whole funded run.
    */
   billedRunShare?: number;
+  /** The scarcest major input when short inputs cut the run; set only with billedRunShare. */
+  bindingInput?: string;
   /** Cold upkeep inside otherOperatingPaid plus arrears; not a cost of running. */
   idleOperatingCost?: number;
   /**
@@ -1165,6 +1167,50 @@ export function advanceProducerEconomy(input: {
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
+  // Unsold supply per book and ask, read back to name the input that cut a run.
+  const unsoldByBook = new Map<string, { unitPrice: number; units: number }[]>();
+  for (const offer of market.tradeReceipt.offers) {
+    const settled = offersById.get(offer.id);
+    const units = settled ? settled.offeredUnits - settled.deliveredUnits : 0;
+    if (!(units > 0)) continue;
+    const key = JSON.stringify([offer.commodity, offer.book]);
+    const rows = unsoldByBook.get(key) ?? [];
+    rows.push({ unitPrice: offer.unitPrice, units });
+    unsoldByBook.set(key, rows);
+  }
+  /**
+   * The scarcest input of a plant short inputs cut: the major input whose
+   * stock, purchases and unsold supply within its limit price cover the least
+   * of its physical maximum run. Undefined when every input could have covered it.
+   */
+  const bindingInputOf = (p: ProductionPlan): string | undefined => {
+    const maximum = physicalMaximum.get(p.id)!;
+    const minor = minorInputs(
+      p.inputs.map((r) => ({ unitsPerOutput: r.unitsPerOutput, unitValue: r.maximumUnitPrice }))
+    );
+    let binding: string | undefined;
+    let lowest = 1 - 1e-9;
+    for (const [k, recipe] of p.inputs.entries()) {
+      const need = maximum * recipe.unitsPerOutput;
+      if (minor[k] || !(need > 0)) continue;
+      const stock = p.inputStock
+        .filter((s) => s.commodity === recipe.commodity)
+        .reduce((n, s) => n + s.units, 0);
+      const bought = orderIdsForInput(p.id, recipe.commodity).reduce(
+        (sum, id) => sum + (ordersById.get(id)?.deliveredUnits ?? 0),
+        0
+      );
+      const spare = (unsoldByBook.get(JSON.stringify([recipe.commodity, recipe.book])) ?? [])
+        .filter((row) => row.unitPrice <= recipe.maximumUnitPrice)
+        .reduce((sum, row) => sum + row.units, 0);
+      const cover = (stock + bought + spare) / need;
+      if (cover < lowest) {
+        lowest = cover;
+        binding = recipe.commodity;
+      }
+    }
+    return binding;
+  };
   // The run's sales pay the wages and site bills it deferred, pro rata, before
   // close; what they cannot cover stays owed as an ordinary payable.
   const settledCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
@@ -1423,6 +1469,10 @@ export function advanceProducerEconomy(input: {
       plannedUnits: proposedById.get(p.id)!,
       ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
       ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
+      ...(() => {
+        const binding = billedRunShare.has(p.id) ? bindingInputOf(p) : undefined;
+        return binding ? { bindingInput: binding } : {};
+      })(),
       ...(() => {
         const reasons: RunCutReason[] = [];
         if (
