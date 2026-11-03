@@ -5,12 +5,12 @@ summary: >-
   The committee vote card on a party now says how many yes votes are needed to
   pass, so you can tell how close a proposal is.
 tags: [parties, interface]
-badges: [minor]
+badges: [patch]
 areas: [frontend]
 ---
 
 ## What changed
 
 - Each committee proposal card now shows the number of yes votes needed to pass.
-- The card also reminds you that seats which have not voted when the window closes count as no, and that AI-held seats never vote.
+- The card also reminds you that seats which have not voted when the window closes count as no.
 - No game rules changed.

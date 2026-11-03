@@ -4,6 +4,7 @@ import { useState } from "react";
 import { partyApiUrl } from "@/lib/urls";
 import type { ProposalView } from "@/lib/parties/dto/partyView";
 import { MergerNppWarning } from "./MergerNppWarning";
+import { REQUIRED_YES_FRACTION } from "@/lib/parties/proposalConstants";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 function VoteBar({
@@ -33,8 +34,8 @@ function VoteBar({
         <span>{notVoted} not voted</span>
       </div>
       <div className="text-xs text-muted">
-        {yesNeeded} yes {yesNeeded === 1 ? "vote" : "votes"} needed to pass (60% of {total} seats).
-        Seats that have not voted when the window closes count as no, and AI-held seats never vote.
+        {`${yesNeeded} yes ${yesNeeded === 1 ? "vote" : "votes"} needed to pass (${Math.round(REQUIRED_YES_FRACTION * 100)}% of ${total} seats).`}{" "}
+        Seats that have not voted when the window closes count as no.
       </div>
     </div>
   );

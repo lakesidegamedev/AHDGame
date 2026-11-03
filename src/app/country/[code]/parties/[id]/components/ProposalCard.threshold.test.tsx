@@ -36,8 +36,7 @@ describe("committee proposal pass threshold", () => {
       />
     );
     const text = document.body.textContent ?? "";
-    expect(text).toContain("3 yes votes needed to pass (60% of 5 seats)");
+    expect(text).toContain("3 yes votes needed to pass (60% of 5 seats).");
     expect(text).toContain("count as no");
-    expect(text).toContain("AI-held seats never vote");
   });
 });
