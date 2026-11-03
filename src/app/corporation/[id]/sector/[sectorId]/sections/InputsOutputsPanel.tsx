@@ -16,6 +16,7 @@ import InputOffersHint from "../components/InputOffersHint";
 import { costliestInput } from "../lib/costliestInput";
 import { perProductSalePrices } from "../lib/perProductSalePrice";
 import DetailsDisclosure from "../components/DetailsDisclosure";
+import UnsoldNote from "../components/UnsoldNote";
 import type { CommoditiesData, CommodityFlow, ExtractionCapacityRow, PlantsData } from "../types";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
@@ -320,6 +321,17 @@ export default function InputsOutputsPanel({
                 />
               ))}
             </ul>
+          )}
+          {commodities.supplies.map((f) =>
+            f.unsold ? (
+              <UnsoldNote
+                key={f.commodity}
+                unsold={f.unsold}
+                label={f.label}
+                share={fmtPct(f.unsold.unsoldShare)}
+                money={(v) => `${price(v)} ${currencyCode}`}
+              />
+            ) : null
           )}
         </section>
       </div>

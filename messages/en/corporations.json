@@ -1054,6 +1054,14 @@
       "estimateUnavailable": "Unavailable",
       "subtotal": "Known-state estimate subtotal",
       "total": "Visible state total"
+    },
+    "unsoldOutput": {
+      "lead": "{share} of your {good} went unsold last turn.",
+      "askAboveMarket": "You asked {ask}, but buyers in this market paid {market} on average, so they bought from cheaper sellers first. A lower price would sell more.",
+      "askAboveMarketNoPrice": "Your price was above what buyers in this market paid, so they bought from cheaper sellers first.",
+      "sharedAtMarket": "Your price matched what buyers paid, but the buyers at that price were shared between every seller asking it. More {good} here sells only if demand grows or you price lower.",
+      "buyersExhausted": "Your price was below what buyers paid, yet every buyer willing to pay it was already supplied. More output here will not sell until demand grows.",
+      "noBuyers": "Nobody bought {good} in your market last turn, at any price."
     }
   }
 }

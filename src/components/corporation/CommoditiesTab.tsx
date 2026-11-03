@@ -229,7 +229,10 @@ export default function CommoditiesTab({
                       <Th align="right" title="Output valued at the current market price, per turn">
                         Value
                       </Th>
-                      <Th align="right" title="Own output minus own input use">
+                      <Th
+                        align="right"
+                        title="Own output minus own input use, added up across every site. A surplus here does not mean it reached your plants: output reaches another site only through your supply policy and freight."
+                      >
                         Net production
                       </Th>
                       <Th align="right" title="Net production valued at the current market price">
@@ -298,10 +301,12 @@ export default function CommoditiesTab({
         meta={`${commodities.length} ${commodities.length === 1 ? "commodity" : "commodities"}`}
       >
         <p className="py-1 text-xs text-muted">
-          Net production is this corporation&apos;s own output minus its input use. Purchases do not
-          change it. The private supply line under a commodity shows where consumed inputs came
-          from. Stock and cover are the world&apos;s shadow inventory from the market ledger, not
-          this corporation&apos;s.
+          Net production is this corporation&apos;s own output minus its input use, added up across
+          every site. Purchases do not change it. A surplus here does not mean your own plants got
+          it: output reaches another of your sites only through your supply policy and freight. The
+          private supply line under a commodity shows where consumed inputs came from. Stock and
+          cover are the world&apos;s shadow inventory from the market ledger, not this
+          corporation&apos;s.
         </p>
         {features.length > 0 && (
           <p className="pb-1 text-xs text-muted">
