@@ -712,8 +712,9 @@ async function fillLateBaselines(
   world: ContestWorld,
   round: ContestRound
 ): Promise<ContestRound> {
-  if (round.baselines.length > 0 || !HISTORY_BASELINE_KINDS.has(round.kind)) return round;
-  const late = (await openingBaselines(db, world, [round.kind])).get(round.kind);
+  const kind = round.kind as ContestKind;
+  if (round.baselines.length > 0 || !HISTORY_BASELINE_KINDS.has(kind)) return round;
+  const late = (await openingBaselines(db, world, [kind])).get(kind);
   if (!late || late.baselines.length === 0) return round;
   return {
     ...round,
