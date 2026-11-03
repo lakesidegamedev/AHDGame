@@ -216,6 +216,8 @@ export interface IndexFundRedemptionQueueEntry {
    */
   redeemFxRate?: number;
   status: IndexFundRedemptionStatus;
+  /** Why a cancelled row was written off. Absent on rows closed any other way. */
+  cancelReason?: "holder_missing";
   /** Set while the cron owns this payout. Processing rows require reconciliation after a crash. */
   processingStartedAt?: Date;
   createdAt: Date;

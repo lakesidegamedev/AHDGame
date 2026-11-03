@@ -158,7 +158,7 @@ describe("queued redemption pass budget", () => {
     expect(again).toBe(0);
   });
 
-  it("leaves a payout whose holder is gone alone instead of fencing it every turn", async () => {
+  it("writes off a payout whose holder is gone instead of fencing it every turn", async () => {
     // Every sixth NPP has been merged away. Its queue row can never be paid (the
     // credit leg is guarded on that id), and before this it was fenced, broken
     // out of the payout batch and restored on every single pass.
@@ -174,9 +174,11 @@ describe("queued redemption pass budget", () => {
 
     // The budget went to claims that can actually pay.
     expect(paid).toBe(BUDGET);
-    // One fence per paid entry and none for the vanished holders.
+    // One fence per paid entry and none for the vanished holders, which each
+    // cost a single terminal write-off instead of a fence on every pass.
     expect(trips.count("indexFundRedemptionQueue", "findOneAndUpdate")).toBe(paid);
-    expect(trips.count("indexFundRedemptionQueue", "updateOne")).toBe(0);
+    const writtenOff = trips.count("indexFundRedemptionQueue", "updateOne");
+    expect(writtenOff).toBeGreaterThan(0);
 
     const queue = await w.db
       .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
@@ -185,13 +187,17 @@ describe("queued redemption pass budget", () => {
     const owedToNobody = queue.filter(
       (e) => w.missingNppIds.has(String(e.nppId)) && e.paidAmountAnchor === 0
     );
-    expect(owedToNobody).toHaveLength(missing.size);
-    for (const entry of owedToNobody) {
-      // Never claimed, never restored: the obligation is exactly as it was.
-      expect(entry).toMatchObject({ status: "queued", units: 10 });
+    // The budget cuts the pass short, so only the vanished holders it reached are closed.
+    expect(owedToNobody.filter((e) => e.status === "cancelled")).toHaveLength(writtenOff);
+    for (const entry of owedToNobody.filter((e) => e.status === "cancelled")) {
+      // Never claimed: closed as terminal so it stops holding the fund out of trading.
+      expect(entry).toMatchObject({
+        status: "cancelled",
+        cancelReason: "holder_missing",
+        units: 10,
+      });
       expect(entry).not.toHaveProperty("settlementClaimId");
       expect(entry).not.toHaveProperty("processingStartedAt");
-      expect(entry.updatedAt).toEqual(entry.createdAt);
     }
 
     // Cash left the fund only for the holders it paid.

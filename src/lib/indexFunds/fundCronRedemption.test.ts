@@ -89,7 +89,7 @@ describe("queued NPC redemption cash witness", () => {
       cashAnchor: 9000,
     });
   });
-  it("does not debit a fund or emit a witness when its holder is gone", async () => {
+  it("writes off a queued claim, with no debit or witness, when its holder is gone", async () => {
     const f = world();
     await f.db.collection("npps").deleteMany({});
     expect(await processQueuedRedemptions(f.db, f.fund, false, 7)).toBe(0);
@@ -99,7 +99,7 @@ describe("queued NPC redemption cash witness", () => {
     });
     expect(
       await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entry._id })
-    ).toMatchObject({ status: "cancelled", units: 10 });
+    ).toMatchObject({ status: "cancelled", cancelReason: "holder_missing", units: 10 });
   });
   it("mirrors an anchor-stated cross-currency redemption onto the fund's own key", async () => {
     const f = world("UK");

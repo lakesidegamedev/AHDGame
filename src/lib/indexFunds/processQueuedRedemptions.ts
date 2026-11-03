@@ -274,7 +274,7 @@ export async function processQueuedRedemptions(
               unitsBurnedAtRequest: true,
               pendingSettlementProjection: { $exists: false },
             },
-            { $set: { status: "cancelled", updatedAt: new Date() } }
+            { $set: { status: "cancelled", cancelReason: "holder_missing", updatedAt: new Date() } }
           );
         if (cancelled.matchedCount)
           console.warn(
