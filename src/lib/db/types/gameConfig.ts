@@ -244,6 +244,15 @@ export interface GameConfig {
    */
   producerFundedBookStage?: number;
   /**
+   * Funded producer market: >= 1 counts orders from stateless national wallets
+   * (public, military and investment buyers) in their country's national
+   * supply and demand. Before, they reached the world total only, so every
+   * engine reader of national demand (national price leg, margin modifier,
+   * latent shortage, NPP placement for reachable goods) missed government
+   * demand. State books are unchanged. 0 or absent = off.
+   */
+  producerNationalPublicDemandStage?: number;
+  /**
    * Funded producer market: >= 1 pays a share of the public funding left after
    * the line carry, transition support and grants to the same country's
    * households (weighted by wages) instead of burning it at close. Nothing is

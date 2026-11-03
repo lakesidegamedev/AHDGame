@@ -126,6 +126,8 @@ export type ProducerPhysicalEnv = Pick<
   clearingReferenceStage?: number;
   /** gameConfig.producerFundedBookStage: >= 1 prices the funded market from its own orders and cross-border fills. */
   fundedBookStage?: number;
+  /** gameConfig.producerNationalPublicDemandStage: >= 1 counts stateless national buyers in their country's national book. */
+  nationalPublicDemandStage?: number;
   /** gameConfig.producerShortageGrowthStage: >= 1 grows a sold-out line by its book's shortage. */
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */

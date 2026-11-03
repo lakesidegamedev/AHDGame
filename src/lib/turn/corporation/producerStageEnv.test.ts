@@ -23,3 +23,12 @@ describe("producer stage env shortage growth", () => {
     expect(producerStageEnv({ producerShortageGrowthStage: 1 }).shortageGrowthStage).toBe(1);
   });
 });
+
+describe("producer stage env national public demand", () => {
+  it("passes the national public demand stage through and leaves it off by default", () => {
+    expect(producerStageEnv(null).nationalPublicDemandStage).toBeUndefined();
+    expect(
+      producerStageEnv({ producerNationalPublicDemandStage: 1 }).nationalPublicDemandStage
+    ).toBe(1);
+  });
+});

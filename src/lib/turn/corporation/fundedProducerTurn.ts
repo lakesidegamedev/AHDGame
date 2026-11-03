@@ -931,6 +931,9 @@ export async function runFundedProducerTurn(
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
       sectorState.set(sector._id.toString(), sector.stateId);
   const stateOfWallet = (id: string) => scopeById.get(id)?.stateId ?? null;
+  // Stage on: a stateless national wallet (public, military, investment)
+  // counts in its country's national book, not the world total only.
+  const nationalPublicDemandOn = (input.env.nationalPublicDemandStage ?? 0) >= 1;
   const rows = fundedLedgerRows({
     outcomes: settled.result.orderOutcomes,
     products: settled.result.producers.flatMap((p) =>
@@ -947,6 +950,16 @@ export async function runFundedProducerTurn(
       const first = demand.firstWalletByCorp.get(id);
       return first ? stateOfWallet(first.wallet) : null;
     },
+    ...(nationalPublicDemandOn
+      ? {
+          countryOfAccount: (id: string) => {
+            const own = scopeById.get(id)?.countryId;
+            if (own) return own;
+            const first = demand.firstWalletByCorp.get(id);
+            return first ? (scopeById.get(first.wallet)?.countryId ?? null) : null;
+          },
+        }
+      : {}),
     stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
     unitScale: TURNS_PER_DAY,
   });
