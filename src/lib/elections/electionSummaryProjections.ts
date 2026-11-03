@@ -60,4 +60,8 @@ export const ELECTION_SUMMARY_GAME_STATE_PROJECTION: Document = {
   preset: 1,
   currentYear: 1,
   redistrictingEnabled: 1,
+  // Cycle-anchor context: years for legacy races with none baked.
+  startingYear: 1,
+  preIterationTurns: 1,
+  "preIteration.active": 1,
 };

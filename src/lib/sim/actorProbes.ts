@@ -388,7 +388,7 @@ export function probeOppositionResearch(
     oppositionResearchLevel: 0,
   } as Campaign;
   const drainPerTurn = getOppoDrainPerTurn(starterCampaign);
-  const cost = getEffectiveBranchCost("oppositionResearch", null, 0, "president", false);
+  const cost = getEffectiveBranchCost("oppositionResearch", null, 0, false);
   if (!cost) {
     throw new Error("opposition-research probe: starter cost helper returned null");
   }

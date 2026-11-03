@@ -2,19 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-import dynamic from "next/dynamic";
 import { PhaseTag, electionPageTitle } from "./ElectionDetailHelpers";
 import type { ElectionDetail } from "./ElectionDetailTypes";
-
-// The statutory map inside the collapsed details is Japan-only and reads the
-// 72 KB 1994 constituency table, so it loads after the header paints.
-const JpStatutoryConstituencyList = dynamic(
-  () => import("./JpStatutoryConstituencyList").then((m) => m.JpStatutoryConstituencyList),
-  {
-    loading: () => <div className="mt-2 h-24 animate-pulse rounded bg-muted" aria-hidden="true" />,
-  }
-);
 
 interface ElectionHeaderProps {
   election: ElectionDetail;
@@ -41,7 +30,6 @@ export function ElectionHeader({
   onEnter,
   onWithdraw,
 }: ElectionHeaderProps) {
-  const t = useTranslations("elections.huModernByElection");
   const titleText = electionPageTitle(election, electionYear);
 
   return (
@@ -71,27 +59,6 @@ export function ElectionHeader({
               How to run for president
             </Link>
           </p>
-        )}
-        {election.hungarianModernByElection && (
-          <p className="text-sm text-muted">
-            {t("description", { district: election.hungarianModernByElection.districtId })}
-          </p>
-        )}
-        {election.japanShugiinRules?.ruleVersion === "mixed-1994-v1" && (
-          <div className="mt-2 max-w-3xl text-sm text-muted">
-            <p>
-              This 500-seat chamber has {election.japanShugiinRules.districtSeats} district
-              constituencies and {election.japanShugiinRules.listSeats} regional party-list seats.
-              Constituency and list nominations are separate; a direct winner cannot take a second
-              list seat.
-            </p>
-            <details className="mt-1">
-              <summary className="cursor-pointer font-medium">
-                1994 statutory constituency map
-              </summary>
-              <JpStatutoryConstituencyList regionId={election.state} />
-            </details>
-          </div>
         )}
       </div>
       {election.myCharId && !localIsEnded && (

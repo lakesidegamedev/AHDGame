@@ -320,17 +320,17 @@ export function congressMembersApiUrl(countryId: CountryId | string): string {
 
 /**
  * Per-party primary page for a given race tier. Presidential lives at
- * `/president/primary/[partyId]` (preserved for backwards compat); the
- * lower tiers — Senate, Governor, House — share the new
- * `/elections/primary/[tier]/[partyId]` tree built out as part of the
- * tier-selector activation feature.
+ * `/president/primary/[partyId]`; the lower tiers (Senate, Governor, House)
+ * open Campaign Manager on that type's primaries, filtered to the party.
  */
 export function tierPrimaryRoute(
   tier: "president" | "senate" | "stateSenate" | "governor" | "house",
   partyId: string
 ): string {
+  // Same URL as campaignManager/links primaryTierHref; spelled out here so this
+  // client-safe leaf module stays free of the links module's imports.
   if (tier === "president") return `/president/primary/${partyId}`;
-  return `/elections/primary/${tier}/${partyId}`;
+  return `/campaign-manager?type=${encodeURIComponent(tier)}&stage=primary&party=${encodeURIComponent(partyId)}`;
 }
 
 /**

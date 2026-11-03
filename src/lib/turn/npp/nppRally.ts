@@ -15,7 +15,6 @@
  * action cycle, which is once every four turns.
  */
 import type { ObjectId } from "mongodb";
-import { getCampaignFamilyScalar } from "@/lib/campaigns/upgradeCosts";
 import { SUPPORT_RALLY_FULL_VALUE } from "@/lib/electionEngine/electionFormulaFactors";
 import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
 import type { NppRaceSignal } from "@/lib/npp/actionSignals";
@@ -37,7 +36,7 @@ export function planNppRally(
 ): NppRallyWrite | null {
   if (!race?.rallyEligible) return null;
   if (race.lastRallyTurn != null && race.lastRallyTurn >= currentTurn) return null;
-  const scaledR = SUPPORT_RALLY_FULL_VALUE * getCampaignFamilyScalar(race.electionType);
+  const scaledR = SUPPORT_RALLY_FULL_VALUE;
   const { immediateBump, entry } = buildRallyAccrualEntry(scaledR);
   if (immediateBump <= 0) return null;
   return {

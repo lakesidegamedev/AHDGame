@@ -58,8 +58,8 @@ export function tickSupportAccrual(
 }
 
 /**
- * Pure helper: build one rally accrual entry from a full-value `R`
- * (already race-family-scaled by the caller). Returns the immediate
+ * Pure helper: build one rally accrual entry from a full-value `R`.
+ * Returns the immediate
  * Support bump that should be applied to `support` synchronously AND
  * the accrual entry to push into `supportAccrual`.
  */

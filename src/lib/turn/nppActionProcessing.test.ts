@@ -375,7 +375,7 @@ describe("nppActionProcessing", () => {
                     state: "CA",
                     startTurn: 10,
                     status: "active",
-                    electionType: "house",
+                    electionType: "president",
                   },
                 ],
               }),

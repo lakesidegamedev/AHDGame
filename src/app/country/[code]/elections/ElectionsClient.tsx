@@ -15,7 +15,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { toElectionDisplay, type ElectionsPageResponse } from "@/lib/elections/electionDisplay";
+import { toElectionDisplay } from "@/lib/elections/electionDisplay";
+import { fetchAllElections } from "@/lib/elections/fetchAllElections";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 import { useCountryManifestos } from "@/hooks/useCountryManifestos";
 import { useElectionActions } from "@/hooks/useElectionActions";
@@ -95,39 +96,6 @@ const EmbeddedParliamentaryResults = dynamic(
 );
 
 /** Must stay <= the GET /api/elections max limit so one request covers a country. */
-const ELECTIONS_PAGE_SIZE = 500;
-
-async function fetchAllElections(
-  countryId: string
-): Promise<{ elections: ElectionDisplay[]; error?: string }> {
-  const elections: ElectionDisplay[] = [];
-  let page = 1;
-
-  try {
-    for (;;) {
-      const res = await fetch(
-        `/api/elections?country=${countryId}&view=summary&limit=${ELECTIONS_PAGE_SIZE}&page=${page}`,
-        { signal: AbortSignal.timeout(15_000) }
-      );
-      if (!res.ok) {
-        console.error(`Failed to fetch elections: ${res.status}`);
-        return { elections: [], error: `Failed to fetch elections: ${res.status}` };
-      }
-
-      const data = (await res.json()) as ElectionsPageResponse;
-      const batch = Array.isArray(data.elections) ? data.elections : [];
-      elections.push(...batch.map(toElectionDisplay));
-
-      const total = typeof data.total === "number" ? data.total : elections.length;
-      if (batch.length <= 0 || page * ELECTIONS_PAGE_SIZE >= total) break;
-      page++;
-    }
-    return { elections };
-  } catch (err) {
-    console.error("Error fetching elections:", err);
-    return { elections: [], error: String(err) };
-  }
-}
 
 interface ElectionsClientProps {
   code: string;
@@ -215,7 +183,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
       setFetchError(null);
       try {
         const result = await fetchAllElections(countryId);
-        setElections(result.elections);
+        setElections(result.elections.map(toElectionDisplay));
         if (result.error) setFetchError(apiErrorText(result, "Request failed. Try again."));
         await fetchSecondary();
       } catch (err) {

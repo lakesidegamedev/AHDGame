@@ -13,6 +13,7 @@ import { SuspendEndorsePanel } from "./components/SuspendEndorsePanel";
 import { CampaignRoomBriefing } from "./components/CampaignRoomBriefing";
 import { CampaignBlendClient } from "./blend/CampaignBlendClient";
 import { BLEND, BLEND_CONTAINER, FONT, BLEND_LABEL } from "@/components/blend/tokens";
+import { raceHref } from "@/lib/campaignManager/links";
 
 // The canvass panel and the running-mate surrogate block sit below the main
 // campaign view and only render for the campaign manager or a surrogate. The
@@ -308,7 +309,13 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           className={BLEND_CONTAINER}
           style={{ ...BLEND_LABEL, paddingTop: 14, paddingBottom: 14 }}
         >
-          <Link href={`/elections/${campaign.electionId}`} style={{ color: BLEND.muted }}>
+          <Link
+            href={raceHref({
+              id: String(campaign.electionId),
+              electionType: campaign.electionInfo.electionType,
+            })}
+            style={{ color: BLEND.muted }}
+          >
             &lsaquo; {campaign.electionInfo.state}{" "}
             {campaign.electionInfo.electionType === "president"
               ? "Presidential"

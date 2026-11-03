@@ -53,11 +53,9 @@ describe("calculateMediaMaintenanceAfterDowngrade", () => {
     const downgraded = { ...campaign, mediaSpendingLevel: 2 } as Campaign;
 
     expect(
-      calculateMediaMaintenanceAfterDowngrade(
-        campaign,
-        [{ category: "mediaSpending", fromLevel: 3, toLevel: 2 }],
-        undefined
-      )
+      calculateMediaMaintenanceAfterDowngrade(campaign, [
+        { category: "mediaSpending", fromLevel: 3, toLevel: 2 },
+      ])
     ).toBe(calculateMediaMaintenanceCosts(downgraded));
   });
 
@@ -72,11 +70,9 @@ describe("calculateMediaMaintenanceAfterDowngrade", () => {
     } as Campaign;
 
     expect(
-      calculateMediaMaintenanceAfterDowngrade(
-        campaign,
-        [{ category: "mediaSpending", branch: "a", fromLevel: 2, toLevel: 1 }],
-        undefined
-      )
+      calculateMediaMaintenanceAfterDowngrade(campaign, [
+        { category: "mediaSpending", branch: "a", fromLevel: 2, toLevel: 1 },
+      ])
     ).toBe(calculateMediaMaintenanceCosts(downgraded));
     expect(campaign.mediaSpendingTree?.a).toBe(2);
   });

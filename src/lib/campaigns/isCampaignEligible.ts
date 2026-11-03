@@ -3,69 +3,32 @@ import type { Election } from "@/lib/db/types";
 
 /**
  * Campaign Manager (Campaign doc, fundraising / ads / ground-game upgrades,
- * contribution UI) eligibility.
+ * field offices, contribution UI) eligibility.
  *
- * Phase 5.5 extension: previously president-only, now also enables US
- * statewide (senate / governor) and US district (house / state senate)
- * races. Other countries opt in per chamber through
- * `CountryConfig.campaignRaceFamilies` (UK commons, JP shugiin / sangiin /
- * governor). DE / IE stay off until their list-PR and STV races are mapped
- * onto the per-candidate loop.
+ * Campaign Manager is the presidential campaign system: only a directly
+ * elected executive qualifies. Every other race (US senate / house /
+ * governor / state senate, UK commons, JP shugiin / sangiin / governor, ...)
+ * campaigns through the per-character Actions loop instead.
  *
- * The presidential path stays future-proof: any country whose
- * `isDirectElection(config)` automatically qualifies for
- * president-tier Campaign Manager, even if the country itself isn't
- * currently in the active set.
- *
- * See plan §"Phase 5.5 — Decisions Recorded During Execution" D2 + D4.
+ * Any country whose `isDirectElection(config)` holds qualifies automatically,
+ * even if the country itself isn't currently in the active set. Russia's
+ * popular rounds additionally need a valid bound ballot.
  */
-
-/**
- * Race families enabled when a country opts in via
- * `CountryConfig.campaignManagerNonPresidentialEnabled`. Keyed off the
- * canonical `Election.electionType` discriminator. Phase 5.5 enables
- * these for the US; future countries can flip the flag once their
- * campaign-finance models are audited.
- */
-const NON_PRESIDENTIAL_RACE_FAMILIES = new Set<string>([
-  "senate",
-  "governor",
-  "house",
-  "stateSenate",
-]);
-
 export function isCampaignEligibleElection(
   election: Pick<Partial<Election>, "countryId" | "electionType" | "russianPresidentialRound">
 ): boolean {
   const countryId = election.countryId;
-  const electionType = election.electionType;
-  if (!countryId || !electionType) return false;
+  if (!countryId || election.electionType !== "president") return false;
 
-  // Presidential path — any country with direct election of the executive.
-  // Future-proof: kept identical to the pre-Phase-5.5 gate so behavior
-  // stays the same for direct-election presidents.
-  if (electionType === "president") {
-    if (countryId === "RU" && election.russianPresidentialRound) {
-      const binding = election.russianPresidentialRound;
-      return (
-        [1, 2].includes(binding.round) &&
-        Number.isSafeInteger(binding.mandateSinceTurn) &&
-        binding.mandateSinceTurn > 0 &&
-        Number.isSafeInteger(binding.registeredVoters) &&
-        binding.registeredVoters > 0
-      );
-    }
-    return isDirectElection(getCountryConfig(countryId as CountryId));
+  if (countryId === "RU" && election.russianPresidentialRound) {
+    const binding = election.russianPresidentialRound;
+    return (
+      [1, 2].includes(binding.round) &&
+      Number.isSafeInteger(binding.mandateSinceTurn) &&
+      binding.mandateSinceTurn > 0 &&
+      Number.isSafeInteger(binding.registeredVoters) &&
+      binding.registeredVoters > 0
+    );
   }
-
-  // Non-presidential races — gated by the country's
-  // `campaignManagerNonPresidentialEnabled` flag (Phase 5.5 D2 / D4).
-  // A country's own `campaignRaceFamilies` replaces the US default set, so
-  // UK `commons` and JP `shugiin` opt in by name without inheriting US races.
-  const config = getCountryConfig(countryId as CountryId);
-  if (config.campaignManagerNonPresidentialEnabled !== true) return false;
-  const families = config.campaignRaceFamilies ?? NON_PRESIDENTIAL_RACE_FAMILIES;
-  return families instanceof Set
-    ? families.has(electionType)
-    : (families as readonly string[]).includes(electionType);
+  return isDirectElection(getCountryConfig(countryId as CountryId));
 }

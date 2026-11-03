@@ -241,7 +241,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
     slug: "campaign-manager",
     title: "Campaign Manager",
     description:
-      "The /campaign/[id] page: budget, upgrades, activity log, endorsements, appointing up to three campaign managers, access tiers, donations, and insolvency auto-downgrade.",
+      "Every race in your country on one page, with a map down to counties, actions on any candidate and your own Actions. Plus the presidential Campaign HQ: budget, upgrades, managers and donations.",
     content: campaignManagerContent,
     category: "elections",
     extraTags: ["campaign"],

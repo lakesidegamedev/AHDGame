@@ -45,7 +45,7 @@ describe("StateDropdown lazy panel", () => {
     expect(screen.getByRole("link", { name: "State Legislature" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Office" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "My Election" }).getAttribute("href")).toBe(
-      "/elections/seat-1"
+      "/campaign-manager?race=e1"
     );
     expect(screen.getByRole("link", { name: "My Office" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /My Party - Democratic Party/ })).toBeTruthy();

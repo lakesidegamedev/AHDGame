@@ -4,6 +4,7 @@ import {
   loadCampaignCurrencyRates,
   loadCampaignPriceLevel,
 } from "@/lib/campaigns/campaignCurrency";
+import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { Campaign, CampaignFieldOffice, Election } from "@/lib/db/types";
 import { FIELD_OFFICES_COLLECTION } from "./commands";
@@ -55,7 +56,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
       .collection<Election>("elections")
       .find(
         { _id: { $in: electionIds } },
-        { projection: { status: 1, countryId: 1, electionType: 1 } }
+        { projection: { status: 1, countryId: 1, electionType: 1, russianPresidentialRound: 1 } }
       )
       .toArray(),
     loadCampaignCurrencyRates(db),
@@ -70,7 +71,14 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
   for (const office of offices) {
     const campaign = campaignById.get(office.campaignId.toString());
     const election = electionById.get(office.electionId.toString());
-    if (!campaign || campaign.status === "archived" || election?.status !== "active") {
+    // Offices left in a race Campaign Manager no longer covers (down-ballot
+    // races opened before it became presidential-only) are swept, not charged.
+    if (
+      !campaign ||
+      campaign.status === "archived" ||
+      election?.status !== "active" ||
+      !isCampaignEligibleElection(election)
+    ) {
       sweep.push(office._id);
       continue;
     }
@@ -97,7 +105,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
       continue;
     }
     const perOffice = campaignAnchorToLocal(
-      getFieldOfficeCostAnchor(rules, election.electionType).upkeep * priceLevel,
+      getFieldOfficeCostAnchor(rules).upkeep * priceLevel,
       election.countryId,
       rates,
       preset

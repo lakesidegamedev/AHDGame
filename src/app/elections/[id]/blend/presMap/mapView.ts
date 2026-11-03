@@ -116,7 +116,10 @@ export function viewForBox(
   const fh = f.frameHeight ?? height;
   const bw = Math.max(1, box.x1 - box.x0);
   const bh = Math.max(1, box.y1 - box.y0);
-  const k = Math.min(fw / (bw * (1 + padding * 2)), fh / (bh * (1 + padding * 2)));
+  const fit = Math.min(fw / (bw * (1 + padding * 2)), fh / (bh * (1 + padding * 2)));
+  // Cap the zoom before centring: a box smaller than the cap allows would
+  // otherwise be offset for a zoom it never gets, and land off-frame.
+  const k = Math.min(f.maxZoom ?? MAX_ZOOM, Math.max(MIN_ZOOM, fit));
   const cx = (box.x0 + box.x1) / 2;
   const cy = (box.y0 + box.y1) / 2;
   return clampView({ k, x: fw / 2 - cx * k, y: fh / 2 - cy * k }, width, height, f);

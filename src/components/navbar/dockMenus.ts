@@ -10,6 +10,7 @@ import {
   regionUrl,
   scotusJusticeOfficeUrl,
 } from "@/lib/urls";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 import { rankDesktopLinks, type DesktopNavLink, type DesktopNavMenu } from "./desktopNavModel";
 import {
   HELP_DISCORD_URL,
@@ -285,7 +286,7 @@ export function buildDesktopMenus({
               desktopLink(
                 "activeElection",
                 t("state.myElection"),
-                `/elections/${activeElection.seatId ?? activeElection.id}`
+                campaignManagerHref({ race: activeElection.id })
               ),
             ]
           : []),

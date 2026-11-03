@@ -85,19 +85,22 @@ function sheetHrefs(tab: string) {
 }
 
 describe("phone navigation dock", () => {
-  it("puts the company and Actions one tap away", () => {
+  it("puts the company one tap away and Campaign one sheet away", () => {
     renderNav();
     const links = within(dock()).getAllByRole<HTMLAnchorElement>("link");
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/corporation/7", "/actions"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/corporation/7"]);
+    // The Campaign tab holds exactly Actions and the Campaign Manager.
+    expect(sheetHrefs(en.nav.campaignMenu.label)).toEqual(["/actions", "/campaign-manager"]);
     expect(
       within(dock()).getByRole("button", { name: "United States" }).getAttribute("aria-expanded")
     ).toBe("false");
   });
 
-  it("swaps the company tab for the market without a company, and drops Actions in imperial mode", () => {
+  it("swaps the company tab for the market without a company, and drops Campaign in imperial mode", () => {
     renderNav({ myCorporationId: null, isImperialMode: true });
     const links = within(dock()).getAllByRole<HTMLAnchorElement>("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual(["/market"]);
+    expect(within(dock()).queryByRole("button", { name: en.nav.campaignMenu.label })).toBeNull();
   });
 
   it("keeps every state and nation destination in the section sheets", () => {
@@ -109,7 +112,7 @@ describe("phone navigation dock", () => {
         "/country/us/region/NY/party/1",
         "/country/us/region/NY/legislature",
         "/country/us/region/NY?tab=economy",
-        "/elections/NY-senate",
+        "/campaign-manager?race=election",
         "/country/us/region/NY/office",
       ])
     );

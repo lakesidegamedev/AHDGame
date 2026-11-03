@@ -23,6 +23,8 @@ import {
 import { getGameTime } from "@/lib/time/gameTime";
 import { fetchDepsForElection } from "./enrichElection";
 import { resolveElection, resolveElections } from "./resolveElection";
+import { resolveElectionYear } from "@/lib/utils/formatters";
+import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/mongodb", () => ({
@@ -342,5 +344,107 @@ describe("Hungarian modern election response", () => {
     });
     expect(response.countryId).toBe("HU");
     expect(response.hungarianModernAssembly).toEqual({ ruleVersion: "mixed-2011-v1" });
+  });
+});
+
+describe("finished primary results", () => {
+  const primaryResults = {
+    byParty: {
+      "1": [
+        {
+          candidateId: "a",
+          characterName: "Player One",
+          party: "1",
+          primaryScore: 60,
+          sharePct: 62.5,
+          won: true,
+        },
+        {
+          candidateId: "b",
+          characterName: "NPP Ron",
+          party: "1",
+          primaryScore: 40,
+          sharePct: 37.5,
+          won: false,
+        },
+      ],
+    },
+    recordedAt: new Date("2025-01-01T00:00:00Z"),
+  };
+
+  function withTally(db: MockDb, electionId: ObjectId) {
+    db.collection("electionVoteTallies").find.mockReturnValue({
+      toArray: async () => [
+        {
+          _id: new ObjectId(),
+          electionId,
+          state: "CA",
+          totalVotes: {},
+          candidateNames: {},
+          candidateParties: {},
+          turnSnapshots: [],
+          finalized: true,
+          primaryResults,
+        },
+      ],
+    });
+  }
+
+  it("carries primary results on an ended race, never during its primary", async () => {
+    const { db, election } = setupSummaryWorld();
+    withTally(db, election._id);
+    const ended = { ...election, status: "resolved" as const, endTurn: 5, primaryEndTurn: 3 };
+    const [done] = await resolveElections(db as unknown as Db, [ended], {
+      view: "summary",
+      userId: null,
+    });
+    expect(done.primaryResults).toEqual({
+      "1": [
+        { candidateId: "a", characterName: "Player One", sharePct: 62.5, won: true },
+        { candidateId: "b", characterName: "NPP Ron", sharePct: 37.5, won: false },
+      ],
+    });
+
+    const [live] = await resolveElections(db as unknown as Db, [election], {
+      view: "summary",
+      userId: null,
+    });
+    expect(live.primaryResults ?? null).toBeNull();
+  });
+
+  it("carries primary results once the primary has ended and the general runs", async () => {
+    const { db, election } = setupSummaryWorld();
+    withTally(db, election._id);
+    const inGeneral = { ...election, primaryEndTurn: 5, endTurn: 40 };
+    const [race] = await resolveElections(db as unknown as Db, [inGeneral], {
+      view: "summary",
+      userId: null,
+    });
+    expect(race.inGeneral).toBe(true);
+    expect(Object.keys(race.primaryResults ?? {})).toEqual(["1"]);
+  });
+});
+
+describe("resolved year", () => {
+  it("derives a year for a legacy race with none baked, and keeps a baked one", async () => {
+    const { db, election } = setupSummaryWorld();
+    const legacy = { ...election, electionYear: undefined, cycle: 2 };
+    const [r] = await resolveElections(db as unknown as Db, [legacy], {
+      view: "summary",
+      userId: null,
+    });
+    expect(r.electionYear).toBeNull();
+    expect(r.resolvedYear).toBe(
+      resolveElectionYear(legacy, cycleAnchorContextFromGameState({ preset: "1990" } as never))
+    );
+    const [baked] = await resolveElections(
+      db as unknown as Db,
+      [{ ...election, electionYear: 1988 }],
+      {
+        view: "summary",
+        userId: null,
+      }
+    );
+    expect(baked.resolvedYear).toBe(1988);
   });
 });

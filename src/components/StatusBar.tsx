@@ -44,6 +44,7 @@ import {
 } from "./statusbar/statusBarLayoutClasses";
 import { useStatusBarLayout, type StatusBarLayout } from "./statusbar/useStatusBarLayout";
 import { useStatusBarHeightVar } from "./statusbar/useStatusBarHeightVar";
+import { campaignManagerHref } from "@/lib/campaignManager/links";
 
 export type { StatusBarLayout };
 
@@ -921,7 +922,7 @@ export function StatusBar({
                           />
                         </div>
                       )}
-                      <TooltipLink href={`/elections/${elStats.electionId}`}>
+                      <TooltipLink href={campaignManagerHref({ race: elStats.electionId })}>
                         View election
                       </TooltipLink>
                     </StatusChip>
@@ -974,7 +975,7 @@ export function StatusBar({
                           <Sparkline data={seatHistory} color="#2dd4bf" width={188} height={30} />
                         </div>
                       )}
-                      <TooltipLink href={`/elections/${elStats.electionId}`}>
+                      <TooltipLink href={campaignManagerHref({ race: elStats.electionId })}>
                         View election
                       </TooltipLink>
                     </StatusChip>

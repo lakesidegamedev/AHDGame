@@ -240,9 +240,7 @@ export function FieldOfficesSection({
           maxWidth: 680,
         }}
       >
-        {view.scope === "county"
-          ? `Put staff in a county and your voters there turn out in bigger numbers. Every office also lifts turnout across its state, with diminishing returns. Offices reach full strength over ${view.rampTurns} turns, so early ground counts.`
-          : `Offices lift your turnout across the region they stand in. Up to ${view.maxPerRegion ?? 3} per region, with diminishing returns. Each reaches full strength over ${view.rampTurns} turns.`}
+        {`Put staff in a county and your voters there turn out in bigger numbers. Every office also lifts turnout across its state, with diminishing returns. Offices reach full strength over ${view.rampTurns} turns, so early ground counts.`}
       </p>
 
       <div
@@ -274,7 +272,7 @@ export function FieldOfficesSection({
         ) : null}
       </div>
 
-      {view.regions.length > 1 && view.scope === "county" ? (
+      {view.regions.length > 1 ? (
         <RegionPicker
           regions={view.regions}
           value={view.selectedRegionId}
@@ -286,7 +284,7 @@ export function FieldOfficesSection({
         />
       ) : null}
 
-      {view.scope === "county" && view.map ? (
+      {view.map ? (
         <div
           style={{
             marginTop: 18,
@@ -391,17 +389,6 @@ export function FieldOfficesSection({
             />
           </div>
         </div>
-      ) : null}
-
-      {view.scope === "region" ? (
-        <RegionCards
-          view={view}
-          canAct={canAct}
-          blockReason={blockReason}
-          busy={busy}
-          onOpen={(id, name) => openOffice(id, null, name)}
-          onClose={closeOffice}
-        />
       ) : null}
 
       {message ? (
@@ -799,120 +786,6 @@ function OfficeList({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function RegionCards({
-  view,
-  canAct,
-  blockReason,
-  busy,
-  onOpen,
-  onClose,
-}: {
-  view: FieldOfficeView;
-  canAct: boolean;
-  blockReason: string | null;
-  busy: string | null;
-  onOpen: (regionId: string, name: string) => void;
-  onClose: (officeId: string, label: string) => void;
-}) {
-  const perRegion = view.maxPerRegion ?? 3;
-  return (
-    <div
-      style={{
-        marginTop: 18,
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-        gap: 12,
-      }}
-    >
-      {view.regions.map((r) => {
-        const offices = view.offices.filter((o) => o.regionId === r.id);
-        const full = offices.length >= perRegion;
-        return (
-          <div
-            key={r.id}
-            style={{
-              padding: "14px 16px",
-              background: BLEND.inset,
-              border: `1px solid ${offices.length > 0 ? BLEND.hairlineStrong : BLEND.hairline}`,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-              <span style={{ fontFamily: FONT.sans, fontSize: 15, fontWeight: 600 }}>{r.name}</span>
-              <span
-                style={{
-                  fontFamily: FONT.mono,
-                  fontSize: 12,
-                  color: r.effectPct > 0 ? BLEND.positive : BLEND.mutedDim,
-                }}
-              >
-                {formatPct(r.effectPct)}
-              </span>
-            </div>
-            <div style={{ marginTop: 10, display: "flex", gap: 4 }}>
-              {Array.from({ length: perRegion }, (_, i) => {
-                const o = offices[i];
-                return (
-                  <span
-                    key={i}
-                    title={o ? `${Math.round(o.strength * 100)}% strength` : "Empty slot"}
-                    style={{
-                      flex: 1,
-                      height: 8,
-                      borderRadius: 2,
-                      background: o ? (o.strength >= 1 ? BLEND.gold : BLEND.caution) : BLEND.track,
-                      opacity: o ? 0.4 + 0.6 * o.strength : 1,
-                    }}
-                  />
-                );
-              })}
-            </div>
-            {canAct ? (
-              <div style={{ marginTop: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  onClick={() => onOpen(r.id, r.name)}
-                  disabled={busy !== null || full || blockReason !== null}
-                  title={full ? "Region is full" : (blockReason ?? undefined)}
-                  style={{
-                    ...BUTTON,
-                    color: full || blockReason ? BLEND.mutedDim : BLEND.ink,
-                    cursor: full || blockReason ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {busy === `open:${r.id}:` ? "Opening..." : "Open office"}
-                </button>
-                {offices.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => onClose(offices[offices.length - 1].id, r.name)}
-                    disabled={busy !== null}
-                    style={{ ...BUTTON, color: BLEND.mutedDim }}
-                  >
-                    Close one
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
-      {canAct && blockReason ? (
-        <p
-          style={{
-            gridColumn: "1 / -1",
-            margin: 0,
-            fontFamily: FONT.sans,
-            fontSize: 12.5,
-            color: BLEND.caution,
-          }}
-        >
-          {blockReason}
-        </p>
-      ) : null}
     </div>
   );
 }

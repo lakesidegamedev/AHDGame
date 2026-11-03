@@ -1,3 +1,5 @@
+import { campaignManagerHref } from "@/lib/campaignManager/links";
+
 export interface TurnBriefingItem {
   category: "markets" | "corporation" | "election";
   label: string;
@@ -65,7 +67,7 @@ export function buildTurnBriefing(
         value: current.pct,
         delta: voteDelta,
         unit: "percent",
-        href: `/elections/${election.electionId}`,
+        href: campaignManagerHref({ race: election.electionId }),
       });
     if (current.seats != null && previous.seats != null) {
       const seatDelta = finiteDelta(current.seats, previous.seats);
@@ -76,7 +78,7 @@ export function buildTurnBriefing(
           value: current.seats,
           delta: seatDelta,
           unit: "points",
-          href: `/elections/${election.electionId}`,
+          href: campaignManagerHref({ race: election.electionId }),
         });
     }
   }

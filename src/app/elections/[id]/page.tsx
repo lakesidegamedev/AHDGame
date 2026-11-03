@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
+import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
 import { getAuthUser } from "@/lib/auth";
 import { resolveElection } from "@/lib/elections/resolveElection";
 import { ElectionDetailClient } from "./components/ElectionDetailClient";
@@ -25,13 +27,18 @@ interface PageProps {
 export default async function ElectionDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { cycle: cycleParam } = await searchParams;
+  const parsedCycle = cycleParam ? parseInt(cycleParam, 10) : undefined;
+  const cycle = parsedCycle !== undefined && !isNaN(parsedCycle) ? parsedCycle : undefined;
+
+  // Down-ballot races live in Campaign Manager; only the presidency renders
+  // here. Outside the try below: `redirect` throws to do its work.
+  const elsewhere = await downBallotRedirectTarget(await getDb(), id, cycle);
+  if (elsewhere) redirect(elsewhere);
 
   let initialElection: ElectionDetail | null = null;
   try {
     const db = await getDb();
     const user = await getAuthUser();
-    const parsedCycle = cycleParam ? parseInt(cycleParam, 10) : undefined;
-    const cycle = parsedCycle !== undefined && !isNaN(parsedCycle) ? parsedCycle : undefined;
 
     const result = await resolveElection(
       db,

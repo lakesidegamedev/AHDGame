@@ -35,9 +35,9 @@ export interface CharacterProfile {
 }
 
 export type OpenKey =
-  "world" | "country" | "nation" | "state" | "help" | "staff" | "user" | "gear" | null;
+  "world" | "country" | "nation" | "state" | "help" | "staff" | "user" | "gear" | "campaign" | null;
 
-export type MobileSubKey = "state" | "nation" | "world" | "help" | "staff" | "country";
+export type MobileSubKey = "state" | "nation" | "world" | "help" | "staff" | "country" | "campaign";
 
 /**
  * Top-level tab descriptor for the experimental navbar (desktop tabs and the

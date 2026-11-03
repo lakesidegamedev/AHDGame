@@ -59,14 +59,15 @@ export interface Campaign {
 
   /**
    * Lifecycle state. `"archived"` campaigns are retained but excluded from
-   * active surfaces (primary loser, voluntary withdrawal, admin removal, ban).
+   * active surfaces (primary loser, voluntary withdrawal, admin removal, ban,
+   * or a race Campaign Manager no longer covers).
    * Missing/undefined is treated as `"active"` for legacy rows. Campaigns are
    * only hard-deleted when the election resolves (see presidentResolution /
    * generalResolution) so the next cycle starts fresh.
    */
   status?: "active" | "archived";
   archivedAt?: Date | null;
-  archivedReason?: "primary_loss" | "withdrawn" | "removed" | "banned";
+  archivedReason?: "primary_loss" | "withdrawn" | "removed" | "banned" | "ineligible";
 
   /**
    * Legacy single-manager pair. Retained and kept in sync with `managers[0]` so
