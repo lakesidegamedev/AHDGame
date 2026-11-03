@@ -101,6 +101,12 @@ export interface CommodityData {
   statePrices?: Record<string, number>;
   /** Per-state supply matching `statePrices`, used to volume-weight national averages. */
   stateSupply?: Record<string, number>;
+  /**
+   * Goods sold only inside each state (healthcare, real estate, construction,
+   * freight): how many of the states trading it are short. The world totals
+   * above add every state together, so they cannot say where a plant can sell.
+   */
+  stateShortage?: { shortStates: number; tradingStates: number };
   /** Per-state demand (scope=full only) — pairs with stateSupply for the State lens. */
   stateDemand?: Record<string, number>;
   /** Per-country supply/demand/price (scope=full only) — drives the Country lens. */
