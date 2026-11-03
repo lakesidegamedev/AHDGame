@@ -3,7 +3,10 @@ import type { AltSignal } from "@/lib/db/types/altDetection";
 import type { StoredFingerprintComponents } from "@/lib/utils/fingerprint";
 import { isCloudflareEdgeIp } from "@/lib/utils/cloudflareIpRanges";
 import { maskIp } from "@/lib/utils/maskIp";
-import { isDegenerateFingerprint } from "@/lib/utils/degenerateFingerprints";
+import {
+  FINGERPRINT_COMMONNESS_CEILING,
+  isDegenerateFingerprint,
+} from "@/lib/utils/degenerateFingerprints";
 import { anchorComponentsMatch } from "@/lib/turn/suspiciousDetection";
 import {
   analyzeSessionInterleave,
@@ -163,14 +166,8 @@ export interface SignalContext {
   fingerprintCounts?: Map<string, number>;
 }
 
-/**
- * A fingerprint held by more than this many accounts identifies nobody. Mobile
- * browsers are the usual cause: same handset model, OS and browser build
- * produce an identical ThumbmarkJS hash across unrelated people, and unlike the
- * literal sentinels in DEGENERATE_FINGERPRINTS these are real-looking hashes.
- * Above the ceiling the signal is scored 0 (kept as evidence, not as weight).
- */
-export const FINGERPRINT_COMMONNESS_CEILING = 8;
+/** Above the ceiling a shared fingerprint is scored 0 (kept as evidence, not as weight). */
+export { FINGERPRINT_COMMONNESS_CEILING } from "@/lib/utils/degenerateFingerprints";
 
 export interface SignalDefinition {
   type: AltSignal;

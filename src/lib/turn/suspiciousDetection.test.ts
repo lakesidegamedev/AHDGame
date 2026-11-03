@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { ActivityLogAuth } from "@/lib/db/types/activityLog";
+import { FINGERPRINT_COMMONNESS_CEILING } from "@/lib/utils/degenerateFingerprints";
 import {
   buildSharedAuthArtifactFlags,
   buildCoordinatedLoginFlags,
@@ -92,6 +93,25 @@ describe("buildSharedAuthArtifactFlags", () => {
     expect(fp?.evidence.accountCount).toBe(3);
   });
 
+  it("ignores an exact fingerprint held by more accounts than the commonness ceiling", () => {
+    const now = new Date("2026-11-03T12:00:00.000Z");
+    const n = FINGERPRINT_COMMONNESS_CEILING + 1;
+    const ids = Array.from({ length: n }, () => new ObjectId());
+    const chars = Array.from({ length: n }, () => new ObjectId());
+    const flags = buildSharedAuthArtifactFlags(
+      now,
+      ids.map((u, i) => ({ _id: chars[i], userId: u })),
+      ids.map((u, i) => ({
+        _id: u,
+        username: `m${i}`,
+        lastFingerprint: "common-handset",
+        fingerprintHistory: ["common-handset"],
+      }))
+    );
+    const fp = flags.get(chars[0].toString())?.find((f) => f.type === "shared_fingerprint");
+    expect(fp).toBeUndefined();
+  });
+
   it("does NOT escalate to high when the shared fingerprint is degenerate (low-entropy)", () => {
     const now = new Date("2026-05-30T12:00:00.000Z");
     const ids = [31, 32, 33].map((n) => new ObjectId(`507f1f77bcf86cd7994390${n}`));
@@ -111,7 +131,7 @@ describe("buildSharedAuthArtifactFlags", () => {
     expect(fp?.evidence.accountCount).toBe(3);
   });
 
-  it("emits a fuzzy shared_fingerprint flag (medium) when hashes differ but anchors match", () => {
+  it("emits a low fuzzy shared_fingerprint flag when hashes differ but anchors match", () => {
     const now = new Date("2026-05-30T12:00:00.000Z");
     const uA = new ObjectId("507f1f77bcf86cd799439b11");
     const uB = new ObjectId("507f1f77bcf86cd799439b12");
@@ -135,7 +155,7 @@ describe("buildSharedAuthArtifactFlags", () => {
       ]
     );
     const fp = flags.get(cA.toString())?.find((f) => f.type === "shared_fingerprint");
-    expect(fp?.severity).toBe("medium");
+    expect(fp?.severity).toBe("low");
     expect(fp?.evidence.matchType).toBe("fuzzy");
   });
 });
