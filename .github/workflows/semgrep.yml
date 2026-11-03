@@ -4,6 +4,10 @@ on:
   push:
     branches: [main, staging, development]
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  # A maintainer approval can satisfy the governance step, so a review re-runs this check.
+  pull_request_review:
+    types: [submitted, dismissed]
   schedule:
     - cron: "0 6 * * 2" # Weekly Tuesday 6am UTC
 
@@ -16,6 +20,9 @@ jobs:
   # hit here is a real problem and should block the PR.
   custom-rules:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     # Pulled through Google's Docker Hub mirror: same image digest, but no
     # Docker Hub anonymous rate limit, which can red this required check.
     container:
@@ -31,6 +38,13 @@ jobs:
           printf 'tree=%s\n' "$checked_tree" >> "$GITHUB_OUTPUT"
       - name: Semgrep (AHD project rules)
         run: semgrep scan --config .semgrep/ --error --quiet
+      # Contributors: conflict-of-interest disclosure, and maintainer approval for
+      # economy or turn-processing code (see CONTRIBUTING.md).
+      - name: Contributor governance
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/pr_governance.py
       - name: qualified-tree-${{ steps.tree.outputs.tree }}
         run: echo "Project security rules passed for this checked tree."
 
@@ -40,7 +54,7 @@ jobs:
   # nothing there, and its runner slot is shared with the required checks.
   # Every change is still scanned when it lands on a branch.
   registry:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.event_name != 'pull_request_review'
     runs-on: ubuntu-latest
     permissions:
       contents: read

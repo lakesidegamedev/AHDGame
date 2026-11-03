@@ -168,6 +168,11 @@ Disclose a conflict when your change could directly help or hurt:
 
 To disclose, tick the conflict box in the PR template and say what the link is. You do not have to name your character or corporation in the public PR: tell a maintainer privately and write "disclosed privately" in the PR instead.
 
+The required `custom-rules` check enforces two things on contributor PRs:
+
+- The "Conflict of interest" section stays in the description with exactly one box ticked.
+- A change to economy or turn-processing code (markets, banking, trade, budgets, corporations, the turn engine and the other folders listed in `scripts/ci/pr_governance.py`) needs a maintainer's approving review on the PR's current commit before it can merge. Pushing a new commit needs a fresh approval.
+
 A disclosure does not block a PR. It tells the reviewer to weigh the change on its merits and against other players' positions, and a conflicted PR is never merged on its author's word alone. Staff contributors follow the same rule.
 
 An undisclosed conflict found later is grounds to revert the change and remove contribution access, and gains made through it may be reversed in game.
