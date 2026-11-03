@@ -46,6 +46,7 @@ export type ResetMetricRow = PrimaryMetricDefinition & {
     policyLevelTitle: string;
     state: MetricLawState;
     favorableNormalizedPoints: number | null;
+    nextFundingTurn?: number | null;
   }[];
 };
 
@@ -303,7 +304,8 @@ function EffectDetail({
 
 function lawStatePresentation(
   state: MetricLawState,
-  interpretation: PrimaryMetricDefinition["interpretation"]
+  interpretation: PrimaryMetricDefinition["interpretation"],
+  turnsUntilFunding?: number | null
 ): { label: string; className: string; explanation: string } {
   if (state === "equilibrium") {
     return {
@@ -311,6 +313,17 @@ function lawStatePresentation(
       className: "text-success",
       explanation:
         "This standing law's effects are already reflected in the current metric value, so it adds no further modeled movement.",
+    };
+  }
+  if (state === "awaiting_first_funding") {
+    const due =
+      turnsUntilFunding && turnsUntilFunding > 0
+        ? ` The first round is due in ${turnsUntilFunding} ${turnsUntilFunding === 1 ? "turn" : "turns"}.`
+        : "";
+    return {
+      label: "Awaiting first funding",
+      className: "text-muted",
+      explanation: `The law is in force. Its programme is funded in the annual budget round and has not had one yet, so it is not moving this metric yet.${due}`,
     };
   }
   if (state === "implementation_stalled") {
@@ -345,11 +358,17 @@ function lawStatePresentation(
 function StandingLawDetail({
   law,
   interpretation,
+  asOfTurn,
 }: {
   law: ResetMetricRow["standingLaws"][number];
   interpretation: PrimaryMetricDefinition["interpretation"];
+  asOfTurn?: number;
 }) {
-  const presentation = lawStatePresentation(law.state, interpretation);
+  const presentation = lawStatePresentation(
+    law.state,
+    interpretation,
+    law.nextFundingTurn != null && asOfTurn != null ? law.nextFundingTurn - asOfTurn : null
+  );
   return (
     <div className="rounded-md border border-card-border bg-card-muted p-3">
       <div className="flex items-start justify-between gap-3">
@@ -366,12 +385,14 @@ function StandingLawDetail({
         </span>
       </div>
       <p className="mt-2 text-body-xs leading-relaxed text-muted">{presentation.explanation}</p>
-      {law.favorableNormalizedPoints !== null && law.state !== "implementation_stalled" && (
-        <div className={`mt-2 text-body-xs font-semibold ${presentation.className}`}>
-          {law.favorableNormalizedPoints >= 0 ? "+" : ""}
-          {law.favorableNormalizedPoints.toFixed(2)} favorable modeled pressure
-        </div>
-      )}
+      {law.favorableNormalizedPoints !== null &&
+        law.state !== "implementation_stalled" &&
+        law.state !== "awaiting_first_funding" && (
+          <div className={`mt-2 text-body-xs font-semibold ${presentation.className}`}>
+            {law.favorableNormalizedPoints >= 0 ? "+" : ""}
+            {law.favorableNormalizedPoints.toFixed(2)} favorable modeled pressure
+          </div>
+        )}
     </div>
   );
 }
@@ -1089,6 +1110,7 @@ function MetricDetail({
                     key={law.familyId}
                     law={law}
                     interpretation={metric.interpretation}
+                    asOfTurn={board.asOfTurn}
                   />
                 ))}
                 {metric.temporaryActionEffect && (

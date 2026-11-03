@@ -14,6 +14,7 @@ import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/li
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StateBudget } from "@/lib/db/types/budget";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { getSharedFiscalYearStartTurnInYear } from "@/lib/countrySystems/fiscalCalendar";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 import { readResetGovernanceStyle } from "@/lib/resetMetrics/readGovernanceStyle";
@@ -21,7 +22,10 @@ import { resetLawFamilies, resetLawFamilyById } from "@/lib/resetLegislation/cat
 import { withPostLaunchReferences } from "@/lib/resetLegislation/rules/postLaunchReferences";
 import { resetCabinetActions } from "@/lib/resetCabinet/catalog";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
-import { buildMetricLawStatuses } from "@/lib/resetLegislation/rules/metricPolicyStatus";
+import {
+  buildMetricLawStatuses,
+  nextAnnualFundingTurn,
+} from "@/lib/resetLegislation/rules/metricPolicyStatus";
 import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
@@ -156,6 +160,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
                 settlements?.[program._id],
                 board.board.asOfTurn
               ),
+              awaitingFirstFunding:
+                !settlements?.[program._id] &&
+                program.choice !== "leave_to_states" &&
+                program.effectiveTurn <= board.board.asOfTurn,
             };
           })
         : programs.map((program) => {
@@ -218,6 +226,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           references: withPostLaunchReferences(openingLawBoard),
           programs,
           delivery,
+          nextFundingTurn: nextAnnualFundingTurn(
+            board.board.asOfTurn,
+            getSharedFiscalYearStartTurnInYear()
+          ),
         })
       : {};
     const currentYear = 1991 + Math.floor((board.board.asOfTurn - 1) / TURNS_PER_YEAR);
