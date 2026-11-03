@@ -43,6 +43,7 @@ import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { deriveHighestOffice } from "@/lib/character/deriveHighestOffice";
 import type { GameIteration } from "@/lib/db/types/gameState";
 import type { CharacterRecap } from "@/lib/recap/types";
+import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -294,6 +295,7 @@ export async function retireCharacter(
       .toArray(),
   ]).catch(() => null);
 
+  const blocRowIds = await heldBlocRowIds(db, { characterId });
   await db.collection("electedOfficials").updateMany(
     { characterId },
     {
@@ -319,6 +321,8 @@ export async function retireCharacter(
       });
     }
   }
+  // After the Commons vacancies exist, so their anchor rows keep the count.
+  await releaseVacatedBlocSeats(db, blocRowIds, now);
 
   const forexEnabled = await isForexEnabled();
   const ceoCorps = await db

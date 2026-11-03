@@ -1,3 +1,4 @@
+import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import type { GameState } from "@/lib/db/types";
 import { ObjectId, type Db } from "mongodb";
@@ -428,6 +429,7 @@ async function resignOfficial(
         }
       );
       if (!hasChanged(result)) return false;
+      await releaseVacatedBlocSeats(db, [official._id], now);
     } else {
       const result = await officials.deleteOne({ _id: official._id, characterId: character._id });
       if (result.deletedCount === 0) return false;
@@ -775,6 +777,7 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
     }
   }
 
+  const leftoverBlocRowIds = await heldBlocRowIds(db, { characterId: freshCharacter._id });
   const [officialResult, partyResults, statePartyResult, congressResult, cabinetResult, bankRows] =
     await Promise.all([
       db.collection<ElectedOfficial>("electedOfficials").updateMany(
@@ -822,6 +825,7 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
         .find({ chairCharacterId: freshCharacter._id })
         .toArray(),
     ]);
+  await releaseVacatedBlocSeats(db, leftoverBlocRowIds, now);
 
   if (officialResult.modifiedCount > 0)
     resigned.push(`Elected office records: ${officialResult.modifiedCount}`);
