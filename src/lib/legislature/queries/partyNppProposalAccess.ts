@@ -22,7 +22,8 @@ export async function resolvePartyNppProposalAccess(
   db: Db,
   countryId: CountryId,
   stateId: string,
-  character: Pick<Character, "_id" | "party" | "countryId"> | null | undefined
+  character: Pick<Character, "_id" | "party" | "countryId"> | null | undefined,
+  options: { allowBusySponsor?: boolean } = {}
 ): Promise<{ authorized: boolean; npp: Pick<NPP, "_id" | "name" | "party"> | null }> {
   const denied = { authorized: false, npp: null };
   if (!character?.party || !isSameCountry(character, { countryId })) return denied;
@@ -65,6 +66,22 @@ export async function resolvePartyNppProposalAccess(
     seat.nppId && hasPartyNppSeats(seat.seatsHeld) ? [seat.nppId] : []
   );
   if (!ids.length) return { authorized: true, npp: null };
+  // Impeachment filing is not a bill, so it does not wait for a free bill slot:
+  // any seated party NPP in the chamber may file.
+  if (options.allowBusySponsor) {
+    const seated = await db
+      .collection<NPP>("npps")
+      .find(
+        { _id: { $in: ids }, party: character.party, retiredAt: null },
+        { projection: { name: 1, party: 1, countryId: 1 } }
+      )
+      .sort({ _id: 1 })
+      .toArray();
+    return {
+      authorized: true,
+      npp: seated.find((npp) => isSameCountry(npp, { countryId })) ?? null,
+    };
+  }
   const [npps, busy, queued] = await Promise.all([
     db
       .collection<NPP>("npps")

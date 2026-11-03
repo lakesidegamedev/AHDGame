@@ -8,6 +8,7 @@ import {
   type CountryId,
 } from "@/lib/constants/countries";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { resolvePartyNppProposalAccess } from "@/lib/legislature/queries/partyNppProposalAccess";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
 import { getGameState } from "@/lib/gameState";
@@ -40,7 +41,7 @@ export interface FileImpeachmentOpts {
 export async function fileArticlesOfImpeachment(
   db: Db,
   countryId: CountryId,
-  filer: Pick<Character, "_id" | "name">,
+  filer: Pick<Character, "_id" | "name" | "party" | "countryId">,
   isAdmin: boolean,
   opts: FileImpeachmentOpts
 ): Promise<{ impeachmentId: string }> {
@@ -58,12 +59,16 @@ export async function fileArticlesOfImpeachment(
   let targetCharacterId: ObjectId;
   let initialStage: ImpeachmentStage;
   let state: string | undefined;
+  let filedByName = filer.name;
+  let filedByNppId: ObjectId | undefined;
 
   if (opts.office === "governor") {
     state = opts.state;
     if (!state) throw badRequest("A state is required to impeach a governor.");
 
-    // Filer must be a sitting member of that state's legislature (admins bypass).
+    // Filer must be a sitting member of that state's legislature (admins
+    // bypass). A party chair with no seat of their own may instead direct a
+    // seated party NPP to file, matching chair-directed regional NPP bills.
     if (!isAdmin) {
       const stateChamber = getSubNationalLegislatureKey(countryId);
       const filerOfficial = await officials.findOne({
@@ -72,9 +77,19 @@ export async function fileArticlesOfImpeachment(
         state,
       });
       if (!filerOfficial) {
-        throw forbidden(
-          `You must be a sitting member of the ${state} state legislature to file articles of impeachment.`
-        );
+        const access = await resolvePartyNppProposalAccess(db, countryId, state, filer, {
+          allowBusySponsor: true,
+        });
+        if (!access.authorized) {
+          throw forbidden(
+            `You must be a sitting member of the ${state} state legislature, or your party's national or state chair directing one, to file articles of impeachment.`
+          );
+        }
+        if (!access.npp) {
+          throw badRequest(`No seated ${state} legislator from your party is available to file.`);
+        }
+        filedByName = access.npp.name;
+        filedByNppId = access.npp._id;
       }
     }
 
@@ -159,7 +174,8 @@ export async function fileArticlesOfImpeachment(
     targetOffice: opts.office,
     ...(state ? { state } : {}),
     filedByCharacterId: filer._id,
-    filedByName: filer.name,
+    filedByName,
+    ...(filedByNppId ? { filedByNppId } : {}),
     stage: initialStage,
     houseVotesFor: 0,
     houseVotesAgainst: 0,

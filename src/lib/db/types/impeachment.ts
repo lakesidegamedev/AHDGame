@@ -31,9 +31,12 @@ export interface Impeachment {
   /** Set for state-scoped offices (governor): the state whose legislature tries the case. */
   state?: string;
 
-  // Filer — a sitting lower-chamber member.
+  // Filer — a sitting legislator, or the party chair who directed a seated
+  // party NPP to file. filedByCharacterId is always the player who filed.
   filedByCharacterId: ObjectId;
   filedByName: string;
+  /** Set when a seated party NPP filed at the direction of a party chair. */
+  filedByNppId?: ObjectId;
 
   // Stage machine
   stage: ImpeachmentStage;
