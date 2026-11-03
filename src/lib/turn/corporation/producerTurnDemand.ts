@@ -9,7 +9,7 @@ import { eraScaledBasePrices } from "@/lib/constants/commodities";
 import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
-import { incomeIndexByState } from "@/lib/market/producerMarket/demandCurveRules";
+import { incomeIndexByState } from "@/lib/market/rules/demandCurve";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
@@ -462,7 +462,10 @@ export async function buildProducerTurnDemand(
     [...householdWallets.values()].map((w) => [w.accountId, w.countryId])
   );
   // Demand curves (#5451, #5453): each wallet state's income in anchor against
-  // the median across wallet states, and its country's prime rate.
+  // the median across wallet states, and its country's prime rate. The
+  // comparison is deliberately across countries: incomes are converted to
+  // anchor first, so a richer country's households tilt toward discretionary
+  // goods and a poorer one's toward essentials, at today's exchange rates.
   const walletStateCountry = new Map(
     [...householdWallets.values()].map((w) => [w.stateId, w.countryId] as const)
   );

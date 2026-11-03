@@ -2,7 +2,11 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { PurchaseOrder } from "./rules";
 import { laneKeyOf } from "./laneKey";
-import { demandElasticity, demandSteps, incomeAdjustedWeights } from "./demandCurveRules";
+import {
+  demandElasticity,
+  demandSteps,
+  incomeAdjustedWeights,
+} from "@/lib/market/rules/demandCurve";
 
 export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> = {
   food: 0.2,
@@ -43,7 +47,7 @@ export function householdPurchaseOrders(input: {
   /**
    * Demand curves (issue #5448). Absent: one order per good, as before. Present:
    * basket weights shift with `incomeIndex` and each good becomes a price
-   * ladder; see demandCurveRules.
+   * ladder; see market/rules/demandCurve.
    */
   demandCurve?: { incomeIndex?: number };
 }): PurchaseOrder[] {

@@ -6,8 +6,8 @@ import {
   incomeAdjustedWeights,
   householdSpendFraction,
   incomeIndexByState,
-} from "./demandCurveRules";
-import { householdPurchaseOrders } from "./householdRules";
+} from "./demandCurve";
+import { householdPurchaseOrders } from "@/lib/market/producerMarket/householdRules";
 
 describe("demandSteps", () => {
   it("keeps the old single order as the top step", () => {
@@ -49,6 +49,16 @@ describe("demandSteps", () => {
       expect(q).toBeGreaterThanOrEqual(previous);
       previous = q;
     }
+  });
+
+  it("pins the budget-capped step for a good above unit elasticity (vehicles, 1.3)", () => {
+    // At the 0.55 step the elastic quantity, 100 * 0.55^-1.3, exceeds what the
+    // budget buys there, 100 / 0.55, so the cumulative quantity is the budget cap.
+    const steps = demandSteps({ budget: 1_000, maximumUnitPrice: 10, priceElasticity: 1.3 });
+    const cumulative = steps.reduce((n, s) => n + s.units, 0);
+    expect(Math.pow(0.55, -1.3) * 100).toBeGreaterThan(100 / 0.55);
+    expect(cumulative).toBeCloseTo(100 / 0.55, 9);
+    expect(ladderSpendAt(steps, 5.5)).toBeCloseTo(1_000, 9);
   });
 
   it("returns nothing for an empty budget or bad price", () => {
@@ -148,6 +158,10 @@ describe("householdSpendFraction", () => {
   it("saves more when money is dear and spends more when it is cheap", () => {
     expect(householdSpendFraction(0.9, 10)).toBeCloseTo(0.85, 12);
     expect(householdSpendFraction(0.9, 1)).toBeCloseTo(0.94, 12);
+  });
+
+  it("returns a base outside the band unchanged at the neutral rate", () => {
+    expect(householdSpendFraction(0.5, 5)).toBe(0.5);
   });
 
   it("stays inside its bounds", () => {

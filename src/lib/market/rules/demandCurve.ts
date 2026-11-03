@@ -139,7 +139,11 @@ export const SPEND_FRACTION_MAX = 0.97;
 export function householdSpendFraction(base: number, primeRatePct: number | undefined): number {
   if (typeof primeRatePct !== "number" || !Number.isFinite(primeRatePct)) return base;
   const shifted = base - SPEND_RATE_SENSITIVITY * (primeRatePct - NEUTRAL_PRIME_RATE_PCT);
-  return Math.min(SPEND_FRACTION_MAX, Math.max(SPEND_FRACTION_MIN, shifted));
+  // Bound around the base, so a base outside the band is never moved by the
+  // bounds themselves: at the neutral rate the base comes back unchanged.
+  const lo = Math.min(base, SPEND_FRACTION_MIN);
+  const hi = Math.max(base, SPEND_FRACTION_MAX);
+  return Math.min(hi, Math.max(lo, shifted));
 }
 
 /**

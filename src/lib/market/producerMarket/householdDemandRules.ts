@@ -11,7 +11,7 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { HOUSEHOLD_CONSUMER_BASKET, type householdPurchaseOrders } from "./householdRules";
-import { householdSpendFraction } from "./demandCurveRules";
+import { householdSpendFraction } from "@/lib/market/rules/demandCurve";
 
 /** Share of a household wallet spent each turn. The rest carries as savings. Tunable. */
 const HOUSEHOLD_SPEND_FRACTION = 0.9;
