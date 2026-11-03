@@ -71,7 +71,7 @@ import {
   fireStrikeStartedPulse,
   fireStrikeResolvedPulse,
 } from "@/lib/corporations/sentimentEvents";
-import { processRdInnovations } from "./rdInnovation";
+import { processRdInnovations, seedDepositLookup } from "./rdInnovation";
 import { processVoteReminders, processVoteAutoResolve } from "./voteReminders";
 import { processImfBailoutPayments } from "@/lib/turn/imfBailoutTurn";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -1411,7 +1411,8 @@ export async function processCorporationTurn(
       turn,
       now,
       makeSeededRng(`rdInnovation:${turn}${CORP_TURN_RNG_SALT}`),
-      market.plantsEnabled
+      market.plantsEnabled,
+      seedDepositLookup(gameState?.preset)
     );
     if (sectorBoostOps.length > 0) {
       // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid
