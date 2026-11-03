@@ -27,8 +27,8 @@ const proposal: ProposalView = {
   createdAtTurn: 1,
   expiresAtTurn: 25,
   merge: { targetPartyId: "2", targetPartyName: "Surviving party" },
-  proposingVoteSummary: { yes: 0, no: 0, notVoted: 3 },
-  targetVoteSummary: { yes: 0, no: 0, notVoted: 3 },
+  proposingVoteSummary: { yes: 0, no: 0, notVoted: 3, yesNeeded: 2 },
+  targetVoteSummary: { yes: 0, no: 0, notVoted: 3, yesNeeded: 2 },
 };
 
 function assertWarning() {

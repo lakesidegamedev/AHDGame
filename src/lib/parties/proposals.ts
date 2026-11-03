@@ -30,7 +30,7 @@ import {
   resolveOrganizationUnits,
 } from "@/lib/parties/rules/organizationBucket";
 import {
-  REQUIRED_YES_FRACTION,
+  requiredYesVotes,
   POSITION_SHIFT_COOLDOWN_TURNS,
   PROPOSAL_COOLDOWN_TURNS,
 } from "./proposalConstants";
@@ -57,7 +57,7 @@ export function checkResolution(
   options?: { expired?: boolean }
 ): "passed" | "rejected" | "open" {
   if (committeeSize <= 0) return "rejected"; // edge: no one eligible to vote
-  const yesNeeded = Math.ceil(committeeSize * REQUIRED_YES_FRACTION);
+  const yesNeeded = requiredYesVotes(committeeSize);
   if (yesCount >= yesNeeded) return "passed";
   // Even if every remaining voter votes yes, can yesCount still reach yesNeeded?
   const remaining = committeeSize - yesCount - noCount;
