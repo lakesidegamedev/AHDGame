@@ -2,6 +2,10 @@ import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { PUBLIC_CARRY_DEFAULT_SHARE } from "@/lib/market/producerMarket/publicCarryRules";
 import { PROCUREMENT_SPILL_DEFAULT_SHARE } from "@/lib/market/producerMarket/procurementSpillRules";
 import { SUBSTITUTION_SHARE as SPILLOVER_DEFAULT_SHARE } from "@/lib/market/producerMarket/spilloverRules";
+import {
+  WAGE_SHARE_DEFAULT_SURPLUS_CAP,
+  WAGE_SHARE_DEFAULT_TARGET,
+} from "@/lib/market/producerMarket/wageShareRules";
 
 /** The staged funded-market switches in gameConfig, as the physical-preparation env reads them. */
 export function producerStageEnv(
@@ -23,6 +27,7 @@ export function producerStageEnv(
         producerCreditStuckTurns?: number;
         producerClearingReferenceStage?: number;
         producerFundedBookStage?: number;
+        producerNationalPublicDemandStage?: number;
         producerProcurementSpillStage?: number;
         producerProcurementSpillShare?: number;
         producerShortageGrowthStage?: number;
@@ -30,6 +35,9 @@ export function producerStageEnv(
         producerJointRunStage?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
+        producerWageShareStage?: number;
+        producerWageShareTarget?: number;
+        producerWageShareSurplusCap?: number;
         wholePlantsStage?: number;
         fiscalScaleStage?: number;
       }
@@ -42,6 +50,7 @@ export function producerStageEnv(
     idleRetireStage: config?.producerIdleRetireStage,
     decommissionGrantShare: config?.decommissionGrantShare,
     fundedBookStage: config?.producerFundedBookStage,
+    nationalPublicDemandStage: config?.producerNationalPublicDemandStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
     jointRunStage: config?.producerJointRunStage,
@@ -68,5 +77,10 @@ export function producerStageEnv(
       (config?.producerProcurementSpillStage ?? 0) >= 1
         ? (config?.producerProcurementSpillShare ?? PROCUREMENT_SPILL_DEFAULT_SHARE)
         : 0,
+    wageShareTarget:
+      (config?.producerWageShareStage ?? 0) >= 1
+        ? (config?.producerWageShareTarget ?? WAGE_SHARE_DEFAULT_TARGET)
+        : 0,
+    wageShareSurplusCap: config?.producerWageShareSurplusCap ?? WAGE_SHARE_DEFAULT_SURPLUS_CAP,
   };
 }

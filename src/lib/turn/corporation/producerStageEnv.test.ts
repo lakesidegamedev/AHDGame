@@ -23,3 +23,31 @@ describe("producer stage env shortage growth", () => {
     expect(producerStageEnv({ producerShortageGrowthStage: 1 }).shortageGrowthStage).toBe(1);
   });
 });
+
+describe("producer stage env national public demand", () => {
+  it("passes the national public demand stage through and leaves it off by default", () => {
+    expect(producerStageEnv(null).nationalPublicDemandStage).toBeUndefined();
+    expect(
+      producerStageEnv({ producerNationalPublicDemandStage: 1 }).nationalPublicDemandStage
+    ).toBe(1);
+  });
+});
+
+describe("producer stage env wage share", () => {
+  it("keeps the wage share off unless its stage is on", () => {
+    expect(producerStageEnv(null).wageShareTarget).toBe(0);
+    expect(producerStageEnv({ producerWageShareTarget: 0.5 }).wageShareTarget).toBe(0);
+  });
+
+  it("uses the default target when the stage is on and honours explicit settings", () => {
+    expect(producerStageEnv({ producerWageShareStage: 1 }).wageShareTarget).toBe(0.6);
+    expect(producerStageEnv({ producerWageShareStage: 1 }).wageShareSurplusCap).toBe(0.75);
+    const set = producerStageEnv({
+      producerWageShareStage: 1,
+      producerWageShareTarget: 0.5,
+      producerWageShareSurplusCap: 0.4,
+    });
+    expect(set.wageShareTarget).toBe(0.5);
+    expect(set.wageShareSurplusCap).toBe(0.4);
+  });
+});

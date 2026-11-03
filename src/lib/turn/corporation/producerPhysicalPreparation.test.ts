@@ -347,6 +347,33 @@ describe("physical producer preparation", () => {
     );
   });
 
+  it("raises wages toward the target share of last turn's value added only under the wage share stage", () => {
+    const { input, env, sector } = fixture();
+    const base = prepareProducerPhysicalSector(input).prepared.plan;
+    const units = base.capacityUnits * base.activeFraction * base.outputMultiplier;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: units,
+      producedUnits: units,
+      offeredUnits: units,
+      soldUnits: units,
+      revenue: 20 * base.labourCost,
+      inputsConsumed: 0,
+      inventoryWriteOff: 0,
+      otherOperatingPaid: 0,
+      otherOperatingArrears: 0,
+      turn: env.currentTurn - 1,
+    };
+    const off = prepareProducerPhysicalSector(input).prepared.plan;
+    env.wageShareTarget = 0.5;
+    env.wageShareSurplusCap = 0.75;
+    const on = prepareProducerPhysicalSector(input).prepared.plan;
+    // Target 0.5 of value added binds: 10 base wages a unit on this turn's run.
+    const run = on.capacityUnits * on.activeFraction * on.outputMultiplier;
+    expect(on.labourCost).toBeCloseTo(((0.5 * 20 * base.labourCost) / units) * run, 6);
+    expect(on.labourCost).toBeGreaterThan(off.labourCost);
+    expect(on.otherOperatingCost).toBe(off.otherOperatingCost);
+  });
+
   it("records the planned run share only under the demand plan", () => {
     const { input, env } = fixture();
     expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeUndefined();
