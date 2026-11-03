@@ -20,6 +20,24 @@ import {
 export interface FundedPricePace {
   maxMove?: number;
   maxMultiplier?: number;
+  /** Soft ceiling (issue #5448): approach the ceiling gradually instead of pinning on it. */
+  softCeiling?: boolean;
+}
+
+/** Share of the ceiling above which the soft ceiling starts to compress. */
+export const SOFT_CEILING_KNEE = 0.6;
+
+/**
+ * Maps a price above the knee onto the band below the ceiling: the excess
+ * decays exponentially, so a deeper shortage still reads higher but never
+ * reaches the ceiling itself. Below the knee the price is unchanged.
+ */
+export function softCeiling(price: number, ceiling: number): number {
+  if (!(ceiling > 0) || !Number.isFinite(price)) return price;
+  const knee = ceiling * SOFT_CEILING_KNEE;
+  if (price <= knee) return price;
+  const band = ceiling - knee;
+  return knee + band * (1 - Math.exp(-(price - knee) / band));
 }
 
 export function clampFundedPrice(
@@ -37,7 +55,14 @@ export function clampFundedPrice(
     typeof pace.maxMultiplier === "number" && pace.maxMultiplier >= 1
       ? pace.maxMultiplier
       : FUNDED_SCARCITY_MAX;
-  let price = next;
+  // Soften the target, not the paced price: softening after the pace bound
+  // re-compressed an already softened price every turn, so a capped good with
+  // unchanged demand slid toward the knee (about 3.0x to 2.1x base over 60
+  // turns). Softened first, the price walks to the soft target and holds there.
+  let target = next;
+  if (pace.softCeiling && Number.isFinite(nominalBase) && nominalBase > 0)
+    target = softCeiling(target, nominalBase * ceiling);
+  let price = target;
   if (typeof previous === "number" && Number.isFinite(previous) && previous > 0)
     price = Math.min(previous * (1 + maxMove), Math.max(previous * (1 - maxMove), price));
   if (Number.isFinite(nominalBase) && nominalBase > 0)
