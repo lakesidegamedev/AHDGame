@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
+import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import {
+  fundedReachableBookEntries,
+  type WithNationalBalanceSource,
+} from "@/lib/market/producerMarket/fundedCountryViewRules";
 import { handleRouteError } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
@@ -51,7 +56,8 @@ export async function GET(request: Request) {
       }
     }
 
-    const currentTurn = (await getGameState())?.currentTurn ?? 1;
+    const gameState = await getGameState(db);
+    const currentTurn = gameState?.currentTurn ?? 1;
     // Per-country reachable books (ticket #1077). Only the scope=full payload
     // carries them; null on a world that has not run a turn since 1.1.2, which
     // the client reads as "Reachable lens unavailable" rather than "no market".
@@ -59,7 +65,7 @@ export async function GET(request: Request) {
     const targetTurn = Math.max(1, currentTurn - TURNS_PER_YEAR);
     const target24hTurn = Math.max(1, currentTurn - 24);
 
-    const [prices, historyAtOrBeforeTarget, oldestHistory, history24h] = await Promise.all([
+    const [rawPrices, historyAtOrBeforeTarget, oldestHistory, history24h] = await Promise.all([
       db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
       db
         .collection<CommodityPriceHistory>("commodityPriceHistory")
@@ -105,6 +111,17 @@ export async function GET(request: Request) {
         .toArray(),
     ]);
 
+    // Filter state data by exchange if specified
+    const exchangeCountry = exchange ? getCountryForExchange(exchange) : undefined;
+
+    // Country figures read the funded country book of the prices' turn when
+    // there is one: stored nationalDemand misses buyers with no state (public,
+    // military and investment orders). See fundedCountryViewRules.
+    const prices: WithNationalBalanceSource<CommodityPrice>[] =
+      scopeFull || exchangeCountry
+        ? await withFundedNationalBalances(db, rawPrices, gameState?.worldEpochId)
+        : rawPrices.map((p) => ({ ...p, nationalBalanceSource: "modelled" as const }));
+
     // Build a map for quick lookup
     const priceMap = new Map(prices.map((p) => [p.commodity, p]));
     const historyAtOrBeforeTargetByCommodity = new Map(
@@ -125,8 +142,6 @@ export async function GET(request: Request) {
       .toArray();
     const stateCountryMap = new Map(allStates.map((s) => [s._id, s.countryId]));
 
-    // Filter state data by exchange if specified
-    const exchangeCountry = exchange ? getCountryForExchange(exchange) : undefined;
     const isRelevantState = (stateId: string) => {
       if (!exchangeCountry) return true;
       return stateCountryMap.get(stateId) === exchangeCountry;
@@ -144,12 +159,22 @@ export async function GET(request: Request) {
       const relevantStatePrices: Record<string, number> = {};
       const relevantStateSupply: Record<string, number> = {};
 
+      const fundedExchange =
+        exchangeCountry && data?.fundedCountryBooks
+          ? (data.fundedCountryBooks[exchangeCountry] ?? { supply: 0, demand: 0 })
+          : null;
+      if (fundedExchange) {
+        exchangeSupply = fundedExchange.supply;
+        exchangeDemand = fundedExchange.demand;
+      }
       if (data) {
         for (const stateId of Object.keys(data.stateSupply)) {
           if (isRelevantState(stateId)) {
             const supply = data.stateSupply[stateId] ?? 0;
-            exchangeSupply += supply;
-            exchangeDemand += data.stateDemand[stateId] ?? 0;
+            if (!fundedExchange) {
+              exchangeSupply += supply;
+              exchangeDemand += data.stateDemand[stateId] ?? 0;
+            }
             if (data.statePrices[stateId]) {
               relevantStatePrices[stateId] = data.statePrices[stateId];
               relevantStateSupply[stateId] = supply;
@@ -214,10 +239,14 @@ export async function GET(request: Request) {
               nationalSupply: data.nationalSupply ?? {},
               nationalDemand: data.nationalDemand ?? {},
               nationalPrices: data.nationalPrices ?? {},
+              nationalBalanceSource: data.nationalBalanceSource,
               // Stored country -> commodity; the client's lens wants
               // commodity -> country, so pivot it here rather than shipping the
-              // whole cube and re-indexing per render.
-              reachableBooks: reachableBooksFor(reachableBooks, commodity),
+              // whole cube and re-indexing per render. A funded turn shows the
+              // funded book the price phase priced from.
+              reachableBooks: data.fundedCountryBooks
+                ? fundedReachableBookEntries(data.fundedCountryBooks)
+                : reachableBooksFor(reachableBooks, commodity),
             }
           : {}),
       };

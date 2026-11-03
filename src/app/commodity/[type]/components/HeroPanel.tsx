@@ -218,7 +218,14 @@ export default function HeroPanel({
           <span className="text-base font-bold tabular-nums text-error">
             {formatUnits(marketScope.demand, data.unit)}
           </span>
-          <span className="text-xs text-muted">per day</span>
+          <span className="text-xs text-muted">
+            {marketScope.demandBasis === "funded_orders" ? "ordered per day" : "per day"}
+          </span>
+          {marketScope.filled !== null ? (
+            <span className="text-[10px] text-muted">
+              {formatUnits(marketScope.filled, data.unit)} received
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">Balance</span>

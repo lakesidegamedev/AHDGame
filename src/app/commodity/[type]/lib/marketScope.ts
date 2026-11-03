@@ -22,6 +22,14 @@ export interface CommodityMarketScope {
    * the own-production figure and callers net this out via `postImportBalance`.
    */
   imports: number | null;
+  /**
+   * "funded_orders": a country view whose supply is what producers offered and
+   * demand what buyers ordered on last turn's funded market. "stored": every
+   * other view (world, state, or a country on a turn with no funded book).
+   */
+  demandBasis: "funded_orders" | "stored";
+  /** Units the country's buyers received last turn; null when not recorded or not a funded view. */
+  filled: number | null;
   /** Imports attributed to each state in scope (deficit-weighted); empty when unknown. */
   stateImports: Record<string, number>;
   regionCount: number;
@@ -131,6 +139,8 @@ export function buildCommodityMarketScope(
       supply: stateSupply,
       demand: stateDemand,
       balance: stateSupply - stateDemand,
+      demandBasis: "stored",
+      filled: null,
       imports: activeStateImports,
       stateImports: activeStateImports === null ? {} : { [activeState]: activeStateImports },
       regionCount: 1,
@@ -163,6 +173,8 @@ export function buildCommodityMarketScope(
       supply: data.globalSupply,
       demand: data.globalDemand,
       balance: data.globalSupply - data.globalDemand,
+      demandBasis: "stored",
+      filled: null,
       imports: null,
       stateImports: {},
       regionCount: Object.keys(stateCountryMap).length,
@@ -202,10 +214,24 @@ export function buildCommodityMarketScope(
     data.nationalDemand
   );
   const countryRollup = countryRollups[activeCountry];
+  // A funded book covers every country that traded; one absent from it had no
+  // funded orders, so it must not fall back to the stored state sums.
+  const funded =
+    data.nationalBalanceSource === "funded_book"
+      ? (data.fundedCountryBooks?.[activeCountry] ?? null)
+      : undefined;
   const supply =
-    data.nationalSupply?.[activeCountry] ?? countryRollup?.supply ?? sumValues(countryStateSupply);
+    funded !== undefined
+      ? (funded?.supply ?? 0)
+      : (data.nationalSupply?.[activeCountry] ??
+        countryRollup?.supply ??
+        sumValues(countryStateSupply));
   const demand =
-    data.nationalDemand?.[activeCountry] ?? countryRollup?.demand ?? sumValues(countryStateDemand);
+    funded !== undefined
+      ? (funded?.demand ?? 0)
+      : (data.nationalDemand?.[activeCountry] ??
+        countryRollup?.demand ??
+        sumValues(countryStateDemand));
   const marketPrice =
     data.nationalPrices?.[activeCountry] ?? countryRollup?.avgPrice ?? data.globalPrice;
   // Only a real bourse names the commodity market. A command economy's state
@@ -222,12 +248,17 @@ export function buildCommodityMarketScope(
     activeCountry,
     activeState: null,
     marketLabel: `${exchangeName} Market`,
-    marketCaption: `Filtered to ${activeCountryConfig?.name ?? activeCountry}.`,
+    marketCaption:
+      funded !== undefined
+        ? `Filtered to ${activeCountryConfig?.name ?? activeCountry}. Supply and demand are last turn's market orders.`
+        : `Filtered to ${activeCountryConfig?.name ?? activeCountry}.`,
     marketPrice,
     priceChange: percentChangeFromBase(marketPrice, data.basePrice),
     supply,
     demand,
     balance: supply - demand,
+    demandBasis: funded !== undefined ? "funded_orders" : "stored",
+    filled: funded?.filled ?? null,
     imports: countryImports(data, activeCountry),
     stateImports: allocateStateImports(data, activeCountry, Object.keys(countryStateCountryMap)),
     regionCount: Object.keys(countryStateCountryMap).length,

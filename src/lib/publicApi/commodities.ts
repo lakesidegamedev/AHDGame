@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { CommodityPrice } from "@/lib/db/types";
+import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import type { NationalBalanceSource } from "@/lib/market/producerMarket/fundedCountryViewRules";
 import {
   COMMODITY_TYPES,
   COMMODITY_LABELS,
@@ -8,10 +10,21 @@ import {
   type CommodityType,
 } from "@/lib/constants/commodities";
 
+/** Which source a country's supply and demand came from; null with no price row. */
+function balanceSource(data: object | null | undefined): NationalBalanceSource | null {
+  if (!data) return null;
+  return "nationalBalanceSource" in data
+    ? (data.nationalBalanceSource as NationalBalanceSource)
+    : "modelled";
+}
+
 export async function queryCommodities(db: Db, params: { country?: string }) {
   const { country } = params;
 
-  const prices = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  const rawPrices = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  // A country's figures come from the funded country book of the prices' turn
+  // when there is one (see fundedCountryViewRules).
+  const prices = country ? await withFundedNationalBalances(db, rawPrices) : rawPrices;
   const priceMap = new Map(prices.map((p) => [p.commodity, p]));
 
   const result = COMMODITY_TYPES.map((commodity) => {
@@ -36,6 +49,7 @@ export async function queryCommodities(db: Db, params: { country?: string }) {
         nationalPrice,
         nationalSupply,
         nationalDemand,
+        nationalBalanceSource: balanceSource(data),
       }),
       priceAttribution: data?.priceAttribution ?? null,
       turn: data?.turn ?? 0,
@@ -51,7 +65,8 @@ export async function queryCommodityDetail(db: Db, params: { key: string; countr
   if (!COMMODITY_TYPES.includes(key as CommodityType)) return null;
   const commodity = key as CommodityType;
 
-  const data = await db.collection<CommodityPrice>("commodityPrices").findOne({ commodity });
+  const rawData = await db.collection<CommodityPrice>("commodityPrices").findOne({ commodity });
+  const data = rawData && country ? (await withFundedNationalBalances(db, [rawData]))[0] : rawData;
 
   const basePrice = COMMODITY_BASE_PRICES[commodity];
 
@@ -112,6 +127,7 @@ export async function queryCommodityDetail(db: Db, params: { key: string; countr
       nationalPrice,
       nationalSupply,
       nationalDemand,
+      nationalBalanceSource: balanceSource(data),
     }),
     statePrices: filtered.prices,
     stateSupply: filtered.supply,
