@@ -294,6 +294,14 @@ export async function computeIncomeStatement(
     passThroughPhase,
     corporation
   );
+  const corpCurrency = resolveCorpLiquidCurrencyCode(corporation);
+  const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
+  const dailyInterestLocal = anchorToCorpCapital(dailyInterestAnchor, corpCurrency, corpFxRate);
+  // Interest paid on the corporation's own bonds is deductible, apportioned by
+  // revenue share like other overhead (as the turn charges it). National
+  // enterprises have their issuer interest waived, so they deduct nothing.
+  const deductibleBondInterestLocal = corporation.countryOwnerId ? 0 : dailyInterestLocal;
+  const corpLevelTaxCosts = corpLevelCosts + deductibleBondInterestLocal;
   let consolidatedTaxableNet = 0;
 
   let displayFederalTax = 0;
@@ -306,7 +314,7 @@ export async function computeIncomeStatement(
   for (const sd of sectorDetails) {
     const revenueShare =
       sectorRevenueTotal > 0 ? (sd.financialRevenue ?? sd.revenue ?? 0) / sectorRevenueTotal : 0;
-    const sectorNetIncome = (sd.profit ?? 0) - corpLevelCosts * revenueShare;
+    const sectorNetIncome = (sd.profit ?? 0) - corpLevelTaxCosts * revenueShare;
     consolidatedTaxableNet += sectorNetIncome;
     const sectorTaxable = Math.max(0, sectorNetIncome);
     const sectorCountry = sd.countryId ?? corporation.countryId;
@@ -337,8 +345,6 @@ export async function computeIncomeStatement(
     });
   }
 
-  const corpCurrency = resolveCorpLiquidCurrencyCode(corporation);
-  const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
   const bankingPolicy = await bankingPolicyPromise;
   const activeBankCharter =
     corporation.bankCharter?.status === "active" ? corporation.bankCharter : null;
@@ -371,7 +377,6 @@ export async function computeIncomeStatement(
   );
   const bankBookEquityLocal = anchorToCorpCapital(bankBookEquityAnchor, corpCurrency, corpFxRate);
   const bankValuationLocal = anchorToCorpCapital(bankValuationAnchor, corpCurrency, corpFxRate);
-  const dailyInterestLocal = anchorToCorpCapital(dailyInterestAnchor, corpCurrency, corpFxRate);
   const dailyCouponIncomeLocal = anchorToCorpCapital(dailyCouponIncome, corpCurrency, corpFxRate);
 
   const corpHomeCountryFedRate = domesticFederalRateByCountry.get(corporation.countryId) ?? 0;
