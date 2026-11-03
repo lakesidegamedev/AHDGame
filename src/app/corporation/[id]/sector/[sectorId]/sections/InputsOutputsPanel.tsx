@@ -320,6 +320,23 @@ export default function InputsOutputsPanel({
               ))}
             </ul>
           )}
+          {commodities.supplies.map((f) =>
+            f.unsold ? (
+              <p
+                key={f.commodity}
+                data-unsold-reason={f.unsold.reason}
+                className="mt-2 rounded-lg border border-card-border bg-background/40 px-3 py-2 text-body-sm text-foreground"
+              >
+                <span className="font-semibold tabular-nums">{fmtPct(f.unsold.unsoldShare)}</span>{" "}
+                of your {f.label} went unsold last turn.{" "}
+                {f.unsold.reason === "ask_above_market" && f.unsold.marketUnitPrice != null
+                  ? `You asked ${price(f.unsold.askUnitPrice)} ${currencyCode}, but buyers in this market paid ${price(f.unsold.marketUnitPrice)} on average, so they bought from cheaper sellers first. A lower price would sell more.`
+                  : f.unsold.reason === "buyers_covered"
+                    ? "Your price was in line with what buyers paid, but every buyer willing to pay it was already supplied. More output here will not sell until demand grows."
+                    : "Nobody bought this in your market last turn, at any price."}
+              </p>
+            ) : null
+          )}
         </section>
       </div>
 

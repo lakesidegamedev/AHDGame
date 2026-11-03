@@ -69,8 +69,10 @@ import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
   capCarry,
+  carryLineKey,
   carryTotal,
   nextLineCarry,
+  withHeldCarry,
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
@@ -523,7 +525,11 @@ export async function runFundedProducerTurn(
       for (const f of demand.funding) {
         const orders =
           demand.publicCarryOrders.find((o) => o.countryId === f.countryId)?.orders ?? [];
-        const wanted = nextLineCarry(orders, outcomes, carryShare);
+        const wanted = withHeldCarry(
+          nextLineCarry(orders, outcomes, carryShare),
+          demand.publicCarryHeld.get(f.countryId),
+          new Map(orders.map((o) => [carryLineKey(o.commodity, o.book), o.fresh]))
+        );
         const target = capCarry(wanted, closingCash.get(publicWallet(f.countryId)) ?? 0);
         if (carryTotal(target) > 0) carryTargetByCountry[f.countryId] = target;
       }

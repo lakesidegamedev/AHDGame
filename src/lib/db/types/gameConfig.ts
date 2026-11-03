@@ -192,6 +192,20 @@ export interface GameConfig {
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
   /**
+   * Funded producer market (issue #5448): >= 1 lets a public line draw at most
+   * half its fresh outlay from the carry each turn, holding the rest for later
+   * turns, so supply landing on a long-short line does not unlock several
+   * turns of budget at once. 0 or absent = off.
+   */
+  producerPublicCarryReleaseStage?: number;
+  /**
+   * Funded producer market (issue #5448): >= 1 gives household orders demand
+   * curves (a price ladder per good) and income-dependent basket weights, so
+   * cheaper supply sells more units and richer households shift spending
+   * toward discretionary goods. 0 or absent = off.
+   */
+  producerDemandCurveStage?: number;
+  /**
    * Funded producer market: > 0 limits how much of last turn's run a plant may
    * shed in one turn (for example 0.15 = at most 15% a turn), so output and
    * wages follow a glut down over several turns. 0 or absent = off.
@@ -314,6 +328,14 @@ export interface GameConfig {
   producerPriceMaxMove?: number;
   /** Funded-turn price ceiling: largest scarcity multiplier. Absent = 10. */
   producerPriceMaxMultiplier?: number;
+  /**
+   * Funded producer market (issue #5448): >= 1 replaces the hard ceiling at
+   * producerPriceMaxMultiplier with a soft one: above SOFT_CEILING_KNEE of the
+   * ceiling a price approaches it gradually instead of piling up on it, so two
+   * goods in different shortages no longer publish the same pinned price.
+   * 0 or absent = off.
+   */
+  producerSoftPriceCeilingStage?: number;
   /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.

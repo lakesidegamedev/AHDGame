@@ -985,6 +985,45 @@ describe("country-tagged funded settlement", () => {
     expect(imports).toBe(8);
   });
 
+  it("counts a lower demand-curve step as demand only for what it bought (issue #5448)", () => {
+    const withSteps = {
+      ...base,
+      orders: [
+        ...base.orders,
+        // Below every ask: buys nothing, so it must not read as a shortage.
+        {
+          id: "order-us-step-low",
+          accountId: "buyer-us",
+          commodity: "gas",
+          book: "world",
+          units: 50,
+          maximumUnitPrice: 1,
+          countryId: "US",
+          demandStep: 2,
+        },
+        // At the low ask: buys what is left of the cheap offer.
+        {
+          id: "order-uk-step",
+          accountId: "buyer-uk",
+          commodity: "gas",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 2,
+          countryId: "UK",
+          demandStep: 1,
+        },
+      ],
+    };
+    const result = settleProducerMarket({ turn: 1, ...withSteps, trackCountryBooks: true });
+    const rows = new Map(
+      (result.countryBooks ?? []).map((r) => [`${r.countryId}:${r.commodity}`, r])
+    );
+    const ukStep = result.orders.find((o) => o.id === "order-uk-step")!;
+    expect(rows.get("US:gas")!.demand).toBe(6);
+    expect(rows.get("UK:gas")!.demand).toBeCloseTo(8 + ukStep.deliveredUnits, 9);
+    expect(result.orders.find((o) => o.id === "order-us-step-low")!.deliveredUnits).toBe(0);
+  });
+
   it("tags replay legs and fills with the seller and buyer country", () => {
     const result = settleProducerMarket({ turn: 1, ...base, trackCountryBooks: true });
     const ukFills = result.tradeReceipt.fills.filter((f) => f.orderId === "order-uk");

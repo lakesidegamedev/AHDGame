@@ -107,6 +107,10 @@ export type ProducerPhysicalEnv = Pick<
   ownSitesFirst?: boolean;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
+  /** gameConfig.producerPublicCarryReleaseStage >= 1: release carry over several turns. */
+  publicCarryRelease?: boolean;
+  /** gameConfig.producerDemandCurveStage >= 1: household demand curves and income-shifted baskets. */
+  demandCurve?: boolean;
   /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */
   procurementSpillShare?: number;
   /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */

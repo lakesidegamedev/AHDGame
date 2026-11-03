@@ -13,7 +13,7 @@ import {
 } from "@/lib/constants/commodities";
 import { costPassThroughMultiplier } from "@/lib/market/costPassThrough";
 import { computeGlobalCommodityPrice } from "@/lib/market/globalCommodityPrice";
-import { clampFundedPrice } from "@/lib/market/fundedPriceClamp";
+import { clampFundedPrice, type FundedPricePace } from "@/lib/market/fundedPriceClamp";
 import { getPriceSoftKnee } from "@/lib/constants/commodities";
 import {
   updateScarcityMultiplier,
@@ -88,7 +88,7 @@ export interface CommodityPricingContext {
    */
   fundedPricing?: boolean;
   /** Funded price pace (gameConfig.producerPriceMaxMove / producerPriceMaxMultiplier). */
-  fundedPricePace?: { maxMove?: number; maxMultiplier?: number };
+  fundedPricePace?: FundedPricePace;
   /** Market recovery stage; stages 3 and 4 damp price memory. */
   marketRecoveryStage?: number;
   commandEconomyEnabled: boolean;

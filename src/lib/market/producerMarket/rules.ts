@@ -51,6 +51,11 @@ export interface PurchaseOrder {
   countryId?: string;
   /** State the buying site is in; a freight order takes local sellers first. */
   stateId?: string;
+  /**
+   * A lower step of a household demand curve (issue #5448). It buys only when
+   * a seller asks that little, so it counts as demand only for what it buys.
+   */
+  demandStep?: number;
 }
 
 export interface ProducerTrade {
@@ -470,7 +475,8 @@ export function settleProducerMarket(input: {
     if (order.maximumSpend != null) nonNegative(order.maximumSpend, "order spending limit");
     if (order.priority != null && !Number.isFinite(order.priority))
       throw new Error("Invalid priority");
-    if (tracked && order.countryId)
+    // A lower demand-curve step is counted once settled, for what it bought.
+    if (tracked && order.countryId && !(order.demandStep && order.demandStep > 0))
       countryBookRow(order.countryId, order.commodity).demand += order.units;
   }
   const orderResults = new Map(
@@ -842,6 +848,11 @@ export function settleProducerMarket(input: {
       const [seller, buyer, commodity] = JSON.parse(key) as [string, string, string];
       countryBookRow(buyer, commodity).imports += units;
       countryBookRow(seller, commodity).exports += units;
+    }
+    for (const order of input.orders) {
+      if (!(order.demandStep && order.demandStep > 0) || !order.countryId) continue;
+      const bought = orderResults.get(order.id)?.deliveredUnits ?? 0;
+      if (bought > 0) countryBookRow(order.countryId, order.commodity).demand += bought;
     }
   }
   return {

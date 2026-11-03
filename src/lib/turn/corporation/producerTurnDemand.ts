@@ -9,6 +9,8 @@ import { eraScaledBasePrices } from "@/lib/constants/commodities";
 import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
+import { incomeIndexByState } from "@/lib/market/producerMarket/demandCurveRules";
+import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
 import {
@@ -19,6 +21,7 @@ import {
   carryLineKey,
   publicOrderId,
   withCarriedLines,
+  releaseCarriedLines,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
@@ -303,10 +306,20 @@ export async function buildProducerTurnDemand(
     ])
   );
   const publicCarriedIn = new Map<string, number>();
+  // Release stage (issue #5448): a line draws at most part of its carry a turn.
+  // The rest is held, and kept for later turns with what this turn leaves unspent.
+  const publicCarryHeld = new Map<string, LineCarry>();
   const carriedFunding = funding.map((f) => {
     const carryIn = input.publicCarryIn?.get(f.countryId);
     if (!carryIn) return f;
-    const lines = withCarriedLines(f.lines, carryIn);
+    let lines: typeof f.lines;
+    if (input.env.publicCarryRelease) {
+      const released = releaseCarriedLines(f.lines, carryIn);
+      lines = released.lines;
+      if (Object.keys(released.held).length > 0) publicCarryHeld.set(f.countryId, released.held);
+    } else {
+      lines = withCarriedLines(f.lines, carryIn);
+    }
     const added =
       lines.reduce((s, l) => s + l.amountLocal, 0) - f.lines.reduce((s, l) => s + l.amountLocal, 0);
     if (added > 0) publicCarriedIn.set(f.countryId, added);
@@ -441,10 +454,34 @@ export async function buildProducerTurnDemand(
   const walletCountry = new Map(
     [...householdWallets.values()].map((w) => [w.accountId, w.countryId])
   );
+  // Demand curves (issue #5448): each wallet's state income, in anchor, against
+  // the median across the states with a wallet.
+  const walletStateCountry = new Map(
+    [...householdWallets.values()].map((w) => [w.stateId, w.countryId] as const)
+  );
+  const demandCurve = input.env.demandCurve
+    ? {
+        incomeIndexByState: incomeIndexByState(
+          [...walletStateCountry].map(([stateId, country]) => {
+            const local = lookups.stateMetricsByState?.get(stateId)?.economic?.medianIncome?.value;
+            const code = currencyForCountry(country);
+            const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+            return { stateId, income: typeof local === "number" ? local / rate : NaN };
+          })
+        ),
+        primeRatePctByState: new Map(
+          [...walletStateCountry].flatMap(([stateId, country]) => {
+            const rate = lookups.primeRateByCountry.get(country);
+            return typeof rate === "number" ? [[stateId, rate] as const] : [];
+          })
+        ),
+      }
+    : undefined;
   const households = householdDemandSpecs({
     wallets: [...householdWallets.values()],
     referencePrice: refPrice,
     priceHeadroom: PRICE_HEADROOM,
+    ...(demandCurve ? { demandCurve } : {}),
   }).map((h) => ({
     ...h,
     ...tagCountry(walletCountry.get(h.accountId)),
@@ -585,6 +622,8 @@ export async function buildProducerTurnDemand(
         fresh: publicFreshByCountry.get(f.countryId)?.get(carryLineKey(l.commodity, l.book)) ?? 0,
       })),
     })),
+    /** Carry each country held back this turn under the release stage. */
+    publicCarryHeld,
     headcountBySectorId,
     householdForPayee,
     householdSeed,

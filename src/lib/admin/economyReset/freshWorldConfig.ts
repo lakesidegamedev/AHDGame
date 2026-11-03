@@ -44,6 +44,10 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerSpilloverShare: "",
   producerPublicCarryStage: "",
   producerPublicCarryShare: "",
+  // Demand and supply rework stages (issue #5448), switched on one at a time.
+  producerPublicCarryReleaseStage: "",
+  producerDemandCurveStage: "",
+  producerSoftPriceCeilingStage: "",
   producerRunPaceDrop: "",
   producerConversionPaceShare: "",
   producerHouseholdIncomeFloor: "",

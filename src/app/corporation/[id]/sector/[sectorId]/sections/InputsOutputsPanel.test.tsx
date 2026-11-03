@@ -299,3 +299,53 @@ describe("InputsOutputsPanel layout", () => {
     expect(within(row("Vehicles & Machinery")).queryByText(/1,000/)).toBeNull();
   });
 });
+
+describe("InputsOutputsPanel unsold reason (issue #5448)", () => {
+  const withUnsold = (unsold: CommodityFlow["unsold"]) =>
+    render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          supplies: [
+            flow({
+              commodity: "healthcare_services",
+              label: "Healthcare Services",
+              icon: "HC",
+              soldFraction: 0.4,
+              unsold,
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+
+  it("says the ask was above what buyers paid", () => {
+    const { container } = withUnsold({
+      reason: "ask_above_market",
+      unsoldShare: 0.6,
+      askUnitPrice: 12,
+      marketUnitPrice: 10,
+    });
+    const note = container.querySelector('[data-unsold-reason="ask_above_market"]');
+    expect(note?.textContent).toContain("went unsold last turn");
+    expect(note?.textContent).toContain("bought from cheaper sellers first");
+    expect(note?.textContent).not.toMatch(/[–—]/);
+  });
+
+  it("says buyers were covered when the price was competitive", () => {
+    const { container } = withUnsold({
+      reason: "buyers_covered",
+      unsoldShare: 0.3,
+      askUnitPrice: 10,
+      marketUnitPrice: 10,
+    });
+    expect(container.querySelector('[data-unsold-reason="buyers_covered"]')?.textContent).toContain(
+      "already supplied"
+    );
+  });
+});

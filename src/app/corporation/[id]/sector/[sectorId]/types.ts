@@ -161,6 +161,11 @@ export interface CommodityFlow {
    */
   ownSite?: { units: number; share: number; valueAnchor: number };
   /**
+   * Supply rows, CEO only: why part of this output went unsold last turn, from
+   * the plant's ask against what buyers in its book paid (issue #5448).
+   */
+  unsold?: import("@/lib/corporations/rules/unsoldReason").UnsoldReading;
+  /**
    * Market clearing, supply rows only: this output's share of last turn's
    * realized revenue (0-1, summing to ~1 across outputs). Splits the blended
    * average sale price into a price per product on a multi-output sector.
