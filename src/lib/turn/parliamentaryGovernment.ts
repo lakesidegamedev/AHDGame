@@ -1338,6 +1338,25 @@ export async function resolveParliamentaryNoConfidenceVote(
   vote.votesFor = tally.votesFor;
   vote.votesAgainst = tally.votesAgainst;
   const govFormationForTally = await govColl.findOne({ _id: countryId });
+
+  // A no-confidence motion names one PM. If that seat is empty (or holds
+  // someone else) by the time the motion closes, the motion has no subject:
+  // cancel it rather than adjudicating a departed incumbent. Otherwise the
+  // failed branch below cancels appointment votes filed during the vacancy and
+  // blocks the formation of a replacement government.
+  const targetStillInOffice =
+    govFormationForTally?.status === "formed" &&
+    govFormationForTally.pmCharacterId != null &&
+    vote.targetPmCharacterId != null &&
+    govFormationForTally.pmCharacterId.toString() === vote.targetPmCharacterId.toString();
+  if (!targetStillInOffice) {
+    await votesColl.updateOne(
+      { _id: voteId, status: "active" },
+      { $set: { status: "cancelled", closedAt: now, updatedAt: now } }
+    );
+    return;
+  }
+
   const passed = noConfidenceMotionCarries({
     votesFor: vote.votesFor,
     votesAgainst: vote.votesAgainst,
@@ -1776,6 +1795,13 @@ export async function unformGovernmentAndVacatePM(
       },
     }
   );
+
+  // A motion of no confidence names a specific PM. Once the seat is vacant the
+  // motion has no subject, so cancel it here — the single choke point for every
+  // departure (snap, resignation, lost confidence, lost seat). Leaving it
+  // active lets it resolve later against a departed PM and cancel replacement
+  // appointment votes filed during the vacancy.
+  await cancelActiveNoConfidenceVotes(db, countryId, now);
 
   // Restore former cabinet holders before the broad cleanup. The restore pass
   // reads cabinetMembers to find their character ids; running the safety-net
