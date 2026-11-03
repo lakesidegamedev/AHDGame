@@ -968,6 +968,9 @@ export async function runFundedProducerTurn(
           demand: row.demand * TURNS_PER_DAY,
           imports: row.imports * TURNS_PER_DAY,
           exports: row.exports * TURNS_PER_DAY,
+          ...(row.requested != null ? { requested: row.requested * TURNS_PER_DAY } : {}),
+          ...(row.funded != null ? { funded: row.funded * TURNS_PER_DAY } : {}),
+          ...(row.filled != null ? { filled: row.filled * TURNS_PER_DAY } : {}),
         }))
       : undefined;
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)

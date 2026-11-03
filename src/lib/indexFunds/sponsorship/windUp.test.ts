@@ -329,8 +329,36 @@ describe("wind-up when a corporation no longer exists", () => {
     // NAV = 100. The character takes their 50,000; the dead holder's 50,000
     // goes to the reserve, so it never falls through to the sponsor.
     expect(vi.mocked(payFundHolderCash)).toHaveBeenCalledWith(db, fund, positions[0], 50_000);
+    expect(centralBanksUpdate).toHaveBeenCalledTimes(1);
     expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBe(50_000);
     expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+  });
+
+  it("escheats multiple unpayable NPP slices in one reserve credit", async () => {
+    const positions = [
+      { _id: new ObjectId(), units: 500, holderKind: "character" as const },
+      { _id: new ObjectId(), units: 250, holderKind: "npp" as const },
+      { _id: new ObjectId(), units: 250, holderKind: "npp" as const },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 100_000,
+      unitSupply: 1_000,
+      countryId: "US",
+    });
+    vi.mocked(payFundHolderCash).mockImplementation(
+      async (_db, _fund, position) =>
+        position.holderKind !== "fund_reserve" && position.holderKind !== "npp"
+    );
+    const { db, centralBanksUpdate, fundUpdate } = makeDb({ positions, fund });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(centralBanksUpdate.mock.calls[0][1].$inc.reserveBalance).toBe(50_000);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    vi.mocked(payFundHolderCash).mockImplementation(
+      async (_db, _fund, position) => position.holderKind !== "fund_reserve"
+    );
   });
 
   it("ignores a dead holder whose units are worth nothing", async () => {
