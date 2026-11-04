@@ -49,6 +49,7 @@ import {
   type CloseParty,
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
+import type { ProducerSectorSettlement } from "@/lib/db/types/producerEconomy";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
 import {
   fundedDemandThrottle,
@@ -125,6 +126,33 @@ export interface FundedProducerTurnResult {
 export { producerStageEnv } from "./producerStageEnv";
 
 const PUBLIC_CARRY = "producerPublicCarry";
+
+/** The funded receipt a sector's settlement publishes to its own accounts. */
+export function fundedReceiptOf(
+  r: Pick<
+    ProducerSectorSettlement,
+    | "revenue"
+    | "profit"
+    | "producedUnits"
+    | "soldUnits"
+    | "unsoldProductionCost"
+    | "internalSupplyIncome"
+    | "internalSupplyCharge"
+  >,
+  transitionSupport: number
+): FundedReceipt {
+  return {
+    revenue: r.revenue,
+    profit: r.profit,
+    producedUnits: r.producedUnits,
+    soldUnits: r.soldUnits,
+    unsoldProductionCost: r.unsoldProductionCost ?? 0,
+    transitionSupport,
+    // Priced own-site deliveries: without these the sector accounts show no charge or income.
+    ...(r.internalSupplyIncome ? { internalSupplyIncome: r.internalSupplyIncome } : {}),
+    ...(r.internalSupplyCharge ? { internalSupplyCharge: r.internalSupplyCharge } : {}),
+  };
+}
 
 /**
  * The last settled funded producer turn this turn opens from. Normally the
@@ -854,14 +882,10 @@ export async function runFundedProducerTurn(
         offtakeUnits(r as { soldUnits?: number; products?: CaptiveProduct[] })
       );
     if (r && r.worldEpoch === worldEpoch && r.turn === turn) {
-      receiptsBySectorId.set(sector._id.toHexString(), {
-        revenue: r.revenue,
-        profit: r.profit,
-        producedUnits: r.producedUnits,
-        soldUnits: r.soldUnits,
-        unsoldProductionCost: r.unsoldProductionCost ?? 0,
-        transitionSupport: supportBySector[sector._id.toHexString()] ?? 0,
-      });
+      receiptsBySectorId.set(
+        sector._id.toHexString(),
+        fundedReceiptOf(r, supportBySector[sector._id.toHexString()] ?? 0)
+      );
       throttleBySectorId.set(
         sector._id.toHexString(),
         fundedDemandThrottle(r.soldUnits, r.offeredUnits)
