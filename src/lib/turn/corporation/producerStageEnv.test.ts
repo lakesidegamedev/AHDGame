@@ -51,3 +51,38 @@ describe("producer stage env wage share", () => {
     expect(set.wageShareSurplusCap).toBe(0.4);
   });
 });
+
+describe("producer stage env labour-linked wages", () => {
+  it("is off unless its stage is on", () => {
+    expect(producerStageEnv(null).labourWage).toBeNull();
+    expect(producerStageEnv({ producerLabourWageMaxShare: 0.7 }).labourWage).toBeNull();
+    expect(producerStageEnv({ producerLabourWageMaxShare: 0.7 }).wageShareTarget).toBe(0);
+  });
+
+  it("turns the wage share raise on with defaults and honours explicit settings", () => {
+    const on = producerStageEnv({ producerLabourWageStage: 1 });
+    expect(on.wageShareTarget).toBe(0.6);
+    expect(on.labourWage).toEqual({
+      naturalRate: 4.5,
+      slackRate: 12,
+      maxShare: 0.55,
+      floorShare: 0.3,
+      step: 0.03,
+    });
+    const set = producerStageEnv({
+      producerLabourWageStage: 1,
+      producerLabourWageNaturalRate: 5,
+      producerLabourWageSlackRate: 10,
+      producerLabourWageMaxShare: 0.7,
+      producerLabourWageFloorShare: 0.25,
+      producerLabourWageStep: 0.05,
+    }).labourWage;
+    expect(set).toEqual({
+      naturalRate: 5,
+      slackRate: 10,
+      maxShare: 0.7,
+      floorShare: 0.25,
+      step: 0.05,
+    });
+  });
+});
