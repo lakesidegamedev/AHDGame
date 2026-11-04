@@ -112,7 +112,10 @@ export type { BondTurnResult } from "./bondTurnTypes";
  */
 export async function processBondTurn(
   turn: number,
-  config?: Pick<GameConfig, "treasuryCashLedgerEnabled" | "fiscalScaleStage"> & {
+  config?: Pick<
+    GameConfig,
+    "treasuryCashLedgerEnabled" | "fiscalScaleStage" | "sovereignRolloverConsolidationEnabled"
+  > & {
     captureSovereignCashProceeds?: boolean;
   }
 ): Promise<BondTurnResult> {
@@ -1392,6 +1395,7 @@ export async function processBondTurn(
         bondCcy,
         budgetsWithBankClaims,
         liveTargets,
+        consolidateRollover: config?.sovereignRolloverConsolidationEnabled === true,
       })
     );
   };

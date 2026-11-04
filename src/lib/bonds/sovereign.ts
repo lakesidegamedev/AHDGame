@@ -1219,6 +1219,11 @@ export async function settleFundedSovereignBondMaturity(
     liveTargets?: SovereignMaturityLiveTargets;
     /** Test seam for the isolated native-Mongo settlement fixture. */
     transactionClient?: import("mongodb").MongoClient;
+    /**
+     * `sovereignRolloverConsolidationEnabled`: refinance into the issuer's
+     * shared rollover bond for the turn instead of one new bond per claim.
+     */
+    consolidateRollover?: boolean;
   }
 ): Promise<SovereignMaturitySettlement | null> {
   const {
@@ -1333,7 +1338,8 @@ export async function settleFundedSovereignBondMaturity(
     turn,
     now,
     allowNovation,
-    transactionClient
+    transactionClient,
+    input.consolidateRollover === true
   );
   if (
     quote.publicFloatDisposition?.mode === "novation" &&
@@ -1392,6 +1398,7 @@ export async function settleFundedSovereignBondMaturity(
           couponRate: await marketSovereignRolloverCoupon(db, bond.countryId),
           budgetId,
           client: transactionClient,
+          consolidateReplacement: input.consolidateRollover === true,
         });
         if (rolled) {
           const rebased = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
@@ -1418,6 +1425,7 @@ export async function settleFundedSovereignBondMaturity(
         scope: "holders",
         turn,
         now,
+        consolidateReplacement: input.consolidateRollover === true,
       });
       if (refunded.status === "refused") return null;
       const refinanced = await db

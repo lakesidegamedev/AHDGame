@@ -18,6 +18,7 @@ import {
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
 import { frozenClaimPoolCashPerFace } from "./sovereignMaturityPayoutTargets";
+import { sovereignRolloverBondId, sovereignRolloverBondUpsert } from "./sovereignRolloverBond";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 type Disposition = NonNullable<MaturityClaim["publicFloatDisposition"]>;
@@ -58,7 +59,8 @@ async function freezeDisposition(
   claim: MaturityClaim,
   turn: number,
   allowNovation: boolean,
-  now: Date
+  now: Date,
+  consolidateReplacement: boolean
 ): Promise<MaturityClaim> {
   if (claim.publicFloatDisposition) return claim;
   const countryId = bond.countryId;
@@ -126,7 +128,18 @@ async function freezeDisposition(
         replacementIssuerName: bond.issuerName!,
         replacementCorporationId: bond.corporationId!,
         replacementCountryId: countryId!,
-        replacementBondId: primaryDocumentId(`${claim.id}:public-float-novation`),
+        replacementBondId: consolidateReplacement
+          ? sovereignRolloverBondId({
+              countryId: countryId!,
+              currencyCode: claim.currencyCode,
+              issuerName: bond.issuerName!,
+              corporationId: bond.corporationId!,
+              couponRate,
+              maturityTurns: REPLACEMENT_MATURITY,
+              issuedAtTurn: turn,
+            })
+          : primaryDocumentId(`${claim.id}:public-float-novation`),
+        ...(consolidateReplacement ? { replacementConsolidated: true } : {}),
         replacementMaturityTurns: REPLACEMENT_MATURITY,
         replacementCouponRate: couponRate,
         residualAmountLocal: Math.max(
@@ -254,10 +267,36 @@ async function applyDisposition(
   try {
     await runRequiredTransaction(
       async (session) => {
-        const inserted = await db
-          .collection<Bond>("bonds")
-          .insertOne({ _id: disposition.replacementBondId!, ...replacement } as Bond, { session });
-        void inserted;
+        if (disposition.replacementConsolidated === true) {
+          // The issuer's shared rollover bond for the turn: add the units,
+          // creating it on the first novation. The source guard below is the
+          // one-shot receipt, so a replay aborts before this lands twice.
+          const shared = sovereignRolloverBondUpsert(
+            {
+              countryId: disposition.replacementCountryId,
+              currencyCode: claim.currencyCode,
+              issuerName: disposition.replacementIssuerName,
+              corporationId: disposition.replacementCorporationId,
+              couponRate: disposition.replacementCouponRate,
+              maturityTurns: disposition.replacementMaturityTurns,
+              issuedAtTurn: disposition.novationTurn,
+            },
+            units,
+            disposition.reservedAt
+          );
+          if (!shared.filter._id.equals(disposition.replacementBondId))
+            throw new Error("Consolidated novation replacement identity changed after reservation");
+          await db
+            .collection<Bond>("bonds")
+            .updateOne(shared.filter, shared.update, { upsert: true, session });
+        } else {
+          const inserted = await db
+            .collection<Bond>("bonds")
+            .insertOne({ _id: disposition.replacementBondId!, ...replacement } as Bond, {
+              session,
+            });
+          void inserted;
+        }
         const sourceUpdate = await db.collection<Bond>("bonds").updateOne(
           {
             _id: bond._id,
@@ -350,8 +389,17 @@ export async function settleSovereignPublicFloatDisposition(
   turn: number,
   now: Date,
   allowNovation = true,
-  client?: import("mongodb").MongoClient
+  client?: import("mongodb").MongoClient,
+  consolidateReplacement = false
 ): Promise<MaturityClaim> {
-  const frozen = await freezeDisposition(db, bond, claim, turn, allowNovation, now);
+  const frozen = await freezeDisposition(
+    db,
+    bond,
+    claim,
+    turn,
+    allowNovation,
+    now,
+    consolidateReplacement
+  );
   return applyDisposition(db, bond, frozen, client);
 }

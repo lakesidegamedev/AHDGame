@@ -71,6 +71,15 @@ export interface Bond {
   unsoldUnits?: number;
   /** Set on a refunding issue: the sovereign maturity claim its proceeds paid. */
   refundsSovereignMaturityClaimId?: string;
+  /**
+   * Set on the shared replacement bond the maturity refinancing paths add to
+   * under `sovereignRolloverConsolidationEnabled`: one bond per issuer,
+   * currency, coupon, term and turn instead of one per maturing claim.
+   */
+  sovereignRolloverConsolidated?: boolean;
+  /** Set on a bond a series consolidation emptied and closed: the bond that absorbed it. */
+  consolidatedIntoBondId?: ObjectId;
+  consolidatedAt?: Date;
   /** Frozen issuer-selected underwriter terms for future funded primary fills. */
   primaryUnderwriting?: import("@/lib/banking/underwritingTypes").PrimaryUnderwritingOffer;
   primaryFillRatio?: number;
@@ -152,6 +161,8 @@ export interface Bond {
           replacementCorporationId: ObjectId;
           replacementCountryId: CountryId;
           replacementBondId: ObjectId;
+          /** The replacement is the issuer's shared rollover bond for the turn, added to by $inc. */
+          replacementConsolidated?: boolean;
           replacementMaturityTurns: BondMaturityTurns;
           replacementCouponRate: number;
           residualAmountLocal: number;

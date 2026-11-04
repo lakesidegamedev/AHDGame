@@ -44,6 +44,8 @@ export interface SovereignBondMaturitySettlementInput {
   budgetsWithBankClaims: Set<string>;
   /** Payee existence for the whole maturity wave, so this bond need not read it. */
   liveTargets?: SovereignMaturityLiveTargets;
+  /** `sovereignRolloverConsolidationEnabled` for this turn. */
+  consolidateRollover?: boolean;
 }
 
 /**
@@ -106,6 +108,7 @@ export async function settleSovereignBondMaturityBond(
         bondCcy,
         turn,
         now,
+        consolidateRollover: input.consolidateRollover,
       });
       const paid = await settleBankSovereignClaims(db, refinanced ?? budgetWithClaims!, turn);
       const paidIds = new Set(paid?.paidClaimIds ?? []);
@@ -129,6 +132,7 @@ export async function settleSovereignBondMaturityBond(
     holderLegs,
     liveTargets: input.liveTargets,
     now,
+    consolidateRollover: input.consolidateRollover,
   });
   if (
     fundedSettlement?.status === "partial" ||
@@ -202,9 +206,11 @@ async function fundBankMaturityClaims(
     bondCcy: CurrencyCode;
     turn: number;
     now: Date;
+    consolidateRollover?: boolean;
   }
 ): Promise<ClaimBudget | null> {
-  const { bond, dueClaims, budget, countryId, budgetId, bondCcy, turn, now } = input;
+  const { bond, dueClaims, budget, countryId, budgetId, bondCcy, turn, now, consolidateRollover } =
+    input;
   const claimId = `sovereign-maturity:${bond._id.toHexString()}:${bond.maturityTurn}`;
   const stored = await db
     .collection<Bond>("bonds")
@@ -280,6 +286,7 @@ async function fundBankMaturityClaims(
       currencyCode: bondCcy,
       couponRate: await marketSovereignRolloverCoupon(db, countryId as CountryId),
       scope: "bank",
+      consolidateReplacement: consolidateRollover === true,
       followOn: {
         legs: funding.flatMap((transition) => transition.legs),
         projections: funding.flatMap((transition) => transition.projections),
