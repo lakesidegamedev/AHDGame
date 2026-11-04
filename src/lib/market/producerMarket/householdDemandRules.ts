@@ -11,6 +11,7 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { HOUSEHOLD_CONSUMER_BASKET, type householdPurchaseOrders } from "./householdRules";
+import { householdSpendFraction } from "@/lib/market/rules/demandCurve";
 
 /** Share of a household wallet spent each turn. The rest carries as savings. Tunable. */
 const HOUSEHOLD_SPEND_FRACTION = 0.9;
@@ -24,6 +25,16 @@ export function householdDemandSpecs(input: {
   /** Ceiling over the reference a household will pay. */
   priceHeadroom: number;
   spendFraction?: number;
+  /**
+   * Demand curves (issue #5448). Absent: one order per good. Present: each
+   * wallet gets a price ladder, with basket weights shifted by its state's
+   * income index (missing states read as 1).
+   */
+  demandCurve?: {
+    incomeIndexByState: ReadonlyMap<string, number>;
+    /** Prime rate in percent by wallet state; households save more when money is dear. */
+    primeRatePctByState?: ReadonlyMap<string, number>;
+  };
 }): HouseholdSpec[] {
   if (!Number.isFinite(input.priceHeadroom) || input.priceHeadroom < 1)
     throw new Error("Invalid household price headroom");
@@ -47,7 +58,24 @@ export function householdDemandSpecs(input: {
         weight,
       });
     }
-    specs.push({ accountId: w.accountId, spendFraction, products, stateId: w.stateId });
+    specs.push({
+      accountId: w.accountId,
+      spendFraction: input.demandCurve
+        ? householdSpendFraction(
+            spendFraction,
+            input.demandCurve.primeRatePctByState?.get(w.stateId)
+          )
+        : spendFraction,
+      products,
+      stateId: w.stateId,
+      ...(input.demandCurve
+        ? {
+            demandCurve: {
+              incomeIndex: input.demandCurve.incomeIndexByState.get(w.stateId) ?? 1,
+            },
+          }
+        : {}),
+    });
   }
   return specs;
 }

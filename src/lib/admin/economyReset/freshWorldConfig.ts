@@ -39,6 +39,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   // opening that moves the rebuilt economy onto the funded path.
   producerMarketLiveFromTurn: "",
   producerDemandPlanStage: "",
+  // Demand curve stage (#5451), switched on deliberately.
+  producerDemandCurveStage: "",
   producerSpilloverStage: "",
   producerOwnSitesFirstStage: "",
   producerSpilloverShare: "",

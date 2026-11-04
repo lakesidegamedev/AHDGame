@@ -9,6 +9,8 @@ import { eraScaledBasePrices } from "@/lib/constants/commodities";
 import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
+import { incomeIndexByState } from "@/lib/market/rules/demandCurve";
+import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
 import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
@@ -470,10 +472,37 @@ export async function buildProducerTurnDemand(
   const walletCountry = new Map(
     [...householdWallets.values()].map((w) => [w.accountId, w.countryId])
   );
+  // Demand curves (#5451, #5453): each wallet state's income in anchor against
+  // the median across wallet states, and its country's prime rate. The
+  // comparison is deliberately across countries: incomes are converted to
+  // anchor first, so a richer country's households tilt toward discretionary
+  // goods and a poorer one's toward essentials, at today's exchange rates.
+  const walletStateCountry = new Map(
+    [...householdWallets.values()].map((w) => [w.stateId, w.countryId] as const)
+  );
+  const demandCurve = input.env.demandCurve
+    ? {
+        incomeIndexByState: incomeIndexByState(
+          [...walletStateCountry].map(([stateId, country]) => {
+            const local = lookups.stateMetricsByState?.get(stateId)?.economic?.medianIncome?.value;
+            const code = currencyForCountry(country);
+            const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+            return { stateId, income: typeof local === "number" ? local / rate : NaN };
+          })
+        ),
+        primeRatePctByState: new Map(
+          [...walletStateCountry].flatMap(([stateId, country]) => {
+            const rate = lookups.primeRateByCountry.get(country);
+            return typeof rate === "number" ? [[stateId, rate] as const] : [];
+          })
+        ),
+      }
+    : undefined;
   const households = householdDemandSpecs({
     wallets: [...householdWallets.values()],
     referencePrice: refPrice,
     priceHeadroom: PRICE_HEADROOM,
+    ...(demandCurve ? { demandCurve } : {}),
   }).map((h) => ({
     ...h,
     ...tagCountry(walletCountry.get(h.accountId)),

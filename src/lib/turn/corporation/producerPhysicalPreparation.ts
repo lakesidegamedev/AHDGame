@@ -109,6 +109,8 @@ export type ProducerPhysicalEnv = Pick<
   transitionFirstFundedTurn?: number;
   /** gameConfig.producerDemandPlanStage: >= 1 plans output from expected sales. 0 or absent = off. */
   demandPlanStage?: number;
+  /** gameConfig.producerDemandCurveStage >= 1: household demand curves and income-shifted baskets. */
+  demandCurve?: boolean;
   /** gameConfig.producerSpilloverStage share: substitution share for same-turn spillover (0 or absent = off). */
   spilloverShare?: number;
   /** gameConfig.producerOwnSitesFirstStage >= 1: own sites take own output first, nearest first. */

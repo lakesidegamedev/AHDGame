@@ -1577,14 +1577,27 @@ export function advanceProducerEconomy(input: {
       const meta = new Map(
         [...consumerOrders, ...inputOrders()].map((o) => [
           o.id,
-          { commodity: o.commodity, book: o.book, accountId: o.accountId },
+          {
+            commodity: o.commodity,
+            book: o.book,
+            accountId: o.accountId,
+            lowerStep: !!(o.demandStep && o.demandStep > 0),
+          },
         ])
       );
       return market.orders.flatMap((o) => {
         const m = meta.get(o.id);
-        return m
-          ? [{ ...m, requestedUnits: o.requestedUnits, deliveredUnits: o.deliveredUnits }]
-          : [];
+        if (!m) return [];
+        const { lowerStep, ...where } = m;
+        // A lower demand-curve step asked only at its own lower price, so it
+        // is demand for what it bought, not a shortage at the market price.
+        return [
+          {
+            ...where,
+            requestedUnits: lowerStep ? o.deliveredUnits : o.requestedUnits,
+            deliveredUnits: o.deliveredUnits,
+          },
+        ];
       });
     })(),
   };

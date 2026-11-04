@@ -169,6 +169,14 @@ export interface GameConfig {
    */
   producerDemandPlanStage?: number;
   /**
+   * Funded producer market (#5451, #5453): >= 1 gives household orders demand
+   * curves (a price ladder per good sharing one budget) and income-dependent
+   * basket weights, so cheaper supply sells more units and richer households
+   * shift spending toward discretionary goods; the spent share responds to the
+   * prime rate. 0 or absent = off.
+   */
+  producerDemandCurveStage?: number;
+  /**
    * Funded producer market: >= 1 re-clears household spend that was stranded in
    * sold-out lanes onto the household's other lanes with unsold supply, once, at
    * the same posted prices. 0 or absent = off.
