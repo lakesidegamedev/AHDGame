@@ -380,6 +380,30 @@ describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
     runCutBy: ["cash"],
   });
 
+  it("never plans below what sold last turn, even at a loss (owner invariant)", () => {
+    // Sold out at a price below its running cost: the loss brake fires, but the
+    // plan may not fall under the 0.5 of capacity buyers actually took.
+    const losing = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 50,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 400,
+    });
+    expect(planRecoveryRunShare(losing, { demandPlan: true })).toBeGreaterThanOrEqual(0.5);
+    // A partial seller with held stock still plans at least what it sold.
+    const partial = receipt({
+      plannedRunShare: 0.8,
+      producedUnits: 80,
+      offeredUnits: 160,
+      soldUnits: 60,
+      revenue: 600,
+      inputsConsumed: 100,
+    });
+    expect(planRecoveryRunShare(partial, { demandPlan: true })).toBeGreaterThanOrEqual(0.6);
+  });
+
   it("an input or cash cut does not lower the next plan", () => {
     for (const runCutBy of [["cash"], ["inputs"]]) {
       const next = planRecoveryRunShare({ ...cut, runCutBy }, { demandPlan: true });
@@ -472,6 +496,11 @@ describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
     const partial = receipt({ plannedRunShare: 0.5, producedUnits: 50, soldUnits: 25 });
     expect(
       planRecoveryRunShare(partial, { demandPlan: true, floor: LOW_USE_RUN_FLOOR })
-    ).toBeCloseTo((25 * 1.1 - 25) / 100, 10);
+    ).toBeCloseTo(
+      // Expected sales less held stock would be (25 * 1.1 - 25) / 100, but the
+      // owner invariant keeps the plan at what sold: 25 of 100.
+      Math.max((25 * 1.1 - 25) / 100, 0.25),
+      10
+    );
   });
 });

@@ -359,7 +359,7 @@ export function planBaseRunShare(
  *
  * Pure: last receipt in, run share for this turn out.
  */
-export function planRecoveryRunShare(
+function planRecoveryRunShareCore(
   prior: PriorReceipt | null | undefined,
   options: {
     floor?: number;
@@ -425,4 +425,31 @@ export function planRecoveryRunShare(
       ? Math.max(target, base * (1 - OUTPUT_CUT_STEP))
       : Math.min(target, base + PLAN_RECOVERY_STEP)
   );
+}
+
+/**
+ * Owner invariant (2026-11-04): a plant never plans to make less than it sold
+ * last turn. Glut, loss and ratchet rules can only lower the plan down to that
+ * line. The one exception is a plant that has gone a second consecutive turn
+ * without selling (sell-through under GLUT_SELL_THROUGH): it may drop to the
+ * floor, and on the first such turn it already only steps down gradually.
+ */
+export function planRecoveryRunShare(
+  prior: PriorReceipt | null | undefined,
+  options: Parameters<typeof planRecoveryRunShareCore>[1] = {}
+): number {
+  const next = planRecoveryRunShareCore(prior, options);
+  if (!prior) return next;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return next;
+  const { offered, sellThrough } = sellThroughOf(prior);
+  if (
+    offered > 0 &&
+    sellThrough < GLUT_SELL_THROUGH &&
+    glutTurnsThrough(prior) >= GLUT_TURNS_TO_FLOOR
+  )
+    return next;
+  const soldShare = Math.min(1, finite(prior.soldUnits) / active);
+  return Math.max(next, soldShare);
 }
