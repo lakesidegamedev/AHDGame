@@ -57,8 +57,8 @@ import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sect
 import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { loadSettleableSupplyAgreements } from "./loadSettleableSupplyAgreements";
+import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
-  buildMinWageRatioByCountry,
   buildUnionLawBiasByCountry,
   buildUnionsBannedByCountry,
   type LabourContext,
@@ -378,9 +378,16 @@ export async function processCorporationTurn(
         loadUndergroundStrengthByCountrySector(db, bannedUnionCountryIds),
       ])
     : [undefined, undefined, undefined, undefined];
+  const wagesEnabled = labourAtLeast(labourMode, "wages");
   const labour: LabourContext = {
-    wagesEnabled: labourAtLeast(labourMode, "wages"),
-    minWageRatioByCountry: buildMinWageRatioByCountry(lookups.federalBudgets),
+    wagesEnabled,
+    // minimumWageLawStage: the national minimum wage law in force sets the
+    // floor. Below the wages tier the floor is unused, so the law is not read.
+    minWageRatioByCountry: await resolveMinWageRatioByCountry(
+      db,
+      lookups.federalBudgets,
+      wagesEnabled ? marketGovernorConfig?.minimumWageLawStage : undefined
+    ),
     // v3 Phase 5/6: gates the NPC unionization metric + strikes.
     unionsEnabled: labourAtLeast(labourMode, "unions"),
     // v3 Phase 7b: gates union-law bias + union-busting.

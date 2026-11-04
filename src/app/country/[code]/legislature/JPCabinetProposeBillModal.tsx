@@ -33,6 +33,7 @@ import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { LegislationSystemGate } from "@/components/legislation/LegislationSystemGate";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 import { apiErrorText } from "@/lib/errors/catalog";
+import MinimumWageFloorNote from "@/components/legislation/MinimumWageFloorNote";
 
 interface LegislationPolicyOption {
   id: string;
@@ -43,6 +44,8 @@ interface LegislationPolicyOption {
   social?: number;
   archetypeApprovals?: Record<string, number>;
   groupApprovals?: Record<string, number>;
+  /** National minimum wage laws, minimumWageLawStage on: the wage floor this option sets. */
+  wageFloorKaitz?: number;
 }
 
 interface LegislationTypeOption {
@@ -390,6 +393,7 @@ function LegacyJPCabinetProposeBillModal({
                           selectedLegislationType.description}
                       </p>
                     ) : null}
+                    <MinimumWageFloorNote kaitz={selectedPolicyOption?.wageFloorKaitz} />
                     {selectedPolicyOption ? (
                       <PolicyEffectIndicators
                         effectTargetsWeighted={selectedLegislationType.effectTargetsWeighted}

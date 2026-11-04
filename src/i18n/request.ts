@@ -46,6 +46,7 @@ const NAMESPACES = [
   // never loaded, so its copy rendered as raw keys. Found while measuring the
   // client catalog on 2026-10-24.
   "governmentConfidence",
+  "legislation",
 ] as const;
 
 async function loadCatalog(locale: string): Promise<Messages> {

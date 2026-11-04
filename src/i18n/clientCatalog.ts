@@ -98,6 +98,7 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
     namespaces: [
       "elections",
       "layout",
+      "legislation",
       "parties",
       "worldConflicts",
       "worldOrganizations",
@@ -189,7 +190,7 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
   { prefix: "/centralbank", namespaces: ["centralBank", "nav", "tutorial"] },
   { prefix: "/settings", namespaces: ["settings", "nav", "tutorial"] },
   // Lists and read-only rosters: their copy is server-rendered.
-  { prefix: "/congress", namespaces: ["nav", "tutorial"] },
+  { prefix: "/congress", namespaces: ["legislation", "nav", "tutorial"] },
   { prefix: "/unions", namespaces: ["nav", "tutorial"] },
   { prefix: "/politicians", namespaces: ["nav", "tutorial"] },
   { prefix: "/news", namespaces: ["nav", "tutorial"] },

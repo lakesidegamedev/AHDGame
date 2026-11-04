@@ -66,6 +66,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerLabourWageMaxShare: "",
   producerLabourWageFloorShare: "",
   producerLabourWageStep: "",
+  minimumWageLawStage: "",
   producerShortageGrowthStage: "",
   producerCaptiveDeliveryStage: "",
   producerJointRunStage: "",

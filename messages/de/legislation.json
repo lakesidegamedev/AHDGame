@@ -1,0 +1,8 @@
+{
+  "legislation": {
+    "minimumWageFloor": {
+      "sets": "Lohnuntergrenze: legt den nationalen Mindestlohn auf {percent} % des Medianlohns fest. Unternehmen in Branchen, die weniger zahlen, müssen ihre Löhne auf diese Untergrenze anheben.",
+      "none": "Lohnuntergrenze: legt keinen nationalen Mindestlohn fest, also hebt das Gesetz in keiner Branche die Löhne an."
+    }
+  }
+}
