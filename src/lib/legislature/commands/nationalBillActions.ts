@@ -1,3 +1,5 @@
+import { applyV2BillVotePolicyShift } from "@/lib/legislature/v2VotePolicyShift";
+import { billVotePositions } from "@/lib/legislature/votePositions";
 /**
  * National deputies vote and act on bills through their active offices.
  * performNationalBillAction preserves voting windows and costs while refusing
@@ -27,7 +29,6 @@ import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import type { Bill, Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
-import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT, USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
 import type { Db } from "mongodb";
@@ -362,19 +363,39 @@ export async function performNationalBillAction(
         : bill.whippedFromVote?.[charKey]
     );
     const ledgerEntry = bill.policyShiftLedger?.[charKey];
-    if (shouldApplyVoteShift(previousVote, ledgerEntry)) {
+    if (
+      bill.provisions?.some((p) => p.type === "reset_law") ||
+      shouldApplyVoteShift(previousVote, ledgerEntry)
+    ) {
       try {
-        await applyBillVotePolicyShift(db, {
+        const applyShift = bill.provisions?.some((p) => p.type === "reset_law")
+          ? (input: Parameters<typeof applyBillVotePolicyShift>[1]) =>
+              applyV2BillVotePolicyShift(
+                db,
+                input,
+                votesInOtherChamber ? "otherChamberVotes" : "votes"
+              )
+          : (input: Parameters<typeof applyBillVotePolicyShift>[1]) =>
+              applyBillVotePolicyShift(db, input);
+        await applyShift({
           collection: "bills",
           billId: bill._id,
           characterId: character._id,
-          provisions: (bill.provisions ?? []).filter(isPolicyProvision),
+          provisions: billVotePositions(bill.provisions ?? []),
           vote,
           currentPolicies: character.policies,
           ledgerEntry,
         });
       } catch (error) {
         console.warn("[policyShift] Failed to apply policy shift from congress vote:", error);
+        if (bill.provisions?.some((p) => p.type === "reset_law"))
+          return {
+            status: 503,
+            body: {
+              error:
+                "Your vote was recorded, but its policy position update is pending. Please retry your vote.",
+            },
+          };
       }
     }
 
@@ -448,6 +469,34 @@ export async function performNationalBillAction(
       meta: { vote, chamber: "veto_override", weight: overrideWeight, countryId },
       outcome: "ok",
     });
+
+    if (bill.provisions?.some((p) => p.type === "reset_law")) {
+      try {
+        await applyV2BillVotePolicyShift(
+          db,
+          {
+            collection: "bills",
+            billId: bill._id,
+            characterId: character._id,
+            provisions: billVotePositions(bill.provisions),
+            vote,
+            currentPolicies: character.policies,
+            ledgerEntry: bill.policyShiftLedger?.[charKey],
+          },
+          "vetoOverrideVotes"
+        );
+      } catch (error) {
+        console.warn("[policyShift] Failed to apply policy shift from override vote:", error);
+        if (bill.provisions?.some((p) => p.type === "reset_law"))
+          return {
+            status: 503,
+            body: {
+              error:
+                "Your vote was recorded, but its policy position update is pending. Please retry your vote.",
+            },
+          };
+      }
+    }
 
     return { status: 200, body: { message: `Override vote recorded: ${vote}.` } };
   }

@@ -47,6 +47,19 @@ describe("buildVoteShiftPreview", () => {
     });
   });
 
+  it("previews v2 center votes and recovery of a missing first ledger entry", () => {
+    const preview = buildVoteShiftPreview({
+      provisions: [{ economic: 0, includeNeutral: true }],
+      ledger: undefined,
+      characterId: charKey,
+      policies: { economic: 1, social: 0 },
+      previousVote: "for",
+      canVote: true,
+    });
+    expect(preview?.aye).toEqual({ economic: -0.25, social: 0 });
+    expect(preview?.nay).toEqual({ economic: 0.25, social: 0 });
+  });
+
   it("previews a re-vote from the ledger baseline so the net stays within one step", () => {
     expect(
       buildVoteShiftPreview({
