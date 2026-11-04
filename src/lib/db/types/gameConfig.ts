@@ -323,6 +323,13 @@ export interface GameConfig {
   /** Largest move of a plant's effective target a turn (share of value added). Absent = 0.03. */
   producerLabourWageStep?: number;
   /**
+   * Labour system: >= 1 lets each country's national minimum wage law in force
+   * set its minimum wage Kaitz ratio, so the law floors low-pay sectors' wages
+   * (src/lib/labour/rules/minimumWageLaw.ts). An admin-set
+   * federalBudget.minimumWageKaitzRatio still wins. 0 or absent = off.
+   */
+  minimumWageLawStage?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

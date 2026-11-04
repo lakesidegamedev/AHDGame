@@ -602,17 +602,18 @@ export interface FederalBudget {
   gdp: number; // National GDP (A1 SSOT = Σ regional state.gdp × 1M, set at fiscal close)
   /**
    * Labour system minimum wage, expressed as a Kaitz ratio (minimum wage ÷
-   * median wage), 0–1. Absent/0 = no minimum wage. A national policy lever (like
-   * taxRates) set by legislation/admin and read by the corporation turn to floor
-   * low-pay sectors' labor cost. See docs/plans/2026-06-30-labour-system.md.
+   * median wage), 0–1. Absent/0 = no minimum wage. Set by the admin route and
+   * read by the corporation turn to floor low-pay sectors' labor cost. With
+   * gameConfig.minimumWageLawStage on, an absent value means the national
+   * minimum wage law in force sets the ratio each turn, and a set value (0
+   * included) overrides the law (src/lib/labour/rules/minimumWageLaw.ts).
    */
   minimumWageKaitzRatio?: number;
   /**
    * v3 Phase 7b (labourSystemMode >= "full"): union-law bias, -50 (strong
    * right-to-work) to +50 (strong collective-bargaining protection), 0 =
    * neutral/no law. Set by an enacted `UnionLawProvision` bill (see
-   * `applyUnionLawProvision` in `src/lib/labour/unionLaws.ts`) — unlike
-   * `minimumWageKaitzRatio` above (admin-only today), this IS the
+   * `applyUnionLawProvision` in `src/lib/labour/unionLaws.ts`), the
    * player-legislated path. Read by `buildUnionLawBiasByCountry`
    * (`src/lib/labour/laborCost.ts`) into `LabourContext`.
    */

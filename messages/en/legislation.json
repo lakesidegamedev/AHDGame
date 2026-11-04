@@ -1,0 +1,8 @@
+{
+  "legislation": {
+    "minimumWageFloor": {
+      "sets": "Wage floor: sets the national minimum wage at {percent}% of the median wage. Companies in industries that pay less must raise their wages to this floor.",
+      "none": "Wage floor: sets no national minimum wage, so no industry has its wages raised by law."
+    }
+  }
+}

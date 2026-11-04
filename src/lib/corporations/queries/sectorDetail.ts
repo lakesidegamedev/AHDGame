@@ -94,6 +94,7 @@ import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentS
 import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityPrice, GameConfig, GameState } from "@/lib/db/types";
+import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
@@ -220,6 +221,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           privateBankingEnabled: 1,
           bankConstructionFinanceEnabled: 1,
           treasuryCashLedgerEnabled: 1,
+          minimumWageLawStage: 1,
         },
       }
     );
@@ -490,6 +492,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               "taxRates.foreignCorporateTax": 1,
               investorConfidence: 1,
               stateOwnershipConcentration: 1,
+              minimumWageKaitzRatio: 1,
             },
           }
         ),
@@ -1597,6 +1600,21 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       forSaleInfo.eligible = forSaleInfo.blockReason === null;
     }
 
+    // The same floor the corporation turn applies: admin ratio, else the
+    // national minimum wage law in force (minimumWageLawStage).
+    const minWageKaitz =
+      (
+        await resolveMinWageRatioByCountry(
+          db,
+          [
+            {
+              countryId: sectorCountryId,
+              minimumWageKaitzRatio: federalBudget?.minimumWageKaitzRatio,
+            },
+          ],
+          governorConfig?.minimumWageLawStage
+        )
+      ).get(sectorCountryId) ?? 0;
     const payload: Record<string, unknown> = {
       sector: {
         _id: sector._id,
@@ -1664,11 +1682,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               100
           ) / 100,
         minWageUplift:
-          Math.round(
-            (minWageFloorMultiplier(sector.sectorType, federalBudget?.minimumWageKaitzRatio ?? 0) -
-              1) *
-              1000
-          ) / 1000,
+          Math.round((minWageFloorMultiplier(sector.sectorType, minWageKaitz) - 1) * 1000) / 1000,
         // v3 Phase 5/6 (labourSystemMode ≥ "unions"): NPC unionization
         // pressure, 0-100. Feeds unionPremium (labor cost) and the strike
         // trigger threshold.
