@@ -169,6 +169,14 @@ export interface GameConfig {
    */
   producerDemandPlanStage?: number;
   /**
+   * Funded producer market (#5451, #5453): >= 1 gives household orders demand
+   * curves (a price ladder per good sharing one budget) and income-dependent
+   * basket weights, so cheaper supply sells more units and richer households
+   * shift spending toward discretionary goods; the spent share responds to the
+   * prime rate. 0 or absent = off.
+   */
+  producerDemandCurveStage?: number;
+  /**
    * Funded producer market: >= 1 re-clears household spend that was stranded in
    * sold-out lanes onto the household's other lanes with unsold supply, once, at
    * the same posted prices. 0 or absent = off.
@@ -191,6 +199,13 @@ export interface GameConfig {
   producerPublicCarryStage?: number;
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
+  /**
+   * Funded producer market (issue #5454): >= 1 lets a public line draw at most
+   * half its fresh outlay from the carry each turn, holding the rest for later
+   * turns, so supply landing on a long-short line does not unlock several
+   * turns of budget at once. 0 or absent = off.
+   */
+  producerPublicCarryReleaseStage?: number;
   /**
    * Funded producer market: > 0 limits how much of last turn's run a plant may
    * shed in one turn (for example 0.15 = at most 15% a turn), so output and

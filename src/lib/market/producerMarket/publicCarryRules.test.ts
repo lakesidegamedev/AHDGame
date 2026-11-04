@@ -9,6 +9,7 @@ import {
   nextLineCarry,
   withCarriedLines,
 } from "./publicCarryRules";
+import { releaseCarriedLines, withHeldCarry } from "@/lib/market/rules/publicCarryRelease";
 
 const order = (id: string, budget: number, fresh = budget) => ({
   id,
@@ -78,5 +79,57 @@ describe("public carry", () => {
       1.25
     );
     expect(publicOrderId("acct", "healthcare_services", "world")).toBe(order.id);
+  });
+});
+
+describe("carry release (issue #5448)", () => {
+  const key = carryLineKey("construction_services", "world");
+  const line = { commodity: "construction_services", book: "world", amountLocal: 100 };
+
+  it("adds at most half the fresh outlay and holds the rest", () => {
+    const { lines, held } = releaseCarriedLines([line], { [key]: 400 });
+    expect(lines[0]!.amountLocal).toBe(150);
+    expect(held).toEqual({ [key]: 350 });
+  });
+
+  it("releases a small carry in full", () => {
+    const { lines, held } = releaseCarriedLines([line], { [key]: 20 });
+    expect(lines[0]!.amountLocal).toBe(120);
+    expect(held).toEqual({});
+  });
+
+  it("keeps held carry for next turn, still capped at the turn limit", () => {
+    const fresh = new Map([[key, 100]]);
+    expect(withHeldCarry({ [key]: 30 }, { [key]: 350 }, fresh)).toEqual({ [key]: 380 });
+    expect(withHeldCarry({ [key]: 30 }, { [key]: 500 }, fresh)).toEqual({
+      [key]: PUBLIC_CARRY_MAX_TURNS * 100,
+    });
+    expect(withHeldCarry({ [key]: 30 }, { [key]: 50 }, fresh)).toEqual({ [key]: 80 });
+  });
+
+  it("spreads a long carry over several turns instead of one burst", () => {
+    let carry: Record<string, number> = { [key]: 400 };
+    const spent: number[] = [];
+    for (let turn = 0; turn < 6; turn++) {
+      const { lines, held } = releaseCarriedLines([line], carry);
+      spent.push(lines[0]!.amountLocal);
+      carry = withHeldCarry({}, held, new Map([[key, 100]]));
+    }
+    expect(Math.max(...spent)).toBe(150);
+    expect(spent.filter((x) => x > 100)).toHaveLength(6);
+  });
+});
+
+describe("carry release bounds (review of #5475)", () => {
+  const key = carryLineKey("construction_services", "world");
+  const line = { commodity: "construction_services", book: "world", amountLocal: 100 };
+
+  it("never releases more than the whole fresh outlay a turn", () => {
+    const { lines } = releaseCarriedLines([line], { [key]: 400 }, 2);
+    expect(lines[0]!.amountLocal).toBe(200);
+  });
+
+  it("drops held carry for a line that no longer exists", () => {
+    expect(withHeldCarry({}, { [key]: 50 }, new Map())).toEqual({});
   });
 });
