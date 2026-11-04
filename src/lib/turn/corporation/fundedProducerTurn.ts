@@ -771,6 +771,7 @@ export async function runFundedProducerTurn(
       ownSitesFirst: input.env.ownSitesFirst,
       stockCoverTurns: input.env.stockCoverTurns,
       ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
+      ...(input.env.restartProbes ? { restartProbes: true } : {}),
       ...(lastOutcome?.laneClearingPrices
         ? { clearingPriceByLane: lastOutcome.laneClearingPrices }
         : {}),

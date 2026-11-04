@@ -57,6 +57,14 @@ describe("producer stage env sales advance price", () => {
   });
 });
 
+describe("producer stage env zombie restart", () => {
+  it("lets idle plants probe only when the stage is on", () => {
+    expect(producerStageEnv(null).restartProbes).toBe(false);
+    expect(producerStageEnv({ producerZombieRestartStage: 0 }).restartProbes).toBe(false);
+    expect(producerStageEnv({ producerZombieRestartStage: 1 }).restartProbes).toBe(true);
+  });
+});
+
 describe("producer stage env wage share", () => {
   it("keeps the wage share off unless its stage is on", () => {
     expect(producerStageEnv(null).wageShareTarget).toBe(0);

@@ -333,6 +333,17 @@ export interface GameConfig {
    */
   producerSalesAdvancePriceStage?: number;
   /**
+   * Funded producer market: >= 1 lets an idle plant of a company that cannot
+   * fund a run, and that sold nothing last turn, run a small probe (5% of its
+   * capacity) on intra-turn credit against its output's market price, when
+   * other buyers have funded demand for that output and the probe pays for
+   * itself at market input prices. The probe's sales repay the credit in the
+   * same settlement; what they do not cover stays an ordinary payable. A plant
+   * stops probing after 3 probe turns in a row that did not pay for
+   * themselves (restartProbeRules). 0 or absent = off.
+   */
+  producerZombieRestartStage?: number;
+  /**
    * Capacity builds paid from cash must leave this many turns of the plants'
    * running bills (wages, site bills, inputs from their last receipts) unless
    * the CEO confirms an override (suggestion 409). Absent = 3, 0 = off.

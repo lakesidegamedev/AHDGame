@@ -87,6 +87,7 @@ export async function runCorporationProducerMarket(
       | "trackCountryBooks"
       | "credit"
       | "salesAdvanceAtClearing"
+      | "restartProbes"
     >;
     /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
     close?: Parameters<typeof settleProducerTurn>[1]["close"];

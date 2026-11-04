@@ -46,6 +46,12 @@ import {
   salesAdvanceAmount,
   salesFundedRunShare,
 } from "./salesAdvanceRules";
+import {
+  nextProbeFailures,
+  probePaidForItself,
+  restartProbe,
+  RESTART_PROBE_RUN_SHARE,
+} from "./restartProbeRules";
 
 export interface PurchasedStock {
   commodity: string;
@@ -120,6 +126,11 @@ export interface ProductionPlan {
    * financed against its own sales; absent or 0 = no sales advance.
    */
   expectedUnitRevenue?: number;
+  /**
+   * Consecutive restart probes before this turn that did not pay for
+   * themselves (restartProbeRules), read from last turn's receipt.
+   */
+  restartProbeFailures?: number;
 }
 
 /** Why a plant made less than its planned run this turn, recorded on its receipt. */
@@ -193,6 +204,10 @@ export interface ProducerOperatingResult {
   plannedRunShare?: number;
   /** Consecutive glut turns before this turn, read back by the plan-recovery rule. */
   priorGlutTurns?: number;
+  /** True when this turn's run was a restart probe financed against its own sales (restartProbeRules). */
+  restartProbe?: boolean;
+  /** Consecutive restart probes through this turn that did not pay for themselves; absent when 0. */
+  restartProbeFailures?: number;
   /**
    * Share of the funded run that was actually made, when short inputs cut it:
    * wages and the running part of the site bill were billed on this share.
@@ -360,6 +375,12 @@ export function advanceProducerEconomy(input: {
    * instead of at the ceiling (gameConfig.producerSalesAdvancePriceStage).
    */
   salesAdvanceAtClearing?: boolean;
+  /**
+   * Let an idle plant whose company cannot fund a run and that sold nothing
+   * last turn run a small probe on intra-turn credit against its output's
+   * market price (restartProbeRules, gameConfig.producerZombieRestartStage).
+   */
+  restartProbes?: boolean;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -602,10 +623,95 @@ export function advanceProducerEconomy(input: {
       return [id, share] as const;
     })
   );
+  // Restart probes: a plant of a company that cannot fund even a probe-sized
+  // run, with no sales last turn to borrow against, may run a small share of
+  // its capacity on credit against its output's market price, when other
+  // buyers have funded demand for it there and the probe pays for itself.
+  const probeShare = new Map<string, number>();
+  if (input.restartProbes) {
+    const candidates = plans.filter((p) => {
+      const share = runShare.get(p.accountId) ?? 1;
+      return (
+        share < RESTART_PROBE_RUN_SHARE &&
+        !inputReserve.has(p.accountId) &&
+        !((p.expectedUnitRevenue ?? 0) > 0) &&
+        p.capacityUnits * p.activeFraction * p.outputMultiplier > 0
+      );
+    });
+    if (candidates.length > 0) {
+      // Highest funded bid per lane and buyer at the open: public and other
+      // outside orders, household baskets, and the inputs of other plants.
+      const bids = new Map<string, Map<string, number>>();
+      const bid = (lane: string, accountId: string, price: number) => {
+        if (!((cash.get(accountId) ?? 0) > 0) || !(price > 0)) return;
+        const row = bids.get(lane) ?? new Map<string, number>();
+        row.set(accountId, Math.max(row.get(accountId) ?? 0, price));
+        bids.set(lane, row);
+      };
+      for (const o of input.externalOrders ?? [])
+        if (o.units > 0) bid(laneKeyOf(o.commodity, o.book), o.accountId, o.maximumUnitPrice);
+      for (const h of input.households ?? [])
+        if (h.spendFraction > 0)
+          for (const product of h.products)
+            if (product.weight > 0)
+              bid(
+                laneKeyOf(product.commodity, product.book),
+                h.accountId,
+                product.maximumUnitPrice
+              );
+      for (const p of plans)
+        if (p.capacityUnits * p.activeFraction * p.outputMultiplier > 0)
+          for (const recipe of p.inputs)
+            if (recipe.unitsPerOutput > 0)
+              bid(laneKeyOf(recipe.commodity, recipe.book), p.accountId, recipe.maximumUnitPrice);
+      const fundedBuyers = (lane: string, ownAccount: string, price: number) => {
+        for (const [accountId, top] of bids.get(lane) ?? [])
+          if (accountId !== ownAccount && top >= price) return true;
+        return false;
+      };
+      for (const p of candidates) {
+        const outputs = p.outputs.map((o) => {
+          const lane = laneKeyOf(o.commodity, o.book);
+          const marketUnitPrice = input.clearingPriceByLane?.[lane];
+          return {
+            unitsPerOutput: o.unitsPerOutput,
+            ...(marketUnitPrice != null ? { marketUnitPrice } : {}),
+            fundedBuyers:
+              marketUnitPrice != null &&
+              marketUnitPrice > 0 &&
+              fundedBuyers(lane, p.accountId, marketUnitPrice),
+          };
+        });
+        const probe = restartProbe({
+          fullUnits: p.capacityUnits * p.activeFraction * p.outputMultiplier,
+          labourCost: p.labourCost,
+          runningSiteCost: p.otherOperatingCost - idleUpkeep(p),
+          inputs: p.inputs.map((recipe) => {
+            const clearingUnitPrice =
+              input.clearingPriceByLane?.[laneKeyOf(recipe.commodity, recipe.book)];
+            return {
+              unitsPerOutput: recipe.unitsPerOutput,
+              maximumUnitPrice: recipe.maximumUnitPrice,
+              ...(clearingUnitPrice != null ? { clearingUnitPrice } : {}),
+              stockUnits: p.inputStock
+                .filter((s) => s.commodity === recipe.commodity)
+                .reduce((n, s) => n + s.units, 0),
+            };
+          }),
+          outputs,
+          priorFailures: p.restartProbeFailures,
+        });
+        if (!probe) continue;
+        probeShare.set(p.id, probe.runShare);
+        salesAdvance.set(p.accountId, (salesAdvance.get(p.accountId) ?? 0) + probe.advance);
+      }
+    }
+  }
+  const shareOf = (p: ProductionPlan) => probeShare.get(p.id) ?? runShare.get(p.accountId) ?? 1;
   // Wages and site running costs follow the run the company can fund; idle
   // capacity keeps its cold upkeep.
   plans = plans.map((p) => {
-    const share = runShare.get(p.accountId) ?? 1;
+    const share = shareOf(p);
     if (share >= 1) return p;
     const idle = idleUpkeep(p);
     return {
@@ -681,7 +787,7 @@ export function advanceProducerEconomy(input: {
       p.capacityUnits *
         p.activeFraction *
         p.outputMultiplier *
-        (runShare.get(p.accountId) ?? 1) *
+        shareOf(p) *
         // A run on credit or on its own sales is fully staffed: what cash did
         // not pay is owed until the sales pay it.
         (inputReserve.has(p.accountId) || salesAdvance.has(p.accountId)
@@ -1502,6 +1608,31 @@ export function advanceProducerEconomy(input: {
       consumed + minorInputPremium + inventoryWriteOff + p.labourCost + p.otherOperatingCost,
       "production expense"
     );
+    // A probe that did not pay for itself counts toward its stop; one that
+    // paid, or any run that paid, clears the count.
+    const probeFields = (() => {
+      if (!input.restartProbes) return {};
+      const probed = probeShare.has(p.id);
+      const failures = nextProbeFailures({
+        priorFailures: p.restartProbeFailures,
+        probed,
+        paid: probePaidForItself({
+          revenue,
+          profit:
+            revenue -
+            consumed -
+            minorInputPremium -
+            inventoryWriteOff -
+            p.labourCost -
+            p.otherOperatingCost,
+          idleOperatingCost: idleUpkeep(p),
+        }),
+      });
+      return {
+        ...(probed ? { restartProbe: true } : {}),
+        ...(failures > 0 ? { restartProbeFailures: failures } : {}),
+      };
+    })();
     results.push({
       id: p.id,
       ...(internalSupplyIncome > 0 ? { internalSupplyIncome } : {}),
@@ -1511,6 +1642,7 @@ export function advanceProducerEconomy(input: {
       plannedUnits: proposedById.get(p.id)!,
       ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
       ...(p.priorGlutTurns != null ? { priorGlutTurns: p.priorGlutTurns } : {}),
+      ...probeFields,
       ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
       ...(() => {
         const binding = billedRunShare.has(p.id) ? bindingInputOf(p) : undefined;
@@ -1519,7 +1651,7 @@ export function advanceProducerEconomy(input: {
       ...(() => {
         const reasons: RunCutReason[] = [];
         if (
-          (runShare.get(p.accountId) ?? 1) < 1 - 1e-12 ||
+          shareOf(p) < 1 - 1e-12 ||
           (!inputReserve.has(p.accountId) &&
             !salesAdvance.has(p.accountId) &&
             (funding.get(p.accountId) ?? 1) < 1 - 1e-12)
