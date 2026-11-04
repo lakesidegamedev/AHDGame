@@ -11,7 +11,11 @@
  * On a turn the funded market published a book, a country view reads that
  * book instead: supply is what the country's producers offered, demand is what
  * its buyers requested (the reservation and its public fallback counted once),
- * and the fill is what they actually received. World totals are unchanged:
+ * and the fill is what they actually received. Household substitution orders
+ * placed after a first choice sold out (spillover) are not first-choice
+ * demand: they are left out of `demand` and reported as `spilloverRequested`,
+ * so a cheap good that caught spilled budget does not read as short. Units
+ * they bought still count in `filled`. World totals are unchanged:
  * `globalSupply` / `globalDemand` are already the sum of the same orders.
  * Countries absent from the book had no funded activity and read as empty.
  * Without a book for the price row's turn the stored national fields stand.
@@ -29,8 +33,13 @@ export type NationalBalanceSource = "funded_book" | "modelled";
 export interface FundedCountryMarket {
   /** Units producers in the country offered. */
   supply: number;
-  /** Units buyers in the country requested (`requested`, else `demand`). */
+  /**
+   * First-choice units buyers in the country requested (`requested`, else
+   * `demand`), less household spillover.
+   */
   demand: number;
+  /** Household spillover units left out of `demand`; 0 when none was recorded. */
+  spilloverRequested: number;
   /** Units buyers in the country received; null on books written before fills were recorded. */
   filled: number | null;
   /** Part of `demand` the buyers' cash could pay for; null when not recorded. */
@@ -52,9 +61,12 @@ const optional = (value: number | null | undefined): number | null =>
   typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : null;
 
 export function fundedCountryMarket(row: FundedCountryBookRow): FundedCountryMarket {
+  const requested = nonNegative(row.requested ?? row.demand);
+  const spilloverRequested = Math.min(requested, nonNegative(row.spilloverRequested));
   return {
     supply: nonNegative(row.supply),
-    demand: nonNegative(row.requested ?? row.demand),
+    demand: requested - spilloverRequested,
+    spilloverRequested,
     filled: optional(row.filled),
     funded: optional(row.funded),
     imports: nonNegative(row.imports),
@@ -132,8 +144,9 @@ export function priceRowsTurn(prices: readonly { turn?: number }[]): number | nu
  * The reachable-book entries one commodity's funded country markets imply,
  * shaped like `fundedReachableBooks` builds them for the price phase, so the
  * map's Reachable lens shows the book prices were set from. Demand here is
- * `requested` like every other country view; the price phase reads `demand`,
- * which only differs when a reservation and its public fallback both ordered.
+ * first-choice `requested` like every other country view; the price phase
+ * reads `demand`, which also counts a reservation and its public fallback
+ * twice and includes household spillover.
  */
 export function fundedReachableBookEntries(
   markets: Readonly<Record<string, FundedCountryMarket>>

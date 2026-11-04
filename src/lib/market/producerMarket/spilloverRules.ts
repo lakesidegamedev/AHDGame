@@ -11,6 +11,8 @@
  * still spend no more than its own cash.
  *
  * Pure: orders, first-clearing outcomes and unsold supply in, new orders out.
+ * `extraUnits` names the units each order gained from spillover, so fill and
+ * shortage measures can tell substitution orders from first-choice demand.
  */
 import type { PurchaseOrder } from "./rules";
 
@@ -33,7 +35,7 @@ export function spilloverOrders(input: {
   unsoldUnits: ReadonlyMap<string, number>;
   laneKey: (commodity: string, book: string) => string;
   share: number;
-}): { orders: PurchaseOrder[]; stats: SpilloverStats } {
+}): { orders: PurchaseOrder[]; stats: SpilloverStats; extraUnits: Map<string, number> } {
   const share = Number.isFinite(input.share) ? Math.max(0, Math.min(1, input.share)) : 0;
   const wanted = (o: PurchaseOrder) =>
     Math.min(o.units * o.maximumUnitPrice, o.maximumSpend ?? Number.MAX_VALUE);
@@ -73,15 +75,18 @@ export function spilloverOrders(input: {
       requested += extra;
     }
   }
+  const extraUnits = new Map<string, number>();
   const orders = input.orders.map((o) => {
     const extra = extraById.get(o.id);
     if (!extra) return o;
     const spend = wanted(o) + extra;
+    const units = spend / o.maximumUnitPrice;
+    if (units > o.units) extraUnits.set(o.id, units - o.units);
     return {
       ...o,
-      units: spend / o.maximumUnitPrice,
+      units,
       maximumSpend: spend,
     };
   });
-  return { orders, stats: { strandedSpend: stranded, extraRequested: requested } };
+  return { orders, stats: { strandedSpend: stranded, extraRequested: requested }, extraUnits };
 }
