@@ -14,6 +14,8 @@ import {
   computeSectorConcentration,
 } from "@/lib/turn/npp/rules/sectorConcentration";
 import { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
+import { stateServiceHeadroomOn } from "@/lib/turn/npp/rules/stateServiceHeadroom";
+import { liftStateServiceHeadroom } from "@/lib/turn/npp/stateServiceHeadroomShell";
 import { strategyStateNeedsPersist } from "@/lib/turn/npp/rules/strategyCadence";
 export { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
 import {
@@ -463,6 +465,7 @@ export async function processNppCorporationDecisions(
         producerConversionPaceShare?: number;
         producerFundedRestartStage?: number;
         wholePlantsStage?: number;
+        nppStateServiceHeadroomStage?: number;
       }>("gameConfig")
       .findOne(
         { _id: "default" as never },
@@ -472,6 +475,7 @@ export async function processNppCorporationDecisions(
             producerConversionPaceShare: 1,
             producerFundedRestartStage: 1,
             wholePlantsStage: 1,
+            nppStateServiceHeadroomStage: 1,
           },
         }
       );
@@ -493,6 +497,11 @@ export async function processNppCorporationDecisions(
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
     if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;
+    // Local service pools that never refill: read their headroom from the
+    // state book instead (rules/stateServiceHeadroom). Off = no read, no lift.
+    if (stateServiceHeadroomOn(nppGameConfig?.nppStateServiceHeadroomStage)) {
+      await liftStateServiceHeadroom(db, unownedByCountry, placementSignals, plants.eraUnitScale);
+    }
   }
   const unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]> = [];
   // Capacity-decision observations, aggregated in memory and flushed once for
