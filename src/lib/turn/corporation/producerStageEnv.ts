@@ -55,6 +55,8 @@ export function producerStageEnv(
         producerClearingReferenceStage?: number;
         producerFundedBookStage?: number;
         producerNationalPublicDemandStage?: number;
+        producerPublicHomeFirstStage?: number;
+        producerPublicFairShareStage?: number;
         producerProcurementSpillStage?: number;
         producerProcurementSpillShare?: number;
         producerShortageGrowthStage?: number;
@@ -81,6 +83,8 @@ export function producerStageEnv(
     decommissionGrantShare: config?.decommissionGrantShare,
     fundedBookStage: config?.producerFundedBookStage,
     nationalPublicDemandStage: config?.producerNationalPublicDemandStage,
+    publicHomeFirstStage: config?.producerPublicHomeFirstStage,
+    publicFairShareStage: config?.producerPublicFairShareStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
     jointRunStage: config?.producerJointRunStage,
