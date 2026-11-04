@@ -574,6 +574,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
               treasuryCashLedgerEnabled: context.config?.treasuryCashLedgerEnabled,
               captureSovereignCashProceeds: captureV2SovereignCash,
               fiscalScaleStage: context.config?.fiscalScaleStage,
+              sovereignRolloverConsolidationEnabled:
+                context.config?.sovereignRolloverConsolidationEnabled,
             })
           ),
           runtime.runPhase("commodityPrices", () => processCommodityPriceTurn(newTurn)),

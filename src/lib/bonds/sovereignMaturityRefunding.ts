@@ -34,6 +34,11 @@ import {
   sovereignRefundingKey,
   type SovereignRefundingRefusal,
 } from "./rules/sovereignMaturityRefunding";
+import {
+  sovereignRolloverBondId,
+  sovereignRolloverBondShell,
+  type SovereignRolloverBondIdentity,
+} from "./sovereignRolloverBond";
 
 export interface SovereignMaturityRefundingInput {
   /** The maturing bond; its issuer identity is copied onto the refunding issue. */
@@ -61,6 +66,8 @@ export interface SovereignMaturityRefundingInput {
   followOn?: { legs: TransitionLeg[]; projections: TransitionProjection[] };
   turn: number;
   now: Date;
+  /** Add the issue to the issuer's shared rollover bond for the turn. */
+  consolidateReplacement?: boolean;
 }
 
 const SCOPE_COUNTER = {
@@ -77,9 +84,32 @@ export async function refundSovereignMaturityShortfall(
   input: SovereignMaturityRefundingInput
 ): Promise<SovereignMaturityRefundingResult> {
   const key = sovereignRefundingKey(input.claimId, input.scope, input.turn);
-  const bondId = primaryDocumentId(`${key}:0`);
+  const shared: SovereignRolloverBondIdentity | null =
+    input.consolidateReplacement === true &&
+    input.sourceBond.issuerName &&
+    input.sourceBond.corporationId &&
+    Number.isFinite(input.couponRate)
+      ? {
+          countryId: input.countryId as CountryId,
+          currencyCode: input.currencyCode,
+          issuerName: input.sourceBond.issuerName,
+          corporationId: input.sourceBond.corporationId,
+          couponRate: input.couponRate,
+          maturityTurns: FORCED_ROLLOVER_MATURITY,
+          issuedAtTurn: input.turn,
+        }
+      : null;
+  const bondId = shared ? sovereignRolloverBondId(shared) : primaryDocumentId(`${key}:0`);
   try {
     if (await primarySettlementExists(db, key)) {
+      if (shared) {
+        // The shared bond carries every refunding of the turn, so this sale's
+        // own face is the one its cash receipt recorded.
+        const receipt = await db
+          .collection<{ _id: ObjectId; meta?: { face?: number } }>("financialTxLog")
+          .findOne({ _id: primaryDocumentId(`${key}:receipt`) }, { projection: { meta: 1 } });
+        return { status: "replayed", key, bondId, faceLocal: receipt?.meta?.face ?? 0 };
+      }
       const issued = await db
         .collection<Bond>("bonds")
         .findOne({ _id: bondId }, { projection: { totalIssued: 1 } });
@@ -153,6 +183,39 @@ export async function refundSovereignMaturityShortfall(
     createdAt: input.now,
     updatedAt: input.now,
   };
+  if (shared) {
+    // The receipt's projection adds the units under the journal's replay
+    // guard; it can only target a document that exists, so the first sale
+    // of the turn creates the shared bond empty. Idempotent and safe under
+    // concurrent writers: an upsert on a fixed id with no amounts.
+    await db.collection<Bond>("bonds").updateOne(
+      { _id: bondId },
+      {
+        $setOnInsert: {
+          ...sovereignRolloverBondShell(shared, input.now),
+          totalIssued: 0,
+          publicFloat: 0,
+          requestedUnits: 0,
+        },
+      },
+      { upsert: true }
+    );
+  }
+  const issueProjection: TransitionProjection = shared
+    ? {
+        collection: "bonds",
+        filter: { _id: bondId },
+        update: {
+          $inc: { totalIssued: faceLocal, publicFloat: units, requestedUnits: units },
+          $set: { updatedAt: input.now },
+        },
+        note: "Refunding issue added to the issuer's shared rollover bond",
+      }
+    : {
+        collection: "bonds",
+        insert: refunding as unknown as Record<string, unknown>,
+        note: "Refunding issue for an unfunded sovereign maturity",
+      };
   try {
     await commitSovereignPrimary(
       db,
@@ -169,11 +232,7 @@ export async function refundSovereignMaturityShortfall(
         now: input.now,
       },
       [
-        {
-          collection: "bonds",
-          insert: refunding as unknown as Record<string, unknown>,
-          note: "Refunding issue for an unfunded sovereign maturity",
-        },
+        issueProjection,
         {
           collection: "bonds",
           filter: { _id: input.sourceBond._id, "sovereignMaturityClaim.id": input.claimId },
