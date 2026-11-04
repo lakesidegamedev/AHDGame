@@ -37,6 +37,7 @@ export function producerStageEnv(
   config:
     | ({
         producerDemandPlanStage?: number;
+        producerDemandCurveStage?: number;
         producerLowUseCostStage?: number;
         producerIdleRetireStage?: number;
         decommissionGrantShare?: number;
@@ -45,7 +46,6 @@ export function producerStageEnv(
         producerOwnSitesFirstStage?: number;
         producerPublicCarryStage?: number;
         producerPublicCarryShare?: number;
-        producerDemandCurveStage?: number;
         producerRunPaceDrop?: number;
         producerHouseholdIncomeFloor?: number;
         producerStockCover?: number;
@@ -73,6 +73,7 @@ export function producerStageEnv(
   const labourWage = labourWageParams(config);
   return {
     demandPlanStage: config?.producerDemandPlanStage,
+    demandCurve: (config?.producerDemandCurveStage ?? 0) >= 1,
     lowUseCostStage: config?.producerLowUseCostStage,
     idleRetireStage: config?.producerIdleRetireStage,
     decommissionGrantShare: config?.decommissionGrantShare,
@@ -100,7 +101,6 @@ export function producerStageEnv(
       (config?.producerPublicCarryStage ?? 0) >= 1
         ? (config?.producerPublicCarryShare ?? PUBLIC_CARRY_DEFAULT_SHARE)
         : 0,
-    demandCurve: (config?.producerDemandCurveStage ?? 0) >= 1,
     procurementSpillShare:
       (config?.producerProcurementSpillStage ?? 0) >= 1
         ? (config?.producerProcurementSpillShare ?? PROCUREMENT_SPILL_DEFAULT_SHARE)

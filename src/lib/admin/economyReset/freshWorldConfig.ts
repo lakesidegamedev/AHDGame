@@ -39,6 +39,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   // opening that moves the rebuilt economy onto the funded path.
   producerMarketLiveFromTurn: "",
   producerDemandPlanStage: "",
+  // Demand curve stage (#5451), switched on deliberately.
+  producerDemandCurveStage: "",
   producerSpilloverStage: "",
   producerOwnSitesFirstStage: "",
   producerSpilloverShare: "",
@@ -46,8 +48,6 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerPublicCarryShare: "",
   // Soft price ceiling stage (issue #5452), switched on deliberately.
   producerSoftPriceCeilingStage: "",
-  // Demand curve stage (#5451), switched on deliberately.
-  producerDemandCurveStage: "",
   producerRunPaceDrop: "",
   producerConversionPaceShare: "",
   producerHouseholdIncomeFloor: "",
