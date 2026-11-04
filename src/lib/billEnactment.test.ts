@@ -1,3 +1,5 @@
+import { getNationalDocId } from "@/lib/constants/nationalScope";
+import { taxSliderRateLabel } from "@/lib/politicalLegislation/taxSlider";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { onBillEnacted } from "./billEnactment";
@@ -5,6 +7,11 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { getCatalog } from "@/lib/politicalLegislation/catalog";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
 import type { Db } from "mongodb";
+
+vi.mock("@/lib/db/runRequiredTransaction", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/runRequiredTransaction")>()),
+  runRequiredTransaction: vi.fn(async (body) => body({})),
+}));
 
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
@@ -59,7 +66,7 @@ describe("onBillEnacted", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    db = createMockDb();
+    db = Object.assign(createMockDb(), { client: {} });
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
 
@@ -898,6 +905,86 @@ describe("onBillEnacted", () => {
     );
   });
 
+  it.each(["US", "UK", "JP", "IE", "SCO", "WAL"] as const)(
+    "routes %s corporate tax enactment and both ballots through the actual tax writer",
+    async (countryId) => {
+      const forId = new ObjectId().toString(),
+        againstId = new ObjectId().toString();
+      const definition = { scope: "federal" as const, taxType: "domesticCorporateTax" as const };
+      const legacy = countryId === "JP" || countryId === "IE";
+      const type = {
+        _id: "test-corporate-tax",
+        policyDomain: "tax",
+        // Older UK metadata may omit scope; the bill country remains authoritative.
+        ...(countryId === "UK" ? {} : { countryScope: countryId.toLowerCase() }),
+        ...(legacy
+          ? { taxRateChange: definition }
+          : {
+              taxSlider: {
+                ...definition,
+                minRate: 0,
+                maxRate: 100,
+                step: 1,
+                baselineRate: 30,
+                waypoints: [],
+              },
+            }),
+        policyOptions: legacy
+          ? [{ id: "cut", rate: 20, economic: 2, social: 0, effectDirection: -1 }]
+          : [],
+      };
+      setupCollection("legislationTypes", [type]);
+      setupCollection("gameState", [
+        { _id: "current", currentYear: 1991, resetWorldId: "test-world" },
+      ]);
+      db.collection("federalBudget").findOne.mockResolvedValue({
+        _id: countryId,
+        countryId,
+        taxRates: { incomeTax: 20, domesticCorporateTax: 30, foreignCorporateTax: 30 },
+        spending: { total: 100 },
+      });
+      const bill = createBill({
+        stateId: getNationalDocId(countryId),
+        countryId,
+        provisions: [
+          {
+            legislationTypeId: type._id,
+            policyOptionId: "rate:20",
+            proposedRate: 20,
+            policyOptionNameSnapshot: taxSliderRateLabel(20),
+            currentPolicyOptionNameSnapshot: taxSliderRateLabel(30),
+            effectDirection: -1,
+          } as any,
+        ],
+        votes: { [forId]: "for", [againstId]: "against" },
+      });
+      await onBillEnacted(db as unknown as Db, bill as any, 10);
+      const budgetWrite = db.collectionMocks.federalBudget!.updateOne.mock.calls[0]!;
+      expect(budgetWrite[1].$set.taxRates.domesticCorporateTax).toBe(29);
+      expect(budgetWrite[1].$set["taxRatePhaseIn.domesticCorporateTax"]).toBe(20);
+      expect(budgetWrite[2]).toMatchObject({ session: expect.anything() });
+      const reactions = db.collectionMocks.characters!.bulkWrite.mock.calls[0]![0];
+      expect(reactions).toHaveLength(2);
+      const dimension = countryId === "US" ? "wealth" : "income";
+      const delta = (operation: any) =>
+        operation.updateOne.update[0].$set[`archetypeApprovals.${dimension}:low`].$min[1].$max[1]
+          .$add[1];
+      expect(
+        delta(
+          reactions.find((operation: any) => operation.updateOne.filter._id.toString() === forId)
+        )
+      ).toBe(-1);
+      expect(
+        delta(
+          reactions.find(
+            (operation: any) => operation.updateOne.filter._id.toString() === againstId
+          )
+        )
+      ).toBe(1);
+      expect(calculateShiftImpacts).not.toHaveBeenCalled();
+    }
+  );
+
   describe("tax rate change enactment", () => {
     it("updates state budget taxRates and recalculates revenue for state-scope domestic corp tax bills", async () => {
       const { calculateStateRevenue } = await import("@/lib/budget/revenue");
@@ -1209,6 +1296,7 @@ describe("onBillEnacted", () => {
     it("enacting uk_foreign_corporation_tax writes foreignCorporateTax to UK national budget", async () => {
       const { calculateFederalRevenue } = await import("@/lib/budget/revenue");
       const bill = createBill({
+        stateId: "uk_national",
         provisions: [
           {
             legislationTypeId: "uk_foreign_corporation_tax",
@@ -1323,6 +1411,7 @@ describe("onBillEnacted", () => {
     it("enacting jp_foreign_corporation_tax writes foreignCorporateTax to JP national budget", async () => {
       const { calculateFederalRevenue } = await import("@/lib/budget/revenue");
       const bill = createBill({
+        stateId: "jp_national",
         provisions: [
           {
             legislationTypeId: "jp_foreign_corporation_tax",

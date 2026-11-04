@@ -1,4 +1,5 @@
 /** Transactional persistence shell for a server-authored v2 law bill. */
+import { applyV2VoterReactions, type V2BillBallots } from "./voterReactions";
 import type { Db, ObjectId } from "mongodb";
 import type { Bill, ResetLawProvision } from "@/lib/db/types/legislation";
 import type { StateBill } from "@/lib/db/types/stateBill";
@@ -23,7 +24,8 @@ function resetLawProvisions(bill: Pick<Bill | StateBill, "provisions">): ResetLa
 
 export async function applyResetLawBillEnactment(
   db: Db,
-  bill: Pick<Bill | StateBill, "_id" | "countryId" | "provisions"> & { stateId?: string },
+  bill: Pick<Bill | StateBill, "_id" | "countryId" | "provisions"> &
+    V2BillBallots & { stateId?: string },
   turn: number
 ): Promise<{ applied: boolean; programs: number }> {
   const frozen = resetLawProvisions(bill);
@@ -248,6 +250,14 @@ export async function applyResetLawBillEnactment(
     const programIds = frozen.map(
       (provision) => `${worldId}:${country}:national:${provision.familyId}`
     );
+    await applyV2VoterReactions(
+      db,
+      bill,
+      country,
+      frozen,
+      new Map(existingPrograms.map((program) => [program.familyId, program.choice])),
+      session
+    );
     await db.collection<ResetLawEnactmentReceipt>("resetLawEnactmentReceipts").insertOne(
       {
         _id: receiptId,
@@ -266,7 +276,7 @@ export async function applyResetLawBillEnactment(
 
 async function applyRegionalResetLawBillEnactment(
   db: Db,
-  bill: Pick<Bill | StateBill, "_id" | "countryId"> & { stateId?: string },
+  bill: Pick<Bill | StateBill, "_id" | "countryId"> & V2BillBallots & { stateId?: string },
   frozen: readonly ResetLawProvision[],
   turn: number
 ): Promise<{ applied: boolean; programs: number }> {
@@ -366,6 +376,14 @@ async function applyRegionalResetLawBillEnactment(
         .replaceOne({ _id: program._id, worldId }, program, { upsert: true, session });
       programIds.push(program._id);
     }
+    await applyV2VoterReactions(
+      db,
+      bill,
+      country,
+      frozen,
+      new Map(existingPrograms.map((program) => [program.familyId, program.choice])),
+      session
+    );
     await receipts.insertOne(
       {
         _id: receiptId,

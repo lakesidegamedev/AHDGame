@@ -1,3 +1,4 @@
+import { billVotePositions } from "@/lib/legislature/votePositions";
 /**
  * National bills display the active legislature and its current voting mandates.
  * listNationalLegislatureBills and getNationalBillDetail preserve concluded snapshots and identify the active deputy or president controls.
@@ -662,7 +663,7 @@ export async function listNationalLegislatureBills(
       canVoteOrigin,
       canVoteOther,
       voteShiftPreview: buildVoteShiftPreview({
-        provisions: (bill.provisions ?? []).filter(isPolicyProvision),
+        provisions: billVotePositions(bill.provisions ?? []),
         ledger: bill.policyShiftLedger,
         characterId: myCharacterId,
         policies: myPolicies,
@@ -1098,7 +1099,7 @@ export async function getNationalBillDetail(
   // Cabinet review votes never move positions, so no preview there.
   const previewChamberOpen = bill.status !== "cabinet_review";
   const voteShiftPreview = buildVoteShiftPreview({
-    provisions: (bill.provisions ?? []).filter(isPolicyProvision),
+    provisions: billVotePositions(bill.provisions ?? []),
     ledger: bill.policyShiftLedger,
     characterId: myCharacterId,
     policies: viewerPolicies,

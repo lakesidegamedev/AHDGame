@@ -39,6 +39,63 @@ describe("resolvePolicyProvision", () => {
     db = createMockDb();
   });
 
+  it.each(["US", "UK", "JP"] as const)(
+    "previews %s corporate tax with rate-based income reactions instead of legacy option signs",
+    async (countryId) => {
+      db.collection("federalBudget").findOne.mockResolvedValue({
+        taxRates: { domesticCorporateTax: 30 },
+      });
+      const out = await resolvePolicyProvision(db as unknown as Db, {
+        scope: { scope: "national", countryId },
+        lt: {
+          _id: "corp",
+          name: "Corporate tax",
+          policyDomain: "tax",
+          policyOptions: [],
+          taxRateChange: { scope: "federal", taxType: "domesticCorporateTax" },
+        } as never,
+        provision: {
+          legislationTypeId: "corp",
+          policyOptionId: "rate:20",
+          proposedRate: 20,
+          effectDirection: -1,
+        },
+        live: undefined,
+        legislationTypeName: "Corporate tax",
+        directionLabel: "Right",
+      });
+      const dimension = countryId === "US" ? "wealth" : "income";
+      expect(out.archetypeApprovals).toEqual({
+        [`${dimension}:low`]: -1,
+        [`${dimension}:middle`]: -0.8,
+        [`${dimension}:high`]: 1.2,
+      });
+      expect(out.policyDomain).toBeUndefined();
+    }
+  );
+
+  it("previews no corporate tax reward for a destination already scheduled", async () => {
+    db.collection("federalBudget").findOne.mockResolvedValue({
+      taxRates: { domesticCorporateTax: 29 },
+      taxRatePhaseIn: { domesticCorporateTax: 20 },
+    });
+    const out = await resolvePolicyProvision(db as unknown as Db, {
+      scope: { scope: "national", countryId: "UK" },
+      lt: {
+        _id: "corp",
+        policyDomain: "tax",
+        policyOptions: [],
+        taxRateChange: { scope: "federal", taxType: "domesticCorporateTax" },
+      } as never,
+      provision: { legislationTypeId: "corp", proposedRate: 20, effectDirection: -1 },
+      live: undefined,
+      legislationTypeName: "Corporate tax",
+      directionLabel: "Right",
+    });
+    expect(out.archetypeApprovals).toEqual({});
+    expect(out.policyDomain).toBeUndefined();
+  });
+
   it("emits structured proposed and current labels from snapshots", async () => {
     const out = await resolvePolicyProvision(db as unknown as Db, {
       scope: REGION,

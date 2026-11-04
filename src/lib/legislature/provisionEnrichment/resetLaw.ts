@@ -1,3 +1,4 @@
+import { v2EnactmentApproval } from "@/lib/resetLegislation/rules/voterReactions";
 /** Reset-law bill displays use the frozen proposal price, including retained claims. */
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { ResetLawProvision } from "@/lib/db/types/legislation";
@@ -40,5 +41,6 @@ export function resolveResetLawProvision(provision: ResetLawProvision): Provisio
       transitionCost: provision.reviewedOption.accruedTransitionLiability,
     },
     metricEffects,
+    archetypeApprovals: v2EnactmentApproval([provision], provision.reviewedOption.country),
   };
 }
