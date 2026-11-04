@@ -327,6 +327,12 @@ export function settleProducerMarket(input: {
   /** Build the per-country funded book from these orders and fills (see fundedBookRules). */
   trackCountryBooks?: boolean;
   /**
+   * Units of each order that came from household spillover (spilloverRules).
+   * Measurement only: tagged on the tracked country book as
+   * `spilloverRequested`, never read by the clearing.
+   */
+  spilloverUnitsByOrder?: ReadonlyMap<string, number>;
+  /**
    * Intra-turn credit per buyer, settled from its own sales before the turn
    * closes (salesAdvanceRules). A buyer may spend past its cash by this much,
    * so its closing cash can be negative; the caller settles it. Absent = none.
@@ -538,7 +544,8 @@ export function settleProducerMarket(input: {
     fundedDemandByCountry(
       input.orders.filter((o) => !(o.demandStep && o.demandStep > 0)),
       budgets,
-      countryBookRow
+      countryBookRow,
+      input.spilloverUnitsByOrder
     );
   // Shared budgets for spend groups: what every order in the group may still spend.
   const spendGroupLeft = new Map<string, number>();
@@ -1154,7 +1161,8 @@ const compareOrders = (a: PurchaseOrder, b: PurchaseOrder) =>
 function fundedDemandByCountry(
   orders: readonly PurchaseOrder[],
   openingBudgets: ReadonlyMap<string, number>,
-  row: (countryId: string, commodity: string) => FundedCountryBookRow
+  row: (countryId: string, commodity: string) => FundedCountryBookRow,
+  spilloverUnits?: ReadonlyMap<string, number>
 ): void {
   const budget = new Map(openingBudgets);
   const groupTarget = new Map<string, number>();
@@ -1171,8 +1179,11 @@ function fundedDemandByCountry(
     if (!order.countryId) continue;
     const book = row(order.countryId, order.commodity);
     const group = order.quantityGroup?.id;
-    if (group === undefined) book.requested = (book.requested ?? 0) + order.units;
-    else if (!groupCounted.has(group)) {
+    if (group === undefined) {
+      book.requested = (book.requested ?? 0) + order.units;
+      const spilled = Math.min(order.units, spilloverUnits?.get(order.id) ?? 0);
+      if (spilled > 0) book.spilloverRequested = (book.spilloverRequested ?? 0) + spilled;
+    } else if (!groupCounted.has(group)) {
       groupCounted.add(group);
       book.requested =
         (book.requested ?? 0) + Math.min(groupTarget.get(group)!, groupAsked.get(group)!);

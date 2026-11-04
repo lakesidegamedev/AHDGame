@@ -30,6 +30,8 @@ export interface CommodityMarketScope {
   demandBasis: "funded_orders" | "stored";
   /** Units the country's buyers received last turn; null when not recorded or not a funded view. */
   filled: number | null;
+  /** Household substitution orders left out of `demand`, units per day; 0 when none. */
+  spilloverRequested: number;
   /** Imports attributed to each state in scope (deficit-weighted); empty when unknown. */
   stateImports: Record<string, number>;
   regionCount: number;
@@ -141,6 +143,7 @@ export function buildCommodityMarketScope(
       balance: stateSupply - stateDemand,
       demandBasis: "stored",
       filled: null,
+      spilloverRequested: 0,
       imports: activeStateImports,
       stateImports: activeStateImports === null ? {} : { [activeState]: activeStateImports },
       regionCount: 1,
@@ -175,6 +178,7 @@ export function buildCommodityMarketScope(
       balance: data.globalSupply - data.globalDemand,
       demandBasis: "stored",
       filled: null,
+      spilloverRequested: 0,
       imports: null,
       stateImports: {},
       regionCount: Object.keys(stateCountryMap).length,
@@ -259,6 +263,7 @@ export function buildCommodityMarketScope(
     balance: supply - demand,
     demandBasis: funded !== undefined ? "funded_orders" : "stored",
     filled: funded?.filled ?? null,
+    spilloverRequested: funded?.spilloverRequested ?? 0,
     imports: countryImports(data, activeCountry),
     stateImports: allocateStateImports(data, activeCountry, Object.keys(countryStateCountryMap)),
     regionCount: Object.keys(countryStateCountryMap).length,

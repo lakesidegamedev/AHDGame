@@ -1003,6 +1003,9 @@ export async function runFundedProducerTurn(
           ...(row.requested != null ? { requested: row.requested * TURNS_PER_DAY } : {}),
           ...(row.funded != null ? { funded: row.funded * TURNS_PER_DAY } : {}),
           ...(row.filled != null ? { filled: row.filled * TURNS_PER_DAY } : {}),
+          ...(row.spilloverRequested != null
+            ? { spilloverRequested: row.spilloverRequested * TURNS_PER_DAY }
+            : {}),
         }))
       : undefined;
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)

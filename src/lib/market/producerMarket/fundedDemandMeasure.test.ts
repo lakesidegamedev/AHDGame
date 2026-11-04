@@ -169,3 +169,47 @@ describe("funded demand measurement (#5450)", () => {
     expect(result.countryBooks).toBeUndefined();
   });
 });
+
+describe("household spillover on the funded book", () => {
+  const input = {
+    turn: 1,
+    trackCountryBooks: true,
+    accounts: [
+      { id: "buyer", cash: 100 },
+      { id: "seller-US", cash: 0 },
+    ],
+    offers: [offer(30, 1)],
+    orders: [
+      {
+        id: "o1",
+        accountId: "buyer",
+        commodity: "food",
+        book: "world",
+        units: 50,
+        maximumUnitPrice: 2,
+        countryId: "US",
+      },
+    ],
+  };
+
+  it("tags spillover units on the row and changes nothing else", () => {
+    const plain = settleProducerMarket(input);
+    const tagged = settleProducerMarket({
+      ...input,
+      spilloverUnitsByOrder: new Map([["o1", 40]]),
+    });
+    expect(row(tagged, "US:food")).toMatchObject({ requested: 50, spilloverRequested: 40 });
+    const { spilloverRequested, ...rest } = row(tagged, "US:food")!;
+    expect(spilloverRequested).toBe(40);
+    expect(JSON.stringify({ ...tagged, countryBooks: [rest] })).toBe(JSON.stringify(plain));
+  });
+
+  it("never tags more than the order asked for, and omits the field without spillover", () => {
+    const capped = settleProducerMarket({
+      ...input,
+      spilloverUnitsByOrder: new Map([["o1", 80]]),
+    });
+    expect(row(capped, "US:food")!.spilloverRequested).toBe(50);
+    expect(row(settleProducerMarket(input), "US:food")).not.toHaveProperty("spilloverRequested");
+  });
+});

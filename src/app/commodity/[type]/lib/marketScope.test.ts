@@ -104,7 +104,15 @@ describe("buildCommodityMarketScope", () => {
       nationalDemand: { DE: 20, US: 1100 },
       nationalBalanceSource: "funded_book",
       fundedCountryBooks: {
-        DE: { supply: 200, demand: 600, filled: 180, funded: 500, imports: 0, exports: 20 },
+        DE: {
+          supply: 200,
+          demand: 600,
+          spilloverRequested: 25,
+          filled: 180,
+          funded: 500,
+          imports: 0,
+          exports: 20,
+        },
       },
     });
 
@@ -115,6 +123,7 @@ describe("buildCommodityMarketScope", () => {
     expect(scope.balance).toBe(-400);
     expect(scope.demandBasis).toBe("funded_orders");
     expect(scope.filled).toBe(180);
+    expect(scope.spilloverRequested).toBe(25);
     expect(scope.marketCaption).toBe(
       "Filtered to Germany. Supply and demand are last turn's market orders."
     );
