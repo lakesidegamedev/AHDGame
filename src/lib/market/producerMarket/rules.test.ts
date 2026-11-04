@@ -985,6 +985,45 @@ describe("country-tagged funded settlement", () => {
     expect(imports).toBe(8);
   });
 
+  it("counts a lower demand-curve step as demand only for what it bought (issue #5448)", () => {
+    const withSteps = {
+      ...base,
+      orders: [
+        ...base.orders,
+        // Below every ask: buys nothing, so it must not read as a shortage.
+        {
+          id: "order-us-step-low",
+          accountId: "buyer-us",
+          commodity: "gas",
+          book: "world",
+          units: 50,
+          maximumUnitPrice: 1,
+          countryId: "US",
+          demandStep: 2,
+        },
+        // At the low ask: buys what is left of the cheap offer.
+        {
+          id: "order-uk-step",
+          accountId: "buyer-uk",
+          commodity: "gas",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 2,
+          countryId: "UK",
+          demandStep: 1,
+        },
+      ],
+    };
+    const result = settleProducerMarket({ turn: 1, ...withSteps, trackCountryBooks: true });
+    const rows = new Map(
+      (result.countryBooks ?? []).map((r) => [`${r.countryId}:${r.commodity}`, r])
+    );
+    const ukStep = result.orders.find((o) => o.id === "order-uk-step")!;
+    expect(rows.get("US:gas")!.demand).toBe(6);
+    expect(rows.get("UK:gas")!.demand).toBeCloseTo(8 + ukStep.deliveredUnits, 9);
+    expect(result.orders.find((o) => o.id === "order-us-step-low")!.deliveredUnits).toBe(0);
+  });
+
   it("tags replay legs and fills with the seller and buyer country", () => {
     const result = settleProducerMarket({ turn: 1, ...base, trackCountryBooks: true });
     const ukFills = result.tradeReceipt.fills.filter((f) => f.orderId === "order-uk");
@@ -1221,5 +1260,110 @@ describe("automatic ask with sell-through memory", () => {
     });
     expect(noAnchor.unitPrice).toBe(0);
     expect(fullDiscount.unitPrice).toBe(0);
+  });
+});
+
+describe("spend groups share one budget (#5451)", () => {
+  it("never lets a ladder spend more than its group budget at mixed fill prices", () => {
+    const group = { id: "hh:food", maximumSpend: 100 };
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "hh", cash: 10_000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "cheap",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          unitPrice: 5,
+        },
+        {
+          id: "dear",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 50,
+          unitPrice: 10,
+        },
+      ],
+      orders: [
+        // Top step: 10 units at up to 10, its own budget 100.
+        {
+          id: "top",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 10,
+          maximumSpend: 100,
+          spendGroup: group,
+        },
+        // Lower step: 5 more units at up to 5.
+        {
+          id: "step",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 5,
+          maximumSpend: 25,
+          spendGroup: group,
+          demandStep: 1,
+        },
+      ],
+    });
+    const spent = result.orders.reduce((n, o) => n + o.cost, 0);
+    expect(spent).toBeLessThanOrEqual(100 + 1e-9);
+    // Without the shared group the two orders could spend 100 + 25.
+    const ungrouped = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "hh", cash: 10_000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "cheap",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          unitPrice: 5,
+        },
+        {
+          id: "dear",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 50,
+          unitPrice: 10,
+        },
+      ],
+      orders: [
+        {
+          id: "top",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 10,
+          maximumSpend: 100,
+        },
+        {
+          id: "step",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 5,
+          maximumSpend: 25,
+        },
+      ],
+    });
+    expect(ungrouped.orders.reduce((n, o) => n + o.cost, 0)).toBeGreaterThan(100);
   });
 });
