@@ -1242,6 +1242,8 @@ export function computeSectorMarginSection(args: {
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
 
+type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?: string };
+
 /**
  * Idle weights from a funded settlement receipt, or null when the sector has
  * none for the last turn (legacy worlds keep the throttle reading).
@@ -1250,11 +1252,13 @@ export function computeSectorMarginSection(args: {
  * one the player can act on (ticket 1728): the demand plan held its run below
  * capacity (demand, or ramping back up once it sells out), short inputs or
  * short cash cut what it made below that plan, and unsold output is demand.
+ * A sold-out plant whose run was cut is held by that input or by cash, not
+ * ramping up (ticket 1765): the plan is not what is keeping it down.
  */
 function fundedIdleWeights(
   receipt: CorporateSector["producerSettlement"] | null | undefined,
   currentTurn: number
-): { cause: PlantIdleCause["cause"]; w: number }[] | null {
+): IdleWeight[] | null {
   if (!receipt || !(receipt.turn >= currentTurn - 1)) return null;
   const active = receipt.activeUnits;
   if (!(Number.isFinite(active) && active > 0)) return null;
@@ -1268,12 +1272,32 @@ function fundedIdleWeights(
   const sellThrough = offered > 0 ? share((receipt.soldUnits + ownDelivered) / offered) : 1;
   const runShare = share(receipt.plannedRunShare ?? 1);
   const made = share(receipt.producedUnits / active);
-  const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
-  if (runShare < 1)
-    weights.push({ cause: sellThrough >= SOLD_OUT_FILL ? "ramping" : "demand", w: 1 - runShare });
+  const cutBy = receipt.runCutBy ?? [];
+  const heldInput =
+    cutBy.includes("inputs") && receipt.bindingInput
+      ? (COMMODITY_LABELS[receipt.bindingInput as CommodityType] ?? receipt.bindingInput)
+      : undefined;
+  const held = heldInput != null || cutBy.includes("cash");
+  const weights: IdleWeight[] = [];
+  if (runShare < 1) {
+    if (sellThrough < SOLD_OUT_FILL) weights.push({ cause: "demand", w: 1 - runShare });
+    else if (held)
+      weights.push({ cause: "held", w: 1 - runShare, ...(heldInput ? { heldInput } : {}) });
+    else weights.push({ cause: "ramping", w: 1 - runShare });
+  }
   const shortfall = Math.max(0, runShare - made);
   if (shortfall > 0)
-    weights.push({ cause: (receipt.operatingArrears ?? 0) > 0 ? "cash" : "inputs", w: shortfall });
+    weights.push({
+      cause:
+        cutBy.length > 0
+          ? cutBy.includes("inputs")
+            ? "inputs"
+            : "cash"
+          : (receipt.operatingArrears ?? 0) > 0
+            ? "cash"
+            : "inputs",
+      w: shortfall,
+    });
   return weights;
 }
 
@@ -1487,7 +1511,7 @@ export function buildSectorPlantsSection(args: {
       idleCauses.push({ cause: "bank", units: bankUnits, capacityShare: bankShare });
     }
     const idleShare = (idleUnits - coldUnits - bankUnits) / capacityUnits;
-    const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
+    const weights: IdleWeight[] = [];
     const funded = fundedIdleWeights(sector.producerSettlement, currentTurn);
     if (funded) {
       weights.push(...funded);
@@ -1527,11 +1551,11 @@ export function buildSectorPlantsSection(args: {
     const sumW = weights.reduce((s, x) => s + x.w, 0);
     const scale = sumW > 0 ? Math.min(1, idleShare / sumW) : 0;
     let attributed = coldUnits + bankUnits;
-    for (const { cause, w } of weights) {
+    for (const { cause, w, heldInput } of weights) {
       const units = w * scale * capacityUnits;
       if (units <= 0) continue;
       attributed += units;
-      idleCauses.push({ cause, units });
+      idleCauses.push({ cause, units, ...(heldInput ? { heldInput } : {}) });
     }
     const leftover = nonNeg(idleUnits - attributed);
     if (leftover > 0.0001) idleCauses.push({ cause: "other", units: leftover });

@@ -65,6 +65,11 @@ export interface PriorReceipt {
    * settled before it was recorded.
    */
   runCutBy?: readonly string[];
+  /**
+   * Consecutive glut turns before this receipt's turn, recorded on the plan
+   * when gameConfig.producerRunPlanStage >= 1. Absent on older receipts.
+   */
+  priorGlutTurns?: number;
 }
 
 /** One product row of a settled receipt, as the run signals read it. */
@@ -283,12 +288,168 @@ export function pacedRunShare(
   next: number,
   prior: PriorReceipt | null | undefined,
   drop: number,
-  floor: number = OUTPUT_RUN_FLOOR
+  floor: number = OUTPUT_RUN_FLOOR,
+  /** Pace from the planned run (producerRunPlanStage), so a cut run does not speed the fall. */
+  fromPlan = false
 ): number {
   if (!(drop > 0) || !prior) return next;
   const active = Number.isFinite(prior.activeUnits) ? prior.activeUnits : 0;
   if (!(active > 0)) return next;
   const produced = Number.isFinite(prior.producedUnits) ? prior.producedUnits : 0;
-  const prevRun = Math.max(floor, Math.min(1, produced / active));
+  const prevRun = fromPlan
+    ? planBaseRunShare(prior, floor)!
+    : Math.max(floor, Math.min(1, produced / active));
   return Math.min(1, Math.max(next, prevRun * (1 - Math.min(1, drop))));
+}
+
+/** Additive recovery step under the plan-recovery rule: a share of capacity a turn. */
+export const PLAN_RECOVERY_STEP = 0.15;
+/** Consecutive glut turns before the plan-recovery rule drops a plant to its floor. */
+export const GLUT_TURNS_TO_FLOOR = 2;
+
+function sellThroughOf(prior: PriorReceipt): { offered: number; sellThrough: number } {
+  const offered = Number.isFinite(prior.offeredUnits) ? prior.offeredUnits : 0;
+  const sold = Number.isFinite(prior.soldUnits) ? prior.soldUnits : 0;
+  return { offered, sellThrough: offered > 0 ? Math.min(1, sold / offered) : 0 };
+}
+
+/**
+ * Consecutive glut turns ending with this receipt's turn: the plan of the next
+ * turn records it, so the run rule can tell a one-turn glut from a lasting one.
+ */
+export function glutTurnsThrough(prior: PriorReceipt | null | undefined): number {
+  if (!prior) return 0;
+  const { offered, sellThrough } = sellThroughOf(prior);
+  if (!(offered > 0) || !(sellThrough < GLUT_SELL_THROUGH)) return 0;
+  const before = Number.isFinite(prior.priorGlutTurns) ? Math.max(0, prior.priorGlutTurns!) : 0;
+  return before + 1;
+}
+
+/**
+ * The run a plant steps from under the plan-recovery rule: the share it
+ * planned last turn, not only what it made. Short inputs or cash cut what a
+ * plant makes below its plan; starting from the cut output would lower the
+ * plan every turn a plant is a little short, while it sells everything. A
+ * receipt without a recorded plan falls back to what was made.
+ */
+export function planBaseRunShare(
+  prior: PriorReceipt | null | undefined,
+  floor: number = OUTPUT_RUN_FLOOR
+): number | null {
+  if (!prior) return null;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return null;
+  const run = Math.max(floor, Math.min(1, finite(prior.producedUnits) / active));
+  const planned = Math.min(1, finite(prior.plannedRunShare ?? 0));
+  return planned > 0 ? Math.max(floor, run, planned) : run;
+}
+
+/**
+ * Output follows price, recovering from the plan (gameConfig.producerRunPlanStage >= 1).
+ *
+ * The same signals as nextRunShare and demandPlanRunShare, read differently:
+ * - grow and cut from the planned run share (planBaseRunShare), so a run cut
+ *   by inputs or cash does not lower the next plan;
+ * - a plant that sold out at a profit grows by a fixed step of capacity a
+ *   turn (or faster with shortage growth), so a plant at the floor is back to
+ *   a full run in about seven turns instead of seventeen or more;
+ * - one glut turn steps the plan down; only a second glut turn in a row
+ *   drops it to the floor.
+ *
+ * Pure: last receipt in, run share for this turn out.
+ */
+function planRecoveryRunShareCore(
+  prior: PriorReceipt | null | undefined,
+  options: {
+    floor?: number;
+    /** Growth factor for a line that sold out at a profit (see shortageGrowthRules). */
+    soldOutGrowth?: number;
+    /** Partial sell-through plans from expected sales (producerDemandPlanStage >= 1). */
+    demandPlan?: boolean;
+  } = {}
+): number {
+  const floor = options.floor ?? OUTPUT_RUN_FLOOR;
+  if (!prior) return 1;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return 1;
+  // No output and no offer yet: no demand signal, run in full (see nextRunShare).
+  if (!(finite(prior.producedUnits) > 0) && !(finite(prior.offeredUnits) > 0)) return 1;
+  const base = planBaseRunShare(prior, floor)!;
+  const produced = finite(prior.producedUnits);
+  const sold = finite(prior.soldUnits);
+  const { offered, sellThrough } = sellThroughOf(prior);
+  const clamp = (x: number) => Math.max(floor, Math.min(1, x));
+  if (offered > 0 && sellThrough < GLUT_SELL_THROUGH)
+    return glutTurnsThrough(prior) >= GLUT_TURNS_TO_FLOOR
+      ? floor
+      : clamp(base * (1 - OUTPUT_CUT_STEP));
+  const runningCost =
+    finite(prior.inputsConsumed) +
+    finite(prior.labourPaid ?? 0) +
+    finite(prior.labourArrears ?? 0) +
+    finite(prior.otherOperatingPaid ?? 0) +
+    finite(prior.otherOperatingArrears ?? 0);
+  const contributionPerUnit =
+    sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
+  if (
+    marginalLoss({
+      sold,
+      produced,
+      sellThrough,
+      revenue: finite(prior.revenue),
+      inputsConsumed: finite(prior.inputsConsumed),
+      contributionPerUnit,
+    })
+  )
+    return clamp(base * (1 - OUTPUT_CUT_STEP));
+  if (sellThrough >= SOLD_OUT)
+    return clamp(
+      Math.max(base + PLAN_RECOVERY_STEP, base * (options.soldOutGrowth ?? 1 + OUTPUT_GROW_STEP))
+    );
+  if (options.demandPlan) {
+    // Partial sell-through: plan expected sales less held stock, as the demand
+    // plan does; a cut run reads demand at the run it planned.
+    const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
+    const heldStock = Math.max(0, offered - sold);
+    const cutSales =
+      (prior.runCutBy?.length ?? 0) > 0 && base * active > produced
+        ? base * active * sellThrough * (1 + DEMAND_PLAN_PROBE)
+        : 0;
+    return clamp((Math.max(expectedSales, cutSales) - heldStock) / active);
+  }
+  const target = base * sellThrough * (1 + OUTPUT_PROBE);
+  return clamp(
+    target < base
+      ? Math.max(target, base * (1 - OUTPUT_CUT_STEP))
+      : Math.min(target, base + PLAN_RECOVERY_STEP)
+  );
+}
+
+/**
+ * Owner invariant (2026-11-04): a plant never plans to make less than it sold
+ * last turn. Glut, loss and ratchet rules can only lower the plan down to that
+ * line. The one exception is a plant that has gone a second consecutive turn
+ * without selling (sell-through under GLUT_SELL_THROUGH): it may drop to the
+ * floor, and on the first such turn it already only steps down gradually.
+ */
+export function planRecoveryRunShare(
+  prior: PriorReceipt | null | undefined,
+  options: Parameters<typeof planRecoveryRunShareCore>[1] = {}
+): number {
+  const next = planRecoveryRunShareCore(prior, options);
+  if (!prior) return next;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return next;
+  const { offered, sellThrough } = sellThroughOf(prior);
+  if (
+    offered > 0 &&
+    sellThrough < GLUT_SELL_THROUGH &&
+    glutTurnsThrough(prior) >= GLUT_TURNS_TO_FLOOR
+  )
+    return next;
+  const soldShare = Math.min(1, finite(prior.soldUnits) / active);
+  return Math.max(next, soldShare);
 }
