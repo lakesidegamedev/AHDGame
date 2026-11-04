@@ -26,8 +26,32 @@ interface RunMeterProps {
   dimmed?: boolean;
 }
 
+type SegmentGroup = "made" | "stopped" | "unplanned";
+
+/**
+ * Legend groups. A slice either ran, was planned but stopped this turn (cash,
+ * inputs, workers: fixed by supplying what was missing), or was never planned
+ * (the plan sits below full: fixed by price, demand or time). Two labels that
+ * both said "cash" read as the same thing (ticket 1767); under their group they
+ * read as "stopped this turn" and "plan kept low after an earlier cut".
+ */
+const GROUP_OF: Record<string, SegmentGroup> = {
+  inputs: "stopped",
+  cash: "stopped",
+  staffing: "stopped",
+  strike: "stopped",
+  disaster: "stopped",
+  deposits: "stopped",
+};
+const GROUP_TITLE: Record<SegmentGroup, string> = {
+  made: "Made",
+  stopped: "Planned, but stopped this turn",
+  unplanned: "Not in the plan",
+};
+
 interface Segment {
   key: string;
+  group: SegmentGroup;
   label: string;
   units: number;
   fill: string;
@@ -70,6 +94,7 @@ export default function RunMeter({
   const segments: Segment[] = [
     {
       key: "sold",
+      group: "made",
       label: "Made and sold",
       units: sold,
       fill: TONE_FILL.sold,
@@ -77,6 +102,7 @@ export default function RunMeter({
     },
     {
       key: "own-sites",
+      group: "made",
       label: "Sent to your sites",
       units: ownSite,
       fill: "bg-sky-500",
@@ -84,6 +110,7 @@ export default function RunMeter({
     },
     {
       key: "unsold",
+      group: "made",
       label: "Made, not sold",
       units: unsold,
       fill: TONE_FILL.unsold,
@@ -103,6 +130,7 @@ export default function RunMeter({
           : causeMeta[c.cause];
       return {
         key: `idle-${c.cause}`,
+        group: GROUP_OF[c.cause] ?? "unplanned",
         label: meta.label,
         units: c.units,
         // Per cause, not per tone: the bar segment and the legend dot below
@@ -122,7 +150,11 @@ export default function RunMeter({
    * segment under a pixel wide. A slice earns a row when it rounds to at least
    * one unit or to at least one percent.
    */
-  const visible = segments.filter((s) => s.units >= 0.5 || share(s.units) >= 0.005);
+  const GROUP_ORDER: SegmentGroup[] = ["made", "stopped", "unplanned"];
+  // Bar and legend in the same group order, so a segment sits beside its heading.
+  const visible = segments
+    .filter((s) => s.units >= 0.5 || share(s.units) >= 0.005)
+    .sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
 
   /** Whole percent, except a real-but-tiny share reads "<1%" rather than "0%". */
   const shareLabel = (units: number) => {
@@ -153,30 +185,41 @@ export default function RunMeter({
           />
         ))}
       </div>
-      <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-        {visible.map((s) => (
-          <li key={s.key} className="flex items-center justify-between gap-2">
-            <InfoTooltip
-              width={260}
-              trigger={
-                <span className="flex min-w-0 items-center gap-2 text-body-sm">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${s.fill}`} aria-hidden />
-                  <span className="truncate border-b border-dotted border-muted/40 text-foreground">
-                    {s.label}
+      {GROUP_ORDER.map((group) => {
+        const rows = visible.filter((s) => s.group === group);
+        if (rows.length === 0) return null;
+        return (
+          <div key={group} className="mt-3">
+            <p className="mb-1 text-body-xs font-semibold uppercase tracking-wide text-muted">
+              {GROUP_TITLE[group]}
+            </p>
+            <ul className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+              {rows.map((s) => (
+                <li key={s.key} className="flex items-center justify-between gap-2">
+                  <InfoTooltip
+                    width={260}
+                    trigger={
+                      <span className="flex min-w-0 items-center gap-2 text-body-sm">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${s.fill}`} aria-hidden />
+                        <span className="truncate border-b border-dotted border-muted/40 text-foreground">
+                          {s.label}
+                        </span>
+                      </span>
+                    }
+                  >
+                    <p className="mb-1 font-semibold text-foreground">{s.label}</p>
+                    <p className="text-muted">{s.help}</p>
+                  </InfoTooltip>
+                  <span className="shrink-0 text-body-sm tabular-nums text-muted">
+                    <span className="font-semibold text-foreground">{fmtUnits(s.units)}</span>{" "}
+                    {shareLabel(s.units)}
                   </span>
-                </span>
-              }
-            >
-              <p className="mb-1 font-semibold text-foreground">{s.label}</p>
-              <p className="text-muted">{s.help}</p>
-            </InfoTooltip>
-            <span className="shrink-0 text-body-sm tabular-nums text-muted">
-              <span className="font-semibold text-foreground">{fmtUnits(s.units)}</span>{" "}
-              {shareLabel(s.units)}
-            </span>
-          </li>
-        ))}
-      </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }

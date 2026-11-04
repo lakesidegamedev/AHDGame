@@ -16,6 +16,7 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "losing"
     | "held"
     | "cash"
     | "strike"
@@ -75,6 +76,8 @@ export interface PlantBuildOrderView {
  * basis as `capitalStock` / `producedUnits`.
  */
 export interface SectorPlantsSection {
+  /** Why the plan sits where it does and what next turn brings (sectorRunReport). Funded worlds only. */
+  runReport?: import("./sectorRunReport").RunReport | null;
   /** Persisted whole facilities owned by this sector. */
   plantCount: number;
   /** The strategy the sector runs; with the lane it decides plant size. */

@@ -1068,8 +1068,8 @@
       "buyersElsewhereCountry": "Buyers for {good} are short in other countries, but your plants could not reach them from this market, and buyers here were already supplied. Capacity where the buyers are, or a route to them, would sell."
     },
     "runHold": {
-      "heldByInput": "Held by {input}",
-      "heldByCash": "Held by cash",
+      "heldByInput": "Kept low after {input} ran short",
+      "heldByCash": "Kept low after a cash cut",
       "heldByInputHelp": "You sold everything you made, but there was not enough {input} to run your {sites} at their plan. They are held below it, not ramping up. Output returns to the plan once {input} arrives.",
       "heldByCashHelp": "You sold everything you made, but your company could not pay for the whole run, so your {sites} are held below their plan, not ramping up. Add cash or cut costs to run the full plan."
     },

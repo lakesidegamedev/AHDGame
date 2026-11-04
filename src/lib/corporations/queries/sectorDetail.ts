@@ -149,6 +149,10 @@ import {
   computeTechGrowthCostReductionPct,
   buildSectorPlantsSection,
 } from "@/lib/corporations/queries/sectorDetailSections";
+import {
+  RUN_REPORT_STAGE_PROJECTION,
+  withRunReport,
+} from "@/lib/corporations/queries/sectorRunReport";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -222,6 +226,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           bankConstructionFinanceEnabled: 1,
           treasuryCashLedgerEnabled: 1,
           minimumWageLawStage: 1,
+          ...RUN_REPORT_STAGE_PROJECTION,
         },
       }
     );
@@ -1518,6 +1523,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           sectorType === "extraction" &&
           Object.values(thisSectorMultipliers).some((m) => typeof m === "number" && m < 0.999),
       });
+      withRunReport(plants, sector.producerSettlement, currentTurn, governorConfig);
     }
 
     if (
