@@ -50,6 +50,8 @@ import {
   pacedRunShare,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
+  planRecoveryRunShare,
+  glutTurnsThrough,
   OUTPUT_RUN_FLOOR,
   type PriorReceipt,
   type ReceiptLine,
@@ -147,6 +149,8 @@ export type ProducerPhysicalEnv = Pick<
   captiveDeliveryStage?: number;
   /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan; >= 2 on its marginal cost. */
   jointRunStage?: number;
+  /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
+  runPlanStage?: number;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
   /** Funded build speedup factor for short plants (gameConfig.producerShortageBuildFactor). */
@@ -465,21 +469,26 @@ export function prepareProducerPhysicalSector(input: {
     : null;
   const lastReceipt =
     liveLast && (env.captiveDeliveryStage ?? 0) >= 1 ? withCaptiveDeliveries(liveLast) : liveLast;
-  const planRun = (receipt: typeof lastReceipt) =>
-    (env.demandPlanStage ?? 0) >= 1
-      ? demandPlanRunShare(
-          receipt,
-          runFloor,
-          (env.shortageGrowthStage ?? 0) >= 1
-            ? shortageGrowth(
-                plantPressure(
-                  (receipt as { products?: Parameters<typeof plantPressure>[0] } | null)?.products,
-                  env.pressureByBook
-                )
-              )
-            : undefined
+  const runPlan = (env.runPlanStage ?? 0) >= 1;
+  const soldOutGrowth = (receipt: typeof lastReceipt) =>
+    (env.shortageGrowthStage ?? 0) >= 1
+      ? shortageGrowth(
+          plantPressure(
+            (receipt as { products?: Parameters<typeof plantPressure>[0] } | null)?.products,
+            env.pressureByBook
+          )
         )
-      : nextRunShare(receipt, runFloor);
+      : undefined;
+  const planRun = (receipt: typeof lastReceipt) =>
+    runPlan
+      ? planRecoveryRunShare(receipt, {
+          floor: runFloor,
+          soldOutGrowth: soldOutGrowth(receipt),
+          demandPlan: (env.demandPlanStage ?? 0) >= 1,
+        })
+      : (env.demandPlanStage ?? 0) >= 1
+        ? demandPlanRunShare(receipt, runFloor, soldOutGrowth(receipt))
+        : nextRunShare(receipt, runFloor);
   const summedRunShare = planRun(lastReceipt);
   // A multi-product plant runs at the highest line plan that pays, not at the plan its summed lines read.
   // Stage 2 weighs the run against its marginal cost: idle upkeep is owed at any run.
@@ -495,8 +504,15 @@ export function prepareProducerPhysicalSector(input: {
         )
       : summedRunShare;
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
-  const runShare = pacedRunShare(unpacedRunShare, lastReceipt, env.runPaceDrop ?? 0, runFloor);
-  if ((env.demandPlanStage ?? 0) >= 1) plan.plannedRunShare = runShare;
+  const runShare = pacedRunShare(
+    unpacedRunShare,
+    lastReceipt,
+    env.runPaceDrop ?? 0,
+    runFloor,
+    runPlan
+  );
+  if ((env.demandPlanStage ?? 0) >= 1 || runPlan) plan.plannedRunShare = runShare;
+  if (runPlan) plan.priorGlutTurns = glutTurnsThrough(lastReceipt);
   // Wages and site running costs follow the line the plant runs: idle lines
   // employ no one (their workers count as unemployed) and idle capacity pays
   // cold upkeep only.

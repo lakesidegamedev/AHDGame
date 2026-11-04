@@ -284,6 +284,14 @@ export interface GameConfig {
    */
   producerJointRunStage?: number;
   /**
+   * Funded producer market: >= 1 plans a plant's run from the share it planned
+   * last turn, not only what it made, so a run cut by short inputs or cash does
+   * not lower the next plan; a plant that sold out at a profit grows by a fixed
+   * step of capacity a turn; and only a second glut turn in a row drops a plant
+   * to its floor (one glut turn steps it down). 0 or absent = off.
+   */
+  producerRunPlanStage?: number;
+  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price

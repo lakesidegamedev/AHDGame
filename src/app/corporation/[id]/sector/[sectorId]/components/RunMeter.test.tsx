@@ -1,7 +1,17 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render as rtlRender } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import type { ReactElement } from "react";
+import messages from "../../../../../../../messages/en/corporations.json";
 import RunMeter from "./RunMeter";
+
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>
+  );
 
 afterEach(cleanup);
 
@@ -69,5 +79,22 @@ describe("run meter idle causes", () => {
     );
     expect(dots).toEqual(segments);
     expect(new Set(dots).size).toBe(dots.length);
+  });
+
+  it("names what holds a sold-out run instead of calling it ramping (ticket 1765)", () => {
+    const meter = (heldInput?: string) =>
+      render(
+        <RunMeter
+          capacityUnits={100}
+          producedUnits={40}
+          soldUnits={40}
+          idleCauses={[{ cause: "held", units: 60, ...(heldInput ? { heldInput } : {}) }]}
+          sectorType="extraction"
+        />
+      ).container.textContent;
+    expect(meter("Iron Ore")).toContain("Held by Iron Ore");
+    expect(meter("Iron Ore")).not.toContain("Ramping up");
+    cleanup();
+    expect(meter()).toContain("Held by cash");
   });
 });

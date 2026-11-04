@@ -163,6 +163,36 @@ describe("buildSectorPlantsSection", () => {
     expect(s.idleCauses.some((c) => c.cause === "demand")).toBe(false);
   });
 
+  it("says a sold-out run cut by an input is held by it, not ramping (ticket 1765)", () => {
+    const settled = (over: Record<string, unknown>) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          capitalStock: 1_000,
+          producedUnits: 300,
+          soldUnits: 300,
+          labourStaffingFactor: 1,
+          producerSettlement: {
+            turn: 100,
+            activeUnits: 100,
+            offeredUnits: 30,
+            producedUnits: 30,
+            soldUnits: 30,
+            plannedRunShare: 0.4,
+            ...over,
+          } as unknown as CorporateSector["producerSettlement"],
+        }),
+      }).idleCauses;
+    expect(settled({}).map((c) => c.cause)).toEqual(["ramping", "inputs"]);
+    const byInput = settled({ runCutBy: ["inputs"], bindingInput: "iron" });
+    expect(byInput.map((c) => c.cause)).toEqual(["held", "inputs"]);
+    expect(byInput[0]?.heldInput).toBe("Iron Ore");
+    const byCash = settled({ runCutBy: ["cash"] });
+    expect(byCash.map((c) => c.cause)).toEqual(["held", "cash"]);
+    expect(byCash[0]?.heldInput).toBeUndefined();
+  });
+
   it("falls back to the pre-migration visible facility count", () => {
     const s = buildSectorPlantsSection({ eraUnitScale: 1, ...BASE_ARGS, sector: sectorFixture() });
     expect(s.plantCount).toBe(8);

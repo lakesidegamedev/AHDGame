@@ -1064,6 +1064,12 @@
       "noBuyers": "Nobody bought {good} in your market last turn, at any price.",
       "buyersElsewhereState": "Buyers for {good} are short in other states, but services like this sell only to buyers in the state where they are produced, and buyers here were already supplied. Capacity in the short states would sell.",
       "buyersElsewhereCountry": "Buyers for {good} are short in other countries, but your plants could not reach them from this market, and buyers here were already supplied. Capacity where the buyers are, or a route to them, would sell."
+    },
+    "runHold": {
+      "heldByInput": "Held by {input}",
+      "heldByCash": "Held by cash",
+      "heldByInputHelp": "You sold everything you made, but there was not enough {input} to run your {sites} at their plan. They are held below it, not ramping up. Output returns to the plan once {input} arrives.",
+      "heldByCashHelp": "You sold everything you made, but your company could not pay for the whole run, so your {sites} are held below their plan, not ramping up. Add cash or cut costs to run the full plan."
     }
   }
 }
