@@ -617,6 +617,7 @@ export type PlantIdleCauseKey =
   | "inputs"
   | "demand"
   | "ramping"
+  | "losing"
   | "held"
   | "cash"
   | "strike"
@@ -661,6 +662,8 @@ export interface PlantBuildOrderView {
 }
 
 export interface PlantsData {
+  /** Why the plan sits where it does, what next turn brings, and per-unit money (funded worlds). */
+  runReport?: import("@/lib/corporations/queries/sectorRunReport").RunReport | null;
   /** Persisted whole facilities owned by this sector. */
   plantCount?: number;
   /** The strategy the sector runs; with the lane it decides plant size. */

@@ -132,6 +132,70 @@ function marginalLoss(input: {
   return !(input.revenue / input.sold > materialsPerUnit);
 }
 
+/**
+ * The signals the run rules read from a receipt, for a page that has to say
+ * why a plant runs where it does. Same arithmetic as the rules: sell-through,
+ * the per-unit contribution, and the marginal-loss test (`marginalLoss`). Pass
+ * the receipt the planner reads (after `withCaptiveDeliveries` when that stage
+ * is on), or own-site deliveries read as unsold.
+ */
+export interface RunSignals {
+  /** Made / active capacity, floored. */
+  run: number;
+  sellThrough: number;
+  soldOut: boolean;
+  /** Under the glut line: almost nothing sold. */
+  glut: boolean;
+  /** The loss brake fires: each unit sold paid less than it cost to make. */
+  losing: boolean;
+  /** Revenue per unit sold. Null when nothing sold. */
+  unitPrice: number | null;
+  /** Inputs consumed per unit made. Null when nothing was made. */
+  unitMaterials: number | null;
+  /** Wages per unit made. Null when nothing was made. */
+  unitWages: number | null;
+  /** Running site bill per unit made. Null when nothing was made. */
+  unitSite: number | null;
+}
+
+export function runSignals(
+  prior: PriorReceipt | null | undefined,
+  floor: number = OUTPUT_RUN_FLOOR
+): RunSignals | null {
+  if (!prior) return null;
+  const finite = (x: number | undefined) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return null;
+  const produced = finite(prior.producedUnits);
+  const offered = finite(prior.offeredUnits);
+  const sold = finite(prior.soldUnits);
+  const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
+  const labour = finite(prior.labourPaid) + finite(prior.labourArrears);
+  const site = finite(prior.otherOperatingPaid) + finite(prior.otherOperatingArrears);
+  const runningCost = finite(prior.inputsConsumed) + labour + site;
+  const contributionPerUnit =
+    sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
+  const made = Math.max(produced, sold);
+  return {
+    run: Math.max(floor, Math.min(1, produced / active)),
+    sellThrough,
+    soldOut: sellThrough >= SOLD_OUT,
+    glut: offered > 0 && sellThrough < GLUT_SELL_THROUGH,
+    losing: marginalLoss({
+      sold,
+      produced,
+      sellThrough,
+      revenue: finite(prior.revenue),
+      inputsConsumed: finite(prior.inputsConsumed),
+      contributionPerUnit,
+    }),
+    unitPrice: sold > 0 ? finite(prior.revenue) / sold : null,
+    unitMaterials: made > 0 ? finite(prior.inputsConsumed) / made : null,
+    unitWages: made > 0 ? labour / made : null,
+    unitSite: made > 0 ? site / made : null,
+  };
+}
+
 export function nextRunShare(
   prior: PriorReceipt | null | undefined,
   floor: number = OUTPUT_RUN_FLOOR
