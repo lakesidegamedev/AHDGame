@@ -40,7 +40,12 @@ import {
   internalTransferUnitPrice,
   type InternalTransferPricing,
 } from "./internalTransferPricingRules";
-import { deferredBillFraction, salesAdvanceAmount, salesFundedRunShare } from "./salesAdvanceRules";
+import {
+  deferredBillFraction,
+  expectedInputUnitPrice,
+  salesAdvanceAmount,
+  salesFundedRunShare,
+} from "./salesAdvanceRules";
 
 export interface PurchasedStock {
   commodity: string;
@@ -135,7 +140,11 @@ function idleUpkeep(p: ProductionPlan): number {
  * the share of this its free cash covers; the state operating advance sizes
  * itself from the same total so the two cannot drift.
  */
-export function producerRunBudget(plans: readonly ProductionPlan[]): {
+export function producerRunBudget(
+  plans: readonly ProductionPlan[],
+  /** Price per input unit; absent = the bid ceiling. */
+  inputUnitPrice?: (recipe: ProductionPlan["inputs"][number]) => number
+): {
   fixedBills: Map<string, number>;
   variableNeed: Map<string, number>;
 } {
@@ -149,7 +158,9 @@ export function producerRunBudget(plans: readonly ProductionPlan[]): {
       const stock = p.inputStock
         .filter((s) => s.commodity === recipe.commodity)
         .reduce((n, s) => n + s.units, 0);
-      spend += Math.max(0, full * recipe.unitsPerOutput - stock) * recipe.maximumUnitPrice;
+      spend +=
+        Math.max(0, full * recipe.unitsPerOutput - stock) *
+        (inputUnitPrice ? inputUnitPrice(recipe) : recipe.maximumUnitPrice);
     }
     fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + idle);
     variableNeed.set(
@@ -343,6 +354,12 @@ export function advanceProducerEconomy(input: {
   trackCountryBooks?: boolean;
   /** Private companies that may owe wages and site bills to keep running (producerCreditRules). */
   credit?: ProducerCreditPolicy;
+  /**
+   * Judge whether a run's sales pay for it with its inputs at last turn's
+   * clearing price (`clearingPriceByLane`), never above the bid ceiling,
+   * instead of at the ceiling (gameConfig.producerSalesAdvancePriceStage).
+   */
+  salesAdvanceAtClearing?: boolean;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -490,6 +507,17 @@ export function advanceProducerEconomy(input: {
   // of cash runs smaller instead of paying every wage with nothing left for
   // materials, and owes no wages or running costs for a run that never happened.
   const { fixedBills, variableNeed } = producerRunBudget(plans);
+  // The same run with inputs at what they are expected to cost, for the sales
+  // advance: a run that pays for itself at market prices is not held to its
+  // opening cash because the bid ceiling is several times the market.
+  const expectedNeed = input.salesAdvanceAtClearing
+    ? producerRunBudget(plans, (recipe) =>
+        expectedInputUnitPrice(
+          recipe.maximumUnitPrice,
+          input.clearingPriceByLane?.[laneKeyOf(recipe.commodity, recipe.book)]
+        )
+      ).variableNeed
+    : undefined;
   // A private company on the credit line may run past its cash: it buys the
   // inputs with cash and owes the wages and site bills it cannot cover, up to
   // its headroom (producerCreditRules). `inputReserve` is the cash kept back
@@ -534,10 +562,20 @@ export function advanceProducerEconomy(input: {
       // back by the cash the company happens to hold at the open.
       const salesFunded = Math.max(
         cashOnly,
-        salesFundedRunShare({ free, need, expectedRevenue: expectedRevenue.get(id) ?? 0 })
+        salesFundedRunShare({
+          free,
+          need,
+          expectedRevenue: expectedRevenue.get(id) ?? 0,
+          ...(expectedNeed ? { expectedNeed: expectedNeed.get(id) ?? need } : {}),
+        })
       );
       const advance = () => {
-        const amount = salesAdvanceAmount({ free, need, runShare: salesFunded });
+        const amount = salesAdvanceAmount({
+          free,
+          need,
+          runShare: salesFunded,
+          ...(expectedNeed ? { expectedRevenue: expectedRevenue.get(id) ?? 0 } : {}),
+        });
         if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && amount > 0)
           salesAdvance.set(id, amount);
         return [id, salesFunded] as const;

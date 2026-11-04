@@ -323,6 +323,22 @@ export interface GameConfig {
    */
   producerRunPlanStage?: number;
   /**
+   * Funded producer market: >= 1 judges whether a cash-short company's run
+   * pays for itself (the sales advance) with its inputs at last turn's
+   * clearing price, never above the bid ceiling, instead of at the ceiling.
+   * At the ceiling a run whose sales clearly cover it read as losing money,
+   * so a company that spent its cash on construction stayed held to that cash
+   * turn after turn. The advance stays capped by the run's expected revenue.
+   * 0 or absent = off.
+   */
+  producerSalesAdvancePriceStage?: number;
+  /**
+   * Capacity builds paid from cash must leave this many turns of the plants'
+   * running bills (wages, site bills, inputs from their last receipts) unless
+   * the CEO confirms an override (suggestion 409). Absent = 3, 0 = off.
+   */
+  capacityBuildReserveTurns?: number;
+  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price

@@ -49,6 +49,8 @@ interface BuildCapacityDialogProps {
   errorMessage: string;
   onWithdrawFinancing?: (claimId: string) => void;
   onSubmit: (units: number, financing?: ConstructionFinanceRequest) => void;
+  /** Set when the last build was refused for the operating reserve: confirms it past the reserve. */
+  onOverrideReserve?: () => void;
 }
 
 /** Nobody builds this many at once; the cap only stops a stray paste locking the dialog. */
@@ -97,6 +99,7 @@ export default function BuildCapacityDialog({
   submitting,
   errorMessage,
   onSubmit,
+  onOverrideReserve,
   onWithdrawFinancing,
 }: BuildCapacityDialogProps) {
   const t = useTranslations("corporations.sectorInvestment");
@@ -674,6 +677,19 @@ export default function BuildCapacityDialog({
           <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
             {errorMessage}
           </p>
+        )}
+        {errorMessage && onOverrideReserve && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
+            <p className="text-body-sm text-foreground">{t("reserveOverrideHelp")}</p>
+            <Button
+              variant="secondary"
+              onClick={onOverrideReserve}
+              disabled={submitting}
+              isLoading={submitting}
+            >
+              {t("buildPastReserve")}
+            </Button>
+          </div>
         )}
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-card-border bg-card px-5 py-4">

@@ -51,6 +51,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerCaptiveDeliveryStage: 1,
   producerJointRunStage: 1,
   producerRunPlanStage: 1,
+  producerSalesAdvancePriceStage: 1,
   producerFundedRestartStage: 1,
   producerIdleRetireStage: 1,
   wholePlantsStage: 1,

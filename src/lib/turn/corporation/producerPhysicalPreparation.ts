@@ -159,6 +159,8 @@ export type ProducerPhysicalEnv = Pick<
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
   runPlanStage?: number;
+  /** gameConfig.producerSalesAdvancePriceStage >= 1: the sales advance judges a run on its inputs' clearing prices. */
+  salesAdvanceAtClearing?: boolean;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
   /** Funded build speedup factor for short plants (gameConfig.producerShortageBuildFactor). */

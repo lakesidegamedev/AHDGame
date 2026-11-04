@@ -35,6 +35,7 @@ import {
   selectBulkBuildSectors,
   type BulkBuildQuoteRow,
 } from "@/lib/corporations/rules/bulkBuildCapacity";
+import { operatingReserveSkipReason } from "@/lib/corporations/rules/operatingReserve";
 import { placeCapacityBuild } from "./buildCapacity";
 
 interface RouteParams {
@@ -67,6 +68,8 @@ const bulkBuildCapacitySchema = z.object({
    * the confirmed figure.
    */
   maxTotalLocal: z.number().finite().positive().optional(),
+  /** The CEO confirmed building past the operating reserve (operatingReserve.ts). */
+  overrideOperatingReserve: z.boolean().optional(),
 });
 
 export type BulkBuildRowResult = {
@@ -205,8 +208,12 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     });
 
     // ─── preview: price every sector through the single-sector quote ─────────
+    const override = body.overrideOperatingReserve === true;
     if (body.mode === "preview") {
       const quotes: BulkBuildQuoteRow[] = [];
+      // The reserve is the company's, so every quote carries the same one.
+      let reserveLocal = 0;
+      let reserveTurns = 0;
       for (const [i, { sector }] of ordered.entries()) {
         const row = rows[i];
         const reason = quoteBlockedReason(sector);
@@ -236,8 +243,16 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
             blockedReason: null,
           });
         }
+        const quotedReserve = quote.ok ? quote.body.operatingReserveLocal : undefined;
+        if (quote.ok && typeof quotedReserve === "number") {
+          reserveLocal = quotedReserve;
+          reserveTurns = Number(quote.body.reserveTurns) || 0;
+        }
       }
-      const plan = planBulkBuild(quotes, corporation.liquidCapital);
+      const keep = override ? 0 : reserveLocal;
+      const plan = planBulkBuild(quotes, corporation.liquidCapital - keep);
+      // Rows the cash alone would cover are held back by the reserve, not the cash.
+      const cashOnly = keep > 0 ? planBulkBuild(quotes, corporation.liquidCapital) : plan;
       plan.rows.forEach((p, i) => {
         rows[i].costLocal = Math.round(p.costLocal);
         rows[i].status = p.status;
@@ -245,7 +260,9 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
           p.status === "blocked"
             ? p.blockedReason
             : p.status === "over_budget"
-              ? OVER_BUDGET_REASON
+              ? cashOnly.rows[i].status === "ready"
+                ? operatingReserveSkipReason(reserveTurns)
+                : OVER_BUDGET_REASON
               : null;
       });
       return NextResponse.json({
@@ -256,7 +273,10 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
         readyCount: plan.readyCount,
         // Rounded UP: it becomes the confirmed spending cap, which identical prices must fit.
         readyCostLocal: Math.ceil(plan.readyCostLocal),
-        cashAfterLocal: Math.round(plan.cashAfterLocal),
+        cashAfterLocal: Math.round(plan.cashAfterLocal + keep),
+        operatingReserveLocal: reserveLocal,
+        reserveTurns,
+        reserveHeldBack: cashOnly.readyCount > plan.readyCount,
         maxSectors: BULK_BUILD_MAX_SECTORS,
         rows,
       });
@@ -300,6 +320,17 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
       }
       const quotedLocal = Number(quote.body.totalCostLocal) || 0;
       row.costLocal = Math.round(quotedLocal);
+      if (
+        !override &&
+        quote.body.belowOperatingReserve === true &&
+        quotedLocal <= corporation.liquidCapital &&
+        spentLocal + quotedLocal <= budget
+      ) {
+        stopped = true;
+        row.status = "skipped";
+        row.reason = operatingReserveSkipReason(Number(quote.body.reserveTurns) || 0);
+        continue;
+      }
       if (quotedLocal > corporation.liquidCapital || spentLocal + quotedLocal > budget) {
         stopped = true;
         row.status = "skipped";
@@ -315,6 +346,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
         sector,
         userId: auth.user.userId,
         units: row.units,
+        ...(override ? { overrideOperatingReserve: true } : {}),
       });
       if (placed.ok) {
         row.status = "built";
@@ -329,6 +361,10 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
       if (placed.code === "insufficient_cash") {
         stopped = true;
         row.reason = OVER_BUDGET_REASON;
+      }
+      if (placed.code === "operating_reserve") {
+        stopped = true;
+        row.reason = operatingReserveSkipReason(placed.reserve?.reserveTurns ?? 0);
       }
     }
 
