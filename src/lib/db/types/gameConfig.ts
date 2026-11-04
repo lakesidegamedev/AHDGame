@@ -344,6 +344,17 @@ export interface GameConfig {
    */
   producerZombieRestartStage?: number;
   /**
+   * Funded producer market: >= 1 lets an automatic seller that sold out last
+   * turn, in a lane where buyers asked for more than they got, ask a step above
+   * last turn's clearing price instead of at it (shortageAskRules). The step is
+   * 0.25 x (requested / delivered - 1), capped by producerShortageAskMaxStep,
+   * and the ask never passes reference x producerPriceMaxMultiplier. 0 or
+   * absent = off.
+   */
+  producerShortageAskStage?: number;
+  /** Largest raise in one turn under producerShortageAskStage. Absent = 0.05. */
+  producerShortageAskMaxStep?: number;
+  /**
    * Capacity builds paid from cash must leave this many turns of the plants'
    * running bills (wages, site bills, inputs from their last receipts) unless
    * the CEO confirms an override (suggestion 409). Absent = 3, 0 = off.

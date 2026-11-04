@@ -800,6 +800,19 @@ export async function runFundedProducerTurn(
       stockCoverTurns: input.env.stockCoverTurns,
       ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
       ...(input.env.restartProbes ? { restartProbes: true } : {}),
+      ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
+        ? {
+            shortageAsk: {
+              pressureByLane: lastOutcome.bookPressure,
+              ...(input.env.shortageAskMaxStep != null
+                ? { maxStep: input.env.shortageAskMaxStep }
+                : {}),
+              ...(input.env.priceMaxMultiplier != null
+                ? { maxMultiplier: input.env.priceMaxMultiplier }
+                : {}),
+            },
+          }
+        : {}),
       ...(lastOutcome?.laneClearingPrices
         ? { clearingPriceByLane: lastOutcome.laneClearingPrices }
         : {}),
