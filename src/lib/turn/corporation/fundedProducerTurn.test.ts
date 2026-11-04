@@ -349,3 +349,44 @@ describe("funded producer turn after a missed economy step", () => {
     await expect(readProducerOpeningTurn(db, "world", 875)).rejects.toThrow("more than 6 turns");
   });
 });
+
+describe("fundedReceiptOf", () => {
+  it("carries priced own-site charges and income into the sector accounts", async () => {
+    const { fundedSectorOpsAll } = await import("@/lib/market/producerMarket/fundedSectorRules");
+    const { fundedReceiptOf } = await import("./fundedProducerTurn");
+    const receipt = fundedReceiptOf(
+      {
+        revenue: 10,
+        profit: 4,
+        producedUnits: 5,
+        soldUnits: 5,
+        internalSupplyIncome: 7,
+        internalSupplyCharge: 3,
+      },
+      0
+    );
+    expect(receipt).toMatchObject({ internalSupplyIncome: 7, internalSupplyCharge: 3 });
+    const id = "s1";
+    const [op] = fundedSectorOpsAll(
+      [{ updateOne: { filter: { _id: id }, update: { $set: { name: "x" } } } }] as never,
+      new Map([
+        [
+          id,
+          {
+            receipt,
+            result: { hourlyRevenue: 10, costs: 6, effectiveMargin: 0 } as never,
+            daily: (n) => n,
+          },
+        ],
+      ]),
+      1
+    );
+    const pnl = (op.updateOne.update as { $set: { plantsPnl: Record<string, number> } }).$set
+      .plantsPnl;
+    expect(pnl.internalSupplyCharge).toBe(3);
+    expect(pnl.internalSupplyIncome).toBe(7);
+    expect(
+      fundedReceiptOf({ revenue: 1, profit: 1, producedUnits: 1, soldUnits: 1 }, 0)
+    ).not.toHaveProperty("internalSupplyCharge");
+  });
+});
