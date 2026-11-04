@@ -268,6 +268,22 @@ export interface GameConfig {
    */
   producerNationalPublicDemandStage?: number;
   /**
+   * Funded producer market: >= 1 lets each public buyer's world-book order
+   * clear sellers in its own country before the ordinary book pass. Before, a
+   * scarce world book went to buyers in order-id order, which for public
+   * buyers is their country code, so foreign governments bought out a
+   * country's own ordnance before its order came up. Needs country tags
+   * (producerFundedBookStage). 0 or absent = off.
+   */
+  producerPublicHomeFirstStage?: number;
+  /**
+   * Funded producer market: >= 1 clears each price level of the world book
+   * across public buyers together, pro rata to what each still wants, after
+   * any home-first pass. Before, the leftover went to governments in order-id
+   * order, which is alphabetical by country code. 0 or absent = off.
+   */
+  producerPublicFairShareStage?: number;
+  /**
    * Funded producer market: >= 1 pays a share of the public funding left after
    * the line carry, transition support and grants to the same country's
    * households (weighted by wages) instead of burning it at close. Nothing is
