@@ -1,3 +1,4 @@
+import { corporateTaxApprovalPreview } from "./corporateTaxApprovalPreview";
 import type { Db } from "mongodb";
 import type { LegislationType } from "@/lib/db/types";
 import { computeProvisionEffectChips } from "@/lib/legislature/provisionEffects";
@@ -85,6 +86,12 @@ export async function resolvePolicyProvision(
   });
 
   const proposedOption = proposed.index !== undefined ? options[proposed.index] : undefined;
+  const approvalPreview = await corporateTaxApprovalPreview(
+    db,
+    scope,
+    lt,
+    provision.proposedRate ?? proposedOption?.rate
+  );
 
   return {
     legislationTypeId: provision.legislationTypeId,
@@ -108,7 +115,13 @@ export async function resolvePolicyProvision(
         ? { archetypeApprovals: proposedOption.groupApprovals }
         : {}),
     ...(proposedOption?.groupApprovals ? { groupApprovals: proposedOption.groupApprovals } : {}),
-    ...(lt?.policyDomain ? { policyDomain: lt.policyDomain } : {}),
+    // Explicit rate-based approvals must not be recomputed by the client's
+    // legacy option-index indicator. It renders these shared-rule values instead.
+    ...(approvalPreview !== undefined
+      ? { archetypeApprovals: approvalPreview }
+      : lt?.policyDomain
+        ? { policyDomain: lt.policyDomain }
+        : {}),
     ...(options.length
       ? { policyOptionScores: options.map((o) => (o.economic ?? 0) + (o.social ?? 0)) }
       : {}),

@@ -1,3 +1,5 @@
+import { applyV2BillVotePolicyShift } from "@/lib/legislature/v2VotePolicyShift";
+import { billVotePositions } from "@/lib/legislature/votePositions";
 import { northernIrelandAssemblyAllows } from "@/lib/countries/uk/northernIreland/service";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
@@ -142,24 +144,35 @@ export async function castStateBillVote(
 
   const previousVote = bill.votes?.[charId];
   const ledgerEntry = bill.policyShiftLedger?.[charId];
-  if (shouldApplyVoteShift(previousVote, ledgerEntry)) {
+  if (
+    bill.provisions?.some((p) => p.type === "reset_law") ||
+    shouldApplyVoteShift(previousVote, ledgerEntry)
+  ) {
     try {
-      await applyBillVotePolicyShift(db, {
+      const applyShift = bill.provisions?.some((p) => p.type === "reset_law")
+        ? (input: Parameters<typeof applyBillVotePolicyShift>[1]) =>
+            applyV2BillVotePolicyShift(db, input, "votes")
+        : (input: Parameters<typeof applyBillVotePolicyShift>[1]) =>
+            applyBillVotePolicyShift(db, input);
+      await applyShift({
         collection: "stateBills",
         billId: bill._id,
         characterId: character._id,
-        provisions: (bill.provisions ?? []).filter(
-          (provision) =>
-            provision.type !== "subsidy" &&
-            provision.type !== "end_subsidy" &&
-            provision.type !== "reset_law"
-        ),
+        provisions: billVotePositions(bill.provisions ?? []),
         vote,
         currentPolicies: character.policies,
         ledgerEntry,
       });
     } catch (error) {
       console.warn("[policyShift] Failed to apply policy shift from state vote:", error);
+      if (bill.provisions?.some((p) => p.type === "reset_law"))
+        return {
+          status: 503,
+          body: {
+            error:
+              "Your vote was recorded, but its policy position update is pending. Please retry your vote.",
+          },
+        };
     }
   }
 
@@ -255,6 +268,34 @@ export async function castStateBillOverrideVote(
       status: 409,
       body: { error: "This bill changed before your override vote could be recorded" },
     };
+  }
+
+  if (bill.provisions?.some((p) => p.type === "reset_law")) {
+    try {
+      await applyV2BillVotePolicyShift(
+        db,
+        {
+          collection: "stateBills",
+          billId: bill._id,
+          characterId: character._id,
+          provisions: billVotePositions(bill.provisions),
+          vote,
+          currentPolicies: character.policies,
+          ledgerEntry: bill.policyShiftLedger?.[charId],
+        },
+        "overrideVotes"
+      );
+    } catch (error) {
+      console.warn("[policyShift] Failed to apply policy shift from override vote:", error);
+      if (bill.provisions?.some((p) => p.type === "reset_law"))
+        return {
+          status: 503,
+          body: {
+            error:
+              "Your vote was recorded, but its policy position update is pending. Please retry your vote.",
+          },
+        };
+    }
   }
 
   return { status: 200, body: { success: true, vote, seatsHeld } };

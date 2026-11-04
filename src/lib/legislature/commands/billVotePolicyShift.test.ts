@@ -1,3 +1,4 @@
+import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 /**
  * Vote → ideology shift wiring.
  *
@@ -8,12 +9,16 @@
  * write that the profile compass reads back.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getCountryConfig } from "@/lib/constants/countries";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { AuthUser, AuthUserWithCharacter } from "@/lib/auth";
 import type { Bill, Character, StateBill } from "@/lib/db/types";
 
+vi.mock("@/lib/db/runRequiredTransaction", () => ({
+  runRequiredTransaction: vi.fn(async (body) => body({})),
+}));
 vi.mock("@/lib/gameState", () => ({
   getGameState: vi.fn().mockResolvedValue({ currentTurn: 5 }),
 }));
@@ -114,6 +119,101 @@ describe("national bill vote → policy shift", () => {
       ...overrides,
     } as Bill;
   }
+
+  it.each(["US", "UK", "JP"] as const)(
+    "routes a %s v2 personal vote through the real shift helper",
+    async (countryId) => {
+      const character = makeCharacter({ economic: 1, social: 0 });
+      const chamber = getCountryConfig(countryId).legislature.lowerChamber.key;
+      const bill = usBill({
+        countryId,
+        originChamber: chamber,
+        currentChamber: chamber,
+        provisions: [
+          { type: "reset_law", familyId: "L01", choice: "center" },
+        ] as Bill["provisions"],
+      });
+      db.collection("electedOfficials").findOne.mockResolvedValue({
+        officeType:
+          countryId === "UK" ? "commons" : countryId === "JP" ? "houseOfRepresentatives" : "house",
+        characterId,
+        countryId,
+        seatsHeld: 1,
+      });
+      db.collection("bills").findOne.mockResolvedValue({
+        ...bill,
+        votes: { [characterId.toString()]: "for" },
+      });
+      db.collection("characters").findOne.mockResolvedValue(character);
+      const result = await performNationalBillAction(db as unknown as Db, {
+        authUser,
+        character,
+        bill,
+        countryId,
+        input: { action: "vote", vote: "for" },
+      });
+      expect(result.status).toBe(200);
+      expect(characterShift(db)).toMatchObject({ "policies.economic": 0.75, "policies.social": 0 });
+    }
+  );
+
+  it("reports an interrupted update and allows the recorded vote to recover on retry", async () => {
+    const character = makeCharacter({ economic: 1, social: 0 });
+    const bill = usBill({
+      provisions: [{ type: "reset_law", familyId: "L01", choice: "center" }] as Bill["provisions"],
+    });
+    db.collection("bills").findOne.mockResolvedValue({
+      ...bill,
+      votes: { [characterId.toString()]: "for" },
+    });
+    db.collection("characters").findOne.mockResolvedValue(character);
+    vi.mocked(runRequiredTransaction).mockRejectedValueOnce(
+      new Error("temporary transaction failure")
+    );
+    const request = {
+      authUser,
+      character,
+      bill,
+      countryId: "US" as const,
+      input: { action: "vote" as const, vote: "for" as const },
+    };
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const failed = await performNationalBillAction(db as unknown as Db, request);
+      expect(failed.status).toBe(503);
+      expect(failed.body).toMatchObject({ error: expect.stringContaining("vote was recorded") });
+      const retried = await performNationalBillAction(db as unknown as Db, {
+        ...request,
+        bill: { ...bill, votes: { [characterId.toString()]: "for" } },
+      });
+      expect(retried.status).toBe(200);
+      expect(characterShift(db)).toMatchObject({ "policies.economic": 0.75 });
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
+  it("applies a v2 override using the same per-bill ledger", async () => {
+    const character = makeCharacter({ economic: 1, social: 0 });
+    const bill = usBill({
+      status: "veto_override",
+      provisions: [{ type: "reset_law", familyId: "L01", choice: "center" }] as Bill["provisions"],
+    });
+    db.collection("bills").findOne.mockResolvedValue({
+      ...bill,
+      vetoOverrideVotes: { [characterId.toString()]: "for" },
+    });
+    db.collection("characters").findOne.mockResolvedValue(character);
+    const result = await performNationalBillAction(db as unknown as Db, {
+      authUser,
+      character,
+      bill,
+      countryId: "US",
+      input: { action: "veto_override_vote", vote: "for" },
+    });
+    expect(result.status).toBe(200);
+    expect(characterShift(db)).toMatchObject({ "policies.economic": 0.75 });
+  });
 
   it("an Aye moves both axes one 0.25 step toward the bill", async () => {
     const result = await performNationalBillAction(db as unknown as Db, {
@@ -380,6 +480,34 @@ describe("state bill vote → policy shift", () => {
     db.collection("gameState").findOne.mockResolvedValue({ _id: "current", currentTurn: 5 });
     db.collection("stateBills").updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
   });
+
+  it.each(["US", "UK", "JP"] as const)(
+    "routes a %s regional v2 vote through the real helper",
+    async (countryId) => {
+      const bill = txBill({
+        countryId,
+        provisions: [
+          { type: "reset_law", familyId: "L01", choice: "far_left" },
+        ] as StateBill["provisions"],
+        votes: { [characterId.toString()]: "for" },
+      });
+      db.collection("stateBills").findOne.mockResolvedValue(bill);
+      db.collection("characters").findOne.mockResolvedValue(user.character);
+      const result = await castStateBillVote(
+        db as unknown as Db,
+        countryId,
+        "TX",
+        bill._id.toString(),
+        user,
+        "for"
+      );
+      expect(result.status).toBe(200);
+      expect(characterShift(db)).toMatchObject({
+        "policies.economic": -0.25,
+        "policies.social": 0,
+      });
+    }
+  );
 
   it("an Aye moves both axes one 0.25 step toward the bill", async () => {
     const bill = txBill();

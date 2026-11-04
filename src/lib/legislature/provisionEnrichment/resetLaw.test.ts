@@ -1,3 +1,4 @@
+import { v2EnactmentApproval } from "@/lib/resetLegislation/rules/voterReactions";
 import { describe, expect, it } from "vitest";
 import type { ResetLawProvision } from "@/lib/db/types/legislation";
 import { resolveResetLawProvision } from "./resetLaw";
@@ -38,6 +39,12 @@ describe("resolveResetLawProvision", () => {
     ],
     balanceBasis: "game-calibrated-provisional",
   } as ResetLawProvision;
+
+  it("uses the enacted rules for the displayed demographic reaction", () => {
+    expect(resolveResetLawProvision(provision).archetypeApprovals).toEqual(
+      v2EnactmentApproval([provision], provision.reviewedOption.country)
+    );
+  });
 
   it("exposes every snapshotted metric and the proposal-time budget comparison", () => {
     expect(resolveResetLawProvision(provision)).toMatchObject({
