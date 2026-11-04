@@ -81,6 +81,11 @@ export function idleCauseMeta(
       tone: "info",
       help: `You sold everything you made last turn, so your ${sites} are stepping back up toward a full run. Output rises each turn while buyers keep taking it, faster when the market is short.`,
     },
+    held: {
+      label: "Held by a cut",
+      tone: "warning",
+      help: `You sold everything you made, but short inputs or cash cut what your ${sites} could make, so they are held below their plan rather than ramping up.`,
+    },
     cash: {
       label: "Short of cash",
       tone: "warning",
@@ -161,6 +166,7 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
   inputs: "bg-amber-500/60",
   demand: "bg-rose-500/50",
   ramping: "bg-sky-400/60",
+  held: "bg-yellow-600/60",
   cash: "bg-yellow-300/60",
   strike: "bg-error/80",
   disaster: "bg-fuchsia-600/55",

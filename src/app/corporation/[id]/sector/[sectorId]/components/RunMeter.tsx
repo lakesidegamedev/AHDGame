@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { PlantIdleCause } from "../types";
 import { idleCauseMeta, IDLE_CAUSE_FILL, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
@@ -55,6 +56,7 @@ export default function RunMeter({
   dimmed = false,
 }: RunMeterProps) {
   const sites = facilityPlural(sectorType);
+  const t = useTranslations("corporations.runHold");
   const causeMeta = idleCauseMeta(
     sectorType,
     idleCauses.find((cause) => cause.cause === "bank")?.capacityShare,
@@ -88,7 +90,17 @@ export default function RunMeter({
       help: "Units you made that nobody bought at your posted price. You paid to make them. Lower your price or build less.",
     },
     ...idleCauses.map((c) => {
-      const meta = causeMeta[c.cause];
+      // A sold-out run cut by an input or by cash names what holds it (ticket 1765).
+      const meta =
+        c.cause === "held"
+          ? {
+              ...causeMeta.held,
+              label: c.heldInput ? t("heldByInput", { input: c.heldInput }) : t("heldByCash"),
+              help: c.heldInput
+                ? t("heldByInputHelp", { input: c.heldInput, sites })
+                : t("heldByCashHelp", { sites }),
+            }
+          : causeMeta[c.cause];
       return {
         key: `idle-${c.cause}`,
         label: meta.label,
