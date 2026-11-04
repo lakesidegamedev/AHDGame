@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { wageShareLabourCost, type WageShareReceipt } from "./wageShareRules";
+import {
+  LABOUR_WAGE_DEFAULTS,
+  LABOUR_WAGE_GROWTH,
+  labourLinkedWageShareTarget,
+  labourWageGrowth,
+  labourWageShareTarget,
+  lastWageShare,
+  stateWageMove,
+  stickyWageShareTarget,
+  wageShareLabourCost,
+  type WageShareReceipt,
+} from "./wageShareRules";
 
 // Last turn: 100 units, value added 1000 (10 a unit), site bill 100 (1 a unit).
 const last: WageShareReceipt = {
@@ -64,5 +75,145 @@ describe("wage share labour cost", () => {
         const wage = wageShareLabourCost({ ...input, targetShare, surplusCap });
         expect(1000 - 100 - wage).toBeGreaterThanOrEqual(-1e-9);
       }
+  });
+});
+
+// Explicit settings so the expectations do not move with the tuned defaults.
+const p = { ...LABOUR_WAGE_DEFAULTS, maxShare: 0.65, floorShare: 0.3 };
+
+describe("labour-linked wage share target", () => {
+  it("sits at the maximum in a tight market and the floor in a slack one", () => {
+    expect(labourWageShareTarget(3, p, 0.6)).toBe(0.65);
+    expect(labourWageShareTarget(4.5, p, 0.6)).toBe(0.65);
+    expect(labourWageShareTarget(12, p, 0.6)).toBeCloseTo(0.3, 12);
+    expect(labourWageShareTarget(25, p, 0.6)).toBeCloseTo(0.3, 12);
+  });
+
+  it("falls in a straight line in between", () => {
+    // Halfway from 4.5 to 12 is 8.25: halfway from 0.65 to 0.3.
+    expect(labourWageShareTarget(8.25, p, 0.6)).toBeCloseTo(0.475, 12);
+    const a = labourWageShareTarget(6, p, 0.6);
+    const b = labourWageShareTarget(9, p, 0.6);
+    expect(a).toBeGreaterThan(b);
+  });
+
+  it("uses the fallback with no unemployment reading", () => {
+    expect(labourWageShareTarget(undefined, p, 0.6)).toBe(0.6);
+    expect(labourWageShareTarget(Number.NaN, p, 0.6)).toBe(0.6);
+  });
+
+  it("reads last turn's paid wage share of value added", () => {
+    expect(lastWageShare({ ...last, labourPaid: 100, labourArrears: 20 })).toBeCloseTo(0.12, 12);
+    expect(lastWageShare(null)).toBeNull();
+    expect(lastWageShare({ ...last, revenue: 400 })).toBeNull();
+  });
+
+  it("moves the effective target at most one step a turn either way", () => {
+    expect(stickyWageShareTarget(0.65, 0.12, 0.03)).toBeCloseTo(0.15, 12);
+    expect(stickyWageShareTarget(0.3, 0.6, 0.03)).toBeCloseTo(0.57, 12);
+    expect(stickyWageShareTarget(0.5, 0.49, 0.03)).toBe(0.5);
+    expect(stickyWageShareTarget(0.65, null, 0.03)).toBe(0.65);
+    expect(stickyWageShareTarget(0.65, 0.12, 0)).toBe(0.65);
+  });
+
+  it("walks a plant's wage bill toward the state target over turns", () => {
+    // Last turn paid 0.12 of value added; tight market: 0.15 this turn, not 0.65.
+    const target = labourLinkedWageShareTarget({
+      unemploymentRate: 3,
+      last: { ...last, labourPaid: 120 },
+      params: p,
+      fallback: 0.6,
+    });
+    expect(target).toBeCloseTo(0.15, 12);
+    // Base 1 a unit, value added 10 a unit: 1.5 a unit on 100 units.
+    expect(wageShareLabourCost({ ...input, targetShare: target })).toBeCloseTo(150, 9);
+  });
+});
+
+describe("labour market wage growth", () => {
+  const atRest = { labour: 475, valueAdded: 1000, siteBill: 100 };
+
+  it("is the neutral rate at the natural rate with wages at rest", () => {
+    // Unemployment 8.25 sets the target to 0.475, which this plant already pays.
+    expect(stateWageMove([atRest], 0.475, p.step, 0.75)).toBeCloseTo(0, 12);
+    const g = labourWageGrowth({
+      states: [{ unemploymentRate: 4.5, gdp: 1, plants: [] }],
+      params: p,
+      fallbackTarget: 0.6,
+      surplusCap: 0.75,
+      previous: null,
+      turnsPerYear: 48,
+    });
+    expect(g).toBe(LABOUR_WAGE_GROWTH.neutral);
+  });
+
+  it("rises with tightness and falls with slack, weighted by GDP", () => {
+    const run = (u: number[], gdp: number[]) =>
+      labourWageGrowth({
+        states: u.map((x, i) => ({ unemploymentRate: x, gdp: gdp[i]!, plants: [] })),
+        params: p,
+        fallbackTarget: 0.6,
+        surplusCap: 0.75,
+        previous: null,
+        turnsPerYear: 48,
+      })!;
+    expect(run([2.5], [1])).toBeCloseTo(3 + 0.3 * 2, 9);
+    expect(run([10.5], [1])).toBeCloseTo(3 - 0.3 * 6, 9);
+    expect(run([2.5, 10.5], [3, 1])).toBeCloseTo(3 + 0.75 * 0.6 - 0.25 * 1.8, 9);
+  });
+
+  it("adds a capped term while wages walk up, and limits the move by surplus", () => {
+    const low = { labour: 120, valueAdded: 1000, siteBill: 100 };
+    // 0.12 -> 0.15: the wage bill rises a quarter this turn.
+    expect(stateWageMove([low], 0.65, p.step, 0.75)).toBeCloseTo(0.25, 12);
+    // A plant with no surplus cannot raise.
+    expect(stateWageMove([{ labour: 800, valueAdded: 1000, siteBill: 200 }], 0.95, 0.5, 0.75)).toBe(
+      0
+    );
+    const g = labourWageGrowth({
+      states: [{ unemploymentRate: 4.5, gdp: 1, plants: [low] }],
+      params: p,
+      fallbackTarget: 0.6,
+      surplusCap: 0.75,
+      previous: null,
+      turnsPerYear: 48,
+    });
+    expect(g).toBe(LABOUR_WAGE_GROWTH.neutral + LABOUR_WAGE_GROWTH.moveCap);
+  });
+
+  it("does not read a plant paying its base wage on thin value added as a wage cut", () => {
+    // Paying 0.9 of value added is above any target the labour stage can ask: base wage.
+    const thin = { labour: 900, valueAdded: 1000, siteBill: 50 };
+    expect(stateWageMove([thin], 0.3, p.step, 0.75, p.maxShare)).toBe(0);
+    // A plant paying a raise in a slack market steps down.
+    expect(
+      stateWageMove(
+        [{ labour: 600, valueAdded: 1000, siteBill: 50 }],
+        0.3,
+        p.step,
+        0.75,
+        p.maxShare
+      )
+    ).toBeCloseTo(-0.05, 12);
+  });
+
+  it("smooths against last turn's rate and stays inside its bounds", () => {
+    const base = {
+      states: [{ unemploymentRate: 4.5, gdp: 1, plants: [] }],
+      params: p,
+      fallbackTarget: 0.6,
+      surplusCap: 0.75,
+      turnsPerYear: 48,
+    };
+    expect(labourWageGrowth({ ...base, previous: 8 })).toBeCloseTo(0.6 * 8 + 0.4 * 3, 9);
+    expect(labourWageGrowth({ ...base, previous: 400 })).toBe(LABOUR_WAGE_GROWTH.ceiling);
+    expect(
+      labourWageGrowth({
+        ...base,
+        states: [{ unemploymentRate: 60, gdp: 1, plants: [] }],
+        previous: null,
+      })
+    ).toBe(LABOUR_WAGE_GROWTH.floor);
+    expect(labourWageGrowth({ ...base, states: [], previous: 3 })).toBeNull();
   });
 });

@@ -17,6 +17,18 @@ import {
   type TaxBaseGravityContext,
 } from "@/lib/budget/revenue";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
+import type { GameConfig } from "@/lib/db/types/gameConfig";
+import { TURNS_PER_YEAR } from "@/lib/constants/calendar";
+import { labourWageParams } from "@/lib/turn/corporation/producerStageEnv";
+import {
+  WAGE_SHARE_DEFAULT_SURPLUS_CAP,
+  WAGE_SHARE_DEFAULT_TARGET,
+  labourWageGrowth,
+  receiptValueAdded,
+  type LabourWageParams,
+  type LabourWagePlant,
+  type WageShareReceipt,
+} from "@/lib/market/producerMarket/wageShareRules";
 
 /**
  * Per-turn fiscal base growth (the dynamic wage/trade application). The metric
@@ -48,16 +60,94 @@ function metricRate(
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
+type LabourWageGameConfig = Pick<
+  GameConfig,
+  | "producerLabourWageStage"
+  | "producerLabourWageNaturalRate"
+  | "producerLabourWageSlackRate"
+  | "producerLabourWageMaxShare"
+  | "producerLabourWageFloorShare"
+  | "producerLabourWageStep"
+  | "producerWageShareTarget"
+  | "producerWageShareSurplusCap"
+>;
+
+const LABOUR_WAGE_CONFIG_PROJECTION = {
+  producerLabourWageStage: 1,
+  producerLabourWageNaturalRate: 1,
+  producerLabourWageSlackRate: 1,
+  producerLabourWageMaxShare: 1,
+  producerLabourWageFloorShare: 1,
+  producerLabourWageStep: 1,
+  producerWageShareTarget: 1,
+  producerWageShareSurplusCap: 1,
+} as const;
+
+type LabourWageSector = {
+  stateId?: string;
+  producerSettlement?: WageShareReceipt;
+};
+
+/** This turn's funded plant receipts, reduced to what the labour wage move reads, by state. */
+async function loadLabourWagePlantsByState(
+  db: Awaited<ReturnType<typeof getDb>>,
+  turn: number
+): Promise<Map<string, LabourWagePlant[]>> {
+  const sectors = await db
+    .collection<LabourWageSector>("corporateSectors")
+    .find(
+      { "producerSettlement.turn": turn },
+      {
+        projection: {
+          _id: 0,
+          stateId: 1,
+          "producerSettlement.revenue": 1,
+          "producerSettlement.inputsConsumed": 1,
+          "producerSettlement.minorInputPremium": 1,
+          "producerSettlement.inventoryWriteOff": 1,
+          "producerSettlement.otherOperatingPaid": 1,
+          "producerSettlement.otherOperatingArrears": 1,
+          "producerSettlement.labourPaid": 1,
+          "producerSettlement.labourArrears": 1,
+        },
+      }
+    )
+    .toArray();
+  const out = new Map<string, LabourWagePlant[]>();
+  for (const sector of sectors) {
+    const r = sector.producerSettlement;
+    if (!sector.stateId || !r) continue;
+    const plant: LabourWagePlant = {
+      labour: (r.labourPaid ?? 0) + (r.labourArrears ?? 0),
+      valueAdded: receiptValueAdded(r),
+      siteBill: (r.otherOperatingPaid ?? 0) + (r.otherOperatingArrears ?? 0),
+    };
+    const list = out.get(sector.stateId);
+    if (list) list.push(plant);
+    else out.set(sector.stateId, [plant]);
+  }
+  return out;
+}
+
 export async function processFiscalBaseGrowth(
   _turn: number
 ): Promise<{ countriesProcessed: number; statesProcessed: number }> {
   const db = await getDb();
-  const [allFederalBudgets, stateBudgets, allStateMetrics, states] = await Promise.all([
+  const [allFederalBudgets, stateBudgets, allStateMetrics, states, gameConfig] = await Promise.all([
     db.collection<FederalBudget>("federalBudget").find({}).toArray(),
     db.collection<StateBudget>("stateBudgets").find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
     db.collection<State>("states").find({}).toArray(),
+    db
+      .collection<LabourWageGameConfig & { _id: string }>("gameConfig")
+      .findOne({ _id: "default" }, { projection: LABOUR_WAGE_CONFIG_PROJECTION }),
   ]);
+  // Labour stage: wage growth follows each country's labour market instead of
+  // the national doc's rate (or the flat 3.0 where there is none).
+  const labourWage: LabourWageParams | null = labourWageParams(gameConfig);
+  const labourPlantsByState = labourWage
+    ? await loadLabourWagePlantsByState(db, _turn)
+    : new Map<string, LabourWagePlant[]>();
 
   // Dissolved countries keep their budget doc but must not be simulated against
   // it; see `getRegisteredCountryIdSet`.
@@ -88,7 +178,22 @@ export async function processFiscalBaseGrowth(
       const currentGdp = countryStates.reduce((sum, s) => sum + (s.gdp || 0), 0) * 1_000_000;
       const nationalDocId = getNationalDocId(countryId);
       const national = nationalDocId ? metricsById.get(nationalDocId) : undefined;
-      const wageGrowth = metricRate(national, "wageGrowth", 3.0);
+      const engineWageGrowth = metricRate(national, "wageGrowth", 3.0);
+      const wageGrowth =
+        (labourWage &&
+          labourWageGrowth({
+            states: countryStates.map((s) => ({
+              unemploymentRate: metricsById.get(String(s._id))?.economic?.unemploymentRate?.value,
+              gdp: s.gdp ?? 0,
+              plants: labourPlantsByState.get(String(s._id)) ?? [],
+            })),
+            params: labourWage,
+            fallbackTarget: gameConfig?.producerWageShareTarget ?? WAGE_SHARE_DEFAULT_TARGET,
+            surplusCap: gameConfig?.producerWageShareSurplusCap ?? WAGE_SHARE_DEFAULT_SURPLUS_CAP,
+            previous: budget.economicFactors?.wageGrowth,
+            turnsPerYear: TURNS_PER_YEAR,
+          })) ??
+        engineWageGrowth;
       const tradeGrowth = metricRate(national, "tradeGrowth", 2.0);
       // National doc first, then the GDP-weighted regional mean (the 17
       // countries with no national doc were growing their bases on a flat 2.5

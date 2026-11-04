@@ -170,4 +170,59 @@ describe("processFiscalBaseGrowth", () => {
     expect(out.statesProcessed).toBe(1);
     expect(out.countriesProcessed).toBe(1);
   });
+
+  it("leaves wage growth on the national rate and reads no plants while the labour stage is off", async () => {
+    db.collection("corporateSectors");
+    const { processFiscalBaseGrowth } = await import("./fiscalBaseGrowth");
+    await processFiscalBaseGrowth(1);
+    expect(db.collectionMocks.corporateSectors!.find).not.toHaveBeenCalled();
+    const calls = db.collectionMocks.federalBudget!.updateOne.mock.calls;
+    const factorSet = calls.find((c) => c[1]?.$set?.["economicFactors.wageGrowth"] != null)?.[1]
+      .$set;
+    expect(factorSet["economicFactors.wageGrowth"]).toBe(3);
+  });
+
+  it("builds wage growth from state unemployment and the plants' wage move under the labour stage", async () => {
+    db.collection("gameConfig");
+    db.collectionMocks.gameConfig!.findOne = vi
+      .fn()
+      .mockResolvedValue({ _id: "default", producerLabourWageStage: 1 });
+    db.collectionMocks.macroMetrics!.find = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { _id: "federal", economic: { wageGrowth: { value: 3 } } },
+        { _id: "CA", economic: { unemploymentRate: { value: 2.5 } } },
+      ]),
+    });
+    db.collectionMocks.states!.find = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "CA", countryId: "US", gdp: 100 }]),
+    });
+    db.collection("corporateSectors");
+    // A plant already paying its target share (0.65 in a tight market): no wage move.
+    db.collectionMocks.corporateSectors!.find = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          stateId: "CA",
+          producerSettlement: {
+            revenue: 1500,
+            inputsConsumed: 500,
+            inventoryWriteOff: 0,
+            otherOperatingPaid: 100,
+            labourPaid: 650,
+            labourArrears: 0,
+          },
+        },
+      ]),
+    });
+    const { processFiscalBaseGrowth } = await import("./fiscalBaseGrowth");
+    await processFiscalBaseGrowth(7);
+    expect(db.collectionMocks.corporateSectors!.find).toHaveBeenCalledWith(
+      { "producerSettlement.turn": 7 },
+      expect.objectContaining({ projection: expect.any(Object) })
+    );
+    const calls = db.collectionMocks.federalBudget!.updateOne.mock.calls;
+    const factorSet = calls.find((c) => c[1]?.$set?.["economicFactors.wageGrowth"] != null)?.[1]
+      .$set;
+    // Neutral 3 + 0.3 x (4.5 - 2.5) = 3.6, no previous rate to smooth against.
+    expect(factorSet["economicFactors.wageGrowth"]).toBeCloseTo(3.6, 9);
+  });
 });

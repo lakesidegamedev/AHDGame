@@ -374,6 +374,58 @@ describe("physical producer preparation", () => {
     expect(on.otherOperatingCost).toBe(off.otherOperatingCost);
   });
 
+  it("takes the wage share target from state unemployment, a step a turn, under the labour stage", () => {
+    const { input, env, sector } = fixture();
+    const base = prepareProducerPhysicalSector(input).prepared.plan;
+    const units = base.capacityUnits * base.activeFraction * base.outputMultiplier;
+    const valueAdded = 20 * base.labourCost;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: units,
+      producedUnits: units,
+      offeredUnits: units,
+      soldUnits: units,
+      revenue: valueAdded,
+      inputsConsumed: 0,
+      inventoryWriteOff: 0,
+      otherOperatingPaid: 0,
+      otherOperatingArrears: 0,
+      // Last turn paid 0.4 of value added.
+      labourPaid: 0.4 * valueAdded,
+      labourArrears: 0,
+      turn: env.currentTurn - 1,
+    };
+    env.wageShareTarget = 0.6;
+    env.wageShareSurplusCap = 0.75;
+    const constant = prepareProducerPhysicalSector(input).prepared.plan;
+    env.labourWage = {
+      naturalRate: 4.5,
+      slackRate: 12,
+      maxShare: 0.65,
+      floorShare: 0.3,
+      step: 0.03,
+    };
+    const share = (unemployment?: number) => {
+      (input.env.lookups as { stateMetricsByState?: Map<string, unknown> }).stateMetricsByState =
+        new Map(
+          unemployment == null
+            ? []
+            : [[sector.stateId, { economic: { unemploymentRate: { value: unemployment } } }]]
+        );
+      const plan = prepareProducerPhysicalSector(input).prepared.plan;
+      const run = plan.capacityUnits * plan.activeFraction * plan.outputMultiplier;
+      return plan.labourCost / ((valueAdded / units) * run);
+    };
+    // Tight market (target 0.65) and no reading (fallback 0.6) both step up to 0.43;
+    // a slack market (target 0.3) steps down to 0.37. The constant stage jumps to 0.6.
+    expect(share(3)).toBeCloseTo(0.43, 9);
+    expect(share()).toBeCloseTo(0.43, 9);
+    expect(share(20)).toBeCloseTo(0.37, 9);
+    const run = constant.capacityUnits * constant.activeFraction * constant.outputMultiplier;
+    expect(constant.labourCost / ((valueAdded / units) * run)).toBeCloseTo(0.6, 9);
+    const linked = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(linked.otherOperatingCost).toBe(constant.otherOperatingCost);
+  });
+
   it("records the planned run share only under the demand plan", () => {
     const { input, env } = fixture();
     expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeUndefined();
