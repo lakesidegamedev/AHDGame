@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { producerPayableId } from "./payablesRules";
 import { producerTrades } from "./rules";
 import { describe, expect, it } from "vitest";
@@ -1283,6 +1284,120 @@ describe("same-turn spillover", () => {
       r.prices.find((p) => p.commodity === commodity)!.unitPrice;
     expect(price(on, "food")).toBeCloseTo(price(off, "food"), 12);
     expect(price(on, "steel")).toBeCloseTo(price(off, "steel"), 12);
+  });
+});
+
+describe("spillover measurement tags", () => {
+  const output = (commodity: string, price: number) => ({
+    commodity,
+    book: "world",
+    unitsPerOutput: 0,
+    referenceUnitPrice: price,
+    retainedUnitCost: 1,
+    policy: { kind: "manual" as const, unitPrice: price },
+    storable: true,
+  });
+  const stock = (id: string, commodity: string, units: number, price: number): ProductionPlan =>
+    plant({
+      id,
+      accountId: `${id}-corp`,
+      capacityUnits: 0,
+      labourCost: 0,
+      otherOperatingCost: 0,
+      labourRecipientAccountId: "services",
+      inputs: [],
+      outputs: [output(commodity, price)],
+      outputStock: [{ commodity, book: "world", units, quoteUnitCost: 1 }],
+    });
+  const run = () =>
+    advanceProducerEconomy({
+      turn: 1,
+      accounts: [
+        { id: "scarce-corp", cash: 0 },
+        { id: "plenty-corp", cash: 0 },
+        { id: "chem-corp", cash: 0 },
+        { id: "hh-a", cash: 1000 },
+        { id: "hh-b", cash: 700 },
+        { id: "services", cash: 0 },
+      ],
+      carryLossByCommodity: { steel: 0, food: 0, chemicals: 0 },
+      producers: [
+        stock("scarce", "steel", 2, 10),
+        stock("plenty", "food", 1000, 5),
+        stock("chem", "chemicals", 500, 2),
+      ],
+      households: [
+        {
+          accountId: "hh-a",
+          countryId: "US",
+          spendFraction: 1,
+          products: [
+            { commodity: "steel", book: "world", maximumUnitPrice: 12, weight: 1 },
+            { commodity: "food", book: "world", maximumUnitPrice: 6, weight: 1 },
+            { commodity: "chemicals", book: "world", maximumUnitPrice: 3, weight: 0.2 },
+          ],
+        },
+        {
+          accountId: "hh-b",
+          countryId: "DE",
+          spendFraction: 1,
+          products: [
+            { commodity: "steel", book: "world", maximumUnitPrice: 12, weight: 2 },
+            { commodity: "chemicals", book: "world", maximumUnitPrice: 3, weight: 1 },
+          ],
+        },
+      ],
+      spilloverShare: 0.7,
+      trackCountryBooks: true,
+    });
+  const untagged = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(untagged)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value)
+              .filter(([k]) => k !== "spilloverRequested" && k !== "spilloverRequestedUnits")
+              .map(([k, v]) => [k, untagged(v)])
+          )
+        : value;
+
+  it("leaves every settlement number byte-identical to the untagged settlement", () => {
+    // Digest of this fixture's full result (accounts, payables, producers,
+    // trade receipt, prices, order outcomes, spillover, country books) from
+    // the settlement before spillover was tagged. The tags are measurement
+    // only, so with them removed the result must not change by a byte.
+    const json = JSON.stringify(untagged(run()));
+    expect(createHash("sha256").update(json).digest("hex")).toBe(
+      "8b7485b3de05658f83b615512cc96e9980d1a615ac1708b7ccd2ef65a603827d"
+    );
+  });
+
+  it("tags the spillover part of each household order and country book row", () => {
+    const result = run();
+    expect(result.spillover!.extraRequested).toBeGreaterThan(0);
+    const outcome = (accountId: string, commodity: string) =>
+      result.orderOutcomes.find((o) => o.accountId === accountId && o.commodity === commodity)!;
+    // DE wanted 700 / 3 weight split: one third of its budget on chemicals at
+    // a ceiling of 3 is 77.78 units; the rest is the 70% of stranded steel spend.
+    const chem = outcome("hh-b", "chemicals");
+    expect(chem.requestedUnits - chem.spilloverRequestedUnits!).toBeCloseTo(700 / 3 / 3, 9);
+    expect(chem.deliveredUnits).toBeCloseTo(chem.requestedUnits, 9);
+    expect(outcome("hh-a", "steel").spilloverRequestedUnits).toBeUndefined();
+    const spilledSpend = result.orderOutcomes.reduce((sum, o) => {
+      const price = o.commodity === "food" ? 6 : o.commodity === "chemicals" ? 3 : 12;
+      return sum + (o.spilloverRequestedUnits ?? 0) * price;
+    }, 0);
+    expect(spilledSpend).toBeCloseTo(result.spillover!.extraRequested, 9);
+    for (const row of result.countryBooks!) {
+      const tagged = result.orderOutcomes
+        .filter(
+          (o) =>
+            o.commodity === row.commodity &&
+            o.accountId === (row.countryId === "US" ? "hh-a" : "hh-b")
+        )
+        .reduce((sum, o) => sum + (o.spilloverRequestedUnits ?? 0), 0);
+      expect(row.spilloverRequested ?? 0).toBeCloseTo(tagged, 9);
+    }
   });
 });
 

@@ -65,6 +65,20 @@ describe("same-turn spillover", () => {
     expect(spendOf("food")).toBeCloseTo(100 + 42 * 0.5, 10);
   });
 
+  it("names the units each order gained, so measures can leave them out", () => {
+    const { extraUnits } = spilloverOrders({
+      orders,
+      accounts: new Set(["hh"]),
+      outcomes,
+      unsoldUnits: unsold,
+      laneKey,
+      share: 0.7,
+    });
+    expect([...extraUnits.keys()].sort()).toEqual(["food", "tv"]);
+    expect(extraUnits.get("tv")).toBeCloseTo(21 / 20, 10);
+    expect(extraUnits.get("food")).toBeCloseTo(21 / 5, 10);
+  });
+
   it("changes nothing when nothing is stranded, for other buyers, or at zero share", () => {
     const allSupply = new Map([
       [laneKey("healthcare_services", "world"), 5],

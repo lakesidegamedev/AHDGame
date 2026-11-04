@@ -52,6 +52,21 @@ describe("fundedCountryMarket", () => {
     expect(fundedCountryMarket(row({ demand: 120 })).demand).toBe(120);
   });
 
+  it("reads first-choice demand: household spillover is reported beside it, not in it", () => {
+    // Chemicals shape: 26k units of substitution orders on 386 first-choice units.
+    const m = fundedCountryMarket(
+      row({ demand: 26386, requested: 26386, spilloverRequested: 26000, filled: 386 })
+    );
+    expect(m.demand).toBe(386);
+    expect(m.spilloverRequested).toBe(26000);
+    expect(m.filled).toBe(386);
+    expect(fundedCountryMarket(row({ requested: 10, spilloverRequested: 50 }))).toMatchObject({
+      demand: 0,
+      spilloverRequested: 10,
+    });
+    expect(fundedCountryMarket(row({ requested: 10 })).spilloverRequested).toBe(0);
+  });
+
   it("keeps fills, and reports them as unknown on older books", () => {
     expect(fundedCountryMarket(row({ filled: 7 })).filled).toBe(7);
     expect(fundedCountryMarket(row({})).filled).toBeNull();

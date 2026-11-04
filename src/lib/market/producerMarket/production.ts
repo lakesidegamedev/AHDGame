@@ -396,6 +396,11 @@ export function advanceProducerEconomy(input: {
     accountId: string;
     requestedUnits: number;
     deliveredUnits: number;
+    /**
+     * Measurement only: the part of `requestedUnits` placed as household
+     * spillover after a first choice sold out. Absent when none.
+     */
+    spilloverRequestedUnits?: number;
   }>;
   /** Household spend stranded in sold-out lanes and how much the extra clearing placed. */
   spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
@@ -1110,6 +1115,8 @@ export function advanceProducerEconomy(input: {
     });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
+  // Units each household order gained from spillover; measurement only.
+  let spilloverUnits = new Map<string, number>();
   const trial = (track = false) => {
     const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? [])];
     for (const p of plans)
@@ -1129,6 +1136,7 @@ export function advanceProducerEconomy(input: {
       offers: proposedOffers,
       orders: [...consumerOrders, ...inputOrders()],
       ...(track ? { trackCountryBooks: true } : {}),
+      ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
       ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
     });
@@ -1308,6 +1316,7 @@ export function advanceProducerEconomy(input: {
       };
       const before = spend(market.orders);
       consumerOrders = next.orders;
+      spilloverUnits = next.extraUnits;
       market = settleWithinCredit(input.trackCountryBooks === true);
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
@@ -1766,11 +1775,14 @@ export function advanceProducerEconomy(input: {
         const { lowerStep, ...where } = m;
         // A lower demand-curve step asked only at its own lower price, so it
         // is demand for what it bought, not a shortage at the market price.
+        const requestedUnits = lowerStep ? o.deliveredUnits : o.requestedUnits;
+        const spilled = lowerStep ? 0 : Math.min(requestedUnits, spilloverUnits.get(o.id) ?? 0);
         return [
           {
             ...where,
-            requestedUnits: lowerStep ? o.deliveredUnits : o.requestedUnits,
+            requestedUnits,
             deliveredUnits: o.deliveredUnits,
+            ...(spilled > 0 ? { spilloverRequestedUnits: spilled } : {}),
           },
         ];
       });

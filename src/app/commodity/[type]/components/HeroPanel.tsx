@@ -19,6 +19,7 @@ import {
 import { postImportBalance } from "@/lib/trade/postImportGap";
 import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 
 interface HeroPanelProps {
@@ -38,6 +39,7 @@ export default function HeroPanel({
   exchangeRates,
   onSelectExchange,
 }: HeroPanelProps) {
+  const t = useTranslations("corporations.commodityMarket");
   const registered = useRegisteredCountries();
   // Exchange tabs follow the runtime registered set, filtered to countries that
   // actually run a market (exchangeName). A latent SCO/WAL surfaces here only once
@@ -224,6 +226,13 @@ export default function HeroPanel({
           {marketScope.filled !== null ? (
             <span className="text-[10px] text-muted">
               {formatUnits(marketScope.filled, data.unit)} received
+            </span>
+          ) : null}
+          {marketScope.spilloverRequested > 0 ? (
+            <span className="text-[10px] text-muted" title={t("substitutionOrdersExplanation")}>
+              {t("substitutionOrders", {
+                units: formatUnits(marketScope.spilloverRequested, data.unit),
+              })}
             </span>
           ) : null}
         </div>
