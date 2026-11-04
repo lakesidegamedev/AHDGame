@@ -41,6 +41,12 @@ export const ERROR_CATALOG = {
     message: "That conflicts with the current state. Refresh and try again.",
     retryable: true,
   },
+  OPERATING_RESERVE_SHORT: {
+    status: 409,
+    message:
+      "This build would leave too little cash to run your plants. Build less, or confirm the override.",
+    retryable: false,
+  },
   RATE_LIMITED: {
     status: 429,
     message: "Too many requests. Wait a moment and try again.",

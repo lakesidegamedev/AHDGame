@@ -110,6 +110,8 @@ export default function SectorDetailPage() {
   const [capacityBusy, setCapacityBusy] = useState(false);
   const [reviewStrategyId, setReviewStrategyId] = useState<string | null>(null);
   const [capacityMessage, setCapacityMessage] = useState("");
+  // The build the operating reserve refused, ready to resend with the override.
+  const [reserveRetry, setReserveRetry] = useState<Record<string, unknown> | null>(null);
 
   const [state, dispatch] = useSectorPageState();
   const { showToast } = useToast();
@@ -282,6 +284,7 @@ export default function SectorDetailPage() {
     async (body: Record<string, unknown>) => {
       setCapacityBusy(true);
       setCapacityMessage("");
+      setReserveRetry(null);
       try {
         const res = await fetch(`/api/corporations/${corpId}/sectors/${sectorId}/build`, {
           method: "POST",
@@ -295,6 +298,11 @@ export default function SectorDetailPage() {
           return true;
         }
         setCapacityMessage((data as { error?: string }).error ?? "That did not work. Try again.");
+        if (
+          (data as { code?: string }).code === "OPERATING_RESERVE_SHORT" &&
+          body.action === "build"
+        )
+          setReserveRetry({ ...body, overrideOperatingReserve: true });
         return false;
       } catch {
         setCapacityMessage("Network error. Nothing was changed.");
@@ -1190,6 +1198,9 @@ export default function SectorDetailPage() {
             }
             onSubmit={(units, financing) =>
               runCapacityAction({ action: "build", units, ...(financing ? { financing } : {}) })
+            }
+            onOverrideReserve={
+              reserveRetry ? () => void runCapacityAction(reserveRetry) : undefined
             }
           />
         )}

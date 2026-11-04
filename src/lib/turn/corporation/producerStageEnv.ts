@@ -63,6 +63,8 @@ export function producerStageEnv(
         producerCaptiveDeliveryStage?: number;
         producerJointRunStage?: number;
         producerRunPlanStage?: number;
+        producerSalesAdvancePriceStage?: number;
+        producerZombieRestartStage?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
         producerWageShareStage?: number;
@@ -89,6 +91,8 @@ export function producerStageEnv(
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
     jointRunStage: config?.producerJointRunStage,
     runPlanStage: config?.producerRunPlanStage,
+    salesAdvanceAtClearing: (config?.producerSalesAdvancePriceStage ?? 0) >= 1,
+    restartProbes: (config?.producerZombieRestartStage ?? 0) >= 1,
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,
     wholePlants: wholePlantsOn(config?.wholePlantsStage),
