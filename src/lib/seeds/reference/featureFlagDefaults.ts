@@ -139,6 +139,7 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   bankConstructionFinanceEnabled: true,
   treasuryCashLedgerEnabled: true,
   sovereignIssuanceConsolidationEnabled: true,
+  sovereignRolloverConsolidationEnabled: true,
   domesticSovereignBondCoverageEnabled: true,
   prospectingEnabled: true,
   contractIssuanceEnabled: true,
