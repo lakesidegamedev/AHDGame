@@ -159,6 +159,10 @@ export type ProducerPhysicalEnv = Pick<
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
   runPlanStage?: number;
+  /** gameConfig.producerSalesAdvancePriceStage >= 1: the sales advance judges a run on its inputs' clearing prices. */
+  salesAdvanceAtClearing?: boolean;
+  /** gameConfig.producerZombieRestartStage >= 1: idle plants with no sales may run a restart probe. */
+  restartProbes?: boolean;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
   /** Funded build speedup factor for short plants (gameConfig.producerShortageBuildFactor). */
@@ -468,6 +472,11 @@ export function prepareProducerPhysicalSector(input: {
     (settledLast as { products?: SalesAdvanceLine[] } | null)?.products
   );
   if (unitRevenue > 0) plan.expectedUnitRevenue = unitRevenue;
+  // Failed restart probes in a row, so a plant whose probes keep losing stops.
+  const probeFailures = (settledLast as { restartProbeFailures?: number } | null)
+    ?.restartProbeFailures;
+  if (env.restartProbes && probeFailures != null && probeFailures > 0)
+    plan.restartProbeFailures = probeFailures;
   // Leftover stock of lines the recipe no longer makes is still sold, but does not steer the run.
   const liveLast = settledLast
     ? liveLineReceipt(
