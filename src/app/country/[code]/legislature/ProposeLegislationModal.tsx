@@ -68,6 +68,7 @@ import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFail
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 import { apiErrorText } from "@/lib/errors/catalog";
+import MinimumWageFloorNote from "@/components/legislation/MinimumWageFloorNote";
 
 interface LegislationTypeOption {
   _id: string;
@@ -87,6 +88,8 @@ interface LegislationTypeOption {
     social?: number;
     archetypeApprovals?: Record<string, number>;
     groupApprovals?: Record<string, number>;
+    /** National minimum wage laws, minimumWageLawStage on: the wage floor this option sets. */
+    wageFloorKaitz?: number;
   }[];
   /** New-generation catalog laws (US/UK/RU/DD): API-attached per-level fiscal estimates. */
   estimates?: { level: number; cost: number; revenue: number; net: number }[];
@@ -1062,9 +1065,14 @@ function LegacyProposeLegislationModal({
                           }
                           const explanation =
                             selectedOption?.explanation ?? lt.explanation ?? lt.description;
-                          return explanation ? (
-                            <p className="text-xs italic text-muted/80">{explanation}</p>
-                          ) : null;
+                          return (
+                            <>
+                              {explanation ? (
+                                <p className="text-xs italic text-muted/80">{explanation}</p>
+                              ) : null}
+                              <MinimumWageFloorNote kaitz={selectedOption?.wageFloorKaitz} />
+                            </>
+                          );
                         })()}
                         {/* New-gen laws: Current law → Proposed comparison with
                             per-level fiscal estimates + metric deltas vs enacted. */}
