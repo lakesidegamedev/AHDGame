@@ -33,6 +33,18 @@ describe("producer stage env national public demand", () => {
   });
 });
 
+describe("producer stage env public home first", () => {
+  it("passes the public home-first stage through and leaves it off by default", () => {
+    expect(producerStageEnv(null).publicHomeFirstStage).toBeUndefined();
+    expect(producerStageEnv({ producerPublicHomeFirstStage: 1 }).publicHomeFirstStage).toBe(1);
+  });
+
+  it("passes the public fair-share stage through and leaves it off by default", () => {
+    expect(producerStageEnv(null).publicFairShareStage).toBeUndefined();
+    expect(producerStageEnv({ producerPublicFairShareStage: 1 }).publicFairShareStage).toBe(1);
+  });
+});
+
 describe("producer stage env wage share", () => {
   it("keeps the wage share off unless its stage is on", () => {
     expect(producerStageEnv(null).wageShareTarget).toBe(0);

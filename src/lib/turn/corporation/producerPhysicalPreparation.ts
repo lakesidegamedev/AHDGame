@@ -147,6 +147,10 @@ export type ProducerPhysicalEnv = Pick<
   fundedBookStage?: number;
   /** gameConfig.producerNationalPublicDemandStage: >= 1 counts stateless national buyers in their country's national book. */
   nationalPublicDemandStage?: number;
+  /** gameConfig.producerPublicHomeFirstStage: >= 1 lets public buyers clear their own country's sellers first. */
+  publicHomeFirstStage?: number;
+  /** gameConfig.producerPublicFairShareStage: >= 1 shares world-book levels across public buyers pro rata. */
+  publicFairShareStage?: number;
   /** gameConfig.producerShortageGrowthStage: >= 1 grows a sold-out line by its book's shortage. */
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
