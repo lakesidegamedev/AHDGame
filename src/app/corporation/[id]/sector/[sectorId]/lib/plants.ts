@@ -81,6 +81,11 @@ export function idleCauseMeta(
       tone: "info",
       help: `You sold everything you made last turn, so your ${sites} are stepping back up toward a full run. Output rises each turn while buyers keep taking it, faster when the market is short.`,
     },
+    losing: {
+      label: "Trimmed: losing money",
+      tone: "warning",
+      help: `Your ${sites} sell everything they make, but at current prices each unit costs more to make than it earns, so ${run} is trimmed a little each turn until it breaks even. To run more, raise the price you can sell for, cut input and wage costs, or accept the lower run.`,
+    },
     held: {
       label: "Held by a cut",
       tone: "warning",
@@ -166,6 +171,7 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
   inputs: "bg-amber-500/60",
   demand: "bg-rose-500/50",
   ramping: "bg-sky-400/60",
+  losing: "bg-red-700/55",
   held: "bg-yellow-600/60",
   cash: "bg-yellow-300/60",
   strike: "bg-error/80",

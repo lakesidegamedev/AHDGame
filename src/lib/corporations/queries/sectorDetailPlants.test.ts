@@ -193,6 +193,39 @@ describe("buildSectorPlantsSection", () => {
     expect(byCash[0]?.heldInput).toBeUndefined();
   });
 
+  it("calls a sold-out run trimmed for a marginal loss losing, not ramping (ticket 1765)", () => {
+    const causes = (over: Record<string, unknown>) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          capitalStock: 1_000,
+          producedUnits: 300,
+          soldUnits: 300,
+          labourStaffingFactor: 1,
+          producerSettlement: {
+            turn: 100,
+            activeUnits: 100,
+            offeredUnits: 33,
+            producedUnits: 33,
+            soldUnits: 33,
+            plannedRunShare: 0.33,
+            revenue: 44_469,
+            inputsConsumed: 50_000,
+            labourPaid: 24_967,
+            ...over,
+          } as unknown as CorporateSector["producerSettlement"],
+        }),
+      }).idleCauses.map((c) => c.cause);
+    expect(causes({})).toContain("losing");
+    expect(causes({})).not.toContain("ramping");
+    // Revenue above running cost: nothing is trimming it, so it is ramping.
+    expect(causes({ revenue: 120_000 })).toContain("ramping");
+    expect(causes({ revenue: 120_000 })).not.toContain("losing");
+    // A cut by cash still reads as held.
+    expect(causes({ runCutBy: ["cash"] })).toContain("held");
+  });
+
   it("falls back to the pre-migration visible facility count", () => {
     const s = buildSectorPlantsSection({ eraUnitScale: 1, ...BASE_ARGS, sector: sectorFixture() });
     expect(s.plantCount).toBe(8);

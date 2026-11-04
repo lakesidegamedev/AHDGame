@@ -136,6 +136,7 @@ import {
 } from "@/lib/market/capital";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
+import { receiptLosesOnMargin } from "@/lib/market/producerMarket/outputResponseRules";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
 import {
   fundedSectorProfit,
@@ -1253,7 +1254,9 @@ type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?: strin
  * capacity (demand, or ramping back up once it sells out), short inputs or
  * short cash cut what it made below that plan, and unsold output is demand.
  * A sold-out plant whose run was cut is held by that input or by cash, not
- * ramping up (ticket 1765): the plan is not what is keeping it down.
+ * ramping up (ticket 1765): the plan is not what is keeping it down. A
+ * sold-out plant whose last run lost money on the margin is being trimmed by
+ * the engine each turn, so it is "losing", not ramping.
  */
 function fundedIdleWeights(
   receipt: CorporateSector["producerSettlement"] | null | undefined,
@@ -1283,6 +1286,7 @@ function fundedIdleWeights(
     if (sellThrough < SOLD_OUT_FILL) weights.push({ cause: "demand", w: 1 - runShare });
     else if (held)
       weights.push({ cause: "held", w: 1 - runShare, ...(heldInput ? { heldInput } : {}) });
+    else if (receiptLosesOnMargin(receipt)) weights.push({ cause: "losing", w: 1 - runShare });
     else weights.push({ cause: "ramping", w: 1 - runShare });
   }
   const shortfall = Math.max(0, runShare - made);

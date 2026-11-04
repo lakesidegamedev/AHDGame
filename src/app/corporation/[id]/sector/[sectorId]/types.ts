@@ -617,6 +617,7 @@ export type PlantIdleCauseKey =
   | "inputs"
   | "demand"
   | "ramping"
+  | "losing"
   | "held"
   | "cash"
   | "strike"

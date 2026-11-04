@@ -12,6 +12,7 @@ import {
   pacedRunShare,
   planBaseRunShare,
   planRecoveryRunShare,
+  receiptLosesOnMargin,
   PLAN_RECOVERY_STEP,
   type PriorReceipt,
   type ReceiptLine,
@@ -502,5 +503,16 @@ describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
       Math.max((25 * 1.1 - 25) / 100, 0.25),
       10
     );
+  });
+});
+
+describe("receiptLosesOnMargin", () => {
+  it("agrees with the loss brake in nextRunShare", () => {
+    const losing = receipt({ revenue: 100, inputsConsumed: 400 });
+    const paying = receipt({ revenue: 5_000, inputsConsumed: 100 });
+    expect(receiptLosesOnMargin(losing)).toBe(true);
+    expect(nextRunShare(losing)).toBeLessThan(0.5);
+    expect(receiptLosesOnMargin(paying)).toBe(false);
+    expect(receiptLosesOnMargin(null)).toBe(false);
   });
 });
