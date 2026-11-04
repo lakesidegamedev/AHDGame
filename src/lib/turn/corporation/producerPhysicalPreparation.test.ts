@@ -256,6 +256,36 @@ describe("physical producer preparation", () => {
     expect(plan.expectedUnitRevenue).toBeCloseTo(made.unitsPerOutput * 40, 12);
   });
 
+  it("plans from last turn's plan under the run plan stage, and changes nothing while it is off", () => {
+    const { input, env, sector } = fixture();
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    env.runPaceDrop = 0.25;
+    // Sold out under materials cost, and cash cut the run to half of its 0.4
+    // plan: the shape of the iron mine in ticket 1765.
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: env.currentTurn - 1,
+      activeUnits: 100,
+      plannedRunShare: 0.4,
+      producedUnits: 20,
+      offeredUnits: 20,
+      soldUnits: 20,
+      revenue: 400,
+      inputsConsumed: 500,
+      runCutBy: ["cash"],
+    };
+    const off = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(off.priorGlutTurns).toBeUndefined();
+    env.runPlanStage = 0;
+    expect(prepareProducerPhysicalSector(input).prepared.plan).toEqual(off);
+    env.runPlanStage = 1;
+    const on = prepareProducerPhysicalSector(input).prepared.plan;
+    // The loss brake steps down a tenth from the plan, not from the cut output.
+    expect(on.plannedRunShare).toBeCloseTo(0.36, 12);
+    expect(on.priorGlutTurns).toBe(0);
+    expect(off.plannedRunShare).toBeCloseTo(0.18, 12);
+  });
+
   it("runs a two-product plant at its sold-out dear line, not its glutted cheap one, under the joint run stage", () => {
     const { input, env, sector } = fixture();
     Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });

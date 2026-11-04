@@ -130,6 +130,7 @@ export function lineSlices(
         otherOperatingPaid: num(receipt.otherOperatingPaid) * share,
         otherOperatingArrears: num(receipt.otherOperatingArrears) * share,
         plannedRunShare: receipt.plannedRunShare,
+        ...(receipt.priorGlutTurns != null ? { priorGlutTurns: receipt.priorGlutTurns } : {}),
         ...(receipt.runCutBy ? { runCutBy: receipt.runCutBy } : {}),
         ...(carryIdleUpkeep && receipt.idleOperatingCost != null
           ? { idleOperatingCost: num(receipt.idleOperatingCost) * share }

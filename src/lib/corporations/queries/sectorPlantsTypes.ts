@@ -16,6 +16,7 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "held"
     | "cash"
     | "strike"
     | "disaster"
@@ -29,6 +30,8 @@ export interface PlantIdleCause {
   units: number;
   /** Configured branch share, before idle and mothball caps. Only for bank. */
   capacityShare?: number;
+  /** The input that cut the run, as a label. Only for held; absent means cash held it. */
+  heldInput?: string;
 }
 
 /** One outstanding capacity build order, already turned into countdown form. */

@@ -107,6 +107,8 @@ export interface ProductionPlan {
   recentSoldByOutput?: Readonly<Record<string, number>>;
   /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
   plannedRunShare?: number;
+  /** Consecutive glut turns before this one (producerRunPlanStage); echoed on the receipt. */
+  priorGlutTurns?: number;
   /**
    * Revenue one unit of physical output is expected to earn, from last turn's
    * realized prices and sell-through (salesAdvanceRules). Lets a run be
@@ -178,6 +180,8 @@ export interface ProducerOperatingResult {
   plannedUnits: number;
   /** The plan's run share before input and cash cuts, read back by next turn's run rule. */
   plannedRunShare?: number;
+  /** Consecutive glut turns before this turn, read back by the plan-recovery rule. */
+  priorGlutTurns?: number;
   /**
    * Share of the funded run that was actually made, when short inputs cut it:
    * wages and the running part of the site bill were billed on this share.
@@ -1468,6 +1472,7 @@ export function advanceProducerEconomy(input: {
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,
       ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
+      ...(p.priorGlutTurns != null ? { priorGlutTurns: p.priorGlutTurns } : {}),
       ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
       ...(() => {
         const binding = billedRunShare.has(p.id) ? bindingInputOf(p) : undefined;
