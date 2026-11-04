@@ -1,4 +1,12 @@
 /** Funded-market demand construction shared by the producer shadow and the live funded market. */
+import {
+  markPublicFairShare,
+  publicFairShareOn,
+} from "@/lib/market/producerMarket/publicFairShareRules";
+import {
+  markHomeCountryFirst,
+  publicHomeFirstOn,
+} from "@/lib/market/producerMarket/publicHomeFirstRules";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { CorporateSector } from "@/lib/db/types";
 import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
@@ -520,6 +528,10 @@ export async function buildProducerTurnDemand(
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
+  // Public buyers clear their own country's sellers first (publicHomeFirstRules).
+  if (publicHomeFirstOn(env.publicHomeFirstStage)) markHomeCountryFirst(publicBuyerOrders);
+  // What is left on the world book is shared pro rata (publicFairShareRules).
+  if (publicFairShareOn(env.publicFairShareStage)) markPublicFairShare(publicBuyerOrders);
   const investmentBuyerOrders = publicOrders(
     investmentFunding.map((f) => ({
       accountId: investmentAccountId(f.countryId),
