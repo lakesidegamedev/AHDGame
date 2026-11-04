@@ -44,7 +44,7 @@ describe("idle cause meter colors", () => {
   it("gives every idle cause a unique swatch so no two legend dots collide", () => {
     const entries = Object.entries(IDLE_CAUSE_FILL);
 
-    expect(entries).toHaveLength(13);
+    expect(entries).toHaveLength(14);
     const fills = new Set(entries.map(([, fill]) => fill));
     expect(fills.size).toBe(entries.length);
     for (const fill of fills) expect(fill).toMatch(/^bg-/);
@@ -58,5 +58,15 @@ describe("idle cause meter colors", () => {
     expect(
       idleCauseMeta("construction", undefined, ["Freight", "Construction Services"]).demand.help
     ).toMatch(/Freight and Construction Services sell only in this state/);
+  });
+});
+
+describe("losing idle cause", () => {
+  it("explains the trim in plain words with no dashes", () => {
+    const losing = idleCauseMeta("extraction").losing;
+    expect(losing.label).toContain("losing money");
+    expect(losing.help).toContain("trimmed");
+    expect(losing.help).toContain("raise the price");
+    expect(`${losing.label}${losing.help}`).not.toMatch(/[\u2013\u2014-]/);
   });
 });

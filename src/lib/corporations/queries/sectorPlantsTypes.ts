@@ -16,6 +16,7 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "losing"
     | "held"
     | "cash"
     | "strike"

@@ -132,6 +132,36 @@ function marginalLoss(input: {
   return !(input.revenue / input.sold > materialsPerUnit);
 }
 
+/**
+ * Whether the engine will read this receipt as a loss worth trimming output
+ * for (the loss brake in `nextRunShare`). Pure, so the sector page can say why
+ * a sold-out plant is running below capacity instead of calling it ramping up.
+ */
+export function receiptLosesOnMargin(prior: PriorReceipt | null | undefined): boolean {
+  if (!prior) return false;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const produced = finite(prior.producedUnits);
+  const offered = finite(prior.offeredUnits);
+  const sold = finite(prior.soldUnits);
+  const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
+  const runningCost =
+    finite(prior.inputsConsumed) +
+    finite(prior.labourPaid ?? 0) +
+    finite(prior.labourArrears ?? 0) +
+    finite(prior.otherOperatingPaid ?? 0) +
+    finite(prior.otherOperatingArrears ?? 0);
+  const contributionPerUnit =
+    sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
+  return marginalLoss({
+    sold,
+    produced,
+    sellThrough,
+    revenue: finite(prior.revenue),
+    inputsConsumed: finite(prior.inputsConsumed),
+    contributionPerUnit,
+  });
+}
+
 export function nextRunShare(
   prior: PriorReceipt | null | undefined,
   floor: number = OUTPUT_RUN_FLOOR
