@@ -31,6 +31,7 @@ const NAMESPACES = [
   "parties",
   "contests",
   "governmentConfidence",
+  "legislation",
 ] as const;
 
 function englishCatalog(): AbstractIntlMessages {

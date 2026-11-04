@@ -59,6 +59,7 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
+import MinimumWageFloorNote from "@/components/legislation/MinimumWageFloorNote";
 
 interface LegislationPolicyOption {
   id: string;
@@ -71,6 +72,8 @@ interface LegislationPolicyOption {
   /** @deprecated Use archetypeApprovals instead */
   groupApprovals?: Record<string, number>;
   archetypeApprovals?: Record<string, number>;
+  /** National minimum wage laws, minimumWageLawStage on: the wage floor this option sets. */
+  wageFloorKaitz?: number;
 }
 
 interface EffectTargetWeighted {
@@ -1230,9 +1233,14 @@ function LegacyProposeBillModal({
                               }
                               const explanation =
                                 selectedOpt?.explanation ?? type?.explanation ?? type?.description;
-                              return explanation ? (
-                                <span className="italic text-muted/80">{explanation}</span>
-                              ) : null;
+                              return (
+                                <>
+                                  {explanation ? (
+                                    <span className="italic text-muted/80">{explanation}</span>
+                                  ) : null}
+                                  <MinimumWageFloorNote kaitz={selectedOpt?.wageFloorKaitz} />
+                                </>
+                              );
                             })()}
                           </div>
                         )}

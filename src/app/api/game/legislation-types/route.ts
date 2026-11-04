@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { LegislationType } from "@/lib/db/types";
+import type { GameConfig, LegislationType } from "@/lib/db/types";
+import { isLabourWagesEnabled } from "@/lib/labour/featureFlag";
+import {
+  annotateMinimumWageLawOptions,
+  minimumWageLawOn,
+  MINIMUM_WAGE_LAW_TYPE_IDS,
+} from "@/lib/labour/rules/minimumWageLaw";
 import { BILL_CATEGORIES, CATEGORY_TO_POLICY_DOMAINS } from "@shared/constants/legislation";
 import { LEGISLATION_TYPES_CACHE_TAG } from "@/lib/legislation/cacheTag";
 import { getEraContext } from "@/lib/era/context";
@@ -182,7 +188,26 @@ export async function GET(request: Request) {
       exactTax
     );
 
-    return NextResponse.json(withEstimates, {
+    // minimumWageLawStage: national minimum wage law options state the wage
+    // floor they set. Only read when such a law is in the list.
+    const minimumWageLawListed = withEstimates.some((t) =>
+      MINIMUM_WAGE_LAW_TYPE_IDS.includes(String(t._id))
+    );
+    const wageFloorConfig = minimumWageLawListed
+      ? await db
+          .collection<GameConfig>("gameConfig")
+          .findOne(
+            { _id: "default" },
+            { projection: { minimumWageLawStage: 1, labourSystemMode: 1 } }
+          )
+      : null;
+    const body =
+      minimumWageLawOn(wageFloorConfig?.minimumWageLawStage) &&
+      (await isLabourWagesEnabled(wageFloorConfig))
+        ? annotateMinimumWageLawOptions(withEstimates)
+        : withEstimates;
+
+    return NextResponse.json(body, {
       headers: {
         "Cache-Control": noCache
           ? "no-store, no-cache, must-revalidate, no-transform"

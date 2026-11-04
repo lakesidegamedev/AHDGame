@@ -68,8 +68,8 @@ export interface UnionizationDriftInputs {
    * UNIONIZATION_NEUTRAL_KAITZ, NOT 0, `minWageRatioByCountry` maps a
    * country with no minimum-wage policy configured to 0 (see
    * `buildMinWageRatioByCountry`), and most countries/eras don't have one
-   * set (it's admin-only today). Treating that as "minimum wage maximally
-   * lags" would skew unionization upward almost everywhere by default the
+   * set (by an admin, or by a national law under minimumWageLawStage).
+   * Treating that as "minimum wage maximally lags" would skew unionization upward almost everywhere by default the
    * moment "unions" mode turns on, the absence of a policy isn't the same
    * signal as a deliberately weak one.
    */
