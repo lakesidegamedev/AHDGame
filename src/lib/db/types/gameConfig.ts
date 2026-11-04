@@ -859,6 +859,16 @@ export interface GameConfig {
    * Absent or false keeps one replacement bond per claim.
    */
   sovereignRolloverConsolidationEnabled?: boolean;
+  /**
+   * Stage gate for grouped sovereign coupon accrual. When true the Treasury
+   * phase freezes each turn's coupons as one claim per budget, currency and
+   * payee group (players apart from the bond pool, index funds and NPPs)
+   * instead of one claim per bond, so an unfunded Treasury's arrears queue
+   * grows by a couple of documents a turn rather than one per bond. Every
+   * payee is owed exactly what its per-bond claims summed to. Absent or false
+   * keeps one claim per bond.
+   */
+  sovereignCouponGroupedAccrualEnabled?: boolean;
   /** Dark gate for the index-fund 20 percent sovereign-bond allocation target. */
   indexFundBondLiquidityEnabled?: boolean;
   /**
