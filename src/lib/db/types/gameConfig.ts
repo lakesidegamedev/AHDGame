@@ -850,6 +850,15 @@ export interface GameConfig {
    * simulation report from scripts/sim/ per CONTRIBUTING.md.
    */
   sovereignIssuanceConsolidationEnabled?: boolean;
+  /**
+   * Stage gate for consolidated sovereign maturity refinancing. When true the
+   * novation, forced pool rollover and refunding paths add their replacement
+   * units to one shared bond per issuer, currency, coupon, term and turn
+   * instead of inserting one bond per maturing claim. Money, debt and units
+   * are identical either way; only the number of bond documents changes.
+   * Absent or false keeps one replacement bond per claim.
+   */
+  sovereignRolloverConsolidationEnabled?: boolean;
   /** Dark gate for the index-fund 20 percent sovereign-bond allocation target. */
   indexFundBondLiquidityEnabled?: boolean;
   /**

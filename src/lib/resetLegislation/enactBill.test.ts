@@ -115,12 +115,22 @@ describe("applyResetLawBillEnactment", () => {
       countryId: "US" as const,
       stateId: "PA",
       provisions: [provision],
+      votes: { ["000000000000000000000001"]: "for" as const },
     };
 
     await expect(applyResetLawBillEnactment(db as unknown as Db, bill, 2)).resolves.toEqual({
       applied: true,
       programs: 1,
     });
+    expect(db.collectionMocks.characters!.bulkWrite).toHaveBeenCalledTimes(1);
+    db.collectionMocks.resetLawEnactmentReceipts!.findOne.mockResolvedValue({
+      programIds: ["existing"],
+    });
+    await expect(applyResetLawBillEnactment(db as unknown as Db, bill, 2)).resolves.toEqual({
+      applied: false,
+      programs: 1,
+    });
+    expect(db.collectionMocks.characters!.bulkWrite).toHaveBeenCalledTimes(1);
     expect(db.collectionMocks.resetLawPrograms!.replaceOne).toHaveBeenCalledWith(
       { _id: `${worldId}:US:PA:L19`, worldId },
       expect.objectContaining({

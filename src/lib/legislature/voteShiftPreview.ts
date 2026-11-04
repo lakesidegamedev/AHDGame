@@ -12,7 +12,7 @@ export type { VoteShiftPreview };
 
 export interface BuildVoteShiftPreviewInput {
   /** Policy provisions only; callers strip tariffs, subsidies and the like first. */
-  provisions: ReadonlyArray<{ economic?: number; social?: number }>;
+  provisions: ReadonlyArray<{ economic?: number; social?: number; includeNeutral?: boolean }>;
   ledger: Record<string, PolicyShiftLedgerEntry> | undefined;
   characterId: string | null;
   policies: AxisPositions | undefined;
@@ -40,7 +40,10 @@ export function buildVoteShiftPreview({
   if (!canVote || !characterId || !policies) return null;
   const current: AxisPositions = { economic: policies.economic, social: policies.social };
   const entry = ledger?.[characterId];
-  if (!shouldApplyVoteShift(personalPreviousVote(previousVote, whippedFrom), entry)) {
+  if (
+    !provisions.some((p) => p.includeNeutral) &&
+    !shouldApplyVoteShift(personalPreviousVote(previousVote, whippedFrom), entry)
+  ) {
     const none: AxisPositions = { economic: 0, social: 0 };
     return { current, aye: none, nay: { ...none } };
   }
