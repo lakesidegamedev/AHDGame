@@ -290,6 +290,14 @@ export interface GameConfig {
    * ratio. 0 or absent = off.
    */
   producerFundedRestartStage?: number;
+  /**
+   * NPP pass: >= 1 reads the unowned headroom of a local service cell
+   * (healthcare, real estate, construction) as the larger of the pool and the
+   * state book's unmet demand net of capacity already in flight. The pool never
+   * refills once incumbents drew it to zero, which closed short states to new
+   * entrants and autopilot growth (rules/stateServiceHeadroom). 0 or absent = off.
+   */
+  nppStateServiceHeadroomStage?: number;
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
   /**
