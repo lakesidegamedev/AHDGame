@@ -181,6 +181,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           privateBankingEnabled: 1,
           treasuryCashLedgerEnabled: 1,
           fiscalScaleStage: 1,
+          sovereignCouponGroupedAccrualEnabled: 1,
         },
       }
     ),
@@ -195,6 +196,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   const bankTreasury = config?.privateBankingEnabled === true;
   const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
   const fiscalScaleStage = normalizeFiscalScaleStage(config?.fiscalScaleStage);
+  const groupedCouponAccrual = config?.sovereignCouponGroupedAccrualEnabled === true;
 
   // Projected read: see `treasuryBudgetProjection`. The rows are a narrower
   // shape than `FederalBudget`; every field the settle path reads is included.
@@ -466,6 +468,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           prefetch: couponPrefetch,
           cashBounds: couponCashBounds,
           budgets: passableBudgets,
+          ...(groupedCouponAccrual ? { groupedAccrual: true } : {}),
           ...(fiscalScaleStage >= FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT
             ? { claimLoadLimit: FISCAL_SCALE_CLAIM_LOAD_LIMIT }
             : {}),
@@ -523,6 +526,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               ...(debtSplitScale(String(b._id)) !== undefined
                 ? { claimLoadLimit: FISCAL_SCALE_CLAIM_LOAD_LIMIT }
                 : {}),
+              ...(groupedCouponAccrual ? { groupedAccrual: true } : {}),
             });
             if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);
             if (preparedCoupons && coupons.completed) pruneCouponBudgets.push(String(b._id));
@@ -723,6 +727,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               ...(debtSplitScale(String(b._id)) !== undefined
                 ? { claimLoadLimit: FISCAL_SCALE_CLAIM_LOAD_LIMIT }
                 : {}),
+              ...(groupedCouponAccrual ? { groupedAccrual: true } : {}),
             }
           );
           if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);

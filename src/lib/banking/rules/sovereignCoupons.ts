@@ -95,3 +95,127 @@ export function freezeSovereignCouponClaim(input: {
     holders,
   };
 }
+
+/**
+ * Which grouped claim a coupon holder's leg joins. Players hold real money and
+ * settle first under the fiscal scale's debt service split, so their legs
+ * stay apart from the bond pool, index funds and NPPs.
+ */
+export type SovereignCouponPayeeGroup = "player" | "market";
+
+const PLAYER_PAYEE_KINDS: ReadonlySet<string> = new Set(["character", "imperial", "corporation"]);
+
+export function sovereignCouponPayeeGroup(
+  kind: FundedSovereignCouponClaim["holders"][number]["kind"]
+): SovereignCouponPayeeGroup {
+  return PLAYER_PAYEE_KINDS.has(kind) ? "player" : "market";
+}
+
+/**
+ * Stands in for the bond id of a grouped claim, so a grouped claim id has the
+ * same `sovereign-coupon:<token>:<dueTurn>` shape as a per-bond one. Budget ids
+ * and currency codes never contain `~` or `:`.
+ */
+export function sovereignCouponGroupToken(
+  budgetId: string,
+  currencyCode: string,
+  group: SovereignCouponPayeeGroup
+): string {
+  return `grp~${budgetId}~${currencyCode}~${group}`;
+}
+
+/** Prefix every grouped token of one budget starts with. */
+export const sovereignCouponGroupTokenPrefix = (budgetId: string) => `grp~${budgetId}~`;
+
+/** A holder leg is the same payee, under the same frozen quote, when every field but the amounts match. */
+function payeeKey(holder: FundedSovereignCouponClaim["holders"][number]): string {
+  return JSON.stringify([
+    holder.kind,
+    holder.id ?? null,
+    holder.currencyCode ?? null,
+    holder.payeeCurrencyCode ?? null,
+    holder.payeeLocalPerAnchor ?? null,
+    holder.payeeCountryId ?? null,
+    holder.payeeCurrencyFieldPresent ?? null,
+    holder.payeeCurrencyFieldValue === undefined ? "u" : holder.payeeCurrencyFieldValue,
+    holder.payeeCurrencyUsesCountryFallback ?? null,
+    holder.personalBalancePath ?? null,
+  ]);
+}
+
+/** One grouped claim and the per-bond claims folded into it. */
+export interface GroupedSovereignCouponClaim {
+  claim: FundedSovereignCouponClaim;
+  group: SovereignCouponPayeeGroup;
+  /** Bonds whose legs it carries, in fold order. */
+  bondIds: string[];
+}
+
+/**
+ * Fold per-bond coupon claims into one claim per due turn, currency, frozen
+ * native quote and payee group. Each payee's legs are summed in input order,
+ * so a payee is owed exactly what its per-bond legs added up to and the claim
+ * amount is the sum of its legs, as a frozen claim's always is.
+ *
+ * `idSuffix` is appended to every grouped id (the one-time heal names its
+ * claims apart from the accrual's).
+ */
+export function groupSovereignCouponClaims(
+  budgetId: string,
+  claims: readonly FundedSovereignCouponClaim[],
+  idSuffix = ""
+): GroupedSovereignCouponClaim[] {
+  const out = new Map<
+    string,
+    GroupedSovereignCouponClaim & {
+      legs: Map<string, FundedSovereignCouponClaim["holders"][number]>;
+      bondSet: Set<string>;
+    }
+  >();
+  for (const source of claims) {
+    for (const holder of source.holders) {
+      const group = sovereignCouponPayeeGroup(holder.kind);
+      const key = JSON.stringify([source.dueTurn, source.currencyCode, source.anchorRate, group]);
+      let row = out.get(key);
+      if (!row) {
+        const token = sovereignCouponGroupToken(budgetId, source.currencyCode, group);
+        row = {
+          claim: {
+            id: `sovereign-coupon:${token}:${source.dueTurn}${idSuffix}`,
+            bondId: token,
+            dueTurn: source.dueTurn,
+            countryId: source.countryId,
+            currencyCode: source.currencyCode,
+            amountLocal: 0,
+            anchorRate: source.anchorRate,
+            holders: [],
+          },
+          group,
+          bondIds: [],
+          legs: new Map(),
+          bondSet: new Set(),
+        };
+        out.set(key, row);
+      }
+      if (!row.bondSet.has(source.bondId)) {
+        row.bondSet.add(source.bondId);
+        row.bondIds.push(source.bondId);
+      }
+      const leg = payeeKey(holder);
+      const merged = row.legs.get(leg);
+      if (merged) {
+        merged.amountLocal += holder.amountLocal;
+        merged.amountAnchor += holder.amountAnchor;
+      } else {
+        const copy = { ...holder };
+        row.legs.set(leg, copy);
+        row.claim.holders.push(copy);
+      }
+    }
+  }
+  return [...out.values()].map(({ claim, group, bondIds }) => ({
+    claim: { ...claim, amountLocal: claim.holders.reduce((sum, row) => sum + row.amountLocal, 0) },
+    group,
+    bondIds,
+  }));
+}

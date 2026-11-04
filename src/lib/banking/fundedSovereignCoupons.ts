@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { ObjectId, type Db, type Filter } from "mongodb";
 import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget, FundedSovereignCouponClaim } from "@/lib/db/types/budget";
@@ -13,6 +14,9 @@ import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/bound
 import { checkBalancedTransfer } from "@/lib/banking/rules/invariants";
 import {
   freezeSovereignCouponClaim,
+  groupSovereignCouponClaims,
+  sovereignCouponGroupTokenPrefix,
+  sovereignCouponPayeeGroup,
   type SovereignCouponBondSnapshot,
   type SovereignCouponCorporationQuote,
 } from "@/lib/banking/rules/sovereignCoupons";
@@ -33,12 +37,21 @@ import {
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
 export interface SovereignCouponClaimRecord {
-  /** The claim id, `sovereign-coupon:<bondId>:<dueTurn>`. */
+  /**
+   * The claim id, `sovereign-coupon:<bondId>:<dueTurn>`. A grouped claim
+   * (`sovereignCouponGroupedAccrualEnabled`) carries its group token in place
+   * of the bond id.
+   */
   _id: string;
   budgetId: string;
   /** Book position within the due turn, so claims settle in the order they were frozen. */
   order: number;
   claim: FundedSovereignCouponClaim;
+  /**
+   * Bonds whose coupon a grouped claim carries. Read only when a replayed
+   * freeze finds the grouped id already installed; no settlement reads it.
+   */
+  bondIds?: string[];
   createdAt: Date;
   /** Set by the payout projection once the claim is paid. */
   settledTurn?: number;
@@ -59,6 +72,12 @@ export const SOVEREIGN_COUPON_CLAIM_PROJECTION = {
   budgetId: 1,
   settledTurn: 1,
   claim: 1,
+} as const;
+
+/** The install probe of a grouped freeze also reads which bonds a saved claim carries. */
+export const FROZEN_CLAIM_PROBE_PROJECTION = {
+  ...SOVEREIGN_COUPON_CLAIM_PROJECTION,
+  bondIds: 1,
 } as const;
 
 let claimIndexReady: Promise<unknown> | null = null;
@@ -603,15 +622,19 @@ export const claimIdOfMove = (moveId: string) => moveId.slice(0, moveId.indexOf(
  */
 export function sovereignCouponBudgetPriors(
   priorPayouts: ReadonlyArray<{ _id: string; status: string }>,
-  input: { bonds: readonly Bond[]; frozenThrough?: Record<string, number> }
+  input: { bonds: readonly Bond[]; frozenThrough?: Record<string, number>; budgetId?: string }
 ): Array<{ _id: string; status: string }> {
   const bondIds = new Set<string>();
   for (const bond of input.bonds) bondIds.add(bond._id.toHexString());
   for (const key of Object.keys(input.frozenThrough ?? {}))
     if (key.startsWith("b")) bondIds.add(key.slice(1));
-  return priorPayouts.filter((move) =>
-    bondIds.has(move._id.slice("sovereign-coupon:".length).split(":")[0] ?? "")
-  );
+  // A grouped claim names its budget in place of a bond.
+  const groupPrefix =
+    input.budgetId === undefined ? null : sovereignCouponGroupTokenPrefix(input.budgetId);
+  return priorPayouts.filter((move) => {
+    const token = move._id.slice("sovereign-coupon:".length).split(":")[0] ?? "";
+    return bondIds.has(token) || (groupPrefix !== null && token.startsWith(groupPrefix));
+  });
 }
 
 /** Claims a prior receipt or a grouped receipt already owns, for one budget. */
@@ -632,7 +655,11 @@ export function sovereignCouponQueuedClaimIds(
  * between the two re-installs the same id (a no-op) rather than losing the
  * claim.
  */
-export function freezeDueSovereignCouponClaims(input: {
+export function freezeDueSovereignCouponClaims(input: FreezeDueSovereignCouponInput) {
+  return freezeDueSovereignCouponClaimSet(input).records;
+}
+
+export interface FreezeDueSovereignCouponInput {
   budgetId: string;
   bonds: readonly Bond[];
   turn: number;
@@ -641,7 +668,26 @@ export function freezeDueSovereignCouponClaims(input: {
   corporateQuotes: ReadonlyMap<string, SovereignCouponCorporationQuote>;
   frozenThrough?: Record<string, number>;
   knownClaims: ReadonlyMap<string, FundedSovereignCouponClaim>;
-}): SovereignCouponClaimRecord[] {
+  /**
+   * `sovereignCouponGroupedAccrualEnabled`: fold this turn's per-bond claims
+   * into one claim per currency and payee group
+   * (`groupSovereignCouponClaims`). Absent, one claim per bond.
+   */
+  grouped?: boolean;
+}
+
+/** One budget's frozen claims for this turn, and the frozen-through marks they set. */
+export interface FrozenSovereignCouponClaimSet {
+  records: SovereignCouponClaimRecord[];
+  /** `$max` update for `sovereignCouponFrozenThrough`, one entry per bond frozen. */
+  marks: Record<string, number>;
+  /** Grouped only: the per-bond claims each grouped record folds, by record id. */
+  parts: Map<string, FundedSovereignCouponClaim[]>;
+}
+
+export function freezeDueSovereignCouponClaimSet(
+  input: FreezeDueSovereignCouponInput
+): FrozenSovereignCouponClaimSet {
   const records: SovereignCouponClaimRecord[] = [];
   for (const bond of input.bonds) {
     if (
@@ -701,7 +747,109 @@ export function freezeDueSovereignCouponClaims(input: {
       createdAt: new Date(),
     });
   }
-  return records;
+  const marks = Object.fromEntries(
+    records.map((row) => [`sovereignCouponFrozenThrough.b${row.claim.bondId}`, row.claim.dueTurn])
+  );
+  if (!input.grouped) return { records, marks, parts: new Map() };
+  return {
+    ...groupedRecords(
+      input.budgetId,
+      records.map((row) => row.claim)
+    ),
+    marks,
+  };
+}
+
+function groupedRecords(
+  budgetId: string,
+  claims: readonly FundedSovereignCouponClaim[],
+  idSuffix = ""
+): Pick<FrozenSovereignCouponClaimSet, "records" | "parts"> {
+  const parts = new Map<string, FundedSovereignCouponClaim[]>();
+  const records = groupSovereignCouponClaims(budgetId, claims, idSuffix).map((row, order) => {
+    // Only the legs this group carries, so regrouping a part rebuilds exactly
+    // its share of the claim.
+    const bondIds = new Set(row.bondIds);
+    parts.set(
+      row.claim.id,
+      claims.flatMap((claim) => {
+        if (
+          !bondIds.has(claim.bondId) ||
+          claim.dueTurn !== row.claim.dueTurn ||
+          claim.currencyCode !== row.claim.currencyCode ||
+          claim.anchorRate !== row.claim.anchorRate
+        )
+          return [];
+        const holders = claim.holders.filter(
+          (holder) => sovereignCouponPayeeGroup(holder.kind) === row.group
+        );
+        return [
+          {
+            ...claim,
+            holders,
+            amountLocal: holders.reduce((sum, holder) => sum + holder.amountLocal, 0),
+          },
+        ];
+      })
+    );
+    return {
+      _id: row.claim.id,
+      budgetId,
+      order,
+      claim: row.claim,
+      createdAt: new Date(),
+      bondIds: row.bondIds,
+    };
+  });
+  return { records, parts };
+}
+
+/**
+ * A replayed grouped freeze whose id is already installed keeps the claim it
+ * first wrote, as a per-bond replay does. A bond that claim does not carry
+ * (the replay saw a bond the first freeze did not) is frozen into a
+ * supplementary claim named after exactly those bonds, so no bond's coupon is
+ * dropped and none is frozen twice. Returns the supplementary records, already
+ * installed.
+ */
+export async function installGroupedReplaySupplements(
+  db: Db,
+  fresh: readonly SovereignCouponClaimRecord[],
+  savedById: ReadonlyMap<string, SovereignCouponClaimRecord>,
+  parts: ReadonlyMap<string, FundedSovereignCouponClaim[]>
+): Promise<SovereignCouponClaimRecord[]> {
+  const added: SovereignCouponClaimRecord[] = [];
+  for (const record of fresh) {
+    const saved = savedById.get(record._id);
+    if (!saved || !record.bondIds) continue;
+    const savedBonds = new Set(saved.bondIds ?? []);
+    if (record.bondIds.every((id) => savedBonds.has(id))) continue;
+    // Every part already written for this group and turn, supplements included.
+    // A plain prefix keeps the _id index bounds; the supplement suffix is
+    // matched here instead of in the pattern.
+    const supplementId = new RegExp(`^${escapeRegex(record._id)}(:x[0-9a-f]+)?$`);
+    const written = (
+      await sovereignCouponClaimStore(db)
+        .find({ _id: { $regex: `^${escapeRegex(record._id)}` } }, { projection: { bondIds: 1 } })
+        .toArray()
+    ).filter((row) => supplementId.test(String(row._id)));
+    const covered = new Set(written.flatMap((row) => row.bondIds ?? []));
+    const missing = (parts.get(record._id) ?? []).filter((claim) => !covered.has(claim.bondId));
+    if (!missing.length) continue;
+    const hash = createHash("sha256")
+      .update(
+        missing
+          .map((claim) => claim.bondId)
+          .sort()
+          .join(",")
+      )
+      .digest("hex")
+      .slice(0, 12);
+    const supplement = groupedRecords(record.budgetId, missing, `:x${hash}`).records;
+    await insertClaimRecords(db, supplement);
+    added.push(...supplement);
+  }
+  return added;
 }
 
 /**
@@ -959,6 +1107,12 @@ export async function settleFundedSovereignCoupons(
      * and receipt-owned claims. Set with `fiscalScale`; omitted, no cap.
      */
     claimLoadLimit?: number;
+    /**
+     * `gameConfig.sovereignCouponGroupedAccrualEnabled`: freeze this turn's
+     * coupons as one claim per currency and payee group instead of one per
+     * bond. Claims already frozen settle the same either way.
+     */
+    groupedAccrual?: boolean;
   }
 ): Promise<{ completed: boolean; batchClose?: CouponBatchCloseOp[] }> {
   const budgetId = String(budget._id);
@@ -983,6 +1137,7 @@ export async function settleFundedSovereignCoupons(
     budgetPriors = sovereignCouponBudgetPriors(input.priorPayouts, {
       bonds: input.bonds,
       frozenThrough: budget.sovereignCouponFrozenThrough,
+      budgetId,
     });
     // The cash figure is only a bound: the payout loop still reads the
     // authoritative cash and its guarded debit is the authority. A prefetched
@@ -1034,9 +1189,9 @@ export async function settleFundedSovereignCoupons(
   // This turn's claims. A prepared pass froze and installed them for every
   // budget at once before its lanes started; otherwise this budget installs
   // its own here.
-  const fresh: SovereignCouponClaimRecord[] = prepared
-    ? prepared.fresh.map((row) => row.record)
-    : freezeDueSovereignCouponClaims({
+  const frozenSet = prepared
+    ? undefined
+    : freezeDueSovereignCouponClaimSet({
         budgetId,
         bonds: input.bonds,
         turn: input.turn,
@@ -1045,7 +1200,11 @@ export async function settleFundedSovereignCoupons(
         corporateQuotes: input.corporateQuotes,
         frozenThrough: budget.sovereignCouponFrozenThrough,
         knownClaims: claimById,
+        grouped: input.groupedAccrual === true,
       });
+  const fresh: SovereignCouponClaimRecord[] = prepared
+    ? prepared.fresh.map((row) => row.record)
+    : frozenSet!.records;
 
   // A budget that can settle nothing this pass skips its claim load and
   // target-readiness work entirely, as the payee locks already do.
@@ -1095,7 +1254,11 @@ export async function settleFundedSovereignCoupons(
     const existing = await sovereignCouponClaimStore(db)
       .find(
         { _id: { $in: fresh.map((row) => row._id) } },
-        { projection: SOVEREIGN_COUPON_CLAIM_PROJECTION }
+        {
+          projection: input.groupedAccrual
+            ? FROZEN_CLAIM_PROBE_PROJECTION
+            : SOVEREIGN_COUPON_CLAIM_PROJECTION,
+        }
       )
       .toArray();
     const existingById = new Map(existing.map((row) => [row._id, row]));
@@ -1103,17 +1266,13 @@ export async function settleFundedSovereignCoupons(
       db,
       fresh.filter((row) => !existingById.has(row._id))
     );
-    await db.collection<FederalBudget>("federalBudget").updateOne(
-      { _id: budget._id },
-      {
-        $max: Object.fromEntries(
-          fresh.map((row) => [
-            `sovereignCouponFrozenThrough.b${row.claim.bondId}`,
-            row.claim.dueTurn,
-          ])
-        ),
-      }
-    );
+    if (frozenSet!.parts.size > 0)
+      fresh.push(
+        ...(await installGroupedReplaySupplements(db, fresh, existingById, frozenSet!.parts))
+      );
+    await db
+      .collection<FederalBudget>("federalBudget")
+      .updateOne({ _id: budget._id }, { $max: frozenSet!.marks });
     for (const row of fresh) {
       const saved = existingById.get(row._id);
       if (saved?.settledTurn !== undefined) continue;
