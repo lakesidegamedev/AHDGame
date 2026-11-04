@@ -70,6 +70,10 @@
       "specializationClosed": "In einem abgeschlossenen Jahrzehnt nicht erforschbar",
       "specializationsClosed": "Dieses Jahrzehnt ist abgeschlossen; seine Spezialisierungen können nicht mehr erforscht werden.",
       "chooseSpecialization": "Wähle eine. Die anderen werden für dieses Jahrzehnt gesperrt. Jeder Abschluss folgt seiner eigenen Wahl."
+    },
+    "commodityMarket": {
+      "substitutionOrders": "zuzüglich {units} Ersatzbestellungen",
+      "substitutionOrdersExplanation": "Haushalte haben diese bestellt, nachdem ihre erste Wahl ausverkauft war. Sie zählen hier nicht als Nachfrage, damit dieses Gut nicht als knapp erscheint."
     }
   }
 }
