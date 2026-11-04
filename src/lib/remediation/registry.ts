@@ -37,6 +37,7 @@ import { defect as freightOverbillingRestitution } from "./defects/AHD-1448-frei
 import { defect as dissolutionNppSuccessors } from "./defects/AHD-dissolution-npp-successors";
 import { defect as sovereignMaturityStrandedPayout } from "./defects/AHD-sovereign-maturity-stranded-payout";
 import { defect as sovereignMaturityUnfundedRollover } from "./defects/AHD-sovereign-maturity-unfunded-rollover";
+import { defect as sovereignCouponArrears } from "./defects/AHD-sovereign-coupon-arrears";
 import { defect as sovereignRolloverWall } from "./defects/AHD-sovereign-rollover-wall";
 import { defect as wholePlantsConversion } from "./defects/AHD-whole-plants-conversion";
 import type { Defect } from "./types";
@@ -114,6 +115,10 @@ export const DEFECTS: Defect[] = [
   // maturing claim and path, so walls of thousands of identical bonds formed.
   // Folds every plain series into one bond; moves no money.
   sovereignRolloverWall,
+  // Unfunded Treasuries kept one coupon claim per bond per unpaid turn, so the
+  // open queue reached millions of documents. Folds them into one claim per
+  // budget, turn, currency and payee group; moves no money.
+  sovereignCouponArrears,
   // Whole plants: one-time recount of every sector to whole plants before
   // gameConfig.wholePlantsStage is switched on; part-plants are credited.
   wholePlantsConversion,
