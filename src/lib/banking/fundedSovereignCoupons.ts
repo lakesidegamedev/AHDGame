@@ -825,12 +825,14 @@ export async function installGroupedReplaySupplements(
     const savedBonds = new Set(saved.bondIds ?? []);
     if (record.bondIds.every((id) => savedBonds.has(id))) continue;
     // Every part already written for this group and turn, supplements included.
-    const written = await sovereignCouponClaimStore(db)
-      .find(
-        { _id: { $regex: `^${escapeRegex(record._id)}(:x[0-9a-f]+)?$` } },
-        { projection: { bondIds: 1 } }
-      )
-      .toArray();
+    // A plain prefix keeps the _id index bounds; the supplement suffix is
+    // matched here instead of in the pattern.
+    const supplementId = new RegExp(`^${escapeRegex(record._id)}(:x[0-9a-f]+)?$`);
+    const written = (
+      await sovereignCouponClaimStore(db)
+        .find({ _id: { $regex: `^${escapeRegex(record._id)}` } }, { projection: { bondIds: 1 } })
+        .toArray()
+    ).filter((row) => supplementId.test(String(row._id)));
     const covered = new Set(written.flatMap((row) => row.bondIds ?? []));
     const missing = (parts.get(record._id) ?? []).filter((claim) => !covered.has(claim.bondId));
     if (!missing.length) continue;
