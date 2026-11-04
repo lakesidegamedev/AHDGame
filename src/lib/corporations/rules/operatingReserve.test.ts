@@ -105,7 +105,7 @@ describe("operating reserve", () => {
     expect(text).toContain("leave £200 in cash");
     expect(text).toContain("the £300 your plants need to run for 3 turns");
     expect(text).toContain("most you can build and keep that reserve is £700");
-    expect(text).not.toMatch(/[–—]/);
+    expect(text).not.toMatch(/[\u2013\u2014]/);
     expect(operatingReserveSkipReason(3)).toBe(
       "Would leave less than 3 turns of running costs in cash"
     );
