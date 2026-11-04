@@ -219,7 +219,9 @@
         "cash": "There is not enough cash to build one facility while retaining the operating reserve.",
         "demand": "Measured buyers and queued builds leave room for less than one additional facility."
       },
-      "mixedOrQueuedDemand": "Some outputs have no measured unmet demand, or existing unused capacity and queued builds already cover the available buyers. Extra capacity can leave part of the output unsold."
+      "mixedOrQueuedDemand": "Some outputs have no measured unmet demand, or existing unused capacity and queued builds already cover the available buyers. Extra capacity can leave part of the output unsold.",
+      "reserveOverrideHelp": "Spending below the reserve can leave your plants without the cash to pay wages and buy inputs, so they run at a fraction of their output until the cash recovers.",
+      "buildPastReserve": "Build anyway"
     },
     "bankConsole": {
       "eyebrow": {

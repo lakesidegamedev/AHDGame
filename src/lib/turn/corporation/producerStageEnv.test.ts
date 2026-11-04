@@ -45,6 +45,26 @@ describe("producer stage env public home first", () => {
   });
 });
 
+describe("producer stage env sales advance price", () => {
+  it("judges the sales advance at clearing prices only when the stage is on", () => {
+    expect(producerStageEnv(null).salesAdvanceAtClearing).toBe(false);
+    expect(producerStageEnv({ producerSalesAdvancePriceStage: 0 }).salesAdvanceAtClearing).toBe(
+      false
+    );
+    expect(producerStageEnv({ producerSalesAdvancePriceStage: 1 }).salesAdvanceAtClearing).toBe(
+      true
+    );
+  });
+});
+
+describe("producer stage env zombie restart", () => {
+  it("lets idle plants probe only when the stage is on", () => {
+    expect(producerStageEnv(null).restartProbes).toBe(false);
+    expect(producerStageEnv({ producerZombieRestartStage: 0 }).restartProbes).toBe(false);
+    expect(producerStageEnv({ producerZombieRestartStage: 1 }).restartProbes).toBe(true);
+  });
+});
+
 describe("producer stage env wage share", () => {
   it("keeps the wage share off unless its stage is on", () => {
     expect(producerStageEnv(null).wageShareTarget).toBe(0);

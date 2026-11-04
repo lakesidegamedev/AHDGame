@@ -269,6 +269,106 @@ describe("bulkBuildCapacity", () => {
     expect(placeCapacityBuild).not.toHaveBeenCalled();
   });
 
+  describe("operating reserve (suggestion 409)", () => {
+    // The company must keep 40 in cash: three turns of its running bills.
+    function reservePath(costs: Record<string, number>) {
+      vi.mocked(placeCapacityBuild).mockImplementation(async (_db, input) => {
+        const cost = costs[input.sector.stateId as string];
+        const cash = corporation.liquidCapital as number;
+        const below = cash - cost < 40;
+        if (input.preview)
+          return {
+            ok: true,
+            status: 200,
+            body: {
+              success: true,
+              preview: true,
+              totalCostLocal: cost,
+              operatingReserveLocal: 40,
+              reserveTurns: 3,
+              maxAffordableLocal: Math.max(0, cash - 40),
+              belowOperatingReserve: below,
+            },
+            chargedLocal: 0,
+            queueFull: false,
+          };
+        if (below && !input.overrideOperatingReserve)
+          return {
+            ok: false,
+            status: 409,
+            code: "operating_reserve",
+            error: "reserve",
+            reserve: { reserveTurns: 3, operatingReserveLocal: 40, maxAffordableLocal: 0 },
+          };
+        corporation.liquidCapital = cash - cost;
+        return {
+          ok: true,
+          status: 201,
+          body: { success: true },
+          chargedLocal: cost,
+          queueFull: false,
+        };
+      });
+    }
+
+    it("previews only what keeps the reserve and says why the rest waits", async () => {
+      wire([sector("US-AL"), sector("US-NY")]);
+      reservePath({ "US-AL": 60, "US-NY": 30 });
+      const json = await (
+        await call({ rule: { kind: "facilities", count: 1 }, mode: "preview" })
+      ).json();
+      expect(json.rows.map((r: { status: string }) => r.status)).toEqual(["ready", "over_budget"]);
+      expect(json.rows[1].reason).toMatch(/3 turns of running costs/);
+      expect(json.operatingReserveLocal).toBe(40);
+      expect(json.reserveHeldBack).toBe(true);
+      expect(json.cashAfterLocal).toBe(40);
+    });
+
+    it("previews past the reserve when the CEO overrides it", async () => {
+      wire([sector("US-AL"), sector("US-NY")]);
+      reservePath({ "US-AL": 60, "US-NY": 30 });
+      const json = await (
+        await call({
+          rule: { kind: "facilities", count: 1 },
+          mode: "preview",
+          overrideOperatingReserve: true,
+        })
+      ).json();
+      expect(json.rows.map((r: { status: string }) => r.status)).toEqual(["ready", "ready"]);
+      expect(json.cashAfterLocal).toBe(10);
+    });
+
+    it("applies until the next build would break the reserve, then stops", async () => {
+      wire([sector("US-AL"), sector("US-NY")]);
+      reservePath({ "US-AL": 60, "US-NY": 30 });
+      const json = await (
+        await call({ rule: { kind: "facilities", count: 1 }, mode: "apply", maxTotalLocal: 1_000 })
+      ).json();
+      expect(json.rows.map((r: { status: string }) => r.status)).toEqual(["built", "skipped"]);
+      expect(json.rows[1].reason).toMatch(/3 turns of running costs/);
+      expect(corporation.liquidCapital).toBe(40);
+    });
+
+    it("applies past the reserve with the override and passes it to every order", async () => {
+      wire([sector("US-AL"), sector("US-NY")]);
+      reservePath({ "US-AL": 60, "US-NY": 30 });
+      const json = await (
+        await call({
+          rule: { kind: "facilities", count: 1 },
+          mode: "apply",
+          maxTotalLocal: 1_000,
+          overrideOperatingReserve: true,
+        })
+      ).json();
+      expect(json.rows.map((r: { status: string }) => r.status)).toEqual(["built", "built"]);
+      expect(corporation.liquidCapital).toBe(10);
+      for (const [, input] of vi
+        .mocked(placeCapacityBuild)
+        .mock.calls.filter(([, i]) => !i.preview))
+        expect(input.overrideOperatingReserve).toBe(true);
+    });
+  });
+
   it("refuses to spend without a confirmed total", async () => {
     const res = await call({ rule: { kind: "facilities", count: 1 }, mode: "apply" });
     expect(res.status).toBe(400);
