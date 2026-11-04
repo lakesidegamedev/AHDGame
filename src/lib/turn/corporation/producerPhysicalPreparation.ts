@@ -75,7 +75,9 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { producerRecipe } from "@/lib/market/producerMarket/recipeRules";
 import {
   WAGE_SHARE_DEFAULT_SURPLUS_CAP,
+  labourLinkedWageShareTarget,
   wageShareLabourCost,
+  type LabourWageParams,
   type WageShareReceipt,
 } from "@/lib/market/producerMarket/wageShareRules";
 import { prepareProducerSector } from "./producerSectorPlan";
@@ -121,6 +123,8 @@ export type ProducerPhysicalEnv = Pick<
   wageShareTarget?: number;
   /** gameConfig.producerWageShareSurplusCap: largest share of surplus after base wages the raise takes. */
   wageShareSurplusCap?: number;
+  /** gameConfig.producerLabourWageStage settings: the target follows state unemployment (null or absent = off). */
+  labourWage?: LabourWageParams | null;
   /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
   runPaceDrop?: number;
   /** gameConfig.producerHouseholdIncomeFloor: target household income per turn, anchor (0 or absent = off). */
@@ -600,13 +604,21 @@ export function prepareProducerPhysicalSector(input: {
         )
       : 1);
   // Wage share stage: wages rise toward a share of last turn's value added (wageShareRules).
+  // The labour stage sets that share from the state's unemployment, moving a step a turn.
   plan.labourCost =
     (env.wageShareTarget ?? 0) > 0
       ? wageShareLabourCost({
           baseLabourCost: payroll.sectorLaborCost,
           fullRunUnits: plan.capacityUnits * plan.activeFraction * plan.outputMultiplier,
           last: settledLast as WageShareReceipt | null,
-          targetShare: env.wageShareTarget ?? 0,
+          targetShare: env.labourWage
+            ? labourLinkedWageShareTarget({
+                unemploymentRate: metrics?.economic?.unemploymentRate?.value,
+                last: settledLast as WageShareReceipt | null,
+                params: env.labourWage,
+                fallback: env.wageShareTarget ?? 0,
+              })
+            : (env.wageShareTarget ?? 0),
           surplusCap: env.wageShareSurplusCap ?? WAGE_SHARE_DEFAULT_SURPLUS_CAP,
         })
       : payroll.sectorLaborCost;

@@ -305,6 +305,24 @@ export interface GameConfig {
   /** Largest share (0 to 1) of surplus after base wages the raise takes. Absent = 0.75. */
   producerWageShareSurplusCap?: number;
   /**
+   * Funded producer market: >= 1 sets each plant's wage share target from its
+   * state's unemployment instead of producerWageShareTarget (turns the wage
+   * share raise on by itself), moving at most producerLabourWageStep a turn,
+   * and builds every country's economicFactors.wageGrowth from its states'
+   * labour markets (wageShareRules.ts). 0 or absent = off.
+   */
+  producerLabourWageStage?: number;
+  /** Unemployment (%) at or below which the target is at its maximum. Absent = 4.5. */
+  producerLabourWageNaturalRate?: number;
+  /** Unemployment (%) at or above which the target is at its floor. Absent = 12. */
+  producerLabourWageSlackRate?: number;
+  /** Target wage share (0 to 1) in a tight labour market. Absent = 0.55. */
+  producerLabourWageMaxShare?: number;
+  /** Target wage share (0 to 1) in a slack labour market. Absent = 0.3. */
+  producerLabourWageFloorShare?: number;
+  /** Largest move of a plant's effective target a turn (share of value added). Absent = 0.03. */
+  producerLabourWageStep?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
