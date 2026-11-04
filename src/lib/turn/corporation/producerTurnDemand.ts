@@ -22,6 +22,7 @@ import {
   withCarriedLines,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { releaseCarriedLines } from "@/lib/market/rules/publicCarryRelease";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
@@ -321,10 +322,20 @@ export async function buildProducerTurnDemand(
     ])
   );
   const publicCarriedIn = new Map<string, number>();
+  // Release stage (issue #5454): a line draws at most part of its carry a turn.
+  // The rest is held, and kept for later turns with what this turn leaves unspent.
+  const publicCarryHeld = new Map<string, LineCarry>();
   const carriedFunding = funding.map((f) => {
     const carryIn = input.publicCarryIn?.get(f.countryId);
     if (!carryIn) return f;
-    const lines = withCarriedLines(f.lines, carryIn);
+    let lines: typeof f.lines;
+    if (input.env.publicCarryRelease) {
+      const released = releaseCarriedLines(f.lines, carryIn);
+      lines = released.lines;
+      if (Object.keys(released.held).length > 0) publicCarryHeld.set(f.countryId, released.held);
+    } else {
+      lines = withCarriedLines(f.lines, carryIn);
+    }
     const added =
       lines.reduce((s, l) => s + l.amountLocal, 0) - f.lines.reduce((s, l) => s + l.amountLocal, 0);
     if (added > 0) publicCarriedIn.set(f.countryId, added);
@@ -603,6 +614,8 @@ export async function buildProducerTurnDemand(
         fresh: publicFreshByCountry.get(f.countryId)?.get(carryLineKey(l.commodity, l.book)) ?? 0,
       })),
     })),
+    /** Carry each country held back this turn under the release stage. */
+    publicCarryHeld,
     headcountBySectorId,
     householdForPayee,
     householdSeed,
