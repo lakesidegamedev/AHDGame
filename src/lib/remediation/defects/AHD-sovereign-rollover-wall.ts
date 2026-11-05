@@ -399,7 +399,11 @@ async function applySeries(
       { client: (db as Db & { client?: import("mongodb").MongoClient }).client }
     );
     return true;
-  } catch {
+  } catch (error) {
+    console.error(
+      `[rollover-wall] series ${row.countryId} t${row.maturityTurn} (${row.members.length}) failed:`,
+      error
+    );
     return false;
   }
 }
