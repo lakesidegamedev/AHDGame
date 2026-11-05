@@ -16,6 +16,11 @@ describe("ownSiteDeliveries", () => {
     expect(r?.products[0]).toMatchObject({ commodity: "steel", share: 1, units: 360 });
   });
 
+  it("values deliveries to short own sites at the captive value", () => {
+    const r = ownSiteDeliveries({ turn: 10, products: [product({ captiveUnitValue: 300 })] }, 10);
+    expect(r?.valueAnchor).toBe(108000);
+  });
+
   it("splits a mixed plant per output", () => {
     const r = ownSiteDeliveries(
       {

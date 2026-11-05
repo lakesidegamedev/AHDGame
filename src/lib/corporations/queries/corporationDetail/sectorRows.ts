@@ -67,7 +67,8 @@ import {
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
-import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import { internalSupplyView } from "@/lib/corporations/rules/internalSupplyView";
+import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import {
   fundedSectorTotalCost,
   plantlessSectorView,
@@ -786,14 +787,31 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     // earned, so a plants sector selling 15% of its output displays a fat
     // positive margin while it loses money. Plants only: below plants there is
     // no produced-vs-sold split for the margin to lie about. Presentation only,
-    // never read back into the economy. Rules: `plantsNetMarginPct`.
-    const sectorNetMargin = plantsMode
-      ? plantsNetMarginPct({
+    // never read back into the economy. Rules: `plantsNetMarginPct`, via `internalSupplyView`.
+    //
+    // Issue 5385 / ticket 1763: the margin and the management profit count the
+    // internal supply lines between the company's own sites, priced or free, on
+    // one basis (`internalSupplyView`). `profit` stays the booked figure, which
+    // tax and valuation read.
+    const ownSite = plantsMode ? ownSiteDeliveries(sector.producerSettlement, currentTurn) : null;
+    const supplyView = plantsMode
+      ? internalSupplyView({
           profit,
           revenue: financialRevenue,
           totalCost: maintenance + sectorGrowthCostLocal + sectorRegulatoryBurden + freightCost,
+          income: sectorFieldToCorpCcy(sector.plantsPnl?.internalSupplyIncome ?? 0, sector),
+          charge: sectorFieldToCorpCcy(sector.plantsPnl?.internalSupplyCharge ?? 0, sector),
+          // The receipt is ₳ per turn; the row is the corp's currency per day.
+          ownSiteValue: ownSite
+            ? writeCorpEconomicLocal(
+                ownSite.valueAnchor * TURNS_PER_DAY,
+                restatement.corpCurrency,
+                restatement.corpRate
+              )
+            : 0,
         })
       : null;
+    const sectorNetMargin = supplyView?.netMarginPct ?? null;
     const fillAdjustedMarginPct =
       sectorNetMargin == null ? null : Math.round(sectorNetMargin * 10) / 10;
 
@@ -851,6 +869,16 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ...roundOwnershipTerms(ownershipTerms),
       commoditySupplyDemandBlendPct,
       profit: Math.round(profit),
+      // Profit with internal supply income and charges counted, display only.
+      // Null when there are no internal lines, so the row shows `profit`.
+      managementProfit:
+        supplyView && (supplyView.income > 0 || supplyView.charge > 0)
+          ? Math.round(supplyView.profit)
+          : null,
+      // Free transfers: what this site sent to its own sites at its own asking
+      // price, per day in the corp's currency. A memo, never booked.
+      ownSiteMemoValue:
+        supplyView && supplyView.ownSiteMemo > 0 ? Math.round(supplyView.ownSiteMemo) : null,
       workers:
         sector.workers ??
         calculateWorkers(sectorFieldToAnchor(sector.revenue, sector), metrics.workforceSkill),
@@ -894,9 +922,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       fillRateBand: fillRateBand(sectorFillRate),
       // Share of output handed to the company's own other sites (no sale, no
       // revenue). Null when none, or not last turn's receipt.
-      ownSiteShare: plantsMode
-        ? (ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? null)
-        : null,
+      ownSiteShare: ownSite?.share ?? null,
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
       mothballed,

@@ -89,6 +89,65 @@ describe("buildSectorPlantsSection", () => {
         (s.pnl.internalSupplyChargeAnchor ?? 0)
     ).toBeCloseTo(s.pnl.profitAnchor, 8);
   });
+  it("gives a free supplier a memo at its ask and a margin off the -999% floor (issue 5385)", () => {
+    // Everything went to own sites for free: no revenue, the whole bill booked.
+    const money = {
+      ...BASE_ARGS.money,
+      realizedRevenueAnchor: 0,
+      maintenanceNetAnchor: 600,
+      profitAnchor: -850,
+    };
+    const supplier = sectorFixture({
+      soldUnits: 0,
+      producerSettlement: {
+        turn: 99,
+        products: [
+          { commodity: "steel", producedUnits: 5, internalDeliveredUnits: 5, askingUnitPrice: 20 },
+        ],
+      } as unknown as CorporateSector["producerSettlement"],
+    });
+    const booked = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      sector: sectorFixture({ soldUnits: 0 }),
+      money,
+    });
+    expect(booked.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
+    expect(booked.pnl.ownSiteMemoAnchor).toBeUndefined();
+    const s = buildSectorPlantsSection({ ...BASE_ARGS, eraUnitScale: 1, sector: supplier, money });
+    // 5 units a turn at 20, over a 24-turn day.
+    expect(s.pnl.ownSiteMemoAnchor).toBe(2400);
+    expect(s.pnl.revenueAnchor).toBe(0);
+    expect(s.pnl.profitAnchor).toBe(-850);
+    expect(s.truth.fillAdjustedMarginPct).toBeCloseTo(((2400 - 850) / 2400) * 100, 8);
+  });
+  it("adds no memo once the deliveries were priced", () => {
+    const s = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      sector: sectorFixture({
+        producerSettlement: {
+          turn: 99,
+          products: [
+            {
+              commodity: "steel",
+              producedUnits: 5,
+              internalDeliveredUnits: 5,
+              askingUnitPrice: 20,
+            },
+          ],
+        } as unknown as CorporateSector["producerSettlement"],
+      }),
+      money: {
+        ...BASE_ARGS.money,
+        realizedRevenueAnchor: 1040,
+        profitAnchor: 190,
+        internalSupplyIncomeAnchor: 40,
+      },
+    });
+    expect(s.pnl.ownSiteMemoAnchor).toBeUndefined();
+    expect(s.truth.fillAdjustedMarginPct).toBeCloseTo((190 / 1040) * 100, 8);
+  });
   it("does not attribute all idle output to an unquantified deposit constraint", () => {
     const result = buildSectorPlantsSection({
       ...BASE_ARGS,

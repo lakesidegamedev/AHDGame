@@ -137,6 +137,7 @@ import {
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import { freeTransferMemo } from "@/lib/corporations/rules/internalSupplyView";
 import {
   fundedSectorProfit,
   sectorMaintenanceAndProfit,
@@ -1462,7 +1463,8 @@ export function buildSectorPlantsSection(args: {
   // Output handed free to the company's own sites is used, not unsold (ticket
   // 1757): a Kanto plant that fed its owner's US mines read "75 units went
   // unsold, the market is oversupplied" on a fully used turn.
-  const ownSiteShare = ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? 0;
+  const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
+  const ownSiteShare = ownSite?.share ?? 0;
   const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
     producedUnits != null && soldUnits != null
@@ -1795,22 +1797,35 @@ export function buildSectorPlantsSection(args: {
     : 0;
   const freightCostAnchor = money.freightCostAnchor ?? 0;
   const freightIncomeAnchor = money.freightIncomeAnchor ?? 0;
+  // One basis for revenue, cost and profit (issue 5385, ticket 1763): the
+  // profit counts income and charges between the company's own sites, so the
+  // revenue and the bill do too. The fallback path's figures already carry
+  // them (`internalTransferAccount`); the engine's own lines do not.
+  const internalSupplyIncomeAnchor = nonNeg(money.internalSupplyIncomeAnchor ?? 0);
   const operatingCostAnchor =
     (engine
-      ? engine.totalCost - engineGrowthAnchor
+      ? engine.totalCost - engineGrowthAnchor + internalSupplyChargeAnchor
       : nonNeg(money.maintenanceNetAnchor + money.labourAnchor)) + freightCostAnchor;
   const totalCostAnchor = engine
-    ? engine.totalCost + freightCostAnchor
+    ? engine.totalCost + internalSupplyChargeAnchor + freightCostAnchor
     : operatingCostAnchor + nonNeg(money.growthCostAnchor);
   const revenueAnchor =
-    (engine ? engine.revenue : money.realizedRevenueAnchor) + freightIncomeAnchor;
+    (engine ? engine.revenue + internalSupplyIncomeAnchor : money.realizedRevenueAnchor) +
+    freightIncomeAnchor;
+  // Free transfers book nothing for what this site sent to its own sites. The
+  // memo values it at the site's own ask (₳ per turn on the receipt, per day
+  // here) so a pure supplier's margin is not the -999% floor.
+  const ownSiteMemoAnchor = freeTransferMemo({
+    income: internalSupplyIncomeAnchor,
+    ownSiteValue: (ownSite?.valueAnchor ?? 0) * TURNS_PER_DAY,
+  });
   const receivedPerUnitAnchor =
     producedUnits != null && producedUnits > 0 ? revenueAnchor / producedUnits : null;
   const costPerUnitAnchor =
     producedUnits != null && producedUnits > 0 ? operatingCostAnchor / producedUnits : null;
   const fillAdjustedMarginPct = plantsNetMarginPct({
-    profit: money.profitAnchor,
-    revenue: revenueAnchor,
+    profit: money.profitAnchor + ownSiteMemoAnchor,
+    revenue: revenueAnchor + ownSiteMemoAnchor,
     totalCost: totalCostAnchor,
   });
   // Break-even: profit is stored per financial day (TURNS_PER_DAY turns), CIP
@@ -1942,6 +1957,7 @@ export function buildSectorPlantsSection(args: {
         ? { internalSupplyIncomeAnchor: money.internalSupplyIncomeAnchor }
         : {}),
       ...(internalSupplyChargeAnchor > 0 ? { internalSupplyChargeAnchor } : {}),
+      ...(ownSiteMemoAnchor > 0 ? { ownSiteMemoAnchor } : {}),
       freightCostAnchor,
       freightIncomeAnchor,
       growthAndBuildAnchor: engine ? nonNeg(engineGrowthAnchor) : nonNeg(money.growthCostAnchor),

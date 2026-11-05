@@ -200,6 +200,33 @@ it("names own-site charges and identifies allocated income already included in r
   expect(screen.getByText("Charges from your sites")).toBeTruthy();
 });
 
+it("shows a free supplier's own-site deliveries as a memo, not as revenue (issue 5385)", () => {
+  const free = plants as PlantsData;
+  render(
+    <MarketMoneyPanel
+      plants={{ ...free, pnl: { ...free.pnl, ownSiteMemoAnchor: 4_200 } }}
+      sectorType="manufacturing"
+      financials={null}
+      corporation={{ _id: "fixture", name: "Synthetic producer" }}
+    />
+  );
+  expect(screen.getByText("Sent to your own sites (memo)")).toBeTruthy();
+  expect(screen.getByText("M4200")).toBeTruthy();
+  expect(screen.getByText("M895000")).toBeTruthy();
+});
+
+it("shows no memo line when nothing was sent free", () => {
+  render(
+    <MarketMoneyPanel
+      plants={plants}
+      sectorType="manufacturing"
+      financials={null}
+      corporation={{ _id: "fixture", name: "Synthetic producer" }}
+    />
+  );
+  expect(screen.queryByText("Sent to your own sites (memo)")).toBeNull();
+});
+
 describe("own-site deliveries (ticket 1757)", () => {
   it("names output handed to the company's own sites and does not call it unsold", () => {
     render(

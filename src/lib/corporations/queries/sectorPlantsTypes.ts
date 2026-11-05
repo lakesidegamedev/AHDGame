@@ -277,6 +277,12 @@ export interface SectorPlantsSection {
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
     internalSupplyChargeAnchor?: number;
+    /**
+     * Free internal transfers: what this site sent to the company's own sites
+     * last turn at its own asking price, ₳ per day. A memo, not booked; only
+     * the net margin counts it. Absent when priced or none.
+     */
+    ownSiteMemoAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     growthAndBuildAnchor: number;

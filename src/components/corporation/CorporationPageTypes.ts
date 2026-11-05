@@ -834,6 +834,16 @@ export interface SectorDetail {
    */
   ownSiteShare?: number | null;
   /**
+   * Profit with income and charges between the company's own sites counted
+   * (priced internal transfers). Display only; null when there are none.
+   */
+  managementProfit?: number | null;
+  /**
+   * Free internal transfers: what this site sent to the company's own sites,
+   * at its own asking price, per day. A memo, never booked. Insider-only.
+   */
+  ownSiteMemoValue?: number | null;
+  /**
    * Share of offered output (0-1) no freight network could place. The part of
    * the fill shortfall that is a DELIVERY failure rather than a demand
    * failure, which is the opposite instruction to the player. Insider-only,

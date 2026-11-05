@@ -397,6 +397,8 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
             row.deliveryLimitedFraction = null;
             // Same class of intel: who a rival's output goes to.
             row.ownSiteShare = null;
+            row.managementProfit = null;
+            row.ownSiteMemoValue = null;
           }
         }
         const corpPhysical = corpObj?.physical as Record<string, unknown> | null | undefined;
