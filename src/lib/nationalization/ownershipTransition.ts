@@ -29,6 +29,7 @@ import {
   resolveSectorHostCurrencyCode,
   fxRateForSectorHostFromMap,
   fxRateForCorpFromMap,
+  resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CorporationType } from "@/lib/constants/corporations";
@@ -93,8 +94,16 @@ import { recordNationalizationLedger } from "./ledger";
 import type { NationalizationMethod, NationalizationTrigger } from "./consequences/types";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import {
+  combineConstructionBorrowerTransferPlans,
+  mergeSurvivorConstructionFilter,
+  prepareConstructionBorrowerTransfers,
+  securedSiteMergeRefusal,
+  settleConstructionBorrowerTransfers,
+  type ConstructionBorrowerTransferPlan,
+} from "@/lib/banking/constructionBorrowerTransfer";
+import {
   acquireConstructionPropertyTransition,
-  hasProtectedConstructionProperty,
+  hasProtectedConstructionClaim,
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
   unprotectedConstructionPropertyFilter,
@@ -121,6 +130,11 @@ export interface TransitionConsequenceInput {
   governingPartyId?: string | null;
   actorCharacterId?: ObjectId;
 }
+
+/** Pairs a seized site with the holding `absorbSectorIntoNatCorp` folds it into. */
+const nationalizedSiteMergeKey = (
+  sector: Pick<CorporateSector, "stateId" | "sectorType" | "industryModel">
+) => `${sector.stateId}|${sector.sectorType}|${sector.industryModel ?? ""}`;
 
 /**
  * Move one seized `sector` into the National Corporation `destId`, MERGING into
@@ -155,7 +169,8 @@ async function absorbSectorIntoNatCorp(
   transitionMultiplier: number,
   plantsEnabled: boolean,
   transitionKey?: string,
-  fundedOperationKey?: string
+  fundedOperationKey?: string,
+  constructionTransfers?: ConstructionBorrowerTransferPlan
 ): Promise<ObjectId> {
   const sectors = db.collection<CorporateSector>("corporateSectors");
   // Prior-owner provenance — captured from the donor row BEFORE it is re-parented
@@ -204,10 +219,13 @@ async function absorbSectorIntoNatCorp(
     sectorType: sector.sectorType,
     industryModel: sector.industryModel ?? null,
   });
-  if (existing && hasProtectedConstructionProperty(existing)) {
-    throw badRequest("Resolve secured construction before merging this nationalized sector");
-  }
   if (existing && !existing._id.equals(sector._id)) {
+    // A financed site keeps its own row; `nationalizedSiteMergeKey` refuses
+    // the taking before any money moves when it would have to fold.
+    if (hasProtectedConstructionClaim(sector))
+      throw badRequest("A site with a construction loan cannot be merged into another holding");
+    if (existing.constructionPropertyTransition)
+      throw badRequest("The National Corporation holding is in another ownership change");
     // MERGE: the donor row is DELETED below, so anything not folded into the
     // survivor here is destroyed outright. `mergeSectorPlantFields` sums
     // capacity and CIP, concatenates the queues in landing order, ANDs
@@ -222,7 +240,7 @@ async function absorbSectorIntoNatCorp(
         })
       : null;
     const merge = await sectors.updateOne(
-      { _id: existing._id, ...unprotectedConstructionPropertyFilter() },
+      { _id: existing._id, ...mergeSurvivorConstructionFilter(existing) },
       {
         $inc: {
           // Revenue merges in EVERY mode, in lockstep with the capacity fold
@@ -280,12 +298,16 @@ async function absorbSectorIntoNatCorp(
           ? { "pendingFundedNationalization.operationKey": fundedOperationKey }
           : {}),
         ...(transitionKey
-          ? { "constructionPropertyTransition.key": transitionKey }
-          : unprotectedConstructionPropertyFilter()),
+          ? {
+              "constructionPropertyTransition.key": transitionKey,
+              ...constructionTransfers?.claimFilterFor(sector),
+            }
+          : (constructionTransfers?.filterFor(sector) ?? unprotectedConstructionPropertyFilter())),
       },
       {
         $set: {
           corporationId: destId,
+          ...constructionTransfers?.setFor(sector._id),
           revenue: transferRevenue,
           ...(plantsEnabled ? { capitalStock: haircutStock } : {}),
           ...(plantsEnabled ? seedPlantLedger(sector, haircutStock) : {}),
@@ -721,116 +743,157 @@ export async function nationalizeSector(
   const ownsFundedReservation =
     sector.constructionPropertyTransition?.key === compensationKey &&
     sector.constructionPropertyTransition.kind === "nationalization";
-  if (
-    hasProtectedConstructionProperty(sector) &&
-    !sector.pendingFundedNationalization &&
-    !ownsFundedReservation
-  ) {
-    throw badRequest("Resolve secured construction before nationalizing this sector");
-  }
-  if (
-    sector.pendingFundedNationalization &&
-    (sector.pendingFundedNationalization.operationKey !== compensationKey ||
-      !compensationLedger?.context?.treasuryCashLedgerEnabled)
-  ) {
-    throw new Error("Funded nationalization retry requires its original Treasury cash mode");
-  }
-  if (ownsFundedReservation && !compensationLedger?.context?.treasuryCashLedgerEnabled) {
-    throw new Error("Funded nationalization retry requires its original Treasury cash mode");
-  }
-  if (compensationLedger?.context?.treasuryCashLedgerEnabled) {
-    if (
-      !(await acquireConstructionPropertyTransition(
-        db,
-        sector,
-        compensationKey,
-        "nationalization",
-        false,
-        true
-      ))
-    ) {
-      throw badRequest("Resolve secured construction before nationalizing this sector");
-    }
-    const reservation = await sectors.updateOne(
-      {
-        _id: sector._id,
-        corporationId: donor._id,
-        $or: [
-          { pendingFundedNationalization: { $exists: false } },
-          { pendingFundedNationalization: { operationKey: compensationKey } },
-        ],
-      },
-      { $set: { pendingFundedNationalization: { operationKey: compensationKey } } }
+  // The state takes the site with its secured construction loan, the same way
+  // a whole-corp taking assumes the seized corporation's bonds: the National
+  // Corporation becomes the borrower. Checked and locked before compensation.
+  if (hasProtectedConstructionClaim(sector)) {
+    const mergeRefusal = await securedSiteMergeRefusal(
+      db,
+      [sector],
+      nationalCorp._id,
+      nationalizedSiteMergeKey
     );
-    if ((reservation?.matchedCount ?? 0) !== 1)
-      throw new Error("Could not reserve the funded nationalization mode");
+    if (mergeRefusal) throw badRequest(mergeRefusal);
   }
-  let fundedCompensationLocal: number | undefined;
-  let fundedCompensationNewlySettled = false;
-  let fundedTreasuryAmountLocal = 0;
-  let fundedPayoutAnchor: number | undefined;
-  if (compensationLedger?.context?.treasuryCashLedgerEnabled) {
-    const settled = await settleFundedTreasuryCompensation(db, {
-      countryId: params.countryId,
-      donor,
-      payoutAnchor,
-      fxByCurrency,
-      now,
-      key: compensationKey,
-      ledger: compensationLedger!,
-    });
-    fundedCompensationLocal = settled.donorAmountLocal;
-    fundedCompensationNewlySettled = settled.newlySettled;
-    fundedTreasuryAmountLocal = settled.treasuryAmountLocal;
-    fundedPayoutAnchor = settled.payoutAnchor;
-  } else {
-    await debitTreasuryCompensation(db, params.countryId, payoutAnchor, fxByCurrency, now, {
-      flow: "nationalization_compensation",
-      key: compensationKey,
-      ledger: compensationLedger,
-    });
-  }
-  const effectivePayoutAnchor = fundedPayoutAnchor ?? payoutAnchor;
-
-  // Snapshot the SOCI escalation multiplier at taking time so the transition
-  // shock is fixed to today's concentration, not retroactively deepened later.
-  const transitionMultiplier = sociMultiplier(
-    await readStateOwnershipConcentration(db, params.countryId)
-  );
-
-  // Move the sector into the National Corporation, merging into an existing
-  // (NatCorp, state, type) holding when present. Stamp the absorption turn so the
-  // re-privatization cooldown (spec §13.4) can protect just-absorbed assets.
-  // Brand facility-loss (Boeing rule): the donor survives a single-sector taking
-  // but loses this plant to the state, so dent its brand proportional to the
-  // sector's share of its revenue. Called before the sector is re-parented (the
-  // aggregate still includes it). No-op when the donor has no loyalty.
-  await applyBrandFacilityLoss(db, donor._id, sector.revenue);
-
-  const resultingSectorId = await absorbSectorIntoNatCorp(
-    db,
-    sector,
-    nationalCorp._id,
-    params.consequence.turn,
-    now,
-    transitionMultiplier,
-    plantsEnabled,
-    compensationLedger?.context?.treasuryCashLedgerEnabled ? compensationKey : undefined,
-    compensationLedger?.context?.treasuryCashLedgerEnabled ? compensationKey : undefined
-  );
-
-  // Credit the donor in its own currency (counterparty of the treasury debit).
-  let compensationPaid = 0;
-  if (payoutAnchor > 0 || (fundedCompensationLocal ?? 0) > 0) {
-    compensationPaid =
-      fundedCompensationLocal ??
-      Math.round(anchorToCorpLiquidCapital(payoutAnchor, donor, donorFxRate));
-    if (fundedCompensationLocal === undefined) {
-      const credited = await corps.updateOne(
-        { _id: donor._id },
-        { $inc: { liquidCapital: compensationPaid }, $set: { updatedAt: now } }
+  const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
+    sectors: [sector],
+    toId: nationalCorp._id,
+    toCurrency: resolveCorpLiquidCurrencyCode(nationalCorp) ?? undefined,
+    operationKey: compensationKey,
+    turn: gameState?.currentTurn ?? params.consequence.turn,
+    ownsTransition: () => ownsFundedReservation || !!sector.pendingFundedNationalization,
+  });
+  if (!preparedTransfers.ok) throw badRequest(preparedTransfers.error);
+  const constructionTransfers = preparedTransfers.plan;
+  try {
+    if (
+      sector.pendingFundedNationalization &&
+      (sector.pendingFundedNationalization.operationKey !== compensationKey ||
+        !compensationLedger?.context?.treasuryCashLedgerEnabled)
+    ) {
+      throw new Error("Funded nationalization retry requires its original Treasury cash mode");
+    }
+    if (ownsFundedReservation && !compensationLedger?.context?.treasuryCashLedgerEnabled) {
+      throw new Error("Funded nationalization retry requires its original Treasury cash mode");
+    }
+    if (compensationLedger?.context?.treasuryCashLedgerEnabled) {
+      if (
+        !(await acquireConstructionPropertyTransition(
+          db,
+          sector,
+          compensationKey,
+          "nationalization",
+          false,
+          true,
+          constructionTransfers.hasTransfer(sector._id)
+            ? constructionTransfers.claimFilterFor(sector)
+            : undefined
+        ))
+      ) {
+        throw badRequest("This sector is in another ownership change. Try again shortly.");
+      }
+      const reservation = await sectors.updateOne(
+        {
+          _id: sector._id,
+          corporationId: donor._id,
+          $or: [
+            { pendingFundedNationalization: { $exists: false } },
+            { pendingFundedNationalization: { operationKey: compensationKey } },
+          ],
+        },
+        { $set: { pendingFundedNationalization: { operationKey: compensationKey } } }
       );
-      if ((credited?.matchedCount ?? 0) > 0) {
+      if ((reservation?.matchedCount ?? 0) !== 1)
+        throw new Error("Could not reserve the funded nationalization mode");
+    }
+    let fundedCompensationLocal: number | undefined;
+    let fundedCompensationNewlySettled = false;
+    let fundedTreasuryAmountLocal = 0;
+    let fundedPayoutAnchor: number | undefined;
+    if (compensationLedger?.context?.treasuryCashLedgerEnabled) {
+      const settled = await settleFundedTreasuryCompensation(db, {
+        countryId: params.countryId,
+        donor,
+        payoutAnchor,
+        fxByCurrency,
+        now,
+        key: compensationKey,
+        ledger: compensationLedger!,
+      });
+      fundedCompensationLocal = settled.donorAmountLocal;
+      fundedCompensationNewlySettled = settled.newlySettled;
+      fundedTreasuryAmountLocal = settled.treasuryAmountLocal;
+      fundedPayoutAnchor = settled.payoutAnchor;
+    } else {
+      await debitTreasuryCompensation(db, params.countryId, payoutAnchor, fxByCurrency, now, {
+        flow: "nationalization_compensation",
+        key: compensationKey,
+        ledger: compensationLedger,
+      });
+    }
+    const effectivePayoutAnchor = fundedPayoutAnchor ?? payoutAnchor;
+
+    // Snapshot the SOCI escalation multiplier at taking time so the transition
+    // shock is fixed to today's concentration, not retroactively deepened later.
+    const transitionMultiplier = sociMultiplier(
+      await readStateOwnershipConcentration(db, params.countryId)
+    );
+
+    // Move the sector into the National Corporation, merging into an existing
+    // (NatCorp, state, type) holding when present. Stamp the absorption turn so the
+    // re-privatization cooldown (spec §13.4) can protect just-absorbed assets.
+    // Brand facility-loss (Boeing rule): the donor survives a single-sector taking
+    // but loses this plant to the state, so dent its brand proportional to the
+    // sector's share of its revenue. Called before the sector is re-parented (the
+    // aggregate still includes it). No-op when the donor has no loyalty.
+    await applyBrandFacilityLoss(db, donor._id, sector.revenue);
+
+    const resultingSectorId = await absorbSectorIntoNatCorp(
+      db,
+      sector,
+      nationalCorp._id,
+      params.consequence.turn,
+      now,
+      transitionMultiplier,
+      plantsEnabled,
+      compensationLedger?.context?.treasuryCashLedgerEnabled ? compensationKey : undefined,
+      compensationLedger?.context?.treasuryCashLedgerEnabled ? compensationKey : undefined,
+      constructionTransfers
+    );
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+
+    // Credit the donor in its own currency (counterparty of the treasury debit).
+    let compensationPaid = 0;
+    if (payoutAnchor > 0 || (fundedCompensationLocal ?? 0) > 0) {
+      compensationPaid =
+        fundedCompensationLocal ??
+        Math.round(anchorToCorpLiquidCapital(payoutAnchor, donor, donorFxRate));
+      if (fundedCompensationLocal === undefined) {
+        const credited = await corps.updateOne(
+          { _id: donor._id },
+          { $inc: { liquidCapital: compensationPaid }, $set: { updatedAt: now } }
+        );
+        if ((credited?.matchedCount ?? 0) > 0) {
+          await witnessTreasuryCash(db, compensationLedger, {
+            flow: "nationalization_compensation",
+            account: {
+              kind: "corporation",
+              corpId: donor._id.toString(),
+              currency: snapshotCorporationCurrency(donor),
+            },
+            amount: compensationPaid,
+            now,
+            site: "ownershipTransition:compensation",
+          });
+        }
+      } else if (fundedCompensationNewlySettled) {
+        await witnessTreasuryCash(db, compensationLedger, {
+          flow: "nationalization_compensation",
+          account: { kind: "government", countryId: params.countryId },
+          amount: -fundedTreasuryAmountLocal,
+          now,
+          site: "ownershipTransition:compensation",
+        });
         await witnessTreasuryCash(db, compensationLedger, {
           flow: "nationalization_compensation",
           account: {
@@ -843,67 +906,51 @@ export async function nationalizeSector(
           site: "ownershipTransition:compensation",
         });
       }
-    } else if (fundedCompensationNewlySettled) {
-      await witnessTreasuryCash(db, compensationLedger, {
-        flow: "nationalization_compensation",
-        account: { kind: "government", countryId: params.countryId },
-        amount: -fundedTreasuryAmountLocal,
-        now,
-        site: "ownershipTransition:compensation",
-      });
-      await witnessTreasuryCash(db, compensationLedger, {
-        flow: "nationalization_compensation",
-        account: {
-          kind: "corporation",
-          corpId: donor._id.toString(),
-          currency: snapshotCorporationCurrency(donor),
-        },
-        amount: compensationPaid,
-        now,
-        site: "ownershipTransition:compensation",
-      });
     }
-  }
 
-  // Politics + investor-confidence (spec §12). Compensation here is in ₳ already.
-  const consequenceResult = await applyNationalizationConsequences(db, {
-    countryId: params.countryId,
-    method: params.consequence.method,
-    tier: params.tier,
-    triggers: params.consequence.triggers,
-    sectorTypes: [sector.sectorType],
-    valuationAnchor,
-    compensationAnchor: effectivePayoutAnchor,
-    foreignOwnerCountryId: donor.countryId !== params.countryId ? donor.countryId : null,
-    governingPartyId: params.consequence.governingPartyId ?? null,
-    turn: params.consequence.turn,
-    actorCharacterId: params.consequence.actorCharacterId,
-  });
-
-  // Acquisition ledger (Register tab). Best-effort — a failed write never aborts.
-  try {
-    await recordNationalizationLedger(db, {
+    // Politics + investor-confidence (spec §12). Compensation here is in ₳ already.
+    const consequenceResult = await applyNationalizationConsequences(db, {
       countryId: params.countryId,
-      nationalCorporationId: nationalCorp._id,
-      kind: "nationalize_sector",
       method: params.consequence.method,
-      triggers: params.consequence.triggers,
       tier: params.tier,
+      triggers: params.consequence.triggers,
+      sectorTypes: [sector.sectorType],
       valuationAnchor,
       compensationAnchor: effectivePayoutAnchor,
-      sectorTypes: [sector.sectorType],
-      formerCorpName: donor.name,
       foreignOwnerCountryId: donor.countryId !== params.countryId ? donor.countryId : null,
-      confidenceBefore: consequenceResult.confidenceBefore,
-      confidenceAfter: consequenceResult.confidenceAfter,
-      legitimacyDelta: consequenceResult.legitimacyDelta,
+      governingPartyId: params.consequence.governingPartyId ?? null,
       turn: params.consequence.turn,
+      actorCharacterId: params.consequence.actorCharacterId,
     });
-  } catch (err) {
-    console.error("[nationalizationLedger] sector ledger write failed:", err);
-  }
 
-  return { nationalCorporationId: nationalCorp._id, compensationPaid, resultingSectorId };
+    // Acquisition ledger (Register tab). Best-effort — a failed write never aborts.
+    try {
+      await recordNationalizationLedger(db, {
+        countryId: params.countryId,
+        nationalCorporationId: nationalCorp._id,
+        kind: "nationalize_sector",
+        method: params.consequence.method,
+        triggers: params.consequence.triggers,
+        tier: params.tier,
+        valuationAnchor,
+        compensationAnchor: effectivePayoutAnchor,
+        sectorTypes: [sector.sectorType],
+        formerCorpName: donor.name,
+        foreignOwnerCountryId: donor.countryId !== params.countryId ? donor.countryId : null,
+        confidenceBefore: consequenceResult.confidenceBefore,
+        confidenceAfter: consequenceResult.confidenceAfter,
+        legitimacyDelta: consequenceResult.legitimacyDelta,
+        turn: params.consequence.turn,
+      });
+    } catch (err) {
+      console.error("[nationalizationLedger] sector ledger write failed:", err);
+    }
+
+    return { nationalCorporationId: nationalCorp._id, compensationPaid, resultingSectorId };
+  } finally {
+    // A loan follows its site only if the title actually moved.
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+  }
 }
 
 // ── Whole-corp absorption ─────────────────────────────────────────────────────
@@ -966,15 +1013,77 @@ export async function nationalizeWholeCorp(
   ) {
     throw new Error("Nationalization retry requires its original Treasury cash mode");
   }
+  // Domestic financed sites go to their National Corporation with their loans,
+  // the same way the seized corporation's bonds are assumed below. A foreign
+  // financed site would be released to the open market with no buyer to repay
+  // its lender, so it still blocks the taking.
+  const financedSites = targetSectors.filter((sector) => hasProtectedConstructionClaim(sector));
+  if (financedSites.some((s) => s.countryId && s.countryId !== params.countryId)) {
+    throw badRequest(
+      "A site this corporation holds abroad carries a construction loan. It must be repaid or sold before the taking."
+    );
+  }
+  const financedByDest = new Map<string, { dest: Corporation; sites: CorporateSector[] }>();
+  for (const site of financedSites) {
+    const dest =
+      site.industryModel || site.mediaDiscriminator
+        ? await resolveNationalCorporationForSector(
+            db,
+            params.countryId,
+            site.sectorType,
+            site.industryModel,
+            site.mediaDiscriminator
+          )
+        : await resolveNationalCorporationForSector(db, params.countryId, site.sectorType);
+    const group = financedByDest.get(dest._id.toHexString()) ?? { dest, sites: [] };
+    group.sites.push(site);
+    financedByDest.set(dest._id.toHexString(), group);
+  }
+  const transferPlans: ConstructionBorrowerTransferPlan[] = [];
+  const abandonTransfers = () =>
+    settleConstructionBorrowerTransfers(
+      db,
+      combineConstructionBorrowerTransferPlans(transferPlans)
+    );
+  for (const { dest, sites } of financedByDest.values()) {
+    const mergeRefusal = await securedSiteMergeRefusal(
+      db,
+      sites,
+      dest._id,
+      nationalizedSiteMergeKey
+    );
+    const prepared = mergeRefusal
+      ? ({ ok: false, error: mergeRefusal } as const)
+      : await prepareConstructionBorrowerTransfers(db, {
+          sectors: sites,
+          toId: dest._id,
+          toCurrency: resolveCorpLiquidCurrencyCode(dest) ?? undefined,
+          operationKey: nationalizationOperationKey,
+          turn: params.consequence.turn,
+          ownsTransition: (sector) =>
+            sector.constructionPropertyTransition?.key ===
+            `${nationalizationOperationKey}:${sector._id.toHexString()}`,
+        });
+    if (!prepared.ok) {
+      await abandonTransfers();
+      throw badRequest(prepared.error);
+    }
+    transferPlans.push(prepared.plan);
+  }
+  const constructionTransfers = combineConstructionBorrowerTransferPlans(transferPlans);
   const transitionKeys = await reserveSectorsForTransition(
     db,
     targetSectors,
     "nationalization",
     nationalizationOperationKey,
-    true
+    true,
+    constructionTransfers
   );
   if (!transitionKeys) {
-    throw badRequest("Resolve secured construction before nationalizing this corporation");
+    await abandonTransfers();
+    throw badRequest(
+      "A site of this corporation is in another ownership change. Try again shortly."
+    );
   }
   if (ledger.context?.treasuryCashLedgerEnabled) {
     const marker = await corps.updateOne(
@@ -1220,9 +1329,12 @@ export async function nationalizeWholeCorp(
       now,
       transitionMultiplier,
       corpPlantsEnabled,
-      transitionKeyBySectorId.get(s._id.toHexString())!
+      transitionKeyBySectorId.get(s._id.toHexString())!,
+      undefined,
+      constructionTransfers
     );
   }
+  await settleConstructionBorrowerTransfers(db, constructionTransfers);
   for (const s of foreignSectors) {
     // A foreign sector's revenue is stored in ITS host-state currency, not the
     // (donor) corp's — convert to the ₳-native unowned pool at the host rate.

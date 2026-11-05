@@ -59,7 +59,10 @@ describe("splitOffSectorType", () => {
       newCorpName: "China Energy Corporation",
     });
 
-    expect(result.newNationalCorporationId).toEqual(newId);
+    // The split-off id is chosen before insert so financed sites can name it as borrower.
+    expect(result.newNationalCorporationId).toEqual(
+      db.collectionMocks.corporations.insertOne.mock.calls[0][0]._id
+    );
     expect(result.sectorsMoved).toBe(3);
 
     const insertedDoc = db.collectionMocks.corporations.insertOne.mock.calls[0][0];
@@ -72,7 +75,9 @@ describe("splitOffSectorType", () => {
       (call) => call[1]?.$set?.corporationId
     );
     expect(moves).toHaveLength(3);
-    expect(moves.every((move) => move[1].$set.corporationId.equals(newId))).toBe(true);
+    expect(
+      moves.every((move) => move[1].$set.corporationId.equals(result.newNationalCorporationId))
+    ).toBe(true);
   });
 
   it("stamps the split-off with the sector type it operates, not the financial default", async () => {
@@ -122,7 +127,10 @@ describe("splitOffSectorType", () => {
       newCorpName: "Norinco State Arms",
     });
     expect(result.sectorsMoved).toBe(0);
-    expect(result.newNationalCorporationId).toEqual(newId);
+    // The split-off id is chosen before insert so financed sites can name it as borrower.
+    expect(result.newNationalCorporationId).toEqual(
+      db.collectionMocks.corporations.insertOne.mock.calls[0][0]._id
+    );
   });
 
   it("rejects a duplicate claim for the same sector type", async () => {
