@@ -307,8 +307,16 @@ function OperationsRow({
         <Td align="right" className={signTone(margin)}>
           {Number.isFinite(margin) ? `${margin.toFixed(1)}%` : "n/a"}
         </Td>
-        <Td align="right" className={signTone(sector.profit)}>
-          {fmtSigned(scale(sector.profit))}
+        <Td align="right" className={signTone(sector.managementProfit ?? sector.profit)}>
+          {fmtSigned(scale(sector.managementProfit ?? sector.profit))}
+          {sector.ownSiteMemoValue != null && sector.ownSiteMemoValue > 0 && (
+            <span
+              className="block text-[11px] text-muted"
+              title="Free transfers book no sale. This is what this site sent your own sites, at its own asking price. The margin counts it."
+            >
+              {fmt(scale(sector.ownSiteMemoValue))} to own sites
+            </span>
+          )}
         </Td>
         <Td align="right" className="hidden text-muted lg:table-cell">
           {sector.workers.toLocaleString("en-US")}
@@ -898,7 +906,7 @@ export default function CeoOperationsTable({
     const value: Record<SortKey, (s: SectorDetail) => number> = {
       revenue: (s) => s.financialRevenue ?? s.revenue,
       margin: (s) => s.fillAdjustedMarginPct ?? s.effectiveProfitMargin,
-      profit: (s) => s.profit,
+      profit: (s) => s.managementProfit ?? s.profit,
       fill: (s) => s.fillRate ?? -1,
     };
     const dir = sortDir === "asc" ? 1 : -1;

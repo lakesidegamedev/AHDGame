@@ -52,6 +52,7 @@ async function run(args: {
   agreements?: (string | AgreementRow)[];
   shortInputs?: string[];
   routeTurn?: number | null;
+  funded?: boolean;
 }) {
   const { db, find } = fakeDb(args.agreements ?? []);
   const out = new Map<string, OwnSupplyRow>();
@@ -75,6 +76,7 @@ async function run(args: {
       : [],
     ownRouteTurn: args.routeTurn === undefined ? 9 : args.routeTurn,
     currentTurn: 10,
+    funded: args.funded,
     out,
   });
   return { row: out.get("pharmaceuticals"), find };
@@ -149,5 +151,64 @@ describe("explainOwnSupplyReach", () => {
       ] as unknown as Corporation["shareholders"]),
     });
     expect(row).toBeUndefined();
+  });
+});
+
+describe("explainOwnSupplyReach in a funded world (issue 5385)", () => {
+  const usedUp = {
+    _id: new ObjectId(),
+    stateId: "HOK",
+    producerSettlement: {
+      turn: 9,
+      products: [
+        {
+          commodity: "pharmaceuticals",
+          producedUnits: 2,
+          soldUnits: 0,
+          internalDeliveredUnits: 2,
+        },
+      ],
+    },
+  } as unknown as CorporateSector;
+
+  it("replaces the policy and freight reasons with what the receipts show", async () => {
+    // Market priority and no haul would have read market_priority under the old rules.
+    const { row } = await run({
+      corporation: corp("own"),
+      siblings: [sector, usedUp],
+      funded: true,
+    });
+    expect(row?.reasons).toEqual(["used_by_own_sites", "made_only"]);
+    expect(row?.output).toEqual({ made: 48, ownSites: 48, soldOutside: 0 });
+  });
+
+  it("treats an unset policy as own sites first", async () => {
+    const unset = { _id: corpId, shareholders: [] } as unknown as Corporation;
+    const { row } = await run({ corporation: unset, siblings: [sector, usedUp], funded: true });
+    expect(row?.reasons).not.toContain("market_priority");
+    expect(row?.reasons).not.toContain("sold_first");
+  });
+
+  it("names an explicit open market choice when outside buyers took the output", async () => {
+    const sold = {
+      ...usedUp,
+      producerSettlement: {
+        turn: 9,
+        products: [
+          {
+            commodity: "pharmaceuticals",
+            producedUnits: 2,
+            soldUnits: 2,
+            internalDeliveredUnits: 0,
+          },
+        ],
+      },
+    } as unknown as CorporateSector;
+    const { row } = await run({
+      corporation: corp("market"),
+      siblings: [sector, sold],
+      funded: true,
+    });
+    expect(row?.reasons).toEqual(["sold_first", "made_only"]);
   });
 });

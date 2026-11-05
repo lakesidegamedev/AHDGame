@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agreementLeftAGap, ownSupplyReach } from "./ownSupplyReach";
+import { agreementLeftAGap, fundedOwnSupplyReach, ownSupplyReach } from "./ownSupplyReach";
 
 const base = {
   priority: "own" as const,
@@ -93,5 +93,66 @@ describe("agreementLeftAGap", () => {
   it("does not count a state-scoped agreement fulfilled in another state", () => {
     expect(agreementLeftAGap({ ...gap, stateScoped: true, agreementStateId: "KAN" })).toBe(false);
     expect(agreementLeftAGap({ ...gap, stateScoped: true, agreementStateId: "KYU" })).toBe(true);
+  });
+});
+
+describe("fundedOwnSupplyReach", () => {
+  const funded = {
+    buyerStateId: "KYU",
+    sourceStateIds: ["HOK"],
+    output: { made: 12, ownSites: 12, soldOutside: 0 },
+    marketFirst: false,
+    stateScoped: false,
+    hasAgreement: false,
+  };
+
+  it("never claims the old policy or freight reasons", () => {
+    const r = fundedOwnSupplyReach(funded);
+    expect(r?.reasons).not.toContain("market_priority");
+    expect(r?.reasons).not.toContain("no_route");
+  });
+
+  it("says own output was fully used by other sites, and how much was made", () => {
+    expect(fundedOwnSupplyReach(funded)).toEqual({
+      sourceStateIds: ["HOK"],
+      reasons: ["used_by_own_sites", "made_only"],
+      output: { made: 12, ownSites: 12, soldOutside: 0 },
+    });
+  });
+
+  it("says only how much was made when some went elsewhere", () => {
+    expect(
+      fundedOwnSupplyReach({ ...funded, output: { made: 12, ownSites: 4, soldOutside: 0 } })
+        ?.reasons
+    ).toEqual(["made_only"]);
+  });
+
+  it("names an explicit open market choice only when outside buyers took some", () => {
+    const sold = { made: 12, ownSites: 2, soldOutside: 10 };
+    expect(fundedOwnSupplyReach({ ...funded, marketFirst: true, output: sold })?.reasons).toEqual([
+      "sold_first",
+      "made_only",
+    ]);
+    expect(fundedOwnSupplyReach({ ...funded, marketFirst: false, output: sold })?.reasons).toEqual([
+      "made_only",
+    ]);
+    expect(fundedOwnSupplyReach({ ...funded, marketFirst: true })?.reasons).toEqual([
+      "used_by_own_sites",
+      "made_only",
+    ]);
+  });
+
+  it("keeps a local good made only in other states to its own reason", () => {
+    expect(fundedOwnSupplyReach({ ...funded, stateScoped: true })?.reasons).toEqual(["local_only"]);
+    expect(
+      fundedOwnSupplyReach({ ...funded, stateScoped: true, sourceStateIds: ["KYU"] })?.reasons
+    ).toEqual(["used_by_own_sites", "made_only"]);
+  });
+
+  it("adds a short agreement and is null with no source", () => {
+    expect(fundedOwnSupplyReach({ ...funded, hasAgreement: true })?.reasons).toContain(
+      "agreement_reserved"
+    );
+    expect(fundedOwnSupplyReach({ ...funded, sourceStateIds: [] })).toBeNull();
   });
 });
