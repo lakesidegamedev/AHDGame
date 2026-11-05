@@ -509,6 +509,13 @@ const STRATEGY_CHANNEL_OVERRIDES: Record<string, ChannelWeights> = {
     environmentalCompliance: 1.15,
     mediaTrust: 0.35,
   },
+  "extraction.natural_gas_drilling": {
+    physicalLogistics: 0.95,
+    gridReliability: 0.95,
+    regulatoryTrust: 0.8,
+    environmentalCompliance: 1.15,
+    mediaTrust: 0.35,
+  },
   "extraction.rare_earth_mining": {
     laborQuality: 0.75,
     physicalLogistics: 0.9,
