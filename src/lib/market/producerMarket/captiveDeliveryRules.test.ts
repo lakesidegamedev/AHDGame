@@ -35,3 +35,27 @@ describe("captive deliveries", () => {
     expect(demandPlanRunShare(withCaptiveDeliveries(captive()))).toBeGreaterThan(0.5);
   });
 });
+
+describe("captive value when own sites were short", () => {
+  it("values own-site deliveries at captiveUnitValue when present, else at the ask", () => {
+    const base = {
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 10,
+      soldUnits: 0,
+      revenue: 0,
+      inputsConsumed: 0,
+    };
+    const short = withCaptiveDeliveries({
+      ...base,
+      products: [{ internalDeliveredUnits: 10, askingUnitPrice: 43, captiveUnitValue: 237 }],
+    });
+    expect(short.soldUnits).toBe(10);
+    expect(short.revenue).toBeCloseTo(2370);
+    const plain = withCaptiveDeliveries({
+      ...base,
+      products: [{ internalDeliveredUnits: 10, askingUnitPrice: 43 }],
+    });
+    expect(plain.revenue).toBeCloseTo(430);
+  });
+});

@@ -17,6 +17,13 @@ import type { PriorReceipt } from "./outputResponseRules";
 export interface CaptiveProduct {
   internalDeliveredUnits?: number;
   askingUnitPrice?: number | null;
+  /**
+   * What own-site deliveries are worth when the company's own sites were left
+   * short of this good: what they bid for it, capped at the reference and never
+   * under the ask. A mine feeding its own short steel plant is judged on what
+   * that iron is worth to the company, not on a market price below its cost.
+   */
+  captiveUnitValue?: number | null;
 }
 
 function positive(x: number | null | undefined): number {
@@ -47,7 +54,7 @@ export function withCaptiveDeliveries<
   for (const p of receipt.products ?? []) {
     const u = positive(p.internalDeliveredUnits);
     units += u;
-    value += u * positive(p.askingUnitPrice);
+    value += u * (positive(p.captiveUnitValue) || positive(p.askingUnitPrice));
   }
   if (!(units > 0)) return receipt;
   return {

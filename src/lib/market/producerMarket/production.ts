@@ -269,6 +269,8 @@ export interface ProducerOperatingResult {
     deliveredUnits: number;
     revenue: number;
     askingUnitPrice: number;
+    /** Value of own-site deliveries when the company's own sites were short (stage 2); absent otherwise. */
+    captiveUnitValue?: number;
     realizedUnitPrice: number | null;
     unsoldUnits: number;
     lostUnits: number;
@@ -358,6 +360,8 @@ export function advanceProducerEconomy(input: {
   spilloverShare?: number;
   /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
   ownSitesFirst?: boolean;
+  /** Companies that explicitly chose market first: their own orders clear after outside buyers (rules.ts). */
+  marketFirstAccounts?: readonly string[];
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
   /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
@@ -382,6 +386,12 @@ export function advanceProducerEconomy(input: {
    * market price (restartProbeRules, gameConfig.producerZombieRestartStage).
    */
   restartProbes?: boolean;
+  /**
+   * Record, per product, the value of own-site deliveries for a company whose
+   * own sites were left short of that good: the lower of their highest bid and
+   * the output's reference, never under the ask (producerCaptiveDeliveryStage >= 2).
+   */
+  captiveShortValue?: boolean;
   /**
    * Shortage ask step (shortageAskRules, gameConfig.producerShortageAskStage):
    * an automatic seller that sold out into a lane where buyers went short asks
@@ -1167,6 +1177,9 @@ export function advanceProducerEconomy(input: {
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
       ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
+      ...(input.marketFirstAccounts?.length
+        ? { marketFirstAccounts: input.marketFirstAccounts }
+        : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it
@@ -1774,6 +1787,47 @@ export function advanceProducerEconomy(input: {
     Math.abs(openingTotal - closingTotal) > Math.max(1e-7, Math.abs(openingTotal) * 1e-12)
   )
     throw new Error("Producer market cash did not reconcile");
+  // A company whose own sites were cut short by a good it also makes values what
+  // its plants sent them at what those sites bid (capped at the reference, never
+  // under the ask), not at a market price below its cost
+  // (captiveDeliveryRules, producerCaptiveDeliveryStage >= 2).
+  if (input.captiveShortValue) {
+    const resultById = new Map(results.map((x) => [x.id, x]));
+    const shortBid = new Map<string, number>();
+    const markShort = (accountId: string, commodity: string, bid: number) => {
+      const key = accountId + "|" + commodity;
+      shortBid.set(key, Math.max(shortBid.get(key) ?? 0, bid));
+    };
+    // Short by the order: an own input order the book left partly unfilled.
+    const settledOrders = new Map(market.orders.map((o) => [o.id, o]));
+    for (const order of inputOrders()) {
+      const o = settledOrders.get(order.id);
+      if (o && o.requestedUnits > o.deliveredUnits * (1 + 1e-9) + 1e-9)
+        markShort(order.accountId, order.commodity, order.maximumUnitPrice);
+    }
+    for (const p of plans) {
+      const r = resultById.get(p.id);
+      if (!r?.runCutBy?.includes("inputs") || !r.bindingInput) continue;
+      // Short by the run: the input cut what the site could make before it ordered.
+      const recipe = p.inputs.find((i) => i.commodity === r.bindingInput);
+      if (!recipe) continue;
+      markShort(p.accountId, recipe.commodity, recipe.maximumUnitPrice);
+    }
+    if (shortBid.size > 0)
+      for (const p of plans) {
+        const r = resultById.get(p.id);
+        if (!r) continue;
+        for (const product of r.products) {
+          const bid = shortBid.get(p.accountId + "|" + product.commodity);
+          const output = p.outputs.find((o) => o.commodity === product.commodity);
+          if (bid == null || !output || !(product.internalDeliveredUnits > 0)) continue;
+          product.captiveUnitValue = Math.max(
+            product.askingUnitPrice,
+            Math.min(bid, output.referenceUnitPrice)
+          );
+        }
+      }
+  }
   return {
     accounts: closingAccounts,
     payables: [...closingPayables.values()].sort((a, b) =>

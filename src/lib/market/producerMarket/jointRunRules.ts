@@ -44,6 +44,8 @@ export interface JointReceiptLine {
   revenue?: number;
   internalDeliveredUnits?: number;
   askingUnitPrice?: number | null;
+  /** Own-site delivery value when the company's own sites were short (captiveDeliveryRules). */
+  captiveUnitValue?: number | null;
 }
 
 export type JointReceipt = PriorReceipt & { products?: readonly JointReceiptLine[] };
@@ -108,7 +110,7 @@ export function lineSlices(
       if (countCaptive) {
         const internal = positive(r.internalDeliveredUnits);
         sold += internal;
-        revenue += internal * positive(r.askingUnitPrice);
+        revenue += internal * (positive(r.captiveUnitValue) || positive(r.askingUnitPrice));
       }
     }
     // A line that made nothing last turn has no slice to plan from.

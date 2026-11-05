@@ -302,6 +302,10 @@ export interface GameConfig {
    * company's sites as sales for the demand plan and the zero-sales counter
    * (valued at its asking price for the profit test), so a captive supplier is
    * not read as idle and mothballed. Settlement is unchanged. 0 or absent = off.
+   * >= 2 values them at
+   * what those sites bid (capped at the reference, never under the ask) when the
+   * company's own sites were left short of that good, so a plant feeding its
+   * own short consumers is not cut for a market price below its cost.
    */
   producerCaptiveDeliveryStage?: number;
   /**

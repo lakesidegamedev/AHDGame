@@ -345,6 +345,13 @@ export function settleProducerMarket(input: {
    * company's order comes up in id order.
    */
   ownSitesFirst?: boolean;
+  /**
+   * Companies that explicitly chose to sell on the market first (supply
+   * priority "market"). Their own sites get no head start: outside buyers clear
+   * first, then their own orders take what is left of their own output, free,
+   * and buy any remaining need from other sellers.
+   */
+  marketFirstAccounts?: readonly string[];
 }): ProducerMarketResult {
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
@@ -724,9 +731,11 @@ export function settleProducerMarket(input: {
   // earlier could buy the stock out (tickets 1755, 1757). Named suppliers,
   // contracts and reservation groups keep their ordinary pass: agreements
   // reserve before own supply.
+  const marketFirst = new Set(input.marketFirstAccounts ?? []);
   if (input.ownSitesFirst) {
     for (const order of orders) {
       if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
+      if (marketFirst.has(order.accountId)) continue;
       const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
       const own = (
         ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
@@ -964,12 +973,12 @@ export function settleProducerMarket(input: {
     }
   };
   // Phase 2: the ordinary book pass over every order at its residual target.
-  for (const order of orders) {
+  const clearOrder = (order: PurchaseOrder): void => {
     const fairGroup = fairGroupOf.get(order.id);
     if (fairGroup) {
       // The whole group clears at its first member's place in the queue.
       if (fairGroup[0] === order) clearFairGroup(fairGroup);
-      continue;
+      return;
     }
     const quantityGroup = order.quantityGroup && quantityGroups.get(order.quantityGroup.id);
     const carriedOrder = carried.get(order.id);
@@ -996,7 +1005,7 @@ export function settleProducerMarket(input: {
         if (quantityGroup) quantityGroup.remaining = Math.max(0, quantityGroup.remaining - take);
         orderBudget = Math.max(0, orderBudget - amount);
       }
-      continue;
+      return;
     }
     const rows = (byBook.get(key) ?? []).filter(
       (offer) =>
@@ -1082,7 +1091,14 @@ export function settleProducerMarket(input: {
       }
       if (!(wanted > 0)) break;
     }
+  };
+  // Market-first companies buy last, so outside buyers clear their output first.
+  const deferred: PurchaseOrder[] = [];
+  for (const order of orders) {
+    if (marketFirst.has(order.accountId) && !fairGroupOf.get(order.id)) deferred.push(order);
+    else clearOrder(order);
   }
+  for (const order of deferred) clearOrder(order);
   for (const offer of input.offers) {
     if (!poolByOffer.get(offer.id)!.hasPooledSales) continue;
     const seller = offerResults.get(offer.id)!;

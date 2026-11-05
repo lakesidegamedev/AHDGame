@@ -81,6 +81,7 @@ export async function runCorporationProducerMarket(
       | "eligibleOffersByOrder"
       | "spilloverShare"
       | "ownSitesFirst"
+      | "marketFirstAccounts"
       | "stockCoverTurns"
       | "clearingPriceByLane"
       | "countryOfProducer"
@@ -88,6 +89,7 @@ export async function runCorporationProducerMarket(
       | "credit"
       | "salesAdvanceAtClearing"
       | "restartProbes"
+      | "captiveShortValue"
       | "shortageAsk"
     >;
     /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
