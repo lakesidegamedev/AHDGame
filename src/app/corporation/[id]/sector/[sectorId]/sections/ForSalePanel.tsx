@@ -28,7 +28,8 @@ const BLOCK_REASON_TEXT: Record<NonNullable<ForSaleInfo["blockReason"]>, string>
   insufficient_funds: "Your corporation does not have enough liquid capital for this price.",
   merge_blocked:
     "You already run this sector here, and one of the two sites has an unfinished secured construction loan, so they cannot be merged yet.",
-  construction: "This sector has secured construction in progress and cannot be acquired yet.",
+  construction:
+    "This site's construction loan is still being set up or settled, so it cannot be bought yet.",
   not_ceo: "Only the CEO of a corporation can buy listed sectors.",
   actions_paused: "Corporate actions are paused right now. Try again once they resume.",
   state_controlled: "This market is state-controlled and closed to private acquisition.",

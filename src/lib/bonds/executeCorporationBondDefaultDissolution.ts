@@ -98,7 +98,9 @@ export async function executeCorporationBondDefaultDissolution(
     .find({ corporationId: corporation._id })
     .toArray();
   if (!(await reserveSectorsForRestore(db, sectors))) {
-    throw badRequest("Resolve secured construction before dissolving this corporation");
+    throw badRequest(
+      "A site of this corporation carries a construction loan, and dissolving would return the site to the market with no buyer to repay the lender. Sell the site or wait until the loan is repaid."
+    );
   }
 
   const now = new Date();
