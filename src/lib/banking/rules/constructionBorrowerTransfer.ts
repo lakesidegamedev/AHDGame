@@ -131,3 +131,24 @@ export function transferableConstructionClaimFilter(
     ],
   };
 }
+
+/**
+ * Secured principal a new owner takes on with its financed sites, in ₳. A
+ * price or compensation paid for those sites is net of this: the receiver
+ * repays the bank, so paying the seller the full value as well would pay for
+ * the same construction twice. Rates are local units per ₳; a missing or
+ * unusable rate counts the amount as ₳.
+ */
+export function assumedSecuredPrincipalAnchor(
+  loans: readonly { outstandingLocal: number; currency: string }[],
+  fxByCurrency: ReadonlyMap<string, number>
+): number {
+  let total = 0;
+  for (const loan of loans) {
+    if (!Number.isFinite(loan.outstandingLocal) || loan.outstandingLocal <= 0) continue;
+    const rate = fxByCurrency.get(loan.currency) ?? 1;
+    total +=
+      Number.isFinite(rate) && rate > 0 ? loan.outstandingLocal / rate : loan.outstandingLocal;
+  }
+  return total;
+}

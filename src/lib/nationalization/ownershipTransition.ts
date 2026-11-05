@@ -101,6 +101,7 @@ import {
   settleConstructionBorrowerTransfers,
   type ConstructionBorrowerTransferPlan,
 } from "@/lib/banking/constructionBorrowerTransfer";
+import { assumedSecuredPrincipalAnchor } from "@/lib/banking/rules/constructionBorrowerTransfer";
 import {
   acquireConstructionPropertyTransition,
   hasProtectedConstructionClaim,
@@ -720,7 +721,7 @@ export async function nationalizeSector(
   //
   // D11: under plants the base switches to replacement-cost book (and the
   // premium inside applyTier switches with it).
-  const valuationAnchor = sectorCompensationValuationAnchor(
+  const grossValuationAnchor = sectorCompensationValuationAnchor(
     sector,
     computeSectorNpvSum([sector], primeMap, donor, fxByCurrency, {
       excludeGrowthCost: true,
@@ -733,7 +734,6 @@ export async function nationalizeSector(
       eraUnitScale: await loadWorldEraUnitScale(db),
     }
   );
-  const payoutAnchor = applyTier(valuationAnchor, params.tier, { plantsEnabled });
 
   // Debit the treasury BEFORE any mutation. The debit is unconditional — an
   // unaffordable payout pushes the treasury into the hole rather than blocking
@@ -765,6 +765,15 @@ export async function nationalizeSector(
   });
   if (!preparedTransfers.ok) throw badRequest(preparedTransfers.error);
   const constructionTransfers = preparedTransfers.plan;
+  // The National Corporation repays the bank, so the former owner is paid for
+  // the site net of what it still owes on it, the same way a whole-corp taking
+  // nets the bonds the state assumes.
+  const valuationAnchor = Math.max(
+    0,
+    grossValuationAnchor -
+      assumedSecuredPrincipalAnchor(constructionTransfers.transfers, fxByCurrency)
+  );
+  const payoutAnchor = applyTier(valuationAnchor, params.tier, { plantsEnabled });
   try {
     if (
       sector.pendingFundedNationalization &&
@@ -1152,8 +1161,11 @@ export async function nationalizeWholeCorp(
         excludeGrowthCost: true,
       });
   const liquidCapitalAnchor = corpLiquidCapitalToAnchor(target.liquidCapital, target, targetFxRate);
-  // Debt the state assumes — sum of the corp's issued, non-matured bond principal.
-  const debtAnchor = sumBondPrincipalAnchor(targetBonds, fxByCurrency);
+  // Debt the state assumes: the corp's issued, non-matured bond principal,
+  // plus the secured construction loans its National Corporations take on.
+  const debtAnchor =
+    sumBondPrincipalAnchor(targetBonds, fxByCurrency) +
+    assumedSecuredPrincipalAnchor(constructionTransfers.transfers, fxByCurrency);
   // Shares the seized corp holds in other corporations pass to the National
   // Corporation (step 5b) as shares only, so the buyout pays the holders their
   // market value, like cash (#3041). Held bonds are still left out (conservative

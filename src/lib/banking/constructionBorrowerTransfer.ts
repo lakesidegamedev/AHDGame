@@ -26,6 +26,9 @@ export interface ConstructionBorrowerTransfer {
   fromId: ObjectId;
   toId: ObjectId;
   key: string;
+  /** Balance the new owner takes on, in the loan's currency, read under the lock. */
+  outstandingLocal: number;
+  currency: string;
 }
 
 export interface ConstructionBorrowerTransferPlan {
@@ -175,6 +178,8 @@ export async function prepareConstructionBorrowerTransfers(
       fromId: sector.corporationId,
       toId,
       key,
+      outstandingLocal: owned.outstanding,
+      currency: owned.currency,
     });
     const lockedRefusal = check(owned);
     if (lockedRefusal) return refuse(lockedRefusal);
