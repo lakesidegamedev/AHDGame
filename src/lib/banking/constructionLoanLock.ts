@@ -35,16 +35,14 @@ export async function alignConstructionBorrowerWithSite(db: Db, loan: BankLoan):
     claim.borrowerId === String(loan.borrowerId)
   )
     return;
-  await db
-    .collection<BankLoan>("bankLoans")
-    .updateOne(
-      {
-        _id: loan._id,
-        borrowerId: loan.borrowerId,
-        "constructionCollateral.claimId": claim.claimId,
-      },
-      { $set: { borrowerId: sector.corporationId } }
-    );
+  await db.collection<BankLoan>("bankLoans").updateOne(
+    {
+      _id: loan._id,
+      borrowerId: loan.borrowerId,
+      "constructionCollateral.claimId": claim.claimId,
+    },
+    { $set: { borrowerId: sector.corporationId } }
+  );
 }
 
 export async function releaseConstructionLoanLock(
