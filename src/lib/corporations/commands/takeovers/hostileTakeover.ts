@@ -43,10 +43,7 @@ import {
   HOSTILE_TAKEOVER_PREMIUM_RATE,
 } from "@/lib/corporations/corporateOwnership";
 import { withCorpLock } from "@/lib/corporations/corpMoneyLock";
-import {
-  hasProtectedConstructionProperty,
-  unprotectedConstructionPropertyFilter,
-} from "@/lib/corporations/securedConstructionProperty";
+import { unprotectedConstructionPropertyFilter } from "@/lib/corporations/securedConstructionProperty";
 import {
   buildPersonalBalanceInc,
   getHomeCurrency,
@@ -87,6 +84,12 @@ import { releaseCorporationHeldBondsToFloat } from "@/lib/corporations/releaseHe
 import { bankTransferConflict, transferBankCharterToAcquirer } from "@/lib/banking/transferCharter";
 import { applyBrandFacilityLoss } from "@/lib/corporations/brandFacilityLoss";
 import { debitSharesFromFund } from "@/lib/corporations/shareholderOps";
+import {
+  mergeSurvivorConstructionFilter,
+  prepareConstructionBorrowerTransfers,
+  securedSiteMergeRefusal,
+  settleConstructionBorrowerTransfers,
+} from "@/lib/banking/constructionBorrowerTransfer";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import {
   acquisitionsBarredByDivestiture,
@@ -414,10 +417,6 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         .collection<CorporateSector>("corporateSectors")
         .find({ corporationId: target._id })
         .toArray();
-      if (targetSectors.some(hasProtectedConstructionProperty)) {
-        return errorResponse(409, "Resolve secured construction before completing this takeover");
-      }
-
       const takeoverTurn = await getCurrentTurn(db);
       const withholdingContexts = await loadStockWithholdingContexts(
         db,
@@ -430,6 +429,27 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         ),
         takeoverTurn
       );
+
+      // The target is absorbed and deleted, so a secured construction loan
+      // moves with its site and the parent becomes the borrower, the same way
+      // the target's bonds are re-keyed below. Checked and locked before the
+      // debit; a financed site cannot fold into a parent site of the same market.
+      const mergeRefusal = await securedSiteMergeRefusal(
+        db,
+        targetSectors,
+        parent._id,
+        (s) => `${s.stateId}:${s.sectorType}`
+      );
+      if (mergeRefusal) return errorResponse(409, mergeRefusal);
+      const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
+        sectors: targetSectors,
+        toId: parent._id,
+        toCurrency: resolveCorpLiquidCurrencyCode(parent) ?? undefined,
+        operationKey: `takeover:${target._id.toHexString()}`,
+        turn: takeoverTurn,
+      });
+      if (!preparedTransfers.ok) return errorResponse(409, preparedTransfers.error);
+      const constructionTransfers = preparedTransfers.plan;
       const debitResult = await db.collection<Corporation>("corporations").updateOne(
         {
           _id: parent._id,
@@ -446,6 +466,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         // moved. This early return is before every mutation by construction;
         // keep it that way — anything added after the debit below must run
         // inside the try so the catch refund covers it.
+        await settleConstructionBorrowerTransfers(db, constructionTransfers);
         return errorResponse(400, "Insufficient liquid capital (race with another transaction).");
       }
 
@@ -809,7 +830,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               updateOne: {
                 filter: {
                   _id: existing._id,
-                  ...unprotectedConstructionPropertyFilter(),
+                  ...mergeSurvivorConstructionFilter(existing),
                 },
                 update: {
                   $set: {
@@ -835,11 +856,12 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               updateOne: {
                 filter: {
                   _id: ts._id,
-                  ...unprotectedConstructionPropertyFilter(),
+                  ...constructionTransfers.filterFor(ts),
                 },
                 update: {
                   $set: {
                     corporationId: parent._id,
+                    ...constructionTransfers.setFor(ts._id),
                     countryId: getSectorOperatingCountryId(ts, stateCountryByStateId),
                     // PLANTS-GATED: reassign path — the doc keeps its own
                     // plant state, and under plants `revenue` is restated from
@@ -878,6 +900,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
             throw new Error("A takeover source sector became secured before reassignment");
           }
         }
+        await settleConstructionBorrowerTransfers(db, constructionTransfers);
 
         await db.collection<Bond>("bonds").updateMany(
           {
@@ -1062,6 +1085,8 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         // that itself fails is rethrown with context (never swallowed: silent
         // success here would report a 400/503 while money is gone).
         const failureLabel = err instanceof Error ? err.message : String(err);
+        // Loans follow only the sites that actually moved before the failure.
+        await settleConstructionBorrowerTransfers(db, constructionTransfers);
         try {
           await refundCorpLiquidCapital(db, parent._id, totalInParentCapital);
           if (cashTransferApplied && cashToParentLocal > 0) {
