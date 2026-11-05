@@ -6,8 +6,8 @@ summary: >-
   Campaign switch sits beside the title, and clicking a ticket in the race
   opens that campaign without leaving the page.
 tags: [elections, campaigns, ui]
-badges: [feature]
-areas: [elections, campaigns]
+badges: [minor]
+areas: [fullstack]
 ---
 
 ## What changed
