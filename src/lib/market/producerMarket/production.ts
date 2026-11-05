@@ -36,6 +36,7 @@ import { makeDoOutput, minorInputShortfallCost, minorInputs } from "./makeDoRule
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
+import { shortageAsk } from "./shortageAskRules";
 import {
   internalTransferUnitPrice,
   type InternalTransferPricing,
@@ -381,6 +382,17 @@ export function advanceProducerEconomy(input: {
    * market price (restartProbeRules, gameConfig.producerZombieRestartStage).
    */
   restartProbes?: boolean;
+  /**
+   * Shortage ask step (shortageAskRules, gameConfig.producerShortageAskStage):
+   * an automatic seller that sold out into a lane where buyers went short asks
+   * a step above last turn's clearing instead of at it. Absent = off.
+   */
+  shortageAsk?: {
+    /** Requested / delivered per lane last turn (bookPressure). */
+    pressureByLane: Readonly<Record<string, number>>;
+    maxStep?: number;
+    maxMultiplier?: number;
+  };
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -1037,8 +1049,24 @@ export function advanceProducerEconomy(input: {
       const weight =
         outputValue > 0 ? (output.unitsPerOutput * output.referenceUnitPrice) / outputValue : 0;
       const recentSold = recentSoldOf(p, output.commodity, output.book);
-      const clearingUnitPrice =
+      const lastClearingUnitPrice =
         input.clearingPriceByLane?.[laneKeyOf(output.commodity, output.book)];
+      // A seller that sold out into a short lane anchors a step above the
+      // clearing (shortageAskRules). Both quote passes read this anchor, so the
+      // competitor pass cannot pull the ask back under it.
+      const clearingUnitPrice =
+        lastClearingUnitPrice != null && input.shortageAsk && output.policy.kind === "automatic"
+          ? shortageAsk({
+              clearingUnitPrice: lastClearingUnitPrice,
+              referenceUnitPrice: output.referenceUnitPrice,
+              pressure: input.shortageAsk.pressureByLane[laneKeyOf(output.commodity, output.book)],
+              soldOut: recentSold != null && recentSold > 0 && stock <= recentSold * 0.01,
+              ...(input.shortageAsk.maxStep != null ? { maxStep: input.shortageAsk.maxStep } : {}),
+              ...(input.shortageAsk.maxMultiplier != null
+                ? { maxMultiplier: input.shortageAsk.maxMultiplier }
+                : {}),
+            })
+          : lastClearingUnitPrice;
       const quoteInput = {
         policy: output.policy,
         referenceUnitPrice: output.referenceUnitPrice,

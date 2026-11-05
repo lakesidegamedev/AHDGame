@@ -15,7 +15,7 @@ describe("bank capacity explanation", () => {
 describe("staffing idle explanation", () => {
   it("names a worker shortage on the run meter", () => {
     const staffing = idleCauseMeta("media").staffing;
-    expect(staffing.label).toBe("Short of workers");
+    expect(staffing.label).toBe("Stopped: short of workers");
     expect(staffing.tone).toBe("warning");
     expect(staffing.help.toLowerCase()).toContain("workers");
   });
@@ -44,7 +44,7 @@ describe("idle cause meter colors", () => {
   it("gives every idle cause a unique swatch so no two legend dots collide", () => {
     const entries = Object.entries(IDLE_CAUSE_FILL);
 
-    expect(entries).toHaveLength(13);
+    expect(entries).toHaveLength(14);
     const fills = new Set(entries.map(([, fill]) => fill));
     expect(fills.size).toBe(entries.length);
     for (const fill of fills) expect(fill).toMatch(/^bg-/);

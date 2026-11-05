@@ -65,6 +65,9 @@ export function producerStageEnv(
         producerRunPlanStage?: number;
         producerSalesAdvancePriceStage?: number;
         producerZombieRestartStage?: number;
+        producerShortageAskStage?: number;
+        producerShortageAskMaxStep?: number;
+        producerPriceMaxMultiplier?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
         producerWageShareStage?: number;
@@ -93,6 +96,9 @@ export function producerStageEnv(
     runPlanStage: config?.producerRunPlanStage,
     salesAdvanceAtClearing: (config?.producerSalesAdvancePriceStage ?? 0) >= 1,
     restartProbes: (config?.producerZombieRestartStage ?? 0) >= 1,
+    shortageAskStage: config?.producerShortageAskStage,
+    shortageAskMaxStep: config?.producerShortageAskMaxStep,
+    priceMaxMultiplier: config?.producerPriceMaxMultiplier,
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,
     wholePlants: wholePlantsOn(config?.wholePlantsStage),

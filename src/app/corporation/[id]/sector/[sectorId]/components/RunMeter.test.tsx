@@ -92,9 +92,9 @@ describe("run meter idle causes", () => {
           sectorType="extraction"
         />
       ).container.textContent;
-    expect(meter("Iron Ore")).toContain("Held by Iron Ore");
-    expect(meter("Iron Ore")).not.toContain("Ramping up");
+    expect(meter("Iron Ore")).toContain("Kept low after Iron Ore ran short");
+    expect(meter("Iron Ore")).not.toContain("Stepping back up");
     cleanup();
-    expect(meter()).toContain("Held by cash");
+    expect(meter()).toContain("Kept low after a cash cut");
   });
 });
