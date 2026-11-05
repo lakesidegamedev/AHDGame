@@ -800,6 +800,7 @@ export async function runFundedProducerTurn(
       stockCoverTurns: input.env.stockCoverTurns,
       ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
       ...(input.env.restartProbes ? { restartProbes: true } : {}),
+      ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
         ? {
             shortageAsk: {
