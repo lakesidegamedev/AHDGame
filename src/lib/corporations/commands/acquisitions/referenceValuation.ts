@@ -22,6 +22,7 @@ import {
   fxRateForCorpFromMap,
 } from "@/lib/currency/corporationCapital";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { loadLiveCorporateLoans } from "@/lib/banking/corporateLoanAssumption";
 import { acquisitionBalanceSheet } from "./rules";
 
 export interface ReferenceValuation {
@@ -34,6 +35,8 @@ export interface ReferenceValuation {
   portfolioAnchor: number;
   bankEquityAnchor: number;
   debtAnchor: number;
+  /** Bank loans the target owes (₳), netted from the floor but not from `debtAnchor`. */
+  bankLoanDebtAnchor: number;
   minimumPriceAnchor: number;
 }
 
@@ -73,7 +76,7 @@ export async function referenceValuation(db: Db, target: Corporation): Promise<R
     target,
     targetFxRate
   );
-  const [bonds, heldCorps, funds, receivables] = await Promise.all([
+  const [bonds, heldCorps, funds, receivables, bankLoans] = await Promise.all([
     db
       .collection<Bond>("bonds")
       .find({
@@ -90,6 +93,7 @@ export async function referenceValuation(db: Db, target: Corporation): Promise<R
       .toArray(),
     loadCorporationFundPortfolio(db, target._id),
     findImfFacilityReceivablesForLender(db, target._id),
+    loadLiveCorporateLoans(db, target._id),
   ]);
   const bondRate = (bond: Bond) => {
     const currency = (bond.currencyCode ??
@@ -111,41 +115,46 @@ export async function referenceValuation(db: Db, target: Corporation): Promise<R
       currency ? (fxByCurrency.get(currency) ?? 1) : 1
     );
   }
-  const { portfolioAnchor, debtAnchor, minimumPriceAnchor } = acquisitionBalanceSheet({
-    cashAnchor: liquidCapitalAnchor,
-    sectorsAnchor: sectorNpvAnchor,
-    bankEquityAnchor,
-    fundsAnchor: funds.valueAnchor,
-    receivablesAnchor: receivables.totalPrincipal,
-    facilityDebtLocal: target.imfFacilityPrincipalOutstanding ?? 0,
-    facilityFxRate: targetFxRate,
-    issuedBonds: bonds
-      .filter((b) => b.corporationId?.equals(target._id))
-      .map((b) => ({ principalLocal: b.totalIssued, fxRate: bondRate(b) })),
-    heldBonds: bonds
-      .filter((b) => !b.corporationId?.equals(target._id))
-      .flatMap((b) =>
-        (b.holders ?? [])
-          .filter((h) => h.corporationId?.equals(target._id))
-          .map((h) => ({
-            units: h.units,
-            faceValue: BOND_UNIT_FACE_VALUE,
-            marketPrice: b.marketPrice,
-            fxRate: bondRate(b),
-          }))
-      ),
-    heldShares: heldCorps
-      .filter((c) => !c._id.equals(target._id))
-      .flatMap((c) =>
-        (c.shareholders ?? [])
-          .filter((h) => h.corporationId?.equals(target._id))
-          .map((h) => ({
-            shares: h.shares,
-            sharePrice: getPublicShareQuote(c),
-            fxRate: fxRateForCorpFromMap(c, fxByCurrency),
-          }))
-      ),
-  });
+  const { portfolioAnchor, debtAnchor, bankLoanDebtAnchor, minimumPriceAnchor } =
+    acquisitionBalanceSheet({
+      cashAnchor: liquidCapitalAnchor,
+      sectorsAnchor: sectorNpvAnchor,
+      bankEquityAnchor,
+      fundsAnchor: funds.valueAnchor,
+      receivablesAnchor: receivables.totalPrincipal,
+      facilityDebtLocal: target.imfFacilityPrincipalOutstanding ?? 0,
+      facilityFxRate: targetFxRate,
+      issuedBonds: bonds
+        .filter((b) => b.corporationId?.equals(target._id))
+        .map((b) => ({ principalLocal: b.totalIssued, fxRate: bondRate(b) })),
+      bankLoans: bankLoans.map((loan) => ({
+        outstandingLocal: loan.outstanding,
+        fxRate: fxByCurrency.get(loan.currency) ?? 1,
+      })),
+      heldBonds: bonds
+        .filter((b) => !b.corporationId?.equals(target._id))
+        .flatMap((b) =>
+          (b.holders ?? [])
+            .filter((h) => h.corporationId?.equals(target._id))
+            .map((h) => ({
+              units: h.units,
+              faceValue: BOND_UNIT_FACE_VALUE,
+              marketPrice: b.marketPrice,
+              fxRate: bondRate(b),
+            }))
+        ),
+      heldShares: heldCorps
+        .filter((c) => !c._id.equals(target._id))
+        .flatMap((c) =>
+          (c.shareholders ?? [])
+            .filter((h) => h.corporationId?.equals(target._id))
+            .map((h) => ({
+              shares: h.shares,
+              sharePrice: getPublicShareQuote(c),
+              fxRate: fxRateForCorpFromMap(c, fxByCurrency),
+            }))
+        ),
+    });
   const sharePriceAnchor = corpLiquidCapitalToAnchor(target.sharePrice ?? 0, target, targetFxRate);
   const valuationAnchor = computeWholeCorpValuation({
     sharePrice: sharePriceAnchor,
@@ -160,6 +169,7 @@ export async function referenceValuation(db: Db, target: Corporation): Promise<R
     portfolioAnchor,
     bankEquityAnchor,
     debtAnchor,
+    bankLoanDebtAnchor,
     minimumPriceAnchor,
   };
 }

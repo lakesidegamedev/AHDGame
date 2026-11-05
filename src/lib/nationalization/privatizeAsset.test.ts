@@ -139,7 +139,7 @@ describe("privatizeAsset", () => {
         method: "ipo",
         turn: 10,
       })
-    ).rejects.toThrow(/secured construction/);
+    ).rejects.toThrow(/construction loan|ownership change/);
 
     expect(db.collectionMocks.corporations.insertOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe("privatizeAsset", () => {
         method: "ipo",
         turn: 10,
       })
-    ).rejects.toThrow(/secured construction/);
+    ).rejects.toThrow(/construction loan|ownership change/);
 
     expect(db.collectionMocks.corporations.insertOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();

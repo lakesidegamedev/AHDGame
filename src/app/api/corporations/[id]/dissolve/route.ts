@@ -162,7 +162,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
         if (!(await reserveSectorsForRestore(db, sectors))) {
           return errorResponse(
             409,
-            "Resolve secured construction before dissolving this corporation"
+            "A site of this corporation carries a construction loan, and dissolving would return the site to the market with no buyer to repay the lender. Sell the site or wait until the loan is repaid."
           );
         }
 

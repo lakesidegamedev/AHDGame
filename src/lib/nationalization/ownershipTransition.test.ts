@@ -483,7 +483,7 @@ describe("nationalizeWholeCorp", () => {
         tier: "fair",
         consequence: CONSEQ,
       })
-    ).rejects.toThrow(/secured construction/);
+    ).rejects.toThrow(/ownership change/);
     expect(debitTreasuryCompensation).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporations.deleteOne).not.toHaveBeenCalled();
   });

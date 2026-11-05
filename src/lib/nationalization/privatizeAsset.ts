@@ -135,7 +135,9 @@ export async function privatizeAsset(
       throw new Error("Sector is not owned by the source National Corporation");
     }
     if (hasProtectedConstructionProperty(sector)) {
-      throw new Error("Resolve secured construction before privatizing this sector");
+      throw new Error(
+        "This site carries a construction loan, and privatization splits a site into a new holding. Wait until the loan is repaid."
+      );
     }
     if (
       sector.absorbedAtTurn != null &&
@@ -275,7 +277,9 @@ export async function privatizeAsset(
     `privatize:${newCorpId.toHexString()}`
   );
   if (!transitionKeys) {
-    throw new Error("Resolve secured construction before privatizing these sectors");
+    throw new Error(
+      "A selected site carries a construction loan or is in another ownership change. Wait until it settles."
+    );
   }
   const transitionKeyBySectorId = new Map(
     selected.map(({ sector }, index) => [sector._id.toHexString(), transitionKeys[index]])

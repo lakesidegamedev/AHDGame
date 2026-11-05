@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   NPP_ACQUISITION_PREMIUM_MULTIPLIER,
+  acquisitionBalanceSheet,
   acquisitionBlockedAsNewThisTurn,
   playerAcquisitionMinimumPrice,
   isNppAutoResolvableTarget,
@@ -98,5 +99,41 @@ describe("net asset acquisition floor", () => {
     expect(
       playerAcquisitionMinimumPrice({ cashAnchor: 1_000, otherAssetsAnchor: 0, debtAnchor: 2_000 })
     ).toBe(0);
+  });
+});
+
+describe("acquisition balance sheet and bank loans", () => {
+  const base = {
+    cashAnchor: 100_000,
+    sectorsAnchor: 400_000,
+    bankEquityAnchor: 0,
+    fundsAnchor: 0,
+    receivablesAnchor: 0,
+    facilityDebtLocal: 0,
+    facilityFxRate: 1,
+    heldBonds: [],
+    heldShares: [],
+    issuedBonds: [],
+  };
+
+  it("nets bank loans from the floor without counting them as merger-blocking debt", () => {
+    const sheet = acquisitionBalanceSheet({
+      ...base,
+      bankLoans: [
+        { outstandingLocal: 150_000, fxRate: 1 },
+        { outstandingLocal: 100_000, fxRate: 2 },
+      ],
+    });
+    expect(sheet.bankLoanDebtAnchor).toBe(200_000);
+    expect(sheet.debtAnchor).toBe(0);
+    expect(sheet.minimumPriceAnchor).toBe(300_000);
+  });
+
+  it("floors at zero when the loans exceed the assets", () => {
+    const sheet = acquisitionBalanceSheet({
+      ...base,
+      bankLoans: [{ outstandingLocal: 10_000_000, fxRate: 1 }],
+    });
+    expect(sheet.minimumPriceAnchor).toBe(0);
   });
 });

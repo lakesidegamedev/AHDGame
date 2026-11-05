@@ -51,6 +51,10 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import {
+  prepareConstructionBorrowerTransfers,
+  settleConstructionBorrowerTransfers,
+} from "@/lib/banking/constructionBorrowerTransfer";
 
 // PLANTS-GATED: a spin-off only re-points `corporationId` on the existing row, so
 // capitalStock, buildQueue, CIP and plantsStartTurn ride along untouched. There
@@ -178,17 +182,38 @@ export async function spinOff(
   const costLocal = Math.round(
     anchorToCorpLiquidCapital(spinOffCostAnchor(sectors.length), parent, parentFx)
   );
+  const newCorpId = new Oid();
+  const currencyCode =
+    parent.liquidCurrencyCode ??
+    (COUNTRY_CURRENCY_MAP[parent.countryId] as CurrencyCode | undefined);
+  const parentCurrency = resolveCorpLiquidCurrencyCode(parent);
+
+  // A secured construction loan follows its site into the subsidiary, which
+  // becomes the borrower and services it from its own cash.
+  const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
+    sectors,
+    toId: newCorpId,
+    toCurrency: currencyCode,
+    operationKey: `spin-off:${newCorpId.toHexString()}`,
+    turn,
+  });
+  if (!preparedTransfers.ok) return fail(preparedTransfers.error);
+  const constructionTransfers = preparedTransfers.plan;
   const transitionKeys = await reserveSectorsForTransition(
     db,
     sectors,
     "subsidiary_spin_off",
-    `spin-off:${parent._id.toHexString()}:${new Oid().toHexString()}`
+    `spin-off:${parent._id.toHexString()}:${new Oid().toHexString()}`,
+    false,
+    constructionTransfers
   );
   if (!transitionKeys) {
-    return fail("Resolve secured construction before spinning off these sectors.");
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+    return fail("A sector changed or is in another ownership change. Try the spin-off again.");
   }
   const debit = await atomicallyDebitCorpLiquidCapital(db, parent._id, costLocal);
   if (!debit.ok) {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
     await Promise.all(
       sectors.map((sector, index) =>
         releaseConstructionPropertyTransition(db, sector._id, transitionKeys[index])
@@ -200,12 +225,6 @@ export async function spinOff(
       }.`
     );
   }
-
-  const newCorpId = new Oid();
-  const currencyCode =
-    parent.liquidCurrencyCode ??
-    (COUNTRY_CURRENCY_MAP[parent.countryId] as CurrencyCode | undefined);
-  const parentCurrency = resolveCorpLiquidCurrencyCode(parent);
 
   const transferredSectorIds: ObjectId[] = [];
   try {
@@ -308,10 +327,12 @@ export async function spinOff(
           _id: sector._id,
           corporationId: parent._id,
           "constructionPropertyTransition.key": transitionKeys[index],
+          ...constructionTransfers.claimFilterFor(sector),
         },
         {
           $set: {
             corporationId: newCorpId,
+            ...constructionTransfers.setFor(sector._id),
             revenue: newRevenueLocal,
             currentGrowthCost: newGrowthLocal,
             updatedAt: now,
@@ -388,6 +409,7 @@ export async function spinOff(
       }
     }
 
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
     await Promise.all(
       sectors.map((sector, index) =>
         releaseConstructionPropertyTransition(db, sector._id, transitionKeys[index])
@@ -398,24 +420,38 @@ export async function spinOff(
   } catch (err) {
     // Roll back: move any transferred sectors back, delete the new corp, refund.
     if (transferredSectorIds.length > 0) {
-      const rollback = await db.collection<CorporateSector>("corporateSectors").updateMany(
-        {
-          $or: transferredSectorIds.map((sectorId) => {
-            const index = sectors.findIndex((sector) => sector._id.equals(sectorId));
-            return {
-              _id: sectorId,
-              "constructionPropertyTransition.key": transitionKeys[index],
-            };
-          }),
-        },
-        { $set: { corporationId: parent._id, updatedAt: new Date() } }
+      // A financed site goes back with its claim naming the parent again, so
+      // the settle below leaves its loan with the parent.
+      const rollback = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+        transferredSectorIds.map((sectorId) => {
+          const index = sectors.findIndex((sector) => sector._id.equals(sectorId));
+          return {
+            updateOne: {
+              filter: {
+                _id: sectorId,
+                "constructionPropertyTransition.key": transitionKeys[index],
+              },
+              update: {
+                $set: {
+                  corporationId: parent._id,
+                  ...(constructionTransfers.hasTransfer(sectorId)
+                    ? { "constructionFinancing.borrowerId": parent._id.toHexString() }
+                    : {}),
+                  updatedAt: new Date(),
+                },
+              },
+            },
+          };
+        })
       );
+      await settleConstructionBorrowerTransfers(db, constructionTransfers);
       if ((rollback.matchedCount ?? 0) !== transferredSectorIds.length) {
         throw new Error("The spin-off could not safely restore every reserved sector", {
           cause: err,
         });
       }
     }
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
     await db.collection<Corporation>("corporations").deleteOne({ _id: newCorpId });
     await refundCorpLiquidCapital(db, parent._id, costLocal);
     await Promise.all(
