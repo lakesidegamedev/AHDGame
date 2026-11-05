@@ -1556,4 +1556,46 @@ describe("own freight and the input gauge", () => {
       throughputBindingInput: "freight",
     });
   });
+
+  it("values own-site deliveries at the sites' bid when they were left short (captive stage 2)", () => {
+    const freight = (capacityUnits: number) =>
+      plant({
+        id: "logistics",
+        stateId: "CT",
+        inputs: [],
+        outputs: [
+          {
+            commodity: "freight",
+            unitsPerOutput: 1,
+            book: "country:US",
+            policy: { kind: "manual", unitPrice: 30 },
+            referenceUnitPrice: 50,
+            storable: false,
+          },
+        ],
+        capacityUnits,
+      });
+    const chemicals = plant({
+      id: "chemicals",
+      stateId: "CT",
+      inputs: [
+        { commodity: "freight", unitsPerOutput: 0.05, book: "country:US", maximumUnitPrice: 60 },
+      ],
+    });
+    const run = (capacityUnits: number, captiveShortValue?: boolean) =>
+      advanceProducerEconomy({
+        turn: 1,
+        accounts,
+        producers: [freight(capacityUnits), chemicals],
+        ownSitesFirst: true,
+        ...(captiveShortValue ? { captiveShortValue } : {}),
+      }).producers.find((p) => p.id === "logistics")!.products[0];
+    // Short: 2 units of own freight against a need of 5. Bid 60, reference 50, ask 30.
+    expect(run(2, true).captiveUnitValue).toBeCloseTo(50);
+    // Not short: own freight covers the need, so the ask stands.
+    expect(run(10, true).captiveUnitValue).toBeUndefined();
+    // Stage off: nothing recorded, the receipt is unchanged.
+    expect(run(2).captiveUnitValue).toBeUndefined();
+    expect(JSON.stringify(run(2))).toBe(JSON.stringify(run(2, false)));
+  });
 });
