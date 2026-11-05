@@ -666,6 +666,7 @@ export function GeneralBlendView({
               presence={mapCampaign.presence}
               inPage={mapCampaign.inPage}
               panelExtra={mapCampaign.panelExtra}
+              fieldOffices={mapCampaign.fieldOffices}
             />
           }
           squares={

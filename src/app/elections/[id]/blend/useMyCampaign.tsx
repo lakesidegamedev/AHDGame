@@ -8,6 +8,7 @@ import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/
 import { BLEND, BLEND_LABEL, FONT } from "@/components/blend/tokens";
 import { campaignPageHref } from "@/lib/campaignManager/links";
 import { presenceLevelsFor, type RacePresenceEntry } from "@/lib/campaignManager/mapActions";
+import { useFieldOfficeMapControl } from "./presMap/fieldOfficeMapContext";
 
 interface PresenceRow {
   stateId: string;
@@ -159,6 +160,17 @@ export function useMyCampaign(args: {
 export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stateId: string }) {
   const row = mine.rows[stateId];
   const level = row?.level ?? 0;
+  // On the race page's map the link flies into the state's counties instead of
+  // leaving for the field tab. A phone has no room for both, so it gets the
+  // list of counties under this block and no link.
+  const mapControl = useFieldOfficeMapControl();
+  const linkStyle = {
+    marginTop: 10,
+    display: "block",
+    fontSize: 13,
+    color: BLEND.accentInk,
+    textDecoration: "none",
+  } as const;
   return (
     <section
       style={{
@@ -207,25 +219,32 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
         </p>
       ) : null}
       {mine.campaignId && mine.canOpenFieldOffice ? (
-        <Link
-          href={campaignPageHref({
-            campaignId: mine.campaignId,
-            electionId: mine.race.id,
-            countryId: mine.race.countryId,
-            tab: "field",
-            region: stateId,
-          })}
-          className="hover:underline"
-          style={{
-            marginTop: 10,
-            display: "block",
-            fontSize: 13,
-            color: BLEND.accentInk,
-            textDecoration: "none",
-          }}
-        >
-          Open a field office in this state
-        </Link>
+        mapControl ? (
+          mapControl.canZoom ? (
+            <button
+              type="button"
+              onClick={() => mapControl.showFieldOffices(stateId)}
+              className="hover:underline"
+              style={{ ...linkStyle, padding: 0, border: 0, background: "none", cursor: "pointer" }}
+            >
+              Open a field office in this state
+            </button>
+          ) : null
+        ) : (
+          <Link
+            href={campaignPageHref({
+              campaignId: mine.campaignId,
+              electionId: mine.race.id,
+              countryId: mine.race.countryId,
+              tab: "field",
+              region: stateId,
+            })}
+            className="hover:underline"
+            style={linkStyle}
+          >
+            Open a field office in this state
+          </Link>
+        )
       ) : null}
     </section>
   );

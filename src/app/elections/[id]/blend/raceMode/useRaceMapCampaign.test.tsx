@@ -7,9 +7,10 @@ import type { ElectionDetail } from "../../components/ElectionDetailTypes";
 import { RaceModeProvider, type RaceModeSlots } from "./RaceModeContext";
 import { useRaceMapCampaign } from "./useRaceMapCampaign";
 
+let search = "";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(search),
 }));
 const fetchJson = vi.fn();
 vi.mock("@/lib/observability/fetchJson", () => ({
@@ -33,10 +34,20 @@ function slots(desk: CampaignDesk | null): RaceModeSlots {
   return { switcher: null, campaign: null, desk, mapAbove: desk !== null };
 }
 
-function deskFor(accessLevel: "owner" | "public", canManage = false): CampaignDesk {
+function deskFor(
+  accessLevel: "owner" | "public",
+  canManage = false,
+  fieldOfficeScope: "county" | null = "county"
+): CampaignDesk {
   return {
     campaignId: "c1",
-    campaign: { id: "c1", electionId: "e1", candidateId: "cand1", accessLevel },
+    campaign: {
+      id: "c1",
+      electionId: "e1",
+      candidateId: "cand1",
+      accessLevel,
+      electionInfo: { fieldOfficeScope, fieldOfficeCount: 2 },
+    },
     loading: false,
     error: "",
     me: {
@@ -67,6 +78,7 @@ function wrap(value: RaceModeSlots | null) {
 }
 
 beforeEach(() => {
+  search = "";
   fetchJson.mockReset();
   fetchJson.mockResolvedValue({
     canBuild: true,
@@ -126,5 +138,51 @@ describe("useRaceMapCampaign", () => {
     );
     expect(result.current.presence).toBeNull();
     expect(fetchJson).not.toHaveBeenCalled();
+  });
+
+  describe("field offices on the map", () => {
+    it("hands the campaign on screen to the map in Campaign mode, rival's included", () => {
+      const { result } = renderHook(() => useRaceMapCampaign(election()), {
+        wrapper: wrap(slots(deskFor("public"))),
+      });
+      expect(result.current.fieldOffices).toMatchObject({
+        campaignId: "c1",
+        version: 2,
+        startInFieldView: false,
+      });
+    });
+
+    it("refreshes the desk when an office opens or closes", () => {
+      const desk = deskFor("owner", true);
+      const { result } = renderHook(() => useRaceMapCampaign(election()), {
+        wrapper: wrap(slots(desk)),
+      });
+      result.current.fieldOffices?.onChanged();
+      expect(desk.refresh).toHaveBeenCalled();
+      expect(desk.refreshMe).toHaveBeenCalled();
+    });
+
+    it("opens in the field-office view from the old field tab link", () => {
+      search = "tab=field&region=OH";
+      const { result } = renderHook(() => useRaceMapCampaign(election()), {
+        wrapper: wrap(slots(deskFor("owner", true))),
+      });
+      expect(result.current.fieldOffices?.startInFieldView).toBe(true);
+    });
+
+    it("offers none in Race mode, outside the US, or where the country has no offices", () => {
+      const race = renderHook(() => useRaceMapCampaign(election()), {
+        wrapper: wrap(slots(null)),
+      });
+      expect(race.result.current.fieldOffices).toBeNull();
+      const none = renderHook(() => useRaceMapCampaign(election()), {
+        wrapper: wrap(slots(deskFor("owner", true, null))),
+      });
+      expect(none.result.current.fieldOffices).toBeNull();
+      const fr = renderHook(() => useRaceMapCampaign(election({ countryId: "FR" })), {
+        wrapper: wrap(slots(deskFor("owner", true))),
+      });
+      expect(fr.result.current.fieldOffices).toBeNull();
+    });
   });
 });

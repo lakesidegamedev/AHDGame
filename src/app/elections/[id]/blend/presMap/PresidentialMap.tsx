@@ -42,6 +42,18 @@ import { MIN_ZOOM, MAX_ZOOM, visibleBox } from "./mapView";
 import { COUNTY_ZOOM, CountyPaths, countyOpacity, useCountyRows } from "./CountyLayer";
 import { countyFadeGround, type CountyRow } from "./countyModel";
 import type { CountySource } from "./countyStore";
+import {
+  applyFieldOfficeStateView,
+  fieldOfficeCountyRows,
+  fieldOfficeViewOptions,
+  isFieldOfficeView,
+  leanSourceNote,
+  officesByState,
+} from "./fieldOfficeMath";
+import { FieldOfficeKey, FieldOfficeOverlay, FieldOfficeTip } from "./FieldOfficeMapParts";
+import { FieldOfficeStatePanel } from "./FieldOfficeStatePanel";
+import { FieldOfficeMapProvider } from "./fieldOfficeMapContext";
+import { useFieldOfficeLayer, type FieldOfficeLayerConfig } from "./useFieldOfficeLayer";
 
 /** Container width at which the state overview sits over the map instead of rising as a sheet. */
 const PANEL_MIN_WIDTH = 640;
@@ -55,6 +67,9 @@ const SELECTED_COUNTY_ZOOM = 1.5;
 function countiesAllowed(s: PresMapState): boolean {
   return !s.broadcast || s.broadcast.countiesOpen;
 }
+
+/** Stable empty list, so a hook argument does not change identity every render. */
+const NO_STATES: string[] = [];
 
 /** Width of the state overview docked over the stage's right edge. */
 const STAGE_PANEL_WIDTH = 380;
@@ -102,6 +117,12 @@ export interface PresidentialMapProps {
   presence?: { levels: Readonly<Record<string, number>>; color: string } | null;
   /** Appended to the state overview (the reader's campaign actions there). */
   panelExtra?: (stateId: string) => ReactNode;
+  /**
+   * The campaign whose field offices the map can show (Campaign mode, US):
+   * adds the field-office colour-by views, county pins and the county detail
+   * with the open-office action.
+   */
+  fieldOffices?: FieldOfficeLayerConfig | null;
   /**
    * The stage sits in a page that scrolls (the race page's Campaign mode)
    * rather than filling the viewport. On desktop it then starts locked, like
@@ -166,6 +187,7 @@ export function PresidentialMap({
   focusRequest,
   presence,
   panelExtra,
+  fieldOffices = null,
   inPage = false,
 }: PresidentialMapProps) {
   const stage = variant === "stage";
@@ -191,7 +213,9 @@ export function PresidentialMap({
   // Where the state overview opens: docked over the map, or as a bottom sheet.
   const docked = stage ? desk : wide;
   const ground = useBlendGround();
-  const [dataView, setDataView] = useState<MapDataView>("margin");
+  const [dataView, setDataView] = useState<MapDataView>(
+    fieldOffices?.startInFieldView ? "fieldLean" : "margin"
+  );
   const [shareCandId, setShareCandId] = useState<string | null>(null);
 
   const [geo, setGeo] = useState<StateGeo[] | null>(null);
@@ -220,24 +244,37 @@ export function PresidentialMap({
     frame: stage ? { frameWidth: frameW, frameHeight: frameH, maxZoom: STAGE_MAX_ZOOM } : undefined,
   });
 
+  // Field offices: the state whose counties are loaded is the open one, and
+  // only when the map shows them (a field-office view) or sits behind the
+  // overview (a phone), where the overview lists the best counties instead.
+  const field = useFieldOfficeLayer(
+    stage ? fieldOffices : null,
+    selected && (isFieldOfficeView(dataView) || !docked) ? selected : null
+  );
+  const fieldOptions = fieldOfficeViewOptions(field?.meta ?? null);
   const shareOn = hasShareData(model);
   const presenceOn = stage && !!presence;
-  const viewsOn = stage && (shareOn || presenceOn);
+  const viewsOn = stage && (shareOn || presenceOn || fieldOptions.length > 0);
   const viewOptions = [
     ...(shareOn ? DATA_VIEWS : DATA_VIEWS.filter((v) => v.id === "margin")),
     ...(presenceOn ? [PRESENCE_VIEW] : []),
+    ...fieldOptions,
   ];
   const pickable = useMemo(() => (viewsOn ? shareCandidates(model) : []), [viewsOn, model]);
   const shareCand =
     (shareCandId ? pickable.find((c) => c.id === shareCandId) : undefined) ?? pickable[0] ?? null;
   const activeView: MapDataView =
     viewsOn && viewOptions.some((v) => v.id === dataView) ? dataView : "margin";
+  const fieldActive = isFieldOfficeView(activeView);
+  const fieldRegions = field?.meta?.regions;
   const viewModel = useMemo(
     () =>
-      activeView === "presence" && presence
-        ? applyPresenceView(model, ground, presence)
-        : applyDataView(model, activeView, ground, shareCand),
-    [model, activeView, ground, shareCand, presence]
+      fieldActive && fieldRegions
+        ? applyFieldOfficeStateView(model, ground, officesByState(fieldRegions))
+        : activeView === "presence" && presence
+          ? applyPresenceView(model, ground, presence)
+          : applyDataView(model, activeView, ground, shareCand),
+    [model, activeView, fieldActive, fieldRegions, ground, shareCand, presence]
   );
   const states = viewModel.states;
   const geoById = useMemo(() => new Map((geo ?? []).map((g) => [g.id, g])), [geo]);
@@ -269,11 +306,13 @@ export function PresidentialMap({
   );
   const k = pz.view.k;
   const countyStates = useMemo(() => {
-    if (!stage || !counties || !geo) return [];
+    if (!stage || !(counties || fieldActive) || !geo) return [];
     // The open state shows its counties as soon as the map has flown to it;
     // the rest fade in only on deep zoom.
     const open =
       selected && states[selected] && countiesAllowed(states[selected]) ? selected : null;
+    // A field-office view paints the open state's counties and no others.
+    if (fieldActive) return open && k >= SELECTED_COUNTY_ZOOM ? [open] : [];
     if (k < COUNTY_ZOOM) return open && k >= SELECTED_COUNTY_ZOOM ? [open] : [];
     const box = visibleBox(pz.view, MAP_WIDTH, MAP_HEIGHT, {
       frameWidth: frameW,
@@ -289,11 +328,29 @@ export function PresidentialMap({
       })
       .map((g) => g.id)
       .sort();
-  }, [stage, counties, geo, k, pz.view, frameW, frameH, states, selected]);
-  const countyRows = useCountyRows(electionId, turn, countyStates, candidate, countySource);
+  }, [stage, counties, fieldActive, geo, k, pz.view, frameW, frameH, states, selected]);
+  const countyRows = useCountyRows(
+    electionId,
+    turn,
+    fieldActive ? NO_STATES : countyStates,
+    candidate,
+    countySource
+  );
+  // The open state's counties painted for the field-office view.
+  const fieldRegionView = field?.regionView ?? null;
+  const fieldRows = useMemo<Record<string, CountyRow[]>>(() => {
+    const map = fieldActive ? fieldRegionView?.map : null;
+    return map && isFieldOfficeView(activeView)
+      ? { [map.regionId]: fieldOfficeCountyRows(map.subdivisions, activeView) }
+      : {};
+  }, [fieldActive, fieldRegionView, activeView]);
   // Rows for states that are in view now; ones loaded earlier stay cached.
   const shownCountyRows = useMemo(() => {
     const out: Record<string, CountyRow[]> = {};
+    if (fieldActive) {
+      for (const id of countyStates) if (fieldRows[id]) out[id] = fieldRows[id];
+      return out;
+    }
     for (const id of countyStates) {
       const rows = countyRows[id]
         ? applyCountyView(countyRows[id], activeView, countyFadeGround(ground), shareCand)
@@ -301,15 +358,19 @@ export function PresidentialMap({
       if (rows) out[id] = rows;
     }
     return out;
-  }, [countyStates, countyRows, activeView, ground, shareCand]);
+  }, [countyStates, countyRows, fieldActive, fieldRows, activeView, ground, shareCand]);
   // Momentum has no county series, so that view stays at state level.
   const countyAlpha =
     activeView === "momentum" || activeView === "presence"
       ? 0
-      : k < COUNTY_ZOOM && countyStates.length > 0
-        ? 1
-        : countyOpacity(k);
-  const countyLoading = countyStates.some((id) => !countyRows[id]);
+      : fieldActive
+        ? countyStates.length > 0
+          ? 1
+          : 0
+        : k < COUNTY_ZOOM && countyStates.length > 0
+          ? 1
+          : countyOpacity(k);
+  const countyLoading = countyStates.some((id) => !(fieldActive ? fieldRows : countyRows)[id]);
 
   useEffect(() => {
     if (!selectedState) return;
@@ -332,6 +393,9 @@ export function PresidentialMap({
     // The stage never toggles a state shut on a second click, so a double
     // click (which zooms) leaves the state it zoomed to open.
     if (!id) return;
+    // A county of the open state, in a field-office view, opens its detail.
+    const countyId = (e.target as Element).getAttribute?.("data-county");
+    if (fieldActive && countyId && id === selected) field?.selectCounty(countyId);
     if (!stage) {
       select(id === selected ? null : id);
       return;
@@ -397,15 +461,38 @@ export function PresidentialMap({
   const atRest = pz.view.k === pz.rest.k && pz.view.x === pz.rest.x && pz.view.y === pz.rest.y;
   const hoverCounty =
     hover?.county && countyAlpha > 0
-      ? countyRows[hover.id]?.find((r) => r.id === hover.county)
+      ? (fieldActive ? fieldRows : countyRows)[hover.id]?.find((r) => r.id === hover.county)
       : undefined;
   const pulsing = useMemo(() => Object.values(states).filter((s) => s.pulse), [states]);
 
-  const panel = selectedState ? (
+  // From the overview's "open a field office" link: switch to the field-office
+  // view and fly into the state. A locked map is unlocked for it when it sits
+  // beside the overview; on a phone the overview lists the counties instead.
+  const showFieldOffices = (id: string) => {
+    if (!isFieldOfficeView(dataView)) setDataView("fieldLean");
+    select(id);
+    if (!docked) return;
+    if (!freeGestures) setUnlocked(true);
+    zoomToState(id);
+  };
+  const fieldPanel =
+    selectedState && field ? (
+      <FieldOfficeStatePanel
+        layer={field}
+        stateId={selectedState.id}
+        stateName={selectedState.name}
+        active={fieldActive}
+        listCounties={!docked}
+        onShowOnMap={() => showFieldOffices(selectedState.id)}
+      />
+    ) : null;
+
+  const panelBody = selectedState ? (
     renderPanel ? (
       <div ref={panelRef} tabIndex={-1} style={{ outline: "none" }}>
         {renderPanel(selectedState, () => select(null))}
         {panelExtra?.(selectedState.id)}
+        {fieldPanel}
       </div>
     ) : (
       <>
@@ -419,8 +506,14 @@ export function PresidentialMap({
           onClose={() => select(null)}
         />
         {panelExtra?.(selectedState.id)}
+        {fieldPanel}
       </>
     )
+  ) : null;
+  const panel = panelBody ? (
+    <FieldOfficeMapProvider value={{ showFieldOffices, canZoom: docked }}>
+      {panelBody}
+    </FieldOfficeMapProvider>
   ) : null;
 
   const callouts = CALLOUT_STATES.map((id) => states[id]).filter((s): s is PresMapState => !!s);
@@ -489,6 +582,13 @@ export function PresidentialMap({
               <OverlayDefs states={states} />
               <StatePaths geo={geo} states={states} />
               <CountyPaths rows={shownCountyRows} opacity={countyAlpha} />
+              {fieldActive && countyAlpha > 0 && fieldRegionView?.map ? (
+                <FieldOfficeOverlay
+                  rows={fieldRows[fieldRegionView.map.regionId] ?? []}
+                  viewBox={fieldRegionView.map.viewBox}
+                  selected={field?.selectedCounty ?? null}
+                />
+              ) : null}
               {countyAlpha > 0 ? (
                 <StateBorders geo={geo} ids={countyStates} opacity={countyAlpha} />
               ) : null}
@@ -584,7 +684,15 @@ export function PresidentialMap({
           </div>
         ) : null}
 
-        {hoverState && hover && hoverCounty ? (
+        {hoverState && hover && hoverCounty?.field ? (
+          <FieldOfficeTip
+            county={hoverCounty}
+            stateId={hoverState.id}
+            x={hover.x}
+            y={hover.y}
+            frameWidth={width}
+          />
+        ) : hoverState && hover && hoverCounty ? (
           <CountyTip
             county={hoverCounty}
             state={hoverState}
@@ -655,6 +763,11 @@ export function PresidentialMap({
           </div>
           {activeView === "margin" ? (
             (legend ?? <MapKey model={model} />)
+          ) : isFieldOfficeView(activeView) ? (
+            <FieldOfficeKey
+              view={activeView}
+              note={field?.meta ? leanSourceNote(field.meta) : null}
+            />
           ) : (
             <DataViewKey
               view={activeView}
