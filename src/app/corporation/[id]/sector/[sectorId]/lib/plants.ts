@@ -67,27 +67,32 @@ export function idleCauseMeta(
   const run = v.runNoun;
   return {
     inputs: {
-      label: "Waiting on inputs",
+      label: "Stopped: short of inputs",
       tone: "warning",
       help: `Your ${sites} could not buy enough of what they consume, so part of ${run} stopped. Check the Inputs list below for the item in short supply.`,
     },
     demand: {
-      label: "Demand limited",
+      label: "Cut back: buyers took less",
       tone: "warning",
       help: `Recent sales did not support a full run, so your plants are producing less to avoid making more unsold goods. Output rises as buyers take more.${localMarketNote(localMarketOutputs)}`,
     },
     ramping: {
-      label: "Ramping up",
+      label: "Stepping back up",
       tone: "info",
-      help: `You sold everything you made last turn, so your ${sites} are stepping back up toward a full run. Output rises each turn while buyers keep taking it, faster when the market is short.`,
+      help: `You sold everything you made last turn and it paid, so your ${sites} are stepping back up toward a full run. Output rises each turn while buyers keep taking it, faster when the market is short.`,
+    },
+    losing: {
+      label: "Cut back: losing money",
+      tone: "warning",
+      help: `Each unit your ${sites} sold earned less than the materials it used, so the game runs less of ${run} each turn to stop the loss growing. Running more at this price loses more. To run more, the price has to rise above what each unit costs to make: check the cost per unit above.`,
     },
     held: {
-      label: "Held by a cut",
+      label: "Kept low after a cut",
       tone: "warning",
       help: `You sold everything you made, but short inputs or cash cut what your ${sites} could make, so they are held below their plan rather than ramping up.`,
     },
     cash: {
-      label: "Short of cash",
+      label: "Stopped: not enough cash",
       tone: "warning",
       help: `Your company could not pay the full bill for ${run}, so part of it stopped. Add cash to the company or cut costs to run more.`,
     },
@@ -107,7 +112,7 @@ export function idleCauseMeta(
       help: "You set output below full. Raise the output target to run more of your capacity.",
     },
     staffing: {
-      label: "Short of workers",
+      label: "Stopped: short of workers",
       tone: "warning",
       help: `Your ${sites} did not have enough workers for a full run. Every employer in this state hires from the same pool of workers; the shortage note under Workforce shows how big it is.`,
     },
@@ -166,6 +171,7 @@ export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
   inputs: "bg-amber-500/60",
   demand: "bg-rose-500/50",
   ramping: "bg-sky-400/60",
+  losing: "bg-red-700/55",
   held: "bg-yellow-600/60",
   cash: "bg-yellow-300/60",
   strike: "bg-error/80",

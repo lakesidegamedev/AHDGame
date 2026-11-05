@@ -23,6 +23,7 @@ import {
   facilityVocabulary,
 } from "@/lib/constants/facilityVocabulary";
 import RunMeter from "../components/RunMeter";
+import RunReport from "../components/RunReport";
 import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
@@ -266,6 +267,16 @@ export default function PlantPanel({
         <p className="mb-2 mt-5 text-body-sm font-medium text-muted">Today&apos;s run</p>
         {hasRun ? (
           <>
+            {plants.runReport && (
+              <RunReport
+                report={plants.runReport}
+                capacityUnits={plants.capacityUnits ?? 0}
+                producedUnits={plants.producedUnits ?? 0}
+                idleCauses={plants.idleCauses}
+                sectorType={sectorType}
+                mothballed={mothballed}
+              />
+            )}
             <RunMeter
               capacityUnits={plants.capacityUnits ?? 0}
               producedUnits={plants.producedUnits ?? 0}

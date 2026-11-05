@@ -163,6 +163,12 @@ export type ProducerPhysicalEnv = Pick<
   salesAdvanceAtClearing?: boolean;
   /** gameConfig.producerZombieRestartStage >= 1: idle plants with no sales may run a restart probe. */
   restartProbes?: boolean;
+  /** gameConfig.producerShortageAskStage >= 1: sold-out sellers in a short lane ask a step above the clearing. */
+  shortageAskStage?: number;
+  /** gameConfig.producerShortageAskMaxStep: largest raise in one turn (shortageAskRules default when absent). */
+  shortageAskMaxStep?: number;
+  /** gameConfig.producerPriceMaxMultiplier: the shortage ask never passes reference x this. */
+  priceMaxMultiplier?: number;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
   /** Funded build speedup factor for short plants (gameConfig.producerShortageBuildFactor). */
