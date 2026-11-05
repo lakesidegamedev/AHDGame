@@ -1519,6 +1519,53 @@ describe("own freight and the input gauge", () => {
     expect(shipped.soldUnits).toBeCloseTo(0);
   });
 
+  it("records what the company's own sites asked for, past what the supplier could make", () => {
+    const freight = plant({
+      id: "logistics",
+      stateId: "CT",
+      inputs: [],
+      outputs: [
+        {
+          commodity: "freight",
+          unitsPerOutput: 1,
+          book: "country:US",
+          policy: { kind: "manual", unitPrice: 50 },
+          referenceUnitPrice: 50,
+          storable: false,
+        },
+      ],
+      capacityUnits: 1,
+    });
+    const chemicals = plant({
+      id: "chemicals",
+      stateId: "CT",
+      inputs: [
+        { commodity: "freight", unitsPerOutput: 0.05, book: "country:US", maximumUnitPrice: 60 },
+      ],
+    });
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [freight, chemicals],
+      externalOffers: [
+        {
+          id: "freight",
+          accountId: "supplier",
+          commodity: "freight",
+          book: "country:US",
+          units: 50,
+          unitPrice: 10,
+        },
+      ],
+      ownSitesFirst: true,
+    });
+    const shipped = result.producers.find((p) => p.id === "logistics")!.products[0];
+    expect(shipped.internalDeliveredUnits).toBeCloseTo(1);
+    expect(shipped.ownSiteDemandUnits).toBeCloseTo(5);
+    const chem = result.producers.find((p) => p.id === "chemicals")!.products[0];
+    expect(chem.ownSiteDemandUnits).toBeUndefined();
+  });
+
   it("names the input that cut the run when own freight falls short", () => {
     const freight = plant({
       id: "logistics",
