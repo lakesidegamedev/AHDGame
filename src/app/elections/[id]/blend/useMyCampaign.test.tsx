@@ -1,7 +1,8 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, renderHook, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MyCampaignStateBlock, useMyCampaign } from "./useMyCampaign";
+import { FieldOfficeMapProvider } from "./presMap/fieldOfficeMapContext";
 
 const fetchJson = vi.fn();
 vi.mock("@/lib/observability/fetchJson", () => ({
@@ -91,6 +92,35 @@ describe("MyCampaignStateBlock", () => {
 
   it("hides the field office link from someone who cannot open one", () => {
     render(<MyCampaignStateBlock mine={{ ...base, canOpenFieldOffice: false }} stateId="OH" />);
+    expect(screen.queryByText("Open a field office in this state")).toBeNull();
+  });
+
+  it("links to the campaign's field tab when there is no map to fly into", () => {
+    render(<MyCampaignStateBlock mine={base} stateId="OH" />);
+    const link = screen.getByText("Open a field office in this state").closest("a");
+    expect(link?.getAttribute("href")).toContain("tab=field");
+    expect(link?.getAttribute("href")).toContain("region=OH");
+  });
+
+  it("flies the map into the state's counties instead of leaving the page", () => {
+    const showFieldOffices = vi.fn();
+    render(
+      <FieldOfficeMapProvider value={{ showFieldOffices, canZoom: true }}>
+        <MyCampaignStateBlock mine={base} stateId="OH" />
+      </FieldOfficeMapProvider>
+    );
+    const control = screen.getByRole("button", { name: "Open a field office in this state" });
+    expect(control.closest("a")).toBeNull();
+    fireEvent.click(control);
+    expect(showFieldOffices).toHaveBeenCalledWith("OH");
+  });
+
+  it("leaves the field office link out on a phone, where the overview lists the counties", () => {
+    render(
+      <FieldOfficeMapProvider value={{ showFieldOffices: vi.fn(), canZoom: false }}>
+        <MyCampaignStateBlock mine={base} stateId="OH" />
+      </FieldOfficeMapProvider>
+    );
     expect(screen.queryByText("Open a field office in this state")).toBeNull();
   });
 });

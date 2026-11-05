@@ -27,6 +27,19 @@ export interface CountyApiResponse {
   candidateColors?: Record<string, string>;
 }
 
+/** What the field-office views know about a county, carried on its row. */
+export interface FieldOfficeCountyInfo {
+  livePvi: number;
+  basePvi: number;
+  /** Share of the state electorate, 0..1. */
+  electorateShare: number;
+  /** Turnout points one new office here would add statewide. Managers only. */
+  marginalPct?: number;
+  yieldFactor?: number;
+  /** The id of this campaign's office in the county, if it holds one. */
+  officeId: string | null;
+}
+
 export interface CountyRow {
   id: string;
   name: string;
@@ -45,6 +58,8 @@ export interface CountyRow {
    * payload can key the same ticket differently.
    */
   shareByName: Record<string, number>;
+  /** Set on rows built for the field-office views; they carry no tally. */
+  field?: FieldOfficeCountyInfo;
 }
 
 export type CountySortKey = "name" | "leader" | "margin" | "votes";
