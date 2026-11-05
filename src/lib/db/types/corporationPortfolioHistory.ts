@@ -9,7 +9,7 @@ export interface CorporationPortfolioHistory {
   _id: ObjectId;
   corporationId: ObjectId;
   turn: number;
-  /** Gross assets in anchor units (stocks + bonds held + liquid capital). */
+  /** Gross assets in anchor units (stocks + bonds held + index funds + liquid capital). */
   totalValue: number;
   /** Debt-adjusted net worth in anchor units (gross assets - liabilities). */
   netValue?: number;
@@ -19,6 +19,8 @@ export interface CorporationPortfolioHistory {
   bondValue?: number;
   /** Liquid capital at snapshot time (anchor-normalized). */
   cashValue?: number;
+  /** Index funds at quoted NAV, in anchor units. Missing on older snapshots. */
+  fundValue?: number;
   /** Issued bond principal + IMF facility principal outstanding, anchor-normalized. */
   liabilityValue?: number;
   /**

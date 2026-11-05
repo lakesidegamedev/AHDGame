@@ -289,3 +289,14 @@ describe("applyFogToFinancials by country", () => {
     expect(fogged.byCountry).toBeUndefined();
   });
 });
+
+it("includes dividends received and restores paid dividends only for the quarterly net-income headline", () => {
+  const history = makeHistory({
+    totalCosts: 1000,
+    income: -100,
+    dividendIncomeReceived: 500,
+    dividendPaidPerTurn: 20,
+  });
+  expect(realizedNetIncomePerTurn(history)).toBe(400);
+  expect(buildQuarterlySnapshot(history).income).toBe(420);
+});

@@ -35,6 +35,7 @@ interface HistoryPoint {
   netValue?: number;
   stockValue?: number;
   bondValue?: number;
+  fundValue?: number;
   cashValue?: number;
   liabilityValue?: number;
   /** FX snapshot at the time of recording — keeps charts honest across rate moves. */
@@ -48,6 +49,14 @@ interface CorpPortfolioApiResponse {
   /** Market bonds plus IMF facility receivables as bond-shaped rows (`imfFacilityLoan`). */
   bondHoldings: PortfolioBondHolding[];
   totalStockValue: number;
+  totalFundValue?: number;
+  fundHoldings?: {
+    fundId: string;
+    slug?: string;
+    name: string;
+    units: number;
+    valueAnchor: number;
+  }[];
   /** Includes IMF facility principal when this corp is the lender. */
   totalBondValue: number;
   totalLiabilityValue: number;
@@ -61,11 +70,11 @@ interface CorpPortfolioApiResponse {
   error?: string;
 }
 
-type Section = "overview" | "cash" | "stocks" | "bonds";
+type Section = "overview" | "cash" | "stocks" | "bonds" | "funds";
 type ChartView = "total" | "breakdown";
-type SeriesView = "total" | "stocks" | "bonds" | "cash";
+type SeriesView = "total" | "stocks" | "bonds" | "cash" | "funds";
 
-const VALID_SECTIONS: Section[] = ["overview", "cash", "stocks", "bonds"];
+const VALID_SECTIONS: Section[] = ["overview", "cash", "stocks", "bonds", "funds"];
 const LEGACY_TAB_MAP: Record<string, Section> = {
   stocks: "stocks",
   bonds: "bonds",
@@ -222,6 +231,13 @@ export default function CorporationPortfolioView({
       delta: deltas?.bonds ?? null,
       icon: <IconBonds />,
     },
+    {
+      key: "funds",
+      label: "Index funds",
+      delta: null,
+      value: formatAmount(data.totalFundValue ?? 0),
+      icon: <IconStocks />,
+    },
   ];
 
   const viewCorpLink = (
@@ -268,6 +284,21 @@ export default function CorporationPortfolioView({
             seriesView={seriesView}
             setSeriesView={setSeriesView}
           />
+        )}
+
+        {activeSection === "funds" && (
+          <div className="rounded-xl border border-card-border p-6">
+            <h2>Index fund holdings</h2>
+            {(data.fundHoldings ?? []).map((fund) => (
+              <div key={fund.fundId} className="flex justify-between py-3">
+                <span>
+                  {fund.name}: {fund.units.toLocaleString()} units
+                </span>
+                <span>{formatAmount(fund.valueAnchor)}</span>
+              </div>
+            ))}
+            {!data.fundHoldings?.length && <p>No index funds held.</p>}
+          </div>
         )}
 
         {activeSection === "cash" && <CorpCashPane cashOnHand={data.cashOnHand} />}
@@ -335,8 +366,9 @@ function CorpOverviewPane({
   const { formatAmount } = useCurrency();
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         <StatCard label="Liquid capital" value={formatAmount(data.cashOnHand)} />
+        <StatCard label="Index funds" value={formatAmount(data.totalFundValue ?? 0)} />
         <StatCard label="Stock holdings" value={formatAmount(data.totalStockValue)} />
         <StatCard label="Bond holdings" value={formatAmount(data.totalBondValue)} />
         <StatCard label="Liabilities" value={formatAmount(data.totalLiabilityValue)} />
@@ -388,6 +420,9 @@ function CorpOverviewPane({
                     activeTone="warning"
                   >
                     Bonds
+                  </ChartPill>
+                  <ChartPill active={seriesView === "funds"} onClick={() => setSeriesView("funds")}>
+                    Index funds
                   </ChartPill>
                   <ChartPill
                     active={seriesView === "cash"}

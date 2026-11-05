@@ -20,7 +20,6 @@ const DISPLAY_PATHS = [
   "src/lib/corporations/queries/corporationDetail/subsidiaryContext.ts",
   "src/app/api/stock-exchange/wealth-list/route.ts",
   "src/lib/turn/investorWealthSnapshots.ts",
-  "src/app/api/character/[id]/portfolio/route.ts",
   "src/lib/character/financialData.ts",
   "src/app/api/discord-bot/financials/route.ts",
   "src/app/api/discord-bot/corporation/route.ts",
@@ -77,4 +76,14 @@ describe("valuation vs settlement FX usage", () => {
     expect(source).toContain("loadFxRatesByCurrency");
     expect(source).not.toContain("loadValuationFxRates");
   });
+});
+
+it("the profile portfolio delegates valuation to the same FX-aware loader as the owner view", () => {
+  const route = readFileSync("src/app/api/character/[id]/portfolio/route.ts", "utf8");
+  const loader = readFileSync("src/lib/portfolio/loadCharacterPortfolio.ts", "utf8");
+  expect(route).toContain('from "@/lib/portfolio/loadCharacterPortfolio"');
+  expect(route).toContain("loadPortfolioForCharacter(db, character, forexEnabled");
+  expect(route).not.toContain("loadFxRatesByCurrency");
+  expect(loader).toContain("loadValuationFxRates");
+  expect(loader).not.toContain("loadFxRatesByCurrency");
 });

@@ -1,3 +1,5 @@
+import { readResetMetricBoard } from "@/lib/resetMetrics/readBoard";
+import { readNationalMetricRollup } from "@/lib/resetMetrics/readNationalRollup";
 /**
  * National Economic Outlook payload (`GET /api/country/[code]/economy`).
  *
@@ -242,6 +244,23 @@ export async function buildCountryEconomyOutlook(
   const surplus = budget ? federalSurplus(budget) : null;
   const ratioGdp = budget ? resolveRatioGdp(budget) : 0;
 
+  const publishedBoard = await readResetMetricBoard(db, countryId);
+  const publishedObservations =
+    publishedBoard.status === "ready"
+      ? await readNationalMetricRollup(db, publishedBoard.board)
+      : null;
+  const unemployment =
+    publishedBoard.status === "not_enabled"
+      ? popWeighted(
+          stateMetrics.map((m) => ({
+            _id: m._id,
+            value: m.economic?.unemploymentRate?.value,
+            trend: m.economic?.unemploymentRate?.trend,
+          })),
+          populationByStateId
+        )
+      : { value: publishedObservations?.["01"]?.value ?? null, trend: null };
+
   return {
     countryId,
     currencyCode: COUNTRY_CONFIGS[countryId].currencyCode,
@@ -276,14 +295,7 @@ export async function buildCountryEconomyOutlook(
       wageGrowth: budget?.economicFactors?.wageGrowth ?? null,
       tradeGrowth: budget?.economicFactors?.tradeGrowth ?? null,
       householdPriceIndex,
-      unemployment: popWeighted(
-        stateMetrics.map((m) => ({
-          _id: m._id,
-          value: m.economic?.unemploymentRate?.value,
-          trend: m.economic?.unemploymentRate?.trend,
-        })),
-        populationByStateId
-      ),
+      unemployment,
       medianIncome,
       realMedianIncome: householdPriceAdjustedValue(medianIncome.value, householdPriceIndex),
       // SP6: the Economy page is the statistics home — total population joins

@@ -1,5 +1,7 @@
 "use client";
 
+import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
+
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -228,21 +230,27 @@ export default function FinancialsTab({
                 <tr>
                   <Td className="text-muted">Revenue</Td>
                   <Td align="right">
-                    {lastQ.revenue != null ? money.fmt(scale(lastQ.revenue)) : "n/a"}
+                    {lastQ.revenue != null
+                      ? money.fmt(scale(lastQ.revenue * TURNS_PER_DAY))
+                      : "n/a"}
                   </Td>
                   <Td align="right">~{money.fmt(scale(revenue))}</Td>
                 </tr>
                 <tr>
                   <Td className="text-muted">Total costs</Td>
                   <Td align="right">
-                    {lastQ.totalCosts != null ? `(${money.fmt(scale(lastQ.totalCosts))})` : "n/a"}
+                    {lastQ.totalCosts != null
+                      ? `(${money.fmt(scale(lastQ.totalCosts * TURNS_PER_DAY))})`
+                      : "n/a"}
                   </Td>
                   <Td align="right">~({money.fmt(scale(financials.totalCosts))})</Td>
                 </tr>
                 <tr>
                   <Td className="text-muted">Net income</Td>
                   <Td align="right" className={signTone(lastQ.income)}>
-                    {lastQ.income != null ? money.fmtSigned(scale(lastQ.income)) : "n/a"}
+                    {lastQ.income != null
+                      ? money.fmtSigned(scale(lastQ.income * TURNS_PER_DAY))
+                      : "n/a"}
                   </Td>
                   <Td align="right" className={signTone(financials.income)}>
                     ~{money.fmtSigned(scale(financials.income))}

@@ -32,7 +32,7 @@ const pulse = {
       { turn: 412, rate: 4.25 },
     ],
   },
-  credit: { rating: "AA", debtToGdpRatio: 62 },
+  credit: { rating: "AA", debtToGdpRatio: 0.62 },
 };
 
 describe("PulseStrip", () => {
@@ -46,7 +46,7 @@ describe("PulseStrip", () => {
     expect(screen.getByText(/4\.25%/)).toBeTruthy();
     expect(screen.getByText(/held 6t/)).toBeTruthy();
     expect(screen.getByText("AA")).toBeTruthy();
-    expect(screen.getByText(/62% debt-to-GDP/)).toBeTruthy();
+    expect(screen.getByText(/62.0% debt-to-GDP/)).toBeTruthy();
     const link = screen.getByRole("link", { name: /National Budget/ });
     expect(link.getAttribute("href")).toBe("/country/us/budget");
   });

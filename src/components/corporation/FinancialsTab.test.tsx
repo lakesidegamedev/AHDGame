@@ -241,3 +241,40 @@ describe("income statement by country", () => {
     expect(screen.getByText("Result in Japan")).toBeTruthy();
   });
 });
+
+it.each([
+  ["turn", 2400],
+  ["daily", 57600],
+  ["annual", 115200],
+] as const)("puts quarterly rates on the selected %s basis", (periodView, expectedRevenue) => {
+  render(
+    <FinancialsTab
+      corporation={{ countryId: "US", liquidCurrencyCode: "USD" } as CorporationDetail}
+      financials={financials}
+      balanceSheet={null}
+      bondInfo={null}
+      corpId="test"
+      periodView={periodView}
+      onPeriodViewChange={vi.fn()}
+      sectors={[]}
+      financialFogOfWar={{
+        isFinancialFogOfWar: true,
+        maxDeviation: 0.1,
+        fogSourceTurn: 12,
+        lastQuarterly: {
+          revenue: 2400,
+          totalCosts: 1000,
+          income: 400,
+          liquidCapital: 5000,
+          turn: 12,
+          currencyCode: "USD",
+          marketingStrength: 0,
+          logisticsStrength: 0,
+        },
+      }}
+    />
+  );
+  const table = screen.getByText("Last report").closest("table")!;
+  expect(within(table).getByText(`M${expectedRevenue}`)).toBeTruthy();
+  expect(within(table).getByText(`(M${expectedRevenue / 2.4})`)).toBeTruthy();
+});

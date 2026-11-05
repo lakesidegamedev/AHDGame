@@ -60,44 +60,15 @@ function fog(value: number, factor: number): number {
  * operating costs plus gross bond coupon expense (before natcorp subsidy).
  * History stores operating in `totalCosts`; bond interest is split out for net-income math.
  */
-export function totalCostsPerTurnFromParts(parts: {
-  totalCosts: number;
-  perTurnBondInterestExpense?: number;
-  perTurnBondDragOnNetIncome?: number;
-}): number {
-  const bondInterest = parts.perTurnBondInterestExpense ?? parts.perTurnBondDragOnNetIncome ?? 0;
-  return parts.totalCosts + bondInterest;
-}
-
-export function historyTotalCostsPerTurn(history: CorporationHistory): number {
-  return totalCostsPerTurnFromParts(history);
-}
-
-/**
- * Realized per-turn net income for display, reconstructed from a history
- * snapshot to match the live income-statement definition.
- *
- * The engine persists `history.income` as the OPERATING result only — bond
- * coupon income and bond interest settle in a separate bond phase and land
- * directly in `liquidCapital` (sectorCalculations.ts:1452), so they are
- * excluded from the stored field. For a corp whose earnings are dominated by
- * a bond portfolio (support #941 / #942) that stored value is deeply negative
- * even while the corp is plainly profitable and its cash rises every turn —
- * and it disagrees in sign with the coupon-inclusive Financials "Net income".
- *
- * Fold the persisted coupon income back in and net out the interest drag so
- * the realized figure equals the corp's true per-turn cash contribution
- * (operating result + coupon − interest), matching both the income statement
- * and the observed `liquidCapital` delta. Both components are persisted from
- * the same turn; older rows that predate them fall back to `history.income`.
- */
-export function realizedNetIncomePerTurn(history: CorporationHistory): number {
-  return (
-    history.income +
-    (history.perTurnBondCouponIncome ?? 0) -
-    (history.perTurnBondDragOnNetIncome ?? 0)
-  );
-}
+export {
+  totalCostsPerTurnFromParts,
+  historyTotalCostsPerTurn,
+  realizedNetIncomePerTurn,
+} from "./rules/historyFinancials";
+import {
+  historyTotalCostsPerTurn,
+  historyNetIncomeBeforeDividends,
+} from "./rules/historyFinancials";
 
 /**
  * Return a copy of `financials` with all monetary values scaled by `factor`.
@@ -239,7 +210,7 @@ export function buildQuarterlySnapshot(history: CorporationHistory | null): {
   }
   return {
     revenue: history.revenue,
-    income: realizedNetIncomePerTurn(history),
+    income: historyNetIncomeBeforeDividends(history),
     totalCosts: historyTotalCostsPerTurn(history),
     liquidCapital: history.liquidCapital,
     marketingStrength: history.marketingStrength,

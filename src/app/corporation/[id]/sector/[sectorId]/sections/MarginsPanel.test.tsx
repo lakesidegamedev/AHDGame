@@ -129,3 +129,56 @@ describe("sector margin explanation", () => {
     expect(screen.queryByText("Revenue less all costs")).toBeNull();
   });
 });
+
+it("uses the same free internal supply margin as the sector list, without treating it as cash", () => {
+  render(
+    <MarginsPanel
+      margins={margins}
+      defaultExpanded
+      pnl={{
+        ...pnl,
+        revenueAnchor: 0,
+        profitAnchor: -850,
+        inputsAnchor: 850,
+        labourAnchor: 0,
+        upkeepAnchor: 0,
+        complianceAnchor: 0,
+        policyAnchor: 0,
+        otherOperatingAnchor: 0,
+        growthAndBuildAnchor: 0,
+        ownSiteMemoAnchor: 2400,
+      }}
+    />
+  );
+  expect(screen.getAllByText("64.6%").length).toBe(2);
+  expect(screen.getByText("Own-site supply value (not cash revenue)")).toBeTruthy();
+  expect(screen.getByText("-35.4%")).toBeTruthy();
+  expect(screen.queryByText(/No sales revenue was recorded/)).toBeNull();
+});
+
+it("itemizes priced internal transfers without counting a free-transfer memo twice", () => {
+  render(
+    <MarginsPanel
+      margins={margins}
+      defaultExpanded
+      pnl={{
+        ...pnl,
+        revenueAnchor: 150,
+        profitAnchor: 30,
+        inputsAnchor: 90,
+        labourAnchor: 0,
+        upkeepAnchor: 0,
+        complianceAnchor: 0,
+        policyAnchor: 0,
+        otherOperatingAnchor: 0,
+        growthAndBuildAnchor: 0,
+        internalSupplyIncomeAnchor: 50,
+        internalSupplyChargeAnchor: 30,
+      }}
+    />
+  );
+  expect(screen.getAllByText("20.0%").length).toBe(2);
+  expect(screen.getByText("Own-site transfer income (management)")).toBeTruthy();
+  expect(screen.getByText("Own-site supply charges")).toBeTruthy();
+  expect(screen.getByText("-20.0%")).toBeTruthy();
+});

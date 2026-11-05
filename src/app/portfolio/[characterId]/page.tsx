@@ -1,5 +1,7 @@
 "use client";
 
+import { personalPortfolioNetWorth } from "@/lib/portfolio/rules/netWorth";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -46,6 +48,8 @@ export default function CharacterPortfolioPage() {
   const [totalBondValue, setTotalBondValue] = useState(0);
   const [totalBondIncomePerTurn, setTotalBondIncomePerTurn] = useState(0);
   const [cashOnHand, setCashOnHand] = useState(0);
+  const [totalFundValue, setTotalFundValue] = useState(0);
+  const [incomeTaxDebtValue, setIncomeTaxDebtValue] = useState(0);
   const [locDebtValue, setLocDebtValue] = useState(0);
   const [characterName, setCharacterName] = useState("");
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -76,6 +80,8 @@ export default function CharacterPortfolioPage() {
         setTotalBondIncomePerTurn(data.totalBondIncomePerTurn || 0);
         setCashOnHand(data.cashOnHand || 0);
         setLocDebtValue(data.locDebtValue || 0);
+        setTotalFundValue(data.totalFundValue || 0);
+        setIncomeTaxDebtValue(data.incomeTaxDebtValue || 0);
         setCharacterName(data.characterName || "");
         setHistory(data.history || []);
       })
@@ -85,7 +91,14 @@ export default function CharacterPortfolioPage() {
       .finally(() => setLoading(false));
   }, [characterId]);
 
-  const combinedTotal = totalValue + totalBondValue + cashOnHand - locDebtValue;
+  const combinedTotal = personalPortfolioNetWorth({
+    stockValue: totalValue,
+    bondValue: totalBondValue,
+    fundValue: totalFundValue,
+    cashValue: cashOnHand,
+    loanDebt: locDebtValue,
+    incomeTaxDebt: incomeTaxDebtValue,
+  });
 
   if (loading) {
     return (
@@ -142,7 +155,15 @@ export default function CharacterPortfolioPage() {
 
             {/* Itemized breakdown so Total Net Worth reconciles:
                 stocks + bonds + cash on hand - loans. */}
-            <div className="grid grid-cols-2 md:grid-cols-5 divide-x divide-card-border">
+            <div className="grid grid-cols-2 md:grid-cols-7 divide-x divide-card-border">
+              <div className="p-6">
+                <span className="block text-body-sm text-muted">Index funds</span>
+                <span className="text-xl font-bold">{formatAmount(totalFundValue)}</span>
+              </div>
+              <div className="p-6">
+                <span className="block text-body-sm text-muted">Unpaid income tax</span>
+                <span className="text-xl font-bold">{formatAmount(-incomeTaxDebtValue)}</span>
+              </div>
               <div className="p-6">
                 <span className="block text-body-sm font-medium text-muted mb-1">
                   Stock holdings
