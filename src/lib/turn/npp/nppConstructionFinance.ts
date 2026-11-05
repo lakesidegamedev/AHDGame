@@ -27,10 +27,20 @@ import {
 import { quoteConstructionFinance } from "@/lib/banking/rules/constructionFinance";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import {
+  boundShortageGrowthFinanceCandidates,
+  type ShortageGrowthFinanceConfig,
+} from "@/lib/turn/npp/rules/shortageGrowthFinance";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
-  "borrowerId" | "currency" | "outstanding" | "ratePercent" | "originatedTurn" | "termTurns"
+  | "borrowerId"
+  | "currency"
+  | "outstanding"
+  | "ratePercent"
+  | "originatedTurn"
+  | "termTurns"
+  | "constructionCollateral"
 >;
 type BlacklistFund = { slug: string; targetConstituents?: Array<{ corporationId: ObjectId }> };
 
@@ -44,6 +54,8 @@ export interface NppConstructionFinanceIntent {
   cashContributionLimitLocal: number;
   priority: number;
   fill: number;
+  /** Short-lane growth request (rules/shortageGrowthFinance); ranked under its own cap. */
+  shortageGrowth?: { pressure: number; paybackTurns: number };
 }
 
 export interface NppConstructionFinanceCandidate extends NppConstructionFinanceIntent {
@@ -75,6 +87,8 @@ export interface NppConstructionFundingPool {
   policy: BankingPolicySnapshot;
   lendersByCurrency: ReadonlyMap<CurrencyCode, readonly NppConstructionLender[]>;
   borrowersByCorpAndCurrency: ReadonlyMap<string, BorrowerSnapshot>;
+  /** Outstanding construction loans per borrower, converted to its cash currency. */
+  constructionOutstandingByCorpAndCurrency?: ReadonlyMap<string, number>;
   fxByCurrency: ReadonlyMap<CurrencyCode, number>;
 }
 
@@ -154,6 +168,7 @@ export async function loadNppConstructionFundingPool(input: {
         ratePercent: 1,
         originatedTurn: 1,
         termTurns: 1,
+        constructionCollateral: 1,
       })
       .toArray(),
   ]);
@@ -211,6 +226,7 @@ export async function loadNppConstructionFundingPool(input: {
   }
 
   const borrowersByCorpAndCurrency = new Map<string, BorrowerSnapshot>();
+  const constructionOutstandingByCorpAndCurrency = new Map<string, number>();
   for (const corporation of corporations) {
     const corporationId = corporation._id.toHexString();
     const currency = currencyByCorpId.get(corporationId);
@@ -236,6 +252,25 @@ export async function loadNppConstructionFundingPool(input: {
         )
       );
     }, 0);
+    const constructionOutstanding = (loansByCorp.get(corporationId) ?? []).reduce(
+      (sum, loan) =>
+        loan.constructionCollateral
+          ? sum +
+            convertFaceBetweenCurrencies(
+              Math.max(0, loan.outstanding),
+              loan.currency,
+              currency,
+              fxByCurrency.get(loan.currency) ?? 0,
+              fxByCurrency.get(currency) ?? 0
+            )
+          : sum,
+      0
+    );
+    if (constructionOutstanding > 0)
+      constructionOutstandingByCorpAndCurrency.set(
+        borrowerCurrencyKey(corporationId, currency),
+        constructionOutstanding
+      );
     borrowersByCorpAndCurrency.set(borrowerCurrencyKey(corporationId, currency), {
       type: "corporation",
       id: corporationId,
@@ -290,7 +325,14 @@ export async function loadNppConstructionFundingPool(input: {
     rows.sort((a, b) => a.bank._id.toHexString().localeCompare(b.bank._id.toHexString()));
   }
 
-  return { turn, policy, lendersByCurrency, borrowersByCorpAndCurrency, fxByCurrency };
+  return {
+    turn,
+    policy,
+    lendersByCurrency,
+    borrowersByCorpAndCurrency,
+    constructionOutstandingByCorpAndCurrency,
+    fxByCurrency,
+  };
 }
 
 /** Pick the lowest-rate eligible same-currency lender, with id as stable tie break. */
@@ -371,5 +413,54 @@ export function boundNppConstructionFinanceCandidates(
   return {
     selected: ordered.slice(0, safeLimit),
     backlogCount: Math.max(0, ordered.length - safeLimit),
+  };
+}
+
+/**
+ * Short-lane growth requests (rules/shortageGrowthFinance): rank by pressure
+ * over payback and keep each company within its construction exposure and
+ * cash-share limits, up to the configured cap. Without a funding pool there is
+ * no lender and no exposure reading, so every request is backlog.
+ */
+export function boundNppShortageGrowthFinanceCandidates(
+  candidates: readonly NppConstructionFinanceCandidate[],
+  config: ShortageGrowthFinanceConfig | null,
+  pool: NppConstructionFundingPool | null
+): { selected: NppConstructionFinanceCandidate[]; backlogCount: number } {
+  if (!config || !pool) return { selected: [], backlogCount: candidates.length };
+  const currencyByCorp = new Map<string, CurrencyCode>();
+  const facts = candidates.flatMap((candidate) => {
+    if (!candidate.shortageGrowth) return [];
+    const corporationId = candidate.corporation._id.toHexString();
+    currencyByCorp.set(corporationId, candidate.currency);
+    const principalLocal = candidate.costLocal * CAPACITY_BUILD_CANCEL_REFUND;
+    return [
+      {
+        candidate,
+        corporationId,
+        sectorId: candidate.sector._id.toHexString(),
+        pressure: candidate.shortageGrowth.pressure,
+        paybackTurns: candidate.shortageGrowth.paybackTurns,
+        principalLocal,
+        contributionLocal: candidate.costLocal - principalLocal,
+        cashContributionLimitLocal: candidate.cashContributionLimitLocal,
+        unitsOrdered: candidate.order.unitsOrdered,
+      },
+    ];
+  });
+  const { selected } = boundShortageGrowthFinanceCandidates(facts, config, (corporationId) => {
+    const currency = currencyByCorp.get(corporationId);
+    if (!currency) return undefined;
+    const key = borrowerCurrencyKey(corporationId, currency);
+    const borrower = pool.borrowersByCorpAndCurrency.get(key);
+    if (!borrower) return undefined;
+    return {
+      outstandingLocal: pool.constructionOutstandingByCorpAndCurrency?.get(key) ?? 0,
+      profitPerTurnLocal: borrower.incomePerTurn,
+    };
+  });
+  return {
+    selected: selected.map((fact) => fact.candidate),
+    backlogCount: candidates.length - selected.length,
   };
 }

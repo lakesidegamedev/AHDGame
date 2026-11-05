@@ -892,9 +892,15 @@ Examples:
                   },
                   {
                     name: "Oil & Gas",
-                    supply: "Crude Oil 0.55",
+                    supply: "Crude Oil 0.58, Natural Gas 0.32",
                     demand: "Energy 0.20, Chemicals 0.15, Steel, Vehicles",
-                    note: "Sole output: crude oil at maximum volume",
+                    note: "Oil first, natural gas as a byproduct",
+                  },
+                  {
+                    name: "Natural Gas Focus",
+                    supply: "Natural Gas 0.58, Crude Oil 0.32",
+                    demand: "Energy 0.20, Chemicals 0.15, Steel, Vehicles",
+                    note: "Natural gas first, crude oil as a byproduct",
                   },
                   {
                     name: "Rare Earth Mining",

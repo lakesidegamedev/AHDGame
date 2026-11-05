@@ -1165,6 +1165,17 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       demand: { energy: 0.2, steel: 0.1, vehicles: 0.1, chemicals: 0.15, ordnance: 0.02 },
     },
     {
+      id: "natural_gas_drilling",
+      name: "Natural Gas Focus",
+      description: "Gas-led drilling. Main output natural gas, with crude oil as a byproduct.",
+      // Suggestion S#422: Oil & Gas always made more oil than gas, so a producer
+      // facing a gas shortage and an oil glut had no recipe to lean on. Mirror of
+      // oil_gas with the two outputs swapped. Inputs are a share of nameplate
+      // revenue, so the base margin matches oil_gas whatever the output mix.
+      supply: { natural_gas: 0.58, oil: 0.32 },
+      demand: { energy: 0.2, steel: 0.1, vehicles: 0.1, chemicals: 0.15, ordnance: 0.02 },
+    },
+    {
       id: "rare_earth_mining",
       name: "Rare Earth Minerals Mining",
       description:
