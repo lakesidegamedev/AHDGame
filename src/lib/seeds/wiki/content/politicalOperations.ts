@@ -4,7 +4,7 @@ Every dollar in a presidential campaign treasury eventually becomes a question: 
 
 ## What a level buys, and what it costs
 
-Presence belongs to a candidate, not the party. (Party organization is a separate lever that the party's chairs, vice chairs and campaigners control.) You need a live campaign that has not been archived, and every level is paid for by the campaign, never from your personal actions or personal cash. It draws on the campaign's own action pool, run through the [Campaign Manager](/wiki/campaign-manager), and on the campaign treasury, which fills from the campaign's per-turn income and from donations (see [Fundraising and Ads](/wiki/fundraising-ads)). Money you raise personally reaches the treasury only when you donate it.
+Presence belongs to a candidate, not the party. (Party organization is a separate lever that the party's chairs, vice chairs and campaigners control.) You need a live campaign that has not been archived, and every level is paid for by the campaign, never from your personal actions or personal cash. It draws on the campaign's own action pool, run through the [Campaign Manager](/wiki/campaign-manager), and on the campaign treasury, which fills from the campaign's per-turn income and from donations (see [Fundraising and Ads](/wiki/fundraising-ads)). Money you raise personally reaches the treasury only when you donate it. The candidate's appointed campaign managers can build presence for the ticket too, from the state panel on the race page in Campaign mode, paid from the same campaign pools. The running mate cannot.
 
 Each level in a state:
 
@@ -47,7 +47,7 @@ Going from level 5 to level 10 in one state costs about ₳11.2 million and adds
 
 ## Choosing where to build
 
-You can build a level from the Political Operations hub, from the State operations hub in the [Campaign Manager](/wiki/campaign-manager), from a state's primary page, or from a state on the presidential election map. All of them charge the same price. Presence is public: opposing campaigns can see how deep your network is in each state, and you can see theirs.
+You can build a level from the Political Operations hub, from a state's panel on the race page in Campaign mode, from a state's primary page, or from a state on the presidential election map. All of them charge the same price. Presence is public: opposing campaigns can see how deep your network is in each state, and you can see theirs.
 
 A modest vote-weight change is worth the most where it flips delegates or electoral votes, so concentrate early spending in delegate-rich states and in states where [polling](/wiki/polling) shows a close race.
 

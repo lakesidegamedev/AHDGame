@@ -61,7 +61,7 @@ Fog of war is automatic and refreshes every turn. An estimate never shows below 
 
 ## Field offices
 
-- Pick a county on the state map and open an office. The map shades counties by partisan lean; switch to Opportunity to shade by what a new office would add.
+- On the race page in Campaign mode, colour the map by Field offices: lean, or Field offices: opportunity if you manage the campaign, then click a state and a county to open an office. Lean shades counties by partisan lean; opportunity shades by what a new office would add.
 - An office raises turnout in its county, weighted by the county's size and how strong your side is there, and adds a smaller boost across the whole state. The statewide part has diminishing returns, so the tenth office in a state adds much less than the first.
 - Offices take 3 turns to reach full strength, so early ground beats late ground.
 - Each office costs funds and campaign actions to open, and funds each turn in upkeep. If the war chest cannot cover upkeep, the newest offices close first.
@@ -102,7 +102,7 @@ Only the candidate or an appointed manager can buy upgrades and change the Oppos
 
 ## Your first turns on the page
 
-- **Open the campaign** from the race page (View Campaign) once you have declared.
+- **Open the campaign** with the Campaign switch on the race page once you have declared. Candidates, managers and the running mate land in it by default.
 - **Plan the first turns:** Fundraising starter, then Media or Ground Game depending on the race. Media upgrades here raise the favorability behind primary scores in [Primaries](/wiki/primaries).
 - **Appoint managers** if you want help with operations.
 - **Open field offices** early.

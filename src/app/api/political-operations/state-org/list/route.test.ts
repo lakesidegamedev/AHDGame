@@ -8,6 +8,7 @@ vi.mock("@/lib/elections/usPoliticalHome", () => ({
     residentPoliticalIds: new Set(["IA", "NH", "CA"]),
   })),
 }));
+vi.mock("@/lib/campaigns/statePresenceAccess", () => ({ resolvePresenceSubject: vi.fn() }));
 vi.mock("@/lib/politicalOperations/racePresence", () => ({
   loadRacePresence: vi.fn(async () => []),
 }));
@@ -164,4 +165,70 @@ it("loads public levels through the real race loader without exposing investment
     { characterId: { $in: [candidateId] } },
     { projection: { characterId: 1, stateId: 1, level: 1 } }
   );
+});
+
+it("serves a manager the ticket's rows, priced for the candidate, when a campaign is named", async () => {
+  const db = createMockDb();
+  const managerCharacterId = new ObjectId();
+  const candidateId = new ObjectId();
+  db.collection("characterStateOrg").find.mockReturnValue({
+    toArray: async () => [{ stateId: "IA", level: 5, updatedAt: new Date("2026-01-01T11:00:00Z") }],
+  });
+  const { resolvePresenceSubject } = await import("@/lib/campaigns/statePresenceAccess");
+  vi.mocked(resolvePresenceSubject).mockResolvedValue({
+    campaign: {},
+    candidate: { _id: candidateId, countryId: "US", party: "independent", homeState: "IA" },
+  } as never);
+  vi.mocked((await import("@/lib/mongodb")).getDb).mockResolvedValue(db as unknown as Db);
+  const managerUserId = new ObjectId().toString();
+  vi.mocked((await import("@/lib/api/requireAuth")).requireAuthWithCharacter).mockResolvedValue({
+    ok: true,
+    user: { userId: managerUserId, character: { _id: managerCharacterId, countryId: "UK" } },
+  } as never);
+  const campaignId = new ObjectId().toHexString();
+  const { GET } = await import("./route");
+  const response = await GET(
+    new Request(`http://localhost/api/political-operations/state-org/list?campaignId=${campaignId}`)
+  );
+  expect(response.status).toBe(200);
+  expect(resolvePresenceSubject).toHaveBeenCalledWith(db, {
+    campaignId,
+    userId: managerUserId,
+    activeCharacterId: managerCharacterId,
+  });
+  const payload = await response.json();
+  expect(payload.canBuild).toBe(true);
+  expect(payload.homeState).toBe("IA");
+  expect(payload.states.find((r: { stateId: string }) => r.stateId === "IA").level).toBe(5);
+  // The rows are the candidate's, never the manager's.
+  expect(db.collectionMocks.characterStateOrg!.find).toHaveBeenCalledWith({
+    characterId: candidateId,
+  });
+  expect((await import("@/lib/currency/campaignFxRate")).loadCampaignFxRate).toHaveBeenCalledWith(
+    db,
+    expect.objectContaining({ _id: candidateId })
+  );
+});
+
+it("refuses a named campaign the reader has no part in", async () => {
+  const { forbidden } = await import("@/lib/api/errors");
+  const { resolvePresenceSubject } = await import("@/lib/campaigns/statePresenceAccess");
+  vi.mocked(resolvePresenceSubject).mockRejectedValue(forbidden("Not yours"));
+  vi.mocked((await import("@/lib/mongodb")).getDb).mockResolvedValue(
+    createMockDb() as unknown as Db
+  );
+  vi.mocked((await import("@/lib/api/requireAuth")).requireAuthWithCharacter).mockResolvedValue({
+    ok: true,
+    user: {
+      userId: new ObjectId().toString(),
+      character: { _id: new ObjectId(), countryId: "US" },
+    },
+  } as never);
+  const { GET } = await import("./route");
+  const response = await GET(
+    new Request(
+      `http://localhost/api/political-operations/state-org/list?campaignId=${new ObjectId().toHexString()}`
+    )
+  );
+  expect(response.status).toBe(403);
 });

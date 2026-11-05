@@ -243,7 +243,7 @@ export function GeneralBlendView({
         color: "#fff",
       }}
     >
-      OPEN CAMPAIGN MANAGER
+      OPEN CAMPAIGN
     </Link>
   ) : null;
 
@@ -666,6 +666,7 @@ export function GeneralBlendView({
               presence={mapCampaign.presence}
               inPage={mapCampaign.inPage}
               panelExtra={mapCampaign.panelExtra}
+              fieldOffices={mapCampaign.fieldOffices}
             />
           }
           squares={

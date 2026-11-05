@@ -37,7 +37,7 @@ In a **general election**, the page shows live votes, share, trends, persuasion 
 
 ### 3. Campaign page
 
-Presidential candidates open **View Campaign** from the race page. This is where you raise and spend funds, buy upgrades, run actions, assign a manager, and inspect the activity log. In every other race you act through your character's own Actions. The race page tells you where you stand. The campaign page and your Actions are where you act.
+Presidential candidates switch the race page to **Campaign** mode. This is where you raise and spend funds, buy upgrades, run actions, assign a manager, and inspect the activity log. In every other race you act through your character's own Actions. The race page tells you where you stand. Campaign mode and your Actions are where you act.
 
 ## Primary phase: win your party first
 

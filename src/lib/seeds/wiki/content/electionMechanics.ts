@@ -127,14 +127,14 @@ House, State Senate and other multi-seat contests allocate seats by the largest 
 
 **No electoral majority.** If nobody reaches a majority, a contingent election runs: the House elects the President from the top three, one vote per state delegation (26 of 50 needed), and the Senate elects the Vice President from the top two running mates (51 of 100). If the House stays deadlocked, the Senate's Vice President choice serves as acting president and the House re-votes every turn for up to 24 turns. See [Contingent Election](/wiki/contingent-election).
 
-**Suspend and endorse.** In a presidential general, a nominee can suspend their campaign and endorse another nominee, from the Campaign Manager page. You stay on the ballot and keep the votes already earned, but you gain no more and forfeit passive bonuses. A share of your campaign strength moves to your endorsed nominee (about a quarter if well aligned, much less if not), and up to 25% of your personal state organization is added to theirs, scaled by how well aligned you are. It cannot be undone.
+**Suspend and endorse.** In a presidential general, a nominee can suspend their campaign and endorse another nominee, from the race page's Campaign mode. You stay on the ballot and keep the votes already earned, but you gain no more and forfeit passive bonuses. A share of your campaign strength moves to your endorsed nominee (about a quarter if well aligned, much less if not), and up to 25% of your personal state organization is added to theirs, scaled by how well aligned you are. It cannot be undone.
 
 ## Entering and leaving a race
 
 - **Declare** for one office in your home state or region (President is national). Your home country must match the election's country.
 - **Pick a party.** Independents run in the independent party primary under the same rules.
 - **Withdraw** any time before the election resolves. Your votes are removed for good, your campaign is archived and you cannot re-enter that election. During a primary this is almost always wrong; during a general you are losing it can free your actions for the next cycle.
-- **Campaign** with your character's actions (see [Fundraising and Ads](/wiki/fundraising-ads)), and in a presidential race also from the Campaign Manager page (see [Campaign Manager](/wiki/campaign-manager)).
+- **Campaign** with your character's actions (see [Fundraising and Ads](/wiki/fundraising-ads)), and in a presidential race also from the race page's Campaign mode (see [Campaign Manager](/wiki/campaign-manager)).
 - **Build presence, travel, suspend or endorse** in presidential races, as described above.
 
 You can only run in one race at a time. Declarations close when the primary window ends, and if you miss it you wait a full cycle.

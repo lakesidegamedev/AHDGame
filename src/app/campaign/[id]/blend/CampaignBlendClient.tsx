@@ -27,6 +27,7 @@ import { BlendScopeInline } from "@/components/blend/BlendScope";
 import { StatePresencePanel } from "../components/StatePresencePanel";
 import { StateOperationsSection } from "../components/StateOperationsSection";
 import { useStateOperations } from "@/components/campaign/useCampaignDesk";
+import { raceCampaignHref } from "@/lib/campaignManager/links";
 import type { PrimaryStateActionKind } from "@/lib/db/types";
 import type { PickerResult } from "./BlendCharacterPicker";
 
@@ -238,6 +239,13 @@ export function CampaignBlendClient({
   const showLog = rail === "overview" || rail === "log";
   const showField =
     (rail === "overview" || rail === "field") && !!campaign.electionInfo?.fieldOfficeScope;
+  // Without the map on this page (the embedded frame), point at the race page.
+  const fieldMapHref = campaign.electionId
+    ? raceCampaignHref(campaign.electionId, campaign.id, {
+        tab: "field",
+        region: fieldRegion ?? undefined,
+      })
+    : undefined;
   const refreshAfterField = () => {
     onRefresh();
     onRefreshMe();
@@ -304,6 +312,9 @@ export function CampaignBlendClient({
           campaignId={campaign.id}
           onChanged={refreshAfterField}
           initialRegion={fieldRegion}
+          mapOnPage={stateActionsOnMap}
+          mapHref={fieldMapHref}
+          reloadKey={campaign.electionInfo?.fieldOfficeCount}
         />
       ) : null}
 
@@ -605,6 +616,9 @@ export function CampaignBlendClient({
             onChanged={refreshAfterField}
             variant="mobile"
             initialRegion={fieldRegion}
+            mapOnPage={stateActionsOnMap}
+            mapHref={fieldMapHref}
+            reloadKey={campaign.electionInfo?.fieldOfficeCount}
           />
         ) : null}
         {showMoney && vm.money ? (
