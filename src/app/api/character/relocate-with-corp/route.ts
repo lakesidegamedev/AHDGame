@@ -258,7 +258,7 @@ export async function POST(request: Request) {
         ) {
           return errorResponse(
             409,
-            "Resolve secured construction before relocating corporate headquarters"
+            "A site carries a construction loan repaid in this corporation's current currency. Moving headquarters to another currency must wait until the loan is repaid or the site is sold."
           );
         }
 

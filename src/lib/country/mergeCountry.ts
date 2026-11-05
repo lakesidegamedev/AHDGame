@@ -524,7 +524,9 @@ async function mergeNationalCorporations(
     `country-merge:${fromCountryId}:${toCountryId}:${now.getTime()}`
   );
   if (!transitionKeys) {
-    throw new Error("Resolve secured construction before consolidating National Corporations");
+    throw new Error(
+      "A National Corporation site carries a construction loan. Consolidate after it is repaid."
+    );
   }
   const transitionKeyBySectorId = new Map(
     absorbedSectors.map((sector, index) => [sector._id.toHexString(), transitionKeys[index]])

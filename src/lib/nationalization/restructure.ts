@@ -16,6 +16,10 @@ import {
 } from "./nationalCorporation";
 import { makeAdoptedSoeState } from "@/lib/economy/soe";
 import {
+  prepareConstructionBorrowerTransfers,
+  settleConstructionBorrowerTransfers,
+} from "@/lib/banking/constructionBorrowerTransfer";
+import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
@@ -82,56 +86,79 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
           .find({ corporationId: { $in: fromIds }, ...operatingSectorFilter(params.sectorType) })
           .toArray()
       : [];
+  // Financed sites move with their construction loans; the split-off becomes
+  // the borrower. It inherits the primary's currency, so the loan's does not change.
+  const newId = new ObjectId();
+  const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
+    sectors,
+    toId: newId,
+    toCurrency: primary.liquidCurrencyCode,
+    operationKey: `split-off:${newId.toHexString()}`,
+  });
+  if (!preparedTransfers.ok) throw new Error(preparedTransfers.error);
+  const constructionTransfers = preparedTransfers.plan;
   const transitionKeys = await reserveSectorsForTransition(
     db,
     sectors,
     "nationalization_restructure",
-    `split-off:${new ObjectId().toHexString()}`
+    `split-off:${new ObjectId().toHexString()}`,
+    false,
+    constructionTransfers
   );
   if (!transitionKeys) {
-    throw new Error("Resolve secured construction before splitting this National Corporation type");
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+    throw new Error("A sector of this type is in another ownership change. Try again shortly.");
   }
-
-  const doc = buildNationalCorporationDoc(params.countryId, {
-    name,
-    // Inherit the primary's home currency so a split-off on a 2027 euro
-    // member stamps EUR, not the era-blind map code. No extra read: the
-    // ensure above already returned the document.
-    liquidCurrencyCode: primary.liquidCurrencyCode,
-    // `buildNationalCorporationDoc` defaults `type` to "financial", which is
-    // right for the PRIMARY NatCorp (a sovereign issuer) and wrong for a
-    // producing split-off. `corporation.type` is the sector a corp builds into
-    // when none is named (`expandSector`, `buildCapacity`) and one of the keys
-    // `applyPriceMultipliers` reads, so leaving it at the default pointed every
-    // split-off enterprise at the financial sector regardless of what it
-    // actually operates (ticket #1271).
-    type: corporationTypeOfLane(params.sectorType),
-    ...(operatingSectorIdentity(params.sectorType).industryModel
-      ? { industryModel: operatingSectorIdentity(params.sectorType).industryModel }
-      : {}),
-    ...(operatingSectorIdentity(params.sectorType).mediaDiscriminator
-      ? { mediaDiscriminator: operatingSectorIdentity(params.sectorType).mediaDiscriminator }
-      : {}),
-    isPrimaryNationalCorporation: false,
-    assignedSectorTypes: [params.sectorType],
-  });
-  const insert = await corps.insertOne(doc as Corporation);
-  const newId = insert.insertedId;
-
-  // Move all sectors of this type held by any of the country's NatCorps.
   let sectorsMoved = 0;
-  for (const [index, sector] of sectors.entries()) {
-    const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
-      {
-        _id: sector._id,
-        corporationId: sector.corporationId,
-        "constructionPropertyTransition.key": transitionKeys[index],
-      },
-      { $set: { corporationId: newId, updatedAt: now } }
-    );
-    if (moved.matchedCount !== 1)
-      throw new Error("A sector changed during the National Corporation split-off");
-    sectorsMoved += 1;
+  try {
+    const doc = buildNationalCorporationDoc(params.countryId, {
+      name,
+      // Inherit the primary's home currency so a split-off on a 2027 euro
+      // member stamps EUR, not the era-blind map code. No extra read: the
+      // ensure above already returned the document.
+      liquidCurrencyCode: primary.liquidCurrencyCode,
+      // `buildNationalCorporationDoc` defaults `type` to "financial", which is
+      // right for the PRIMARY NatCorp (a sovereign issuer) and wrong for a
+      // producing split-off. `corporation.type` is the sector a corp builds into
+      // when none is named (`expandSector`, `buildCapacity`) and one of the keys
+      // `applyPriceMultipliers` reads, so leaving it at the default pointed every
+      // split-off enterprise at the financial sector regardless of what it
+      // actually operates (ticket #1271).
+      type: corporationTypeOfLane(params.sectorType),
+      ...(operatingSectorIdentity(params.sectorType).industryModel
+        ? { industryModel: operatingSectorIdentity(params.sectorType).industryModel }
+        : {}),
+      ...(operatingSectorIdentity(params.sectorType).mediaDiscriminator
+        ? { mediaDiscriminator: operatingSectorIdentity(params.sectorType).mediaDiscriminator }
+        : {}),
+      isPrimaryNationalCorporation: false,
+      assignedSectorTypes: [params.sectorType],
+    });
+    await corps.insertOne({ ...doc, _id: newId } as Corporation);
+
+    // Move all sectors of this type held by any of the country's NatCorps.
+    for (const [index, sector] of sectors.entries()) {
+      const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+        {
+          _id: sector._id,
+          corporationId: sector.corporationId,
+          "constructionPropertyTransition.key": transitionKeys[index],
+          ...constructionTransfers.claimFilterFor(sector),
+        },
+        {
+          $set: {
+            corporationId: newId,
+            ...constructionTransfers.setFor(sector._id),
+            updatedAt: now,
+          },
+        }
+      );
+      if (moved.matchedCount !== 1)
+        throw new Error("A sector changed during the National Corporation split-off");
+      sectorsMoved += 1;
+    }
+  } finally {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
   }
   await Promise.all(
     sectors.map((sector, index) =>
@@ -236,16 +263,6 @@ export async function mergeBackSectorType(
     .collection<CorporateSector>("corporateSectors")
     .find({ corporationId: splitOff._id })
     .toArray();
-  const transitionKeys = await reserveSectorsForTransition(
-    db,
-    splitOffSectors,
-    "nationalization_restructure",
-    `merge-back:${new ObjectId().toHexString()}`
-  );
-  if (!transitionKeys) {
-    throw new Error("Resolve secured construction before merging this National Corporation type");
-  }
-
   // Resolve the target: explicit corp (must be a NatCorp of this country) or primary.
   let target: Corporation;
   if (params.intoCorpId) {
@@ -262,6 +279,29 @@ export async function mergeBackSectorType(
     target = await ensurePrimaryNationalCorporation(db, params.countryId);
   }
 
+  // Financed sites move with their construction loans; the target becomes the
+  // borrower.
+  const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
+    sectors: splitOffSectors,
+    toId: target._id,
+    toCurrency: target.liquidCurrencyCode,
+    operationKey: `merge-back:${splitOff._id.toHexString()}`,
+  });
+  if (!preparedTransfers.ok) throw new Error(preparedTransfers.error);
+  const constructionTransfers = preparedTransfers.plan;
+  const transitionKeys = await reserveSectorsForTransition(
+    db,
+    splitOffSectors,
+    "nationalization_restructure",
+    `merge-back:${new ObjectId().toHexString()}`,
+    false,
+    constructionTransfers
+  );
+  if (!transitionKeys) {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+    throw new Error("A sector of this type is in another ownership change. Try again shortly.");
+  }
+
   // Move the split-off's sectors into the target.
   let sectorsMoved = 0;
   for (const [index, sector] of splitOffSectors.entries()) {
@@ -270,13 +310,23 @@ export async function mergeBackSectorType(
         _id: sector._id,
         corporationId: splitOff._id,
         "constructionPropertyTransition.key": transitionKeys[index],
+        ...constructionTransfers.claimFilterFor(sector),
       },
-      { $set: { corporationId: target._id, updatedAt: now } }
+      {
+        $set: {
+          corporationId: target._id,
+          ...constructionTransfers.setFor(sector._id),
+          updatedAt: now,
+        },
+      }
     );
-    if (moved.matchedCount !== 1)
+    if (moved.matchedCount !== 1) {
+      await settleConstructionBorrowerTransfers(db, constructionTransfers);
       throw new Error("A sector changed during the National Corporation merge-back");
+    }
     sectorsMoved += 1;
   }
+  await settleConstructionBorrowerTransfers(db, constructionTransfers);
 
   // If the target is a split-off, it now also owns this type; if it's the
   // primary, the type reverts to the remainder (primary keeps assignedSectorTypes empty).

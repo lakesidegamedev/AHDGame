@@ -93,7 +93,9 @@ export async function mergeNationalCorporations(
     `country-merge:${fromCountryId}:${toCountryId}:${new ObjectId().toHexString()}`
   );
   if (!allTransitionKeys) {
-    throw new Error("Resolve secured construction before merging National Corporation holdings");
+    throw new Error(
+      "A National Corporation site carries a construction loan. Merge the holdings after it is repaid."
+    );
   }
   const transitionKeyBySectorId = new Map(
     absorbedSectors.map((sector, index) => [sector._id.toHexString(), allTransitionKeys[index]])

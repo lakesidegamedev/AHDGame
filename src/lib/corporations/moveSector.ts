@@ -14,6 +14,10 @@ import {
   hasProtectedConstructionProperty,
   unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
+import {
+  mergeSurvivorConstructionFilter,
+  type ConstructionBorrowerTransferPlan,
+} from "@/lib/banking/constructionBorrowerTransfer";
 
 /**
  * Move one operating sector to `destCorpId`, re-denominating its revenue + growth
@@ -25,6 +29,11 @@ import {
  * capacity folded, donor row dropped); otherwise it is re-parented. Haircut-free
  * — unlike nationalization's absorbSectorIntoNatCorp, this is a consensual
  * transfer, not a taking, so no productivity shock is applied.
+ *
+ * A financed site moves only under `constructionTransfers`, which has already
+ * locked its loan: the title write names the new borrower in the same update.
+ * The caller settles the plan afterwards. A financed site never merges into
+ * another row; a financed survivor keeps its own claim while a donor folds in.
  */
 export async function moveSectorToCorp(
   db: Db,
@@ -34,9 +43,11 @@ export async function moveSectorToCorp(
   srcFxRate: number,
   destCurrency: CurrencyCode | string | undefined,
   destFxRate: number,
-  now: Date
+  now: Date,
+  constructionTransfers?: ConstructionBorrowerTransferPlan
 ): Promise<void> {
-  if (hasProtectedConstructionProperty(sector)) {
+  const financedMove = constructionTransfers?.hasTransfer(sector._id) === true;
+  if (hasProtectedConstructionProperty(sector) && !financedMove) {
     throw new Error("A sector with secured construction cannot change ownership yet");
   }
   const sectors = db.collection<CorporateSector>("corporateSectors");
@@ -72,9 +83,13 @@ export async function moveSectorToCorp(
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
   if (existing && !existing._id.equals(sector._id)) {
-    if (hasProtectedConstructionProperty(existing)) {
-      throw new Error("The destination sector has secured construction and cannot be merged");
+    if (financedMove || hasProtectedConstructionProperty(sector)) {
+      throw new Error("A site with a construction loan cannot be merged into another site");
     }
+    if (existing.constructionPropertyTransition) {
+      throw new Error("The destination sector is in another ownership change");
+    }
+    const survivorFilter = mergeSurvivorConstructionFilter(existing);
     if (plantsEnabled) {
       const ratio = capacityRescaleRatio(
         sector.sectorType as CorporationType,
@@ -134,7 +149,7 @@ export async function moveSectorToCorp(
         }
       );
       const mergedSurvivor = await sectors.updateOne(
-        { _id: existing._id, ...unprotectedConstructionPropertyFilter() },
+        { _id: existing._id, ...survivorFilter },
         {
           // Workers are recomputed from capacity next turn under plants, so the
           // headcount merge is informational only — kept so the row is not
@@ -162,7 +177,7 @@ export async function moveSectorToCorp(
       return;
     }
     const mergedSurvivor = await sectors.updateOne(
-      { _id: existing._id, ...unprotectedConstructionPropertyFilter() },
+      { _id: existing._id, ...survivorFilter },
       {
         $inc: {
           // PLANTS-GATED: unreachable under plants — the branch above returns
@@ -184,10 +199,16 @@ export async function moveSectorToCorp(
       throw new Error("The source sector became secured before the ownership merge completed");
   } else {
     const moved = await sectors.updateOne(
-      { _id: sector._id, ...unprotectedConstructionPropertyFilter() },
+      {
+        _id: sector._id,
+        ...(constructionTransfers
+          ? constructionTransfers.filterFor(sector)
+          : unprotectedConstructionPropertyFilter()),
+      },
       {
         $set: {
           corporationId: destCorpId,
+          ...constructionTransfers?.setFor(sector._id),
           ...(plantsEnabled ? {} : { revenue: newRevenue }),
           currentGrowthCost: newGrowthCost,
           updatedAt: now,

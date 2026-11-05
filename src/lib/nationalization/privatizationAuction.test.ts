@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(false) }));
@@ -410,6 +410,7 @@ describe("reabsorbSpunOutCorp", () => {
       countryId: "US",
       liquidCapital: 500,
     });
+    db.collectionMocks.corporateSectors.bulkWrite.mockResolvedValueOnce({ matchedCount: 2 });
     const { reabsorbSpunOutCorp } = await import("./privatizationAuction");
     await reabsorbSpunOutCorp(
       db as unknown as Db,
@@ -419,8 +420,10 @@ describe("reabsorbSpunOutCorp", () => {
     );
 
     // Both energy sectors routed back to the primary, absorbedAtTurn re-stamped.
-    const movedUpdates = db.collectionMocks.corporateSectors.updateOne.mock.calls.filter(
-      ([, update]) => update.$set?.corporationId?.toString() === primaryId.toString()
+    const movedUpdates = bulkOps(db.collectionMocks.corporateSectors.bulkWrite).filter(
+      ([, update]) =>
+        (update.$set as { corporationId?: ObjectId } | undefined)?.corporationId?.toString() ===
+        primaryId.toString()
     );
     expect(movedUpdates).toHaveLength(2);
     expect(movedUpdates.map(([filter]) => filter._id)).toEqual([firstSectorId, secondSectorId]);
@@ -432,9 +435,9 @@ describe("reabsorbSpunOutCorp", () => {
         })
       );
       expect(filter["constructionPropertyTransition.key"]).toBe(
-        `reabsorb:${shellId.toHexString()}:42:${filter._id.toHexString()}`
+        `reabsorb:${shellId.toHexString()}:42:${(filter._id as ObjectId).toHexString()}`
       );
-      expect(update.$set.absorbedAtTurn).toBe(42);
+      expect((update.$set as { absorbedAtTurn?: number }).absorbedAtTurn).toBe(42);
     }
     // Residual cash → primary.
     const corpUpd = db.collectionMocks.corporations.findOneAndUpdate.mock.calls.find(

@@ -153,7 +153,8 @@ export async function convertCorpCurrency(
   if (hasProtectedConstructionPropertyIn(sectors)) {
     return {
       ok: false,
-      error: "Resolve secured construction before changing the corporation's liquid currency",
+      error:
+        "A site of this corporation carries a construction loan repaid from its cash in its current currency. Sell the site or wait until the loan is repaid before changing currency.",
     };
   }
   const transitionKeys = await reserveSectorsForTransition(

@@ -108,7 +108,19 @@ export function acquisitionBalanceSheet(input: {
   heldBonds: { units: number; faceValue: number; marketPrice: number; fxRate: number }[];
   heldShares: { shares: number; sharePrice: number; fxRate: number }[];
   issuedBonds: { principalLocal: number; fxRate: number }[];
-}): { portfolioAnchor: number; debtAnchor: number; minimumPriceAnchor: number } {
+  /**
+   * Bank loans the target owes, secured construction loans included. They
+   * reduce the floor, because whoever ends up owning the company repays them,
+   * but they are kept apart from `debtAnchor`: a merger moves them to the
+   * acquirer instead of requiring them repaid first.
+   */
+  bankLoans?: { outstandingLocal: number; fxRate: number }[];
+}): {
+  portfolioAnchor: number;
+  debtAnchor: number;
+  bankLoanDebtAnchor: number;
+  minimumPriceAnchor: number;
+} {
   const convert = (local: number, rate: number) => {
     if (!Number.isFinite(local) || !Number.isFinite(rate) || rate <= 0)
       throw new Error("Cannot price an acquisition with incomplete financial values.");
@@ -125,6 +137,10 @@ export function acquisitionBalanceSheet(input: {
   const debtAnchor =
     convert(input.facilityDebtLocal, input.facilityFxRate) +
     input.issuedBonds.reduce((sum, p) => sum + convert(p.principalLocal, p.fxRate), 0);
+  const bankLoanDebtAnchor = (input.bankLoans ?? []).reduce(
+    (sum, p) => sum + convert(Math.max(0, p.outstandingLocal), p.fxRate),
+    0
+  );
   if (
     ![
       input.cashAnchor,
@@ -132,18 +148,20 @@ export function acquisitionBalanceSheet(input: {
       input.bankEquityAnchor,
       portfolioAnchor,
       debtAnchor,
+      bankLoanDebtAnchor,
     ].every(Number.isFinite)
   )
     throw new Error("Cannot price an acquisition with incomplete balance-sheet values.");
   return {
     portfolioAnchor,
     debtAnchor,
+    bankLoanDebtAnchor,
     minimumPriceAnchor: playerAcquisitionMinimumPrice({
       cashAnchor: input.cashAnchor,
       otherAssetsAnchor: input.sectorsAnchor,
       portfolioAnchor,
       bankEquityAnchor: input.bankEquityAnchor,
-      debtAnchor,
+      debtAnchor: debtAnchor + bankLoanDebtAnchor,
     }),
   };
 }
