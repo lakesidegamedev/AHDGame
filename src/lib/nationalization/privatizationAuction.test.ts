@@ -435,9 +435,9 @@ describe("reabsorbSpunOutCorp", () => {
         })
       );
       expect(filter["constructionPropertyTransition.key"]).toBe(
-        `reabsorb:${shellId.toHexString()}:42:${filter._id.toHexString()}`
+        `reabsorb:${shellId.toHexString()}:42:${(filter._id as ObjectId).toHexString()}`
       );
-      expect(update.$set.absorbedAtTurn).toBe(42);
+      expect((update.$set as { absorbedAtTurn?: number }).absorbedAtTurn).toBe(42);
     }
     // Residual cash → primary.
     const corpUpd = db.collectionMocks.corporations.findOneAndUpdate.mock.calls.find(
