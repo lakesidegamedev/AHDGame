@@ -168,6 +168,7 @@ import {
   type SectorProfitInfo,
 } from "@/lib/turn/npp/sectorProfitability";
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
+import { sizeShortageGrowthFinance } from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import type { ObjectId } from "mongodb";
 
@@ -1653,6 +1654,18 @@ export function makeNppCorpDecision(
             )
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
+      const shortageSizing =
+        ctx.shortageGrowthFinance && !autopilot && borrowAllowed && canGrow && sp.isProfitable
+          ? sizeShortageGrowthFinance(ctx.shortageGrowthFinance, sector, {
+              sectorProfitLocal: sectorEconomicToCorpLocal(sp.income, sector),
+              operatingCapacityUnits: productionCapacity,
+              perUnitBuildCostLocal: perUnitGrowthLocal,
+              stepCapUnits: Math.min(growthCapUnits, MAX_BUILD_UNITS_PER_ORDER),
+              cashLocal,
+              cashFloorLocal: effectiveCashFloor,
+            })
+          : null;
+      if (shortageSizing) growthUnits = Math.max(growthUnits, shortageSizing.growthUnits);
       // Market-throttle and input-starvation evidence (rules/growthEvidenceGate)
       // refuse the growth leg; replacement of worn capacity still goes through.
       const evidenceGate =
@@ -1728,6 +1741,7 @@ export function makeNppCorpDecision(
         fill,
         headroomUnits,
         interventionPriority,
+        shortageGrowth: growthUnits > 0 ? shortageSizing?.shortageGrowth : undefined,
       });
     }
 
@@ -1858,6 +1872,7 @@ export function makeNppCorpDecision(
             growthUnits: candidate.growthUnits,
             priority: candidate.interventionPriority,
             fill: candidate.fill,
+            shortageGrowth: candidate.growthUnits > 0 ? candidate.shortageGrowth : undefined,
           });
         }
         observePricedReinvestCandidate(
