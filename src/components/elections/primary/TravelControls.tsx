@@ -16,6 +16,11 @@ interface TravelControlsProps {
   states: StateTravelOption[];
   /** For a host that keeps this data in client state, as the Blend screens do. */
   onChanged?: () => void;
+  /**
+   * A state the reader is looking at (the map's state panel). Adds a one-click
+   * move there; the picker stays for anywhere else.
+   */
+  focusState?: { id: string; name: string };
 }
 
 /**
@@ -34,6 +39,7 @@ export function TravelControls({
   playerActions,
   states,
   onChanged,
+  focusState,
 }: TravelControlsProps) {
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -66,6 +72,9 @@ export function TravelControls({
     }
   };
 
+  const focusCost = focusState ? states.find((s) => s.id === focusState.id)?.actionCost : undefined;
+  const here = focusState != null && focusState.id === currentStateId;
+
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 space-y-3">
       <div>
@@ -91,13 +100,28 @@ export function TravelControls({
             </div>
           )}
         </div>
+        {focusState && focusCost !== undefined && !here ? (
+          <button
+            type="button"
+            disabled={busy || playerActions < focusCost}
+            onClick={() => void travelTo(focusState.id)}
+            title={playerActions < focusCost ? `Needs ${focusCost} actions` : undefined}
+            className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Travel to {focusState.name} ({focusCost} {focusCost === 1 ? "action" : "actions"})
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={busy}
           onClick={() => setPickerOpen(true)}
           className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {currentStateId ? "Travel elsewhere" : "Travel to a state"}
+          {focusState && !here
+            ? "Another state"
+            : currentStateId
+              ? "Travel elsewhere"
+              : "Travel to a state"}
         </button>
       </div>
 

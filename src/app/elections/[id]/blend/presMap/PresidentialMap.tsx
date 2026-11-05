@@ -102,6 +102,12 @@ export interface PresidentialMapProps {
   presence?: { levels: Readonly<Record<string, number>>; color: string } | null;
   /** Appended to the state overview (the reader's campaign actions there). */
   panelExtra?: (stateId: string) => ReactNode;
+  /**
+   * The stage sits in a page that scrolls (the race page's Campaign mode)
+   * rather than filling the viewport. On desktop it then starts locked, like
+   * the phone, so the wheel scrolls the page until the reader unlocks the map.
+   */
+  inPage?: boolean;
 }
 
 type Hover = { id: string; county?: string; x: number; y: number } | null;
@@ -160,6 +166,7 @@ export function PresidentialMap({
   focusRequest,
   presence,
   panelExtra,
+  inPage = false,
 }: PresidentialMapProps) {
   const stage = variant === "stage";
   const frameRef = useRef<HTMLDivElement>(null);
@@ -180,7 +187,7 @@ export function PresidentialMap({
   // The desktop stage is the whole viewport and nothing scrolls under it, so it
   // owns its gestures from the start. Everywhere else the map sits in a
   // scrolling page and stays locked until the reader unlocks it.
-  const freeGestures = stage && desk;
+  const freeGestures = stage && desk && !inPage;
   // Where the state overview opens: docked over the map, or as a bottom sheet.
   const docked = stage ? desk : wide;
   const ground = useBlendGround();

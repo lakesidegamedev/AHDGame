@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { StateOperationsSection } from "./StateOperationsSection";
+import { StateOperationsHere, StateOperationsSection } from "./StateOperationsSection";
 import type { StateOperationsView } from "@/lib/elections/dto/stateOperations";
 
 vi.mock("next/navigation", () => ({
@@ -304,4 +304,75 @@ it("marks states already built this turn and prevents repeat selection", () => {
   fireEvent.click(screen.getByRole("button", { name: /Build presence/ }));
   const state = screen.getByRole("button", { name: /New Hampshire.*Built this turn/ });
   expect(state.hasAttribute("disabled")).toBe(true);
+});
+
+describe("StateOperationsHere", () => {
+  it("attacks a rival in the open state without asking for a state", () => {
+    const onAttack = vi.fn();
+    render(<StateOperationsHere view={view()} stateId="NH" busy={null} onAttack={onAttack} />);
+    fireEvent.click(screen.getByRole("button", { name: /Local attack/ }));
+    expect(onAttack).toHaveBeenCalledWith("r1", "localFavorability", "NH");
+  });
+
+  it("disables an attack the campaign cannot pay for and says why on hover", () => {
+    render(
+      <StateOperationsHere
+        view={view({ campaignFunds: 1_000 })}
+        stateId="NH"
+        busy={null}
+        onAttack={() => {}}
+      />
+    );
+    const btn = screen.getByRole("button", { name: /Local attack/ }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.title).toContain("war chest");
+  });
+
+  it("lists only what is live in this state, in both directions", () => {
+    render(
+      <StateOperationsHere
+        view={view({
+          liveAgainstYou: [
+            {
+              kind: "localFavorability",
+              stateId: "NH",
+              stateName: "New Hampshire",
+              actorName: "Rival Filer",
+              expiresTurn: 15,
+            },
+            {
+              kind: "voteSuppression",
+              stateId: "IA",
+              stateName: "Iowa",
+              actorName: "Rival Filer",
+              expiresTurn: 15,
+            },
+          ],
+          opponents: [
+            {
+              candidateId: "r1",
+              name: "Rival Filer",
+              color: "#EF4444",
+              delegates: 942,
+              liveAgainstThem: [
+                {
+                  kind: "voteSuppression",
+                  stateId: "NH",
+                  stateName: "New Hampshire",
+                  expiresTurn: 14,
+                },
+                { kind: "voteSuppression", stateId: "IA", stateName: "Iowa", expiresTurn: 14 },
+              ],
+            },
+          ],
+        })}
+        stateId="NH"
+        busy={null}
+        onAttack={() => {}}
+      />
+    );
+    expect(screen.getByText(/Against you: Rival Filer in New Hampshire/)).toBeTruthy();
+    expect(screen.getByText(/Live against them: New Hampshire, 2 turns left/)).toBeTruthy();
+    expect(screen.queryByText(/Iowa/)).toBeNull();
+  });
 });

@@ -63,6 +63,24 @@ function attackLine(row: LiveAttackRow, currentTurn: number): string {
   return `${where}, ${left} ${left === 1 ? "turn" : "turns"} left`;
 }
 
+// Actions come out of the candidate; the money comes out of the campaign.
+// `camp.playerFunds` is the candidate's own balance and pays for the surge,
+// not for these.
+function attackAffordable(view: StateOperationsView, attack: AttackOption): boolean {
+  return (
+    view.positives.camp.playerActions >= attack.costActions &&
+    view.campaignFunds >= attack.costFunds
+  );
+}
+
+function attackBlockedReason(view: StateOperationsView, attack: AttackOption): string | null {
+  return view.positives.camp.playerActions < attack.costActions
+    ? `Needs ${attack.costActions} actions.`
+    : view.campaignFunds < attack.costFunds
+      ? `Needs ${money(attack.costFunds)} in the war chest.`
+      : null;
+}
+
 /**
  * Every state-level move a presidential primary candidate can make, in one
  * place: where they are camped, what they are building, where they can canvass,
@@ -128,17 +146,8 @@ export function StateOperationsSection({
     }
   };
 
-  // Actions come out of the candidate; the money comes out of the campaign.
-  // `camp.playerFunds` is the candidate's own balance and pays for the surge,
-  // not for these.
-  const canAfford = (attack: AttackOption) =>
-    camp.playerActions >= attack.costActions && view.campaignFunds >= attack.costFunds;
-  const reasonFor = (attack: AttackOption) =>
-    camp.playerActions < attack.costActions
-      ? `Needs ${attack.costActions} actions.`
-      : view.campaignFunds < attack.costFunds
-        ? `Needs ${money(attack.costFunds)} in the war chest.`
-        : null;
+  const canAfford = (attack: AttackOption) => attackAffordable(view, attack);
+  const reasonFor = (attack: AttackOption) => attackBlockedReason(view, attack);
 
   const chooseState = (stateId: string) => {
     if (!attackTarget) return;
@@ -456,5 +465,95 @@ export function StateOperationsSection({
         />
       ) : null}
     </section>
+  );
+}
+
+/**
+ * What the candidate can do about one state, for the presidential map's state
+ * panel: the rivals they can act against there, and what is live in the state in
+ * both directions. The same hub, prices and attack route as the full section;
+ * the state is already chosen, so there is no picker.
+ */
+export function StateOperationsHere({
+  view,
+  stateId,
+  busy,
+  onAttack,
+}: {
+  view: StateOperationsView;
+  stateId: string;
+  busy: string | null;
+  onAttack: StateOperationsSectionProps["onAttack"];
+}) {
+  const againstYou = view.liveAgainstYou.filter((row) => row.stateId === stateId);
+  return (
+    <div data-testid="state-operations-here">
+      <Eyebrow>Operations here</Eyebrow>
+      {againstYou.map((row) => (
+        <div
+          key={`${row.actorName}:${row.kind}`}
+          style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 11.5, color: BLEND.negative }}
+        >
+          Against you: {attackLine(row, view.currentTurn)}
+        </div>
+      ))}
+      {view.opponents.length === 0 ? (
+        <Note>You are running unopposed.</Note>
+      ) : (
+        view.opponents.map((o) => {
+          const liveHere = o.liveAgainstThem.filter((row) => row.stateId === stateId);
+          return (
+            <div
+              key={o.candidateId}
+              style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${BLEND.hairline}` }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <i
+                  aria-hidden
+                  style={{ width: 9, height: 9, borderRadius: 2, background: o.color }}
+                />
+                <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>
+                  {o.name}
+                </span>
+              </div>
+              <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {view.attacks.map((attack) => {
+                  const affordable = attackAffordable(view, attack);
+                  const pending = busy === `${o.candidateId}:${attack.kind}`;
+                  const reason = attackBlockedReason(view, attack);
+                  return (
+                    <button
+                      key={attack.kind}
+                      type="button"
+                      disabled={!affordable || pending}
+                      title={reason ?? attack.description}
+                      onClick={() => onAttack(o.candidateId, attack.kind, stateId)}
+                      style={{
+                        ...BLEND_LABEL,
+                        border: `1px solid ${affordable ? BLEND.negative : BLEND.hairlineStrong}`,
+                        background: "transparent",
+                        padding: "6px 11px",
+                        fontWeight: 700,
+                        cursor: affordable && !pending ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {pending ? "Working" : attack.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {liveHere.map((row) => (
+                <div
+                  key={`${row.kind}`}
+                  style={{ marginTop: 5, fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted }}
+                >
+                  Live against them: {attackLine(row, view.currentTurn)}
+                </div>
+              ))}
+            </div>
+          );
+        })
+      )}
+    </div>
   );
 }

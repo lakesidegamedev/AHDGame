@@ -94,4 +94,40 @@ describe("PrimaryCampaignControls", () => {
       (screen.getByRole("button", { name: /Surge home state/ }) as HTMLButtonElement).disabled
     ).toBe(true);
   });
+
+  it("offers a one-click camp in the state the map is open on", async () => {
+    render(<PrimaryCampaignControls {...props()} focusState={{ id: "OH", name: "Ohio" }} />);
+    fireEvent.click(screen.getByRole("button", { name: /Camp in Ohio \(7 actions\)/ }));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const [url, init] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/elections/e1/primary-campaign");
+    expect(JSON.parse(init.body)).toEqual({ stateId: "OH" });
+  });
+
+  it("does not offer to camp where the candidate already is, or without the actions", () => {
+    const { unmount } = render(
+      <PrimaryCampaignControls {...props()} focusState={{ id: "IA", name: "Iowa" }} />
+    );
+    expect(screen.queryByRole("button", { name: /Camp in Iowa/ })).toBeNull();
+    unmount();
+    render(
+      <PrimaryCampaignControls
+        {...props({ playerActions: 2 })}
+        focusState={{ id: "OH", name: "Ohio" }}
+      />
+    );
+    expect(
+      (screen.getByRole("button", { name: /Camp in Ohio/ }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
+  it("keeps the home-state surge to the home state's own panel", () => {
+    const { unmount } = render(
+      <PrimaryCampaignControls {...props()} focusState={{ id: "OH", name: "Ohio" }} />
+    );
+    expect(screen.queryByText("Home-state surge")).toBeNull();
+    unmount();
+    render(<PrimaryCampaignControls {...props()} focusState={{ id: "IA", name: "Iowa" }} />);
+    expect(screen.getByText("Home-state surge")).toBeTruthy();
+  });
 });

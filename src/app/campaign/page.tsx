@@ -1,10 +1,17 @@
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { redirect } from "next/navigation";
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import type { Campaign, Character, Election, PoliticalParty } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import Link from "next/link";
+import { resolveCampaignRedirect } from "@/lib/campaigns/queries/campaignRedirect";
+import { standaloneCampaignHref } from "@/lib/campaignManager/links";
+
+/** The viewer's campaign on its race page in Campaign mode, else the standalone page. */
+async function campaignDestination(db: Db, campaignId: string) {
+  return (await resolveCampaignRedirect(db, campaignId, {})) ?? standaloneCampaignHref(campaignId);
+}
 
 export default async function CampaignPage() {
   const user = await getAuthUserWithCharacter();
@@ -57,7 +64,7 @@ export default async function CampaignPage() {
         (c) => c.electionId.toString() === target._id.toString()
       );
       if (targetCampaign) {
-        redirect(`/campaign/${targetCampaign._id.toString()}`);
+        redirect(await campaignDestination(db, targetCampaign._id.toString()));
       }
     }
   }
@@ -102,7 +109,7 @@ export default async function CampaignPage() {
             .collection<Campaign>("campaigns")
             .findOne({ $or: orClauses });
           if (officerCampaign) {
-            redirect(`/campaign/${officerCampaign._id.toString()}`);
+            redirect(await campaignDestination(db, officerCampaign._id.toString()));
           }
         }
       }

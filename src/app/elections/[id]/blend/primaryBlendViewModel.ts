@@ -6,6 +6,7 @@
  * derivations are unit-testable.
  */
 
+import { campaignPageHref } from "@/lib/campaignManager/links";
 import type {
   CandidateDetail,
   ElectionDetail,
@@ -533,7 +534,13 @@ export function buildPrimaryBlendViewModel(inp: PrimaryBlendInput): PrimaryBlend
     },
   ];
 
-  const campaignHref = me?.campaignId ? `/campaign/${me.campaignId}` : null;
+  const campaignHref = me?.campaignId
+    ? campaignPageHref({
+        campaignId: me.campaignId,
+        electionId: election.id,
+        countryId: election.countryId,
+      })
+    : null;
 
   return {
     headline,

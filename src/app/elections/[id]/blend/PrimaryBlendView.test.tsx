@@ -331,7 +331,7 @@ describe("campaign operations live in the field table", () => {
       expect(screen.getAllByRole("link", { name: "View campaign" }).length).toBeGreaterThan(0)
     );
     expect(screen.getAllByRole("link", { name: "View campaign" })[0].getAttribute("href")).toBe(
-      "/campaign/camp-1"
+      "/elections/e1?view=campaign&campaign=camp-1"
     );
     expect(screen.getAllByText(/Manager: Pat Manager/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("6").length).toBeGreaterThan(0);
