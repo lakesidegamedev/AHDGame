@@ -872,7 +872,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       // Profit with internal supply income and charges counted, display only.
       // Null when there are no internal lines, so the row shows `profit`.
       managementProfit:
-        supplyView && (supplyView.income > 0 || supplyView.charge > 0)
+        supplyView && (supplyView.income > 0 || supplyView.charge > 0 || supplyView.ownSiteMemo > 0)
           ? Math.round(supplyView.profit)
           : null,
       // Free transfers: what this site sent to its own sites at its own asking

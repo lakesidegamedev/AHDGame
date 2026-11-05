@@ -28,7 +28,7 @@ describe("internalSupplyView", () => {
       totalCost: 238_578,
       ownSiteValue: 400_000,
     });
-    expect(v.profit).toBe(-238_578);
+    expect(v.profit).toBe(400_000 - 238_578);
     expect(v.ownSiteMemo).toBe(400_000);
     expect(v.netMarginPct).toBeCloseTo(((400_000 - 238_578) / 400_000) * 100, 6);
   });
@@ -63,5 +63,36 @@ describe("internalSupplyView", () => {
       ownSiteValue: Number.POSITIVE_INFINITY,
     });
     expect(v).toMatchObject({ profit: 20, revenue: 100, income: 0, charge: 0, ownSiteMemo: 0 });
+  });
+
+  it("at cost: supplier revenue is the cost basis, receiver books the matching charge", () => {
+    const supplier = internalSupplyView({ profit: -100, revenue: 0, totalCost: 100, income: 100 });
+    const receiver = internalSupplyView({ profit: 500, revenue: 800, totalCost: 300, charge: 100 });
+    expect(supplier.revenue).toBe(100);
+    expect(supplier.profit).toBe(0);
+    expect(supplier.netMarginPct).toBe(0);
+    expect(receiver.totalCost).toBe(400);
+    expect(receiver.profit).toBe(400);
+    // Company totals stay balanced: income and charge cancel.
+    expect(supplier.profit + receiver.profit).toBe(-100 + 500);
+  });
+
+  it("at market: supplier income is market value and the company total is unchanged", () => {
+    const supplier = internalSupplyView({ profit: -100, revenue: 0, totalCost: 100, income: 160 });
+    const receiver = internalSupplyView({ profit: 500, revenue: 800, totalCost: 300, charge: 160 });
+    expect(supplier.revenue).toBe(160);
+    expect(supplier.netMarginPct).toBeCloseTo((60 / 160) * 100, 6);
+    expect(supplier.profit + receiver.profit).toBe(-100 + 500);
+  });
+
+  it("margin and profit share one basis: never a positive margin on a loss", () => {
+    for (const input of [
+      { profit: -238_578, revenue: 0, totalCost: 238_578, ownSiteValue: 100_000 },
+      { profit: -50, revenue: 10, totalCost: 60, income: 5 },
+      { profit: 10, revenue: 100, totalCost: 90, charge: 40 },
+    ]) {
+      const v = internalSupplyView(input);
+      expect(Math.sign(v.netMarginPct ?? 0)).toBe(Math.sign(v.profit));
+    }
   });
 });

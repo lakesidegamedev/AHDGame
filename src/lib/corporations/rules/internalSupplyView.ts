@@ -36,6 +36,7 @@ export interface InternalSupplyViewInput {
 }
 
 export interface InternalSupplyView {
+  /** Management profit: booked profit plus internal income, less charges, plus the free memo. */
   profit: number;
   revenue: number;
   totalCost: number;
@@ -67,8 +68,10 @@ export function internalSupplyView(input: InternalSupplyViewInput): InternalSupp
   const income = nonNeg(input.income);
   const charge = nonNeg(input.charge);
   const ownSiteMemo = freeTransferMemo(input);
-  const profit = input.profit + income - charge;
-  const revenue = input.revenue + income;
+  // One basis: the memo sits in revenue and profit alike, so the margin and the
+  // profit read from the same lines and a loss never shows a positive margin.
+  const profit = input.profit + income - charge + ownSiteMemo;
+  const revenue = input.revenue + income + ownSiteMemo;
   const totalCost = input.totalCost + charge;
   return {
     profit,
@@ -78,8 +81,8 @@ export function internalSupplyView(input: InternalSupplyViewInput): InternalSupp
     charge,
     ownSiteMemo,
     netMarginPct: plantsNetMarginPct({
-      profit: profit + ownSiteMemo,
-      revenue: revenue + ownSiteMemo,
+      profit,
+      revenue,
       totalCost,
     }),
   };
