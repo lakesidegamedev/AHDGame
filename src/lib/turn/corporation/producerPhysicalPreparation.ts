@@ -1,5 +1,6 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
 import {
+  ownDemandRunShare,
   withCaptiveDeliveries,
   type CaptiveProduct,
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
@@ -50,6 +51,7 @@ import {
   pacedRunShare,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
+  planBaseRunShare,
   planRecoveryRunShare,
   glutTurnsThrough,
   OUTPUT_RUN_FLOOR,
@@ -530,9 +532,15 @@ export function prepareProducerPhysicalSector(input: {
           jointMarginal
         )
       : summedRunShare;
+  // A plant that supplies its own company plans at least that company's demand for the good.
+  const ownDemandFloor =
+    (env.captiveDeliveryStage ?? 0) >= 1
+      ? ownDemandRunShare(lastReceipt, planBaseRunShare(lastReceipt, runFloor))
+      : 0;
+  const plannedRunShare = Math.max(unpacedRunShare, ownDemandFloor);
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
   const runShare = pacedRunShare(
-    unpacedRunShare,
+    plannedRunShare,
     lastReceipt,
     env.runPaceDrop ?? 0,
     runFloor,
