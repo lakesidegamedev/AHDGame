@@ -6,6 +6,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import { BLEND, BLEND_LABEL, FONT } from "@/components/blend/tokens";
+import { campaignPageHref } from "@/lib/campaignManager/links";
 
 interface PresenceRow {
   stateId: string;
@@ -16,6 +17,8 @@ interface PresenceRow {
 
 export interface MyCampaign {
   campaignId: string | null;
+  /** The race, for the link into the campaign's field offices. */
+  race: { id: string; countryId: string };
   color: string;
   /** Campaign Presence level per state. */
   levels: Record<string, number>;
@@ -34,9 +37,10 @@ export interface MyCampaign {
 export function useMyCampaign(args: {
   enabled: boolean;
   campaignId: string | null;
+  race: { id: string; countryId: string };
   color: string;
 }): MyCampaign | null {
-  const { enabled, campaignId, color } = args;
+  const { enabled, campaignId, race, color } = args;
   const [rows, setRows] = useState<Record<string, PresenceRow>>({});
   const [canBuild, setCanBuild] = useState(false);
   const [fxRate, setFxRate] = useState<number>(1);
@@ -99,6 +103,7 @@ export function useMyCampaign(args: {
   if (!enabled) return null;
   return {
     campaignId,
+    race,
     color,
     levels: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, r.level])),
     rows,
@@ -162,7 +167,13 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
       ) : null}
       {mine.campaignId ? (
         <Link
-          href={`/campaign/${mine.campaignId}?tab=field&region=${stateId}`}
+          href={campaignPageHref({
+            campaignId: mine.campaignId,
+            electionId: mine.race.id,
+            countryId: mine.race.countryId,
+            tab: "field",
+            region: stateId,
+          })}
           className="hover:underline"
           style={{
             marginTop: 10,

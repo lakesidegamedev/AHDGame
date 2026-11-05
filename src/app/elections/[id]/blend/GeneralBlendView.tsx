@@ -86,6 +86,7 @@ export function GeneralBlendView({
   const mine = useMyCampaign({
     enabled: Boolean(myCandidate) && election.countryId === "US",
     campaignId: myCandidate?.campaignId ?? null,
+    race: election,
     color: myCandidate?.campaignColor ?? myCandidate?.partyColor ?? "#4F8EF7",
   });
   const live = presidentialResultsLive(election);
@@ -704,6 +705,7 @@ export function GeneralBlendView({
                   tickets={vm.tickets}
                   campaigns={campaigns}
                   campaignsLoading={campaignsLoading}
+                  race={election}
                   endorseButton={endorseButton}
                 />
               </div>
@@ -712,6 +714,7 @@ export function GeneralBlendView({
                   tickets={vm.tickets}
                   campaigns={campaigns}
                   campaignsLoading={campaignsLoading}
+                  race={election}
                   endorseButton={endorseButton}
                 />
               </div>
