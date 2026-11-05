@@ -16,9 +16,12 @@ import type { CampaignStatePresence } from "@/lib/elections/dto/campaignStatePre
 export function StatePresencePanel({
   presence,
   onChanged,
+  focusState,
 }: {
   presence: CampaignStatePresence | null | undefined;
   onChanged?: () => void;
+  /** The state the map's panel is open on; see the two controls. */
+  focusState?: { id: string; name: string };
 }) {
   if (!presence) return null;
 
@@ -30,6 +33,7 @@ export function StatePresencePanel({
         electionId={presence.electionId}
         {...presence.primary}
         onChanged={onChanged}
+        focusState={focusState}
       />
     );
   }
@@ -42,6 +46,7 @@ export function StatePresencePanel({
       playerActions={presence.playerActions}
       states={presence.states}
       onChanged={onChanged}
+      focusState={focusState}
     />
   );
 }

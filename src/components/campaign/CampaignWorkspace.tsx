@@ -1,12 +1,11 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { resolveElectionYear } from "@/lib/utils/formatters";
 import { Modal, Skeleton } from "@/components/ui";
-import type { CampaignData } from "@/lib/campaigns/dto/campaignView";
 import { TargetedAdsPanel } from "@/app/campaign/[id]/components/TargetedAdsPanel";
 import { SuspendEndorsePanel } from "@/app/campaign/[id]/components/SuspendEndorsePanel";
 import { CampaignRoomBriefing } from "@/app/campaign/[id]/components/CampaignRoomBriefing";
@@ -39,7 +38,7 @@ const RunningMateSurrogatePanel = dynamic(
   { loading: PanelFallback }
 );
 import { BlendScope } from "@/components/blend/BlendScope";
-import type { CurrencyCode } from "@/lib/constants/currencies";
+import { useCampaignDesk, type CampaignDesk } from "./useCampaignDesk";
 
 /**
  * Where the workspace sits. `page` is the standalone route with its own
@@ -55,111 +54,43 @@ export type CampaignWorkspaceVariant = "page" | "embedded" | "inline";
  * own, so the standalone route and the race page's Campaign mode share it.
  */
 export function CampaignWorkspace({
-  campaignId: id,
+  campaignId,
   variant = "page",
 }: {
   campaignId: string;
   variant?: CampaignWorkspaceVariant;
 }) {
+  const desk = useCampaignDesk(campaignId);
+  return <CampaignDeskView desk={desk} variant={variant} />;
+}
+
+/**
+ * The desk's panes for data that is already loaded. The race page loads the data
+ * itself so the presidential map's state panel can act on the same campaign.
+ * `stateActionsOnMap` hands the state operations and presence controls to that
+ * map on desktop; phones and races without the map keep them here.
+ */
+export function CampaignDeskView({
+  desk,
+  variant = "page",
+  stateActionsOnMap = false,
+}: {
+  desk: CampaignDesk;
+  variant?: CampaignWorkspaceVariant;
+  stateActionsOnMap?: boolean;
+}) {
   const fillsScreen = variant === "page";
-  const [campaign, setCampaign] = useState<CampaignData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [myFunds, setMyFunds] = useState<number | null>(null);
-  const [myStoredFunds, setMyStoredFunds] = useState<number | null>(null);
-  const [myFundsCurrency, setMyFundsCurrency] = useState<CurrencyCode | null>(null);
-  const [myActions, setMyActions] = useState<number | null>(null);
-  const [myNationalInfluence, setMyNationalInfluence] = useState<number | null>(null);
-  const [myCountryId, setMyCountryId] = useState<string | null>(null);
-  const [currentTurn, setCurrentTurn] = useState<number | null>(null);
-  const [wire, setWire] = useState<string[]>([]);
+  const { campaign, loading, error, me, currentTurn, wire, canManage, canSurrogate } = desk;
+  const { refresh: fetchCampaign, refreshMe: fetchMe } = desk;
+  const myFunds = me.funds;
+  const myStoredFunds = me.storedFunds;
+  const myFundsCurrency = me.fundsCurrency;
+  const myActions = me.actions;
+  const myNationalInfluence = me.nationalInfluence;
+  const myCountryId = me.countryId;
   const [resetOppoOpen, setResetOppoOpen] = useState(false);
   const [resetOppoBusy, setResetOppoBusy] = useState(false);
   const [resetOppoError, setResetOppoError] = useState("");
-
-  const fetchCampaign = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/campaigns/${id}`);
-      if (!res.ok) {
-        const data = await res.json();
-        setError(apiErrorText(data, "Failed to load campaign"));
-        return;
-      }
-      const data = await res.json();
-      setCampaign(data.campaign);
-    } catch {
-      setError("Network error");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  const fetchMe = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (!res.ok) return;
-      const data = await res.json();
-      const meCharacter = data?.user?.character;
-      // Prefer the stored local balance over the legacy anchor mirror
-      // (in-game bug #0553). The mirror drifts under floating FX and can
-      // block actions even when the real balance is fine.
-      const storedOrLegacy = meCharacter?.campaignFundsStored ?? meCharacter?.funds ?? null;
-      setMyFunds(storedOrLegacy);
-      setMyStoredFunds(storedOrLegacy);
-      setMyFundsCurrency((meCharacter?.homeCurrency as CurrencyCode | undefined) ?? null);
-      setMyActions(meCharacter?.actions ?? null);
-      setMyNationalInfluence(meCharacter?.nationalInfluence ?? null);
-      setMyCountryId((meCharacter?.countryId as string | undefined) ?? null);
-    } catch {
-      // non-critical: contribute card just shows "—" for available balance
-    }
-  }, []);
-
-  const fetchTurn = useCallback(async () => {
-    try {
-      const res = await fetch("/api/game/turn/status");
-      if (!res.ok) return;
-      const data = await res.json();
-      setCurrentTurn(typeof data?.currentTurn === "number" ? data.currentTurn : null);
-    } catch {
-      // non-critical: the masthead simply omits the turn readout
-    }
-  }, []);
-
-  // Per-race wire headlines for the ticker. A quiet race returns an empty list
-  // and the strip renders nothing.
-  const fetchWire = useCallback(async (electionId: string) => {
-    try {
-      const res = await fetch(`/api/elections/${electionId}/wire?limit=8`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setWire(
-        Array.isArray(data?.items)
-          ? data.items.map((i: { headline: string }) => i.headline).filter(Boolean)
-          : []
-      );
-    } catch {
-      // non-critical: the ticker stays hidden
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCampaign();
-    fetchMe();
-    fetchTurn();
-  }, [fetchCampaign, fetchMe, fetchTurn]);
-
-  useEffect(() => {
-    if (campaign?.electionId) fetchWire(campaign.electionId);
-  }, [campaign?.electionId, fetchWire]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      fetchCampaign();
-      fetchTurn();
-    }, 60_000);
-    return () => clearInterval(t);
-  }, [fetchCampaign, fetchTurn]);
 
   async function handleRetarget(targetId: string) {
     if (!campaign) return;
@@ -292,18 +223,6 @@ export function CampaignWorkspace({
   }
 
   const isOwner = campaign.accessLevel === "owner";
-  const isRunningMate = campaign.isRunningMate === true;
-  // Archived campaigns (primary loser / withdrawn) are viewable as history but
-  // not manageable — owners still see their figures, but every action affordance
-  // is hidden (and the server rejects mutations regardless).
-  //
-  // A running mate has owner-level VIEW but NOT full manage: canManage (the
-  // manager/nominee surface: full ops, oppo reset, retarget, budget controls) is
-  // withheld from them. Their narrower surrogate action set is gated on
-  // canSurrogate instead, and the server enforces the same split.
-  const canManage =
-    isOwner && !isRunningMate && !campaign.isArchived && !campaign.campaignSuspended;
-  const canSurrogate = isRunningMate && !campaign.isArchived && !campaign.campaignSuspended;
   const electionYear = campaign.electionInfo
     ? resolveElectionYear({
         electionType: campaign.electionInfo.electionType,
@@ -371,6 +290,8 @@ export function CampaignWorkspace({
         wire={wire}
         canManage={canManage}
         canSurrogate={canSurrogate}
+        stateOps={desk.stateOps}
+        stateActionsOnMap={stateActionsOnMap}
         onRefresh={fetchCampaign}
         onRefreshMe={fetchMe}
         onRetarget={canManage ? handleRetarget : undefined}

@@ -225,6 +225,7 @@ export function PresidentialStage({
   const [view, setView] = useState<BoardView>("map");
   const modeSlots = useRaceModeSlots();
   const campaignBody = modeSlots?.campaign ?? null;
+  const mapAbove = Boolean(modeSlots?.mapAbove);
   const statusBar = useStatusBarHeight();
   const boards: Record<BoardView, ReactNode> = { map, squares, battleground };
   const views = (Object.keys(boards) as BoardView[]).filter((v) => v === "map" || boards[v]);
@@ -341,7 +342,9 @@ export function PresidentialStage({
   );
 
   // Campaign mode keeps the masthead and the ticker and swaps the race body
-  // (rails, map, board) for the campaign workspace, which scrolls with the page.
+  // (rails, board) for the campaign workspace, which scrolls with the page. On a
+  // US race the map stays above the workspace: it is where a state's campaign
+  // actions are reached.
   if (campaignBody) {
     return (
       <section
@@ -363,6 +366,19 @@ export function PresidentialStage({
         ) : null}
         {ticker}
         {nav ? <div style={{ padding: "10px 20px 0" }}>{nav}</div> : null}
+        {mapAbove ? (
+          <div
+            data-testid="campaign-map"
+            style={{
+              position: "relative",
+              height: "min(78vh, 680px)",
+              minHeight: 360,
+              borderBottom: `1px solid ${BLEND.hairlineStrong}`,
+            }}
+          >
+            {map}
+          </div>
+        ) : null}
         <div data-testid="campaign-mode">{campaignBody}</div>
       </section>
     );

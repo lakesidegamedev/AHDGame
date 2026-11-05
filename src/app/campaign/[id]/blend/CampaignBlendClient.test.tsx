@@ -485,6 +485,67 @@ describe("state operations", () => {
   });
 });
 
+describe("state actions on the map", () => {
+  const camp = {
+    currentCampaignState: "IA",
+    currentTicks: 3,
+    tickCap: 5,
+    homeState: "IA",
+    surgeUsed: false,
+    playerActions: 25,
+    playerFunds: 250_000,
+    surgeCostFunds: 25_000,
+    surgeCostActions: 3,
+    surgeBoost: 15,
+    states: [{ id: "IA", name: "Iowa", actionCost: 3 }],
+  };
+  const hubView = {
+    electionId: "e1",
+    currentTurn: 12,
+    positives: {
+      camp,
+      presence: [],
+      canvass: { available: true, stateId: "IA", reason: null },
+    },
+    opponents: [],
+    liveAgainstYou: [],
+    shieldPct: 0,
+    campaignFunds: 1_000_000,
+    campaignFxRate: 1,
+    countryId: "US",
+    attacks: [],
+  };
+  const presence = {
+    electionId: "e1",
+    phase: "general" as const,
+    currentStateId: "IA",
+    currentStateName: "Iowa",
+    playerActions: 25,
+    states: [{ id: "IA", name: "Iowa", actionCost: 3 }],
+    primary: null,
+  };
+
+  it("leaves the state operations list and the travel panel to the map on desktop", () => {
+    // The phone layout keeps its compact list; only the desktop copy goes.
+    renderClient({
+      campaign: { ...campaignFixture(), statePresence: presence },
+      stateOps: { view: hubView as never, reload: () => {} },
+      stateActionsOnMap: true,
+    });
+    expect(screen.getAllByText("State operations")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /Travel elsewhere/i })).toHaveLength(1);
+  });
+
+  it("keeps both copies when the map is not the entry point", () => {
+    renderClient({
+      campaign: { ...campaignFixture(), statePresence: presence },
+      stateOps: { view: hubView as never, reload: () => {} },
+    });
+    expect(screen.getAllByText("State operations")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /Travel elsewhere/i })).toHaveLength(2);
+  });
+});
+
 describe("action failures", () => {
   it("shows a refused action on both layouts, not the desktop shell alone", async () => {
     // Every failed action sets one `error`, and the banner that renders it sits

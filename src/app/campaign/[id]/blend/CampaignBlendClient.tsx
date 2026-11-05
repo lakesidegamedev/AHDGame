@@ -26,7 +26,7 @@ import { BlendSidebar, ManagersBlock, RunningMateBlock, SupportBlock } from "./B
 import { BlendScopeInline } from "@/components/blend/BlendScope";
 import { StatePresencePanel } from "../components/StatePresencePanel";
 import { StateOperationsSection } from "../components/StateOperationsSection";
-import type { StateOperationsView } from "@/lib/elections/dto/stateOperations";
+import { useStateOperations } from "@/components/campaign/useCampaignDesk";
 import type { PrimaryStateActionKind } from "@/lib/db/types";
 import type { PickerResult } from "./BlendCharacterPicker";
 
@@ -39,6 +39,17 @@ export interface CampaignBlendClientProps {
   canManage: boolean;
   /** Running-mate surrogate: rally, tour, and the fundraising lane only. */
   canSurrogate: boolean;
+  /**
+   * The state operations hub, when the host already loads it (the race page's
+   * map reads the same copy). Left out, the desk fetches its own.
+   */
+  stateOps?: ReturnType<typeof useStateOperations>;
+  /**
+   * The presidential map carries the state operations and presence controls on
+   * desktop, so the desktop panes leave them out. The phone layout keeps its
+   * compact list either way.
+   */
+  stateActionsOnMap?: boolean;
   onRefresh: () => void;
   onRefreshMe: () => void;
   /** Change the opposition-research target. Manager/nominee only. */
@@ -59,6 +70,8 @@ export function CampaignBlendClient({
   wire,
   canManage,
   canSurrogate,
+  stateOps,
+  stateActionsOnMap = false,
   onRefresh,
   onRefreshMe,
   onRetarget,
@@ -80,8 +93,8 @@ export function CampaignBlendClient({
   const [personalAmount, setPersonalAmount] = useState("");
   const [treasuryAmount, setTreasuryAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [ops, setOps] = useState<{ key: string; view: StateOperationsView } | null>(null);
-  const [reloadOps, setReloadOps] = useState(0);
+  const ownOps = useStateOperations(campaign.electionId, !stateOps);
+  const { view: opsView, reload: reloadOps } = stateOps ?? ownOps;
 
   const vm = useMemo(
     () =>
@@ -136,36 +149,6 @@ export function CampaignBlendClient({
     else setLedgerPage(forward);
   }, [ledgerTab, vm.ledger.pageCount]);
 
-  // The state operations hub. Fetched here rather than served with the page so
-  // an attack can refresh it without a full round trip. Keyed by election and
-  // read back through a match, so a response for a race the viewer has left
-  // cannot paint over the one they are looking at.
-  const opsKey = campaign.electionId ?? "";
-  const opsView = ops && ops.key === opsKey ? ops.view : null;
-
-  useEffect(() => {
-    if (!opsKey) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/elections/${opsKey}/state-operations`);
-        // 404 is the ordinary answer for a race with nothing to act on (a
-        // general election, a non-US seat, a viewer who is not a candidate).
-        if (!res.ok) return;
-        const payload = (await res.json()) as StateOperationsView | null;
-        // A 200 carrying something else is not the hub. Rendering it would
-        // throw inside the section and take the whole manager down with it.
-        if (!payload?.positives?.camp) return;
-        if (!cancelled) setOps({ key: opsKey, view: payload });
-      } catch {
-        // Non-critical: the section stays hidden and the rest of the page stands.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [opsKey, reloadOps]);
-
   const post = useCallback(
     async (key: string, url: string, body?: unknown) => {
       setBusy(key);
@@ -213,7 +196,7 @@ export function CampaignBlendClient({
       `/api/elections/${campaign.electionId}/state-attack`,
       { targetCandidateId, kind, stateId, ...(group ?? {}) }
     );
-    if (ok) setReloadOps((n) => n + 1);
+    if (ok) reloadOps();
   };
 
   // Camping and the home-state surge now live in the hub, so the standalone
@@ -303,7 +286,7 @@ export function CampaignBlendClient({
         />
       ) : null}
 
-      {showOps && opsView ? (
+      {showOps && opsView && !stateActionsOnMap ? (
         <StateOperationsSection
           view={opsView}
           busy={busy}
@@ -311,7 +294,7 @@ export function CampaignBlendClient({
           onChanged={() => {
             onRefresh();
             onRefreshMe();
-            setReloadOps((n) => n + 1);
+            reloadOps();
           }}
         />
       ) : null}
@@ -573,7 +556,7 @@ export function CampaignBlendClient({
             <div style={{ ...BLEND_LABEL, paddingBottom: 10 }}>Where you are campaigning</div>
             <BlendScopeInline>
               <StatePresencePanel
-                presence={presencePanel}
+                presence={stateActionsOnMap ? null : presencePanel}
                 onChanged={() => {
                   onRefresh();
                   onRefreshMe();
@@ -612,7 +595,7 @@ export function CampaignBlendClient({
             onChanged={() => {
               onRefresh();
               onRefreshMe();
-              setReloadOps((n) => n + 1);
+              reloadOps();
             }}
           />
         ) : null}
