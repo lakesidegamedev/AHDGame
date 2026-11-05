@@ -111,6 +111,13 @@ describe("useRaceMapCampaign", () => {
   });
 
   it("follows the campaign on screen in Campaign mode for someone on it", async () => {
+    // A manager reads the ticket's own list, so the rows come from the campaign-named call.
+    fetchJson.mockResolvedValue({
+      canBuild: true,
+      fxRate: 1,
+      states: [{ stateId: "OH", level: 3, nextCost: 100, builtThisTurn: false }],
+      racePresence: [],
+    });
     const { result } = renderHook(() => useRaceMapCampaign(election()), {
       wrapper: wrap(slots(deskFor("owner", true))),
     });
@@ -118,6 +125,52 @@ describe("useRaceMapCampaign", () => {
     expect(result.current.inPage).toBe(true);
     render(<>{result.current.panelExtra?.("OH")}</>);
     expect(screen.getByText("Your campaign here")).toBeTruthy();
+  });
+
+  it("offers a manager the build button for the ticket, naming the campaign", async () => {
+    fetchJson.mockResolvedValue({
+      canBuild: true,
+      fxRate: 1,
+      states: [{ stateId: "OH", level: 3, nextCost: 100, builtThisTurn: false }],
+      racePresence: [],
+    });
+    const { result } = renderHook(() => useRaceMapCampaign(election()), {
+      wrapper: wrap(slots(deskFor("owner", true))),
+    });
+    await waitFor(() => expect(result.current.presence?.levels).toEqual({ OH: 3 }));
+    expect(fetchJson.mock.calls[0][0]).toBe(
+      "/api/political-operations/state-org/list?campaignId=c1"
+    );
+    render(<>{result.current.panelExtra?.("OH")}</>);
+    expect(screen.getByRole("button", { name: /Build presence to level 4/ })).toBeTruthy();
+  });
+
+  it("offers the running mate the ticket's level and no build button", async () => {
+    // Owner-level view without manage access: the running mate.
+    const { result } = renderHook(() => useRaceMapCampaign(election()), {
+      wrapper: wrap(slots(deskFor("owner", false))),
+    });
+    await waitFor(() => expect(result.current.presence?.levels).toEqual({ OH: 3 }));
+    expect(fetchJson.mock.calls[0][0]).toBe("/api/political-operations/state-org/list");
+    render(<>{result.current.panelExtra?.("OH")}</>);
+    expect(screen.getByText("Your campaign here")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Build presence/ })).toBeNull();
+  });
+
+  it("offers the candidate their own build button without naming a campaign", async () => {
+    fetchJson.mockResolvedValue({
+      canBuild: true,
+      fxRate: 1,
+      states: [{ stateId: "OH", level: 3, nextCost: 100, builtThisTurn: false }],
+      racePresence: [],
+    });
+    const { result } = renderHook(() => useRaceMapCampaign(election({ myCampaignId: "c3" })), {
+      wrapper: wrap(slots(null)),
+    });
+    await waitFor(() => expect(result.current.presence?.levels).toEqual({ OH: 3 }));
+    expect(fetchJson.mock.calls[0][0]).toBe("/api/political-operations/state-org/list");
+    render(<>{result.current.panelExtra?.("OH")}</>);
+    expect(screen.getByRole("button", { name: /Build presence to level 4/ })).toBeTruthy();
   });
 
   it("adds no presence layer or actions when the campaign on screen is a rival's", () => {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   campaignMapIsEntry,
   canvassStateFromEligibility,
+  presenceBuildAccess,
   presenceLevelsFor,
   presenceSubject,
   stateActionSections,
@@ -135,5 +136,31 @@ describe("presenceSubject", () => {
   });
   it("is null when the viewer is on no ticket here", () => {
     expect(presenceSubject([candidates[0]], null)).toBeNull();
+  });
+});
+
+describe("presenceBuildAccess", () => {
+  it("lets the candidate build from their own list", () => {
+    expect(
+      presenceBuildAccess({ viewerIsCandidate: true, canManage: true, campaignId: "c1" })
+    ).toEqual({
+      kind: "own",
+    });
+  });
+
+  it("lets a manager build for the ticket by naming the campaign", () => {
+    expect(
+      presenceBuildAccess({ viewerIsCandidate: false, canManage: true, campaignId: "c1" })
+    ).toEqual({ kind: "campaign", campaignId: "c1" });
+  });
+
+  it("gives the running mate and everyone else no build", () => {
+    // The desk's canManage is already false for a running mate, an archived or a suspended campaign.
+    expect(
+      presenceBuildAccess({ viewerIsCandidate: false, canManage: false, campaignId: "c1" })
+    ).toBeNull();
+    expect(
+      presenceBuildAccess({ viewerIsCandidate: false, canManage: true, campaignId: null })
+    ).toBeNull();
   });
 });

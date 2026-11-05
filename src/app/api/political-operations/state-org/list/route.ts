@@ -10,6 +10,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
 import { getPartyHex } from "@/lib/utils/politics";
+import { resolvePresenceSubject } from "@/lib/campaigns/statePresenceAccess";
 import { loadRacePresence } from "@/lib/politicalOperations/racePresence";
 import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
@@ -26,12 +27,25 @@ import type { CharacterStateOrg, PoliticalParty } from "@/lib/db/types";
  * Auth: requireAuthWithCharacter
  * Errors: 401, 403
  */
-async function handleGET() {
+async function handleGET(request?: Request) {
   try {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
-    const character = auth.user.character;
     const db = await getDb();
+
+    // `?campaignId=` reads the same screen for a campaign's candidate: the
+    // candidate's own account or an appointed manager gets the ticket's rows,
+    // priced in the candidate's currency, and may build them.
+    const campaignId = request ? new URL(request.url).searchParams.get("campaignId") : null;
+    const character = campaignId
+      ? (
+          await resolvePresenceSubject(db, {
+            campaignId,
+            userId: auth.user.userId,
+            activeCharacterId: auth.user.character._id,
+          })
+        ).candidate
+      : auth.user.character;
     if (character.countryId !== "US") {
       const [{ residentPoliticalIds }, racePresence] = await Promise.all([
         loadUsPoliticalStateIds(db),

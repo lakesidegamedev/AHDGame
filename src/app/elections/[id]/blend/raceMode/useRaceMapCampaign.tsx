@@ -61,6 +61,8 @@ export function useRaceMapCampaign(election: ElectionDetail): {
     color: subject?.color ?? "#4F8EF7",
     candidateId: subject?.candidateId ?? null,
     viewerIsCandidate: subject?.viewerIsCandidate ?? true,
+    // Only the desk knows a manager from the running mate; Race mode cannot tell.
+    canManage: inCampaignMode ? desk.canManage : false,
     canOpenFieldOffice: inCampaignMode ? desk.canManage : (subject?.viewerIsCandidate ?? true),
   });
 
