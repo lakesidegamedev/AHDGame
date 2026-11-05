@@ -107,6 +107,26 @@ describe("FieldOfficeStatePanel", () => {
     expect(l.closeOffice).toHaveBeenCalledWith("o1", "Franklin");
   });
 
+  it("starts folded until a field-office view is on the map, and opens when one is", () => {
+    const l = layer(view());
+    const first = panel(l, { active: false });
+    const toggle = screen.getByRole("button", { name: "Field offices in Ohio" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText(/1 office, turnout boost/)).toBeNull();
+    first.rerender(
+      <FieldOfficeStatePanel
+        layer={l}
+        stateId="OH"
+        stateName="Ohio"
+        active
+        listCounties={false}
+        onShowOnMap={vi.fn()}
+      />
+    );
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText(/1 office, turnout boost/)).toBeTruthy();
+  });
+
   it("gives a viewer who cannot manage offices and lean, with no actions or prices", () => {
     const v = view({ canManage: false, costs: null, funds: null, actions: null });
     const l = layer(v, { selectedCounty: "39035" });
@@ -148,6 +168,7 @@ describe("FieldOfficeStatePanel", () => {
   it("lists the best counties for a manager when the map is behind the panel", () => {
     const l = layer(view());
     panel(l, { active: false, listCounties: true });
+    fireEvent.click(screen.getByRole("button", { name: "Field offices in Ohio" }));
     const top = screen.getByTestId("field-office-top");
     const names = Array.from(top.querySelectorAll("li")).map((li) => li.textContent);
     expect(names[0]).toMatch(/Cuyahoga/);
@@ -178,6 +199,7 @@ describe("FieldOfficeStatePanel", () => {
   it("offers a way onto the map to a viewer who has no campaign link", () => {
     const onShow = vi.fn();
     panel(layer(view({ canManage: false, costs: null })), { active: false, onShowOnMap: onShow });
+    fireEvent.click(screen.getByRole("button", { name: "Field offices in Ohio" }));
     fireEvent.click(screen.getByRole("button", { name: "Show counties on the map" }));
     expect(onShow).toHaveBeenCalled();
   });

@@ -475,6 +475,16 @@ export function PresidentialMap({
     if (!freeGestures) setUnlocked(true);
     zoomToState(id);
   };
+  // Choosing a field-office colouring with a state open does the same as that
+  // link: a locked map unlocks and flies into the state.
+  const chooseView = (view: MapDataView) => {
+    const wasField = isFieldOfficeView(dataView);
+    setDataView(view);
+    if (!isFieldOfficeView(view) || !selected || !docked) return;
+    if (wasField && (freeGestures || unlocked)) return;
+    if (!freeGestures) setUnlocked(true);
+    zoomToState(selected);
+  };
   const fieldPanel =
     selectedState && field ? (
       <FieldOfficeStatePanel
@@ -749,7 +759,7 @@ export function PresidentialMap({
               <DataViewPicker
                 options={viewOptions}
                 view={activeView}
-                onView={setDataView}
+                onView={chooseView}
                 candidates={pickable}
                 shareCand={shareCand}
                 onShareCand={setShareCandId}

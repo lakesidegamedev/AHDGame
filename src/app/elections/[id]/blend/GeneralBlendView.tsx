@@ -243,7 +243,7 @@ export function GeneralBlendView({
         color: "#fff",
       }}
     >
-      OPEN CAMPAIGN MANAGER
+      OPEN CAMPAIGN
     </Link>
   ) : null;
 

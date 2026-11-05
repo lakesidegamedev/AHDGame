@@ -8,7 +8,6 @@ import {
   leanFill,
   leanLabel,
   leanSourceNote,
-  officeCountyIds,
   officesByState,
   openBlockReason,
   pathCentre,
@@ -86,10 +85,6 @@ describe("field-office views on the map", () => {
     expect(value[1].fill).toBe(valueFill(0.8, 0.8));
     expect(value[1].field?.officeId).toBe("o1");
     expect(value[0].field?.officeId).toBeNull();
-  });
-
-  it("lists the counties that hold an office for the pins", () => {
-    expect(officeCountyIds([sub({ id: "A" }), sub({ id: "B", officeId: "o" })])).toEqual(["B"]);
   });
 
   it("counts offices by state from the region list", () => {

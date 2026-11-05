@@ -141,11 +141,6 @@ export function fieldOfficeCountyRows(
   }));
 }
 
-/** Counties that hold one of this campaign's offices, for the pins. */
-export function officeCountyIds(subs: readonly FieldOfficeSubdivisionDto[]): string[] {
-  return subs.filter((s) => s.officeId).map((s) => s.id);
-}
-
 /** Offices held per state, from the server's region list. */
 export function officesByState(
   regions: readonly { id: string; officeCount: number }[]

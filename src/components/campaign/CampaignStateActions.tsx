@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { BlendScopeInline } from "@/components/blend/BlendScope";
 import { BLEND } from "@/components/blend/tokens";
 import { Skeleton } from "@/components/ui";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { StatePresencePanel } from "@/app/campaign/[id]/components/StatePresencePanel";
 import { StateOperationsHere } from "@/app/campaign/[id]/components/StateOperationsSection";
 import { MyCampaignStateBlock, type MyCampaign } from "@/app/elections/[id]/blend/useMyCampaign";
@@ -112,18 +113,33 @@ export function CampaignStateActions({
 
   if (!show.presenceBlock && !show.movement && !show.operations && !show.canvass) return null;
 
+  // The presence block is the first section and always shows. The rest fold
+  // away, except the first of them when nothing sits above it.
+  const showBlock = show.presenceBlock && mine !== null;
+  let firstFolded = !showBlock;
+  const openFirst = () => {
+    const open = firstFolded;
+    firstFolded = false;
+    return open;
+  };
+
   return (
     <div data-testid="campaign-state-actions">
-      {show.presenceBlock && mine ? <MyCampaignStateBlock mine={mine} stateId={stateId} /> : null}
+      {showBlock && mine ? <MyCampaignStateBlock mine={mine} stateId={stateId} /> : null}
 
       <BlendScopeInline>
         {show.movement ? (
           <div style={{ marginTop: 16 }}>
-            <StatePresencePanel
-              presence={presence}
-              onChanged={changed}
-              focusState={{ id: stateId, name: stateName }}
-            />
+            <CollapsibleSection
+              label={presence?.phase === "primary" ? "Camping" : "Travel"}
+              defaultOpen={openFirst()}
+            >
+              <StatePresencePanel
+                presence={presence}
+                onChanged={changed}
+                focusState={{ id: stateId, name: stateName }}
+              />
+            </CollapsibleSection>
           </div>
         ) : null}
 
@@ -131,15 +147,17 @@ export function CampaignStateActions({
           <>
             <Divider />
             <div style={{ marginTop: 14 }}>
-              <StateOperationsHere view={ops} stateId={stateId} busy={busy} onAttack={attack} />
-              {error ? (
-                <p
-                  role="alert"
-                  style={{ margin: "8px 0 0", fontSize: 12.5, color: BLEND.negative }}
-                >
-                  {error}
-                </p>
-              ) : null}
+              <CollapsibleSection label="Operations" defaultOpen={openFirst()}>
+                <StateOperationsHere view={ops} stateId={stateId} busy={busy} onAttack={attack} />
+                {error ? (
+                  <p
+                    role="alert"
+                    style={{ margin: "8px 0 0", fontSize: 12.5, color: BLEND.negative }}
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </CollapsibleSection>
             </div>
           </>
         ) : null}
@@ -148,13 +166,15 @@ export function CampaignStateActions({
           <>
             <Divider />
             <div style={{ marginTop: 14 }} data-testid="state-canvass">
-              <CanvassingPanel
-                electionId={campaign.electionId}
-                countryId={desk.me.countryId ?? undefined}
-                characterActions={desk.me.actions ?? undefined}
-                characterFunds={desk.me.funds ?? undefined}
-                onResourcesSpent={() => void desk.refreshMe()}
-              />
+              <CollapsibleSection label="Canvassing" defaultOpen={openFirst()}>
+                <CanvassingPanel
+                  electionId={campaign.electionId}
+                  countryId={desk.me.countryId ?? undefined}
+                  characterActions={desk.me.actions ?? undefined}
+                  characterFunds={desk.me.funds ?? undefined}
+                  onResourcesSpent={() => void desk.refreshMe()}
+                />
+              </CollapsibleSection>
             </div>
           </>
         ) : null}
