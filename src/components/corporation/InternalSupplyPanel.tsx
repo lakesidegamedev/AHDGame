@@ -22,6 +22,17 @@ interface PolicyView {
   received: Record<string, number>;
   reserved: Record<string, number>;
   discountCostAnchor: number;
+  /** Funded worlds: what the company's sites sent each other last turn, per day. */
+  ownSites?: {
+    turn: number;
+    rows: {
+      commodity: string;
+      madeUnits: number;
+      ownSiteUnits: number;
+      soldUnits: number;
+      valueAnchor: number;
+    }[];
+  } | null;
   ownHaulTurn?: number | null;
   ownHauls?: {
     commodity: string;
@@ -94,7 +105,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
       !!draft.ownFirstAcrossStates !== !!view.policy.ownFirstAcrossStates);
   return (
     <DenseSection title={t("title")} meta={t("timing")}>
-      <p className="py-2 text-sm text-muted">{t("intro")}</p>
+      <p className="py-2 text-sm text-muted">{t(funded ? "fundedIntro" : "intro")}</p>
       {!view && !error && (
         <p className="text-sm text-muted" role="status">
           {t("loading")}
@@ -133,8 +144,17 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
                   setSaved(false);
                 }}
               >
-                <option value="market">{t("market")}</option>
-                <option value="own">{t("own")}</option>
+                {funded ? (
+                  <>
+                    <option value="own">{t("fundedOwn")}</option>
+                    <option value="market">{t("fundedMarket")}</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="market">{t("market")}</option>
+                    <option value="own">{t("own")}</option>
+                  </>
+                )}
                 <option value="group">{t("group")}</option>
               </select>
             </label>
@@ -191,24 +211,30 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
               {busy ? t("saving") : t("save")}
             </button>
           </div>
-          <label className="flex items-center gap-2 py-2 text-sm">
-            <input
-              type="checkbox"
-              disabled={disabled || draft.priority === "market"}
-              checked={draft.ownFirstAcrossStates === true}
-              onChange={(e) => {
-                setDraft({ ...draft, ownFirstAcrossStates: e.target.checked });
-                setSaved(false);
-              }}
-            />
-            {t("ownFirstAcrossStates")}
-          </label>
+          {!funded && (
+            <label className="flex items-center gap-2 py-2 text-sm">
+              <input
+                type="checkbox"
+                disabled={disabled || draft.priority === "market"}
+                checked={draft.ownFirstAcrossStates === true}
+                onChange={(e) => {
+                  setDraft({ ...draft, ownFirstAcrossStates: e.target.checked });
+                  setSaved(false);
+                }}
+              />
+              {t("ownFirstAcrossStates")}
+            </label>
+          )}
           {funded && (
             <p className="pb-2 text-sm text-muted">
               {t(pricing === "free" ? "freeTransfer" : "pricedTransfer")}
             </p>
           )}
-          <p className="pb-2 text-xs text-muted">{t("ownFirstFreightWarning")}</p>
+          {funded ? (
+            <p className="pb-2 text-sm text-muted">{t("fundedPriorityNote")}</p>
+          ) : (
+            <p className="pb-2 text-xs text-muted">{t("ownFirstFreightWarning")}</p>
+          )}
           {view.ownHauls && view.ownHauls.length > 0 && (
             <div className="border-t border-card-border py-2 text-xs text-muted">
               <p>{t("ownHaulTurn", { turn: view.ownHaulTurn ?? 0 })}</p>
@@ -235,15 +261,17 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
           <details className="border-t border-card-border py-2 text-sm text-muted">
             <summary className="cursor-pointer">{t("how")}</summary>
             <div className="mt-2 space-y-2">
-              <p>{t("scope")}</p>
+              <p>{t(funded ? "fundedScope" : "scope")}</p>
               {!funded && <p>{t("priceNote")}</p>}
-              <p>{t("constraints")}</p>
+              <p>{t(funded ? "fundedConstraints" : "constraints")}</p>
             </div>
           </details>
           <div className="border-t border-card-border py-2">
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-sm font-medium">
-                {view.lastTurn ? t("lastTurn", { turn: view.lastTurn }) : t("waiting")}
+                {view.lastTurn
+                  ? t(funded ? "ownSitesTurn" : "lastTurn", { turn: view.lastTurn })
+                  : t("waiting")}
               </p>
               <button
                 className="text-xs underline"
@@ -253,7 +281,8 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
                 {t("refresh")}
               </button>
             </div>
-            {view.lastTurn && (
+            {funded && view.ownSites && <OwnSitesTable rows={view.ownSites.rows} />}
+            {!funded && view.lastTurn && (
               <>
                 {Object.keys(view.received).length || Object.keys(view.reserved).length ? (
                   <table className="mt-2 w-full text-sm">
@@ -316,5 +345,40 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
         </p>
       )}
     </DenseSection>
+  );
+}
+
+const units = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+/** Funded worlds: each good the company made, and where it went last turn. */
+function OwnSitesTable({ rows }: { rows: NonNullable<PolicyView["ownSites"]>["rows"] }) {
+  const t = useTranslations("corporations.internalSupply");
+  const sent = rows.filter((r) => r.ownSiteUnits > 0);
+  if (sent.length === 0) return <p className="mt-1 text-xs text-muted">{t("noOwnSiteUnits")}</p>;
+  return (
+    <>
+      <table className="mt-2 w-full text-sm">
+        <caption className="sr-only">{t("deliveries")}</caption>
+        <thead>
+          <tr className="border-b border-card-border text-left text-xs text-muted">
+            <th className="py-1 font-normal">{t("commodity")}</th>
+            <th className="text-right font-normal">{t("made")}</th>
+            <th className="text-right font-normal">{t("toOwnSites")}</th>
+            <th className="text-right font-normal">{t("soldOutside")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sent.map((r) => (
+            <tr key={r.commodity} className="border-b border-card-border/50">
+              <th className="py-1 text-left font-normal">{r.commodity.replaceAll("_", " ")}</th>
+              <td className="text-right font-mono tabular-nums">{units(r.madeUnits)}</td>
+              <td className="text-right font-mono tabular-nums">{units(r.ownSiteUnits)}</td>
+              <td className="text-right font-mono tabular-nums">{units(r.soldUnits)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2 text-xs text-muted">{t("ownSitesNote")}</p>
+    </>
   );
 }

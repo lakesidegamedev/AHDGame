@@ -10,12 +10,15 @@ import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import type { SourcingOwnRoute } from "@/lib/logistics/ownRoutes";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { FREIGHT_CLASS_BY_COMMODITY } from "@/lib/logistics/freightClass";
+import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { DEFAULT_INTERNAL_SUPPLY_POLICY } from "@/lib/market/internalSupply/rules";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import {
   agreementLeftAGap,
+  fundedOwnSupplyReach,
   isLastTurnRecord,
   ownSupplyReach,
+  type OwnSupplyOutput,
   type OwnSupplyReach,
 } from "@/lib/corporations/rules/ownSupplyReach";
 
@@ -40,6 +43,8 @@ export async function explainOwnSupplyReach(args: {
   corporation: Corporation;
   sector: CorporateSector;
   siblings: readonly Pick<CorporateSector, "_id" | "stateId" | "producerSettlement">[];
+  /** Funded producer market: reasons come from the settled receipts, not the old policy. */
+  funded?: boolean;
   shortInputs: readonly string[];
   stateNameById: ReadonlyMap<string, string>;
   ownRouteDelivered: readonly SourcingOwnRoute[];
@@ -51,6 +56,7 @@ export async function explainOwnSupplyReach(args: {
   if (args.shortInputs.length === 0 || whollyOwnedByCorporation(args.corporation)) return;
   const sectorId = args.sector._id.toString();
   const sourcesByCommodity = new Map<string, string[]>();
+  const outputByCommodity = new Map<string, OwnSupplyOutput>();
   for (const s of args.siblings) {
     if (s._id.toString() === sectorId) continue;
     const receipt = s.producerSettlement;
@@ -60,6 +66,11 @@ export async function explainOwnSupplyReach(args: {
       const states = sourcesByCommodity.get(p.commodity) ?? [];
       states.push(s.stateId);
       sourcesByCommodity.set(p.commodity, states);
+      const out = outputByCommodity.get(p.commodity) ?? { made: 0, ownSites: 0, soldOutside: 0 };
+      out.made += p.producedUnits * TURNS_PER_DAY;
+      out.ownSites += Math.max(0, p.internalDeliveredUnits ?? 0) * TURNS_PER_DAY;
+      out.soldOutside += Math.max(0, p.soldUnits ?? 0) * TURNS_PER_DAY;
+      outputByCommodity.set(p.commodity, out);
     }
   }
   if (sourcesByCommodity.size === 0) return;
@@ -104,6 +115,23 @@ export async function explainOwnSupplyReach(args: {
   const priority = (args.corporation.internalSupplyPolicy ?? DEFAULT_INTERNAL_SUPPLY_POLICY)
     .priority;
   for (const [commodity, sourceStateIds] of sourcesByCommodity) {
+    if (args.funded) {
+      const reach = fundedOwnSupplyReach({
+        buyerStateId: args.sector.stateId,
+        sourceStateIds,
+        output: outputByCommodity.get(commodity) ?? { made: 0, ownSites: 0, soldOutside: 0 },
+        // Only an explicit choice sells on the market first (issue 5505).
+        marketFirst: args.corporation.internalSupplyPolicy?.priority === "market",
+        stateScoped: isStateScopedCommodity(commodity as CommodityType),
+        hasAgreement: agreed.has(commodity),
+      });
+      if (!reach) continue;
+      args.out.set(commodity, {
+        ...reach,
+        sourceStateNames: reach.sourceStateIds.map((id) => args.stateNameById.get(id) ?? id),
+      });
+      continue;
+    }
     const routedUnitsIn = args.ownRouteDelivered
       .filter(
         (r) =>

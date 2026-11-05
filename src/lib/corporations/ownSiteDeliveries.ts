@@ -19,7 +19,10 @@ export interface OwnSiteProduct {
   units: number;
   /** Share of this output's production (0-1). */
   share: number;
-  /** Units at the plant's asking price, ₳. */
+  /**
+   * Units at what they were worth to the company, ₳ per turn: the captive value
+   * when own sites were left short, otherwise the plant's asking price.
+   */
   valueAnchor: number;
 }
 
@@ -50,7 +53,7 @@ export function ownSiteDeliveries(
     produced += made;
     const u = positive(p.internalDeliveredUnits);
     if (u <= 0) continue;
-    const valueAnchor = u * positive(p.askingUnitPrice);
+    const valueAnchor = u * (positive(p.captiveUnitValue) || positive(p.askingUnitPrice));
     products.push({
       commodity: p.commodity,
       units: u,

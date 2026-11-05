@@ -37,6 +37,7 @@ import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
 import { shortageAsk } from "./shortageAskRules";
+import { householdSpendBase } from "./householdSpendRules";
 import {
   internalTransferUnitPrice,
   type InternalTransferPricing,
@@ -386,6 +387,13 @@ export function advanceProducerEconomy(input: {
    * market price (restartProbeRules, gameConfig.producerZombieRestartStage).
    */
   restartProbes?: boolean;
+  /**
+   * Households spend from income (householdSpendRules, producerHouseholdIncomeSpendStage):
+   * each wallet's basket budget is its spend share of this turn's wages plus a
+   * draw share of the rest of its cash, instead of the spend share of all its
+   * cash. Absent = off.
+   */
+  householdIncomeSpend?: { savingsDrawShare: number };
   /**
    * Record, per product, the value of own-site deliveries for a company whose
    * own sites were left short of that good: the lower of their highest bid and
@@ -796,6 +804,18 @@ export function advanceProducerEconomy(input: {
     const line = Math.max(0, amount - (deferredBills.get(id) ?? 0));
     if (line > 0) inputCredit[id] = line;
   }
+  // The cash a household's basket budget is read from (householdSpendRules).
+  const householdBudgetCash = (household: { accountId: string; spendFraction: number }) => {
+    const held = cash.get(household.accountId)!;
+    return input.householdIncomeSpend
+      ? householdSpendBase({
+          cash: held,
+          income: credits.get(household.accountId) ?? 0,
+          spendFraction: household.spendFraction,
+          savingsDrawShare: input.householdIncomeSpend.savingsDrawShare,
+        })
+      : held;
+  };
   const householdIds = new Set<string>();
   let consumerOrders = [...(input.externalOrders ?? [])];
   for (const household of input.households ?? []) {
@@ -803,7 +823,7 @@ export function advanceProducerEconomy(input: {
       throw new Error("Duplicate or unknown household wallet");
     householdIds.add(household.accountId);
     consumerOrders.push(
-      ...householdPurchaseOrders({ ...household, cash: cash.get(household.accountId)! })
+      ...householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
     );
   }
   const orders = [...consumerOrders];
@@ -1316,7 +1336,7 @@ export function advanceProducerEconomy(input: {
     consumerOrders = [
       ...(input.externalOrders ?? []),
       ...(input.households ?? []).flatMap((household) =>
-        householdPurchaseOrders({ ...household, cash: cash.get(household.accountId)! })
+        householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
       ),
     ];
   // Clear once more at the settled plan so every sale is backed by what is

@@ -209,6 +209,20 @@ export function SectorRow({
   // reads 40%+ while the sector loses money. The raw figure stays in the
   // tooltip. Null when redacted/fogged or below plants.
   const fillAdjusted = plantsMode ? (sector.fillAdjustedMarginPct ?? null) : null;
+  // Profit with income and charges between the company's own sites counted
+  // (issue 5385). Null without internal lines, so the booked figure shows.
+  const shownProfit = sector.managementProfit ?? sector.profit;
+  // Free transfers: what this site sent to the company's own sites, at its own
+  // asking price. Not booked; the margin counts it.
+  const ownSiteMemo =
+    plantsMode && sector.ownSiteMemoValue != null && sector.ownSiteMemoValue > 0 ? (
+      <span
+        className="block font-mono text-[11px] tabular-nums text-muted"
+        title="Free transfers book no sale. This is what this site sent your own sites, at its own asking price. The margin counts it so a supplier does not read as a loss."
+      >
+        {fmtMoney(sector.ownSiteMemoValue * scaleFactor)} to own sites
+      </span>
+    ) : null;
   // The part of the fill shortfall that is a DELIVERY failure. Null outside
   // plants, when redacted/fogged, and until the freight pass writes it.
   const deliveryLimited = plantsMode ? (sector.deliveryLimitedFraction ?? null) : null;
@@ -284,8 +298,8 @@ export function SectorRow({
         </div>
         <div className="flex justify-between gap-3 border-t border-card-border pt-0.5 font-semibold">
           <span className="text-foreground">Net profit</span>
-          <span className={`tabular-nums ${sector.profit >= 0 ? "text-success" : "text-error"}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+          <span className={`tabular-nums ${shownProfit >= 0 ? "text-success" : "text-error"}`}>
+            {fmtMoney(shownProfit * scaleFactor)}
           </span>
         </div>
       </div>
@@ -577,7 +591,7 @@ export function SectorRow({
     </div>
   );
 
-  const profitTone = sector.profit > 0 ? "text-success" : sector.profit < 0 ? "text-error" : "";
+  const profitTone = shownProfit > 0 ? "text-success" : shownProfit < 0 ? "text-error" : "";
   // The net margin is floored at -999.9 for a sector that sold nothing; past
   // three figures the exact value is in the title, not the column.
   const netMargin =
@@ -672,7 +686,8 @@ export function SectorRow({
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+            {fmtMoney(shownProfit * scaleFactor)}
+            {ownSiteMemo}
           </div>
 
           <div className="text-right font-mono text-xs tabular-nums text-muted">
@@ -752,7 +767,7 @@ export function SectorRow({
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+            {fmtMoney(shownProfit * scaleFactor)}
           </div>
 
           <div className="text-right font-mono text-xs tabular-nums text-muted">
@@ -866,7 +881,8 @@ export function SectorRow({
           </div>
           <div>
             <dt className="text-[11px] text-muted">Profit{scaleLabel}</dt>
-            <dd className={`${cellNum} ${profitTone}`}>{fmtMoney(sector.profit * scaleFactor)}</dd>
+            <dd className={`${cellNum} ${profitTone}`}>{fmtMoney(shownProfit * scaleFactor)}</dd>
+            {ownSiteMemo && <dd>{ownSiteMemo}</dd>}
             <dd
               className="font-mono text-[11px] tabular-nums text-muted"
               title={

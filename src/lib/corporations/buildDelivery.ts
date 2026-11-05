@@ -56,30 +56,72 @@ function safeCost(order: SectorBuildOrder): number {
 }
 
 /**
- * Capacity units this order converts into `capitalStock` ON `currentTurn`.
+ * The last turn whose build deliveries already landed, which a turn's delivery
+ * window starts after.
  *
- * Legacy: the whole order the turn it comes due (matching the pre-smooth
- * `landedBuildUnits` sum). Smooth: the slice between the previous turn and this
- * one, so the final slice lands on `onlineTurn`.
+ * Usually the previous turn. An economy pause skips the corporation turn while
+ * the turn counter keeps moving, so the build step can last have run many
+ * turns ago (#5169). `sectorSettledTurn` is the stamp the turn writes on the
+ * sector together with the deliveries themselves, so a replayed turn finds its
+ * own number and delivers nothing twice. A sector that has never been stamped
+ * (created during a pause, or after a reset) falls back to the world stamp:
+ * the last turn the corporation turn ran in this world. With neither, the
+ * previous turn. A stamp after `currentTurn` belongs to an older world and is
+ * ignored.
  */
-export function unitsDeliveredThisTurn(order: SectorBuildOrder, currentTurn: number): number {
-  const units = safeUnits(order);
-  if (units === 0) return 0;
-  if (!isSmooth(order)) return currentTurn >= order.onlineTurn ? units : 0;
-  const slice = deliveredFraction(order, currentTurn) - deliveredFraction(order, currentTurn - 1);
-  return slice > 0 ? units * slice : 0;
+export function resolveBuildSettledTurn(
+  currentTurn: number,
+  sectorSettledTurn: number | null | undefined,
+  worldSettledTurn: number | null | undefined
+): number {
+  for (const stamp of [sectorSettledTurn, worldSettledTurn]) {
+    if (typeof stamp === "number" && Number.isInteger(stamp) && stamp <= currentTurn) return stamp;
+  }
+  return currentTurn - 1;
+}
+
+/** Share of the order delivered after `settledTurn` up to `currentTurn`. */
+function deliveredSlice(order: SectorBuildOrder, settledTurn: number, currentTurn: number): number {
+  if (settledTurn >= currentTurn) return 0;
+  if (!isSmooth(order)) return currentTurn >= order.onlineTurn ? 1 : 0;
+  const slice = deliveredFraction(order, currentTurn) - deliveredFraction(order, settledTurn);
+  return slice > 0 ? slice : 0;
 }
 
 /**
- * Paid cost (anchor) that leaves CIP and becomes a booked plant ON
- * `currentTurn` — the cost twin of `unitsDeliveredThisTurn`.
+ * Capacity units this order converts into `capitalStock` for the turns after
+ * `settledTurn` up to and including `currentTurn`.
+ *
+ * Legacy: the whole order once it has come due (matching the pre-smooth
+ * `landedBuildUnits` sum). Smooth: every slice due in that span, so the final
+ * slice lands on `onlineTurn`, or on the first turn the build step runs after
+ * it. Nothing lands when `settledTurn` is not before `currentTurn`.
  */
+export function unitsDeliveredSince(
+  order: SectorBuildOrder,
+  settledTurn: number,
+  currentTurn: number
+): number {
+  return safeUnits(order) * deliveredSlice(order, settledTurn, currentTurn);
+}
+
+/** Paid cost that leaves CIP over the same span: the cost twin of `unitsDeliveredSince`. */
+export function costReleasedSince(
+  order: SectorBuildOrder,
+  settledTurn: number,
+  currentTurn: number
+): number {
+  return safeCost(order) * deliveredSlice(order, settledTurn, currentTurn);
+}
+
+/** Capacity units this order converts into `capitalStock` ON `currentTurn` alone. */
+export function unitsDeliveredThisTurn(order: SectorBuildOrder, currentTurn: number): number {
+  return unitsDeliveredSince(order, currentTurn - 1, currentTurn);
+}
+
+/** Paid cost that leaves CIP ON `currentTurn` alone. */
 export function costReleasedThisTurn(order: SectorBuildOrder, currentTurn: number): number {
-  const cost = safeCost(order);
-  if (cost === 0) return 0;
-  if (!isSmooth(order)) return currentTurn >= order.onlineTurn ? cost : 0;
-  const slice = deliveredFraction(order, currentTurn) - deliveredFraction(order, currentTurn - 1);
-  return slice > 0 ? cost * slice : 0;
+  return costReleasedSince(order, currentTurn - 1, currentTurn);
 }
 
 /**
