@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignPageHref } from "@/lib/campaignManager/links";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { formatFundsCompact, formatCompactNumber } from "@/lib/utils/formatters";
@@ -55,6 +56,8 @@ interface PresidentialCandidateTableProps {
    * suppressed for down-ballot races where the number has no vote effect.
    */
   showCampaignStrength?: boolean;
+  /** The race, so a campaign link opens it in Campaign mode on the race page. */
+  race?: { id: string; countryId: string };
 }
 
 export function PresidentialCandidateTable({
@@ -75,6 +78,7 @@ export function PresidentialCandidateTable({
   onSupport,
   campaignStrengthOverrides,
   showCampaignStrength = true,
+  race,
 }: PresidentialCandidateTableProps) {
   const hasTurns = tally.turnSnapshots.length > 0;
 
@@ -270,7 +274,11 @@ export function PresidentialCandidateTable({
                     {c.campaignFunds != null ? (
                       c.campaignId ? (
                         <Link
-                          href={`/campaign/${c.campaignId}`}
+                          href={campaignPageHref({
+                            campaignId: c.campaignId,
+                            electionId: race?.id,
+                            countryId: race?.countryId,
+                          })}
                           className="font-mono font-semibold tabular-nums text-xs text-amber-400 hover:text-amber-300 transition-colors"
                         >
                           {formatFundsCompact(c.campaignFunds)}

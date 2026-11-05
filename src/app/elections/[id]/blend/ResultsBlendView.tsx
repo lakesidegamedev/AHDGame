@@ -510,7 +510,7 @@ export function ResultsBlendView({
                       return {
                         id: t.id,
                         name: t.name,
-                        ...candidateLinks(c, data.election.countryId),
+                        ...candidateLinks(c, data.election),
                         partyName: t.party,
                         color: t.color,
                         figure: `${t.ev} EV`,

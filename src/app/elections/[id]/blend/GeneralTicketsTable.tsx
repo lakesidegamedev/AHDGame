@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignPageHref } from "@/lib/campaignManager/links";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
@@ -28,6 +29,8 @@ export interface GeneralTicketsProps {
   tickets: GeneralTicketVM[];
   campaigns: CampaignSummary[];
   campaignsLoading: boolean;
+  /** The race the tickets belong to, for the link into each campaign. */
+  race: CampaignRace;
   /** The endorse control from the view, which owns the busy and error state. */
   endorseButton: (ticket: GeneralTicketVM) => ReactNode;
 }
@@ -159,10 +162,26 @@ function MateAndManager({
   );
 }
 
-export function ViewCampaign({ campaign }: { campaign: CampaignSummary }) {
+export interface CampaignRace {
+  id: string;
+  countryId: string;
+}
+
+/** Opens the ticket's campaign in Campaign mode on this race page. */
+export function ViewCampaign({
+  campaign,
+  race,
+}: {
+  campaign: CampaignSummary;
+  race: CampaignRace;
+}) {
   return (
     <Link
-      href={`/campaign/${campaign.id}`}
+      href={campaignPageHref({
+        campaignId: campaign.id,
+        electionId: race.id,
+        countryId: race.countryId,
+      })}
       style={{
         display: "block",
         padding: "4px 10px",
@@ -217,6 +236,7 @@ export function TicketsTable({
   tickets,
   campaigns,
   campaignsLoading,
+  race,
   endorseButton,
 }: GeneralTicketsProps) {
   return (
@@ -306,7 +326,7 @@ export function TicketsTable({
                   <td style={{ ...TD, width: 1 }}>
                     <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {endorseButton(c)}
-                      {campaign ? <ViewCampaign campaign={campaign} /> : null}
+                      {campaign ? <ViewCampaign campaign={campaign} race={race} /> : null}
                     </span>
                   </td>
                 </tr>
@@ -354,6 +374,7 @@ export function TicketCards({
   tickets,
   campaigns,
   campaignsLoading,
+  race,
   endorseButton,
 }: GeneralTicketsProps) {
   return (
@@ -425,7 +446,7 @@ export function TicketCards({
             {endorse || campaign ? (
               <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
                 {endorse}
-                {campaign ? <ViewCampaign campaign={campaign} /> : null}
+                {campaign ? <ViewCampaign campaign={campaign} race={race} /> : null}
               </div>
             ) : null}
           </article>

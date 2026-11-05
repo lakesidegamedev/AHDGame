@@ -231,6 +231,8 @@ export interface ElectionResponse {
   myEndorsedCandidateId: string | null;
   /** The reader's party, set for presidential primaries only. */
   myPartyId?: string | null;
+  /** The reader's own campaign in a presidential race: candidate, manager or running mate. */
+  myCampaignId?: string | null;
   isAdmin: boolean;
   gameState: GameStateData | null;
 

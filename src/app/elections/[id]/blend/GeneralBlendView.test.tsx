@@ -312,7 +312,7 @@ describe("the tickets and the campaign operations are one table", () => {
     expect(cells[7].textContent).toBe("6");
     expect(cells[6].textContent).toBe("3");
     expect(within(row).getByRole("link", { name: "View campaign" }).getAttribute("href")).toBe(
-      "/campaign/camp1"
+      "/elections/e1?view=campaign&campaign=camp1"
     );
   });
 
@@ -478,7 +478,7 @@ describe("the hero's two sides stay level", () => {
     const rightPartyCell = heroGrids(container)[0]?.children[3] as HTMLElement;
     const partyLink = rightPartyCell.querySelector<HTMLAnchorElement>('a[href$="/parties/2"]');
     const campaignLink = rightPartyCell.querySelector<HTMLAnchorElement>(
-      'a[href="/campaign/camp2"]'
+      'a[href="/elections/e1?view=campaign&campaign=camp2"]'
     );
 
     expect(partyLink).not.toBeNull();

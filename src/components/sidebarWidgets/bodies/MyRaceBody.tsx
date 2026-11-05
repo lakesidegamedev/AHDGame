@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import type { MyRaceWidgetData } from "@/lib/sidebarWidgets/data/myRace";
 import { Meter } from "../MiniCharts";
 import { percent, Empty, WidgetLinks } from "./shared";
-import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { campaignManagerHref, campaignPageHref } from "@/lib/campaignManager/links";
 
 export function MyRaceBody({
   data,
@@ -24,7 +24,19 @@ export function MyRaceBody({
   const majorityMark = data.mySeats === null ? 50 : undefined;
   const links = [
     { href: campaignManagerHref({ race: data.electionId }), label: t("election") },
-    ...(data.campaignId ? [{ href: `/campaign/${data.campaignId}`, label: t("campaign") }] : []),
+    ...(data.campaignId
+      ? [
+          {
+            href: campaignPageHref({
+              campaignId: data.campaignId,
+              // A race that has not opened has no Blend screen to host the campaign.
+              electionId: data.status === "upcoming" ? null : data.electionId,
+              countryId: data.countryId,
+            }),
+            label: t("campaign"),
+          },
+        ]
+      : []),
   ];
   return (
     <div className="space-y-2">

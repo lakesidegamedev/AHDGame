@@ -269,6 +269,8 @@ export interface ElectionDetail {
   myEndorsedCandidateId: string | null;
   /** The reader's party, set for presidential primaries only. */
   myPartyId?: string | null;
+  /** The reader's own campaign in this race: candidate, manager or running mate. */
+  myCampaignId?: string | null;
   isAdmin?: boolean;
   gameState: {
     isActive: boolean;
