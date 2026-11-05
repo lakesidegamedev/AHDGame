@@ -617,6 +617,7 @@ export function GeneralElectionPanel({
             onSupport={handleSupportOpen}
             campaignStrengthOverrides={campaignStrengthOverrides}
             showCampaignStrength={isPresident}
+            race={electionId ? { id: electionId, countryId } : undefined}
           />
         )}
 

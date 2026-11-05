@@ -52,7 +52,7 @@ describe("role widget bodies", () => {
     const meters = screen.getAllByRole("meter");
     expect(meters.map((meter) => meter.getAttribute("aria-valuenow"))).toEqual(["40", "52.5"]);
     expect(href(w.myRace.election)).toBe("/campaign-manager?race=e1");
-    expect(href(w.myRace.campaign)).toBe("/campaign/c1");
+    expect(href(w.myRace.campaign)).toBe("/elections/e1?view=campaign&campaign=c1");
   });
 
   it("says when no votes are projected yet", () => {

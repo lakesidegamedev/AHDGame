@@ -29,7 +29,7 @@ import { MyCampaignStateBlock, useMyCampaign } from "./useMyCampaign";
 import { readableInk } from "@/lib/elections/marginTierShade";
 import { useBlendGround } from "@/components/blend/useBlendGround";
 import { useElectionCampaigns, type CampaignSummary } from "../components/useElectionCampaigns";
-import { FogNote, ViewCampaign, campaignFigures } from "./GeneralTicketsTable";
+import { FogNote, ViewCampaign, campaignFigures, type CampaignRace } from "./GeneralTicketsTable";
 import {
   buildPrimaryBlendViewModel,
   type PrimaryBlendVM,
@@ -210,9 +210,11 @@ function StateBoard({
 function MobileCampaignLine({
   campaign,
   loading,
+  race,
 }: {
   campaign: CampaignSummary | undefined;
   loading: boolean;
+  race: CampaignRace;
 }) {
   if (!campaign && !loading) return null;
   const figures = campaignFigures(campaign, loading);
@@ -246,7 +248,7 @@ function MobileCampaignLine({
         <span>{figures.actions} act.</span>
         <span>{figures.levels} lvl</span>
       </span>
-      {campaign ? <ViewCampaign campaign={campaign} /> : null}
+      {campaign ? <ViewCampaign campaign={campaign} race={race} /> : null}
     </div>
   );
 }
@@ -464,6 +466,7 @@ export function PrimaryBlendView({
   const mine = useMyCampaign({
     enabled: Boolean(myCandidate) && election.countryId === "US",
     campaignId: myCandidate?.campaignId ?? null,
+    race: election,
     color: myCandidate?.campaignColor ?? myCandidate?.partyColor ?? "#4F8EF7",
   });
   const ground = useBlendGround();
@@ -665,7 +668,7 @@ export function PrimaryBlendView({
             <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
               {figures.levels}
             </span>
-            <span>{campaign ? <ViewCampaign campaign={campaign} /> : null}</span>
+            <span>{campaign ? <ViewCampaign campaign={campaign} race={election} /> : null}</span>
           </div>
         );
       })}
@@ -796,7 +799,7 @@ export function PrimaryBlendView({
                     return {
                       id: f.id,
                       name: f.name,
-                      ...candidateLinks(c, election.countryId),
+                      ...candidateLinks(c, election),
                       partyName: c?.partyName ?? "",
                       color: f.color,
                       figure: `${f.pct}%`,
@@ -810,6 +813,7 @@ export function PrimaryBlendView({
                             <MobileCampaignLine
                               campaign={campaignForRow(f.id)}
                               loading={campaignsLoading}
+                              race={election}
                             />
                           </div>
                           <EndorseControl

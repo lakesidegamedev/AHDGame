@@ -123,6 +123,7 @@ import { resolvedSeatsEstimate } from "./resolvedSeatsEstimate";
 import { appendHistoricalTallyCandidates } from "./historicalTallyCandidates";
 import { seatEstimateForVoteTotals } from "./snapshotSeats";
 import { getPartyHex } from "@/lib/utils/politics";
+import { findViewerRaceCampaignId } from "@/lib/campaigns/queries/viewerRaceCampaign";
 import { getPrimaryWaveSchedule } from "@/lib/constants/primaryCalendar";
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
@@ -643,6 +644,7 @@ export async function _enrichElection(
   let generalVotes: GeneralVotesData | null = null;
   let myEndorsedCandidateId: string | null = null;
   let myPartyId: string | null = null;
+  let myCampaignId: string | null = null;
   /** Read-through of the tally's economic-referendum snapshot (president only). */
   let economicReferendum: ElectionResponse["economicReferendum"];
   /** Read-through of the tally's factor ledger, fog-of-war applied (president only). */
@@ -700,6 +702,12 @@ export async function _enrichElection(
         playerEndorsements
           .find((e) => e.characterId.toString() === myCharId)
           ?.candidateId.toString() ?? null;
+    }
+
+    // The reader's own campaign in a presidential race (candidate, manager or
+    // running mate), so the race page can open it in Campaign mode.
+    if (userId && isPresident) {
+      myCampaignId = await findViewerRaceCampaignId(db, electionOid, userId);
     }
 
     // The reader's party, so a primary screen offers endorsement only where the
@@ -1311,6 +1319,7 @@ export async function _enrichElection(
     myCharId: isFull ? myCharId : null,
     myEndorsedCandidateId: isFull ? myEndorsedCandidateId : null,
     myPartyId: isFull ? myPartyId : null,
+    myCampaignId: isFull ? myCampaignId : null,
     isAdmin: isFull ? isAdmin : false,
     gameState:
       isFull && gameState

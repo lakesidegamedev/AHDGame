@@ -45,6 +45,8 @@ import { captureProductEvent } from "@/lib/analytics/capture";
 import { getStoredConsent } from "@/components/CookieConsent";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useRaceEntry } from "@/components/elections/raceEntry/useRaceEntry";
+import { RaceModeProvider } from "../blend/raceMode/RaceModeContext";
+import { useRaceMode } from "../blend/raceMode/useRaceMode";
 
 // The stage screens are mutually exclusive: a race is concluded, in its general
 // phase, in its primary, or in the final-night broadcast, and exactly one of
@@ -337,6 +339,15 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const handleWithdraw = raceEntry.withdraw;
   const actionLoading = raceEntry.busy;
 
+  // Race / Campaign mode: only the Blend presidential screens have a campaign
+  // to switch to (not Russia, down-ballot races, or a race that has not opened).
+  const raceMode = useRaceMode({
+    enabled:
+      election?.electionType === "president" && election.countryId !== "RU" && !election.isUpcoming,
+    myCampaignId: election?.myCampaignId,
+  });
+  const campaignMode = raceMode.state.mode === "campaign" && raceMode.state.campaignId !== null;
+
   if (loading) return <ElectionDetailSkeleton />;
 
   if (error || !election)
@@ -444,7 +455,10 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   // current phase, and the admin tools for admins. The old "Also on this race" block (the old header, a second map,
   // the schedule, a second results table) repeated the stage and is gone.
   const showRaceDetail =
-    election.electionType === "president" && election.countryId !== "RU" && !localIsUpcoming;
+    election.electionType === "president" &&
+    election.countryId !== "RU" &&
+    !localIsUpcoming &&
+    !campaignMode;
   const desktopTail =
     showRaceDetail || election.isAdmin ? (
       <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
@@ -507,19 +521,21 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   }
   if (election.electionType === "president" && localIsEnded && currentResults) {
     return (
-      <div className="min-h-screen" style={{ background: BLEND.page, color: BLEND.ink }}>
-        {confirmDialogNode}
-        <ResultsBlendView
-          data={currentResults}
-          route="concluded"
-          election={election}
-          stageTitle={presidentialTitle(electionYear)}
-          stageNav={stageRailTop}
-          initialFocus={focusStateParam}
-        />
+      <RaceModeProvider value={raceMode.slots}>
+        <div className="min-h-screen" style={{ background: BLEND.page, color: BLEND.ink }}>
+          {confirmDialogNode}
+          <ResultsBlendView
+            data={currentResults}
+            route="concluded"
+            election={election}
+            stageTitle={presidentialTitle(electionYear)}
+            stageNav={stageRailTop}
+            initialFocus={focusStateParam}
+          />
 
-        {desktopTail}
-      </div>
+          {desktopTail}
+        </div>
+      </RaceModeProvider>
     );
   }
 
@@ -534,25 +550,27 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
     !localIsUpcoming
   ) {
     return (
-      <div className="min-h-screen" style={{ background: BLEND.page, color: BLEND.ink }}>
-        {confirmDialogNode}
-        <GeneralBlendView
-          election={election}
-          electionId={id}
-          wire={wire}
-          onRefresh={fetchElection}
-          stageTitle={presidentialTitle(electionYear)}
-          stageNav={stageRailTop}
-          stageActions={stageActions}
-          initialFocus={focusStateParam}
-        />
+      <RaceModeProvider value={raceMode.slots}>
+        <div className="min-h-screen" style={{ background: BLEND.page, color: BLEND.ink }}>
+          {confirmDialogNode}
+          <GeneralBlendView
+            election={election}
+            electionId={id}
+            wire={wire}
+            onRefresh={fetchElection}
+            stageTitle={presidentialTitle(electionYear)}
+            stageNav={stageRailTop}
+            stageActions={stageActions}
+            initialFocus={focusStateParam}
+          />
 
-        {/* Everything the hero above does not already say. The college bar, the
+          {/* Everything the hero above does not already say. The college bar, the
             per-ticket tally and the deadline strip all appear up there, so the
             blocks below are asked to leave them out rather than print the same
             standing twice on one page. */}
-        {desktopTail}
-      </div>
+          {desktopTail}
+        </div>
+      </RaceModeProvider>
     );
   }
 
@@ -566,19 +584,35 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
     !localIsUpcoming
   ) {
     return (
+      <RaceModeProvider value={raceMode.slots}>
+        <div className="min-h-screen" style={{ background: BLEND.page, color: BLEND.ink }}>
+          {confirmDialogNode}
+          <PrimaryBlendView
+            election={election}
+            wire={wire}
+            onRefresh={fetchElection}
+            stageTitle={presidentialTitle(electionYear)}
+            stageNav={stageRailTop}
+            stageActions={stageActions}
+            initialFocus={focusStateParam}
+          />
+
+          {desktopTail}
+        </div>
+      </RaceModeProvider>
+    );
+  }
+
+  // A race the Blend screens do not cover (its results failed to load) still
+  // opens a campaign named in the link, rather than dropping it.
+  if (campaignMode && raceMode.slots.campaign) {
+    return (
       <div className="min-h-screen" style={{ background: BLEND.page, color: BLEND.ink }}>
         {confirmDialogNode}
-        <PrimaryBlendView
-          election={election}
-          wire={wire}
-          onRefresh={fetchElection}
-          stageTitle={presidentialTitle(electionYear)}
-          stageNav={stageRailTop}
-          stageActions={stageActions}
-          initialFocus={focusStateParam}
-        />
-
-        {desktopTail}
+        {raceMode.slots.switcher ? (
+          <div className="px-4 py-3 sm:px-6">{raceMode.slots.switcher}</div>
+        ) : null}
+        {raceMode.slots.campaign}
       </div>
     );
   }

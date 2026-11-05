@@ -290,7 +290,7 @@ describe("campaign link", () => {
       ],
     });
     const vm = buildPrimaryBlendViewModel(input({ election: withCampaign }));
-    expect(vm.campaignHref).toBe("/campaign/camp1");
+    expect(vm.campaignHref).toBe("/elections/e1?view=campaign&campaign=camp1");
   });
 
   it("is absent when you have no campaign in this party", () => {
