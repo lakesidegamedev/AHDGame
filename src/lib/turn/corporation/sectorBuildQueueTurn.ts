@@ -20,9 +20,10 @@ import {
 } from "@/lib/constants/capacityEconomy";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
-  costReleasedThisTurn,
+  costReleasedSince,
   queueUndeliveredCost,
-  unitsDeliveredThisTurn,
+  resolveBuildSettledTurn,
+  unitsDeliveredSince,
 } from "@/lib/corporations/buildDelivery";
 
 export interface BuildQueueTurnArgs {
@@ -35,6 +36,11 @@ export interface BuildQueueTurnArgs {
   sectorFxRate: number;
   eraUnitScale: number;
   preset?: string;
+  /**
+   * Last turn the corporation turn ran in this world (gameState stamp). Only
+   * read for a sector that carries no stamp of its own.
+   */
+  worldBuildsSettledTurn?: number | null;
 }
 
 export interface BuildQueueTurn {
@@ -42,6 +48,11 @@ export interface BuildQueueTurn {
   isFlipTurn: boolean;
   /** The stored queue, minus rows too malformed to deliver. */
   existingQueue: SectorBuildOrder[];
+  /**
+   * Last turn whose deliveries already landed. This turn delivers everything
+   * due after it, so turns the economy pause skipped are caught up.
+   */
+  buildsSettledTurn: number;
   /** Capacity converting into `capitalStock` this turn. */
   landedBuildUnits: number;
   /** The cash those landing orders consumed, leaving CIP this turn. */
@@ -77,16 +88,29 @@ export function resolveBuildQueueTurn(args: BuildQueueTurnArgs): BuildQueueTurn 
       )
     : [];
   // A legacy order delivers its whole `unitsOrdered` the turn it comes due; a
-  // `smooth` order delivers only this turn's slice, so a large build ramps in
-  // instead of landing as one lump (see buildDelivery.ts). Both sum identically.
+  // `smooth` order delivers only the slices due since the build step last ran,
+  // so a large build ramps in instead of landing as one lump (see
+  // buildDelivery.ts). Both sum identically. Normally that is one turn's slice;
+  // after an economy pause it is every slice the paused turns skipped (#5169).
+  const buildsSettledTurn = resolveBuildSettledTurn(
+    currentTurn,
+    sector.buildDeliverySettledTurn,
+    args.worldBuildsSettledTurn
+  );
   const landedBuildUnits = plantsEnabled
-    ? existingQueue.reduce((sum, o) => sum + unitsDeliveredThisTurn(o, currentTurn), 0)
+    ? existingQueue.reduce(
+        (sum, o) => sum + unitsDeliveredSince(o, buildsSettledTurn, currentTurn),
+        0
+      )
     : 0;
   // P5: this cash leaves CIP this turn (the orders leave the queue), so it has
   // to arrive somewhere or the sector's paid basis silently drops to zero the
   // moment its plant comes online. It arrives in `capacityBookAnchor`.
   const landedBuildCostAnchor = plantsEnabled
-    ? existingQueue.reduce((sum, o) => sum + costReleasedThisTurn(o, currentTurn), 0)
+    ? existingQueue.reduce(
+        (sum, o) => sum + costReleasedSince(o, buildsSettledTurn, currentTurn),
+        0
+      )
     : 0;
   const outstandingOrders = plantsEnabled
     ? existingQueue.filter((o) => o.onlineTurn > currentTurn)
@@ -151,6 +175,7 @@ export function resolveBuildQueueTurn(args: BuildQueueTurnArgs): BuildQueueTurn 
   return {
     isFlipTurn,
     existingQueue,
+    buildsSettledTurn,
     landedBuildUnits,
     landedBuildCostAnchor,
     outstandingOrders,

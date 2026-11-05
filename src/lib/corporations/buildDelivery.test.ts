@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { SectorBuildOrder } from "@/lib/db/types";
 import {
+  costReleasedSince,
   costReleasedThisTurn,
   deliveredFraction,
   nextArrivalTurn,
   queueUndeliveredCost,
+  resolveBuildSettledTurn,
   steadyUnitsPerTurn,
   undeliveredCost,
   undeliveredUnits,
+  unitsDeliveredSince,
   unitsDeliveredThisTurn,
 } from "@/lib/corporations/buildDelivery";
 
@@ -153,5 +156,54 @@ describe("nextArrivalTurn", () => {
   it("is the next turn for a linear order and null once an order has landed", () => {
     expect(nextArrivalTurn(smooth(), 10)).toBe(11);
     expect(nextArrivalTurn(smooth(), 100)).toBeNull();
+  });
+});
+
+describe("buildDelivery: catching up turns the build step did not run (#5169)", () => {
+  it("starts after the sector's own stamp, then the world's, then the previous turn", () => {
+    expect(resolveBuildSettledTurn(130, 100, 90)).toBe(100);
+    expect(resolveBuildSettledTurn(130, undefined, 90)).toBe(90);
+    expect(resolveBuildSettledTurn(130, null, null)).toBe(129);
+  });
+
+  it("returns the current turn on a replay, so nothing lands twice", () => {
+    expect(resolveBuildSettledTurn(130, 130, 90)).toBe(130);
+  });
+
+  it("ignores a stamp from an older world with higher turn numbers", () => {
+    expect(resolveBuildSettledTurn(5, 700, 3)).toBe(3);
+    expect(resolveBuildSettledTurn(5, 700, 700)).toBe(4);
+    expect(resolveBuildSettledTurn(5, 2.5, undefined)).toBe(4);
+  });
+
+  it("lands an order due wholly inside a pause in full on the first turn after it", () => {
+    const o = smooth({ startTurn: 10, onlineTurn: 30 });
+    expect(unitsDeliveredSince(o, 5, 40)).toBeCloseTo(100, 9);
+    expect(costReleasedSince(o, 5, 40)).toBeCloseTo(1_000, 9);
+  });
+
+  it("lands the paused share of an order that spans the pause", () => {
+    const o = smooth({ startTurn: 0, onlineTurn: 100 });
+    // Settled through turn 20, paused to turn 50: 30 turns of slices owed.
+    expect(unitsDeliveredSince(o, 20, 50)).toBeCloseTo(30, 9);
+    // Ran normally up to 20 and catches up past the online turn: the rest.
+    expect(unitsDeliveredSince(o, 20, 120)).toBeCloseTo(80, 9);
+  });
+
+  it("delivers nothing when the span is empty", () => {
+    expect(unitsDeliveredSince(smooth(), 50, 50)).toBe(0);
+    expect(costReleasedSince(legacy(), 120, 120)).toBe(0);
+  });
+
+  it("matches the one-turn slices it replaces, summed over the span", () => {
+    const o = smooth({ unitsOrdered: 500, plantUnits: 100, startTurn: 0, onlineTurn: 7 });
+    let perTurn = 0;
+    for (let t = 3; t <= 9; t++) perTurn += unitsDeliveredThisTurn(o, t);
+    expect(unitsDeliveredSince(o, 2, 9)).toBeCloseTo(perTurn, 9);
+  });
+
+  it("still lands a legacy order once it has come due", () => {
+    expect(unitsDeliveredSince(legacy(), 90, 130)).toBe(100);
+    expect(unitsDeliveredSince(legacy(), 90, 99)).toBe(0);
   });
 });

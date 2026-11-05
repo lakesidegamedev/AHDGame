@@ -405,6 +405,110 @@ describe("plants build queue — smooth (per-turn) delivery", () => {
   });
 });
 
+describe("plants build queue — builds due inside an economy pause (#5169)", () => {
+  const STOCK = 5_000;
+  const smoothOrder = (): SectorBuildOrder => ({
+    unitsOrdered: 4_800,
+    costPaidAnchor: 480_000,
+    startTurn: 900,
+    onlineTurn: 900 + BUILD_TURNS,
+    smooth: true,
+  });
+
+  /** One sector turn at `currentTurn`; returns the gross units it delivered. */
+  function runAfterPause(
+    sector: Partial<CorporateSector>,
+    currentTurn: number,
+    worldBuildsSettledTurn?: number
+  ) {
+    const env = makeEnv("plants", currentTurn);
+    env.lookups.worldBuildsSettledTurn = worldBuildsSettledTurn;
+    const full = makeSector({
+      capitalStock: STOCK,
+      plantsStartTurn: 900,
+      constructionInProgressAnchor: 480_000,
+      ...sector,
+    });
+    processSector(env, makeCorp(), full, 1, undefined, 1);
+    const update = sectorUpdateOf(env);
+    const doc = applySectorOps(full as unknown as Record<string, unknown>, env);
+    const delivered = (update.capitalStock as number) / (1 - CAPITAL_DEPRECIATION_PER_TURN) - STOCK;
+    return { update, doc, delivered };
+  }
+
+  it("lands an order whose whole window was paused in full on the first turn after", () => {
+    const ord = smoothOrder();
+    const resume = ord.onlineTurn + 10;
+    const { update, doc, delivered } = runAfterPause(
+      { buildQueue: [ord], buildDeliverySettledTurn: 899 },
+      resume
+    );
+    expect(delivered).toBeCloseTo(ord.unitsOrdered, 0);
+    expect(doc.buildQueue as SectorBuildOrder[]).toEqual([]);
+    expect(doc.constructionInProgressAnchor).toBe(0);
+    expect(update.buildDeliverySettledTurn).toBe(resume);
+  });
+
+  it("lands the slices skipped by a pause that began mid-build", () => {
+    const ord = smoothOrder();
+    const settled = 900 + Math.floor(BUILD_TURNS / 4);
+    const { delivered, doc } = runAfterPause(
+      { buildQueue: [ord], buildDeliverySettledTurn: settled },
+      ord.onlineTurn + 3
+    );
+    const owed = ord.unitsOrdered * (1 - (settled - 900) / BUILD_TURNS);
+    expect(delivered).toBeCloseTo(owed, 0);
+    expect(doc.buildQueue as SectorBuildOrder[]).toEqual([]);
+  });
+
+  it("catches up a pause that ends before the order is done and keeps the rest in CIP", () => {
+    const ord = smoothOrder();
+    const resume = 900 + Math.floor(BUILD_TURNS / 2);
+    const { delivered, doc } = runAfterPause(
+      { buildQueue: [ord], buildDeliverySettledTurn: 900 },
+      resume
+    );
+    const done = (resume - 900) / BUILD_TURNS;
+    expect(delivered).toBeCloseTo(ord.unitsOrdered * done, 0);
+    expect((doc.buildQueue as SectorBuildOrder[]).length).toBe(1);
+    expect(doc.constructionInProgressAnchor as number).toBeCloseTo(
+      ord.costPaidAnchor * (1 - done),
+      0
+    );
+  });
+
+  it("catches an unstamped sector up from the world stamp", () => {
+    // Founded during the pause: no sector stamp, the world last ran at 899.
+    const ord = smoothOrder();
+    const { delivered } = runAfterPause({ buildQueue: [ord] }, ord.onlineTurn + 5, 899);
+    expect(delivered).toBeCloseTo(ord.unitsOrdered, 0);
+  });
+
+  it("delivers nothing on a replay of a turn that already landed", () => {
+    const ord = smoothOrder();
+    const turn = 900 + Math.floor(BUILD_TURNS / 2);
+    const { delivered } = runAfterPause(
+      { buildQueue: [ord], buildDeliverySettledTurn: turn },
+      turn,
+      turn
+    );
+    expect(delivered).toBeCloseTo(0, 6);
+  });
+
+  it("delivers one slice on a normal turn, stamped or not", () => {
+    const ord = smoothOrder();
+    const turn = 900 + Math.floor(BUILD_TURNS / 2);
+    const stamped = runAfterPause(
+      { buildQueue: [ord], buildDeliverySettledTurn: turn - 1 },
+      turn,
+      turn - 1
+    );
+    const unstamped = runAfterPause({ buildQueue: [ord] }, turn);
+    expect(stamped.delivered).toBeCloseTo(ord.unitsOrdered / BUILD_TURNS, 6);
+    expect(unstamped.delivered).toBeCloseTo(stamped.delivered, 9);
+  });
+});
+
 describe("plants — growth-ramp flip conversion", () => {
   const RAMPING = makeSector({
     capitalStock: IMPLIED_UNITS * CAPITAL_SEED_HEADROOM,

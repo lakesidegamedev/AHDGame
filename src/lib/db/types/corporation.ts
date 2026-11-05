@@ -1586,6 +1586,14 @@ export interface CorporateSector {
    * written outside plants mode.
    */
   buildQueue?: SectorBuildOrder[];
+  /**
+   * Last turn whose build deliveries landed on this sector, written by the
+   * corporation turn in the same update as the deliveries. The next run
+   * delivers every slice due after it, so an economy pause defers builds
+   * instead of dropping them, and a replayed turn delivers nothing twice
+   * (#5169). Absent until the sector's first run.
+   */
+  buildDeliverySettledTurn?: number;
   /** Frozen funded build claim and its cash escrow; absent on legacy sectors. */
   constructionFinancing?: import("@/lib/banking/rules/constructionBuild").ConstructionBuildClaim;
   /** A durable owner mutation excludes new construction claims until completion. */
