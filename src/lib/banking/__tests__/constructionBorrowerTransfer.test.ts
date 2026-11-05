@@ -11,6 +11,10 @@ import {
 import { acquireConstructionLoanLock } from "../constructionLoanLock";
 import { servicePlayerLoan } from "../namedLoanBook";
 import { constructionBorrowerTransferRefusal } from "../rules/constructionBorrowerTransfer";
+import {
+  releaseConstructionPropertyTransition,
+  reserveSectorsForTransition,
+} from "@/lib/corporations/securedConstructionProperty";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 export function securedSiteWorld(options: { buyerCurrency?: string; defaulted?: boolean } = {}) {
@@ -92,7 +96,7 @@ export function securedSiteWorld(options: { buyerCurrency?: string; defaulted?: 
       },
     },
   ]);
-  memory.seed("bankLoans", [loan]);
+  memory.seed("bankLoans", [{ ...loan }]);
   memory.seed("corporateSectors", [
     {
       _id: sectorId,
@@ -281,5 +285,68 @@ describe("secured construction borrower transfer", () => {
     expect(
       constructionBorrowerTransferRefusal({ ...base, toId: String(w.bankId), claim: w.claim })
     ).toMatch(/bank cannot take over/);
+  });
+
+  it("reserves a financed site under an ownership marker and moves it with its loan", async () => {
+    // The spin-off, nationalization, restructure and reabsorption shape.
+    const w = securedSiteWorld();
+    const prepared = await prepareConstructionBorrowerTransfers(w.db, {
+      sectors: [await w.sector()],
+      toId: w.buyerId,
+      toCurrency: "USD",
+      operationKey: "spin-off:test",
+    });
+    if (!prepared.ok) throw new Error(prepared.error);
+    expect(await reserveSectorsForTransition(w.db, [await w.sector()], "spin", "spin")).toBeNull();
+    const keys = await reserveSectorsForTransition(
+      w.db,
+      [await w.sector()],
+      "spin",
+      "spin",
+      false,
+      prepared.plan
+    );
+    expect(keys).toEqual([`spin:${w.sectorId.toHexString()}`]);
+    const sector = await w.sector();
+    const moved = await w.db.collection<CorporateSector>("corporateSectors").updateOne(
+      {
+        _id: w.sectorId,
+        "constructionPropertyTransition.key": keys![0],
+        ...prepared.plan.claimFilterFor(sector),
+      },
+      { $set: { corporationId: w.buyerId, ...prepared.plan.setFor(w.sectorId) } }
+    );
+    expect(moved.matchedCount).toBe(1);
+    await settleConstructionBorrowerTransfers(w.db, prepared.plan);
+    await releaseConstructionPropertyTransition(w.db, w.sectorId, keys![0]);
+    expect(String((await w.loanDoc()).borrowerId)).toBe(String(w.buyerId));
+    expect((await w.sector()).constructionPropertyTransition).toBeUndefined();
+    const buyerBefore = await w.cash(w.buyerId);
+    const result = await servicePlayerLoan(w.db, 21, w.bankId, await w.loanDoc(), "USD", "Lender");
+    expect(await w.cash(w.buyerId)).toBeCloseTo(buyerBefore - result.paidLocal);
+  });
+
+  it("puts a rolled-back site's loan back with its original owner", async () => {
+    const w = securedSiteWorld();
+    const prepared = await prepareConstructionBorrowerTransfers(w.db, {
+      sectors: [await w.sector()],
+      toId: w.buyerId,
+      toCurrency: "USD",
+      operationKey: "spin-off:rollback",
+    });
+    if (!prepared.ok) throw new Error(prepared.error);
+    await w.moveTitle(prepared);
+    // The caller fails later and restores title and claim together.
+    await w.db.collection("corporateSectors").updateOne(
+      { _id: w.sectorId },
+      {
+        $set: {
+          corporationId: w.sellerId,
+          "constructionFinancing.borrowerId": String(w.sellerId),
+        },
+      }
+    );
+    expect(await settleConstructionBorrowerTransfers(w.db, prepared.plan)).toEqual({ moved: 0 });
+    expect(String((await w.loanDoc()).borrowerId)).toBe(String(w.sellerId));
   });
 });

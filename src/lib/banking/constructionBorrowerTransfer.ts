@@ -75,6 +75,13 @@ function planFor(transfers: ConstructionBorrowerTransfer[]): ConstructionBorrowe
   };
 }
 
+/** One plan for an ownership change whose sites go to more than one new owner. */
+export function combineConstructionBorrowerTransferPlans(
+  plans: readonly ConstructionBorrowerTransferPlan[]
+): ConstructionBorrowerTransferPlan {
+  return planFor(plans.flatMap((plan) => plan.transfers));
+}
+
 /** A plan that moves no loans, for callers whose sites carry no secured claim. */
 export function emptyConstructionBorrowerTransferPlan(): ConstructionBorrowerTransferPlan {
   return planFor([]);
@@ -227,4 +234,107 @@ export async function settleConstructionBorrowerTransfers(
   }
   await db.collection<BankLoan>("bankLoans").bulkWrite(ops, { ordered: true });
   return { moved };
+}
+
+/**
+ * A financed site carries one claim bound to its own sector row, so it cannot
+ * be folded into another row of the same market. A financed survivor can take
+ * an unfinanced donor in, because its own claim and borrower do not change,
+ * but only while that claim is stable. Checked before any money moves.
+ */
+export async function securedSiteMergeRefusal(
+  db: Db,
+  sectors: readonly Pick<
+    CorporateSector,
+    | "_id"
+    | "corporationId"
+    | "stateId"
+    | "sectorType"
+    | "industryModel"
+    | "mediaDiscriminator"
+    | "constructionFinancing"
+    | "constructionPropertyTransition"
+  >[],
+  toId: ObjectId,
+  /** How the caller pairs a moving site with the survivor it merges into. */
+  mergeKey: (
+    sector: Pick<CorporateSector, "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator">
+  ) => string = (sector) =>
+    [
+      sector.stateId,
+      sector.sectorType,
+      sector.industryModel ?? "",
+      sector.mediaDiscriminator ?? "",
+    ].join("|")
+): Promise<string | null> {
+  const moving = sectors.filter((sector) => !sector.corporationId.equals(toId));
+  if (moving.length === 0) return null;
+  const survivors = await db
+    .collection<CorporateSector>("corporateSectors")
+    .find(
+      {
+        corporationId: toId,
+        stateId: { $in: [...new Set(moving.map((sector) => sector.stateId))] },
+        sectorType: { $in: [...new Set(moving.map((sector) => sector.sectorType))] },
+      },
+      {
+        projection: {
+          corporationId: 1,
+          stateId: 1,
+          countryId: 1,
+          sectorType: 1,
+          industryModel: 1,
+          mediaDiscriminator: 1,
+          constructionFinancing: 1,
+          constructionPropertyTransition: 1,
+        },
+      }
+    )
+    .toArray();
+  const lane = mergeKey;
+  const survivorByLane = new Map(survivors.map((sector) => [lane(sector), sector]));
+  for (const donor of moving) {
+    const survivor = survivorByLane.get(lane(donor));
+    if (!survivor || survivor._id.equals(donor._id)) continue;
+    if (hasProtectedConstructionClaim(donor))
+      return "A site in this transfer carries a construction loan, and the new owner already runs that market there. The two sites cannot be merged until the loan is repaid or the site is sold.";
+    if (survivor.constructionPropertyTransition)
+      return "The new owner's site in that market is in the middle of another ownership change. Try again shortly.";
+    if (hasProtectedConstructionClaim(survivor)) {
+      const refusal = constructionBorrowerTransferRefusal({
+        claim: survivor.constructionFinancing!,
+        loan: null,
+        sectorId: survivor._id.toHexString(),
+        fromId: survivor.corporationId.toHexString(),
+        toId: survivor.corporationId.toHexString(),
+        toCurrency: undefined,
+      });
+      if (refusal)
+        return `The new owner's site in that market cannot take this one in yet. ${refusal}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Claim predicate for a merge survivor: a stable financed site keeps its own
+ * claim and borrower while the donor's capacity folds in, and an unfinanced
+ * survivor must stay unfinanced.
+ */
+export function mergeSurvivorConstructionFilter(
+  survivor: Pick<
+    CorporateSector,
+    "corporationId" | "constructionFinancing" | "constructionPropertyTransition"
+  >
+): Record<string, unknown> {
+  if (!hasProtectedConstructionClaim(survivor)) return unprotectedConstructionPropertyFilter();
+  return {
+    $and: [
+      { constructionPropertyTransition: { $exists: false } },
+      transferableConstructionClaimFilter({
+        claimId: survivor.constructionFinancing!.claimId,
+        borrowerId: survivor.corporationId.toHexString(),
+      }),
+    ],
+  };
 }
