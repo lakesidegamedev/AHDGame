@@ -164,4 +164,20 @@ describe("FieldOfficesSection", () => {
     await waitFor(() => expect(container.textContent).not.toMatch(/Loading/));
     expect(container.textContent).toBe("");
   });
+
+  it("switches the state from the picker and asks for that state", async () => {
+    serve(
+      view({
+        regions: [
+          { id: "OH", name: "Ohio", officeCount: 1, effectPct: 0.8 },
+          { id: "PA", name: "Pennsylvania", officeCount: 0, effectPct: 0 },
+        ],
+      })
+    );
+    render(<FieldOfficesSection campaignId="c1" onChanged={vi.fn()} mapOnPage />);
+    fireEvent.change(await screen.findByLabelText("State"), { target: { value: "PA" } });
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith("/api/campaigns/c1/field-offices?region=PA")
+    );
+  });
 });

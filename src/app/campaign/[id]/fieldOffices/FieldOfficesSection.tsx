@@ -236,15 +236,7 @@ export function FieldOfficesSection({
       </div>
 
       {view.regions.length > 1 ? (
-        <RegionPicker
-          regions={view.regions}
-          value={view.selectedRegionId}
-          onChange={(id) => {
-            setSelected(null);
-            setHovered(null);
-            setRegion(id);
-          }}
-        />
+        <RegionPicker regions={view.regions} value={view.selectedRegionId} onChange={setRegion} />
       ) : null}
 
       {view.map || view.offices.length > 0 ? (
