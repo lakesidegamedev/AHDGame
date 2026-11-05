@@ -25,6 +25,8 @@ export interface ReinvestCandidate {
   fill: number;
   headroomUnits: number;
   interventionPriority: number;
+  /** Set when the growth leg was sized on short-lane bank finance (rules/shortageGrowthFinance). */
+  shortageGrowth?: { pressure: number; paybackTurns: number };
 }
 
 /** Pool lookup by (country, state, sectorType), over the shared snapshot. */
