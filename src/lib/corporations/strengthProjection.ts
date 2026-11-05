@@ -24,7 +24,7 @@ interface StrengthProjectionInput {
   rdScore?: number | null;
   liquidCurrencyCode?: CurrencyCode | string | null;
   strengthUpkeepStage?: number | null;
-  /** Active product projects the turn pays from the R&D budget before generic research. */
+  /** Active product projects the turn pays from part of the R&D budget. */
   rdDevelopmentProjects?: readonly RdDevelopmentProject[];
 }
 
@@ -38,8 +38,8 @@ export interface RdDevelopmentProject {
 }
 
 /**
- * Daily R&D budget left for generic research after the turn pays active
- * product development first (same allocator the turn runs, per turn).
+ * Daily R&D budget left for generic research after active product
+ * development takes its bounded share (same allocator the turn runs, per turn).
  */
 export function genericResearchDailyAnchor(
   dailyBudgetAnchor: number,
@@ -51,6 +51,14 @@ export function genericResearchDailyAnchor(
     projects,
   });
   return genericResearchAnchor * TURNS_PER_DAY;
+}
+
+/** Daily R&D budget that active product development takes, in anchor currency. */
+export function productDevelopmentDailyAnchor(
+  dailyBudgetAnchor: number,
+  projects: readonly RdDevelopmentProject[] | undefined
+): number {
+  return Math.max(0, dailyBudgetAnchor - genericResearchDailyAnchor(dailyBudgetAnchor, projects));
 }
 
 /** Cost still owed on projects in development, in anchor currency. */

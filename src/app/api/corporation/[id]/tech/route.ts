@@ -29,10 +29,11 @@ import {
 } from "@/lib/constants/corporations";
 import {
   calculateCorpStrengthProjection,
+  productDevelopmentDailyAnchor,
   remainingDevelopmentAnchor,
 } from "@/lib/corporations/strengthProjection";
 import { loadRdDevelopmentProjects } from "@/lib/corporations/rdDevelopmentFunding";
-import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { getCorpFxRate } from "@/lib/currency/corporationCapital";
 import { SECTOR_STRATEGIES, getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
@@ -307,6 +308,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const rdProjection = redact
       ? null
       : calculateCorpStrengthProjection({ ...corporation, rdDevelopmentProjects }, corpFxRate);
+    const rdBudgetAnchor = readCorpEconomicAnchor(
+      corporation.rdBudget ?? 0,
+      corporation.liquidCurrencyCode,
+      corpFxRate
+    );
+    const rdDevelopmentShare =
+      rdBudgetAnchor > 0
+        ? productDevelopmentDailyAnchor(rdBudgetAnchor, rdDevelopmentProjects) / rdBudgetAnchor
+        : 0;
 
     return NextResponse.json({
       enabled: true,
@@ -325,17 +335,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // with no anchor and no decay, which inflated the figure ~2.7× for non-USD
       // corps (e.g. JPY ~130× budget through the log curve) and disagreed with
       // every other tab (#903).
-      // While an active product is in development the turn pays the R&D budget
-      // to it first, so only the budget left over earns points (#1724).
+      // While an active product is in development it takes a bounded share of
+      // the R&D budget, so only the rest earns points (#1724).
       rdGainPerTurn: rdProjection ? Math.round(rdProjection.rdScoreNetChange * 10) / 10 : null,
       rdDecayPerTurn: rdProjection ? Math.round(rdProjection.rdScoreDecay * 10) / 10 : null,
       rdFundedProduct:
-        fundedProject &&
-        rdProjection &&
-        (corporation.rdBudget ?? 0) > 0 &&
-        rdProjection.rdScoreGrowth <= 0
+        fundedProject && rdProjection && rdDevelopmentShare > 0
           ? {
               label: fundedProject.label,
+              sharePct: Math.round(rdDevelopmentShare * 100),
               remainingCost: Math.round(
                 writeCorpEconomicLocal(
                   remainingDevelopmentAnchor([fundedProject]),

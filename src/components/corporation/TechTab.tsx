@@ -73,7 +73,7 @@ interface TechResponse {
   rdGainPerTurn?: number | null;
   rdDecayPerTurn?: number | null;
   /** Set while the R&D budget is paying an active product's development. */
-  rdFundedProduct?: { label: string; remainingCost: number } | null;
+  rdFundedProduct?: { label: string; sharePct: number; remainingCost: number } | null;
   liquidCapital?: number | null;
   cashPricing?: {
     dailyGrossOperatingScale: number;
@@ -292,17 +292,15 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={(data.rdScore ?? 0).toLocaleString("en-US")}
               hint={
                 data.rdGainPerTurn != null
-                  ? data.rdFundedProduct
-                    ? `+0/turn, decaying ${data.rdDecayPerTurn ?? 0}/turn`
-                    : `+${data.rdGainPerTurn}/turn`
+                  ? `${data.rdGainPerTurn >= 0 ? "+" : ""}${data.rdGainPerTurn}/turn`
                   : undefined
               }
             />
             {data.rdFundedProduct && (
               <KVRow
                 label="R&D budget"
-                value={`Funding ${data.rdFundedProduct.label} development`}
-                hint={`${fmtCash(data.rdFundedProduct.remainingCost)} still to pay`}
+                value={`${data.rdFundedProduct.sharePct}% goes to ${data.rdFundedProduct.label} development`}
+                hint={`${fmtCash(data.rdFundedProduct.remainingCost)} still to pay. The rest goes to research.`}
               />
             )}
             <KVRow label="Cash" value={fmtCash(data.liquidCapital)} />
