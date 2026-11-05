@@ -331,3 +331,74 @@ describe("hostile takeover with a banked subsidiary (ticket-1267)", () => {
     expect(db.collectionMocks.corporations.deleteOne).not.toHaveBeenCalled();
   }, 60_000);
 });
+
+describe("hostile takeover of a subsidiary that owes ordinary bank loans", () => {
+  function owedLoans(targetId: ObjectId, loans: Record<string, unknown>[]) {
+    db.collectionMocks.bankLoans.find.mockImplementation((filter: { borrowerId?: ObjectId }) =>
+      makeCursor(filter.borrowerId?.equals?.(targetId) ? loans : [])
+    );
+  }
+
+  it("makes the parent the borrower on the subsidiary's loans", async () => {
+    const parentId = new ObjectId();
+    const targetId = new ObjectId();
+    const loanId = new ObjectId();
+    const parent = {
+      _id: parentId,
+      name: "Holding Co",
+      liquidCapital: 1_000_000,
+      shareholders: [],
+    };
+    const target = {
+      _id: targetId,
+      name: "Borrower Co",
+      liquidCapital: 0,
+      sharePrice: 10,
+      shareholders: [{ corporationId: parentId, shares: 964 }],
+      liquidCurrencyCode: "USD",
+    };
+    await setupMocks({ parentId, targetId, parent, target });
+    owedLoans(targetId, [{ _id: loanId, status: "current", currency: "USD", outstanding: 500 }]);
+
+    const response = await postTakeover(targetId, parentId);
+
+    expect(response.status).toBe(200);
+    expect(db.collectionMocks.bankLoans.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: { $in: [loanId] }, borrowerId: targetId }),
+      { $set: { borrowerId: parentId } }
+    );
+    expect(db.collectionMocks.corporations.deleteOne).toHaveBeenCalled();
+  }, 60_000);
+
+  it("refuses before any money moves when a loan is in another currency", async () => {
+    const parentId = new ObjectId();
+    const targetId = new ObjectId();
+    const parent = {
+      _id: parentId,
+      name: "Holding Co",
+      liquidCapital: 1_000_000,
+      shareholders: [],
+    };
+    const target = {
+      _id: targetId,
+      name: "Borrower Co",
+      liquidCapital: 0,
+      sharePrice: 10,
+      shareholders: [{ corporationId: parentId, shares: 964 }],
+      liquidCurrencyCode: "USD",
+    };
+    await setupMocks({ parentId, targetId, parent, target });
+    owedLoans(targetId, [
+      { _id: new ObjectId(), status: "current", currency: "EUR", outstanding: 500 },
+    ]);
+
+    const response = await postTakeover(targetId, parentId);
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body.error).toMatch(/repaid in EUR/);
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.bankLoans.updateMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporations.deleteOne).not.toHaveBeenCalled();
+  }, 60_000);
+});

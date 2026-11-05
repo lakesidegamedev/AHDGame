@@ -39,6 +39,7 @@ vi.mock("@/lib/corporations/mergerReview/lifecycle", () => ({
 }));
 
 import { executeAgreedAcquisition } from "./executeAgreedAcquisition";
+import { referenceValuation } from "./referenceValuation";
 import { servicePlayerLoan } from "@/lib/banking/namedLoanBook";
 
 async function financedWorld() {
@@ -140,5 +141,109 @@ describe("agreed acquisition of a site with a secured construction loan", () => 
     const loan = (await w.db.collection<BankLoan>("bankLoans").findOne({ _id: w.loanId }))!;
     expect(String(loan.borrowerId)).toBe(String(w.tgt));
     expect(loan.constructionSettlementOwner).toBeUndefined();
+  });
+});
+
+describe("acquisition pricing and the target's bank loans", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const targetDoc = async (w: Awaited<ReturnType<typeof financedWorld>>) =>
+    (await w.db.collection("corporations").findOne({ _id: w.tgt })) as never;
+
+  it("nets the secured principal the acquirer takes on out of the price floor", async () => {
+    const w = await financedWorld();
+    const net = await referenceValuation(w.db, await targetDoc(w));
+    await w.db.collection("bankLoans").deleteOne({ _id: w.loanId });
+    const gross = await referenceValuation(w.db, await targetDoc(w));
+    expect(net.bankLoanDebtAnchor).toBe(SECURED_PRINCIPAL);
+    expect(gross.bankLoanDebtAnchor).toBe(0);
+    expect(gross.minimumPriceAnchor - net.minimumPriceAnchor).toBe(SECURED_PRINCIPAL);
+    // Bonds and facilities still gate a merger; bank loans move with it instead.
+    expect(net.debtAnchor).toBe(0);
+  });
+
+  it("never quotes a negative floor when the loans exceed the assets", async () => {
+    const w = await financedWorld();
+    await w.db
+      .collection("bankLoans")
+      .updateOne({ _id: w.loanId }, { $set: { outstanding: 1_000_000_000 } });
+    expect((await referenceValuation(w.db, await targetDoc(w))).minimumPriceAnchor).toBe(0);
+  });
+
+  async function plainLoan(
+    w: Awaited<ReturnType<typeof financedWorld>>,
+    over: Partial<BankLoan> = {}
+  ) {
+    const loanId = new ObjectId();
+    w.memory.seed("bankLoans", [
+      {
+        _id: loanId,
+        bankCorporationId: w.bankId,
+        charteredTurn: 2,
+        currency: "USD",
+        borrowerType: "corporation",
+        borrowerId: w.tgt,
+        principal: 40_000,
+        outstanding: 40_000,
+        ratePercent: 6,
+        originatedTurn: 150,
+        termTurns: 40,
+        status: "current",
+        ...over,
+      },
+    ]);
+    return loanId;
+  }
+
+  it("moves the target's ordinary loans to the acquirer, who services them next turn", async () => {
+    const w = await financedWorld();
+    const loanId = await plainLoan(w);
+    const r = await executeAgreedAcquisition({
+      db: w.db,
+      offer: w.offer as never,
+      currentTurn: 200,
+    });
+    expect(r.ok).toBe(true);
+    const loan = (await w.db.collection<BankLoan>("bankLoans").findOne({ _id: loanId }))!;
+    expect(String(loan.borrowerId)).toBe(String(w.acq));
+    expect(loan.outstanding).toBe(40_000);
+
+    const before = await readBalances(w);
+    const served = await servicePlayerLoan(w.db, 201, w.bankId, loan, "USD", "Lender");
+    expect(served.paidLocal).toBeGreaterThan(0);
+    expect((await readBalances(w)).acquirer).toBeCloseTo(before.acquirer - served.paidLocal);
+  });
+
+  it("refuses before any money moves when an ordinary loan is in another currency", async () => {
+    const w = await financedWorld();
+    const loanId = await plainLoan(w, { currency: "EUR" });
+    const r = await executeAgreedAcquisition({
+      db: w.db,
+      offer: w.offer as never,
+      currentTurn: 200,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/repaid in EUR/);
+    const b = await readBalances(w);
+    expect(b.acquirer).toBe(ACQUIRER_CASH);
+    expect(b.targetGone).toBe(false);
+    const loan = (await w.db.collection<BankLoan>("bankLoans").findOne({ _id: loanId }))!;
+    expect(String(loan.borrowerId)).toBe(String(w.tgt));
+    const secured = (await w.db.collection<BankLoan>("bankLoans").findOne({ _id: w.loanId }))!;
+    expect(String(secured.borrowerId)).toBe(String(w.tgt));
+    expect(secured.constructionSettlementOwner).toBeUndefined();
+  });
+
+  it("refuses while a loan request is still waiting on the bank", async () => {
+    const w = await financedWorld();
+    await plainLoan(w, { status: "pending" });
+    const r = await executeAgreedAcquisition({
+      db: w.db,
+      offer: w.offer as never,
+      currentTurn: 200,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/waiting on the bank/);
+    expect((await readBalances(w)).acquirer).toBe(ACQUIRER_CASH);
   });
 });

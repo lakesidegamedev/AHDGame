@@ -40,6 +40,10 @@ import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
 import { moveSectorToCorp } from "@/lib/corporations/moveSector";
 import {
+  assumeCorporateLoans,
+  corporateLoanAssumptionCheck,
+} from "@/lib/banking/corporateLoanAssumption";
+import {
   emptyConstructionBorrowerTransferPlan,
   prepareConstructionBorrowerTransfers,
   securedSiteMergeRefusal,
@@ -547,9 +551,15 @@ async function runAgreedAcquisition(
   // The target corporation is deleted and its sites move to the acquirer, so a
   // secured construction loan moves with its site: the acquirer becomes the
   // borrower and keeps servicing it. Checked and locked before any money moves.
+  // Its ordinary bank loans move with it the same way, checked here too.
   let constructionTransfers = emptyConstructionBorrowerTransferPlan();
   if (!subsidiary) {
-    const mergeRefusal = await securedSiteMergeRefusal(db, targetSectors, acquirer._id);
+    const mergeRefusal =
+      (await securedSiteMergeRefusal(db, targetSectors, acquirer._id)) ??
+      (await corporateLoanAssumptionCheck(db, {
+        fromId: target._id,
+        toCurrency: acquirerCurrency ?? undefined,
+      }));
     const prepared = mergeRefusal
       ? ({ ok: false, error: mergeRefusal } as const)
       : await prepareConstructionBorrowerTransfers(db, {
@@ -717,7 +727,12 @@ async function runAgreedAcquisition(
     await markAcquisitionProgress(db, offer._id, { sectorsMoved: sectorsMovedTotal });
     settlement.sectorsMoved = sectorsMovedTotal;
 
-    // 7. Tear down the target shell.
+    // 7. The acquirer now owes the target's ordinary bank loans. Moved after
+    // every step that can fail and before the delete, so a retry still finds
+    // any that are left on the target.
+    await assumeCorporateLoans(db, { fromId: target._id, toId: acquirer._id });
+
+    // 8. Tear down the target shell.
     const forexEnabledNow = await isForexEnabled();
     await cleanupShareMarketActivityForCorporations(db, [target._id], now, forexEnabledNow);
     await stampSubjectDeleted(db, target._id, {

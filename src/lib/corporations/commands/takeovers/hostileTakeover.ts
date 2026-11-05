@@ -85,6 +85,11 @@ import { bankTransferConflict, transferBankCharterToAcquirer } from "@/lib/banki
 import { applyBrandFacilityLoss } from "@/lib/corporations/brandFacilityLoss";
 import { debitSharesFromFund } from "@/lib/corporations/shareholderOps";
 import {
+  assumeCorporateLoans,
+  corporateLoanAssumptionCheck,
+  restoreCorporateLoans,
+} from "@/lib/banking/corporateLoanAssumption";
+import {
   mergeSurvivorConstructionFilter,
   prepareConstructionBorrowerTransfers,
   securedSiteMergeRefusal,
@@ -441,6 +446,12 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         (s) => `${s.stateId}:${s.sectorType}`
       );
       if (mergeRefusal) return errorResponse(409, mergeRefusal);
+      // Its ordinary bank loans become the parent's debt as well.
+      const loanRefusal = await corporateLoanAssumptionCheck(db, {
+        fromId: target._id,
+        toCurrency: resolveCorpLiquidCurrencyCode(parent) ?? undefined,
+      });
+      if (loanRefusal) return errorResponse(409, loanRefusal);
       const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
         sectors: targetSectors,
         toId: parent._id,
@@ -474,6 +485,8 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       // the catch block needs to reverse both the minority-payout debit (always
       // applied before the try) and the cash transfer (applied partway through).
       let cashTransferApplied = false;
+      // Ordinary bank loans moved to the parent, handed back if the target survives a failure.
+      let assumedLoanIds: ObjectId[] = [];
 
       // Ledger legs for every money move in this takeover. Collected as we go and
       // flushed only once the merge has fully committed, so the rollback path
@@ -970,6 +983,13 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         // bond units pointing at a deleted corp).
         await releaseCorporationHeldBondsToFloat(db, target._id, now);
 
+        // The parent now owes the target's ordinary bank loans. Moved after
+        // every step that can fail and just before the delete.
+        assumedLoanIds = await assumeCorporateLoans(db, {
+          fromId: target._id,
+          toId: parent._id,
+        });
+
         // Stamp tx history before deleting the absorbed corp so any
         // financial-ledger rows referencing the merged target (corp_dividend
         // it received, stock_trade_buy where it was the target, etc.) keep a
@@ -1087,6 +1107,17 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         const failureLabel = err instanceof Error ? err.message : String(err);
         // Loans follow only the sites that actually moved before the failure.
         await settleConstructionBorrowerTransfers(db, constructionTransfers);
+        if (
+          assumedLoanIds.length > 0 &&
+          (await db
+            .collection<Corporation>("corporations")
+            .countDocuments({ _id: target._id }, { limit: 1 })) > 0
+        )
+          await restoreCorporateLoans(db, {
+            ids: assumedLoanIds,
+            fromId: target._id,
+            toId: parent._id,
+          });
         try {
           await refundCorpLiquidCapital(db, parent._id, totalInParentCapital);
           if (cashTransferApplied && cashToParentLocal > 0) {
