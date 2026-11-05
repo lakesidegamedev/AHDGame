@@ -348,6 +348,16 @@ export interface GameConfig {
    */
   producerZombieRestartStage?: number;
   /**
+   * Funded producer market: >= 1 makes a household's basket budget its spend
+   * share of this turn's wages plus producerHouseholdSavingsDrawShare of the
+   * rest of its cash, instead of its spend share of all its cash, so money it
+   * could not spend in a shortage is not budgeted again every turn
+   * (householdSpendRules). 0 or absent = off.
+   */
+  producerHouseholdIncomeSpendStage?: number;
+  /** Share of savings a household spends each turn under producerHouseholdIncomeSpendStage. Absent = 0.3. */
+  producerHouseholdSavingsDrawShare?: number;
+  /**
    * Funded producer market: >= 1 lets an automatic seller that sold out last
    * turn, in a lane where buyers asked for more than they got, ask a step above
    * last turn's clearing price instead of at it (shortageAskRules). The step is

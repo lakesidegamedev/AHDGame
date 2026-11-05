@@ -79,6 +79,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerRunPlanStage: "",
   producerSalesAdvancePriceStage: "",
   producerZombieRestartStage: "",
+  producerHouseholdIncomeSpendStage: "",
+  producerHouseholdSavingsDrawShare: "",
   producerShortageAskStage: "",
   producerShortageAskMaxStep: "",
   producerFundedRestartStage: "",
