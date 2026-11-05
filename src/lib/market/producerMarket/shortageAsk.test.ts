@@ -120,6 +120,39 @@ const settle = (
 const ask = (result: ReturnType<typeof settle>) =>
   result.tradeReceipt.offers.find((o) => o.commodity === "iron")!.unitPrice;
 
+describe("shortage ask below cost (stage 2)", () => {
+  const base = { referenceUnitPrice: 217, pressure: 1.5, soldOut: true };
+  it("climbs while the price is under the seller's cost and stops at it", () => {
+    expect(shortageAsk({ ...base, clearingUnitPrice: 46, costUnitPrice: 95 })).toBeCloseTo(
+      46 * 1.05
+    );
+    expect(shortageAsk({ ...base, clearingUnitPrice: 93, costUnitPrice: 95 })).toBeCloseTo(95);
+  });
+  it("holds a seller that already earns above its cost: that shortage needs capacity", () => {
+    expect(shortageAsk({ ...base, clearingUnitPrice: 357, costUnitPrice: 207 })).toBe(357);
+  });
+  it("never passes the highest bid in the lane", () => {
+    expect(
+      shortageAsk({
+        ...base,
+        referenceUnitPrice: 2400,
+        clearingUnitPrice: 2100,
+        costUnitPrice: 3000,
+        topBuyerUnitPrice: 2157,
+      })
+    ).toBeCloseTo(2157);
+    expect(
+      shortageAsk({
+        ...base,
+        referenceUnitPrice: 2400,
+        clearingUnitPrice: 2100,
+        costUnitPrice: 3000,
+        topBuyerUnitPrice: 2000,
+      })
+    ).toBe(2100);
+  });
+});
+
 describe("shortage ask in the settlement", () => {
   it("is off unless passed: the settlement is identical", () => {
     expect(JSON.stringify(settle({ shortageAsk: undefined }))).toBe(JSON.stringify(settle()));
@@ -140,6 +173,14 @@ describe("shortage ask in the settlement", () => {
       { outputStock: [{ commodity: "iron", book: "world", units: 5 }] }
     );
     expect(ask(stocked)).toBeLessThanOrEqual(46);
+  });
+
+  it("below cost: a profitable mine holds, an under-cost mine climbs (stage 2)", () => {
+    const short = { shortageAsk: { pressureByLane: { "iron|world": 1.5 }, belowCost: true } };
+    // No wages or inputs: cost per unit is 0, the mine is profitable at 46, so it holds.
+    expect(ask(settle(short))).toBe(46);
+    // Wages of 950 over 10 planned units: cost 95 a unit, above 46, so it climbs 5%.
+    expect(ask(settle(short, { labourCost: 950 }))).toBeCloseTo(48.3);
   });
 
   it("never raises a manual price", () => {

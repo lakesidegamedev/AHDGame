@@ -810,6 +810,7 @@ export async function runFundedProducerTurn(
               ...(input.env.priceMaxMultiplier != null
                 ? { maxMultiplier: input.env.priceMaxMultiplier }
                 : {}),
+              ...((input.env.shortageAskStage ?? 0) >= 2 ? { belowCost: true } : {}),
             },
           }
         : {}),

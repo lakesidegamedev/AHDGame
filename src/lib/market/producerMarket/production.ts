@@ -392,6 +392,8 @@ export function advanceProducerEconomy(input: {
     pressureByLane: Readonly<Record<string, number>>;
     maxStep?: number;
     maxMultiplier?: number;
+    /** Step only while the seller's price is under its own cost, never past it or the top bid (stage 2). */
+    belowCost?: boolean;
   };
 }): {
   accounts: MarketAccount[];
@@ -1061,6 +1063,40 @@ export function advanceProducerEconomy(input: {
               referenceUnitPrice: output.referenceUnitPrice,
               pressure: input.shortageAsk.pressureByLane[laneKeyOf(output.commodity, output.book)],
               soldOut: recentSold != null && recentSold > 0 && stock <= recentSold * 0.01,
+              ...(input.shortageAsk.belowCost
+                ? (() => {
+                    // Cost per unit at market input prices (bid ceilings run far above the market).
+                    const variableAtMarket = p.inputs.reduce(
+                      (n, r) =>
+                        n +
+                        r.unitsPerOutput *
+                          expectedInputUnitPrice(
+                            r.maximumUnitPrice,
+                            input.clearingPriceByLane?.[laneKeyOf(r.commodity, r.book)]
+                          ),
+                      0
+                    );
+                    const plannedOut = plannedById.get(p.id)! * output.unitsPerOutput;
+                    const cost =
+                      output.unitsPerOutput > 0 && plannedOut > 0
+                        ? (variableAtMarket * weight) / output.unitsPerOutput +
+                          (fixed * weight) / plannedOut
+                        : undefined;
+                    const bids = quoteVolumesExcept(
+                      demandBooks,
+                      output.commodity,
+                      output.book,
+                      p.accountId
+                    ).filter((level) => level.units > 0);
+                    const top = bids.length
+                      ? Math.max(...bids.map((level) => level.unitPrice))
+                      : undefined;
+                    return {
+                      ...(cost != null ? { costUnitPrice: cost } : {}),
+                      ...(top != null ? { topBuyerUnitPrice: top } : {}),
+                    };
+                  })()
+                : {}),
               ...(input.shortageAsk.maxStep != null ? { maxStep: input.shortageAsk.maxStep } : {}),
               ...(input.shortageAsk.maxMultiplier != null
                 ? { maxMultiplier: input.shortageAsk.maxMultiplier }

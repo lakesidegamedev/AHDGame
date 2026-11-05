@@ -348,8 +348,10 @@ export interface GameConfig {
    * turn, in a lane where buyers asked for more than they got, ask a step above
    * last turn's clearing price instead of at it (shortageAskRules). The step is
    * 0.25 x (requested / delivered - 1), capped by producerShortageAskMaxStep,
-   * and the ask never passes reference x producerPriceMaxMultiplier. 0 or
-   * absent = off.
+   * and the ask never passes reference x producerPriceMaxMultiplier. >= 2
+   * also stops at the seller's own cost per unit (inputs at market prices plus
+   * wages and site bill) and at the highest bid in the lane, and steps only
+   * while the price is below that cost. 0 or absent = off.
    */
   producerShortageAskStage?: number;
   /** Largest raise in one turn under producerShortageAskStage. Absent = 0.05. */

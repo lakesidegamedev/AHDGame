@@ -43,6 +43,19 @@ export interface ShortageAskInput {
   maxStep?: number;
   /** Ceiling as a multiple of the reference price. */
   maxMultiplier?: number;
+  /**
+   * The seller's own cost per unit (inputs at market prices plus wages and site
+   * bill over its planned output). When given, the ask steps only while the
+   * clearing is below it and never past it: the step recovers prices to what
+   * goods cost to make, not above. A profitable seller in a short market holds
+   * its price; that shortage needs capacity, not a higher price.
+   */
+  costUnitPrice?: number;
+  /**
+   * Highest price any other buyer bid in this lane. When given, the ask never
+   * passes it, so a raise cannot price out every buyer at once.
+   */
+  topBuyerUnitPrice?: number;
 }
 
 /** The step this seller may take: 0 unless it sold out into a lane that went short. */
@@ -70,8 +83,12 @@ export function shortageAsk(input: ShortageAskInput): number {
       ? input.maxMultiplier
       : SHORTAGE_ASK_DEFAULT_MAX_MULTIPLIER;
   const reference = input.referenceUnitPrice;
-  const ceiling =
+  let ceiling =
     Number.isFinite(reference) && reference > 0 ? reference * multiplier : Number.POSITIVE_INFINITY;
+  const cost = input.costUnitPrice;
+  if (typeof cost === "number" && Number.isFinite(cost)) ceiling = Math.min(ceiling, cost);
+  const top = input.topBuyerUnitPrice;
+  if (typeof top === "number" && Number.isFinite(top)) ceiling = Math.min(ceiling, top);
   if (clearing >= ceiling) return clearing;
   return Math.min(ceiling, clearing * (1 + step));
 }
