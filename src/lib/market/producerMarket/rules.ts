@@ -287,6 +287,11 @@ export interface ProducerMarketResult {
     cost: number;
     internalCost?: number;
   }>;
+  /**
+   * Units each own offer handed to each own order, only when
+   * `trackInternalDeliveries` is on (captiveMarketValueRules prices them).
+   */
+  internalDeliveries?: Array<{ offerId: string; orderId: string; units: number }>;
   prices: Array<{
     commodity: string;
     book: string;
@@ -352,6 +357,8 @@ export function settleProducerMarket(input: {
    * and buy any remaining need from other sellers.
    */
   marketFirstAccounts?: readonly string[];
+  /** Report units moved between a company's own sites, per offer and order. */
+  trackInternalDeliveries?: boolean;
 }): ProducerMarketResult {
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
@@ -392,6 +399,16 @@ export function settleProducerMarket(input: {
   // Country books are optional: the shadow and planning passes settle without
   // them, and only the final funded settlement pays for the extra pass.
   const tracked = input.trackCountryBooks === true;
+  const internalDeliveries = input.trackInternalDeliveries
+    ? new Map<string, { offerId: string; orderId: string; units: number }>()
+    : null;
+  const recordInternal = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
+    if (!internalDeliveries || !(units > 0)) return;
+    const key = JSON.stringify([offer.id, order.id]);
+    const row = internalDeliveries.get(key) ?? { offerId: offer.id, orderId: order.id, units: 0 };
+    row.units += units;
+    internalDeliveries.set(key, row);
+  };
   const countryBookRows = new Map<string, FundedCountryBookRow>();
   const countryBookRow = (countryId: string, commodity: string): FundedCountryBookRow => {
     const key = JSON.stringify([countryId, commodity]);
@@ -763,6 +780,7 @@ export function settleProducerMarket(input: {
           remaining.set(offer.id, Math.max(0, available - units));
           const seller = offerResults.get(offer.id)!;
           seller.internalDeliveredUnits += units;
+          recordInternal(offer, order, units);
           seller.deliveredUnits += units;
           tradeCount++;
         }
@@ -836,6 +854,7 @@ export function settleProducerMarket(input: {
       remaining.set(offer.id, Math.max(0, available - units));
       const seller = offerResults.get(offer.id)!;
       seller.internalDeliveredUnits += units;
+      recordInternal(offer, order, units);
       seller.deliveredUnits += units;
       tradeCount++;
     }
@@ -1083,8 +1102,10 @@ export function settleProducerMarket(input: {
           buyer.deliveredUnits += units;
           buyer.cost += amount;
           const seller = offerResults.get(offer.id)!;
-          if (internal) seller.internalDeliveredUnits += units;
-          else seller.soldUnits += units;
+          if (internal) {
+            seller.internalDeliveredUnits += units;
+            recordInternal(offer, order, units);
+          } else seller.soldUnits += units;
           seller.deliveredUnits += units;
           seller.revenue += amount;
         }
@@ -1140,6 +1161,13 @@ export function settleProducerMarket(input: {
     },
     offers: [...offerResults.values()].sort((a, b) => compareId(a.id, b.id)),
     orders: [...orderResults.values()].sort((a, b) => compareId(a.id, b.id)),
+    ...(internalDeliveries
+      ? {
+          internalDeliveries: [...internalDeliveries.values()].sort(
+            (a, b) => compareId(a.offerId, b.offerId) || compareId(a.orderId, b.orderId)
+          ),
+        }
+      : {}),
     prices: [...prices.values()].sort((a, b) =>
       compareId(bookKey(a.commodity, a.book), bookKey(b.commodity, b.book))
     ),

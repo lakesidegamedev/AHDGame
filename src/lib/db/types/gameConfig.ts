@@ -306,6 +306,11 @@ export interface GameConfig {
    * what those sites bid (capped at the reference, never under the ask) when the
    * company's own sites were left short of that good, so a plant feeding its
    * own short consumers is not cut for a market price below its cost.
+   * >= 3 also books every own-site delivery in the site accounts at that turn's
+   * clearing price for the good (the selling site's ask when it did not trade):
+   * income for the selling site and the same charge for the receiving site, so
+   * company totals and cash are unchanged. Companies with their own internal
+   * transfer price keep it.
    */
   producerCaptiveDeliveryStage?: number;
   /**
