@@ -221,7 +221,7 @@ export interface CorporationDetail {
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   rdScoreNetChange?: number;
-  /** Active product projects paid from the R&D budget before generic research. */
+  /** Active product projects paid from part of the R&D budget. */
   rdDevelopmentProjects?: {
     id: string;
     stage: string;

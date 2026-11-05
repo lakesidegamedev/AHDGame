@@ -1410,6 +1410,12 @@ export default function CorporationDetailPage() {
 
                   {tab === "sectors" && (
                     <div className="space-y-6">
+                      {isCeo && (
+                        <LegacyProductProjects
+                          corporationId={id}
+                          currencyCode={corporation.liquidCurrencyCode}
+                        />
+                      )}
                       <ProductStudio corporationId={id} onUpdate={fetchCorporation} />
                       {isCeo && corporation.mediaOperatingModelsEnabled === true && (
                         <AdvertisingAgreementsPanel
@@ -1417,7 +1423,6 @@ export default function CorporationDetailPage() {
                           ownsMediaSector={sectors.some((sector) => sector.sectorType === "media")}
                         />
                       )}
-                      {isCeo && <LegacyProductProjects corporationId={id} />}
                       <SectorsTab
                         sectors={sectors}
                         isCeo={isCeo}
