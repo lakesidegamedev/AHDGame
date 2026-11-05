@@ -263,4 +263,36 @@ describe("own-site deliveries (ticket 1757)", () => {
     expect(screen.getByText(/75 units went free to your company's own sites/)).toBeTruthy();
     expect(screen.queryByText(/went unsold/)).toBeNull();
   });
+
+  it("says priced transfers were charged to own sites and shows the value", () => {
+    const base = plants as PlantsData;
+    render(
+      <MarketMoneyPanel
+        plants={{
+          ...base,
+          ownSiteUnits: 75,
+          pnl: { ...base.pnl, internalSupplyIncomeAnchor: 900 },
+        }}
+        sectorType="energy"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Exxon Mobil" }}
+      />
+    );
+    expect(screen.getByText(/those sites were charged M900/)).toBeTruthy();
+    expect(screen.queryByText(/went free/)).toBeNull();
+  });
+
+  it("says free transfers were free and shows the memo value", () => {
+    const base = plants as PlantsData;
+    render(
+      <MarketMoneyPanel
+        plants={{ ...base, ownSiteUnits: 75, pnl: { ...base.pnl, ownSiteMemoAnchor: 4_200 } }}
+        sectorType="energy"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Exxon Mobil" }}
+      />
+    );
+    expect(screen.getByText(/went free to your company's own sites/)).toBeTruthy();
+    expect(screen.getByText(/worth about M4200 at your asking price/)).toBeTruthy();
+  });
 });
