@@ -272,6 +272,13 @@ export interface ProducerOperatingResult {
     askingUnitPrice: number;
     /** Value of own-site deliveries when the company's own sites were short (stage 2); absent otherwise. */
     captiveUnitValue?: number;
+    /**
+     * This plant's share of what the company's other sites asked for this good
+     * this turn, filled from own supply or the market. Shared across the
+     * company's plants of the good by active capacity. Absent when no own site
+     * asked for it.
+     */
+    ownSiteDemandUnits?: number;
     realizedUnitPrice: number | null;
     unsoldUnits: number;
     lostUnits: number;
@@ -1807,6 +1814,55 @@ export function advanceProducerEconomy(input: {
     Math.abs(openingTotal - closingTotal) > Math.max(1e-7, Math.abs(openingTotal) * 1e-12)
   )
     throw new Error("Producer market cash did not reconcile");
+  // What the company's own sites asked for each good, shared across its plants
+  // of that good by active capacity: the next run plan reads it so a plant that
+  // supplies its own company ramps toward that demand (captiveDeliveryRules).
+  {
+    const settledById = new Map(market.orders.map((o) => [o.id, o]));
+    const asked = new Map<string, { units: number; bySite: Map<string, number> }>();
+    for (const p of plans)
+      for (const recipe of p.inputs) {
+        const o = settledById.get(JSON.stringify([p.id, "input", recipe.commodity]));
+        if (!o || !(o.requestedUnits > 0)) continue;
+        const key = p.accountId + "|" + recipe.commodity;
+        const row = asked.get(key) ?? { units: 0, bySite: new Map<string, number>() };
+        row.units += o.requestedUnits;
+        row.bySite.set(p.id, (row.bySite.get(p.id) ?? 0) + o.requestedUnits);
+        asked.set(key, row);
+      }
+    if (asked.size > 0) {
+      const resultById = new Map(results.map((x) => [x.id, x]));
+      const weight = new Map<string, number>();
+      const weightOf = (p: (typeof plans)[number], commodity: string) =>
+        p.outputs
+          .filter((o) => o.commodity === commodity)
+          .reduce((n, o) => n + o.unitsPerOutput, 0) * (resultById.get(p.id)?.activeUnits ?? 0);
+      for (const p of plans)
+        for (const commodity of new Set(p.outputs.map((o) => o.commodity))) {
+          const key = p.accountId + "|" + commodity;
+          if (!asked.has(key)) continue;
+          weight.set(key, (weight.get(key) ?? 0) + weightOf(p, commodity));
+        }
+      for (const p of plans) {
+        const r = resultById.get(p.id);
+        if (!r) continue;
+        const seen = new Set<string>();
+        for (const product of r.products) {
+          // One share per good, on its first row, so a good on two books is not counted twice.
+          if (seen.has(product.commodity)) continue;
+          seen.add(product.commodity);
+          const key = p.accountId + "|" + product.commodity;
+          const row = asked.get(key);
+          const total = weight.get(key) ?? 0;
+          if (!row || !(total > 0)) continue;
+          // A site's own input order for a good it makes is not demand on itself.
+          const others = row.units - (row.bySite.get(p.id) ?? 0);
+          const units = (others * weightOf(p, product.commodity)) / total;
+          if (units > 0) product.ownSiteDemandUnits = units;
+        }
+      }
+    }
+  }
   // A company whose own sites were cut short by a good it also makes values what
   // its plants sent them at what those sites bid (capped at the reference, never
   // under the ask), not at a market price below its cost
