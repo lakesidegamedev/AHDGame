@@ -508,7 +508,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/backup.ts",
     owner: "snapshot",
     argument: "entry.collection",
-    scopeHash: "1a4794bcc6779152d020d9d84205c489da7ea0eb968f02c34834d2e0932fc94d",
+    scopeHash: "d276eecca8148a87d9c11a108187f69937a3e594d3990147cb8bd8d61ee47a29",
     count: 1,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
