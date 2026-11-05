@@ -358,6 +358,8 @@ export function advanceProducerEconomy(input: {
   spilloverShare?: number;
   /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
   ownSitesFirst?: boolean;
+  /** Companies that explicitly chose market first: their own orders clear after outside buyers (rules.ts). */
+  marketFirstAccounts?: readonly string[];
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
   /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
@@ -1167,6 +1169,9 @@ export function advanceProducerEconomy(input: {
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
       ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
+      ...(input.marketFirstAccounts?.length
+        ? { marketFirstAccounts: input.marketFirstAccounts }
+        : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it

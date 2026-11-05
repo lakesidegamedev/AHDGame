@@ -640,6 +640,107 @@ describe("one funded producer market", () => {
       ]);
     });
 
+    it("market first (issue 5505): outside buyers clear the company's output before its own sites", () => {
+      const market = (marketFirst: boolean) =>
+        settleProducerMarket({
+          turn: 1,
+          accounts: [
+            { id: "corp", cash: 100 },
+            { id: "outside", cash: 100 },
+          ],
+          offers: [
+            {
+              id: "own",
+              accountId: "corp",
+              commodity: "energy",
+              book: "world",
+              units: 5,
+              unitPrice: 1,
+            },
+          ],
+          orders: [
+            {
+              id: "a-corp",
+              accountId: "corp",
+              commodity: "energy",
+              book: "world",
+              units: 4,
+              maximumUnitPrice: 2,
+            },
+            {
+              id: "b-outside",
+              accountId: "outside",
+              commodity: "energy",
+              book: "world",
+              units: 4,
+              maximumUnitPrice: 2,
+            },
+          ],
+          ownSitesFirst: true,
+          ...(marketFirst ? { marketFirstAccounts: ["corp"] } : {}),
+        });
+      const own = market(false);
+      expect(own.offers.find((o) => o.id === "own")!.internalDeliveredUnits).toBeCloseTo(4, 9);
+      expect(own.offers.find((o) => o.id === "own")!.soldUnits).toBeCloseTo(1, 9);
+      const first = market(true);
+      // The outside buyer takes 4 at the ask; the company's own site gets the 1 left, free.
+      expect(first.offers.find((o) => o.id === "own")!.soldUnits).toBeCloseTo(4, 9);
+      expect(first.offers.find((o) => o.id === "own")!.internalDeliveredUnits).toBeCloseTo(1, 9);
+      expect(first.orders.find((o) => o.id === "a-corp")!.deliveredUnits).toBeCloseTo(1, 9);
+    });
+
+    it("market first: no own output left means the company buys from other sellers", () => {
+      const result = settleProducerMarket({
+        turn: 1,
+        accounts: [
+          { id: "corp", cash: 100 },
+          { id: "outside", cash: 100 },
+          { id: "seller", cash: 0 },
+        ],
+        offers: [
+          {
+            id: "own",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 2,
+            unitPrice: 1,
+          },
+          {
+            id: "other",
+            accountId: "seller",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 1.5,
+          },
+        ],
+        orders: [
+          {
+            id: "a-corp",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 3,
+            maximumUnitPrice: 2,
+          },
+          {
+            id: "b-outside",
+            accountId: "outside",
+            commodity: "energy",
+            book: "world",
+            units: 2,
+            maximumUnitPrice: 2,
+          },
+        ],
+        ownSitesFirst: true,
+        marketFirstAccounts: ["corp"],
+      });
+      expect(result.offers.find((o) => o.id === "own")!.soldUnits).toBeCloseTo(2, 9);
+      expect(result.offers.find((o) => o.id === "other")!.soldUnits).toBeCloseTo(3, 9);
+      expect(result.orders.find((o) => o.id === "a-corp")!.deliveredUnits).toBeCloseTo(3, 9);
+    });
+
     it("on: a named supplier contract still reserves before own supply", () => {
       const result = settleProducerMarket({
         turn: 1,
