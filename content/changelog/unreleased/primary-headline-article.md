@@ -1,6 +1,6 @@
 ---
 date: 2026-11-05
-title: "Primary headline no longer says \"The The\""
+title: 'Primary headline no longer says "The The"'
 summary: >-
   The presidential primary screen read "The The Mafia primary" for parties whose
   name starts with "The". It now reads "The Mafia primary".
