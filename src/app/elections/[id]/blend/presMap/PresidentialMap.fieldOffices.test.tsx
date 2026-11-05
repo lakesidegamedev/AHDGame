@@ -121,7 +121,11 @@ function serve(v: FieldOfficeView) {
   );
 }
 
-function mount(config: Parameters<typeof PresidentialMap>[0]["fieldOffices"], desktop = true) {
+function mount(
+  config: Parameters<typeof PresidentialMap>[0]["fieldOffices"],
+  desktop = true,
+  inPage = false
+) {
   vi.stubGlobal(
     "matchMedia",
     (query: string) =>
@@ -140,6 +144,7 @@ function mount(config: Parameters<typeof PresidentialMap>[0]["fieldOffices"], de
       countryId="US"
       turn={10}
       fieldOffices={config}
+      inPage={inPage}
       renderPanel={() => <div>overview</div>}
     />
   );
@@ -235,11 +240,30 @@ describe("PresidentialMap field offices", () => {
     expect(lean.getAttribute("aria-checked")).toBe("true");
   });
 
+  it("unlocks a locked in-page map when a field-office colouring is chosen with a state open", async () => {
+    serve(view());
+    mount(config, true, true);
+    await waitFor(() => expect(document.querySelector("[data-state=OH]")).not.toBeNull());
+    fireEvent.click(document.querySelector("[data-state=OH]")!);
+    expect(document.querySelector("[data-locked]")?.getAttribute("data-locked")).toBe("true");
+
+    fireEvent.click(await screen.findByRole("radio", { name: "Field offices: lean" }));
+    expect(document.querySelector("[data-locked]")?.getAttribute("data-locked")).toBe("false");
+  });
+
+  it("leaves a locked in-page map alone when no state is open", async () => {
+    serve(view());
+    mount(config, true, true);
+    fireEvent.click(await screen.findByRole("radio", { name: "Field offices: lean" }));
+    expect(document.querySelector("[data-locked]")?.getAttribute("data-locked")).toBe("true");
+  });
+
   it("lists the best counties instead of the map on a phone", async () => {
     serve(view());
     mount(config, false);
     await waitFor(() => expect(document.querySelector("[data-state=OH]")).not.toBeNull());
     fireEvent.click(document.querySelector("[data-state=OH]")!);
+    fireEvent.click(await screen.findByRole("button", { name: "Field offices in Ohio" }));
     const top = await screen.findByTestId("field-office-top");
     expect(top.textContent).toMatch(/Cuyahoga/);
     expect(top.textContent).not.toMatch(/Franklin/);

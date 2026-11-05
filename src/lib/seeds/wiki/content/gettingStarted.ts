@@ -55,7 +55,7 @@ elections
 
 6. **Run a Commission Poll before you declare.** A Commission Poll costs 2 actions and about 25,000 campaign funds. It shows your topline and your five best and five worst demographic groups. If you are far behind, pick a different seat. A poll is much cheaper than a lost primary.
 
-7. **Declare during the primary window.** You can hold one active candidacy at a time. Missing the window means waiting a full cycle. Declaring costs no actions. You can withdraw from the race page, which also costs nothing, but the campaign spend you put into it is gone, you cannot re-enter that same race, and it goes to your rivals. After you declare, open **View Campaign** from the race page. That is where you spend funds, run ads, and canvass.
+7. **Declare during the primary window.** You can hold one active candidacy at a time. Missing the window means waiting a full cycle. Declaring costs no actions. You can withdraw from the race page, which also costs nothing, but the campaign spend you put into it is gone, you cannot re-enter that same race, and it goes to your rivals. After you declare, switch the race page to **Campaign** mode. That is where you spend funds, run ads, and canvass.
 
 8. **Spend the rest of your actions on the race, not on everything else.** Do not buy a corporation, a bond, or a central-bank position in week one unless you already understand the system.
 

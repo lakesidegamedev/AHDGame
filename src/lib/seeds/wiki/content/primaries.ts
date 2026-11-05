@@ -75,7 +75,7 @@ When a player is in the same party's primary, the NPP's score is halved. A 60-po
 - **Declare** during the window, from the race page (Nation > Elections). You need party membership at the moment you declare. You can join a party after spawn and before the deadline. Only one active candidacy at a time.
 - **Switch parties** by declaring under the new party. Your old candidacy is withdrawn automatically and your campaign moves across.
 - **Poll first.** A Quick Poll shows your topline appeal and your five best and worst groups. See [Polling](/wiki/polling).
-- **Campaign** from the Campaign Manager page to raise influence and favorability. See [Campaign Manager](/wiki/campaign-manager).
+- **Campaign** from the race page's Campaign mode to raise influence and favorability. See [Campaign Manager](/wiki/campaign-manager).
 - **Withdraw** if you must. It is final: you cannot re-enter that election, and withdrawing mid-primary is almost always a mistake. If you are losing, just lose. Your influence and favorability persist into the next cycle.
 
 Tips:

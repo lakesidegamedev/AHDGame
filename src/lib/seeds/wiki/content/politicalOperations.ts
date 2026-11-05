@@ -47,7 +47,7 @@ Going from level 5 to level 10 in one state costs about ₳11.2 million and adds
 
 ## Choosing where to build
 
-You can build a level from the Political Operations hub, from the State operations hub in the [Campaign Manager](/wiki/campaign-manager), from a state's primary page, or from a state on the presidential election map. All of them charge the same price. Presence is public: opposing campaigns can see how deep your network is in each state, and you can see theirs.
+You can build a level from the Political Operations hub, from a state's panel on the race page in Campaign mode, from a state's primary page, or from a state on the presidential election map. All of them charge the same price. Presence is public: opposing campaigns can see how deep your network is in each state, and you can see theirs.
 
 A modest vote-weight change is worth the most where it flips delegates or electoral votes, so concentrate early spending in delegate-rich states and in states where [polling](/wiki/polling) shows a close race.
 

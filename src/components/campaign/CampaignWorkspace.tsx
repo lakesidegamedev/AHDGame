@@ -340,20 +340,22 @@ export function CampaignDeskView({
             )}
 
           {/* The control that sets your state lives in the right rail with the
-              other things you can do about your standing. Canvassing stays
-              here because it needs the room, and it names the state it is
-              acting on, so it still reads on its own. */}
+              other things you can do about your standing. */}
           {canManage && campaign.electionInfo && !campaign.electionInfo.isEnded && (
             <TargetedAdsPanel campaignId={campaign.id} onResourcesSpent={fetchMe} />
           )}
+          {/* With the map as the way in (desktop), canvassing sits in the state
+              panel instead; phones keep it here. */}
           {canManage && campaign.electionInfo && !campaign.electionInfo.isEnded && (
-            <CanvassingPanel
-              electionId={campaign.electionId}
-              countryId={myCountryId ?? undefined}
-              characterActions={myActions ?? undefined}
-              characterFunds={myFunds ?? undefined}
-              onResourcesSpent={fetchMe}
-            />
+            <div className={stateActionsOnMap ? "lg:hidden" : undefined} data-testid="desk-canvass">
+              <CanvassingPanel
+                electionId={campaign.electionId}
+                countryId={myCountryId ?? undefined}
+                characterActions={myActions ?? undefined}
+                characterFunds={myFunds ?? undefined}
+                onResourcesSpent={fetchMe}
+              />
+            </div>
           )}
 
           {canManage && (

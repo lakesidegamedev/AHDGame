@@ -512,7 +512,7 @@ export function PrimaryBlendView({
         color: "#fff",
       }}
     >
-      OPEN CAMPAIGN MANAGER
+      OPEN CAMPAIGN
     </Link>
   ) : null;
 

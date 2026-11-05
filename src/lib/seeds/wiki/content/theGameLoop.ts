@@ -79,7 +79,7 @@ elections
 
 1. **Build** (no race open for your office): Campaign, ads, donor network, party influence.
 2. **Primary:** Elections, then the race, then declare. Your standing is your alignment plus Favorability plus PI. Over the primary's closing window your party's registered voters cast ballots split by that standing, and the top count per party advances (for president, pledged delegates).
-3. **General:** the same race page with a live tally. Sustain PI and Favorability through the last 4 turns and use **View Campaign** to spend.
+3. **General:** the same race page with a live tally. Sustain PI and Favorability through the last 4 turns and use **Campaign** mode on the race page to spend.
 
 \`\`\`guide-screenshot
 campaign
