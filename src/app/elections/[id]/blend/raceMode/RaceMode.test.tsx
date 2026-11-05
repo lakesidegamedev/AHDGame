@@ -35,13 +35,18 @@ describe("PresidentialStage modes", () => {
   });
 
   it("keeps the switch beside the title in Race mode", () => {
-    stage({ switcher: <span>the switch</span>, campaign: null });
+    stage({ switcher: <span>the switch</span>, campaign: null, desk: null, mapAbove: false });
     expect(screen.getByText("the switch")).toBeTruthy();
     expect(screen.getByText("national map")).toBeTruthy();
   });
 
   it("swaps the race body for the workspace in Campaign mode and keeps the stage", () => {
-    stage({ switcher: <span>the switch</span>, campaign: <div>campaign desk</div> });
+    stage({
+      switcher: <span>the switch</span>,
+      campaign: <div>campaign desk</div>,
+      desk: null,
+      mapAbove: false,
+    });
     expect(screen.getByTestId("campaign-mode").textContent).toBe("campaign desk");
     expect(screen.getByText("The 1992 Presidential Election")).toBeTruthy();
     expect(screen.getByText("wire ticker")).toBeTruthy();
@@ -50,6 +55,29 @@ describe("PresidentialStage modes", () => {
     expect(screen.queryByText("national map")).toBeNull();
     expect(screen.queryByText("scoreboard")).toBeNull();
     expect(screen.queryByText("college snake")).toBeNull();
+  });
+});
+
+describe("PresidentialStage Campaign mode map", () => {
+  it("keeps the map above the workspace when the map is the way into a state", () => {
+    stage({
+      switcher: null,
+      campaign: <div>campaign desk</div>,
+      desk: null,
+      mapAbove: true,
+    });
+    const map = screen.getByTestId("campaign-map");
+    expect(map.textContent).toBe("national map");
+    const desk = screen.getByTestId("campaign-mode");
+    // The map comes first in the page, then the workspace.
+    expect(map.compareDocumentPosition(desk) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("scoreboard")).toBeNull();
+  });
+
+  it("leaves the workspace alone for a race without the map entry", () => {
+    stage({ switcher: null, campaign: <div>campaign desk</div>, desk: null, mapAbove: false });
+    expect(screen.queryByTestId("campaign-map")).toBeNull();
+    expect(screen.queryByText("national map")).toBeNull();
   });
 });
 

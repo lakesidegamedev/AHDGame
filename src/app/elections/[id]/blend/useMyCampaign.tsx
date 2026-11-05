@@ -7,6 +7,7 @@ import { fetchJson } from "@/lib/observability/fetchJson";
 import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import { BLEND, BLEND_LABEL, FONT } from "@/components/blend/tokens";
 import { campaignPageHref } from "@/lib/campaignManager/links";
+import { presenceLevelsFor, type RacePresenceEntry } from "@/lib/campaignManager/mapActions";
 
 interface PresenceRow {
   stateId: string;
@@ -24,6 +25,8 @@ export interface MyCampaign {
   levels: Record<string, number>;
   rows: Record<string, PresenceRow>;
   canBuild: boolean;
+  /** The viewer may open field offices for this campaign (manager or nominee). */
+  canOpenFieldOffice: boolean;
   busy: string | null;
   error: string | null;
   build: (stateId: string) => Promise<void>;
@@ -31,16 +34,33 @@ export interface MyCampaign {
 
 /**
  * The reader's own presidential campaign, for the map: Campaign Presence by
- * state and the action to build it, from the same routes the Political
- * Operations tab uses. Null when the reader is not running in this race.
+ * state and, for the candidate, the action to build it, from the same routes
+ * the Political Operations tab uses. A manager or the running mate sees the
+ * ticket's levels (presence is public in the race-wide list) but building it
+ * stays the candidate's, as the build route enforces. Null when the reader is
+ * not on a campaign in this race.
  */
 export function useMyCampaign(args: {
   enabled: boolean;
   campaignId: string | null;
   race: { id: string; countryId: string };
   color: string;
+  /** The ticket whose presence is shown; for the candidate this is the reader. */
+  candidateId?: string | null;
+  /** The reader is the candidate. Only the candidate's own list is theirs to build. */
+  viewerIsCandidate?: boolean;
+  /** The reader may open field offices for the campaign. */
+  canOpenFieldOffice?: boolean;
 }): MyCampaign | null {
-  const { enabled, campaignId, race, color } = args;
+  const {
+    enabled,
+    campaignId,
+    race,
+    color,
+    candidateId = null,
+    viewerIsCandidate = true,
+    canOpenFieldOffice = true,
+  } = args;
   const [rows, setRows] = useState<Record<string, PresenceRow>>({});
   const [canBuild, setCanBuild] = useState(false);
   const [fxRate, setFxRate] = useState<number>(1);
@@ -50,14 +70,34 @@ export function useMyCampaign(args: {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    fetchJson<{ canBuild?: boolean; fxRate?: number; states?: PresenceRow[] }>(
-      "/api/political-operations/state-org/list",
-      { signal: controller.signal, feature: "presidential-map-presence" }
-    )
+    fetchJson<{
+      canBuild?: boolean;
+      fxRate?: number;
+      states?: PresenceRow[];
+      racePresence?: RacePresenceEntry[];
+    }>("/api/political-operations/state-org/list", {
+      signal: controller.signal,
+      feature: "presidential-map-presence",
+    })
       .then((body) => {
-        setCanBuild(Boolean(body.canBuild));
-        if (typeof body.fxRate === "number") setFxRate(body.fxRate);
-        setRows(Object.fromEntries((body.states ?? []).map((r) => [r.stateId, r])));
+        if (viewerIsCandidate) {
+          setCanBuild(Boolean(body.canBuild));
+          if (typeof body.fxRate === "number") setFxRate(body.fxRate);
+          setRows(Object.fromEntries((body.states ?? []).map((r) => [r.stateId, r])));
+          return;
+        }
+        // Someone else's ticket: the list's own rows are the reader's character,
+        // not the campaign's. The race-wide list carries the ticket's levels.
+        setCanBuild(false);
+        const levels = presenceLevelsFor(body.racePresence, candidateId);
+        setRows(
+          Object.fromEntries(
+            Object.entries(levels).map(([stateId, level]) => [
+              stateId,
+              { stateId, level, nextCost: 0 },
+            ])
+          )
+        );
       })
       .catch((err: unknown) => {
         // fetchJson reports the failure; the map just shows no presence layer.
@@ -65,7 +105,7 @@ export function useMyCampaign(args: {
           setError("Could not load your campaign.");
       });
     return () => controller.abort();
-  }, [enabled]);
+  }, [enabled, viewerIsCandidate, candidateId]);
 
   const build = useCallback(
     async (stateId: string) => {
@@ -108,6 +148,7 @@ export function useMyCampaign(args: {
     levels: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, r.level])),
     rows,
     canBuild,
+    canOpenFieldOffice,
     busy,
     error,
     build,
@@ -165,7 +206,7 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
           {mine.error}
         </p>
       ) : null}
-      {mine.campaignId ? (
+      {mine.campaignId && mine.canOpenFieldOffice ? (
         <Link
           href={campaignPageHref({
             campaignId: mine.campaignId,

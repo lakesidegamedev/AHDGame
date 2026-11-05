@@ -24,7 +24,7 @@ import { PresidentialMap } from "./presMap/PresidentialMap";
 import { StateSquares } from "./presMap/StateSquares";
 import { BattlegroundMap } from "@/components/elections/general/BattlegroundMap";
 import { CollegeSnake } from "./presMap/CollegeSnake";
-import { MyCampaignStateBlock, useMyCampaign } from "./useMyCampaign";
+import { useRaceMapCampaign } from "./raceMode/useRaceMapCampaign";
 import { PresidentialStage, presidentialTitle } from "./PresidentialStage";
 import { presidentialResultsLive } from "./liveState";
 import { ElectionDatesLine } from "./ElectionDatesLine";
@@ -80,15 +80,9 @@ export function GeneralBlendView({
     [election, wire, rail, ground]
   );
 
-  // The reader's own campaign in this race: presence by state on the map, and
-  // building it from the state overview.
-  const myCandidate = election.allCandidates.find((c) => c.isYou) ?? null;
-  const mine = useMyCampaign({
-    enabled: Boolean(myCandidate) && election.countryId === "US",
-    campaignId: myCandidate?.campaignId ?? null,
-    race: election,
-    color: myCandidate?.campaignColor ?? myCandidate?.partyColor ?? "#4F8EF7",
-  });
+  // The reader's campaign in this race on the map: presence by state, and what
+  // the state panel offers for it (see useRaceMapCampaign).
+  const mapCampaign = useRaceMapCampaign(election);
   const live = presidentialResultsLive(election);
   const mapModel = useMemo(() => buildPresMapModel(election, ground), [election, ground]);
 
@@ -669,12 +663,9 @@ export function GeneralBlendView({
               countryId={election.countryId}
               turn={election.gameState?.currentTurn ?? null}
               focusRequest={focus}
-              presence={mine ? { levels: mine.levels, color: mine.color } : null}
-              panelExtra={
-                mine
-                  ? (stateId) => <MyCampaignStateBlock mine={mine} stateId={stateId} />
-                  : undefined
-              }
+              presence={mapCampaign.presence}
+              inPage={mapCampaign.inPage}
+              panelExtra={mapCampaign.panelExtra}
             />
           }
           squares={

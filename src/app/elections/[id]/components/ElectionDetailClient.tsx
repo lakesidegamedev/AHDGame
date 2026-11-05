@@ -345,6 +345,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
     enabled:
       election?.electionType === "president" && election.countryId !== "RU" && !election.isUpcoming,
     myCampaignId: election?.myCampaignId,
+    countryId: election?.countryId,
   });
   const campaignMode = raceMode.state.mode === "campaign" && raceMode.state.campaignId !== null;
 
@@ -405,7 +406,11 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   // the old page header below the stage, which the desktop no longer renders.
   // `?state=OH` opens that state on the stage (the old per-state page
   // redirects here). Only a plain state code is honoured.
-  const stateParam = searchParams.get("state")?.toUpperCase() ?? null;
+  // In Campaign mode the old campaign deep link (`?tab=field&region=OH`) opens
+  // that state on the map too, since the map is the way into a state's actions.
+  const stateParam =
+    searchParams.get("state")?.toUpperCase() ??
+    (raceMode.slots.mapAbove ? (searchParams.get("region")?.toUpperCase() ?? null) : null);
   const focusStateParam = stateParam && /^[A-Z]{2}$/.test(stateParam) ? stateParam : null;
 
   const stageRailTop = (

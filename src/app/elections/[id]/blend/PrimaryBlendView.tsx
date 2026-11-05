@@ -25,7 +25,7 @@ import type { PresMapModel, PresMapState } from "./presMap/presMapModel";
 import { STATE_NAMES } from "./presMap/usStates";
 import { mixToward } from "./presMap/dataViews";
 import type { CountySource } from "./presMap/countyStore";
-import { MyCampaignStateBlock, useMyCampaign } from "./useMyCampaign";
+import { useRaceMapCampaign } from "./raceMode/useRaceMapCampaign";
 import { readableInk } from "@/lib/elections/marginTierShade";
 import { useBlendGround } from "@/components/blend/useBlendGround";
 import { useElectionCampaigns, type CampaignSummary } from "../components/useElectionCampaigns";
@@ -460,15 +460,9 @@ export function PrimaryBlendView({
     [election, partyId, wire, detail, selectedStateId]
   );
 
-  // The reader's own campaign in this race: presence by state on the map, and
-  // building it from the state overview.
-  const myCandidate = election.allCandidates.find((c) => c.isYou) ?? null;
-  const mine = useMyCampaign({
-    enabled: Boolean(myCandidate) && election.countryId === "US",
-    campaignId: myCandidate?.campaignId ?? null,
-    race: election,
-    color: myCandidate?.campaignColor ?? myCandidate?.partyColor ?? "#4F8EF7",
-  });
+  // The reader's campaign in this race on the map: presence by state, and what
+  // the state panel offers for it (see useRaceMapCampaign).
+  const mapCampaign = useRaceMapCampaign(election);
   const ground = useBlendGround();
   /**
    * Campaign operations for the field table: funds, actions, levels and the
@@ -973,12 +967,9 @@ export function PrimaryBlendView({
               counties={vm.board.length > 0 && election.countryId === "US"}
               countySource={countySource}
               focusRequest={focusRequest}
-              presence={mine ? { levels: mine.levels, color: mine.color } : null}
-              panelExtra={
-                mine
-                  ? (stateId) => <MyCampaignStateBlock mine={mine} stateId={stateId} />
-                  : undefined
-              }
+              presence={mapCampaign.presence}
+              inPage={mapCampaign.inPage}
+              panelExtra={mapCampaign.panelExtra}
               model={primaryMapModel}
               electionId={electionId}
               countryId={election.countryId}

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import type { CampaignDesk } from "@/components/campaign/useCampaignDesk";
 
 /**
  * What the presidential stage needs to offer Campaign mode: the Race / Campaign
@@ -13,6 +14,18 @@ export interface RaceModeSlots {
   switcher: ReactNode;
   /** The campaign workspace. Set only while Campaign mode is on. */
   campaign: ReactNode | null;
+  /**
+   * The campaign's loaded data while Campaign mode is on. The workspace and the
+   * map's state panel both read it, so an action taken on the map shows in the
+   * workspace panes and the other way round.
+   */
+  desk: CampaignDesk | null;
+  /**
+   * The presidential map stays above the workspace and is how a state's
+   * campaign actions are reached. Set for US races only; other races keep the
+   * workspace alone.
+   */
+  mapAbove: boolean;
 }
 
 const RaceModeContext = createContext<RaceModeSlots | null>(null);

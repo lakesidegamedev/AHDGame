@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { CampaignWorkspace } from "@/components/campaign/CampaignWorkspace";
+import { CampaignDeskView } from "@/components/campaign/CampaignWorkspace";
+import { useCampaignDesk } from "@/components/campaign/useCampaignDesk";
+import { campaignMapIsEntry } from "@/lib/campaignManager/mapActions";
 import { resolveRaceMode, type RaceModeState } from "@/lib/campaignManager/raceMode";
 import { RaceModeSwitch } from "./RaceModeSwitch";
 import type { RaceModeSlots } from "./RaceModeContext";
@@ -12,11 +14,15 @@ import type { RaceModeSlots } from "./RaceModeContext";
  * (`?view=race|campaign`, `&campaign=<id>`) and the viewer's own campaign.
  * `enabled` is false for races that have no Blend views (Russia, down-ballot).
  */
-export function useRaceMode(args: { enabled: boolean; myCampaignId: string | null | undefined }): {
+export function useRaceMode(args: {
+  enabled: boolean;
+  myCampaignId: string | null | undefined;
+  countryId: string | null | undefined;
+}): {
   state: RaceModeState;
   slots: RaceModeSlots;
 } {
-  const { enabled, myCampaignId } = args;
+  const { enabled, myCampaignId, countryId } = args;
   const searchParams = useSearchParams();
   const view = searchParams?.get("view");
   const campaign = searchParams?.get("campaign");
@@ -29,19 +35,25 @@ export function useRaceMode(args: { enabled: boolean; myCampaignId: string | nul
     [enabled, view, campaign, myCampaignId]
   );
 
+  const campaignOn = state.mode === "campaign" && state.campaignId !== null;
+  const desk = useCampaignDesk(campaignOn ? state.campaignId : null);
+  const mapAbove = campaignOn && campaignMapIsEntry(countryId);
+
   const slots = useMemo<RaceModeSlots>(
     () => ({
       switcher: state.canSwitch ? <RaceModeSwitch mode={state.mode} /> : null,
-      campaign:
-        state.mode === "campaign" && state.campaignId ? (
-          <CampaignWorkspace
-            key={state.campaignId}
-            campaignId={state.campaignId}
-            variant="inline"
-          />
-        ) : null,
+      campaign: campaignOn ? (
+        <CampaignDeskView
+          key={desk.campaignId}
+          desk={desk}
+          variant="inline"
+          stateActionsOnMap={mapAbove}
+        />
+      ) : null,
+      desk: campaignOn ? desk : null,
+      mapAbove,
     }),
-    [state]
+    [state, campaignOn, desk, mapAbove]
   );
 
   return { state, slots };
