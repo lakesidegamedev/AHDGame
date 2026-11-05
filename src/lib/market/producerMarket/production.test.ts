@@ -121,6 +121,130 @@ describe("internal supply accounting", () => {
   );
 });
 
+describe("own-site deliveries at market value (captive stage 3)", () => {
+  const mine = plant({
+    id: "mine",
+    inputs: [],
+    outputs: [
+      {
+        commodity: "energy",
+        book: "world",
+        unitsPerOutput: 2,
+        policy: { kind: "manual", unitPrice: 10 },
+        referenceUnitPrice: 10,
+        storable: true,
+      },
+    ],
+  });
+  const consumer = plant({ id: "consumer" });
+  const request = {
+    turn: 1,
+    accounts,
+    producers: [mine, consumer],
+    // An outside seller clears the lane at 8 while the mine asks 10.
+    externalOffers: [
+      {
+        id: "outside",
+        accountId: "supplier",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        unitPrice: 8,
+      },
+    ],
+    externalOrders: [
+      {
+        id: "town",
+        accountId: "households",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        maximumUnitPrice: 9,
+      },
+    ],
+  };
+  const byId = (r: ReturnType<typeof advanceProducerEconomy>, id: string) =>
+    r.producers.find((p) => p.id === id)!;
+
+  it("credits the producing site at the clearing price and charges the receiving site the same", () => {
+    const result = advanceProducerEconomy({
+      ...request,
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    const product = byId(result, "mine").products[0];
+    expect(product.internalDeliveredUnits).toBeGreaterThan(0);
+    expect(product.soldUnits).toBe(0);
+    expect(product.captiveUnitValue).toBeCloseTo(8);
+    expect(byId(result, "mine").internalSupplyIncome).toBeCloseTo(
+      product.internalDeliveredUnits * 8,
+      8
+    );
+    expect(byId(result, "consumer").internalSupplyCharge).toBeCloseTo(
+      product.internalDeliveredUnits * 8,
+      8
+    );
+  });
+
+  it("falls back to the site's ask when the lane did not trade", () => {
+    const result = advanceProducerEconomy({
+      ...request,
+      externalOffers: [],
+      externalOrders: [],
+      captiveMarketValue: true,
+    });
+    const product = byId(result, "mine").products[0];
+    expect(product.internalDeliveredUnits).toBeGreaterThan(0);
+    expect(product.captiveUnitValue).toBeCloseTo(10);
+    expect(byId(result, "mine").internalSupplyIncome).toBeCloseTo(
+      byId(result, "consumer").internalSupplyCharge!,
+      8
+    );
+  });
+
+  it("leaves company cash, profit and physical flows as at stage 2", () => {
+    const stage2 = advanceProducerEconomy({ ...request, captiveShortValue: true });
+    const stage3 = advanceProducerEconomy({
+      ...request,
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    expect(stage3.accounts).toEqual(stage2.accounts);
+    const flows = (r: typeof stage2) =>
+      r.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow, p.profit]);
+    expect(flows(stage3)).toEqual(flows(stage2));
+    const income = stage3.producers.reduce((n, p) => n + (p.internalSupplyIncome ?? 0), 0);
+    const charge = stage3.producers.reduce((n, p) => n + (p.internalSupplyCharge ?? 0), 0);
+    expect(income).toBeGreaterThan(0);
+    expect(income).toBeCloseTo(charge, 8);
+  });
+
+  it("books nothing at stage 2 or below", () => {
+    for (const flags of [{}, { captiveShortValue: true }]) {
+      const result = advanceProducerEconomy({ ...request, ...flags });
+      for (const p of result.producers) {
+        expect(p.internalSupplyIncome).toBeUndefined();
+        expect(p.internalSupplyCharge).toBeUndefined();
+      }
+      expect(byId(result, "mine").products[0].captiveUnitValue).toBeUndefined();
+    }
+  });
+
+  it("keeps an explicit internal transfer price instead of adding a second entry", () => {
+    const priced = { ...mine, internalTransferPricing: { mode: "cost" as const } };
+    const base = advanceProducerEconomy({ ...request, producers: [priced, consumer] });
+    const stage3 = advanceProducerEconomy({
+      ...request,
+      producers: [priced, consumer],
+      captiveMarketValue: true,
+    });
+    expect(byId(stage3, "mine").internalSupplyIncome).toBe(byId(base, "mine").internalSupplyIncome);
+    expect(byId(stage3, "consumer").internalSupplyCharge).toBe(
+      byId(base, "consumer").internalSupplyCharge
+    );
+  });
+});
+
 describe("receipt-backed production", () => {
   it("sells retained goods after a recipe change without producing or expensing them again", () => {
     const result = advanceProducerEconomy({
