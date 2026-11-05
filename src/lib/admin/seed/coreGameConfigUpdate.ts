@@ -115,6 +115,9 @@ export const TURN_ANCHORED_GAME_CONFIG_KEPT: Readonly<Record<string, string>> = 
   producerCreditStuckTurns: "admin tuning knob (a duration, not an anchor)",
   capacityBuildReserveTurns:
     "admin tuning knob (turns of running bills kept as cash, not an anchor)",
+  nppShortageGrowthFinanceMaxPaybackTurns: "admin tuning knob (a duration, not an anchor)",
+  nppShortageGrowthFinanceMaxExposureProfitTurns:
+    "admin tuning knob (turns of profit as a loan limit, not an anchor)",
   centralBankPricingPhaseIn:
     "rewritten to {} from the reference config by the core seed; the engine restamps it on the first economy turn",
   marketSystemModeUpdatedTurn: "cleared by STALE_MARKET_MODE_STAMP_UNSET with the tier provenance",

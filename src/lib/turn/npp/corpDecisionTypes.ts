@@ -100,6 +100,16 @@ export interface NppCorpDecisionContext {
     sectorType: string,
     strategyId: string | null | undefined
   ) => number | undefined;
+  /**
+   * Short-lane growth finance (gameConfig.nppShortageGrowthFinanceStage): a
+   * short, profitable sector may size one growth step on bank finance below
+   * the cash floor. Absent = off, and the decision is unchanged.
+   */
+  shortageGrowthFinance?: {
+    config: import("./rules/shortageGrowthFinance").ShortageGrowthFinanceConfig;
+    /** Last turn's book pressure on the sector's main output lane. */
+    pressureOf: (sector: CorporateSector) => number | undefined;
+  };
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
   /**
@@ -191,6 +201,8 @@ export interface NppCorpDecision {
     growthUnits: number;
     priority: number;
     fill: number;
+    /** Short-lane growth request (rules/shortageGrowthFinance); ranked under its own cap. */
+    shortageGrowth?: { pressure: number; paybackTurns: number };
   }>;
   shortageCreditRequest?: {
     amountLocal: number;

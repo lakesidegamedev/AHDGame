@@ -5,6 +5,7 @@ import type { BankingSnapshot, BorrowerSnapshot } from "@/lib/banking/rules/boun
 import { BANKING_POLICY_ALL_ON, BANKING_POLICY_OFF } from "@/lib/banking/rules/policy";
 import {
   boundNppConstructionFinanceCandidates,
+  boundNppShortageGrowthFinanceCandidates,
   loadNppConstructionFundingPool,
   selectNppConstructionFundingContext,
   type NppConstructionFinanceCandidate,
@@ -175,6 +176,44 @@ describe("NPP construction funding cohort", () => {
     );
 
     expect(result.selected.map((row) => row.priority)).toEqual([4, 2]);
+    expect(result.backlogCount).toBe(1);
+  });
+});
+
+describe("NPP short-lane growth finance bound", () => {
+  const config = { candidateLimit: 10, maxPaybackTurns: 100, maxExposureProfitTurns: 24 };
+  const shortLane = (sectorId: string, paybackTurns: number) =>
+    candidate({
+      sector: {
+        ...candidate().sector,
+        _id: new ObjectId(sectorId),
+      } as CorporateSector,
+      // Principal 0.75 x 100,000 = 75,000; contribution 25,000 against a 30,000 limit.
+      shortageGrowth: { pressure: 1.6, paybackTurns },
+    });
+
+  it("treats every request as backlog without a funding pool", () => {
+    const result = boundNppShortageGrowthFinanceCandidates(
+      [shortLane("0000000000000000000002a1", 50)],
+      config,
+      null
+    );
+    expect(result).toEqual({ selected: [], backlogCount: 1 });
+  });
+
+  it("funds the shortest payback first within the borrower's exposure", () => {
+    // Profit 10,000 a turn x 24 = 240,000 ceiling, 150,000 already outstanding:
+    // one 75,000 loan fits, a second does not.
+    const funding = {
+      ...pool([lender("000000000000000000000301", false)]),
+      constructionOutstandingByCorpAndCurrency: new Map([
+        ["000000000000000000000101:USD", 150_000],
+      ]),
+    };
+    const slow = shortLane("0000000000000000000002a1", 90);
+    const fast = shortLane("0000000000000000000002a2", 30);
+    const result = boundNppShortageGrowthFinanceCandidates([slow, fast], config, funding);
+    expect(result.selected).toEqual([fast]);
     expect(result.backlogCount).toBe(1);
   });
 });

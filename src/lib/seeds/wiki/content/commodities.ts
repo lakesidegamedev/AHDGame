@@ -262,18 +262,19 @@ Each sector type has **4-8 operating strategies** that change which commodities 
 
 ### Extraction strategies
 
-Extraction sectors choose between a **Diversified** strategy (standard) and five **focused** strategies (there is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and the old copper_mining strategy now maps to Rare Earth Minerals Mining):
+Extraction sectors choose between a **Diversified** strategy (standard) and six **focused** strategies (there is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and the old copper_mining strategy now maps to Rare Earth Minerals Mining):
 
 | Strategy | Supply rate | vs Diversified | Notes |
 | --- | --- | --- | --- |
 | Diversified | Iron 0.25, Coal 0.22, Oil 0.185, Rare Earth 0.14, Natural Gas 0.185, Timber 0.03 | n/a | Broad coverage; no ordnance demand; strong when no single shortage dominates |
 | Iron & Metals Mining | Iron **0.78** | **~3.1×** iron output | Best when iron is severely scarce (D/S above 2×) |
-| Oil & Gas | Oil **0.58** + Natural Gas **0.32** | **~3.1× / ~1.7×** | Best when oil and/or natural gas are scarce |
+| Oil & Gas | Oil **0.58** + Natural Gas **0.32** | **~3.1× / ~1.7×** | Best when oil is scarce |
+| Natural Gas Focus | Natural Gas **0.58** + Oil **0.32** | **~3.1× / ~1.7×** | Best when natural gas is scarce and oil is not |
 | Coal Mining | Coal **0.72** | **~3.3×** | Best when coal is scarce |
 | Timber & Forestry | Timber **0.64** | **~21×** | Best when timber is scarce |
 | Rare Earth Minerals Mining | Rare Earth **0.72** | **~5.1×** | Covers the merged copper + rare-earth market; best when that market is scarce |
 
-Focused strategies produce roughly **3 to 5× more** of iron, oil, coal and rare earth than the diversified strategy, about 1.7× the natural gas and about 21× the timber. If a resource is at D/S 2×+ and you have 3+ sectors, focusing beats diversifying on both supply contribution and margin. The Diversified strategy earns a broad surplus bonus across many commodities but caps quickly at the +30pp aggregate ceiling. Note: ordnance demand was removed from the Diversified strategy (blasting costs are now part of the chemicals budget rather than a weapons-system procurement).
+Focused strategies produce roughly **3 to 5× more** of their main resource than the diversified strategy (about 21× for timber). Oil & Gas and Natural Gas Focus each make the other resource as a byproduct, at about 1.7× the diversified rate. If a resource is at D/S 2×+ and you have 3+ sectors, focusing beats diversifying on both supply contribution and margin. The Diversified strategy earns a broad surplus bonus across many commodities but caps quickly at the +30pp aggregate ceiling. Note: ordnance demand was removed from the Diversified strategy (blasting costs are now part of the chemicals budget rather than a weapons-system procurement).
 
 Extraction sectors are further modulated by state resource capacity and active
 extraction contracts. A contract reserves a share of the existing state

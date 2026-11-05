@@ -379,6 +379,20 @@ export interface GameConfig {
    * entrants and autopilot growth (rules/stateServiceHeadroom). 0 or absent = off.
    */
   nppStateServiceHeadroomStage?: number;
+  /**
+   * NPP pass: >= 1 lets an AI company's existing sector whose main output lane
+   * went short last turn (units asked over delivered at least 1.33) and whose
+   * plant repays a new unit within the payback horizon size one growth step and
+   * ask a bank to fund it, even below its cash floor. Bank underwriting still
+   * applies (rules/shortageGrowthFinance). 0 or absent = off.
+   */
+  nppShortageGrowthFinanceStage?: number;
+  /** Short-lane growth finance requests a turn, on top of the ordinary cap. Absent = 128. */
+  nppShortageGrowthFinanceCandidateLimit?: number;
+  /** Payback horizon (turns) a short-lane growth step must earn back within. Absent = 100. */
+  nppShortageGrowthFinanceMaxPaybackTurns?: number;
+  /** Outstanding construction finance cap in turns of average profit. Absent = 24. */
+  nppShortageGrowthFinanceMaxExposureProfitTurns?: number;
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
   /**
