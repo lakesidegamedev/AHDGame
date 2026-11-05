@@ -294,7 +294,9 @@ export default function InputsOutputsPanel({
                             }`}
                           >
                             {fmtPct(share)} sold
-                            {ownSite ? ` · ${ownSiteLabel(ownSite.share)}` : ""}
+                            {ownSite
+                              ? ` · ${ownSiteLabel(ownSite.share)} (worth about ${price(ownSite.valueAnchor)} ${currencyCode} to your sites)`
+                              : ""}
                           </span>
                         }
                       >
