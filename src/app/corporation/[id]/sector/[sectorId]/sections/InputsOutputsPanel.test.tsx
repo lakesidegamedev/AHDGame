@@ -423,3 +423,30 @@ describe("InputsOutputsPanel layout", () => {
     expect(within(row("Vehicles & Machinery")).queryByText(/1,000/)).toBeNull();
   });
 });
+
+describe("sold share beside own-site use", () => {
+  it("shows the own-site value next to the sold share", () => {
+    render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          supplies: [
+            flow({
+              commodity: "advertising",
+              label: "Advertising & Media",
+              icon: "Ad",
+              soldFraction: 0.7,
+              ownSite: { units: 30, share: 0.3, valueAnchor: 1234 },
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    expect(screen.getByText(/70% sold · .*worth about .*1,?234.* to your sites/)).toBeTruthy();
+  });
+});

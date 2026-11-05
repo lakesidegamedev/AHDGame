@@ -304,8 +304,23 @@ export default function MarketMoneyPanel({
       </div>
       {ownSite >= 0.5 && (
         <p className="mt-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-body-sm text-foreground">
-          {fmtUnits(ownSite)} units went free to your company&apos;s own sites that use them. They
-          are not sales, so they earn nothing here, but those sites did not have to buy them.
+          {pnl.internalSupplyIncomeAnchor && pnl.internalSupplyIncomeAnchor > 0 ? (
+            <>
+              {fmtUnits(ownSite)} units went to your company&apos;s own sites that use them. They
+              are not sales, but those sites were charged {money(pnl.internalSupplyIncomeAnchor)}{" "}
+              for them, booked as income here.
+            </>
+          ) : (
+            <>
+              {fmtUnits(ownSite)} units went free to your company&apos;s own sites that use them.
+              They are not sales, so they earn nothing here, but those sites did not have to buy
+              them
+              {pnl.ownSiteMemoAnchor && pnl.ownSiteMemoAnchor > 0
+                ? ` (worth about ${money(pnl.ownSiteMemoAnchor)} at your asking price)`
+                : ""}
+              .
+            </>
+          )}
         </p>
       )}
       {unsold > 0 && (
