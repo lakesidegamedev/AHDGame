@@ -69,6 +69,27 @@ export function presenceLevelsFor(
   return racePresence.find((e) => e.characterId === candidateId)?.levelsByState ?? {};
 }
 
+/**
+ * How the viewer builds Campaign Presence for the campaign on screen.
+ * `own`: the candidate, who builds from their own list. `campaign`: an appointed
+ * manager, who builds for the ticket by naming the campaign. `null`: the running
+ * mate, a rival or anyone else, who gets no build button. The server decides the
+ * same way and is the authority; this only keeps the button to people it serves.
+ */
+export type PresenceBuildAccess = { kind: "own" } | { kind: "campaign"; campaignId: string } | null;
+
+export function presenceBuildAccess(input: {
+  viewerIsCandidate: boolean;
+  /** The viewer may run the campaign (not a running mate, not archived or suspended). */
+  canManage: boolean;
+  campaignId: string | null | undefined;
+}): PresenceBuildAccess {
+  if (input.viewerIsCandidate) return { kind: "own" };
+  if (input.canManage && input.campaignId)
+    return { kind: "campaign", campaignId: input.campaignId };
+  return null;
+}
+
 export interface SubjectCandidate {
   characterId: string;
   isNPP?: boolean;
@@ -82,7 +103,7 @@ export interface SubjectCandidate {
 export interface PresenceSubject {
   /** The id Campaign Presence is stored under for this ticket. */
   candidateId: string;
-  /** The viewer is the candidate: the only one who can build presence. */
+  /** The viewer is the candidate. A manager builds for them too; see `presenceBuildAccess`. */
   viewerIsCandidate: boolean;
   color: string;
 }
