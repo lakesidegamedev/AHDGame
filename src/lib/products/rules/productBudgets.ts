@@ -6,7 +6,19 @@ function positive(value: number): number {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
-/** Split one paid R&D budget by remaining development cost, with no postlaunch claim. */
+/**
+ * Most of a turn's R&D budget that product development may take. The rest
+ * always funds general research, so a long development cannot leave research
+ * at zero for days.
+ */
+export const PRODUCT_DEVELOPMENT_MAX_RD_SHARE = 0.5;
+
+/**
+ * Split one paid R&D budget by remaining development cost, with no postlaunch
+ * claim. Development takes at most PRODUCT_DEVELOPMENT_MAX_RD_SHARE of the
+ * budget; whatever it does not take funds general research, so the parts
+ * always sum to the budget.
+ */
 export function allocateProductDevelopmentBudget(input: {
   budgetAnchor: number;
   projects: readonly {
@@ -25,7 +37,7 @@ export function allocateProductDevelopmentBudget(input: {
   }));
   const total = needs.reduce((sum, project) => sum + project.remaining, 0);
   const budget = positive(input.budgetAnchor);
-  const spend = Math.min(budget, total);
+  const spend = Math.min(budget * PRODUCT_DEVELOPMENT_MAX_RD_SHARE, total);
   const byProjectId = Object.fromEntries(
     needs.map((project) => [project.id, total > 0 ? (spend * project.remaining) / total : 0])
   );

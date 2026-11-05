@@ -127,6 +127,11 @@ function show(d: CampaignDesk, m: MyCampaign | null = mine(), stateId = "OH") {
   return render(<CampaignStateActions desk={d} stateId={stateId} stateName="Ohio" mine={m} />);
 }
 
+/** Open a folded section by its label. */
+function openSection(label: string) {
+  fireEvent.click(screen.getByRole("button", { name: label }));
+}
+
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
@@ -138,6 +143,7 @@ describe("CampaignStateActions", () => {
   it("gives the general-election candidate a one-click travel to the open state", async () => {
     const d = desk({ campaign: { statePresence: generalPresence } });
     show(d);
+    openSection("Travel");
     fireEvent.click(screen.getByRole("button", { name: /Travel to Ohio \(5 actions\)/ }));
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     const [url, init] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -147,7 +153,9 @@ describe("CampaignStateActions", () => {
 
   it("falls back to the operations hub for camping when no presence payload came", () => {
     show(desk({ stateOps: { view: hub, reload: vi.fn() } }));
+    openSection("Camping");
     expect(screen.getByRole("button", { name: /Camp in Ohio/ })).toBeTruthy();
+    openSection("Operations");
     expect(screen.getByTestId("state-operations-here")).toBeTruthy();
   });
 
@@ -155,6 +163,7 @@ describe("CampaignStateActions", () => {
     const reload = vi.fn();
     const d = desk({ stateOps: { view: hub, reload } });
     show(d);
+    openSection("Operations");
     fireEvent.click(screen.getByRole("button", { name: /Local attack/ }));
     await waitFor(() => expect(reload).toHaveBeenCalled());
     const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.find(
@@ -170,6 +179,7 @@ describe("CampaignStateActions", () => {
 
   it("shows the canvassing desk only in the state canvassing is open in", async () => {
     const { unmount } = show(desk({ canvassStateId: "OH" }));
+    openSection("Canvassing");
     expect(await screen.findByText("canvassing desk")).toBeTruthy();
     unmount();
     show(desk({ canvassStateId: "IA" }));
@@ -179,6 +189,7 @@ describe("CampaignStateActions", () => {
   it("gives a manager the presence block and canvassing but no travel or attacks", async () => {
     show(desk({ canvassStateId: "OH" }));
     expect(screen.getByText("Your campaign here")).toBeTruthy();
+    openSection("Canvassing");
     expect(await screen.findByText("canvassing desk")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Travel/ })).toBeNull();
     expect(screen.queryByTestId("state-operations-here")).toBeNull();
@@ -194,6 +205,33 @@ describe("CampaignStateActions", () => {
     expect(screen.getByText("Your campaign here")).toBeTruthy();
     expect(screen.queryByTestId("state-canvass")).toBeNull();
     expect(screen.queryByText(/Open a field office/)).toBeNull();
+  });
+
+  it("keeps the panel short: the presence block shows and every other section starts folded", () => {
+    show(
+      desk({
+        canvassStateId: "OH",
+        stateOps: { view: hub, reload: vi.fn() },
+        campaign: { statePresence: generalPresence },
+      })
+    );
+    expect(screen.getByText("Your campaign here")).toBeTruthy();
+    for (const label of ["Travel", "Operations", "Canvassing"]) {
+      expect(screen.getByRole("button", { name: label }).getAttribute("aria-expanded")).toBe(
+        "false"
+      );
+    }
+    expect(screen.queryByRole("button", { name: /Travel to Ohio/ })).toBeNull();
+    expect(screen.queryByTestId("state-operations-here")).toBeNull();
+    expect(screen.queryByText("canvassing desk")).toBeNull();
+  });
+
+  it("opens the first section when there is no presence block above it", () => {
+    show(desk({ campaign: { statePresence: generalPresence } }), null);
+    expect(screen.getByRole("button", { name: "Travel" }).getAttribute("aria-expanded")).toBe(
+      "true"
+    );
+    expect(screen.getByRole("button", { name: /Travel to Ohio/ })).toBeTruthy();
   });
 
   it("shows a rival or party viewer nothing beyond the public overview", () => {

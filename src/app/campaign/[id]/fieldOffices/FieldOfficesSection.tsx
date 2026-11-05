@@ -1,22 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BLEND, FONT, BLEND_LABEL } from "@/components/blend/tokens";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { trackAction } from "@/lib/observability/actionBreadcrumb";
-import type {
-  FieldOfficeSubdivisionDto,
-  FieldOfficeView,
-} from "@/lib/campaigns/fieldOffices/queries";
-import {
-  formatPct,
-  leanFill,
-  leanLabel,
-  pathCentre,
-  pinRadius,
-  valueFill,
-} from "./fieldOfficeMapMath";
+import type { FieldOfficeView } from "@/lib/campaigns/fieldOffices/queries";
+import { formatPct } from "@/app/elections/[id]/blend/presMap/fieldOfficeMath";
 
 export interface FieldOfficesSectionProps {
   campaignId: string;
@@ -25,9 +15,16 @@ export interface FieldOfficesSectionProps {
   variant?: "desktop" | "mobile";
   /** Region to open first (`?region=OH` on the campaign page). */
   initialRegion?: string | null;
+  /**
+   * The presidential map is on this page (the race page's Campaign mode). The
+   * county map lives there; this section points at it.
+   */
+  mapOnPage?: boolean;
+  /** Where the county map is when it is not on this page (the embedded frame). */
+  mapHref?: string;
+  /** Changes when the campaign's offices change elsewhere on the page (the map). */
+  reloadKey?: number;
 }
-
-type ColorMode = "lean" | "value";
 
 const BUTTON: React.CSSProperties = {
   border: `1px solid ${BLEND.chipBorder}`,
@@ -90,10 +87,10 @@ function StrengthBar({ strength }: { strength: number }) {
 /**
  * Field offices: where the campaign has people on the ground.
  *
- * In county-scope countries this is a map of the selected state's counties,
- * shaded by lean (or by what a new office there would be worth), with a pin
- * on every county you already hold. Region-scope countries get one card per
- * region instead. Every figure comes from the server view, so the panel never
+ * The summary, the totals, the list of current offices and how it works. In
+ * county-scope countries the county map itself is the presidential map (colour
+ * it by Field offices), so this section points there instead of drawing a
+ * second map. Every figure comes from the server view, so the panel never
  * quotes a price or an effect the engine does not use.
  */
 export function FieldOfficesSection({
@@ -101,14 +98,14 @@ export function FieldOfficesSection({
   onChanged,
   variant = "desktop",
   initialRegion = null,
+  mapOnPage = false,
+  mapHref,
+  reloadKey = 0,
 }: FieldOfficesSectionProps) {
   const mobile = variant === "mobile";
   const [region, setRegion] = useState<string | null>(initialRegion);
   const [view, setView] = useState<FieldOfficeView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [mode, setMode] = useState<ColorMode>("lean");
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -130,16 +127,8 @@ export function FieldOfficesSection({
 
   useEffect(() => {
     void load();
-  }, [load]);
-
-  const subById = useMemo(
-    () => new Map((view?.map?.subdivisions ?? []).map((s) => [s.id, s])),
-    [view?.map]
-  );
-  const maxMarginal = useMemo(
-    () => Math.max(0, ...(view?.map?.subdivisions ?? []).map((s) => s.marginalPct ?? 0)),
-    [view?.map]
-  );
+    // reloadKey: an office was opened or closed from the map.
+  }, [load, reloadKey]);
 
   if (loadError && !view) {
     return (
@@ -159,19 +148,7 @@ export function FieldOfficesSection({
 
   const selectedRegion = view.regions.find((r) => r.id === view.selectedRegionId) ?? null;
   const canAct = view.canManage && view.raceActive;
-  const atCap = view.offices.length >= view.cap;
-  const funds = view.funds ?? 0;
-  const actions = view.actions ?? 0;
   const currency = view.costs?.currency ?? "USD";
-  const blockReason = !canAct
-    ? null
-    : atCap
-      ? `This race allows ${view.cap} offices. Close one to open another.`
-      : view.costs && funds < view.costs.open
-        ? `Needs ${formatCurrency(view.costs.open, currency)} in the war chest.`
-        : view.costs && actions < view.costs.actions
-          ? `Needs ${view.costs.actions} campaign actions.`
-          : null;
 
   const act = async (key: string, run: () => Promise<Response>, success: string) => {
     setBusy(key);
@@ -193,19 +170,6 @@ export function FieldOfficesSection({
     }
   };
 
-  const openOffice = (regionId: string, subdivisionId: string | null, label: string) => {
-    trackAction("campaign.field-office.open", { regionId, subdivisionId: subdivisionId ?? "" });
-    return act(
-      `open:${regionId}:${subdivisionId ?? ""}`,
-      () =>
-        fetch(`/api/campaigns/${campaignId}/field-offices`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ regionId, subdivisionId }),
-        }),
-      `Office opened in ${label}. It reaches full strength in ${view.rampTurns} turns.`
-    );
-  };
   const closeOffice = (officeId: string, label: string) => {
     trackAction("campaign.field-office.close", { officeId });
     return act(
@@ -216,7 +180,6 @@ export function FieldOfficesSection({
   };
 
   const upkeepTotal = (view.costs?.upkeep ?? 0) * view.offices.length;
-  const focus = (selected && subById.get(selected)) || (hovered && subById.get(hovered)) || null;
 
   return (
     <Shell mobile={mobile}>
@@ -273,121 +236,23 @@ export function FieldOfficesSection({
       </div>
 
       {view.regions.length > 1 ? (
-        <RegionPicker
-          regions={view.regions}
-          value={view.selectedRegionId}
-          onChange={(id) => {
-            setSelected(null);
-            setHovered(null);
-            setRegion(id);
-          }}
-        />
+        <RegionPicker regions={view.regions} value={view.selectedRegionId} onChange={setRegion} />
       ) : null}
 
-      {view.map ? (
-        <div
-          style={{
-            marginTop: 18,
-            display: "grid",
-            gridTemplateColumns: mobile ? "1fr" : "minmax(0, 1.6fr) minmax(0, 1fr)",
-            gap: 22,
-            alignItems: "start",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-                marginBottom: 10,
-              }}
-            >
-              <div style={BLEND_LABEL}>
-                {view.liveLeanActive
-                  ? `County lean from ${view.leanSourceLabel ?? "past results"}, shifted by this world's swing${view.liveLeanPriorYear && view.liveLeanYear ? ` from ${view.liveLeanPriorYear} to ${view.liveLeanYear}` : ""}`
-                  : `County lean from ${view.leanSourceLabel ?? "past results"}`}
-              </div>
-              {view.canManage ? (
-                <div style={{ display: "flex", gap: 6 }}>
-                  {(["lean", "value"] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMode(m)}
-                      aria-pressed={mode === m}
-                      style={{
-                        ...BUTTON,
-                        padding: "4px 9px",
-                        fontSize: 9.5,
-                        color: mode === m ? BLEND.ink : BLEND.mutedDim,
-                        borderColor: mode === m ? BLEND.hairlineStrong : BLEND.chipBorder,
-                        background: mode === m ? BLEND.inset : "transparent",
-                      }}
-                    >
-                      {m === "lean" ? "Lean" : "Opportunity"}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <CountyMap
-              viewBox={view.map.viewBox}
-              subdivisions={view.map.subdivisions}
-              mode={mode}
-              maxMarginal={maxMarginal}
-              hovered={hovered}
-              selected={selected}
-              onHover={setHovered}
-              onSelect={(id) => setSelected((cur) => (cur === id ? null : id))}
-            />
-            <Legend mode={mode} regionLivePvi={view.map.regionLivePvi} />
-          </div>
-
-          <div>
-            {focus ? (
-              <CountyCard
-                sub={focus}
-                regionId={view.map.regionId}
-                pinned={selected === focus.id}
-                canAct={canAct}
-                blockReason={blockReason}
-                busy={busy}
-                currency={currency}
-                openCost={view.costs?.open ?? null}
-                openActions={view.costs?.actions ?? null}
-                onOpen={() => openOffice(view.map!.regionId, focus.id, `${focus.name} County`)}
-                onClose={() =>
-                  focus.officeId ? closeOffice(focus.officeId, focus.name) : undefined
-                }
-              />
-            ) : (
-              <p
-                style={{
-                  margin: 0,
-                  fontFamily: FONT.sans,
-                  fontSize: 13.5,
-                  lineHeight: 1.5,
-                  color: BLEND.muted,
-                }}
-              >
-                {view.canManage
-                  ? "Pick a county on the map. Big counties where your side is strong turn out the most votes per office. Switch to Opportunity to see that directly."
-                  : "Pins mark this campaign's offices. Hover a county for its lean."}
-              </p>
-            )}
-            <OfficeList
-              view={view}
-              canAct={canAct}
-              busy={busy}
-              onClose={closeOffice}
-              onFocus={(regionId, subId) => {
-                if (regionId !== view.selectedRegionId) setRegion(regionId);
-                setSelected(subId);
-              }}
-            />
-          </div>
+      {view.map || view.offices.length > 0 ? (
+        <div style={{ marginTop: 18, maxWidth: 680 }}>
+          {view.map ? (
+            <MapPointer mapOnPage={mapOnPage} mapHref={mapHref} canManage={view.canManage} />
+          ) : null}
+          <OfficeList
+            view={view}
+            canAct={canAct}
+            busy={busy}
+            onClose={closeOffice}
+            onFocus={(regionId) => {
+              if (regionId !== view.selectedRegionId) setRegion(regionId);
+            }}
+          />
         </div>
       ) : null}
 
@@ -476,240 +341,55 @@ function RegionPicker({
   );
 }
 
-function CountyMap({
-  viewBox,
-  subdivisions,
-  mode,
-  maxMarginal,
-  hovered,
-  selected,
-  onHover,
-  onSelect,
+function MapPointer({
+  mapOnPage,
+  mapHref,
+  canManage,
 }: {
-  viewBox: string;
-  subdivisions: FieldOfficeSubdivisionDto[];
-  mode: ColorMode;
-  maxMarginal: number;
-  hovered: string | null;
-  selected: string | null;
-  onHover: (id: string | null) => void;
-  onSelect: (id: string) => void;
+  mapOnPage: boolean;
+  mapHref?: string;
+  canManage: boolean;
 }) {
-  const r = pinRadius(viewBox);
-  const pins = subdivisions
-    .filter((s) => s.officeId)
-    .map((s) => ({ id: s.id, c: pathCentre(s.path) }))
-    .filter((p): p is { id: string; c: { x: number; y: number } } => p.c !== null);
+  const copy = mapOnPage
+    ? canManage
+      ? "The county map is the presidential map above. Colour it by Field offices: lean, or by opportunity to see where a new office adds the most turnout. Open a state, then pick a county to see what an office there is worth and to open one."
+      : "Colour the presidential map above by Field offices: lean to see where this campaign has offices."
+    : "The county map is on the race page, in Campaign mode.";
+  const linkStyle: React.CSSProperties = {
+    ...BUTTON,
+    display: "inline-block",
+    textDecoration: "none",
+    marginTop: 10,
+  };
   return (
-    <svg
-      viewBox={viewBox}
-      role="img"
-      aria-label="County map"
-      style={{ width: "100%", height: "auto", maxHeight: 460, display: "block" }}
-      onMouseLeave={() => onHover(null)}
-    >
-      {subdivisions.map((s) => {
-        const active = s.id === hovered || s.id === selected;
-        return (
-          <path
-            key={s.id}
-            d={s.path}
-            fill={
-              mode === "value" ? valueFill(s.marginalPct ?? 0, maxMarginal) : leanFill(s.livePvi)
-            }
-            stroke={active ? BLEND.ink : BLEND.page}
-            strokeWidth={active ? r * 0.35 : r * 0.12}
-            style={{ cursor: "pointer", transition: "fill 160ms ease" }}
-            onMouseEnter={() => onHover(s.id)}
-            onClick={() => onSelect(s.id)}
-          >
-            <title>{`${s.name}: ${leanLabel(s.livePvi)}`}</title>
-          </path>
-        );
-      })}
-      {pins.map((p) => (
-        <g key={`pin-${p.id}`} pointerEvents="none">
-          <circle cx={p.c.x} cy={p.c.y} r={r * 1.6} fill={BLEND.gold} opacity={0.22} />
-          <circle
-            cx={p.c.x}
-            cy={p.c.y}
-            r={r * 0.8}
-            fill={BLEND.gold}
-            stroke={BLEND.page}
-            strokeWidth={r * 0.25}
-          />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function Legend({ mode, regionLivePvi }: { mode: ColorMode; regionLivePvi: number }) {
-  const stops =
-    mode === "lean"
-      ? [-30, -15, -5, 0, 5, 15, 30].map((v) => ({ key: String(v), fill: leanFill(v) }))
-      : [0.1, 0.3, 0.5, 0.75, 1].map((v) => ({ key: String(v), fill: valueFill(v, 1) }));
-  return (
-    <div
-      style={{
-        marginTop: 10,
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        fontFamily: FONT.mono,
-        fontSize: 10,
-        color: BLEND.mutedDim,
-      }}
-    >
-      <span>{mode === "lean" ? "Left" : "Low"}</span>
-      <span style={{ display: "flex", gap: 2 }}>
-        {stops.map((s) => (
-          <span key={s.key} style={{ width: 18, height: 8, borderRadius: 2, background: s.fill }} />
-        ))}
-      </span>
-      <span>{mode === "lean" ? "Right" : "High"}</span>
-      <span style={{ marginLeft: "auto" }}>
-        {mode === "lean" ? `State ${leanLabel(regionLivePvi)}` : "Turnout from one new office"}
-      </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            background: BLEND.gold,
-            display: "inline-block",
-          }}
-        />
-        Office
-      </span>
-    </div>
-  );
-}
-
-function CountyCard({
-  sub,
-  regionId,
-  pinned,
-  canAct,
-  blockReason,
-  busy,
-  currency,
-  openCost,
-  openActions,
-  onOpen,
-  onClose,
-}: {
-  sub: FieldOfficeSubdivisionDto;
-  regionId: string;
-  pinned: boolean;
-  canAct: boolean;
-  blockReason: string | null;
-  busy: string | null;
-  currency: string;
-  openCost: number | null;
-  openActions: number | null;
-  onOpen: () => void;
-  onClose: () => void;
-}) {
-  const openKey = `open:${regionId}:${sub.id}`;
-  return (
-    <div
-      style={{
-        padding: "14px 16px",
-        background: BLEND.inset,
-        border: `1px solid ${pinned ? BLEND.hairlineStrong : BLEND.hairline}`,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ fontFamily: FONT.sans, fontSize: 17, fontWeight: 600 }}>
-          {sub.name} County
-        </div>
-        {sub.officeId ? (
-          <span style={{ fontFamily: FONT.mono, fontSize: 10, color: BLEND.gold }}>
-            OFFICE OPEN
-          </span>
-        ) : null}
-      </div>
-      <dl
+    <div>
+      <p
         style={{
-          margin: "10px 0 0",
-          display: "grid",
-          gridTemplateColumns: "auto 1fr",
-          rowGap: 4,
-          columnGap: 14,
-          fontFamily: FONT.mono,
-          fontSize: 12,
+          margin: 0,
+          fontFamily: FONT.sans,
+          fontSize: 13.5,
+          lineHeight: 1.5,
+          color: BLEND.muted,
         }}
       >
-        <dt style={{ color: BLEND.mutedDim }}>Lean</dt>
-        <dd style={{ margin: 0 }}>
-          {leanLabel(sub.livePvi)}
-          {Math.abs(sub.livePvi - sub.basePvi) >= 0.1 ? (
-            <span style={{ color: BLEND.mutedDim }}> (was {leanLabel(sub.basePvi)})</span>
-          ) : null}
-        </dd>
-        <dt style={{ color: BLEND.mutedDim }}>Share of state</dt>
-        <dd style={{ margin: 0 }}>{(sub.electorateShare * 100).toFixed(1)}%</dd>
-        {sub.yieldFactor != null ? (
-          <>
-            <dt style={{ color: BLEND.mutedDim }}>Your yield</dt>
-            <dd style={{ margin: 0 }}>{sub.yieldFactor.toFixed(2)}x</dd>
-          </>
-        ) : null}
-        {sub.marginalPct != null && !sub.officeId ? (
-          <>
-            <dt style={{ color: BLEND.mutedDim }}>New office</dt>
-            <dd style={{ margin: 0, color: BLEND.positive }}>
-              {formatPct(sub.marginalPct)} turnout statewide
-            </dd>
-          </>
-        ) : null}
-      </dl>
-      {canAct ? (
-        <div style={{ marginTop: 12 }}>
-          {sub.officeId ? (
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={busy !== null}
-              style={{ ...BUTTON, color: BLEND.muted }}
-            >
-              {busy === `close:${sub.officeId}` ? "Closing..." : "Close office"}
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={onOpen}
-                disabled={busy !== null || blockReason !== null}
-                style={{
-                  ...BUTTON,
-                  borderColor: BLEND.accent,
-                  background: blockReason ? "transparent" : BLEND.accent,
-                  color: blockReason ? BLEND.mutedDim : "#fff",
-                  cursor: blockReason ? "not-allowed" : "pointer",
-                }}
-              >
-                {busy === openKey
-                  ? "Opening..."
-                  : `Open office${openCost != null ? ` · ${formatCurrency(openCost, currency)}` : ""}${openActions != null ? ` · ${openActions} actions` : ""}`}
-              </button>
-              {blockReason ? (
-                <p
-                  style={{
-                    margin: "6px 0 0",
-                    fontFamily: FONT.sans,
-                    fontSize: 12.5,
-                    color: BLEND.caution,
-                  }}
-                >
-                  {blockReason}
-                </p>
-              ) : null}
-            </>
-          )}
-        </div>
+        {copy}
+      </p>
+      {mapOnPage ? (
+        <button
+          type="button"
+          style={linkStyle}
+          onClick={() =>
+            document
+              .querySelector('[data-testid="campaign-map"]')
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        >
+          Go to the map
+        </button>
+      ) : mapHref ? (
+        <a href={mapHref} target="_top" style={linkStyle}>
+          Open the map
+        </a>
       ) : null}
     </div>
   );

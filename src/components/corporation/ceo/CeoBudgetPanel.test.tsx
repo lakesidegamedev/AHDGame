@@ -178,6 +178,30 @@ describe("CeoBudgetPanel: marketing growth note", () => {
   });
 });
 
+describe("CeoBudgetPanel: R&D with a product in development", () => {
+  it("names the project, the share it takes, and keeps research growing", () => {
+    renderBudget({
+      corporation: {
+        rdBudget: 240_000,
+        rdScore: 1,
+        rdDevelopmentProjects: [
+          {
+            id: "p1",
+            stage: "development",
+            paidAnchor: 0,
+            thresholdAnchor: 1_000_000,
+            label: "Passenger car",
+          },
+        ],
+      },
+      financials: { totalRevenue: 1_000_000 },
+    });
+    expect(screen.getByText(/Passenger car development takes 50% of this budget/)).toBeTruthy();
+    expect(screen.getByText(/^\+\d+\.\d{2}\/turn \(now 1\)/)).toBeTruthy();
+    expect(screen.queryByText(/\+0\/turn/)).toBeNull();
+  });
+});
+
 describe("CeoBudgetPanel: editing in place", () => {
   it("shows the operating-income change of an unsaved edit, and Reset drops it", () => {
     renderBudget({ financials: { totalRevenue: 100_000 } });

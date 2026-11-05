@@ -63,7 +63,7 @@ Stop week 1 when PI is about 30, Favorability is 60 or higher, donor level is 3 
 Before the primary ends (entry shuts when it does):
 
 1. **Elections**, then the race, then **Declare**. You can hold one candidacy at a time.
-2. **View Campaign.** This is where your campaign budget is spent; Campaign actions stay on **Actions**.
+2. **Campaign mode.** This is where your campaign budget is spent; Campaign actions stay on **Actions**.
 
 \`\`\`guide-screenshot
 campaign

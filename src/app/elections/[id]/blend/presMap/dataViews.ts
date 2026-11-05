@@ -9,9 +9,11 @@
 
 import { readableInk } from "@/lib/elections/marginTierShade";
 import type { CountyRow } from "./countyModel";
+import type { FieldOfficeViewId } from "./fieldOfficeMath";
 import { describeTrend, type PresMapCandidate, type PresMapModel } from "./presMapModel";
 
-export type MapDataView = "margin" | "winner" | "share" | "momentum" | "presence";
+export type MapDataView =
+  "margin" | "winner" | "share" | "momentum" | "presence" | FieldOfficeViewId;
 
 export const DATA_VIEWS: { id: MapDataView; label: string }[] = [
   { id: "margin", label: "Margin" },
@@ -115,7 +117,8 @@ export function applyDataView(
   ground: string,
   shareCandidate: PresMapCandidate | null
 ): PresMapModel {
-  if (view === "margin") return model;
+  // The field-office views paint from their own data (see fieldOfficeMath).
+  if (view === "margin" || view === "fieldLean" || view === "fieldValue") return model;
   const states: PresMapModel["states"] = {};
   for (const [id, s] of Object.entries(model.states)) {
     let fill = s.fill;
@@ -156,7 +159,7 @@ export function applyCountyView(
   ground: string,
   shareCandidate: PresMapCandidate | null
 ): CountyRow[] | null {
-  if (view === "margin") return rows;
+  if (view === "margin" || view === "fieldLean" || view === "fieldValue") return rows;
   if (view === "momentum") return null;
   return rows.map((r) => {
     if (view === "winner") return { ...r, fill: r.winnerName ? r.winnerColor : r.fill };

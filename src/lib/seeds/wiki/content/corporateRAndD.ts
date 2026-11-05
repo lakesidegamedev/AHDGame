@@ -4,7 +4,7 @@ Research is the one place a corporation can turn money into technology upgrades,
 
 ## Funding the score
 
-Set a daily **R&D budget** in the Budget section of the **CEO Office** tab. Each turn your budget adds to your score and the score decays by 3%. New score = 97% of the old score + (1.2 + 0.78 x ln(1 + budget / 100,000)) x a diminishing factor of 100 / (100 + score + the part of the score above 100). With no budget, nothing is added. While a product line or media slate is in development, the R&D budget pays for it first and only what is left builds the score. R&D spending counts toward the **150% overhead cap** alongside marketing, logistics and CEO salary.
+Set a daily **R&D budget** in the Budget section of the **CEO Office** tab. Each turn your budget adds to your score and the score decays by 3%. New score = 97% of the old score + (1.2 + 0.78 x ln(1 + budget / 100,000)) x a diminishing factor of 100 / (100 + score + the part of the score above 100). With no budget, nothing is added. While a product line or media slate is in development, it takes up to half of the R&D budget each turn until it is paid for, and the rest still builds the score. R&D spending counts toward the **150% overhead cap** alongside marketing, logistics and CEO salary.
 
 | Rule | Value |
 | --- | --- |

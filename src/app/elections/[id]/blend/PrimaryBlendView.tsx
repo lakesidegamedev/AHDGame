@@ -512,7 +512,7 @@ export function PrimaryBlendView({
         color: "#fff",
       }}
     >
-      OPEN CAMPAIGN MANAGER
+      OPEN CAMPAIGN
     </Link>
   ) : null;
 
@@ -970,6 +970,7 @@ export function PrimaryBlendView({
               presence={mapCampaign.presence}
               inPage={mapCampaign.inPage}
               panelExtra={mapCampaign.panelExtra}
+              fieldOffices={mapCampaign.fieldOffices}
               model={primaryMapModel}
               electionId={electionId}
               countryId={election.countryId}
