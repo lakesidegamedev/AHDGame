@@ -5,6 +5,7 @@ import {
   presenceLevelsFor,
   presenceSubject,
   stateActionSections,
+  type RacePresenceEntry,
   type StateActionInput,
 } from "./mapActions";
 
@@ -81,7 +82,7 @@ describe("canvassStateFromEligibility", () => {
 });
 
 describe("presenceLevelsFor", () => {
-  const race = [
+  const race: RacePresenceEntry[] = [
     { characterId: "a", levelsByState: { OH: 3 } },
     { characterId: "b", levelsByState: { TX: 1 } },
   ];
