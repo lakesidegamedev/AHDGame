@@ -51,11 +51,21 @@ export async function snapshot(
   const rows: HealBackup[] = [];
   const missing: SnapshotSummary["missing"] = [];
 
+  // Read in batches: one round trip per document made a 31k-document plan
+  // spend most of its turn gap on the snapshot.
+  const SNAPSHOT_READ_BATCH = 500;
   for (const entry of args.touched) {
-    for (const docId of entry.ids) {
-      const doc = await db
+    const byId = new Map<string, Record<string, unknown>>();
+    for (let i = 0; i < entry.ids.length; i += SNAPSHOT_READ_BATCH) {
+      const chunk = entry.ids.slice(i, i + SNAPSHOT_READ_BATCH);
+      const found = await db
         .collection(entry.collection)
-        .findOne({ _id: { $in: idCandidates(docId) } } as Record<string, unknown>);
+        .find({ _id: { $in: chunk.flatMap(idCandidates) } } as Record<string, unknown>)
+        .toArray();
+      for (const doc of found) byId.set(String(doc._id), doc as Record<string, unknown>);
+    }
+    for (const docId of entry.ids) {
+      const doc = byId.get(docId);
       if (!doc) {
         missing.push({ collection: entry.collection, docId });
         continue;
