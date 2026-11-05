@@ -89,6 +89,7 @@ export async function runCorporationProducerMarket(
       | "credit"
       | "salesAdvanceAtClearing"
       | "restartProbes"
+      | "householdIncomeSpend"
       | "captiveShortValue"
       | "shortageAsk"
     >;

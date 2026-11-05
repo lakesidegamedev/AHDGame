@@ -163,6 +163,10 @@ export type ProducerPhysicalEnv = Pick<
   salesAdvanceAtClearing?: boolean;
   /** gameConfig.producerZombieRestartStage >= 1: idle plants with no sales may run a restart probe. */
   restartProbes?: boolean;
+  /** gameConfig.producerHouseholdIncomeSpendStage >= 1: households spend from income (householdSpendRules). */
+  householdIncomeSpendStage?: number;
+  /** gameConfig.producerHouseholdSavingsDrawShare: share of savings spent a turn (default 0.3). */
+  householdSavingsDrawShare?: number;
   /** gameConfig.producerShortageAskStage >= 1: sold-out sellers in a short lane ask a step above the clearing. */
   shortageAskStage?: number;
   /** gameConfig.producerShortageAskMaxStep: largest raise in one turn (shortageAskRules default when absent). */

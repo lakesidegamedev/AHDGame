@@ -827,7 +827,21 @@
       "transferIncome": "Included: income from your sites",
       "transferCharge": "Charges from your sites",
       "transferChargeNote": "The selected internal price for goods delivered by your other sites. The supplying site records matching income; your company’s total cash is unchanged.",
-      "transferIncomeNote": "Included in revenue: the selected internal price allocated by your other sites. No cash enters the company from these deliveries."
+      "transferIncomeNote": "Included in revenue: the selected internal price allocated by your other sites. No cash enters the company from these deliveries.",
+      "fundedIntro": "Your own sites get your output before outside buyers. You can choose to sell to outside buyers first instead.",
+      "fundedOwn": "Own sites first (default)",
+      "fundedMarket": "Open market first",
+      "fundedPriorityNote": "Own sites first: your sites take what they need of your output, then the rest is sold. Open market first: outside buyers get your output first, and your sites use what is left. They buy anything else they need from other sellers.",
+      "fundedScope": "Your sites only take goods they use. Your output reaches your sites in any region, with no freight to arrange. Region-only goods, like local services, stay in the region where they are made.",
+      "fundedConstraints": "This does not make more goods. If your sites need more than your company makes, they buy the rest on the market.",
+      "ownSitesTurn": "Sent to your own sites, turn {turn}",
+      "made": "Made",
+      "toOwnSites": "To your sites",
+      "soldOutside": "Sold to others",
+      "ownSitesNote": "Units per day. Your sites received the same units they were sent.",
+      "noOwnSiteUnits": "None of your output went to your own sites last turn. Your sites only take your output when they use that good.",
+      "ownSiteMemo": "Sent to your own sites (memo)",
+      "ownSiteMemoNote": "Free transfers book no sale, so this is not in revenue or profit. It is what this site sent your other sites, valued at its own asking price, or at what your sites would pay when they were short. The net margin counts it, so a site that supplies your company does not read as a loss."
     },
     "governmentContracts": {
       "featureDisabled": "Government contracts are temporarily disabled. New tenders, bids and awards are paused. Existing signed contracts continue, and you can still cancel tenders or withdraw bids.",

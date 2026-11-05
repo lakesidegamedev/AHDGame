@@ -696,6 +696,10 @@ export async function resetGameWorld(
     passThroughOwnerTaxStartTurn: resetDate.currentTurn - PASS_THROUGH_PHASE_IN_TURNS,
     // NPP CEOs are paid from the first turn of a fresh world.
     nppCeoPayStartTurn: resetDate.currentTurn,
+    // No builds have landed in the new world yet. Sectors founded before its
+    // first economy turn (the opening pause included) catch up from here, and
+    // the old world's stamp, from a higher turn, cannot linger (#5169).
+    buildDeliverySettledTurn: resetDate.currentTurn - 1,
     currentYear: resetDate.currentYear,
     resetStartDate: { year: resetDate.year, week: resetDate.week },
     startingYear,

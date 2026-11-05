@@ -384,6 +384,12 @@ export interface CorporationLookups {
   /** gameConfig.wholePlantsStage on: capacity is kept to whole plants (corporations/wholePlants). */
   wholePlantsOn?: boolean;
   /**
+   * gameState.buildDeliverySettledTurn, set by the corporation turn after the
+   * lookup build: the last turn this world's builds were delivered. Absent on
+   * read-only callers of the lookups.
+   */
+  worldBuildsSettledTurn?: number;
+  /**
    * sectorId → revenue-weighted extraction capacity utilization (0..1) and the
    * most-binding resource, derived from computeExtractionCapacityMultipliers.
    * Drives the capacity revenue haircut in processSectors. Computed here (not in

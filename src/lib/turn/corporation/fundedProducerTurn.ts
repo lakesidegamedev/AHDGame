@@ -14,6 +14,7 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
+import { HOUSEHOLD_SAVINGS_DRAW_SHARE } from "@/lib/market/producerMarket/householdSpendRules";
 import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
@@ -810,6 +811,13 @@ export async function runFundedProducerTurn(
       stockCoverTurns: input.env.stockCoverTurns,
       ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
       ...(input.env.restartProbes ? { restartProbes: true } : {}),
+      ...((input.env.householdIncomeSpendStage ?? 0) >= 1
+        ? {
+            householdIncomeSpend: {
+              savingsDrawShare: input.env.householdSavingsDrawShare ?? HOUSEHOLD_SAVINGS_DRAW_SHARE,
+            },
+          }
+        : {}),
       ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
         ? {

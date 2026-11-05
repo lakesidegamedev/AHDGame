@@ -111,6 +111,32 @@ describe("InputsOutputsPanel own supply", () => {
     expect(screen.getByText(/Choose own plants first/)).toBeTruthy();
   });
 
+  it("gives funded reasons: own output used up, and how much was made", () => {
+    const { container } = panel({
+      sourceStateIds: ["HOK"],
+      sourceStateNames: ["Hokkaido"],
+      reasons: ["used_by_own_sites", "made_only"],
+      output: { made: 48, ownSites: 48, soldOutside: 0 },
+    });
+    const note = container.querySelector("[data-own-supply-note]");
+    expect(note?.textContent).toContain(
+      "Your own output of Pharmaceuticals was fully used by your other sites."
+    );
+    expect(note?.textContent).toContain("Your sites made only 48 a day.");
+    expect(note?.textContent).not.toContain("hauled");
+    expect(note?.textContent).not.toMatch(/[\u2013\u2014]/);
+  });
+
+  it("names an explicit open market choice and what outside buyers took", () => {
+    panel({
+      sourceStateIds: ["HOK"],
+      sourceStateNames: ["Hokkaido"],
+      reasons: ["sold_first", "made_only"],
+      output: { made: 48, ownSites: 8, soldOutside: 40 },
+    });
+    expect(screen.getByText(/outside buyers took 40 a day/)).toBeTruthy();
+  });
+
   it("stays quiet once the input is fully covered", () => {
     const { container } = panel(
       { sourceStateIds: ["HOK"], sourceStateNames: ["Hokkaido"], reasons: ["no_route"] },

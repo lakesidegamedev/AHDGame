@@ -8,6 +8,11 @@
  * only for demand no supply agreement has already claimed. This names which
  * of those stood in the way, from last turn's records.
  *
+ * In a funded world the producer market decides instead (issue 5385): own
+ * output goes to own sites first, in any region, unless the company chose the
+ * open market first. The old policy and freight reasons were wrong there, so a
+ * funded world reads the settled receipts and names what actually happened.
+ *
  * Pure: plain data in, reasons out.
  */
 
@@ -21,12 +26,62 @@ export type OwnSupplyReachReason =
   /** Agreements claim part of this demand; own supply does not fill that part. */
   | "agreement_reserved"
   /** Own supply did reach this plant's state; it was not enough. */
-  | "not_enough";
+  | "not_enough"
+  /** Funded: the company chose the open market first and outside buyers took some. */
+  | "sold_first"
+  /** Funded: every unit the company made went to its own sites. */
+  | "used_by_own_sites"
+  /** Funded: a region-only good made only in other regions. */
+  | "local_only"
+  /** Funded: the company's sites made only this much. */
+  | "made_only";
+
+/** What the company's other sites did with this good last turn, units per day. */
+export interface OwnSupplyOutput {
+  made: number;
+  ownSites: number;
+  soldOutside: number;
+}
 
 export interface OwnSupplyReach {
   /** States where the company's other sites made the commodity last turn. */
   sourceStateIds: string[];
   reasons: OwnSupplyReachReason[];
+  /** Funded only: what the company's other sites made and where it went. */
+  output?: OwnSupplyOutput;
+}
+
+/**
+ * Funded worlds. `marketFirst` is only an explicit "market" choice: an unset
+ * policy keeps own sites first there. A state-scoped good does not leave the
+ * state it is made in; every other good reaches own sites anywhere.
+ */
+export function fundedOwnSupplyReach(args: {
+  buyerStateId: string;
+  sourceStateIds: readonly string[];
+  output: OwnSupplyOutput;
+  marketFirst: boolean;
+  stateScoped: boolean;
+  hasAgreement: boolean;
+}): OwnSupplyReach | null {
+  const sourceStateIds = [...new Set(args.sourceStateIds)].sort();
+  if (sourceStateIds.length === 0) return null;
+  const n = (x: number) => (Number.isFinite(x) && x > 0 ? x : 0);
+  const output = {
+    made: n(args.output.made),
+    ownSites: n(args.output.ownSites),
+    soldOutside: n(args.output.soldOutside),
+  };
+  const reasons: OwnSupplyReachReason[] = [];
+  if (args.stateScoped && !sourceStateIds.includes(args.buyerStateId)) reasons.push("local_only");
+  else {
+    if (args.marketFirst && output.soldOutside > 0) reasons.push("sold_first");
+    if (output.made > 0 && output.ownSites >= output.made * 0.999)
+      reasons.push("used_by_own_sites");
+    reasons.push("made_only");
+  }
+  if (args.hasAgreement) reasons.push("agreement_reserved");
+  return { sourceStateIds, reasons, output };
 }
 
 export function ownSupplyReach(args: {

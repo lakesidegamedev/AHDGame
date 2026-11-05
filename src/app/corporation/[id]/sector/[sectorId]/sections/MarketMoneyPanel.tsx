@@ -434,6 +434,21 @@ export default function MarketMoneyPanel({
             help="Revenue minus every cost line above, exactly. A line shown with a + is a credit, so it adds back instead of taking away. Corporation-level costs and tax are settled on the corporation page."
           />
         </div>
+        {!!pnl.ownSiteMemoAnchor && (
+          <div className="flex items-center justify-between text-body-sm">
+            <InfoTooltip
+              width={280}
+              trigger={
+                <span className="cursor-help border-b border-dotted border-muted/40 text-muted">
+                  {supplyText("ownSiteMemo")}
+                </span>
+              }
+            >
+              <p className="text-muted">{supplyText("ownSiteMemoNote")}</p>
+            </InfoTooltip>
+            <span className="tabular-nums text-muted">{money(pnl.ownSiteMemoAnchor)}</span>
+          </div>
+        )}
       </div>
 
       {corporation.isStateOwned && (

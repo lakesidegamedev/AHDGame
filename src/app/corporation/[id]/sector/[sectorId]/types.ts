@@ -174,6 +174,8 @@ export interface CommodityFlow {
     sourceStateIds: string[];
     sourceStateNames: string[];
     reasons: import("@/lib/corporations/rules/ownSupplyReach").OwnSupplyReachReason[];
+    /** Funded only: what the company's other sites made and where it went, units a day. */
+    output?: import("@/lib/corporations/rules/ownSupplyReach").OwnSupplyOutput;
   };
   /**
    * Market clearing, supply rows only: this output's share of last turn's
@@ -776,6 +778,8 @@ export interface PlantsData {
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
     internalSupplyChargeAnchor?: number;
+    /** Free transfers: own-site deliveries at this site's ask, ₳ per day. Not booked. */
+    ownSiteMemoAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     growthAndBuildAnchor: number;

@@ -557,7 +557,10 @@ export default function SectorsTab({
                 // for a corporation selling everything it makes.
                 const financialsRedacted = sortedSectors.some((s) => s.revenue == null);
                 const totalRev = sumSectorDisplayRevenue(sortedSectors);
-                const totalProfit = sortedSectors.reduce((sum, s) => sum + (s.profit ?? 0), 0);
+                const totalProfit = sortedSectors.reduce(
+                  (sum, s) => sum + (s.managementProfit ?? s.profit ?? 0),
+                  0
+                );
                 const totalWorkers = sortedSectors.reduce((sum, s) => sum + (s.workers ?? 0), 0);
                 const totalCapacity = sortedSectors.reduce(
                   (sum, s) => sum + (s.capacityUnits ?? 0),
@@ -626,7 +629,10 @@ export default function SectorsTab({
                 // did not equal the column above it for any corp whose realized
                 // revenue differs from nameplate (ticket #1122).
                 const totalRev = sumSectorDisplayRevenue(sortedSectors);
-                const totalProfit = sortedSectors.reduce((sum, s) => sum + (s.profit ?? 0), 0);
+                const totalProfit = sortedSectors.reduce(
+                  (sum, s) => sum + (s.managementProfit ?? s.profit ?? 0),
+                  0
+                );
                 const totalWorkers = sortedSectors.reduce((sum, s) => sum + (s.workers ?? 0), 0);
                 // Net margin where the engine provides one (plants), else the
                 // effective margin, so the average does not hide upkeep.

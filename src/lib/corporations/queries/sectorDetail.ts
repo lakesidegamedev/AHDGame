@@ -226,6 +226,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           bankConstructionFinanceEnabled: 1,
           treasuryCashLedgerEnabled: 1,
           minimumWageLawStage: 1,
+          producerMarketLiveFromTurn: 1,
           ...RUN_REPORT_STAGE_PROJECTION,
         },
       }
@@ -446,6 +447,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 "producerSettlement.turn": 1,
                 "producerSettlement.products.commodity": 1,
                 "producerSettlement.products.producedUnits": 1,
+                "producerSettlement.products.soldUnits": 1,
+                "producerSettlement.products.internalDeliveredUnits": 1,
               },
             }
           )
@@ -998,6 +1001,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           corporation,
           sector,
           siblings: allCorpSectors,
+          funded:
+            typeof governorConfig?.producerMarketLiveFromTurn === "number" &&
+            currentTurn >= governorConfig.producerMarketLiveFromTurn,
           shortInputs: demandsWithShortage
             .filter((d) => typeof d.inputAvailability === "number" && d.inputAvailability < 0.999)
             .map((d) => d.commodity),

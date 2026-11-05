@@ -280,7 +280,7 @@ export default function InputsOutputsPanel({
                     if (share == null && !ownSite) return null;
                     const perOutput = f.soldFraction != null;
                     const ownSiteText = ownSite
-                      ? `${ownSiteLabel(ownSite.share)}: ${fmtUnits(ownSite.units)} used by your company (about ${price(ownSite.valueAnchor)} ${currencyCode} at your asking price)`
+                      ? `${ownSiteLabel(ownSite.share)}: ${fmtUnits(ownSite.units)} used by your company (worth about ${price(ownSite.valueAnchor)} ${currencyCode} to your sites)`
                       : null;
                     if (share == null)
                       return <span className="text-body-xs text-muted">{ownSiteText}</span>;
@@ -458,6 +458,28 @@ function OwnSupplyNote({
         <span className="font-semibold">{label}</span>, made in {where}:
       </p>
       <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted">
+        {reasons.has("local_only") && (
+          <li>
+            It is a local good. It stays in the region where it is made, so it cannot reach this
+            plant.
+          </li>
+        )}
+        {reasons.has("sold_first") && (
+          <li>
+            You chose to sell on the open market first, so outside buyers took{" "}
+            {fmtUnits(ownSupply.output?.soldOutside ?? 0, 1)} a day before your sites got any.
+            Choose own sites first in the CEO office to change that.
+          </li>
+        )}
+        {reasons.has("used_by_own_sites") && (
+          <li>Your own output of {label} was fully used by your other sites.</li>
+        )}
+        {reasons.has("made_only") && (
+          <li>
+            Your sites made only {fmtUnits(ownSupply.output?.made ?? 0, 1)} a day. This plant bought
+            the rest on the market, and the market could not cover all of it.
+          </li>
+        )}
         {reasons.has("market_priority") && (
           <li>
             Your supply policy sells it on the market first. Choose own plants first in the CEO

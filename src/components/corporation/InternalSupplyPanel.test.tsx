@@ -186,7 +186,8 @@ it("saves the cross-state opt-in and shows freight separately from discounts", a
 it("hides the discount controls and explains the free transfer on funded worlds", async () => {
   fetcher.mockResolvedValue({ ok: true, json: async () => ({ ...view, fundedMarket: true }) });
   show();
-  await screen.findByText("Reserved supply, turn 12");
+  // Funded worlds report what own sites were sent, not the legacy reservation.
+  await screen.findByText("Sent to your own sites, turn 12");
   expect(screen.queryByLabelText("Internal discount")).toBeNull();
   expect(screen.queryByText("Net internal discount credit: ₳20 per day.")).toBeNull();
   expect(
@@ -201,4 +202,46 @@ it("keeps the discount controls and no free-transfer note on legacy worlds", asy
   await screen.findByText("Reserved supply, turn 12");
   expect(screen.getByLabelText("Internal discount")).toBeTruthy();
   expect(screen.queryByText(/free transfer/)).toBeNull();
+});
+it("in a funded world shows what own sites were sent and describes the real priority", async () => {
+  fetcher.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      ...view,
+      policy: { priority: "own", discount: 0 },
+      effectivePolicy: { priority: "own", discount: 0 },
+      fundedMarket: true,
+      lastTurn: 20,
+      received: {},
+      ownSites: {
+        turn: 20,
+        rows: [
+          { commodity: "energy", madeUnits: 240, ownSiteUnits: 200, soldUnits: 40, valueAnchor: 9 },
+        ],
+      },
+    }),
+  });
+  show();
+  await screen.findByText("Sent to your own sites, turn 20");
+  expect(screen.getByLabelText("Supply priority")).toHaveProperty("value", "own");
+  expect(screen.getByRole("option", { name: "Own sites first (default)" })).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Open market first" })).toBeTruthy();
+  expect(screen.getByText("energy")).toBeTruthy();
+  expect(screen.getByText("200")).toBeTruthy();
+  expect(screen.queryByText(/No internal units were reserved/)).toBeNull();
+  expect(screen.queryByText(/Ship eligible surplus/)).toBeNull();
+  expect(screen.getByText(/outside buyers get your output first/)).toBeTruthy();
+});
+it("in a funded world says plainly when nothing went to own sites", async () => {
+  fetcher.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      ...view,
+      fundedMarket: true,
+      lastTurn: 20,
+      ownSites: { turn: 20, rows: [] },
+    }),
+  });
+  show();
+  await screen.findByText(/None of your output went to your own sites last turn/);
 });

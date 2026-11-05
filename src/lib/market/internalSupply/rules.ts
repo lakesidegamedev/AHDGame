@@ -33,6 +33,14 @@ export const DEFAULT_INTERNAL_SUPPLY_POLICY: InternalSupplyPolicy = {
   priority: "market",
   discount: 0,
 };
+/**
+ * What an unset policy does in a funded world: own sites take the company's
+ * output first. Only an explicit "market" choice sells to outside buyers first.
+ */
+export const FUNDED_DEFAULT_SUPPLY_POLICY: InternalSupplyPolicy = {
+  priority: "own",
+  discount: 0,
+};
 export interface SupplyOwner {
   id: string;
   totalShares: number;

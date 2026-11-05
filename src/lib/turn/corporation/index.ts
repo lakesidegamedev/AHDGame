@@ -22,7 +22,7 @@ import { applyCorporationCashWrites } from "@/lib/turn/npp/foundingCashLedger";
 import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
 import { ObjectId } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { Character } from "@/lib/db/types";
+import type { Character, GameState } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { State } from "@/lib/db/types/state";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
@@ -288,6 +288,8 @@ export async function processCorporationTurn(
       : Promise.resolve(null),
   ]);
   await resolvePhaseLookups(db, marketGovernorConfig, turn ?? gameState?.currentTurn ?? 0, lookups);
+  // Where an unstamped sector's build deliveries catch up from (#5169).
+  lookups.worldBuildsSettledTurn = gameState?.buildDeliverySettledTurn;
   if (
     mediaProductSlatesEnabled &&
     lookups.mediaProductProjectsByCorpId &&
@@ -1007,6 +1009,13 @@ export async function processCorporationTurn(
     // `$push` after the main update) stay together and in order.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await partitionedBulkWrite(db.collection("corporateSectors"), sectorOps as any[]);
+  }
+  // After the sector writes, which carry each sector's own stamp: a sector
+  // founded before the next run catches its builds up from this turn (#5169).
+  if (typeof turn === "number") {
+    await db
+      .collection<GameState>("gameState")
+      .updateOne({ _id: "current" }, { $set: { buildDeliverySettledTurn: turn } });
   }
   mark("sectorBulkWrite");
   if (corpOps.length > 0 || manufacturingDevelopmentCashOps.length > 0) {
