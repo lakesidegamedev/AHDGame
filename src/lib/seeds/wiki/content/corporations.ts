@@ -478,11 +478,11 @@ Computer-run corporations may automatically retool a sector onto a better strate
 | Media (entertainment) | Live-Service Platforms, Standard, Streaming/Digital, Live/Venue | 4 |
 | Retail | E-Commerce Fulfillment, Standard, E-Commerce, Brick & Mortar | 4 |
 | Logistics | Autonomous Freight, Standard, Freight Only, Automated Logistics, Full-Service | 5 |
-| Extraction & Mining | Diversified, Iron & Metals Mining, Oil & Gas, Rare Earth Minerals Mining, Coal Mining, Timber & Forestry | 6 |
+| Extraction & Mining | Diversified, Iron & Metals Mining, Oil & Gas, Natural Gas Focus, Rare Earth Minerals Mining, Coal Mining, Timber & Forestry | 7 |
 
 There is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and Rare Earth Minerals Mining covers both markets.
 
-For extraction sectors specifically, the **Diversified** strategy spreads output across all six resource types (copper is merged into the Rare Earth Minerals market) at lower per-commodity rates. The focused strategies (Iron & Metals Mining, Oil & Gas, etc.) produce roughly **3 to 5×** more of their target commodity (Timber & Forestry about 20× the timber, while Oil & Gas makes under twice the natural gas), so switching to the focused strategy that matches the scarcest resource is almost always the higher-margin play when a clear shortage exists. See [Commodities](/wiki/commodities#extraction-strategies) for a full breakdown.
+For extraction sectors specifically, the **Diversified** strategy spreads output across all six resource types (copper is merged into the Rare Earth Minerals market) at lower per-commodity rates. The focused strategies (Iron & Metals Mining, Oil & Gas, etc.) produce roughly **3 to 5×** more of their target commodity (Timber & Forestry about 20× the timber; Oil & Gas leads with oil and Natural Gas Focus leads with gas, each making under twice the diversified rate of the other), so switching to the focused strategy that matches the scarcest resource is almost always the higher-margin play when a clear shortage exists. See [Commodities](/wiki/commodities#extraction-strategies) for a full breakdown.
 
 **Telecommunications** sectors produce **Network Services** (subscription-equivalent broadband/connectivity capacity) as their primary unique output alongside software. The five strategies (Standard, Wireline Network, 5G/Infrastructure, Cloud Services and the research-gated 5G / 6G Networks) differ in how much network services versus software they supply and in their hardware and energy input mix. Network services have background macro demand from GDP, so there is always a market even before player-built Telecom sectors are common.
 
