@@ -103,6 +103,12 @@ import {
 } from "@/lib/banking/constructionBorrowerTransfer";
 import { assumedSecuredPrincipalAnchor } from "@/lib/banking/rules/constructionBorrowerTransfer";
 import {
+  assumeCorporateLoans,
+  corporateLoanAssumptionCheck,
+  loadLiveCorporateLoans,
+  restoreCorporateLoans,
+} from "@/lib/banking/corporateLoanAssumption";
+import {
   acquireConstructionPropertyTransition,
   hasProtectedConstructionClaim,
   releaseConstructionPropertyTransition,
@@ -1032,6 +1038,17 @@ export async function nationalizeWholeCorp(
       "A site this corporation holds abroad carries a construction loan. It must be repaid or sold before the taking."
     );
   }
+  // The primary NatCorp is the bond and ordinary-loan assumption target and the
+  // canonical return. Individual sectors may route to split-offs (resolved per
+  // type below).
+  const nationalCorp = await ensurePrimaryNationalCorporation(db, params.countryId);
+  // Its ordinary bank loans become the National Corporation's debt, like its
+  // bonds. Checked before any site is reserved or money moves.
+  const loanRefusal = await corporateLoanAssumptionCheck(db, {
+    fromId: target._id,
+    toCurrency: resolveCorpLiquidCurrencyCode(nationalCorp) ?? undefined,
+  });
+  if (loanRefusal) throw badRequest(loanRefusal);
   const financedByDest = new Map<string, { dest: Corporation; sites: CorporateSector[] }>();
   for (const site of financedSites) {
     const dest =
@@ -1117,10 +1134,6 @@ export async function nationalizeWholeCorp(
     targetSectors.map((sector, index) => [sector._id.toHexString(), transitionKeys[index]])
   );
 
-  // The primary NatCorp is the bond-assumption target + the canonical return.
-  // Individual sectors may route to split-offs (resolved per type below).
-  const nationalCorp = await ensurePrimaryNationalCorporation(db, params.countryId);
-
   // ── 1. Capture valuation inputs BEFORE moving sectors/bonds (₳). ──
   const [
     targetBonds,
@@ -1130,6 +1143,7 @@ export async function nationalizeWholeCorp(
     targetFxRate,
     marketMode,
     corpGameState,
+    ordinaryLoans,
   ] = await Promise.all([
     bonds.find({ corporationId: target._id, matured: false }).toArray(),
     corps
@@ -1143,6 +1157,7 @@ export async function nationalizeWholeCorp(
     getCorpFxRate(db, target),
     getMarketSystemModeForDb(db),
     getGameState(db),
+    loadLiveCorporateLoans(db, target._id, { ordinaryOnly: true }),
   ]);
   const corpPlantsEnabled = marketAtLeast(marketMode, "plants");
   const corpEraUnitScale = await loadWorldEraUnitScale(db);
@@ -1162,10 +1177,18 @@ export async function nationalizeWholeCorp(
       });
   const liquidCapitalAnchor = corpLiquidCapitalToAnchor(target.liquidCapital, target, targetFxRate);
   // Debt the state assumes: the corp's issued, non-matured bond principal,
-  // plus the secured construction loans its National Corporations take on.
+  // the secured construction loans its National Corporations take on, and its
+  // ordinary bank loans (construction loans excluded there, so none counts twice).
   const debtAnchor =
     sumBondPrincipalAnchor(targetBonds, fxByCurrency) +
-    assumedSecuredPrincipalAnchor(constructionTransfers.transfers, fxByCurrency);
+    assumedSecuredPrincipalAnchor(constructionTransfers.transfers, fxByCurrency) +
+    assumedSecuredPrincipalAnchor(
+      ordinaryLoans.map((loan) => ({
+        outstandingLocal: loan.outstanding,
+        currency: loan.currency,
+      })),
+      fxByCurrency
+    );
   // Shares the seized corp holds in other corporations pass to the National
   // Corporation (step 5b) as shares only, so the buyout pays the holders their
   // market value, like cash (#3041). Held bonds are still left out (conservative
@@ -1382,10 +1405,30 @@ export async function nationalizeWholeCorp(
     sequentialId: target.sequentialId,
     deletedAt: now,
   });
-  await deleteDissolvedCorporation(db, target._id, ledger, now, "ownershipTransition:dissolve", {
-    reason: "nationalized",
-    successorId: nationalCorp._id,
+  // The National Corporation now owes the seized corp's ordinary bank loans.
+  // Moved after every step that can fail and just before the delete; handed
+  // back if the delete fails while the corporation still exists.
+  const assumedLoanIds = await assumeCorporateLoans(db, {
+    fromId: target._id,
+    toId: nationalCorp._id,
   });
+  try {
+    await deleteDissolvedCorporation(db, target._id, ledger, now, "ownershipTransition:dissolve", {
+      reason: "nationalized",
+      successorId: nationalCorp._id,
+    });
+  } catch (err) {
+    if (
+      assumedLoanIds.length > 0 &&
+      (await corps.countDocuments({ _id: target._id }, { limit: 1 })) > 0
+    )
+      await restoreCorporateLoans(db, {
+        ids: assumedLoanIds,
+        fromId: target._id,
+        toId: nationalCorp._id,
+      });
+    throw err;
+  }
   // Keep every reservation through compensation, asset transfer, share/bond
   // settlement, and shell deletion. Only release after ownership is final.
   await Promise.all(

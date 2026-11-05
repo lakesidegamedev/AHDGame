@@ -67,17 +67,23 @@ export async function restoreCorporateLoans(
     );
 }
 
-/** Live ordinary loans a corporation owes, for pricing it net of its debt. */
+/**
+ * Live loans a corporation owes, for pricing it net of its debt. Secured
+ * construction loans are included unless `ordinaryOnly` is set, for callers
+ * that already net them through a construction borrower transfer plan.
+ */
 export async function loadLiveCorporateLoans(
   db: Db,
-  borrowerId: ObjectId
+  borrowerId: ObjectId,
+  options: { ordinaryOnly?: boolean } = {}
 ): Promise<Pick<BankLoan, "_id" | "outstanding" | "currency">[]> {
   return db
     .collection<BankLoan>("bankLoans")
     .find(
       {
-        borrowerType: "corporation",
-        borrowerId,
+        ...(options.ordinaryOnly
+          ? plainLoansOf(borrowerId)
+          : { borrowerType: "corporation" as const, borrowerId }),
         status: { $in: [...ASSUMABLE_LOAN_STATUSES] },
       },
       { projection: { outstanding: 1, currency: 1 } }

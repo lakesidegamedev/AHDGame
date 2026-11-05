@@ -38,6 +38,10 @@ areas: [backend]
   at a company that no longer existed and slid into default. A loan request
   still waiting on the bank, or a loan in a different currency from the
   acquirer's cash, blocks the deal until it is settled.
+- Nationalizing a whole corporation works the same way: its ordinary bank loans
+  pass to the country's National Corporation, and shareholder compensation is
+  net of them, never going below zero. A pending loan request, or a loan in a
+  different currency from the National Corporation's cash, blocks the taking.
 
 ## What still waits for the loan
 
