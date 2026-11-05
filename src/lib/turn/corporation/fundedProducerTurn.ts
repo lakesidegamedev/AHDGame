@@ -797,9 +797,20 @@ export async function runFundedProducerTurn(
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
       ownSitesFirst: input.env.ownSitesFirst,
+      // An explicit "market first" supply priority is honoured (issue 5505): own
+      // sites get no head start for these companies. Unset keeps own sites first.
+      ...(input.env.ownSitesFirst
+        ? {
+            marketFirstAccounts: lookups.corporations
+              .filter((c) => c.internalSupplyPolicy?.priority === "market")
+              .map((c) => c._id.toHexString())
+              .sort(),
+          }
+        : {}),
       stockCoverTurns: input.env.stockCoverTurns,
       ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
       ...(input.env.restartProbes ? { restartProbes: true } : {}),
+      ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
         ? {
             shortageAsk: {
