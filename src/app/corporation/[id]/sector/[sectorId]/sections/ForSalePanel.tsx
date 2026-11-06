@@ -27,7 +27,9 @@ const BLOCK_REASON_TEXT: Record<NonNullable<ForSaleInfo["blockReason"]>, string>
   invalid_price: "The listing price is invalid. Ask the seller to relist it.",
   insufficient_funds: "Your corporation does not have enough liquid capital for this price.",
   merge_blocked:
-    "You already run this sector here, and one of the two sites has an unfinished secured construction loan, so they cannot be merged yet.",
+    "You already run this sector here, and your site there has an unfinished secured construction loan or is mid-change, so the two cannot be merged yet.",
+  strategy_mismatch:
+    "Your site in this market runs a different strategy, so the two cannot be merged yet.",
   construction:
     "This site's construction loan is still being set up or settled, so it cannot be bought yet.",
   not_ceo: "Only the CEO of a corporation can buy listed sectors.",
@@ -97,10 +99,24 @@ export default function ForSalePanel({
             {message.text}
           </div>
         )}
+        {forSaleInfo.securedLoan && (
+          <div className="mt-3 rounded-lg border border-card-border p-3 text-xs text-muted">
+            This site carries a secured construction loan of{" "}
+            <strong className="text-foreground">
+              {formatAmount(forSaleInfo.securedLoan.outstandingAnchor, buyerCurrency)}
+            </strong>
+            . Your price pays the lender{" "}
+            {formatAmount(forSaleInfo.securedLoan.repaidFromPriceAnchor, buyerCurrency)} first, so
+            you take on no debt
+            {forSaleInfo.securedLoan.remainingAfterSaleAnchor > 0
+              ? `; the remaining ${formatAmount(forSaleInfo.securedLoan.remainingAfterSaleAnchor, buyerCurrency)} stays with the seller.`
+              : "."}
+          </div>
+        )}
         {forSaleInfo.conflict && (
           <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
             {sector.forSale?.pledged
-              ? `You already operate this market in ${sector.stateName}. A financed site must transfer as a separate property.`
+              ? `You already operate this market in ${sector.stateName}. Purchasing will pay off the lender and merge this site into yours.`
               : `You already operate this market in ${sector.stateName}. Purchasing will merge its revenue and workers into your existing site.`}
           </div>
         )}
@@ -184,7 +200,7 @@ export default function ForSalePanel({
         </div>
         <p className="mt-2 text-xs text-muted">
           {reason
-            ? BLOCK_REASON_TEXT[reason]
+            ? (forSaleInfo.blockDetail ?? BLOCK_REASON_TEXT[reason])
             : "This listing is not available to your corporation."}
         </p>
         {reason === "insufficient_funds" && (

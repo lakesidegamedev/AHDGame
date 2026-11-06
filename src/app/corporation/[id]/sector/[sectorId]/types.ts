@@ -601,16 +601,28 @@ export interface ForSaleInfo {
   conflict: boolean;
   /** Buyer has enough liquid capital */
   hasFunds: boolean;
+  /**
+   * Secured loan on a pledged site, in ₳. The price pays the lender first and
+   * the buyer takes on no debt; `remainingAfterSaleAnchor` stays with the seller.
+   */
+  securedLoan?: {
+    outstandingAnchor: number;
+    repaidFromPriceAnchor: number;
+    remainingAfterSaleAnchor: number;
+  } | null;
   /** First reason the purchase is unavailable; null when eligible */
   blockReason?:
     | "invalid_price"
     | "insufficient_funds"
     | "merge_blocked"
+    | "strategy_mismatch"
     | "construction"
     | "not_ceo"
     | "actions_paused"
     | "state_controlled"
     | null;
+  /** Plain-words detail for the block, when the reason carries one */
+  blockDetail?: string | null;
 }
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
