@@ -475,6 +475,7 @@ export async function processNppCorporationDecisions(
           producerConversionPaceShare?: number;
           producerFundedRestartStage?: number;
           wholePlantsStage?: number;
+          producerCaptiveDeliveryStage?: number;
           nppStateServiceHeadroomStage?: number;
         } & ShortageGrowthFinanceConfigInput
       >("gameConfig")
@@ -486,6 +487,7 @@ export async function processNppCorporationDecisions(
             producerConversionPaceShare: 1,
             producerFundedRestartStage: 1,
             wholePlantsStage: 1,
+            producerCaptiveDeliveryStage: 1,
             nppStateServiceHeadroomStage: 1,
             nppShortageGrowthFinanceStage: 1,
             nppShortageGrowthFinanceCandidateLimit: 1,
@@ -510,6 +512,9 @@ export async function processNppCorporationDecisions(
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
       ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),
+      ...((nppGameConfig?.producerCaptiveDeliveryStage ?? 0) >= 3
+        ? { captiveMarketValue: true }
+        : {}),
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
     if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;

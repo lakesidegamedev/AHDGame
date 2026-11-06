@@ -163,10 +163,7 @@ import {
   reinvestPoolHeadroomUnits,
   type ReinvestCandidate,
 } from "@/lib/turn/npp/reinvestCandidatePool";
-import {
-  analyzeSectorProfitability,
-  type SectorProfitInfo,
-} from "@/lib/turn/npp/sectorProfitability";
+import { nppSectorProfitability, type SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import { sizeShortageGrowthFinance } from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
@@ -284,7 +281,7 @@ export function makeNppCorpDecision(
   );
 
   // ── Profitability analysis ─────────────────────────────────────────────────
-  const sectorProfits = analyzeSectorProfitability(sectors, plants?.enabled === true);
+  const sectorProfits = nppSectorProfitability(sectors, plants);
   const profitableSectors = sectorProfits.filter((sp) => sp.isProfitable).length;
 
   // Count consecutive loss turns for active NPP sectors. Restart resets the count.

@@ -6,6 +6,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
   # A maintainer approval can satisfy the governance step, so a review re-runs this check.
+  # (A `/approve <sha>` comment is handled by the approve-comment-rerun workflow.)
   pull_request_review:
     types: [submitted, dismissed]
   schedule:
