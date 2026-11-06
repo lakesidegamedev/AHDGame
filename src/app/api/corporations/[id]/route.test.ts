@@ -252,8 +252,7 @@ describe("GET /api/corporations/[id]", () => {
     // The mocked corporations collection answers the "corporation I run" lookup
     // with the holder corp, then the private corp for the base lookup.
     db.collectionMocks["corporations"]!.findOne.mockImplementation(
-      async (filter: Record<string, unknown>) =>
-        filter?.userId ? { _id: holderCorpId } : corp
+      async (filter: Record<string, unknown>) => (filter?.userId ? { _id: holderCorpId } : corp)
     );
     const { getAuthUser } = await import("@/lib/auth");
     vi.mocked(getAuthUser).mockResolvedValue({ userId: new ObjectId().toString() } as never);

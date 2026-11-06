@@ -30,11 +30,12 @@ export async function viewerHoldsShares(
 
   const holderCorpIds = holders.flatMap((sh) => (sh.corporationId ? [sh.corporationId] : []));
   if (holderCorpIds.length > 0) {
-    const ownCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: { $in: holderCorpIds }, userId, ceoVacant: { $ne: true } }, {
+    const ownCorp = await db.collection<Corporation>("corporations").findOne(
+      { _id: { $in: holderCorpIds }, userId, ceoVacant: { $ne: true } },
+      {
         projection: { _id: 1 },
-      });
+      }
+    );
     if (ownCorp) return true;
   }
   return false;
