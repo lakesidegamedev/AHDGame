@@ -7,7 +7,7 @@ summary: >-
   leaving the balance lower with no entry to explain it.
 tags: [corporations, finance]
 badges: [patch]
-areas: [corporations]
+areas: [backend]
 ---
 
 ## What changed
