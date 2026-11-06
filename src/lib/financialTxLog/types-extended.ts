@@ -161,6 +161,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   // ── Resource prospecting + extraction contracts ───────────────────────
   "corp_prospecting_cost",
   "corp_tech_unlock",
+  "corp_sector_retool",
   "corp_sector_split_cost",
   "corp_union_busting_cost",
   "govt_prospecting_cost",
@@ -310,6 +311,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
 
   corp_prospecting_cost: "Prospecting Cost",
   corp_tech_unlock: "Technology Unlock",
+  corp_sector_retool: "Sector Retooling",
   corp_sector_split_cost: "Sector Split Campaign",
   corp_union_busting_cost: "Union-Busting Attempt",
   govt_prospecting_cost: "Govt Prospecting Cost",
