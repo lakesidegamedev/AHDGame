@@ -425,6 +425,13 @@ export interface GameConfig {
    */
   nppShortageGrowthFinanceStage?: number;
   /**
+   * AI company growth gate: >= 1 reads an existing sector's fill as the best
+   * per-product sell-through (sold plus own-site deliveries over offered)
+   * instead of sold over produced across all co-products, and scores
+   * short-lane pressure on the plant's most pressed product. 0 or absent = off.
+   */
+  nppGrowthPerProductFillStage?: number;
+  /**
    * AI company profit payout: >= 1 pays the household dividend on profit after
    * this turn's tax (60% of the after-tax profit), never out of opening cash and
    * not while opening cash is negative. >= 2 also holds AI sector founding and

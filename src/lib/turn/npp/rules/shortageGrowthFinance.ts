@@ -100,10 +100,11 @@ type PressureProducts = Parameters<typeof plantPressure>[0];
 export function sectorBookPressure(
   receipt: { worldEpoch?: string | null; products?: PressureProducts } | null | undefined,
   worldEpoch: string | undefined,
-  pressureByBook: ReadonlyMap<string, number> | undefined
+  pressureByBook: ReadonlyMap<string, number> | undefined,
+  shortestProduct = false
 ): number | undefined {
   if (!receipt || !worldEpoch || receipt.worldEpoch !== worldEpoch) return undefined;
-  return plantPressure(receipt.products, pressureByBook);
+  return plantPressure(receipt.products, pressureByBook, shortestProduct);
 }
 
 export type ShortageGrowthFinanceRejection =

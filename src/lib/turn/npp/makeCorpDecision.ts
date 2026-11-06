@@ -164,6 +164,7 @@ import {
 } from "@/lib/turn/npp/reinvestCandidatePool";
 import { nppSectorProfitability, type SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
+import { gateFill, type ProductFillRow } from "@/lib/turn/npp/rules/productFill";
 import { sizeShortageGrowthFinance } from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import type { ObjectId } from "mongodb";
@@ -1357,7 +1358,12 @@ export function makeNppCorpDecision(
       // telemetry means no evidence, and no evidence means no build.
       const produced = sector.producedUnits ?? 0;
       const sold = sector.soldUnits ?? 0;
-      const fill = produced > 0 ? sold / produced : 0;
+      const fill = gateFill(
+        ctx.productFillStage,
+        (sector.producerSettlement as { products?: ProductFillRow[] } | null | undefined)?.products,
+        produced,
+        sold
+      );
       // (b) Is there room in the market to absorb more output? Same unowned
       // pool the founding path sizes and draws against.
       const sectorCountryId = sector.countryId ?? corp.countryId;
