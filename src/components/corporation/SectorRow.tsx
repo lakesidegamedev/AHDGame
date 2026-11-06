@@ -287,7 +287,7 @@ export function SectorRow({
           <span className="tabular-nums text-success">{fmtScaled(realized)}</span>
         </div>
         <div className="flex justify-between gap-3">
-          <span>× effective margin</span>
+          <span>× effective margin (outside sales only)</span>
           <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
         </div>
         <div className="flex justify-between gap-3">

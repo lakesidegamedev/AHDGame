@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
 import { MINOR_INPUT_SHORTFALL_PREMIUM } from "./makeDoRules";
-import { fundedInputThroughput } from "./fundedSectorRules";
+import { fundedInputThroughput, fundedSectorOpsAll, type FundedReceipt } from "./fundedSectorRules";
 import { decisionProfit } from "./internalTransferPricingRules";
 import { strugglingReason } from "./transitionRules";
 
@@ -121,6 +121,109 @@ describe("internal supply accounting", () => {
       );
     }
   );
+});
+
+describe("internal supply legs net across a multi-site company", () => {
+  const output = (commodity: string, unitPrice: number) => ({
+    commodity,
+    book: "world",
+    unitsPerOutput: 1,
+    policy: { kind: "manual" as const, unitPrice },
+    referenceUnitPrice: unitPrice,
+    storable: true,
+  });
+  const input = (commodity: string, unitsPerOutput: number) => ({
+    commodity,
+    unitsPerOutput,
+    book: "world",
+    maximumUnitPrice: 50,
+  });
+  const site = (
+    id: string,
+    inputs: ProductionPlan["inputs"],
+    outputs: ProductionPlan["outputs"]
+  ): ProductionPlan =>
+    plant({ id, inputs, outputs, internalTransferPricing: { mode: "market", discount: 0 } });
+  const request = {
+    turn: 1,
+    accounts: [
+      { id: "corp", cash: 100000 },
+      { id: "households", cash: 1000 },
+      { id: "services", cash: 0 },
+      { id: "supplier", cash: 0 },
+    ],
+    producers: [
+      site("a", [], [output("energy", 5)]),
+      site("b", [input("energy", 1)], [output("steel", 10)]),
+      site("c", [input("steel", 1), input("energy", 1)], [output("pharma", 20)]),
+      site("d", [input("pharma", 1)], [output("health", 30)]),
+    ],
+    externalOffers: [
+      {
+        id: "o",
+        accountId: "supplier",
+        commodity: "energy",
+        book: "world",
+        units: 30,
+        unitPrice: 4,
+      },
+    ],
+    externalOrders: ["pharma", "health"].map((commodity) => ({
+      id: `town-${commodity}`,
+      accountId: "households",
+      commodity,
+      book: "world",
+      units: 20,
+      maximumUnitPrice: 40,
+    })),
+  };
+
+  it.each([false, true])(
+    "books equal income and charge over a multi-hop chain (captive stage %s)",
+    (captiveMarketValue) => {
+      const result = advanceProducerEconomy({ ...request, captiveMarketValue });
+      const income = result.producers.reduce((n, p) => n + (p.internalSupplyIncome ?? 0), 0);
+      const charge = result.producers.reduce((n, p) => n + (p.internalSupplyCharge ?? 0), 0);
+      expect(income).toBeGreaterThan(0);
+      expect(income).toBeCloseTo(charge, 8);
+    }
+  );
+
+  it("still nets after each site's legs are restated in its own currency", () => {
+    const result = advanceProducerEconomy(request);
+    // Sellers at home in dollars, receivers in a currency worth 1/120 of the anchor.
+    const rate = new Map([
+      ["a", 1],
+      ["b", 1],
+      ["c", 120],
+      ["d", 120],
+    ]);
+    const ops = result.producers.map((p) => ({
+      updateOne: { filter: { _id: p.id }, update: { $set: { name: p.id } } },
+    }));
+    const funded = new Map(
+      result.producers.map((p) => [
+        p.id,
+        {
+          receipt: p as unknown as FundedReceipt,
+          result: { hourlyRevenue: 0, costs: 0, effectiveMargin: 0, hourlyGrowthCost: 0 },
+          daily: (anchor: number) => anchor * rate.get(p.id)!,
+        },
+      ])
+    );
+    const written = fundedSectorOpsAll(ops, funded, 1);
+    let income = 0;
+    let charge = 0;
+    for (const op of written) {
+      const id = String((op.updateOne.filter as { _id: string })._id);
+      const pnl = (op.updateOne.update as { $set: { plantsPnl: Record<string, number> } }).$set
+        .plantsPnl;
+      income += (pnl.internalSupplyIncome ?? 0) / rate.get(id)!;
+      charge += (pnl.internalSupplyCharge ?? 0) / rate.get(id)!;
+    }
+    expect(income).toBeGreaterThan(0);
+    expect(income).toBeCloseTo(charge, 6);
+  });
 });
 
 describe("own-site deliveries at market value (captive stage 3)", () => {

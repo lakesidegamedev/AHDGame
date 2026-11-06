@@ -155,7 +155,7 @@ import {
 } from "./commodity/pricing";
 import { buildBlocsByCountry, buildCurtainedCountries } from "./commodity/tradeContext";
 import { runFreightSettlementPhase } from "./commodity/sourcingSettlement";
-import { buildOwnRoutes } from "@/lib/logistics/ownRoutes";
+import { buildOwnFreightCapacity, buildOwnRoutes } from "@/lib/logistics/ownRoutes";
 import { stateHops } from "@/lib/logistics/stateDistance";
 import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
 import { persistTurnOutputs } from "./commodity/persistence";
@@ -956,29 +956,36 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     demandUsesByState.set(stateId, byCommodity);
   }
 
-  const ownRoutes = buildOwnRoutes({
-    sectors: sectorData
-      .filter((s) => !!s.corporationId && !!s.sectorId && !!s.stateId)
-      .map((s) => ({
-        sectorId: s.sectorId,
-        corporationId: s.corporationId!.toString(),
-        stateId: s.stateId,
+  const ownRouteSectors = sectorData
+    .filter((s) => !!s.corporationId && !!s.sectorId && !!s.stateId)
+    .map((s) => ({
+      sectorId: s.sectorId,
+      corporationId: s.corporationId!.toString(),
+      stateId: s.stateId,
+    }));
+  const ownRoutePolicies = resolveSupplyPolicies(
+    allCorporations.map((c) => ({
+      id: c._id.toString(),
+      totalShares: c.totalShares,
+      holders: (c.shareholders ?? []).map((h) => ({
+        corporationId: h.corporationId?.toString(),
+        shares: h.shares,
       })),
+      policy: c.internalSupplyPolicy,
+    }))
+  );
+  const ownRoutes = buildOwnRoutes({
+    sectors: ownRouteSectors,
     supplyBySector: sectorUnits.supplyBySector,
     inputDemandBySector: sectorUnits.inputDemandBySector,
-    policies: resolveSupplyPolicies(
-      allCorporations.map((c) => ({
-        id: c._id.toString(),
-        totalShares: c.totalShares,
-        holders: (c.shareholders ?? []).map((h) => ({
-          corporationId: h.corporationId?.toString(),
-          shares: h.shares,
-        })),
-        policy: c.internalSupplyPolicy,
-      }))
-    ),
+    policies: ownRoutePolicies,
     stateToCountry,
     hops: stateHops,
+  });
+  const ownFreightCapacityByState = buildOwnFreightCapacity({
+    sectors: ownRouteSectors,
+    supplyBySector: sectorUnits.supplyBySector,
+    policies: ownRoutePolicies,
   });
 
   // ── Landed-price freight settlement (shadow or active) ─────────────────
@@ -998,6 +1005,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         affinityFor,
         demandUsesByState,
         ownRoutes,
+        ownFreightCapacityByState,
       },
       turn,
       now,

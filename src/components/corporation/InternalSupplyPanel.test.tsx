@@ -245,3 +245,9 @@ it("in a funded world says plainly when nothing went to own sites", async () => 
   show();
   await screen.findByText(/None of your output went to your own sites last turn/);
 });
+
+it("exposes the section anchor the CEO Office nav links to", async () => {
+  const { container } = show();
+  await screen.findByText("Reserved supply, turn 12");
+  expect(container.querySelector("#ceo-internal-supply")).toBeTruthy();
+});

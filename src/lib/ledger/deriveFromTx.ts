@@ -120,6 +120,9 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   // corp into R&D spend with no ledger-backed recipient account, so the debit
   // is an attributed sink rather than `unattributed` backlog.
   corp_tech_unlock: "tech_research",
+  // Retool and retool-cancel fees leave the corp with no ledger-backed recipient
+  // (the foreign-sector spread is routed separately), so attribute the sink.
+  corp_sector_retool: "sector_retool",
   govt_prospecting_cost: "prospecting_cost",
   contract_signing_fee: "extraction_contract_fee",
   contract_royalty_payment: "extraction_royalty",

@@ -104,7 +104,7 @@ export default function InternalSupplyPanel({ corpId }: { corpId: string }) {
       (funded && pricing !== (view.policy.transferPricing ?? "free")) ||
       !!draft.ownFirstAcrossStates !== !!view.policy.ownFirstAcrossStates);
   return (
-    <DenseSection title={t("title")} meta={t("timing")}>
+    <DenseSection id="ceo-internal-supply" title={t("title")} meta={t("timing")}>
       <p className="py-2 text-sm text-muted">{t(funded ? "fundedIntro" : "intro")}</p>
       {!view && !error && (
         <p className="text-sm text-muted" role="status">

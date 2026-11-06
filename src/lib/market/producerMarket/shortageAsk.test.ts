@@ -45,6 +45,18 @@ describe("shortage ask rules", () => {
     ).toBeCloseTo(325.5);
   });
 
+  it("steps a sold-out seller from its own last ask when that is above the clearing (stage 2)", () => {
+    // Ordnance on turn 701: clearing 2819, most sellers had sold out at 1.1x the prior clearing.
+    const base = { clearingUnitPrice: 2819, referenceUnitPrice: 39095, pressure: 2, maxStep: 0.1 };
+    expect(shortageAsk({ ...base, soldOut: true, ownAskUnitPrice: 3101 })).toBeCloseTo(3101 * 1.1);
+    expect(shortageAsk({ ...base, soldOut: true, ownAskUnitPrice: 2480 })).toBeCloseTo(2819 * 1.1);
+    expect(shortageAsk({ ...base, soldOut: false, ownAskUnitPrice: 3101 })).toBe(2819);
+    expect(shortageAsk({ ...base, pressure: 1, soldOut: true, ownAskUnitPrice: 3101 })).toBe(2819);
+    expect(
+      shortageAsk({ ...base, referenceUnitPrice: 1000, soldOut: true, ownAskUnitPrice: 3101 })
+    ).toBe(3101);
+  });
+
   it("from 0.21x reference reaches the 0.6x market floor in about 22 turns at the default step", () => {
     let price = 46;
     let turns = 0;
@@ -140,6 +152,14 @@ describe("shortage ask in the settlement", () => {
       { outputStock: [{ commodity: "iron", book: "world", units: 5 }] }
     );
     expect(ask(stocked)).toBeLessThanOrEqual(46);
+  });
+
+  it("at stage 2 a sold-out mine steps from its own last ask, not the clearing", () => {
+    const run = settle(
+      { shortageAsk: { pressureByLane: { "iron|world": 1.5 } } },
+      { recentAskByOutput: { "iron|world": 50 } }
+    );
+    expect(ask(run)).toBeCloseTo(52.5);
   });
 
   it("never raises a manual price", () => {
