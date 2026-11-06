@@ -776,6 +776,9 @@ export interface PlantsData {
     /** perUnitAnchor × (1 + fxSpreadRate), what a unit actually costs. */
     perUnitChargedAnchor: number;
     corpCapitalAnchor: number;
+    /** Running bills and expected sales of one turn, from the last settled receipts (build warning). */
+    runningBillsAnchor?: number;
+    runRevenueAnchor?: number;
     maxAffordableUnits: number;
   };
   pnl: {

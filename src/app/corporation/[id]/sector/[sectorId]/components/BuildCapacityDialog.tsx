@@ -8,6 +8,11 @@ import {
 import { useTranslations } from "next-intl";
 import InvestmentForecast from "./InvestmentForecast";
 import { investmentForecastInput } from "../lib/investment";
+import {
+  OPERATING_RESERVE_TURNS,
+  runAfterBuild,
+  runAfterBuildMessage,
+} from "@/lib/corporations/rules/operatingReserve";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
 import type {
@@ -245,6 +250,21 @@ export default function BuildCapacityDialog({
   const noShareLeft = plants.headroomUnits < 1;
   const blockedByMothball = plants.mothballed;
   const affordable = financingChoice ? financingChoice.affordable : preview.affordable;
+  // Next turn's run once this build has taken its cash. A financed build only
+  // spends the part the lender does not fund.
+  const financedAnchor =
+    financingChoice?.request && q.financing
+      ? financingChoice.request.principal / (q.financing.localPerAnchor || 1)
+      : 0;
+  const afterBuild =
+    affordable && preview.safeCount > 0 && (q.runningBillsAnchor ?? 0) > 0
+      ? runAfterBuild({
+          cash: q.corpCapitalAnchor,
+          cost: Math.max(0, preview.total - financedAnchor),
+          billsPerTurn: q.runningBillsAnchor ?? 0,
+          revenuePerTurn: q.runRevenueAnchor ?? 0,
+        })
+      : null;
   const canSubmit =
     !q.financing?.pendingRequest &&
     !submitting &&
@@ -610,6 +630,19 @@ export default function BuildCapacityDialog({
           {!q.financing && (
             <p className="mt-3 text-body-sm text-muted">
               {t("cashBalance", { amount: money(q.corpCapitalAnchor) })}
+            </p>
+          )}
+          {afterBuild && (
+            <p
+              className={`mt-2 text-body-sm ${afterBuild.cutPercent > 0 ? "text-warning" : "text-muted"}`}
+              data-testid="run-after-build"
+            >
+              {runAfterBuildMessage({
+                cashAfterText: money(afterBuild.cashAfter),
+                cutPercent: afterBuild.cutPercent,
+                belowReserve:
+                  afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0),
+              })}
             </p>
           )}
           {!affordable && !financingChoice && (

@@ -50,8 +50,8 @@ import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMe
 import {
   OPERATING_RESERVE_TURNS,
   operatingReserveCheck,
+  runningFlowsPerTurn,
   operatingReserveMessage,
-  runningBillsPerTurn,
   type ReserveReceipt,
 } from "@/lib/corporations/rules/operatingReserve";
 import {
@@ -698,7 +698,7 @@ export async function loadOperatingReserve(
   db: Db,
   corporationId: ObjectId,
   currentTurn: number
-): Promise<{ turns: number; billsPerTurnAnchor: number }> {
+): Promise<{ turns: number; billsPerTurnAnchor: number; revenuePerTurnAnchor: number }> {
   const config = await db
     .collection<GameConfig>("gameConfig")
     .findOne({ _id: "default" }, { projection: { capacityBuildReserveTurns: 1 } });
@@ -707,7 +707,7 @@ export async function loadOperatingReserve(
     typeof configured === "number" && Number.isFinite(configured) && configured >= 0
       ? configured
       : OPERATING_RESERVE_TURNS;
-  if (!(turns > 0)) return { turns: 0, billsPerTurnAnchor: 0 };
+  if (!(turns > 0)) return { turns: 0, billsPerTurnAnchor: 0, revenuePerTurnAnchor: 0 };
   const sectors = await db
     .collection<CorporateSector>("corporateSectors")
     .find(
@@ -720,6 +720,8 @@ export async function loadOperatingReserve(
           "producerSettlement.otherOperatingPaid": 1,
           "producerSettlement.otherOperatingArrears": 1,
           "producerSettlement.purchases": 1,
+          "producerSettlement.revenue": 1,
+          "producerSettlement.internalSupplyIncome": 1,
           "producerSettlement.activeUnits": 1,
           "producerSettlement.producedUnits": 1,
           "producerSettlement.plannedRunShare": 1,
@@ -731,7 +733,8 @@ export async function loadOperatingReserve(
   const receipts: ReserveReceipt[] = sectors.flatMap((s) =>
     s.producerSettlement ? [s.producerSettlement] : []
   );
-  return { turns, billsPerTurnAnchor: runningBillsPerTurn(receipts, currentTurn) };
+  const flows = runningFlowsPerTurn(receipts, currentTurn);
+  return { turns, billsPerTurnAnchor: flows.bills, revenuePerTurnAnchor: flows.revenue };
 }
 
 export interface PlaceCapacityBuildInput {
@@ -963,16 +966,22 @@ export async function placeCapacityBuild(
       requestedUnits: units,
     });
 
-  // Operating reserve: a cash build may not leave less than a few turns of the
-  // plants' running bills unless the CEO confirms it. Financed builds spend
-  // the lender's cash, not the running cash, so they are not held to it.
-  const reserveInputs = input.financing
-    ? null
-    : await loadOperatingReserve(db, corporation._id, currentTurn);
+  // Operating reserve: a build may not leave less than a few turns of the
+  // plants' running bills unless the CEO confirms it. A financed build is held
+  // to it for the part the lender does not fund: that part still comes out of
+  // the running cash.
+  const reserveInputs = await loadOperatingReserve(db, corporation._id, currentTurn);
+  const cashPortionAnchor = input.financing
+    ? Math.max(
+        0,
+        totalCostAnchor -
+          corpLiquidCapitalToAnchor(input.financing.principal, corporation, corpFxRate)
+      )
+    : totalCostAnchor;
   const reserveCheck = reserveInputs
     ? operatingReserveCheck({
         cash: corpCapitalAnchor,
-        cost: totalCostAnchor,
+        cost: cashPortionAnchor,
         billsPerTurn: reserveInputs.billsPerTurnAnchor,
         turns: reserveInputs.turns,
       })
@@ -994,6 +1003,16 @@ export async function placeCapacityBuild(
     void observe("quote", "quoted");
     return succeed(200, {
       ...(reserveQuote ? { ...reserveQuote, belowOperatingReserve: !reserveCheck!.ok } : {}),
+      ...(reserveInputs
+        ? {
+            runningBillsLocal: Math.round(
+              anchorToCorpLiquidCapital(reserveInputs.billsPerTurnAnchor, corporation, corpFxRate)
+            ),
+            runRevenueLocal: Math.round(
+              anchorToCorpLiquidCapital(reserveInputs.revenuePerTurnAnchor, corporation, corpFxRate)
+            ),
+          }
+        : {}),
       success: true,
       preview: true,
       units,
@@ -1032,6 +1051,22 @@ export async function placeCapacityBuild(
     ...(wholePlants ? { plantUnits } : {}),
   };
   if (input.financing) {
+    if (reserveCheck && reserveQuote && !reserveCheck.ok && !input.overrideOperatingReserve) {
+      return {
+        ok: false,
+        status: 409,
+        code: "operating_reserve",
+        error: operatingReserveMessage({
+          costLocal: anchorToCorpLiquidCapital(cashPortionAnchor, corporation, corpFxRate),
+          cashLocal: corporation.liquidCapital,
+          reserveLocal: reserveQuote.operatingReserveLocal,
+          maxAffordableLocal: reserveQuote.maxAffordableLocal,
+          turns: reserveQuote.reserveTurns,
+          currencyCode: resolveCorpLiquidCurrencyCode(corporation),
+        }),
+        reserve: reserveQuote,
+      };
+    }
     const policy = await loadBankingPolicy(db);
     if (!policy.constructionFinance)
       return fail(400, "finance", "Construction finance is not enabled");

@@ -343,3 +343,38 @@ describe("sales advance on expected input prices", () => {
     expect(cashOf(run.accounts, "supplier")).toBeCloseTo(plant.purchases);
   });
 });
+
+describe("expected sales count own-site deliveries (ticket 1785)", () => {
+  // Prod shape: a chemicals line offered 4633.6 units, sold 3111.7 at 829.5 and
+  // delivered 1521.9 to the company's own sites at a captive 819.9. The
+  // delivered units earn nothing in `revenue`, so reading it alone understates
+  // what the run earns by about a third and the cut turn is not rescued.
+  const line = {
+    commodity: "chemicals",
+    offeredUnits: 4633.6,
+    soldUnits: 3111.7,
+    revenue: 2_581_237.8,
+    internalDeliveredUnits: 1521.9,
+    captiveUnitValue: 819.93,
+    realizedUnitPrice: 829.52,
+  };
+  const outputs = [{ commodity: "chemicals", unitsPerOutput: 1 }];
+
+  it("pays the own-site units at their captive value", () => {
+    const withInternal = expectedUnitRevenue(outputs, [line]);
+    const marketOnly = expectedUnitRevenue(outputs, [{ ...line, internalDeliveredUnits: 0 }]);
+    expect(marketOnly).toBeCloseTo(557.0, 0);
+    expect(withInternal).toBeCloseTo(826.4, 0);
+  });
+
+  it("funds a break-even run in full once own-site sales are counted", () => {
+    const need = 700_000;
+    const revenueFor = (unit: number) => unit * 1000;
+    const marketOnly = revenueFor(
+      expectedUnitRevenue(outputs, [{ ...line, internalDeliveredUnits: 0 }])
+    );
+    const withInternal = revenueFor(expectedUnitRevenue(outputs, [line]));
+    expect(salesFundedRunShare({ free: 0, need, expectedRevenue: marketOnly })).toBeLessThan(1);
+    expect(salesFundedRunShare({ free: 0, need, expectedRevenue: withInternal })).toBe(1);
+  });
+});
