@@ -841,7 +841,7 @@
       "ownSitesNote": "Units per day. Your sites received the same units they were sent.",
       "noOwnSiteUnits": "None of your output went to your own sites last turn. Your sites only take your output when they use that good.",
       "ownSiteMemo": "Sent to your own sites (memo)",
-      "ownSiteMemoNote": "Free transfers book no sale, so this is not in revenue or profit. It is what this site sent your other sites, valued at its own asking price, or at what your sites would pay when they were short. The net margin counts it, so a site that supplies your company does not read as a loss."
+      "ownSiteMemoNote": "Free transfers book no sale, so this is not in revenue or profit. It is what this site sent your other sites, valued at its own asking price, or at what your sites would pay when they were short. This estimate is separate from revenue, profit and net margin."
     },
     "governmentContracts": {
       "featureDisabled": "Government contracts are temporarily disabled. New tenders, bids and awards are paused. Existing signed contracts continue, and you can still cancel tenders or withdraw bids.",

@@ -44,6 +44,10 @@ export function CapacityChain({
   /** "tooltip" keeps the compact hover layout; "block" is the drawer card. */
   variant: "tooltip" | "block";
 }) {
+  const statement = sector.siteStatement;
+  const shownProfit = statement?.profit ?? sector.managementProfit ?? sector.profit;
+  const shownRevenue = statement?.revenue ?? realized;
+  const shownMargin = statement ? statement.netMarginPct : fillAdjusted;
   const t = useTranslations("corporations.sectorInvestment");
   const deliveryLimitedShown =
     deliveryLimited != null &&
@@ -98,36 +102,70 @@ export function CapacityChain({
         </div>
         <div className={`${row} border-t border-card-border pt-0.5`}>
           <span className="text-foreground">Revenue</span>
-          <span className="tabular-nums text-success">{fmtScaled(realized)}</span>
+          <span className="tabular-nums text-success">{fmtScaled(shownRevenue)}</span>
         </div>
-        <div className={row}>
-          <span>× effective margin</span>
-          <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
-        </div>
-        <div className={row}>
-          <span>Operating profit</span>
-          <span className="tabular-nums">{fmtScaled(operatingProfit)}</span>
-        </div>
+        {statement ? (
+          <>
+            <div className={row}>
+              <span>Outside sales</span>
+              <span>{fmtScaled(statement.externalRevenue)}</span>
+            </div>
+            <div className={row}>
+              <span>Internal supply income</span>
+              <span>{fmtScaled(statement.income)}</span>
+            </div>
+            <div className={row}>
+              <span>All costs, net of credits</span>
+              <span>{fmtScaled(statement.totalCost)}</span>
+            </div>
+            {statement.charge > 0 && (
+              <div className={row}>
+                <span>Including internal supply charges</span>
+                <span>{fmtScaled(statement.charge)}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className={row}>
+              <span>× effective margin</span>
+              <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
+            </div>
+            <div className={row}>
+              <span>Operating profit</span>
+              <span className="tabular-nums">{fmtScaled(operatingProfit)}</span>
+            </div>
+          </>
+        )}
         <div className={`${row} border-t border-card-border pt-0.5 font-semibold`}>
           <span className="text-foreground">Net profit</span>
-          <span className={`tabular-nums ${sector.profit >= 0 ? "text-success" : "text-error"}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+          <span className={`tabular-nums ${shownProfit >= 0 ? "text-success" : "text-error"}`}>
+            {fmtMoney(shownProfit * scaleFactor)}
           </span>
         </div>
-        {fillAdjusted != null && (
+        {(statement || shownMargin != null) && (
           <div className={row}>
             <span>Net margin</span>
-            <span className={`tabular-nums ${fillAdjusted >= 0 ? "text-success" : "text-error"}`}>
-              {fillAdjusted}%
+            <span
+              className={`tabular-nums ${(shownMargin ?? 0) >= 0 ? "text-success" : "text-error"}`}
+            >
+              {shownMargin == null ? "n/a: no revenue" : `${shownMargin.toFixed(1)}%`}
             </span>
           </div>
         )}
       </div>
-      {fillAdjusted != null && (
+      {statement ? (
         <p className={note}>
-          The effective margin counts only units that sold. Net margin is profit over revenue after
-          paying for everything made, so unsold units pull it down.
+          Revenue minus all costs is net profit. Internal income and charges follow the settled
+          delivery price and cancel across the company.{" "}
+          {statement.turn != null ? `Settled turn ${statement.turn}.` : ""}
         </p>
+      ) : (
+        fillAdjusted != null && (
+          <p className={note}>
+            Net margin is profit over revenue after paying for everything made.
+          </p>
+        )
       )}
       {deliveryLimitedShown && (
         <p className={note}>

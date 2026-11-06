@@ -1,12 +1,13 @@
+import { sectorDisplayRevenue, sectorDisplayMargin, sectorDisplayProfit } from "./sectorSortUtils";
 import type { BondInfo, CorpTabId, SectorDetail } from "./CorporationPageTypes";
 
 /** Shared reads of a sector row for both Overview layouts. */
 export function sectorRevenue(s: SectorDetail): number {
-  return s.financialRevenue ?? s.revenue;
+  return sectorDisplayRevenue(s);
 }
 
 export function sectorMargin(s: SectorDetail): number | null {
-  const m = s.fillAdjustedMarginPct ?? s.effectiveProfitMargin;
+  const m = sectorDisplayMargin(s);
   return typeof m === "number" && Number.isFinite(m) ? m : null;
 }
 
@@ -136,8 +137,10 @@ export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
     });
   }
   const losing = active
-    .filter((s) => !s.embargoSuspended && typeof s.profit === "number" && s.profit < 0)
-    .sort((a, b) => (a.profit ?? 0) - (b.profit ?? 0));
+    .filter(
+      (s) => !s.embargoSuspended && typeof s.profit === "number" && sectorDisplayProfit(s) < 0
+    )
+    .sort((a, b) => sectorDisplayProfit(a) - sectorDisplayProfit(b));
   if (losing.length > 0) {
     items.push({
       key: "losing-sectors",

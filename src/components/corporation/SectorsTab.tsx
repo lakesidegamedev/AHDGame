@@ -1,5 +1,6 @@
 "use client";
 
+import { consolidateSiteStatements } from "@/lib/corporations/rules/siteStatement";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   OPERATING_SECTOR_TYPES,
@@ -28,6 +29,7 @@ import { SectorRow } from "./SectorRow";
 import {
   sortSectors,
   sumSectorDisplayRevenue,
+  sectorDisplayProfit,
   type SectorSortKey,
   type SortDir,
 } from "./sectorSortUtils";
@@ -556,11 +558,17 @@ export default function SectorsTab({
                 // ratios: a mean lets one small plant at 5% drag the headline
                 // for a corporation selling everything it makes.
                 const financialsRedacted = sortedSectors.some((s) => s.revenue == null);
-                const totalRev = sumSectorDisplayRevenue(sortedSectors);
-                const totalProfit = sortedSectors.reduce(
-                  (sum, s) => sum + (s.managementProfit ?? s.profit ?? 0),
-                  0
+                const statements = sortedSectors.flatMap((s) =>
+                  s.siteStatement ? [s.siteStatement] : []
                 );
+                const consolidated =
+                  statements.length === sortedSectors.length
+                    ? consolidateSiteStatements(statements)
+                    : null;
+                const totalRev = consolidated?.revenue ?? sumSectorDisplayRevenue(sortedSectors);
+                const totalProfit =
+                  consolidated?.profit ??
+                  sortedSectors.reduce((sum, s) => sum + sectorDisplayProfit(s), 0);
                 const totalWorkers = sortedSectors.reduce((sum, s) => sum + (s.workers ?? 0), 0);
                 const totalCapacity = sortedSectors.reduce(
                   (sum, s) => sum + (s.capacityUnits ?? 0),
@@ -583,7 +591,15 @@ export default function SectorsTab({
                   <div
                     className={`hidden lg:grid ${tableGrid} items-center gap-x-3 border-t border-card-border px-2 py-1.5 text-[13px] font-medium`}
                   >
-                    <span className="text-xs text-muted">Total, {n} sectors</span>
+                    <span
+                      className="text-xs text-muted"
+                      title="Internal supply income and charges are removed from this total."
+                    >
+                      Total, {n} sectors
+                      {consolidated ? (
+                        <span className="block text-[10px]">Internal transfers excluded</span>
+                      ) : null}
+                    </span>
                     <span></span>
                     <span></span>
                     <span
@@ -602,7 +618,10 @@ export default function SectorsTab({
                         className="items-end"
                       />
                     </span>
-                    <span className={`${cellNum} text-right text-foreground`}>
+                    <span
+                      className={`${cellNum} text-right text-foreground`}
+                      title="Total revenue excludes transfers between the company's own sites."
+                    >
                       {financialsRedacted ? "n/a" : fmtMoney(totalRev * scaleFactor)}
                     </span>
                     <span></span>
@@ -630,7 +649,7 @@ export default function SectorsTab({
                 // revenue differs from nameplate (ticket #1122).
                 const totalRev = sumSectorDisplayRevenue(sortedSectors);
                 const totalProfit = sortedSectors.reduce(
-                  (sum, s) => sum + (s.managementProfit ?? s.profit ?? 0),
+                  (sum, s) => sum + sectorDisplayProfit(s),
                   0
                 );
                 const totalWorkers = sortedSectors.reduce((sum, s) => sum + (s.workers ?? 0), 0);

@@ -139,10 +139,11 @@ export function fundedReceiptOf(
     | "unsoldProductionCost"
     | "internalSupplyIncome"
     | "internalSupplyCharge"
-  >,
+  > & { turn?: number },
   transitionSupport: number
 ): FundedReceipt {
   return {
+    ...(r.turn != null ? { turn: r.turn } : {}),
     revenue: r.revenue,
     profit: r.profit,
     producedUnits: r.producedUnits,

@@ -109,7 +109,24 @@ export default function MarketMoneyPanel({
   const policyStack = plants.policyStack ?? [];
   const hasPolicy = policyAnchor !== 0;
 
+  const statement = pnl.statement;
   const costLines: { key: string; label: string; value: number; help: string }[] = [
+    ...(statement
+      ? [
+          {
+            key: "stockCredit",
+            label: "Output added to stock at cost",
+            value: -statement.inventoryCredit,
+            help: "Production cost retained as stock, separate from sales income.",
+          },
+          {
+            key: "supportCredit",
+            label: "Transition support",
+            value: -statement.supportCredit,
+            help: "Support received by this site, separate from sales income.",
+          },
+        ].filter((line) => line.value !== 0)
+      : []),
     ...(pnl.internalSupplyChargeAnchor
       ? [
           {

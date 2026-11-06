@@ -6,6 +6,7 @@ import { render as rtlRender, screen, fireEvent, waitFor, within } from "@testin
 import { NextIntlClientProvider } from "next-intl";
 import corporations from "@/../messages/en/corporations.json";
 import CeoOperationsTable from "./CeoOperationsTable";
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 
 // The bulk wage control reads its copy through next-intl.
 const render = (ui: React.ReactElement) =>
@@ -253,4 +254,29 @@ describe("CeoOperationsTable: per-sector levers", () => {
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => expect(onSectorGrowth).toHaveBeenLastCalledWith("s1", 6));
   });
+});
+
+it("uses the settled statement for CEO revenue, profit and margin", () => {
+  renderTable({
+    corporation: {
+      _id: "c1",
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+      labourEnabled: true,
+      plantsMode: true,
+    } as never,
+    sectors: [
+      sector({
+        financialRevenue: 0,
+        profit: -2400,
+        effectiveProfitMargin: 0,
+        fillAdjustedMarginPct: 0,
+        siteStatement: siteStatement({ revenue: 0, totalCost: 2400, income: 4800 }),
+      }),
+    ] as never,
+  });
+  const row = screen.getAllByRole("row").find((r) => within(r).queryByText("California"))!;
+  expect(within(row).getByText("$200")).toBeTruthy();
+  expect(within(row).getByText("+$100")).toBeTruthy();
+  expect(within(row).getByText("50.0%")).toBeTruthy();
 });
