@@ -1206,10 +1206,15 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
                   ownedTeu(dispatch)
               );
               const unitsToNominal = Math.max(0, nominal - heldBack - totalUsed) / teuPerUnit;
+              // The hold also guards the overflow band: otherwise rivals served
+              // earlier run past nominal and spend the owner's held trucks, which
+              // is how a saturated state left its owner with no own cover at all.
               const unitsInOverflow =
                 Math.max(
                   0,
-                  nominal * (1 + FREIGHT_CONGESTION_OVERFLOW) - Math.max(totalUsed, nominal)
+                  nominal * (1 + FREIGHT_CONGESTION_OVERFLOW) -
+                    heldBack -
+                    Math.max(totalUsed, nominal - heldBack)
                 ) / teuPerUnit;
               // Overflow units carry the full surcharge. If that price breaks the
               // buyer's tolerance the overflow simply does not happen, which is a
