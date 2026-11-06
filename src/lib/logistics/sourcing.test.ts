@@ -1957,6 +1957,52 @@ describe("own shipments first (freight capacity held for the owner)", () => {
       expect(sumCharges(s2)).toBeCloseTo(sumCharges(open) - mineCharges(open), 6);
     });
 
+    it("rivals served earlier cannot run through the overflow band into the owner's held trucks", () => {
+      // The owner holds the whole nominal pool. Rival goods go to two buyers, so
+      // the rival makes a second haul after the first has used part of the
+      // overflow band. Before the hold also guarded that band, the second haul
+      // spent the owner's held trucks and the owner's goods found the state at
+      // its hard ceiling.
+      const split = (freight: number, overrides: Partial<SourcingInputs> = {}) =>
+        marketWorld(freight, {
+          states: [
+            { stateId: "A1", countryId: "US" as CountryId },
+            { stateId: "A2", countryId: "US" as CountryId },
+            { stateId: "A3", countryId: "US" as CountryId },
+            { stateId: "A4", countryId: "US" as CountryId },
+          ],
+          byState: new Map([
+            ["A1", bal({ [rival]: { supply: 0, demand: 50 } })],
+            ["A4", bal({ [rival]: { supply: 0, demand: 50 } })],
+            [
+              "A2",
+              bal({
+                [rival]: { supply: 100, demand: 0 },
+                [mine]: { supply: 100, demand: 0 },
+                freight: { supply: freight, demand: 0 },
+              }),
+            ],
+            ["A3", bal({ [mine]: { supply: 0, demand: 100 } })],
+          ]),
+          statePricesFor: () => ({ A1: 100, A2: 90, A3: 100, A4: 100 }),
+          ...overrides,
+        });
+      const openSplit = runSourcingPass(split(BIG));
+      const mineTeuSplit = openSplit.flows
+        .filter((f) => f.commodity === mine)
+        .reduce((a, f) => a + f.freightTeuConsumed, 0);
+      const pool = mineTeuSplit;
+      const s2 = runSourcingPass(
+        split(pool, {
+          ownFreightCapacityByState: ownCap(pool),
+          ownFreightMarketSupply: supplyOf(100),
+        })
+      );
+      const covered = s2.ownFreightCoveredTeuByState!.get("A2")!.get("corp1")!;
+      expect(covered).toBeCloseTo(pool, 6);
+      expect(usedTeu(s2) - covered).toBeLessThanOrEqual(pool * FREIGHT_CONGESTION_OVERFLOW + 1e-6);
+    });
+
     it("an owner supplying half the state's goods covers only its half, the rest bills", () => {
       const s2 = runSourcingPass(
         marketWorld(BIG, {
