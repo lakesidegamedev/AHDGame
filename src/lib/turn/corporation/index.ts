@@ -931,6 +931,8 @@ export async function processCorporationTurn(
   for (const snapshot of corpSnapshots) {
     const distribution = funded?.deferredDistributions?.get(snapshot.corpId.toHexString());
     if (distribution) snapshot.deferredProducerDistributions = distribution;
+    if (distribution && (marketGovernorConfig?.nppDividendAfterTaxStage ?? 0) >= 1)
+      snapshot.distributionAfterTax = true;
   }
   // Merge NPP corp updates into the main corpOps
   for (const nppUpdate of nppCorpUpdates) {
