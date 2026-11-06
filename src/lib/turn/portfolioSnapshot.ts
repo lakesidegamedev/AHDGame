@@ -1,3 +1,10 @@
+import { fundPositionValue } from "@/lib/indexFunds/rules/portfolioValue";
+import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
+import {
+  loadReservedCorporatePositionsByTarget,
+  corporationWithReservedHoldings,
+} from "@/lib/corporations/reservedCorporateHoldings";
+import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 import {
   holdingMarketValues,
   holdingMarketSnapshotValues,
@@ -220,7 +227,7 @@ export async function snapshotPortfolioValues(
         : undefined)) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (charFxByCurrency.get(bondCcy) ?? 1) : 1;
     const unitValueAnchor = bondCcy && bondRate > 0 ? unitValueLocal / bondRate : unitValueLocal;
-    for (const holder of bond.holders) {
+    for (const holder of bond.holders ?? []) {
       const charId = holder.characterId?.toString() ?? holder.imperialCharacterId?.toString();
       if (charId) {
         const bondValueAnchor = unitValueAnchor * holder.units;
@@ -267,13 +274,13 @@ export async function snapshotPortfolioValues(
     const navByFundId = new Map<string, number>(
       (
         await db
-          .collection<{ _id: ObjectId; quotedNav?: number }>("indexFunds")
+          .collection<{ _id: ObjectId; quotedNav?: number; status?: string }>("indexFunds")
           .find(
             { _id: { $in: [...new Set(fundPositions.map((p) => p.fundId))] } },
-            { projection: { quotedNav: 1 } }
+            { projection: { quotedNav: 1, status: 1 } }
           )
           .toArray()
-      ).map((f) => [f._id.toString(), f.quotedNav ?? 0])
+      ).map((f) => [f._id.toString(), fundPositionValue(1, f.quotedNav, f.status)])
     );
 
     for (const position of fundPositions) {
@@ -373,13 +380,15 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   // stocks/bonds) still have Net Worth history. Previously this query scoped
   // to corps with shareholder rows, which silently dropped cash-only corps
   // from the chart entirely.
-  const [allCorps, heldCorps, bonds, fxByCurrency] = await Promise.all([
+  const [allCorps, bonds, fxByCurrency, reserved, fundPositions] = await Promise.all([
     db
       .collection<Corporation>("corporations")
       .find({})
       .project<Corporation>({
         _id: 1,
         liquidCapital: 1,
+        shareholders: 1,
+        sharePrice: 1,
         liquidCurrencyCode: 1,
         countryId: 1,
         imfBailoutActive: 1,
@@ -388,23 +397,41 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
       })
       .toArray(),
     db
-      .collection<Corporation>("corporations")
-      .find({ "shareholders.corporationId": { $exists: true } })
-      .project<Corporation>({
-        _id: 1,
-        shareholders: 1,
-        sharePrice: 1,
-        liquidCurrencyCode: 1,
+      .collection<Bond>("bonds")
+      .find({ matured: false })
+      .project<Bond>({
+        holders: 1,
+        marketPrice: 1,
+        currencyCode: 1,
         countryId: 1,
+        corporationId: 1,
+        totalIssued: 1,
+        matured: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
-      .find({ matured: false, "holders.corporationId": { $exists: true } })
-      .project<Bond>({ holders: 1, marketPrice: 1, currencyCode: 1, countryId: 1 })
-      .toArray(),
     loadValuationFxRates(db),
+    loadReservedCorporatePositionsByTarget(db),
+    db
+      .collection<IndexFundPosition>("indexFundPositions")
+      .find(
+        { holderKind: "corporation", units: { $gt: 0 } },
+        { projection: { corporationId: 1, fundId: 1, units: 1 } }
+      )
+      .toArray(),
   ]);
+
+  const funds = fundPositions.length
+    ? await db
+        .collection<IndexFund>("indexFunds")
+        .find(
+          { _id: { $in: fundPositions.map((p) => p.fundId) } },
+          { projection: { quotedNav: 1, status: 1 } }
+        )
+        .toArray()
+    : [];
+  const navById = new Map(
+    funds.map((f) => [f._id.toString(), fundPositionValue(1, f.quotedNav, f.status)])
+  );
 
   // All portfolio aggregates land in ₳ (anchor). sharePrice, bond face values,
   // and liquidCapital are each stored in their own local currency (v0.2.6) —
@@ -415,11 +442,21 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
       totalValue: number;
       netValue: number;
       stockValue: number;
+      fundValue: number;
       bondValue: number;
       cashValue: number;
       liabilityValue: number;
     }
   >();
+
+  const issuedBondsByCorp = new Map<string, Bond[]>();
+  for (const bond of bonds) {
+    if (!bond.corporationId) continue;
+    const key = bond.corporationId.toString();
+    const rows = issuedBondsByCorp.get(key) ?? [];
+    rows.push(bond);
+    issuedBondsByCorp.set(key, rows);
+  }
 
   const imfReceivableByLender = new Map<string, number>();
   for (const corp of allCorps) {
@@ -443,11 +480,16 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
     const fxRate = fxRateForCorpFromMap(corp, fxByCurrency);
     const cashAnchor = corpLiquidCapitalToAnchor(corp.liquidCapital ?? 0, corp, fxRate);
     const imfReceivableAnchor = imfReceivableByLender.get(corp._id.toString()) ?? 0;
-    const liabilityAnchor = computeCorporationLiabilityValueAnchor(corp, bonds, fxByCurrency);
+    const liabilityAnchor = computeCorporationLiabilityValueAnchor(
+      corp,
+      issuedBondsByCorp.get(corp._id.toString()) ?? [],
+      fxByCurrency
+    );
     portfolioMap.set(corp._id.toString(), {
       totalValue: cashAnchor + imfReceivableAnchor,
       netValue: cashAnchor + imfReceivableAnchor - liabilityAnchor,
       stockValue: 0,
+      fundValue: 0,
       bondValue: imfReceivableAnchor,
       cashValue: cashAnchor,
       liabilityValue: liabilityAnchor,
@@ -455,11 +497,15 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   }
 
   // Add stock holdings (where a corp holds shares in another corp)
-  for (const corp of heldCorps) {
-    const price = corp.sharePrice ?? 0;
+  for (const heldCorp of allCorps) {
+    const corp = corporationWithReservedHoldings(
+      heldCorp,
+      reserved.get(heldCorp._id.toString()) ?? []
+    );
+    const price = getPublicShareQuote(corp);
     if (price <= 0) continue;
     const heldFxRate = fxRateForCorpFromMap(corp, fxByCurrency);
-    for (const sh of corp.shareholders) {
+    for (const sh of corp.shareholders ?? []) {
       if (sh.corporationId) {
         const holderCorpId = sh.corporationId.toString();
         const stockValueLocal = sh.shares * price;
@@ -468,6 +514,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
           totalValue: 0,
           netValue: 0,
           stockValue: 0,
+          fundValue: 0,
           bondValue: 0,
           cashValue: 0,
           liabilityValue: 0,
@@ -477,6 +524,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
           netValue: existing.netValue + stockValueAnchor,
           stockValue: existing.stockValue + stockValueAnchor,
           bondValue: existing.bondValue,
+          fundValue: existing.fundValue,
           cashValue: existing.cashValue,
           liabilityValue: existing.liabilityValue,
         });
@@ -493,7 +541,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
         : undefined)) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
     const unitValueAnchor = bondCcy && bondRate > 0 ? unitValueLocal / bondRate : unitValueLocal;
-    for (const holder of bond.holders) {
+    for (const holder of bond.holders ?? []) {
       if (holder.corporationId) {
         const holderCorpId = holder.corporationId.toString();
         const bondValueAnchor = unitValueAnchor * holder.units;
@@ -501,6 +549,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
           totalValue: 0,
           netValue: 0,
           stockValue: 0,
+          fundValue: 0,
           bondValue: 0,
           cashValue: 0,
           liabilityValue: 0,
@@ -510,11 +559,23 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
           netValue: existing.netValue + bondValueAnchor,
           stockValue: existing.stockValue,
           bondValue: existing.bondValue + bondValueAnchor,
+          fundValue: existing.fundValue,
           cashValue: existing.cashValue,
           liabilityValue: existing.liabilityValue,
         });
       }
     }
+  }
+
+  for (const position of fundPositions) {
+    const existing = position.corporationId
+      ? portfolioMap.get(position.corporationId.toString())
+      : undefined;
+    if (!existing) continue;
+    const value = position.units * (navById.get(position.fundId.toString()) ?? 0);
+    existing.fundValue += value;
+    existing.totalValue += value;
+    existing.netValue += value;
   }
 
   if (portfolioMap.size === 0) return 0;
@@ -530,6 +591,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
       totalValue: Math.round(values.totalValue * 100) / 100,
       netValue: Math.round(values.netValue * 100) / 100,
       stockValue: Math.round(values.stockValue * 100) / 100,
+      fundValue: Math.round(values.fundValue * 100) / 100,
       bondValue: Math.round(values.bondValue * 100) / 100,
       cashValue: Math.round(values.cashValue * 100) / 100,
       liabilityValue: Math.round(values.liabilityValue * 100) / 100,

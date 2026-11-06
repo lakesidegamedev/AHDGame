@@ -163,5 +163,20 @@ describe("corporation tab grouping", () => {
         "sectors",
       ]);
     });
+
+    it("lets a direct shareholder see every tab including shares", () => {
+      const access = getPrivateCorpTabAccess({
+        isPrivate: true,
+        isCeo: false,
+        viewerIsControllingParentCeo: false,
+        viewerIsShareholder: true,
+        modViewEnabled: false,
+      });
+
+      expect(access).toBe("shareholder");
+      expect(filterPrivateCorpBaseTabs(CORP_TABS, access).map((tab) => tab.id)).toEqual(
+        CORP_TABS.map((tab) => tab.id)
+      );
+    });
   });
 });

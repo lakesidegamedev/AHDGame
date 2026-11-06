@@ -13,6 +13,7 @@ interface HistoryPoint {
   shortTermStockValue?: number;
   longTermStockValue?: number;
   bondValue?: number;
+  fundValue?: number;
   cashValue?: number;
   liquidCashValue?: number;
   savingsCashValue?: number;
@@ -23,7 +24,7 @@ interface HistoryPoint {
 
 interface Props {
   history: HistoryPoint[];
-  view?: "total" | "stocks" | "shortStocks" | "longStocks" | "bonds" | "cash" | "savings";
+  view?: "total" | "stocks" | "shortStocks" | "longStocks" | "bonds" | "cash" | "savings" | "funds";
 }
 
 const WIDTH = 600;
@@ -40,6 +41,7 @@ const COLORS = {
   stocks: "var(--color-success, #22c55e)",
   shortStocks: "var(--color-info, #3b82f6)",
   longStocks: "var(--color-success, #22c55e)",
+  funds: "var(--color-primary, #8b5cf6)",
   bonds: "var(--color-warning, #f59e0b)",
   cash: "var(--color-info, #3b82f6)",
   savings: "var(--color-primary, #8b5cf6)",
@@ -51,11 +53,13 @@ export function PortfolioChart({ history, view = "total" }: Props) {
 
   // Bucket history starts when measured. Never fabricate old zero-valued points.
   const measuredHistory = history.filter((point) =>
-    view === "shortStocks"
-      ? point.shortTermStockValue !== undefined
-      : view === "longStocks"
-        ? point.longTermStockValue !== undefined
-        : true
+    view === "funds"
+      ? point.fundValue !== undefined
+      : view === "shortStocks"
+        ? point.shortTermStockValue !== undefined
+        : view === "longStocks"
+          ? point.longTermStockValue !== undefined
+          : true
   );
   if (measuredHistory.length < 2) {
     return (
@@ -68,6 +72,7 @@ export function PortfolioChart({ history, view = "total" }: Props) {
   const getAnchor = (p: HistoryPoint): number => {
     if (view === "shortStocks") return p.shortTermStockValue!;
     if (view === "longStocks") return p.longTermStockValue!;
+    if (view === "funds") return p.fundValue!;
     if (view === "stocks") return p.stockValue ?? 0;
     if (view === "bonds") return p.bondValue ?? 0;
     if (view === "cash") return p.cashValue ?? 0;

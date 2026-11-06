@@ -1,8 +1,13 @@
+import { readResetMetricBoard } from "@/lib/resetMetrics/readBoard";
+import { readNationalMetricRollup } from "@/lib/resetMetrics/readNationalRollup";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+
+vi.mock("@/lib/resetMetrics/readBoard", () => ({ readResetMetricBoard: vi.fn() }));
+vi.mock("@/lib/resetMetrics/readNationalRollup", () => ({ readNationalMetricRollup: vi.fn() }));
 
 let db: MockDb;
 
@@ -15,6 +20,7 @@ function mockFind(collection: string, docs: unknown[]) {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "not_enabled" });
   db = createMockDb();
   [
     "states",
@@ -69,7 +75,7 @@ beforeEach(async () => {
     revenue: { total: 4_200_000_000_000 },
     spending: { total: 5_000_000_000_000 },
     surplus: 999_999,
-    debtToGdpRatio: 62,
+    debtToGdpRatio: 0.62,
     creditRating: "AA",
     economicFactors: {
       inflationRate: 3.4,
@@ -136,7 +142,7 @@ describe("buildCountryEconomyOutlook", () => {
     expect(result.pulse.primeRate.heldTurns).toBe(6);
     expect(result.pulse.primeRate.neutral).toBe(3);
     expect(result.pulse.credit.rating).toBe("AA");
-    expect(result.pulse.credit.debtToGdpRatio).toBe(62);
+    expect(result.pulse.credit.debtToGdpRatio).toBe(0.62);
     expect(result.plannedEconomy).toBeNull();
     expect(result.commandEconomyEnabled).toBe(false);
     expect(result.currentYear).toBe(2019);
@@ -208,3 +214,27 @@ describe("buildCountryEconomyOutlook", () => {
     expect(result.sectorMix.length).toBeGreaterThan(0);
   });
 });
+
+it.each(["US", "UK", "JP"] as const)(
+  "uses the published labor-force rollup in %s instead of population weighting",
+  async (countryId) => {
+    vi.mocked(readResetMetricBoard).mockResolvedValue({
+      status: "ready",
+      board: { countryId, asOfTurn: 412 },
+    } as never);
+    vi.mocked(readNationalMetricRollup).mockResolvedValue({ "01": { value: 9.2 } } as never);
+    const { buildCountryEconomyOutlook } = await import("./countryEconomyOutlook");
+    const result = await buildCountryEconomyOutlook(db as unknown as Db, countryId);
+    expect(result.realEconomy.unemployment).toEqual({ value: 9.2, trend: null });
+  }
+);
+it.each(["stale", "invalid", "missing"] as const)(
+  "does not substitute a legacy unemployment mean for a %s v2 board",
+  async (status) => {
+    vi.mocked(readResetMetricBoard).mockResolvedValue({ status });
+    const { buildCountryEconomyOutlook } = await import("./countryEconomyOutlook");
+    const result = await buildCountryEconomyOutlook(db as unknown as Db, "UK");
+    expect(result.realEconomy.unemployment.value).toBeNull();
+    expect(readNationalMetricRollup).not.toHaveBeenCalled();
+  }
+);

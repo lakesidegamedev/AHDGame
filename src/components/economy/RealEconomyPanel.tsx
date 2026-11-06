@@ -167,7 +167,7 @@ export function RealEconomyPanel({
         />
         <Row
           label="Unemployment"
-          note={`${regionWord}-weighted national metric`}
+          note="National unemployment rate"
           link={rankingsLink}
           value={
             realEconomy.unemployment.value != null

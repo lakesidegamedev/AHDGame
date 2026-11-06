@@ -2,6 +2,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import MarginsPanel from "./MarginsPanel";
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { Margins, PlantsData } from "../types";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
@@ -128,4 +129,88 @@ describe("sector margin explanation", () => {
     expect(screen.queryByText("Condition details")).toBeNull();
     expect(screen.queryByText("Revenue less all costs")).toBeNull();
   });
+});
+
+it("does not inflate a legacy margin with unbooked own-site supply value", () => {
+  render(
+    <MarginsPanel
+      margins={margins}
+      defaultExpanded
+      pnl={{
+        ...pnl,
+        revenueAnchor: 0,
+        profitAnchor: -850,
+        inputsAnchor: 850,
+        labourAnchor: 0,
+        upkeepAnchor: 0,
+        complianceAnchor: 0,
+        policyAnchor: 0,
+        otherOperatingAnchor: 0,
+        growthAndBuildAnchor: 0,
+        ownSiteMemoAnchor: 2400,
+      }}
+    />
+  );
+  expect(screen.queryByText("64.6%")).toBeNull();
+  expect(screen.queryByText("Own-site supply value (not cash revenue)")).toBeNull();
+  expect(screen.getByText(/No sales revenue was recorded/)).toBeTruthy();
+});
+
+it("itemizes priced internal transfers without counting a free-transfer memo twice", () => {
+  render(
+    <MarginsPanel
+      margins={margins}
+      defaultExpanded
+      pnl={{
+        ...pnl,
+        revenueAnchor: 150,
+        profitAnchor: 30,
+        inputsAnchor: 90,
+        labourAnchor: 0,
+        upkeepAnchor: 0,
+        complianceAnchor: 0,
+        policyAnchor: 0,
+        otherOperatingAnchor: 0,
+        growthAndBuildAnchor: 0,
+        internalSupplyIncomeAnchor: 50,
+        internalSupplyChargeAnchor: 30,
+      }}
+    />
+  );
+  expect(screen.getAllByText("20.0%").length).toBe(2);
+  expect(screen.getByText("Own-site transfer income (management)")).toBeTruthy();
+  expect(screen.getByText("Internal supply charges")).toBeTruthy();
+  expect(screen.getByText("-20.0%")).toBeTruthy();
+});
+
+it("uses the settled statement for margin and revenue shares while preserving accounting credits", () => {
+  render(
+    <MarginsPanel
+      margins={margins}
+      defaultExpanded
+      pnl={{
+        ...pnl,
+        statement: siteStatement({
+          revenue: 100,
+          income: 50,
+          totalCost: 140,
+          inventoryCredit: 10,
+          supportCredit: 10,
+        }),
+      }}
+    />
+  );
+  expect(screen.getAllByText("20.0%")).toHaveLength(2);
+  expect(within(screen.getByText("Sales revenue").parentElement!).getByText("66.7%")).toBeTruthy();
+  expect(
+    within(screen.getByText("Own-site transfer income (management)").parentElement!).getByText(
+      "33.3%"
+    )
+  ).toBeTruthy();
+  expect(
+    within(screen.getByText("Output added to stock at cost").parentElement!).getByText("+6.7%")
+  ).toBeTruthy();
+  expect(
+    within(screen.getByText("Transition support").parentElement!).getByText("+6.7%")
+  ).toBeTruthy();
 });
