@@ -885,7 +885,10 @@ export function makeNppCorpDecision(
   // whichever target survives.
   const surplusCash = liquidCapital - effectiveCashFloor;
   // Plants idle for want of cash hold founding and every reinvestment leg.
-  const cashCutHold = corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn);
+  // nppDividendAfterTaxStage >= 2: no founding or growth from cash at or under the floor.
+  const cashCutHold =
+    corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn) ||
+    (plants?.holdExpansionAtCashFloor === true && !(surplusCash > 0));
   const entry = evaluateNppEntry({
     corp,
     sectors: sectorsAfterConversion(sectors, conversionApplied),

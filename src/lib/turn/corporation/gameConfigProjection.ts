@@ -5,6 +5,7 @@
  */
 export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   marketSystemMode: 1,
+  nppDividendAfterTaxStage: 1,
   marketGovernorGlideStartTurn: 1,
   marketGovernorGlideTurns: 1,
   marketGovernorGlideMode: 1,

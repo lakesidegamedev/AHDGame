@@ -477,6 +477,7 @@ export async function processNppCorporationDecisions(
           wholePlantsStage?: number;
           producerCaptiveDeliveryStage?: number;
           nppStateServiceHeadroomStage?: number;
+          nppDividendAfterTaxStage?: number;
         } & ShortageGrowthFinanceConfigInput
       >("gameConfig")
       .findOne(
@@ -490,6 +491,7 @@ export async function processNppCorporationDecisions(
             producerCaptiveDeliveryStage: 1,
             nppStateServiceHeadroomStage: 1,
             nppShortageGrowthFinanceStage: 1,
+            nppDividendAfterTaxStage: 1,
             nppShortageGrowthFinanceCandidateLimit: 1,
             nppShortageGrowthFinanceMaxPaybackTurns: 1,
             nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
@@ -514,6 +516,9 @@ export async function processNppCorporationDecisions(
       ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),
       ...((nppGameConfig?.producerCaptiveDeliveryStage ?? 0) >= 3
         ? { captiveMarketValue: true }
+        : {}),
+      ...((nppGameConfig?.nppDividendAfterTaxStage ?? 0) >= 2
+        ? { holdExpansionAtCashFloor: true }
         : {}),
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);

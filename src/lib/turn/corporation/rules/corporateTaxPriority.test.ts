@@ -84,3 +84,44 @@ it("does not pay future coupons or count funded profit twice when sizing optiona
     80
   );
 });
+
+describe("AI dividend after tax (nppDividendAfterTaxStage)", () => {
+  // Pre-tax producer profit 100, current tax 52, dividend requested at 60% of pre-tax.
+  const ai = {
+    cash: 1000,
+    pending: 0,
+    netIncome: 48,
+    localPerAnchor: 1,
+    currentTax: { GR: 52 },
+    priorTax: {},
+    priorOperating: 0,
+    distributionRequested: 60,
+  };
+
+  it("off: tax plus a pre-tax dividend pays out more than the profit", () => {
+    expect(planCorporateTaxPriority(ai)).toMatchObject({ distributionPaid: 60, cash: 988 });
+  });
+
+  it("on: pays 60% of after-tax profit and keeps the rest", () => {
+    const plan = planCorporateTaxPriority({ ...ai, distributionAfterTax: true });
+    expect(plan.distributionPaid).toBeCloseTo(0.6 * 48);
+    expect(plan.cash).toBeCloseTo(1000 + 0.4 * 48);
+  });
+
+  it("on: never pays out of opening cash", () => {
+    const plan = planCorporateTaxPriority({
+      ...ai,
+      netIncome: -40,
+      currentTax: { GR: 0 },
+      distributionAfterTax: true,
+    });
+    expect(plan.distributionPaid).toBe(0);
+    expect(plan.cash).toBe(960);
+  });
+
+  it("on: pays nothing while opening cash is negative", () => {
+    const plan = planCorporateTaxPriority({ ...ai, cash: -30, distributionAfterTax: true });
+    expect(plan.distributionPaid).toBe(0);
+    expect(plan.currentPaid).toEqual({ GR: 52 });
+  });
+});
