@@ -575,7 +575,11 @@ describe("buildSectorPlantsSection", () => {
       const s = buildSectorPlantsSection({
         eraUnitScale: 1,
         ...BASE_ARGS,
-        sector: sectorFixture({ producedUnits: undefined, soldUnits: undefined, soldFraction: 0.4 }),
+        sector: sectorFixture({
+          producedUnits: undefined,
+          soldUnits: undefined,
+          soldFraction: 0.4,
+        }),
       });
       expect(s.truth.soldFraction).toBeCloseTo(0.4, 6);
     });
