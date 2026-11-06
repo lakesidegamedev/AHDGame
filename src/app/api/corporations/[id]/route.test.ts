@@ -186,6 +186,53 @@ describe("GET /api/corporations/[id]", () => {
     expect(outsiderJson.balanceSheet).toBeNull();
   });
 
+  it("shows a private corporation to a direct shareholder without management", async () => {
+    await wireDb();
+    const holderChar = new ObjectId();
+    const corp = makeCorporation({
+      _id: new ObjectId(),
+      isPrivate: true,
+      liquidCapital: 5_000,
+      shareholders: [{ characterId: holderChar, shares: 10 }],
+    } as never);
+    const detailPayload = {
+      corporation: { _id: corp._id.toString(), name: corp.name, liquidCapital: 5_000 },
+      ceo: null,
+      financials: { totalRevenue: 1 },
+      sectors: [],
+      balanceSheet: { assets: {}, liabilities: {}, equity: {} },
+    };
+    db.collectionMocks["corporations"]!.findOne.mockResolvedValue(corp);
+    const viewerUserId = new ObjectId().toString();
+    db.collection("characters");
+    db.collectionMocks["characters"]!.findOne.mockResolvedValue({ _id: holderChar });
+    const { getAuthUser } = await import("@/lib/auth");
+    vi.mocked(getAuthUser).mockResolvedValue({ userId: viewerUserId } as never);
+    const { loadCorporationDetailView } =
+      await import("@/lib/corporations/queries/corporationDetail");
+    vi.mocked(loadCorporationDetailView).mockResolvedValue(detailPayload as never);
+
+    const { GET } = await import("./route");
+    const res = await GET(new Request(`http://localhost/api/corporations/${corp._id}`), {
+      params: Promise.resolve({ id: corp._id.toString() }),
+    });
+    const json = await res.json();
+
+    expect(json.corporation.viewerIsShareholder).toBe(true);
+    expect(json.corporation.liquidCapital).toBe(5_000);
+    expect(json.financials).toEqual(detailPayload.financials);
+    expect(json.corporation.canManageAcquisitions).not.toBe(true);
+
+    db.collectionMocks["characters"]!.findOne.mockResolvedValue({ _id: new ObjectId() });
+    const outsider = await (
+      await GET(new Request(`http://localhost/api/corporations/${corp._id}`), {
+        params: Promise.resolve({ id: corp._id.toString() }),
+      })
+    ).json();
+    expect(outsider.corporation.viewerIsShareholder).toBe(false);
+    expect(outsider.corporation.liquidCapital).toBeUndefined();
+  });
+
   it("marks the controlling parent CEO as an insider of a public subsidiary", async () => {
     await wireDb();
     const subsidiary = makeCorporation({

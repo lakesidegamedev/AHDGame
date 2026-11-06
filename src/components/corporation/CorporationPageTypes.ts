@@ -322,6 +322,7 @@ export interface CorporationDetail {
   isPrivate?: boolean;
   /** The viewer is CEO of the corporation that controls this subsidiary. */
   viewerIsControllingParentCeo?: boolean;
+  viewerIsShareholder?: boolean;
   /** Global feature gate — when true, the decade-gated Tech tab is shown. */
   techTreesEnabled?: boolean;
   /** Global feature gate — when true, the private supply-agreements panel is shown to the CEO. */

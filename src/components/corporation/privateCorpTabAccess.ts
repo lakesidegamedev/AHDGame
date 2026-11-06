@@ -1,9 +1,11 @@
-export type PrivateCorpTabAccess = "all" | "parent-insider" | "mod-view" | "restricted";
+export type PrivateCorpTabAccess =
+  "all" | "parent-insider" | "shareholder" | "mod-view" | "restricted";
 
 export interface PrivateCorpTabAccessInput {
   isPrivate: boolean;
   isCeo: boolean;
   viewerIsControllingParentCeo: boolean;
+  viewerIsShareholder?: boolean;
   modViewEnabled: boolean;
 }
 
@@ -11,10 +13,12 @@ export function getPrivateCorpTabAccess({
   isPrivate,
   isCeo,
   viewerIsControllingParentCeo,
+  viewerIsShareholder = false,
   modViewEnabled,
 }: PrivateCorpTabAccessInput): PrivateCorpTabAccess {
   if (!isPrivate || isCeo) return "all";
   if (viewerIsControllingParentCeo) return "parent-insider";
+  if (viewerIsShareholder) return "shareholder";
   return modViewEnabled ? "mod-view" : "restricted";
 }
 
