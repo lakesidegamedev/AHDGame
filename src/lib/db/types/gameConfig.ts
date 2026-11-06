@@ -191,6 +191,14 @@ export interface GameConfig {
    */
   producerOwnSitesFirstStage?: number;
   /**
+   * Freight network: >= 1 gives a company's own cross-state hauls first use of
+   * the freight capacity that company owns in the origin state (the covered
+   * share is internal supply: no charge, no haul revenue); only the rest of its
+   * capacity joins the shared pool. 0 or absent = one shared first-come pool.
+   * Needs freightSettlementMode "active" (own routes only run then).
+   */
+  ownFreightFirstStage?: number;
+  /**
    * Funded producer market: >= 1 keeps a share of each public budget line's
    * unfilled money in the public wallet for the next turn (instead of burning
    * it at close), capped at four turns of the line's outlay. Support and grants
