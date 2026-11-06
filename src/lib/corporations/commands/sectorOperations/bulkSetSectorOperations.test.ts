@@ -348,6 +348,11 @@ describe("bulkSetSectorOperations capacity", () => {
     const ops = db.collectionMocks.corporateSectors.bulkWrite.mock.calls[0][0];
     expect(ops).toHaveLength(1);
     expect(ops[0].updateOne.update.$set.mothballed).toBe(false);
+    expect(ops[0].updateOne.update.$set).toMatchObject({
+      pnlLossTurns: 0,
+      producerZeroSalesTurns: 0,
+      manualReactivatedTurn: 5,
+    });
   });
 
   it("previews counts without writing", async () => {
