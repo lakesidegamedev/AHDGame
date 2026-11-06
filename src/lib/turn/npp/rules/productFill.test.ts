@@ -29,6 +29,14 @@ describe("bestProductSellThrough", () => {
       bestProductSellThrough([{ offeredUnits: 700, soldUnits: 200, internalDeliveredUnits: 150 }])
     ).toBeCloseTo(0.5);
   });
+  it("ignores a sliver of a side product that sold out", () => {
+    expect(
+      bestProductSellThrough([
+        { offeredUnits: 1000, soldUnits: 300 },
+        { offeredUnits: 5, soldUnits: 5 },
+      ])
+    ).toBeCloseTo(0.3);
+  });
   it("is null without usable rows", () => {
     expect(bestProductSellThrough(undefined)).toBeNull();
     expect(bestProductSellThrough([{ offeredUnits: 0, soldUnits: 0 }])).toBeNull();
