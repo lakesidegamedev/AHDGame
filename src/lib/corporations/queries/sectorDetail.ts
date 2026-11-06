@@ -1411,8 +1411,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           corporation,
           corporationFxRate
         ),
-        runningBillsAnchor: runFlows.bills,
-        runRevenueAnchor: runFlows.revenue,
         headroomUnits: unownedHeadroomUnitsOf(
           sectorType,
           unownedDoc?.headroomUnits,
@@ -1540,6 +1538,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           sectorType === "extraction" &&
           Object.values(thisSectorMultipliers).some((m) => typeof m === "number" && m < 0.999),
       });
+      plants.buildQuote.runningBillsAnchor = runFlows.bills;
+      plants.buildQuote.runRevenueAnchor = runFlows.revenue;
       withRunReport(plants, sector.producerSettlement, currentTurn, governorConfig);
     }
 

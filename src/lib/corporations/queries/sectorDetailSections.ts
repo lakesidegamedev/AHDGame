@@ -1379,8 +1379,6 @@ export function buildSectorPlantsSection(args: {
   eraUnitScale: number;
   preset?: string;
   corpCapitalAnchor: number;
-  runningBillsAnchor?: number;
-  runRevenueAnchor?: number;
   /** Untapped units in this market — see `unownedHeadroomUnitsOf`. */
   headroomUnits: number;
   /** True buyers' room (see SectorPlantsSection.demandGapUnits). Optional so
@@ -1434,8 +1432,6 @@ export function buildSectorPlantsSection(args: {
     eraUnitScale,
     preset,
     corpCapitalAnchor,
-    runningBillsAnchor,
-    runRevenueAnchor,
     headroomUnits,
     demandGapUnits = 0,
     ownedCellCapacityUnits,
@@ -1937,8 +1933,6 @@ export function buildSectorPlantsSection(args: {
       fxSpreadRate: safeFxSpreadRate,
       perUnitChargedAnchor,
       corpCapitalAnchor,
-      ...(runningBillsAnchor !== undefined ? { runningBillsAnchor } : {}),
-      ...(runRevenueAnchor !== undefined ? { runRevenueAnchor } : {}),
       maxAffordableUnits:
         perUnitChargedAnchor > 0
           ? Math.max(0, Math.floor(corpCapitalAnchor / perUnitChargedAnchor))
