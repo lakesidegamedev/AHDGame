@@ -1,3 +1,4 @@
+import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
@@ -838,6 +839,8 @@ export interface SectorDetail {
    * (priced internal transfers). Display only; null when there are none.
    */
   managementProfit?: number | null;
+  /** Site accounts in the corporation currency per financial day. */
+  siteStatement?: SiteStatement | null;
   /**
    * Free internal transfers: what this site sent to the company's own sites,
    * at its own asking price, per day. A memo, never booked. Insider-only.

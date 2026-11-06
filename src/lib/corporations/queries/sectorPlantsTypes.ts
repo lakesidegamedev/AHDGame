@@ -1,3 +1,4 @@
+import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 /**
  * Plant capacity, freight and profit payloads for the sector detail page.
  * `SectorPlantsSection` keeps the physical cost chain and production summary together.
@@ -254,6 +255,8 @@ export interface SectorPlantsSection {
    * same identity hold.
    */
   pnl: {
+    /** Site accounts in anchor currency per financial day. */
+    statement?: SiteStatement;
     revenueAnchor: number;
     inputsAnchor: number;
     labourAnchor: number;

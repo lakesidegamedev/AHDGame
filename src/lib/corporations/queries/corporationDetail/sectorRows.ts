@@ -67,8 +67,7 @@ import {
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
-import { internalSupplyView } from "@/lib/corporations/rules/internalSupplyView";
-import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { sectorSiteStatement, scaleSiteStatement } from "@/lib/corporations/rules/siteStatement";
 import {
   fundedSectorTotalCost,
   plantlessSectorView,
@@ -781,35 +780,27 @@ export function buildSectorDetails(ctx: SectorRowContext) {
         ? sector.deliveryLimitedFreightClass
         : null;
     const mothballed = plantsMode ? sector.mothballed === true : false;
-    // Net margin (ticket #1027 family): realized profit over realized revenue,
-    // with the whole bill, unsold output included, already netted out of
-    // profit. `effectiveProfitMargin` divides by the revenue the SOLD units
-    // earned, so a plants sector selling 15% of its output displays a fat
-    // positive margin while it loses money. Plants only: below plants there is
-    // no produced-vs-sold split for the margin to lie about. Presentation only,
-    // never read back into the economy. Rules: `plantsNetMarginPct`, via `internalSupplyView`.
-    //
-    // Issue 5385 / ticket 1763: the margin and the management profit count the
-    // internal supply lines between the company's own sites, priced or free, on
-    // one basis (`internalSupplyView`). `profit` stays the booked figure, which
-    // tax and valuation read.
+    // One receipt-backed statement for every owner-facing monetary reading.
+    // The existing economic fields below remain the company's external basis.
     const ownSite = plantsMode ? ownSiteDeliveries(sector.producerSettlement, currentTurn) : null;
     const supplyView = plantsMode
-      ? internalSupplyView({
-          profit,
-          revenue: financialRevenue,
-          totalCost: maintenance + sectorGrowthCostLocal + sectorRegulatoryBurden + freightCost,
-          income: sectorFieldToCorpCcy(sector.plantsPnl?.internalSupplyIncome ?? 0, sector),
-          charge: sectorFieldToCorpCcy(sector.plantsPnl?.internalSupplyCharge ?? 0, sector),
-          // The receipt is ₳ per turn; the row is the corp's currency per day.
-          ownSiteValue: ownSite
-            ? writeCorpEconomicLocal(
-                ownSite.valueAnchor * TURNS_PER_DAY,
-                restatement.corpCurrency,
-                restatement.corpRate
-              )
-            : 0,
-        })
+      ? scaleSiteStatement(
+          sectorSiteStatement(sector, {
+            revenue:
+              revenueBasis.realizedRevenueLocal != null
+                ? revenueBasis.realizedRevenueLocal / sectorFieldToCorpCcy(1, sector)
+                : (financialRevenue - freightIncome) / sectorFieldToCorpCcy(1, sector),
+            totalCost:
+              (financialRevenue - profit + fundedResultAdjust - freightCost) /
+              sectorFieldToCorpCcy(1, sector),
+            freightIncome: sector.freightBillingCredit ?? 0,
+            freightCost: sector.freightBillingCharge ?? 0,
+            ownSiteValue: ownSite
+              ? (ownSite.valueAnchor * TURNS_PER_DAY) / sectorFieldToAnchor(1, sector)
+              : 0,
+          }),
+          sectorFieldToCorpCcy(1, sector)
+        )
       : null;
     const sectorNetMargin = supplyView?.netMarginPct ?? null;
     const fillAdjustedMarginPct =
@@ -869,6 +860,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ...roundOwnershipTerms(ownershipTerms),
       commoditySupplyDemandBlendPct,
       profit: Math.round(profit),
+      siteStatement: supplyView,
       // Profit with internal supply income and charges counted, display only.
       // Null when there are no internal lines, so the row shows `profit`.
       managementProfit:

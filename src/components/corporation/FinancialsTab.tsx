@@ -925,16 +925,16 @@ export default function FinancialsTab({
                         <Th>Region</Th>
                         <Th
                           align="right"
-                          title="Net margin over the full cost bill where plants report it."
+                          title="The outside-sales earnings basis used for valuation. Internal site allocations are excluded."
                         >
-                          Margin
+                          Outside-sales margin
                         </Th>
                         <Th align="right">NPV</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {npvSlice.map((row) => {
-                        const margin = row.fillAdjustedMarginPct ?? row.effectiveProfitMargin;
+                        const margin = row.effectiveProfitMargin;
                         return (
                           <tr key={row.sectorId} className="hover:bg-card-elevated/40">
                             <Td className="max-w-[10rem] truncate">

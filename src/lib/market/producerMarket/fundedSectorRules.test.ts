@@ -9,7 +9,7 @@ import {
 } from "./fundedSectorRules";
 
 const legacy = { hourlyRevenue: 500, effectiveMargin: 40, costs: 300, hourlyGrowthCost: 10, x: 1 };
-const receipt = { revenue: 100, profit: 30, producedUnits: 12.345, soldUnits: 10 };
+const receipt = { turn: 12, revenue: 100, profit: 30, producedUnits: 12.345, soldUnits: 10 };
 
 describe("funded sector result", () => {
   it("keeps management allocations out of tax, salary, growth and valuation bases", () => {
@@ -103,7 +103,12 @@ describe("funded sector ops", () => {
       soldUnits: 240,
       effectiveProfitMargin: 20,
     });
-    expect(main.$set.plantsPnl).toMatchObject({ revenue: 2400, profit: 480, totalCost: 1920 });
+    expect(main.$set.plantsPnl).toMatchObject({
+      turn: 12,
+      revenue: 2400,
+      profit: 480,
+      totalCost: 1920,
+    });
     expect(out[1].updateOne.update).toEqual({ $set: { activeCapacityPercent: 60 } });
     expect(out[2]).toBe(ops[3]);
   });

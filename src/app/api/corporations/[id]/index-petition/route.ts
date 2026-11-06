@@ -13,7 +13,7 @@ import {
   findPendingPetition,
 } from "@/lib/indexFunds/petitions/service";
 import { requiredContributionAnchor } from "@/lib/indexFunds/petitions/rules";
-import { measurePetitioner } from "@/lib/indexFunds/petitions/service";
+import { marketCapInAnchor, measurePetitioner } from "@/lib/indexFunds/petitions/service";
 
 /**
  * A7 part 2: the issuer's side of the index committee.
@@ -70,7 +70,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       findActiveWaiver(db, corporation._id, currentTurn),
     ]);
 
-    const marketCapAnchor = (corporation.sharePrice ?? 0) * (corporation.totalShares ?? 0);
+    const marketCapAnchor = await marketCapInAnchor(db, corporation);
     const isCeo = corporation.ceoId?.equals(auth.user.character._id) ?? false;
     // Only the CEO can act, so only the CEO's view pays for the measurement.
     // A waiver is only worth asking for when the company misses a size or

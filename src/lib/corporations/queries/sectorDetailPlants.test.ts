@@ -89,7 +89,7 @@ describe("buildSectorPlantsSection", () => {
         (s.pnl.internalSupplyChargeAnchor ?? 0)
     ).toBeCloseTo(s.pnl.profitAnchor, 8);
   });
-  it("gives a free supplier a memo at its ask and a margin off the -999% floor (issue 5385)", () => {
+  it("keeps a free supplier estimate separate from its actual loss on legacy payloads", () => {
     // Everything went to own sites for free: no revenue, the whole bill booked.
     const money = {
       ...BASE_ARGS.money,
@@ -119,7 +119,7 @@ describe("buildSectorPlantsSection", () => {
     expect(s.pnl.ownSiteMemoAnchor).toBe(2400);
     expect(s.pnl.revenueAnchor).toBe(0);
     expect(s.pnl.profitAnchor).toBe(-850);
-    expect(s.truth.fillAdjustedMarginPct).toBeCloseTo(((2400 - 850) / 2400) * 100, 8);
+    expect(s.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
   });
   it("adds no memo once the deliveries were priced", () => {
     const s = buildSectorPlantsSection({
