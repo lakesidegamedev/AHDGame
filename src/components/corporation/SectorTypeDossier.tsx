@@ -1,5 +1,7 @@
 "use client";
 
+import { sectorDisplayProfit } from "./sectorSortUtils";
+
 /**
  * The dossier that heads a sector type on the Sectors tab.
  *
@@ -66,7 +68,7 @@ export function SectorTypeDossier({
 
   // The Total row's basis, so the dossier and the table below it never disagree.
   const revenue = sumSectorDisplayRevenue(sectors);
-  const profit = sectors.reduce((sum, s) => sum + (s.profit ?? 0), 0);
+  const profit = sectors.reduce((sum, s) => sum + sectorDisplayProfit(s), 0);
   const corpRevenue = sumSectorDisplayRevenue(allSectors);
   const revenueShare = corpRevenue > 0 ? Math.round((revenue / corpRevenue) * 100) : 0;
   const blendedMargin = revenue > 0 ? (profit / revenue) * 100 : 0;

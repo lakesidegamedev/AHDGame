@@ -4,6 +4,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import OverviewTab from "./OverviewTab";
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import { redactPrivateCorporation } from "@/lib/corporations/redaction";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
@@ -313,4 +314,22 @@ describe("OverviewTab", () => {
     expect(within(table).getByText("Not running yet")).toBeTruthy();
     expect(within(table).getByText(/\+3 building/)).toBeTruthy();
   });
+});
+
+it("uses site accounts in overview rows and removes internal income from its total", () => {
+  renderOverview({
+    corporation: { ...corporation, plantsMode: true },
+    sectors: [
+      {
+        ...sector(1, 0),
+        profit: -2400,
+        effectiveProfitMargin: 0,
+        siteStatement: siteStatement({ revenue: 0, totalCost: 2400, income: 4800 }),
+      },
+    ],
+  });
+  const row = screen.getAllByRole("row").find((r) => within(r).queryByText("Region 1"))!;
+  expect(within(row).getByText("$200")).toBeTruthy();
+  expect(within(row).getByText("+$100")).toBeTruthy();
+  expect(within(row).getByText("50.0%")).toBeTruthy();
 });

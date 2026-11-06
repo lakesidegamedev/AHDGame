@@ -59,7 +59,7 @@ function columnsFor(plantsMode: boolean, timeScale: MoneyPeriod): Column[] {
     {
       label: "Profit",
       help: plantsMode
-        ? "Revenue times effective margin, less upkeep. Does not include corporate overhead (marketing, logistics, CEO salary, taxes)."
+        ? "Site revenue minus all site costs, including internal supply income and charges. Does not include corporation-wide overhead or tax."
         : "Revenue (the realized figure in the Revenue column) times effective margin, less growth cost. Does not include corporate overhead (marketing, logistics, CEO salary, taxes).",
       sortKey: "profit",
       align: "right",
@@ -88,13 +88,13 @@ function columnsFor(plantsMode: boolean, timeScale: MoneyPeriod): Column[] {
       },
       {
         label: "Revenue",
-        help: `What the units you sold were worth, ${period}. Under plants revenue is derived from capacity, output and sales. ${MONEY_PERIOD_HELP}`,
+        help: `Outside sales plus priced internal deliveries, ${period}. Transfers between your own sites are excluded from company totals. ${MONEY_PERIOD_HELP}`,
         sortKey: "revenue",
         align: "right",
       },
       {
         label: "Net margin",
-        help: "Profit over revenue, after paying for everything made, unsold units included. The effective margin counts only units that sold.",
+        help: "Site profit divided by site revenue, using the same settled internal income and charges. No percentage is shown when revenue is zero.",
         sortKey: "margin",
         align: "right",
       },

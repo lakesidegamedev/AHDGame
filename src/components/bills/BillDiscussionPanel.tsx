@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { Skeleton } from "@/components/ui";
@@ -19,6 +19,8 @@ interface BillDiscussionPanelProps {
   chamberLabel: string;
 }
 
+const MAX_POST_LENGTH = 1000;
+
 const EMPTY: BillDiscussionListResult = {
   posts: [],
   page: 1,
@@ -35,6 +37,16 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Grow the composer with its content so longer arguments stay readable.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 320)}px`;
+  }, [draft, focused]);
 
   const load = useCallback(
     async (targetPage: number) => {
@@ -105,37 +117,75 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Discussion</h3>
-        <span className="text-xs text-muted">
-          {data.total} {data.total === 1 ? "post" : "posts"}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-lg font-semibold">Floor debate</h3>
+          <p className="text-xs text-muted">
+            {data.total === 0
+              ? "Make the case for or against this bill."
+              : `${data.total} ${data.total === 1 ? "post" : "posts"} so far.`}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-card-border bg-background px-2.5 py-0.5 text-xs font-medium tabular-nums text-muted">
+          {data.total}
         </span>
       </div>
 
       {/* Composer */}
       {data.viewerCanPost ? (
-        <div className="space-y-2">
+        <div
+          className={`rounded-lg border bg-background transition-colors ${
+            focused ? "border-primary/60" : "border-card-border"
+          }`}
+        >
           <textarea
+            ref={textareaRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            maxLength={1000}
-            rows={3}
-            placeholder="Share your view on this bill…"
-            className="w-full resize-y rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                void submitPost();
+              }
+            }}
+            maxLength={MAX_POST_LENGTH}
+            rows={focused || draft ? 3 : 1}
+            placeholder={
+              data.total === 0
+                ? "Open the debate. Where do you stand on this bill?"
+                : "Add your voice to the debate..."
+            }
+            className="block w-full resize-none rounded-lg bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted/60 focus:outline-none"
           />
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={submitPost}
-              disabled={submitting || !draft.trim()}
-              className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-            >
-              {submitting ? "Posting…" : "Post"}
-            </button>
-          </div>
+          {(focused || draft) && (
+            <div className="flex items-center justify-between gap-2 border-t border-card-border/60 px-3 py-2">
+              <span
+                className={`text-[11px] tabular-nums ${
+                  draft.length > MAX_POST_LENGTH * 0.9 ? "text-warning" : "text-muted/70"
+                }`}
+              >
+                {draft.length}/{MAX_POST_LENGTH}
+                <span className="ml-2 hidden sm:inline">Ctrl+Enter to post</span>
+              </span>
+              <button
+                type="button"
+                // Keep focus on the textarea so the footer does not collapse mid-click.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={submitPost}
+                disabled={submitting || !draft.trim()}
+                className="rounded-lg border border-primary/40 bg-primary/15 px-4 py-1.5 text-xs font-semibold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Posting..." : "Post"}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
-        <p className="text-xs text-muted">Only {chamberLabel} members may post here.</p>
+        <p className="rounded-lg border border-dashed border-card-border px-3 py-2 text-xs text-muted">
+          Only {chamberLabel} members may post here. Anyone can read the debate.
+        </p>
       )}
 
       {/* List */}
@@ -153,13 +203,13 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
           ))}
         </div>
       ) : data.posts.length === 0 ? (
-        <p className="text-xs text-muted py-2">No discussion yet.</p>
+        <p className="py-4 text-center text-xs text-muted">No one has spoken on this bill yet.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="-mx-2 space-y-1">
           {data.posts.map((post) => (
             <li
               key={post._id}
-              className="flex gap-3 border-t border-card-border/40 pt-4 first:border-0 first:pt-0"
+              className="flex gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-background/60"
             >
               <Avatar
                 url={post.authorAvatarUrl}
@@ -200,7 +250,9 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
                   )}
                 </div>
 
-                <p className="whitespace-pre-wrap text-sm text-foreground/90">{post.content}</p>
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
+                  {post.content}
+                </p>
 
                 <div className="flex items-center gap-4 pt-1 text-xs">
                   <button

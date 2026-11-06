@@ -176,6 +176,7 @@ describe("redaction covers the plants-tier physical book", () => {
     stateId: "US-CA",
     revenue: 1000,
     financialRevenue: 1000,
+    siteStatement: { revenue: 1234, profit: 100 },
     realizedRevenue: 990,
     profitMargin: 12,
     currentGrowthCost: 5,
@@ -238,4 +239,12 @@ describe("redaction covers the plants-tier physical book", () => {
     expect("physical" in r).toBe(false);
     expect("liquidCapital" in r).toBe(false);
   });
+});
+
+it("strips the complete site statement from private outsider rows", () => {
+  const redacted = redactPrivateSectorRow({
+    profit: 20,
+    siteStatement: { revenue: 100, totalCost: 80, profit: 20 },
+  });
+  expect(redacted).not.toHaveProperty("siteStatement");
 });
