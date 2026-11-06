@@ -330,7 +330,9 @@ async function verifyPhysicalTargets(
       sector.producerCapacity.turn !== state.completedTurn ||
       !samePhysicalImage(sector, state)
     )
-      throw new Error("Producer physical opening changed or was not reconciled");
+      throw new Error(
+        `Producer physical opening changed or was not reconciled: sector ${target.sectorId} (capacity ${sector.producerCapacity?.worldEpoch === frozen.worldEpoch ? `turn ${sector.producerCapacity?.turn} vs ${state.completedTurn}` : "other world"}, stock ${sector.capitalStock} vs ${state.ownedDailyUnits}, queue ${(sector.buildQueue ?? []).length} vs ${(state.buildQueue ?? []).length})`
+      );
     if (
       comparableInventory(sector.producerInventory) !==
       comparableInventory(
