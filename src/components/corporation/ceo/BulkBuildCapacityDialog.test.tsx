@@ -146,3 +146,37 @@ it("drops a stale preview when the selection changes and shows server errors", a
     expect.objectContaining({ rule: { kind: "percent", percent: 25 } })
   );
 });
+
+it("warns how much of next turn's run the build would cut before the confirm button", async () => {
+  const onRequest = vi.fn<BulkBuildRequestFn>(async () => ({
+    ok: true,
+    data: {
+      mode: "preview",
+      cashLocal: 500,
+      readyCount: 1,
+      readyCostLocal: 450,
+      cashAfterLocal: 50,
+      runCutPercent: 26,
+      rows: [row("s1", "US-AL", "ready", 450)],
+    },
+  }));
+  render(
+    <BulkBuildCapacityDialog
+      open
+      onClose={() => {}}
+      sectors={sectors}
+      homeCountry="US"
+      countryLabel={(c) => c}
+      fmt={(n) => `$${n}`}
+      cashLocal={500}
+      onRequest={onRequest}
+      onApplied={() => {}}
+    />
+  );
+  fireEvent.click(screen.getByText("Preview 3 sectors"));
+  await waitFor(() =>
+    expect(
+      screen.getByText("After this build your cash is $50; next turn's run would be cut about 26%.")
+    ).toBeTruthy()
+  );
+});
