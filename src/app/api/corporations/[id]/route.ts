@@ -398,6 +398,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
             // Same class of intel: who a rival's output goes to.
             row.ownSiteShare = null;
             row.managementProfit = null;
+            row.siteStatement = null;
             row.ownSiteMemoValue = null;
           }
         }

@@ -154,13 +154,15 @@ export default function MarginsPanel({
   // me" (#gameplay-advisors, 2026-07-29). Rank by absolute impact and lead with
   // it; the full breakdown stays underneath for anyone who wants it.
   const drivers = pnl ? [] : topMarginDrivers(margins);
-  const netMargin = pnl
-    ? plantsNetMarginPct({
-        revenue: pnl.revenueAnchor,
-        profit: pnl.profitAnchor,
-        totalCost: pnl.revenueAnchor - pnl.profitAnchor,
-      })
-    : (fillAdjustedMarginPct ?? margins.effective);
+  const netMargin = pnl?.statement
+    ? pnl.statement.netMarginPct
+    : pnl
+      ? plantsNetMarginPct({
+          revenue: pnl.revenueAnchor,
+          profit: pnl.profitAnchor,
+          totalCost: pnl.revenueAnchor - pnl.profitAnchor,
+        })
+      : (fillAdjustedMarginPct ?? margins.effective);
   // Crisis and disaster losses ride inside `otherOperatingAnchor` (the
   // engine's financial legs). Split them out so the "Crisis margin shock" a
   // player sees in the condition list has a line of its own here; the two
@@ -173,6 +175,10 @@ export default function MarginsPanel({
         ["Inputs at market prices", pnl.inputsAnchor],
         ["Wages", pnl.labourAnchor],
         ["Freight charges", pnl.freightCostAnchor ?? 0],
+        ["Internal supply charges", pnl.internalSupplyChargeAnchor ?? 0],
+        ["Internal supply discount", pnl.internalSupplyDiscountAnchor ?? 0],
+        ["Output added to stock at cost", -(pnl.statement?.inventoryCredit ?? 0)],
+        ["Transition support", -(pnl.statement?.supportCredit ?? 0)],
         ["Upkeep", pnl.upkeepAnchor],
         ["Compliance", pnl.complianceAnchor],
         ["Other operating costs", pnl.otherOperatingAnchor - crisisLossAnchor],
@@ -289,7 +295,7 @@ export default function MarginsPanel({
                   )}
                   <div className="flex justify-between border-t border-card-border pt-2 font-semibold">
                     <span>Net margin</span>
-                    <span>{netMargin?.toFixed(1) ?? "n/a"}%</span>
+                    <span>{netMargin == null ? "n/a" : `${netMargin.toFixed(1)}%`}</span>
                   </div>
                 </div>
               ) : (

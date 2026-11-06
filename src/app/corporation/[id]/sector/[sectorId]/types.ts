@@ -1,3 +1,4 @@
+import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
@@ -413,6 +414,8 @@ export interface Margins {
 }
 
 export interface Financials {
+  /** Same statement as the plants panel, restated into corporation currency. */
+  siteStatement?: SiteStatement | null;
   revenue: number;
   /** Realized revenue after all realization legs (capacity/clearing/throughput/capital/strike/embargo). */
   realizedRevenue?: number;
@@ -762,6 +765,8 @@ export interface PlantsData {
     maxAffordableUnits: number;
   };
   pnl: {
+    /** Site accounts in anchor currency per financial day. */
+    statement?: SiteStatement;
     revenueAnchor: number;
     inputsAnchor: number;
     labourAnchor: number;

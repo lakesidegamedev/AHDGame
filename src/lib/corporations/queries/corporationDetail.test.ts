@@ -289,6 +289,56 @@ describe("loadCorporationDetailView", () => {
     expect((await view({ ownershipState: "stateOwned" })).corporation.isStateOwned).toBe(true);
   });
 
+  it("publishes a complete supplier statement without inflating company revenue", async () => {
+    const corp = makeCorporation({ countryId: "US", liquidCurrencyCode: "USD", shareholders: [] });
+    const sector = {
+      _id: new ObjectId(),
+      corporationId: corp._id,
+      countryId: "US",
+      stateId: "CA",
+      sectorType: "manufacturing",
+      strategyId: "standard",
+      revenue: 1000,
+      realizedRevenue: 0,
+      profitMargin: 35,
+      effectiveProfitMargin: 0,
+      workers: 10,
+      currentGrowthCost: 0,
+      currentGrowthRate: 0,
+      capitalStock: 10,
+      producedUnits: 240,
+      soldUnits: 0,
+      plantsPnl: {
+        source: "funded",
+        turn: 12,
+        revenue: 0,
+        totalCost: 2400,
+        profit: -2400,
+        internalSupplyIncome: 4800,
+      },
+      producerSettlement: { turn: 12, products: [] },
+    };
+    db.collection("gameConfig").findOne.mockResolvedValue({ marketSystemMode: "plants" });
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      toArray: async () => [sector],
+    } as never);
+    const result = await loadCorporationDetailView({
+      db: db as unknown as Db,
+      corporation: corp,
+      currentTurn: 12,
+      viewerUserId: null,
+    });
+    expect(result.sectors[0].siteStatement).toMatchObject({
+      turn: 12,
+      revenue: 4800,
+      totalCost: 2400,
+      profit: 2400,
+      netMarginPct: 50,
+    });
+    expect(result.financials.totalRevenue).toBe(0);
+    expect(result.sectors[0].financialRevenue).toBe(0);
+  });
+
   it("includes recorded freight and complete physical costs in the corporate statement", async () => {
     const ceo = makeCharacter({ _id: new ObjectId(), userId: new ObjectId() });
     const corporation = makeCorporation({

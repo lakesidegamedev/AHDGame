@@ -136,7 +136,12 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import { buildSectorCommoditySections } from "@/lib/corporations/queries/sectorDetailCommodities";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import { internalTransferAccount } from "@/lib/market/producerMarket/internalTransferPricingRules";
+import {
+  sectorSiteStatement,
+  scaleSiteStatement,
+  matchingSiteReceipt,
+} from "@/lib/corporations/rules/siteStatement";
+import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
 import {
   buildSectorAttackInfo,
@@ -1360,13 +1365,22 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         currentYear: techCurrentYear,
       });
 
-      const internalAccount = internalTransferAccount({
-        revenue: sectorEconomicRevenue(sector),
-        costs: maintenanceNet,
-        profit,
-        income: sector.plantsPnl?.internalSupplyIncome,
-        charge: sector.plantsPnl?.internalSupplyCharge,
-      });
+      const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
+      const matchingReceipt = matchingSiteReceipt(sector);
+      const statement = scaleSiteStatement(
+        sectorSiteStatement(sector, {
+          revenue: sectorEconomicRevenue(sector),
+          totalCost:
+            sectorEconomicRevenue(sector) -
+            profit +
+            (sector.freightBillingCredit ?? 0) -
+            (sector.freightBillingCharge ?? 0),
+          freightIncome: sector.freightBillingCredit ?? 0,
+          freightCost: sector.freightBillingCharge ?? 0,
+          ownSiteValue: ownSite ? (ownSite.valueAnchor * TURNS_PER_DAY) / sectorAmountAnchor(1) : 0,
+        }),
+        sectorAmountAnchor(1)
+      );
       plants = buildSectorPlantsSection({
         bankingCommodityScale: commodityProductionCapacityScale(
           corporation.bankCharter,
@@ -1442,13 +1456,18 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           ),
         },
         money: {
+          statement,
           nameplateRevenueAnchor: sectorAmountAnchor(sector.revenue),
-          realizedRevenueAnchor: sectorAmountAnchor(internalAccount.revenue),
-          maintenanceNetAnchor: sectorAmountAnchor(internalAccount.costs),
-          labourAnchor: sectorAmountAnchor(sectorLaborCost),
+          realizedRevenueAnchor: statement.revenue,
+          maintenanceNetAnchor: sectorAmountAnchor(maintenanceNet) + statement.charge,
+          labourAnchor: matchingReceipt
+            ? (matchingReceipt.labourPaid + (matchingReceipt.labourArrears ?? 0)) * TURNS_PER_DAY
+            : sectorAmountAnchor(sectorLaborCost),
           growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
-          profitAnchor: sectorAmountAnchor(internalAccount.profit),
-          inputsAnchor,
+          profitAnchor: statement.profit,
+          inputsAnchor: matchingReceipt
+            ? matchingReceipt.inputsConsumed * TURNS_PER_DAY
+            : inputsAnchor,
           internalSupplyIncomeAnchor: sectorAmountAnchor(
             sector.plantsPnl?.internalSupplyIncome ?? 0
           ),
@@ -1805,6 +1824,12 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         ),
       },
       financials: {
+        siteStatement: plants?.pnl.statement
+          ? scaleSiteStatement(
+              plants.pnl.statement,
+              sectorAmountInCorpCurrency(1) / sectorAmountAnchor(1)
+            )
+          : null,
         revenue: Math.round(sectorAmountInCorpCurrency(sector.revenue)),
         // Realized revenue after every realization leg (capacity, clearing,
         // throughput, capital, strike, embargo). Surfaced so the detail page can
