@@ -921,6 +921,59 @@ describe("quote policies", () => {
     }
   });
 
+  describe("buyer tie-break (producerAskBuyerTieStage)", () => {
+    // Turn 700, US food: other plants' input ceilings sat 0.1 above the household
+    // ceiling, every automatic seller posted the higher one, and households bought none.
+    const food = {
+      referenceUnitPrice: 707.49,
+      clearingUnitPrice: 901.29,
+      variableUnitCost: 300,
+      fixedCost: 5000,
+      offeredUnits: 60,
+      demand: [
+        { units: 494_000, maximumUnitPrice: 884.2625 },
+        { units: 2_000, maximumUnitPrice: 884.3625 },
+        { units: 18_000, maximumUnitPrice: 2288.425 },
+      ],
+      competitors: [{ units: 38_000, unitPrice: 901.29 }],
+      policy: { kind: "automatic" as const, targetMarkup: 0 },
+    };
+
+    it("without it, posts just above the household ceiling", () => {
+      expect(quoteProducer(food).unitPrice).toBeCloseTo(884.3625, 6);
+    });
+
+    it("with it, posts where the households can buy", () => {
+      const quote = quoteProducer({ ...food, buyerTieBreak: true });
+      expect(quote.unitPrice).toBeCloseTo(884.2625, 6);
+      expect(quote.expectedSoldUnits).toBeCloseTo(60);
+    });
+
+    it("does not give up more than the profit share for reach", () => {
+      const quote = quoteProducer({
+        ...basis,
+        competitors: [],
+        demand: [
+          { units: 1000, maximumUnitPrice: 8 },
+          { units: 100, maximumUnitPrice: 10 },
+        ],
+        policy: { kind: "automatic", targetMarkup: 0 },
+        buyerTieBreak: true,
+      });
+      expect(quote.unitPrice).toBe(10);
+    });
+
+    it("leaves manual and cost-plus prices alone", () => {
+      expect(
+        quoteProducer({
+          ...food,
+          policy: { kind: "manual", unitPrice: 884.3625 },
+          buyerTieBreak: true,
+        }).unitPrice
+      ).toBe(884.3625);
+    });
+  });
+
   it("never asks above the market reference plus markup, however high a far bid is", () => {
     // Ticket 1728: a short world book held one buyer bidding twice the market, and
     // the automatic ask jumped to that ceiling and sold nothing.

@@ -1300,6 +1300,9 @@ function priceVolumes(rows: readonly { price: number; units: number }[]) {
 }
 
 /** Quote policy selects an asking price only; all policies settle identically. */
+/** Share of the best expected profit a buyer tie-break may give up for more reachable demand. */
+export const ASK_BUYER_TIE_PROFIT_SHARE = 0.01;
+
 export function quoteProducer(input: {
   policy: ProducerQuotePolicy;
   referenceUnitPrice: number;
@@ -1331,6 +1334,12 @@ export function quoteProducer(input: {
   };
   demand: readonly { maximumUnitPrice: number; units: number }[];
   competitors: readonly { unitPrice: number; units: number }[];
+  /**
+   * Buyer tie-break (gameConfig.producerAskBuyerTieStage). Among candidate
+   * asks whose expected profit is within ASK_BUYER_TIE_PROFIT_SHARE of the
+   * best, take the one the most demand can pay. Absent = off.
+   */
+  buyerTieBreak?: boolean;
 }): {
   unitPrice: number;
   breakEvenUnitPrice: number | null;
@@ -1409,8 +1418,25 @@ export function quoteProducer(input: {
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
   for (const order of input.demand)
     candidates.add(nonNegative(order.maximumUnitPrice, "demand limit"));
-  return [...candidates]
+  const scored = [...candidates]
     .filter((price) => price <= ceiling)
     .map(estimate)
-    .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice)[0];
+    .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice);
+  const best = scored[0];
+  if (!input.buyerTieBreak || !best) return best;
+  // The estimate assumes every competitor holds its opening quote, so a ceiling a
+  // hair above a large buyer block looks as good as the block itself. Every seller
+  // in the lane then posts it and the block buys nothing: on turn 700 US food sat
+  // at 884.36 against household ceilings of 884.26 and 17k units went unsold. A
+  // near-equal profit is not worth losing the buyers below it.
+  const slack = Math.abs(best.expectedProfit) * ASK_BUYER_TIE_PROFIT_SHARE;
+  const reach = (price: number) => demandVolumes.at(price).atOrAbove;
+  return scored
+    .filter((e) => e.expectedProfit >= best.expectedProfit - slack)
+    .sort(
+      (a, b) =>
+        reach(b.unitPrice) - reach(a.unitPrice) ||
+        b.expectedProfit - a.expectedProfit ||
+        a.unitPrice - b.unitPrice
+    )[0];
 }
