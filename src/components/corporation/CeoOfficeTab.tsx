@@ -49,6 +49,7 @@ async function postJson(
 
 const SECTION_LINKS = [
   { href: "#ceo-budget", label: "Budget" },
+  { href: "#ceo-internal-supply", label: "Internal supply" },
   { href: "#ceo-operations", label: "Operations" },
   { href: "#ceo-governance", label: "Governance" },
 ] as const;
