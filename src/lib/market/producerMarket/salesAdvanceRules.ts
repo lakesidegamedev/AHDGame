@@ -31,12 +31,17 @@ export interface SalesAdvanceLine {
   offeredUnits?: number;
   soldUnits?: number;
   revenue?: number;
+  /** Units the company's own sites took from this line, paid at `captiveUnitValue` (not in `revenue`). */
+  internalDeliveredUnits?: number;
+  captiveUnitValue?: number;
+  realizedUnitPrice?: number;
 }
 
 /**
  * Revenue one unit of this turn's run is expected to earn: for each output the
  * plant makes, units per run unit times last turn's realized price times its
- * sell-through (revenue over units offered). Lines with no prior row earn
+ * sell-through (revenue over units offered). Units its own sites took count at
+ * their captive value. Lines with no prior row earn
  * nothing here, so a new line gets no advance until it has sold.
  */
 export function expectedUnitRevenue(
@@ -54,7 +59,13 @@ export function expectedUnitRevenue(
     for (const row of lastProducts)
       if (row.commodity === output.commodity) {
         offered += finite(row.offeredUnits);
-        revenue += finite(row.revenue);
+        // Units delivered to the company's own sites are offered but not in
+        // `revenue`; the sites pay for them, and their inputs sit in the run's
+        // bills, so they earn at the captive value.
+        revenue +=
+          finite(row.revenue) +
+          finite(row.internalDeliveredUnits) *
+            (finite(row.captiveUnitValue) || finite(row.realizedUnitPrice));
       }
     if (offered > 0) total += output.unitsPerOutput * (revenue / offered);
   }

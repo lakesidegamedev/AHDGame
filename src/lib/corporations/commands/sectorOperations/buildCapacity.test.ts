@@ -574,6 +574,72 @@ describe("buildCapacity — build", () => {
       expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalled();
     });
 
+    const financing = (principal: number) => ({
+      bankId: new ObjectId().toHexString(),
+      requestId: "build-quote",
+      principal,
+      termTurns: 48,
+      maximumCostLocal: 1e12,
+      maximumRatePercent: 5,
+      pledgeConsent: true,
+    });
+
+    it("holds a financed build to the reserve for the part the lender does not fund (ticket 1785)", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      vi.mocked(loadBankingPolicy).mockResolvedValue(BANKING_POLICY_ALL_ON);
+      // A bond that covers a sliver of the cost leaves the rest on the running cash.
+      const res = await buildCapacity(
+        request({ action: "build", units: 1_000, financing: financing(1_000) }),
+        { params }
+      );
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as Record<string, unknown>).code).toBe("OPERATING_RESERVE_SHORT");
+      expect(requestConstructionFinance).not.toHaveBeenCalled();
+    });
+
+    it("lets a financed build through when the lender funds all of it", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      vi.mocked(loadBankingPolicy).mockResolvedValue(BANKING_POLICY_ALL_ON);
+      vi.mocked(requestConstructionFinance).mockResolvedValue({
+        ok: true,
+        pending: true,
+        loanId: "loan",
+        claimId: "claim",
+      });
+      const res = await buildCapacity(
+        request({ action: "build", units: 1_000, financing: financing(1e12) }),
+        { params }
+      );
+      expect(res.status).toBe(200);
+      expect(requestConstructionFinance).toHaveBeenCalled();
+    });
+
+    it("quotes the bills and sales behind the next-run warning", async () => {
+      await wireMocks(sectorDoc());
+      db.collectionMocks.corporateSectors.find.mockReturnValue(
+        createAsyncIterableCursor([
+          {
+            _id: SECTOR_ID,
+            producerSettlement: {
+              turn: CURRENT_TURN - 1,
+              labourPaid: 20_000_000,
+              purchases: 10_000_000,
+              revenue: 25_000_000,
+              internalSupplyIncome: 5_000_000,
+            },
+          },
+        ])
+      );
+      const res = await buildCapacity(request({ action: "build", units: 1_000, preview: true }), {
+        params,
+      });
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body.runningBillsLocal).toBe(30_000_000);
+      expect(body.runRevenueLocal).toBe(30_000_000);
+    });
+
     it("quotes the reserve on a preview", async () => {
       await wireMocks(sectorDoc());
       wireReceipts();

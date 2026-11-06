@@ -241,6 +241,9 @@ export interface SectorPlantsSection {
     perUnitChargedAnchor: number;
     /** Corp's spendable capital, normalized to ₳ so the dialog can gate on it. */
     corpCapitalAnchor: number;
+    /** Running bills and expected sales of one turn, from the last settled receipts (build warning). */
+    runningBillsAnchor?: number;
+    runRevenueAnchor?: number;
     /** Largest whole order the corp can afford, fee included. */
     maxAffordableUnits: number;
   };

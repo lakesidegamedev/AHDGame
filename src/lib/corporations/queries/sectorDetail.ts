@@ -9,6 +9,7 @@ import {
 } from "@/lib/corporations/commodityDominanceContext";
 import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
+import { runningFlowsPerTurn } from "@/lib/corporations/rules/operatingReserve";
 import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondReference";
 import { NextResponse } from "next/server";
 import { findMergedRegionMetrics } from "@/lib/macroMetrics/merge";
@@ -1247,6 +1248,11 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         Object.values(corporation.federalTaxArrearsAnchorByCountry ?? {}).some(
           (value) => value > 0
         );
+      // What next turn's run costs and earns, for the build warning.
+      const runFlows = runningFlowsPerTurn(
+        allCorpSectors.flatMap((s) => (s.producerSettlement ? [s.producerSettlement] : [])),
+        currentTurn
+      );
       const operatingReserveAnchor =
         unsettled || !enginePnl
           ? null
@@ -1532,6 +1538,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           sectorType === "extraction" &&
           Object.values(thisSectorMultipliers).some((m) => typeof m === "number" && m < 0.999),
       });
+      plants.buildQuote.runningBillsAnchor = runFlows.bills;
+      plants.buildQuote.runRevenueAnchor = runFlows.revenue;
       withRunReport(plants, sector.producerSettlement, currentTurn, governorConfig);
     }
 
