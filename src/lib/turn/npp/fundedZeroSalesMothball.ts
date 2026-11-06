@@ -7,10 +7,8 @@ import type { CorporateSector } from "@/lib/db/types";
 import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import type { NppCorpDecision, NppCorpDecisionContext } from "@/lib/turn/npp/corpDecisionTypes";
 import type { OperatorPermissions } from "@/lib/turn/npp/rules/operatorPolicy";
-import {
-  AI_ZERO_SALES_MOTHBALL_TURNS,
-  inManualRestartGrace,
-} from "@/lib/turn/npp/nppCorporationTuning";
+import { inManualRestartGrace } from "@/lib/turn/npp/nppCorporationTuning";
+import { AI_ZERO_SALES_MOTHBALL_TURNS } from "@/lib/turn/npp/rules/transitionConversion";
 
 interface FundedZeroSalesInput {
   ctx: NppCorpDecisionContext;
