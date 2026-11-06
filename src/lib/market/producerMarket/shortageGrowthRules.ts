@@ -68,9 +68,19 @@ export function plantPressure(
   products:
     | readonly { commodity: string; book: string; deliveredUnits?: number; soldUnits?: number }[]
     | undefined,
-  pressureByBook: ReadonlyMap<string, number> | undefined
+  pressureByBook: ReadonlyMap<string, number> | undefined,
+  /** Score the plant's most pressed product instead of its biggest by units. */
+  shortestProduct = false
 ): number | undefined {
   if (!products || products.length === 0 || !pressureByBook) return undefined;
+  if (shortestProduct) {
+    let top: number | undefined;
+    for (const p of products) {
+      const v = pressureByBook.get(bookKey(p.commodity, p.book));
+      if (v !== undefined && (top === undefined || v > top)) top = v;
+    }
+    return top;
+  }
   let best: { key: string; units: number } | null = null;
   for (const p of products) {
     const units = positive(p.deliveredUnits ?? p.soldUnits);

@@ -447,6 +447,7 @@ export async function processNppCorporationDecisions(
   let plants: NppPlantsContext | undefined;
   let conversionPaceShare = 0;
   let fundedRestartStage = 0;
+  let productFillStage = 0;
   let shortageGrowthFinanceConfig: ShortageGrowthFinanceConfig | null = null;
   let bankRates: RelocationPrimeBank[] | undefined;
   if (plantsEnabled) {
@@ -478,6 +479,7 @@ export async function processNppCorporationDecisions(
           producerCaptiveDeliveryStage?: number;
           nppStateServiceHeadroomStage?: number;
           nppDividendAfterTaxStage?: number;
+          nppGrowthPerProductFillStage?: number;
         } & ShortageGrowthFinanceConfigInput
       >("gameConfig")
       .findOne(
@@ -492,6 +494,7 @@ export async function processNppCorporationDecisions(
             nppStateServiceHeadroomStage: 1,
             nppShortageGrowthFinanceStage: 1,
             nppDividendAfterTaxStage: 1,
+            nppGrowthPerProductFillStage: 1,
             nppShortageGrowthFinanceCandidateLimit: 1,
             nppShortageGrowthFinanceMaxPaybackTurns: 1,
             nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
@@ -501,6 +504,7 @@ export async function processNppCorporationDecisions(
     conversionPaceShare = nppGameConfig?.producerConversionPaceShare ?? 0;
     fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
     shortageGrowthFinanceConfig = resolveShortageGrowthFinanceConfig(nppGameConfig);
+    productFillStage = nppGameConfig?.nppGrowthPerProductFillStage ?? 0;
     plants = {
       enabled: true,
       year: plantsYear,
@@ -681,7 +685,8 @@ export async function processNppCorporationDecisions(
             sectorBookPressure(
               sector.producerSettlement as Parameters<typeof sectorBookPressure>[0],
               fundedWorldEpoch,
-              bookPressureByBook
+              bookPressureByBook,
+              productFillStage >= 1
             ),
         }
       : undefined;
@@ -807,6 +812,7 @@ export async function processNppCorporationDecisions(
         ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
         : undefined,
       ...(shortageGrowthFinance && !autopilot ? { shortageGrowthFinance } : {}),
+      ...(productFillStage >= 1 ? { productFillStage } : {}),
     };
     let decision = makeNppCorpDecision(
       decisionContext,
