@@ -211,6 +211,8 @@ jobs:
           fi
       - name: Build recovery and promotion qualification tests
         run: node --test scripts/ci/change-scope.test.mjs scripts/ci/staging-qualification.test.mjs scripts/build-with-cache-recovery.test.mjs
+      - name: PR governance tests
+        run: python3 -m unittest discover -s scripts/ci -p 'test_*.py'
 
       - uses: actions/cache@v4
         with:
