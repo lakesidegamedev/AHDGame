@@ -4,6 +4,7 @@ export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from ".
 import { IDLE_RETIRE_GRACE_TURNS } from "@/lib/turn/corporation/rules/idleCapacityRetirement";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
+import { buildSecuredLoanInfo } from "./securedSaleLoanInfo";
 import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
 import { securedSaleMergeRefusal } from "@/lib/banking/constructionSaleMerge";
 /**
@@ -18,8 +19,7 @@ import {
   activeCapacityFraction,
   hasSettledOperatingHistory,
 } from "@/lib/corporations/investment/rules";
-import { ObjectId, type Db } from "mongodb";
-import type { BankLoan } from "@/lib/db/types/bank";
+import type { Db } from "mongodb";
 import type {
   CommodityPrice,
   CorporateSector,
@@ -532,33 +532,7 @@ export async function buildSectorForSaleInfo(
     (listing.pledged
       ? securedSaleMergeRefusal(conflict) !== null
       : hasProtectedConstructionProperty(conflict));
-  // What the buyer's price does to the site's secured loan. The lender is paid
-  // first out of the price and the buyer takes on no debt; a price below the
-  // balance leaves the remainder with the seller.
-  const loanId = sector.constructionFinancing?.loanId;
-  const securedLoanDoc =
-    listing.pledged && loanId && ObjectId.isValid(loanId)
-      ? await db
-          .collection<BankLoan>("bankLoans")
-          .findOne({ _id: new ObjectId(loanId) }, { projection: { outstanding: 1, status: 1 } })
-      : null;
-  const securedLoanOutstandingAnchor =
-    securedLoanDoc && securedLoanDoc.outstanding > 0
-      ? securedLoanDoc.outstanding /
-        (args.sellerFxRate && args.sellerFxRate > 0 ? args.sellerFxRate : 1)
-      : 0;
-  const securedLoan =
-    securedLoanOutstandingAnchor > 0
-      ? {
-          outstandingAnchor: Math.round(securedLoanOutstandingAnchor),
-          repaidFromPriceAnchor: Math.round(
-            Math.min(securedLoanOutstandingAnchor, listing.priceAnchor)
-          ),
-          remainingAfterSaleAnchor: Math.round(
-            Math.max(0, securedLoanOutstandingAnchor - listing.priceAnchor)
-          ),
-        }
-      : null;
+  const securedLoan = await buildSecuredLoanInfo(db, sector, listing, args.sellerFxRate);
   // A merge keeps the buyer's strategy, so a different one is refused up front.
   const strategyMismatch = conflict ? sectorMergeStrategyRefusal(sector, conflict) : null;
   const constructionBlocked =

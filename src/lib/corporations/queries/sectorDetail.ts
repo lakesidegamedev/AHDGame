@@ -683,7 +683,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const blendPresenceKeys = tariffRulesNeedSectorPresenceKeys(allTariffs)
       ? buildSectorPresenceKeys(allSectorsRaw, corpByIdForLookup)
       : new Set<string>();
-
     const ftaCoverage = buildFtaCoverageLookup(allSectorsRaw, corpByIdForLookup, activeFtaPairs);
 
     // Extract raw state metric values for display context and modifier computation
