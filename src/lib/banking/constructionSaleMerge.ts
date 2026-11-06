@@ -36,8 +36,6 @@ export function securedSaleMergeRefusal(
   return refusal ? `Your site in that market cannot take this one in yet. ${refusal}` : null;
 }
 
-const MAX_ATTEMPTS = 5;
-
 /**
  * Fold a sold pledged site into the buyer's existing site and delete it. The
  * buyer has already paid, the lender is settled and the sold row's loan claim
@@ -52,7 +50,8 @@ export async function foldSoldSiteIntoSurvivor(
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const { donorId, survivorId, buyerId, saleKey } = input;
   const plants = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  // bounded-cas-retry(maxAttempts=5): Retry only when a turn rewrote the survivor between the read and the guarded fold.
+  for (let attempt = 0; attempt < 5; attempt++) {
     const donor = await sectors.findOne({ _id: donorId });
     if (!donor) break;
     const survivor = await sectors.findOne({ _id: survivorId });
