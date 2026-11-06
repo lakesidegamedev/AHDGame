@@ -194,6 +194,12 @@ export interface CorporationLookups {
    */
   stateDeliveryLimitedRatioByState?: Map<string, Map<CommodityType, number>>;
   /**
+   * Corporation id -> state id -> commodity -> share of that corporation's own
+   * output wanted and not delivered. Drives the sector figure; the state ratio
+   * above keeps driving offers and revenue placement.
+   */
+  ownerDeliveryLimitedRatioByCorp?: Map<string, Map<string, Map<CommodityType, number>>>;
+  /**
    * Lagged global price / base price per commodity (prior turn's computed
    * price). Read by the price-realization multiplier when
    * marketSystemMode >= "realization"; always built (cheap), inert otherwise.

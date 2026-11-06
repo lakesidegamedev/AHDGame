@@ -2003,6 +2003,54 @@ describe("own shipments first (freight capacity held for the owner)", () => {
       expect(usedTeu(s2) - covered).toBeLessThanOrEqual(pool * FREIGHT_CONGESTION_OVERFLOW + 1e-6);
     });
 
+    describe("owner-level delivery-limited figure", () => {
+      // corp1 makes 60 of the state's 100 `mine` and ships all of it on its own
+      // route. The other 40 belong to sellers with no freight capacity, and the
+      // pool is too small for them: the state figure is high, corp1's is not.
+      const ownerWorld = (freight: number, overrides: Partial<SourcingInputs> = {}) =>
+        marketWorld(freight, {
+          ownRoutes: [route],
+          ownFreightCapacityByState: ownCap(ownTeu),
+          ownFreightMarketSupply: supplyOf(60),
+          ...overrides,
+        });
+      const stateFraction = (r: R) =>
+        (r.deliveryLimitedSupplyByState.get(mine)?.get("A2") ?? 0) / 100;
+      const ownerFraction = (r: R, owner: string) =>
+        r.ownerDeliveryLimitedFractionByState?.get(mine)?.get("A2")?.get(owner);
+
+      it("an owner whose goods all shipped reads low while the state reads high", () => {
+        const r = runSourcingPass(ownerWorld(ownTeu / (1 + FREIGHT_CONGESTION_OVERFLOW)));
+        expect(ownUnits(r)).toBeCloseTo(60);
+        expect(stateFraction(r)).toBeGreaterThan(0.2);
+        expect(ownerFraction(r, "corp1")).toBeCloseTo(0, 6);
+      });
+
+      it("an owner that shipped nothing of its own is stuck at the state rate, pro rata", () => {
+        // Same stuck goods, but corp1 has no route out: it holds its units like
+        // everyone else, so its figure is the state's.
+        const r = runSourcingPass(
+          ownerWorld(ownTeu / (1 + FREIGHT_CONGESTION_OVERFLOW), { ownRoutes: [] })
+        );
+        expect(stateFraction(r)).toBeGreaterThan(0.2);
+        expect(ownerFraction(r, "corp1")).toBeCloseTo(stateFraction(r), 1);
+      });
+
+      it("is bounded 0..1 and absent for sellers without a market-supply entry (state fallback)", () => {
+        const r = runSourcingPass(ownerWorld(ownTeu / (1 + FREIGHT_CONGESTION_OVERFLOW)));
+        for (const f of r.ownerDeliveryLimitedFractionByState?.get(mine)?.get("A2")?.values() ??
+          []) {
+          expect(f).toBeGreaterThanOrEqual(0);
+          expect(f).toBeLessThanOrEqual(1);
+        }
+        expect(ownerFraction(r, "corp2")).toBeUndefined();
+        const off = runSourcingPass(
+          marketWorld(ownTeu, { ownFreightCapacityByState: ownCap(ownTeu) })
+        );
+        expect(off.ownerDeliveryLimitedFractionByState?.size ?? 0).toBe(0);
+      });
+    });
+
     it("an owner supplying half the state's goods covers only its half, the rest bills", () => {
       const s2 = runSourcingPass(
         marketWorld(BIG, {
