@@ -452,6 +452,7 @@ export function prepareProducerPhysicalSector(input: {
             book: string;
             deliveredUnits?: number;
             soldUnits?: number;
+            askingUnitPrice?: number;
           }[];
         };
       }
@@ -465,6 +466,13 @@ export function prepareProducerPhysicalSector(input: {
           `${x.commodity}|${x.book}`,
           x.deliveredUnits ?? x.soldUnits ?? 0,
         ])
+      );
+    // Stage 2 of the shortage ask: a sold-out seller steps from its own last ask.
+    if (current?.products && (env.shortageAskStage ?? 0) >= 2)
+      plan.recentAskByOutput = Object.fromEntries(
+        current.products
+          .filter((x) => typeof x.askingUnitPrice === "number" && x.askingUnitPrice > 0)
+          .map((x) => [`${x.commodity}|${x.book}`, x.askingUnitPrice as number])
       );
   }
   const suspended =
