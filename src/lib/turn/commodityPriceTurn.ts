@@ -155,7 +155,11 @@ import {
 } from "./commodity/pricing";
 import { buildBlocsByCountry, buildCurtainedCountries } from "./commodity/tradeContext";
 import { runFreightSettlementPhase } from "./commodity/sourcingSettlement";
-import { buildOwnFreightCapacity, buildOwnRoutes } from "@/lib/logistics/ownRoutes";
+import {
+  buildOwnFreightCapacity,
+  buildOwnMarketSupply,
+  buildOwnRoutes,
+} from "@/lib/logistics/ownRoutes";
 import { stateHops } from "@/lib/logistics/stateDistance";
 import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
 import { persistTurnOutputs } from "./commodity/persistence";
@@ -1006,6 +1010,11 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         demandUsesByState,
         ownRoutes,
         ownFreightCapacityByState,
+        ownFreightMarketSupply: buildOwnMarketSupply({
+          sectors: ownRouteSectors,
+          supplyBySector: sectorUnits.supplyBySector,
+          policies: ownRoutePolicies,
+        }),
       },
       turn,
       now,
