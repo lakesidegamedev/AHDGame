@@ -17,6 +17,7 @@ function fixture(formalized = true, shares = 60, reserved = 0) {
   ];
   const collection = vi.fn((name: string) => ({
     find: vi.fn(() => ({
+      project: vi.fn().mockReturnThis(),
       toArray: async () =>
         name === "corporations"
           ? rows
