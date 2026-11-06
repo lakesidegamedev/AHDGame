@@ -4,10 +4,11 @@ import {
   positionHoldingTerms,
   type ShareHoldingTerms,
 } from "@/lib/corporations/rules/holdingTerms";
-import { ObjectId } from "mongodb";
+import { loadCharacterFundPortfolio } from "@/lib/indexFunds/corporationPortfolio";
+import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type { Corporation, PortfolioHistory, Bond } from "@/lib/db/types";
+import type { Corporation, PortfolioHistory, Bond, Character } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -35,6 +36,24 @@ import {
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+
+type PortfolioHistoryReading = Pick<
+  PortfolioHistory,
+  | "turn"
+  | "totalValue"
+  | "netValue"
+  | "stockValue"
+  | "shortTermStockValue"
+  | "longTermStockValue"
+  | "bondValue"
+  | "fundValue"
+  | "cashValue"
+  | "liquidCashValue"
+  | "savingsCashValue"
+  | "locDebtValue"
+  | "incomeTaxDebtValue"
+  | "exchangeRatesSnapshot"
+>;
 
 interface Holding {
   holdingTerms?: ShareHoldingTerms;
@@ -84,6 +103,8 @@ export interface LoadCharacterPortfolioOptions {
    * endpoint, and the history was measured at the bulk of its payload.
    */
   summary?: boolean;
+  /** Profile viewers do not need private savings pricing or a gains baseline. */
+  profile?: boolean;
 }
 
 export async function loadCharacterPortfolio(
@@ -106,6 +127,16 @@ export async function loadCharacterPortfolio(
     };
   }
 
+  return loadPortfolioForCharacter(db, character, forexEnabled, options);
+}
+
+/** Shared valuation for owner and profile portfolio views. */
+export async function loadPortfolioForCharacter(
+  db: Db,
+  character: Character,
+  forexEnabled: boolean,
+  options: LoadCharacterPortfolioOptions = {}
+) {
   const charId = character._id;
   const gameState = await getGameState();
   const currentTurn = gameState?.currentTurn ?? 1;
@@ -228,7 +259,7 @@ export async function loadCharacterPortfolio(
       const holder = bond.holders.find((h) => h.characterId?.toString() === charId.toString());
       if (!holder || holder.units <= 0) continue;
 
-      const corp = bondCorpMap.get(bond.corporationId.toString());
+      const corp = bondCorpMap.get(bond.corporationId?.toString() ?? "");
       const value = holder.units * BOND_UNIT_FACE_VALUE * bond.marketPrice;
       // Bond face values are denominated in bond.currencyCode (v0.2.6);
       // normalize to ₳ for cross-bond summation.
@@ -246,7 +277,7 @@ export async function loadCharacterPortfolio(
 
       bondHoldings.push({
         bondId: bond._id.toString(),
-        corporationId: bond.corporationId.toString(),
+        corporationId: bond.corporationId?.toString() ?? "",
         corporationName: getBondIssuerDisplayName(bond, corp?.name),
         sequentialId: corp?.sequentialId,
         units: holder.units,
@@ -278,14 +309,14 @@ export async function loadCharacterPortfolio(
   // totals, so both queries and the per-row FX snapshots are skipped.
   const summaryOnly = options.summary === true;
   const [historyDescending, earliestSnapshot] = summaryOnly
-    ? [[] as PortfolioHistory[], null as PortfolioHistory | null]
+    ? [[] as PortfolioHistoryReading[], null as PortfolioHistoryReading | null]
     : await Promise.all([
         db
           .collection<PortfolioHistory>("portfolioHistory")
           .find({ characterId: charId })
           .sort({ turn: -1 })
           .limit(500)
-          .project({
+          .project<PortfolioHistoryReading>({
             _id: 0,
             turn: 1,
             totalValue: 1,
@@ -294,6 +325,7 @@ export async function loadCharacterPortfolio(
             shortTermStockValue: 1,
             longTermStockValue: 1,
             bondValue: 1,
+            fundValue: 1,
             cashValue: 1,
             liquidCashValue: 1,
             savingsCashValue: 1,
@@ -302,27 +334,30 @@ export async function loadCharacterPortfolio(
             exchangeRatesSnapshot: 1,
           })
           .toArray(),
-        db
-          .collection<PortfolioHistory>("portfolioHistory")
-          .find({ characterId: charId })
-          .sort({ turn: 1 })
-          .limit(1)
-          .project({
-            _id: 0,
-            turn: 1,
-            totalValue: 1,
-            netValue: 1,
-            stockValue: 1,
-            shortTermStockValue: 1,
-            longTermStockValue: 1,
-            bondValue: 1,
-            cashValue: 1,
-            liquidCashValue: 1,
-            savingsCashValue: 1,
-            locDebtValue: 1,
-            exchangeRatesSnapshot: 1,
-          })
-          .next(),
+        options.profile
+          ? Promise.resolve(null)
+          : db
+              .collection<PortfolioHistory>("portfolioHistory")
+              .find({ characterId: charId })
+              .sort({ turn: 1 })
+              .limit(1)
+              .project<PortfolioHistoryReading>({
+                _id: 0,
+                turn: 1,
+                totalValue: 1,
+                netValue: 1,
+                stockValue: 1,
+                shortTermStockValue: 1,
+                longTermStockValue: 1,
+                bondValue: 1,
+                fundValue: 1,
+                cashValue: 1,
+                liquidCashValue: 1,
+                savingsCashValue: 1,
+                locDebtValue: 1,
+                exchangeRatesSnapshot: 1,
+              })
+              .next(),
       ]);
   const history = historyDescending.reverse();
   // Load exchange rates so multi-currency personal wealth is correctly summed
@@ -354,11 +389,12 @@ export async function loadCharacterPortfolio(
       point.locDebtValue ??
       (point.turn === currentTurn ? Math.round(currentLocDebt * 100) / 100 : 0),
   }));
-  const combinedTotal = totalValue + totalBondValue + currentCashWealth;
+  const funds = await loadCharacterFundPortfolio(db, charId);
+  const combinedTotal = totalValue + totalBondValue + funds.valueAnchor + currentCashWealth;
   const baselineValue = earliestSnapshot?.totalValue ?? combinedTotal;
   const totalCapitalGains = combinedTotal - baselineValue;
 
-  const apyByCurrency = await loadSavingsApyForCharacter(db, character);
+  const apyByCurrency = options.profile ? {} : await loadSavingsApyForCharacter(db, character);
 
   const interestEarnedByCurrency: Partial<Record<CurrencyCode, number>> =
     forexEnabled && character.currencyBalances?.interestEarned
@@ -385,6 +421,9 @@ export async function loadCharacterPortfolio(
 
   return {
     holdings,
+    totalFundValue: funds.valueAnchor,
+    locDebtValue: currentLocDebt,
+    incomeTaxDebtValue: incomeTax.unpaidTaxAnchor,
     incomeTax,
     bondHoldings,
     totalValue: Math.round(totalValue * 100) / 100,

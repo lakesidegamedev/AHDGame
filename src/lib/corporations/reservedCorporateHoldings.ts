@@ -112,6 +112,13 @@ export async function loadReservedCorporatePositionsByTarget(
         status: "open",
         placerCorporationId: { $exists: true },
       })
+      .project<OpenCorpSell>({
+        corporationId: 1,
+        type: 1,
+        status: 1,
+        placerCorporationId: 1,
+        sharesRemaining: 1,
+      })
       .toArray(),
     db
       .collection<ShareListing>("shareListings")
@@ -120,20 +127,34 @@ export async function loadReservedCorporatePositionsByTarget(
         status: "open",
         sellerCorporationId: { $exists: true },
       })
+      .project<OpenCorpListing>({
+        corporationId: 1,
+        status: 1,
+        sellerCorporationId: 1,
+        sharesRemaining: 1,
+      })
       .toArray(),
   ]);
 
-  const targetIds = new Set<string>();
-  for (const order of orders) targetIds.add(order.corporationId.toString());
-  for (const listing of listings) targetIds.add(listing.corporationId.toString());
+  const grouped = new Map<
+    string,
+    { targetId: ObjectId; orders: OpenCorpSell[]; listings: OpenCorpListing[] }
+  >();
+  const rowsFor = (targetId: ObjectId) => {
+    const key = targetId.toString();
+    let rows = grouped.get(key);
+    if (!rows) {
+      rows = { targetId, orders: [], listings: [] };
+      grouped.set(key, rows);
+    }
+    return rows;
+  };
+  for (const order of orders) rowsFor(order.corporationId).orders.push(order);
+  for (const listing of listings) rowsFor(listing.corporationId).listings.push(listing);
 
   const map = new Map<string, ReservedCorporatePosition[]>();
-  for (const id of targetIds) {
-    const targetId =
-      orders.find((o) => o.corporationId.toString() === id)?.corporationId ??
-      listings.find((l) => l.corporationId.toString() === id)?.corporationId;
-    if (!targetId) continue;
-    map.set(id, reservedCorporatePositions(orders, listings, targetId));
+  for (const [id, rows] of grouped) {
+    map.set(id, reservedCorporatePositions(rows.orders, rows.listings, rows.targetId));
   }
   return map;
 }

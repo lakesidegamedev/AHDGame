@@ -322,3 +322,29 @@ describe("GET /api/corporations/[id]/portfolio", () => {
     expect(json.totalPortfolioValue).toBe(-300_000);
   });
 });
+
+it("includes fund assets in live net worth and preserves optional fund history", async () => {
+  const corpId = new ObjectId(),
+    fundId = new ObjectId();
+  const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+  vi.mocked(resolveCorporation).mockResolvedValue({
+    ok: true,
+    corporation: { _id: corpId, name: "Fixture", shareholders: [], liquidCapital: 1000 },
+  } as never);
+  db.collection("indexFundPositions").find.mockReturnValue({
+    toArray: async () => [{ fundId, units: 10 }],
+  });
+  db.collection("indexFunds").find.mockReturnValue({
+    toArray: async () => [{ _id: fundId, name: "Fund", quotedNav: 25, status: "active" }],
+  });
+  const { GET } = await import("./route");
+  const res = await GET(new Request("http://localhost/api/corporations/1/portfolio"), {
+    params: Promise.resolve({ id: "1" }),
+  });
+  const data = await res.json();
+  expect(res.status).toBe(200);
+  expect(data.totalFundValue).toBe(250);
+  expect(data.grossPortfolioValue).toBe(1250);
+  expect(data.totalPortfolioValue).toBe(1250);
+  expect(data.fundHoldings[0].valueAnchor).toBe(250);
+});

@@ -1,3 +1,4 @@
+import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
 import { describe, expect, it, vi } from "vitest";
 import { type Db, ObjectId } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -54,4 +55,42 @@ describe("loadPortfolioHoldings legacy bond rows (#2349)", () => {
     expect(result.heldBondsSummary[0]!.currentValue).toBe(0);
     expect(result.heldBondsSummary[1]!.units).toBe(10);
   });
+});
+
+it("counts unsold corporate reservations at the held corporation's explicit currency", async () => {
+  resetCorpFxRateCacheForTests();
+  const db = createMockDb();
+  const owner = makeCorporation({ countryId: "UK" });
+  const target = new ObjectId();
+  db.collection("shareOrders").find.mockReturnValue({
+    toArray: async () => [
+      {
+        corporationId: target,
+        placerCorporationId: owner._id,
+        type: "sell",
+        status: "open",
+        sharesRemaining: 20,
+      },
+    ],
+  });
+  db.collection("corporations").find.mockReturnValue({
+    project: vi.fn().mockReturnValue({
+      toArray: async () => [
+        {
+          _id: target,
+          countryId: "US",
+          liquidCurrencyCode: "JPY",
+          sharePrice: 200,
+          shareholders: [{ corporationId: owner._id, shares: 5 }],
+        },
+      ],
+    }),
+  });
+  db.collection("exchangeRates").find.mockReturnValue({
+    toArray: async () => [{ currencyCode: "JPY", rate: 100 }],
+  });
+  const result = await loadPortfolioHoldings(db as unknown as Db, owner, 10, new Map());
+  expect(result.totalStockHoldingsValue).toBe(50);
+  const projection = db.collection("corporations").find.mock.results[0].value.project;
+  expect(projection).toHaveBeenCalledWith(expect.objectContaining({ liquidCurrencyCode: 1 }));
 });

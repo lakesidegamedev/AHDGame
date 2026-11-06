@@ -1,3 +1,4 @@
+import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
 import { buildCountryStatements } from "./countryStatements";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { MAX_DIVIDEND_RATE, TURNS_PER_DAY } from "@/lib/constants/corporations";
@@ -141,11 +142,10 @@ export function buildFinancials(inputs: FinancialsInputs) {
           // operating-only, so a bond/holding-portfolio corp's masthead went
           // deeply negative while the income statement was positive (#941).
           realizedIncome: Math.round(
-            (latestCorpIncomeRow.income +
-              (latestCorpIncomeRow.perTurnBondCouponIncome ?? 0) -
-              (latestCorpIncomeRow.perTurnBondDragOnNetIncome ?? 0) +
-              (latestCorpIncomeRow.dividendIncomeReceived ?? 0)) *
-              TURNS_PER_DAY
+            realizedNetIncomePerTurn({
+              ...latestCorpIncomeRow,
+              income: latestCorpIncomeRow.income,
+            }) * TURNS_PER_DAY
           ),
           // Dividends the engine ACTUALLY paid out of that same turn's income,
           // in the same daily display units. `realizedIncome` above is already

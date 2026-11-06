@@ -232,3 +232,68 @@ describe("GET /api/character/[id]/portfolio", () => {
     expect(data.history[0].cashValue).toBeUndefined();
   });
 });
+
+it("includes funds and unpaid tax like the owner view without exposing the private statement", async () => {
+  await setup();
+  const charId = new ObjectId(),
+    fundId = new ObjectId();
+  const { requireAuth } = await import("@/lib/api/requireAuth");
+  vi.mocked(requireAuth).mockResolvedValue({
+    ok: true,
+    user: { userId: new ObjectId().toString() },
+  } as never);
+  const { getGameState } = await import("@/lib/gameState");
+  vi.mocked(getGameState).mockResolvedValue({ currentTurn: 100 } as never);
+  db.collectionMocks.characters.findOne.mockResolvedValue({
+    _id: charId,
+    name: "Fixture",
+    countryId: "US",
+    currencyBalances: { personal: { USD: 1000 } },
+  });
+  db.collection("indexFundPositions").find.mockReturnValue({
+    toArray: async () => [{ fundId, units: 10 }],
+  });
+  db.collection("indexFunds").find.mockReturnValue({
+    toArray: async () => [{ _id: fundId, quotedNav: 25, status: "active" }],
+  });
+  db.collection("playerIncomeTaxAssessments").find.mockReturnValue({
+    toArray: async () => [
+      {
+        _id: "fixture",
+        turn: 99,
+        currency: "USD",
+        status: "unpaid",
+        gross: 500,
+        federal: 50,
+        regional: 0,
+        collectedFederal: 0,
+        collectedRegional: 0,
+        net: 450,
+        sourceFx: 1,
+      },
+    ],
+  });
+  db.collection("portfolioHistory").find.mockReturnValue({
+    sort: () => ({
+      limit: () => ({
+        project: () => ({
+          toArray: async () => [
+            { turn: 100, totalValue: 1250, fundValue: 250, shortTermStockValue: 999 },
+          ],
+        }),
+      }),
+    }),
+  });
+  const { GET } = await import("./route");
+  const res = await GET(new Request("http://localhost/api/character/77/portfolio"), {
+    params: Promise.resolve({ id: "77" }),
+  });
+  const data = await res.json();
+  expect(res.status).toBe(200);
+  expect(data.totalFundValue).toBe(250);
+  expect(data.incomeTaxDebtValue).toBe(50);
+  expect(data.incomeTax).toBeUndefined();
+  expect(data.history[0].fundValue).toBe(250);
+  expect(data.history[0].shortTermStockValue).toBeUndefined();
+  expect(data.cashOnHand + data.totalFundValue - data.incomeTaxDebtValue).toBe(1200);
+});
