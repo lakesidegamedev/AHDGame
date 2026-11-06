@@ -343,6 +343,14 @@ export interface SourcingResult {
   ownRouteDelivered: SourcingOwnRoute[];
   /** Own-shipments-first: TEU each route owner hauled on its own capacity, per origin state. */
   ownFreightCoveredTeuByState?: Map<string, Map<string, number>>;
+  /**
+   * Own shipments first, stage 2: per commodity and origin state, the share of
+   * each route owner's own output that was wanted and could not be delivered
+   * (route identity -> fraction). `deliveryLimitedSupplyByState` is a state
+   * figure covering every seller; this is the owner's own slice of it. Absent
+   * for owners without freight capacity there, who keep the state figure.
+   */
+  ownerDeliveryLimitedFractionByState?: Map<CommodityType, Map<string, Map<string, number>>>;
   summaries: SourcingCommoditySummary[];
   /** TEU consumed per state per class, the load on each shipping network. */
   freightTeuByState: Map<string, Record<FreightClass, number>>;
@@ -627,6 +635,10 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
   };
   const unplacedSupplyByState = new Map<CommodityType, Map<string, number>>();
   const deliveryLimitedSupplyByState = new Map<CommodityType, Map<string, number>>();
+  const ownerDeliveryLimitedFractionByState = new Map<
+    CommodityType,
+    Map<string, Map<string, number>>
+  >();
   const freightChargesByDestState = new Map<string, Map<CommodityType, number>>();
   const haulRevenueByOriginState = new Map<string, number>();
   const foreignQuotes = new Map<string, SourcingForeignQuote>();
@@ -791,6 +803,17 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     // Working copies of spare supply — consumed as buyers fill, never written
     // back to the price model.
     const spareByState = new Map<string, number>();
+    // Units each route owner actually shipped out of a state this commodity:
+    // its own routes in full plus its seller share of every market haul.
+    // `shippedOutByState` is the same count for every seller, owners or not.
+    const shippedOutByState = new Map<string, number>();
+    const ownerShippedUnits = new Map<string, Map<string, number>>();
+    const addOwnerShipped = (stateId: string, routeId: string, units: number) => {
+      if (!(units > 0)) return;
+      let byRoute = ownerShippedUnits.get(stateId);
+      if (!byRoute) ownerShippedUnits.set(stateId, (byRoute = new Map()));
+      byRoute.set(routeId, (byRoute.get(routeId) ?? 0) + units);
+    };
     const localFillByState = new Map<string, number>();
     const unmetByState = new Map<string, number>();
     const useSharesByState = new Map<string, PurchaseUseShares>();
@@ -1318,6 +1341,16 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
               );
             }
             spareByState.set(cand.originId, Math.max(0, marketSpare - dispatch));
+            shippedOutByState.set(
+              cand.originId,
+              (shippedOutByState.get(cand.originId) ?? 0) + dispatch
+            );
+            if (cand.ownRoute) {
+              addOwnerShipped(cand.originId, cand.ownRoute.corporationId, dispatch);
+            } else {
+              for (const o of marketOwnersFor(commodity, cand.originId))
+                addOwnerShipped(cand.originId, o.routeId, dispatch * o.share);
+            }
             summary.interStateUnits += take;
           } else {
             spareByCountry.set(cand.originId as CountryId, spare - dispatch);
@@ -1513,6 +1546,50 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     }
     deliveryLimitedSupplyByState.set(commodity, deliveryLimited);
 
+    // The owner's own slice of that state figure. A route owner's goods leave a
+    // state on its own routes first and then in its seller share of every
+    // market haul, so what it shipped is known exactly. The state's stuck units
+    // are then spread over what every seller still holds unshipped: listed
+    // owners by their own count, everyone else as the remainder. Owners not
+    // listed here have no entry and keep the state figure.
+    if (marketStage && isHauledClass(freightClass)) {
+      const byOwnerState = new Map<string, Map<string, number>>();
+      for (const [stateId, owners] of ownFreightMarketSupply!.get(commodity) ?? []) {
+        const supply = byState.get(stateId)?.get(commodity)?.supply ?? 0;
+        if (!(supply > 0)) continue;
+        const limited = deliveryLimited.get(stateId) ?? 0;
+        const localFill = Math.max(0, localFillByState.get(stateId) ?? 0);
+        const shipped = ownerShippedUnits.get(stateId);
+        let ownersUnits = 0;
+        let ownersShipped = 0;
+        const heldByOwner = new Map<string, number>();
+        for (const [routeId, units] of owners) {
+          if (!(units > 0)) continue;
+          const own = Math.min(units, shipped?.get(routeId) ?? 0);
+          ownersUnits += units;
+          ownersShipped += own;
+          heldByOwner.set(routeId, Math.max(0, units - own - (localFill * units) / supply));
+        }
+        const restUnits = Math.max(0, supply - ownersUnits);
+        const restHeld = Math.max(
+          0,
+          restUnits -
+            Math.max(0, (shippedOutByState.get(stateId) ?? 0) - ownersShipped) -
+            (localFill * restUnits) / supply
+        );
+        let heldTotal = restHeld;
+        for (const held of heldByOwner.values()) heldTotal += held;
+        const fractions = new Map<string, number>();
+        for (const [routeId, held] of heldByOwner) {
+          const units = owners.get(routeId)!;
+          const stuck = heldTotal > 0 ? (limited * held) / heldTotal : 0;
+          fractions.set(routeId, Math.max(0, Math.min(1, stuck / units)));
+        }
+        if (fractions.size > 0) byOwnerState.set(stateId, fractions);
+      }
+      if (byOwnerState.size > 0) ownerDeliveryLimitedFractionByState.set(commodity, byOwnerState);
+    }
+
     summary.intraStateUnits = round2(summary.intraStateUnits);
     summary.interStateUnits = round2(summary.interStateUnits);
     summary.importUnits = round2(summary.importUnits);
@@ -1542,6 +1619,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     ownRouteDelivered,
     summaries,
     ownFreightCoveredTeuByState: ownFreight.covered(),
+    ownerDeliveryLimitedFractionByState,
     freightTeuByState: freightUsedByState,
     freightDemandTeuByState: freightDemandByState,
     landedPremiumByDestState,
