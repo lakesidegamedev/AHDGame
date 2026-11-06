@@ -837,6 +837,7 @@ export async function runFundedProducerTurn(
       ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((input.env.captiveDeliveryStage ?? 0) >= 3 ? { captiveMarketValue: true } : {}),
       ...((input.env.askBuyerTieStage ?? 0) >= 1 ? { askBuyerTieBreak: true } : {}),
+      ...((input.env.askBuyerTieStage ?? 0) >= 2 ? { askCompetitorsMatch: true } : {}),
       ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
         ? {
             shortageAsk: {

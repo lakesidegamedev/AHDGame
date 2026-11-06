@@ -963,6 +963,45 @@ describe("quote policies", () => {
       expect(quote.unitPrice).toBe(10);
     });
 
+    // Turn 708, US food: opening quotes at the shortage step (925.9), household
+    // ceilings 889.94, another country's input ceilings 913.12, 2.6% apart.
+    const food708 = {
+      ...food,
+      clearingUnitPrice: 925.9,
+      offeredUnits: 50,
+      demand: [
+        { units: 444_000, maximumUnitPrice: 889.94 },
+        { units: 3_000, maximumUnitPrice: 913.12 },
+        { units: 17_000, maximumUnitPrice: 2288.425 },
+      ],
+      competitors: [{ units: 48_000, unitPrice: 925.9 }],
+      buyerTieBreak: true,
+    };
+
+    it("stage 1 alone still posts above the households when the gap is wider than the band", () => {
+      expect(quoteProducer(food708).unitPrice).toBeCloseTo(913.12, 6);
+    });
+
+    it("with competitors matching, posts where the households can buy", () => {
+      const quote = quoteProducer({ ...food708, competitorsMatch: true });
+      expect(quote.unitPrice).toBeCloseTo(889.94, 6);
+      expect(quote.expectedSoldUnits).toBeCloseTo(50);
+    });
+
+    it("with competitors matching, still takes a higher price that buyers can absorb", () => {
+      const quote = quoteProducer({
+        ...basis,
+        demand: [
+          { units: 50, maximumUnitPrice: 8 },
+          { units: 1000, maximumUnitPrice: 12 },
+        ],
+        competitors: [{ units: 300, unitPrice: 12 }],
+        policy: { kind: "automatic", targetMarkup: 0.2 },
+        competitorsMatch: true,
+      });
+      expect(quote.unitPrice).toBe(12);
+    });
+
     it("leaves manual and cost-plus prices alone", () => {
       expect(
         quoteProducer({

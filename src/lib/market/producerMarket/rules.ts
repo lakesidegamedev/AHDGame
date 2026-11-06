@@ -1340,6 +1340,12 @@ export function quoteProducer(input: {
    * best, take the one the most demand can pay. Absent = off.
    */
   buyerTieBreak?: boolean;
+  /**
+   * Competitors match (producerAskBuyerTieStage >= 2). The estimate treats every
+   * competitor quoted at or above a candidate as matching it, instead of holding
+   * its opening quote. Absent = off.
+   */
+  competitorsMatch?: boolean;
 }): {
   unitPrice: number;
   breakEvenUnitPrice: number | null;
@@ -1361,7 +1367,11 @@ export function quoteProducer(input: {
     const demand = demandVolumes.at(price).atOrAbove;
     const supply = supplyVolumes.at(price);
     const cheaper = supply.cheaper;
-    const tied = units + supply.tied;
+    // Opening quotes in a short lane sit at the shortage step, above the household
+    // ceiling, so each seller read the business bids above that ceiling as its own.
+    // On turn 708 every US food plant asked 913.12 against household ceilings of
+    // 889.94 and 13k units went unsold. Sellers quoted above a price can match it.
+    const tied = units + (input.competitorsMatch ? supply.atOrAbove : supply.tied);
     const sold = tied > 0 ? Math.min(units, (Math.max(0, demand - cheaper) * units) / tied) : 0;
     return {
       unitPrice: price,

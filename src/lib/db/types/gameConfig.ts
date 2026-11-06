@@ -387,7 +387,9 @@ export interface GameConfig {
    * Funded producer market: >= 1 makes an automatic seller choose, among asks
    * within 1% of its best expected profit, the one the most buyers can pay
    * (quoteProducer buyerTieBreak). Stops a whole lane posting a hair above a
-   * household ceiling and selling nothing to households. 0 or absent = off.
+   * household ceiling and selling nothing to households. >= 2: the seller's
+   * sales estimate also assumes competitors quoted at or above a price will
+   * match it. 0 or absent = off.
    */
   producerAskBuyerTieStage?: number;
   /**
