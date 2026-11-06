@@ -170,27 +170,11 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 
+import type { SiblingCorpProjection } from "./sectorDetailTypes";
+
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
 }
-
-/**
- * The slice of a rival corporation the market-position panel needs: enough to
- * name and colour it, plus the two fields that decide whether it is player-owned
- * or part of the NPP field.
- */
-type SiblingCorpProjection = Pick<
-  Corporation,
-  | "_id"
-  | "name"
-  | "sequentialId"
-  | "brandColor"
-  | "countryId"
-  | "liquidCurrencyCode"
-  | "ceoType"
-  | "caretakerCeo"
-  | "marketingStrength"
->;
 
 /**
  * GET /api/corporations/[id]/sectors/[sectorId]
