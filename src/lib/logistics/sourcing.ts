@@ -342,7 +342,7 @@ export interface SourcingResult {
   flows: SourcingFlow[];
   ownRouteDelivered: SourcingOwnRoute[];
   /** Own-shipments-first: TEU each route owner hauled on its own capacity, per origin state. */
-  ownFreightCoveredTeuByState: Map<string, Map<string, number>>;
+  ownFreightCoveredTeuByState?: Map<string, Map<string, number>>;
   summaries: SourcingCommoditySummary[];
   /** TEU consumed per state per class, the load on each shipping network. */
   freightTeuByState: Map<string, Record<FreightClass, number>>;

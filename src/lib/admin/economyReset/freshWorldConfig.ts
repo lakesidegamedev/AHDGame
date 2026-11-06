@@ -43,6 +43,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerDemandCurveStage: "",
   producerSpilloverStage: "",
   producerOwnSitesFirstStage: "",
+  // Own shipments first on owned freight, switched on deliberately.
+  ownFreightFirstStage: "",
   producerSpilloverShare: "",
   producerPublicCarryStage: "",
   producerPublicCarryShare: "",

@@ -1834,7 +1834,7 @@ describe("own shipments first (freight capacity held for the owner)", () => {
 
   it("flag off: first come, so the earlier rival takes the pool and the owner is short", () => {
     const r = runSourcingPass(world(tight));
-    expect(r.ownFreightCoveredTeuByState.size).toBe(0);
+    expect(r.ownFreightCoveredTeuByState?.size ?? 0).toBe(0);
     expect(r.ownRouteDelivered.every((d) => d.ownCapacityTeu === undefined)).toBe(true);
     expect(ownUnits(r)).toBeLessThan(60);
     expect(sumCharges(r)).toBeCloseTo(sumRevenue(r), 8);
