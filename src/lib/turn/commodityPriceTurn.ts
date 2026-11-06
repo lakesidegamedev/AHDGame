@@ -161,7 +161,7 @@ import {
   buildOwnRoutes,
 } from "@/lib/logistics/ownRoutes";
 import { stateHops } from "@/lib/logistics/stateDistance";
-import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
+import { ownRouteIdentity, resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
 import { persistTurnOutputs } from "./commodity/persistence";
 import { loadBlockadeClosure } from "./commodity/blockadeClosure";
 import { bookExtractionDepletion } from "./commodity/extractionDepletion";
@@ -1166,6 +1166,19 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     priceCurrentYear,
     freightSettlementActive,
     freightRampFraction,
+    ownRouteCorporationIds: (() => {
+      const byRoute = new Map<string, string[]>();
+      for (const sector of ownRouteSectors) {
+        const routeId = ownRouteIdentity(
+          sector.corporationId,
+          ownRoutePolicies.get(sector.corporationId)
+        );
+        const list = byRoute.get(routeId) ?? [];
+        if (!list.includes(sector.corporationId)) list.push(sector.corporationId);
+        byRoute.set(routeId, list);
+      }
+      return byRoute;
+    })(),
     freightSettlement,
     existingPriceMap,
     nudgeMap,

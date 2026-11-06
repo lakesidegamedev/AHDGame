@@ -1,3 +1,4 @@
+import { sectorDeliveryLimited } from "./deliveryLimited";
 import { outputPlacementRatios, revenuePlacementRatios } from "@/lib/market/rules/outputPlacement";
 import {
   commodityMixWeights,
@@ -41,7 +42,7 @@ import {
   type SupplyAgreementDemandSector,
 } from "./settleSupplyAgreements";
 import { computeContractProductionTargets } from "./contractProductionDemand";
-import { FREIGHT_CLASS_BY_COMMODITY, type FreightClass } from "@/lib/logistics/freightClass";
+import type { FreightClass } from "@/lib/logistics/freightClass";
 import { contractScopeKeysFor } from "./loadSettleableSupplyAgreements";
 import {
   fxRateForSectorHostFromMap,
@@ -237,23 +238,12 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
      */
     const deliveryLimitedForSector = (
       stateId: string | undefined,
-      supplyRates: Partial<Record<CommodityType, number>>
-    ): { fraction: number; freightClass: FreightClass | null } => {
-      if (!freightSettlementActive || !stateId) return { fraction: 0, freightClass: null };
-      const byCommodity = lookups.stateDeliveryLimitedRatioByState?.get(stateId);
-      if (!byCommodity) return { fraction: 0, freightClass: null };
-      let ratio = 0;
-      let freightClass: FreightClass | null = null;
-      for (const commodity of Object.keys(supplyRates) as CommodityType[]) {
-        if (!((supplyRates[commodity] ?? 0) > 0)) continue;
-        const candidate = byCommodity.get(commodity) ?? 0;
-        if (candidate > ratio) {
-          ratio = candidate;
-          freightClass = FREIGHT_CLASS_BY_COMMODITY[commodity];
-        }
-      }
-      return { fraction: Math.max(0, Math.min(1, ratio)), freightClass };
-    };
+      supplyRates: Partial<Record<CommodityType, number>>,
+      corpId?: string
+    ) =>
+      freightSettlementActive
+        ? sectorDeliveryLimited(lookups, stateId, supplyRates, corpId)
+        : { fraction: 0, freightClass: null };
     for (const [corpId, sectors] of lookups.sectorsByCorp) {
       const corp = lookups.corpById.get(corpId);
       // Owner identity is one fact per corporation, read by every offer leg
@@ -681,7 +671,11 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           );
         }
         if (freightSettlementActive) {
-          const deliveryLimit = deliveryLimitedForSector(sector.stateId, rates.supply ?? {});
+          const deliveryLimit = deliveryLimitedForSector(
+            sector.stateId,
+            rates.supply ?? {},
+            corpId
+          );
           deliveryLimitedBySectorId.set(sectorId, deliveryLimit.fraction);
           deliveryLimitedClassBySectorId.set(sectorId, deliveryLimit.freightClass);
         }

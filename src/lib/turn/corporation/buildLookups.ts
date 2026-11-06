@@ -350,6 +350,7 @@ export async function buildCorporationLookups(
             stateInputAvailability: 1,
             statePlacedSupply: 1,
             stateDeliveryLimitedSupply: 1,
+            stateOwnerDeliveryLimited: 1,
             nationalSupply: 1,
             nationalDemand: 1,
             reachablePrices: 1,
@@ -847,6 +848,10 @@ export async function buildCorporationLookups(
   const stateInputAvailabilityByState = new Map<string, Map<CommodityType, number>>();
   const statePlacementRatioByState = new Map<string, Map<CommodityType, number>>();
   const stateDeliveryLimitedRatioByState = new Map<string, Map<CommodityType, number>>();
+  const ownerDeliveryLimitedRatioByCorp = new Map<
+    string,
+    Map<string, Map<CommodityType, number>>
+  >();
   // Market rework (marketSystemMode >= "realization"): lagged price-over-base
   // ratio per commodity. commodityPrices docs hold the price computed by the
   // PRIOR commodity-price pass, so reading them here is the one-turn lag that
@@ -953,6 +958,16 @@ export async function buildCorporationLookups(
       // included); this one is the only figure allowed to tell a player their
       // goods could not get there. Keeping them apart is the whole point: the
       // two states of the world call for opposite decisions.
+      for (const [stateId, byCorp] of Object.entries(cp.stateOwnerDeliveryLimited ?? {})) {
+        for (const [corpId, fraction] of Object.entries(byCorp)) {
+          if (!Number.isFinite(fraction)) continue;
+          let byState = ownerDeliveryLimitedRatioByCorp.get(corpId);
+          if (!byState) ownerDeliveryLimitedRatioByCorp.set(corpId, (byState = new Map()));
+          let byCommodity = byState.get(stateId);
+          if (!byCommodity) byState.set(stateId, (byCommodity = new Map()));
+          byCommodity.set(cp.commodity, Math.max(0, Math.min(1, fraction)));
+        }
+      }
       for (const [stateId, deliveryLimited] of Object.entries(
         cp.stateDeliveryLimitedSupply ?? {}
       )) {
@@ -1815,6 +1830,7 @@ export async function buildCorporationLookups(
     stateInputAvailabilityByState,
     statePlacementRatioByState,
     stateDeliveryLimitedRatioByState,
+    ownerDeliveryLimitedRatioByCorp,
     priceRatioByCommodity,
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
