@@ -147,6 +147,30 @@ export const GLUT_RESTART_PRICE_RATIO = 0.9;
 export const COST_MOTHBALL_LOSS_TURNS = 12;
 
 /**
+ * Turns an autopilot corporation leaves a sector running after its owner
+ * restarted it by hand. Covers every autopilot mothball path (glut, floor-stuck,
+ * chronic cost loss); the owner can still mothball the sector themselves.
+ */
+export const MANUAL_RESTART_GRACE_TURNS = 24;
+
+/** True while a sector's owner-restart grace holds off automatic mothballing. */
+export function inManualRestartGrace(
+  sector: { manualReactivatedTurn?: number | null },
+  turn: number
+): boolean {
+  const restarted = sector.manualReactivatedTurn;
+  return restarted != null && turn < restarted + MANUAL_RESTART_GRACE_TURNS;
+}
+
+/** First turn autopilot may mothball the sector again, or null when no grace applies. */
+export function manualRestartGraceEndsTurn(sector: {
+  manualReactivatedTurn?: number | null;
+}): number | null {
+  const restarted = sector.manualReactivatedTurn;
+  return restarted == null ? null : restarted + MANUAL_RESTART_GRACE_TURNS;
+}
+
+/**
  * Ordinary (non-essential-shortage) NPP foundings require the target's peak
  * output shortage score above this bar (demand audit step 5). The growth
  * governor already treats ≤0.85 as glut worth shrinking out of; founding

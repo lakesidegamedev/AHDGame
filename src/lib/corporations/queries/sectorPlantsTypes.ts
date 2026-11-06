@@ -102,6 +102,11 @@ export interface SectorPlantsSection {
   /** State-scoped output labels: these sell only in this state (ticket 1700). */
   localMarketOutputs: string[];
   mothballed: boolean;
+  /**
+   * Present while autopilot is on and the owner's manual restart holds off
+   * automatic mothballing: the first turn autopilot may mothball it again.
+   */
+  autopilotHoldUntilTurn?: number;
   /** Outstanding build orders, oldest first. */
   buildQueue: PlantBuildOrderView[];
   /** ₳ paid for capacity that is not productive yet. */

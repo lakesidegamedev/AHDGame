@@ -156,6 +156,7 @@ import {
   NPP_RD_MAINTENANCE_BUDGET_MIN,
   NPP_RD_MAINTENANCE_SHARE,
   NPP_SHORTAGE_ENTRIES_PER_TURN,
+  inManualRestartGrace,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { pushNppWageUpdates } from "@/lib/turn/npp/nppWagePolicy";
 import {
@@ -740,6 +741,7 @@ export function makeNppCorpDecision(
       if (reopen && sector._id.equals(reopen._id)) continue;
       const id = sector._id.toString();
       if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
+      if (inManualRestartGrace(sector, ctx.turn)) continue;
       if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;
       sectorUpdates.push({
         filter: { _id: sector._id, mothballed: { $ne: true } },

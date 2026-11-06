@@ -1,6 +1,10 @@
 import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
 export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
+import {
+  inManualRestartGrace,
+  manualRestartGraceEndsTurn,
+} from "@/lib/turn/npp/nppCorporationTuning";
 import { IDLE_RETIRE_GRACE_TURNS } from "@/lib/turn/corporation/rules/idleCapacityRetirement";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
@@ -1369,6 +1373,8 @@ export function buildSectorPlantsSection(args: {
   regulatoryBurdenPp: number;
   /** Active-crisis margin penalty in pp (negative). */
   crisisMarginPenaltyPp: number;
+  /** The corporation runs on owner-enabled autopilot. */
+  autopilotEnabled?: boolean;
   /** True when this extraction sector is clamped by its state's deposits. */
   depositBound: boolean;
   /**
@@ -1405,6 +1411,7 @@ export function buildSectorPlantsSection(args: {
     money,
     regulatoryBurdenPp,
     crisisMarginPenaltyPp,
+    autopilotEnabled = false,
   } = args;
 
   const num = (v: unknown): number | null =>
@@ -1810,6 +1817,9 @@ export function buildSectorPlantsSection(args: {
       .filter(isStateScopedCommodity)
       .map((commodity) => COMMODITY_LABELS[commodity]),
     mothballed,
+    ...(autopilotEnabled && !mothballed && inManualRestartGrace(sector, currentTurn)
+      ? { autopilotHoldUntilTurn: manualRestartGraceEndsTurn(sector) ?? undefined }
+      : {}),
     activeCapacityPercent: activeFraction * 100,
     ...(upkeepUnitDailyAnchor != null
       ? {

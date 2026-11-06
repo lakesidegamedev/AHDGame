@@ -1540,6 +1540,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           : [],
         regulatoryBurdenPp: mods.dominanceRegulatoryBurdenPp ?? 0,
         crisisMarginPenaltyPp: crisisMarginPenalty,
+        autopilotEnabled: corporation.autopilot != null,
         // C9: the same spread `buildCapacity` charges on top of the build cost.
         // Priced off 1 ₳ so the result is the RATE, which is all the quote needs
         // (the spread is strictly proportional to the construction cost).
