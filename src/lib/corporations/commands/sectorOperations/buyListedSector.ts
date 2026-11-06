@@ -58,6 +58,7 @@ import {
   identitySectorPlantFields,
   mergeSectorPlantFields,
 } from "@/lib/corporations/sectorTransferCapex";
+import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { buySecuredConstructionProperty } from "@/lib/banking/constructionSale";
@@ -165,7 +166,10 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         buyerCurrency: result.quote.buyerCurrency,
         sellerCurrency: securedClaim?.currency,
         principalRepaid: result.quote.principalRepaid,
-        message: "Property acquired; secured principal paid before seller proceeds.",
+        merged: !!result.quote.mergeIntoSectorId,
+        message: result.quote.mergeIntoSectorId
+          ? "Property acquired and merged into your existing site; secured principal paid before seller proceeds."
+          : "Property acquired; secured principal paid before seller proceeds.",
       });
     }
     if (hasProtectedConstructionProperty(sector)) {
@@ -202,6 +206,11 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     });
     if (existingBuyerSector && hasProtectedConstructionProperty(existingBuyerSector))
       return errorResponse(409, "The buyer's existing site has an unfinished secured obligation.");
+
+    const strategyRefusal = existingBuyerSector
+      ? sectorMergeStrategyRefusal(sector, existingBuyerSector)
+      : null;
+    if (strategyRefusal) return errorResponse(409, strategyRefusal);
 
     const priceAnchor = sector.forSale.priceAnchor;
     if (!Number.isFinite(priceAnchor) || priceAnchor <= 0) {

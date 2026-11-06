@@ -8,6 +8,9 @@ import {
 import { IDLE_RETIRE_GRACE_TURNS } from "@/lib/turn/corporation/rules/idleCapacityRetirement";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
+import { buildSecuredLoanInfo } from "./securedSaleLoanInfo";
+import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
+import { securedSaleMergeRefusal } from "@/lib/banking/constructionSaleMerge";
 /**
  * Payload-section builders for the sector detail query: apportioned taxes,
  * active-crisis margin penalty, attack/split info, for-sale info, tech
@@ -471,6 +474,8 @@ export async function buildSectorForSaleInfo(
     isCeo: boolean;
     viewerCorpFxRate: number;
     sellerCurrency?: CurrencyCode | null;
+    /** Local units per ₳ for the seller, to express a secured loan in ₳. */
+    sellerFxRate?: number;
   }
 ) {
   const { sector, viewerCorporation, isCeo, viewerCorpFxRate, sellerCurrency } = args;
@@ -484,7 +489,18 @@ export async function buildSectorForSaleInfo(
       stateId: sector.stateId,
       ...getCorporateSectorLaneQuery(sector),
     },
-    { projection: { _id: 1, constructionFinancing: 1, constructionPropertyTransition: 1 } }
+    {
+      projection: {
+        _id: 1,
+        constructionFinancing: 1,
+        constructionPropertyTransition: 1,
+        corporationId: 1,
+        sectorType: 1,
+        industryModel: 1,
+        mediaDiscriminator: 1,
+        strategyId: 1,
+      },
+    }
   );
   const buyerCurrency = resolveCorpLiquidCurrencyCode(viewerCorporation);
   const feeLocal =
@@ -513,8 +529,16 @@ export async function buildSectorForSaleInfo(
   );
   const hasFunds = (viewerCorporation.liquidCapital ?? 0) >= priceInViewerCapital;
   const priceValid = Number.isFinite(listing.priceAnchor) && listing.priceAnchor > 0;
+  // A pledged site folds into the buyer's existing site once the price has paid
+  // off the lender; any other listing needs the buyer's site free of secured debt.
   const mergeBlocked =
-    !!conflict && (!!listing.pledged || hasProtectedConstructionProperty(conflict));
+    !!conflict &&
+    (listing.pledged
+      ? securedSaleMergeRefusal(conflict) !== null
+      : hasProtectedConstructionProperty(conflict));
+  const securedLoan = await buildSecuredLoanInfo(db, sector, listing, args.sellerFxRate);
+  // A merge keeps the buyer's strategy, so a different one is refused up front.
+  const strategyMismatch = conflict ? sectorMergeStrategyRefusal(sector, conflict) : null;
   const constructionBlocked =
     !!sector.constructionPropertyTransition ||
     (hasProtectedConstructionProperty(sector) &&
@@ -528,11 +552,13 @@ export async function buildSectorForSaleInfo(
     ? "invalid_price"
     : !hasFunds
       ? "insufficient_funds"
-      : mergeBlocked
-        ? "merge_blocked"
-        : constructionBlocked
-          ? "construction"
-          : null;
+      : strategyMismatch
+        ? "strategy_mismatch"
+        : mergeBlocked
+          ? "merge_blocked"
+          : constructionBlocked
+            ? "construction"
+            : null;
   return {
     viewerCorporationId: viewerCorporation._id.toString(),
     viewerLiquidCurrencyCode: resolveCorpLiquidCurrencyCode(viewerCorporation),
@@ -540,8 +566,10 @@ export async function buildSectorForSaleInfo(
     viewerCapitalAnchor,
     eligible: blockReason === null,
     blockReason: blockReason as SectorPurchaseBlockReason | null,
+    blockDetail: blockReason === "strategy_mismatch" ? strategyMismatch : null,
     conflict: !!conflict,
     hasFunds,
+    securedLoan,
   };
 }
 
@@ -549,6 +577,7 @@ export type SectorPurchaseBlockReason =
   | "invalid_price"
   | "insufficient_funds"
   | "merge_blocked"
+  | "strategy_mismatch"
   | "construction"
   | "not_ceo"
   | "actions_paused"
@@ -1746,7 +1775,11 @@ export function buildSectorPlantsSection(args: {
   // sell under half their output). The headline instead spreads cost and
   // revenue over every unit made, which is the basis the player's bank balance
   // actually moves on.
-  const soldFraction = num(sector.soldFraction) ?? fillRate;
+  // One definition: market sales over units made, the same two numbers the
+  // Offered / Sold / Unsold rows print (ticket 1773: the engine's stored
+  // soldFraction read 100% beside 139 sold of 195 made). The engine value is
+  // only the fallback when the unit counts are missing.
+  const soldFraction = fillRate ?? num(sector.soldFraction);
   const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({
