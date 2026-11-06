@@ -394,15 +394,14 @@ export interface SectorOperatingFields {
 export function mergeSectorOperatingFields(
   survivor: SectorOperatingFields,
   incoming: SectorOperatingFields
-): Pick<
-  SectorOperatingFields,
-  | "revenue"
-  | "workers"
-  | "profitMargin"
-  | "currentGrowthCost"
-  | "productionPolicyLevel"
-  | "negativeProductionSustainedTurns"
-> {
+): {
+  revenue: number;
+  workers: number;
+  profitMargin: number;
+  currentGrowthCost: number;
+  productionPolicyLevel: number;
+  negativeProductionSustainedTurns: number;
+} {
   const incomingRevenue = Math.round(incoming.revenue ?? 0);
   const revenue = survivor.revenue + incomingRevenue;
   const weigh = (a: number | null | undefined, b: number | null | undefined) =>

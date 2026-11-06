@@ -6,7 +6,7 @@ summary: >-
   already operates that sector in the same state.
 tags: [corporations, sectors]
 badges: [patch]
-areas: [corporations]
+areas: [backend]
 ---
 
 ## What changed
