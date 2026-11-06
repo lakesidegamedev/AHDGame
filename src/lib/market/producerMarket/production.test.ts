@@ -6,6 +6,8 @@ import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
 import { MINOR_INPUT_SHORTFALL_PREMIUM } from "./makeDoRules";
 import { fundedInputThroughput } from "./fundedSectorRules";
+import { decisionProfit } from "./internalTransferPricingRules";
+import { strugglingReason } from "./transitionRules";
 
 const plant = (changes: Partial<ProductionPlan> = {}): ProductionPlan => ({
   id: "plant",
@@ -228,6 +230,39 @@ describe("own-site deliveries at market value (captive stage 3)", () => {
       }
       expect(byId(result, "mine").products[0].captiveUnitValue).toBeUndefined();
     }
+  });
+
+  it("judges a captive-only seller on its management account at stage 3 only", () => {
+    const stage2 = advanceProducerEconomy({ ...request, captiveShortValue: true });
+    const stage3 = advanceProducerEconomy({
+      ...request,
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    const seller = byId(stage3, "mine");
+    // Everything went to its own company: no sale, an economic loss.
+    expect(seller.soldUnits).toBe(0);
+    expect(seller.profit).toBeLessThan(0);
+    expect(decisionProfit(seller, true)).toBeGreaterThan(0);
+    expect(strugglingReason(seller, true)).toBeNull();
+    // The receiving site carries the matching charge.
+    const receiver = byId(stage3, "consumer");
+    expect(decisionProfit(receiver, true)).toBeCloseTo(
+      receiver.profit - receiver.internalSupplyCharge!,
+      8
+    );
+    // Stage 2 books no entries, so decisions read the economic loss as before.
+    const before = byId(stage2, "mine");
+    expect(decisionProfit(before, false)).toBe(before.profit);
+    expect(strugglingReason(before, false)).toBe("zeroSales");
+    // Company totals: the entries net to zero, cash is untouched.
+    const sum = (r: typeof stage3, f: (p: (typeof r.producers)[number]) => number) =>
+      r.producers.reduce((n, p) => n + f(p), 0);
+    expect(sum(stage3, (p) => decisionProfit(p, true))).toBeCloseTo(
+      sum(stage3, (p) => p.profit),
+      8
+    );
+    expect(stage3.accounts).toEqual(stage2.accounts);
   });
 
   it("keeps an explicit internal transfer price instead of adding a second entry", () => {

@@ -1304,7 +1304,8 @@ export async function runFundedProducerTurn(
     lookups,
     receiptsBySectorId,
     turn,
-    input.firstFundedTurn
+    input.firstFundedTurn,
+    (input.env.captiveDeliveryStage ?? 0) >= 3
   );
 
   const deferredDistributions = new Map<

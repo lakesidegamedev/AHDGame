@@ -8,7 +8,7 @@ import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
-import type { Character } from "@/lib/db/types";
+import { viewerHoldsShares } from "@/lib/corporations/viewerShareholding";
 import { loadCorporationDetailView } from "@/lib/corporations/queries/corporationDetail";
 import { loadCorporationDefenceContracts } from "@/lib/corporations/queries/corporationDefenceContracts";
 import { resolveGameYear } from "@/lib/era/era";
@@ -241,18 +241,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     }
 
     // A direct shareholder (e.g. via a private deal) may see the company they own.
-    let viewerIsShareholder = false;
-    if (authUser?.userId && (corporation.shareholders ?? []).some((sh) => sh.characterId)) {
-      const viewerCharacter = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) }, { projection: { _id: 1 } });
-      viewerIsShareholder =
-        viewerCharacter != null &&
-        (corporation.shareholders ?? []).some(
-          (sh) =>
-            sh.characterId != null && sh.characterId.toString() === viewerCharacter._id.toString()
-        );
-    }
+    const viewerIsShareholder = await viewerHoldsShares(db, corporation, authUser?.userId);
     if (redact && viewerIsShareholder) {
       redact = false;
     }

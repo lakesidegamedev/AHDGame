@@ -37,7 +37,9 @@ export async function markStrugglingTransitionSectors(
   lookups: Pick<CorporationLookups, "corporations" | "sectorsByCorp">,
   receiptsBySectorId: ReadonlyMap<string, FundedReceipt> | undefined,
   turn: number,
-  firstFundedTurn: number | undefined
+  firstFundedTurn: number | undefined,
+  /** Own-site deliveries booked at market value (producerCaptiveDeliveryStage >= 3). */
+  managementAccounts = false
 ): Promise<{ marked: number; owners: number }> {
   if (!receiptsBySectorId || firstFundedTurn == null) return { marked: 0, owners: 0 };
   if (!inTransitionWindow(turn, firstFundedTurn)) return { marked: 0, owners: 0 };
@@ -77,7 +79,7 @@ export async function markStrugglingTransitionSectors(
       }
       if (sector.mothballed === true) continue;
       const receipt = receiptsBySectorId.get(sector._id.toString());
-      const reason = receipt ? strugglingReason(receipt) : null;
+      const reason = receipt ? strugglingReason(receipt, managementAccounts) : null;
       if (!reason) continue;
       reasons.set(sector, reason);
       if (owner) {

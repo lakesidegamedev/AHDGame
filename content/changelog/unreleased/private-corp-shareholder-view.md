@@ -11,5 +11,5 @@ areas: [frontend, backend]
 
 ## What changed
 
-- Holding shares in a private corporation, for example through a private deal, now shows you its financials and Shares tab.
+- Holding shares in a private corporation, directly or through a corporation you run, now shows you its financials and Shares tab.
 - Only the CEO can manage the company. Shareholders get a read-only view.
