@@ -40,6 +40,7 @@ import { captiveMarketValue, laneClearingPrices } from "./captiveMarketValueRule
 import { shortageAsk } from "./shortageAskRules";
 import { householdSpendBase } from "./householdSpendRules";
 import {
+  decisionProfit,
   internalTransferUnitPrice,
   type InternalTransferPricing,
 } from "./internalTransferPricingRules";
@@ -1721,15 +1722,24 @@ export function advanceProducerEconomy(input: {
       const failures = nextProbeFailures({
         priorFailures: p.restartProbeFailures,
         probed,
+        // At market-valued own-site deliveries, a probe judged on its management
+        // account: output its own company took counts as sold (decisionProfit).
         paid: probePaidForItself({
-          revenue,
-          profit:
-            revenue -
-            consumed -
-            minorInputPremium -
-            inventoryWriteOff -
-            p.labourCost -
-            p.otherOperatingCost,
+          revenue: revenue + (input.captiveMarketValue ? internalSupplyIncome : 0),
+          profit: decisionProfit(
+            {
+              profit:
+                revenue -
+                consumed -
+                minorInputPremium -
+                inventoryWriteOff -
+                p.labourCost -
+                p.otherOperatingCost,
+              internalSupplyIncome,
+              internalSupplyCharge,
+            },
+            input.captiveMarketValue === true
+          ),
           idleOperatingCost: idleUpkeep(p),
         }),
       });

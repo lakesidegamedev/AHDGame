@@ -13,6 +13,7 @@
  *
  * Pure: plain data in, plain data out.
  */
+import { decisionProfit } from "./internalTransferPricingRules";
 
 /** Funded revenue below this share of legacy revenue marks a sector over-built. */
 const TRANSITION_MISMATCH_SHARE = 0.6;
@@ -102,13 +103,23 @@ export interface CutoverStruggling {
 /** Shortest gap between two transition-review notices to the same owner. */
 export const TRANSITION_RENOTICE_TURNS = 6;
 
-/** Why a sector on a funded turn is struggling, or null when it is not. */
-export function strugglingReason(receipt: {
-  soldUnits: number;
-  profit: number;
-}): CutoverStruggling["reason"] | null {
-  if (!(receipt.soldUnits > 0)) return "zeroSales";
-  if (receipt.profit < 0) return "losing";
+/**
+ * Why a sector on a funded turn is struggling, or null when it is not. With
+ * `managementAccounts` (own-site deliveries at market value), output its own
+ * company took counts as sales and the site is judged on decisionProfit.
+ */
+export function strugglingReason(
+  receipt: {
+    soldUnits: number;
+    profit: number;
+    internalSupplyIncome?: number;
+    internalSupplyCharge?: number;
+  },
+  managementAccounts = false
+): CutoverStruggling["reason"] | null {
+  const deliveredOwn = managementAccounts && (receipt.internalSupplyIncome ?? 0) > 0;
+  if (!(receipt.soldUnits > 0) && !deliveredOwn) return "zeroSales";
+  if (decisionProfit(receipt, managementAccounts) < 0) return "losing";
   return null;
 }
 
