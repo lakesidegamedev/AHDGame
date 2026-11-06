@@ -1,0 +1,31 @@
+name: Approve comment rerun
+
+# A maintainer can approve in a PR comment (`/approve <sha>`). Comments do not trigger
+# pull request workflows, so this re-runs the governance checks for the PR's head commit.
+# It runs from the default branch and never checks out or runs code from the pull request.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  rerun:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/approve')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-run governance checks for the head commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+        run: |
+          head=$(gh api "repos/$GH_REPO/pulls/$PR" --jq .head.sha)
+          for wf in semgrep.yml pr-governance-guard.yml; do
+            for id in $(gh api "repos/$GH_REPO/actions/workflows/$wf/runs?head_sha=$head&per_page=5" --jq '.workflow_runs[] | select(.event=="pull_request" or .event=="pull_request_target") | .id'); do
+              gh run rerun "$id" || echo "run $id not re-runnable yet"
+            done
+          done
