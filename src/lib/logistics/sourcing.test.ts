@@ -1885,4 +1885,88 @@ describe("own shipments first (freight capacity held for the owner)", () => {
     );
     expect(sumCharges(on)).toBeCloseTo(sumRevenue(on), 8);
   });
+
+  describe("stage 2: the owner's market sales ride its own trucks first", () => {
+    const marketWorld = (freight: number, overrides: Partial<SourcingInputs> = {}) =>
+      world(freight, { ownRoutes: [], ...overrides });
+    const supplyOf = (units: number, owner = "corp1") =>
+      new Map([[mine, new Map([["A2", new Map([[owner, units]])]])]]);
+    const mineUnits = (r: R) =>
+      r.flows.filter((f) => f.commodity === mine).reduce((sum, f) => sum + f.units, 0);
+    const mineCharges = (r: R) =>
+      [...r.freightChargesByDestState.values()].reduce((a, m) => a + (m.get(mine) ?? 0), 0);
+    const open = runSourcingPass(marketWorld(BIG));
+    const mineTeu = open.flows
+      .filter((f) => f.commodity === mine)
+      .reduce((a, f) => a + f.freightTeuConsumed, 0);
+    const tightM = (mineTeu + (usedTeu(open) - mineTeu) / 2) / (1 + FREIGHT_CONGESTION_OVERFLOW);
+
+    it("setup: the market goods fit in an open pool and are squeezed out when it is tight", () => {
+      expect(mineTeu).toBeGreaterThan(0);
+      expect(mineUnits(runSourcingPass(marketWorld(tightM)))).toBeLessThan(mineUnits(open));
+    });
+
+    it("stage 1 (no market supply passed) leaves market goods first come", () => {
+      const off = runSourcingPass(marketWorld(tightM));
+      const s1 = runSourcingPass(
+        marketWorld(tightM, { ownFreightCapacityByState: ownCap(mineTeu) })
+      );
+      expect(mineUnits(s1)).toBeCloseTo(mineUnits(off));
+      expect(rivalUnits(s1)).toBeCloseTo(rivalUnits(off));
+      expect(s1.ownFreightCoveredTeuByState?.size ?? 0).toBe(0);
+    });
+
+    it("an owner with most of the capacity gets its market goods out before a rival's", () => {
+      const off = runSourcingPass(marketWorld(tightM));
+      const s2 = runSourcingPass(
+        marketWorld(tightM, {
+          ownFreightCapacityByState: ownCap(mineTeu),
+          ownFreightMarketSupply: supplyOf(100),
+        })
+      );
+      expect(mineUnits(s2)).toBeCloseTo(100);
+      expect(mineUnits(s2)).toBeGreaterThan(mineUnits(off));
+      expect(rivalUnits(s2)).toBeLessThan(rivalUnits(off));
+      expect(rivalUnits(s2)).toBeGreaterThan(0);
+      expect(s2.ownFreightCoveredTeuByState!.get("A2")!.get("corp1")).toBeCloseTo(mineTeu, 6);
+      expect(usedTeu(s2)).toBeLessThanOrEqual(tightM * (1 + FREIGHT_CONGESTION_OVERFLOW) + 1e-6);
+    });
+
+    it("a seller with no freight capacity is unchanged", () => {
+      const off = runSourcingPass(marketWorld(tightM));
+      const s2 = runSourcingPass(
+        marketWorld(tightM, {
+          ownFreightCapacityByState: ownCap(mineTeu),
+          ownFreightMarketSupply: supplyOf(100, "corp2"),
+        })
+      );
+      expect(mineUnits(s2)).toBeCloseTo(mineUnits(off));
+      expect(rivalUnits(s2)).toBeCloseTo(rivalUnits(off));
+      expect(s2.ownFreightCoveredTeuByState?.size ?? 0).toBe(0);
+    });
+
+    it("covered goods carry no freight charge or haul revenue, and the legs net", () => {
+      const s2 = runSourcingPass(
+        marketWorld(BIG, {
+          ownFreightCapacityByState: ownCap(mineTeu * 2),
+          ownFreightMarketSupply: supplyOf(100),
+        })
+      );
+      expect(mineCharges(s2)).toBeCloseTo(0, 8);
+      expect(sumCharges(s2)).toBeCloseTo(sumRevenue(s2), 8);
+      expect(sumCharges(s2)).toBeCloseTo(sumCharges(open) - mineCharges(open), 6);
+    });
+
+    it("an owner supplying half the state's goods covers only its half, the rest bills", () => {
+      const s2 = runSourcingPass(
+        marketWorld(BIG, {
+          ownFreightCapacityByState: ownCap(mineTeu * 2),
+          ownFreightMarketSupply: supplyOf(50),
+        })
+      );
+      expect(s2.ownFreightCoveredTeuByState!.get("A2")!.get("corp1")).toBeCloseTo(mineTeu / 2, 6);
+      expect(mineCharges(s2)).toBeCloseTo(mineCharges(open) / 2, 6);
+      expect(sumCharges(s2)).toBeCloseTo(sumRevenue(s2), 8);
+    });
+  });
 });

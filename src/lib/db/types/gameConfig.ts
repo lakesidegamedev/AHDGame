@@ -194,7 +194,10 @@ export interface GameConfig {
    * Freight network: >= 1 gives a company's own cross-state hauls first use of
    * the freight capacity that company owns in the origin state (the covered
    * share is internal supply: no charge, no haul revenue); only the rest of its
-   * capacity joins the shared pool. 0 or absent = one shared first-come pool.
+   * capacity joins the shared pool. >= 2 extends this to everything the company
+   * sells to the general market out of that state (its output share of the
+   * state's shipments rides its own trucks first; rivals get the remainder).
+   * 0 or absent = one shared first-come pool.
    * Needs freightSettlementMode "active" (own routes only run then).
    */
   ownFreightFirstStage?: number;
