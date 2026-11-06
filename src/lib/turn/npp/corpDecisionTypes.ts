@@ -110,6 +110,11 @@ export interface NppCorpDecisionContext {
     /** Last turn's book pressure on the sector's main output lane. */
     pressureOf: (sector: CorporateSector) => number | undefined;
   };
+  /**
+   * gameConfig.nppGrowthPerProductFillStage: >= 1 reads the reinvestment fill
+   * gate as the best per-product sell-through (rules/productFill). Absent = off.
+   */
+  productFillStage?: number;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
   /**
