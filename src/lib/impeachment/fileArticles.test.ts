@@ -140,11 +140,23 @@ describe("party NPP impeachment filing", () => {
       .updateOne({ nppId }, { $set: { officeType: "house" } });
     await expect(file("president")).rejects.toThrow(/authorized party chair/);
   });
-  it("does not borrow an NPP reserved for a pending governor bill", async () => {
+  it("files through an NPP that is reserved for a pending governor bill or carrying a bill", async () => {
     await memory
       .collection("governorLegislationQueue")
       .insertOne({ _id: new ObjectId(), countryId: "US", status: "pending", targetNppId: nppId });
-    await expect(file()).rejects.toThrow(/No eligible/);
+    await memory.collection("stateBills").insertOne({
+      _id: new ObjectId(),
+      countryId: "US",
+      stateId: "NY",
+      sponsorNppId: nppId,
+      nppId,
+      isNPP: true,
+      status: "active",
+    });
+    const result = await file();
+    expect(
+      await memory.collection("impeachments").findOne({ _id: new ObjectId(result.impeachmentId) })
+    ).toMatchObject({ filedByNppId: nppId });
   });
   it("rejects a stale governor target", async () => {
     await expect(
