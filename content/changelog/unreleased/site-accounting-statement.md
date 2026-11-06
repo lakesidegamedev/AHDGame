@@ -12,7 +12,7 @@ areas: [fullstack]
 
 ## What changed
 
-- Internal deliveries priced at cost or market price count as income for the supplying site and a matching charge for the receiving site across the company table, sector header and money and margin panels.
+- Internal deliveries priced at cost or market price count as income for the supplying site and a matching charge for the receiving site across the company table, CEO operations, overview cards, sector header and money and margin panels.
 - Revenue and profit sorting follow the figures shown in the rows. Totals remove transfers between the company's own sites, so those transfers do not inflate company earnings.
 - Estimated value of free deliveries no longer changes net margin. A site with no revenue shows no percentage; its actual profit or loss remains visible.
 - Saved funded site accounts carry their settled turn. Detailed costs are joined only to a matching turn, so a new delivery receipt cannot be mixed with older accounts.

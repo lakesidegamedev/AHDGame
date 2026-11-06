@@ -1,3 +1,4 @@
+import { sectorDisplayProfit } from "../sectorSortUtils";
 import Image from "next/image";
 import Link from "next/link";
 import { STATE_FLAGS } from "@/lib/constants";
@@ -95,8 +96,10 @@ export function SectorCards({
               <Figure label="Margin" className={signTone(margin)}>
                 {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
               </Figure>
-              <Figure label="Profit" className={signTone(s.profit)}>
-                {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
+              <Figure label="Profit" className={signTone(sectorDisplayProfit(s))}>
+                {typeof s.profit === "number"
+                  ? est(fmtSigned(scale(sectorDisplayProfit(s))))
+                  : "n/a"}
               </Figure>
               {plantsMode ? (
                 <Figure label="Plants">

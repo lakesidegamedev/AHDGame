@@ -1,5 +1,7 @@
 "use client";
 
+import { sectorDisplayProfit } from "./sectorSortUtils";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -239,7 +241,7 @@ export function OverviewSimple({
                 const flag = STATE_FLAGS[s.stateId];
                 const margin = sectorMargin(s);
                 const revenue = sectorRevenue(s);
-                const losing = typeof s.profit === "number" && s.profit < 0;
+                const losing = typeof s.profit === "number" && sectorDisplayProfit(s) < 0;
                 return (
                   <li
                     key={s._id}
@@ -305,12 +307,16 @@ export function OverviewSimple({
           )}
           {/* Profit is the one figure Simple leaves to the colour rule on the
               left edge; Pro carries the full column. */}
-          {hasMoney && top.some((s) => typeof s.profit === "number" && s.profit < 0) && (
-            <p className="pt-1.5 text-[11px] text-muted">
-              <span aria-hidden className="mr-1 inline-block h-2 w-0.5 bg-error/70 align-middle" />
-              Red edge: the sector is losing money.
-            </p>
-          )}
+          {hasMoney &&
+            top.some((s) => typeof s.profit === "number" && sectorDisplayProfit(s) < 0) && (
+              <p className="pt-1.5 text-[11px] text-muted">
+                <span
+                  aria-hidden
+                  className="mr-1 inline-block h-2 w-0.5 bg-error/70 align-middle"
+                />
+                Red edge: the sector is losing money.
+              </p>
+            )}
         </DenseSection>
       </div>
       {aside && <aside className="min-w-0 space-y-6">{aside}</aside>}

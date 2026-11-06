@@ -167,3 +167,12 @@ export function sectorDisplayProfit(
 ): number {
   return sector.siteStatement?.profit ?? sector.managementProfit ?? sector.profit ?? 0;
 }
+
+/** Preserve an explicitly undefined percentage when a site has no revenue. */
+export function sectorDisplayMargin(
+  sector: Pick<SectorDetail, "siteStatement" | "fillAdjustedMarginPct" | "effectiveProfitMargin">
+): number | null {
+  return sector.siteStatement
+    ? sector.siteStatement.netMarginPct
+    : (sector.fillAdjustedMarginPct ?? sector.effectiveProfitMargin ?? null);
+}
