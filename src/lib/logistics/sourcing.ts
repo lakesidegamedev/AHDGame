@@ -45,6 +45,7 @@ import {
   type PurchaseUse,
   type PurchaseUseShares,
 } from "./rules/purchaseExposure";
+import { createOwnFreightLedger } from "./rules/ownFreight";
 import {
   FREIGHT_CLASS_BY_COMMODITY,
   isHauledClass,
@@ -340,6 +341,8 @@ export interface SourcingResult {
   foreignQuotes?: SourcingForeignQuote[];
   flows: SourcingFlow[];
   ownRouteDelivered: SourcingOwnRoute[];
+  /** Own-shipments-first: TEU each route owner hauled on its own capacity, per origin state. */
+  ownFreightCoveredTeuByState?: Map<string, Map<string, number>>;
   summaries: SourcingCommoditySummary[];
   /** TEU consumed per state per class, the load on each shipping network. */
   freightTeuByState: Map<string, Record<FreightClass, number>>;
@@ -527,6 +530,16 @@ export interface SourcingInputs {
   /** Raise the landed-price ceiling only for states below 50 percent local fill. */
   shortageResponsiveSourcingEnabled?: boolean;
   ownRoutes?: ReadonlyArray<SourcingOwnRoute>;
+  /**
+   * Own shipments first: freight capacity each route owner holds per origin
+   * state (state id -> route identity -> units, the same identity as
+   * `SourcingOwnRoute.corporationId`). When present, an own route's haul draws
+   * on its owner's capacity before the shared pool, and that capacity is held
+   * back from everyone else's hauls while the owner still plans to use it. The
+   * covered share of an own haul is internal supply: no freight charge and no
+   * haul revenue. Absent = one shared first-come pool (the old behaviour).
+   */
+  ownFreightCapacityByState?: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }
 
 export type { SourcingOwnRoute };
@@ -552,6 +565,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     isBlocked,
     shortageResponsiveSourcingEnabled = false,
     ownRoutes,
+    ownFreightCapacityByState,
   } = inputs;
 
   // Deterministic iteration: states sorted by id, countries sorted by id.
@@ -573,6 +587,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
 
   const flows: SourcingFlow[] = [];
   const ownRouteDelivered: SourcingOwnRoute[] = [];
+  const ownFreight = createOwnFreightLedger(ownFreightCapacityByState);
   const ownBudgets = ownRouteBudgets(ownRoutes ?? []);
   const stateById = new Map(sortedStates.map((state) => [state.stateId, state] as const));
   // Exporting states per country, so a foreign dispatch can be drawn from the
@@ -641,6 +656,31 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     acc.extraCost += extraCost;
     byCommodity.set(commodity, acc);
   };
+
+  if (ownFreight.enabled) {
+    // Each owner's planned hauls out of a state, so its capacity there is held
+    // back from other companies until the commodity's own legs have been served.
+    for (const route of ownRoutes ?? []) {
+      const freightClass = FREIGHT_CLASS_BY_COMMODITY[route.commodity];
+      const seller = stateById.get(route.originStateId);
+      const buyer = stateById.get(route.destStateId);
+      if (!freightClass || !isHauledClass(freightClass) || !seller || !buyer) continue;
+      if (seller.countryId !== buyer.countryId || seller.stateId === buyer.stateId) continue;
+      const hopCount = hops(buyer.countryId, seller.stateId, buyer.stateId);
+      if (hopCount == null || hopCount <= 0) continue;
+      const units = Math.min(
+        route.units,
+        route.originSupplyUnits ?? Infinity,
+        route.destinationDemandUnits ?? Infinity
+      );
+      ownFreight.plan(
+        route.originStateId,
+        route.corporationId,
+        route.commodity,
+        units * freightTeuPerUnitHop(freightClass, eraUnitScale) * hopCount
+      );
+    }
+  }
 
   for (const commodity of SHIPPED_COMMODITIES) {
     const freightClass = FREIGHT_CLASS_BY_COMMODITY[commodity]!;
@@ -1036,6 +1076,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
             }
           }
           let teuConsumed = 0;
+          let ownCapacityTeu = 0;
           let overflowDispatch = 0;
           let congestionSurchargePaid = 0;
           if (cand.originType === "state" && isHauledClass(freightClass)) {
@@ -1055,7 +1096,13 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
                 addCapacityBound(cand.originId, deliver, teuPerUnit);
                 continue;
               }
-              const unitsToNominal = Math.max(0, nominal - totalUsed) / teuPerUnit;
+              // Capacity other owners still plan to haul with is not this
+              // haul's to take; the shared pool is what is left of it.
+              const heldBack = ownFreight.heldFromOthers(
+                cand.originId,
+                cand.ownRoute?.corporationId
+              );
+              const unitsToNominal = Math.max(0, nominal - heldBack - totalUsed) / teuPerUnit;
               const unitsInOverflow =
                 Math.max(
                   0,
@@ -1095,6 +1142,12 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
               congestionSurchargePaid =
                 overflowDispatch * cand.shippingPerUnit * FREIGHT_CONGESTION_SURCHARGE;
               teuConsumed = dispatch * teuPerUnit;
+              if (cand.ownRoute)
+                ownCapacityTeu = ownFreight.cover(
+                  cand.originId,
+                  cand.ownRoute.corporationId,
+                  teuConsumed
+                );
               used[freightClass] += teuConsumed;
               freightDemandByState.get(cand.originId)![freightClass] += teuConsumed;
             }
@@ -1192,12 +1245,22 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
           // amount booked on both sides. Hauled classes lose nothing in transit
           // (deliveryFactor 1), so `take` here is also what was dispatched.
           if (cand.ownRoute) {
-            const freightCharge = take * cand.shippingPerUnit + congestionSurchargePaid;
+            // The part carried on the owner's own capacity is internal supply:
+            // no charge to the owner and no revenue to the origin fleet, so
+            // the two legs net. The rest bills as before.
+            const ownShare = teuConsumed > 0 ? ownCapacityTeu / teuConsumed : 0;
+            const freightCharge =
+              (take * cand.shippingPerUnit + congestionSurchargePaid) * (1 - ownShare);
             haulRevenueByOriginState.set(
               cand.originId,
               (haulRevenueByOriginState.get(cand.originId) ?? 0) + freightCharge
             );
-            ownRouteDelivered.push({ ...cand.ownRoute, units: take, freightCharge });
+            ownRouteDelivered.push({
+              ...cand.ownRoute,
+              units: take,
+              freightCharge,
+              ...(ownCapacityTeu > 0 ? { ownCapacityTeu } : {}),
+            });
           } else if (cand.originType === "state" && isHauledClass(freightClass)) {
             addFreightBilling(
               buyer.stateId,
@@ -1259,7 +1322,9 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
         if (unmet > 0) destinationFor(buyer.countryId).unmetUnits += unmet;
       }
     };
-    serveBuyers([...ownEntries, ...sortedStates], false);
+    serveBuyers(ownEntries, false);
+    ownFreight.release(commodity);
+    serveBuyers(sortedStates, false);
 
     // The national pool above is supply minus demand, fixed before anyone
     // buys. When a country's own buyers take cheaper imports (or cannot reach
@@ -1356,6 +1421,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     flows,
     ownRouteDelivered,
     summaries,
+    ownFreightCoveredTeuByState: ownFreight.covered(),
     freightTeuByState: freightUsedByState,
     freightDemandTeuByState: freightDemandByState,
     landedPremiumByDestState,
