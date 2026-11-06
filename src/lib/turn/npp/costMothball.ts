@@ -5,6 +5,7 @@
 import type { ObjectId } from "mongodb";
 import type { SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import type { NppSectorUpdateDoc } from "@/lib/turn/npp/corpDecisionTypes";
+import { inManualRestartGrace } from "@/lib/turn/npp/nppCorporationTuning";
 
 type SectorUpdate = { filter: { _id: ObjectId }; update: NppSectorUpdateDoc };
 
@@ -30,12 +31,14 @@ export function lossChronicityUpdates(
 export function chooseCostMothballSector(
   sectorProfits: readonly SectorProfitInfo[],
   excludedSectorIds: readonly ObjectId[],
-  minimumLossTurns: number
+  minimumLossTurns: number,
+  turn?: number
 ): SectorProfitInfo | null {
   let coldest: { sp: SectorProfitInfo; lossTurns: number } | null = null;
   for (const sp of sectorProfits) {
     if (sp.sector.mothballed === true) continue;
     if (excludedSectorIds.includes(sp.sector._id)) continue;
+    if (turn != null && inManualRestartGrace(sp.sector, turn)) continue;
     if (sp.sector.sectorType === "extraction" || sp.income >= 0) continue;
     const lossTurns = sp.sector.pnlLossTurns ?? 0;
     if (lossTurns < minimumLossTurns) continue;

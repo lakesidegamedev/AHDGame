@@ -689,6 +689,8 @@ export interface PlantsData {
    */
   localMarketOutputs?: string[];
   mothballed: boolean;
+  /** First turn autopilot may mothball this sector again after the owner restarted it. */
+  autopilotHoldUntilTurn?: number;
   buildQueue: PlantBuildOrderView[];
   constructionInProgressAnchor: number;
   depreciationPerTurn: number;

@@ -317,6 +317,13 @@ export default function PlantPanel({
         )}
       </div>
 
+      {isCeo && !mothballed && plants.autopilotHoldUntilTurn != null && (
+        <div className="mt-4 rounded-lg border border-card-border bg-muted/10 px-3 py-2 text-body-sm text-foreground">
+          Autopilot will leave this sector running until turn {plants.autopilotHoldUntilTurn}. You
+          restarted it, so autopilot will not park it before then. You can still park it yourself.
+        </div>
+      )}
+
       {isCeo && !mothballed && idleRetirement && (
         <div className="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
           {idleRetirement.retiredUnits > 0 ? (

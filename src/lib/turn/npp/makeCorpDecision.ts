@@ -5,7 +5,6 @@
  */
 import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
-import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
   toDominanceSector,
@@ -114,8 +113,8 @@ import {
   settleFrontierEntryPlacement,
 } from "@/lib/turn/npp/frontierEntryCandidate";
 import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
+import { pushFundedZeroSalesMothballs } from "@/lib/turn/npp/fundedZeroSalesMothball";
 import {
-  AI_ZERO_SALES_MOTHBALL_TURNS,
   chooseTransitionConversion,
   sectorsAfterConversion,
 } from "@/lib/turn/npp/rules/transitionConversion";
@@ -711,40 +710,16 @@ export function makeNppCorpDecision(
     }
   }
 
-  // ── 2e. Funded market: an AI-run corporation mothballs every plant that has
-  // sold nothing for two settled turns, instead of one plant a turn. Its wages
-  // and site bills buy nothing; the glut restart above brings it back when the
-  // market's price recovers. Player autopilot and caretakers never do this.
-  if (ctx.transitionFirstFundedTurn != null && operator.role === "npp" && !corp.countryOwnerId) {
-    // Funded restart: reopen the mothballed plant whose recipe is shortest.
-    const reopen = ctx.fundedRestartPressureOf
-      ? chooseFundedRestart(
-          sectors,
-          ctx.fundedRestartPressureOf,
-          (s) =>
-            !divestedSectorIds.some((d) => d.equals(s._id)) &&
-            !(s.sectorType === "extraction" && s.capacityUtilization === 0)
-        )
-      : null;
-    if (reopen)
-      sectorUpdates.push({
-        filter: { _id: reopen._id, mothballed: true },
-        update: {
-          $set: { mothballed: false, producerZeroSalesTurns: 0, pnlLossTurns: 0, updatedAt: now },
-        },
-      });
-    for (const sector of sectors) {
-      if (reopen && sector._id.equals(reopen._id)) continue;
-      const id = sector._id.toString();
-      if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
-      if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;
-      sectorUpdates.push({
-        filter: { _id: sector._id, mothballed: { $ne: true } },
-        update: { $set: { mothballed: true, updatedAt: now } },
-      });
-      newlyMothballedIds.add(id);
-    }
-  }
+  // ── 2e. Funded market: AI-run corporations reopen and mothball by zero sales.
+  pushFundedZeroSalesMothballs({
+    ctx,
+    operator,
+    sectors,
+    divestedSectorIds,
+    newlyMothballedIds,
+    sectorUpdates,
+    now,
+  });
 
   // Input-squeeze strategy shifts use the 2c cohort independently: a mothball and a strategy
   // shift never target a sector scheduled to become cold in this decision.
