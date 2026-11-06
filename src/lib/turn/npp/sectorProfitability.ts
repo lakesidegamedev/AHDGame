@@ -42,3 +42,15 @@ export function analyzeSectorProfitability(
     return { sector, income, margin, isProfitable, marginCategory };
   });
 }
+
+/** NPP decision read: physical P&L when plants are on, management accounts at stage 3. */
+export function nppSectorProfitability(
+  sectors: CorporateSector[],
+  plants?: { enabled?: boolean; captiveMarketValue?: boolean }
+): SectorProfitInfo[] {
+  return analyzeSectorProfitability(
+    sectors,
+    plants?.enabled === true,
+    plants?.captiveMarketValue === true
+  );
+}
