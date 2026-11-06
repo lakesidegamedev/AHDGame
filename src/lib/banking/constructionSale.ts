@@ -19,6 +19,7 @@ import {
   releaseConstructionServiceLease,
 } from "./constructionServiceLease";
 import { releaseCompletedConstructionFunding } from "./constructionFundingLease";
+import { foldSoldSiteIntoSurvivor, securedSaleMergeRefusal } from "./constructionSaleMerge";
 import { ensureFund } from "./insurance";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
 import type { TransitionLeg } from "./rules/boundary";
@@ -57,7 +58,7 @@ export async function buySecuredConstructionProperty(input: {
     loan.currency !== claim.currency
   )
     return { ok: false, error: "The original property creditor does not match" };
-  const cleanup = async (paid: ConstructionSaleQuote) => {
+  const cleanup = async (paid: ConstructionSaleQuote): Promise<string | null> => {
     if (paid.destination === "bank")
       await releaseConstructionServiceLease(
         db,
@@ -72,6 +73,18 @@ export async function buySecuredConstructionProperty(input: {
       { _id: loan._id, constructionSettlementOwner: paid.key },
       { $unset: { constructionSettlementOwner: "" } }
     );
+    if (paid.mergeIntoSectorId) {
+      // The sold row still names the seller. Folding it into the buyer's site
+      // deletes it, and a failed fold leaves its ownership marker in place so
+      // the next turn's recovery pass retries.
+      const folded = await foldSoldSiteIntoSurvivor(db, {
+        donorId: sectorId,
+        survivorId: new ObjectId(paid.mergeIntoSectorId),
+        buyerId: new ObjectId(paid.buyerId),
+        saleKey: paid.key,
+      });
+      return folded.ok ? null : folded.error;
+    }
     await sectors.updateOne(
       {
         _id: sectorId,
@@ -84,14 +97,15 @@ export async function buySecuredConstructionProperty(input: {
         $unset: { constructionPropertyTransition: "" },
       }
     );
+    return null;
   };
   if (quote?.completed) {
     // Title may be published before the original final projection is acknowledged.
     const acknowledged = await resumeSettlement(db, quote.transition.key);
     if (acknowledged.error || !["applied", "replayed"].includes(acknowledged.status))
       return { ok: false, error: acknowledged.error ?? "Sale acknowledgement is pending" };
-    await cleanup(quote);
-    return { ok: true, quote };
+    const unfinished = await cleanup(quote);
+    return unfinished ? { ok: false, error: unfinished } : { ok: true, quote };
   }
   if (quote?.aborted)
     return { ok: false, error: "This sale attempt was not funded; relist before retrying" };
@@ -128,10 +142,10 @@ export async function buySecuredConstructionProperty(input: {
       stateId: sector.stateId,
       ...getCorporateSectorLaneQuery(sector),
     });
-    if (collision)
-      return refuse(
-        "A pledged property must transfer as a separate site; this buyer already owns that market"
-      );
+    // One site per market: a buyer who already runs this market takes the
+    // purchased site into it, once the price has settled with the lender.
+    const mergeRefusal = collision ? securedSaleMergeRefusal(collision) : null;
+    if (mergeRefusal) return refuse(mergeRefusal);
     const buyerCurrency = resolveCorpLiquidCurrencyCode(buyer);
     if (!buyerCurrency) return refuse("The buyer currency is unavailable");
     const [buyerRate, creditorRate] = await Promise.all([
@@ -205,6 +219,7 @@ export async function buySecuredConstructionProperty(input: {
       feeLegs,
       turn,
       destination: liveEpoch ? "bank" : "insurance",
+      ...(collision ? { mergeIntoSectorId: String(collision._id) } : {}),
     });
     if (!candidate) return refuse("The secured sale quote is invalid");
     if (
@@ -292,8 +307,8 @@ export async function buySecuredConstructionProperty(input: {
     }
     return { ok: false, error: result.error ?? "Buyer-funded secured sale is incomplete" };
   }
-  await cleanup(quote);
-  return { ok: true, quote };
+  const unfinished = await cleanup(quote);
+  return unfinished ? { ok: false, error: unfinished } : { ok: true, quote };
 }
 
 export async function recoverConstructionSales(

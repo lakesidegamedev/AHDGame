@@ -133,7 +133,7 @@ describe("persisted operating model strategy reads", () => {
 });
 
 describe("pledged property sale affordability", () => {
-  it("includes actual native FX fees in the buyer quote and refuses a same-market merge", async () => {
+  it("includes actual native FX fees in the buyer quote and allows a same-market merge", async () => {
     const memory = createInMemoryDb();
     const viewer = makeCorp({ liquidCurrencyCode: "EUR", liquidCapital: 300_500 });
     const sector = makeSector({
@@ -165,7 +165,47 @@ describe("pledged property sale affordability", () => {
     expect(await buildSectorForSaleInfo(memory as unknown as Db, args)).toMatchObject({
       hasFunds: true,
       conflict: true,
+      eligible: true,
+    });
+  });
+
+  it("states what the price pays off on the secured loan and still blocks a mid-change site", async () => {
+    const memory = createInMemoryDb();
+    const viewer = makeCorp({ liquidCapital: 1_000_000 });
+    const loanId = new ObjectId();
+    const sector = makeSector({
+      forSale: { priceAnchor: 150_000, listedAt: new Date(0), npvAnchor: 150_000, pledged: true },
+      constructionFinancing: {
+        currency: "USD",
+        loanFunded: true,
+        status: "building",
+        loanId: String(loanId),
+      } as CorporateSector["constructionFinancing"],
+    });
+    memory.seed("bankLoans", [{ _id: loanId, outstanding: 200_000, status: "defaulted" }]);
+    memory.seed("corporateSectors", [{ ...makeSector({ corporationId: viewer._id }) }]);
+    const args = { sector, viewerCorporation: viewer, isCeo: false, viewerCorpFxRate: 1 };
+    expect(await buildSectorForSaleInfo(memory as unknown as Db, args)).toMatchObject({
+      eligible: true,
+      securedLoan: {
+        outstandingAnchor: 200_000,
+        repaidFromPriceAnchor: 150_000,
+        remainingAfterSaleAnchor: 50_000,
+      },
+    });
+    const busy = createInMemoryDb();
+    busy.seed("bankLoans", [{ _id: loanId, outstanding: 200_000, status: "defaulted" }]);
+    busy.seed("corporateSectors", [
+      {
+        ...makeSector({
+          corporationId: viewer._id,
+          constructionPropertyTransition: { key: "k", kind: "abandon" },
+        }),
+      },
+    ]);
+    expect(await buildSectorForSaleInfo(busy as unknown as Db, args)).toMatchObject({
       eligible: false,
+      blockReason: "merge_blocked",
     });
   });
 });

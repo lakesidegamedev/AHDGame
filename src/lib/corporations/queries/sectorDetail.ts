@@ -1617,6 +1617,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       isCeo,
       viewerCorpFxRate,
       sellerCurrency: resolveCorpLiquidCurrencyCode(corporation),
+      sellerFxRate: corporationFxRate,
     });
     if (forSaleInfo) {
       const outerBlock =

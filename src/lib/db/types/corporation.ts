@@ -1606,6 +1606,12 @@ export interface CorporateSector {
      */
     stage?: "reserved" | "brandApplied" | "refunded";
   };
+  /**
+   * Key of the pledged-site sale this site is absorbing. Set in the same write
+   * as the fold and cleared once the sold row is gone, so a resumed purchase
+   * never folds the same site in twice.
+   */
+  securedSaleFold?: string;
   /** Stable mode marker for an interrupted funded single-sector nationalization. */
   pendingFundedNationalization?: { operationKey: string };
   /**

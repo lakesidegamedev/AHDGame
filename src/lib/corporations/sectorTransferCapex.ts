@@ -31,6 +31,7 @@ import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types/corporati
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantLedger";
+import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 
 /** The plant-state subset of a sector doc. Structural so projections fit. */
 export interface SectorPlantFields {
@@ -371,5 +372,53 @@ export function readSectorPlantFields(sector: Partial<CorporateSector>): SectorP
     legacyRevenueShadow: sector.legacyRevenueShadow,
     inventoryUnits: sector.inventoryUnits,
     inventoryValueAnchor: sector.inventoryValueAnchor,
+  };
+}
+
+/** The operating figures a merge sums or revenue-weights, apart from plant state. */
+export interface SectorOperatingFields {
+  revenue: number;
+  workers: number;
+  profitMargin: number;
+  currentGrowthCost?: number | null;
+  productionPolicyLevel?: number | null;
+  negativeProductionSustainedTurns?: number | null;
+}
+
+/**
+ * Operating `$set` fragment for folding `incoming` into `survivor`: revenue,
+ * workers and growth cost add up, and margin, production policy and sustained
+ * negative-production turns are revenue-weighted. Revenue is in the sector's
+ * host currency on both sides, so nothing is converted.
+ */
+export function mergeSectorOperatingFields(
+  survivor: SectorOperatingFields,
+  incoming: SectorOperatingFields
+): Pick<
+  SectorOperatingFields,
+  | "revenue"
+  | "workers"
+  | "profitMargin"
+  | "currentGrowthCost"
+  | "productionPolicyLevel"
+  | "negativeProductionSustainedTurns"
+> {
+  const incomingRevenue = Math.round(incoming.revenue ?? 0);
+  const revenue = survivor.revenue + incomingRevenue;
+  const weigh = (a: number | null | undefined, b: number | null | undefined) =>
+    revenue > 0 ? ((a ?? 0) * survivor.revenue + (b ?? 0) * incomingRevenue) / revenue : (a ?? 0);
+  return {
+    revenue,
+    workers: survivor.workers + incoming.workers,
+    profitMargin:
+      revenue > 0 ? weigh(survivor.profitMargin, incoming.profitMargin) : survivor.profitMargin,
+    currentGrowthCost:
+      (survivor.currentGrowthCost ?? 0) + Math.round(incoming.currentGrowthCost ?? 0),
+    productionPolicyLevel: clampProductionPolicy(
+      Math.round(weigh(survivor.productionPolicyLevel, incoming.productionPolicyLevel))
+    ),
+    negativeProductionSustainedTurns: Math.round(
+      weigh(survivor.negativeProductionSustainedTurns, incoming.negativeProductionSustainedTurns)
+    ),
   };
 }

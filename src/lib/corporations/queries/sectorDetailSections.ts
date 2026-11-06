@@ -4,6 +4,7 @@ export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from ".
 import { IDLE_RETIRE_GRACE_TURNS } from "@/lib/turn/corporation/rules/idleCapacityRetirement";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
+import { securedSaleMergeRefusal } from "@/lib/banking/constructionSaleMerge";
 /**
  * Payload-section builders for the sector detail query: apportioned taxes,
  * active-crisis margin penalty, attack/split info, for-sale info, tech
@@ -16,7 +17,8 @@ import {
   activeCapacityFraction,
   hasSettledOperatingHistory,
 } from "@/lib/corporations/investment/rules";
-import type { Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
+import type { BankLoan } from "@/lib/db/types/bank";
 import type {
   CommodityPrice,
   CorporateSector,
@@ -467,6 +469,8 @@ export async function buildSectorForSaleInfo(
     isCeo: boolean;
     viewerCorpFxRate: number;
     sellerCurrency?: CurrencyCode | null;
+    /** Local units per ₳ for the seller, to express a secured loan in ₳. */
+    sellerFxRate?: number;
   }
 ) {
   const { sector, viewerCorporation, isCeo, viewerCorpFxRate, sellerCurrency } = args;
@@ -509,8 +513,40 @@ export async function buildSectorForSaleInfo(
   );
   const hasFunds = (viewerCorporation.liquidCapital ?? 0) >= priceInViewerCapital;
   const priceValid = Number.isFinite(listing.priceAnchor) && listing.priceAnchor > 0;
+  // A pledged site folds into the buyer's existing site once the price has paid
+  // off the lender; any other listing needs the buyer's site free of secured debt.
   const mergeBlocked =
-    !!conflict && (!!listing.pledged || hasProtectedConstructionProperty(conflict));
+    !!conflict &&
+    (listing.pledged
+      ? securedSaleMergeRefusal(conflict) !== null
+      : hasProtectedConstructionProperty(conflict));
+  // What the buyer's price does to the site's secured loan. The lender is paid
+  // first out of the price and the buyer takes on no debt; a price below the
+  // balance leaves the remainder with the seller.
+  const loanId = sector.constructionFinancing?.loanId;
+  const securedLoanDoc =
+    listing.pledged && loanId && ObjectId.isValid(loanId)
+      ? await db
+          .collection<BankLoan>("bankLoans")
+          .findOne({ _id: new ObjectId(loanId) }, { projection: { outstanding: 1, status: 1 } })
+      : null;
+  const securedLoanOutstandingAnchor =
+    securedLoanDoc && securedLoanDoc.outstanding > 0
+      ? securedLoanDoc.outstanding /
+        (args.sellerFxRate && args.sellerFxRate > 0 ? args.sellerFxRate : 1)
+      : 0;
+  const securedLoan =
+    securedLoanOutstandingAnchor > 0
+      ? {
+          outstandingAnchor: Math.round(securedLoanOutstandingAnchor),
+          repaidFromPriceAnchor: Math.round(
+            Math.min(securedLoanOutstandingAnchor, listing.priceAnchor)
+          ),
+          remainingAfterSaleAnchor: Math.round(
+            Math.max(0, securedLoanOutstandingAnchor - listing.priceAnchor)
+          ),
+        }
+      : null;
   const constructionBlocked =
     !!sector.constructionPropertyTransition ||
     (hasProtectedConstructionProperty(sector) &&
@@ -538,6 +574,7 @@ export async function buildSectorForSaleInfo(
     blockReason: blockReason as SectorPurchaseBlockReason | null,
     conflict: !!conflict,
     hasFunds,
+    securedLoan,
   };
 }
 

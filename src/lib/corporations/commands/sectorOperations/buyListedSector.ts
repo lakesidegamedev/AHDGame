@@ -165,7 +165,10 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         buyerCurrency: result.quote.buyerCurrency,
         sellerCurrency: securedClaim?.currency,
         principalRepaid: result.quote.principalRepaid,
-        message: "Property acquired; secured principal paid before seller proceeds.",
+        merged: !!result.quote.mergeIntoSectorId,
+        message: result.quote.mergeIntoSectorId
+          ? "Property acquired and merged into your existing site; secured principal paid before seller proceeds."
+          : "Property acquired; secured principal paid before seller proceeds.",
       });
     }
     if (hasProtectedConstructionProperty(sector)) {
