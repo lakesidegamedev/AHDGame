@@ -192,3 +192,82 @@ describe("existing autonomous plant top-ups", () => {
     expect(built(crowded)).toBeLessThan(built(unconstrained));
   });
 });
+
+describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => {
+  const run = (cashOverFloor: number, hold: boolean) => {
+    const modifiers = ceoArchetypeModifiers("cautious");
+    const floor = getNppCashFloorAnchor("2019-default", modifiers.cashFloorMult);
+    const corp = {
+      _id: new ObjectId(),
+      type: "retail",
+      countryId: "US",
+      headquartersState: "NY",
+      liquidCurrencyCode: "USD",
+      liquidCapital: floor + cashOverFloor,
+      ceoType: "npp",
+      ceoId: new ObjectId(),
+      logisticsStrength: 1000,
+    } as Corporation;
+    const sector = {
+      _id: new ObjectId(),
+      corporationId: corp._id,
+      sectorType: "retail",
+      countryId: "US",
+      stateId: "NY",
+      revenue: 100000,
+      profitMargin: 10,
+      plantsPnl: { revenue: 100000, costs: 90000, profit: 10000 },
+      capitalStock: 80,
+      operatingCapacityUnits: 80,
+      producedUnits: 80,
+      soldUnits: 80,
+      buildQueue: [],
+    } as unknown as CorporateSector;
+    const pool = {
+      _id: new ObjectId(),
+      countryId: "US",
+      stateId: "NY",
+      sectorType: "retail",
+      revenue: 100000,
+      headroomUnits: 1000,
+    } as UnownedSector;
+    const decision = makeNppCorpDecision(
+      {
+        corp,
+        groupRootId: "root",
+        sectors: [sector],
+        turn: 70,
+        now: new Date("2026-01-01"),
+        modifiers,
+        strategyLoopEnabled: false,
+      },
+      new Map([["US", [pool]]]),
+      new Set(),
+      () => 2,
+      {
+        enabled: true,
+        eraUnitScale: 1,
+        year: CAPACITY_ANCHOR_YEAR,
+        preset: "2019-default",
+        primeRateOf: () => 0,
+        costOfLivingOf: () => null,
+        ...(hold ? { holdExpansionAtCashFloor: true } : {}),
+      }
+    );
+    return {
+      growth: (decision.reinvestments ?? []).reduce((sum, build) => sum + build.units, 0),
+      founded: (decision.newSectors ?? []).length,
+    };
+  };
+
+  it("holds founding and growth with no cash above the floor", () => {
+    expect(run(-1, false).growth).toBeGreaterThan(0);
+    expect(run(-1, true)).toEqual({ growth: 0, founded: 0 });
+  });
+
+  it("lets a corp with cash above the floor grow as before", () => {
+    const big = 1e9;
+    expect(run(big, true).growth).toBe(run(big, false).growth);
+    expect(run(big, true).growth).toBeGreaterThan(1);
+  });
+});

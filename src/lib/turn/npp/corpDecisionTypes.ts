@@ -226,6 +226,8 @@ export interface NppPlantsContext {
   wholePlants?: boolean;
   /** producerCaptiveDeliveryStage >= 3: sector profit is read on the management account. */
   captiveMarketValue?: boolean;
+  /** nppDividendAfterTaxStage >= 2: founding and growth hold while cash is at or under the floor. */
+  holdExpansionAtCashFloor?: boolean;
   year: number;
   eraUnitScale: number;
   preset: string | undefined;

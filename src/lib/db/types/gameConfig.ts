@@ -424,6 +424,14 @@ export interface GameConfig {
    * applies (rules/shortageGrowthFinance). 0 or absent = off.
    */
   nppShortageGrowthFinanceStage?: number;
+  /**
+   * AI company profit payout: >= 1 pays the household dividend on profit after
+   * this turn's tax (60% of the after-tax profit), never out of opening cash and
+   * not while opening cash is negative. >= 2 also holds AI sector founding and
+   * capacity builds unless opening cash covers a reserve of coupons and running
+   * costs. 0 or absent = off (60% of pre-tax profit).
+   */
+  nppDividendAfterTaxStage?: number;
   /** Short-lane growth finance requests a turn, on top of the ordinary cap. Absent = 128. */
   nppShortageGrowthFinanceCandidateLimit?: number;
   /** Payback horizon (turns) a short-lane growth step must earn back within. Absent = 100. */
