@@ -4,7 +4,10 @@ import {
   operatingReserveCheck,
   operatingReserveMessage,
   operatingReserveSkipReason,
+  runAfterBuild,
+  runAfterBuildMessage,
   runningBillsPerTurn,
+  runningFlowsPerTurn,
   type ReserveReceipt,
 } from "./operatingReserve";
 
@@ -108,6 +111,48 @@ describe("operating reserve", () => {
     expect(text).not.toMatch(/[\u2013\u2014]/);
     expect(operatingReserveSkipReason(3)).toBe(
       "Would leave less than 3 turns of running costs in cash"
+    );
+  });
+});
+
+describe("run after a build (ticket 1785)", () => {
+  // Umbrella t700: 8.97M cash, 8.86M build, bills 6.9M, sales 7.9M a turn.
+  it("cuts the run when the leftover cash and the sales do not cover the bills", () => {
+    const after = runAfterBuild({
+      cash: 8_970_000,
+      cost: 8_860_000,
+      billsPerTurn: 6_900_000,
+      revenuePerTurn: 6_000_000,
+    });
+    expect(after.cashAfter).toBe(110_000);
+    expect(after.cutPercent).toBeGreaterThan(0);
+  });
+
+  it("keeps the run when expected sales cover the bills", () => {
+    const after = runAfterBuild({
+      cash: 8_970_000,
+      cost: 8_860_000,
+      billsPerTurn: 6_900_000,
+      revenuePerTurn: 7_900_000,
+    });
+    expect(after.cutPercent).toBe(0);
+    expect(
+      runAfterBuildMessage({ cashAfterText: "$110,000", cutPercent: 0, belowReserve: true })
+    ).toContain("would not be cut");
+  });
+
+  it("reads own-site sales into the run's revenue", () => {
+    const flows = runningFlowsPerTurn(
+      [receipt({ revenue: 100, internalSupplyIncome: 40, purchases: 20 })],
+      10
+    );
+    expect(flows.revenue).toBe(140);
+    expect(flows.bills).toBe(100);
+  });
+
+  it("names the cut in the warning", () => {
+    expect(runAfterBuildMessage({ cashAfterText: "$1", cutPercent: 26, belowReserve: true })).toBe(
+      "After this build your cash is $1; next turn's run would be cut about 26%."
     );
   });
 });

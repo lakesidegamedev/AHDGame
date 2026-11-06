@@ -13,6 +13,7 @@ import {
   selectBulkBuildSectors,
   type BulkBuildRule,
 } from "@/lib/corporations/rules/bulkBuildCapacity";
+import { runAfterBuildMessage } from "@/lib/corporations/rules/operatingReserve";
 import { CAPACITY_UNIT_LABEL, formatUnits } from "../plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 
@@ -61,6 +62,8 @@ export interface BulkBuildResponse {
   /** Cash kept back for the plants' running costs (operating reserve), 0 when none. */
   operatingReserveLocal?: number;
   reserveTurns?: number;
+  /** Whole percent next turn's run would be cut after these builds; absent when unknown. */
+  runCutPercent?: number;
   /** The reserve, not the cash, held back at least one sector. */
   reserveHeldBack?: boolean;
   rows: BulkBuildRow[];
@@ -461,6 +464,19 @@ export default function BulkBuildCapacityDialog({
             <p className="mt-1 text-muted">
               Cash {fmt(cash)}, leaving {fmt(preview.cashAfterLocal ?? cash - readyCost)}.
             </p>
+            {preview.runCutPercent !== undefined && readyCount > 0 && (
+              <p
+                className={`mt-2 text-body-xs ${preview.runCutPercent > 0 ? "text-warning" : "text-muted"}`}
+              >
+                {runAfterBuildMessage({
+                  cashAfterText: fmt(preview.cashAfterLocal ?? cash - readyCost),
+                  cutPercent: preview.runCutPercent,
+                  belowReserve:
+                    (preview.cashAfterLocal ?? cash - readyCost) <
+                    (preview.operatingReserveLocal ?? 0),
+                })}
+              </p>
+            )}
             {(preview.operatingReserveLocal ?? 0) > 0 && (
               <div className="mt-2 text-body-xs text-muted">
                 <p>

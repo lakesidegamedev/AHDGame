@@ -35,7 +35,10 @@ import {
   selectBulkBuildSectors,
   type BulkBuildQuoteRow,
 } from "@/lib/corporations/rules/bulkBuildCapacity";
-import { operatingReserveSkipReason } from "@/lib/corporations/rules/operatingReserve";
+import {
+  operatingReserveSkipReason,
+  runAfterBuild,
+} from "@/lib/corporations/rules/operatingReserve";
 import { placeCapacityBuild } from "./buildCapacity";
 
 interface RouteParams {
@@ -214,6 +217,8 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
       // The reserve is the company's, so every quote carries the same one.
       let reserveLocal = 0;
       let reserveTurns = 0;
+      let billsLocal = 0;
+      let revenueLocal = 0;
       for (const [i, { sector }] of ordered.entries()) {
         const row = rows[i];
         const reason = quoteBlockedReason(sector);
@@ -247,6 +252,8 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
         if (quote.ok && typeof quotedReserve === "number") {
           reserveLocal = quotedReserve;
           reserveTurns = Number(quote.body.reserveTurns) || 0;
+          billsLocal = Number(quote.body.runningBillsLocal) || 0;
+          revenueLocal = Number(quote.body.runRevenueLocal) || 0;
         }
       }
       const keep = override ? 0 : reserveLocal;
@@ -265,6 +272,13 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
                 : OVER_BUDGET_REASON
               : null;
       });
+      const cashAfterLocal = Math.round(plan.cashAfterLocal + keep);
+      const projected = runAfterBuild({
+        cash: corporation.liquidCapital,
+        cost: Math.ceil(plan.readyCostLocal),
+        billsPerTurn: billsLocal,
+        revenuePerTurn: revenueLocal,
+      });
       return NextResponse.json({
         success: true,
         mode: "preview",
@@ -273,7 +287,8 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
         readyCount: plan.readyCount,
         // Rounded UP: it becomes the confirmed spending cap, which identical prices must fit.
         readyCostLocal: Math.ceil(plan.readyCostLocal),
-        cashAfterLocal: Math.round(plan.cashAfterLocal + keep),
+        cashAfterLocal,
+        ...(billsLocal > 0 ? { runCutPercent: projected.cutPercent } : {}),
         operatingReserveLocal: reserveLocal,
         reserveTurns,
         reserveHeldBack: cashOnly.readyCount > plan.readyCount,
