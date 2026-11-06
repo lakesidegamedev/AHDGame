@@ -22,6 +22,30 @@ export function internalTransferAccount(input: {
   };
 }
 
+/**
+ * The site profit operating decisions read: losing marks, restart probes and
+ * NPP loss counts. Once own-site deliveries are booked at market value
+ * (producerCaptiveDeliveryStage >= 3), a plant whose output goes to its own
+ * company is judged on its management account, so it is not read as a loss
+ * for output its company would otherwise buy, and the receiving site carries
+ * the matching charge. Cash, company totals, tax and distributions keep the
+ * economic profit; the entries net to zero inside the company, so no money is
+ * created. Below that stage this is the economic profit, unchanged.
+ */
+export function decisionProfit(
+  result: { profit: number; internalSupplyIncome?: number; internalSupplyCharge?: number },
+  managementAccounts: boolean
+): number {
+  if (!managementAccounts) return result.profit;
+  return internalTransferAccount({
+    revenue: 0,
+    costs: 0,
+    profit: result.profit,
+    income: result.internalSupplyIncome,
+    charge: result.internalSupplyCharge,
+  }).profit;
+}
+
 export function internalTransferUnitPrice(input: {
   mode?: InternalTransferPricing;
   marketPrice: number;

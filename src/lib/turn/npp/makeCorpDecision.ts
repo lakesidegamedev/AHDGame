@@ -284,7 +284,11 @@ export function makeNppCorpDecision(
   );
 
   // ── Profitability analysis ─────────────────────────────────────────────────
-  const sectorProfits = analyzeSectorProfitability(sectors, plants?.enabled === true);
+  const sectorProfits = analyzeSectorProfitability(
+    sectors,
+    plants?.enabled === true,
+    plants?.captiveMarketValue === true
+  );
   const profitableSectors = sectorProfits.filter((sp) => sp.isProfitable).length;
 
   // Count consecutive loss turns for active NPP sectors. Restart resets the count.

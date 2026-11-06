@@ -224,6 +224,8 @@ export interface NppPlantsContext {
   enabled: boolean;
   /** gameConfig.wholePlantsStage on: builds are sized in whole plants. */
   wholePlants?: boolean;
+  /** producerCaptiveDeliveryStage >= 3: sector profit is read on the management account. */
+  captiveMarketValue?: boolean;
   year: number;
   eraUnitScale: number;
   preset: string | undefined;
