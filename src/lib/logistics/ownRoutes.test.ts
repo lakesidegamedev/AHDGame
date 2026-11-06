@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOwnFreightCapacity, buildOwnRoutes } from "./ownRoutes";
+import { buildOwnFreightCapacity, buildOwnMarketSupply, buildOwnRoutes } from "./ownRoutes";
 import type { CommodityType } from "@/lib/constants/commodities";
 import {
   resolveSupplyPolicies,
@@ -268,5 +268,30 @@ describe("buildOwnFreightCapacity", () => {
     expect([...out.entries()].map(([s, r]) => [s, [...r.entries()]])).toEqual([
       ["MN", [["c1", 50]]],
     ]);
+  });
+});
+
+describe("buildOwnMarketSupply", () => {
+  it("sums each owner's output per commodity and state, skipping freight and market-priority owners", () => {
+    const out = buildOwnMarketSupply({
+      sectors: [
+        { sectorId: "mine-a", corporationId: "c1", stateId: "MN" },
+        { sectorId: "mine-b", corporationId: "c1", stateId: "MN" },
+        { sectorId: "mine-c", corporationId: "c2", stateId: "MN" },
+        { sectorId: "log", corporationId: "c1", stateId: "MN" },
+      ],
+      supplyBySector: m([
+        ["mine-a", [["iron", 30]]],
+        ["mine-b", [["iron", 12]]],
+        ["mine-c", [["iron", 99]]],
+        ["log", [["freight", 50]]],
+      ]),
+      policies: new Map([
+        ["c1", policy("own")],
+        ["c2", policy("market")],
+      ]),
+    });
+    expect([...out.keys()]).toEqual(["iron"]);
+    expect([...out.get("iron")!.get("MN")!.entries()]).toEqual([["c1", 42]]);
   });
 });

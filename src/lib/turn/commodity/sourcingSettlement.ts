@@ -36,6 +36,11 @@ export interface FreightSettlementInputs {
   ownRoutes?: readonly SourcingOwnRoute[];
   /** Freight capacity per owner and state; used only while gameConfig.ownFreightFirstStage >= 1. */
   ownFreightCapacityByState?: ReadonlyMap<string, ReadonlyMap<string, number>>;
+  /** Owner output per commodity and state; used only while gameConfig.ownFreightFirstStage >= 2. */
+  ownFreightMarketSupply?: ReadonlyMap<
+    CommodityType,
+    ReadonlyMap<string, ReadonlyMap<string, number>>
+  >;
 }
 
 export interface FreightSettlementOutcome {
@@ -79,6 +84,7 @@ export async function runFreightSettlementPhase(
     demandUsesByState,
     ownRoutes,
     ownFreightCapacityByState,
+    ownFreightMarketSupply,
   } = inputs;
   // Freight is a separately-soaked rollout. The market ladder enables the
   // ledger needed to observe routes, while this gate decides whether those
@@ -145,6 +151,10 @@ export async function runFreightSettlementPhase(
       ownFreightCapacityByState:
         freightSettlementActive && (freightSettlementConfig?.ownFreightFirstStage ?? 0) >= 1
           ? (ownFreightCapacityByState ?? new Map())
+          : undefined,
+      ownFreightMarketSupply:
+        freightSettlementActive && (freightSettlementConfig?.ownFreightFirstStage ?? 0) >= 2
+          ? (ownFreightMarketSupply ?? new Map())
           : undefined,
     });
     const { commodityDocs, networkDoc } = buildSourcingDocs(freightSettlement.sourcing, turn, now, {

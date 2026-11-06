@@ -540,6 +540,18 @@ export interface SourcingInputs {
    * haul revenue. Absent = one shared first-come pool (the old behaviour).
    */
   ownFreightCapacityByState?: ReadonlyMap<string, ReadonlyMap<string, number>>;
+  /**
+   * Own shipments first, stage 2: what each route owner produces per commodity
+   * and state (commodity -> state id -> route identity -> units). When present
+   * with `ownFreightCapacityByState`, the state's market shipments are split by
+   * these seller shares, and each owner's capacity first carries its share
+   * (internal supply: no charge, no haul revenue) while the rest bills as
+   * before. Absent = only own routes get priority (stage 1).
+   */
+  ownFreightMarketSupply?: ReadonlyMap<
+    CommodityType,
+    ReadonlyMap<string, ReadonlyMap<string, number>>
+  >;
 }
 
 export type { SourcingOwnRoute };
@@ -566,6 +578,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     shortageResponsiveSourcingEnabled = false,
     ownRoutes,
     ownFreightCapacityByState,
+    ownFreightMarketSupply,
   } = inputs;
 
   // Deterministic iteration: states sorted by id, countries sorted by id.
@@ -679,6 +692,82 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
         route.commodity,
         units * freightTeuPerUnitHop(freightClass, eraUnitScale) * hopCount
       );
+    }
+  }
+
+  // Units each route owner sends out of a state on its own routes, so market
+  // shares are taken from what is left of its output.
+  const ownRouteOutUnits = new Map<string, number>();
+  const outKey = (commodity: CommodityType, stateId: string, routeId: string) =>
+    `${commodity}\u0000${stateId}\u0000${routeId}`;
+  const marketStage = ownFreight.enabled && ownFreightMarketSupply != null;
+  const meanHopsCache = new Map<string, number>();
+  const meanHopsFrom = (stateId: string) => {
+    let mean = meanHopsCache.get(stateId);
+    if (mean != null) return mean;
+    const from = stateById.get(stateId);
+    let sum = 0;
+    let n = 0;
+    for (const to of sortedStates) {
+      if (!from || to.stateId === stateId || to.countryId !== from.countryId) continue;
+      const h = hops(from.countryId, stateId, to.stateId);
+      if (h != null && h > 0) {
+        sum += h;
+        n += 1;
+      }
+    }
+    mean = n > 0 ? sum / n : 1;
+    meanHopsCache.set(stateId, mean);
+    return mean;
+  };
+  /** Owners' shares of the goods a state sends to market, given what own routes already took. */
+  const marketOwnersFor = (commodity: CommodityType, stateId: string) => {
+    const owners = marketStage ? ownFreightMarketSupply!.get(commodity)?.get(stateId) : undefined;
+    if (!owners) return [];
+    const supply = byState.get(stateId)?.get(commodity)?.supply ?? 0;
+    let taken = 0;
+    for (const [routeId] of owners)
+      taken += ownRouteOutUnits.get(outKey(commodity, stateId, routeId)) ?? 0;
+    const total = supply - taken;
+    if (!(total > 0)) return [];
+    const shares: Array<{ routeId: string; share: number; units: number }> = [];
+    for (const [routeId, units] of owners) {
+      const left = Math.max(
+        0,
+        units - (ownRouteOutUnits.get(outKey(commodity, stateId, routeId)) ?? 0)
+      );
+      if (left > 0) shares.push({ routeId, share: Math.min(1, left / total), units: left });
+    }
+    return shares;
+  };
+  if (marketStage) {
+    // Hold each owner's capacity for the market sales it expects to ship, for
+    // every commodity, before any commodity is served: an earlier commodity must
+    // not use up the trucks a later one needs.
+    for (const route of ownRoutes ?? []) {
+      const units = Math.min(route.units, route.originSupplyUnits ?? Infinity);
+      const k = outKey(route.commodity, route.originStateId, route.corporationId);
+      ownRouteOutUnits.set(k, (ownRouteOutUnits.get(k) ?? 0) + units);
+    }
+    for (const commodity of SHIPPED_COMMODITIES) {
+      const freightClass = FREIGHT_CLASS_BY_COMMODITY[commodity];
+      if (!freightClass || !isHauledClass(freightClass)) continue;
+      const teuPerUnitHop = freightTeuPerUnitHop(freightClass, eraUnitScale);
+      for (const stateId of ownFreightMarketSupply!.get(commodity)?.keys() ?? []) {
+        const bal = byState.get(stateId)?.get(commodity);
+        const supply = bal?.supply ?? 0;
+        if (!(supply > 0)) continue;
+        const exportFraction = Math.max(0, supply - (bal?.demand ?? 0)) / supply;
+        for (const { routeId, units } of marketOwnersFor(commodity, stateId)) {
+          ownFreight.plan(
+            stateId,
+            routeId,
+            commodity,
+            units * exportFraction * teuPerUnitHop * meanHopsFrom(stateId),
+            "market"
+          );
+        }
+      }
     }
   }
 
@@ -1098,9 +1187,23 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
               }
               // Capacity other owners still plan to haul with is not this
               // haul's to take; the shared pool is what is left of it.
-              const heldBack = ownFreight.heldFromOthers(
-                cand.originId,
-                cand.ownRoute?.corporationId
+              // A market haul out of a state carries its sellers' goods: the part
+              // owners ship on their own trucks is theirs to take.
+              const marketOwners = cand.ownRoute ? [] : marketOwnersFor(commodity, cand.originId);
+              const ownedTeu = (units: number) =>
+                marketOwners.reduce(
+                  (sum, o) =>
+                    sum +
+                    Math.min(
+                      units * teuPerUnit * o.share,
+                      ownFreight.heldBy(cand.originId, o.routeId)
+                    ),
+                  0
+                );
+              const heldBack = Math.max(
+                0,
+                ownFreight.heldFromOthers(cand.originId, cand.ownRoute?.corporationId) -
+                  ownedTeu(dispatch)
               );
               const unitsToNominal = Math.max(0, nominal - heldBack - totalUsed) / teuPerUnit;
               const unitsInOverflow =
@@ -1148,6 +1251,13 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
                   cand.ownRoute.corporationId,
                   teuConsumed
                 );
+              else
+                for (const o of marketOwners)
+                  ownCapacityTeu += ownFreight.cover(
+                    cand.originId,
+                    o.routeId,
+                    teuConsumed * o.share
+                  );
               used[freightClass] += teuConsumed;
               freightDemandByState.get(cand.originId)![freightClass] += teuConsumed;
             }
@@ -1232,12 +1342,16 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
           // Delivered-units + extra-cost accumulation for money wiring, regardless
           // of the itemization floor below (that floor only caps the doc's flow
           // list; the aggregates must stay exact).
+          // The share an owner hauled on its own trucks adds no freight cost
+          // to the buyer (stage 2 only; zero otherwise).
+          const marketOwnShare =
+            !cand.ownRoute && teuConsumed > 0 ? ownCapacityTeu / teuConsumed : 0;
           if (!cand.ownRoute) {
             addLandedPremium(
               buyer.stateId,
               commodity,
               take,
-              take * cand.shippingPerUnit + tariffPaid
+              take * cand.shippingPerUnit * (1 - marketOwnShare) + tariffPaid
             );
           }
           // Canonical freight billing: the shipping leg of a domestic hauled flow
@@ -1266,7 +1380,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
               buyer.stateId,
               cand.originId,
               commodity,
-              take * cand.shippingPerUnit + congestionSurchargePaid
+              (take * cand.shippingPerUnit + congestionSurchargePaid) * (1 - marketOwnShare)
             );
           }
           if (cand.originType === "country") {
@@ -1325,6 +1439,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     serveBuyers(ownEntries, false);
     ownFreight.release(commodity);
     serveBuyers(sortedStates, false);
+    ownFreight.release(commodity, "market");
 
     // The national pool above is supply minus demand, fixed before anyone
     // buys. When a country's own buyers take cheaper imports (or cannot reach
