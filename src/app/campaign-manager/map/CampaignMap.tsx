@@ -63,6 +63,7 @@ export function CampaignMap(props: CampaignMapProps) {
   // A gesture moves the map at once; a pick, a button or a reset glides there.
   const [glide, setGlide] = useState(true);
   const [frameWidth, setFrameWidth] = useState(0);
+  const [partyOverlay, setPartyOverlay] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const { filter, races, selectedRace } = props;
   const sel = filter.regionId !== "ALL" ? filter.regionId : null;
@@ -124,6 +125,18 @@ export function CampaignMap(props: CampaignMapProps) {
     }
     return out;
   }, [races, filter]);
+
+  // Regions where the viewer's party has a candidate in a race of this view.
+  const partyRegions = useMemo(() => {
+    const mine = new Set<string>();
+    for (const r of races) for (const c of r.candidates) if (c.isYou) mine.add(c.partyId);
+    const out = new Set<string>();
+    if (mine.size === 0) return out;
+    for (const [region, list] of byRegion) {
+      if (list.some((r) => r.candidates.some((c) => mine.has(c.partyId)))) out.add(region);
+    }
+    return out;
+  }, [races, byRegion]);
 
   // Regions in the picked region's frame load their sub-units. Panning and
   // zooming do not widen that, so a drag never fans out into more reads.
@@ -273,6 +286,27 @@ export function CampaignMap(props: CampaignMapProps) {
             ) : null}
           </>
         ) : null}
+        {partyRegions.size > 0 ? (
+          <button
+            type="button"
+            aria-pressed={partyOverlay}
+            onClick={() => setPartyOverlay((v) => !v)}
+            style={{
+              marginLeft: "auto",
+              minHeight: 32,
+              padding: "0 10px",
+              borderRadius: 6,
+              border: `1px solid ${BLEND.hairlineStrong}`,
+              background: partyOverlay ? BLEND.accent : "transparent",
+              color: partyOverlay ? "#fff" : BLEND.ink,
+              cursor: "pointer",
+              fontFamily: FONT.sans,
+              fontSize: 13,
+            }}
+          >
+            {t("map.myParty")}
+          </button>
+        ) : null}
       </nav>
 
       <div
@@ -336,7 +370,9 @@ export function CampaignMap(props: CampaignMapProps) {
                   : isNb
                     ? regionShade(id)
                     : BLEND.track;
-              const opacity = !sel || isSel ? 1 : isNb ? 0.28 : 0.18;
+              const contested = partyOverlay && partyRegions.has(id);
+              const dimmed = partyOverlay && !contested;
+              const opacity = (!sel || isSel ? 1 : isNb ? 0.28 : 0.18) * (dimmed ? 0.35 : 1);
               const title =
                 sel && !isSel
                   ? t("map.moveHere", { name: regionLabel(id) })
@@ -350,8 +386,8 @@ export function CampaignMap(props: CampaignMapProps) {
                   aria-label={title}
                   fill={fill}
                   opacity={opacity}
-                  stroke={BLEND.page}
-                  strokeWidth={0.8}
+                  stroke={contested ? BLEND.accent : BLEND.page}
+                  strokeWidth={contested ? 2 : 0.8}
                   vectorEffect="non-scaling-stroke"
                   style={{ cursor: isSel ? "default" : "pointer" }}
                   onClick={() => {
