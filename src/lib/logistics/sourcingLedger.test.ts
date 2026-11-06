@@ -23,6 +23,35 @@ function baseResult(overrides: Partial<SourcingResult> = {}): SourcingResult {
 }
 
 describe("buildSourcingDocs", () => {
+  it("persists own freight capacity used per origin state and route owner", () => {
+    const covered = new Map([
+      [
+        "IN",
+        new Map([
+          ["6ae3b71b4195f19db7c125eb", 116.23812],
+          ["group:abc", 0],
+        ]),
+      ],
+      ["PA", new Map([["6ae3b71b4195f19db7c125eb", 42.89894]])],
+    ]);
+    const { networkDoc } = buildSourcingDocs(
+      baseResult({ ownFreightCoveredTeuByState: covered }),
+      708,
+      new Date()
+    );
+    expect(networkDoc.ownFreightCoveredTeuByState).toEqual({
+      IN: { "6ae3b71b4195f19db7c125eb": 116.24 },
+      PA: { "6ae3b71b4195f19db7c125eb": 42.9 },
+    });
+  });
+  it("omits the own freight field when the rule used no own capacity", () => {
+    const { networkDoc } = buildSourcingDocs(
+      baseResult({ ownFreightCoveredTeuByState: new Map() }),
+      708,
+      new Date()
+    );
+    expect(networkDoc).not.toHaveProperty("ownFreightCoveredTeuByState");
+  });
   it("persists full buyer demand and freight supply with the billed sourcing snapshot", () => {
     const result = baseResult({
       freightChargesByDestState: new Map([["WA", new Map([["vehicles", 698_000]])]]),
