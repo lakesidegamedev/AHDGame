@@ -56,6 +56,7 @@ import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 
 interface RouteParams {
@@ -336,6 +337,21 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
         409,
         "Insufficient spendable corporate funds, or outstanding taxes and payables."
       );
+    // The debit committed: record it in the corporation's finance history.
+    await emitSectorRetoolTx(db, {
+      corporationId: corporation._id,
+      corporationName: corporation.name ?? "Corporation",
+      corporationSequentialId: corporation.sequentialId,
+      amountLocal: retoolCostInCorpCapital,
+      currencyCode: (liquidCode ?? "USD") as CurrencyCode,
+      turn: currentTurn,
+      createdAt: new Date(),
+      action: "retool",
+      sectorId: sector._id,
+      sectorType: sector.sectorType,
+      fromStrategyId: currentStrategyId,
+      toStrategyId: strategyId,
+    });
     await Promise.all([
       db.collection<CorporateSector>("corporateSectors").updateOne(
         { _id: sector._id },

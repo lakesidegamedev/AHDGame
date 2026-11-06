@@ -128,7 +128,7 @@ export function CapacityChain({
         ) : (
           <>
             <div className={row}>
-              <span>× effective margin</span>
+              <span>× effective margin (outside sales only)</span>
               <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
             </div>
             <div className={row}>

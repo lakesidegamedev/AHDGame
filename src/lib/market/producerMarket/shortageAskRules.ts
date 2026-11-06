@@ -43,6 +43,12 @@ export interface ShortageAskInput {
   maxStep?: number;
   /** Ceiling as a multiple of the reference price. */
   maxMultiplier?: number;
+  /**
+   * This seller's own ask on the lane last turn (producerShortageAskStage >= 2).
+   * A sold-out seller steps from the higher of it and the clearing, so one
+   * cheap seller's volume in the average cannot hold every raise to a sliver.
+   */
+  ownAskUnitPrice?: number;
 }
 
 /** The step this seller may take: 0 unless it sold out into a lane that went short. */
@@ -61,10 +67,16 @@ export function shortageAskStep(
 
 /** The ask: the clearing, raised by the step, never past the ceiling and never below the clearing. */
 export function shortageAsk(input: ShortageAskInput): number {
-  const clearing = input.clearingUnitPrice;
-  if (!(Number.isFinite(clearing) && clearing > 0)) return clearing;
+  const cleared = input.clearingUnitPrice;
+  if (!(Number.isFinite(cleared) && cleared > 0)) return cleared;
   const step = shortageAskStep(input);
-  if (!(step > 0)) return clearing;
+  if (!(step > 0)) return cleared;
+  // On turn 701 one company sold 36% of world ordnance at 0.88x the clearing while
+  // every other seller sold out at 1.1x, so the average and every anchor rose about
+  // 2% a turn with buyers 89% unfilled. A seller that sold out at its own ask
+  // steps from that ask.
+  const own = input.ownAskUnitPrice;
+  const clearing = typeof own === "number" && Number.isFinite(own) && own > cleared ? own : cleared;
   const multiplier =
     typeof input.maxMultiplier === "number" && input.maxMultiplier >= 1
       ? input.maxMultiplier

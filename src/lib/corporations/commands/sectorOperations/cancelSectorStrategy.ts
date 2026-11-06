@@ -29,6 +29,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
+import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 
 interface RouteParams {
@@ -210,6 +211,20 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
         409,
         "Insufficient spendable corporate funds, or outstanding taxes and payables."
       );
+    await emitSectorRetoolTx(db, {
+      corporationId: corporation._id,
+      corporationName: corporation.name ?? "Corporation",
+      corporationSequentialId: corporation.sequentialId,
+      amountLocal: cancelCostInCorpCapital,
+      currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
+      turn: currentTurn,
+      createdAt: new Date(),
+      action: "cancel_retool",
+      sectorId: sector._id,
+      sectorType: sector.sectorType,
+      fromStrategyId: sector.strategyId,
+      toStrategyId: newStrategyId,
+    });
     await Promise.all([
       db.collection<CorporateSector>("corporateSectors").updateOne(
         { _id: sector._id },

@@ -235,7 +235,7 @@ export default function MarketMoneyPanel({
         <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <UnitTile
             label="Selling"
-            value={truth.soldFraction != null ? `${fmtPct(truth.soldFraction)} of output` : "n/a"}
+            value={truth.soldFraction != null ? `${fmtPct(truth.soldFraction)} sold` : "n/a"}
             tone={
               truth.soldFraction == null
                 ? "muted"
@@ -245,13 +245,13 @@ export default function MarketMoneyPanel({
             }
             help={
               (truth.soldByCommodity.length > 0
-                ? `The share of what you make that buyers actually take. By product: ${truth.soldByCommodity
+                ? `Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. By product: ${truth.soldByCommodity
                     .map(
                       (s) =>
                         `${COMMODITY_LABELS[s.commodity as CommodityType] ?? s.commodity} ${fmtPct(s.fraction)}`
                     )
                     .join(", ")}.`
-                : "The share of what you make that buyers actually take. Units that do not sell cost you money and earn nothing.") +
+                : "Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale. Units that do not sell cost you money and earn nothing.") +
               (deliveryLimitedShown
                 ? ` ${deliveryLabel} limited ${fmtPct(deliveryLimited)} of your output from reaching buyers outside this state. ${deliveryExplanation} ${deliveryAction}`
                 : "")

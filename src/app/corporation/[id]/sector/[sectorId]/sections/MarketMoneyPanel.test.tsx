@@ -52,7 +52,7 @@ const plants = {
     fillAdjustedMarginPct: 9.8,
     breakEven: { status: "profitable_now", turns: null },
   },
-} as never;
+} as unknown as PlantsData;
 
 describe("MarketMoneyPanel period and scope labels", () => {
   it("separates per-unit averages, daily totals, turns, and SOE remittance (ticket #1072)", () => {
@@ -104,6 +104,28 @@ describe("signed cost lines (ticket 1122)", () => {
     },
     truth: null,
   } as never;
+
+  it("ticket 1773: the Selling tile prints the same share as the sold chip, not 100% of output", () => {
+    render(
+      <MarketMoneyPanel
+        plants={
+          {
+            ...plants,
+            producedUnits: 195,
+            soldUnits: 139,
+            unsoldUnits: 56,
+            fillRate: 139 / 195,
+            truth: { ...plants.truth, soldFraction: 139 / 195 },
+          } as PlantsData
+        }
+        sectorType="manufacturing"
+        financials={null}
+        corporation={{ _id: "natcorp-1", name: "VEB Kombinat", isStateOwned: true }}
+      />
+    );
+    expect(screen.getAllByText("71% sold").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("100% of output")).toBeNull();
+  });
 
   it("renders a negative running-cost line as a credit and totals the real bill", () => {
     render(

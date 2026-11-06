@@ -18,6 +18,12 @@ export interface ConstructionSaleQuote {
   completed?: boolean;
   cleanupCompleted?: boolean;
   aborted?: boolean;
+  /**
+   * The buyer's existing site in the same market. Present when the purchased
+   * site folds into it instead of taking title as a second row, which the
+   * one-site-per-market index forbids.
+   */
+  mergeIntoSectorId?: string;
 }
 
 /** A sale distributes actual buyer cash before title or loan security changes. */
@@ -34,6 +40,7 @@ export function quoteConstructionSale(input: {
   feeLegs: readonly TransitionLeg[];
   turn: number;
   destination: "bank" | "insurance";
+  mergeIntoSectorId?: string;
 }): ConstructionSaleQuote | null {
   const { claim, loan, turn, priceAnchor, buyerRate, creditorRate, feeLocal } = input;
   if (
@@ -188,7 +195,9 @@ export function quoteConstructionSale(input: {
         },
         update: {
           $set: {
-            corporationId: oid(input.buyerId),
+            // A merging sale keeps title on the sold row until its contents
+            // are folded into the buyer's site and the row is deleted.
+            ...(input.mergeIntoSectorId ? {} : { corporationId: oid(input.buyerId) }),
             "constructionFinancing.status": "released",
             "constructionFinancing.sale.completed": true,
           },
@@ -196,42 +205,48 @@ export function quoteConstructionSale(input: {
         },
         note: "Deliver property title after funded creditor and owner proceeds",
       },
-      {
-        collection: "corporateSectors",
-        filter: { ...sectorIdentity, corporationId: oid(input.buyerId) },
-        pipelineUpdate: [
-          {
-            $set: {
-              buildQueue: {
-                $map: {
-                  input: { $ifNull: ["$buildQueue", []] },
-                  as: "order",
-                  in: {
-                    $cond: [
-                      {
-                        $and: [
-                          { $eq: ["$$order.constructionClaimId", { $literal: claim.claimId }] },
-                          { $eq: ["$$order.constructionLoanId", { $literal: claim.loanId }] },
-                        ],
-                      },
-                      {
-                        $unsetField: {
-                          field: "constructionClaimId",
-                          input: {
-                            $unsetField: { field: "constructionLoanId", input: "$$order" },
-                          },
+      ...(input.mergeIntoSectorId
+        ? []
+        : [
+            {
+              collection: "corporateSectors",
+              filter: { ...sectorIdentity, corporationId: oid(input.buyerId) },
+              pipelineUpdate: [
+                {
+                  $set: {
+                    buildQueue: {
+                      $map: {
+                        input: { $ifNull: ["$buildQueue", []] },
+                        as: "order",
+                        in: {
+                          $cond: [
+                            {
+                              $and: [
+                                {
+                                  $eq: ["$$order.constructionClaimId", { $literal: claim.claimId }],
+                                },
+                                { $eq: ["$$order.constructionLoanId", { $literal: claim.loanId }] },
+                              ],
+                            },
+                            {
+                              $unsetField: {
+                                field: "constructionClaimId",
+                                input: {
+                                  $unsetField: { field: "constructionLoanId", input: "$$order" },
+                                },
+                              },
+                            },
+                            "$$order",
+                          ],
                         },
                       },
-                      "$$order",
-                    ],
+                    },
                   },
                 },
-              },
+              ],
+              note: "The buyer receives paid construction without the seller's released loan claim",
             },
-          },
-        ],
-        note: "The buyer receives paid construction without the seller's released loan claim",
-      },
+          ]),
       {
         collection: "bankLoans",
         filter: { _id: oid(claim.loanId), constructionSettlementOwner: key },
@@ -257,6 +272,7 @@ export function quoteConstructionSale(input: {
     principalRepaid,
     ownerProceeds,
     destination: input.destination,
+    ...(input.mergeIntoSectorId ? { mergeIntoSectorId: input.mergeIntoSectorId } : {}),
     fundingTransition: {
       ...fundingTransition,
       key: `${key}:funding`,

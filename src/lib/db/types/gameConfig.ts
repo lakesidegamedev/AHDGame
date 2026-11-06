@@ -191,6 +191,14 @@ export interface GameConfig {
    */
   producerOwnSitesFirstStage?: number;
   /**
+   * Freight network: >= 1 gives a company's own cross-state hauls first use of
+   * the freight capacity that company owns in the origin state (the covered
+   * share is internal supply: no charge, no haul revenue); only the rest of its
+   * capacity joins the shared pool. 0 or absent = one shared first-come pool.
+   * Needs freightSettlementMode "active" (own routes only run then).
+   */
+  ownFreightFirstStage?: number;
+  /**
    * Funded producer market: >= 1 keeps a share of each public budget line's
    * unfilled money in the public wallet for the next turn (instead of burning
    * it at close), capped at four turns of the line's outlay. Support and grants
@@ -367,12 +375,21 @@ export interface GameConfig {
    * turn, in a lane where buyers asked for more than they got, ask a step above
    * last turn's clearing price instead of at it (shortageAskRules). The step is
    * 0.25 x (requested / delivered - 1), capped by producerShortageAskMaxStep,
-   * and the ask never passes reference x producerPriceMaxMultiplier. 0 or
+   * and the ask never passes reference x producerPriceMaxMultiplier. >= 2: a
+   * seller that sold out steps from the higher of the clearing and its own last
+   * ask, so a cheap seller's share of the average cannot pin the lane. 0 or
    * absent = off.
    */
   producerShortageAskStage?: number;
   /** Largest raise in one turn under producerShortageAskStage. Absent = 0.05. */
   producerShortageAskMaxStep?: number;
+  /**
+   * Funded producer market: >= 1 makes an automatic seller choose, among asks
+   * within 1% of its best expected profit, the one the most buyers can pay
+   * (quoteProducer buyerTieBreak). Stops a whole lane posting a hair above a
+   * household ceiling and selling nothing to households. 0 or absent = off.
+   */
+  producerAskBuyerTieStage?: number;
   /**
    * Capacity builds paid from cash must leave this many turns of the plants'
    * running bills (wages, site bills, inputs from their last receipts) unless

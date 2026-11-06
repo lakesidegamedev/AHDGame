@@ -225,6 +225,7 @@ const TX_TYPE_TO_AUDIT_ACTION: Partial<Record<FinancialTxType, string>> = {
   // Resource prospecting + extraction contracts
   corp_prospecting_cost: "corp.prospecting_cost",
   corp_tech_unlock: "corp.tech_unlock",
+  corp_sector_retool: "corp.sector_retool",
   govt_prospecting_cost: "gov.prospecting_cost",
   contract_signing_fee: "contract.signing_fee",
   contract_royalty_payment: "contract.royalty_payment",
