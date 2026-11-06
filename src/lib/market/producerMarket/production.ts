@@ -120,6 +120,8 @@ export interface ProductionPlan {
   recentSoldUnits?: number;
   /** Units delivered per output last turn, keyed `${commodity}|${book}`; overrides the plant total. */
   recentSoldByOutput?: Readonly<Record<string, number>>;
+  /** Own ask per output last turn, keyed like recentSoldByOutput (producerShortageAskStage >= 2). */
+  recentAskByOutput?: Readonly<Record<string, number>>;
   /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
   plannedRunShare?: number;
   /** Consecutive glut turns before this one (producerRunPlanStage); echoed on the receipt. */
@@ -1115,6 +1117,7 @@ export function advanceProducerEconomy(input: {
               referenceUnitPrice: output.referenceUnitPrice,
               pressure: input.shortageAsk.pressureByLane[laneKeyOf(output.commodity, output.book)],
               soldOut: recentSold != null && recentSold > 0 && stock <= recentSold * 0.01,
+              ownAskUnitPrice: p.recentAskByOutput?.[laneKeyOf(output.commodity, output.book)],
               ...(input.shortageAsk.maxStep != null ? { maxStep: input.shortageAsk.maxStep } : {}),
               ...(input.shortageAsk.maxMultiplier != null
                 ? { maxMultiplier: input.shortageAsk.maxMultiplier }
