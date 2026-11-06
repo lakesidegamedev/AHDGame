@@ -118,6 +118,7 @@ async function settleCorporateTaxPriorityBatch(
             (sum, target) => sum + target.amountAnchor * rate,
             0
           ),
+          ...(row.distributionAfterTax ? { distributionAfterTax: true } : {}),
         });
         closing.set(corp._id.toHexString(), plan.cash);
         const inc: Record<string, number> = {

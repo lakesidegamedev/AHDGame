@@ -474,6 +474,8 @@ export interface CorpSnapshot {
     currency: CurrencyCode;
     localPerAnchor: number;
   }[];
+  /** gameConfig.nppDividendAfterTaxStage >= 1: the deferred distribution is paid after tax. */
+  distributionAfterTax?: boolean;
   /**
    * Funded producer turn: producer profit the settlement already moved as cash
    * and witnessed in its own ledger entry (anchor). The legacy cash witness
