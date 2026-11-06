@@ -69,6 +69,7 @@ export function producerStageEnv(
         producerHouseholdSavingsDrawShare?: number;
         producerShortageAskStage?: number;
         producerShortageAskMaxStep?: number;
+        producerAskBuyerTieStage?: number;
         producerPriceMaxMultiplier?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
@@ -102,6 +103,7 @@ export function producerStageEnv(
     householdSavingsDrawShare: config?.producerHouseholdSavingsDrawShare,
     shortageAskStage: config?.producerShortageAskStage,
     shortageAskMaxStep: config?.producerShortageAskMaxStep,
+    askBuyerTieStage: config?.producerAskBuyerTieStage,
     priceMaxMultiplier: config?.producerPriceMaxMultiplier,
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,

@@ -374,6 +374,13 @@ export interface GameConfig {
   /** Largest raise in one turn under producerShortageAskStage. Absent = 0.05. */
   producerShortageAskMaxStep?: number;
   /**
+   * Funded producer market: >= 1 makes an automatic seller choose, among asks
+   * within 1% of its best expected profit, the one the most buyers can pay
+   * (quoteProducer buyerTieBreak). Stops a whole lane posting a hair above a
+   * household ceiling and selling nothing to households. 0 or absent = off.
+   */
+  producerAskBuyerTieStage?: number;
+  /**
    * Capacity builds paid from cash must leave this many turns of the plants'
    * running bills (wages, site bills, inputs from their last receipts) unless
    * the CEO confirms an override (suggestion 409). Absent = 3, 0 = off.
