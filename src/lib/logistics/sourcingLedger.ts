@@ -68,6 +68,12 @@ export interface CommoditySourcingDoc {
 export interface SourcingNetworkDoc {
   turn: number;
   ownRouteDelivered?: import("./ownRoutes").SourcingOwnRoute[];
+  /**
+   * Own-shipments-first rule: TEU of each route owner's own freight capacity
+   * used this turn, per origin state then route identity (company id or
+   * `group:<root>`). Only written while the rule is on and a haul used it.
+   */
+  ownFreightCoveredTeuByState?: Record<string, Record<string, number>>;
   /** Per-state freight consumed this turn, by class — network load for the UI. */
   freightTeuByState: Record<string, Record<FreightClass, number>>;
   /**
@@ -241,6 +247,15 @@ export function buildSourcingDocs(
     };
   }
 
+  const ownFreightCoveredTeuByState: Record<string, Record<string, number>> = {};
+  for (const [stateId, byRoute] of result.ownFreightCoveredTeuByState ?? []) {
+    for (const [routeId, teu] of byRoute) {
+      const rounded = Math.round(teu * 100) / 100;
+      if (rounded <= 0) continue;
+      (ownFreightCoveredTeuByState[stateId] ??= {})[routeId] = rounded;
+    }
+  }
+
   const landedPremiums: Record<string, Record<CommodityType, number>> = {};
   for (const [stateId, byCommodity] of result.landedPremiumByDestState) {
     const perCommodity: Partial<Record<CommodityType, number>> = {};
@@ -268,6 +283,7 @@ export function buildSourcingDocs(
     freightTeuByState,
     landedPremiums,
     importAggregates,
+    ...(Object.keys(ownFreightCoveredTeuByState).length > 0 ? { ownFreightCoveredTeuByState } : {}),
     createdAt: now,
   };
 

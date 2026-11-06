@@ -9,10 +9,22 @@ import type { CommodityType } from "@/lib/constants/commodities";
 
 export interface OwnFreightLedger {
   enabled: boolean;
-  /** Register TEU the owner plans to haul out of `stateId` for `commodity`. */
-  plan(stateId: string, routeId: string, commodity: CommodityType, teu: number): void;
-  /** The commodity's own legs have been served: unused plans stop holding capacity back. */
-  release(commodity: CommodityType): void;
+  /**
+   * Register TEU the owner plans to haul out of `stateId` for `commodity`.
+   * `phase` separates the owner's own-route plan from its market-sale plan so
+   * each can be released when its own pass has been served.
+   */
+  plan(
+    stateId: string,
+    routeId: string,
+    commodity: CommodityType,
+    teu: number,
+    phase?: OwnFreightPhase
+  ): void;
+  /** The commodity's pass is served: unused plans stop holding capacity back. */
+  release(commodity: CommodityType, phase?: OwnFreightPhase): void;
+  /** TEU of `routeId`'s own capacity currently held back from everyone else. */
+  heldBy(stateId: string, routeId: string): number;
   /** TEU held back from every route except `exceptRouteId` in this state. */
   heldFromOthers(stateId: string, exceptRouteId?: string): number;
   /** Consume up to `teu` of the owner's own capacity; returns the TEU it covered. */
@@ -20,6 +32,8 @@ export interface OwnFreightLedger {
   /** TEU of own capacity used so far, per state and route identity. */
   covered(): Map<string, Map<string, number>>;
 }
+
+export type OwnFreightPhase = "route" | "market";
 
 const finite = (n: number | undefined) => (n != null && Number.isFinite(n) && n > 0 ? n : 0);
 
@@ -29,7 +43,8 @@ export function createOwnFreightLedger(
   const enabled = capacityByState != null;
   const left = new Map<string, Map<string, number>>();
   const planned = new Map<string, Map<string, number>>();
-  const plannedByCommodity = new Map<CommodityType, Array<[string, string, number]>>();
+  const plannedByKey = new Map<string, Array<[string, string, number]>>();
+  const keyOf = (commodity: CommodityType, phase: OwnFreightPhase) => `${phase}\u0000${commodity}`;
   const used = new Map<string, Map<string, number>>();
   const bump = (m: Map<string, Map<string, number>>, s: string, r: string, d: number) => {
     let inner = m.get(s);
@@ -42,18 +57,22 @@ export function createOwnFreightLedger(
 
   return {
     enabled,
-    plan(stateId, routeId, commodity, teu) {
+    plan(stateId, routeId, commodity, teu, phase = "route") {
       if (!enabled || !(finite(left.get(stateId)?.get(routeId)) > 0) || !(finite(teu) > 0)) return;
       bump(planned, stateId, routeId, teu);
-      const list = plannedByCommodity.get(commodity) ?? [];
+      const key = keyOf(commodity, phase);
+      const list = plannedByKey.get(key) ?? [];
       list.push([stateId, routeId, teu]);
-      plannedByCommodity.set(commodity, list);
+      plannedByKey.set(key, list);
     },
-    release(commodity) {
-      for (const [stateId, routeId, teu] of plannedByCommodity.get(commodity) ?? [])
+    release(commodity, phase = "route") {
+      const key = keyOf(commodity, phase);
+      for (const [stateId, routeId, teu] of plannedByKey.get(key) ?? [])
         bump(planned, stateId, routeId, -teu);
-      plannedByCommodity.delete(commodity);
+      plannedByKey.delete(key);
     },
+    heldBy: (stateId, routeId) =>
+      Math.min(finite(left.get(stateId)?.get(routeId)), finite(planned.get(stateId)?.get(routeId))),
     heldFromOthers(stateId, exceptRouteId) {
       if (!enabled) return 0;
       let held = 0;
