@@ -36,6 +36,7 @@ import { makeDoOutput, minorInputShortfallCost, minorInputs } from "./makeDoRule
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
+import { captiveMarketValue, laneClearingPrices } from "./captiveMarketValueRules";
 import { shortageAsk } from "./shortageAskRules";
 import { householdSpendBase } from "./householdSpendRules";
 import {
@@ -270,7 +271,10 @@ export interface ProducerOperatingResult {
     deliveredUnits: number;
     revenue: number;
     askingUnitPrice: number;
-    /** Value of own-site deliveries when the company's own sites were short (stage 2); absent otherwise. */
+    /**
+     * Value of own-site deliveries: what the company's short sites bid (stage
+     * 2), otherwise the booked market value per unit (stage 3); absent otherwise.
+     */
     captiveUnitValue?: number;
     /**
      * This plant's share of what the company's other sites asked for this good
@@ -407,6 +411,13 @@ export function advanceProducerEconomy(input: {
    * the output's reference, never under the ask (producerCaptiveDeliveryStage >= 2).
    */
   captiveShortValue?: boolean;
+  /**
+   * Book own-site deliveries at this turn's lane clearing price, or the seller's
+   * ask when the lane did not trade: matching internal supply income for the
+   * seller and charge for the receiving site, no cash moved
+   * (captiveMarketValueRules, producerCaptiveDeliveryStage >= 3).
+   */
+  captiveMarketValue?: boolean;
   /**
    * Shortage ask step (shortageAskRules, gameConfig.producerShortageAskStage):
    * an automatic seller that sold out into a lane where buyers went short asks
@@ -1207,6 +1218,7 @@ export function advanceProducerEconomy(input: {
       ...(input.marketFirstAccounts?.length
         ? { marketFirstAccounts: input.marketFirstAccounts }
         : {}),
+      ...(input.captiveMarketValue ? { trackInternalDeliveries: true } : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it
@@ -1392,6 +1404,15 @@ export function advanceProducerEconomy(input: {
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
+  // Own-site deliveries at market value, for companies without their own transfer price.
+  const captiveValue = input.captiveMarketValue
+    ? captiveMarketValue({
+        deliveries: market.internalDeliveries ?? [],
+        offers: postedOffers,
+        clearingByLane: laneClearingPrices(market.prices),
+        pricedAccounts: internalAccountingAccounts,
+      })
+    : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
   const unsoldByBook = new Map<string, { unitPrice: number; units: number }[]>();
   for (const offer of market.tradeReceipt.offers) {
@@ -1500,7 +1521,10 @@ export function advanceProducerEconomy(input: {
           return {
             deliveredUnits: total.deliveredUnits + order.deliveredUnits,
             cost: total.cost + order.cost,
-            internalCost: total.internalCost + (order.internalCost ?? 0),
+            internalCost:
+              total.internalCost +
+              (order.internalCost ?? 0) +
+              (captiveValue?.chargeByOrder.get(id) ?? 0),
           };
         },
         { deliveredUnits: 0, cost: 0, internalCost: 0 }
@@ -1576,8 +1600,9 @@ export function advanceProducerEconomy(input: {
     const products: ProducerOperatingResult["products"] = [];
     const outputStock = p.outputs.map((output) => {
       const sold = offersById.get(JSON.stringify([p.id, "output", output.commodity]))!;
+      const marketValue = captiveValue?.incomeByOffer.get(sold.id) ?? 0;
       revenue += sold.revenue;
-      internalSupplyIncome += sold.internalValue ?? 0;
+      internalSupplyIncome += (sold.internalValue ?? 0) + marketValue;
       offeredUnits += sold.offeredUnits;
       soldUnits += sold.soldUnits;
       deliveredUnits += sold.deliveredUnits;
@@ -1651,6 +1676,9 @@ export function advanceProducerEconomy(input: {
         revenue: sold.revenue,
         askingUnitPrice: postedOffers.get(JSON.stringify([p.id, "output", output.commodity]))!
           .unitPrice,
+        ...(marketValue > 0 && sold.internalDeliveredUnits > 0
+          ? { captiveUnitValue: marketValue / sold.internalDeliveredUnits }
+          : {}),
         realizedUnitPrice: sold.soldUnits > 0 ? sold.revenue / sold.soldUnits : null,
         unsoldUnits: unsold,
         lostUnits: unsold - kept,

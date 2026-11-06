@@ -500,7 +500,8 @@ export function buildPrimaryBlendViewModel(inp: PrimaryBlendInput): PrimaryBlend
       : null;
 
   // ── Header and vitals ─────────────────────────────────────────────────────
-  const headline = `The ${selectedName} primary`;
+  // Party names like "The Mafia" already carry the article.
+  const headline = `The ${selectedName.replace(/^the\s+/i, "")} primary`;
   const standfirst = `${candidates.length} filed. ${advanceText}`;
   const turnReadout = [
     currentTurn != null ? `TURN ${grouped(currentTurn)}` : null,
