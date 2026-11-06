@@ -778,6 +778,24 @@ describe("buildCapacity — mothball / reactivate", () => {
     expect(sectorSet().mothballed).toBe(false);
   });
 
+  it("owner reactivate clears the loss counters and records the restart turn", async () => {
+    await wireMocks(sectorDoc({ mothballed: true }));
+    await buildCapacity(request({ action: "reactivate" }), { params });
+    expect(sectorSet()).toMatchObject({
+      mothballed: false,
+      pnlLossTurns: 0,
+      producerZeroSalesTurns: 0,
+      manualReactivatedTurn: CURRENT_TURN,
+    });
+  });
+
+  it("owner mothball does not write a restart marker", async () => {
+    await wireMocks(sectorDoc());
+    await buildCapacity(request({ action: "mothball" }), { params });
+    expect(sectorSet()).not.toHaveProperty("manualReactivatedTurn");
+    expect(sectorSet()).not.toHaveProperty("pnlLossTurns");
+  });
+
   it("rejects a no-op toggle", async () => {
     await wireMocks(sectorDoc({ mothballed: true }));
     const res = await buildCapacity(request({ action: "mothball" }), { params });

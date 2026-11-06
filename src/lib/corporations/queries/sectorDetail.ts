@@ -170,27 +170,11 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 
+import type { SiblingCorpProjection } from "./sectorDetailTypes";
+
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
 }
-
-/**
- * The slice of a rival corporation the market-position panel needs: enough to
- * name and colour it, plus the two fields that decide whether it is player-owned
- * or part of the NPP field.
- */
-type SiblingCorpProjection = Pick<
-  Corporation,
-  | "_id"
-  | "name"
-  | "sequentialId"
-  | "brandColor"
-  | "countryId"
-  | "liquidCurrencyCode"
-  | "ceoType"
-  | "caretakerCeo"
-  | "marketingStrength"
->;
 
 /**
  * GET /api/corporations/[id]/sectors/[sectorId]
@@ -1540,6 +1524,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           : [],
         regulatoryBurdenPp: mods.dominanceRegulatoryBurdenPp ?? 0,
         crisisMarginPenaltyPp: crisisMarginPenalty,
+        autopilotEnabled: corporation.autopilot != null,
         // C9: the same spread `buildCapacity` charges on top of the build cost.
         // Priced off 1 ₳ so the result is the RATE, which is all the quote needs
         // (the spread is strictly proportional to the construction cost).

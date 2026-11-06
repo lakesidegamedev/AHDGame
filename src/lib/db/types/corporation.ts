@@ -1511,6 +1511,12 @@ export interface CorporateSector {
    */
   pnlLossTurns?: number;
   /**
+   * Turn the OWNER last reactivated this sector by hand. Autopilot corporations
+   * will not auto-mothball it for MANUAL_RESTART_GRACE_TURNS afterwards
+   * (nppCorporationTuning). Written only by the player reactivate commands.
+   */
+  manualReactivatedTurn?: number;
+  /**
    * Player toggle (design-realization-legs §6): true = the unsold remainder of
    * storable outputs becomes sector inventory; absent/false = sell-all, the
    * unsold remainder evaporates (legacy behavior). CEO-set, default off.

@@ -1,3 +1,4 @@
+import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
@@ -328,18 +329,24 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     if (body.action === "mothball" || body.action === "reactivate" || body.action === "resize") {
       const mothballed = body.action === "mothball";
       const activeCapacityPercent = body.action === "resize" ? body.activePercent : 100;
+      const restartedByOwner = sector.mothballed === true && !mothballed;
       if (
         (sector.mothballed === true) === mothballed &&
         (sector.activeCapacityPercent ?? 100) === activeCapacityPercent
       ) {
         return errorResponse(400, "Sector already has these capacity settings.");
       }
-      const changed = await db
-        .collection<CorporateSector>("corporateSectors")
-        .updateOne(
-          { _id: sector._id, ...capacityMutationFilter(sector) },
-          { $set: { mothballed, activeCapacityPercent, updatedAt: now } }
-        );
+      const changed = await db.collection<CorporateSector>("corporateSectors").updateOne(
+        { _id: sector._id, ...capacityMutationFilter(sector) },
+        {
+          $set: {
+            mothballed,
+            activeCapacityPercent,
+            updatedAt: now,
+            ...(restartedByOwner ? ownerRestartFields(currentTurn) : {}),
+          },
+        }
+      );
       if (changed.matchedCount === 0) {
         return errorResponse(409, "Sector ownership or listing changed. Refresh and try again.");
       }
