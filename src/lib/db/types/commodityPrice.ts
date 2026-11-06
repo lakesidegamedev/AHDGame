@@ -69,6 +69,13 @@ export interface CommodityPrice {
    * player surface.
    */
   stateDeliveryLimitedSupply?: Record<string, number>;
+  /**
+   * Owner-level slice of the figure above: stateId -> corporationId -> share of
+   * that corporation's own output in the state that was wanted and could not be
+   * delivered. Only corporations with their own freight capacity there appear;
+   * everyone else reads the state figure.
+   */
+  stateOwnerDeliveryLimited?: Record<string, Record<string, number>>;
   /** Per-country aggregate prices: countryId -> price (computed with NATIONAL_COMMODITY_STABILIZER) */
   nationalPrices?: Record<string, number>;
   /** Per-country aggregate supply: countryId -> units/day (raw, before stabilizer) */

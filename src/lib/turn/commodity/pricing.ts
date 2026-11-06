@@ -95,6 +95,8 @@ export interface CommodityPricingContext {
   priceCurrentYear: number | null;
   freightSettlementActive: boolean;
   freightRampFraction: number;
+  /** Corporation ids behind each own-route identity, to persist owner-level delivery figures. */
+  ownRouteCorporationIds?: ReadonlyMap<string, readonly string[]>;
   freightSettlement: FreightSettlement | null;
   existingPriceMap: Map<string, CommodityPrice>;
   nudgeMap: Map<string, number>;
@@ -155,6 +157,7 @@ export function priceCommodity(
     priceCurrentYear,
     freightSettlementActive,
     freightRampFraction,
+    ownRouteCorporationIds,
     freightSettlement,
     existingPriceMap,
     nudgeMap,
@@ -504,6 +507,24 @@ export function priceCommodity(
       )
     : undefined;
 
+  // The state figure above covers every seller. Each route owner's own slice of
+  // it is persisted per corporation so a sector shows its owner's goods, not
+  // the whole state's. Only owners the sourcing pass measured appear.
+  const ownerDeliveryLimited = (() => {
+    if (!freightSettlementActive || !ownRouteCorporationIds) return undefined;
+    const byState = freightSettlement?.sourcing.ownerDeliveryLimitedFractionByState?.get(commodity);
+    if (!byState) return undefined;
+    const out: Record<string, Record<string, number>> = {};
+    for (const [stateId, byRoute] of byState) {
+      for (const [routeId, fraction] of byRoute) {
+        for (const corpId of ownRouteCorporationIds.get(routeId) ?? [routeId]) {
+          (out[stateId] ??= {})[corpId] = Math.round(fraction * 1000) / 1000;
+        }
+      }
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  })();
+
   const latentShortage = latentShortagePersistence(globalBal, demandTruncated.get(commodity));
 
   return {
@@ -525,6 +546,7 @@ export function priceCommodity(
             ...(inputAvailability ? { stateInputAvailability: inputAvailability } : {}),
             ...(placedSupply ? { statePlacedSupply: placedSupply } : {}),
             ...(deliveryLimitedSupply ? { stateDeliveryLimitedSupply: deliveryLimitedSupply } : {}),
+            ...(ownerDeliveryLimited ? { stateOwnerDeliveryLimited: ownerDeliveryLimited } : {}),
             nationalPrices,
             nationalSupply,
             nationalDemand,
