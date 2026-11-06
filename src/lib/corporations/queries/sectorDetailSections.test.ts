@@ -211,6 +211,35 @@ describe("pledged property sale affordability", () => {
 });
 
 describe("unavailable sector purchases", () => {
+  it("blocks a buyer whose site in that market runs a different strategy and names both", async () => {
+    const memory = createInMemoryDb();
+    const viewer = makeCorp({ liquidCapital: 1000 });
+    const sector = makeSector({
+      strategyId: "standard",
+      forSale: { priceAnchor: 100, listedAt: new Date(0), npvAnchor: 125 },
+    });
+    memory.seed("corporateSectors", [
+      { ...makeSector({ corporationId: viewer._id, strategyId: "standard" }) },
+    ]);
+    const args = {
+      sector,
+      viewerCorporation: viewer,
+      isCeo: false,
+      viewerCorpFxRate: 1,
+    };
+    expect(await buildSectorForSaleInfo(memory as unknown as Db, args)).toMatchObject({
+      eligible: true,
+      blockReason: null,
+    });
+    const mismatched = createInMemoryDb();
+    mismatched.seed("corporateSectors", [
+      { ...makeSector({ corporationId: viewer._id, strategyId: "other_strategy" }) },
+    ]);
+    const info = await buildSectorForSaleInfo(mismatched as unknown as Db, args);
+    expect(info).toMatchObject({ eligible: false, blockReason: "strategy_mismatch" });
+    expect(info?.blockDetail).toMatch(/Switch your existing site to/);
+  });
+
   it("rejects a merge into a buyer's protected construction property", async () => {
     const memory = createInMemoryDb();
     const viewer = makeCorp({ liquidCapital: 1000 });

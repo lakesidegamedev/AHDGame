@@ -615,11 +615,14 @@ export interface ForSaleInfo {
     | "invalid_price"
     | "insufficient_funds"
     | "merge_blocked"
+    | "strategy_mismatch"
     | "construction"
     | "not_ceo"
     | "actions_paused"
     | "state_controlled"
     | null;
+  /** Plain-words detail for the block, when the reason carries one */
+  blockDetail?: string | null;
 }
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────

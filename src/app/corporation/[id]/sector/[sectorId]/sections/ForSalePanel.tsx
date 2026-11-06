@@ -28,6 +28,8 @@ const BLOCK_REASON_TEXT: Record<NonNullable<ForSaleInfo["blockReason"]>, string>
   insufficient_funds: "Your corporation does not have enough liquid capital for this price.",
   merge_blocked:
     "You already run this sector here, and your site there has an unfinished secured construction loan or is mid-change, so the two cannot be merged yet.",
+  strategy_mismatch:
+    "Your site in this market runs a different strategy, so the two cannot be merged yet.",
   construction:
     "This site's construction loan is still being set up or settled, so it cannot be bought yet.",
   not_ceo: "Only the CEO of a corporation can buy listed sectors.",
@@ -198,7 +200,7 @@ export default function ForSalePanel({
         </div>
         <p className="mt-2 text-xs text-muted">
           {reason
-            ? BLOCK_REASON_TEXT[reason]
+            ? (forSaleInfo.blockDetail ?? BLOCK_REASON_TEXT[reason])
             : "This listing is not available to your corporation."}
         </p>
         {reason === "insufficient_funds" && (

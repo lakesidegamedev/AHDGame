@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash, InjectedCrash } from "@/lib/test-utils/faultyDb";
 import { buySecuredConstructionProperty, recoverConstructionSales } from "../constructionSale";
+import { foldSoldSiteIntoSurvivor } from "../constructionSaleMerge";
 import { listDefaultedConstructionCollateral } from "../constructionForeclosure";
 import { recoverConstructionServiceLeases } from "../constructionServiceLease";
 import type { CorporateSector } from "@/lib/db/types/corporation";
@@ -255,6 +256,49 @@ describe("buyer-funded secured property sale", () => {
       expect(
         (await w.db.collection("corporations").findOne({ _id: w.buyerId }))?.liquidCapital
       ).toBe(850_000);
+    });
+
+    it("merges when both sites run the same strategy", async () => {
+      const w = await withSurvivor({ strategyId: "rare_earth_mining" });
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { strategyId: "rare_earth_mining" } });
+      expect(await buySecuredConstructionProperty(w.input)).toMatchObject({
+        ok: true,
+        quote: { mergeIntoSectorId: String(w.survivorId) },
+      });
+      expect(await survivorOf(w)).toMatchObject({ revenue: 400, strategyId: "rare_earth_mining" });
+    });
+
+    it("refuses before any money moves when the two sites run different strategies", async () => {
+      const w = await withSurvivor({ strategyId: "standard" });
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { strategyId: "rare_earth_mining" } });
+      const result = await buySecuredConstructionProperty(w.input);
+      expect(result).toMatchObject({ ok: false });
+      expect((result as { error: string }).error).toMatch(/Switch your existing site to/);
+      expect(
+        (await w.db.collection("corporations").findOne({ _id: w.buyerId }))?.liquidCapital
+      ).toBe(1_000_000);
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).not.toBeNull();
+      expect(await survivorOf(w)).toMatchObject({ revenue: 100, workers: 10 });
+    });
+
+    it("the fold itself refuses a strategy mismatch without touching either site", async () => {
+      const w = await withSurvivor({ strategyId: "standard" });
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { strategyId: "rare_earth_mining" } });
+      const folded = await foldSoldSiteIntoSurvivor(w.db, {
+        donorId: w.sectorId,
+        survivorId: w.survivorId,
+        buyerId: w.buyerId,
+        saleKey: "k",
+      });
+      expect(folded).toMatchObject({ ok: false });
+      expect(await survivorOf(w)).toMatchObject({ revenue: 100, workers: 10 });
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).not.toBeNull();
     });
 
     it("refuses before any money moves when the buyer's site is mid-change", async () => {

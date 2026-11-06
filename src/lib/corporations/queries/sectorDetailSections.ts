@@ -4,6 +4,7 @@ export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from ".
 import { IDLE_RETIRE_GRACE_TURNS } from "@/lib/turn/corporation/rules/idleCapacityRetirement";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
+import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
 import { securedSaleMergeRefusal } from "@/lib/banking/constructionSaleMerge";
 /**
  * Payload-section builders for the sector detail query: apportioned taxes,
@@ -484,7 +485,18 @@ export async function buildSectorForSaleInfo(
       stateId: sector.stateId,
       ...getCorporateSectorLaneQuery(sector),
     },
-    { projection: { _id: 1, constructionFinancing: 1, constructionPropertyTransition: 1 } }
+    {
+      projection: {
+        _id: 1,
+        constructionFinancing: 1,
+        constructionPropertyTransition: 1,
+        corporationId: 1,
+        sectorType: 1,
+        industryModel: 1,
+        mediaDiscriminator: 1,
+        strategyId: 1,
+      },
+    }
   );
   const buyerCurrency = resolveCorpLiquidCurrencyCode(viewerCorporation);
   const feeLocal =
@@ -547,6 +559,8 @@ export async function buildSectorForSaleInfo(
           ),
         }
       : null;
+  // A merge keeps the buyer's strategy, so a different one is refused up front.
+  const strategyMismatch = conflict ? sectorMergeStrategyRefusal(sector, conflict) : null;
   const constructionBlocked =
     !!sector.constructionPropertyTransition ||
     (hasProtectedConstructionProperty(sector) &&
@@ -560,11 +574,13 @@ export async function buildSectorForSaleInfo(
     ? "invalid_price"
     : !hasFunds
       ? "insufficient_funds"
-      : mergeBlocked
-        ? "merge_blocked"
-        : constructionBlocked
-          ? "construction"
-          : null;
+      : strategyMismatch
+        ? "strategy_mismatch"
+        : mergeBlocked
+          ? "merge_blocked"
+          : constructionBlocked
+            ? "construction"
+            : null;
   return {
     viewerCorporationId: viewerCorporation._id.toString(),
     viewerLiquidCurrencyCode: resolveCorpLiquidCurrencyCode(viewerCorporation),
@@ -572,6 +588,7 @@ export async function buildSectorForSaleInfo(
     viewerCapitalAnchor,
     eligible: blockReason === null,
     blockReason: blockReason as SectorPurchaseBlockReason | null,
+    blockDetail: blockReason === "strategy_mismatch" ? strategyMismatch : null,
     conflict: !!conflict,
     hasFunds,
     securedLoan,
@@ -582,6 +599,7 @@ export type SectorPurchaseBlockReason =
   | "invalid_price"
   | "insufficient_funds"
   | "merge_blocked"
+  | "strategy_mismatch"
   | "construction"
   | "not_ceo"
   | "actions_paused"

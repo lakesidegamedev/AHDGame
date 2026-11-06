@@ -5,6 +5,7 @@ import {
   mergeSectorOperatingFields,
   mergeSectorPlantFields,
 } from "@/lib/corporations/sectorTransferCapex";
+import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
 import { constructionBorrowerTransferRefusal } from "./rules/constructionBorrowerTransfer";
 import { hasProtectedConstructionClaim } from "./rules/constructionProperty";
 import { mergeSurvivorConstructionFilter } from "./constructionBorrowerTransfer";
@@ -58,7 +59,10 @@ export async function foldSoldSiteIntoSurvivor(
     if (!survivor || !survivor.corporationId.equals(buyerId))
       return { ok: false, error: "The buyer's site changed before the purchase was merged" };
     if (survivor.securedSaleFold !== saleKey) {
-      const refusal = securedSaleMergeRefusal(survivor);
+      // The sale path refuses a strategy mismatch before any money moves, so
+      // this only fires if a strategy changed in between. Fold nothing then.
+      const refusal =
+        sectorMergeStrategyRefusal(donor, survivor) ?? securedSaleMergeRefusal(survivor);
       if (refusal) return { ok: false, error: refusal };
       // The released claim and loan are gone for the buyer's purposes: strip
       // the references so queued capacity folds in as plain paid construction.

@@ -19,6 +19,7 @@ import {
   releaseConstructionServiceLease,
 } from "./constructionServiceLease";
 import { releaseCompletedConstructionFunding } from "./constructionFundingLease";
+import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
 import { foldSoldSiteIntoSurvivor, securedSaleMergeRefusal } from "./constructionSaleMerge";
 import { ensureFund } from "./insurance";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
@@ -144,7 +145,9 @@ export async function buySecuredConstructionProperty(input: {
     });
     // One site per market: a buyer who already runs this market takes the
     // purchased site into it, once the price has settled with the lender.
-    const mergeRefusal = collision ? securedSaleMergeRefusal(collision) : null;
+    const mergeRefusal = collision
+      ? (sectorMergeStrategyRefusal(sector, collision) ?? securedSaleMergeRefusal(collision))
+      : null;
     if (mergeRefusal) return refuse(mergeRefusal);
     const buyerCurrency = resolveCorpLiquidCurrencyCode(buyer);
     if (!buyerCurrency) return refuse("The buyer currency is unavailable");
