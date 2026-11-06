@@ -432,11 +432,10 @@ export function advanceProducerEconomy(input: {
     maxStep?: number;
     maxMultiplier?: number;
   };
-  /**
-   * Buyer tie-break for automatic asks (quoteProducer, gameConfig.producerAskBuyerTieStage):
-   * a near-equal profit never prices a seller just above the buyers below it. Absent = off.
-   */
+  /** Automatic ask tie-break (quoteProducer buyerTieBreak), producerAskBuyerTieStage >= 1. */
   askBuyerTieBreak?: boolean;
+  /** Automatic asks assume dearer competitors match (quoteProducer competitorsMatch), stage >= 2. */
+  askCompetitorsMatch?: boolean;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -1140,6 +1139,7 @@ export function advanceProducerEconomy(input: {
         ),
         competitors: [],
         ...(input.askBuyerTieBreak ? { buyerTieBreak: true } : {}),
+        ...(input.askCompetitorsMatch ? { competitorsMatch: true } : {}),
       };
       const quote = quoteProducer({
         ...quoteInput,
