@@ -1,3 +1,4 @@
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import { describe, expect, it } from "vitest";
 import {
   PLANTS_SORT_OPTIONS,
@@ -155,4 +156,22 @@ describe("sectorDisplayRevenue (ticket #1122)", () => {
     const sorted = sortSectors(sectors, "revenue", "desc");
     expect(sorted.map((s) => s.stateName)).toEqual(["Texas", "Ohio"]);
   });
+});
+
+it("sorts revenue and profit on the same internal-inclusive statement the row shows", () => {
+  const supplier = sector({
+    stateName: "Supplier",
+    profit: -100,
+    financialRevenue: 0,
+    siteStatement: siteStatement({ revenue: 0, totalCost: 100, income: 300 }),
+  });
+  const buyer = sector({
+    stateName: "Buyer",
+    profit: 500,
+    financialRevenue: 1000,
+    siteStatement: siteStatement({ revenue: 1000, totalCost: 700, charge: 300 }),
+  });
+  expect(sectorDisplayRevenue(supplier)).toBe(300);
+  expect(sortSectors([buyer, supplier], "profit", "desc")[0]).toBe(supplier);
+  expect(sortSectors([buyer, supplier], "revenue", "desc")[0]).toBe(buyer);
 });

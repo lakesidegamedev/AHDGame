@@ -1,5 +1,11 @@
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import { describe, expect, it } from "vitest";
-import { buildAttentionItems, type AttentionInput } from "./overviewModel";
+import {
+  buildAttentionItems,
+  sectorRevenue,
+  sectorMargin,
+  type AttentionInput,
+} from "./overviewModel";
 import type { BondInfo, SectorDetail } from "./CorporationPageTypes";
 
 function sector(over: Partial<SectorDetail>): SectorDetail {
@@ -83,4 +89,21 @@ describe("buildAttentionItems", () => {
     expect(keys({ leverageRating: "CCC", openVoteCount: 2 })).toEqual(["leverage", "votes"]);
     expect(keys({ leverageRating: "BB" })).toEqual([]);
   });
+});
+
+it("does not flag a supplying site as losing from its outside-sales contribution alone", () => {
+  const s = sector({
+    profit: -100,
+    financialRevenue: 0,
+    siteStatement: siteStatement({ revenue: 0, totalCost: 100, income: 200 }),
+  });
+  expect(sectorRevenue(s)).toBe(200);
+  expect(sectorMargin(s)).toBe(50);
+  expect(keys({ sectors: [s] })).not.toContain("losing-sectors");
+  const free = sector({
+    ...s,
+    siteStatement: siteStatement({ revenue: 0, totalCost: 100, ownSiteValue: 200 }),
+  });
+  expect(sectorMargin(free)).toBeNull();
+  expect(keys({ sectors: [free] })).toContain("losing-sectors");
 });

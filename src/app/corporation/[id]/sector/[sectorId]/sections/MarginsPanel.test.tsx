@@ -2,6 +2,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import MarginsPanel from "./MarginsPanel";
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { Margins, PlantsData } from "../types";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
@@ -130,7 +131,7 @@ describe("sector margin explanation", () => {
   });
 });
 
-it("uses the same free internal supply margin as the sector list, without treating it as cash", () => {
+it("does not inflate a legacy margin with unbooked own-site supply value", () => {
   render(
     <MarginsPanel
       margins={margins}
@@ -150,10 +151,9 @@ it("uses the same free internal supply margin as the sector list, without treati
       }}
     />
   );
-  expect(screen.getAllByText("64.6%").length).toBe(2);
-  expect(screen.getByText("Own-site supply value (not cash revenue)")).toBeTruthy();
-  expect(screen.getByText("-35.4%")).toBeTruthy();
-  expect(screen.queryByText(/No sales revenue was recorded/)).toBeNull();
+  expect(screen.queryByText("64.6%")).toBeNull();
+  expect(screen.queryByText("Own-site supply value (not cash revenue)")).toBeNull();
+  expect(screen.getByText(/No sales revenue was recorded/)).toBeTruthy();
 });
 
 it("itemizes priced internal transfers without counting a free-transfer memo twice", () => {
@@ -179,6 +179,38 @@ it("itemizes priced internal transfers without counting a free-transfer memo twi
   );
   expect(screen.getAllByText("20.0%").length).toBe(2);
   expect(screen.getByText("Own-site transfer income (management)")).toBeTruthy();
-  expect(screen.getByText("Own-site supply charges")).toBeTruthy();
+  expect(screen.getByText("Internal supply charges")).toBeTruthy();
   expect(screen.getByText("-20.0%")).toBeTruthy();
+});
+
+it("uses the settled statement for margin and revenue shares while preserving accounting credits", () => {
+  render(
+    <MarginsPanel
+      margins={margins}
+      defaultExpanded
+      pnl={{
+        ...pnl,
+        statement: siteStatement({
+          revenue: 100,
+          income: 50,
+          totalCost: 140,
+          inventoryCredit: 10,
+          supportCredit: 10,
+        }),
+      }}
+    />
+  );
+  expect(screen.getAllByText("20.0%")).toHaveLength(2);
+  expect(within(screen.getByText("Sales revenue").parentElement!).getByText("66.7%")).toBeTruthy();
+  expect(
+    within(screen.getByText("Own-site transfer income (management)").parentElement!).getByText(
+      "33.3%"
+    )
+  ).toBeTruthy();
+  expect(
+    within(screen.getByText("Output added to stock at cost").parentElement!).getByText("+6.7%")
+  ).toBeTruthy();
+  expect(
+    within(screen.getByText("Transition support").parentElement!).getByText("+6.7%")
+  ).toBeTruthy();
 });

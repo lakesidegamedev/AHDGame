@@ -13,16 +13,14 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { BillProvisionsSection } from "@/components/legislature/BillProvisionsSection";
-import { BillProposalChip } from "@/components/bills/BillProposalChip";
 import type { BillDetail } from "./types";
 import { chamberLabel } from "./billHelpers";
 import { otherChamber } from "@/lib/billLifecycleHelpers";
-import { StatusBadge } from "./components/StatusBadge";
+import { BillHero } from "./components/BillHero";
 import { VoteBar } from "./components/VoteBar";
 import { VoteShiftPreview } from "@/components/bills/VoteShiftPreview";
 import { VoteTallyTable } from "./components/VoteTallyTable";
 import { VoteListTable } from "./components/VoteListTable";
-import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { TimelineStepper } from "./components/TimelineStepper";
 import { OverrideChamberBar } from "./components/OverrideChamberBar";
 import { DeadlineCountdown } from "./components/DeadlineCountdown";
@@ -219,13 +217,23 @@ function BillDetailContent() {
           against: bill.otherChamberVotesAgainst,
         };
   const heroEligible = chamberSeatCount(bill.currentChamber);
+  const heroDeadline =
+    bill.status === "veto_override"
+      ? bill.overrideVotingEndsAt
+      : bill.currentChamber === bill.originChamber
+        ? isActive || isConcurrent || isJpOverride || isCabinetReview
+          ? bill.votingEndsAt
+          : null
+        : isActiveOther || isConcurrent
+          ? bill.otherChamberVotingEndsAt
+          : null;
   const heroCast = heroVotes.for + heroVotes.abstain + heroVotes.against;
   const showSeatingHero =
     heroEligible > 0 && (isActive || isActiveOther || isConcurrent || isJpOverride || heroCast > 0);
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-4xl min-w-0 px-6 py-8 space-y-6">
+      <main className="mx-auto max-w-7xl min-w-0 px-4 py-6 sm:px-6 sm:py-8 space-y-6">
         {/* Back nav */}
         <Link
           href={backHref}
@@ -234,145 +242,18 @@ function BillDetailContent() {
           {backLabel}
         </Link>
 
-        {/* Header */}
-        <div className="rounded-xl border border-card-border bg-card shadow-panel p-6 space-y-4">
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={bill.status} />
-                {filibustered && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-error/40 bg-error/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-error">
-                    ⚑ Filibustered
-                  </span>
-                )}
-                <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] text-muted capitalize">
-                  {chamberLabel(bill.originChamber)} Bill
-                </span>
-                <BillProposalChip adminProposed={bill.adminProposed} category={bill.category} />
-                {bill.category && (
-                  <span className="text-[10px] text-muted/60 capitalize">{bill.category}</span>
-                )}
-                {bill.provisions?.length ? (
-                  <span className="text-[10px] text-cyan-400/90">
-                    {bill.provisions.map((p, i) => (
-                      <span key={i}>
-                        {i > 0 && "; "}
-                        {p.legislationTypeName}
-                      </span>
-                    ))}
-                  </span>
-                ) : bill.legislationTypeName ? (
-                  <span className="text-[10px] text-cyan-400/90">{bill.legislationTypeName}</span>
-                ) : null}
-              </div>
-              <h1 className="text-3xl font-semibold leading-tight tracking-tight">{bill.title}</h1>
-            </div>
-          </div>
-
-          <p className="whitespace-pre-wrap break-words text-sm text-muted leading-relaxed">
-            {bill.summary}
-          </p>
-
-          {bill.vetoMessage && (
-            <div className="rounded-lg border border-error/40 bg-error/5 px-4 py-3">
-              <h2 className="text-sm font-semibold text-error">President&apos;s veto message</h2>
-              <p className="mt-1 text-sm italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
-            </div>
-          )}
-
-          {/* Sponsor */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted pt-1 border-t border-card-border/40">
-            <span>
-              Sponsored by{" "}
-              {bill.sponsorId ? (
-                <Link
-                  href={`/character/${bill.sponsorSequentialId ?? bill.sponsorId}`}
-                  className="font-medium hover:text-primary transition-colors"
-                  style={{ color: bill.sponsorPartyColor }}
-                >
-                  {bill.sponsorName}
-                </Link>
-              ) : (
-                <span className="font-medium">{bill.sponsorName}</span>
-              )}
-              {bill.sponsorPartyName && (
-                <span className="ml-1" style={{ color: bill.sponsorPartyColor }}>
-                  ({bill.sponsorPartyName})
-                </span>
-              )}
-            </span>
-            <span>
-              Introduced <GameMonthTime value={bill.proposedAt} />
-            </span>
-          </div>
-
-          {/* Nat/priv supermajority notice */}
-          {supermajority && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-              This bill transfers state ownership — it requires a{" "}
-              <span className="font-semibold">two-thirds supermajority</span> of votes cast in each
-              chamber to pass.
-            </div>
-          )}
-
-          {/* Provisions — Proposed vs Current */}
-          <BillProvisionsSection provisions={bill.provisions} billCountry={resolvedCountryId} />
-
-          {/* Co-sponsors */}
-          {(bill.coSponsors?.length ?? 0) > 0 && (
-            <div className="text-xs text-muted">
-              <span className="font-medium">Co-sponsors: </span>
-              {(bill.coSponsors ?? []).map((cs, i) => (
-                <span key={cs.characterId}>
-                  <Link
-                    href={`/character/${cs.sequentialId ?? cs.characterId}`}
-                    className="hover:text-primary transition-colors"
-                  >
-                    {cs.characterName}
-                  </Link>
-                  {i < (bill.coSponsors?.length ?? 0) - 1 && ", "}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {bill.canCosponsor && (
-              <button
-                onClick={() => handleAction("cosponsor")}
-                className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
-              >
-                + Co-Sponsor
-              </button>
-            )}
-            {bill.canUncosponsor && (
-              <button
-                type="button"
-                onClick={() => handleAction("uncosponsor")}
-                className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
-              >
-                Remove co-sponsorship
-              </button>
-            )}
-            {bill.canWithdraw && (
-              <button
-                onClick={() => handleAction("withdraw")}
-                className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
-              >
-                Withdraw bill
-              </button>
-            )}
-            {bill.canFilibuster && (
-              <button
-                onClick={() => handleAction("filibuster")}
-                className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
-              >
-                Invoke filibuster
-              </button>
-            )}
-          </div>
-        </div>
+        <BillHero
+          bill={bill}
+          votes={heroVotes}
+          eligible={heroEligible}
+          liveDeadline={heroDeadline}
+          filibustered={filibustered}
+          supermajority={supermajority}
+          myVote={
+            bill.currentChamber === bill.originChamber ? bill.myVote : bill.myOtherChamberVote
+          }
+          onAction={(a) => void handleAction(a)}
+        />
 
         {/* Messages */}
         {message && (
@@ -386,7 +267,7 @@ function BillDetailContent() {
           </div>
         )}
 
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0 space-y-6">
             {/* A veto opens a fresh simultaneous ballot in both chambers. Keep
                 this in the primary vote position so the completed passage
@@ -520,61 +401,70 @@ function BillDetailContent() {
                         </div>
                       </div>
                     )}
-                  {showSeatingHero && (
-                    <VoteSeatingChart
-                      style={legProcess.seatingStyle}
-                      votes={heroVotes}
-                      eligible={heroEligible}
-                      width={460}
-                      requiredPct={heroRequiredPct}
-                      requiredPctOfCast={heroRequiredPctOfCast}
-                    />
-                  )}
-                  <DispatchVoteBar votes={heroVotes} eligible={heroEligible} height={10} />
-                  <div className="flex justify-center">
-                    <VoteLegend votes={heroVotes} eligible={heroEligible} />
-                  </div>
-                  {bill.myWhippedFrom && (
-                    <WhippedBadge
-                      originalVote={bill.myWhippedFrom}
-                      onRevert={async (v) => {
-                        if (v === "unvoted") return;
-                        await handleVote(false, v as "for" | "against" | "abstain");
-                      }}
-                    />
-                  )}
-                  {bill.canVoteOrigin && (
-                    <div className="space-y-2 border-t border-card-border/60 pt-3">
-                      <div className="text-center text-body-sm font-medium text-muted">
-                        Cast your vote
+                  <div
+                    className={`grid min-w-0 gap-4 ${showSeatingHero ? "xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] xl:items-center" : ""}`}
+                  >
+                    {showSeatingHero && (
+                      <VoteSeatingChart
+                        style={legProcess.seatingStyle}
+                        votes={heroVotes}
+                        eligible={heroEligible}
+                        width={460}
+                        requiredPct={heroRequiredPct}
+                        requiredPctOfCast={heroRequiredPctOfCast}
+                      />
+                    )}
+                    <div className="min-w-0 space-y-4">
+                      <DispatchVoteBar votes={heroVotes} eligible={heroEligible} height={10} />
+                      <div className="flex justify-center">
+                        <VoteLegend votes={heroVotes} eligible={heroEligible} />
                       </div>
-                      <VoteShiftPreview preview={bill.voteShiftPreview} currentVote={bill.myVote} />
-                      <div className="flex gap-2">
-                        {(isCabinetReview
-                          ? (["for", "against"] as const)
-                          : (["for", "against", "abstain"] as const)
-                        ).map((v) => (
-                          <button
-                            key={v}
-                            type="button"
-                            disabled={voting}
-                            onClick={() => handleVote(false, v)}
-                            className={`flex-1 rounded-lg border py-2.5 text-sm font-medium capitalize transition-colors disabled:opacity-50 ${
-                              bill.myVote === v
-                                ? v === "for"
-                                  ? "border-success/50 bg-success/15 text-success"
-                                  : v === "against"
-                                    ? "border-error/50 bg-error/15 text-error"
-                                    : "border-card-border bg-card-elevated text-foreground"
-                                : "border-card-border bg-card text-muted hover:border-foreground/20 hover:text-foreground"
-                            }`}
-                          >
-                            {v === "for" ? "Aye" : v === "against" ? "No" : "Abstain"}
-                          </button>
-                        ))}
-                      </div>
+                      {bill.myWhippedFrom && (
+                        <WhippedBadge
+                          originalVote={bill.myWhippedFrom}
+                          onRevert={async (v) => {
+                            if (v === "unvoted") return;
+                            await handleVote(false, v as "for" | "against" | "abstain");
+                          }}
+                        />
+                      )}
+                      {bill.canVoteOrigin && (
+                        <div className="space-y-2 border-t border-card-border/60 pt-3">
+                          <div className="text-center text-body-sm font-medium text-muted">
+                            Cast your vote
+                          </div>
+                          <VoteShiftPreview
+                            preview={bill.voteShiftPreview}
+                            currentVote={bill.myVote}
+                          />
+                          <div className="flex gap-2">
+                            {(isCabinetReview
+                              ? (["for", "against"] as const)
+                              : (["for", "against", "abstain"] as const)
+                            ).map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                disabled={voting}
+                                onClick={() => handleVote(false, v)}
+                                className={`flex-1 rounded-lg border py-2.5 text-sm font-medium capitalize transition-colors disabled:opacity-50 ${
+                                  bill.myVote === v
+                                    ? v === "for"
+                                      ? "border-success/50 bg-success/15 text-success"
+                                      : v === "against"
+                                        ? "border-error/50 bg-error/15 text-error"
+                                        : "border-card-border bg-card-elevated text-foreground"
+                                    : "border-card-border bg-card text-muted hover:border-foreground/20 hover:text-foreground"
+                                }`}
+                              >
+                                {v === "for" ? "Aye" : v === "against" ? "No" : "Abstain"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
@@ -611,6 +501,24 @@ function BillDetailContent() {
                   />
                 </div>
               )}
+
+            {/* Provisions: what the bill would change, proposed vs current */}
+            {(bill.provisions?.length ?? 0) > 0 && (
+              <div className="min-w-0 rounded-xl border border-card-border bg-card p-5">
+                <BillProvisionsSection
+                  provisions={bill.provisions}
+                  billCountry={resolvedCountryId}
+                />
+              </div>
+            )}
+
+            {/* Discussions */}
+            {id && (
+              <BillDiscussionPanel
+                apiBase={`/api/congress/bills/${id}`}
+                chamberLabel={legislature.name}
+              />
+            )}
 
             {/* Vote by Party */}
             {bill.status !== "veto_override" &&
@@ -665,14 +573,6 @@ function BillDetailContent() {
                 </div>
               )}
 
-            {/* Discussions */}
-            {id && (
-              <BillDiscussionPanel
-                apiBase={`/api/congress/bills/${id}`}
-                chamberLabel={legislature.name}
-              />
-            )}
-
             {/* Member Vote History — searchable, filterable by party / Aye-No-Abstain */}
             {id &&
               bill.status !== "veto_override" &&
@@ -726,12 +626,16 @@ function BillDetailContent() {
 
             {/* Full text */}
             {bill.fullText && (
-              <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-                <h3 className="text-lg font-semibold">Full text</h3>
-                <pre className="text-xs text-muted whitespace-pre-wrap leading-relaxed font-sans">
+              <details className="group rounded-xl border border-card-border bg-card p-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+                  <h3 className="text-lg font-semibold">Full text</h3>
+                  <span className="text-xs text-muted group-open:hidden">Show</span>
+                  <span className="hidden text-xs text-muted group-open:inline">Hide</span>
+                </summary>
+                <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted">
                   {bill.fullText}
                 </pre>
-              </div>
+              </details>
             )}
 
             {/* Override failed panel — US only */}
@@ -789,6 +693,26 @@ function BillDetailContent() {
           <div className="min-w-0 space-y-4">
             {/* Progress timeline */}
             <TimelineStepper bill={bill} />
+
+            {(bill.coSponsors?.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
+                <h3 className="text-lg font-semibold">
+                  Co-sponsors{" "}
+                  <span className="text-sm font-normal text-muted">{bill.coSponsors?.length}</span>
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {(bill.coSponsors ?? []).map((cs) => (
+                    <Link
+                      key={cs.characterId}
+                      href={`/character/${cs.sequentialId ?? cs.characterId}`}
+                      className="rounded-full border border-card-border bg-background px-2.5 py-1 text-xs text-foreground/90 hover:border-primary/50 hover:text-primary transition-colors"
+                    >
+                      {cs.characterName}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* How it becomes law — country-specific procedure */}
             {legProcess.quirks.length > 0 && (

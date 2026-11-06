@@ -1,5 +1,8 @@
 "use client";
 
+import { consolidateSiteStatements } from "@/lib/corporations/rules/siteStatement";
+import { sectorDisplayProfit } from "./sectorSortUtils";
+
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -108,7 +111,7 @@ type SectorSortKey = "revenue" | "margin" | "profit" | "share" | "workers";
 const SORT_VALUE: Record<SectorSortKey, (s: SectorDetail) => number> = {
   revenue: (s) => sectorRevenue(s) ?? -Infinity,
   margin: (s) => sectorMargin(s) ?? -Infinity,
-  profit: (s) => s.profit ?? -Infinity,
+  profit: (s) => sectorDisplayProfit(s),
   share: (s) => s.marketSharePercent ?? -Infinity,
   workers: (s) => s.workers ?? -Infinity,
 };
@@ -159,11 +162,17 @@ function SectorTable({
   const totals = sectors.reduce(
     (acc, s) => ({
       revenue: acc.revenue + (sectorRevenue(s) ?? 0),
-      profit: acc.profit + (s.profit ?? 0),
+      profit: acc.profit + sectorDisplayProfit(s),
       workers: acc.workers + (s.workers ?? 0),
     }),
     { revenue: 0, profit: 0, workers: 0 }
   );
+  const statements = sectors.flatMap((s) => (s.siteStatement ? [s.siteStatement] : []));
+  if (statements.length === sectors.length && statements.length > 0) {
+    const consolidated = consolidateSiteStatements(statements);
+    totals.revenue = consolidated.revenue;
+    totals.profit = consolidated.profit;
+  }
   const est = (text: string) => (fogged ? `~${text}` : text);
   const maxRevenue = Math.max(0, ...sectors.map((s) => sectorRevenue(s) ?? 0));
 
@@ -250,7 +259,7 @@ function SectorTable({
                   <tr key={s._id} className="even:bg-card-border/[0.07] hover:bg-card-elevated/40">
                     <Td
                       className={`border-l-2 ${
-                        typeof s.profit === "number" && s.profit < 0
+                        typeof s.profit === "number" && sectorDisplayProfit(s) < 0
                           ? "border-l-error/70"
                           : "border-l-transparent"
                       }`}
@@ -302,8 +311,10 @@ function SectorTable({
                         {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
                       </span>
                     </Td>
-                    <Td align="right" className={signTone(s.profit)}>
-                      {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
+                    <Td align="right" className={signTone(sectorDisplayProfit(s))}>
+                      {typeof s.profit === "number"
+                        ? est(fmtSigned(scale(sectorDisplayProfit(s))))
+                        : "n/a"}
                     </Td>
                     <Td align="right" className="text-muted">
                       {typeof s.marketSharePercent === "number"
@@ -352,7 +363,12 @@ function SectorTable({
                 <tr className="border-t-2 border-card-border bg-card-border/15 font-semibold">
                   <Td className="text-muted">Total</Td>
                   <Td className="text-muted">{sectors.length} sectors</Td>
-                  <Td align="right">{est(fmt(scale(totals.revenue)))}</Td>
+                  <Td
+                    align="right"
+                    title="Company total excludes income and charges between its own sites."
+                  >
+                    {est(fmt(scale(totals.revenue)))}
+                  </Td>
                   <Td align="right" className={signTone(totals.revenue ? totals.profit : null)}>
                     {totals.revenue > 0
                       ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}%`

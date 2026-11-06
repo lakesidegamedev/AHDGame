@@ -139,10 +139,11 @@ export function fundedReceiptOf(
     | "unsoldProductionCost"
     | "internalSupplyIncome"
     | "internalSupplyCharge"
-  >,
+  > & { turn?: number },
   transitionSupport: number
 ): FundedReceipt {
   return {
+    ...(r.turn != null ? { turn: r.turn } : {}),
     revenue: r.revenue,
     profit: r.profit,
     producedUnits: r.producedUnits,
@@ -819,6 +820,7 @@ export async function runFundedProducerTurn(
           }
         : {}),
       ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
+      ...((input.env.captiveDeliveryStage ?? 0) >= 3 ? { captiveMarketValue: true } : {}),
       ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
         ? {
             shortageAsk: {

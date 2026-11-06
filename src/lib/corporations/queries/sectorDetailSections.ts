@@ -136,8 +136,10 @@ import {
 } from "@/lib/market/capital";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
-import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
-import { freeTransferMemo } from "@/lib/corporations/rules/internalSupplyView";
+import {
+  plantAccountTotals,
+  type PlantAccountInput,
+} from "@/lib/corporations/rules/plantAccountTotals";
 import {
   fundedSectorProfit,
   sectorMaintenanceAndProfit,
@@ -1356,49 +1358,7 @@ export function buildSectorPlantsSection(args: {
   retoolHint?: RetoolHint | null;
   workers: number;
   /** ₳/day, all on the same basis as `sector.revenue` normalized to ₳. */
-  money: {
-    realizedRevenueAnchor: number;
-    nameplateRevenueAnchor?: number;
-    /** Operating cost NET of labour, as the engine bills it. */
-    maintenanceNetAnchor: number;
-    labourAnchor: number;
-    growthCostAnchor: number;
-    profitAnchor: number;
-    /** Physical input bill computed from the demand rows at market prices. */
-    inputsAnchor: number;
-    internalSupplyIncomeAnchor?: number;
-    internalSupplyChargeAnchor?: number;
-    freightCostAnchor?: number;
-    freightIncomeAnchor?: number;
-    /**
-     * Compliance a funded producer turn booked, in ₳. Funded rows carry no
-     * full engine P&L, so without it the line is re-derived from the share.
-     */
-    fundedComplianceAnchor?: number | null;
-    /**
-     * Ticket 1122: the lines the turn ACTUALLY booked, in ₳. When present every
-     * money figure below is read straight off them and nothing is
-     * reconstructed. Absent on a sector that has not run a plants turn since
-     * the field shipped, which falls back to the margin inversion exactly as
-     * before. See `plantsPnlBasis.ts` for why the inversion is not enough.
-     */
-    enginePnl?: {
-      revenue: number;
-      inputs: number;
-      labour: number;
-      upkeep: number;
-      compliance: number;
-      otherOpex: number;
-      financialLegs: number;
-      internalSupplyDiscountAnchor?: number;
-      inventoryCarry: number;
-      policyCredit: number;
-      policyPp: number;
-      operatingCost: number;
-      totalCost: number;
-      profit: number;
-    } | null;
-  };
+  money: PlantAccountInput;
   /**
    * The modifier stack behind `pnl.policyAnchor`, already in money. Empty when
    * there is no stack to explain. Built by `buildPolicyStackRows` from the same
@@ -1731,16 +1691,37 @@ export function buildSectorPlantsSection(args: {
   const engine = money.enginePnl ?? null;
   const inputsAnchor = engine ? engine.inputs : nonNeg(money.inputsAnchor);
   const internalSupplyDiscountAnchor = engine?.internalSupplyDiscountAnchor ?? 0;
-  const otherOperatingAnchor = engine
-    ? // Financial legs (disaster losses) and inventory carry have no line of
-      // their own in the cost chain, so they sit here, exactly as the residual
-      // used to carry them.
-      engine.otherOpex + engine.financialLegs + engine.inventoryCarry - internalSupplyDiscountAnchor
-    : money.maintenanceNetAnchor -
+  const otherOperatingAnchor = money.statement
+    ? money.statement.externalCost -
+      (money.freightCostAnchor ?? 0) -
+      inputsAnchor -
+      (engine ? engine.labour : nonNeg(money.labourAnchor)) -
       upkeepAnchor -
       complianceAnchor -
-      inputsAnchor -
-      internalSupplyChargeAnchor;
+      (engine
+        ? nonNeg(
+            engine.totalCost -
+              engine.operatingCost -
+              engine.upkeep -
+              engine.compliance -
+              engine.inventoryCarry
+          )
+        : nonNeg(money.growthCostAnchor)) +
+      (engine?.policyCredit ?? 0) -
+      internalSupplyDiscountAnchor
+    : engine
+      ? // Financial legs (disaster losses) and inventory carry have no line of
+        // their own in the cost chain, so they sit here, exactly as the residual
+        // used to carry them.
+        engine.otherOpex +
+        engine.financialLegs +
+        engine.inventoryCarry -
+        internalSupplyDiscountAnchor
+      : money.maintenanceNetAnchor -
+        upkeepAnchor -
+        complianceAnchor -
+        inputsAnchor -
+        internalSupplyChargeAnchor;
   // The whole modifier stack as one signed line: positive is a credit that
   // lowers cost. Rendered as its own row with a drilldown, so a player can see
   // their subsidy or a live crisis as a number in the same units as the wage
@@ -1788,51 +1769,23 @@ export function buildSectorPlantsSection(args: {
   // A negative total would be a sector paid more to run than it spends, and the
   // engine can say so; the fallback keeps the floor because an INVERTED total
   // can go negative for reasons that are artefacts of the inversion.
-  const engineGrowthAnchor = engine
-    ? engine.totalCost -
-      engine.operatingCost -
-      engine.upkeep -
-      engine.compliance -
-      engine.inventoryCarry
-    : 0;
-  const freightCostAnchor = money.freightCostAnchor ?? 0;
-  const freightIncomeAnchor = money.freightIncomeAnchor ?? 0;
-  // One basis for revenue, cost and profit (issue 5385, ticket 1763): the
-  // profit counts income and charges between the company's own sites, so the
-  // revenue and the bill do too. The fallback path's figures already carry
-  // them (`internalTransferAccount`); the engine's own lines do not.
-  const internalSupplyIncomeAnchor = nonNeg(money.internalSupplyIncomeAnchor ?? 0);
-  const operatingCostAnchor =
-    (engine
-      ? engine.totalCost - engineGrowthAnchor + internalSupplyChargeAnchor
-      : nonNeg(money.maintenanceNetAnchor + money.labourAnchor)) + freightCostAnchor;
-  const totalCostAnchor = engine
-    ? engine.totalCost + internalSupplyChargeAnchor + freightCostAnchor
-    : operatingCostAnchor + nonNeg(money.growthCostAnchor);
-  const revenueAnchor =
-    (engine ? engine.revenue + internalSupplyIncomeAnchor : money.realizedRevenueAnchor) +
-    freightIncomeAnchor;
-  // Free transfers book nothing for what this site sent to its own sites. The
-  // memo values it at the site's own ask (₳ per turn on the receipt, per day
-  // here) so a pure supplier's margin is not the -999% floor.
-  const ownSiteMemoAnchor = freeTransferMemo({
-    income: internalSupplyIncomeAnchor,
-    ownSiteValue: (ownSite?.valueAnchor ?? 0) * TURNS_PER_DAY,
-  });
+  const {
+    engineGrowthAnchor,
+    operatingCostAnchor,
+    revenueAnchor,
+    ownSiteMemoAnchor,
+    statementProfit,
+    fillAdjustedMarginPct,
+  } = plantAccountTotals(money, (ownSite?.valueAnchor ?? 0) * TURNS_PER_DAY);
   const receivedPerUnitAnchor =
     producedUnits != null && producedUnits > 0 ? revenueAnchor / producedUnits : null;
   const costPerUnitAnchor =
     producedUnits != null && producedUnits > 0 ? operatingCostAnchor / producedUnits : null;
-  const fillAdjustedMarginPct = plantsNetMarginPct({
-    profit: money.profitAnchor + ownSiteMemoAnchor,
-    revenue: revenueAnchor + ownSiteMemoAnchor,
-    totalCost: totalCostAnchor,
-  });
   // Break-even: profit is stored per financial day (TURNS_PER_DAY turns), CIP
   // is a stock. Positive profit pays CIP down in cip / profitPerTurn turns; at
   // zero CIP the sector's own profit sign is the whole story.
   const cipAnchor = Math.max(0, queueUndeliveredCost(rawQueue, currentTurn));
-  const profitPerTurnAnchor = money.profitAnchor / TURNS_PER_DAY;
+  const profitPerTurnAnchor = statementProfit / TURNS_PER_DAY;
   const breakEven: SectorPlantsSection["truth"]["breakEven"] =
     profitPerTurnAnchor > 0
       ? cipAnchor > 0
@@ -1944,6 +1897,7 @@ export function buildSectorPlantsSection(args: {
     },
     policyStack: args.policyStack ?? [],
     pnl: {
+      ...(money.statement ? { statement: money.statement } : {}),
       revenueAnchor,
       inputsAnchor,
       labourAnchor: engine ? engine.labour : nonNeg(money.labourAnchor),
@@ -1958,17 +1912,17 @@ export function buildSectorPlantsSection(args: {
         : {}),
       ...(internalSupplyChargeAnchor > 0 ? { internalSupplyChargeAnchor } : {}),
       ...(ownSiteMemoAnchor > 0 ? { ownSiteMemoAnchor } : {}),
-      freightCostAnchor,
-      freightIncomeAnchor,
+      freightCostAnchor: money.freightCostAnchor ?? 0,
+      freightIncomeAnchor: money.freightIncomeAnchor ?? 0,
       growthAndBuildAnchor: engine ? nonNeg(engineGrowthAnchor) : nonNeg(money.growthCostAnchor),
-      profitAnchor: money.profitAnchor,
+      profitAnchor: statementProfit,
       financialEventsAnchor,
       avgSalePriceAnchor:
         soldUnits != null && soldUnits > 0
           ? (revenueAnchor - (money.internalSupplyIncomeAnchor ?? 0)) / soldUnits
           : null,
       profitPerUnitAnchor:
-        producedUnits != null && producedUnits > 0 ? money.profitAnchor / producedUnits : null,
+        producedUnits != null && producedUnits > 0 ? statementProfit / producedUnits : null,
     },
     truth: {
       soldFraction,
