@@ -1,3 +1,4 @@
+import { loadReservedPositionsPlacedBy } from "@/lib/corporations/reservedCorporateHoldings";
 import { loadCorporationFundPortfolio } from "@/lib/indexFunds/corporationPortfolio";
 import { ObjectId, type Db } from "mongodb";
 import type { Bond, Corporation, Shareholder } from "@/lib/db/types";
@@ -159,10 +160,17 @@ export async function loadPortfolioHoldings(
   const totalBondHoldingsValue = heldBondsSummary.reduce((sum, b) => sum + b.currentValueAnchor, 0);
   const dailyCouponIncome = heldBondsSummary.reduce((sum, b) => sum + b.dailyIncomeAnchor, 0);
 
+  const reserved = await loadReservedPositionsPlacedBy(db, corporation._id);
+  const reservedByTarget = new Map(reserved.map((r) => [r.targetCorpId.toString(), r.shares]));
   const heldCorps = await db
     .collection<Corporation>("corporations")
-    .find({ "shareholders.corporationId": corporation._id })
-    .project({ _id: 1, sharePrice: 1, shareholders: 1, countryId: 1 })
+    .find({
+      $or: [
+        { "shareholders.corporationId": corporation._id },
+        { _id: { $in: reserved.map((r) => r.targetCorpId) } },
+      ],
+    })
+    .project({ _id: 1, sharePrice: 1, shareholders: 1, countryId: 1, liquidCurrencyCode: 1 })
     .toArray();
 
   let totalStockHoldingsValue = 0;
@@ -170,9 +178,10 @@ export async function loadPortfolioHoldings(
     const entry = heldCorp.shareholders?.find(
       (sh: Shareholder) => sh.corporationId?.toString() === corporation._id.toString()
     );
-    if (entry && entry.shares > 0) {
+    const shares = (entry?.shares ?? 0) + (reservedByTarget.get(heldCorp._id.toString()) ?? 0);
+    if (shares > 0) {
       const sharePrice = getPublicShareQuote(heldCorp);
-      const stockValueLocal = entry.shares * sharePrice;
+      const stockValueLocal = shares * sharePrice;
       const heldFxRate = fxRateForCorpFromMap(heldCorp, portfolioFxByCurrency);
       totalStockHoldingsValue += corpLiquidCapitalToAnchor(stockValueLocal, heldCorp, heldFxRate);
     }

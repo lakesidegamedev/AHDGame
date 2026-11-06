@@ -166,7 +166,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
           <span style={{ color: "var(--stat, var(--primary))" }}>{pulse.credit.rating ?? "—"}</span>{" "}
           {pulse.credit.debtToGdpRatio != null && (
             <span className="text-[11px] font-bold text-muted">
-              {Math.round(pulse.credit.debtToGdpRatio)}% debt-to-GDP
+              {(pulse.credit.debtToGdpRatio * 100).toFixed(1)}% debt-to-GDP
             </span>
           )}
         </span>

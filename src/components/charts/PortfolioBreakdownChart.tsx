@@ -10,6 +10,7 @@ interface HistoryPoint {
   totalValue: number;
   stockValue?: number;
   bondValue?: number;
+  fundValue?: number;
   cashValue?: number;
   /** FX rates captured at snapshot time. See PortfolioChart for rationale. */
   exchangeRatesSnapshot?: Partial<Record<CurrencyCode, number>>;
@@ -32,6 +33,7 @@ const INNER_H = HEIGHT - PAD_TOP - PAD_BOTTOM;
 
 const COLORS = {
   stocks: "var(--color-success, #22c55e)",
+  funds: "var(--color-primary, #8b5cf6)",
   bonds: "var(--color-warning, #f59e0b)",
   cash: "var(--color-info, #3b82f6)",
 };
@@ -42,6 +44,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
   const [visibleSeries, setVisibleSeries] = useState({
     stocks: true,
     bonds: true,
+    funds: true,
     cash: !hideCashSeries,
   });
 
@@ -59,6 +62,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
     const snap = p.exchangeRatesSnapshot;
     return {
       stocks: p.stockValue !== undefined ? resolveDisplayAt(p.stockValue, snap).value : undefined,
+      funds: p.fundValue !== undefined ? resolveDisplayAt(p.fundValue, snap).value : undefined,
       bonds: p.bondValue !== undefined ? resolveDisplayAt(p.bondValue, snap).value : undefined,
       cash: p.cashValue !== undefined ? resolveDisplayAt(p.cashValue, snap).value : undefined,
     };
@@ -70,6 +74,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
   const allValues: number[] = [];
   seriesByPoint.forEach((p) => {
     if (visibleSeries.stocks && p.stocks !== undefined) allValues.push(p.stocks);
+    if (visibleSeries.funds && p.funds !== undefined) allValues.push(p.funds);
     if (visibleSeries.bonds && p.bonds !== undefined) allValues.push(p.bonds);
     if (visibleSeries.cash && p.cash !== undefined) allValues.push(p.cash);
   });
@@ -110,6 +115,14 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
         x: toX(i),
         y: toY(seriesByPoint[i].bonds ?? 0),
         displayValue: seriesByPoint[i].bonds,
+        ...p,
+      }))
+    : [];
+  const fundPoints = visibleSeries.funds
+    ? history.map((p, i) => ({
+        x: toX(i),
+        y: toY(seriesByPoint[i].funds ?? 0),
+        displayValue: seriesByPoint[i].funds,
         ...p,
       }))
     : [];
@@ -159,6 +172,15 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
         >
           <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.bonds }} />
           <span className="text-muted">Bonds</span>
+        </button>
+        <button
+          onClick={() => setVisibleSeries((s) => ({ ...s, funds: !s.funds }))}
+          className={`flex items-center gap-1.5 text-xs transition-opacity ${
+            visibleSeries.funds ? "opacity-100" : "opacity-40"
+          }`}
+        >
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.funds }} />
+          <span className="text-muted">Index funds</span>
         </button>
         {!hideCashSeries && (
           <button
@@ -248,6 +270,31 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
                 cy={bondPoints[hovered].y}
                 r={4}
                 fill={COLORS.bonds}
+              />
+            )}
+          </>
+        )}
+
+        {/* Fund line */}
+        {visibleSeries.funds && fundPoints.length > 0 && (
+          <>
+            <polyline
+              points={fundPoints
+                .filter((p) => p.displayValue !== undefined)
+                .map((p) => `${p.x},${p.y}`)
+                .join(" ")}
+              fill="none"
+              stroke={COLORS.funds}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {hovered !== null && fundPoints[hovered]?.displayValue !== undefined && (
+              <circle
+                cx={fundPoints[hovered].x}
+                cy={fundPoints[hovered].y}
+                r={4}
+                fill={COLORS.funds}
               />
             )}
           </>
@@ -346,6 +393,17 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
               </span>
               <span className="font-semibold tabular-nums">
                 {fmt(seriesByPoint[hovered].bonds!)}
+              </span>
+            </div>
+          )}
+          {visibleSeries.funds && seriesByPoint[hovered]?.funds !== undefined && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.funds }} />
+                <span>Index funds</span>
+              </span>
+              <span className="font-semibold tabular-nums">
+                {fmt(seriesByPoint[hovered].funds!)}
               </span>
             </div>
           )}

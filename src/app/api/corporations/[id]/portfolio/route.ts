@@ -1,3 +1,4 @@
+import { loadCorporationFundPortfolio } from "@/lib/indexFunds/corporationPortfolio";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -66,6 +67,8 @@ export async function GET(request: Request, { params }: RouteParams) {
         isPrivate: true,
         stockHoldings: [],
         bondHoldings: [],
+        fundHoldings: [],
+        totalFundValue: 0,
         totalStockValue: 0,
         totalBondValue: 0,
         totalLiabilityValue: 0,
@@ -78,7 +81,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       });
     }
 
-    const [heldCorps, activeBonds, fxByCurrency, reservedPlaced] = await Promise.all([
+    const [heldCorps, activeBonds, fxByCurrency, reservedPlaced, funds] = await Promise.all([
       db
         .collection<Corporation>("corporations")
         .find({ "shareholders.corporationId": corporation._id })
@@ -103,6 +106,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .toArray(),
       loadValuationFxRates(db),
       loadReservedPositionsPlacedBy(db, corporation._id),
+      loadCorporationFundPortfolio(db, corporation._id),
     ]);
 
     let totalStockValueAnchor = 0;
@@ -315,7 +319,9 @@ export async function GET(request: Request, { params }: RouteParams) {
         computeCorporationLiabilityValueAnchor(corporation, issuedBonds, fxByCurrency) * 100
       ) / 100;
     const grossPortfolioValue =
-      Math.round((totalStockValueAnchor + totalBondValueWithImf + cashOnHandAnchor) * 100) / 100;
+      Math.round(
+        (totalStockValueAnchor + totalBondValueWithImf + funds.valueAnchor + cashOnHandAnchor) * 100
+      ) / 100;
     const totalPortfolioValue = Math.round((grossPortfolioValue - totalLiabilityValue) * 100) / 100;
 
     // Most recent 500 turns; sort descending server-side then reverse for the
@@ -333,6 +339,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         netValue: 1,
         stockValue: 1,
         bondValue: 1,
+        fundValue: 1,
         cashValue: 1,
         liabilityValue: 1,
         exchangeRatesSnapshot: 1,
@@ -345,6 +352,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       isNationalCorp: !!corporation.countryOwnerId,
       stockHoldings,
       bondHoldings: mergedBondHoldings,
+      fundHoldings: funds.holdings,
+      totalFundValue: funds.valueAnchor,
       totalStockValue: Math.round(totalStockValueAnchor * 100) / 100,
       totalBondValue: totalBondValueWithImf,
       totalLiabilityValue,

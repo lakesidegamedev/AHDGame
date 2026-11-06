@@ -40,3 +40,19 @@ describe("portfolio bucket chart", () => {
     expect(screen.getByText(/Not enough data yet/)).toBeTruthy();
   });
 });
+
+it("does not invent zero fund history before funds were recorded", () => {
+  render(
+    <PortfolioChart
+      view="funds"
+      history={[
+        { turn: 1, totalValue: 500 },
+        { turn: 2, totalValue: 500, fundValue: 0 },
+        { turn: 3, totalValue: 600, fundValue: 100 },
+      ]}
+    />
+  );
+  expect(screen.queryByText("T1")).toBeNull();
+  expect(screen.getByText("T2")).toBeTruthy();
+  expect(screen.getByText("T3")).toBeTruthy();
+});

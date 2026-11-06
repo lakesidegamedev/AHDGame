@@ -557,12 +557,72 @@ describe("portfolioSnapshot", () => {
   });
 
   describe("snapshotCorporationPortfolioValues", () => {
+    it("preserves unfilled sale ownership, fund NAV and issued debt in one batched snapshot", async () => {
+      const owner = new ObjectId(),
+        target = new ObjectId(),
+        fund = new ObjectId();
+      const rows: Record<string, unknown[]> = {
+        corporations: [
+          { _id: owner, liquidCapital: 1000, countryId: "US", liquidCurrencyCode: "USD" },
+          {
+            _id: target,
+            liquidCapital: 0,
+            sharePrice: 200,
+            countryId: "US",
+            liquidCurrencyCode: "JPY",
+            shareholders: [{ corporationId: owner, shares: 5 }],
+          },
+        ],
+        bonds: [
+          {
+            _id: new ObjectId(),
+            corporationId: owner,
+            totalIssued: 100,
+            currencyCode: "USD",
+            matured: false,
+            holders: [],
+          },
+        ],
+        exchangeRates: [
+          { currencyCode: "USD", rate: 1 },
+          { currencyCode: "JPY", rate: 100 },
+        ],
+        shareOrders: [
+          {
+            corporationId: target,
+            placerCorporationId: owner,
+            type: "sell",
+            status: "open",
+            sharesRemaining: 20,
+          },
+        ],
+        shareListings: [],
+        indexFundPositions: [{ corporationId: owner, fundId: fund, units: 10 }],
+        indexFunds: [{ _id: fund, quotedNav: 25, status: "active" }],
+      };
+      mockCollection.mockImplementation((name: string) => createMockChain(rows[name] ?? []));
+      await snapshotCorporationPortfolioValues(100);
+      const inserted = mockInsertMany.mock.calls[0][0];
+      const doc = inserted.find((d: { corporationId: ObjectId }) => d.corporationId.equals(owner));
+      expect(doc).toMatchObject({
+        cashValue: 1000,
+        stockValue: 50,
+        fundValue: 250,
+        totalValue: 1300,
+        liabilityValue: 100,
+        netValue: 1200,
+      });
+      expect(mockCollection.mock.calls.filter(([name]) => name === "corporations")).toHaveLength(1);
+      expect(
+        mockCollection.mock.calls.filter(([name]) => name === "indexFundPositions")
+      ).toHaveLength(1);
+    });
+
     it("records liquidCapital as cashValue for cash-only corps", async () => {
       const corpId = new ObjectId();
       const allCorps = [{ _id: corpId, liquidCapital: 750_000 }];
 
       mockCollection.mockReturnValueOnce(createMockChain(allCorps)); // all corps
-      mockCollection.mockReturnValueOnce(createMockChain([])); // corps with shareholders
       mockCollection.mockReturnValueOnce(createMockChain([])); // bonds
       // Catch-all: reads that come after the queued ones (index-fund positions)
       // must still answer find/toArray, not only insertMany.
@@ -589,13 +649,11 @@ describe("portfolioSnapshot", () => {
 
       const allCorps = [
         { _id: holderCorpId, liquidCapital: 100_000 },
-        { _id: heldCorpId, liquidCapital: 0 },
-      ];
-      const heldCorps = [
         {
           _id: heldCorpId,
-          shareholders: [{ corporationId: holderCorpId, shares: 10 }],
+          liquidCapital: 0,
           sharePrice: 50,
+          shareholders: [{ corporationId: holderCorpId, shares: 10 }],
         },
       ];
       const bonds = [
@@ -608,7 +666,6 @@ describe("portfolioSnapshot", () => {
       ];
 
       mockCollection.mockReturnValueOnce(createMockChain(allCorps));
-      mockCollection.mockReturnValueOnce(createMockChain(heldCorps));
       mockCollection.mockReturnValueOnce(createMockChain(bonds));
       // Catch-all: reads that come after the queued ones (index-fund positions)
       // must still answer find/toArray, not only insertMany.
@@ -654,7 +711,6 @@ describe("portfolioSnapshot", () => {
       ];
 
       mockCollection.mockReturnValueOnce(createMockChain(allCorps));
-      mockCollection.mockReturnValueOnce(createMockChain([]));
       mockCollection.mockReturnValueOnce(createMockChain(bonds));
       // Catch-all: reads that come after the queued ones (index-fund positions)
       // must still answer find/toArray, not only insertMany.
@@ -687,7 +743,6 @@ describe("portfolioSnapshot", () => {
       ];
 
       mockCollection.mockReturnValueOnce(createMockChain(allCorps));
-      mockCollection.mockReturnValueOnce(createMockChain([]));
       mockCollection.mockReturnValueOnce(createMockChain([]));
       // Catch-all: reads that come after the queued ones (index-fund positions)
       // must still answer find/toArray, not only insertMany.

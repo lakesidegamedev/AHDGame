@@ -1,5 +1,6 @@
 "use client";
 
+import { totalCostsPerTurnFromParts } from "@/lib/corporations/rules/historyFinancials";
 import { useEffect, useState, type ReactNode } from "react";
 import { CorpHistoryPoint } from "./CorporationPageTypes";
 import { Skeleton } from "@/components/ui";
@@ -30,7 +31,7 @@ const CHART_METRICS: { key: ChartMetric; label: string; description: string }[] 
     key: "revenueCosts",
     label: "Revenue and costs",
     description:
-      "Per-turn operating revenue vs operating costs. Financial Statement values are daily totals (24 turns), so multiply chart points by 24 when comparing.",
+      "Per-turn operating revenue vs total costs, including bond interest. Financial Statement values are daily totals (24 turns), so multiply chart points by 24 when comparing.",
   },
   { key: "cashOnHand", label: "Cash on hand", description: "Liquid capital reserves." },
   { key: "marketingStrength", label: "Marketing", description: "Marketing strength over time." },
@@ -188,7 +189,9 @@ export default function ChartsTab({
       case "revenueCosts":
         return {
           values: history.map((p) => toAnchor(p.revenue, p.currencyCode, p.fxRateAtWrite)),
-          values2: history.map((p) => toAnchor(p.totalCosts, p.currencyCode, p.fxRateAtWrite)),
+          values2: history.map((p) =>
+            toAnchor(totalCostsPerTurnFromParts(p), p.currencyCode, p.fxRateAtWrite)
+          ),
           label: "Revenue / turn",
           label2: "Costs / turn",
           format: fmtMoney,

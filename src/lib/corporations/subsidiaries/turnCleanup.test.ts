@@ -73,8 +73,9 @@ describe("cleanupZombieSubsidiaries", () => {
 
   it("does not dissolve a subsidiary whose controlling block is reserved in an open sell", async () => {
     const listed = corp({ formalized: true, parentPct: 0, floorSetter: controllerId });
-    db.collection("shareOrders").find = vi.fn().mockReturnValue({
-      toArray: async () => [
+    db.collection("shareOrders")
+      .find()
+      .toArray.mockResolvedValue([
         {
           type: "sell",
           status: "open",
@@ -82,8 +83,7 @@ describe("cleanupZombieSubsidiaries", () => {
           placerCorporationId: controllerId,
           sharesRemaining: 6_000_000,
         },
-      ],
-    });
+      ]);
     const cleared = await cleanupZombieSubsidiaries(db as unknown as Db, [listed], new Date());
     expect(cleared).toBe(0);
     expect(db.collection("corporations").bulkWrite).not.toHaveBeenCalled();

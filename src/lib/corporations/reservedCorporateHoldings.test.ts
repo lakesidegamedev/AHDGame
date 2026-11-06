@@ -7,6 +7,7 @@ import {
   corporationWithReservedHoldings,
   isSittingCeoOfControllingParent,
   loadReservedCorporatePositions,
+  loadReservedCorporatePositionsByTarget,
   shouldRedactCorporationForViewer,
   reservedCorporatePositions,
   resolveControllingCorporateParent,
@@ -301,4 +302,46 @@ describe("shouldRedactCorporationForViewer", () => {
       await shouldRedactCorporationForViewer(db as never, privateChild(), undefined, false, true)
     ).toBe(false);
   });
+});
+
+it("loads all reserved corporate positions in two projected reads without mixing targets", async () => {
+  const db = createMockDb();
+  const target2 = new ObjectId();
+  const holder2 = new ObjectId();
+  const orders = [
+    {
+      corporationId: childId,
+      placerCorporationId: parentId,
+      type: "sell",
+      status: "open",
+      sharesRemaining: 20,
+    },
+    {
+      corporationId: target2,
+      placerCorporationId: holder2,
+      type: "sell",
+      status: "open",
+      sharesRemaining: 7,
+    },
+  ];
+  const listings = [
+    { corporationId: childId, sellerCorporationId: parentId, status: "open", sharesRemaining: 5 },
+  ];
+  const orderCursor = db.collection("shareOrders").find();
+  const listingCursor = db.collection("shareListings").find();
+  orderCursor.toArray.mockResolvedValue(orders);
+  listingCursor.toArray.mockResolvedValue(listings);
+  db.collection("shareOrders").find.mockClear();
+  db.collection("shareListings").find.mockClear();
+  const result = await loadReservedCorporatePositionsByTarget(db as never);
+  expect(result.get(childId.toString())).toEqual([{ corporationId: parentId, shares: 25 }]);
+  expect(result.get(target2.toString())).toEqual([{ corporationId: holder2, shares: 7 }]);
+  expect(db.collection("shareOrders").find).toHaveBeenCalledTimes(1);
+  expect(db.collection("shareListings").find).toHaveBeenCalledTimes(1);
+  expect(orderCursor.project).toHaveBeenCalledWith(
+    expect.objectContaining({ sharesRemaining: 1, placerCorporationId: 1 })
+  );
+  expect(listingCursor.project).toHaveBeenCalledWith(
+    expect.objectContaining({ sharesRemaining: 1, sellerCorporationId: 1 })
+  );
 });

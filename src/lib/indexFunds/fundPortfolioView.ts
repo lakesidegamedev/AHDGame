@@ -1,3 +1,4 @@
+import { fundPositionValue } from "./rules/portfolioValue";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 
 /** One held fund as a portfolio page renders it. */
@@ -42,7 +43,7 @@ export function enrichFundPositions(
       legacyUnits: pos.legacyUnits ?? pos.units,
       avgNavAnchor: pos.avgNavAnchor ?? null,
       currentNav: fund?.quotedNav ?? null,
-      marketValueAnchor: fund ? pos.units * fund.quotedNav : null,
+      marketValueAnchor: fund ? fundPositionValue(pos.units, fund.quotedNav, fund.status) : null,
       status: fund?.status ?? null,
     };
   });
