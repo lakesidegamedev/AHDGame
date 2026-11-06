@@ -233,6 +233,44 @@ describe("GET /api/corporations/[id]", () => {
     expect(outsider.corporation.liquidCapital).toBeUndefined();
   });
 
+  it("shows a private corporation to a viewer whose own corporation holds shares", async () => {
+    await wireDb();
+    const holderCorpId = new ObjectId();
+    const corp = makeCorporation({
+      _id: new ObjectId(),
+      isPrivate: true,
+      liquidCapital: 7_000,
+      shareholders: [{ corporationId: holderCorpId, shares: 25 }],
+    } as never);
+    const detailPayload = {
+      corporation: { _id: corp._id.toString(), name: corp.name, liquidCapital: 7_000 },
+      ceo: null,
+      financials: { totalRevenue: 2 },
+      sectors: [],
+      balanceSheet: { assets: {}, liabilities: {}, equity: {} },
+    };
+    // The mocked corporations collection answers the "corporation I run" lookup
+    // with the holder corp, then the private corp for the base lookup.
+    db.collectionMocks["corporations"]!.findOne.mockImplementation(
+      async (filter: Record<string, unknown>) =>
+        filter?.userId ? { _id: holderCorpId } : corp
+    );
+    const { getAuthUser } = await import("@/lib/auth");
+    vi.mocked(getAuthUser).mockResolvedValue({ userId: new ObjectId().toString() } as never);
+    const { loadCorporationDetailView } =
+      await import("@/lib/corporations/queries/corporationDetail");
+    vi.mocked(loadCorporationDetailView).mockResolvedValue(detailPayload as never);
+
+    const { GET } = await import("./route");
+    const res = await GET(new Request(`http://localhost/api/corporations/${corp._id}`), {
+      params: Promise.resolve({ id: corp._id.toString() }),
+    });
+    const json = await res.json();
+    expect(json.corporation.viewerIsShareholder).toBe(true);
+    expect(json.balanceSheet).toEqual(detailPayload.balanceSheet);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+  });
+
   it("marks the controlling parent CEO as an insider of a public subsidiary", async () => {
     await wireDb();
     const subsidiary = makeCorporation({
