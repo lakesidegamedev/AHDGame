@@ -6,7 +6,7 @@ summary: >-
   with a maintainer comment, and promotion pull requests skip the contributor checks.
 tags: [tooling]
 badges: [patch]
-areas: [ci]
+areas: [backend]
 ---
 
 ## What changed
