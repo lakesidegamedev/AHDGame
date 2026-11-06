@@ -105,6 +105,28 @@ describe("signed cost lines (ticket 1122)", () => {
     truth: null,
   } as never;
 
+  it("ticket 1773: the Selling tile prints the same share as the sold chip, not 100% of output", () => {
+    render(
+      <MarketMoneyPanel
+        plants={
+          {
+            ...plants,
+            producedUnits: 195,
+            soldUnits: 139,
+            unsoldUnits: 56,
+            fillRate: 139 / 195,
+            truth: { ...(plants as { truth: object }).truth, soldFraction: 139 / 195 },
+          } as never
+        }
+        sectorType="manufacturing"
+        financials={null}
+        corporation={{ _id: "natcorp-1", name: "VEB Kombinat", isStateOwned: true }}
+      />
+    );
+    expect(screen.getAllByText("71% sold").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("100% of output")).toBeNull();
+  });
+
   it("renders a negative running-cost line as a credit and totals the real bill", () => {
     render(
       <MarketMoneyPanel

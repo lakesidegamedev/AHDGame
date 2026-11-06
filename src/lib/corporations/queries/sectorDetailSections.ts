@@ -1739,7 +1739,11 @@ export function buildSectorPlantsSection(args: {
   // sell under half their output). The headline instead spreads cost and
   // revenue over every unit made, which is the basis the player's bank balance
   // actually moves on.
-  const soldFraction = num(sector.soldFraction) ?? fillRate;
+  // One definition: market sales over units made, the same two numbers the
+  // Offered / Sold / Unsold rows print (ticket 1773: the engine's stored
+  // soldFraction read 100% beside 139 sold of 195 made). The engine value is
+  // only the fallback when the unit counts are missing.
+  const soldFraction = fillRate ?? num(sector.soldFraction);
   const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({

@@ -545,8 +545,9 @@ describe("buildSectorPlantsSection", () => {
           soldByCommodity: { steel: 0.2, coal: 0.1 },
         }),
       });
-      // The engine's weighted soldFraction wins over the units ratio.
-      expect(s.truth.soldFraction).toBeCloseTo(0.147, 6);
+      // The units ratio (120 sold of 150 made) wins over the stored engine value,
+      // so the tile cannot disagree with the Offered / Sold / Unsold rows.
+      expect(s.truth.soldFraction).toBeCloseTo(120 / 150, 6);
       expect(s.truth.soldByCommodity).toEqual([
         { commodity: "steel", fraction: 0.2 },
         { commodity: "coal", fraction: 0.1 },
@@ -557,6 +558,26 @@ describe("buildSectorPlantsSection", () => {
       expect(s.truth.costPerUnitAnchor).toBeCloseTo(800 / 150, 6);
       // Net margin: profit 150 over realized revenue 1000.
       expect(s.truth.fillAdjustedMarginPct).toBeCloseTo((150 / 1000) * 100, 6);
+    });
+
+    it("ticket 1773: stored 100% beside 139 sold of 195 made reads 71%, not 100%", () => {
+      const s = buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({ producedUnits: 195, soldUnits: 139, soldFraction: 1 }),
+      });
+      expect(s.truth.soldFraction).toBeCloseTo(139 / 195, 6);
+      expect(s.fillRate).toBeCloseTo(139 / 195, 6);
+      expect(s.unsoldUnits).toBeCloseTo(56, 6);
+    });
+
+    it("falls back to the stored engine value only when unit counts are missing", () => {
+      const s = buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({ producedUnits: undefined, soldUnits: undefined, soldFraction: 0.4 }),
+      });
+      expect(s.truth.soldFraction).toBeCloseTo(0.4, 6);
     });
 
     it("falls back to the units ratio when the engine wrote no soldFraction", () => {
