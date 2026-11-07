@@ -174,6 +174,30 @@ describe("seedFromSeats historical roster", () => {
     });
   });
 
+  it("carries the seeded 2027 president's two terms and none for the vice president", async () => {
+    const executive = seatGroupsFor("2027-default").US!.filter(
+      (seat) => seat.officeType === "president" || seat.officeType === "vicePresident"
+    );
+    await seedFromSeats(ctx.db as unknown as Db, executive, "winners", {
+      presetId: "2027-default",
+    });
+
+    const byName = new Map(ctx.npps.map((n) => [n.name, n]));
+    expect(byName.get("Donald Trump")).toMatchObject({ executiveTermsServed: { US: 2 } });
+    expect(byName.get("JD Vance")).not.toHaveProperty("executiveTermsServed");
+  });
+
+  it.each([
+    ["1991-default", undefined],
+    ["2019-default", { IE: 2 }],
+  ])("stamps prior Uachtaran terms only where %s records them", async (preset, expected) => {
+    const seats = seatGroupsFor(preset).IE!.filter((seat) => seat.officeType === "uachtaran");
+    await seedFromSeats(ctx.db as unknown as Db, seats, "winners", { presetId: preset });
+
+    expect(ctx.npps).toHaveLength(1);
+    expect(ctx.npps[0]!.executiveTermsServed).toEqual(expected);
+  });
+
   it.each(["1999-default", "2007-default"])(
     "does not back-project the 2019 presidential roster into %s",
     (preset) => {

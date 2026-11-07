@@ -7,6 +7,8 @@ export const ROSTER_2019_IE: RosterMap = {
     birthYear: 1941,
     gender: "male",
     ethnicity: "white",
+    // Article 12.3.2: a president may be re-elected once only.
+    priorExecutiveTerms: 2,
   },
   "IE|dail|COR|ie_ff|0": {
     name: "Micheál Martin",

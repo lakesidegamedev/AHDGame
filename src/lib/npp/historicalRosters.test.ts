@@ -364,6 +364,17 @@ describe("2027 US executive roster", () => {
     expect(vicePresident).toMatchObject({ name: "JD Vance", birthYear: 1984 });
   });
 
+  it("records the president's second term and no prior terms for the vice president", () => {
+    expect(
+      getHistoricalRosterEntry("2027-default", "US", "president", "US", "republican", 0)
+        ?.priorExecutiveTerms
+    ).toBe(2);
+    expect(
+      getHistoricalRosterEntry("2027-default", "US", "vicePresident", "US", "republican", 0)
+        ?.priorExecutiveTerms
+    ).toBeUndefined();
+  });
+
   it("leaves the rest of the 2027 board to generated identities", () => {
     expect(
       getHistoricalRosterEntry("2027-default", "US", "governor", "CA", "democrat", 0)

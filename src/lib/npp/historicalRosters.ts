@@ -31,6 +31,12 @@ export interface HistoricalRosterEntry {
    * no findable portrait, fall back to the demographic pick.
    */
   portraitId?: string | null;
+  /**
+   * Executive terms this officeholder has already served toward the country's
+   * term limit, including the term in progress at the preset start. Set only
+   * where the source records it; absent = none counted.
+   */
+  priorExecutiveTerms?: number;
 }
 
 /** Presets with authored real-person rosters. */

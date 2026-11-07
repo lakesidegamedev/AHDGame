@@ -23,6 +23,14 @@ const legacyPresidentHistory: CareerEvent[] = [
 ];
 
 describe("executiveTermLimits", () => {
+  it("applies the same limit to an NPP's stored terms", () => {
+    // The seeded 2027 president: two terms served, no career history.
+    expect(hasReachedExecutiveTermLimit({ executiveTermsServed: { US: 2 } }, "US")).toBe(true);
+    expect(hasReachedExecutiveTermLimit({ executiveTermsServed: { US: 1 } }, "US")).toBe(false);
+    // Terms are per country.
+    expect(hasReachedExecutiveTermLimit({ executiveTermsServed: { US: 2 } }, "BR")).toBe(false);
+  });
+
   it("reads the configured US executive term limit", () => {
     expect(getExecutiveTermLimit("US")).toBe(2);
     expect(getExecutiveTermLimit("UK")).toBeNull();

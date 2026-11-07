@@ -210,6 +210,19 @@ export async function seatPresidentialExecutive(
         },
       }
     );
+    // Same counting as players: an elected term counts toward the limit, a
+    // founding or acting term does not. The election id guard keeps a replayed
+    // seating from counting the same win twice.
+    if (!acting && election.cycle !== 0) {
+      const electionId = election._id.toString();
+      await db.collection<NPP>("npps").updateOne(
+        { _id: winnerCandidate.nppId, lastExecutiveTermElectionId: { $ne: electionId } },
+        {
+          $inc: { [`executiveTermsServed.${electionCountry}`]: 1 },
+          $set: { lastExecutiveTermElectionId: electionId },
+        }
+      );
+    }
   } else if (winnerCandidate.characterId) {
     const winnerCharacter = await db
       .collection<Character>("characters")

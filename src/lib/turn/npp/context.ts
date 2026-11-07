@@ -391,6 +391,8 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
             // (nppAutonomy/v6/rules/candidatePlacement.ts).
             politicalInfluence: 1,
             favorability: 1,
+            // Executive term limits on NPP entry (executiveTermLimits.ts).
+            executiveTermsServed: 1,
             // The ideology pair only. `policies.domainPositions` is a map of
             // ~950 legislation stances (30 KB of a 31 KB NPP document) and
             // only bill voting reads it, so it is hydrated below for the
