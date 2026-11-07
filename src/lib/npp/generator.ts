@@ -74,7 +74,7 @@ let politicianImageCache: PoliticianImage[] | null = null;
  * than being assumed archival on no evidence.
  */
 function photoYearFromUrl(url: string): number | null {
-  const m = /(1[89]\d\d|20[0-2]\d)/.exec(url);
+  const m = /(1[89]\d\d|20\d\d)/.exec(url);
   if (!m) return null;
   const year = Number(m[1]);
   return Number.isFinite(year) ? year : null;
