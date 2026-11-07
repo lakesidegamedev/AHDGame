@@ -25,12 +25,14 @@
  *
  * Folds the bonds already split into one bond per series. A series is every
  * live sovereign bond with the same issuer identity, currency, coupon, issue
- * term, maturity turn, market price and reconcile flag. The oldest bond of
- * the series survives and absorbs the others' face, pool float, requested
- * units and holder positions (summed per holder, average cost weighted by
- * units). Each absorbed bond is emptied and closed with a pointer to its
- * survivor. Total face, units, coupon service, every holder's position and
- * every balance are unchanged, so no money moves.
+ * term, maturity turn, market price, reconcile flag and consolidation origin.
+ * A scheduled primary issue is its own borrowing even when it happens to share
+ * the coupon, term and turn of a shared rollover bond, so the two are never one
+ * series. The oldest bond of the series survives and absorbs the others' face,
+ * pool float, requested units and holder positions (summed per holder, average
+ * cost weighted by units). Each absorbed bond is emptied and closed with a
+ * pointer to its survivor. Total face, units, coupon service, every holder's
+ * position and every balance are unchanged, so no money moves.
  *
  * Only plain bonds take part: no frozen maturity claim, no restructure
  * haircut, no unsold primary units, no underwriting offer, no central-bank
@@ -77,6 +79,7 @@ type SeriesBond = Pick<
   | "maturityTurns"
   | "maturityTurn"
   | "marketPrice"
+  | "sovereignRolloverConsolidated"
   | "totalIssued"
   | "publicFloat"
   | "requestedUnits"
@@ -151,6 +154,7 @@ export function seriesKey(bond: SeriesBond): string {
     String(bond.maturityTurn),
     String(bond.marketPrice),
     bond.reconcile === true ? "reconcile" : "",
+    bond.sovereignRolloverConsolidated === true ? "consolidated" : "plain",
   ].join("|");
 }
 
@@ -209,6 +213,7 @@ export async function surveySovereignSeries(db: Db): Promise<Payload> {
         requestedUnits: 1,
         holders: 1,
         reconcile: 1,
+        sovereignRolloverConsolidated: 1,
       },
     })
     .sort({ _id: 1 })
