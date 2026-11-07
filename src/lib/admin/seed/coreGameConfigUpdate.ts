@@ -116,6 +116,7 @@ export const TURN_ANCHORED_GAME_CONFIG_KEPT: Readonly<Record<string, string>> = 
   capacityBuildReserveTurns:
     "admin tuning knob (turns of running bills kept as cash, not an anchor)",
   nppShortageGrowthFinanceMaxPaybackTurns: "admin tuning knob (a duration, not an anchor)",
+  nppInsolvencyGraceTurns: "admin tuning knob (a duration, not an anchor)",
   nppShortageGrowthFinanceMaxExposureProfitTurns:
     "admin tuning knob (turns of profit as a loan limit, not an anchor)",
   centralBankPricingPhaseIn:
