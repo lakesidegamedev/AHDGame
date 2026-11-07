@@ -112,7 +112,8 @@ describe.skipIf(!uri)("Native slate custody through actual mortality processing"
         expect(result).toMatchObject({ deaths: 0, retirements: 0, replacements: 0 });
         expect(rng).not.toHaveBeenCalled();
         expect(mint).not.toHaveBeenCalled();
-        expect(metrics.commands).toBe(2);
+        // Turnover flag read, candidate read, native-owner distinct.
+        expect(metrics.commands).toBe(3);
         expect(await db.collection("electedOfficials").find().sort({ _id: 1 }).toArray()).toEqual(
           before
         );
