@@ -422,6 +422,12 @@ export interface CorporateSector {
 
   /** Optional industrial input-indexed pricing; ignored while explicit plant costs are off. */
   pricingMode?: "market" | "costPlus";
+  /**
+   * Owner opt-in (suggestion 427): this sector's output goes to outside buyers
+   * before the company's own plants. The own plants then get what is left, free.
+   * Unset/false = the company's own plants are served first.
+   */
+  sellOutsideFirst?: boolean;
   /** Last producing turn's actual operating costs per nominal output value. */
   costPlusCostBasis?: {
     inputCostShare: number;

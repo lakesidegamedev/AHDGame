@@ -1973,6 +1973,7 @@ export function buildSectorPlantsSection(args: {
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
       lowFillTurns: num(sector.lowFillTurns) ?? 0,
+      sellOutsideFirst: sector.sellOutsideFirst === true,
       inventory: {
         stockpileUnsold: sector.stockpileUnsold === true,
         heldUnits: Object.values(sector.inventoryUnits ?? {}).reduce<number>(

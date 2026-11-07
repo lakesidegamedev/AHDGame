@@ -74,6 +74,11 @@
     "commodityMarket": {
       "substitutionOrders": "zuzüglich {units} Ersatzbestellungen",
       "substitutionOrdersExplanation": "Haushalte haben diese bestellt, nachdem ihre erste Wahl ausverkauft war. Sie zählen hier nicht als Nachfrage, damit dieses Gut nicht als knapp erscheint."
+    },
+    "sectorSupplyPriority": {
+      "label": "Zuerst an externe Käufer verkaufen, dann an meine eigenen Werke",
+      "help": "Deine eigenen Werke erhalten dann nur, was externe Käufer übrig lassen. Standardmäßig aus.",
+      "failed": "Aktualisierung fehlgeschlagen"
     }
   }
 }
