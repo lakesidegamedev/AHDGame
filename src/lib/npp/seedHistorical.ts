@@ -43,6 +43,7 @@ export const SLUG_TO_NAME: Record<string, string> = {
   uk_sdlp: "Social Democratic and Labour Party",
   uk_alliance: "Alliance Party",
   uk_uup: "Ulster Unionist Party",
+  uk_reform: "Reform UK",
   uk_speaker: "Speaker",
   uk_independent: "Independent",
   // JP

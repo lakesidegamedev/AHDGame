@@ -199,6 +199,25 @@ describe("seedHistorical slug resolution", () => {
     expect(unresolved).toEqual([]);
   });
 
+  it("2027-default: every party slug resolves except the unseeded Ulster Unionists", () => {
+    const validNames = partyNamesForPreset("2027-default");
+    const unresolved: string[] = [];
+    for (const slug of slugsInPreset("2027-default")) {
+      if (INDEPENDENT_SLUGS.has(slug)) continue;
+      if (slug === "democrat" || slug === "republican") continue; // resolve via the regex fallback
+      const name = SLUG_TO_NAME[slug];
+      if (!name) {
+        unresolved.push(`${slug} (no SLUG_TO_NAME entry)`);
+        continue;
+      }
+      if (name === "Independent" || name === "Speaker") continue;
+      if (!validNames.has(name)) unresolved.push(slug);
+    }
+    // The 2027 UK roster seeds no UUP, so its one Commons seat folds to
+    // independent. Reform UK's five seats used to fold with it.
+    expect(unresolved).toEqual(["uk_uup"]);
+  });
+
   // ── 1999/2007: a RESIDUAL DEFECT, pinned rather than asserted away ─────────
   //
   // `getPresetSeats` has no case for these two, so they fall through its
