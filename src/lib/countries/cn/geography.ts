@@ -37,20 +37,15 @@ import {
 /**
  * Where China is, and who lives there.
  *
- * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE. A
- * registry that needs one string imports `./geographyFacts` instead, which has
- * no value imports at all -- `countryContinents.ts` once held `JP: "Asia"` at
- * zero cost, was repointed at a heavy module, and began pulling 108 KB into
- * every client bundle that read a continent.
+ * HEAVY: every census, metric and region era is imported as a VALUE. Registries
+ * needing one string must import `./geographyFacts` (zero value imports) or they
+ * pull this whole module into client bundles.
  *
- * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it. An
- * early revision of Japan's geography generated copies from the snapshot; deep
- * equality passed and Japan had two sources for every region.
+ * Bundles are REFERENCED, never inlined; `===` proves it. Copies here once let a
+ * country carry two sources for every region while deep equality passed.
  *
- * ⚠ THE PRESET KEYS COME FROM THE SNAPSHOT. China authors 5 census
- * eras, 4 metric eras, 2 anchor eras and 7 region eras. The gaps are real:
- * an unauthored era inherits, and inventing a key for it would turn a fallback
- * into an authored value.
+ * Only preset keys from the snapshot are authored; unauthored eras inherit. Do
+ * not invent keys for gaps or a fallback becomes an authored value.
  */
 
 const regionNames: Record<string, string> = Object.fromEntries(

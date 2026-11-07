@@ -1,19 +1,8 @@
 /**
- * China Region Census Profiles — 1991 (early reform era).
- *
- * 1991-default companion to {@link cnRegionCensusData} (the 2019 profiles).
- * Selected at render time via the preset registry under the `1991-default`
- * reset preset.
- *
- * Sources / methodology (approximate, % of adult population): 1990 National
- * Population Census (NBS). Early-reform China was overwhelmingly rural
- * (~26% urban nationally), with very low tertiary attainment and a young age
- * structure. Minority nationalities concentrate by region: Zhuang in Huanan
- * (Guangxi), Uyghur + Hui in Xibei (Xinjiang / Ningxia), Tibetan in Xinan
- * (Tibet). Income uses era-neutral relative tiers (no RMB thresholds).
- *
- * Directional vs the 2019 profiles: far higher rural share, lower university
- * attainment, lower upper-income share — strongest in the interior (XN/XB/HZ).
+ * China region census profiles, 1991 (early reform era).
+ * Selected via the `1991-default` reset preset.
+ * Approximate shares of adult population, sourced from the 1990 National
+ * Population Census. Income uses era-neutral relative tiers, not RMB.
  */
 
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";

@@ -14,51 +14,34 @@ import { ensurePresidentialElection } from "@/lib/turn/perpetualElections/shared
 /**
  * The United States' elections.
  *
- * ⚠️ SERVER ONLY. `ensurePresidentialElection` reaches `getDb`, so importing this
- * module from a client component pulls the database driver into the browser
- * bundle. It is not re-exported from the folder barrel for browser use.
+ * ⚠️ SERVER ONLY. `ensurePresidentialElection` reaches `getDb`, so importing
+ * this module from a client component pulls the database driver into the
+ * browser bundle. Not re-exported from the folder barrel for browser use.
  *
- * ⚠️ THE SEAT TABLES ARE IMPORTED, NOT DECLARED, AND THAT IS THE ENTIRE POINT.
- * Japan's equivalent module wrote its tables out by value while
- * `constants/states.ts` also declared them, and the two sat there as a second
- * source -- `===` different, `JSON.stringify` equal -- through a completed
- * phase, because a comment saying "a later phase decides whether it forwards"
- * is not a guard. Importing means there is nothing to diverge.
+ * ⚠️ THE SEAT TABLES ARE IMPORTED, NOT DECLARED. Duplicating them by value
+ * creates a silently divergent second source; importing means there is
+ * nothing to diverge.
  *
- * ⚠️ THE TABLES THEMSELVES STAY IN `constants/states.ts`, unlike Japan's, and
- * the reason is specific rather than laziness:
+ * ⚠️ THE TABLES THEMSELVES STAY IN `constants/states.ts` because:
  *
- *   - that file is still multi-country -- it declares UK_COMMONS_SEATS,
- *     CN_NPC_SEATS, DE_WAHLKREIS_SEATS, NG_REGIONAL_COUNCIL_SEATS and
- *     RU_REGION_NAMES -- so it is not the United States' file to take; and
+ *   - that file is still multi-country (UK_COMMONS_SEATS, CN_NPC_SEATS,
+ *     DE_WAHLKREIS_SEATS, NG_REGIONAL_COUNCIL_SEATS, RU_REGION_NAMES), so it
+ *     is not the United States' file to take; and
  *   - the US block is entangled with values DERIVED from it in place.
  *     `STATE_IDS` is `Object.keys(HOUSE_SEATS)`, `STATE_ID_SET` is built from
- *     that, and `ELECTORAL_VOTES_1953` and `ELECTORAL_VOTE_UNITS_1953` are
+ *     that, and `ELECTORAL_VOTES_1953` / `ELECTORAL_VOTE_UNITS_1953` are
  *     computed from the modern tables. Relocating the literals without the
- *     derivations would split one computation across two files for no reader's
- *     benefit, and relocating the derivations would move code, not data.
+ *     derivations would split one computation across two files.
  *
- * Japan's tables moved because Japan had DUPLICATED them. The US has not, so the
- * fix Japan needed does not apply here. If `constants/states.ts` is ever split
- * per country, these follow; until then, one definition is the property that
- * matters and it already holds.
+ * If `constants/states.ts` is ever split per country, these follow; until
+ * then, one definition is the property that matters and it already holds.
  */
 
 /**
- * Federal Senate seats per state, derived from the class assignments.
+ * Federal Senate seats per state, derived from class assignments.
  *
- * ⚠️ `STATE_SENATE_SEATS` IS NOT THIS, AND THE NAMES INVITE THE MISTAKE. That
- * table is each state's OWN upper chamber -- "for state senate elections", as
- * its comment says -- and sums to 1,972 nationally. The federal Senate is two
- * per state and sums to 100. A first draft of this module used it and produced
- * a `senate` chamber of 1,972 seats against a stated total of 100; the totals
- * check caught it, and nothing else would have, because both values are real
- * numbers about real senates.
- *
- * The count is derived from the tuple LENGTH rather than written as `2`. Each
- * entry in `SENATE_CLASSES_BY_STATE` lists that state's seats by election class,
- * so its length IS the seat count -- which keeps this honest if a state ever
- * carries a different number, and stops the `2` becoming a second source.
+ * Not STATE_SENATE_SEATS: that table is each state's own upper chamber (~1,972 total). This is two per state (100 total).
+ * Derive from tuple length, not the literal 2, so class assignments stay the only source.
  */
 const federalSenateSeats: Readonly<Record<string, number>> = Object.fromEntries(
   Object.entries(SENATE_CLASSES_BY_STATE).map(([state, classes]) => [state, classes.length])

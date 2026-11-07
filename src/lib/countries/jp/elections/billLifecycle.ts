@@ -50,16 +50,11 @@ const notifyJPSponsor: SponsorNotifier = async (db: Db, bill: Bill, status: Bill
 
 /**
  * Japan Diet national lifecycle:
- *  - cabinet_review (Cabinet vote, simple majority of votes cast) → pass re-enters
- *    the Shūgiin (`active`, fresh vote) / fail → failed.
- *  - active (Shūgiin) → pass advances to Sangiin (`active_other`) / fail → failed.
- *  - active_other (Sangiin) → pass → signed (no executive veto); reject routes by
- *    origin: sangiin-origin → failed, Shūgiin/cabinet-origin → `override_shugiin`
- *    (fresh Shūgiin vote, Shūgiin whip records cleared).
- *  - override_shugiin (Shūgiin 2/3 of votes cast ≡ legacy didPassOverride) → pass →
- *    signed / fail → failed.
- * Frozen while the JP government is forming (S#17). The engine additionally scopes
- * votes to current seat holders (#0836/#0982).
+ *  - cabinet_review: cabinet vote of player-held positions, simple majority; pass re-enters Shūgiin (active, fresh vote), fail to failed.
+ *  - active (Shūgiin): pass advances to Sangiin (active_other), fail to failed.
+ *  - active_other (Sangiin): pass to signed (no executive veto); reject routes by origin: sangiin-origin to failed, Shūgiin/cabinet-origin to override_shugiin (fresh Shūgiin vote, whip records cleared).
+ *  - override_shugiin: 2/3 of Shūgiin votes cast; pass to signed, fail to failed.
+ * Frozen while JP government is forming. Votes scoped to current seat holders.
  */
 export const JP_NATIONAL_CONFIG: BillLifecycleConfig = {
   country: "JP",
@@ -133,23 +128,17 @@ export const JP_NATIONAL_CONFIG: BillLifecycleConfig = {
 };
 
 /**
- * Japan's registration in the turn loop's bill-lifecycle phase table.
+ * Japan's registration in the turn loop's bill-lifecycle phase table; the
+ * runner function is composed in `src/lib/turn/countryPhases.ts`.
  *
- * Forwarded from `src/lib/turn/countryPhases.ts`, which composes this with the
- * runner function.
- *
- * ⚠ THE `fn` IS DELIBERATELY NOT HERE. `runBillLifecycleForJP` lives in
+ * `fn` is deliberately not here: `runBillLifecycleForJP` lives in
  * `turn/billLifecycle/dispatch`, which reaches this module back through
- * `configs/jp` -- so naming it here would be a real runtime import cycle, not
- * the harmless type-only kind. The registry keeps the one line of wiring and
- * this module keeps the two facts that are Japan's.
+ * `configs/jp`, so naming it would be a real runtime import cycle.
  *
- * ⚠ `emptyResult` IS NOT BOILERPLATE. Every other country reports
- * `{ enacted, failed }`; Japan also reports `overrides` and `cabinetPassed`,
- * because the Diet can pass a bill by cabinet route and the upper house can be
- * overridden. Those two keys are what make a zero-activity turn report zero for
- * those paths rather than omitting them, and a turn summary that omits a key
- * renders it blank rather than "0".
+ * `emptyResult` is not boilerplate. Japan reports `overrides` and
+ * `cabinetPassed` in addition to `enacted` and `failed`, because the Diet can
+ * pass a bill by cabinet route and the upper house can be overridden. Omitting
+ * those keys would make a turn summary render them blank rather than "0".
  */
 export const JP_BILL_PHASE_SHAPE = {
   phaseName: "jpBillLifecycle",

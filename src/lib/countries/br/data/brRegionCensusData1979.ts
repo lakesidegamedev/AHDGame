@@ -1,18 +1,12 @@
 /**
- * Brazil Region Census Profiles — 1979 era.
+ * Brazil region census profiles, 1979 era.
  *
- * 1979-default companion to {@link brRegionCensusData} (the 2019 profiles).
- * Anchored on IBGE Censo Demográfico 1980 (% of adult population), authored
- * independently from historical knowledge of the era — not derived by scaling
- * any other era's profiles.
+ * 1979 counterpart to {@link brRegionCensusData} (2019 profiles). Anchored on
+ * IBGE Censo Demografico 1980 (% of adult population), authored independently
+ * and not scaled from another era.
  *
- * Era anchors: tail of the military regime; the "milagre econômico" has
- * stalled into the oil-shock debt squeeze. Population is very young; mass
- * rural-to-urban migration is in full swing but the Nordeste and Norte remain
- * heavily rural. The Norte frontier (Transamazônica, mining, colonization
- * projects) is just opening. Literacy and schooling are low, worst in the
- * Nordeste; university attainment is a thin elite slice everywhere. Income
- * uses era-neutral relative tiers (no cruzeiro thresholds).
+ * Military regime tail; population very young; Nordeste and Norte heavily
+ * rural; Norte frontier just opening. Income uses era-neutral relative tiers.
  */
 
 import type { BRRegionLayer1 } from "@/lib/seeds/br/brRegionCensusData";

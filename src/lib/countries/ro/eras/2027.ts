@@ -1,24 +1,14 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * Semi-presidential Romania for the 2027 preset. The 1 December 2024
- * legislative election is the latest completed parliamentary election:
- * Chamber of Deputies (331 seats) — PSD 86, AUR 63, PNL 49, USR 40,
- * SOS Romania 28, POT 24, UDMR 22, national minorities 19; Senate
- * (134 seats) — PSD 36, AUR 28, PNL 22, USR 19, SOS 12, UDMR 10, POT 7.
- * Official results: the Permanent Electoral Authority portal
- * https://prezenta.roaep.ro and the Central Electoral Bureau
- * https://www.bec.ro .
+ * Semi-presidential Romania for the 2027 preset. No closed-list PR method
+ * with a 5% threshold exists, so both chambers read `pr_hareQuota` (closest
+ * in-tree proportional method) until a dedicated one exists; the directly
+ * elected presidency reads `fptp`. `headOfStateSelection` is cleared (direct
+ * election replaces base `partyChairSync`), as is the one-party `rulingPartyId`.
  *
- * The game has no closed-list PR method with a 5% threshold, so both
- * chambers read `pr_hareQuota` (the closest in-tree proportional method)
- * until a dedicated one exists; the directly elected presidency reads
- * `fptp` like France's. The difference is explicit here so election replay
- * can test it. `headOfStateSelection` is cleared (direct election replaces
- * the base `partyChairSync`), as is the one-party `rulingPartyId`.
- *
- * The region GDP anchor is in modern RON, and the 2024 NBR annual-average
- * exchange rate below prices the same year against the game's USD anchor.
+ * Region GDP anchor is in modern RON; exchange rate below prices it against
+ * the game's USD anchor.
  */
 export const RO_2027: CountryEraOverride = {
   preset: "2027-default",

@@ -3,26 +3,14 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 /**
  * UK default political parties.
  *
- * Economic/social positions on -5 to +5 scale, calibrated to UK politics:
- *   Labour:    centre-left economically, progressive socially
- *   Tories:    centre-right economically, traditional socially
- *   Lib Dems:  centrist economically, socially liberal
- *   SNP:       centre-left, progressive but defined by independence
- *   Plaid:     centre-left, Welsh language/independence focused
- *   Greens:    far-left economically, very progressive socially
- *   Reform:    right-wing populist, very socially conservative
- *   DUP:       right-wing economically, very socially conservative (NI unionist)
- *   Sinn Féin: left-wing economically, progressive socially (NI nationalist/republican)
- *   Liberals:  historic Liberal Party (1953-only) — free-trade centrist third party
+ * Economic/social positions on -5 to +5 scale.
  *
- * Era gating (`validForPresets`): Lib Dems (1988), Greens (1990) and the DUP
- * (1971) don't exist in the 1953 preset; the historic Liberal Party exists
- * ONLY in 1953. Reform UK is 2019/2027-only; UUP is 1991-only. Every other
- * modern default continues into 2027-default.
+ * `validForPresets` gates era availability: Lib Dems (1988), Greens
+ * (1990), DUP (1971) are absent from 1953; historic Liberals are 1953-only;
+ * Reform UK is 2019/2027-only; UUP is 1991-only.
  *
- * These are seeded as `isDefault: true` for the UK — they always exist
- * and cannot be deleted (equivalent to Democrat/Republican in the US game).
- * seedOrder determines the sequentialId assignment order within the UK.
+ * `isDefault: true` parties always exist and cannot be deleted.
+ * `seedOrder` sets the sequentialId assignment order.
  */
 export const ukParties: PartySeed[] = [
   {
@@ -162,12 +150,9 @@ export const ukParties: PartySeed[] = [
     ],
   },
   {
-    // Reform UK was founded in 2018-2019 (originally the Brexit Party,
-    // renamed January 2021). Not a meaningful political force in 1991:
-    // Anti-Federalist League / Referendum Party era predecessors were
-    // marginal single-issue groups, not stable party defaults. Valid in
-    // 2019 (Brexit Party era) and 2027 (14.3% and five seats at the 2024
-    // general election, leading national polls through 2026-27).
+    // Reform UK was founded in 2018-2019 (originally the Brexit Party, renamed
+    // January 2021). Not a meaningful force in 1991: predecessors were marginal
+    // single-issue groups, not stable party defaults. Valid in 2019 and 2027.
     seedOrder: 7,
     countryId: "UK",
     name: "Reform UK",

@@ -4,20 +4,12 @@ import { INITIAL_RATES_1991 } from "@/lib/constants/currencies";
 /**
  * January 1991 SFRY institutions, before the federation broke apart.
  * The 1974 constitution provided a 220-seat Federal Chamber and an 88-seat
- * Council of Republics and Provinces. The federal executive was the Federal
- * Executive Council, alongside an eight-member rotating Presidency. There
- * was no federal multiparty election in 1991; the republics held their own.
- *
- * This is a start-state snapshot, not a claim that SFRY institutions survived
- * the 1991-92 dissolution. A dated succession transition must retire the
- * federal offices and delegations, split republic state, and create the 1992
- * Federal Republic of Yugoslavia for Serbia and Montenegro. Until then the
- * 1991-to-2027 YU political horizon remains incomplete.
- *
- * https://www.arhivyu.rs/en/leksikon-jugoslavije/konstitutivni_akti_jugoslavije
- * https://www.parlament.gov.rs/national-assembly/history/after-second-world-war.534.html
- * https://www.ecoi.net/en/document/1355059.html
- * https://hudoc.echr.coe.int/app/conversion/pdf/?id=001-107425&library=ECHR
+ * Council of Republics and Provinces. Federal executive was the Federal
+ * Executive Council alongside an eight-member rotating Presidency. There
+ * was no federal multiparty election in 1991; republics held their own.
+ * This is a start-state snapshot, not a claim SFRY institutions survived the
+ * 1991-92 dissolution. A dated succession transition must retire federal
+ * offices and delegations, split republic state, and create the 1992 FRY.
  */
 export const YU_1991: CountryEraOverride = {
   preset: "1991-default",

@@ -35,23 +35,20 @@ import type { Caucus, CaucusMembership } from "@/lib/db/types/caucus";
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * UK party leadership removal — shell commands (epic #856, ticket #861).
+ * UK party leadership removal shell commands.
  *
- * Wires the pure `leadershipRemoval` evaluator + `rules` helpers to storage:
- * per-party rulesets with CON/LAB defaults, the internal governing committee
- * (1922 / NEC analogue) with faction control, committee amendments within safe
- * bounds, and the full challenge lifecycle (letters/nominations → ballot →
- * resolution → immunity / leader replacement).
+ * Wires the leadershipRemoval evaluator to storage: per-party rulesets (CON/LAB
+ * defaults), the governing committee with faction control, and the full
+ * challenge lifecycle (letters/nominations, ballot, resolution, immunity,
+ * leader replacement).
  *
- * Party-leader confidence here is DISTINCT from government confidence: a
- * successful challenge vacates the party chair (the sitting leader) and the
- * existing national chair-election machinery seats the successor. The
- * government formation (PM, cabinet, VONC gauge) is never touched.
+ * Party-leader confidence is distinct from government confidence: a successful
+ * challenge vacates the party chair and the national chair-election machinery
+ * seats the successor. Government formation (PM, cabinet, VONC) is untouched.
  *
- * The sitting party leader IS the party chair. Removal clears chairId with no
- * auto-promotion (same semantics as the committee removeOfficeHolder flow);
- * the vice-chair inherits chair authority via the acting-chair helper until
- * the fresh chair election resolves.
+ * The sitting party leader is the party chair. Removal clears chairId with no
+ * auto-promotion; the vice-chair inherits chair authority via the acting-chair
+ * helper until the fresh chair election resolves.
  */
 
 export interface LeadershipActor {
@@ -369,12 +366,12 @@ export async function amendLeadershipRules(
   const validation = validateRulesetAmendment(patch);
   if (!validation.ok) throw badRequest(validation.errors.join("; "));
 
-  // Durable serialization with conference motion applies (ticket #862): the
-  // cooldown travels with the write as a compare-and-swap on the observed
-  // lastAmendedTurn, so a concurrent winner (motion or amendment) that moved
-  // it first makes this write miss instead of landing a second patch inside
-  // the window. `{ lastAmendedTurn: null }` matches null AND missing, so a
-  // legacy row without the field amends cleanly the first time.
+  // Durable serialization with conference motion applies: the cooldown travels
+  // with the write as a compare-and-swap on the observed lastAmendedTurn, so a
+  // concurrent winner (motion or amendment) that moved it first makes this write
+  // miss instead of landing a second patch inside the window.
+  // `{ lastAmendedTurn: null }` matches null AND missing, so a legacy row
+  // without the field amends cleanly the first time.
   for (let attempt = 0; attempt < 2; attempt++) {
     const leadership = await getOrSeedPartyLeadership(db, countryId, party, now, currentTurn);
     const sinceAmend = turnsSince(currentTurn, leadership.lastAmendedTurn);

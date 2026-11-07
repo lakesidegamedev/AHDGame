@@ -25,21 +25,11 @@ export async function ensureBRElections(now: Date, inFlightTurn?: number): Promi
 }
 
 /**
- * Ensure every BR macro-region has an active/upcoming Federal Senate
- * election. Had NO spawner at all before this — the seeded 81-seat chamber
- * (`brRegions[*].stateSenateSeats`, summing to 81 across the 5 macro-regions
- * — 21/27/12/12/9) never held a single election; seats only ever vacated
- * (resignation/term-end) with nothing to backfill them, so occupancy
- * strictly declined turn over turn.
+ * Ensure every BR macro-region has an active/upcoming Federal Senate election.
  *
- * Mirrors `ensureBRElections`: one multi-seat regional election per
- * macro-region, sized by the region's own `stateSenateSeats` (same field NG's
- * multi-seat Senate spawner reads — `ensureNGZoneElections`), anchored to the
- * preset's `brSenate` cycle anchor (see `canonicalCycle.ts`'s `case "senate"`
- * BR branch and `BR_SENATE_CYCLE_PERIOD_HOURS` for the staggering-
- * simplification note: the real chamber renews 1/3 then 2/3 of individual
- * SEATS every 4 years; this elects every seat in a region together every 4
- * years instead, for lack of per-seat class data at the seed layer).
+ * Without this, seats only vacate (resignation/term-end) with nothing to backfill them, so occupancy strictly declines turn over turn.
+ *
+ * Mirrors `ensureBRElections`: one multi-seat regional election per macro-region, sized by the region's own `stateSenateSeats`. Anchored to the preset's `brSenate` cycle anchor (see `canonicalCycle.ts`'s `case "senate"` BR branch and `BR_SENATE_CYCLE_PERIOD_HOURS`): the real chamber renews 1/3 then 2/3 of individual SEATS every 4 years; this elects every seat in a region together every 4 years instead, for lack of per-seat class data at the seed layer.
  */
 export async function ensureBRSenateElections(now: Date, inFlightTurn?: number): Promise<void> {
   await ensureRegionalDelegateElections(
@@ -67,13 +57,11 @@ export async function ensureBRGovernorElections(now: Date, inFlightTurn?: number
 
 // ─── Soviet Union: Supreme Soviet + republic soviets + First Secretaries ─────
 //
-// All four families are status-gated via `ruElectionsLive` (#3386): RU stays
-// `coming-soon` for players, but its elections run when RU is beta/active (the
-// Cold-War presets / the headless sim force this) OR when RU is NPP-governed
-// (global autonomy ≥ v1, RU read-only, never player-enabled) — so a live world
+// Status-gated via `ruElectionsLive`: RU stays `coming-soon` for players, but its
+// elections run when RU is beta/active (Cold-War presets / headless sim force this)
+// OR when RU is NPP-governed (global autonomy, RU read-only) , so a live world
 // running the NPP brain re-elects the Supreme Soviet instead of freezing it.
-// They are ALSO era-gated (null ruSupremeSoviet/ruRepublicSoviet anchors under
-// 2019/1991 return no spawn from buildCanonicalSpawn).
+// Also era-gated: null Soviet anchors under 2019/1991 return no spawn.
 
 /** Keep Brazil's presidency renewing in autonomous background worlds too. */
 export async function ensureBRPresidentialElection(

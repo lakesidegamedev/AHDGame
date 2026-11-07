@@ -312,35 +312,13 @@ const CAPITAL_1979: PositionsBlock = {
 /**
  * 1979-era US state census profiles (Layer 1 demographic configs).
  *
- * Era anchor: the 1980 Census. Every state profile here was authored
- * independently from historical knowledge of that state circa 1979 —
- * NOT derived by scaling the 2019 data in `stateCensusData.ts`.
+ * Era anchor: the 1980 Census. Every state profile was authored
+ * independently from historical knowledge of that state circa 1979, not
+ * derived by scaling the 2019 data.
  *
- * Key national reference points (1980 Census / late-1970s surveys):
- * - Race: White ~80%, Black ~11.7%, Hispanic ~6.4%, Asian ~1.5%.
- *   Hispanic population heavily concentrated in NM/TX/CA/AZ/CO/NY/FL;
- *   most of the country was far Whiter than in 2019. Asian share was
- *   negligible outside HI/CA/WA/NY. "Other" carries American Indian /
- *   Alaska Native populations (AK, NM, AZ, OK, SD, MT, ND).
- * - Education: bachelor's-or-higher attainment ~17% nationally
- *   (vs ~33% in 2019); graduate degrees rare. no_college dominates
- *   everywhere; Appalachia/Deep South in the low 60s for HS completion.
- * - Age: median age ~30. Baby boomers were 16-34, so the population is
- *   young-heavy with a small senior cohort (~11% 65+). FL already a
- *   retirement magnet; UT exceptionally young.
- * - Wealth: era-neutral relative tiers. Industrial Midwest (MI/OH/IL)
- *   still prosperous pre-deindustrialization collapse; energy-boom
- *   states (TX/AK/WY/OK/LA) riding the late-70s oil boom; Appalachia
- *   (WV/KY) and the Deep South (MS/AR/AL) poorest; CT/NJ/MD/AK richest.
- * - Ideology (pre-Reagan coding): evangelical political mobilization was
- *   only just beginning (Moral Majority founded 1979) — high cultural
- *   presence in the South but somewhat below 2019 political peaks.
- *   Environmentalist and progressive identification far lower than 2019
- *   (post-Earth Day but pre-mainstreaming). Libertarians a tiny fringe
- *   (party founded 1971), modestly higher in the Mountain West.
- *   Patriots (Cold War nationalism) and gunowners strong in the rural
- *   South/West; the unionized industrial Midwest reads blue-collar
- *   Democratic rather than progressive.
+ * National reference points: White ~80%, Black ~11.7%, Hispanic ~6.4%,
+ * Asian ~1.5%; bachelor's-or-higher ~17%; median age ~30 with a small
+ * senior cohort; ideology coded pre-Reagan.
  */
 export const stateCensusData1979: Record<string, Layer1Config> = {
   AK: {

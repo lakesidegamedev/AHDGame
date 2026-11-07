@@ -1,18 +1,12 @@
 /**
- * Japan Region Census Profiles — 1991 era.
+ * Japan Region Census Profiles , 1991 era.
  *
  * 1991-default companion to {@link jpRegionCensusData} (the 2019 profiles).
- * Selected at render time via the preset registry under the `1991-default`
- * reset preset.
+ * Selected at render time via the preset registry under `1991-default`.
  *
- * Sources / methodology (approximate, % of adult population): 1990 Population
- * Census of Japan. Bubble-era Japan was near-ethnically-homogeneous (the
- * zainichi Korean community, concentrated in Kansai, was the largest minority)
- * with a younger age structure and lower university advancement than today.
- * Income uses era-neutral relative tiers (no ¥ thresholds).
- *
- * Directional vs the 2019 profiles: higher `japanese` share, lower combined
- * `university` + `graduate` attainment.
+ * All values independently authored for circa 1991 , approximate % of adult
+ * population. Near-ethnically-homogeneous, younger age structure, lower
+ * university advancement than today. Income uses era-neutral relative tiers.
  */
 
 import type { JPRegionLayer1 } from "./jpRegionCensusData";

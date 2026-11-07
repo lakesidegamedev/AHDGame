@@ -602,11 +602,10 @@ export async function resolveDELandtagElection(
     .find({ _id: { $in: tallyCandidateObjectIds }, electionId: election._id })
     .toArray();
 
-  // Defense-in-depth: never seat a hard-deleted character. Account deletion can
-  // leave a dangling candidacy that resolves into a phantom list seat (the NW
-  // Landtag "Wolfgang Clement" case). Drop non-NPP candidates whose character
-  // no longer exists so their votes and seats fall to the remaining eligible
-  // candidates. Mirrors the FPTP guard in generalResolution.ts.
+  // Defense-in-depth: account deletion can leave a dangling candidacy that
+  // resolves into a phantom list seat. Drop non-NPP candidates whose character no
+  // longer exists so votes and seats fall to remaining eligible candidates.
+  // Mirrors the FPTP guard in generalResolution.ts.
   let liveCandidates = candidates;
   const accountIdByCharacterId = new Map<string, string>();
   const currentOfficeByCharacterId = new Map<string, Character["currentOffice"]>();

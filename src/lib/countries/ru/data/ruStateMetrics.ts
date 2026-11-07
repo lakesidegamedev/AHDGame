@@ -2,19 +2,9 @@ import type { StateMetrics } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * USSR region initial metrics — ~1979 Soviet command-economy values, tuned for
- * gameplay. The USSR exists in the 1953 and 1979 presets; the 1953 preset
- * overlays era-authored values on top of this bundle (see
- * `ruMetricPresets1953.ts`) so 1953 worlds don't seed Brezhnev-era numbers.
- *
- * Era anchors (1979 USSR): official "full employment" (~0% unemployment),
- * centrally-set incomes in rubles (compressed), Brezhnev-era stagnation growth
- * (~2.5%), near-universal literacy, life expectancy ~68 (below the West and
- * declining), minimal press freedom, near-universal formal voter turnout,
- * low external debt, hydro-heavy renewables, high per-capita carbon.
- *
- * `medianIncome` is annual household income in rubles. All values use the
- * `{ value, trend? }` wrappers; `withUniformMetricSet` fills any unset metric.
+ * USSR region initial metrics, ~1979 command-economy values tuned for
+ * gameplay. 1953 preset overlays era-authored values from
+ * ruMetricPresets1953.ts. medianIncome is annual household rubles.
  */
 
 function mv(value: number, trend?: number) {

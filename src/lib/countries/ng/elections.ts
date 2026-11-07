@@ -41,13 +41,10 @@ const spawn = async (now: Date, currentTurn?: number): Promise<SpawnElectionsRes
 };
 
 /**
- * The election phases, in the order `countryPhases.ts` declares them.
+ * Election turn phases, in the order `countryPhases.ts` declares them.
  *
- * ⚠️ `spawn` AND `electionPhases` ARE DIFFERENT LISTS AND THIS COUNTRY HAS
- * BOTH. `spawn` is the continuity check the perpetual-election registry runs;
- * these are the turn phases. They overlap but are not the same set -- the
- * folder previously carried only `spawn`, so anything reading the folder for a
- * country's phases got nothing. The harness compares this list against
+ * Distinct from `spawn`: `spawn` is the perpetual-election continuity check,
+ * these are turn phases. The harness compares this list against
  * `COUNTRY_ELECTION_PHASES` entry by entry, `fn` by reference.
  */
 const phases: CountryElectionPhaseEntry[] = [

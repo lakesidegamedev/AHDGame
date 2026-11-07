@@ -1,21 +1,13 @@
 /**
- * Greece 1953 metric overlays — post-civil-war kingdom / Marshall Plan recovery.
+ * Greece 1953 metric overlays, post-civil-war recovery.
  *
- * Base `grStateMetrics` is authored on ~1979 (Metapolitefsi) values. Without this
- * overlay a 1953-default world keeps 1979 life expectancy (~73.5), literacy, and
- * urbanization — far above post-civil-war Greece, which was materially poorer and
- * less urbanised than Austria or Finland (ELSTAT 1951 census; Maddison GDP/cap
- * ~half of AT/FI). Life expectancy sat near 65 (UN Demographic Yearbook 1950-55).
+ * Base `grStateMetrics` is authored on ~1979 values; without this overlay a
+ * 1953 world keeps 1979 life expectancy, literacy, and urbanization.
  * Region ids match `grRegionCensusData1953`.
  *
- * `medianIncome` is annual household drachmae, re-derived (#income-gdp-scale-audit)
- * against the 1953 budget's own GDP/capita — the old Maddison-scaled-off-1979-
- * nominal method (the same mistake diagnosed and fixed for FR/ES/TR) measured
- * out at ratio 15.7x GDP/capita (₯50B / 7.6M = ₯6,579;
- * medianIncomeGdpScale1953.test.ts band is [0.8, 2.6]). Re-authored ~11x
- * lower (ratio ~1.4). Broadband/internet did not exist.
- * `population.birthRate` is the 0–100 fertility INDEX (metricDefinitions) —
- * Greece's early-1950s TFR ≈2.5–2.7 maps to the mid-50s of that index.
+ * `medianIncome` is annual household drachmae, calibrated to the 1953 budget's
+ * GDP/capita via the income-gdp-scale audit (ratio ~1.4).
+ * `population.birthRate` is the 0-100 fertility index (metricDefinitions).
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 

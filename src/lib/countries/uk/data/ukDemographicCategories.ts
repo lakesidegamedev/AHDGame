@@ -1,21 +1,13 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * UK Voter Archetypes — 12 mutually exclusive attitudinal/demographic groups
- * reflecting the British political landscape.
+ * UK Voter Archetypes: 12 mutually exclusive attitudinal/demographic groups.
  *
- * Design principle: each archetype is defined by attitudes and demographics,
- * not geography or party affiliation. Every group can exist in every region;
- * regional character is expressed through population percentages in
- * ukRegionDemographics.ts, not through dedicated regional identity slots.
- *
- * Each group has:
- *   defaultEconomicLean: -5 (far left) to +5 (far right) on redistribution/market axis
- *   defaultSocialLean:   -5 (progressive/liberal) to +5 (conservative/traditional)
- *   defaultTurnout:      baseline participation rate (UK avg ~67% in 2019 GE)
- *
- * The system (electionEngine, demographicAppeal) is identical to US —
- * only the group definitions differ.
+ * Each archetype is defined by attitudes and demographics, not geography or
+ * party affiliation; regional character comes from population percentages in
+ * ukRegionDemographics.ts. Leans range -5 (far left / progressive) to +5 (far
+ * right / conservative); defaultTurnout is baseline participation (UK 2019 GE
+ * ~67%). Engine is identical to US, only group definitions differ.
  *
  * demographicProfileId: "uk_archetypes"
  */

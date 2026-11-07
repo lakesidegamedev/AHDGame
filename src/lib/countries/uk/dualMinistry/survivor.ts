@@ -5,14 +5,14 @@ import type { Character, OfficeType } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * Preserve the surviving cabinet row after one seat is vacated (issue #2049).
+ * Preserve the surviving cabinet row after one seat is vacated.
  *
- * When a dual-office UK holder loses one seat (fired, resigned, or removed),
- * the other row survives: repoint `currentOffice` at it instead of restoring
- * the legislative seat. Returns true when a surviving row exists (the caller
- * must then skip its legacy office restore). Returns false when no row
- * remains, in which case the caller runs its normal restore. Never touches a
- * `currentOffice` that already moved on from cabinet.
+ * When a dual-office UK holder loses one seat (fired, resigned, removed), the
+ * other row survives: repoint `currentOffice` at it instead of restoring the
+ * legislative seat. Returns true when a surviving row exists (the caller must
+ * then skip its legacy office restore); false when none remains, so the caller
+ * runs its normal restore. Never touches a `currentOffice` that already moved
+ * on from cabinet.
  */
 export async function preserveSurvivingCabinetRow(
   db: Db,

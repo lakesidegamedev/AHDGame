@@ -1,18 +1,10 @@
-/**
- * UK Layer-1 demographic model — census-consuming rebuild.
+/*
+ * UK Layer-1 demographic model, census-consuming.
  *
- * Architecture:
- *   - dims: ["ethnicity","age","education","income","urbanization"]
- *   - census: real per-region ONS data from ukRegionCensusData*.ts
- *   - composition: maps each of the 12 UK archetypes to census dim/key weights
- *   - positions: per-era, reflecting documented UK political history
- *     (Thatcher 1979, Recession 1991, New Labour 1999, Blair peak 2007,
- *      Brexit realignment 2019, post-Truss 2023)
- *   - region/archetype leans EMERGE from census × positions — never hand-calibrated
- *
- * Era-fact anchors validated in uk.test.ts:
- *   1979: SCO, WAL, NEE, NWE, YHU, WMI economically LEFT; SEE, SWE RIGHT
- *   2019: LON strongly LEFT (cosmopolitan); SEE RIGHT; NEE drifting right vs 1979
+ * Region/archetype leans EMERGE from census x positions; never hand-calibrated.
+ * Positions are per-era with documented era-fact anchors (e.g. 1979: SCO, WAL,
+ * NEE, NWE, YHU, WMI economically LEFT, SEE, SWE RIGHT; 2019: LON strongly LEFT,
+ * SEE RIGHT).
  */
 
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
@@ -265,54 +257,24 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
   new_britons: { economicLean: -2, socialLean: -1 },
 };
 
-// ── Per-era positions: how each census key leaned in that political era ────────
-//
-// Scale: economicLean -5 (redistribution) to +5 (free market)
-//        socialLean   -5 (progressive) to +5 (traditional/conservative)
-//
-// Historical basis:
-//   1979: Thatcher election — class politics dominant. Working class / low education /
-//         industrial = strongly economic LEFT. High earners = RIGHT. Social: rural
-//         traditional, senior traditional. Few graduates (left lean not yet formed).
-//
-//   1991: Post-Thatcher recession. Education polarisation beginning. Miners defeated.
-//         Economic discontent in industrial North but social conservatism persistent.
-//         John Major era — centre right.
-//
-//   1999: New Labour 2nd year. Blair landslide was 1997. Graduate expansion starts.
-//         Working class less reliably Labour (some moved to BNP/Ukip). Ethnic minority
-//         communities very strongly Labour. Degree-plus left alignment emerging.
-//
-//   2007: Blair exit / Brown. Iraq war disillusionment. Degree-plus moves further left.
-//         Income.high = more right. Working class dissatisfaction growing.
-//
-//   2019: Brexit realignment complete. Education is the dominant cleavage.
-//         degree_plus → strongly LEFT (Remain); no_qualifications → RIGHT (Leave).
-//         Working class income.low: split but social lean very RIGHT.
-//         London, diverse, urban = strongly left. "Red Wall" right drift.
-//
-//   2023: Post-Truss economic disaster. Conservative collapse. Labour surge.
-//         Similar structure to 2019 but income.middle/high more volatile (cost of living).
-//         Degree-plus remains strong left. No_qualifications right (Reform/Tory).
+// Per-era positions: how each census key leaned in that political era.
+// Scale: economicLean -5 (redistribution) to +5 (free market);
+//        socialLean   -5 (progressive) to +5 (traditional/conservative).
+// Each era's lean reflects that period's dominant cleavage (class in early
+// eras, education by the Brexit era).
 
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;
 
 const POSITIONS_1953: EraPositions = {
-  // 1953 — post-war class politics at its most binary. NHS and welfare state just
-  // built; Churchill's Conservatives in power since 1951. Near-tie elections either
-  // side (1951 Con 48.0% / Lab 48.8%; 1955 Con 49.7% / Lab 46.4%).
+  // 1953: post-war class politics at its most binary. NHS and welfare state just
+  // built; Conservatives in power since 1951; elections near-ties either side.
   //
-  // Fixes #3755, where every region displayed left of centre. The economics were
-  // broadly right; the fault was the SOCIAL LEVEL. `getDisplayLean` takes whichever
-  // axis is larger in magnitude, so the social level acts as the threshold the
-  // economic axis crosses: regions more left than it read left, the rest read right.
-  // This era sat at ~0.26 while every region's economic lean was 0.48–1.14, so the
-  // economic axis always won and the country came out uniformly left — it could not
-  // return the government Britain actually had. The level now sits ~0.7, in line with
-  // the other eras, which splits the industrial North and London from the shire South.
+  // The social level acts as the threshold `getDisplayLean` uses to pick the
+  // larger-magnitude axis over economics. It sits ~0.7, in line with other eras,
+  // which splits the industrial North and London from the shire South.
   //
-  // Welsh rurality is also no longer treated as Tory shire: the valleys were chapel
+  // Welsh rurality is not treated as Tory shire: the valleys were chapel
   // Liberal-Labour, so `rural` pulls right less hard than in later eras.
   //
   // Targets live in seeds/calibration/targets.ts; anchors in uk1953.test.ts.

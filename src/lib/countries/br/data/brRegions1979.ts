@@ -1,19 +1,18 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's region data. All values are authored for 1979 directly.
  * Type-only imports are allowed.
  *
- * Brazil IBGE macro-regions for the 1979-default preset (the Figueiredo military
- * government / start of the abertura; the ARENA–MDB controlled-bipartisan era,
- * just before the 1979 party reform). The 5 macro-regions are structurally
- * stable; the era-specific values are 1980-census population, ~1979 regional GDP
- * (BRL-equivalent millions, nominal — a pre-Real, pre-stabilization economy),
- * and the **420-seat** Chamber distribution of the 1978 legislature.
+ * Brazil IBGE macro-regions for the 1979-default preset (Figueiredo military
+ * government, start of the abertura; ARENA-MDB controlled-bipartisan era). The
+ * 5 macro-regions are structurally stable; era-specific values are 1980-census
+ * population, ~1979 regional GDP (BRL-equivalent millions, nominal), and the
+ * 420-seat Chamber distribution of the 1978 legislature.
  *
- * NOTE (anachronism): `stateSenateSeats` keeps the modern 81-seat Senate split;
- * in 1979 Brazil had fewer states (several northern territories were not yet
- * states) and a 67-seat Senate — the structural seat count is era-invariant here.
+ * Anachronism: `stateSenateSeats` keeps the modern 81-seat Senate split; in
+ * 1979 Brazil had fewer states and a 67-seat Senate. The structural seat count
+ * is era-invariant here.
  */
 import type { State } from "@/lib/db/types";
 

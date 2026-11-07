@@ -2,22 +2,22 @@ import type { StateMetrics } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * German Bundesländer initial metrics — approximate 2022 Destatis / Wegweiser
- * Kommune data, tuned for gameplay feel.
+ * German Bundesländer initial metrics, approximate 2022 Destatis / Wegweiser
+ * Kommune data tuned for gameplay.
  *
- * Units and conventions:
- *   unemploymentRate   — %, e.g. 5.2 means 5.2%
- *   medianIncome       — annual household net income in EUR
- *   gdpGrowth          — year-over-year % change
- *   povertyRate        — % below 60% median-income threshold (Armutsquote)
- *   costOfLiving       — index, 100 = national mean
- *   crimeRate          — incidents per 100k population
- *   lifeExpectancy     — years at birth
- *   carbonEmissions    — tons CO2 per capita per year (lower = better)
- *   corruptionIndex    — 0-100 scale (lower = cleaner; Transparency Int'l style)
- *   voterTurnout       — % turnout in most recent Bundestag election
+ * Units:
+ *   unemploymentRate  %, 5.2 means 5.2%
+ *   medianIncome      annual household net income, EUR
+ *   gdpGrowth         year-over-year % change
+ *   povertyRate       % below 60% median income (Armutsquote)
+ *   costOfLiving      index, 100 = national mean
+ *   crimeRate         incidents per 100k population
+ *   lifeExpectancy    years at birth
+ *   carbonEmissions   tons CO2 per capita per year (lower = better)
+ *   corruptionIndex   0-100 (lower = cleaner; Transparency Int'l style)
+ *   voterTurnout      % in most recent Bundestag election
  *
- * All values use `{ value, trend? }` wrappers expected by the engine.
+ * Values use `{ value, trend? }` wrappers expected by the engine.
  */
 
 function mv(value: number, trend?: number) {

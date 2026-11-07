@@ -1,10 +1,10 @@
 /**
  * UK 1991 regional context offsets, calibrated to published general election
- * regional vote shares (#3076).
+ * regional vote shares.
  *
- * The census-by-position derivation gives the twelve regions a combined spread
- * of about one point on the economic axis, against a Labour minus Conservative
- * margin that ranged over more than fifty points between regions. Composition
+ * Census-by-position derivation gives the twelve regions a combined spread of
+ * about one point on the economic axis, against a Labour minus Conservative
+ * margin ranging over more than fifty points between regions. Composition
  * alone cannot reach that contrast, so each region carries a bounded contextual
  * economic offset proportional to how far its margin sat from the national one.
  *

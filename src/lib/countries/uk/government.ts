@@ -60,9 +60,7 @@ export async function resolveNoConfidenceVote(voteId: ObjectId, now: Date): Prom
 }
 
 /**
- * Every-4-turn NPP auto-aye for active PM appointment votes.
- * Delegates to shared processParliamentaryNPPAutoAye with countryId: "UK".
- * FIXED: now filters by countryId (previously had no filter).
+ * Every-4-turn NPP auto-aye for active PM appointment votes, scoped to UK.
  */
 export async function processNPPAutoAye(_now: Date, currentTurn: number): Promise<void> {
   const db = await getDb();

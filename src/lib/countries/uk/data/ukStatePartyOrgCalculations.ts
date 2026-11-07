@@ -21,9 +21,9 @@ const MIN_ORG = 5;
 const MAX_ORG = 70;
 
 /**
- * UK party slug → display name. Used to resolve a party slug to its
- * `politicalParties.name` for runtime sequentialId lookup. Slugs match
- * the ids used in ukRegionPolling2020.ts and getMajorPartiesForRegion.
+ * UK party slug to display name, resolved to politicalParties.name for
+ * runtime sequentialId lookup. Slugs match the ids in ukRegionPolling2020.ts
+ * and getMajorPartiesForRegion.
  */
 const UK_PARTY_SLUG_TO_NAME: Record<string, string> = {
   uk_labour: "Labour Party",
@@ -74,20 +74,16 @@ export async function buildUKPartySlugToSeqId(db: Db): Promise<Record<string, st
 }
 
 /**
- * Generate all UK state party org entries from polling data.
- * Creates entries for each region × party combination present in the polling
- * data AND in the DB. Async — accepts a Db so slug → sequentialId can be
- * resolved from the live `politicalParties` collection (parties filtered out
- * by `validForPresets` for the active preset are skipped automatically).
+ * Generate UK state party org entries for each region x party present in the
+ * polling data and in the DB. Resolves slug -> sequentialId from the live
+ * politicalParties collection; parties gated out by validForPresets for the
+ * active preset are skipped.
  *
- * `preset` selects the polling table: `1953-default` uses
- * `UK_REGION_POLLING_1951` (Con/Lab duopoly, historic Liberals, no SNP);
- * `1991-default` and `1979-default` use `UK_REGION_POLLING_1992` (UUP dominant
- * in NIR, no Reform UK, lower SF share — for 1979 the 1992 table is the
- * closest authored election until a dedicated 1979 table exists);
- * `2027-default` uses `UK_REGION_POLLING_2024` (Labour landslide, Reform UK
- * second in most English regions, SNP at 30% in Scotland); anything
- * else (including the default `2019-default`) uses `UK_REGION_POLLING_2020`.
+ * Preset to polling table:
+ *   1953-default: UK_REGION_POLLING_1951
+ *   1979-default, 1991-default: UK_REGION_POLLING_1992
+ *   2027-default: UK_REGION_POLLING_2024
+ *   anything else (incl. 2019-default): UK_REGION_POLLING_2020
  */
 export async function calculateUKStatePartyOrgs(
   db: Db,

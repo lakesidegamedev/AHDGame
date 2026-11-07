@@ -27,9 +27,7 @@ export async function ensureNGElections(now: Date, inFlightTurn?: number): Promi
     .toArray();
   const regionIds = ngRegions.map((r) => r._id as string);
   if (regionIds.length === 0) return;
-  // Each NG zone is a multi-seat House election sized by its houseDistricts
-  // (95/50/53/72/47/43 = 360). Without this the spawn fell back to totalSeats=1,
-  // so the whole chamber projected/resolved as 6 single-winner races (#901).
+  // Each NG zone is a multi-seat House election sized by its houseDistricts (sum 360); without this seats fall back to 1.
   const seatsByRegion = new Map<string, number>(
     ngRegions.map((r) => [r._id as string, (r as State).houseDistricts ?? 1])
   );
@@ -79,10 +77,8 @@ export async function ensureNGElections(now: Date, inFlightTurn?: number): Promi
     });
     if (!doc) continue;
 
-    // buildCanonicalSpawn inherits prev?.totalSeats, and NG's earlier cycles were
-    // spawned with the buggy totalSeats=1 — so the fallback alone wouldn't heal
-    // future cycles. A zone's House seat count is the fixed authoritative
-    // houseDistricts, so force it here so every new cycle sizes correctly (#901).
+    // Force totalSeats to the authoritative houseDistricts seat count so
+    // cycles spawned from inherited prev totals size correctly.
     const authoritativeSeats = seatsByRegion.get(regionId);
     if (authoritativeSeats && authoritativeSeats > 0) {
       doc.totalSeats = authoritativeSeats;

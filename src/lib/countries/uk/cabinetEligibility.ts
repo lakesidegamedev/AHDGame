@@ -124,10 +124,10 @@ export async function requireCurrentPrimeMinister(
 /**
  * Get eligible cabinet candidates for any parliamentary country.
  * Returns lower-chamber player-character MPs who are not the PM and not already in cabinet.
- * With `vacancyPositionId` (UK dual-ministry rules, issue #2049), single-slot
+ * With `vacancyPositionId` (UK dual-ministry rules), single-slot
  * holders of the complementary slot stay eligible for the vacancy: a
  * department-only minister may take a central title and vice versa. Without
- * it, every cabinet holder is excluded, exactly as before.
+ * it, every cabinet holder is excluded.
  */
 export async function getEligibleCabinetCharacters(
   db: Db,
@@ -220,9 +220,7 @@ export async function getEligibleCabinetCharacters(
         if (countryId !== "UK") return held == null;
         return isCandidateEligibleForVacancy(countryId, vacancySlot, held ?? []);
       })
-      // Party suspension (issue #859): a whip-withdrawn MP sits as an
-      // independent and is not offered for cabinet until restored. The appoint
-      // and reshuffle handlers enforce the same rule server-side.
+      // A whip-withdrawn MP sits as an independent and is not offered for cabinet until restored. Appoint and reshuffle handlers enforce this too.
       .filter(
         (character) => officialByCharacterId.get(character._id.toString())?.whipWithdrawn !== true
       )

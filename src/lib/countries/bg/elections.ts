@@ -94,18 +94,15 @@ export async function ensureBGElections(now: Date, inFlightTurn?: number): Promi
 /**
  * Bulgaria's elections.
  *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
+ * SERVER ONLY: the spawners reach `getDb`.
  *
- * ⚠️ NO `spawn`. Bulgaria has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The BG spawner lives here and uses shared election
- * helpers without moving the other countries' phases.
+ * No `spawn`: BG has no entry in `SPAWN_ELECTIONS_REGISTRY`, so these phases
+ * run via `COUNTRY_ELECTION_PHASES`. Adding `spawn` would run them twice per
+ * turn.
  *
- * ⚠️ NO `seats`. There is no seat table for Bulgaria anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * No `seats`: there is no seat table; apportionment is read from live regions,
+ * like East Germany's Volkskammer and Brazil's Senate. An empty `byChamber`
+ * would describe a chamber with seats elsewhere.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "bgNationalAssemblyElections", fn: ensureBGElections },

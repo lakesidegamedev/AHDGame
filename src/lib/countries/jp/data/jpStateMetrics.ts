@@ -6,32 +6,23 @@ function mv(value: number, trend?: number) {
 }
 
 /**
- * Japan region metrics — unique per region, calibrated to real-world Japanese data.
+ * Japan region metrics, unique per region, calibrated to real-world Japanese data.
  *
- * Key calibration notes:
- *   - unemploymentRate: 2.4-3.2% (Japan has very low unemployment)
+ * Core metrics:
+ *   - unemploymentRate: 2.4-3.2%
  *   - medianIncome: annual household income in JPY (national median ~4.4M)
- *   - crimeRate: per 100k population (Japan has very low crime)
- *   - lifeExpectancy: 83-85 (world's highest)
+ *   - crimeRate: per 100k population
+ *   - lifeExpectancy: 83-85
  *   - costOfLiving: index relative to JP mean (100 = national average)
  *
- * JP-specific metrics (14 total):
- *   - elderCareQuality: 0-100 (Japan has the world's oldest population)
- *   - naturalDisasterPreparedness: 0-100 (earthquake/tsunami/typhoon readiness)
- *   - transportEfficiency: 0-100 (Shinkansen and transit quality)
- *   - workLifeBalance: 0-100 (overwork/karoshi index — lower = worse)
- *   - demographicDecline: 0-100 (population aging pressure — lower = more severe)
- *   - roboticsAdoption: 0-100 (industrial/service robotics deployment)
- *   - birthRate: 0-100 (fertility rate, family formation — lower = worse)
- *   - foreignWorkerIntegration: 0-100 (immigration acceptance, visa breadth)
- *   - nuclearSafety: 0-100 (post-Fukushima regulatory confidence)
- *   - ruralRevitalization: 0-100 (urban-rural divide health — lower = worse)
- *   - genderEquality: 0-100 (workforce participation gap, pay equity)
- *   - foodSecurity: 0-100 (agricultural self-sufficiency, supply resilience)
- *   - academicPressure: 0-100 (exam culture intensity — higher = more pressure)
- *   - mentalHealthAccess: 0-100 (therapy availability, stigma reduction)
+ * JP-specific metrics, all 0-100 unless noted (lower = worse where flagged):
+ *   elderCareQuality, naturalDisasterPreparedness, transportEfficiency,
+ *   workLifeBalance, demographicDecline, roboticsAdoption, birthRate,
+ *   foreignWorkerIntegration, nuclearSafety, ruralRevitalization,
+ *   genderEquality, foodSecurity, academicPressure (higher = more pressure),
+ *   mentalHealthAccess
  *
- * All figures are approximate 2020-era estimates.
+ * Figures are approximate 2020-era estimates.
  */
 const jpStateMetricsBase: StateMetrics[] = [
   // ── Hokkaido ──────────────────────────────────────────────────────────────

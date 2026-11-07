@@ -1,17 +1,7 @@
 /**
- * JP regional budget constraint system.
- *
- * Runs every turn alongside UK budget processing. Calculates each JP
- * region's budget from resident tax, fixed asset tax, and the national
- * government grant (Local Allocation Tax), then compares against enacted
- * spending. Regions in deficit for more than one turn trigger forced
- * austerity (most expensive programme downgraded one tier).
- *
  * Revenue = Resident Tax + Fixed Asset Tax + National Grant
- * Headroom = Revenue - Enacted Spending ≥ 0
- *
- * Default grant distribution: equal 1/8th per region.
- * The Internal Affairs minister can override those shares via cabinet settings.
+ * Headroom = Revenue - Enacted Spending >= 0
+ * Default grant split: equal 1/8 per region; cabinet can override shares.
  */
 
 import type { AnyBulkWriteOperation } from "mongodb";

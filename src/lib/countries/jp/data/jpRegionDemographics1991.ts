@@ -1,33 +1,21 @@
 import type { StateDemographics } from "@/lib/db/types";
 
 /**
- * Japan region demographics — 1991 era (JP voter archetypes).
+ * Japan region demographics , 1991 era (JP voter archetypes).
  *
- * Era anchor: the bubble-economy peak under Kaifu/Miyazawa, one year after
- * the LDP's comfortable February 1990 general-election win. Salaryman
- * corporate culture is at its zenith — lifetime employment, company
- * loyalty, and a swollen white-collar middle class in the Tokyo and Nagoya
- * belts. The rural LDP machine (koenkai, Nokyo, public works) is intact.
- * The union/left bloc is in structural decline: Sohyo dissolved into Rengo
- * in 1989, privatization of JNR/NTT gutted public-sector militancy, and the
- * JSP's 1989 "Madonna boom" was already fading. Komeito is at its
- * organizational peak in Osaka and Tokyo. Aging has only just begun
- * (population 65+ ~12-13%), dual-income mothers remain uncommon
- * (pre-Womenomics, pre-childcare expansion), and no reform-populist
- * movement exists — reform_populist is seeded at 0 everywhere (Ishin-style
- * populism emerges in 2010s Osaka).
+ * Era anchor: the bubble-economy peak under Kaifu/Miyazawa. Salaryman corporate
+ * culture is at its zenith; the rural LDP machine is intact. The union/left bloc
+ * is in structural decline after Sohyo merged into Rengo and JNR/NTT were
+ * privatized. Komeito is at its peak in Osaka and Tokyo. Aging has only just
+ * begun (65+ ~12-13%), dual-income mothers remain uncommon, and no
+ * reform-populist movement exists (seeded 0).
  *
- * Methodology: every value is independently authored from historical
- * knowledge of Japan circa 1990-91 (1990 House of Representatives results
- * by region, 1990 census age structure, Rengo-era union geography, Soka
- * Gakkai regional strength). Nothing is scaled or multiplied from the 2019
- * file; only region IDs, group IDs, and the populations-sum-to-100
- * convention are shared with it.
+ * Every value is independently authored from circa-1990-91 history; only region
+ * IDs, group IDs, and the populations-sum-to-100 convention are shared with the
+ * 2019 file.
  *
- * Turnout calibration: the 1990 general election recorded ~73.3% national
- * turnout. Group turnouts are set so the population-weighted national
- * figure lands near that, with rural above urban and youth turnout
- * (~55-58%) already sagging relative to 1979 but well above 2019 levels.
+ * Turnout: calibrated so the weighted national figure lands near the ~73.3%
+ * recorded in 1990, rural above urban, youth (~55-58%) below 1979 but above 2019.
  */
 export const jpRegionDemographics1991: StateDemographics[] = [
   // ── Hokkaido ──────────────────────────────────────────────────────────────

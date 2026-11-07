@@ -1,19 +1,17 @@
 import type { State } from "@/lib/db/types";
 
-/**
- * France regions as State-compatible documents (1979-era; France is a 1979-preset
- * Tier-2 Econ country). Differentiated by `countryId: "FR"`.
+/*
+ * France regions as State-compatible documents (1979-era).
  *
- * SEED INDEPENDENCE — values authored for ~1979 directly (1979 France: pop ≈ 53.4M;
- * GDP ≈ FFr 2,500B nominal). Eight macro-regions group the pre-1982 régions.
+ * SEED INDEPENDENCE: values authored for ~1979 directly. Eight macro-regions group
+ * the pre-1982 regions.
  *
- * - `population` — ~1979 estimates (people).
- * - `gdp` — regional GDP in millions of French francs (FRF).
- * - `houseDistricts` — National Assembly seats (1978 boundaries; sum ≈ 491).
- * - `stateSenateSeats` — Senate seats apportioned across the macro-regions
- *     (sum = 305, matching the configured national chamber).
- * - `region` — grouping for regional filters.
- * - `votingSystem` — rcv (two-round runoff approximation).
+ * - `population`: ~1979 estimates (people).
+ * - `gdp`: regional GDP in millions of French francs (FRF).
+ * - `houseDistricts`: National Assembly seats (sum ~491).
+ * - `stateSenateSeats`: Senate seats across macro-regions (sum = 305).
+ * - `region`: grouping for regional filters.
+ * - `votingSystem`: rcv (two-round runoff approximation).
  */
 export const frRegions: State[] = [
   {

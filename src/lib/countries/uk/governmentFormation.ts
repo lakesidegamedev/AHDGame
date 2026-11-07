@@ -80,21 +80,12 @@ export async function updateGovernmentSeats(): Promise<void> {
     await updateParliamentaryGovernmentSeats(db, "UK");
   }
 
-  // Per-turn gauges run on EVERY turn. They used to live at the tail of the
-  // one-time seed above, which the existing-doc branch returned before
-  // reaching, so on a live world neither the confidence gauge nor NHS quality
-  // ever ticked and both collections stayed empty while the UI showed defaults.
+  // Per-turn gauges run on EVERY turn, independent of the one-time seed.
   await tickUkGovernmentGauges(db, new Date());
 }
 
 /**
- * Confidence gauge and NHS quality per-turn drift (epic #856). Exported so the
- * turn test can drive it directly. When the gauge bottoms out AND
- * `UK_CONFIDENCE_GAUGE_DISSOLUTION=1`, Parliament is dissolved through the
- * shared snap-election path (bypassing the PM's allowance: this is the House
- * withdrawing confidence, not the PM spending a snap). The gauge carries
- * through the election and changes when the incoming government forms. Off by default; the gauge still accrues and is
- * observable.
+ * Confidence gauge and NHS quality per-turn drift. Dissolves Parliament via the shared snap-election path (House withdrawing confidence, not the PM's snap) when the gauge bottoms out and UK_CONFIDENCE_GAUGE_DISSOLUTION=1; the gauge persists through the election. Off by default but still accrues and is observable.
  */
 export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
   const nhsGameState = await getGameState(db);

@@ -386,18 +386,8 @@ export async function removeLegacyJPCeremonialIdentity(
 
 /**
  * Admin-only destructive re-seed of JP regional governor NPP officials
- * for the 2020 preset.
- *
- * One seat per JP game-region (8 total, all LDP-aligned at game start).
- * Uses the `governor` officeType — see
- * `docs/design/uk-jp-devolved-executives.md`. Mirrors
- * `seedDEMinisterPresidents2020`.
- *
- * NOT called from `bootstrapGameWorld` — the bootstrap path seeds these
- * officials via the `JP_GOVERNORS_2020` historical-seat array embedded
- * in `getPresetSeats("2019-default")`. This function exists only as the
- * `/api/admin/seed` target `"jpGovernors2020"` for destructive re-seed
- * operations.
+ * for the 2020 preset. Not used by bootstrapGameWorld; bootstrap seeds
+ * via JP_GOVERNORS_2020 in getPresetSeats. Target: /api/admin/seed "jpGovernors2020".
  */
 export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
@@ -442,18 +432,8 @@ export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: str
 
 /**
  * Admin-only destructive re-seed of JP regional governor NPP officials
- * for the 1991-default preset.
- *
- * Same shape as the 2020 variant. All 8 regions LDP-aligned at the 1990
- * historical anchor — matches `JP_GOVERNORS_1991` in `historicalSeats.ts`
- * (suffix renamed from `_1990` so it aligns with the `1991-default`
- * preset id; the underlying baseline composition is unchanged).
- *
- * NOT called from `bootstrapGameWorld` — the bootstrap path seeds these
- * officials via the `JP_GOVERNORS_1991` historical-seat array embedded
- * in `getPresetSeats("1991-default")`. This function exists only as the
- * `/api/admin/seed` target `"jpGovernors1991"` for destructive re-seed
- * operations.
+ * for the 1991-default preset. Not used by bootstrapGameWorld; bootstrap
+ * seeds via JP_GOVERNORS_1991. Target: /api/admin/seed "jpGovernors1991".
  */
 export async function seedJPGovernors1991(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {

@@ -308,27 +308,11 @@ const CAPITAL_2007: PositionsBlock = {
 
 /**
  * 2007-era US state census profiles (Layer 1 demographics).
+ * Era anchor: 2006-2008 ACS estimates, hand-authored per state, NOT derived
+ * from stateCensusData.ts (consulted only for field shape and ideology scale).
  *
- * Era anchor: 2006–2008 American Community Survey estimates, hand-authored
- * independently per state — values are NOT derived from or scaled against the
- * 2019 dataset in `stateCensusData.ts`; that file was consulted only for the
- * field shape and ideology-scale conventions.
- *
- * Key national reference points circa 2007:
- * - Race mix: White ~66%, Black ~12%, Hispanic ~15%, Asian ~4.4%.
- * - Bachelor's degree or higher ~28% (markedly below 2019 levels).
- * - Median age ~36.5; Baby Boomers still mostly working-age, so senior
- *   shares run lower and mid/mature shares higher than 2019.
- * - Pre-crash housing-boom prosperity inflates middle/high wealth shares in
- *   Sun Belt boom states (NV, AZ, FL) and depresses "low" shares there.
- * - Politics: Iraq-War polarization, evangelical political power near its
- *   peak (post-2004 values-voter era), environmentalism rising but not yet
- *   mainstream (An Inconvenient Truth era), libertarian streak visible in
- *   the Mountain West, Hispanic growth accelerating in the Southwest and
- *   Southeast but still below 2019 shares.
- *
- * Ideology values are independent shares of the population (do not sum
- * to 100); race, education, wealth, and age each sum to exactly 100.
+ * Ideology values are independent shares (do not sum to 100); race, education,
+ * wealth, and age each sum to 100.
  */
 export const stateCensusData2007: Record<string, Layer1Config> = {
   AK: {

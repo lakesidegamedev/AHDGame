@@ -13,17 +13,15 @@ import {
  *
  * ⚠️ NO `spawn` AND NO `seats`, AND BOTH ABSENCES ARE REAL.
  *
- * There is no `SPAWN_ELECTIONS_REGISTRY` row: the three spawners run as
- * ELECTION PHASES through `COUNTRY_ELECTION_PHASES`, and the Land assemblies
- * must spawn before the governors so the First Secretary queue has legislature
- * NPPs to sponsor through. Adding a `spawn` would run them a second time each
- * turn, in the wrong order.
+ * The three spawners run as election phases via COUNTRY_ELECTION_PHASES,
+ * and Land assemblies must spawn before governors so the First Secretary
+ * queue has legislature NPPs to sponsor. Adding `spawn` would run them
+ * twice per turn, in the wrong order.
  *
- * There is no seat table either, anywhere. `ensureDDVolkskammerElections` calls
- * `seatsFromRegionField(regions, "houseDistricts")` and the Land assemblies use
- * `stateSenateSeats`, so apportionment is read from the live regions every turn.
- * An empty `byChamber` here would describe a chamber with no seats rather than a
- * chamber whose seats live somewhere else.
+ * Apportionment is read from live regions every turn:
+ * `ensureDDVolkskammerElections` uses `seatsFromRegionField(regions,
+ * "houseDistricts")` and Land assemblies use `stateSenateSeats`. An empty
+ * `byChamber` would falsely describe a chamber with no seats.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "ddVolkskammerElections", fn: ensureDDVolkskammerElections },

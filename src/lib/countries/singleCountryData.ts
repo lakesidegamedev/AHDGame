@@ -1,43 +1,14 @@
 /**
  * Which countries have been converted to a folder, and which of their data files
- * are allowed to live outside it.
+ * may live outside it.
  *
- * WHY THIS EXISTS, AND WHY IT IS NOT `jpCoverage.ts`.
+ * The narrower enforceability question matters: for a converted country, does
+ * every file holding that country's data live in that country's folder? A
+ * classification roster cannot answer this. A file can be marked for relocation
+ * against a completed phase, never actually move, and every test stays green.
  *
- * The coverage roster classifies every Japan-bearing file into a bucket and a
- * phase. It is a good record and it caught real omissions, but it answers the
- * wrong question for the remaining countries, in two ways.
- *
- * It does not scale. It is ~1,100 lines for ONE country, and the denominator is
- * "every file that mentions Japan" -- 121 files. Twenty-four countries of that
- * shape is an artifact nobody maintains, and it already rots in practice: two
- * scripts added in this session had to be hand-registered in it before the suite
- * would go green, neither of which holds a single Japanese fact.
- *
- * ⚠ AND IT CHECKS CLASSIFICATION, NOT RELOCATION -- which is how the thing it
- * was built to prevent happened anyway. A file can sit in the roster marked
- * `bucket: "D"` (relocate wholesale) against a phase that has since COMPLETED,
- * while the file has never moved, and every test stays green. Measured against
- * Japan, a country declared finished, three files were in exactly that state:
- *
- *     src/lib/events/pree/handlers/jpEvents.ts      bucket D, phase D7, 461 lines
- *     src/lib/turn/jpRegionalBudget.ts              bucket D, phase D7, 333 lines
- *     src/lib/seeds/wiki/content/jpOverview.ts      bucket D, phase D6, 215 lines
- *
- * That is `src/lib/constants/japan.ts` -- classified bucket D for D7, missed,
- * and found only by hand afterwards -- happening three more times, for about a
- * thousand lines, with a mechanical guard supposedly watching. Saying "this file
- * should move" is not the same as checking that it did.
- *
- * So this file asks the narrower question that can actually be enforced:
- *
- *     for a country that has been converted, does every file holding that
- *     country's data live in that country's folder?
- *
- * ⚠ A COUNTRY ONLY COUNTS ONCE IT IS IN `CONVERTED`. Adding it there is what
- * makes the guard bite, and it should be the LAST step of converting a country,
- * not the first. The remaining countries are not failures, they are a backlog;
- * the test prints their sizes so the backlog stays visible instead of silent.
+ * A country only counts once it is in CONVERTED. Adding it there turns the guard
+ * on and should be the LAST step of converting a country, not the first.
  */
 
 import type { CountryId } from "@/lib/constants/countries";
@@ -116,20 +87,10 @@ export const ACKNOWLEDGED_OUTSIDE: ReadonlyArray<{
 
   // ---- Shared modules that CONTAINED one country's data without BEING it. ----
   //
-  // ⚠️ EMPTY BECAUSE THE SLICES WERE EXTRACTED, NOT BECAUSE THE CASE STOPPED
-  // EXISTING. Three files were parked here: `demographicCategories.ts`,
-  // `primaryCalendar.ts` and `seeds/reference/politicalParties.ts`. Each held
-  // United States data inside machinery every country reads, so neither moving
-  // the file nor leaving it was right.
-  //
-  // They were split instead. The US halves are `us/data/usDemographicPositions.ts`,
-  // `usPrimaryCalendar.ts` and `usParties.ts`; the shared halves keep their
-  // exports and forward, so no consumer moved and `===` still finds one
-  // definition of every table.
-  //
-  // A file belongs here only while its country's slice genuinely cannot be
-  // separated yet, and the reason must name the shared exports so the entry goes
-  // false the day they part company.
+  // Empty because the slices were extracted, not because the case stopped
+  // existing. A file belongs here only while its country's slice cannot be
+  // separated yet, and the reason must name the shared exports so the entry
+  // goes false the day they part company.
 
   // ---- Engine code that BRANCHES on the United States. Bucket F, not D. ----
   //

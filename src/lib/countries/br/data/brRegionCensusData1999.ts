@@ -1,17 +1,14 @@
 /**
- * Brazil Region Census Profiles — 1999 era.
+ * Brazil Region Census Profiles - 1999 era.
  *
- * 1999-default companion to {@link brRegionCensusData} (the 2019 profiles).
- * Anchored on IBGE Censo Demográfico 2000 (% of adult population), authored
- * independently from historical knowledge of the era — not derived by scaling
- * any other era's profiles.
+ * Companion to {@link brRegionCensusData} (2019 profiles).
+ * Anchored on IBGE Censo Demografico 2000 (% of adult population).
  *
- * Era anchors: post-Plano-Real stabilization under Cardoso — hyperinflation
- * is gone but inequality sits near its historical peak (Gini ~0.60). São
- * Paulo's industry is restructuring/shedding jobs; secondary schooling is
- * expanding fast while university access is still narrow. Urbanization has
- * crossed ~80% nationally, with the Nordeste and Norte still trailing.
- * Income uses era-neutral relative tiers (no real thresholds).
+ * Era anchors: post-Plano-Real stabilization under Cardoso; hyperinflation
+ * gone but inequality near its historical peak (Gini ~0.60). Sao Paulo
+ * industry restructuring; secondary schooling expanding fast, university
+ * access still narrow. Urbanization crossed ~80% nationally, Nordeste and
+ * Norte trailing. Income uses era-neutral relative tiers.
  */
 
 import type { BRRegionLayer1 } from "@/lib/seeds/br/brRegionCensusData";

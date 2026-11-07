@@ -8,11 +8,8 @@ import {
 /**
  * Japan-specific legislation types.
  *
- * Tax types expanded to 11 brackets each with LARP-style titles.
  * Committee positions use "shugiin" and "sangiin" chamber keys.
  * countryScope: "jp" gates these to Japan only.
- *
- * Spec: docs/plans/archive/2026-04/2026-04-10-jp-legislation-overhaul-design.md
  *
  * Helpers: shared `policyOptions(..., "both")` / `taxRateOptions` /
  * `withPerCapitaCosts` from `@/lib/seeds/reference/policyOptionHelpers`. Per-capita

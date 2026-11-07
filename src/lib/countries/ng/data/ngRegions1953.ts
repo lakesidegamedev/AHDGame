@@ -1,19 +1,13 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's region data. All values are authored for 1953 directly.
  * Type-only imports are allowed.
  *
- * Nigeria geo-political zones for the 1953-default preset (British colonial
- * Nigeria — Northern, Eastern, and Western Regions under the Macpherson
- * Constitution 1951; independence comes 1960). The 6-zone model is structurally
- * stable; era-specific values are 1952-53 census population (~30.4M official),
- * ~1953 regional GDP in **USD millions** (USD-anchored like US/DE — refs #3498;
- * colonial £1.2B WAP ≈ $3.4B at Bretton Woods $2.80/£), and the 136-seat Federal
- * House of Representatives allocation under the Lyttelton Constitution (1954).
- *
- * NOTE: Nigeria is Tier-1 full-autonomous economy-preview in 1953 (product
- * decision 2026-07-25). These region records supply the autonomous seed pack.
+ * Nigeria regions for the 1953 preset (British colonial Nigeria, Macpherson
+ * Constitution 1951). Population is the 1952-53 census (~30.4M official);
+ * GDP is **USD millions**; houseDistricts is the 136-seat Federal House
+ * allocation under the Lyttelton Constitution.
  */
 import type { State } from "@/lib/db/types";
 

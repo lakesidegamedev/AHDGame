@@ -1,22 +1,12 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE , DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's region data. All values are authored for 1979 directly.
  * Type-only imports are allowed.
  *
- * UK regions for the 1979-default preset (the 1979 GE — Thatcher's first
- * victory; "Winter of Discontent" Britain, pre-devolution, pre-Big-Bang). The 12
- * electoral regions are structurally stable; the era-specific values are ~1979
- * (1981-census-anchored) population, ~1979 regional GVA (GBP millions, nominal —
- * far smaller than later eras), and the **635-seat** Westminster distribution in
- * force 1974–1983 (England 516 / Scotland 71 / Wales 36 / Northern Ireland 12 —
- * NI ran on only 12 seats until the 1983 expansion to 17).
- *
  * NOTE (anachronism): `stateSenateSeats` keeps the modern devolved/regional
  * counts (Scottish Parliament 129, Senedd 60, NI Assembly 90), none of which
- * existed in 1979 — the same compromise the 1991 seed documents, since
- * stateSenateSeats is era-invariant in this model. London also sat far larger in
- * the House (92 seats) before the 1983 boundary review.
+ * existed in 1979; `stateSenateSeats` is era-invariant in this model.
  */
 import type { State } from "@/lib/db/types";
 

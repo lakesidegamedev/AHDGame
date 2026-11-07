@@ -1,19 +1,7 @@
 /**
- * Ireland Region Census Profiles — 1991 (pre-Celtic-Tiger) era.
- *
- * 1991-default companion to {@link ieRegionCensusData} (the 2019 profiles).
- * Selected at render time via the preset registry under the `1991-default`
- * reset preset.
- *
- * Sources / methodology (approximate, % of adult population): CSO Census of
- * Population 1991. Pre-1995 Ireland was near-ethnically-homogeneous with
- * minimal inward migration, markedly lower third-level attainment, and a far
- * larger rural share than the 2019 profiles. Income uses era-neutral relative
- * tiers (no punt thresholds).
- *
- * Directional vs the 2019 profiles: higher `irish` share, lower `third_level`,
- * higher rural share — strongest in the Border (DON) and Western (GAL/MID)
- * regions.
+ * Ireland region census profiles for the 1991-default preset (companion to the 2019 profiles).
+ * Approximate % of adult population, CSO Census of Population 1991. Income uses era-neutral relative tiers.
+ * Directional vs 2019: higher irish share, lower third_level, higher rural share, strongest in Border and Western regions.
  */
 
 import type { IERegionLayer1 } from "@/lib/seeds/ie/ieRegionCensusData";

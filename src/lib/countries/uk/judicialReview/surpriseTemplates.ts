@@ -1,9 +1,8 @@
 /**
- * UK Judicial Review surprise templates — SCOTUS surprise-case pattern (#3607)
- * adapted for Britain without a full UKSC roster.
+ * UK Judicial Review surprise templates.
  *
- * Fake JR / UKSC-style titles; real `uk_*` mild option ends (opt_1 left /
- * opt_5 right). Dual effects so a proxy court lean can land either way.
+ * Real `uk_*` mild option ends (opt_1 left / opt_5 right). Dual effects so a
+ * proxy court lean can land either way.
  */
 export type JrCaseAxis = "economic" | "social";
 

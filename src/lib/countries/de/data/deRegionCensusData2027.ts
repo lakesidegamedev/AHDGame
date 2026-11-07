@@ -1,31 +1,19 @@
 /**
  * Germany Region Census Profiles, 2027 (Merz GroKo era).
  *
- * 2027-era companion to {@link deRegionCensusData2023} (the 2023 profiles).
- * All values are independently authored literals for 2027, never derived by
- * scaling another era's file in code. They continue the 2023 structure with
- * small documented projection drifts.
+ * 2027-era companion to {@link deRegionCensusData2023}. All values are
+ * independently authored literals, never derived by scaling another era's file.
  *
- * 2027 projection assumptions (2023 bundle as the visible baseline):
- * - Ethnicity: net migration stays positive (Destatis Wanderungsstatistik,
- *   AZR Ukrainians counted under `turkish_russian_diaspora` as in 2023), so
- *   `other` rises 1 point in most Länder and the western metros pass 25%
- *   non-German adult share. Eastern Länder stay above 85% German.
- *   Source: Destatis Zensus 2022 plus Mikrozensus 2023-24
- *   (https://www.destatis.de/EN/Themes/Society-Environment/Population/_node.html).
- * - Age: every Land ages about 1 point from `young`/`mid` into `senior`;
- *   the East stays the oldest part of the EU (senior 33%+ outside Berlin).
- * - Education: tertiary expansion continues, so `hochschulabschluss` rises
- *   2 points funded from `no_degree`/`berufsausbildung`. Vocational Lehre
- *   stays dominant in the East.
- * - Income: inflation recovery moves about 1 point from `low` to `high`
- *   versus 2023. Source: Destatis VGR der Laender and EVS income tables.
+ * 2027 projection assumptions (2023 as baseline):
+ * - Ethnicity: positive net migration, so `other` rises 1 point in most Länder;
+ *   western metros pass 25% non-German adult share; Eastern Länder stay above
+ *   85% German. Source: Destatis Zensus 2022, Mikrozensus 2023-24.
+ * - Age: every Land ages about 1 point into `senior`; the East stays oldest.
+ * - Education: tertiary expansion rises `hochschulabschluss` 2 points from
+ *   `no_degree`/`berufsausbildung`; vocational Lehre stays dominant in the East.
+ * - Income: inflation recovery moves about 1 point from `low` to `high`.
+ *   Source: Destatis VGR der Laender, EVS income tables.
  * - Urbanization: structural and held constant from 2023.
- *
- * NOTE: the shared Layer-1 model registry (`src/lib/seeds/international/`)
- * is outside this change's editable scope, so this bundle is consumed by
- * country-local tests for now. Wiring it into the Layer-1 era map is a
- * follow-up in shared code.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

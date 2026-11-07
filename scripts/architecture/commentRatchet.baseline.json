@@ -7459,7 +7459,7 @@
     },
     "src/lib/corporations/strengthUpkeep.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/corporations/subsidiaries/authorization.ts": {
       "longBlocks": 0,
@@ -7522,12 +7522,8 @@
       "narrativeLines": 0
     },
     "src/lib/countries/at/data/atMetricPresets1953.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/at/data/atMetricPresets1991.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/countries/at/economy.ts": {
       "longBlocks": 1,
@@ -7540,10 +7536,6 @@
     "src/lib/countries/at/eras/1979.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/at/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/countries/at/eras/1999.ts": {
       "longBlocks": 1,
@@ -7569,23 +7561,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/at/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/at/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/at/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/at/layer1Model.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/data/balParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7601,59 +7577,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/bal/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/bal/elections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/bal/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bal/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/bal/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bg/economy.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7685,18 +7613,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/countries/bg/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bg/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/bg/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/bg/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -7705,19 +7621,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/blr/data/blrRegionImages.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/blr/data/blrRegions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/blr/data/blrRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/blr/data/blrSeed.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7757,23 +7661,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/blr/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/blr/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/blr/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/blr/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brDemographicCategories.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7781,19 +7669,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/br/data/brLegislationTypes.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brMetricPresets.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/br/data/brMetricPresets1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7801,39 +7677,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/br/data/brRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brRegionCensusData1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/br/data/brRegionCensusData1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/br/data/brRegionCensusData1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/br/data/brRegionCensusData2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brRegionCensusData2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brRegionDemographics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brRegions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/data/brRegions1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7845,131 +7693,19 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/br/data/brStatePartyOrgCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/br/elections/perpetual.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/br/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/br/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/br/layer1Model.ts": {
-      "longBlocks": 3,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/clientSafeLeafModules.test.ts": {
       "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/countries/cn/cabinet/cnCabinetMechanics.ts": {
+    "src/lib/countries/cn/cnRegionalBudget.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/cn/cnRegionalBudget.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 4
     },
     "src/lib/countries/cn/data/chinaGeometry.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnDemographicCategories.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnLegislationTypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 3
-    },
-    "src/lib/countries/cn/data/cnMetricPresets.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/cn/data/cnMetricPresets1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/cn/data/cnParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegionCensusData2023.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7977,17 +7713,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/cn/data/cnRegionDemographics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/data/cnRegions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/cn/data/cnRegions1953.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/cn/data/cnRegions1979.ts": {
       "longBlocks": 1,
@@ -8006,18 +7734,10 @@
       "narrativeLines": 0
     },
     "src/lib/countries/cn/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/cn/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/cn/elections/perpetual.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/countries/cn/eras/1979.ts": {
+    "src/lib/countries/cn/elections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8025,44 +7745,16 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/cn/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cn/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/cn/geography.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/cn/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
     },
     "src/lib/countries/cn/identity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/cn/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/cn/layer1Model.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/contract.test.ts": {
@@ -8070,54 +7762,14 @@
       "narrativeLines": 0
     },
     "src/lib/countries/contract.ts": {
-      "longBlocks": 7,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/eras/2027.ts": {
-      "longBlocks": 1,
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/countries/cs/geography.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/cs/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/cs/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/cs/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8133,10 +7785,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/countries/dd/data/ddCorporations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/countries/dd/data/ddGovernmentFormation.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -8145,51 +7793,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/dd/data/ddRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/dd/data/ddStateMetrics1953.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/dd/data/ddStatePartyOrgCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/economy.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/dd/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/elections/perpetual.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/dd/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/eras/2023.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8201,15 +7809,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/dd/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/dd/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/dd/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8222,12 +7822,12 @@
       "narrativeLines": 0
     },
     "src/lib/countries/de/data/deLandtag.ts": {
-      "longBlocks": 3,
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/countries/de/data/deLandVoteShares1953.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/de/data/deLandVoteShares1990.ts": {
       "longBlocks": 1,
@@ -8238,34 +7838,14 @@
       "narrativeLines": 0
     },
     "src/lib/countries/de/data/deLegislationTypes.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 9
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/countries/de/data/deMapConfig.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/data/deMetricPresets.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/de/data/deMetricPresets1953.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/de/data/deMetricPresets1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/de/data/deParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/de/data/deRegionCensusData.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/de/data/deRegionCensusData1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8293,10 +7873,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/data/deRegionDemographics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/de/data/deRegions.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -8306,10 +7882,6 @@
       "narrativeLines": 0
     },
     "src/lib/countries/de/data/deRegions1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/de/data/deRegions1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8335,7 +7907,7 @@
     },
     "src/lib/countries/de/data/deStatePartyOrgCalculations.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/countries/de/data/germany.ts": {
       "longBlocks": 1,
@@ -8345,21 +7917,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/de/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/de/elections/billLifecycle.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/countries/de/elections/germanyAMS.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 7
+      "longBlocks": 1,
+      "narrativeLines": 3
     },
     "src/lib/countries/de/elections/germanyLandtag.ts": {
       "longBlocks": 2,
@@ -8389,15 +7949,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/de/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/de/geographyFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8405,75 +7957,19 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/institutionsFacts.ts": {
+    "src/lib/countries/es/data/esMetricPresets1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/de/layer1Model.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/data/esMetricPresets1953.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
     },
     "src/lib/countries/es/data/esParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/es/data/esRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/es/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/es/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/eras/2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/es/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/es/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/es/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8485,63 +7981,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/fi/data/fiMetricPresets1991.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/fi/data/fiParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/fi/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/eras/1979.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/fi/eras/1991.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/fi/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/eras/2027.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/fi/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/fi/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fi/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8551,57 +7999,13 @@
     },
     "src/lib/countries/fr/data/frMetricPresets1953.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/fr/data/frRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/data/frRegionCensusData1979.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/fr/data/frRegions.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/fr/data/frRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/fr/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/fr/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/eras/2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8609,63 +8013,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/fr/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/fr/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/fr/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/data/grMetricPresets1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/data/grMetricPresets1991.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/gr/data/grParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/gr/economy.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/gr/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/gr/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/gr/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/eras/2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8673,79 +8025,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/gr/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/gr/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/gr/layer1Model.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/hu/data/electoralDistricts1991.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/countries/hu/data/huParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/data/huRegions2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/countries/hu/eras/1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/hu/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/hu/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/hu/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8761,23 +8049,11 @@
       "longBlocks": 0,
       "narrativeLines": 3
     },
-    "src/lib/countries/ie/cabinet/ieCabinet.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieDemographicCategories.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ie/data/ieLegislationTypes.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 2
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/countries/ie/data/ieMetricPresets.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ie/data/ieParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8789,31 +8065,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ie/data/ieRegionCensusData1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegionCensusData1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegionCensusData1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegionCensusData2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegionCensusData2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ie/data/ieRegionDemographics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegions.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8825,13 +8077,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ie/data/ieRegions1991.ts": {
+    "src/lib/countries/ie/data/ieRegionVoteShares.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegionVoteShares.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 3
     },
     "src/lib/countries/ie/data/ieStateMetrics.ts": {
       "longBlocks": 1,
@@ -8839,49 +8087,17 @@
     },
     "src/lib/countries/ie/data/ieStatePartyOrgCalculations.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ie/economy.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ie/elections.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ie/elections/billLifecycle.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/countries/ie/elections/perpetual.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/countries/ie/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ie/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/eras/2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8893,63 +8109,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ie/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/layer1Model.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/data/itMetricPresets1953.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/it/data/itRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/it/data/itRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/it/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/eras/1979.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/it/eras/1991.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/it/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/eras/2019.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/it/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/eras/2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8958,14 +8126,6 @@
       "narrativeLines": 0
     },
     "src/lib/countries/it/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/it/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/it/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8978,34 +8138,18 @@
       "narrativeLines": 0
     },
     "src/lib/countries/jp/data/jpLegislationTypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/jp/data/jpMetricPresets.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/lib/countries/jp/data/jpMetricPresets1953.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/countries/jp/data/jpModifierPatches.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/countries/jp/data/jpNppEthnicity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/jp/data/jpParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpPartyTiers.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpReadinessExpectations.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9021,19 +8165,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/jp/data/jpRegionCensusData1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/jp/data/jpRegionCensusData1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpRegionCensusData2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpRegionCensusData2023.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9051,15 +8183,11 @@
     },
     "src/lib/countries/jp/data/jpRegionDirectory.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/jp/data/jpRegions.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/countries/jp/data/jpRegions1979.ts": {
       "longBlocks": 1,
@@ -9072,14 +8200,6 @@
     "src/lib/countries/jp/data/jpRegions2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpRegionVoteShares1990.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/jpSeats.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/countries/jp/data/jpSectorWeights1953.ts": {
       "longBlocks": 1,
@@ -9094,58 +8214,30 @@
       "narrativeLines": 1
     },
     "src/lib/countries/jp/data/jpStatePartyOrgCalculations.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/jp/data/jpUnionNames.ts": {
-      "longBlocks": 1,
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/countries/jp/economy.ts": {
-      "longBlocks": 3,
+      "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/countries/jp/elections.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
     "src/lib/countries/jp/elections/billLifecycle.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/countries/jp/elections/perpetual.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/eras/1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/jp/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/jp/eras/index.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/countries/jp/geography.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/jp/geographyFacts.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/countries/jp/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/index.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9153,31 +8245,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/jp/institutionsFacts.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
     "src/lib/countries/jp/japanReachable.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/layer1Model.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/regionalBudget.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/seed.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/data/ngDemographicCategories.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/data/ngGovernmentFormation.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9193,88 +8261,20 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ng/data/ngRegionDemographics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/data/ngRegions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/data/ngRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/ng/data/ngRegions1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/data/ngRegions1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ng/data/ngStateMetrics.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ng/data/ngStatePartyOrgCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ng/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ng/elections.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/countries/ng/elections/perpetual.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/ng/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/countries/ng/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/ng/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ng/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ng/layer1Model.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/noClientBarrelImport.test.ts": {
@@ -9285,47 +8285,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/pl/data/plRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/pl/data/plRegions2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/pl/geography.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9337,55 +8297,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/pl/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/data/roParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/data/roRegions2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ro/eras/2019.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ro/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ro/geography.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9397,15 +8313,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ro/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ru/cabinet/ruCabinet.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/cabinet/ruCabinetMechanics.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9417,35 +8325,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ru/data/ruDemographicTurnout.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ru/data/ruGeometry.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ru/data/ruGovernmentFormation.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/data/ruLaws.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/ru/data/ruLegislationTypes.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ru/data/ruMetricPresets1953.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/data/ruParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ru/data/ruPopulation1991.ts": {
+    "src/lib/countries/ru/data/ruParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9453,17 +8341,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ru/data/ruRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/countries/ru/data/ruRegions.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ru/data/ruRegions1953.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/ru/data/ruRegions2027.ts": {
       "longBlocks": 1,
@@ -9471,17 +8355,9 @@
     },
     "src/lib/countries/ru/data/ruSeats.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/ru/data/ruStateMetrics.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ru/data/ruStatePartyOrgCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/data/sovietUnionRegions1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9492,10 +8368,6 @@
     "src/lib/countries/ru/elections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/ru/elections/perpetual.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/countries/ru/eras/1979.ts": {
       "longBlocks": 1,
@@ -9509,35 +8381,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ru/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ru/geographyFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ru/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/layer1Model.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9555,18 +8403,6 @@
     },
     "src/lib/countries/ru/ruPresidencyTransition.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/ru/russian1991Config.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ru/seedRuStatePartyOrg.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/sco/data/scoBucketLabels.ts": {
-      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/countries/sco/economy.ts": {
@@ -9574,30 +8410,6 @@
       "narrativeLines": 0
     },
     "src/lib/countries/sco/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/sco/eras/1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/sco/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/sco/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/sco/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/sco/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/sco/eras/2019.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9621,19 +8433,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/sco/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/se/data/seMetricPresets1953.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
     "src/lib/countries/se/data/seParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/se/economy.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9647,7 +8447,7 @@
     },
     "src/lib/countries/se/eras/1991.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/se/eras/1999.ts": {
       "longBlocks": 1,
@@ -9675,13 +8475,9 @@
     },
     "src/lib/countries/se/geographyFacts.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/se/identity.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/se/institutionsFacts.ts": {
+    "src/lib/countries/se/identity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9689,12 +8485,8 @@
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/countries/singleCountryData.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
     "src/lib/countries/tr/data/trMetricPresets1953.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/tr/data/trParties.ts": {
@@ -9703,27 +8495,15 @@
     },
     "src/lib/countries/tr/data/trRegionCensusDataModern.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/tr/data/trRegions2013.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/tr/data/trRegions2019.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/tr/data/trRegionsModern.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/countries/tr/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/tr/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/countries/tr/eras/1979.ts": {
       "longBlocks": 1,
@@ -9731,7 +8511,7 @@
     },
     "src/lib/countries/tr/eras/1991.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/tr/eras/1999.ts": {
       "longBlocks": 1,
@@ -9753,95 +8533,47 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/tr/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/tr/geographyFacts.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/tr/identity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/tr/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/budget/budgetValidation.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/cabinet/mechanics.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/countries/uk/cabinet/nppResignation.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/cabinet/reshuffleLimit.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/cabinet/rules/nppResignation.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
     "src/lib/countries/uk/cabinetApi.ts": {
       "longBlocks": 1,
-      "narrativeLines": 14
+      "narrativeLines": 2
     },
     "src/lib/countries/uk/cabinetEligibility.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/countries/uk/cabinetWhipApi.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/countries/uk/conference/conferenceCommands.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 4
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/countries/uk/conference/conferencePayoff.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/uk/conference/conferenceResolution.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 2
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
     "src/lib/countries/uk/conference/rules.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/countries/uk/conference/types.ts": {
       "longBlocks": 2,
-      "narrativeLines": 3
-    },
-    "src/lib/countries/uk/confidence/confidenceGauge.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/countries/uk/confidence/tickUkGovernmentGauges.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/countries/uk/data/ukDemographicCategories.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/uk/data/ukDemographicTurnout.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukLaws.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/data/ukMetricPresets.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9849,35 +8581,7 @@
       "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/countries/uk/data/ukParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionCensusData.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/uk/data/ukRegionCensusData1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionCensusData1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionCensusData1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionCensusData2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionCensusData2023.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9898,30 +8602,10 @@
       "narrativeLines": 2
     },
     "src/lib/countries/uk/data/ukRegionPolling1951.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/data/ukRegionPolling1992.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegionPolling2024.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/uk/data/ukRegions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegions1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegions1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukRegions1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9941,37 +8625,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/uk/data/ukSocialAttitudes1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/uk/data/ukStateMetrics.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/uk/data/ukStatePartyOrgCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/db/budgets.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/db/budgetTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/db/governmentTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/db/nhsStateTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/db/ukByElectionTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/countries/uk/db/ukPartyConferences.ts": {
       "longBlocks": 0,
@@ -9983,85 +8639,17 @@
     },
     "src/lib/countries/uk/dualMinistry/rules.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/dualMinistry/survivor.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/economy.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/uk/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/elections/billLifecycle.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/elections/byElectionCarve.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/elections/commonsRecallRules.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/elections/commonsSeatCommands.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/elections/commonsTestDb.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/elections/commonsVacancyShell.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/countries/uk/elections/commonsVacancyStatus.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/countries/uk/elections/commonsVacancyStatus.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/uk/elections/perpetual.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/elections/recallPetitionShell.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/eras/1979.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/uk/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/eras/2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10073,101 +8661,25 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/uk/government.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/governmentFormation.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/countries/uk/identity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/uk/institutions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/uk/judicialReview/surpriseTemplates.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/layer1Model.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
-    },
     "src/lib/countries/uk/leadership/leadershipCommands.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/leadership/leadershipRemoval.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/leadership/leadershipTestDb.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/uk/leadership/leadershipTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/leadership/rules.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/manifesto/deliveryMeter.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/manifesto/electionManifestoResolver.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
     },
     "src/lib/countries/uk/manifesto/manifestoLifecycle.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/countries/uk/manifesto/manifestoPopularity.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/manifesto/nppManifesto.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/manifesto/pledgeCatalog.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/nhs/nhsQuality.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/countries/uk/nhs/nhsStore.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/uk/rules/regionalContext1991.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/seed.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/ukLeadershipChallengeTurn.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/uk/ukPartyConferenceTurn.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/countries/ukr/data/uaParties.ts": {
       "longBlocks": 1,
@@ -10181,51 +8693,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ukr/economy.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/elections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ukr/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ukr/geographyFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10233,43 +8701,19 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ukr/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/cabinet/positions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/countries/us/data/usCongressProjection2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/us/data/usDemographicPositions.ts": {
-      "longBlocks": 14,
-      "narrativeLines": 2
+      "longBlocks": 11,
+      "narrativeLines": 1
     },
     "src/lib/countries/us/data/usGovernmentFormation.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usHouse2027.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/us/data/usLaws.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/us/data/usMetricPresets.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/countries/us/data/usMetricPresets1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/data/usParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10277,31 +8721,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usRegistrationLanes1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/data/usRegistrationLanes1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/us/data/usRegistrationLanes2007.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usRegistrationLanes2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/data/usRegistrationLanes2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/us/data/usSenate2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/us/data/usStateBaselines.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -10313,47 +8737,35 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usStateBaselines1991.ts": {
+    "src/lib/countries/us/data/usStateCensusData1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usStateCensusData1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/countries/us/data/usStateCensusData1979.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/countries/us/data/usStateCensusData1991.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/countries/us/data/usStateCensusData1999.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 2
     },
     "src/lib/countries/us/data/usStateCensusData2007.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/lib/countries/us/data/usStateCensusData2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/countries/us/data/usStateCensusData2027.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/us/data/usStateMetrics1953.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/us/data/usStateMetrics1979.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usStateMetrics1991.ts": {
+    "src/lib/countries/us/data/usStateMetrics1979.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10365,12 +8777,8 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usStateMetricsEra1953.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
     "src/lib/countries/us/data/usStatePartyOrg.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/countries/us/data/usStates1953.ts": {
@@ -10378,10 +8786,6 @@
       "narrativeLines": 0
     },
     "src/lib/countries/us/data/usStates1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/data/usStates1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10393,73 +8797,17 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/us/data/usStateTaxLaws.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/us/economy.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/us/elections.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/elections/billLifecycle.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/countries/us/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/geographyFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/us/identity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/us/institutions.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/us/institutionsFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/data/walBucketLabels.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/countries/wal/data/walCabinet.ts": {
       "longBlocks": 1,
@@ -10473,51 +8821,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/wal/eras/1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/wal/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/wal/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10533,47 +8837,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/yu/eras/1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/eras/1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/eras/1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/eras/2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/eras/2019.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/eras/2023.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/eras/2027.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/geography.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/geographyFacts.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/yu/identity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/yu/institutionsFacts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },

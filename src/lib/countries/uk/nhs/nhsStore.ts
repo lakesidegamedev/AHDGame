@@ -9,7 +9,7 @@ import {
 } from "@/lib/countries/uk/nhs/nhsQuality";
 
 /**
- * Persistence + per-turn drive for the UK NHS quality score (epic #856).
+ * Persistence and per-turn drive for the UK NHS quality score.
  *
  * The score is driven by the enacted fiscal ledger. Annual Budgets and ordinary
  * laws both update that same ledger, so neither authority gets a private NHS

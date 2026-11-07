@@ -5363,11 +5363,9 @@ export const cnLegislationTypes: LegislationType[] = [
     subCategory: "Provincial education",
     allowedScope: "state",
     effectTarget: { metricCategoryId: "education", metricId: "educationSpending", scope: "state" },
-    // §4.7 (P2a) sweep, applied here for ticket #826 item 14: testPerformance
-    // and workforceSkill are engine-derived, spend-channel-driven readouts —
-    // this law's educationSpending push already drives them via the channel,
-    // so a direct weighted push here double-counts (same fix as
-    // us_state_education_funding/us_federal_education_funding).
+    // testPerformance and workforceSkill are engine-derived, spend-channel-driven
+    // readouts: educationSpending already drives them via the channel, so a direct
+    // weighted push here double-counts.
     effectTargetsWeighted: [
       { metricCategoryId: "education", metricId: "educationSpending", weight: 1.0 },
       { metricCategoryId: "economic", metricId: "commonProsperityIndex", weight: 0.3 },
@@ -6055,37 +6053,15 @@ export const cnLegislationTypes: LegislationType[] = [
   },
 ];
 
-// ════════════════════════════════════════════════════════════════════════════
-//  Default spending calibration (added 2026-06-03, fix/default-laws)
-// ────────────────────────────────────────────────────────────────────────────
-//  Attach `budgetCategory` to CN spending programs so the national budget seeds
-//  a full set of expenditure lines (CN previously generated no spending laws —
-//  14 types carried per-capita costs but no category, so deriveEnactedLaws
-//  skipped them and the CN budget showed 0/flat expenditure).
-//
-//  All spending programs get a `budgetCategory` + per-capita cost (CNY/capita at
-//  index 3, the seeded default). Index 3 anchors each baseline; the curve grades
-//  toward the higher-spending option. CN's authored convention puts the
-//  higher-spending option on the LEFT (e.g. surveillance-state public security,
-//  expansive PLA), so every CN program uses EXPANSION (high at idx 0).
-//
-//  The 14 types that already wrapped withPerCapitaCosts in situ are re-anchored
-//  here to per-capita figures that reconcile each category to real CN 2023
-//  general-budget function totals (their authored idx-3 values skewed the mix —
-//  e.g. pensions exceeding education, which is backwards for China).
-//
-//  Regulatory / rule-only types (minimum wage, anticorruption, hukou, NPC
-//  reform, HK/Macao, press freedom, diplomacy doctrines, emissions trading,
-//  gender equality, internet governance, skilled immigration, diaspora) are
-//  intentionally omitted — no standing expenditure line. Public security and
-//  criminal justice use a dedicated `publicSafety` line (rendered via the
-//  budget UI's humanizeKey fallback) so the large CN security outlay is visible
-//  rather than buried in "other".
-//
-//  Σ(per-capita × population) per category is reconciled into
+//  Spending calibration: attach `budgetCategory` + per-capita cost to CN spending
+//  programs so the national budget seeds full expenditure lines. CN's authored
+//  convention puts the higher-spending option on the LEFT, so programs use
+//  EXPANSION curves (high at idx 0). Index 3 is the seeded default baseline.
+//  Regulatory / rule-only types are intentionally omitted (no standing
+//  expenditure). Public security and criminal justice use a dedicated
+//  `publicSafety` line. Σ(per-capita × population) reconciles into
 //  NATIONAL_BUDGET_SEED_CONFIGS.CN.baselineSpendingByCategory.
-//  State-scope provincial types are out of scope here (state-budget surface).
-// ════════════════════════════════════════════════════════════════════════════
+
 const CN_EXPANSION_CURVE = [1.6, 1.35, 1.15, 1.0, 0.8, 0.6, 0.4];
 
 const CN_SPENDING_CALIBRATION: Record<

@@ -1,19 +1,15 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * Ireland Voter Archetypes — 8 mutually-exclusive attitudinal/demographic
+ * Ireland Voter Archetypes: 8 mutually-exclusive attitudinal/demographic
  * groups covering the contemporary Irish political landscape.
  *
- * Design principle: each archetype is defined by attitudes and demographics,
- * not geography or party affiliation. Every group can exist in every region;
- * regional character is expressed through population percentages in
- * ieRegionDemographics.ts.
+ * Each group is defined by attitudes and demographics, not geography or
+ * party. All groups can exist in every region; regional character comes
+ * from population percentages in ieRegionDemographics.ts.
  *
- * Each group has:
- *   defaultEconomicLean: -5 (far left / redistribution) to +5 (far right / markets)
- *   defaultSocialLean:   -5 (progressive / liberal) to +5 (traditional / authoritarian)
- *   defaultTurnout:      baseline participation rate (Dáil elections avg ~62%)
- *
+ * Scales: defaultEconomicLean and defaultSocialLean run -5 to +5;
+ * defaultTurnout is baseline participation (Dáil elections avg ~62%).
  * demographicProfileId: "ie_archetypes"
  */
 export const ieDemographicCategories: DemographicCategory[] = [

@@ -16,9 +16,7 @@ export async function ensureCNElections(now: Date, inFlightTurn?: number): Promi
     {
       countryId: "CN",
       electionType: "npcDelegate",
-      // Authoritative per-region NPC seat count (was `1`, which would collapse
-      // the first cycle to one seat per region). Era-gated: a 1953 world seats
-      // the 1,226-deputy 1st NPC, not the modern 2,980 (#3779).
+      // Authoritative per-region NPC seat count. Era-gated: 1953 seats the 1,226-deputy 1st NPC, not the modern 2,980.
       seatsForRegions: (_regions, preset) => getCnNpcSeats(preset),
       openPrimaryImmediately: true,
       label: "NPC Delegate",

@@ -62,20 +62,11 @@ export async function ensureROElections(now: Date, inFlightTurn?: number): Promi
 }
 
 /**
- * Romania's elections.
- *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
- *
- * ⚠️ NO `spawn`. Romania has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The RO spawner lives here and uses shared election
- * helpers without moving the other countries' phases.
- *
- * ⚠️ NO `seats`. There is no seat table for Romania anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * Romania's elections. SERVER ONLY: spawners reach getDb.
+ * No spawn: RO has no SPAWN_ELECTIONS_REGISTRY row, so these phases run via
+ * COUNTRY_ELECTION_PHASES; adding spawn would double-run them each turn.
+ * No seats: apportionment reads from live regions, not a seat table.
+ * Empty byChamber would mean a chamber with no seats, not seats elsewhere.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "roGrandNationalAssemblyElections", fn: ensureROElections },

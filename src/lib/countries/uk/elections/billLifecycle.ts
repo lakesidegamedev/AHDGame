@@ -12,10 +12,10 @@ const VOTING_HOURS = 24;
  * pass Parliament on reject; Lords revision when held in enrolled.
  */
 async function notifyUKSponsor(db: Db, bill: Bill, status: Bill["status"]): Promise<void> {
-  // Budget vote-vehicle bills (epic #856): apply the outcome to the UKBudget on
-  // final resolution (signed = passed, failed = defeated → budgetDefeat
-  // confidence hit). Runs before the sponsor guard since a budget bill may have
-  // no seated sponsor. applyBudgetOutcome is idempotent (guards on "tabled").
+  // Budget vote-vehicle bills apply the outcome to the UKBudget on final
+  // resolution (signed = passed, failed = defeated). Runs before the sponsor
+  // guard since a budget bill may have no seated sponsor. applyBudgetOutcome
+  // is idempotent (guards on "tabled").
   if (bill.budgetFiscalYear != null && (status === "signed" || status === "failed")) {
     await applyBudgetOutcome(db, {
       fiscalYear: bill.budgetFiscalYear,

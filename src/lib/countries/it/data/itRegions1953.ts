@@ -1,20 +1,18 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Italy regions — 1953-era values (First Republic / Christian Democracy).
+ * Italy regions, 1953-era values (First Republic / Christian Democracy).
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Values authored for 1953 directly. Italy 1953: pop ≈ 47.5M (1951 census);
- * GDP ≈ $17B USD-equivalent (₤10.6T at Bretton Woods 625 ITL/USD — refs #3498).
- * De Gasperi's DC dominant; the "Miracolo Economico" is just beginning; the 1953
- * election was fought on the controversial "legge truffa".
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * Values authored for 1953 directly: pop ~47.5M (1951 census), GDP ~$17B
+ * USD-equivalent (625 ITL/USD at Bretton Woods).
  *
- * - `population` — 1951 census estimates.
- * - `gdp` — regional GDP in **USD millions** (USD-anchored like US/DE, refs #3498).
- * - `houseDistricts` — Chamber of Deputies seats (1953; sum = 590, the
- *   Camera size in force 1948–1963 before the 630-seat reform).
- * - `stateSenateSeats` — Senate of the Republic seats.
- * - `votingSystem` — rcv (proportional/two-round approximation).
+ * - `population`: 1951 census estimates.
+ * - `gdp`: regional GDP in USD millions.
+ * - `houseDistricts`: Chamber of Deputies seats (1953; sum = 590, the Camera
+ *   size in force 1948-1963 before the 630-seat reform).
+ * - `stateSenateSeats`: Senate of the Republic seats.
+ * - `votingSystem`: rcv (proportional/two-round approximation).
  */
 export const itRegions1953: State[] = [
   {

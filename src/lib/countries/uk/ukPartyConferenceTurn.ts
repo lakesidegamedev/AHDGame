@@ -40,15 +40,9 @@ const EMPTY: UkPartyConferenceTurnResult = {
 };
 
 /**
- * UK party-conference turn driver (ticket #862).
- *
- * Annual lifecycle per UK party, all idempotent: seed this year's row at
- * the year's first turn, open scheduled rows at their opening turn, ensure
- * an NPP platform proposal on open AI-run conferences, close + resolve
- * rows past their voting window (player votes or deterministic NPP
- * acclamation), apply each ratified row's payoff exactly once, and expire
- * rows a past year left behind. UK-gated: a cheap no-op on worlds without
- * a registered UK.
+ * UK party-conference turn: per-party annual lifecycle, all idempotent.
+ * Seeds, opens, proposes, closes/resolves, pays out, and expires rows.
+ * UK-gated: cheap no-op on worlds without a registered UK.
  */
 export async function processUkPartyConferenceTurn(
   db: Db,

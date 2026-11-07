@@ -1,7 +1,7 @@
 /**
- * Council certification retains frozen registration and previously counted withdrawals.
- * loadRussianCouncilCertificationInputs checks actual owners and pending Duma
- * mandates in bounded batches, preserving voter counts separately from nominee marks.
+ * Retains frozen registration and previously counted withdrawals.
+ * Checks owners and pending Duma mandates in bounded batches,
+ * keeping voter counts separate from nominee marks.
  */
 import { type ClientSession, type Db } from "mongodb";
 import type {

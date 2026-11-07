@@ -1,26 +1,11 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 
-/**
+/*
  * Calculate BR state party organization levels from estimated regional vote shares.
- *
- * Three preset rosters:
- *   - `2019-default` — PT / PL / MDB / UNIÃO / PSD
- *   - `1991-default` — PMDB / PFL / PDT / PDS / PTB / PRN / PSB / PCdoB + PT / PSD
- *   - `1953-default` — PSD (Vargas-era) / UDN / PTB
- *
- * Before the 1953 table existed, `1953-default` fell through to the 2019 table,
- * whose slugs (pt / pl / mdb / uniao / psd-modern) resolve to NO party under the
- * 1953 roster — so BR seeded ZERO statePartyOrg rows and its 1954 Câmara races
- * had no party presence to field candidates through (`canPartyFieldInState`).
- *
- * Organizations scale from vote share:
- * - 0% vote → 5 org (minimal presence)
- * - 50% vote → 70 org (dominant party)
- *
- * Slug → sequentialId is resolved at runtime against the live
- * `politicalParties` collection so preset-filtered seeds are picked up
- * correctly without hardcoded ordering assumptions.
+ * Organizations scale from vote share: 0% -> 5 org, 50% -> 70 org.
+ * Slug to sequentialId resolved at runtime against live `politicalParties`,
+ * so preset-filtered seeds pick up live IDs without hardcoded ordering.
  */
 
 const MIN_ORG = 5;

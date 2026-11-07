@@ -1,5 +1,5 @@
 /**
- * Persistence shell for durable UK Commons vacancies (epic #856, #860).
+ * Persistence shell for durable UK Commons vacancies.
  *
  * A vacancy doc is the durable WHY/HOW-MANY behind a holder-less `commons`
  * official row. Every write is idempotent so turn retries and concurrent
