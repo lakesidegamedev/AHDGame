@@ -91,12 +91,7 @@ export async function fillPendingShareOrders(
 ): Promise<void> {
   const holdingTaxActive = holdingTaxStartTurn !== undefined && turn >= holdingTaxStartTurn;
   let personalForexEnabled = false;
-  // Peer-fill orphan recovery (issue #1672) deliberately does NOT run here:
-  // the receipt scan is a query-per-row N+1 that does not belong on the turn
-  // path. Lonely receipts are re-driven by the periodic
-  // `runShareFillRecoveryPass` driver (cron sweep in multiplayer, post-turn
-  // pass on the singleplayer advance route), and the per-order stamp hook
-  // (`prepareShareFillClaim`) still covers any order that sees another fill.
+  // Peer-fill orphan recovery deliberately does NOT run here: the receipt scan is a query-per-row N+1 that does not belong on the turn path. Lonely receipts are re-driven by the periodic `runShareFillRecoveryPass` driver (cron sweep in multiplayer, post-turn pass on the singleplayer advance route), and `prepareShareFillClaim` still covers any order that sees another fill.
 
   // Fill decisions and their escrow/history writes only use these order
   // fields; the query filter still applies `status` server-side.
@@ -491,12 +486,10 @@ export async function fillPendingShareOrders(
         // the liquidity provider an exit and would bypass the guarded dual
         // debit of its cap-table and fund holdings ledgers.
         if (order.placerFundId) continue;
-        // Fill sell order at the executable bid (which is at least the seller's
-        // limit), add the shares to public float, and pay the seller.
         // Character sell orders are not debited at placement, so a reverse split
-        // (or any later sale) can leave sharesRemaining far above the live
-        // holding. Capping here stops the fill from driving the seller negative
-        // and dumping a pre-split share count into the float (ticket #1154).
+        // (or any later sale) can leave sharesRemaining above the live holding.
+        // Cap here so the fill cannot drive the seller negative or dump a
+        // pre-split share count into the float.
         let toFill = order.sharesRemaining;
         if (!order.placerCorporationId && charIdStr && order.sharesDebitedAtCreation !== true) {
           const held =

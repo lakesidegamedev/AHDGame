@@ -1,18 +1,15 @@
 /**
- * Cross-pressure resolver - pure functions that decide how an NPP votes on a
- * federal bill. No DB access, no random. Replaces the RNG-based ideology +
- * whip-roll path for federal bill voting.
+ * Cross-pressure resolver: pure functions deciding how an NPP votes on a
+ * federal bill. No DB access, no random.
  *
- * The model: every vote is the deterministic sum of four signed forces, each
- * clamped to [-100, +100]. Positive pulls FOR, negative pulls AGAINST. Verdict
- * thresholds: sum > +5 -> FOR, sum < -5 -> AGAINST, otherwise ABSTAIN.
+ * Each vote is the deterministic sum of four signed forces, each clamped to
+ * [-100, +100]. Positive pulls FOR, negative AGAINST. Verdict: sum > +5 -> FOR,
+ * sum < -5 -> AGAINST, otherwise ABSTAIN.
  *
- * | Force    | Where it comes from                                                 |
- * | -------- | ------------------------------------------------------------------- |
- * | ideology | NPP ideology aligned to the selected policy option vector           |
- * | whip     | Party whip + caucus whip, gated by loyalty/stubbornness             |
- * | district | Selected policy option's archetype approvals weighted by home-state |
- * | donors   | Donor base multiplied by the same policy alignment as ideology      |
+ * Forces: ideology (NPP ideology aligned to the policy option vector), whip
+ * (party + caucus whip, gated by loyalty/stubbornness), district (policy
+ * option archetype approvals weighted by home state), donors (donor base
+ * multiplied by the same policy alignment as ideology).
  */
 import { complianceFromPersonality } from "./complianceRules";
 import { europeanIntegrationSupport } from "@/lib/internationalOrganizations/europeanIntegration/rules/nationalDecisions";
@@ -188,11 +185,9 @@ function computePolicyAlignment(
     return Math.max(-1, Math.min(1, (domainStance / 5) * provision.effectDirection));
   }
 
-  // Generation guard (political-legislation spec §6, owner ruling #13):
-  // new-generation bills never enter the inverted-polarity legacy fallback —
-  // no vector and no domain stance means alignment 0, so lean-0 laws genuinely
-  // carry no ideological force and NPPs decide them on their non-ideological
-  // heuristics (party line, sponsor relationship, whip pressure).
+  // New-generation bills skip the inverted-polarity legacy fallback:
+  // no vector and no domain stance means alignment 0, so NPPs decide
+  // them on non-ideological heuristics (party line, sponsor, whip pressure).
   if (isNewGenerationType(legislationType)) {
     return 0;
   }

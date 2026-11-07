@@ -48,18 +48,16 @@ export interface ReconcileInput {
 }
 
 /**
- * Pure reconciler — no DB. Given this turn's ledger entries and the opening /
+ * Pure reconciler, no DB. Given this turn's ledger entries and the opening /
  * closing authoritative-balance snapshots, produce a green/amber/red report.
  *
  * 1. Trial balance (Invariant #1): every entry sums to ~0 in ₳; single-currency
- *    entries also net to ~0 natively (the t841 catch). Violation → red.
- * 2. Stock-vs-flow: per real account, Σ primary-leg ₳ vs actual balance delta.
- *    Divergence (incl. accounts that moved with NO legs) → amber, and drives the
- *    Phase 3 coverage sweep. Expected to be noisy until coverage lands.
- * 3. Money supply: per currency, Σ mints − Σ sinks by reason. Reported; the big
- *    `unattributed` bucket is the Phase 3 backlog.
- *
- * See docs/plans/2026-07-05-shadow-ledger-plan.md §2.
+ *    entries also net to ~0 natively. Violation -> red.
+ * 2. Stock-vs-flow: per real account, sum of primary-leg ₳ vs actual balance
+ *    delta. Divergence (incl. accounts that moved with no legs) -> amber.
+ *    Expected to be noisy until coverage lands.
+ * 3. Money supply: per currency, sum of mints minus sum of sinks by reason.
+ *    Reported; the large `unattributed` bucket is known backlog.
  */
 export function reconcileLedger(input: ReconcileInput): ReconcileReport {
   const { turn, entries } = input;
@@ -255,8 +253,8 @@ function rateForAccount(
  * pre-forex rate. After it, flows are valued at the closing rate.
  */
 /**
- * Account-lifecycle evidence for a divergent account, read off the snapshot
- * key pair (#992). Pure hint: callers must still treat the finding as
+ * Account-lifecycle evidence for a divergent account from the snapshot
+ * key pair. Pure hint: callers must still treat the finding as
  * unexplained divergence, never as reconciled.
  */
 function lifecycleHintFor(

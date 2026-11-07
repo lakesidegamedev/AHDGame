@@ -71,10 +71,9 @@ export async function processCrisisTurn(
   // advances every turn the war is being fought, which is what makes prolonging
   // it progressively more expensive in approval.
   const gameState = await getGameState(db);
-  // Prefer the caller's authoritative calendar year: the persisted
-  // gameState.currentYear is only stamped at turn end, so on the first turn of
-  // a new year it still holds the prior year and year-gated openings would run
-  // one turn late (#2059). Non-turn callers omit it and keep the persisted read.
+  // Prefer the caller's authoritative calendar year: gameState.currentYear is
+  // only stamped at turn end, so on the first turn of a new year it still holds
+  // the prior year. Non-turn callers omit it and use the persisted value.
   const effectiveYear = currentYear ?? gameState?.currentYear;
   await processLivingConflictsTurn(
     db,
@@ -365,20 +364,14 @@ async function resolveCrisisTargetStateIds(db: Db, crisis: Crisis): Promise<stri
 }
 
 /**
- * Announce a crisis at its start: emit the `crisis_start` wire event (which is
- * what the news/wire feed reads) and notify players in the affected states.
+ * Announce a crisis at its start: emit the `crisis_start` wire event and
+ * notify players in affected states.
  *
- * Shared by two callers so the announcement is identical no matter how a crisis
- * begins:
- *  - the turn processor, on `turn === startTurn` (auto-spawned crises), which
- *    passes its already-resolved `targetStateIds`;
- *  - the admin create route, at creation time, since an admin crisis's
- *    `startTurn` is the current turn — already processed — so the turn loop's
- *    start branch never runs for it and it would otherwise post no news event.
+ * Shared by the turn processor (auto-spawned crises, on the start turn) and
+ * the admin create route (startTurn already past, so the turn loop never
+ * announces it), keeping the announcement identical on both paths.
  *
- * Fires exactly once per crisis: the turn processor only reaches this on the
- * start turn, and an admin crisis is announced once at creation, so the two
- * paths do not double-announce.
+ * Fires exactly once per crisis; the two paths never both run for one crisis.
  */
 export async function announceCrisisStart(
   db: Db,

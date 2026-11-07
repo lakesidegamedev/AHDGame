@@ -357,9 +357,9 @@ export async function processActionRefresh(
     );
 
     // Personal AP grant always applies against the live balance. Matching the
-    // snapshotted actions value (optimistic concurrency) let a mid-turn spend
-    // cancel the whole refresh while partyInfluenceTurn still added its bonus
-    // via a live $actions pipeline - leaving only the party grant (Refs #4457).
+    // snapshotted actions value would let a mid-turn spend cancel the whole
+    // refresh while partyInfluenceTurn still added its bonus via a live
+    // $actions pipeline, leaving only the party grant.
     const liveActions = { $ifNull: ["$actions", 0] };
     const hoardPenalty = {
       $cond: [{ $gt: [liveActions, energyThreshold] }, ACTION_HOARD_PENALTY, 0],

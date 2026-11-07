@@ -292,27 +292,16 @@ export function makeNppCorpDecision(
   }
 
   // `totalIncome`/`totalRevenue`/`corpMargin`/`isProfitable` below feed ONLY
-  // sections 3-5 (budgets, dividends, expansion) — never sections 1-2, which
-  // read sp.income/sp.margin directly. Three compounding bugs made those
-  // sections spend a corp into the ground while reading it as healthy:
-  //
-  // (1) Blind to its own overhead. The old figures were pure SECTOR income —
-  //     before the very marketing/logistics/R&D/CEO-salary spend section 3 was
-  //     about to size — so an NPP kept raising overhead while real income fell.
-  //     Measured on a stopped 657-turn world: totalCosts/revenue rose 0.49 →
-  //     1.19 and 89% of corps were loss-making, while sector
-  //     effectiveProfitMargin held flat at 45-60. Fix: subtract last turn's
-  //     ACTUAL spend (below) before judging profitability.
-  //
-  // (2) Sized off the wrong revenue. `sector.revenue` is NOMINAL (book) revenue;
-  //     the corp collects `realizedRevenue` and pays overhead out of it. Sizing
-  //     budgets off nominal while charging them against realized multiplies the
-  //     true burden by 1/realizationRatio (measured ~3×). Use realizedRevenue.
-  //
-  // (3) Blind to its own debt. Bond interest is contracted, not discretionary,
-  //     and was absent, so an operating-profitable corp could lose money every
-  //     turn while reading healthy. See NppCorpDecisionContext.debtServiceAnchor.
-  //     Charged in the corp's own currency, like every other money constant here.
+  // sections 3-5 (budgets, dividends, expansion); sections 1-2 read
+  // sp.income/sp.margin directly. These figures must account for overhead,
+  // realized (not nominal) revenue, and debt service, or NPPs spend themselves
+  // into the ground while reading as healthy:
+  //  (1) Subtract last turn's ACTUAL spend before judging profitability.
+  //  (2) Use `realizedRevenue`, not nominal `sector.revenue`; the corp pays
+  //      overhead out of realized, so sizing off nominal multiplies the burden
+  //      by 1/realizationRatio.
+  //  (3) Include bond interest (contracted, not discretionary); see
+  //      NppCorpDecisionContext.debtServiceAnchor. Charged in corp currency.
   const realizedOrNominal = (sp: SectorProfitInfo) =>
     sectorEconomicToCorpLocal(sp.sector.realizedRevenue ?? sp.sector.revenue ?? 0, sp.sector);
   const totalRevenue = sectorProfits.reduce((sum, sp) => sum + realizedOrNominal(sp), 0);
@@ -489,10 +478,10 @@ export function makeNppCorpDecision(
     }
   }
 
-  // A divest deletes the sector with no proceeds, so a player's plant is shed only
-  // when the owner's policy allows it. Autopilot reports the losers to the owner
-  // instead. A parent-owned AI corporation keeps the parent's property (often
-  // bought at a premium) unless the policy says otherwise.
+  // A divest deletes the sector with no proceeds, so a player's plant is shed
+  // only when the owner's policy allows it. Autopilot reports losers to the
+  // owner instead. Parent-owned AI corps keep the parent's property unless
+  // policy says otherwise.
   const autopilot = isAutopilotRun(corp);
   const blockedDivests = operatorMay(operator, "divest") ? 0 : divestedSectorIds.splice(0).length;
   const autopilotLosers = autopilot && operator.actions.divest === "ask" ? blockedDivests : 0;
@@ -667,10 +656,9 @@ export function makeNppCorpDecision(
       .map(({ filter }) => filter._id.toString())
   );
 
-  // ── 2d. Transition package: free conversion of one losing, over-built
-  // sector toward the country's real shortage (funded market only). The
-  // owner's retool permission gates it, so autopilot and parent-owned
-  // corporations never convert on their own.
+  // 2d. Transition package: free conversion of one losing, over-built sector
+  // toward the country's real shortage (funded market only). The owner's
+  // retool permission gates it.
   let conversionCharge: { countryId: string; cost: number } | undefined;
   let conversionApplied: { sectorId: string; set: Partial<(typeof sectors)[number]> } | null = null;
   if (ctx.transitionFirstFundedTurn != null && operatorMay(operator, "retool")) {
@@ -724,11 +712,10 @@ export function makeNppCorpDecision(
     now,
   });
 
-  // Input-squeeze strategy shifts use the 2c cohort independently: a mothball and a strategy
-  // shift never target a sector scheduled to become cold in this decision.
-  // Another running sector may still shift, and only one shift per corp
-  // per turn keeps the cohort gradual. SOEs are exempt for 2c's reason.
-  // Autopilot and a parent-owned corporation leave retooling to the owner.
+  // Strategy shifts use the 2c cohort independently: an input-squeeze
+  // mothball and a shift never target a sector scheduled to go cold this
+  // decision. Only one shift per corp per turn. SOEs are exempt for 2c's
+  // reason. Autopilot and parent-owned corps leave retooling to the owner.
   if (
     !corp.countryOwnerId &&
     operatorMay(operator, "retool") &&

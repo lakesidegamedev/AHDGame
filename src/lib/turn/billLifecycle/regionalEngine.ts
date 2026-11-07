@@ -15,21 +15,15 @@ import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import type { BillLifecycleRuntimeContext } from "./types";
 
 /**
- * Regional (state) bill-lifecycle walker — the engine's `level: "regional"`
- * counterpart to `runBillLifecycle`. It is a sibling walker rather than a
- * branch of the national engine because state bills share the stage
- * VOCABULARY (chamberVote → executiveAssent → override) but none of the
- * national mechanics: they live in `stateBills` (not `bills`), have no
- * chamber fields, scope votes per-state (stateId + per-country sub-national
- * officeType), take a per-state override threshold (2/3 of that state's
- * seats), and resolve a per-state executive (seated governor, auto-enact
- * fallback). See docs/superpowers/plans/2026-07-21-unified-bill-lifecycle-
- * phase7-state.md for the decision record.
+ * Regional (state) bill-lifecycle walker: the `level: "regional"` counterpart
+ * to `runBillLifecycle`. It is a sibling, not a branch, because state bills share
+ * the stage vocabulary (chamberVote, executiveAssent, override) but none of the
+ * national mechanics: they live in `stateBills`, have no chamber fields, scope
+ * votes per state (stateId plus per-country sub-national officeType), use a
+ * per-state override threshold of 2/3 of that state's seats, and resolve a
+ * per-state executive (seated governor, auto-enact fallback).
  *
- * Behavior parity contract: this module is a move + parameterize of the
- * former `src/lib/stateBillLifecycle.ts` — scoping (#0836), snapshot
- * freezing (#0982), the transient-claim revert (#2991), and all notification
- * copy are unchanged. `regionalEngine.test.ts` is the characterization guard.
+ * `regionalEngine.test.ts` is the characterization guard for behavior parity.
  */
 
 type DbConn = Awaited<ReturnType<typeof getDb>>;
@@ -314,9 +308,9 @@ export async function processStateBillTimers(
         resolutionCache
       );
     } catch (err) {
-      // Resolver threw mid-way — revert the transient claim so the bill is
+      // Resolver threw mid-way: revert the transient claim so the bill is
       // re-picked next turn instead of stranding in vote_closing forever. The
-      // status guard avoids clobbering a status the resolver already advanced. (#2991)
+      // status guard avoids clobbering a status the resolver already advanced.
       await db
         .collection<StateBill>(config.collection)
         .updateOne(
@@ -442,12 +436,11 @@ async function resolveStateBillVoting(
   const officeType = config.officeTypeFor(countryId);
   const officials = await loadRegionalRoster(db, cache, countryId, bill.stateId, officeType);
 
-  // Scope votes to the chamber's CURRENT seat holders before deciding pass/fail
-  // (bug #0836) and freeze the result the decision used so a later sub-national
-  // election cannot recompute this concluded bill's tally against a new chamber
-  // (#0982). Same shared vote-core the national engine resolves through; the
-  // stateId pins the roster lookup to this bill's chamber, and the stored
-  // aggregate + raw map are frozen when no current-holder votes survive.
+  // Scope votes to the chamber's current seat holders before deciding pass/fail,
+  // and freeze the result used so a later sub-national election cannot
+  // recompute a concluded bill's tally against a new chamber. stateId pins the
+  // roster lookup to this bill's chamber; the aggregate and raw map are frozen
+  // when no current-holder votes survive.
   const { totals, snapshot: voteSnapshot } = await resolvePhaseVotes(
     db,
     bill,

@@ -1,28 +1,20 @@
-/**
- * Plants stop producing at a loss (market rebuild phase 1b, kanban 254504).
+/*
+ * Plants stop producing at a loss.
  *
- * The demand throttle sizes a run from what sold, never from whether selling
- * it paid. A plant that sells most of its output below what that output costs
- * to make keeps running flat out and loses money on every unit, which is how
- * a third of plants reached negative margins in October 2026.
+ * The demand throttle sizes runs from sales, not profitability, so a plant
+ * selling below cost runs flat out and loses money. Each turn we read last
+ * turn's plant P&L and compute avoidable contribution:
  *
- * Each turn reads last turn's stored plant P&L and asks whether producing
- * paid for the costs that producing less would save:
+ *     current sales - inputs - per-unit costs (signed)
+ *         - labour above the crew floor + policy credit
  *
- *     contribution = current sales - inputs - per-unit costs (signed)
- *                    - labour above the crew floor + policy credit
+ * Upkeep, crew floor, and inventory sell-down are excluded (not avoidable
+ * by cutting output this turn). The whole output basket is judged together.
  *
- * Upkeep and the crew floor are not avoidable by cutting output, so they are
- * excluded. Inventory sell-down is excluded from sales because it is not this
- * turn's production. The whole output basket is measured together, so a mixed
- * plant is judged on everything it makes.
- *
- * Six turns in a row below -5% of sales cuts the run share by 5 points a turn.
- * Six turns above +5% restores it by 5 points a turn. The band and the streaks
- * keep a plant from flapping on one bad turn. The share scales the market part
- * of the throttle target only, so contract production is untouched, and the
- * throttle floor keeps a probe run on the book so the plant can see prices
- * recover.
+ * Six turns below -5% of sales cuts the run share by 5 points per turn; six
+ * turns above +5% restores it. The band and streaks prevent flapping. The share
+ * scales only the market part of the throttle, so contract production is
+ * untouched, and the throttle floor leaves a probe run so recovery is visible.
  */
 
 /** Contribution below this share of sales counts as a losing turn. */

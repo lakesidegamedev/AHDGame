@@ -1,18 +1,12 @@
 /**
- * Brand Loyalty — Package A core (design: ops dash /reports/brand-loyalty-plan,
- * four advisor rounds 2026-07-05/06).
+ * Brand loyalty: a reputation every corp keeps, not a mode it buys.
+ * Earned by pricing consistently against the corp's own trend and selling well;
+ * sudden hikes above the corp's norm are penalized. Loyalty is relative: one
+ * finite pool per market split by relative loyalty, so it only pays off
+ * rivals' mistakes.
  *
- * Loyalty is a REPUTATION a corp keeps, not a mode it buys. Every corp has it;
- * there is no positioning state and no conversion. It is earned by pricing
- * CONSISTENTLY against the corp's own trend and DELIVERING (selling well) — a
- * stable discounter earns it exactly like a stable premium seller. Sudden price
- * hikes above the corp's own norm are punished (the gouging penalty). It is
- * RELATIVE: one finite loyal pool per market, split by relative loyalty, so if
- * everyone maxes it nobody gains — it only pays off rivals' mistakes.
- *
- * This module is PURE (no DB, no clock). The turn layer supplies the corp's
- * revenue-weighted posture, fill, contest flag, and prior state; the clearing
- * layer calls {@link loyalSliceShares} for the demand pre-pass.
+ * Pure module (no DB, no clock). The turn layer supplies posture, fill, contest
+ * flag and prior state; the clearing layer calls {@link loyalSliceShares}.
  */
 
 // ── Tunables (defaults; see the plan's constants table for ranges) ───────────

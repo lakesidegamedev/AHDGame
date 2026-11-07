@@ -5,10 +5,9 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 /**
  * Per-turn financial-distress clock for player corporations. Run AFTER this
  * turn's liquidCapital has settled. Stamps `financialDistressSinceTurn` when a
- * player corp first goes insolvent or holds a defaulted bond (and notifies the
+ * player corp first goes insolvent or holds a defaulted bond (notifying the
  * owner once), and clears it when the corp recovers. NPC/unowned corps are
- * skipped — they have no nationalization grace. Idempotent within a turn:
- * a corp already in distress is neither re-stamped nor re-notified.
+ * skipped: they have no nationalization grace. Idempotent within a turn.
  *
  * The grace window itself lives in eligibility (FINANCIAL_DISTRESS_GRACE_TURNS);
  * this only maintains the "since" timestamp the window is measured against.

@@ -464,22 +464,11 @@ export async function loadGermanQuestionDossier(
   const capForInstitution = (id: string) =>
     personalNetCapFor(Math.max(1, participantsByInstitution.get(id)?.size ?? 0));
 
-  // PROJECTED, not read off the stamps.
-  //
-  // `appliedPoints` is null until the settlement phase resolves the turn, so
-  // summing it reported the live turn as "scaled to +0.0" every time and made
-  // the panel claim a scaling that had not happened. The board reports what the
-  // tick WILL enforce; the wire is the side that reports what was already
-  // written.
-  //
-  // Reading stamps where they exist would be no more accurate: the resolver
-  // makes them sum to exactly the figure this projection computes, so the two
-  // agree on every batch the resolver actually produced. They diverge only on
-  // rows whose stamps could not have come from it.
-  //
+  // PROJECTED, not read off the stamps. `appliedPoints` is null until the
+  // settlement phase resolves, so the board reports what the tick WILL enforce.
+  // Stamps agree with this projection wherever the resolver produced them.
   // Run THROUGH THE RESOLVER, never a second copy of the apportionment, so the
-  // panel, the institution cards and the turn phase cannot disagree. A local
-  // clamp would be a second copy and would miss the largest-remainder split.
+  // panel and turn phase cannot disagree.
   const projected = resolvePlayBatch(personal);
   const byId = new Map(personal.map((p) => [String(p._id), p]));
   const netByInstitution = new Map<string, number>();

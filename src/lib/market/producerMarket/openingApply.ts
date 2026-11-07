@@ -1,6 +1,5 @@
 /**
- * Applies a reviewed producer opening plan to the live world (funded-market
- * cutover, phase B slice S1).
+ * Applies a reviewed producer opening plan to the live world.
  *
  * The plan is built by `scripts/migrations/captureProducerOpening.ts` from the
  * live world at an idle turn boundary. This writes exactly that plan:
@@ -11,8 +10,8 @@
  * - stamping `gameState.producerOpening` last, after every sector and company
  *   is verified. The funded path refuses to start without that marker.
  *
- * It never creates cash or input stock (the plan guarantees both are zero) and
- * refuses any unresolved modeled-loss carry.
+ * It never creates cash or input stock and refuses any unresolved modeled-loss
+ * carry.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { ProducerOpeningPlan } from "./migrationRules";

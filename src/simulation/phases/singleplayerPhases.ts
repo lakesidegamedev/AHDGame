@@ -3,24 +3,17 @@
  *
  * Singleplayer is one account on one machine, with cheat commands available in
  * the UI by design. Everything in this list exists to catch a player abusing a
- * shared world at other players' expense: trade patterns that look like
- * collusion, audit trails that look like scripting, accounts that look like
- * alts. None of those concepts exist when there is one player and no one to
- * defraud, so the work is pure cost.
+ * shared world at other players' expense: collusion, scripting, alts. None of
+ * those exist with one player, so the work is pure cost. The scans were
+ * measured at ~18% of every document a turn deserializes, and deserialization
+ * dominates singleplayer turn CPU.
  *
- * It is not a small cost. The two scans alone were measured at ~18% of every
- * document a turn deserializes (financialSuspectScan 28,932 and
- * auditAnomalyScan 28,909 documents on a seeded 1953 world), and
- * deserialization is the dominant consumer of singleplayer turn CPU.
+ * This is a DENYLIST, deliberately: a new gameplay phase added later runs in
+ * singleplayer automatically. The failure mode is "singleplayer does more work
+ * than needed", never "singleplayer quietly stopped simulating something".
  *
- * This is a DENYLIST, deliberately. A new gameplay phase added later runs in
- * singleplayer automatically; only phases named here are skipped, so the
- * failure mode is "singleplayer does more work than it needed to", never
- * "singleplayer quietly stopped simulating something".
- *
- * Scope note: this covers detection, not record-keeping. `activityLogging`
- * still runs, because the audit trail it writes is read by player-facing
- * history surfaces, not only by the scans.
+ * Scope: this covers detection, not record-keeping. `activityLogging` still
+ * runs because its audit trail is read by player-facing history surfaces.
  */
 export const SINGLEPLAYER_SKIP_PHASES: ReadonlySet<string> = new Set<string>([
   /** Flags trade patterns between accounts. One account, no counterparties. */

@@ -40,22 +40,21 @@ const MIN_FINDER_SHARE = 0.001;
 /** Factory that turns a seed string into a deterministic [0,1) stream. */
 type RngFactory = (seed: string) => () => number;
 
-/**
+/*
  * Resolve every active prospecting survey whose `completesTurn <= turn`.
  *
- * Determinism: each survey draws from its own seeded stream keyed on the survey
- * id + turn, so resolution order and neighbouring surveys never affect the
- * outcome (replay-safe, matches the "never Math.random in turn paths" rule).
- * Tests inject `rngFactory` to force a success/failure.
+ * Determinism: each survey draws from its own seeded stream keyed on the
+ * survey id + turn, so resolution order and neighbouring surveys never affect
+ * the outcome (replay-safe; Math.random is banned in turn paths). Tests inject
+ * `rngFactory` to force a success/failure.
  *
  * Success grows the state's per-resource capacity by
- * currentCap × uniform(0.03,0.08) × rdMult, hard-capped at 20% of current
- * capacity. Capacity docs are NEVER created here: if the cap doc or the
- * resource entry has vanished (or is 0), the survey still resolves but adds
- * nothing (fail-safe), consistent with the rdInnovation convention.
+ * currentCap x uniform(0.03,0.08) x rdMult, hard-capped at 20% of current
+ * capacity. Capacity docs are NEVER created here: if the cap doc or resource
+ * entry is missing or 0, the survey resolves but adds nothing (fail-safe),
+ * matching the rdInnovation convention.
  *
- * Emits notifications only; the survey cost was charged at launch, so this phase
- * emits nothing financial.
+ * Emits notifications only; survey cost was charged at launch.
  */
 export async function resolveProspects(
   db: Db,

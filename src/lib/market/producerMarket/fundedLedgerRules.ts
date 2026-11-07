@@ -43,8 +43,8 @@ export function fundedLedgerRows(input: {
     book: string;
     offeredUnits: number;
     /**
-     * Seller with no state that belongs to a country (a background economy,
-     * #5702): its supply counts in that country's national book. Absent for plants.
+     * Seller with no state that belongs to a country: its supply counts in that
+     * country's national book. Absent for plants.
      */
     countryId?: string;
   }[];

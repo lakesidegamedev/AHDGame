@@ -1,27 +1,18 @@
 /**
  * Regional budget constraint system for UK regions.
  *
- * Runs every turn as part of the effects & metrics group. Calculates each UK
- * region's budget from council tax, business rates, and the Westminster grant,
- * then compares against enacted spending. Regions in deficit for more than one
- * turn trigger forced austerity (most expensive programme downgraded one tier).
+ * Runs every turn in the effects & metrics group: computes each UK region's
+ * budget from council tax, business rates, and the Westminster grant, then
+ * compares against enacted spending. Regions in deficit for more than one turn
+ * trigger forced austerity (most expensive programme downgraded one tier).
  *
- * **Revenue is derived from the region's own economy and the national grant
- * pool — never from a `legislationTypes` lookup.** The political-legislation
- * v2 preset unseeds every legacy `countryScope: "uk"` type (see
- * `seedLegislationTypes`), so the previous model — council tax rate read off
- * an enacted `uk_council_tax` policy, Westminster grant off a national
- * `uk_local_government_funding` policy — resolved to a silent 0 on every v2
- * world while the COST half kept pricing through the v2 catalog. That
- * asymmetry left all 12 UK regions with £0 revenue against real enacted costs,
- * pinning them in permanent deficit and firing forced austerity every turn.
- * RU/DE/CN/JP regional budgets already derive from the national budget; this
- * brings UK onto the same footing.
- *
- * The per-capita value bases that model replaced were also modern-calibrated
- * (a flat £120,000/head) with no era awareness: on the 1953 preset they billed
- * London £18.8B of council tax against a £17.5B *national* GDP. Anchoring to
- * live regional GDP is era-proof by construction.
+ * Revenue is derived from the region's own economy and the national grant
+ * pool, never from a `legislationTypes` lookup. The v2 preset unseeds all
+ * legacy `countryScope: "uk"` types, so a legislation-based model resolves to
+ * £0 revenue while costs still price through the v2 catalog, pinning every UK
+ * region in permanent deficit. RU/DE/CN/JP derive regional budgets from the
+ * national budget; UK does the same here. Anchoring to live regional GDP is
+ * era-proof where flat per-capita values were not.
  *
  * Pure calculation helpers are exported separately for testability.
  */
@@ -395,12 +386,10 @@ export async function processRegionalBudgets(
 
   let regionsProcessed = 0;
 
-  // Batched: the per-region regionalBudgets upsert (always) and the rare
-  // forced-austerity statePolicies update used to be sequential updateOne
-  // calls inside this loop — one+ round-trip per region. Accumulate into
-  // bulkWrite arrays and commit once after the loop. Small at 12 UK regions,
-  // but this is the shape every per-country regional-budget phase shares, and
-  // it scales with region count toward the 30-50-country target.
+  // Batched: accumulate per-region upserts and rare forced-austerity
+  // updates into bulkWrite arrays and commit once after the loop, avoiding
+  // one round-trip per region. This shape is shared across regional-budget
+  // phases and scales with region count.
   const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
 
@@ -409,9 +398,7 @@ export async function processRegionalBudgets(
     const regionResetPrograms = resetProgramsByRegion.get(String(region._id)) ?? [];
     const existingBudget = budgetMap.get(region._id);
 
-    // a. Use existing value bases or defaults. These are no longer a currency
-    //    amount in the revenue formula — only their ratio to baseline is read,
-    //    so the drift feedback loop survives the switch to GDP anchoring.
+    // Values feed the revenue formula only as a ratio to baseline, so drift feedback survives GDP anchoring.
     const propertyValuePerCapita =
       existingBudget?.propertyValuePerCapita ?? DEFAULT_PROPERTY_VALUE_PER_CAPITA;
     const commercialValuePerCapita =

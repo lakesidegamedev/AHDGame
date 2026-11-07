@@ -1,24 +1,18 @@
 /**
- * SIM-ONLY turn-phase profiles for the headless worldsim (scripts/sim/runWorld.ts).
+ * SIM-ONLY turn-phase profiles for the headless worldsim.
  *
- * The live game always runs the full turn — this module is inert unless a
- * sandbox gameConfig sets `simTurnPhaseMode: "elections-only"`. In that mode the
- * turn runtime skips the phases in ELECTIONS_SKIP_PHASES so an election-balance
- * run isn't paying for corporationTurn (the known hotspot), markets, forex, the
- * ledger reconciler, and the rest of the economy — while every political,
- * election, campaign, party, NPP, approval and turnout phase still runs against
- * the real engine.
+ * Inert unless a sandbox gameConfig sets `simTurnPhaseMode: "elections-only"`,
+ * in which case the turn runtime skips ELECTIONS_SKIP_PHASES so election-balance
+ * runs skip the heavy economic machinery while all political phases still run
+ * against the real engine.
  *
- * Design choice: a DENYLIST, not an allowlist. Any phase NOT named here runs by
- * default — so a new political/election phase added later is included
- * automatically, and only the known-heavy economic machinery is gated off. This
- * file IS the econ/election boundary; tune it here.
+ * A denylist, not an allowlist: any phase not named here runs by default, so a
+ * new political phase is included automatically. This file IS the
+ * econ/election boundary.
  *
- * Frozen-economy semantics: because the metric/econ phases are skipped, national
- * metrics, prices and approval drivers hold at their bootstrap values for the
- * whole run. Elections then play out on a stable substrate (candidates still
- * fluctuate via campaign/support phases), which is exactly the isolation we want
- * for reading election balance without economy noise.
+ * Because the econ phases are skipped, national metrics, prices and approval
+ * drivers hold at bootstrap values for the whole run, giving a stable substrate
+ * for reading election balance.
  */
 
 export type SimTurnPhaseMode = "full" | "elections-only" | "economy-only" | "macro-only";

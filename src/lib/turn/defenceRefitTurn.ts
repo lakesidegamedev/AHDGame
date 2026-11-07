@@ -19,23 +19,20 @@ export interface RefitResult {
 /**
  * Per-turn: bring under-equipped units up to standard from the national arsenal.
  *
- * This is the step that makes the design's central promise true — a unit raised against an
- * empty store "starts at a lower quality and builds up over time" — and it is the first thing
- * in the game's history that RAISES `equipment`. Combat has read that field on every
- * calculation since it was written (`computeEffectivePower` folds `1 + eqAvg × 0.03`), but it
- * was only ever set at seed and at recruit and nothing could move it.
+ * This is what makes a unit raised against an empty store start at lower
+ * quality and build up over time. Combat reads `equipment` via
+ * `computeEffectivePower` (`1 + eqAvg × 0.03`), which otherwise only moves at
+ * seed and recruit.
  *
- * Refits nearest-to-complete first. With scarce stock that produces some combat-worthy
- * formations rather than raising every unit a little and leaving none of them effective — the
- * same reasoning `reinforceUnit` uses when manpower is short.
+ * Refits nearest-to-complete first: with scarce stock, this yields some
+ * combat-worthy formations rather than raising every unit a little and leaving
+ * none effective (same reasoning as `reinforceUnit`).
  *
- * Runs for EVERY country with units, defence seat or not, following `applyReinforcement`
- * rather than `applyMilitaryForceEffects`: a nation whose army is fed manpower and materiel
- * but exempt from one of them would be a standing asymmetry.
+ * Runs for EVERY country with units, defence seat or not, following
+ * `applyReinforcement`: exempting one army would be a standing asymmetry.
  *
- * Deliberately does NOT raise `techTier`. Tier is the grade of the materiel a unit was ISSUED
- * with; topping up a legacy formation's racks does not turn it into a modern one. Upgrading a
- * unit's tier remains the paid modernisation route.
+ * Deliberately does NOT raise `techTier`: topping up a legacy formation's racks
+ * does not modernise it. Tier upgrades remain the paid route.
  */
 export async function applyDefenceRefit(
   db: Db,
@@ -82,9 +79,9 @@ export async function applyDefenceRefit(
       if (drawn <= 0) break; // this domain's store is exhausted
 
       const fullLots = lotsRequired(archetype);
-      // Preserve the sub-track value of every lot and redirect it toward tracks that still
-      // need equipment. Rounding each track here used to consume small deliveries without
-      // changing the unit at all.
+      // Preserve the sub-track value of every lot and redirect it toward tracks that
+      // still need equipment. Rounding per track would consume small deliveries
+      // without changing the unit.
       const equipment = applyEquipmentLots(unit.equipment, drawn, fullLots);
 
       ops.push({

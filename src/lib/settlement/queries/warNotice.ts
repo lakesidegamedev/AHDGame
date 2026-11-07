@@ -1,16 +1,13 @@
 /**
  * What to tell a player who opens the board while the question is frozen.
  *
- * The dossier serves an OPEN crisis only, and rightly so: every value on it is
- * about a board somebody can still act on. A frozen crisis has no board. It does
- * have an answer to "what happened to it", though, and before this the page
- * said "no settlement crisis is open" in the one case a player most wants
- * explained.
+ * The dossier serves an OPEN crisis only, because every value on it is about a
+ * board somebody can still act on. A frozen crisis has no board, but does have
+ * an answer to "what happened to it".
  *
- * Deliberately NOT part of `DossierView`. Widening that interface to carry a
- * frozen variant would put an optional-everything shape in front of every
- * consumer of a board that is normally live; this is a separate, small read for
- * a separate, small state.
+ * Deliberately NOT part of `DossierView`: widening that interface would put an
+ * optional-everything shape in front of every consumer of a normally-live
+ * board. This is a separate, small read for a separate, small state.
  */
 import type { Db } from "mongodb";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";

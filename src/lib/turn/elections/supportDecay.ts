@@ -1,20 +1,8 @@
 /**
- * Support decay turn-phase processor.
- *
- * For every active election candidate, Support regresses toward the
- * neutral midpoint (`DEFAULT_CANDIDATE_SUPPORT = 50`) by
- * `SUPPORT_DECAY_PER_TURN` per turn. This implements the design doc §3.1
- * lifecycle item:
- *
- *   "decays per turn while `Election.status === "active"` (rate
- *    calibrated in Phase 4 — see §8 step 5)"
- *
- * Candidates whose election has resolved or who have themselves withdrawn
- * are skipped — withdrawal does NOT clear the field (per §3.1 contract);
- * resolution does, and that's the responsibility of `clearSupportOnResolve`.
- *
- * Pure DB scan; runs in the politics phase block alongside the other
- * Reg/Org decay processors.
+ * Support decay turn-phase processor: regresses each active election
+ * candidate's Support toward DEFAULT_CANDIDATE_SUPPORT by
+ * SUPPORT_DECAY_PER_TURN per turn. Skips resolved elections and
+ * withdrawn candidates (withdrawal does not clear the field).
  */
 
 import type { Db } from "mongodb";
@@ -61,12 +49,7 @@ export async function processSupportDecay(
     .toArray();
   if (candidates.length === 0) return { candidatesUpdated: 0 };
 
-  // Batched: this used to be a sequential updateOne per candidate — fine at
-  // 8-country scale, but the exact sequential-round-trip pattern that made
-  // the indexFunds turn phase take 108s+ at ~10,700 NPPs (found and fixed
-  // earlier this session). Candidate count scales with country × NPP
-  // density, so toward a 30-50-country sim this needed the same bulkWrite
-  // batching.
+  // Batched: a sequential updateOne per candidate is the same pattern that made the indexFunds turn take 108s+ at ~10,700 NPPs. Candidate count scales with country × NPP density, so toward a 30-50-country sim this needs bulkWrite.
   const ops: { updateOne: { filter: { _id: ElectionCandidate["_id"] }; update: object } }[] = [];
   for (const c of candidates) {
     const current = c.support;
@@ -83,10 +66,10 @@ export async function processSupportDecay(
 }
 
 /**
- * Move `value` toward `target` by `step` units, never overshooting. Pure
- * helper — exported for tests. Linear regression-to-mean: a candidate
- * 10 units above the midpoint loses `step`, a candidate 10 units below
- * gains `step`, a candidate within `step` of the midpoint snaps to it.
+ * Move `value` toward `target` by `step`, never overshooting. Pure
+ * helper, exported for tests. Linear regression-to-mean: a candidate
+ * 10 above the midpoint loses `step`, 10 below gains `step`, within
+ * `step` snaps to it.
  */
 export function regressToward(value: number, target: number, step: number): number {
   const delta = target - value;

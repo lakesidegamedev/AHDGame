@@ -1,18 +1,15 @@
 /**
- * Command Economy v2 (P2) — server-side authorization for the three economic
- * seats. A player may only drive the seat they actually hold:
+ * Server-side authorization for the three command-economy seats. A player may
+ * only drive the seat they actually hold:
  *
- *  - Gosbank Chair panel  → the holder of the country's `bankCabinetId` seat,
- *    or the head of government (who may always steer state credit).
- *  - Gosplan Planner panel → the holder of the `plannerCabinetId` seat, or the
- *    head of government.
- *  - SOE Director panel    → the character whose id is the SOE's `directorId`.
- *  - Appointing an SOE director → the Gosplan chair or the head of government
- *    (the "cabinet / Supreme Soviet appoints" rule). A vacant seat may also be
- *    self-claimed by a citizen of the country.
+ *  - Gosbank Chair panel -> holder of `bankCabinetId`, or head of government.
+ *  - Gosplan Planner panel -> holder of `plannerCabinetId`, or head of government.
+ *  - SOE Director panel -> the character whose id is the SOE's `directorId`.
+ *  - Appointing an SOE director -> the Gosplan chair or head of government. A
+ *    vacant seat may be self-claimed by a citizen of the country.
  *
- * The role RESOLUTION (a DB read) is separated from the role DECISION (a pure
- * predicate) so the decisions are unit-testable without a database.
+ * Role RESOLUTION (DB read) is separated from the role DECISION (pure
+ * predicate) so decisions are unit-testable without a database.
  */
 
 import type { Db, ObjectId } from "mongodb";

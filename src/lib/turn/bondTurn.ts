@@ -123,9 +123,8 @@ export async function processBondTurn(
   const steps = substepMarker();
   const now = new Date();
   const forexEnabled = await isForexEnabled();
-  // #1198: gates default DETECTION only, in Phase 3. Coupon and maturity
-  // settlement runs regardless — see the comment there for why the two are
-  // treated differently.
+  // Gates default DETECTION only, in Phase 3. Coupon and maturity
+  // settlement runs regardless.
   const gameState = await getGameState(db);
   const corporationActionsPaused = gameState?.corporationActionsPaused === true;
   const captureSovereignCashProceeds = config?.captureSovereignCashProceeds === true;
@@ -403,10 +402,7 @@ export async function processBondTurn(
   const govCouponByCountry = new Map<string, { total: number; currency: CurrencyCode }>();
   const sovereignMaturityCashPaidByCountry = new Map<string, number>();
   const sovereignDebtFaceRetiredByCountry = new Map<string, number>();
-  // #992 tranche 4: fund-holder coupon/maturity rows are fund-subject legs, so
-  // the shadow ledger books them against fund:<id> (the stock-checked cash
-  // account) instead of a phantom corporation:<fundId>. One projected read:
-  // funds are few and the currency never changes mid-turn.
+  // Fund-holder coupon/maturity rows are fund-subject legs: book them against fund:<id> (the stock-checked cash account), not a phantom corporation:<fundId>. One projected read: funds are few and currency is stable mid-turn.
   const fundCurrencyById = new Map(
     (
       await db
@@ -480,10 +476,7 @@ export async function processBondTurn(
 
       if (holder.characterId) {
         addCharPayment(holder.characterId.toString(), paymentAnchor, bondCcy);
-        // bond_coupon was previously unlogged for character holders — Phase 5
-        // pushed only bond_maturity. That gap is what made multi-billion-dollar
-        // coupon distributions invisible in the financial ledger and produced
-        // the cash-mismatch pattern flagged on the production wealth list.
+        // Must log bond_coupon for character holders; omitting it leaves multi-billion coupon distributions invisible in the ledger and produces cash mismatches.
         txBondEntries.push({
           type: "bond_coupon",
           turn,
@@ -526,11 +519,11 @@ export async function processBondTurn(
         });
       } else if (holder.fundId) {
         const couponAnchor = addFundPayment(holder.fundId.toString(), paymentAnchor);
-        // #992 tranche 4: the fund credit lands on cashAnchor (₳), so the row
-        // is fund-subject in the fund's own currency with the ₳ value stated
-        // outright — never derived from the live FX table. Without a fund doc
-        // there is no currency to book in, so the row keeps the legacy shape
-        // rather than guessing.
+        // The fund credit lands on cashAnchor (₳), so the row is fund-subject in
+        // the fund's own currency with the ₳ value stated outright, never
+        // derived from the live FX table. Without a fund doc there is no
+        // currency to book in, so the row keeps the legacy shape rather than
+        // guessing.
         const couponFundIdStr = holder.fundId.toString();
         const couponFundCcy = fundLedgerCurrency(couponFundIdStr);
         if (couponFundCcy) {
@@ -795,26 +788,21 @@ export async function processBondTurn(
   }
 
   // ── Phase 3: Check for defaults (negative liquidCapital) ──────────────────
-  // Re-fetch corporations after Phase 2 deltas. Detection only — credit
-  // penalty application is deferred until after Phase 3.5 cascade resolution
-  // so newly-cascaded defaults pick up the same penalty.
+  // Re-fetch corporations after Phase 2 deltas. Detection only. Credit
+  // penalty application is deferred until after the Phase 3.5 cascade
+  // resolution so newly-cascaded defaults pick up the same penalty.
   //
-  // SKIPPED ENTIRELY WHILE CORPORATION ACTIONS ARE PAUSED (ticket #1198).
-  // The pause skips `corporationTurn` — sector revenue, operating income,
-  // dividends — but deliberately not this phase, because coupons and maturities
-  // are contractual and sovereign bondholders should not lose income because an
-  // admin paused corporations. Settling those obligations is right. LIQUIDATING
-  // a corporation for the cash hole that settlement opens is not: the pause
-  // switched the corp's income off, so the shortfall is the pause's doing, not
-  // the corp's. Corporation #624 was defaulted at turns 416 and 418 exactly this
-  // way, paying a A10.2m coupon per turn against revenue the pause had removed.
-  //
-  // So coupon and maturity settlement above still runs; only the decision to
-  // declare a corp insolvent is held until corporations are live again. A corp
-  // that is genuinely insolvent will still be caught on the first unpaused turn.
-  // Escrow cover is inside the skip on purpose — it exists only as a pre-default
-  // mitigation, so with no default possible there is no reason to move a
-  // player's buyback escrow.
+  // SKIPPED ENTIRELY WHILE CORPORATION ACTIONS ARE PAUSED.
+  // The pause skips `corporationTurn` (sector revenue, operating income,
+  // dividends) but deliberately not this phase, because coupons and maturities
+  // are contractual and sovereign bondholders should not lose income because
+  // an admin paused corporations. Settling those obligations is right.
+  // LIQUIDATING a corporation for the cash hole that settlement opens is not:
+  // the pause switched the corp's income off, so the shortfall is the pause's
+  // doing, not the corp's. Only the decision to declare a corp insolvent is
+  // held until corporations are live again; a genuinely insolvent corp will
+  // still be caught on the first unpaused turn. Escrow cover is inside the
+  // skip on purpose, since it exists only as a pre-default mitigation.
   if (corporationActionsPaused && corpIds.length > 0) {
     console.log(
       `[bondTurn] corporation actions paused — skipping default detection and ` +
@@ -841,20 +829,15 @@ export async function processBondTurn(
     const stillNegative = await coverBondShortfallsFromEscrow(db, negativeNonNatcorp, now);
 
     // SOLVENCY GATE. `liquidCapital < 0` is a liquidity snapshot, not
-    // insolvency. A corp that has converted cash into plant is short of cash by
-    // construction, and saying so is not the same as saying it cannot pay.
-    // Ticket #1130 defaulted a corp 16.58 under, holding ₳232k of assets
-    // (mostly paid-for construction not yet delivered) against ₳165k of debt,
-    // then ran it through a ladder that sold its only sector.
+    // insolvency: a corp that converted cash into plant is short of cash by
+    // construction, not unable to pay. The test is whether the corp's assets
+    // could cover its debt on the SAME exit basis the restructure planner uses
+    // to decide what to sell. If restructuring could have covered the debt, the
+    // corp was illiquid, not insolvent, and the ladder should not start. A corp
+    // whose assets fall short is insolvent and defaults as before.
     //
-    // The test is whether the corp's assets could cover its debt, valued on the
-    // SAME exit basis the restructure planner uses to decide what to sell. That
-    // is deliberate: if restructuring could have covered the debt, the corp was
-    // never insolvent, only illiquid, and the ladder should not start. A corp
-    // whose assets fall short is insolvent and defaults exactly as before.
-    //
-    // A corp left illiquid still cannot spend what it does not have, so it is
-    // under real pressure — it simply is not liquidated over a cash dip.
+    // An illiquid corp still cannot spend what it does not have, so it is under
+    // real pressure; it is simply not liquidated over a cash dip.
     //
     // Scope: initial detection only. Cascade defaults (Phase 3.5) are a
     // counterparty genuinely failing to pay, so they are left untouched.
@@ -1872,20 +1855,12 @@ export async function processBondTurn(
     }))
   );
 
-  // ── Phase 7: Auto-resolve lingering corporate defaults ─────────────────────
-  // See autoResolveLingeringDefaults in ./bondTurnAutoResolve for the
-  // refinance → restructure → stand-for-dissolution resolution order. Flushes
-  // its own CEO notifications before returning.
-  //
-  // Also skipped while corporation actions are paused (#1198), and for a
-  // sharper reason than Phase 3. This phase can SELL a corporation's sectors,
-  // and it justifies that by saying the CEO "has already had at least one turn"
-  // to act in the crisis modal. During a pause they have had no such turn: all
-  // four cure routes (cash, refinance, restructure, dissolve) are gated on
-  // `requireCorporationActionsEnabled` and return an error. Counting paused
-  // turns against the CEO's response window, then force-selling their assets
-  // for missing a deadline they were locked out of, is not a defensible
-  // outcome. The clock resumes when corporations do.
+  // Phase 7: auto-resolve lingering corporate defaults. This phase can
+  // SELL a corporation's sectors, justified by the CEO having had at least one
+  // turn to act. While corporation actions are paused they have had no such turn
+  // (all four cure routes are gated), so skip this phase entirely rather than
+  // force-selling assets for a missed deadline the CEO was locked out of.
+  // See autoResolveLingeringDefaults for resolution order and CEO notifications.
   const { bondsAutoRestructured, bondsAutoRefinanced } = corporationActionsPaused
     ? { bondsAutoRestructured: 0, bondsAutoRefinanced: 0 }
     : await autoResolveLingeringDefaults({ db, turn, now });

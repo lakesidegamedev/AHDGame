@@ -1,18 +1,18 @@
 /**
- * Honest producer-market shadow (funded-market cutover, phase A).
+ * Honest producer-market shadow.
  *
- * The shadow must run on its own money: every turn starts from the cash, stock
- * and prices the previous shadow turn settled, households spend only what they
- * were paid, and each turn proves its books balance. These rules carry that
- * state, close the turn and reconcile it. Nothing here touches live money.
+ * The shadow runs on its own money: every turn starts from the cash, stock
+ * and prices the previous shadow turn settled, households spend only what
+ * they were paid, and each turn proves its books balance. Nothing here
+ * touches live money.
  *
- * Timing (documented so no buyer spends proceeds of its own unsettled orders):
- * - wages are paid inside settlement, before households place orders, and are
+ * Timing (no buyer may spend proceeds of its own unsettled orders):
+ * - wages are paid inside settlement before households place orders, and are
  *   spendable the same turn;
  * - AI profit distribution (60% of positive profit, 40% retained) and payments
  *   to operating payees are booked at close and become household cash next turn;
  * - public buyers get this turn's funding at open; unspent funding returns to
- *   the treasury at close (an identified sink, never carried).
+ *   the treasury at close.
  *
  * Pure: plain data in, plain data out.
  */

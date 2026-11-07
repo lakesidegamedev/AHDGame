@@ -1,21 +1,9 @@
 /**
- * One-Party-State Constraints
- *
- * Gating functions that prevent generic parliamentary code paths from
- * allowing non-ruling parties to take over a one-party state's
- * government. These are runtime guards, not compile-time, intended to be
- * called at the entry points of:
- *
- *   - coalition formation eligibility
- *   - VONC / no-confidence processing
- *   - government collapse triggers
- *   - candidate filing (executive and legislative)
- *   - coalition invites
- *
- * The gates derive ruling-party identity from `PoliticalParty.regimeStatus`
- * so the same five guards work for any country configured with
- * `governmentType: "onePartyState"`. CN is the only such country today;
- * adding a second is a pure config change.
+ * One-party-state guards called at generic parliamentary entry points
+ * (coalition eligibility, VONC, collapse, filing, invites) to prevent
+ * non-ruling parties taking over the government. Ruling party comes from
+ * `PoliticalParty.regimeStatus`, so the same guards fit any country with
+ * `governmentType: "onePartyState"`.
  */
 import type { CountryConfig } from "@/lib/constants/countries";
 import { DEFAULT_OPS_VOTE_MULTIPLIERS } from "@/lib/constants/countries";
@@ -82,9 +70,8 @@ export function canCollapseGovernment(config: ConfigShape): boolean {
  *   - Non-executive offices: ruling or approved parties (banned is blocked).
  * For non-one-party countries, always returns true.
  *
- * Legacy office keys (`npcPremier`, the pre-2026-05-22 CN executive key)
- * are treated as executive for safety in case stale data is queried during
- * any future migration window.
+ * Legacy office keys (`npcPremier`) are treated as executive in case stale
+ * data is queried during a migration window.
  */
 export function canFieldExecutiveCandidate(
   config: ConfigShape,
@@ -133,10 +120,7 @@ export function canFieldLegislativeCandidate(config: ConfigShape, party: PartySh
  * - In OPS, returns the ruling/approved/independent/banned multiplier
  *   from the country's `opsVoteMultipliers` override, or
  *   `DEFAULT_OPS_VOTE_MULTIPLIERS` when no override is configured.
- * - Independents (no party document) are treated the same as banned —
- *   only ruling and approved parties earn vote weight.
- *
- * See `docs/plans/archive/2026-05/2026-05-27-ops-general-elections-design.md`.
+ * - Independents (no party document) are treated the same as banned, *   only ruling and approved parties earn vote weight.
  */
 export function resolveRegimeMultiplier(
   config: Pick<CountryConfig, "governmentType" | "opsVoteMultipliers">,

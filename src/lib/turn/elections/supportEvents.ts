@@ -1,25 +1,11 @@
 /**
- * Phase B Support-mutation hooks for discrete events: scandals,
- * endorsements landing, debate outcomes.
+ * Support-mutation hooks for discrete events: scandals, endorsements,
+ * debate outcomes. Each applies a calibrated delta to `support` for every
+ * active candidate row of a character, clamping to [0, 100] post-write.
  *
- * Each helper applies a calibrated bump (positive or negative) to
- * `electionCandidates.support` for every active candidate row of a
- * given character. Clamps to [0, 100] post-write.
- *
- * Callers:
- *   - `applyScandalSupportPenalty` — placeholder for B2. No production
- *     callers yet because the codebase has no discrete "scandal" event
- *     system. When a scandal-event system lands, it should call this
- *     helper at scandal-creation time.
- *   - `applyEndorsementSupportBump` — wired in B3 to every endorsement
- *     write path (executive / governor / NPP / player). Symmetric:
- *     revoking an endorsement applies the negative form.
- *   - `applyDebateOutcomeSupportBump` — B4 stub. No debate infrastructure
- *     exists; this is here so a future debate system has a single hook.
- *
- * All helpers are idempotent-safe — calling twice with the same severity
- * applies the bump twice. Callers should rate-limit / dedupe at their
- * level (e.g. an endorsement only fires once per landing).
+ * Not idempotent: calling twice applies the bump twice. Callers must
+ * rate-limit / dedupe at their level (e.g. an endorsement only fires once
+ * per landing).
  */
 
 import type { Db, ObjectId } from "mongodb";

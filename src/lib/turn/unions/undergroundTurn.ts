@@ -20,22 +20,20 @@ export interface UndergroundTurnResult {
 }
 
 /**
- * Illicit unions under ban, per-turn underground step. The turn orchestrator
- * supplies budget-banned country ids so unions seeded during an active ban are
- * included even when their local `suspended` mirror is absent. Direct callers
- * that omit that set retain the suspended-only behavior:
+ * Illicit unions under ban, per-turn underground step. The orchestrator
+ * supplies budget-banned country ids so unions seeded during an active ban
+ * are included even when their local `suspended` mirror is absent; direct
+ * callers that omit that set retain suspended-only behavior.
  *
- * - Heat decays when idle (`lastUndergroundDriveTurn !== currentTurn`), so
- *   steady slow work stays dark and bursts get noticed.
- * - Each union at or above threshold rolls detection once per turn. The
- *   roll comes from the seeded RNG (`seededRoll`), never `Math.random()`,
- *   so turn replay stays deterministic.
- * - A hit exposes the union for `EXPOSURE_LENGTH_TURNS` turns. Exposure
- *   needs no decay write: `isUnionExposed` compares against the turn, so a
- *   union goes dark on its own once the window passes. No permanent flags.
+ * - Heat decays when idle (`lastUndergroundDriveTurn !== currentTurn`).
+ * - Each union at or above threshold rolls detection once per turn, via
+ *   the seeded RNG (`seededRoll`), never `Math.random()`, so replay stays
+ *   deterministic.
+ * - A hit exposes the union for `EXPOSURE_LENGTH_TURNS`; `isUnionExposed`
+ *   compares against the turn, so no decay write and no permanent flags.
  *
  * Stamps every processed cell, including quiet ones, so a retry cannot roll
- * detection twice or decay heat and recent-drive pressure twice.
+ * detection or decay heat twice.
  */
 export async function processUndergroundTurn(
   db: Db,

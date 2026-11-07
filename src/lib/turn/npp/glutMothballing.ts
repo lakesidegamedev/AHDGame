@@ -51,31 +51,19 @@ export function buildNppGlutMothballUpdates(args: {
   } = args;
   const sectorUpdates: NppCorpDecision["sectorUpdates"] = [];
 
-  // Sections 2a/2b only STOP a glutted sector from growing; nothing ever takes
-  // existing capacity OFF the market. Under plants that matters: NPP plants
-  // seeded at national-economy scale (100k-300k units/day) keep producing
-  // full-tilt into markets clearing at soldFraction 0.01-0.08, pinning every
-  // finished-good price to the log-curve floor and starving player plants of
-  // fill (ticket #1027: chemicals sat 72x oversupplied, advertising 125x).
-  // Negative productionPolicy is the WRONG lever for this (its lean-ops
-  // asymmetry cuts input demand harder than output and worsened gluts, GH
-  // #3370); mothballing is the right one. A mothballed plant is cold on BOTH
-  // sides, so a glutted market loses supply while the extraction inputs it was
-  // hoarding (all in shortage, live fertilizers fill 0.1) are released.
+  // Sections 2a/2b only stop a glutted sector from growing; nothing takes
+  // existing capacity off the market. Seeded NPP plants keep producing into
+  // markets clearing at soldFraction 0.01-0.08, pinning finished-good prices to
+  // the log-curve floor. Negative productionPolicy is the wrong lever (lean-ops
+  // asymmetry cuts inputs harder than output); mothballing is right because a
+  // cold plant frees both its supply and the extraction inputs it hoarded.
   //
-  // Deliberately gradual and self-limiting: a corp is only ELIGIBLE for a
-  // state change on its stagger slot (see GLUT_STATE_CHANGE_STAGGER; young
-  // worlds are wall-to-wall single-sector NPP corps, so per-corp limits alone
-  // are cohort-wide cliffs), at most ONE change per corp per turn, and only
-  // while the sector's own fill is under GLUT_MOTHBALL_FILL_THRESHOLD. As
-  // capacity idles, surviving sellers' fill rises and the trigger stops
-  // firing. A single-sector corp MAY go fully cold: the restart pass prices
-  // its market without needing fill, so cold is recoverable, and exempting
-  // last sectors would exempt essentially the whole glut. Restarts use the
-  // price signal with a wide hysteresis band and are preferred over new
-  // mothballs so a recovering market reactivates before it sheds more.
-  // State-owned corps (countryOwnerId) are exempt: SOEs are policy
-  // instruments, not margin-seekers.
+  // Deliberately gradual: a corp is eligible only on its stagger slot, at most
+  // one change per turn, and only while the sector's fill is below
+  // GLUT_MOTHBALL_FILL_THRESHOLD, so a recovering market stops shedding. A
+  // single-sector corp may go fully cold; the restart pass prices its market
+  // without needing fill. Restarts use the price signal with wide hysteresis
+  // and run before new mothballs. State-owned corps are exempt.
   if (plantsEnabled && !corp.countryOwnerId && glutStaggerEligible(corp._id.toString(), turn)) {
     let stateChangeBudget = 1;
 

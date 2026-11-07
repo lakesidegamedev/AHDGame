@@ -84,12 +84,9 @@ async function findNominationExecutives(
 }
 
 /**
- * Tell the world a committee board has gone understaffed (ticket #1238).
- *
- * Vacant seats are by design (#1195: the engine never seats a machine
- * candidate; the President nominates and the Senate confirms). The notice
- * encourages filling open seats. The chair fallback applies only when no
- * governor is seated.
+ * Notify that a committee board has vacant seats. Vacants are by design:
+ * the engine never seats a machine candidate. The chair fallback applies only
+ * when no governor is seated.
  */
 async function notifyFomcVacancy(
   db: Db,

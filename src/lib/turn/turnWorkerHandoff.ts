@@ -2,12 +2,9 @@
  * Turns belong to the turn worker whenever `CRON_OWNER=worker`.
  *
  * `processTurn` holds the Node event loop for the whole turn (tens of minutes on a
- * large world). Run inside the web server, it stops the server answering anyone:
- * on 2026-10-22 an admin "process turn" click ran turn 372 inside web while the
- * worker was stopped, the site timed out for every player, and two phases then
- * hit their timeout under the contention and the turn needed a manual repair.
- * `CRON_OWNER=worker` only moved the SCHEDULE out of web; every manual trigger
- * still ran the turn inline.
+ * large world). Run inside the web server, it stops the server answering anyone,
+ * and phases can time out under the contention. `CRON_OWNER=worker` only moves the
+ * SCHEDULE out of web; manual triggers must not run the turn inline.
  *
  * So, when the worker owns turns:
  *   - `processTurn` refuses to run inside the Next.js server (`inProcessTurnRefusal`).

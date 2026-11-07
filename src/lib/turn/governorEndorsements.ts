@@ -7,16 +7,12 @@ import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTarg
 
 /**
  * Turn phase: auto-withdraw governor endorsements whose conditions no longer hold.
- *   - election no longer active → election_ended
- *   - candidate no longer active → candidate_inactive
- *   - governor no longer in office → governor_left_office
+ *   - election no longer active -> election_ended
+ *   - candidate no longer active -> candidate_inactive
+ *   - governor no longer in office -> governor_left_office
  *
  * Must run BEFORE processCampaignTurn so withdrawals are observed by the
  * endorsement-count aggregation there.
- *
- * Reads are batched up front (#575): elections, candidates and the regional
- * executives holding office all resolve before the loop, so the phase costs a
- * fixed handful of queries instead of three per endorsement.
  */
 export async function processGovernorEndorsements(
   db: Db

@@ -85,17 +85,12 @@ export async function recalculateInflationPerTurn(db: Db, turn: number): Promise
 /**
  * Inflation step for every country.
  *
- * Turn (no stepFraction): a budget the :30 tick stamped for this turn is first
- * restored to its start-of-hour inflation and household price index (keeping
- * any shock applied since as an offset), then takes the full step as before.
- * The result therefore equals the no-tick result whenever the inputs do; an
- * unstamped budget computes and writes byte-identically to before.
+ * Turn: a budget stamped at :30 is first restored to its start-of-hour
+ * inflation, then takes the full step; unstamped budgets compute as before.
  *
- * Half tick (stepFraction 0.5): the same model on the state last settled,
- * moving each budget part way along the turn's own adjustment path. It stores
- * the start values with the stamp in the same update and leaves savings
- * pressure alone (a chart series the turn snapshots). Writes go out in one
- * bulkWrite and no missing budget is created.
+ * Half tick (stepFraction 0.5): applies the same model partway along the
+ * turn's adjustment path, stores start values with the stamp, leaves savings
+ * pressure alone, and writes via one bulkWrite without creating budgets.
  */
 export async function runInflationRecalc(
   db: Db,
@@ -347,24 +342,13 @@ export async function runInflationRecalc(
           // Commodity cost-push: the MEDIAN annualized CHANGE in this country's
           // national prices. 0.0 until a lookback window exists.
           //
-          // This used to be `avg(P_national / P_base - 1)` — a price LEVEL
-          // against a frozen seed `basePrice`, fed straight into an inflation
-          // RATE. `basePrice` never moves, so once national prices had drifted a
-          // few multiples above it the term became a large and permanently
-          // growing constant that no policy could answer. On prod at turn 221 it
-          // was injecting +4.1pp (US) to +8.4pp (FR) every turn while those same
-          // countries' prices were FLAT over the preceding game year (US median
-          // -7%/yr annualized). Central banks then held rates 3-5pp above their
-          // era neutral fighting a number that was not inflation.
+          // Uses a rate of change, not a price level against a frozen seed basePrice.
+          // A level term becomes a large, permanently growing constant that no policy
+          // can answer, because a high price level is not inflation. A rate of change
+          // decays to zero when prices settle, so CPI can reach target again.
           //
-          // Same dimensional error the cost-of-living/housing term was retired
-          // for — see HOUSING_PRESSURE_COEFF in budget/inflation.ts: "a high
-          // price level is not inflation". A rate of change is, and it decays to
-          // zero when prices settle, so CPI can reach target again.
-          //
-          // Median, not mean: a few commodities in acute scarcity (prod FR: mean
-          // +70%/yr vs median +36%/yr) would otherwise drag the whole basket and
-          // rebuild a spurious permanent term.
+          // Median, not mean: a few commodities in acute scarcity would otherwise drag
+          // the basket and rebuild a spurious permanent term.
           const commodityPressureRaw = commodityPressureForCountry(
             commodityPressureSnapshots,
             countryId
@@ -449,20 +433,12 @@ export async function runInflationRecalc(
     })
   );
 
-  // Countries with NO central bank still need their inflation recomputed every
-  // turn. This loop used to iterate central banks alone, which left the six
-  // Eastern-bloc satellites (PL, HU, CS, RO, BG, YU) with no per-turn recalc at
-  // all — and crisisTurn writes inflation with a raw `$inc`, on the documented
-  // assumption that "the per-turn inflation recalc then blends it through
-  // inertia, so a crisis shock decays over subsequent turns". For a quarter of
-  // the world that assumption was false: the shocks only ever accumulated, with
-  // nothing to pull them back, so administered command-economy CPI ratcheted
-  // from 1.5-3% to 8-19% over 75 turns. fiscalYear's annual pass reset it once a
-  // year, producing a sawtooth rather than a fix.
-  //
-  // These countries have no monetary policy to model, so they take the plain
-  // recompute — which for a planned economy returns the administered target and
-  // for anyone else runs the ordinary market model.
+  // Countries with NO central bank still need their inflation recomputed
+  // every turn: crisisTurn `$inc`s inflation assuming the per-turn recalc will
+  // blend it through inertia, and without this loop those shocks accumulate
+  // unbounded. These countries have no monetary policy, so they take the plain
+  // recompute: administered target for planned economies, else the ordinary
+  // market model.
   const unbanked = await db
     .collection<FederalBudget>("federalBudget")
     .find({ countryId: { $nin: [...bankedCountries] } })

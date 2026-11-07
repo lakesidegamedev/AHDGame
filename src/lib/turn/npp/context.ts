@@ -182,12 +182,10 @@ export function buildActiveBillFilter(opts: {
  * Attach `policies.domainPositions` to the NPPs that vote this turn, for the
  * legislation types actually on the floor.
  *
- * Every NPP carries a stance on every legislation type, ~950 entries and 30 KB
- * per document, and the shared context used to load all of it for every NPP
- * on every read: 50 MB of BSON per load, twice a turn, of which bill voting
- * read a handful of entries for a few hundred officials. The stance keys are
- * dotted legislation ids, which a find() projection cannot address, so the
- * subset is cut server-side with $objectToArray/$filter.
+ * Loading all ~950 stances per NPP costs 50 MB of BSON per load, twice a turn,
+ * for only a handful of entries read. Stance keys are dotted legislation ids,
+ * which find() projections cannot address, so the subset is cut server-side
+ * with $objectToArray/$filter.
  */
 async function hydrateDomainPositions(
   db: Db,

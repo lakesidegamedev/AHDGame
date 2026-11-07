@@ -6,17 +6,9 @@ import { readTurnoutModifier, turnoutModifierPath } from "@/lib/demographics/tur
 /**
  * Turn phase: expire address effects whose `expiresAtTurn` has passed.
  *
- * Approval bump expires read-side (callers filter by
- * `approvalEffect.expiresAtTurn > currentTurn`); this phase just flips the
- * `expired` flag so the row stops being picked up by historical queries.
- *
- * Demographic turnout boost is applied write-side at delivery (added to
- * `stateDemographicTurnout.modifiers.voterGroups[group]`) so at expiry we
- * subtract the snapshotted `turnoutDelta` back out. Modifier is left clamped
- * to 0 minimum so concurrent canvassing decay can't push it below floor.
- *
- * Agenda effect is purely read-side (consumed in stateBillVoting cross-pressure),
- * so expiry is just a flag flip — no compensating action needed.
+ * Approval and agenda effects are read-side, so expiry just flips `expired`.
+ * Demographic turnout boost is applied write-side, so expiry subtracts the
+ * snapshotted `turnoutDelta`, clamped to 0 so concurrent decay stays above floor.
  */
 export async function processGovernorAddressExpiry(
   db: Db,

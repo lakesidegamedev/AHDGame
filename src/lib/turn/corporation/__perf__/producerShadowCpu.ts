@@ -1,20 +1,16 @@
 /**
- * CPU profile of the two corporation-turn hot spots goal 15 targets.
+ * CPU profile of the two corporation-turn hot spots.
  *
  *   npx tsx src/lib/turn/corporation/__perf__/producerShadowCpu.ts [corps] [sectorsPerCorp]
  *
- * Builds the seeded production-shape world (default 2,000 corporations and
- * 14,000 sectors with live document weight) and measures, in isolation:
+ * Builds a seeded production-shape world (default 2,000 corporations and
+ * 14,000 sectors) and measures in isolation `computeBlendedMarginModifiers`
+ * over every sector, and `isolatedShadowEnv` and `shadowOpeningSector`.
  *
- * - `computeBlendedMarginModifiers` over every sector, with the same fresh
- *   strategy-rate objects the margin stack hands it;
- * - `isolatedShadowEnv` and `shadowOpeningSector`, the producer shadow's
- *   isolation and per-sector opening.
- *
- * The pre-goal implementations are kept here as reference copies so the two
- * run in one process on one world: this host is shared, and a before/after
- * across separate runs mostly measures the neighbours. The reference copies
- * also assert that both produce the same number for every sector.
+ * Reference copies of the pre-change implementations run in the same process
+ * so both share one world: this host is shared, and a before/after across
+ * separate runs measures the neighbours. The copies also assert both produce
+ * the same number for every sector.
  */
 import { PerformanceObserver } from "node:perf_hooks";
 import { Session } from "node:inspector/promises";

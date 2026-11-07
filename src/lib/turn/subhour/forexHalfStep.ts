@@ -34,20 +34,17 @@ import { HALF_TICK_FRACTION, hasSubhourStep, subhourStepStamp } from "./stepFrac
 /**
  * :30 half step for forex, under the stepFraction.ts contract: each floating
  * currency takes HALF_TICK_FRACTION of the coming turn's rate step and is
- * stamped with subhourStep in the same update; the turn applies the rest.
+ * stamped with subhourStep; the turn applies the rest.
  *
- * Only the rate moves. Interventions, limit-order fills and expiry, the
- * 12-turn cycle regime roll, the rateHistory append, centralBanks writes and
- * the volume-window fields all stay on the hourly turn, so charts stay hourly
- * and orders still fill once an hour at the turn's rate.
+ * Only the rate moves. Interventions, order fills and expiry, the cycle
+ * regime roll, rateHistory, centralBanks writes and the volume window stay
+ * on the hourly turn.
  *
- * Mirrors processForexTurn for what each currency does: hard pegs and
- * command-economy pegs hold (no write), euro followers and union members copy
- * the anchor's new quote, and Bretton Woods band and drift come from the
- * stored regime. The macro target is recomputed from the current central-bank
- * inputs, so it can differ from the turn's if a prime rate or a macro series
- * moved in between; the turn's remainder then pulls toward the newer target,
- * which is intended (the rate follows the latest information).
+ * Pegs hold, euro followers and union members copy the anchor's new quote,
+ * Bretton Woods band and drift come from the stored regime. The macro target
+ * is recomputed from current central-bank inputs and may differ from the
+ * turn's; the turn's remainder pulls toward the newer target, which is
+ * intended.
  */
 
 export type ForexHalfStepRow = Pick<

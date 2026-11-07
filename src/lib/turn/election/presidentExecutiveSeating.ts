@@ -56,7 +56,7 @@ export async function seatPresidentialExecutive(
   if (pinned) {
     const preset = await getGameStatePresetOrDefault(db);
     // The pinned head of state can already hold a legislative seat won in the
-    // same founding wave (#2038). Vacate it through the shared vacancy path in
+    // same founding wave. Vacate it through the shared vacancy path in
     // presidential systems, where the executive keeps no other office.
     // Parliamentary heads of government keep their seats, so this never runs
     // for the direct-government path inside seatSingleplayerHeadOfState.
@@ -371,11 +371,8 @@ export async function seatPresidentialExecutive(
     }
   }
 
-  // Root-cause guard: a newly-seated President/VP must not remain an active
-  // candidate in any other (down-ballot) race. A lingering candidacy would
-  // otherwise resolve later and seat the executive into a second office — the
-  // failure mode that left a former candidate occupying a Senate seat after
-  // ascending to the executive ticket.
+  // A newly-seated President/VP must not stay an active candidate in any
+  // other race, or a later resolution seats them in a second office.
   const execIdentityOr: Record<string, unknown>[] = [];
   if (!winnerCandidate.isNPP && winnerCandidate.characterId)
     execIdentityOr.push({ characterId: winnerCandidate.characterId });

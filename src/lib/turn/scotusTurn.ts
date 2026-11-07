@@ -1,24 +1,12 @@
 /**
- * SCOTUS Turn (#3598) — single turn-phase entry point, mirroring the shape of
- * `processCentralBankChairSelection` / `processCabinetNominationLifecycle`
- * (one exported function per turn-phase registration).
- *
- * Runs, in order:
- *  1. Tenure turn: Original Roster departures plus divergent hazard clock.
- *     Must run before the docket turn so a case fired this same turn sees
- *     this turn's seat vacancies/successions, not last turn's.
- *  2. Docket turn — fires due cases, evaluates divergence, wires diverged
- *     rulings into the enacted-laws pipeline.
- *  3. Surprise case turn (#3607) — small constant-probability check for a
- *     procedurally-spawned, non-historical Docket case. Runs after the
- *     curated docket turn so both draw from the exact same seated-justice
- *     snapshot for this turn; independent of it otherwise (a historical
- *     case's diverged ruling doesn't reseat justices, so ordering between
- *     these two doesn't change either one's outcome — kept after docket
- *     simply to read top-to-bottom as "curated content first, flavor
- *     content second").
- *  4. Nomination lifecycle — NPP Senate votes + resolves expired nominations.
- *     Runs last since a newly-seated justice only matters starting next turn.
+ * SCOTUS turn-phase entry point. Order matters:
+ * 1. Tenure turn: must run before the docket turn so a case fired this
+ *    turn sees this turn's seat vacancies/successions, not last turn's.
+ * 2. Docket turn: fires due cases and wires diverged rulings into laws.
+ * 3. Surprise case turn: runs after docket so both draw the same seated-
+ *    justice snapshot; otherwise independent of docket ordering.
+ * 4. Nomination lifecycle: runs last since a newly-seated justice only
+ *    matters starting next turn.
  */
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";

@@ -1,21 +1,15 @@
 /**
- * Popular legitimacy (public-mood) scalar for one-party states.
+ * Popular legitimacy (public mood) for one-party states, 0-100, initial 75.
  *
- * Distinct from `partyConfidence` in `rulingPartyConfidence.ts` —
- * popular legitimacy measures public mood; party confidence measures
- * intra-party stability. They couple in one direction only: a popular
- * collapse bleeds into intra-party panic (see `rulingPartyPriorities.ts`
- * Phase 3 wiring); the reverse leak is small.
+ * Distinct from `partyConfidence` (intra-party stability). Coupling is mostly
+ * one-way: a popular collapse bleeds into intra-party panic
+ * (`rulingPartyPriorities.ts` Phase 3); the reverse leak is small.
  *
- * Range 0–100. Initial 75. Slow-buildup tuning per the design doc:
- * normal per-turn drift bounded to ±2, with a +0.2/turn always-on drift
- * toward 60 (`POPULAR_RECOVERY_TARGET`) to prevent runaway death-spirals
- * and reward stability.
+ * Per-turn drift is bounded to ±2, plus +0.2/turn toward 60
+ * (`POPULAR_RECOVERY_TARGET`) to avoid death spirals and reward stability.
  *
- * Pure formulas + persistence helpers only. The per-turn aggregator
- * lives in `popularLegitimacyTurn.ts`; the individual driver functions
- * (economy, repression, policy, election credibility, intra-party
- * coupling, natural recovery) live in `popularLegitimacyDrivers.ts`.
+ * Pure formulas and persistence helpers only; the turn aggregator lives in
+ * `popularLegitimacyTurn.ts` and drivers in `popularLegitimacyDrivers.ts`.
  */
 import {
   leaderStateId,
@@ -42,20 +36,11 @@ export const MAX_POPULAR_HISTORY_ENTRIES = 50;
 export const POPULAR_RECOVERY_TARGET = 60;
 
 /**
- * Per-turn rate of the natural-recovery drift (toward {@link POPULAR_RECOVERY_TARGET}).
+ * Per-turn rate of natural-recovery drift toward {@link POPULAR_RECOVERY_TARGET}.
  *
- * Halved from 0.2 → 0.1 on the request of player feedback that the
- * projected drift on a healthy 75 regime looked too steep (a 75 → 60
- * settling in ~75 turns reads as "collapse" instead of "regression to
- * mean"). At 0.1/turn the settling takes ~150 turns — still pulls the
- * regime back toward equilibrium, but on a timescale that matches the
- * design intent of "active leadership earns above-equilibrium scores."
- *
- * Side effects on the collapse path: with sustained bad governance,
- * natural recovery is a HEADWIND once popular falls below 60. Slowing
- * it weakens that headwind, so the regime sinks faster after the
- * trigger but stays above 60 longer beforehand. The collapse-path E2E
- * (Phase 8) is re-validated after this tuning change.
+ * Sized so a healthy regime settles over ~150 turns instead of reading as a
+ * collapse. Note this is a headwind once popular falls below 60, so lowering
+ * it weakens that headwind on the collapse path.
  */
 export const POPULAR_RECOVERY_RATE = 0.1;
 

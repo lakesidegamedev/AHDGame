@@ -1,9 +1,7 @@
 /**
  * Import tariffs in the funded producer market (gameConfig.producerTariffStage).
  *
- * Before this, a cross-border sale paid no tariff at all: `tariffTransfers`
- * existed but nothing called it, so a law raising a tariff changed nothing the
- * funded market did. With the stage on:
+ * With the stage on:
  *
  * - The importer's tariff for each route (country-wide, sector and targeted
  *   origin-country tariffs, the same rate the trade system uses) is read once

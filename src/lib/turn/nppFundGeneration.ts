@@ -66,18 +66,13 @@ export async function processNppFundGeneration(
   if (config?.nppEconomyEnabled === false) {
     return { nppsProcessed: 0, totalGenerated: 0, totalStateTax: 0, totalNationalTax: 0 };
   }
-  // Local-world difficulty resource tuning. Read from the PERSISTED
-  // singleplayerConfig rather than the SINGLEPLAYER env flag: hosted worlds
-  // never persist that field (see its type comment), so multiplayer resolves to
-  // undefined → `normal` → the live NPP_ACTIONS_PER_TURN / NPP_ACTION_CAP /
-  // ×1 constants, byte-identical to before. The env flag was the wrong key
-  // because the world, not the process, owns the difficulty: the headless
-  // harness and any other host that processes turns without setting
-  // SINGLEPLAYER used to silently ignore a local world's own setting.
+  // Local-world difficulty tuning. Read from the PERSISTED singleplayerConfig,
+  // not the SINGLEPLAYER env flag: hosted worlds never persist that field, so
+  // multiplayer resolves to undefined -> normal -> the live constants. The world,
+  // not the process, owns the difficulty.
   //
-  // This is the resource half of difficulty and is disclosed to the player as a
-  // resource bonus. The behaviour half is
-  // `singleplayerDifficulty/rules/behavior.ts` and never touches funds or AP.
+  // This is the resource half of difficulty, disclosed as a resource bonus. The
+  // behaviour half lives in singleplayerDifficulty/rules/behavior.ts.
   const difficulty = await loadSingleplayerDifficulty(db);
   const tuning = singleplayerNppTuning(difficulty);
   const campaignRates = await loadCampaignCurrencyRates(db);

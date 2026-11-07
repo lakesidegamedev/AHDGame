@@ -1,28 +1,13 @@
-/**
- * The German Question follows the shooting.
+/*
+ * A war declared by or on either Germany against the opposing bloc ends
+ * the influence contest and freezes the board, matching a crisis declaration.
+ * Implemented as a sweep over live conflicts, not a hook in declareWar, so the
+ * military engine stays ignorant of this crisis. Costs up to one turn of
+ * latency after ratification.
  *
- * A war declared BY or AGAINST one of the two Germanies, against the opposing
- * bloc, ends the influence contest the same way the crisis's own declaration
- * does: the board freezes where it stands and whoever wins the war takes the
- * settlement outright. Without this the two systems are fully decoupled — the
- * United States could declare on East Germany and the crisis would keep ticking
- * plays and drift, resolving on the index while the blocs shot at each other
- * over the very question being played.
- *
- * A SWEEP, not a hook inside `declareWar`, for exactly the reason
- * `settleFromConflict` gives: the military engine is shared with the proxy-war
- * path and reaching into it to special-case one crisis would put settlement
- * logic inside the war engine. This reads the live conflicts every tick and
- * needs the military side to know nothing about it. The cost is up to one turn
- * of latency between ratification and the freeze.
- *
- * WHY `treatyEntries` IS THE TEST FOR "DECLARED". A country reaches a roster
- * three ways: it declared, it was declared on, or a collective-defence charter
- * dragged it in. `treatyEntries` is written by, and only by, the charter path
- * (see `declareWar.ts`), so roster-membership-minus-`treatyEntries` is an exact
- * reading of "declarer or declared-on" that needs no new field. An East Germany
- * pulled into a war over Poland therefore does not settle the German Question;
- * an East Germany someone declared war on does.
+ * treatyEntries is written only by the charter path, so
+ * roster minus treatyEntries means "declarer or declared on" without a new
+ * field: a Germany dragged in by a charter does not trigger, one declared on does.
  */
 import type { Db, Filter } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
@@ -190,26 +175,18 @@ const MERGED_THEATRE_CONTROL = 50;
 /**
  * Re-baseline the front when the theatre becomes BOTH Germanies.
  *
- * `initialControl` opens an interstate war with the defender holding all of its
- * own soil, which is right for a war fought over one country: the United States
- * declaring on East Germany starts with East Germany holding East Germany. It is
- * wrong the moment this attachment widens the ground to both Germanies. The war
- * is then being fought over a divided country whose halves each start in a
- * different bloc's hands, and a roster-derived 100 would hand the anchor's side
- * the whole of a theatre that includes its opponent's own territory — a front
- * the West has to fight across the Federal Republic just to draw level on.
+ * `initialControl` opens a war with the defender holding all its own soil, which is
+ * right for a war over one country. Once this attachment widens the ground to both
+ * Germanies, a roster-derived 100 would hand the anchor's side a theatre that includes
+ * its opponent's own territory.
  *
- * ONLY ON AN UNMOVED FRONT. A war already under way when the question attaches
- * has a front that belligerents fought for; slamming it to even would erase that
- * and hand back ground somebody took. `control === controlStart` is the exact
- * test for "nobody has moved this yet", and it is true on the same-tick case
- * this rule is really about, where the declaration and the attachment land in
- * one turn.
+ * ONLY ON AN UNMOVED FRONT. A war already under way has a fought-for front; slamming
+ * it to even would erase ground taken. `control === controlStart` is the exact test for
+ * "nobody has moved this yet".
  *
- * NOT undone by `detachCrisisFromWar`, deliberately, and unlike the name and the
- * host roster. Those are labels the settlement borrowed; this is the line the
- * fighting has since been happening on. Restoring a stale 100 to a war that has
- * been running for fifty turns would be the erasure this guard exists to refuse.
+ * NOT undone by `detachCrisisFromWar`: unlike the borrowed name and host roster, this
+ * is the line the fighting has since happened on, and restoring a stale 100 would be
+ * the erasure this guard exists to refuse.
  */
 function mergedTheatreControl(c: ConflictDoc): MergedTheatreControl | null {
   const start = c.controlStart ?? c.control;
@@ -362,13 +339,10 @@ export async function attachCrisisToLiveWar(
     { _id: war._id },
     {
       $set: { name: WAR_FOR_GERMANY_NAME, hostEntities: widenHosts(war), ...rebaselined },
-      // The momentum sample describes a starting line that no longer exists.
-      // `applyOccupation` writes one even on a battle that does NOT move the
-      // front, so a war can reach this point unmoved and still carry a reading
-      // taken against the old baseline; `warEffort` would then score the
-      // re-baseline itself as fifty points of advance somebody made. Dropped
-      // ONLY when we actually moved the line — a war we left alone keeps a
-      // sample that is still measured against its own, unchanged, start.
+      // The momentum sample describes a starting line that no longer exists:
+      // `applyOccupation` writes one even when a battle does NOT move the front,
+      // so an unmoved war would score the re-baseline as advance. Drop it ONLY
+      // when we actually moved the line.
       ...(rebaselined ? { $unset: { controlSample: "" } } : {}),
     }
   );
@@ -385,29 +359,17 @@ const NOT_DETACHED: DetachResult = { detached: false };
 /**
  * Put a frozen crisis back on the board when its war ended in a WHITE PEACE.
  *
- * A frozen question is waiting for a war to answer it. A white peace answers
- * nothing: neither government prevailed, so there is no result to read the
- * settlement off, and the question goes back to the diplomatic track it left,
- * exactly where it stopped. The index, the institutions and the ladder are all
- * still on the document; only the freeze is lifted.
+ * A white peace answers nothing, so the question returns to the diplomatic
+ * track exactly where it stopped: index, institutions and ladder stay on the
+ * document, only the freeze is lifted.
  *
- * WITHOUT THIS THE CRISIS WOULD FREEZE FOR EVER. `settleFrozenCrisisFromConflict`
- * settles on a winner of "A" or "B" and correctly refuses a stalemate, so a
- * white-peaced war would leave the question frozen against a finished war with
- * nothing left to decide it.
+ * Without this the crisis freezes for ever: `settleFrozenCrisisFromConflict`
+ * settles on a winner of "A"/"B" and refuses a stalemate, leaving it frozen
+ * against a finished war.
  *
- * Handles BOTH kinds of frozen crisis, unlike `detachCrisisFromWar`:
- *
- *   - One that ATTACHED itself to somebody else's war gets that war's name and host
- *     roster handed back, through the same `endWarAttachment` the resolution path
- *     uses.
- *   - One fighting its OWN declared war has nothing to give back, and
- *     `endWarAttachment` no-ops for it. The question still resumes: a war declared
- *     to settle Germany that settled nothing leaves Germany unsettled.
- *
- * Restore first, release second, the same way round as `detachCrisisFromWar` and for
- * the same reason: a crash in between leaves the crisis frozen with its stamp
- * intact, and the next tick simply tries again, because the restore is idempotent.
+ * Handles both attached and self-declared wars; `endWarAttachment` no-ops for
+ * the latter. Restore first, release second, so a crash leaves the crisis
+ * frozen with its stamp intact and the next tick retries (restore is idempotent).
  */
 export async function resumeCrisisAfterWhitePeace(
   db: Db,

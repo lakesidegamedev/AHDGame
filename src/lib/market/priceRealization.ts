@@ -1,23 +1,10 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 
-/**
- * Price realization — Fix 1 of the structural market rework (audit t806,
- * "Nothing Wants to Sell"). A sector's *realized* revenue is scaled by the
- * lagged market price of what it sells, so shortages finally reward producers
- * and gluts bleed them. Before this, market price never touched anyone's
- * income — commodity conditions only reached sectors as capped additive
- * margin percentage-points, so no actor had a reason to sell more.
- *
- * Guards against oscillation (the cobweb failure mode):
- *   - the exponent dampens the response (√ of the price ratio, not the ratio),
- *   - the clamp bounds realization to [−30%, +100%] of base. The ceiling was
- *     1.5 until chronic shortages (energy at ~2.9x base for 40+ turns) pinned
- *     every producer at it, so deeper scarcity stopped reaching anyone's
- *     income and nothing paid for new capacity. Inputs use the same clamp.
- *   - prices are lagged one turn upstream (lookups.priceRatioByCommodity is
- *     built from the prior turn's commodityPrices docs), breaking the
- *     price → revenue → supply → price circularity.
- */
+// Realized revenue scales with the lagged market price of the sector's
+// output, so shortages reward producers and gluts punish them. Guards against
+// cobweb oscillation: exponent dampens the response (sqrt of ratio), the
+// clamp bounds realization to [MIN, MAX] of base, and prices are lagged one
+// turn upstream so price/revenue/supply cannot chase each other circularly.
 const PRICE_REALIZATION_EXPONENT = 0.5;
 export const PRICE_REALIZATION_MIN = 0.7;
 export const PRICE_REALIZATION_MAX = 2.0;

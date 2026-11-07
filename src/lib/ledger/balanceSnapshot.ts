@@ -18,28 +18,23 @@ export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
 
 /**
- * Snapshot the authoritative money-balance fields into a per-turn account→₳ map.
+ * Snapshot authoritative money balances into a per-turn account to ⱺ map,
+ * for the stock-vs-flow reconciler to diff: an account that moved between
+ * snapshots with no matching ledger legs is an uninstrumented write; legs that
+ * move an account whose real balance did not are a wrong-currency bug.
  *
- * This is the reference the stock-vs-flow reconciler check diffs against: an
- * account that moved between two snapshots with no matching ledger legs is an
- * uninstrumented write (the Phase 3 coverage queue); legs that move an account
- * whose real balance didn't are the t841 wrong-currency class.
+ * Balances are stored in ⱺ (anchor) units (local / FX rate) to match ledger
+ * legs' `anchorAmount`; a missing rate is treated 1:1, mirroring the
+ * financialTxLog emit fallback. Government treasury cash uses the receipt
+ * valuation contract instead, with no fabricated rate for a missing active
+ * currency.
  *
- * Balances are stored in ₳ (anchor) units - local balance / FX rate - to match
- * the ledger legs' `anchorAmount`. Missing rate ⇒ treated 1:1 (mirrors
- * financialTxLog/emit.ts's amountToAnchor fallback). Government treasury cash
- * instead uses the receipt valuation contract below, with account-specific
- * provenance and no fabricated rate for a missing active currency. See plan §2.
- *
- * Scope: every financialTxLog subject kind plus the fund cash its holders move
- * against - character personal + savings wallets, corporation liquidCapital,
- * party treasury, government treasuryBalance, NPP investment cash, pension
- * scheme cash (assetsAnchor), state-party treasury, and index-fund cashAnchor.
- * Scheme unit value (investedValueAnchor) is a marked-to-market valuation
- * cache, not a cash balance: it reprices without flows, so it stays out the
- * same way forex repricing stays out of cash deltas (see reconcile.ts).
- * International-org balances have no stored treasury field yet, so the `org`
- * account kind remains defined but uncovered.
+ * Covers every financialTxLog subject kind plus the fund cash its holders move
+ * against: character personal and savings wallets, corporation liquidCapital,
+ * party and state-party treasuries, government treasuryBalance, NPP investment
+ * cash, pension scheme cash, and index-fund cash. Scheme unit value is a
+ * mark-to-market valuation cache, not cash, so it is excluded. International-org
+ * balances have no stored treasury field and remain uncovered.
  */
 
 async function loadAnchorRates(db: Db): Promise<Map<string, number>> {
@@ -281,11 +276,9 @@ async function collectBalanceState(
   // --- Index funds: cashAnchor (already ₳, like NPP cash) -------------------
   // The cash leg every holder↔fund movement settles against. Holdings, bond
   // allocations and queued redemptions are asset/liability accounts the shadow
-  // ledger does not carry; only the cash leg is a money balance. #992
-  // tranches 5-6: every fund cash write (float buys, holding/bond sales,
-  // order-fill seller credits, bond-reserve deploys) now carries a
-  // fund-subject ledger row against this key, so those flows stop reading as
-  // divergences.
+  // ledger does not carry; only the cash leg is a money balance. Every fund
+  // cash write carries a fund-subject ledger row against this key, so those
+  // flows do not read as divergences.
   const funds = db.collection<{
     _id: ObjectId;
     anchorCurrencyCode?: CurrencyCode;

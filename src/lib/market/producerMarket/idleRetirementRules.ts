@@ -1,19 +1,16 @@
 /**
- * Retirement of capacity that persistently sells nothing, for the funded
- * producer market (gameConfig.producerIdleRetireStage >= 1).
+ * Retirement of capacity that persistently sells nothing, on the funded stock
+ * (gameConfig.producerIdleRetireStage >= 1). The legacy rule writes to the
+ * legacy stock, which funded generation overwrites.
  *
- * The legacy retirement rule writes to the legacy capacity stock, which the
- * funded capacity generation owns and overwrites, so on funded turns capacity
- * the market will not buy never leaves and keeps paying its standing bills.
- * This is the same rule on the funded stock: once a plant has sold nothing for
- * more than the grace period, it retires a fixed share of the capacity above
- * what its last sales justify, as extra physical depreciation applied to
- * owned units and their paid basis together. The write-off pays no cash, so no
- * money is created. Capacity that has sat mothballed past the same grace
- * retires too, because holding it costs nothing and parking must not become
- * free hoarding. A probe share is always kept so a plant can see demand return.
+ * Once a plant sells nothing past the grace period, retire a fixed share of
+ * capacity above what its last sales justify, as extra depreciation on owned
+ * units and their paid basis together. The write-off pays no cash, so no money
+ * is created. Mothballed capacity past the same grace retires too: holding it
+ * costs nothing and parking must not become free hoarding. A probe share is
+ * always kept so demand return can be seen.
  *
- * Pure: last receipt and streak in, share of capacity to retire this turn out.
+ * Pure: last receipt and streak in, share to retire this turn out.
  */
 
 /** Consecutive zero-sales turns a plant may run before any capacity retires. */

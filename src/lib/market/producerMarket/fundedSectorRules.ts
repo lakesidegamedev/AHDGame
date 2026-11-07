@@ -1,19 +1,15 @@
 /**
  * Funded producer turn: how one settled receipt replaces the legacy sector
- * result (funded-market cutover, phase B slice S3).
+ * result.
  *
- * The funded settlement has already moved the cash (sales in; wages, site bills
- * and input purchases out) and written each plant's physical state. The legacy
- * per-sector pass still runs for everything the settlement does not own
- * (labour telemetry, growth, valuation inputs), but on a funded turn:
+ * The funded settlement has already moved cash and written each plant's
+ * physical state. On a funded turn:
  * - revenue, margin and costs come from the receipt;
- * - fields the settlement owns, and the legacy inventory, are never written;
+ * - settlement-owned fields and legacy inventory are never written;
  * - build-queue and capacity side ops are dropped;
- * - the corporation's cash credit excludes the producer profit the settlement
- *   already paid.
+ * - the cash credit excludes producer profit the settlement already paid.
  *
- * It also publishes the funded demand throttle (`fundedDemandThrottle`): the
- * legacy clearing pass is its other writer and a funded turn never prices that
+ * Also publishes `fundedDemandThrottle`: a funded turn never prices that
  * market, so AI saturation would otherwise read a stale value.
  *
  * Pure: plain data in, plain data out.
@@ -247,17 +243,14 @@ export function fundedCashIncome(legacyIncome: number, settledProducerProfit: nu
 }
 
 /**
- * Funded demand throttle: the share of what the plant put up for sale (this
- * turn's output plus carried stock) that found a buyer, clamped to [0, 1], 1
- * when it offered nothing. The legacy clearing pass is the only other writer of
- * `demandThrottleFactor`, and a funded turn never prices its market, so the
- * funded settlement publishes its own reading; AI placement, mothballing, the
- * retool hint and the sector page read it as a demand signal.
+ * Funded demand throttle: share of units offered (this turn's output plus
+ * carried stock) that found a buyer, clamped to [0, 1], 1 when nothing was
+ * offered. The funded settlement publishes this reading since a funded turn
+ * never prices its market; consumers include AI placement, mothballing, the
+ * retool hint and the sector page.
  *
  * Sell-through, not sold over capacity: a plant short of inputs or cash that
- * sells every unit it makes has no demand problem, and read against capacity
- * it showed as "Demand limited" (ticket 1728). The same reading NPP decisions
- * take from the receipt (`fundedSellThrough`).
+ * sells everything it makes has no demand problem.
  */
 export function fundedDemandThrottle(
   soldUnits: number | null | undefined,

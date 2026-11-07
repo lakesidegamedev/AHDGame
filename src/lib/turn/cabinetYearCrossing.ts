@@ -26,18 +26,15 @@ export interface CabinetYearCrossingResult {
 
 /**
  * Cabinet year crossing: when the live year advances, unlock newly-established
- * seats (news), rename era-banded seats (news), and retire seats past
- * `yearRetired` (auto-transfer the incumbent to `succeededBy`, else remove).
+ * seats, rename era-banded seats, and retire seats past `yearRetired`
+ * (auto-transfer the incumbent to `succeededBy`, else remove).
  *
- * State reconcile ALWAYS runs when year data exists — the roster resolver reads
+ * State reconcile ALWAYS runs when year data exists: the roster resolver reads
  * the live year directly, so leaving a member on a retired seat would desync UI
- * and DB. News posting is additionally gated on `eraSystemEnabled` (era-news
- * philosophy, mirrors eraCrossing). Guarded by
- * `gameState.lastCabinetYearProcessed`; the first run quietly self-heals
- * (reconciles retirements silently, stamps, posts nothing) so enabling
- * mid-game never bursts missed news. Seats filled AHEAD of their `yearEnabled`
- * (world year behind the seat) are deliberately untouched — that backward
- * direction belongs to scripts/debug/audit-cabinet-year-seats.mjs.
+ * and DB. News posting is gated on `eraSystemEnabled`. Guarded by
+ * `gameState.lastCabinetYearProcessed`; the first run reconciles retirements
+ * silently and posts nothing, so enabling mid-game never bursts missed news.
+ * Seats filled AHEAD of their `yearEnabled` are untouched.
  *
  * News copy carries no literal years (LARP convention).
  */

@@ -25,10 +25,9 @@ export async function resolveInfraEnvelope(db: Db, countryId: string): Promise<n
   } else if (typeof enacted?.infrastructure === "number" && enacted.infrastructure > 0) {
     raw = enacted.infrastructure;
   } else if (typeof enacted?.transport === "number" && enacted.transport > 0) {
-    // DE's actual budgetCategory (deLegislationTypes.ts: de_rail_transport,
-    // de_digital_infrastructure) — the 1953 baseline was renamed "infrastructure"
-    // → "transport" to match it (fiscal-scale audit, 2026-07-28); this fallback
-    // keeps DE's transportation envelope resolving off that renamed key.
+    // DE's budgetCategory is de_rail_transport / de_digital_infrastructure;
+    // the baseline key was renamed infrastructure -> transport to match, so this
+    // fallback keeps DE's transportation envelope resolving.
     raw = enacted.transport;
   } else if (typeof base?.transportation === "number" && base.transportation > 0) {
     raw = base.transportation;

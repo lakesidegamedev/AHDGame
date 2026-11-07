@@ -8,15 +8,12 @@ import {
 
 /**
  * Half-hour election results tick. Between hourly turns, bank the early half
- * of the coming turn's vote slice so results move every 30 minutes:
- * - every general election already counting general turns, on every engine
- *   (state races, ranked PR-STV, the bespoke national ballots and both
- *   presidential engines);
- * - non-presidential primaries whose turn-bounded ballot window is open.
- * The coming turn banks the other half before its timers and resolution run,
- * so vote totals, the closing surge and every race deadline (still on the
- * hour) are unchanged. Campaign money and actions, presidential primary waves
- * and the presidential primary polling projection stay on the hourly turn.
+ * of the coming turn's vote slice so results move every 30 minutes, across all
+ * general election engines and open non-presidential primary windows.
+ * The coming turn banks the other half before timers and resolution run, so
+ * vote totals, the closing surge, and race deadlines (still on the hour) are
+ * unchanged. Campaign money and actions, presidential primary waves, and the
+ * presidential primary polling projection stay on the hourly turn.
  *
  * Returns the turn whose early half was banked, or null when the world is
  * inactive, a turn holds the lock, or turns already run every 30 minutes.

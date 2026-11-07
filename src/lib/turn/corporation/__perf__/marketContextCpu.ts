@@ -1,21 +1,11 @@
 /**
- * CPU profile of the two corporation-turn substeps goal 16 targets.
+ * CPU profile of the corporation-turn market-context and lookup substeps.
  *
  *   npx tsx src/lib/turn/corporation/__perf__/marketContextCpu.ts [corps] [sectorsPerCorp]
  *
- * The production turn spends its market-context substep inside
- * `runClearingPrePass` and its lookup substep inside `buildCorporationLookups`,
- * both of them CPU rather than round-trip bound. Point `AHD_PERF_MONGO_URI` at
- * a local COPY of a world and the script profiles both over that world's real
- * documents: the lookup build, the freight-billing apportionment the
- * market-context substep runs before the pre-pass, and the pre-pass itself,
- * with the market context built from the same gameConfig the turn reads.
+ * With AHD_PERF_MONGO_URI set to a local COPY of a world, profiles runClearingPrePass, buildCorporationLookups, and freight-billing apportionment over that world's real documents, using the same gameConfig the turn reads. Without it, falls back to the seeded production-shape fixture and profiles only the two DB-free workloads.
  *
- * Without a URI it falls back to the seeded production-shape fixture, which has
- * no database, and profiles the two DB-free workloads only.
- *
- * Each workload is profiled on its own so the GC figure belongs to one pass
- * rather than to the whole script. Never point it at production.
+ * Each workload is profiled separately so the GC figure belongs to one pass. Never point it at production.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { Session } from "node:inspector/promises";

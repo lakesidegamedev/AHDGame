@@ -30,19 +30,11 @@ type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
 /**
  * Collect game health metrics and write a snapshot document.
- * Runs as a turn phase in Group 13 (History). Purely observational — never modifies game state.
+ * Purely observational: never modifies game state.
  *
- * Auth: called by turnSystem.ts during processTurn()
- * Errors: caller wraps in runPhase() for isolation
- *
- * **Currency (v0.2.6):** `byCountry[*].totalCorporationRevenue` and
- * `byCountry[*].fundCirculation` / `averagePlayerFunds` are all scoped to a
- * single country via `$match: { countryId }`, so each figure stays in that
- * country's currency (for corps: `liquidCurrencyCode`; for character funds:
- * the character's home currency). No cross-country aggregation happens here,
- * so no FX conversion is needed — the bucket currency is implied by the
- * country key. Presenters should pair each byCountry value with the country's
- * currency symbol.
+ * All `byCountry` figures are scoped to a single country (corps by
+ * `liquidCurrencyCode`, funds by home currency), so no FX conversion is
+ * needed. Presenters pair each value with the country's currency symbol.
  */
 export async function processGameHealthSnapshot(
   db: Db,
@@ -95,12 +87,7 @@ export async function processGameHealthSnapshot(
     ([, telemetry]) => telemetry.status === "skipped"
   );
 
-  // Turn warnings (issue #2054): every entry of the turn warning channel
-  // persists here exactly once. Entries follow the `"<phase>: <message>"`
-  // convention (see the failureMessages parse above); entries without a
-  // prefix land under "unknown". Identical phase+message pairs collapse to
-  // one record, so a retried or replayed turn that re-pushes the same
-  // deterministic warning cannot inflate warningCount.
+  // Turn warnings: every entry of the turn warning channel persists here exactly once. Entries follow "<phase>: <message>"; entries without a prefix land under "unknown". Identical phase+message pairs collapse to one record, so a retried or replayed turn cannot inflate warningCount.
   const seenWarnings = new Set<string>();
   const turnWarnings: TurnWarning[] = [];
   for (const warning of warnings) {
@@ -192,9 +179,9 @@ async function runIntegrityChecks(
     missingFederalBudget,
     budgetCountryMismatches,
   ] = await Promise.all([
-    // 1. Orphaned candidates: electionCandidates where electionId has no
-    // matching election (#2166): project to the join key before the $lookup so
-    // full candidate documents never cross the join. The count is unchanged.
+    // Orphaned candidates: electionCandidates whose electionId has no matching
+    // election. Project to the join key so full documents never cross the join;
+    // only existence matters.
     db
       .collection("electionCandidates")
       .aggregate([
@@ -261,9 +248,8 @@ async function runIntegrityChecks(
             : [];
         return [humanless, npcBacked] as const;
       }),
-    // 4. Party members referencing deleted parties (#2166): project to the
-    // join key before the $lookup so full member documents never cross the
-    // join. The count is unchanged.
+    // Party members referencing deleted parties: project to the join key so full
+    // member documents never cross the join; only existence matters.
     db
       .collection("partyMembers")
       .aggregate([
@@ -284,8 +270,8 @@ async function runIntegrityChecks(
       .toArray(),
     // 5. Elections nearing resolution with zero candidates. Long-dated elections
     // are active for many turns before nominations open, so they are not gaps yet.
-    // (#2166): project to the join key after the status match so full election
-    // documents never cross the $lookup.
+    // Project to the join key after the status match so full election documents
+    // never cross the $lookup.
     db
       .collection("elections")
       .aggregate([
@@ -737,10 +723,9 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
       .collection("corporations")
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
-        // Corps have no top-level `revenue` field — per-turn revenue lives on
-        // each sector (`sectors[].revenue`, home currency). The old `$sum: "$revenue"`
-        // therefore summed a missing field and was always 0 (#3298). Sum the
-        // per-corp sector revenues, then accumulate across the country's corps.
+        // Corps have no top-level `revenue`; per-turn revenue lives on each
+        // sector (`sectors[].revenue`, home currency). Sum per-corp sector
+        // revenues, then accumulate across the country's corps.
         {
           $group: {
             _id: "$countryId",
@@ -751,8 +736,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
       .toArray(),
     // Per-sector revenue moved OFF the corporation document into its own
     // `corporateSectors` collection, so the embedded-array sum above resolves
-    // to 0 for every country — the same failure mode as #3298 one schema move
-    // later. Aggregate the real collection.
+    // to 0 for every country. Aggregate the real collection.
     db
       .collection("corporateSectors")
       .aggregate([

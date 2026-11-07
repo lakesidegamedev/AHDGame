@@ -1,16 +1,11 @@
 /**
- * Pure stage-threshold + dwell-counter math for the regime escalation
- * state machine. No DB access, no side effects — the per-turn driver
- * (`regimeEscalationTurn.ts`) sequences the reads + writes.
+ * Pure stage-threshold + dwell-counter math for the regime escalation state
+ * machine. No DB access, no side effects; the per-turn driver
+ * (`regimeEscalationTurn.ts`) sequences reads and writes.
  *
- * The state machine is forward-only: once a country enters a stage,
- * it stays there until an explicit decision-event action (Phase 4)
- * moves it back. The pure compute here never regresses a stage on
- * raw scalar recovery — that would let a country oscillate
- * Stage 1 ↔ Stable every turn as popular legitimacy drifts across 60.
- *
- * See `docs/superpowers/specs/2026-05-28-one-party-state-collapse-design.md`
- * § "Stage-transition guards" for the threshold + dwell table.
+ * Forward-only: stages never regress on raw scalar recovery, which would let a
+ * country oscillate Stage 1 <-> Stable every turn as popular legitimacy drifts
+ * across the threshold. Only an explicit decision-event action moves it back.
  */
 import type { DwellCounters, RegimeStage } from "@/lib/db/types/regimeEscalation";
 

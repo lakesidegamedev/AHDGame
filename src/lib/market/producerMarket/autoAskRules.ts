@@ -1,35 +1,26 @@
 /**
  * Automated ask-price controller: sell-through feedback with hysteresis.
  *
- * An automatic seller should learn from how last turn's ask actually sold. The
- * policy that preceded this one reacted only to total failure (`soldNothingLastTurn`
- * stepped the ceiling down to the clearing price) and otherwise re-derived an ask
- * from last turn's clearing price and its own markup. So a plant that sold every
- * unit it offered had no way to ask for more, and a plant that sold a little kept
- * the price that produced it. Auto pricing could move down but not up, which is
- * why building capacity read as "nothing happens": the seller had no mechanism to
- * convert demand pressure into a higher price.
- *
- * This is the missing loop, as three discrete moves:
+ * Three discrete moves:
  *
  *   sold out            -> raise the ask one step
  *   inside the deadband -> hold the ask
  *   below the floor     -> revert to the ask posted before this raise, or
  *                          lower one step when there is no raise to give back
  *
- * Reverting to the previous ask rather than to a computed "fair" price is
+ * Reverting to the previous ask rather than a computed "fair" price is
  * deliberate: it gives back exactly the step that overshot, so the price walks
- * toward the market instead of jumping, and a raise that the book rejects is
- * undone rather than compounded. Once that raise is given back, a shortfall that
- * persists keeps lowering the ask one step per turn, so a plant whose demand fell
- * away is not stuck at a price the book stopped paying.
+ * toward the market instead of jumping, and a rejected raise is undone rather
+ * than compounded. Once given back, a persistent shortfall keeps lowering the
+ * ask one step per turn so the seller is not stuck at a price the book stopped
+ * paying.
  *
- * A deadband between `AUTO_ASK_REVERT_RATIO` and a sell-out holds the price on
- * purpose. Raising on strong-but-not-total sell-through, or cutting on a small
- * shortfall, produces a controller that chases its own noise every turn.
+ * The deadband between `AUTO_ASK_REVERT_RATIO` and a sell-out holds the price
+ * on purpose: raising on strong-but-not-total sell-through, or cutting on a
+ * small shortfall, makes the controller chase its own noise every turn.
  *
- * Silence is never a signal: no memory, nothing offered, or a non-finite reading
- * all hold instead of moving the price.
+ * Silence is never a signal: no memory, nothing offered, or a non-finite
+ * reading all hold instead of moving the price.
  *
  * Pure: plain numbers in, plain numbers out. Deterministic, no clock, no rng.
  */
@@ -183,25 +174,17 @@ export function nextAutoAsk(input: {
 }
 
 /**
- * The memory to store for next turn, given this turn's memory and the decision
- * made from it. Callers store what this returns and nothing else, so the rule
- * for `previousAsk` lives here with the controller that reads it.
+ * Next turn's memory, given this turn's memory and decision.
  *
  * Only a raise records a revert target: the ask it raised from. Every other
- * move leaves nothing to undo, so `previousAsk` advances to the new ask and a
- * later shortfall steps down instead of reverting to a stale price. A raise is
- * undoable once, on the turn right after it.
+ * move advances `previousAsk` to the new ask, so a later shortfall steps down
+ * instead of reverting to a stale price. A raise is undoable once.
  *
- * The exception is silence. A turn that offered nothing carries no signal, so
- * it keeps the revert target it was given rather than confirming the raise.
+ * Silence (no offer) keeps the prior revert target.
  *
- * Memory holds the price the book actually saw. The caller passes `postedAsk`
- * when something after the controller moved the price (production marks an
- * unsold ask down before posting it); otherwise the decided ask was posted. A
- * revert target the book never saw would give back a step that never happened.
- *
- * On a first selling turn there is no memory and no decision. The caller seeds
- * memory as `{ ask, previousAsk: ask }` from the ask it posted.
+ * Memory holds the price the book actually saw: the caller passes `postedAsk`
+ * when something moved the price after the controller; a revert target the
+ * book never saw would give back a step that never happened.
  */
 export function rememberAutoAsk(
   memory: AutoAskMemory,

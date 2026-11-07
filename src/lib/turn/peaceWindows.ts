@@ -7,18 +7,12 @@ import { resolveConflict } from "@/lib/military/resolveConflict";
 /**
  * Resolve every won war whose dictate window has lapsed, as a white peace.
  *
- * A REAL SWEEP, not lazy expiry, and the difference matters. A peace offer can be
- * expired by whoever reads it, and a reader is guaranteed because somebody has to
- * open it to act on it. Nothing forces anyone to open a conflict document: a victor
- * who never logs in would leave a won war sitting in `terms_pending` for ever, with
- * both rosters stood down and no truce written. So this runs every tick whether or
- * not anyone fought.
+ * A real sweep, not lazy expiry: nothing forces anyone to open a conflict
+ * document, so a victor who never logs in would leave a won war stuck in
+ * `terms_pending` forever. Runs every tick regardless of activity.
  *
- * Reads `conflictsEnabled` itself, for the same reason `resolveColdWarHolds` does:
- * every other conflict step is reached from a declaration and inherits that gate
- * upstream, while this one is reached from a stamp on a document.
- *
- * Spec: docs/superpowers/specs/2026-08-27-peace-terms-design.md
+ * Reads `conflictsEnabled` itself: unlike other conflict steps reached from a
+ * declaration, this one is reached from a stamp on a document.
  */
 export async function resolvePeaceWindows(
   db: Db,

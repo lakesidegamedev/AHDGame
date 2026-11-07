@@ -207,10 +207,8 @@ export async function seedAdmittedStatePolitics(
       // seeded "REP" to "GOP", which used to abort the whole admission.
       const party = resolveSeedParty(share.abbr);
       if (!party) {
-        // Warn and continue rather than throw. Aborting here used to strand the
-        // admission after the org rows were written but before the
-        // registration-pool upsert, leaving the state permanently outside the
-        // drift/decay phase (it skips states with no pool row).
+        // Warn and continue: throwing here leaves the state permanently
+        // outside drift/decay, since it was admitted without a pool row.
         logger.warn(
           "Statehood",
           `No US party matches seed abbreviation "${share.abbr}" for ${stateId} — skipping its registration shares`

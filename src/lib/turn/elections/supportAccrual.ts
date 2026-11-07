@@ -1,17 +1,13 @@
 /**
  * Per-turn Support accrual tick + rally accrual queue helpers.
  *
- * Implements B1 from `2026-05-22-swing-flow-driver-activation.md`. A
- * rally event delivers 60% of its full value immediately and queues the
- * remaining 40% as a trailing drip spread across `RALLY_SPREAD_TURNS`
- * turns. The per-turn processor below applies the drip + decrements
- * `turnsRemaining` for each queued entry, pruning entries whose tail
- * has fully paid out.
+ * A rally event pays RALLY_IMMEDIATE_SHARE immediately and queues the rest
+ * as a drip across RALLY_SPREAD_TURNS turns.
  *
  * Lifecycle invariants:
  *   - Each entry: `{ amountPerTurn: number, turnsRemaining: number }`.
- *   - Per turn: each entry contributes `amountPerTurn` to candidate
- *     Support, then `turnsRemaining` decrements by 1.
+ *   - Per turn: each entry contributes `amountPerTurn`, then
+ *     `turnsRemaining` decrements by 1.
  *   - Entries with `turnsRemaining <= 0` after the decrement are pruned.
  *   - Support is clamped to [0, 100] after every accrual contribution.
  */

@@ -28,10 +28,9 @@ function chamberNameForOfficeType(countryId: string, officeType: string): string
 }
 
 /**
- * When a bill has been filibustered, it requires 3/5 of the votes cast (for +
- * against + abstain) to be "for" rather than a simple majority. Quorum-based
- * rather than seat-based: senators who never vote don't count against the bill,
- * but an abstention still raises the bar (#3199).
+ * A filibustered bill needs 3/5 of votes cast (for + against + abstain) to be
+ * "for", not a simple majority. Quorum-based, not seat-based: non-voters don't
+ * count against the bill, but abstentions raise the bar.
  */
 export async function didPassWithFilibusterCheck(
   db: LifecycleDb,

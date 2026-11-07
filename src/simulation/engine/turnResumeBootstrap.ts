@@ -1,12 +1,11 @@
 /**
- * Lock takeover and setup boundaries of a crash-resumed turn (#3429).
+ * Lock takeover and setup boundaries of a crash-resumed turn.
  *
  * The crash evidence (target turn, last phase, phase statuses and stored phase
- * results) is the only record of what a dead holder already applied. Lock
- * acquisition leaves it untouched; it is validated against the freshly locked
- * document, then rewritten in full, with the inherited markers and results
- * already in place, by the turn's first status write. A crash anywhere in
- * between leaves the original evidence for the next holder.
+ * results) records what a dead holder already applied. Lock acquisition leaves
+ * it untouched; it is validated against the freshly locked document, then
+ * rewritten in full by the turn's first status write. A crash in between
+ * leaves the original evidence for the next holder.
  *
  * Plain data only. `processTurn` owns the writes.
  */

@@ -24,12 +24,8 @@
 export const DEFAULT_PHASE_ROUND_TRIP_BUDGET = 500;
 
 /**
- * Initial values were measured on a seeded 1953 world (turns 33-41,
- * 2026-09-06), then given roughly 2x headroom for the larger production world.
- * Six entries below were reconciled against production turnLogs for
- * successful turns 1063-1117 (55 turns, 2026-09-25). Their budgets sit about
- * 1.2x the observed phase p95; cadence-gated phases use executed turns only.
- * Sample counts and caveats are in the 1.10.0 dev changelog.
+ * Budgets are ~1.2x the observed phase p95 on production turnLogs, with headroom
+ * for the larger production world. Cadence-gated phases count executed turns only.
  */
 export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   // One expiry update, one projected read, two batched releases and one completion update.

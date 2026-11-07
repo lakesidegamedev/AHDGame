@@ -130,9 +130,8 @@ export async function processAutoSectorSeed(
 
   const now = new Date();
   let sectorsUpdated = 0;
-  // Seed at the WORLD's era. This used to ride the seed helper's
-  // "2019-default" parameter default, so a 1953 world grew modern sector
-  // revenue mid-turn.
+  // Seed at the WORLD's era, not the seed helper's 2019 default, so older
+  // worlds don't grow modern sector revenue mid-turn.
   const preset = await getGameStatePresetOrDefault(db);
 
   const profiles = OPERATING_SECTOR_TYPES.map((operatingType) => ({
@@ -157,20 +156,18 @@ export async function processAutoSectorSeed(
             bucketKey(u.stateId, u.sectorType, u.industryModel, u.mediaDiscriminator)
           )
       )
-      // ─── Cap the boost against actually-built capacity (#1145) ────────────
+      // ─── Cap the boost against actually-built capacity ────────────────────
       //
       // The boost is a $multiply, so it compounds every year a commodity stays
       // distressed. Nothing else grows the pool and only founding/building draw
-      // it down, so a market nobody is building into inflated indefinitely —
-      // and "Unowned 60.6%" on a market that is fully built out is precisely
-      // what players hit when the expand gate (a real demand gap) then refuses
-      // the build.
+      // it down, so a market nobody is building into inflates indefinitely, // and a fully-built-out market then shows inflated unowned share while
+      // the expand gate (a real demand gap) refuses the build.
       //
-      // Distress relief is meant to open room in markets that are genuinely
-      // thin. A bucket already holding more claimable headroom than the world
-      // has built plant is not thin, so it is skipped. Plants-gated: below
-      // plants the pool leads in ₳ and there is no comparable unit figure, so
-      // that path is byte-identical to before.
+      // Distress relief is meant to open room in genuinely thin markets. A
+      // bucket already holding more claimable headroom than the world has built
+      // plant is not thin, so it is skipped. Plants-gated: below plants the pool
+      // leads in ₳ and has no comparable unit figure, so that path is unchanged.
+      // ─────────────────────────────────────────────────────────────────────
       .filter((u) => {
         if (!plantsEnabled) return true;
         const owned =

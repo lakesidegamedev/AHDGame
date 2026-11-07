@@ -615,15 +615,13 @@ async function evaluateOneBank(
 /**
  * On failure, the loans this bank made AS A LENDER die with it.
  *
- * Its borrowers keep the cash and the asset is written off, which is a real
- * loss the estate cannot recover: chasing an interbank borrower for early
- * repayment because its lender failed is a second failure, not a recovery.
+ * Borrowers keep the cash and the asset is written off: chasing an interbank
+ * borrower early because its lender failed is a second failure, not a
+ * recovery.
  *
- * What this deliberately no longer touches is the claims AGAINST this bank.
- * Those used to be written off here, before anyone had asked whether the estate
- * could pay them, so a bank that failed holding enough cash to repay its
- * lenders repaid nobody. They are settled in priority order by
- * `returnDepositBook`, which runs in the resolution sweep later this turn.
+ * Claims AGAINST this bank are NOT touched here. They are settled in priority
+ * order by `returnDepositBook`, which runs in the resolution sweep later this
+ * turn.
  */
 async function writeOffLenderSideInterbankOnFailure(
   db: Db,

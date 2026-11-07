@@ -210,20 +210,14 @@ export async function resolveOppositionLeader(
 // Per-turn seat update
 // ---------------------------------------------------------------------------
 
-/**
+/*
  * Ensure a `governmentFormations` document exists for a parliamentary country.
  *
- * The UK seeds its document from legacy collections via its own seat-update
- * override; every other parliamentary country gets its document from an
- * explicit admin seed step (e.g. the `ieGovernmentFormation` /
- * `cnGovernmentFormation` targets). When that step was never run — or the
- * document was wiped — there is no "pending" status for the executive hub to
- * gate the appointment flow on, so a qualifying party/coalition chair sees no
- * way to nominate a head of government (the symptom that motivated this fix).
- *
- * This self-heals that case by creating a fresh `pending` document derived
- * from country config plus a live seat tally. It is a no-op when a document
- * already exists, so a formed or pending government is never clobbered.
+ * When the admin seed step was skipped or the document was wiped, no `pending`
+ * status exists, so the executive hub cannot gate and no chair can nominate a
+ * head of government. This self-heals by creating a fresh `pending` document
+ * from country config plus a live seat tally. No-op if a document already
+ * exists; never clobbers a formed or pending government.
  *
  * Returns the created document, or null when one already existed.
  */
@@ -946,7 +940,7 @@ export async function autoAyeNPPsForParliamentaryAppointment(
  * writing the new one. Auto-voting is the floor, not a ceiling.
  *
  * Without this, NPP-held government benches cast nothing at all and a whipped
- * opposition bloc could carry a motion on its own (ticket-1137).
+ * opposition bloc could carry a motion on its own.
  */
 export async function autoVoteNPPsForNoConfidence(
   db: Db,
@@ -1271,20 +1265,16 @@ export async function resolveParliamentaryAppointmentVote(
 /**
  * Does a no-confidence motion carry?
  *
- * A motion of no confidence removes a sitting government, so it must command a
- * majority of the WHOLE chamber, not a majority of whoever happened to turn up.
- * Abstentions and unvoted seats therefore count against the motion, which is
- * how a real confidence vote works: the government survives by default.
+ * A no-confidence motion removes a sitting government, so it needs a majority
+ * of the WHOLE chamber, not votes cast. Abstentions and unvoted seats count
+ * against the motion. Tallies are seat-weighted, so `votesFor` is comparable
+ * to `majorityThreshold`.
  *
- * Tallies are seat-weighted (see computeParliamentaryGovernmentTally), so
- * `votesFor` is directly comparable to the chamber's `majorityThreshold`.
+ * Deliberately NOT the cloture rule (3/5 of votes cast) used for legislative
+ * debate, and not applied to any other vote type.
  *
- * This is deliberately NOT the cloture rule (3/5 of votes CAST) used for
- * legislative debate, and it does not apply to any other vote type.
- *
- * Fallbacks, in order: the stored `majorityThreshold`, a threshold derived from
- * `totalSeats`, and finally a strict majority of votes cast when the formation
- * row carries neither number.
+ * Fallbacks: stored `majorityThreshold`, then a threshold from `totalSeats`,
+ * then a strict majority of votes cast.
  */
 export function noConfidenceMotionCarries(input: {
   votesFor: number;
@@ -1608,23 +1598,19 @@ export type AppointmentEligibility =
   | { eligible: false };
 
 /**
- * Determine whether a character is eligible to nominate a Prime Minister.
+ * Determine whether a character may nominate a PM.
  *
- * The character must be either a party chair or coalition chair. Their
- * party/coalition must meet the seat threshold for majority, coalition,
- * or minority government formation. At least one player-character MP
- * must exist in the qualifying parties.
+ * Must be a party or coalition chair whose group meets the seat threshold
+ * for majority, coalition, or minority government, and there must be at
+ * least one player-character MP among the qualifying parties. A qualifying
+ * coalition takes precedence over the chair's own party; the party-only bid
+ * is the fallback.
  *
- * A qualifying coalition takes precedence over the chair's own party, so a
- * party chair who also chairs a coalition may nominate any partner MP. The
- * party-only bid remains the fallback when the coalition does not qualify.
+ * Seats are computed live from electedOfficials so stale
+ * `govFormation.seatsByParty` cannot wrongly block chairs after mid-term
+ * seat moves.
  *
- * Seat counts are always computed live from electedOfficials to prevent
- * stale govFormation.seatsByParty from incorrectly blocking party chairs
- * whose seats moved mid-term (e.g. after a player switches parties).
- *
- * This is the single source of truth — used by the POST appoint route,
- * the executive API, and the UK/JP/DE executive hubs.
+ * Single source of truth: POST appoint, executive API, and the UK/JP/DE hubs.
  */
 export async function checkAppointmentEligibility(
   db: Db,
@@ -1689,10 +1675,10 @@ export async function checkAppointmentEligibility(
     }
   }
 
-  // --- Check as party chair (or acting vice-chair when chair seat vacant) ---
-  // Per the 2026-05-22 VC-acting-chair rule: the vice-chair inherits chair
-  // authority — including PM-proposal eligibility — when the chair slot is
-  // null. Match either the seated chair OR a VC whose chair seat is vacant.
+  // Check as party chair (or acting vice-chair when chair seat vacant).
+  // The vice-chair inherits chair authority, including PM-proposal
+  // eligibility, when the chair slot is null. Match either the seated chair
+  // OR a VC whose chair seat is vacant.
   const chairParty = await db.collection<PoliticalParty>("politicalParties").findOne({
     countryId,
     $or: [{ chairId: characterId }, { chairId: null, viceChairId: characterId }],
@@ -2120,11 +2106,10 @@ export function getParliamentaryCountryIds(preset?: string): CountryId[] {
  * changed. Non-numeric ids ("independent") are skipped.
  *
  * Excludes one-party states: there `rulingPartyId` is authoritative and is
- * mutated by Stage-3 leadership flows, so driving it from governmentFormations
- * each turn would revert those legitimate changes. OPS is seeded from config.
+ * mutated by leadership flows, so driving it from governmentFormations each
+ * turn would revert legitimate changes.
  *
- * Runs every turn inside runParliamentaryGovernmentPhases, so existing worlds
- * self-heal on the next turn (no separate migration needed).
+ * Runs every turn, so existing worlds self-heal without a migration.
  */
 export async function syncRulingPartyIdFromFormedGovernment(
   db: Db,

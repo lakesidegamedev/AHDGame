@@ -1,18 +1,15 @@
 /**
- * Once a turn: Competition Act breakup cases (levels 3 and 4).
+ * Once per turn: Competition Act breakup cases (levels 3 and 4).
  *
- * 1. A group whose share of a national industry reaches the country's
- *    breakup threshold gets a case, decided by the competition authority
- *    (the same seat that reviews mergers) within BREAKUP_CASE_TURNS.
- * 2. When the case is decided, or its deadline passes, the share is measured
- *    again. Below the threshold, the case is dismissed. Otherwise, unless the
- *    authority dismissed it, the group receives a divestiture order: the same
- *    obligation a remedied merger carries, so the existing merger sweep
- *    discharges it once the group falls below the threshold and fines it while
- *    overdue.
+ * A group whose share of a national industry reaches the country's breakup
+ * threshold gets a case, decided by the competition authority within
+ * BREAKUP_CASE_TURNS. On decision or deadline, share is remeasured: below
+ * threshold the case is dismissed; otherwise (unless the authority dismissed it)
+ * the group receives a divestiture order, the same obligation a remedied merger
+ * carries, so the existing merger sweep discharges it and fines overdue groups.
  *
- * Uses the control rows, industry rows and law levels the compliance pass has
- * already built; reads the authority only for countries with a new case.
+ * Uses control rows, industry rows and law levels already built by the
+ * compliance pass; reads the authority only for new cases.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { ObjectId } from "mongodb";

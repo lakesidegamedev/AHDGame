@@ -120,8 +120,8 @@ export function createTurnPhaseRuntime(input: {
    */
   alreadyApplied?: Set<string>;
   /**
-   * How the dead holder left each applied phase, plus the stored results of
-   * completed phases a later phase consumes (#3429). Absent on a normal turn.
+   * How the dead holder left each applied phase, plus stored results of
+   * completed phases a later phase consumes. Absent on a normal turn.
    */
   resumed?: CrashedTurnPhaseState;
   /**
@@ -132,10 +132,8 @@ export function createTurnPhaseRuntime(input: {
    */
   shouldRunPhase?: (phaseName: string) => boolean;
   /**
-   * The turn number being processed (`context.newTurn` in `turnSystem.ts`) —
-   * used to build the `"turn:<n>:<phase>"` audit traceId (forensics plan
-   * §3.1, T2.7). Optional so existing unit tests that don't care about the
-   * audit spine don't have to thread it through; defaults to 0.
+   * Turn number for the `"turn:<n>:<phase>"` audit traceId. Optional so tests
+   * that don't exercise the audit spine can omit it; defaults to 0.
    */
   turn?: number;
   /** Sandbox tooling hook. Omitted by production turn execution. */
@@ -167,7 +165,7 @@ export function createTurnPhaseRuntime(input: {
   // Nested work may bypass its own ancestors, but never a different runtime's
   // drain. Keep this context beside the invocation ids it identifies.
   const phaseInvocationChain = new AsyncLocalStorage<readonly number[]>();
-  // #3385: a timeout cannot cancel the phase function, which keeps issuing
+  // A timeout cannot cancel the phase function, which keeps issuing
   // writes. Every timed-out phase stays here until its function settles, and no
   // new phase starts (nor does the turn complete or release its lock) until the
   // set is empty. A function that never settles therefore halts the turn with
@@ -238,8 +236,8 @@ export function createTurnPhaseRuntime(input: {
           : (options.message ?? current.message),
     };
     // A result-carrying completion is recorded in memory only after its marker
-    // and result land together. Otherwise a later whole-map write (the failure
-    // path) could persist "completed" with no result (#3429).
+    // and result land together, so a later whole-map write cannot persist
+    // completed with no result.
     const stagedCompletion = phaseRequiresResumeResult(phase) && status === "completed";
     if (!stagedCompletion || lockless) phaseStatuses[phase] = next;
     if (lockless) {
@@ -300,21 +298,14 @@ export function createTurnPhaseRuntime(input: {
       await markPhaseSkipped(name, "conditional", "skipped: phase eligibility predicate");
       return null;
     }
-    // RESUME GATE. This turn is a re-entry into a turn a previous process began and
-    // did not finish, and `alreadyApplied` names the phases that must not run again:
-    // the ones it recorded as completed, plus the single phase it was inside when it
-    // died. Running either would double-apply writes that already landed.
-    //
-    // Before this existed the whole turn was CONSUMED on recovery, so one redeploy
-    // landing mid-turn discarded every remaining phase, roughly 150 of them, including
-    // every election, metric and settlement the turn had not reached yet. Skipping the
-    // handful that already ran and continuing is strictly better: the cost of a deploy
-    // falls from a whole turn to the one phase that was interrupted.
+    // RESUME GATE. Re-entry into an unfinished turn: `alreadyApplied` names
+    // phases that must not run again (completed, plus the interrupted one) because
+    // running them would double-apply writes that already landed.
     //
     // A skipped phase returns nothing, so a phase whose result a later phase reads
-    // hands back the bounded copy it stored with its completed status (#3429). An
-    // interrupted phase, or a completed one without a valid copy, returns null and
-    // records why; `requirePhaseResult` turns that into an explicit failure.
+    // hands back the bounded copy stored with its completed status. An interrupted
+    // phase, or a completed one without a valid copy, returns null and records why;
+    // `requirePhaseResult` turns that into an explicit failure.
     if (
       name !== "playerIncomeTax" &&
       name !== "incomeTaxBases" &&
