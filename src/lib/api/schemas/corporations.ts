@@ -237,6 +237,10 @@ export const setSectorPricingSchema = z.object({
   pricingMode: z.enum(["market", "costPlus"]).optional(),
 });
 
+export const setSectorSupplyPrioritySchema = z.object({
+  sellOutsideFirst: z.boolean(),
+});
+
 export const setSectorWageLevelSchema = z.object({
   wageLevel: z.number().min(WAGE_LEVEL_MIN).max(WAGE_LEVEL_MAX),
 });

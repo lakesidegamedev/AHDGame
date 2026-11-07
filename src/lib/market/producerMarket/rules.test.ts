@@ -1560,3 +1560,147 @@ describe("spend groups share one budget (#5451)", () => {
     expect(ungrouped.orders.reduce((n, o) => n + o.cost, 0)).toBeGreaterThan(100);
   });
 });
+
+describe("sell outside first (suggestion 427)", () => {
+  const market = ({
+    ownSitesFirst = true,
+    flag = true,
+    marketFirst = false,
+    twoSites = false,
+    ownWants = 6,
+    outsideWants = 8,
+  }: {
+    ownSitesFirst?: boolean;
+    flag?: boolean;
+    marketFirst?: boolean;
+    twoSites?: boolean;
+    ownWants?: number;
+    outsideWants?: number;
+  } = {}) =>
+    settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "corp", cash: 100 },
+        { id: "outside", cash: 100 },
+      ],
+      offers: [
+        {
+          id: "sup-f",
+          accountId: "corp",
+          commodity: "steel",
+          book: "world",
+          units: twoSites ? 5 : 10,
+          unitPrice: 1,
+          ...(flag ? { sellOutsideFirst: true as const } : {}),
+        },
+        ...(twoSites
+          ? [
+              {
+                id: "sup-u",
+                accountId: "corp",
+                commodity: "steel",
+                book: "world",
+                units: 5,
+                unitPrice: 1,
+              },
+            ]
+          : []),
+      ],
+      orders: [
+        {
+          id: "a-own-plant",
+          accountId: "corp",
+          commodity: "steel",
+          book: "world",
+          units: ownWants,
+          maximumUnitPrice: 2,
+        },
+        {
+          id: "b-outside",
+          accountId: "outside",
+          commodity: "steel",
+          book: "world",
+          units: outsideWants,
+          maximumUnitPrice: 2,
+        },
+      ],
+      ...(ownSitesFirst ? { ownSitesFirst: true } : {}),
+      ...(marketFirst ? { marketFirstAccounts: ["corp"] } : {}),
+    });
+  const sold = (r: ReturnType<typeof market>, id: string) =>
+    r.offers.find((o) => o.id === id)!.soldUnits;
+  const internal = (r: ReturnType<typeof market>, id: string) =>
+    r.offers.find((o) => o.id === id)!.internalDeliveredUnits;
+  const delivered = (r: ReturnType<typeof market>, id: string) =>
+    r.orders.find((o) => o.id === id)!.deliveredUnits;
+
+  const replayConserves = (r: ReturnType<typeof market>) => {
+    const byOffer = new Map<string, number>();
+    for (const trade of producerTrades(r.tradeReceipt)) {
+      // No sale is ever booked from a company to itself.
+      if (trade.kind === "sale") expect(trade.buyerAccountId).not.toBe(trade.sellerAccountId);
+      if (trade.kind === "internalTransfer") expect(trade.unitPrice).toBe(0);
+      byOffer.set(trade.offerId, (byOffer.get(trade.offerId) ?? 0) + trade.units);
+    }
+    for (const offer of r.tradeReceipt.offers) {
+      const result = r.offers.find((o) => o.id === offer.id)!;
+      expect(byOffer.get(offer.id) ?? 0).toBeCloseTo(result.deliveredUnits, 9);
+      expect(result.deliveredUnits).toBeLessThanOrEqual(offer.units + 1e-9);
+    }
+  };
+
+  it("serves the outside buyer first and leaves the own plant the remainder, free", () => {
+    const r = market();
+    expect(sold(r, "sup-f")).toBeCloseTo(8, 9);
+    expect(internal(r, "sup-f")).toBeCloseTo(2, 9);
+    expect(delivered(r, "b-outside")).toBeCloseTo(8, 9);
+    expect(delivered(r, "a-own-plant")).toBeCloseTo(2, 9);
+    const own = r.tradeReceipt.fills.filter((f) => f.orderId === "a-own-plant");
+    expect(own.every((f) => f.kind === "internalTransfer" && f.unitPrice === 0)).toBe(true);
+    expect(r.accounts.find((a) => a.id === "corp")!.cash).toBeCloseTo(108, 9);
+    replayConserves(r);
+  });
+
+  it("unset flag keeps today's result: the own plant is served first", () => {
+    const r = market({ flag: false });
+    expect(internal(r, "sup-f")).toBeCloseTo(6, 9);
+    expect(sold(r, "sup-f")).toBeCloseTo(4, 9);
+    expect(r.tradeReceipt.fills.some((f) => "skipOutsideFirst" in f)).toBe(false);
+    replayConserves(r);
+  });
+
+  it("ignores the flag when own-sites-first is off", () => {
+    const flagged = market({ ownSitesFirst: false });
+    const plain = market({ ownSitesFirst: false, flag: false });
+    expect(flagged.offers).toEqual(plain.offers);
+    expect(flagged.orders).toEqual(plain.orders);
+    expect(flagged.accounts).toEqual(plain.accounts);
+    expect(flagged.tradeReceipt.fills).toEqual(plain.tradeReceipt.fills);
+  });
+
+  it("a company already on market priority behaves as before with the flag set", () => {
+    const flagged = market({ marketFirst: true });
+    const plain = market({ marketFirst: true, flag: false });
+    expect(flagged.offers).toEqual(plain.offers);
+    expect(flagged.orders).toEqual(plain.orders);
+    expect(flagged.tradeReceipt.fills).toEqual(plain.tradeReceipt.fills);
+  });
+
+  it("a flagged and an unflagged site: the unflagged one serves the own plant, the flagged one waits", () => {
+    const r = market({ twoSites: true, ownWants: 4, outsideWants: 10 });
+    expect(internal(r, "sup-u")).toBeCloseTo(4, 9);
+    expect(internal(r, "sup-f")).toBe(0);
+    expect(sold(r, "sup-f")).toBeCloseTo(5, 9);
+    expect(sold(r, "sup-u")).toBeCloseTo(1, 9);
+    expect(delivered(r, "a-own-plant")).toBeCloseTo(4, 9);
+    replayConserves(r);
+  });
+
+  it("the own plant still gets everything when outside demand is small", () => {
+    const r = market({ outsideWants: 3 });
+    expect(sold(r, "sup-f")).toBeCloseTo(3, 9);
+    expect(internal(r, "sup-f")).toBeCloseTo(6, 9);
+    expect(delivered(r, "a-own-plant")).toBeCloseTo(6, 9);
+    replayConserves(r);
+  });
+});

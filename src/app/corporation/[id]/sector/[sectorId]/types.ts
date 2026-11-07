@@ -832,6 +832,8 @@ export interface PlantsData {
     deliveryLimitedFreightClass?: "bulk" | "special" | "grid" | null;
     /** Consecutive turns under half fill; optional for payloads predating it. */
     lowFillTurns?: number;
+    /** Opt-in to sell to outside buyers before the company's own plants. */
+    sellOutsideFirst?: boolean;
     /** Unsold-output inventory (§6); optional for payloads predating it. */
     inventory?: {
       stockpileUnsold: boolean;
