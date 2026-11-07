@@ -66,6 +66,10 @@ import {
   modeledIeRegionalOffices,
 } from "@/lib/seeds/reference/rules/aggregateRegionalOffices";
 import { seatCountFor, seatGroupsFor, seatsForCountry } from "./presetSeatGroups";
+import { getCountryConfig, type CountryId } from "./countries";
+import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { isListTierMethod } from "@/lib/elections/electionMethod";
+import { formationChamberSeats } from "@/lib/legislature/rules/liveChamber";
 
 const ALL_PRESETS = [...SHIPPING_PRESETS, "empty", "2019-no-parties", "1968-default"];
 
@@ -253,5 +257,74 @@ describe("the silent 2020 seat fallback stays recorded", () => {
     getPresetSeats("2019-default");
     getPresetSeats("2023-default");
     expect(getPresetFallbacks().map((f) => f.preset)).toEqual(["2023-default"]);
+  });
+});
+
+/**
+ * Government formation measures its majority against the lower chamber, so a
+ * seated roster that does not sum to that chamber skews every government from
+ * turn one (#5688: a 201-seat Bundestag against 630 made every German cabinet
+ * a minority). Every preset's lower-chamber roster must match its chamber, or
+ * be a known gap pinned here with its reason.
+ */
+describe("lower-chamber rosters match their chamber", () => {
+  const BLOC = ["HU", "PL", "RO", "YU", "BG", "CS"];
+  const KNOWN_GAPS: Record<string, Record<string, number>> = {
+    // The one-party bloc assemblies seat through the shared bloc chamber
+    // rows, and Brazil's 1953 and 2019 chambers start vacant.
+    "1953-default": { BR: 0, ...Object.fromEntries(BLOC.map((id) => [id, 0])) },
+    "1979-default": Object.fromEntries(BLOC.map((id) => [id, 0])),
+    // 1990 Bundestag with overhang; Brazil's 1991 chamber short ten seats.
+    "1991-default": { DE: 672, BR: 503 },
+    // The US House carries five vacancies awaiting special elections. The
+    // 2021 Bundestag roster is a 201-seat scale of the 736-seat result; the
+    // formation majority line follows the seated total (see below) until the
+    // first election fills the list tier.
+    "1999-default": { US: 430, DE: 201 },
+    "2007-default": { US: 430, DE: 201 },
+    "2019-default": { US: 430, DE: 201, BR: 0 },
+    "2023-default": { US: 430, DE: 201 },
+  };
+
+  function lowerSeated(preset: string, countryId: CountryId): number {
+    const config = getCountryConfig(countryId, preset);
+    const keys = new Set([
+      getLowerChamberOfficeType(countryId, preset),
+      config.legislature.lowerChamber?.key,
+    ]);
+    return seatsForCountry(preset, countryId)
+      .filter((seat) => keys.has(seat.officeType))
+      .reduce((sum, seat) => sum + (seat.seatsHeld ?? 1), 0);
+  }
+
+  it("every seeded lower chamber sums to its chamber or is a pinned gap", () => {
+    for (const preset of SHIPPING_PRESETS) {
+      for (const countryId of Object.keys(seatGroupsFor(preset)) as CountryId[]) {
+        if (isBackgroundInPreset(preset, countryId)) continue;
+        const chamber = getCountryConfig(countryId, preset).legislature.lowerChamber?.seats;
+        if (chamber == null) continue;
+        const expected = KNOWN_GAPS[preset]?.[countryId] ?? chamber;
+        expect(lowerSeated(preset, countryId), `${preset} ${countryId}`).toBe(expected);
+      }
+    }
+  });
+
+  it("the 2027 world has no gaps", () => {
+    expect(KNOWN_GAPS["2027-default"]).toBeUndefined();
+    expect(lowerSeated("2027-default", "DE")).toBe(630);
+  });
+
+  it("a short list-tier roster sets the majority line from its seated total", () => {
+    for (const preset of ["1999-default", "2007-default", "2019-default", "2023-default"]) {
+      const config = getCountryConfig("DE", preset);
+      const listTier = isListTierMethod(config.electionSystems.lowerChamber);
+      expect(listTier, preset).toBe(true);
+      expect(formationChamberSeats(630, lowerSeated(preset, "DE"), listTier)).toBe(201);
+    }
+    // A full or overfull chamber, or a single-tier one, keeps its configured size.
+    expect(formationChamberSeats(630, 630, true)).toBe(630);
+    expect(formationChamberSeats(630, 672, true)).toBe(630);
+    expect(formationChamberSeats(435, 430, false)).toBe(435);
+    expect(formationChamberSeats(630, 0, true)).toBe(630);
   });
 });

@@ -7,6 +7,7 @@ import type { PersistedCommandStance, PersistedFiscalStance } from "@/lib/nppAut
 import type { GoverningGoalState } from "@/lib/nppAutonomy/v5/rules/governingGoals";
 import type { PersistedReshuffleGuardState } from "@/lib/nppAutonomy/rules/reshuffleGuard";
 import type { MandateDomains } from "@/lib/nppAutonomy/rules/electoralMandate";
+import type { CoalitionRefusal } from "@/lib/government/rules/coalitionRefusals";
 
 // --- GovernmentFormation ---
 
@@ -49,6 +50,16 @@ export interface GovernmentFormation {
   governingPartyId: string | null; // party of the sitting executive; presumptive largest party while pending
   coalitionId: number | null; // coalition sequentialId if formed via coalition
   coalitionPartyIds: string[] | null;
+  /**
+   * Coalition refusals in force, seeded from the preset's authored list the
+   * first time the country is processed. Absent when nothing was authored.
+   */
+  coalitionRefusals?: CoalitionRefusal[];
+  /**
+   * The lower-chamber election the refusals were last advanced past, and the
+   * seats by party abbreviation it left, so the next election can tell who lost.
+   */
+  coalitionRefusalElection?: { key: string; seats: Record<string, number> } | null;
   /** Explicit parliamentary tolerance, distinct from cabinet support. */
   confidenceAbstentionPartyIds?: string[]; // party sequentialIds in supporting coalition
   totalSeatsSupporting: number;

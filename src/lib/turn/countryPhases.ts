@@ -115,6 +115,7 @@ import {
 import type { CompletedSnapConfidence } from "./snapConfidence";
 import { processPMVacancyDeadlines } from "@/lib/turn/pmVacancyDeadline";
 import { appointNppPrimeMinister } from "@/lib/nppAutonomy/appointNppPrimeMinister";
+import { syncCoalitionRefusals } from "@/lib/government/coalitionRefusalState";
 
 // Per-country seat update overrides (UK has a legacy seed fallback on first run)
 import { updateGovernmentSeats as updateUKGovernmentSeats } from "@/lib/turn/ukGovernmentFormation";
@@ -655,6 +656,7 @@ async function runParliamentaryCountry(
     // formation stalls "pending" forever. Autoseat the largest party's NPP
     // leader. No-op unless isNppAutonomyActive (never fires where players are
     // enabled) and a player vote hasn't already formed a government this turn.
+    await syncCoalitionRefusals(db, countryId, preset);
     await appointNppPrimeMinister(db, countryId, currentTurn, gameNow, preset);
 
     // Reflect the formed government's party onto countryState.rulingPartyId
