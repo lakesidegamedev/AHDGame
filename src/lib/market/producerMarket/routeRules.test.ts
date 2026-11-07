@@ -21,13 +21,31 @@ describe("route eligibility", () => {
       offers,
       open
     );
-    expect([...e.a].sort()).toEqual(["jp-iron", "us-iron"]);
-    expect([...e.b].sort()).toEqual(["jp-iron", "ru-iron", "us-iron"]);
+    expect([...e.a!].sort()).toEqual(["jp-iron", "us-iron"]);
+    // JP reaches every seller, so its order stays unrestricted.
+    expect(e.b).toBeUndefined();
   });
 
   it("spare home output can reach a short foreign buyer", () => {
-    const e = routeEligibility([{ id: "jp", commodity: "iron", buyerCountry: "JP" }], offers, open);
-    expect(e.jp).toContain("us-iron");
+    const e = routeEligibility([{ id: "ru", commodity: "iron", buyerCountry: "RU" }], offers, open);
+    expect(e.ru).toEqual(["jp-iron", "ru-iron"]);
+  });
+
+  it("one embargo restricts only the buyers it closes a route for", () => {
+    const usJapanImportBan = (c: string, from: string, to: string) =>
+      !(from === "JP" && to === "US");
+    const e = routeEligibility(
+      [
+        { id: "us", commodity: "iron", buyerCountry: "US" },
+        { id: "ru", commodity: "iron", buyerCountry: "RU" },
+        { id: "us-coal", commodity: "coal", buyerCountry: "US" },
+      ],
+      offers,
+      usJapanImportBan
+    );
+    expect([...e.us!].sort()).toEqual(["ru-iron", "us-iron"]);
+    expect(e.ru).toBeUndefined();
+    expect(e["us-coal"]).toBeUndefined();
   });
 
   it("never mixes commodities and shares one list per commodity and country", () => {
@@ -39,8 +57,18 @@ describe("route eligibility", () => {
       offers,
       open
     );
-    expect(e.x).toEqual(["us-coal"]);
-    expect(e.x).toBe(e.y);
+    expect(e.x).toBeUndefined();
+    expect(e.y).toBeUndefined();
+    const ru = routeEligibility(
+      [
+        { id: "x", commodity: "iron", buyerCountry: "RU" },
+        { id: "y", commodity: "iron", buyerCountry: "RU" },
+      ],
+      offers,
+      open
+    );
+    expect(ru.x).toEqual(["jp-iron", "ru-iron"]);
+    expect(ru.x).toBe(ru.y);
   });
 });
 
