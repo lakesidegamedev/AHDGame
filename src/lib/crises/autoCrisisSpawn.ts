@@ -8,8 +8,10 @@ import { ALL_CRISIS_TEMPLATES, getTemplateDuration } from "./templates";
 import {
   GLOBAL_SCOPE_KEY,
   isArmed,
+  isDeferred,
   isOnCooldown,
   loadCooldownMap,
+  markDeferred,
   setArmed,
   stampCooldown,
 } from "./autoCrisisCooldown";
@@ -32,6 +34,8 @@ import { refreshVietnamEscalationLevel } from "./vietnamEscalationInterface";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./marketAdjustment/template";
 import { marketAdjustmentEnabled, recordLossShares } from "./marketAdjustment/signals";
 import { syncWorldHeadline } from "./marketAdjustment/worldHeadline";
+import { loadCountrySevereLoad } from "./severeCrisisLoad";
+import { occupySevereSlot, severeSlotFree } from "./rules/severeLoad";
 
 /** Serializable description of an auto-spawnable template, for the admin tab. */
 export interface AutoCrisisCatalogEntry {
@@ -100,7 +104,7 @@ export function getAutoCrisisCatalog(): AutoCrisisCatalogEntry[] {
 }
 
 /** Country gating from a template's geo (allow-list minus deny-list). */
-function countryAllowed(template: CrisisTemplate, countryId: CountryId): boolean {
+export function countryAllowed(template: CrisisTemplate, countryId: CountryId): boolean {
   const geo = template.geo;
   if (!geo) return true;
   if (geo.countries && !geo.countries.includes(countryId)) return false;
@@ -143,6 +147,15 @@ export async function processAutoCrisisSpawn(
   // simulating, including countries deliberately closed to players.
   const countryIds = await getSimulatedCountryIds(db);
   const cooldowns = await loadCooldownMap(db);
+  // Cross-system stacking guard: at most two severe crises (crisis templates
+  // and living conflicts together) per country. Loaded once, then updated in
+  // memory as this pass spawns. Opportunities neither count nor wait.
+  const severeLoad = await loadCountrySevereLoad(db, new Set<string>(countryIds));
+  const slotFree = (template: CrisisTemplate, countryId: CountryId) =>
+    template.opportunity === true || severeSlotFree(countryId, severeLoad);
+  const occupy = (template: CrisisTemplate, countryId: CountryId) => {
+    if (template.opportunity !== true) occupySevereSlot(countryId, severeLoad);
+  };
   // Market Adjustment is dark until its stage is set: no signal is recorded and
   // the template is skipped below.
   const marketAdjustmentOn = await marketAdjustmentEnabled(db);
@@ -189,6 +202,9 @@ export async function processAutoCrisisSpawn(
       }
       if (isOnCooldown(cooldowns, key, countryId, currentTurn, trig.cooldownTurns)) continue;
       if (!evaluateCondition(trig.condition, s)) continue;
+      // Deferred, not dropped: the template stays armed and off cooldown, so
+      // it fires on the first turn the condition still holds and a slot frees.
+      if (!slotFree(template, countryId)) continue;
       await createCrisisFromTemplate(db, {
         template,
         scope: "country",
@@ -198,6 +214,7 @@ export async function processAutoCrisisSpawn(
         autoSource: "condition",
       });
       await stampCooldown(db, cooldowns, key, countryId, currentTurn);
+      occupy(template, countryId);
       spawned++;
     }
   }
@@ -230,7 +247,16 @@ export async function processAutoCrisisSpawn(
       if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;
       if (!countryAllowed(template, countryId)) continue;
       if (isOnCooldown(cooldowns, key, countryId, currentTurn, trig.cooldownTurns)) continue;
-      if (deterministicRoll(currentTurn, key, countryId) >= trig.spawnChance * crisisMult) continue;
+      // A deferred spawn already won its roll; it waits only for a free slot.
+      if (
+        !isDeferred(cooldowns, key, countryId) &&
+        deterministicRoll(currentTurn, key, countryId) >= trig.spawnChance * crisisMult
+      )
+        continue;
+      if (!slotFree(template, countryId)) {
+        await markDeferred(db, cooldowns, key, countryId, currentTurn, trig.cooldownTurns);
+        continue;
+      }
       await createCrisisFromTemplate(db, {
         template,
         scope: "country",
@@ -240,6 +266,7 @@ export async function processAutoCrisisSpawn(
         autoSource: "random",
       });
       await stampCooldown(db, cooldowns, key, countryId, currentTurn);
+      occupy(template, countryId);
       spawned++;
     }
   }

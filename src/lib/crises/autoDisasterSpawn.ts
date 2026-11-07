@@ -24,6 +24,7 @@ import {
   WEATHER_DISASTER_KEYS,
 } from "./rules/climateFeedback";
 import { climateExposureFromTags, uninsuredLossMultiplier } from "./rules/climateEffects";
+import { occupySevereSlot, severeSlotFree } from "./rules/severeLoad";
 
 interface ResilienceRow {
   _id: string;
@@ -134,7 +135,16 @@ export async function processAutoDisasterSpawn(
   db: Db,
   countryId: CountryId,
   currentTurn: number,
-  opts?: { enabled?: boolean; climatePressure?: number }
+  opts?: {
+    enabled?: boolean;
+    climatePressure?: number;
+    /**
+     * Severe crises (templates plus living conflicts) holding each country.
+     * When given, a country already at the limit keeps its disaster due and
+     * takes it on the first turn a slot frees. Updated in place on spawn.
+     */
+    severeLoad?: Map<string, number>;
+  }
 ): Promise<void> {
   if (opts?.enabled !== true) return;
 
@@ -191,6 +201,8 @@ export async function processAutoDisasterSpawn(
   // Province/state/region-scale areas only. Constituencies are excluded: they
   // are sub-regional (e.g. single UK seats) and too small to host a
   // nation-scale natural disaster; "nation" is the country-level pseudo-region.
+  if (opts.severeLoad && !severeSlotFree(countryId, opts.severeLoad)) return;
+
   const regions = await db
     .collection<State>("states")
     .find({ countryId, regionType: { $nin: [null, "nation", "constituency"] } } as never)
@@ -312,4 +324,5 @@ export async function processAutoDisasterSpawn(
   await db
     .collection<CountryGameState>("countryGameStates")
     .updateOne({ _id: countryId }, { $set: { lastDisasterTurn: currentTurn } }, { upsert: true });
+  if (opts.severeLoad) occupySevereSlot(countryId, opts.severeLoad);
 }

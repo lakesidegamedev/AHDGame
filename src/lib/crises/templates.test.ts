@@ -75,8 +75,9 @@ describe("crisis templates", () => {
         expect(template.description).toBeTruthy();
         expect(["global", "country", "region"]).toContain(template.scope);
         // Market Adjustment is effect-free on purpose: it adds no damage of its own
-        // on top of the losses the funded market already books.
-        if (key !== MARKET_ADJUSTMENT_TEMPLATE_KEY) {
+        // on top of the losses the funded market already books. Opportunities are
+        // too: their gains come only from the paths a government pays for.
+        if (key !== MARKET_ADJUSTMENT_TEMPLATE_KEY && template.opportunity !== true) {
           expect(template.effects.length).toBeGreaterThan(0);
         }
       });
