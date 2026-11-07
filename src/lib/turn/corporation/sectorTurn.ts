@@ -39,6 +39,8 @@ import {
   withSunsetPenalty,
   NEUTRAL_TECH_EFFECTS,
 } from "@/lib/constants/techTree";
+import { sectorVintageYear, withEnergyTransition } from "@/lib/energyTransition/policies";
+import { blendVintageYear } from "@/lib/energyTransition/rules";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import {
@@ -141,27 +143,35 @@ export function processSector(
   // sector type, full strength. Neutral when the feature gate is off.
   // A retired (sunset) method runs on with dearer inputs, so its penalty
   // folds into the same aggregate (techTree/sunset).
-  const techEffects = techTreesEnabled
-    ? withSunsetPenalty(
-        currentYear != null
-          ? getSectorTechEffectsForYear(
-              corp,
-              sector.sectorType,
-              currentYear,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            )
-          : getSectorTechEffects(
-              corp,
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ),
-        operatingSectorType,
-        sector.strategyId,
-        currentYear
-      )
-    : NEUTRAL_TECH_EFFECTS;
+  // Energy transition worlds also fold plant age, climate laws and mineral
+  // recycling into the input rates (energyTransition/policies).
+  const techEffects = withEnergyTransition(
+    techTreesEnabled
+      ? withSunsetPenalty(
+          currentYear != null
+            ? getSectorTechEffectsForYear(
+                corp,
+                sector.sectorType,
+                currentYear,
+                sector.industryModel,
+                sector.mediaDiscriminator
+              )
+            : getSectorTechEffects(
+                corp,
+                sector.sectorType,
+                sector.industryModel,
+                sector.mediaDiscriminator
+              ),
+          operatingSectorType,
+          sector.strategyId,
+          currentYear
+        )
+      : NEUTRAL_TECH_EFFECTS,
+    lookups.energyTransition,
+    sector,
+    operatingSectorType,
+    currentYear
+  );
   // Normalize host-currency revenue to anchor currency. Recover corrupt values
   // here so NaN cannot spread through corporate totals and tax accruals.
   const rawSectorRevenue = Number.isFinite(sector.revenue) ? sector.revenue : 0;
@@ -1545,6 +1555,23 @@ export function processSector(
       // same update so a replay or a later catch-up starts here.
       buildDeliverySettledTurn: currentTurn,
     };
+    // Energy transition worlds: new capacity pulls the fleet's build year
+    // toward this year, so building or replacing plants resets their ageing.
+    const priorVintage =
+      lookups.energyTransition && currentYear != null && landedBuildUnits > 0
+        ? sectorVintageYear(sector, operatingSectorType, lookups.energyTransition.startingYear)
+        : null;
+    if (priorVintage != null && currentYear != null) {
+      sectorUpdateDoc.$set = {
+        ...sectorUpdateDoc.$set,
+        capacityVintageYear: blendVintageYear(
+          priorVintage,
+          sector.capitalStock ?? 0,
+          currentYear,
+          landedBuildUnits
+        ),
+      };
+    }
   }
   sectorOps.push({
     updateOne: {
