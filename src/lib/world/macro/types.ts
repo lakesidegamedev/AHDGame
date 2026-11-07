@@ -5,6 +5,7 @@ import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
 import type { BackgroundFiscalState } from "./rules/backgroundBudget";
 import type { NationalIndexState } from "./rules/nationalIndex";
 import type { NationalPoliticsState } from "./rules/nationalPolitics";
+import type { MacroForeignPolicyState } from "./rules/foreignPolicy";
 
 /** Aggregate sector slice for a sphere-macro (Tier-2) country. */
 export interface MacroSectorState {
@@ -113,6 +114,12 @@ export interface MacroCountryState {
   nationalFiscal?: BackgroundFiscalState;
   /** 2027 background countries only: the investable national index level. */
   nationalIndex?: NationalIndexState;
+  /**
+   * 2027 background countries only: the scripted foreign policy (stance,
+   * tariffs, sanctions, war calls, trade-balance pressure). Written by the
+   * kernel tick.
+   */
+  foreignPolicy?: MacroForeignPolicyState;
   dataQuality: MacroCountryDataQuality;
   lastMacroTickTurn: number | null;
   createdAt: Date;

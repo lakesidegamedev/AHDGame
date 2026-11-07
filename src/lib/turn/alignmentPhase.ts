@@ -72,6 +72,7 @@ import {
   type PersistedSphereMembership,
 } from "@/lib/world/spheres/membershipStore";
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
+import { loadBackgroundStancePulls } from "@/lib/alignment/backgroundStancePulls";
 
 // Membership pull lives in `drift.ts` as `membershipPullForTurn`, alongside the
 // ceiling it is bounded by.
@@ -172,7 +173,7 @@ async function processEnabledAlignmentTurn(
   const { poles } = topology;
 
   const col = await getCountryAlignmentsCollection(db);
-  const [allDocs, memberships, dissolved] = await Promise.all([
+  const [allDocs, memberships, dissolved, stancePulls] = await Promise.all([
     col.find({}).toArray(),
     db
       .collection<OrganizationMembership>("organizationMemberships")
@@ -190,6 +191,7 @@ async function processEnabledAlignmentTurn(
       })
       .toArray(),
     getDissolvedCountryIds(db),
+    loadBackgroundStancePulls(db, poles),
   ]);
 
   // A country absorbed into another keeps its alignment row, and that row keeps
@@ -461,6 +463,15 @@ async function processEnabledAlignmentTurn(
         if (!sanctioningOrgs.has(channel.organizationId)) continue;
         pull[channel.poleId] =
           (pull[channel.poleId] ?? 0) - SANCTIONS_ALIGNMENT_EROSION * channel.weight;
+      }
+    }
+
+    // A background country's government leans it (#5702). The pull is small,
+    // on the scale of a membership's, and joins the same capped vector.
+    const stancePull = stancePulls.get(doc.entityId);
+    if (stancePull) {
+      for (const [poleId, value] of Object.entries(stancePull) as [AlignmentPoleId, number][]) {
+        pull[poleId] = (pull[poleId] ?? 0) + value;
       }
     }
 

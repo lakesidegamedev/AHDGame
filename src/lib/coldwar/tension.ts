@@ -4,6 +4,7 @@
  * so claimed outcome retries cannot duplicate or omit a discrete shock.
  */
 import { planTensionEvent } from "./rules/tensionEvent";
+import { stepBlocDyads, type BlocDyad, type BlocPairId } from "./rules/blocTension";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ConflictType } from "@/lib/db/types/conflict";
@@ -61,6 +62,11 @@ export interface ColdWarTensionState {
   pressureFloor: number;
   updatedTurn: number;
   events: TensionEvent[];
+  /**
+   * Tension per pair of blocs (US-led, CN-led, non-aligned), 2027 onward only
+   * (#5695). Absent in earlier worlds, which keep the single global value.
+   */
+  blocDyads?: BlocDyad[];
   updatedAt: Date;
 }
 
@@ -297,6 +303,7 @@ export async function getColdWarTension(db: Db): Promise<ColdWarTensionState> {
     updatedTurn: doc.updatedTurn ?? 0,
     events: doc.events ?? [],
     updatedAt: doc.updatedAt ?? new Date(0),
+    ...(doc.blocDyads ? { blocDyads: doc.blocDyads } : {}),
     ...(doc.appliedEventIds ? { appliedEventIds: doc.appliedEventIds } : {}),
   };
 }
@@ -378,7 +385,9 @@ export async function applyTensionEvent(
 export async function runTensionTurn(
   db: Db,
   turn: number,
-  pressures: TensionPressures
+  pressures: TensionPressures,
+  /** Per-pair floors in a multipolar (2027+) world; omitted elsewhere. */
+  blocFloors?: Record<BlocPairId, number>
 ): Promise<ColdWarTensionState> {
   const state = await getColdWarTension(db);
   if (state.updatedTurn >= turn) return state;
@@ -388,6 +397,7 @@ export async function runTensionTurn(
     value: stepTension(state.value, pressures),
     pressureFloor,
     updatedTurn: turn,
+    ...(blocFloors ? { blocDyads: stepBlocDyads(state.blocDyads, blocFloors) } : {}),
   };
   await putColdWarTension(db, next);
   return next;

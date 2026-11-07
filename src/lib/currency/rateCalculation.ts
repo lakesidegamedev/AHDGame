@@ -32,6 +32,7 @@ import {
   ABSOLUTE_INFLATION_SENSITIVITY,
   GDP_GROWTH_SENSITIVITY,
   TRADE_GROWTH_SENSITIVITY,
+  TRADE_BALANCE_SENSITIVITY,
   VOLUME_PRESSURE_SENSITIVITY,
   VOLUME_PRESSURE_CAP,
   VOLUME_DIRECTION_WEIGHT,
@@ -50,6 +51,11 @@ export interface MacroInputs {
   inflationRate: number;
   gdpGrowth: number;
   tradeGrowth: number;
+  /**
+   * Background countries only (#5702): smoothed funded-trade surplus (+) or
+   * deficit (-), -0.5 to 0.5. Absent everywhere else, which adds nothing.
+   */
+  tradeBalancePressure?: number;
 }
 
 /** Volume data computed by the volume tracker for a single currency */
@@ -127,12 +133,17 @@ export function computeMacroTarget(
     inputs.inflationRate - ABSOLUTE_INFLATION_DEPRECIATION_THRESHOLD
   );
   const absoluteInflationPenalty = excessInflation * ABSOLUTE_INFLATION_SENSITIVITY;
+  // A trade surplus strengthens (lowers the rate); needs no baseline, so it
+  // also moves background currencies that have no economic baseline.
+  const tradeBalance = Number.isFinite(inputs.tradeBalancePressure)
+    ? (inputs.tradeBalancePressure as number) * TRADE_BALANCE_SENSITIVITY
+    : 0;
 
   if (!economicBaseline || !monetaryBaseline) {
     // Not fully modelled (no economic/monetary baseline) — the deviation terms
     // can't be computed, but the absolute-inflation weakening still applies so the
     // currency is no longer a static peg.
-    return baseRate * Math.max(0.01, 1 + absoluteInflationPenalty);
+    return baseRate * Math.max(0.01, 1 + absoluteInflationPenalty - tradeBalance);
   }
 
   // Rate is "local currency per internal unit", so lower = stronger.
@@ -151,7 +162,8 @@ export function computeMacroTarget(
     (inputs.inflationRate - monetaryBaseline.targetInflation) * INFLATION_SENSITIVITY +
     absoluteInflationPenalty -
     (inputs.gdpGrowth - economicBaseline.gdpGrowth) * GDP_GROWTH_SENSITIVITY -
-    (inputs.tradeGrowth - economicBaseline.tradeGrowth) * TRADE_GROWTH_SENSITIVITY;
+    (inputs.tradeGrowth - economicBaseline.tradeGrowth) * TRADE_GROWTH_SENSITIVITY -
+    tradeBalance;
 
   return baseRate * Math.max(0.01, multiplier);
 }
