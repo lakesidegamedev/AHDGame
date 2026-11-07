@@ -12,7 +12,7 @@ Set a daily **R&D budget** in the Budget section of the **CEO Office** tab. Each
 | Base gain with any budget | 1.2 per turn, plus 0.78 x ln(1 + budget / 100,000) |
 | Decay | 3% of current score per turn |
 | Diminishing returns | Gain falls as score rises; halved at score 100, and falls faster above it |
-| Node score cost | Set by decade: 5 (1940s), 6, 8, 11, 13 (1979), 18, 24, 30, 38 (2019), 48 (2029), 60 (2039) |
+| Node score cost | Set by decade: 5 (1940s), 6, 8, 11, 13 (1979), 18, 24, 30, 38 (2019), 48 (2029), 60 (2039), 75 (2049) |
 | Specialization cost | 2 times the decade cost; capstones 3 times |
 | Node cash cost | Value of the node over one game year, or 5% of daily revenue for nodes with no running value |
 | Overhead cap | R&D, marketing, logistics and CEO salary together cannot exceed 150% of daily revenue |
@@ -38,9 +38,15 @@ Worker morale also nudges efficiency: paying wages above baseline makes your R&D
 
 ## Reading the Tech tab
 
-Every private corporation has a **Tech** tab listing research nodes organized by **decade tier**. The world's current calendar year (derived from the active era preset plus elapsed game years) determines which decade you research. Decades before the current one show as baseline research: a corporation founded after them gets the main nodes of both lanes free, and their specializations can no longer be researched. Future decades open when the clock reaches them. A world that starts in 2019 researches the 2019 tier and every later one; a 1953 start begins at the 1950s tier and walks the rest of the tree over decades. The last tier, 2039, opens in 2039 and stays current from then on.
+Every private corporation has a **Tech** tab listing research nodes organized by **decade tier**. The world's current calendar year (derived from the active era preset plus elapsed game years) determines which decade you research. Decades before the current one show as baseline research: a corporation founded after them gets the main nodes of both lanes free, and their specializations can no longer be researched. Future decades open when the clock reaches them. A world that starts in 2019 researches the 2019 tier and every later one; a 1953 start begins at the 1950s tier and walks the rest of the tree over decades. The last tier, 2049, opens in 2049 and stays current from then on.
 
 The **2039 tier** centers the Corporate lane on agent-run operations, automated compliance and supply networks that survive disruption. Its Sector lanes unlock new production methods, each with heavier inputs than the methods it competes with: grid-scale storage and advanced fission for energy, direct air capture for chemicals, biofoundries for healthcare, humanoid robotics for manufacturing, agentic services for technology, cellular agriculture, printed mass timber for construction, drone swarms for defense, orbital constellations for telecommunications, orbital logistics, and personalized media for both media types.
+
+The **2049 tier** is the speculative frontier. Its Sector lanes unlock five breakthrough methods: commercial fusion for energy, space resources for extraction, gene therapy at scale for healthcare, autonomous districts for real estate and neural interfaces for technology. A breakthrough needs more than the calendar and your own unlock node: every corporation in that sector together must have spent enough R&D points on research from the 2039 tier onward. A sector that researches hard gets its breakthrough early in the tier; one that does not may wait years or never get it.
+
+**Frontier programmes** keep research useful after the last tier. Once you own all nine core technologies of the 2049 tier in your committed lane, you can fund repeatable programmes for your primary sector: each one adds 0.4% plant output or cuts plant inputs by 0.6%, costs 15% more R&D points than the one before, and stays inside the usual plant output and input caps. Programme effects never expire.
+
+**Retired methods.** Some old methods retire at a tier: conventional coal-heavy power in 2039 and combustion-engine vehicle lines in 2049. From then on no new site can start on them and no sector can switch to them. Sites already running them keep going, but their inputs cost 1.5% more for each year since retirement, up to 15%. Switching a retired site to one of its named successors (advanced fission or renewables for power, electric or autonomous vehicles for car makers) costs 60% less than a normal retool. AI-run companies convert their own sites automatically.
 
 Each decade forks into two **lanes**:
 

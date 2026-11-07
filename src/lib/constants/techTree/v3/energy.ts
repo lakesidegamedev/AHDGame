@@ -472,4 +472,48 @@ export const ENERGY_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Robotic Reactor Servicing",
+      description: "Remote robots service hot reactor parts so crews stay small and safe.",
+      effects: [{ kind: "laborCostReduction", pct: 0.065 }],
+    },
+    {
+      name: "Baseload Fusion Contracts",
+      description:
+        "Clean, constant power sells at a premium to heavy industry and compute campuses.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Fusion Safety Certification",
+      description: "A certified fusion safety case gets the firm's next plant approved first.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Self-Operating Power Fleet",
+      description: "Fusion and storage plants run, fuel and dispatch themselves from one room.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "energy", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Firm Clean Power Premium",
+      description:
+        "Guaranteed carbon-free power around the clock earns the highest prices on the market.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 36 },
+      ],
+    },
+    {
+      name: "Planetary Grid Compacts",
+      description:
+        "Treaty-backed supergrids make the firm the supplier of last resort across continents.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.18 },
+      ],
+    },
+  ],
 };

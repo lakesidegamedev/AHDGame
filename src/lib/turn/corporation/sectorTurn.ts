@@ -35,6 +35,7 @@ import { nationalizationProductivityFactor } from "@/lib/nationalization/transit
 import {
   getSectorTechEffects,
   getSectorTechEffectsForYear,
+  withSunsetPenalty,
   NEUTRAL_TECH_EFFECTS,
 } from "@/lib/constants/techTree";
 import { getCountryConfig } from "@/lib/constants/countries";
@@ -137,21 +138,28 @@ export function processSector(
   // Per-sector tech effects: Corporate-lane bonuses apply to every sector at
   // reduced strength; Sector-lane bonuses apply only to the corp's primary
   // sector type, full strength. Neutral when the feature gate is off.
+  // A retired (sunset) method runs on with dearer inputs, so its penalty
+  // folds into the same aggregate (techTree/sunset).
   const techEffects = techTreesEnabled
-    ? currentYear != null
-      ? getSectorTechEffectsForYear(
-          corp,
-          sector.sectorType,
-          currentYear,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
-      : getSectorTechEffects(
-          corp,
-          sector.sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
+    ? withSunsetPenalty(
+        currentYear != null
+          ? getSectorTechEffectsForYear(
+              corp,
+              sector.sectorType,
+              currentYear,
+              sector.industryModel,
+              sector.mediaDiscriminator
+            )
+          : getSectorTechEffects(
+              corp,
+              sector.sectorType,
+              sector.industryModel,
+              sector.mediaDiscriminator
+            ),
+        operatingSectorType,
+        sector.strategyId,
+        currentYear
+      )
     : NEUTRAL_TECH_EFFECTS;
   // Normalize host-currency revenue to anchor currency. Recover corrupt values
   // here so NaN cannot spread through corporate totals and tax accruals.

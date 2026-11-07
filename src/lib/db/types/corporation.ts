@@ -995,6 +995,19 @@ export interface Corporation {
    * Audit / future cooldown anchor; absent on corps that have unlocked nothing.
    */
   techDecadeChosenTurn?: Record<string, number>;
+  /**
+   * rdScore this corporation has spent on frontier research: nodes of the
+   * 2039 tier onward plus frontier programmes. Summed per lane it is the world
+   * research that opens breakthrough methods (lib/constants/techTree/breakthrough).
+   * Never decremented except to reverse a failed unlock. Absent ⇒ 0.
+   */
+  frontierResearchSpent?: number;
+  /**
+   * Frontier programmes bought after the last authored tier, by kind
+   * (lib/constants/techTree/frontier). Their effects apply to the primary
+   * sector every turn and never expire. Absent ⇒ none.
+   */
+  frontierProgrammes?: { output?: number; input?: number };
   /** Legal structure of this corporation (e.g. "us_c_corp"). Absent = country default. */
   legalStructure?: import("../../constants/legalStructures").LegalStructureId;
   /** Turn after which the legal structure may be changed again (instant-change cooldown for private corps). */

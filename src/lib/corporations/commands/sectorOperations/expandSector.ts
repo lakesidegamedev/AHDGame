@@ -31,7 +31,12 @@ import {
   DEFAULT_SECTOR_STARTING_WORKERS,
   operatingSectorIdentity,
 } from "@/lib/constants/corporations";
-import { revenuePerCapacityUnit } from "@/lib/constants/capacityEconomy";
+import {
+  capacityRescaleRatio,
+  rescaleBuildQueueForStrategyChange,
+  revenuePerCapacityUnit,
+} from "@/lib/constants/capacityEconomy";
+import { foundingSunsetSuccessor } from "@/lib/corporations/foundingSunsetSuccessor";
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import {
   evaluateMarketEntry,
@@ -404,6 +409,32 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       // this now keeps `sectorTurn`'s `isFlipTurn` (plantsStartTurn == null) from
       // treating a zero-capacity newborn as a legacy sector to convert.
       newSector.plantsStartTurn = currentTurn;
+    }
+
+    // A lane whose default method is retired (sunset) founds on its first
+    // successor open to this corporation. The starter order was priced at the
+    // default mix, so its units convert at the same RPU ratio a retool uses
+    // and the paid value is unchanged.
+    const foundingSuccessor = foundingSunsetSuccessor({
+      lane,
+      corporation,
+      currentYear: quoteYear,
+      techTreesEnabled: gameState?.sectorTechTreesEnabled === true,
+    });
+    if (foundingSuccessor) {
+      newSector.strategyId = foundingSuccessor;
+      if (newSector.buildQueue) {
+        newSector.buildQueue = rescaleBuildQueueForStrategyChange(
+          newSector.buildQueue,
+          capacityRescaleRatio(
+            sectorType,
+            null,
+            foundingSuccessor,
+            industryModel,
+            mediaDiscriminator
+          )
+        );
+      }
     }
 
     let newSectorId: ObjectId;

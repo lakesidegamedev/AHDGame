@@ -629,6 +629,8 @@ export function buildSectorStrategySection(args: {
   techCorpView: TechCorpView;
   techCurrentYear: number;
   techTreesEnabled: boolean;
+  /** World frontier research in this lane, for breakthrough methods. */
+  sectorResearch?: number;
   mediaOperatingModelsEnabled?: boolean;
   shouldRedact: boolean;
   stateResources: Partial<Record<ExtractableResource, number>> | null | undefined;
@@ -802,7 +804,8 @@ export function buildSectorStrategySection(args: {
             techCorpView,
             s,
             techCurrentYear,
-            techTreesEnabled
+            techTreesEnabled,
+            { sectorResearch: args.sectorResearch }
           );
           const projection = projectStrategy(s);
           return {

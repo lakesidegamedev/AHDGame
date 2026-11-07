@@ -14,11 +14,26 @@ import type { SectorStrategy } from "../sectorStrategies";
 import { isDecadeReached } from "./decades";
 import { autoGrantedNodeIds, getUnlockedStrategyIds, type TechCorpView } from "./selectors";
 import { getOperatingSectorType } from "../sectorStrategies";
+import { isBreakthroughReached } from "./breakthrough";
+import { isStrategySunset } from "./sunset";
 
 export interface StrategyAvailability {
   locked: boolean;
-  /** Why it's locked: the world hasn't reached the era, or the corp hasn't unlocked it. */
-  reason?: "era" | "tech";
+  /**
+   * Why it's locked: the world hasn't reached the era, the corp hasn't
+   * unlocked it, the sector's world research has not reached the method's
+   * breakthrough threshold, or the method has been retired (sunset).
+   */
+  reason?: "era" | "tech" | "research" | "sunset";
+}
+
+export interface StrategyAvailabilityWorld {
+  /**
+   * Cumulative world frontier research in the strategy's sector (see
+   * ./breakthrough). Absent keeps every method with a research threshold
+   * closed.
+   */
+  sectorResearch?: number;
 }
 
 /**
@@ -27,11 +42,18 @@ export interface StrategyAvailability {
  */
 export function getStrategyAvailability(
   corp: TechCorpView,
-  strategy: Pick<SectorStrategy, "id" | "minDecade" | "requiresTechUnlock">,
+  strategy: Pick<
+    SectorStrategy,
+    "id" | "minDecade" | "requiresTechUnlock" | "researchThreshold" | "sunsetDecade"
+  >,
   currentYear: number,
-  techTreesEnabled: boolean
+  techTreesEnabled: boolean,
+  world: StrategyAvailabilityWorld = {}
 ): StrategyAvailability {
   if (!techTreesEnabled) return { locked: false };
+  if (isStrategySunset(strategy, currentYear)) {
+    return { locked: true, reason: "sunset" };
+  }
   if (strategy.minDecade && !isDecadeReached(strategy.minDecade, currentYear)) {
     return { locked: true, reason: "era" };
   }
@@ -54,5 +76,29 @@ export function getStrategyAvailability(
       return { locked: true, reason: "tech" };
     }
   }
+  if (!isBreakthroughReached(strategy, world.sectorResearch)) {
+    return { locked: true, reason: "research" };
+  }
   return { locked: false };
+}
+
+/**
+ * True when the method carries no tech gate at all: no era, unlock,
+ * breakthrough threshold or sunset. Automated pickers that do not run the
+ * per-corporation availability check (the extraction autopilot, seed
+ * placement) choose only from these, so a gated method never reaches a site
+ * by the back door.
+ */
+export function isUngatedStrategy(
+  strategy: Pick<
+    SectorStrategy,
+    "minDecade" | "requiresTechUnlock" | "researchThreshold" | "sunsetDecade"
+  >
+): boolean {
+  return (
+    !strategy.minDecade &&
+    !strategy.requiresTechUnlock &&
+    strategy.researchThreshold == null &&
+    !strategy.sunsetDecade
+  );
 }

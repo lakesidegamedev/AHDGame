@@ -19,6 +19,7 @@ import {
   type ExtractableResource,
 } from "@/lib/constants/commodities";
 import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
+import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
 import {
   getExtractionStrategyResources,
   isExtractionStrategyZeroYield,
@@ -273,7 +274,7 @@ export function focusedStrategyByResource(): Map<
     { id: string; supply: Partial<Record<string, number>> }
   >();
   for (const strat of SECTOR_STRATEGIES.extraction ?? []) {
-    if (strat.id === "standard") continue;
+    if (strat.id === "standard" || !isUngatedStrategy(strat)) continue;
     for (const r of getExtractionStrategyResources(strat)) {
       const rate = strat.supply[r] ?? 0;
       const cur = out.get(r);
@@ -341,7 +342,9 @@ export async function processExtractionAutoStrategy(
   const plantsEnabled = marketAtLeast(marketMode, "plants");
   const clearingEnabled = marketAtLeast(marketMode, "clearing");
   const localInputsEnabled = clearingEnabled && config?.freightSettlementMode === "active";
-  const strategies = SECTOR_STRATEGIES.extraction ?? [];
+  // The autopilot skips the per-corporation tech check, so it only picks
+  // methods with no tech gate.
+  const strategies = (SECTOR_STRATEGIES.extraction ?? []).filter(isUngatedStrategy);
   const strategyCommodities = new Set<CommodityType>(EXTRACTABLE_RESOURCES);
   for (const strategy of strategies) {
     for (const commodity of [...Object.keys(strategy.supply), ...Object.keys(strategy.demand)]) {
@@ -660,6 +663,12 @@ export async function processExtractionAutoStrategy(
       if (s.transitionCooldownUntilTurn != null && currentTurn < s.transitionCooldownUntilTurn)
         continue;
       if (isParentDirectedStrategyProtected(s, currentTurn)) continue;
+      // A mine on a gated method (space resources) chose it through the tech
+      // tree; the autopilot cannot score it, so it leaves the mine alone.
+      const onGated = (SECTOR_STRATEGIES.extraction ?? []).some(
+        (x) => x.id === s.strategyId && !isUngatedStrategy(x)
+      );
+      if (onGated) continue;
       const countryId = s.countryId ?? nppCountryById.get(s.corporationId?.toString() ?? "");
       const priceRatioOf: LaggedPriceRatioFn = (commodity) =>
         laggedPriceRatioForCountry(priceByCommodity.get(commodity), countryId);
@@ -826,7 +835,9 @@ export async function processExtractionAutoStrategy(
       .toArray();
     for (const sector of stateCompanySectors) {
       const stateRes = capByState.get(sector.stateId);
-      const recipe = strategies.find((x) => x.id === (sector.strategyId ?? "standard"));
+      const recipe = (SECTOR_STRATEGIES.extraction ?? []).find(
+        (x) => x.id === (sector.strategyId ?? "standard")
+      );
       if (stateRes === undefined || !recipe) continue;
       if (!isExtractionStrategyZeroYield(recipe, stateRes)) continue;
       deadDepositMothballs.push(sector);

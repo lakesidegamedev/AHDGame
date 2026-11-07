@@ -515,4 +515,51 @@ export const FINANCIAL_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Autonomous Bank Operations",
+      description: "Agents run every account from opening to closing with no back office.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.065 },
+        { kind: "outputRate", commodity: "financial_services", pct: 0.05 },
+      ],
+    },
+    {
+      name: "Lifetime Outcome Advice",
+      description: "Advice paid on clients' lifetime results holds a premium.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Machine-Readable Regulation",
+      description: "Rules written as code are met automatically, so examiners find nothing.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.1 },
+        { kind: "tariffShield", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Self-Clearing Markets",
+      description: "Agents lend, trade and settle with each other with no human desk.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "financial_services", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Dynasty Wealth Agents",
+      description: "Agents that guard family fortunes across generations price at the top.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 32 },
+      ],
+    },
+    {
+      name: "Planetary Settlement Network",
+      description: "Settlement every bloc trusts keeps capital moving through any sanction regime.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

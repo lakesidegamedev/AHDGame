@@ -46,6 +46,13 @@ interface StrategyPanelProps {
   onReviewComplete?: () => void;
 }
 
+/** Short player copy for why a production method cannot be picked. */
+function lockReasonLabel(reason: string | null | undefined): string {
+  if (reason === "research") return "awaiting a research breakthrough in this sector";
+  if (reason === "sunset") return "retired, closed to new sites";
+  return reason ?? "locked";
+}
+
 /**
  * A strategy's whole effect is the commodity supply/demand mix it imposes, which
  * lands on BOTH the effective margin and realized revenue. Combine the two legs
@@ -336,7 +343,7 @@ export default function StrategyPanel({
                             : zeroYield
                               ? "no deposits in this state"
                               : s.locked
-                                ? (s.lockReason ?? "locked")
+                                ? lockReasonLabel(s.lockReason)
                                 : s.projectedRevenuePerTurn != null
                                   ? `≈ ${formatAmount(s.projectedRevenuePerTurn, liquidCode)}/turn gross`
                                   : ""}

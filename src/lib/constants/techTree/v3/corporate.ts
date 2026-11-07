@@ -544,4 +544,51 @@ export const CORPORATE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Autonomous Operations Grid",
+      description:
+        "Agents and robots run every site as one system with a small human steering group.",
+      effects: [
+        { kind: "logisticsStrength", flat: 22 },
+        { kind: "growthCostReduction", pct: 0.035 },
+      ],
+    },
+    {
+      name: "Generated Brand Worlds",
+      description: "Each market gets its own living brand, refreshed as tastes shift.",
+      effects: [{ kind: "marketingStrength", flat: 24 }],
+    },
+    {
+      name: "Synthetic Workforce Governance",
+      description:
+        "Published rules for agent and robot staff keep the firm ahead of labor regulators.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Self-Governing Enterprise",
+      description: "Agents run finance, staffing and planning, with people only setting goals.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "growthCostReduction", pct: 0.08 },
+      ],
+    },
+    {
+      name: "Market-Making Brands",
+      description: "Brands so trusted that agents buy them by default set the price for everyone.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 32 },
+      ],
+    },
+    {
+      name: "Planetary Risk Compacts",
+      description:
+        "Shared risk pacts with governments keep the firm operating through any regional crisis.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.18 },
+      ],
+    },
+  ],
 };

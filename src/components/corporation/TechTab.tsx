@@ -91,6 +91,15 @@ interface TechResponse {
   breakthroughChance?: number | null;
   breakthroughInterval?: number;
   decades?: TechDecade[];
+  frontier?: {
+    open: boolean;
+    outputCount: number;
+    inputCount: number;
+    nextCost: number;
+    outputPctPerProgramme: number;
+    inputPctPerProgramme: number;
+    affordable: boolean;
+  } | null;
 }
 interface TechTabProps {
   corporationId: string;
@@ -184,6 +193,31 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
       setConfirmAbandon(null);
     }
   }, [confirmAbandon, corporationId, load]);
+
+  const doFrontier = useCallback(
+    async (kind: "output" | "input") => {
+      setBusyNode(`frontier-${kind}`);
+      setMsg(null);
+      try {
+        const res = await fetch(`/api/corporation/${corporationId}/tech/frontier`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind }),
+        });
+        const json = (await res.json()) as { error?: string };
+        if (!res.ok) setMsg({ kind: "err", text: apiErrorText(json, "Programme failed") });
+        else {
+          setMsg({ kind: "ok", text: "Frontier programme funded." });
+          await load();
+        }
+      } catch {
+        setMsg({ kind: "err", text: "Programme failed" });
+      } finally {
+        setBusyNode(null);
+      }
+    },
+    [corporationId, load]
+  );
 
   const reached = useMemo(() => (data?.decades ?? []).filter((d) => d.reached), [data]);
   const current = useMemo(
@@ -365,6 +399,47 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
           onUnlock={(node, lane) => setConfirmNode({ node, lane, decade: current.id })}
           onAbandon={() => setConfirmAbandon(current)}
         />
+      )}
+
+      {data.frontier && current && current.id === data.decades?.[data.decades.length - 1]?.id && (
+        <DenseSection title="Frontier programmes">
+          <div className="space-y-2 py-1 text-xs text-muted">
+            <p>
+              After the last research tier, R&amp;D funds repeatable programmes for your primary
+              sector. Each output programme adds {data.frontier.outputPctPerProgramme}% plant
+              output, each input programme cuts plant inputs by {data.frontier.inputPctPerProgramme}
+              %, and each one costs 15% more than the last. The plant output and input caps above
+              still apply.
+            </p>
+            <p>
+              Funded so far:{" "}
+              <span className="text-foreground">
+                {data.frontier.outputCount} output, {data.frontier.inputCount} input
+              </span>
+              . Next programme:{" "}
+              <span className="text-foreground">{data.frontier.nextCost} R&amp;D points</span>.
+            </p>
+            {!data.frontier.open ? (
+              <p>Finish this tier&apos;s nine core technologies in your track to open them.</p>
+            ) : (
+              viewerIsCeo && (
+                <div className="flex flex-wrap gap-2">
+                  {(["output", "input"] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      disabled={!data.frontier?.affordable || busyNode != null}
+                      onClick={() => void doFrontier(kind)}
+                      className="rounded border border-card-border px-2 py-1 text-foreground hover:bg-card-elevated disabled:opacity-40"
+                    >
+                      {kind === "output" ? "Fund output programme" : "Fund input programme"}
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </DenseSection>
       )}
 
       {history.length > 0 && (

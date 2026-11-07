@@ -460,4 +460,45 @@ export const DEFENSE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Self-Running Munitions Plants",
+      description: "Plants hold full output with almost no staff.",
+      effects: [{ kind: "laborCostReduction", pct: 0.065 }],
+    },
+    {
+      name: "Simulation-Proven Systems",
+      description: "Millions of simulated battles back every sales claim.",
+      effects: [{ kind: "marketingStrength", flat: 22 }],
+    },
+    {
+      name: "Sovereign Supplier Status",
+      description: "Cleared supplier status locks foreign rivals out of the order book.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Autonomous Arsenal Lines",
+      description: "Robot lines build uncrewed craft and munitions around the clock.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "ordnance", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Cislunar Defense Showcases",
+      description: "Live demonstrations beyond orbit set the price ceiling for the industry.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 40 },
+      ],
+    },
+    {
+      name: "Alliance Arsenal Compacts",
+      description: "Shared arsenals across allies make partner capacity cheap and duty-free.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
 };

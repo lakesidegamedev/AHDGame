@@ -552,4 +552,52 @@ export const LOGISTICS_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Self-Dispatching Fleets",
+      description: "Vehicles assign themselves to loads with no dispatch office.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.065 },
+        { kind: "inputCost", commodity: "vehicles", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Guaranteed Minute Delivery",
+      description: "Delivery guaranteed to the minute prices capacity at its true worth.",
+      effects: [
+        { kind: "plantOutput", pct: 0.019 },
+        { kind: "laborCostReduction", pct: 0.022 },
+      ],
+    },
+    {
+      name: "Net-Negative Freight Certification",
+      description: "A certified carbon-negative fleet clears every access rule and border charge.",
+      effects: [{ kind: "tariffShield", pct: 0.14 }],
+    },
+    {
+      name: "Planet-Scale Flow Network",
+      description: "One network plans, prices and moves freight worldwide without planners.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "logisticsStrength", flat: 40 },
+      ],
+    },
+    {
+      name: "Suborbital Express Services",
+      description: "Suborbital hops sell guaranteed same-day delivery anywhere on Earth.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "freight", pct: 0.085 },
+      ],
+    },
+    {
+      name: "Planetary Supply Compacts",
+      description:
+        "Treaty networks make the firm part of supply security for whole regions of the world.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
 };

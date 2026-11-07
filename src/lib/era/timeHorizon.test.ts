@@ -31,8 +31,10 @@ describe("time horizon contract: 2027 to 2060", () => {
     }
     expect(getDecadeForYear(2045).id).toBe("2039");
     expect(getDecadeForYear(2045).label).toBe("2039-2049");
-    expect(getDecadeForYear(2050).label).toBe("2039+");
-    expect(getDecadeForYear(2051).label).toBe("2039+");
+    expect(getDecadeForYear(2051).id).toBe("2049");
+    expect(getDecadeForYear(2051).label).toBe("2049-2059");
+    expect(getDecadeForYear(2060).label).toBe("2049+");
+    expect(getDecadeForYear(2075).label).toBe("2049+");
     expect(getDecadeForYear(LAST_TIER.startYear).label).toBe(LAST_TIER.label);
   });
 

@@ -37,6 +37,7 @@ export const TECH_DECADES: readonly TechDecade[] = [
   { id: "2019", label: "2019–2029", startYear: 2019, endYear: 2029 },
   { id: "2029", label: "2029–2039", startYear: 2029, endYear: 2039 },
   { id: "2039", label: "2039-2049", startYear: 2039, endYear: 2049 },
+  { id: "2049", label: "2049-2059", startYear: 2049, endYear: 2059 },
 ] as const;
 
 export type TechDecadeId = (typeof TECH_DECADES)[number]["id"];

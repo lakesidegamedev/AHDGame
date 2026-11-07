@@ -51,13 +51,22 @@ import {
 } from "@/lib/corporations/shortageRetool";
 import type { CommodityPrice } from "@/lib/db/types";
 import type { CommodityType } from "@/lib/constants/commodities";
-import { getStrategyAvailability } from "@/lib/constants/techTree";
+import { getStrategyAvailability, sunsetRetoolCostMultiplier } from "@/lib/constants/techTree";
+import { loadSectorFrontierResearch } from "@/lib/corporations/techTree/frontierResearch";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
+
+const STRATEGY_LOCK_MESSAGE: Record<"era" | "tech" | "research" | "sunset", string> = {
+  era: "This production method is not available in this era yet.",
+  tech: "Unlock this production method in the Tech tree first.",
+  research:
+    "This production method needs more research across its sector before anyone can build it.",
+  sunset: "This production method has been retired and is closed to new sites.",
+};
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -192,6 +201,11 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     if (operatingModel && currentYear < operatingModel.availableFromYear) {
       return errorResponse(400, "This business model is not available in this era yet.");
     }
+    // Breakthrough methods also need the sector's world research total.
+    const sectorResearch =
+      techTreesEnabled && targetStrategy.researchThreshold != null
+        ? await loadSectorFrontierResearch(db, sectorType)
+        : undefined;
     const availability = getStrategyAvailability(
       {
         type: corporation.type,
@@ -201,16 +215,20 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       },
       targetStrategy,
       currentYear,
-      techTreesEnabled
+      techTreesEnabled,
+      { sectorResearch }
     );
     if (availability.locked) {
-      return errorResponse(
-        400,
-        availability.reason === "era"
-          ? "This production method is not available in this era yet."
-          : "Unlock this production method in the Tech tree first."
-      );
+      return errorResponse(400, STRATEGY_LOCK_MESSAGE[availability.reason ?? "tech"]);
     }
+    // Retiring a sunset method for one of its named successors is discounted.
+    const sunsetCostMultiplier = techTreesEnabled
+      ? sunsetRetoolCostMultiplier(
+          strategies.find((s) => s.id === currentStrategyId),
+          strategyId,
+          currentYear
+        )
+      : 1;
 
     // Check cooldown
     if (
@@ -267,7 +285,9 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
             sector.revenue,
             resolveSectorHostCurrencyCode(sector, corporation),
             sectorHostRate
-          ) * STRATEGY_RETOOL_COST_FRACTION;
+          ) *
+          STRATEGY_RETOOL_COST_FRACTION *
+          sunsetCostMultiplier;
     // Foreign-sector FX friction (symmetry with the foreign operating-income
     // spread): retooling a sector in a different-currency country incurs the
     // reduced sector spread on top of the base cost, routed to the CB system.
@@ -291,7 +311,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
           anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate),
           corporation.liquidCapital,
           resolveCorpLiquidCurrencyCode(corporation)
-        ) + " (25% of daily revenue, incl. FX on foreign sector)."
+        ) +
+          (sunsetCostMultiplier < 1
+            ? " (discounted conversion from a retired method, incl. FX on foreign sector)."
+            : " (25% of daily revenue, incl. FX on foreign sector).")
       );
     }
 
