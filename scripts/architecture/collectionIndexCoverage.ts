@@ -35,6 +35,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   productAdvertisingClearances: "Append-only receipts, inserted and looked up by payable _id.",
   turnWorkerControl:
     "One singleton (_id 'current'): the turn worker's heartbeat and the single open admin turn request, read and written by _id.",
+  partyRenewalStates:
+    "One document per country, read in one bounded $in by the renewal phase and by country _id in the party frontier; history lives inside it.",
   marketAdjustmentSignals:
     "One document per country, upserted and read by its country _id; the 12-point history lives inside it.",
 };

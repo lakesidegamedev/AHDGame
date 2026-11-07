@@ -111,6 +111,7 @@ import {
   deriveGroupLeans,
 } from "@/lib/uk/manifesto/electionManifestoResolver";
 import { buildCurrentRegistrationBaseline } from "./electionFormulaFactors";
+import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
 import {
   castRankedBallots,
   mergeRankedBallots,
@@ -241,6 +242,7 @@ export async function accumulateVoteTurn(
   let regionDemographics: RegionDemographics | null = null;
   let demographicsV2Active = false;
   let votingAge = 18;
+  let partyRenewalEnabled = false;
 
   if (options?.preload) {
     state = options.preload.stateMap.get(stateId) ?? null;
@@ -259,6 +261,7 @@ export async function accumulateVoteTurn(
     demographicsV2Active =
       options.preload.demographicsV2Countries?.has(election.countryId ?? "US") === true;
     votingAge = options.preload.votingAgeByCountry?.get(election.countryId ?? "US") ?? 18;
+    partyRenewalEnabled = options.preload.partyRenewalEnabled === true;
   } else {
     const [s, d, c, spo, t, rp, gs] = await Promise.all([
       db.collection<State>("states").findOne({ _id: stateId, countryId: election.countryId }),
@@ -293,6 +296,7 @@ export async function accumulateVoteTurn(
             resetWorldId: 1,
             resetVersionSeeds: 1,
             demographicsSystemVersion: 1,
+            nppPartyRenewalEnabled: 1,
           },
         }
       ),
@@ -305,6 +309,7 @@ export async function accumulateVoteTurn(
     registrationPool = rp;
     preset = gs?.preset;
     eraYear = eraYearContextFromGameState(gs);
+    partyRenewalEnabled = gs?.nppPartyRenewalEnabled === true;
     demographicsV2Active =
       resetSystemVersionsForCountry(gs, RESET_V2_READY, election.countryId ?? "US").demographics ===
       "v2";
@@ -671,71 +676,70 @@ export async function accumulateVoteTurn(
       .filter((id): id is string => Boolean(id))
   );
 
-  const [
-    incumbentSeatShareByParty,
-    fundsByParty,
-    president,
-    govExecutive,
-    legInc,
-    governingPartyIds,
-  ] = await Promise.all([
-    // A1 — share-weighted incumbency. Prior-cycle vote-share for this seat so
-    // the swing-flow engine's incumbency driver can scale lift / drag by how
-    // much each party was defending. Empty Map when no prior cycle exists
-    // (driver returns 0, matching open-seat semantics). General elections
-    // only — primaries don't route through the swing-flow engine. Races with
-    // an officeholder incumbency path (US Senate, and single-winner executives
-    // such as governor / president) are excluded by `usesSeatShareIncumbency`
-    // inside the resolver: they use the flat-shield / approval-curve paths
-    // below, never the raw-vote-share fallback, which would price a meaningless
-    // margin for a single winner — and on a VACANT seat would hand out an
-    // incumbency bonus with no incumbent behind it.
-    isGeneralElection
-      ? (options?.preload?.incumbentSeatShareByElection?.get(electionId.toString()) ??
-        getIncumbentSeatShareByParty(election, db))
-      : undefined,
-    // Money driver. Aggregate per-party recent spend across all campaigns
-    // in the race (carried stock plus this turn's accumulator). Reads
-    // spend persistence, not treasury balance; the `campaignSpendReset`
-    // phase folds the accumulator into the decaying stock after this
-    // accumulator runs.
-    isGeneralElection
-      ? options?.preload?.fundsByPartyByElection
-        ? (options.preload.fundsByPartyByElection.get(electionId.toString()) ??
-          new Map<string, number>())
-        : getFundsByPartyForElection(electionId, db)
-      : undefined,
-    // Presidential coattail: the sitting President's party gets an
-    // approval-driven nominal-share nudge in every down-ballot general
-    // nationwide (US only). Excludes the presidential race itself. A vacant
-    // presidency or a party not present in this race no-ops to neutral.
-    isGeneralElection && !isOwnHeadOfGovernmentRace
-      ? memoized(memo?.presidentByCountry, electionCountryId, () =>
-          resolvePresidentApproval(db, electionCountryId)
-        )
-      : undefined,
-    // Governor coattail (§7.3.2 govModifier) — the sitting regional
-    // executive's party gets a small nominal-share bonus in its own state's
-    // down-ballot generals, and the own-race path feeds the same approval
-    // into the incumbency driver.
-    wantsGovCoattail || wantsOwnExecIncumbency
-      ? memoized(memo?.govExecutiveByState, `${electionCountryId}:${stateId}`, () =>
-          resolveGovExecutiveApproval(db, electionCountryId, stateId)
-        )
-      : undefined,
-    // Single-seat legislative own-race (US Senate): flat incumbency shield
-    // keyed to the sitting senator, decaying with tenure to a +1 floor. Null
-    // (skipped) for open seats / incumbent not running / non-senate races.
-    isGeneralElection
-      ? options?.preload?.legislativeIncumbentByElection
-        ? options.preload.legislativeIncumbentByElection.get(electionId.toString())
-        : resolveSingleSeatLegislativeIncumbent(election, runningIdentities, db)
-      : undefined,
-    wantsMidtermOppositionBoost
-      ? (options?.preload?.governingPartyIdsByCountry?.get(electionCountryId) ??
-        resolveGoverningPartyIds(db, electionCountryId))
-      : undefined,
-  ]);
+  const [priorSeatShareByParty, fundsByParty, president, govExecutive, legInc, governingPartyIds] =
+    await Promise.all([
+      // A1 — share-weighted incumbency. Prior-cycle vote-share for this seat so
+      // the swing-flow engine's incumbency driver can scale lift / drag by how
+      // much each party was defending. Empty Map when no prior cycle exists
+      // (driver returns 0, matching open-seat semantics). General elections
+      // only — primaries don't route through the swing-flow engine. Races with
+      // an officeholder incumbency path (US Senate, and single-winner executives
+      // such as governor / president) are excluded by `usesSeatShareIncumbency`
+      // inside the resolver: they use the flat-shield / approval-curve paths
+      // below, never the raw-vote-share fallback, which would price a meaningless
+      // margin for a single winner — and on a VACANT seat would hand out an
+      // incumbency bonus with no incumbent behind it.
+      isGeneralElection
+        ? (options?.preload?.incumbentSeatShareByElection?.get(electionId.toString()) ??
+          getIncumbentSeatShareByParty(election, db))
+        : undefined,
+      // Money driver. Aggregate per-party recent spend across all campaigns
+      // in the race (carried stock plus this turn's accumulator). Reads
+      // spend persistence, not treasury balance; the `campaignSpendReset`
+      // phase folds the accumulator into the decaying stock after this
+      // accumulator runs.
+      isGeneralElection
+        ? options?.preload?.fundsByPartyByElection
+          ? (options.preload.fundsByPartyByElection.get(electionId.toString()) ??
+            new Map<string, number>())
+          : getFundsByPartyForElection(electionId, db)
+        : undefined,
+      // Presidential coattail: the sitting President's party gets an
+      // approval-driven nominal-share nudge in every down-ballot general
+      // nationwide (US only). Excludes the presidential race itself. A vacant
+      // presidency or a party not present in this race no-ops to neutral.
+      isGeneralElection && !isOwnHeadOfGovernmentRace
+        ? memoized(memo?.presidentByCountry, electionCountryId, () =>
+            resolvePresidentApproval(db, electionCountryId)
+          )
+        : undefined,
+      // Governor coattail (§7.3.2 govModifier) — the sitting regional
+      // executive's party gets a small nominal-share bonus in its own state's
+      // down-ballot generals, and the own-race path feeds the same approval
+      // into the incumbency driver.
+      wantsGovCoattail || wantsOwnExecIncumbency
+        ? memoized(memo?.govExecutiveByState, `${electionCountryId}:${stateId}`, () =>
+            resolveGovExecutiveApproval(db, electionCountryId, stateId)
+          )
+        : undefined,
+      // Single-seat legislative own-race (US Senate): flat incumbency shield
+      // keyed to the sitting senator, decaying with tenure to a +1 floor. Null
+      // (skipped) for open seats / incumbent not running / non-senate races.
+      isGeneralElection
+        ? options?.preload?.legislativeIncumbentByElection
+          ? options.preload.legislativeIncumbentByElection.get(electionId.toString())
+          : resolveSingleSeatLegislativeIncumbent(election, runningIdentities, db)
+        : undefined,
+      wantsMidtermOppositionBoost
+        ? (options?.preload?.governingPartyIdsByCountry?.get(electionCountryId) ??
+          resolveGoverningPartyIds(db, electionCountryId))
+        : undefined,
+    ]);
+  // Party renewal bounds the ratchet: past half the seats, no further shield.
+  const incumbentSeatShareByParty =
+    priorSeatShareByParty && partyRenewalEnabled
+      ? capIncumbentSeatShares(priorSeatShareByParty)
+      : priorSeatShareByParty;
 
   const presidentialModifierByParty =
     isGeneralElection && !isOwnHeadOfGovernmentRace

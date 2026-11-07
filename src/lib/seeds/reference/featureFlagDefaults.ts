@@ -55,6 +55,8 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   nppAutonomyEnabled: true,
   // NPP death and retirement, independent of the autonomy level.
   nppTurnoverEnabled: true,
+  // NPP parties splinter, found and fold; bounds the seat-share ratchet.
+  nppPartyRenewalEnabled: true,
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
   nppOffensiveInitiationEnabled: true,

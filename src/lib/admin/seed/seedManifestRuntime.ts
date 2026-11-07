@@ -375,6 +375,12 @@ export const RUNTIME: CollectionEntry[] = [
       "World-local government state, confidence history and confidenceSnapStartTurn replay guard. Cleared on world reset so a new world's snap elections start without an old reset marker.",
   },
   { name: "governmentAccountability", category: "runtime" },
+  {
+    name: "partyRenewalStates",
+    category: "runtime",
+    notes:
+      "Per-country party renewal history: the last two national election snapshots, recently held regions and renewal events. Cycle-indexed, so it resets with the world.",
+  },
   { name: "parliamentaryGovernments", category: "runtime" },
   { name: "ukCabinetCooldowns", category: "runtime" },
   { name: "ukGovernment", category: "runtime" },

@@ -569,12 +569,40 @@ export async function processMergeProposal(
   currentTurn: number
 ): Promise<void> {
   if (!proposal.merge) throw new Error("Not a merge proposal");
+  return mergePartyInto(db, proposal.partyId, proposal.merge.targetPartyId, currentTurn);
+}
 
+/** How a merger is admitted. Committee mergers use the defaults. */
+export interface MergePartyOptions {
+  /**
+   * Require live geographic contact and preserved territory. A party folded
+   * by party renewal joins its ideological neighbour wherever it sits.
+   */
+  requireAdjacency?: boolean;
+  /**
+   * Cull incoming NPPs over the per-region and national recruitment caps. A
+   * fold keeps every NPP so no seat-holder is deleted by the move.
+   */
+  enforceNppCap?: boolean;
+}
+
+/**
+ * Absorb `sourcePartyId` into `targetPartyId`: members, treasury, state org,
+ * NPPs, live candidacies, elected seats and coalition slots move to the
+ * target, and the source is marked defunct.
+ */
+export async function mergePartyInto(
+  db: Db,
+  sourcePartyId: ObjectId,
+  targetPartyId: ObjectId,
+  currentTurn: number,
+  options: MergePartyOptions = {}
+): Promise<void> {
+  const requireAdjacency = options.requireAdjacency !== false;
+  const enforceNppCap = options.enforceNppCap !== false;
   const [proposingParty, targetParty] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").findOne({ _id: proposal.partyId }),
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ _id: proposal.merge.targetPartyId }),
+    db.collection<PoliticalParty>("politicalParties").findOne({ _id: sourcePartyId }),
+    db.collection<PoliticalParty>("politicalParties").findOne({ _id: targetPartyId }),
   ]);
   if (!proposingParty) throw new Error("Proposing party not found");
   if (!targetParty) throw new Error("Target party not found");
@@ -588,18 +616,23 @@ export async function processMergeProposal(
       // Another merger may have completed between the initial lookup and claim.
       // Use fresh party status, balances and membership after admission.
       const [proposingParty, targetParty] = await Promise.all([
-        db.collection<PoliticalParty>("politicalParties").findOne({ _id: proposal.partyId }),
-        db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ _id: proposal.merge!.targetPartyId }),
+        db.collection<PoliticalParty>("politicalParties").findOne({ _id: sourcePartyId }),
+        db.collection<PoliticalParty>("politicalParties").findOne({ _id: targetPartyId }),
       ]);
-      if (!proposingParty || !targetParty) {
+      if (
+        !proposingParty ||
+        !targetParty ||
+        proposingParty._id.equals(targetParty._id) ||
+        proposingParty.isDefunct ||
+        targetParty.isDefunct ||
+        proposingParty.countryId !== targetParty.countryId
+      ) {
         throw new MergeEligibilityError(
           "A merger requires two active parties in the same country."
         );
       }
       // Check before moving anyone: incoming members must not validate their own merger.
-      await assertMergeEligibility(db, proposingParty, targetParty);
+      if (requireAdjacency) await assertMergeEligibility(db, proposingParty, targetParty);
 
       const proposingStrId = String(proposingParty.sequentialId);
       const targetStrId = String(targetParty.sequentialId);
@@ -746,16 +779,25 @@ export async function processMergeProposal(
       //     0..100 reg invariant is preserved (the merged party's lean is lost, not
       //     inherited), then delete the rows so the defunct party stops surfacing in
       //     state Org/Reg views.
-      for (const org of proposingOrgs) {
-        const reg = typeof org.registration === "number" ? org.registration : 0;
-        if (reg > 0) {
-          await db
-            .collection<StateRegistrationPool>("stateRegistrationPool")
-            .updateOne(
-              { _id: `${countryId}_${org.stateId}` },
-              { $inc: { unregistered: reg }, $set: { updatedAt: now } }
-            );
+      const registrationReleases = proposingOrgs.flatMap(
+        (org): AnyBulkWriteOperation<StateRegistrationPool>[] => {
+          const reg = typeof org.registration === "number" ? org.registration : 0;
+          return reg > 0
+            ? [
+                {
+                  updateOne: {
+                    filter: { _id: `${countryId}_${org.stateId}` },
+                    update: { $inc: { unregistered: reg }, $set: { updatedAt: now } },
+                  },
+                },
+              ]
+            : [];
         }
+      );
+      if (registrationReleases.length > 0) {
+        await db
+          .collection<StateRegistrationPool>("stateRegistrationPool")
+          .bulkWrite(registrationReleases, { ordered: false });
       }
       await statePartyOrgCol.deleteMany({ partyId: proposingStrId, countryId });
 
@@ -820,53 +862,59 @@ export async function processMergeProposal(
         )
         .toArray();
 
-      // Surviving party's POST-merge org per state (re-read after step 4 merged it).
-      const targetOrgs = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .find({ partyId: targetStrId, countryId })
-        .toArray();
-      const targetOrgByState = new Map<string, number>(
-        targetOrgs.map((o) => [o.stateId, o.organization ?? 0])
-      );
-
-      // Surviving party's existing active NPP count per state — these consume slots
-      // before any incoming NPP does.
-      const targetActiveNpps = await db
-        .collection<NPP>("npps")
-        .find({ party: targetStrId, countryId, retiredAt: null }, { projection: { homeState: 1 } })
-        .toArray();
-      const targetActiveCountByState = new Map<string, number>();
-      for (const n of targetActiveNpps) {
-        targetActiveCountByState.set(
-          n.homeState,
-          (targetActiveCountByState.get(n.homeState) ?? 0) + 1
+      const selectCull = async (): Promise<ObjectId[]> => {
+        // Surviving party's POST-merge org per state (re-read after step 4 merged it).
+        const targetOrgs = await db
+          .collection<StatePartyOrg>("statePartyOrg")
+          .find({ partyId: targetStrId, countryId })
+          .toArray();
+        const targetOrgByState = new Map<string, number>(
+          targetOrgs.map((o) => [o.stateId, o.organization ?? 0])
         );
-      }
 
-      const { keep, cull } = selectMergeNppCull({
-        proposingNpps: proposingActiveNpps,
-        targetActiveCountByState,
-        targetOrgByState,
-      });
-      // Members have already moved in step 1, so this counts the combined party's
-      // distinct, non-banned active players at resolution, not at proposal time.
-      const { maxNpps } = await getPartyNppCapacity(db, countryId, targetStrId, now);
-      const toRank = (n: NPP) => ({
-        id: n._id.toString(),
-        politicalInfluence: n.politicalInfluence,
-        favorability: n.favorability,
-      });
-      const nationalCull = new Set(
-        selectNationalMergeNppCull({
-          survivingNpps: targetActiveNpps.map((n) => ({ id: n._id.toString() })),
-          incomingNpps: keep.map(toRank),
-          maxNpps,
-        })
-      );
-      const cullIds = [
-        ...cull.map((n) => n._id),
-        ...keep.filter((n) => nationalCull.has(n._id.toString())).map((n) => n._id),
-      ];
+        // Surviving party's existing active NPP count per state — these consume slots
+        // before any incoming NPP does.
+        const targetActiveNpps = await db
+          .collection<NPP>("npps")
+          .find(
+            { party: targetStrId, countryId, retiredAt: null },
+            { projection: { homeState: 1 } }
+          )
+          .toArray();
+        const targetActiveCountByState = new Map<string, number>();
+        for (const n of targetActiveNpps) {
+          targetActiveCountByState.set(
+            n.homeState,
+            (targetActiveCountByState.get(n.homeState) ?? 0) + 1
+          );
+        }
+
+        const { keep, cull } = selectMergeNppCull({
+          proposingNpps: proposingActiveNpps,
+          targetActiveCountByState,
+          targetOrgByState,
+        });
+        // Members have already moved in step 1, so this counts the combined party's
+        // distinct, non-banned active players at resolution, not at proposal time.
+        const { maxNpps } = await getPartyNppCapacity(db, countryId, targetStrId, now);
+        const toRank = (n: NPP) => ({
+          id: n._id.toString(),
+          politicalInfluence: n.politicalInfluence,
+          favorability: n.favorability,
+        });
+        const nationalCull = new Set(
+          selectNationalMergeNppCull({
+            survivingNpps: targetActiveNpps.map((n) => ({ id: n._id.toString() })),
+            incomingNpps: keep.map(toRank),
+            maxNpps,
+          })
+        );
+        return [
+          ...cull.map((n) => n._id),
+          ...keep.filter((n) => nationalCull.has(n._id.toString())).map((n) => n._id),
+        ];
+      };
+      const cullIds = enforceNppCap ? await selectCull() : [];
 
       // Re-point every absorbed NPP that survives (kept active + all retired) to the
       // target in a single pass; the cull set is excluded.

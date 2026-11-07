@@ -48,6 +48,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "nppBillSponsorship",
   "generateChallengers",
   "nppBehavior",
+  "nppPartyRenewal",
   "playerEndorsementPartySweep",
   "billLifecycle",
   "stateBillTimers",

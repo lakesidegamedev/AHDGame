@@ -8,6 +8,7 @@ import { processStatePartyElections } from "@/lib/statePartyElections";
 import { processNationalPartyElections } from "@/lib/nationalPartyElections";
 import { processNationalCommitteeElections } from "@/lib/nationalCommitteeElections";
 import { processNPPTurn } from "@/lib/turn/nppBehavior";
+import { processPartyRenewal } from "@/lib/parties/partyRenewal";
 import { processChallengerGeneration } from "@/lib/turn/npp/challengerSupply";
 import { processNppBillSponsorship } from "@/lib/turn/npp/billSponsorship";
 import { processBillLifecycle } from "@/lib/billLifecycle";
@@ -961,6 +962,13 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             speakerVotesCast: nppResult.speakerVotes,
           };
         }
+
+        // Party renewal (#5704): after a national general election, NPP-run
+        // parties may splinter, found or fold. Gated by the game-state flag.
+        const renewalResult = await runtime.runPhase("nppPartyRenewal", () =>
+          processPartyRenewal(db, newTurn)
+        );
+        if (renewalResult) phaseResults.nppPartyRenewal = renewalResult;
       },
     },
     {
