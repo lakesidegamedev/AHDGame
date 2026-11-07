@@ -9,6 +9,7 @@ import { POLITICAL_METRIC_FAMILIES } from "../../politicalMetrics/families";
 import { budgetKeyForLaw } from "../budgetKeys";
 import { getCatalog, getEraCatalog, getLaw } from "../catalog";
 import { lawTargets } from "../dynamics";
+import { validateCatalog } from "../validate";
 import { projectLawToLegislationType } from "../project";
 import type { PoliticalLaw } from "../types";
 import { MODERN_ERA_LAW_SPECS, UK_MODERN_ERA_LAWS, US_MODERN_ERA_LAWS } from "./modernEraLaws";
@@ -33,6 +34,34 @@ const SLUGS_2030 = [
   "pensionAgeIndexation",
   "nuclearLicensingReform",
 ];
+const SLUGS_2035 = [
+  "climateAdaptationFund",
+  "managedRetreat",
+  "basicIncomePilot",
+  "geneEditingRegulation",
+  "spaceTrafficAct",
+];
+const SLUGS_2040 = [
+  "automationDividend",
+  "fourDayWeek",
+  "digitalCurrencyLegalTender",
+  "sovereignWealthFundMandate",
+];
+const FROM_BY_SLUG = new Map<string, number>([
+  ...SLUGS_2027.map((slug) => [slug, 2027] as const),
+  ...SLUGS_2030.map((slug) => [slug, 2030] as const),
+  ...SLUGS_2035.map((slug) => [slug, 2035] as const),
+  ...SLUGS_2040.map((slug) => [slug, 2040] as const),
+]);
+/** Laws that raise revenue, and the first rung that does. */
+const REVENUE_FROM_LEVEL = new Map<string, number>([
+  ["automationTax", 1],
+  ["carbonBorderAdjustment", 1],
+  ["automationDividend", 1],
+  ["sovereignWealthFundMandate", 1],
+  ["digitalCurrencyLegalTender", 3],
+]);
+const slugOf = (law: PoliticalLaw) => law.id.split(".")[2];
 const METRIC_IDS = new Set<string>(POLITICAL_METRIC_FAMILIES.map((family) => family.id));
 
 function allCopy(law: PoliticalLaw): string[] {
@@ -47,9 +76,11 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
   const laws = BOOKS[countryId];
   const cc = countryId.toLowerCase();
 
-  it("authors the six 2027 and six 2030 laws as national secondaries seeded at level 0", () => {
+  it("authors the 2027, 2030, 2035 and 2040 bands as national secondaries seeded at level 0", () => {
     expect(laws.map((law) => law.id)).toEqual(
-      [...SLUGS_2027, ...SLUGS_2030].map((slug) => `${cc}.sec.${slug}`)
+      [...SLUGS_2027, ...SLUGS_2030, ...SLUGS_2035, ...SLUGS_2040].map(
+        (slug) => `${cc}.sec.${slug}`
+      )
     );
     for (const law of laws) {
       expect(law.countryId).toBe(countryId);
@@ -57,9 +88,10 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       expect(law.allowedScope).toBe("national");
       expect(law.baselineLevel).toBe(0);
       expect(law.levels).toHaveLength(5);
-      expect(law.window?.until).toBeUndefined();
-      const slug = law.id.split(".")[2];
-      expect(law.window?.from).toBe(SLUGS_2027.includes(slug) ? 2027 : 2030);
+      const slug = slugOf(law);
+      // Only the automation tax retires: the automation dividend replaces it.
+      expect(law.window?.until).toBe(slug === "automationTax" ? 2040 : undefined);
+      expect(law.window?.from).toBe(FROM_BY_SLUG.get(slug));
     }
     expect(getEraCatalog(countryId)).toBe(laws);
   });
@@ -93,6 +125,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       const [repealed, ...rungs] = law.levels!;
       expect(repealed.gdpCostFraction).toBeUndefined();
       expect(repealed.gdpRevenueFraction).toBeUndefined();
+      if (slugOf(law) === "pensionAgeIndexation") continue;
       const costs = rungs.map((level) => level.gdpCostFraction ?? 0);
       expect(
         costs.every((cost) => cost > 0 && cost <= 0.12),
@@ -119,12 +152,51 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       const doc = projectLawToLegislationType(law);
       expect(doc.policyOptions![4].costModelV2?.gdpRevenueFraction).toBe(revenue[3]);
     }
-    const others = laws.filter(
-      (law) => !law.id.endsWith(".automationTax") && !law.id.endsWith(".carbonBorderAdjustment")
-    );
-    for (const law of others) {
-      expect(law.levels!.every((level) => level.gdpRevenueFraction === undefined)).toBe(true);
+  });
+
+  it("raises revenue only where the law collects money, rising from its first paying rung", () => {
+    for (const law of laws) {
+      const firstPaying = REVENUE_FROM_LEVEL.get(slugOf(law));
+      const revenue = law.levels!.map((level) => level.gdpRevenueFraction);
+      if (firstPaying === undefined) {
+        expect(
+          revenue.every((value) => value === undefined),
+          law.id
+        ).toBe(true);
+        continue;
+      }
+      revenue.forEach((value, level) => {
+        if (level < firstPaying) expect(value, `${law.id} ${level}`).toBeUndefined();
+        else expect(value! > (revenue[level - 1] ?? 0), `${law.id} ${level}`).toBe(true);
+      });
     }
+  });
+
+  it("pays the automation dividend back out: the payout matches the levy, net of running it", () => {
+    const law = laws.find((entry) => entry.id === `${cc}.sec.automationDividend`)!;
+    expect(law.budgetKeyOverride).toBe(countryId === "US" ? "socialSecurity" : "welfare");
+    for (const level of law.levels!.slice(1)) {
+      const net = level.gdpRevenueFraction! - level.gdpCostFraction!;
+      expect(net).toBeLessThan(0);
+      expect(net).toBeGreaterThan(-0.001);
+    }
+  });
+
+  it("books a real, growing saving on the pension line for pension age indexation", () => {
+    const law = laws.find((entry) => entry.id === `${cc}.sec.pensionAgeIndexation`)!;
+    expect(budgetKeyForLaw(law)).toBe(countryId === "US" ? "socialSecurity" : "statePensions");
+    const [, review, ...indexed] = law.levels!.map((level) => level.gdpCostFraction ?? 0);
+    // The review alone only costs its running; indexation then saves.
+    expect(review).toBeGreaterThan(0);
+    expect(indexed.every((cost, i) => cost < 0 && (i === 0 || cost < indexed[i - 1]))).toBe(true);
+    const doc = projectLawToLegislationType(law);
+    expect(doc.policyOptions![4].costModelV2?.gdpCostFraction).toBe(indexed[2]);
+    // The book validator accepts the saving (it caps costs from above only).
+    const modernIds = laws.map((entry) => entry.id);
+    const errors = validateCatalog(getCatalog(countryId), countryId).filter((error) =>
+      modernIds.some((id) => error.startsWith(`${id}: level`))
+    );
+    expect(errors).toEqual([]);
   });
 
   it("books costs on lines the country already budgets", () => {
@@ -152,7 +224,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       expect(isLegislationTypeFileable(law.id, from - 1), law.id).toBe(false);
       expect(isLegislationTypeActive(law.id, from - 1), law.id).toBe(false);
       expect(isLegislationTypeFileable(law.id, from), law.id).toBe(true);
-      expect(isLegislationTypeFileable(law.id, 2050), law.id).toBe(true);
+      expect(isLegislationTypeFileable(law.id, 2050), law.id).toBe(law.window!.until === undefined);
       // Era system off: legacy behaviour, nothing gated.
       expect(isLegislationTypeFileable(law.id, null), law.id).toBe(true);
       expect(isNewThisEra(law.id, from)).toBe(true);
@@ -160,12 +232,18 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
     }
   });
 
-  it("splits by band in a 2027 world: 2027 laws open, 2030 laws hidden", () => {
+  it("splits by band in a 2027 world: 2027 laws open, later laws hidden", () => {
     const ids2027 = SLUGS_2027.map((slug) => `${cc}.sec.${slug}`);
-    const ids2030 = SLUGS_2030.map((slug) => `${cc}.sec.${slug}`);
+    const ids2030 = [...SLUGS_2030, ...SLUGS_2035, ...SLUGS_2040].map(
+      (slug) => `${cc}.sec.${slug}`
+    );
     expect(ids2027.every((id) => isLegislationTypeFileable(id, 2027))).toBe(true);
     expect(ids2030.some((id) => isLegislationTypeFileable(id, 2027))).toBe(false);
-    expect(ids2030.every((id) => isLegislationTypeFileable(id, 2030))).toBe(true);
+    for (const id of ids2030) {
+      const from = FROM_BY_SLUG.get(id.split(".")[2])!;
+      expect(isLegislationTypeFileable(id, from - 1), id).toBe(false);
+      expect(isLegislationTypeFileable(id, from), id).toBe(true);
+    }
     // The seed baseline only writes records for laws that exist that year.
     const seeded = new Set(getCatalog(countryId, 2027).map((law) => law.id));
     expect(ids2027.every((id) => seeded.has(id))).toBe(true);
@@ -182,6 +260,24 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       }
     }
   });
+});
+
+describe("automation tax retirement", () => {
+  it.each(["US", "UK"] as const)(
+    "%s: the automation dividend takes over filing in 2040 while an enacted tax stays in force",
+    (countryId) => {
+      const cc = countryId.toLowerCase();
+      const tax = `${cc}.sec.automationTax`;
+      const dividend = `${cc}.sec.automationDividend`;
+      expect(isLegislationTypeFileable(tax, 2039)).toBe(true);
+      expect(isLegislationTypeFileable(tax, 2040)).toBe(false);
+      expect(isLegislationTypeFileable(dividend, 2040)).toBe(true);
+      expect(isLegislationTypeActive(tax, 2045)).toBe(true);
+      expect(getCatalog(countryId, 2045).some((entry) => entry.id === tax)).toBe(true);
+      const points = lawTargets(countryId, new Map([[tax, 2]]));
+      expect(points["economy.workerSecurity"]).toBeGreaterThan(0);
+    }
+  );
 });
 
 describe("filing window close", () => {
@@ -218,7 +314,7 @@ describe("seed projection", () => {
   });
 
   it("authors each spec once for both countries", () => {
-    expect(MODERN_ERA_LAW_SPECS).toHaveLength(12);
-    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(12);
+    expect(MODERN_ERA_LAW_SPECS).toHaveLength(21);
+    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(21);
   });
 });
