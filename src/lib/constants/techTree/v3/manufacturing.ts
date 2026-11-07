@@ -433,4 +433,49 @@ export const MANUFACTURING_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Electrified Process Heat",
+      description: "Electric furnaces run on cheap hours and cut the energy bill.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.09 }],
+    },
+    {
+      name: "Robot-Built Premium Lines",
+      description: "Precision robot assembly sells at a quality premium.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Critical Supply Designation",
+      description: "Strategic supplier status brings priority access and legal cover.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.11 },
+        { kind: "tariffShield", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Robot-Built Robot Lines",
+      description: "Robots assemble more robots, so capacity grows without new hires.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "electronics", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Certified Low-Carbon Steel",
+      description: "Audited low-carbon steel commands the top price in green procurement.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 30 },
+      ],
+    },
+    {
+      name: "Friend-Shored Plant Network",
+      description:
+        "Matching plants across allied countries keep supply running through any trade fight.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

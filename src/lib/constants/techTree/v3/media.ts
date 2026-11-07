@@ -458,4 +458,51 @@ export const MEDIA_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Automated Verification Desks",
+      description: "Agents check sources and images before anything publishes.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.06 },
+        { kind: "inputCost", commodity: "software", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Trusted Source Subscriptions",
+      description: "Readers pay more for a feed they can trust.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Disinformation Safeguards",
+      description: "Audited safeguards keep the outlet clear of new platform liability rules.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.1 },
+        { kind: "tariffShield", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Agent Newsrooms",
+      description: "Agent teams cover every beat with a small editorial board signing off.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.095 },
+        { kind: "growthCostReduction", pct: 0.065 },
+      ],
+    },
+    {
+      name: "Individual Sponsorship Feeds",
+      description: "Sponsors buy placement in feeds built for one reader at a time.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Local Content Mandates",
+      description: "In-country production meets content quotas in every market.",
+      effects: [
+        { kind: "tariffShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.15 },
+      ],
+    },
+  ],
 };

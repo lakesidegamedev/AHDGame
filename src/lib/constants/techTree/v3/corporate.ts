@@ -496,4 +496,52 @@ export const CORPORATE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agentic Field Coordination",
+      description:
+        "Agents dispatch crews, parts and trucks across every site without a planning office.",
+      effects: [
+        { kind: "logisticsStrength", flat: 20 },
+        { kind: "growthCostReduction", pct: 0.03 },
+      ],
+    },
+    {
+      name: "Synthetic Brand Studios",
+      description: "Generated campaigns tuned to each market go out the day they are drafted.",
+      effects: [{ kind: "marketingStrength", flat: 22 }],
+    },
+    {
+      name: "Continuous Compliance Monitoring",
+      description:
+        "Every transaction is checked against the rules as it happens, so audits find little.",
+      effects: [{ kind: "dominanceShield", pct: 0.12 }],
+    },
+    {
+      name: "Agent-Run Back Office",
+      description: "Finance, payroll and procurement run on agents with a small human review desk.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "growthCostReduction", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Negotiating Sales Agents",
+      description:
+        "Sales agents settle terms with every buyer and hold price where the market allows.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 30 },
+      ],
+    },
+    {
+      name: "Redundant Supply Footprint",
+      description:
+        "Duplicate suppliers and plants in separate blocs keep orders moving through any embargo.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

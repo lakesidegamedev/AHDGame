@@ -450,4 +450,48 @@ export const VEHICLES_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agent-Planned Assembly",
+      description: "Agents sequence parts and stations so lines never wait.",
+      effects: [
+        { kind: "growthCostReduction", pct: 0.045 },
+        { kind: "laborCostReduction", pct: 0.045 },
+      ],
+    },
+    {
+      name: "Hands-Free Travel Tiers",
+      description: "Full self-driving sells as the defining premium option.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Robotaxi Operator Contracts",
+      description: "Fleet operator deals guarantee volume through retail downturns.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Humanoid Assembly Crews",
+      description: "Humanoid robots handle final assembly with a small supervisory team.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "vehicles", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Mobile Living Space Cabins",
+      description: "Interiors sold as rooms on wheels price like consumer electronics.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 32 },
+      ],
+    },
+    {
+      name: "National Fleet Programs",
+      description: "Public transport and freight fleet deals tie the firm into transport policy.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.23 },
+        { kind: "tariffShield", pct: 0.19 },
+      ],
+    },
+  ],
 };

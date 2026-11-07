@@ -24,6 +24,7 @@ import type { TechEffect } from "./effects";
 import { TECH_DECADES } from "./decades";
 import { SECTOR_EARLY_FILL } from "./earlySectorFill";
 import { CORPORATE_V3, SECTOR_V3 } from "./v3";
+import { TIER_2039_CORPORATE, TIER_2039_SECTOR } from "./tier2039";
 
 export type TechLane = "generic" | "sector";
 
@@ -74,6 +75,7 @@ export const DECADE_COST: Record<string, number> = {
   "2009": 30,
   "2019": 38,
   "2029": 48,
+  "2039": 60,
 };
 
 /**
@@ -7102,6 +7104,16 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
   },
 };
 
+// ─── Tiers authored as one block per tier (2039 onward) ───────────────────────
+// Slots 1-9 for every lane in a single module per tier; slots 10-15 stay in ./v3.
+const LATE_TIER_CORPORATE: Record<string, NodeSpec[]> = {
+  "2039": TIER_2039_CORPORATE,
+};
+
+const LATE_TIER_SECTOR: Record<string, Record<OperatingSectorType, NodeSpec[]>> = {
+  "2039": TIER_2039_SECTOR,
+};
+
 function specToNode(
   spec: NodeSpec,
   id: string,
@@ -7158,6 +7170,7 @@ function buildTreeForSector(sectorType: OperatingSectorType): TechTreeNode[] {
       ...(CORPORATE[decade.id] ?? []),
       ...(CORPORATE_EXTRA[decade.id] ?? []),
       ...(CORPORATE_EXTRA2[decade.id] ?? []),
+      ...(LATE_TIER_CORPORATE[decade.id] ?? []),
     ];
     corpSpecs.forEach((spec, i) => {
       nodes.push(specToNode(spec, corpNodeId(decade.id, i + 1), decade.id, "generic", i + 1, cost));
@@ -7174,6 +7187,7 @@ function buildTreeForSector(sectorType: OperatingSectorType): TechTreeNode[] {
       ...(SECTOR_EARLY_FILL[sectorType]?.[decade.id] ?? []),
       ...(SECTOR_EXTRA[sectorType]?.[decade.id] ?? []),
       ...(SECTOR_EXTRA2[sectorType]?.[decade.id] ?? []),
+      ...(LATE_TIER_SECTOR[decade.id]?.[sectorType] ?? []),
     ];
     sectorSpecs.forEach((spec, i) => {
       nodes.push(

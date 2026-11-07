@@ -491,4 +491,48 @@ export const EXTRACTION_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Predictive Fleet Maintenance",
+      description: "Agents order parts before machines fail.",
+      effects: [
+        { kind: "inputCost", commodity: "vehicles", pct: 0.075 },
+        { kind: "laborCostReduction", pct: 0.045 },
+      ],
+    },
+    {
+      name: "Traceable Critical Minerals",
+      description: "Verified origin sells into the strictest supply rules.",
+      effects: [{ kind: "plantOutput", pct: 0.017 }],
+    },
+    {
+      name: "Water-Neutral Sites",
+      description: "Sites that return clean water get permits faster everywhere.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Unmanned Mine Sites",
+      description: "Fully robotic sites mine, process and load with no one underground.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "rare_earth", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Critical Mineral Auctions",
+      description: "Direct auctions of scarce material clear above contract prices.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "oil", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Strategic Mineral Partnerships",
+      description: "Government stockpile and offtake deals secure demand beyond any one nation.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
 };

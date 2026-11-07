@@ -428,4 +428,48 @@ export const ENERGY_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Robotic Plant Maintenance",
+      description: "Inspection robots and agent schedulers keep plants running with small crews.",
+      effects: [{ kind: "laborCostReduction", pct: 0.06 }],
+    },
+    {
+      name: "Firm Power Contracts",
+      description:
+        "Guaranteed round-the-clock supply sells at a premium to data centers and industry.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Reactor Licensing Track Record",
+      description: "A clean safety record gets the firm's next plant approved first.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Autonomous Generation Fleet",
+      description: "Plants run, refuel and dispatch themselves under a small control room.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "energy", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Balancing Services Premium",
+      description:
+        "Storage that answers the grid in seconds earns the highest prices on the market.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 34 },
+      ],
+    },
+    {
+      name: "Cross-Border Grid Compacts",
+      description:
+        "Treaty-backed interconnectors make the firm the supplier of last resort across borders.",
+      effects: [
+        { kind: "tariffShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

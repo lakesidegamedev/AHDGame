@@ -471,4 +471,48 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Robotic Finishing Crews",
+      description: "Robots plaster, paint and tile without breaks.",
+      effects: [{ kind: "laborCostReduction", pct: 0.06 }],
+    },
+    {
+      name: "Low-Carbon Delivery Guarantees",
+      description:
+        "Guaranteed low-carbon builds win mandates conventional builders cannot bid for.",
+      effects: [{ kind: "plantOutput", pct: 0.017 }],
+    },
+    {
+      name: "Material Passport Compliance",
+      description: "Logged materials clear new embodied carbon rules first.",
+      effects: [{ kind: "tariffShield", pct: 0.12 }],
+    },
+    {
+      name: "Automated Panel Factories",
+      description:
+        "Factories print and assemble wall and floor panels with almost no direct labor.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "inputCost", commodity: "building_materials", pct: 0.12 },
+      ],
+    },
+    {
+      name: "Performance-Based Contracts",
+      description: "Contracts paid on delivered energy and uptime earn fees above cost-plus.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "construction_services", pct: 0.09 },
+      ],
+    },
+    {
+      name: "National Adaptation Programs",
+      description:
+        "Standing contracts to protect coasts, grids and cities make the firm a strategic asset.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.21 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };
