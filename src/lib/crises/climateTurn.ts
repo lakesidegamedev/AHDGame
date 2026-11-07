@@ -10,6 +10,8 @@ import {
   effectiveEmissions,
   populationWeightedEmissions,
 } from "./rules/climateFeedback";
+import { loadTransitionPolicies } from "@/lib/energyTransition/policies";
+import { NO_TRANSITION_POLICY, policyEmissionsCut } from "@/lib/energyTransition/rules";
 
 export interface ClimateFeedbackState {
   _id: "world";
@@ -43,7 +45,7 @@ export async function processClimateFeedbackTurn(
   const oldPressure = prior?.pressure ?? profile.startingPressure;
   if (turn % TURNS_PER_YEAR !== 0 || (prior && prior.lastMeasuredTurn >= turn)) return oldPressure;
 
-  const [regions, metrics, spending, agencies] = await Promise.all([
+  const [regions, metrics, spending, agencies, transitionPolicies] = await Promise.all([
     db
       .collection<PopulationRow>("states")
       .find(
@@ -59,6 +61,9 @@ export async function processClimateFeedbackTurn(
       .toArray(),
     spendingProvider(db),
     loadActiveAgencyNudgesByCountry(db, turn),
+    // Opted-in worlds: carbon pricing, coal phase-out and clean power laws cut
+    // what each country's regions emit.
+    profile.broaderEffects ? loadTransitionPolicies(db) : null,
   ]);
   const regionById = new Map(
     regions
@@ -72,6 +77,10 @@ export async function processClimateFeedbackTurn(
       const agencyNudge = region?.countryId
         ? (agencies.get(region.countryId)?.get("carbonEmissions") ?? 0)
         : 0;
+      const policyCut =
+        transitionPolicies && region?.countryId
+          ? policyEmissionsCut(transitionPolicies.get(region.countryId) ?? NO_TRANSITION_POLICY)
+          : 0;
       return {
         population: region?.population ?? 0,
         tonsPerCapita:
@@ -80,7 +89,8 @@ export async function processClimateFeedbackTurn(
                 seedEmissions,
                 spending.perCapitaByRegion.get(metric._id)?.environment ?? 0,
                 agencyNudge
-              )
+              ) *
+              (1 - policyCut)
             : Number.NaN,
       };
     })

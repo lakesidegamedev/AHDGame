@@ -25,6 +25,9 @@ const SLUGS_2027 = [
   "criticalMineralsStockpile",
   "cyberResilienceMandate",
   "platformContentLaw",
+  "carbonPrice",
+  "coalPhaseOut",
+  "cleanPowerStandard",
 ];
 const SLUGS_2030 = [
   "automationTax",
@@ -56,6 +59,7 @@ const FROM_BY_SLUG = new Map<string, number>([
 /** Laws that raise revenue, and the first rung that does. */
 const REVENUE_FROM_LEVEL = new Map<string, number>([
   ["automationTax", 1],
+  ["carbonPrice", 1],
   ["carbonBorderAdjustment", 1],
   ["automationDividend", 1],
   ["sovereignWealthFundMandate", 1],
@@ -138,8 +142,8 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
     }
   });
 
-  it("gives the automation tax and the carbon border adjustment real, rising revenue", () => {
-    for (const slug of ["automationTax", "carbonBorderAdjustment"]) {
+  it("gives the automation tax, carbon price and carbon border adjustment real, rising revenue", () => {
+    for (const slug of ["automationTax", "carbonPrice", "carbonBorderAdjustment"]) {
       const law = laws.find((entry) => entry.id === `${cc}.sec.${slug}`)!;
       const revenue = law.levels!.slice(1).map((level) => level.gdpRevenueFraction ?? 0);
       expect(revenue.every((value, i) => value > 0 && (i === 0 || value > revenue[i - 1]))).toBe(
@@ -314,7 +318,7 @@ describe("seed projection", () => {
   });
 
   it("authors each spec once for both countries", () => {
-    expect(MODERN_ERA_LAW_SPECS).toHaveLength(21);
-    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(21);
+    expect(MODERN_ERA_LAW_SPECS).toHaveLength(24);
+    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(24);
   });
 });

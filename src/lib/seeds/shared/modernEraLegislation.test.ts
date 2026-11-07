@@ -32,6 +32,9 @@ const BAND_2027 = [
   "critical_minerals_stockpile",
   "cyber_resilience_mandate",
   "platform_content_law",
+  "carbon_price",
+  "coal_phase_out",
+  "clean_power_standard",
 ];
 const BAND_2030 = [
   "automation_tax",
