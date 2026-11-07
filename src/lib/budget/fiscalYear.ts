@@ -1,11 +1,12 @@
 import { financialAusteritySpending } from "@/lib/livingConflict/rules/financialFiscal";
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   FederalBudget,
   StateBudget,
   EconomicGrowthFactors,
   FederalBudgetSnapshot,
   EnactedLaw,
+  FiscalConsolidationRecord,
 } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -45,6 +46,14 @@ import {
 import { evaluateSovereignAuctionForCountry } from "@/lib/sovereignDefault/crisisDetection";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { applyAusterityCap } from "@/lib/sovereignDefault/austerity";
+import { restructureForInterestSpiral } from "@/lib/sovereignDefault/interestSpiralRestructure";
+import { getAllCountryAccess } from "@/lib/countryAccess";
+import {
+  applyFiscalStabilizer,
+  emitFiscalConsolidationNews,
+  loadRulingEconomicPositions,
+} from "./fiscalStabilizer";
+import { shouldRestructureForInterest } from "./rules/fiscalStabilizer";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { ensureBudgetDraftForFiscalYear } from "@/lib/db/collections/ukBudgets";
 import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSettlement";
@@ -192,6 +201,14 @@ export async function processFiscalYear(
       .map((m) => [String(m._id), m.economic.gdpGrowth.value])
   );
   const processedBudgetIds = new Set<string>();
+  const interestSpiralCountries = new Set<string>();
+  // Stabilizer state is written in one batch after the loop, never per country.
+  const stabilizerWrites: AnyBulkWriteOperation<FederalBudget>[] = [];
+  const consolidationNews: Array<{
+    countryId: string;
+    record: FiscalConsolidationRecord;
+    gdp: number;
+  }> = [];
 
   // Money wiring (interstate-logistics plan step 5, phase B): one flag check,
   // one FX table, one sourcingNetworkLoad read for the whole annual pass -
@@ -217,6 +234,17 @@ export async function processFiscalYear(
   // ghost rollover would recompute revenue over nothing, evaluate sovereign
   // auctions for a state that no longer exists, and write snapshots for it.
   const registeredCountries = new Set<string>(await getRegisteredCountryIds(db));
+
+  // Fiscal stabilizer (#5703): AI-run countries enact a consolidation package
+  // at fiscal close. Player countries are never touched. One access read and
+  // two ideology reads for the whole pass.
+  const countryAccess = await getAllCountryAccess(db);
+  const nppGovernedCountries = new Set<string>(
+    Object.entries(countryAccess)
+      .filter(([, access]) => access.nppGoverned)
+      .map(([id]) => id)
+  );
+  const rulingEconomicPositions = await loadRulingEconomicPositions(db, [...nppGovernedCountries]);
 
   for (const federalBudget of federalBudgets) {
     const budgetId = String(federalBudget._id);
@@ -455,6 +483,37 @@ export async function processFiscalYear(
       }
     }
 
+    // Crisis austerity already forces the budget toward balance; the stabilizer
+    // runs only for AI-run countries outside it, and is cleared once players
+    // run the country so their budget is exactly what their laws price.
+    const financialAusterityActive =
+      (federalBudget.financialCrisisAusterityUntilTurn ?? -1) >= currentTurn;
+    let stabilizerSet: Record<string, unknown> = {};
+    let consolidationPackage: FiscalConsolidationRecord | null = null;
+    const stabilizerUnset: Record<string, ""> = {};
+    if (nppGovernedCountries.has(countryId)) {
+      const stabilized = applyFiscalStabilizer({
+        budget: federalBudget,
+        revenue: federalRevenue,
+        spending: finalSpending,
+        gdp: newGdp,
+        debtToGdpRatio: debtResult.debtToGdpRatio,
+        rulingEconomicPosition: rulingEconomicPositions.get(countryId) ?? null,
+        fiscalYear: newFiscalYear,
+        currentTurn,
+        consolidate: !financialAusterityActive && !federalBudget.imfSovereignBailoutActive,
+      });
+      finalSpending = stabilized.spending;
+      finalSurplus = federalRevenue.total - finalSpending.total;
+      stabilizerSet = stabilized.set;
+      consolidationPackage = stabilized.package;
+      if (shouldRestructureForInterest(stabilized.interestSpiralYears)) {
+        interestSpiralCountries.add(countryId);
+      }
+    } else if (federalBudget.fiscalConsolidation) {
+      stabilizerUnset.fiscalConsolidation = "";
+    }
+
     // The legislature raises the statutory ceiling as the stock nears it; no law
     // does, so the stored limit would otherwise only ever be breached.
     const raisedCeiling = raisedDebtCeiling({
@@ -489,6 +548,20 @@ export async function processFiscalYear(
         },
       }
     );
+    if (Object.keys(stabilizerSet).length > 0 || Object.keys(stabilizerUnset).length > 0) {
+      stabilizerWrites.push({
+        updateOne: {
+          filter: { _id: federalBudget._id },
+          update: {
+            ...(Object.keys(stabilizerSet).length > 0 ? { $set: stabilizerSet } : {}),
+            ...(Object.keys(stabilizerUnset).length > 0 ? { $unset: stabilizerUnset } : {}),
+          },
+        },
+      });
+    }
+    if (consolidationPackage) {
+      consolidationNews.push({ countryId, record: consolidationPackage, gdp: newGdp });
+    }
 
     console.log(
       `[FiscalYear] ${countryId} FY${newFiscalYear} processed: Revenue $${(federalRevenue.total / 1e9).toFixed(1)}B, ` +
@@ -546,6 +619,17 @@ export async function processFiscalYear(
     processedBudgetIds.add(budgetId);
   }
 
+  if (stabilizerWrites.length > 0) {
+    await db.collection<FederalBudget>("federalBudget").bulkWrite(stabilizerWrites);
+  }
+  for (const { countryId, record, gdp } of consolidationNews) {
+    try {
+      await emitFiscalConsolidationNews(db, countryId, record, gdp);
+    } catch (err) {
+      console.error(`[FiscalYear] Consolidation news failed for ${countryId}:`, err);
+    }
+  }
+
   try {
     const allBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
     for (const budget of allBudgets) {
@@ -568,6 +652,15 @@ export async function processFiscalYear(
       await evaluateSovereignAuctionForCountry(db, countryId, currentTurn, realtimeMs);
     } catch (err) {
       console.error(`[FiscalYear] Sovereign auction evaluation failed for ${countryId}:`, err);
+    }
+    // After the auction verdict, so a crisis the auctions fired keeps its own
+    // resolution; this only fires one for a country still outside a crisis.
+    if (interestSpiralCountries.has(countryId)) {
+      try {
+        await restructureForInterestSpiral(db, countryId, currentTurn, realtimeMs);
+      } catch (err) {
+        console.error(`[FiscalYear] Interest-spiral restructuring failed for ${countryId}:`, err);
+      }
     }
   }
 }

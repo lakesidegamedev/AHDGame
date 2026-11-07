@@ -333,6 +333,32 @@ export interface FederalSpending {
   total: number;
 }
 
+/** See {@link FederalBudget.fiscalConsolidation}. */
+export interface FiscalConsolidationState {
+  /** Cumulative multiplier on each category's law-priced spending (absent = 1). */
+  categoryScale?: Record<string, number>;
+  /** Consecutive fiscal years in which debt interest took over half of revenue. */
+  interestSpiralYears?: number;
+  /** The package enacted at the latest fiscal close that needed one. */
+  lastPackage?: FiscalConsolidationRecord | null;
+}
+
+export interface FiscalConsolidationRecord {
+  fiscalYear: number;
+  appliedTurn: number;
+  primaryBalanceGdpShare: number;
+  targetPrimaryBalanceGdpShare: number;
+  size: number;
+  sizeGdpShare: number;
+  plannedTaxShare: number;
+  taxRise: number;
+  spendingCut: number;
+  unfunded: number;
+  categoryCuts: Record<string, number>;
+  taxRateTargets: Record<string, number>;
+  approvalCost: number;
+}
+
 export interface FederalDebt {
   principal: number;
   interestRate: number;
@@ -674,6 +700,14 @@ export interface FederalBudget {
   financialCrisisAusterityUntilTurn?: number;
   /** Latest ordinary appropriations restored when temporary consolidation expires. */
   financialCrisisAusterityBaseSpending?: FederalSpending;
+  /**
+   * Fiscal stabilizer state for AI-run countries (#5703), written at fiscal
+   * close by `applyFiscalStabilizer`. `categoryScale` is read back by
+   * `calculateFederalSpending` on every recompute, so a cut survives the
+   * per-turn rebuild from enacted laws. Cleared at fiscal close once players
+   * run the country.
+   */
+  fiscalConsolidation?: FiscalConsolidationState;
   /**
    * Audit stamp written by `mergeNationalFisc` when this country dissolved into
    * another and its treasury, debt and bonds were assumed by the successor. The

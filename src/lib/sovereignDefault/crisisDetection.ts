@@ -51,6 +51,34 @@ export interface EvaluationSummary {
   firedThisEvaluation: boolean;
 }
 
+/** Open the decision row a fired sovereign crisis is resolved against. */
+export async function insertSovereignCrisisDecision(
+  db: Db,
+  countryCode: CountryId,
+  currentTurn: number,
+  realtimeMs: number
+): Promise<SovereignCrisisDecision> {
+  const decision: SovereignCrisisDecision = {
+    _id: new ObjectId(),
+    countryCode,
+    state: "open",
+    firedAtTurn: currentTurn,
+    firedAtRealtimeMs: realtimeMs,
+    executiveChoice: null,
+    executiveProposedAtRealtimeMs: null,
+    // Phase 9 will derive this from country government type. Defaulting to
+    // false here means the decision row is structurally complete but
+    // legislative ratification wiring is intentionally deferred.
+    requiresLegislativeRatification: false,
+    legislativeBillId: null,
+    resolvedAt: null,
+    resolvedReason: null,
+    createdAt: new Date(realtimeMs),
+  };
+  await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").insertOne(decision);
+  return decision;
+}
+
 export async function evaluateSovereignAuctionForCountry(
   db: Db,
   countryCode: CountryId,
@@ -172,24 +200,7 @@ export async function evaluateSovereignAuctionForCountry(
     .updateOne({ _id: budgetId }, { $set: baseUpdate });
 
   if (transition.firedThisEvaluation) {
-    const decision: SovereignCrisisDecision = {
-      _id: new ObjectId(),
-      countryCode,
-      state: "open",
-      firedAtTurn: currentTurn,
-      firedAtRealtimeMs: realtimeMs,
-      executiveChoice: null,
-      executiveProposedAtRealtimeMs: null,
-      // Phase 9 will derive this from country government type. Defaulting to
-      // false here means the decision row is structurally complete but
-      // legislative ratification wiring is intentionally deferred.
-      requiresLegislativeRatification: false,
-      legislativeBillId: null,
-      resolvedAt: null,
-      resolvedReason: null,
-      createdAt: new Date(realtimeMs),
-    };
-    await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").insertOne(decision);
+    const decision = await insertSovereignCrisisDecision(db, countryCode, currentTurn, realtimeMs);
     await emitCrisisFiredNews(countryCode, currentTurn);
     // Phase 10: NPC-controlled and vacant executives auto-propose immediately —
     // no 12-hour wait. Player executives skip this and use the UI within the
