@@ -55,6 +55,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getScotusPresetSeed } from "@/lib/scotus/presetData";
 import type { ScotusPresetSeed } from "@/lib/scotus/presetData/types";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -286,32 +287,44 @@ export async function checkSectors(
       budgetYear !== undefined &&
       commandEconomySoeSectors(countryId).length > 0 &&
       scheduledMarketizationLevel(countryId, budgetYear) < COMMAND_CEILING;
+    // Background countries (#5702) keep their regions but run no sectors, so
+    // seedUnownedSectors deliberately writes no pool for them.
+    const backgroundCountry = isBackgroundInPreset(expect.preset, countryId);
     const unownedCount = await db.collection("unownedSectors").countDocuments({ countryId });
     checks.push(
-      commandSoeSeed
+      backgroundCountry
         ? ok(
             `sectors.${countryId}.unowned`,
             countryId,
             "unownedSectors.count",
-            "optional with country-owned SOE production",
+            "none for a background country",
             unownedCount,
-            "command-band production is validated in the country-owned SOE pool"
+            "background countries run outside the full simulation and seed no sector pool"
           )
-        : unownedCount > 0
+        : commandSoeSeed
           ? ok(
               `sectors.${countryId}.unowned`,
               countryId,
               "unownedSectors.count",
-              ">0",
-              unownedCount
+              "optional with country-owned SOE production",
+              unownedCount,
+              "command-band production is validated in the country-owned SOE pool"
             )
-          : critical(
-              `sectors.${countryId}.unowned`,
-              countryId,
-              "unownedSectors.count",
-              ">0",
-              unownedCount
-            )
+          : unownedCount > 0
+            ? ok(
+                `sectors.${countryId}.unowned`,
+                countryId,
+                "unownedSectors.count",
+                ">0",
+                unownedCount
+              )
+            : critical(
+                `sectors.${countryId}.unowned`,
+                countryId,
+                "unownedSectors.count",
+                ">0",
+                unownedCount
+              )
     );
 
     const strategicCount = await db
