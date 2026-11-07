@@ -22,7 +22,6 @@ import type {
 } from "../../constants/corporations";
 import type { CountryId } from "../../constants/countries";
 import type { CurrencyCode } from "../../constants/currencies";
-import type { ExtractableResource } from "../../constants/commodities";
 import type { ProductAdvertisingDenominationWitness } from "@/lib/products/rules/productAdvertising";
 
 export interface Shareholder {
@@ -211,7 +210,7 @@ export interface CorpAutopilotAdvisory {
   subject?: string;
 }
 
-export interface CorporationAutopilot {
+interface CorporationAutopilot {
   enabledTurn: number;
   advisories?: CorpAutopilotAdvisory[];
   /** Last turn the owner was notified about each advisory kind (throttle). */

@@ -38,13 +38,6 @@ export const resolveCharName = async (
   return doc?.name ?? (isImperial ? "Unknown imperial" : "Unknown character");
 };
 
-export const resolveCorpName = async (db: Db, id: ObjectId): Promise<string> => {
-  const doc = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: id }, { projection: { name: 1 } });
-  return doc?.name ?? "Unknown corporation";
-};
-
 /**
  * Evidence a filled fund sell order with the single fund-subject
  * `stock_trade_sell` ledger row. The fund's `cashAnchor` credit itself is a

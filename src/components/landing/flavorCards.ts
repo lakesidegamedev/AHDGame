@@ -37,11 +37,6 @@ export type FlavorCard = {
   year: string;
 };
 
-export type EraFlavorCards = {
-  era: string;
-  cards: FlavorCard[];
-};
-
 export const ERA_FLAVOR_CARDS: Record<string, FlavorCard[]> = {
   "1953": [
     {

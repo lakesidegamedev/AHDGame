@@ -115,5 +115,3 @@ export const DD_CABINET_POSITIONS = [
     yearEnabled: 1950,
   },
 ] as const;
-
-export type DDCabinetPositionId = (typeof DD_CABINET_POSITIONS)[number]["id"];

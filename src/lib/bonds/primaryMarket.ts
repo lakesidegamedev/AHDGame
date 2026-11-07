@@ -48,22 +48,22 @@ import { ObjectId as MongoObjectId } from "mongodb";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 
 /** Share of the pool's cash one corporate issue may take at issuance. */
-export const CORPORATE_PRIMARY_COMMIT_SHARE = 0.2;
+const CORPORATE_PRIMARY_COMMIT_SHARE = 0.2;
 /** Share of the pool's cash one quarterly sovereign auction may take. */
 export const SOVEREIGN_PRIMARY_COMMIT_SHARE = 0.9;
 /** Appetite floor: even a shunned sovereign finds some buyers. */
-export const SOVEREIGN_PRIMARY_MIN_APPETITE_FACTOR = 0.1;
+const SOVEREIGN_PRIMARY_MIN_APPETITE_FACTOR = 0.1;
 /** Per-turn placement cap for unsold units, as a share of the requested size. */
-export const UNSOLD_PLACEMENT_SHARE_PER_TURN = 0.02;
+const UNSOLD_PLACEMENT_SHARE_PER_TURN = 0.02;
 /** Share of the pool's spendable cash one turn of placement may use, across all bonds in the currency. */
-export const UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN = 0.1;
+const UNSOLD_PLACEMENT_CASH_SHARE_PER_TURN = 0.1;
 /**
  * Share of the pool's target kept back from placement. The target carries the
  * next quarter's sovereign rollover, and placing old unsold units out of that
  * reserve left Austria's t612 auction facing an empty pool (0.02% fill) in the
  * clone sim. Placement only spends cash above this floor.
  */
-export const UNSOLD_PLACEMENT_RESERVE_SHARE = 0.5;
+const UNSOLD_PLACEMENT_RESERVE_SHARE = 0.5;
 
 /** Cash a pool may spend on placing unsold units this turn. */
 export function unsoldPlacementBudget(cashLocal: number, targetCashLocal: number): number {
@@ -75,10 +75,10 @@ export function unsoldPlacementBudget(cashLocal: number, targetCashLocal: number
   );
 }
 /** Autonomous central bank monetization of a sovereign shortfall, cap per auction as a share of GDP. */
-export const SOVEREIGN_MONETIZATION_GDP_CAP = 0.02;
+const SOVEREIGN_MONETIZATION_GDP_CAP = 0.02;
 
 /** How much of a corporate issue the pool will write, by credit tier. */
-export const CORPORATE_PRIMARY_RATING_FACTOR: Record<CreditRating, number> = {
+const CORPORATE_PRIMARY_RATING_FACTOR: Record<CreditRating, number> = {
   AAA: 1,
   AA: 1,
   A: 0.9,
@@ -217,7 +217,7 @@ export async function debitPoolForPrimary(
 }
 
 /** Settlement-journal key of one bond's sovereign placement in one turn. */
-export function sovereignPlacementKey(bondId: ObjectId, turn: number): string {
+function sovereignPlacementKey(bondId: ObjectId, turn: number): string {
   return `sovereign-primary:placement:${bondId}:${turn}`;
 }
 
@@ -598,25 +598,6 @@ export async function monetizeUnsoldSovereignUnits(
   );
   await refreshSovereignDebtTerms(db, getNationalBudgetId(bond.countryId));
   return true;
-}
-
-/** Record the latest primary auction on the budget for the crisis classifier. */
-export async function recordSovereignPrimaryFill(
-  db: Db,
-  budgetId: string,
-  fillRatio: number,
-  turn: number,
-  now: Date
-): Promise<void> {
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId } as { _id: "federal" }, {
-      $set: {
-        lastPrimaryFillRatio: Math.round(fillRatio * 10_000) / 10_000,
-        lastPrimaryAuctionTurn: turn,
-        updatedAt: now,
-      },
-    });
 }
 
 /**

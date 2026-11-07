@@ -242,10 +242,6 @@ export function buildPrimeRateByState(
   return primeRateByState;
 }
 
-export interface ExtractionRevenueInputs {
-  extractionInputs: ExtractionSectorInput[];
-}
-
 /**
  * Per-sector revenue-nameplate output per extractable resource, in ledger
  * units. Also resolves sectorId -> realized/nameplate extraction output and

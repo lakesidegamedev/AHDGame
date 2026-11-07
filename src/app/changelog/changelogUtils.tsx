@@ -8,12 +8,11 @@ import type {
   ClassifiedItem,
   ItemImportance,
   ItemTag,
-  TagFilter,
 } from "./changelogTypes";
 
 // ─── Classification ───────────────────────────────────────────────────────────
 
-export function classifyTag(text: string): ItemTag {
+function classifyTag(text: string): ItemTag {
   const lower = text.toLowerCase();
   const be = BE_SIGNALS.filter((s) => lower.includes(s.toLowerCase())).length;
   const fe = FE_SIGNALS.filter((s) => lower.includes(s.toLowerCase())).length;
@@ -23,7 +22,7 @@ export function classifyTag(text: string): ItemTag {
   return "backend"; // default ambiguous → backend
 }
 
-export function classifyImportance(text: string, sectionHeading: string): ItemImportance {
+function classifyImportance(text: string, sectionHeading: string): ItemImportance {
   if (sectionHeading === "Added" || sectionHeading === "Changed") return "major";
   if (sectionHeading === "Refactored" || sectionHeading === "Technical") return "minor";
   // "Fixed" and others: check for major signals
@@ -183,14 +182,6 @@ export function parseAdminChangelog(raw: string): AdminBlock[] {
 export function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-export function itemMatchesTagFilter(tag: ItemTag, filter: TagFilter): boolean {
-  if (filter === "all") return true;
-  if (filter === "both") return tag === "both";
-  if (filter === "frontend") return tag === "frontend" || tag === "both";
-  if (filter === "backend") return tag === "backend" || tag === "both";
-  return true;
 }
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────

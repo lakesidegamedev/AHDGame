@@ -42,7 +42,7 @@ export const STATE_METRIC_PER_METRIC_CAP = 0.75;
 export const STATE_METRIC_PER_CHANNEL_CAP = 2;
 export const STATE_METRIC_TOTAL_CAP = 8;
 
-export const SECTOR_METRIC_MARGIN_CHANNELS: readonly SectorMetricMarginChannel[] = [
+const SECTOR_METRIC_MARGIN_CHANNELS: readonly SectorMetricMarginChannel[] = [
   "laborCost",
   "laborQuality",
   "consumerDemand",
@@ -1027,18 +1027,4 @@ export function getMetricStrategyCoverage(
     effect: false,
     rationale: `This strategy does not materially depend on ${Object.keys(signal.channels).join(", ")}.`,
   };
-}
-
-export function getNeutralMetricMappings(): Array<{
-  category: MetricCategoryId;
-  metricId: string;
-  rationale: string;
-}> {
-  return METRIC_MARGIN_SIGNALS.filter((signal) => Object.keys(signal.channels).length === 0).map(
-    (signal) => ({
-      category: signal.category,
-      metricId: signal.metricId,
-      rationale: signal.neutralRationale ?? signal.rationale,
-    })
-  );
 }

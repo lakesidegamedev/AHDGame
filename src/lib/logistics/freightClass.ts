@@ -34,7 +34,6 @@
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 
 export type FreightClass = "bulk" | "special" | "grid";
-export type HauledFreightClass = Exclude<FreightClass, "grid">;
 
 /** Freight TEU used per commodity unit for one state-line crossing. */
 export const FREIGHT_TEU_PER_UNIT_HOP: Record<FreightClass, number> = {

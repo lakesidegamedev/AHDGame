@@ -78,8 +78,6 @@ export async function loadCampaignAudience(
   return { context, cells: substrate.campaignCells, build };
 }
 
-export type LoadedCampaignAudience = NonNullable<Awaited<ReturnType<typeof loadCampaignAudience>>>;
-
 /** One batch for every region of a projection; no reads inside candidate loops. */
 export async function loadCampaignProjectionContext(db: Db, regionIds: string[]) {
   const [turnout, defaults, gameState] = await Promise.all([

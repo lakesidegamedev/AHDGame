@@ -213,7 +213,7 @@ export async function settleableSovereignCouponHolderKeys(
 }
 
 /** Unpaid claims for one budget, in book order. Legacy array claims are not included. */
-export async function loadOpenSovereignCouponClaims(
+async function loadOpenSovereignCouponClaims(
   db: Db,
   budgetId: string
 ): Promise<FundedSovereignCouponClaim[]> {
@@ -646,17 +646,6 @@ export function sovereignCouponQueuedClaimIds(
   for (const batch of batches) for (const id of batchMembers(batch)) ids.add(id);
   for (const move of priors) ids.add(claimIdOfMove(move._id));
   return ids;
-}
-
-/**
- * This turn's claims for one budget's coupon-bearing bonds, in bond order.
- *
- * The record has to be written before the frozen-through mark, so a crash
- * between the two re-installs the same id (a no-op) rather than losing the
- * claim.
- */
-export function freezeDueSovereignCouponClaims(input: FreezeDueSovereignCouponInput) {
-  return freezeDueSovereignCouponClaimSet(input).records;
 }
 
 export interface FreezeDueSovereignCouponInput {
@@ -1563,7 +1552,7 @@ async function markBatchMembersSettled(
  * the receipt document and the claim close-out write; a larger backlog drains
  * over the following turns.
  */
-export const MAX_BATCH_CLAIMS = 2000;
+const MAX_BATCH_CLAIMS = 2000;
 
 /**
  * A claim may join a grouped receipt when every credit targets a document by id

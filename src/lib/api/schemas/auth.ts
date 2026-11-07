@@ -67,8 +67,3 @@ export const resetPasswordBodySchema = z.object({
   // Same strength rule as the change-password schema (settings.ts).
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
-
-export type LoginBody = z.infer<typeof loginBodySchema>;
-export type ForgotPasswordBody = z.infer<typeof forgotPasswordBodySchema>;
-export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
-export type RegisterBody = z.infer<typeof registerBodySchema>;

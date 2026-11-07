@@ -134,26 +134,6 @@ export interface CommodityData {
   turn: number;
 }
 
-export interface MarketCapPoint {
-  turn: number;
-  marketCap: number;
-  /** Raw capitalization when `marketCap` is the continuity-adjusted index. */
-  rawMarketCap?: number;
-  /** Simulated intra-turn high for candlestick charting (absent on old records) */
-  high?: number;
-  /** Simulated intra-turn low for candlestick charting (absent on old records) */
-  low?: number;
-  bySector?: Partial<Record<OperatingSectorType, number>>;
-}
-
-export interface MarketHistoryResponse {
-  points: MarketCapPoint[];
-  newestTurnDate: string | null;
-}
-
-export type StockTab =
-  "stocks" | "commodities" | "bonds" | "wealth" | "stats" | "funds" | "auctions";
-
 export interface WealthEntry {
   rank: number;
   characterId: string;

@@ -26,7 +26,7 @@ export const AREA_VALUES = ["backend", "frontend", "fullstack", "engine"] as con
 export type ChangelogBadge = (typeof BADGE_VALUES)[number];
 export type DevArea = (typeof AREA_VALUES)[number];
 
-export interface ChangelogPostMeta {
+interface ChangelogPostMeta {
   version: string;
   date: string;
   title: string;
@@ -43,6 +43,3 @@ export interface ChangelogPost extends ChangelogPostMeta {
   /** Source filename stem, e.g. "0.4.0". */
   slug: string;
 }
-
-export type PublicTagFilter = "all" | string;
-export type DevAreaFilter = "all" | DevArea;

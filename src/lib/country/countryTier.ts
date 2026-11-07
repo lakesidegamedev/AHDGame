@@ -85,8 +85,3 @@ export async function getCountryTier(db: Db, countryId: string): Promise<Country
 export async function getFullSimulationCountryIds(db: Db): Promise<CountryId[]> {
   return (await loadCountryTiers(db)).fullSimulationIds;
 }
-
-/** Registered countries held outside the full simulation. */
-export async function getBackgroundCountryIds(db: Db): Promise<CountryId[]> {
-  return (await loadCountryTiers(db)).backgroundIds;
-}

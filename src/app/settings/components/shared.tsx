@@ -198,70 +198,6 @@ export function SectionIcon({ id }: { id: SectionId }) {
   }
 }
 
-export function AccordionSection({
-  id,
-  label,
-  icon,
-  isOpen,
-  onToggle,
-  children,
-  className = "",
-}: {
-  id: SectionId;
-  label: string;
-  icon: React.ReactNode;
-  isOpen: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      id={id}
-      className={`scroll-mt-24 rounded-2xl border border-card-border bg-card shadow-card overflow-hidden transition-shadow duration-200 ${
-        isOpen ? "shadow-lg" : ""
-      } ${className}`}
-    >
-      <button
-        id={`${id}-header`}
-        type="button"
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        aria-controls={`${id}-content`}
-        className="w-full flex items-center justify-between gap-3 px-6 py-5 md:px-8 text-left hover:bg-background/30 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-primary opacity-80">{icon}</span>
-          <span className="text-sm font-semibold text-foreground">{label}</span>
-        </div>
-        <svg
-          className={`h-4 w-4 text-muted shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      <div
-        id={`${id}-content`}
-        role="region"
-        aria-labelledby={`${id}-header`}
-        className="grid transition-all duration-200 ease-in-out"
-        style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          <div className="px-6 pb-6 pt-2 md:px-8 md:pb-8">{children}</div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function MessageBanner({
   ok,
   text,
@@ -324,20 +260,6 @@ export function MessageBanner({
           </svg>
         </button>
       )}
-    </div>
-  );
-}
-
-export function SkeletonSection() {
-  return (
-    <div className="rounded-2xl border border-card-border bg-card/80 shadow-card overflow-hidden animate-pulse">
-      <div className="px-6 py-5 md:px-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-4 w-4 rounded bg-muted/30" />
-          <div className="h-4 w-32 rounded bg-muted/30" />
-        </div>
-        <div className="h-4 w-4 rounded bg-muted/20" />
-      </div>
     </div>
   );
 }

@@ -19,7 +19,6 @@ import type {
   OrganizationLeadershipElection,
   OrganizationMembershipProposal,
   PendingOrganizationWithdrawalMeasure,
-  ProposalVote,
 } from "@/lib/db/types/internationalOrganization";
 
 /** Public summary returned by GET /api/world/international-organizations. */
@@ -196,9 +195,3 @@ export function orgProposingCountry(
     null
   );
 }
-
-export const VOTE_LABELS: Record<ProposalVote, string> = {
-  yes: "Yes",
-  no: "No",
-  abstain: "Abstain",
-};

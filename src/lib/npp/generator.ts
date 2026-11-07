@@ -739,33 +739,6 @@ export function calculateNPPsToGenerate(totalElections: number, partyOrg: number
   return Math.max(1, totalElections - reduction);
 }
 
-/**
- * Get all active (non-retired) NPPs
- */
-export async function getActiveNPPs(): Promise<NPP[]> {
-  const db = await getDb();
-  return db.collection<NPP>("npps").find({ retiredAt: null }).toArray();
-}
-
-/**
- * Get NPPs by state
- */
-export async function getNPPsByState(stateId: string): Promise<NPP[]> {
-  const db = await getDb();
-  return db.collection<NPP>("npps").find({ homeState: stateId, retiredAt: null }).toArray();
-}
-
-/**
- * Get NPPs holding office
- */
-export async function getNPPsWithOffice(): Promise<NPP[]> {
-  const db = await getDb();
-  return db
-    .collection<NPP>("npps")
-    .find({ currentOffice: { $ne: null }, retiredAt: null })
-    .toArray();
-}
-
 // ── Technocrat NPP spawn ──────────────────────────────────────────────────────
 
 const CENTRAL_BANKER_GIVEN = [

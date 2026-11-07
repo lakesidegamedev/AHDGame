@@ -143,15 +143,6 @@ export const sumDefaultedBondPrincipal = (
     fxByCurrency
   );
 
-export const sumNonDefaultedNonMaturedPrincipal = (
-  bonds: Bond[],
-  fxByCurrency: ReadonlyMap<CurrencyCode, number>
-): number =>
-  sumBondPrincipalAnchor(
-    bonds.filter((b) => !b.matured && !b.defaulted),
-    fxByCurrency
-  );
-
 /** Face value rounded down to whole bond units ($1k each). */
 export function roundFaceToBondUnits(faceValue: number): number {
   const units = Math.floor(faceValue / BOND_UNIT_FACE_VALUE);
@@ -161,7 +152,7 @@ export function roundFaceToBondUnits(faceValue: number): number {
 /**
  * Max new face value the corporation can issue under the 2× equity rule (all non-matured bonds count).
  */
-export function maxNewIssuanceFaceValue(equity: number, existingDebt: number): number {
+function maxNewIssuanceFaceValue(equity: number, existingDebt: number): number {
   const cap = Math.max(0, equity * MAX_BOND_ISSUANCE_FRACTION - existingDebt);
   return roundFaceToBondUnits(cap);
 }

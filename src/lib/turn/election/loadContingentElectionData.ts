@@ -9,7 +9,7 @@ import type {
   NPP,
   PoliticalParty,
 } from "@/lib/db/types";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countries";
 import {
   CONTINGENT_EXCLUDED_HOUSE_STATE,
   CONTINGENT_HOUSE_STATE_IDS,
@@ -431,6 +431,3 @@ export async function loadContingentElectionData(
         }),
   };
 }
-
-/** Default country for US presidential contingent elections. */
-export const US_CONTINGENT_COUNTRY_ID = COUNTRY_CONFIGS.US.id;
