@@ -10,7 +10,7 @@
  * mechanism; it only decides that the crisis fires and which resolution it gets.
  */
 
-import type { Db } from "mongodb";
+import type { Db, Filter } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { FederalBudget, SovereignCrisisState } from "@/lib/db/types/budget";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -48,7 +48,11 @@ export async function restructureForInterestSpiral(
 
   // Guarded on the state just read, so a crisis fired elsewhere this turn wins.
   const fired = await budgets.updateOne(
-    { _id: budgetId, sovereignCrisisState: budget.sovereignCrisisState ?? null },
+    // `null` matches a missing state too, which reads as "normal".
+    {
+      _id: budgetId,
+      sovereignCrisisState: budget.sovereignCrisisState ?? null,
+    } as Filter<FederalBudget>,
     {
       $set: {
         sovereignCrisisState: "crisisPending",
