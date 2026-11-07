@@ -275,6 +275,7 @@ export async function runDemographicFlows(
           startingYear?: number;
           conscription?: Record<string, Partial<ConscriptionPolicy>>;
           livingConflictsEnabled?: boolean;
+          preset?: string;
         } & ResetVersionState
       >({}),
       // v2: read the labour mode via the SAME db (so tests' mock db is honored) and
