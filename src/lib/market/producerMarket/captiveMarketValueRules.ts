@@ -56,13 +56,17 @@ export function captiveMarketValue(input: {
   clearingByLane: ReadonlyMap<string, number>;
   /** Accounts with an explicit internal transfer price; they keep their own entries. */
   pricedAccounts?: ReadonlySet<string>;
+  /** Accounts in free transfer mode; own-site deliveries carry no value at all. */
+  freeAccounts?: ReadonlySet<string>;
 }): CaptiveMarketValue {
   const incomeByOffer = new Map<string, number>();
   const chargeByOrder = new Map<string, number>();
   for (const row of input.deliveries) {
     const units = positive(row.units);
     const offer = input.offers.get(row.offerId);
-    if (!(units > 0) || !offer || input.pricedAccounts?.has(offer.accountId)) continue;
+    if (!(units > 0) || !offer) continue;
+    if (input.pricedAccounts?.has(offer.accountId) || input.freeAccounts?.has(offer.accountId))
+      continue;
     const unitPrice =
       positive(input.clearingByLane.get(laneKeyOf(offer.commodity, offer.book))) ||
       positive(offer.unitPrice);

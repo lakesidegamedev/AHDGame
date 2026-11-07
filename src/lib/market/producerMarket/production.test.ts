@@ -307,6 +307,27 @@ describe("own-site deliveries at market value (captive stage 3)", () => {
     );
   });
 
+  it("books no captive value for a company in free transfer mode", () => {
+    const run = (internalTransferPricing?: { mode: "free" | "cost" }) =>
+      advanceProducerEconomy({
+        ...request,
+        producers: [
+          { ...mine, internalTransferPricing },
+          { ...consumer, internalTransferPricing },
+        ],
+        captiveMarketValue: true,
+      });
+    const free = run({ mode: "free" });
+    expect(byId(free, "mine").products[0].internalDeliveredUnits).toBeGreaterThan(0);
+    for (const p of free.producers) {
+      expect(p.internalSupplyIncome ?? 0).toBe(0);
+      expect(p.internalSupplyCharge ?? 0).toBe(0);
+    }
+    const unset = run();
+    expect(byId(unset, "mine").internalSupplyIncome).toBeGreaterThan(0);
+    expect(byId(unset, "consumer").internalSupplyCharge).toBeGreaterThan(0);
+  });
+
   it("leaves company cash, profit and physical flows as at stage 2", () => {
     const stage2 = advanceProducerEconomy({ ...request, captiveShortValue: true });
     const stage3 = advanceProducerEconomy({
