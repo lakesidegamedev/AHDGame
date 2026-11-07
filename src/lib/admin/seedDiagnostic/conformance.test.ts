@@ -155,11 +155,15 @@ describe("era-derived expectations", () => {
     expect(checks.find((check) => check.id === "config.maintenanceMode")?.severity).toBe("ok");
   });
 
-  it("checks forex fallback rates for included 2027 countries", async () => {
+  it("checks a real exchange row for every 2027 roster country and none for absent ones", async () => {
     const { db } = makeDb({});
     const { checks } = await runConformanceChecks(db, { preset: "2027-default" });
-    expect(checks.some((check) => check.id === "forex.HU.eraRate")).toBe(true);
-    expect(checks.some((check) => check.id === "forex.PL.eraRate")).toBe(true);
+    // HU, PL and RO trade in 2027, so they are checked as rows, not fallbacks.
+    for (const countryId of ["HU", "PL", "RO"]) {
+      expect(checks.some((check) => check.id === `forex.${countryId}.exists`)).toBe(true);
+      expect(checks.some((check) => check.id === `forex.${countryId}.eraRate`)).toBe(false);
+    }
+    expect(checks.some((check) => check.id.startsWith("forex.DD."))).toBe(false);
     expect(checks.some((check) => check.id === "forex.YU.eraRate")).toBe(false);
   });
 

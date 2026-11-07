@@ -12,10 +12,11 @@ import { processChallengerGeneration } from "./challengerSupply";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
-// createNPP is only hit when no free NPP exists in a bucket; stub it so the
-// generate-fallback path is deterministic and DB-free.
-vi.mock("@/lib/npp/generator", () => ({
-  createNPP: vi.fn(
+// createNPP (reached through the phase's creation batch) is only hit when no
+// free NPP exists in a bucket; stub it so the generate-fallback path is
+// deterministic and DB-free.
+vi.mock("@/lib/npp/generator", () => {
+  const createNPP = vi.fn(
     async ({ state, party, countryId }: { state: string; party: string; countryId: string }) => ({
       _id: new ObjectId(),
       name: `Generated ${party}`,
@@ -23,9 +24,13 @@ vi.mock("@/lib/npp/generator", () => ({
       countryId,
       homeState: state,
     })
-  ),
-  calculateQualityBonus: vi.fn(() => 0),
-}));
+  );
+  return {
+    createNPP,
+    openNppCreationBatch: vi.fn(() => ({ create: createNPP, close: vi.fn(async () => {}) })),
+    calculateQualityBonus: vi.fn(() => 0),
+  };
+});
 
 interface WorldFixture {
   currentTurn: number;

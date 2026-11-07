@@ -113,14 +113,18 @@ function buildCharacterUpdateOp(
       : COUNTRY_CURRENCY_MAP[doc.countryId];
   // Euro rows share the DE anchor rate — the same table `seedExchangeRates`
   // uses — so the migrated balance agrees with the seeded FX row in anchor
-  // units. RUB rows use the preset's RU row the same way. All other paths
-  // keep the legacy modern-table rate, byte-identical to before.
+  // units. RUB rows use the preset's RU row the same way, and every other
+  // 2027 row uses the 2027 table (2024 rates, TRY, PLN, RON), matching
+  // `seedExchangeRates`. All other presets keep the legacy modern-table rate,
+  // byte-identical to before.
   const homeRate =
     homeCurrency === "EUR"
       ? (getInitialRates(preset ?? "").DE ?? INITIAL_RATES[doc.countryId] ?? 1)
       : homeCurrency === "RUB"
         ? (getInitialRates(preset ?? "").RU ?? INITIAL_RATES[doc.countryId] ?? 1)
-        : (INITIAL_RATES[doc.countryId] ?? 1);
+        : preset === "2027-default"
+          ? (getInitialRates(preset)[doc.countryId] ?? INITIAL_RATES[doc.countryId] ?? 1)
+          : (INITIAL_RATES[doc.countryId] ?? 1);
   const cashOnHand = doc.cashOnHand ?? 0;
   const convertedCash = cashOnHand * homeRate;
   const convertedCampaignFunds = doc.funds * homeRate;

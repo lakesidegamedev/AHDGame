@@ -55,7 +55,7 @@ import {
   UK_NATIONAL_DEFAULT_OPTION_INDEXES,
   UK_NATIONAL_DEFAULTS,
 } from "./basePolicies";
-import { getInitialRates } from "@/lib/constants/currencies";
+import { INITIAL_RATES, getInitialRates } from "@/lib/constants/currencies";
 import {
   TRANSITION_1991_BUDGET_COUNTRIES,
   shouldUseFullAuthoredBudgetBaseline,
@@ -283,6 +283,7 @@ export interface NationalBudgetSeedConfig {
     | "ESP"
     | "SEK"
     | "TRL"
+    | "TRY"
     | "GRD"
     | "ATS"
     | "FIM"
@@ -5788,11 +5789,13 @@ function getUncalibratedNationalBudgetSeedConfigsForPreset(
     );
   }
   if (preset === "2027-default") {
-    return convertEuroMemberBudgetsFor2027(
-      overlayNationalBudgetConfigs(
-        getUncalibratedNationalBudgetSeedConfigsForPreset("2023-default"),
-        NATIONAL_BUDGET_SEED_CONFIGS_2027,
-        2027
+    return rebaseLegacyUnitBudgetsFor2027(
+      convertEuroMemberBudgetsFor2027(
+        overlayNationalBudgetConfigs(
+          getUncalibratedNationalBudgetSeedConfigsForPreset("2023-default"),
+          NATIONAL_BUDGET_SEED_CONFIGS_2027,
+          2027
+        )
       )
     );
   }
@@ -5943,30 +5946,74 @@ function convertEuroMemberBudgetsFor2027(
     if (config.currencyCode === "EUR") return config;
     if (!isEuroAdopted(config.countryId, preset)) return config;
     const factor = euroConversionFactor(rates[config.countryId] ?? NaN, eurAnchorRate);
-    const scaledSpending: Record<string, number> = {};
-    for (const [key, value] of Object.entries(config.baselineSpendingByCategory)) {
-      scaledSpending[key] = value * factor;
-    }
-    return {
-      ...config,
-      currencyCode: "EUR" as const,
-      gdp: config.gdp * factor,
-      otherRevenue: config.otherRevenue * factor,
-      debt: {
-        ...config.debt,
-        principal: config.debt.principal * factor,
-        ceiling: config.debt.ceiling * factor,
-      },
-      baselineSpendingByCategory: scaledSpending,
-      baselineStateGrants: config.baselineStateGrants * factor,
-      policyRevenueConfigs: config.policyRevenueConfigs?.map((revenueConfig) => ({
-        ...revenueConfig,
-        annualRevenuePerCapitaByOptionIndex: revenueConfig.annualRevenuePerCapitaByOptionIndex?.map(
-          (perCapita) => perCapita * factor
-        ),
-      })),
-    };
+    return scaleBudgetMoney(config, factor, "EUR");
   });
+}
+
+/**
+ * Inherited 2027 rows whose amounts are game units priced at a stale rate.
+ * The SE and TR 2019 books were sized for 4.29 SEK and 34.5 TRL per unit (the
+ * modern-table rows). The 2027 table carries 2024 market rates, so their
+ * money fields rebase by `newRate / legacyRate`, conserving anchor value
+ * exactly. TR also moves to the modern lira. Only an inherited row in the
+ * legacy code rebases; an authored 2027 row is already on the new scale.
+ */
+const LEGACY_UNIT_REBASE_2027: ReadonlyArray<{
+  countryId: CountryId;
+  legacyCode: NationalBudgetSeedConfig["currencyCode"];
+  currencyCode: NationalBudgetSeedConfig["currencyCode"];
+}> = [
+  { countryId: "SE", legacyCode: "SEK", currencyCode: "SEK" },
+  { countryId: "TR", legacyCode: "TRL", currencyCode: "TRY" },
+];
+
+function rebaseLegacyUnitBudgetsFor2027(
+  configs: NationalBudgetSeedConfig[]
+): NationalBudgetSeedConfig[] {
+  const rates = getInitialRates("2027-default");
+  return configs.map((config) => {
+    const rule = LEGACY_UNIT_REBASE_2027.find((row) => row.countryId === config.countryId);
+    if (!rule || config.currencyCode !== rule.legacyCode) return config;
+    if ((config.sourceFiscalYear ?? config.fiscalYear) >= 2027) return config;
+    const legacyRate = INITIAL_RATES[rule.countryId];
+    const rate = rates[rule.countryId];
+    if (!legacyRate || !rate || legacyRate <= 0 || rate <= 0) return config;
+    return scaleBudgetMoney(config, rate / legacyRate, rule.currencyCode);
+  });
+}
+
+/**
+ * Scale every absolute-money field of a budget row and restamp its currency.
+ * Ratios (taxBaseRatios, gdp multipliers, interest rates, ratings) pass through.
+ */
+function scaleBudgetMoney(
+  config: NationalBudgetSeedConfig,
+  factor: number,
+  currencyCode: NationalBudgetSeedConfig["currencyCode"]
+): NationalBudgetSeedConfig {
+  const scaledSpending: Record<string, number> = {};
+  for (const [key, value] of Object.entries(config.baselineSpendingByCategory)) {
+    scaledSpending[key] = value * factor;
+  }
+  return {
+    ...config,
+    currencyCode,
+    gdp: config.gdp * factor,
+    otherRevenue: config.otherRevenue * factor,
+    debt: {
+      ...config.debt,
+      principal: config.debt.principal * factor,
+      ceiling: config.debt.ceiling * factor,
+    },
+    baselineSpendingByCategory: scaledSpending,
+    baselineStateGrants: config.baselineStateGrants * factor,
+    policyRevenueConfigs: config.policyRevenueConfigs?.map((revenueConfig) => ({
+      ...revenueConfig,
+      annualRevenuePerCapitaByOptionIndex: revenueConfig.annualRevenuePerCapitaByOptionIndex?.map(
+        (perCapita) => perCapita * factor
+      ),
+    })),
+  };
 }
 
 /** Preserve the last complete era roster while applying newer authored rows. */

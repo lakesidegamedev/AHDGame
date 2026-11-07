@@ -14,7 +14,11 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { createNPP, calculateQualityBonus, type NPPGenerationContext } from "@/lib/npp/generator";
+import {
+  calculateQualityBonus,
+  openNppCreationBatch,
+  type NPPGenerationContext,
+} from "@/lib/npp/generator";
 import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
 import { isActiveElectionCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
@@ -208,6 +212,8 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
           createdTurn: 1,
           nppElectionMatureAtTurn: 1,
           createdAt: 1,
+          economicPosition: 1,
+          socialPosition: 1,
         },
       }
     )
@@ -275,8 +281,16 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
     )
     .toArray();
   const freeByBucket = new Map<string, NPP[]>();
+  // Generated challengers take their positions from the party rows read
+  // above instead of one party read each. Rows without a stored countryId
+  // are left out: the per-NPP read matches on countryId and would miss them.
   const generationContext: NPPGenerationContext = {
     existingNames: new Set(freeNpps.map((n) => n.name)),
+    partyPositions: new Map(
+      partyDocs
+        .filter((p) => p.countryId)
+        .map((p) => [`${String(p.countryId)}:${String(p.sequentialId)}`, p])
+    ),
   };
   for (const n of freeNpps) {
     const id = String(n._id);
@@ -321,104 +335,58 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
     statesWithOrg.add(`${r.countryId ?? "US"}:${r.stateId}`);
   }
 
+  // One territory hold for the pass: each country's fielding parties are
+  // claimed and read once, not once per generated challenger.
+  const nppBatch = openNppCreationBatch(db, majorsByCountry);
   let filed = 0;
-  for (const primary of openPrimaries) {
-    if (filed >= MAX_CHALLENGERS_PER_TURN) break;
-    const country = String(primary.countryId ?? "US");
-    const supply = getChallengerSupplyPolicy(
-      countryAccess[country as CountryId],
-      primary.electionType
-    );
-    if (!supply.canReuse) continue;
-    const state = primary.state;
-    const countryParties = majorsByCountry.get(country) ?? [];
-    let raceHasCandidate = electionsWithCandidate.has(String(primary._id));
-    for (const party of countryParties) {
+  try {
+    for (const primary of openPrimaries) {
       if (filed >= MAX_CHALLENGERS_PER_TURN) break;
-      if (hasCandidate.has(`${String(primary._id)}_${party}`)) continue; // party already contesting
-      const spo = spoByKey.get(`${country}:${state}:${party}`);
-      const partyDoc = partyDocs.find(
-        (p) => String(p.countryId ?? "US") === country && String(p.sequentialId) === party
+      const country = String(primary.countryId ?? "US");
+      const supply = getChallengerSupplyPolicy(
+        countryAccess[country as CountryId],
+        primary.electionType
       );
-      if (!partyDoc?.isDefault) {
-        const nationalPresence =
-          state === country &&
-          spoRows.some(
-            (row) => row.countryId === country && row.partyId === party && row.hasPresence
-          );
-        if (!spo?.hasPresence && !nationalPresence) continue;
-      }
-
-      if (!canPartyFieldInState(spo, statesWithOrg.has(`${country}:${state}`), party)) continue; // regional presence
-
-      // Reuse a free NPP from this (country,party,state) bucket if available,
-      // else generate one only in a non-player country. Paid recruitment and
-      // roster limits must not be bypassed by empty races in player countries.
-      const bucket = `${country}:${party}:${state}`;
-      let npp = takeFree(bucket, primary);
-      if (!npp) {
-        if (!supply.canGenerate) continue;
-        npp = await createNPP(
-          {
-            state,
-            party,
-            countryId: country as CountryId,
-            quality: calculateQualityBonus(spo?.organization ?? 0),
-          },
-          generationContext
+      if (!supply.canReuse) continue;
+      const state = primary.state;
+      const countryParties = majorsByCountry.get(country) ?? [];
+      let raceHasCandidate = electionsWithCandidate.has(String(primary._id));
+      for (const party of countryParties) {
+        if (filed >= MAX_CHALLENGERS_PER_TURN) break;
+        if (hasCandidate.has(`${String(primary._id)}_${party}`)) continue; // party already contesting
+        const spo = spoByKey.get(`${country}:${state}:${party}`);
+        const partyDoc = partyDocs.find(
+          (p) => String(p.countryId ?? "US") === country && String(p.sequentialId) === party
         );
-      }
+        if (!partyDoc?.isDefault) {
+          const nationalPresence =
+            state === country &&
+            spoRows.some(
+              (row) => row.countryId === country && row.partyId === party && row.hasPresence
+            );
+          if (!spo?.hasPresence && !nationalPresence) continue;
+        }
 
-      const candidateDoc: Omit<ElectionCandidate, "_id"> = {
-        electionId: primary._id,
-        countryId: (primary.countryId ?? npp.countryId ?? "US") as ElectionCandidate["countryId"],
-        characterId: npp._id,
-        characterName: npp.name,
-        party: npp.party,
-        status: "active",
-        support: DEFAULT_CANDIDATE_SUPPORT,
-        enteredAt: now,
-        isNPP: true,
-        nppId: npp._id,
-      };
-      try {
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .insertOne(candidateDoc as ElectionCandidate);
-        hasCandidate.add(`${String(primary._id)}_${party}`);
-        electionsWithCandidate.add(String(primary._id));
-        nppsInActiveCandidacy.add(String(npp._id));
-        raceHasCandidate = true;
-        filed++;
-      } catch (error) {
-        // Partial unique index: one active candidacy per character. A reused free
-        // NPP that was claimed elsewhere this pass just gets skipped for this race.
-        if (!isActiveElectionCandidateDuplicateKey(error)) throw error;
-      }
-    }
+        if (!canPartyFieldInState(spo, statesWithOrg.has(`${country}:${state}`), party)) continue; // regional presence
 
-    // AI-only Founding cannot converge while a cycle-0 race has no candidate or vote
-    // coverage. Regional presence still controls which parties normally field,
-    // but incomplete seed org data must not strand the office forever. Give a
-    // wholly-empty founding race one fallback candidate from the country's first
-    // default party. This also covers national executive races, whose state is
-    // the country code and therefore has no statePartyOrg row by design.
-    if (founding && supply.canGenerate && !raceHasCandidate && filed < MAX_CHALLENGERS_PER_TURN) {
-      const party = countryParties.find((id) =>
-        partyDocs.some(
-          (p) =>
-            p.isDefault && String(p.countryId ?? "US") === country && String(p.sequentialId) === id
-        )
-      );
-      if (party) {
+        // Reuse a free NPP from this (country,party,state) bucket if available,
+        // else generate one only in a non-player country. Paid recruitment and
+        // roster limits must not be bypassed by empty races in player countries.
         const bucket = `${country}:${party}:${state}`;
         let npp = takeFree(bucket, primary);
         if (!npp) {
-          npp = await createNPP(
-            { state, party, countryId: country as CountryId, quality: 0 },
+          if (!supply.canGenerate) continue;
+          npp = await nppBatch.create(
+            {
+              state,
+              party,
+              countryId: country as CountryId,
+              quality: calculateQualityBonus(spo?.organization ?? 0),
+            },
             generationContext
           );
         }
+
         const candidateDoc: Omit<ElectionCandidate, "_id"> = {
           electionId: primary._id,
           countryId: (primary.countryId ?? npp.countryId ?? "US") as ElectionCandidate["countryId"],
@@ -438,12 +406,69 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
           hasCandidate.add(`${String(primary._id)}_${party}`);
           electionsWithCandidate.add(String(primary._id));
           nppsInActiveCandidacy.add(String(npp._id));
+          raceHasCandidate = true;
           filed++;
         } catch (error) {
+          // Partial unique index: one active candidacy per character. A reused free
+          // NPP that was claimed elsewhere this pass just gets skipped for this race.
           if (!isActiveElectionCandidateDuplicateKey(error)) throw error;
         }
       }
+
+      // AI-only Founding cannot converge while a cycle-0 race has no candidate or vote
+      // coverage. Regional presence still controls which parties normally field,
+      // but incomplete seed org data must not strand the office forever. Give a
+      // wholly-empty founding race one fallback candidate from the country's first
+      // default party. This also covers national executive races, whose state is
+      // the country code and therefore has no statePartyOrg row by design.
+      if (founding && supply.canGenerate && !raceHasCandidate && filed < MAX_CHALLENGERS_PER_TURN) {
+        const party = countryParties.find((id) =>
+          partyDocs.some(
+            (p) =>
+              p.isDefault &&
+              String(p.countryId ?? "US") === country &&
+              String(p.sequentialId) === id
+          )
+        );
+        if (party) {
+          const bucket = `${country}:${party}:${state}`;
+          let npp = takeFree(bucket, primary);
+          if (!npp) {
+            npp = await nppBatch.create(
+              { state, party, countryId: country as CountryId, quality: 0 },
+              generationContext
+            );
+          }
+          const candidateDoc: Omit<ElectionCandidate, "_id"> = {
+            electionId: primary._id,
+            countryId: (primary.countryId ??
+              npp.countryId ??
+              "US") as ElectionCandidate["countryId"],
+            characterId: npp._id,
+            characterName: npp.name,
+            party: npp.party,
+            status: "active",
+            support: DEFAULT_CANDIDATE_SUPPORT,
+            enteredAt: now,
+            isNPP: true,
+            nppId: npp._id,
+          };
+          try {
+            await db
+              .collection<ElectionCandidate>("electionCandidates")
+              .insertOne(candidateDoc as ElectionCandidate);
+            hasCandidate.add(`${String(primary._id)}_${party}`);
+            electionsWithCandidate.add(String(primary._id));
+            nppsInActiveCandidacy.add(String(npp._id));
+            filed++;
+          } catch (error) {
+            if (!isActiveElectionCandidateDuplicateKey(error)) throw error;
+          }
+        }
+      }
     }
+  } finally {
+    await nppBatch.close();
   }
 
   if (filed > 0) {

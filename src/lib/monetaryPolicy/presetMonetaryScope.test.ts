@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { CountryId } from "@/lib/constants/countries";
 import { FOREX_ACTIVE_COUNTRIES } from "@/lib/constants/currencies";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
-import { SHIPPING_PRESETS } from "@/lib/world/eraRoster";
+import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
+import { SHIPPING_PRESETS, isRegisteredTier, tierFor } from "@/lib/world/eraRoster";
 import { getPresetMonetaryScope } from "./presetMonetaryScope";
 
 describe("getPresetMonetaryScope", () => {
@@ -26,7 +27,13 @@ describe("getPresetMonetaryScope", () => {
         : preset === "2019-default"
           ? [...FOREX_ACTIVE_COUNTRIES, "PL", "HU", "RO", "BG"]
           : preset === "2027-default"
-            ? [...FOREX_ACTIVE_COUNTRIES, "BG"]
+            ? [
+                ...FOREX_ACTIVE_COUNTRIES.filter((countryId) => countryId !== "DD"),
+                "HU",
+                "PL",
+                "RO",
+                "BG",
+              ]
             : FOREX_ACTIVE_COUNTRIES;
     expect(scope.forexCountries).toEqual(expectedForex);
     expect(scope.centralBankCountries.every((countryId) => budgeted.has(countryId))).toBe(true);
@@ -49,6 +56,24 @@ describe("getPresetMonetaryScope", () => {
       expect.objectContaining({ countryId: "BG", reason: "shared-currency-bank" })
     );
     expect(getPresetMonetaryScope("1991-default").forexCountries).toContain("BG");
+  });
+
+  it("drives 2027 exchange rows from the roster minus absent countries", () => {
+    const scope = getPresetMonetaryScope("2027-default");
+    const registered = COUNTRY_ORDER.filter((countryId) =>
+      isRegisteredTier(tierFor("2027-default", countryId))
+    );
+    expect([...scope.forexCountries].sort()).toEqual([...registered].sort());
+    expect(scope.forexCountries).toEqual(expect.arrayContaining(["HU", "PL", "RO"]));
+    expect(scope.forexCountries).not.toContain("DD");
+    // HU seeds a HUF budget and HUF bonds, so its forint gets a central bank.
+    expect(scope.centralBankCountries).toContain("HU");
+    for (const countryId of ["PL", "RO"] as const) {
+      expect(scope.centralBankCountries).not.toContain(countryId);
+      expect(scope.exclusions).toContainEqual(
+        expect.objectContaining({ countryId, reason: "fiscal-model-unauthored" })
+      );
+    }
   });
 
   it.each(["1953-default", "1979-default"])("models RU and DD fiscally in %s", (preset) => {

@@ -41,6 +41,7 @@ export type CurrencyCode =
   | "ESP"
   | "SEK"
   | "TRL"
+  | "TRY"
   | "GRD"
   | "ATS"
   | "FIM"
@@ -119,6 +120,7 @@ export const CURRENCY_ANCHOR_COUNTRY: Record<CurrencyCode, CountryId> = {
   ESP: "ES",
   SEK: "SE",
   TRL: "TR",
+  TRY: "TR", // Modern Turkish lira, active only in the 2027 preset (see getSeedCurrencyCode)
   GRD: "GR",
   ATS: "AT",
   FIM: "FI",
@@ -177,6 +179,7 @@ export const FOREX_ACTIVE_CURRENCIES: CurrencyCode[] = [
   "ESP",
   "SEK",
   "TRL",
+  "TRY",
   "GRD",
   "ATS",
   "FIM",
@@ -218,6 +221,7 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   ESP: "₧",
   SEK: "kr",
   TRL: "₺",
+  TRY: "₺",
   GRD: "₯",
   ATS: "öS",
   FIM: "mk",

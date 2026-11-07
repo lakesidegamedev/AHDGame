@@ -23,8 +23,15 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { deriveDomainPositions } from "./domainPositions";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { NPP_POLITICAL_INFLUENCE_FLOOR } from "@shared/constants/formulas";
-import { getPartyFrontier, isInFrontier } from "@/lib/parties/partyFrontier";
-import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+import {
+  frontierFromPresence,
+  getCountryRegionIds,
+  getPartyFrontier,
+  getPartyPresenceMap,
+  isInFrontier,
+  loadReentryRegions,
+} from "@/lib/parties/partyFrontier";
+import { holdPartyTerritory, withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
 import fs from "fs";
 import path from "path";
 import { JP_ETHNICITY_WEIGHTS } from "@/lib/countries/jp/data/jpNppEthnicity";
@@ -354,6 +361,13 @@ interface NPPGenerationConfig {
  */
 export interface NPPGenerationContext {
   existingNames: Set<string>;
+  /**
+   * Party positions already loaded by the caller, keyed `${countryId}:${sequentialId}`.
+   * A hit replaces the per-NPP party read; a miss falls back to it.
+   */
+  partyPositions?: ReadonlyMap<string, Pick<PoliticalParty, "economicPosition" | "socialPosition">>;
+  /** Legislation types projected for stances, loaded once by a bulk caller. */
+  legislationTypes?: LegislationType[];
 }
 
 /**
@@ -433,15 +447,17 @@ async function generatePolicyPositions(
   db: Db,
   partyId: string,
   countryId: CountryId,
-  quality: number = 0
+  quality: number = 0,
+  context?: NPPGenerationContext
 ): Promise<PolicyPositions> {
   // Parties are uniquely identified by (sequentialId, countryId).
   const seqId = parseInt(partyId, 10);
-  const party = Number.isFinite(seqId)
-    ? await db
+  const party = !Number.isFinite(seqId)
+    ? null
+    : (context?.partyPositions?.get(`${countryId}:${seqId}`) ??
+      (await db
         .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: seqId, countryId })
-    : null;
+        .findOne({ sequentialId: seqId, countryId })));
 
   // Default positions if party not found
   let baseEconomic = 0;
@@ -466,7 +482,7 @@ async function generatePolicyPositions(
 
   // Derive per-legislation-type stances so the cross-pressure resolver has
   // ideology + donor signal beyond the small economic tint.
-  const legislationTypes = await getLegislationTypesCached(db);
+  const legislationTypes = context?.legislationTypes ?? (await getLegislationTypesCached(db));
   const domainPositions = deriveDomainPositions(legislationTypes, economicRounded, socialRounded);
 
   return {
@@ -532,7 +548,7 @@ export async function generateNPP(
 
   // Generate components
   const personality = generatePersonality(quality);
-  const policies = await generatePolicyPositions(db, config.party, countryId, quality);
+  const policies = await generatePolicyPositions(db, config.party, countryId, quality, context);
   const politicalInfluence = generatePoliticalInfluence();
   const favorability = generateFavorability(quality);
 
@@ -602,6 +618,111 @@ export async function createNPP(
 
     return nppWithId;
   });
+}
+
+/**
+ * Many `createNPP` calls in one pass, without its per-NPP round trips.
+ *
+ * `createNPP` claims the party's territory, reads the country's regions, the
+ * party's presence (three collections) and its renewal row, then releases,
+ * for every NPP: about a dozen round trips before the insert. A batch claims a
+ * country's listed parties together on first use and holds them until
+ * `close`, reads their regions, presence and renewal rows once, and updates
+ * presence in memory as its own NPPs land. The frontier answer is the one
+ * `createNPP` would reach: while held, no other writer can move these parties'
+ * territory, and the only presence this pass adds is its own NPPs.
+ *
+ * `partiesByCountry` names the parties each country may generate for, so one
+ * claim and one presence read cover them all. A party outside that list is
+ * claimed and read on its own when first used.
+ *
+ * Callers must `close` in `finally`.
+ */
+export interface NppCreationBatch {
+  create(config: NPPGenerationConfig, context?: NPPGenerationContext): Promise<NPP>;
+  close(): Promise<void>;
+}
+
+export function openNppCreationBatch(
+  db: Db,
+  partiesByCountry: ReadonlyMap<string, readonly string[]>
+): NppCreationBatch {
+  const hold = holdPartyTerritory(db);
+  const regionsByCountry = new Map<string, string[]>();
+  const presenceByParty = new Map<string, Set<string>>();
+  const reentryByParty = new Map<string, string[]>();
+  let legislationTypes: LegislationType[] | undefined;
+
+  const territoryKey = (countryId: string, partyId: string) => `${countryId}:${partyId}`;
+  const normalize = (partyId: string) => String(parseInt(partyId, 10));
+
+  const loadTerritory = async (countryId: CountryId, partyId: string) => {
+    if (presenceByParty.has(territoryKey(countryId, partyId))) return;
+    const listed = [...new Set((partiesByCountry.get(countryId) ?? []).map(normalize))];
+    const group = (listed.includes(partyId) ? listed : [partyId]).filter(
+      (id) =>
+        !presenceByParty.has(territoryKey(countryId, id)) &&
+        Number.isSafeInteger(Number(id)) &&
+        Number(id) > 0
+    );
+    await hold.claim(group.map((id) => ({ countryId, partyId: id })));
+    let regions = regionsByCountry.get(countryId);
+    if (!regions) {
+      regions = await getCountryRegionIds(db, countryId);
+      regionsByCountry.set(countryId, regions);
+    }
+    const [presence, reentry] = await Promise.all([
+      getPartyPresenceMap(db, countryId, group, regions),
+      loadReentryRegions(db, countryId, group),
+    ]);
+    for (const id of group) {
+      presenceByParty.set(territoryKey(countryId, id), presence.get(id) ?? new Set());
+      reentryByParty.set(territoryKey(countryId, id), reentry.get(id) ?? []);
+    }
+  };
+
+  return {
+    async create(config, context) {
+      const countryId = config.countryId ?? "US";
+      let effectiveConfig = config;
+      let heldPresence: Set<string> | undefined;
+      const sequentialPartyId = parseInt(config.party, 10);
+      if (Number.isSafeInteger(sequentialPartyId) && sequentialPartyId > 0) {
+        const partyId = String(sequentialPartyId);
+        effectiveConfig = { ...config, party: partyId };
+        await loadTerritory(countryId, partyId);
+        const key = territoryKey(countryId, partyId);
+        const presence = presenceByParty.get(key)!;
+        const regions = regionsByCountry.get(countryId)!;
+        const frontier = frontierFromPresence(
+          countryId,
+          presence,
+          regions,
+          reentryByParty.get(key) ?? []
+        );
+        if (isInFrontier(presence, frontier, config.state)) {
+          if (config.state && regions.includes(config.state)) heldPresence = presence;
+        } else {
+          // Same rule as createNPP: no distant partisan foothold as a side effect.
+          effectiveConfig = { ...config, party: "independent" };
+        }
+      }
+      // Stances read the same projected types for every NPP: load them once.
+      legislationTypes ??= context?.legislationTypes ?? (await getLegislationTypesCached(db));
+      const npp = await generateNPP(
+        effectiveConfig,
+        context ? { ...context, legislationTypes } : undefined,
+        db
+      );
+      const sequentialId = await getNextSequentialId(db, "npp");
+      const nppWithId: NPP = { ...npp, sequentialId };
+      await db.collection<NPP>("npps").insertOne(nppWithId);
+      // The new NPP is presence for its party, exactly as a re-read would see it.
+      heldPresence?.add(config.state);
+      return nppWithId;
+    },
+    close: () => hold.release(),
+  };
 }
 
 /**

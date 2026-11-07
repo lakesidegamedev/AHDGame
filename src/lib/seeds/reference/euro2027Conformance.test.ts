@@ -65,7 +65,7 @@ describe("2027 euro seed conformance", () => {
       }
       for (const outsider of ["US", "UK", "JP", "SE", "CN", "BR", "NG", "TR"] as const) {
         expect(byCountry.get(outsider)?.currencyCode, outsider).toBe(
-          COUNTRY_CURRENCY_MAP[outsider]
+          getSeedCurrencyCode(outsider, "2027-default")
         );
       }
     });
@@ -215,7 +215,7 @@ describe("2027 euro seed conformance", () => {
       for (const outsider of ["US", "UK", "JP", "SE", "CN", "BR", "NG", "TR"] as const) {
         const op = byCountry.get(outsider);
         expect(op?.updateOne.update.$setOnInsert.currencyCode, outsider).toBe(
-          COUNTRY_CURRENCY_MAP[outsider]
+          getSeedCurrencyCode(outsider, "2027-default")
         );
         expect(op?.updateOne.update.$setOnInsert.rate, outsider).toBe(RATES_2027[outsider]);
       }
@@ -269,7 +269,7 @@ describe("2027 euro seed conformance", () => {
       // Non-members carry an explicit home code, never undefined.
       for (const outsider of ["US", "UK", "JP", "BR", "CN", "NG", "SE", "TR"] as const) {
         expect(byCountry.get(outsider)?.liquidCurrencyCode, outsider).toBe(
-          COUNTRY_CURRENCY_MAP[outsider]
+          getSeedCurrencyCode(outsider, "2027-default")
         );
       }
     });

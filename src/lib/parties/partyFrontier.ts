@@ -166,19 +166,36 @@ export async function getPartyFrontier(
 ): Promise<{ presence: Set<string>; frontier: Set<string> }> {
   const regions = regionIds ?? (await getCountryRegionIds(db, countryId));
   const presence = await getPartyPresenceStates(db, countryId, partyId, regions);
+  // An empty presence already fails open, so only a present party needs the read.
+  const reentry =
+    presence.size > 0
+      ? ((await loadReentryRegions(db, countryId, [partyId])).get(partyId) ?? [])
+      : [];
+  return { presence, frontier: frontierFromPresence(countryId, presence, regions, reentry) };
+}
+
+/**
+ * The growth frontier for a presence already in hand, plus any re-entry
+ * regions party renewal grants. Pure: the read-side of `getPartyFrontier`,
+ * shared with callers that cache presence across several changes.
+ */
+export function frontierFromPresence(
+  countryId: CountryId,
+  presence: ReadonlySet<string>,
+  regions: readonly string[],
+  reentry: readonly string[]
+): Set<string> {
   const frontier = connectedGrowthFrontier(
     presence,
     expandFrontier(countryId, presence),
     getTerritoryAdjacency(countryId, regions)
   );
-  // An empty presence already fails open, so only a present party needs the read.
   if (presence.size > 0) {
-    const reentry = await loadReentryRegions(db, countryId, [partyId]);
-    for (const region of reentry.get(partyId) ?? []) {
+    for (const region of reentry) {
       if (regions.includes(region)) frontier.add(region);
     }
   }
-  return { presence, frontier };
+  return frontier;
 }
 
 /** Regions each party may re-enter under party renewal. Empty without renewal rows. */
