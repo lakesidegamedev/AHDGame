@@ -26,7 +26,9 @@ import { lifecycleRefusal } from "@/lib/banking/rules/lifecycle";
 import { getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { getCashReserves } from "@/lib/banking/rules/balanceSheet";
 import { isBlockedDepositor } from "@/lib/banking/blacklist";
-import { settleTransition } from "@/lib/banking/settlementJournal";
+import { applyProjection, settleTransition } from "@/lib/banking/settlementJournal";
+import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { reviveObjectIds } from "@/lib/banking/settlementEncoding";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import type { TransitionProjection } from "@/lib/banking/rules/boundary";
@@ -114,7 +116,59 @@ export async function ensureSavingsAccount(
   const created = await db
     .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
     .findOne({ ownerType: "character", ownerId, currency });
-  return created ? toAccountSnapshot(created) : null;
+  if (created) return toAccountSnapshot(created);
+  // The settlement key is deterministic, so an already-applied receipt replays
+  // without inserting anything. When the receipt exists but its account record
+  // does not, rebuild the account from the receipt's own insert.
+  const rebuilt = await rebuildAccountFromReceipt(db, transition.key, ownerId, currency);
+  return rebuilt ? toAccountSnapshot(rebuilt) : null;
+}
+
+/**
+ * Recreate a savings account whose migration receipt is applied but whose
+ * record is missing. The receipt already booked the holder-side counters, so
+ * only the account insert is replayed. The fixed id makes this idempotent.
+ */
+async function rebuildAccountFromReceipt(
+  db: Db,
+  key: string,
+  ownerId: ObjectId,
+  currency: CurrencyCode
+): Promise<SavingsAccount | null> {
+  const receipt = await db
+    .collection<{ _id: string; status?: string; projections?: Array<{ projection?: unknown }> }>(
+      MONEY_MOVE_COLLECTION
+    )
+    .findOne({ _id: key });
+  if (!receipt || receipt.status !== "applied") return null;
+  const stored = receipt.projections?.find(
+    (record) =>
+      (record.projection as TransitionProjection | undefined)?.collection ===
+      SAVINGS_ACCOUNTS_COLLECTION
+  )?.projection as TransitionProjection | undefined;
+  const insert = stored?.insert;
+  if (!insert) return null;
+  const revived = reviveObjectIds(insert) as Record<string, unknown>;
+  if (
+    String(revived.ownerId) !== ownerId.toString() ||
+    revived.currency !== currency ||
+    revived.ownerType !== "character"
+  ) {
+    return null;
+  }
+  const now = new Date();
+  if (!(revived.migratedFromLegacyAt instanceof Date)) revived.migratedFromLegacyAt = now;
+  if (!(revived.createdAt instanceof Date)) revived.createdAt = now;
+  if (!(revived.updatedAt instanceof Date)) revived.updatedAt = now;
+  const outcome = await applyProjection(db, {
+    ...stored,
+    insert: revived,
+    note: "the authoritative account, rebuilt from its migration receipt",
+  } as TransitionProjection);
+  if (!outcome.ok) return null;
+  return db
+    .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
+    .findOne({ ownerType: "character", ownerId, currency });
 }
 
 /** What the rules need to know about a holder right now. */
