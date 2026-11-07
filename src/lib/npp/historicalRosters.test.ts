@@ -24,6 +24,7 @@ import {
   splitCNNPCDelegates,
   US_EXECUTIVE_1992,
   US_EXECUTIVE_2020,
+  US_EXECUTIVE_2027,
   US_HOUSE_1992,
   US_SENATE_1992,
   US_STATE_SENATE_1990,
@@ -330,4 +331,42 @@ describe("roster coverage", () => {
       expect(problems).toEqual([]);
     });
   }
+});
+
+describe("2027 US executive roster", () => {
+  const executive = getPresetSeats("2027-default").filter(
+    (seat) => seat.officeType === "president" || seat.officeType === "vicePresident"
+  );
+
+  it("seats the January 2027 ticket rather than the 2020 placeholder", () => {
+    expect(isRosteredPreset("2027-default")).toBe(true);
+    expect(executive).toEqual(US_EXECUTIVE_2027);
+  });
+
+  it("names the president and vice president of the term that began in January 2025", () => {
+    const president = getHistoricalRosterEntry(
+      "2027-default",
+      "US",
+      "president",
+      "US",
+      "republican",
+      0
+    );
+    const vicePresident = getHistoricalRosterEntry(
+      "2027-default",
+      "US",
+      "vicePresident",
+      "US",
+      "republican",
+      0
+    );
+    expect(president).toMatchObject({ name: "Donald Trump", birthYear: 1946 });
+    expect(vicePresident).toMatchObject({ name: "JD Vance", birthYear: 1984 });
+  });
+
+  it("leaves the rest of the 2027 board to generated identities", () => {
+    expect(
+      getHistoricalRosterEntry("2027-default", "US", "governor", "CA", "democrat", 0)
+    ).toBeUndefined();
+  });
 });

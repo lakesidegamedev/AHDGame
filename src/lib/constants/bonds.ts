@@ -31,15 +31,6 @@ export const CORPORATE_BOND_TERM_PREMIUMS: Record<BondMaturityTurns, number> = {
   336: 1.75,
 };
 
-/**
- * Launch-window bond freeze. Corporate bond issuance is blocked until this
- * instant to keep the opening days from being dominated by debt-fuelled
- * expansion, giving small corps an easier start. Anchored 4 days from the
- * 2026-08-08 world switch-on; auto-expires with no follow-up deploy needed.
- * Set to null (or a past date) to lift the freeze.
- */
-export const BOND_ISSUANCE_FREEZE_UNTIL: Date | null = new Date("2026-08-12T00:00:00Z");
-
 // ── Bond issuance constants ──────────────────────────────────────────────────
 
 /** Minimum face value for a bond issuance ($) */

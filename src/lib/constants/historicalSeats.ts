@@ -3474,6 +3474,16 @@ export const US_EXECUTIVE_2020: HistoricalSeat[] = [
   { state: "US", officeType: "vicePresident", party: "republican" },
 ];
 
+// Republican ticket, from the 2024 election, sitting in January 2027 two years
+// into the term that began 20 Jan 2025. Unlike the 1992 and 2020 pairs these
+// rows are named: the 2027 roster (`src/lib/npp/rosters/p2027-us.ts`) seats the
+// actual president and vice president, the same overlay the 1991 and 2019
+// presets use for their named officeholders.
+export const US_EXECUTIVE_2027: HistoricalSeat[] = [
+  { state: "US", officeType: "president", party: "republican" },
+  { state: "US", officeType: "vicePresident", party: "republican" },
+];
+
 // BR executive 1953 — the PTB ticket won the Oct 1950 presidential election;
 // that Second Republic president (inaugurated Jan 1951) is still sitting in
 // 1953. Seed a generic NPP on the historically-correct PTB affiliation (same
@@ -4177,20 +4187,14 @@ const SEAT_GROUPS_2019: SeatGroups = mergeGroups(SEAT_GROUPS_2020, {
  * only the explicitly modeled aggregate regional offices; their wider 2027
  * legislative rosters remain separate historical-authoring work.
  *
- * ⚠ THE US EXECUTIVE IS SEATED FROM 2020, and upstream's flat case seated
- * none at all. A presidential player country with no president is a broken
- * world rather than an empty chair: the executive branch has no holder, and
- * `eraContract.test.ts` S5 fails on exactly that. Reusing the 2020 holder is
- * the same compromise 1999 and 2007 already make with the February 2020
- * Congress, and it is the lesser of two wrongs.
- *
- * NOT the 1979 case. 1979 stays unseeded because its party slugs resolve to
- * "independent", so seating it would invent a fake independent president --
- * worse than the empty chair. Here the seat resolves correctly.
+ * The US executive is the January 2027 ticket (`US_EXECUTIVE_2027`), named
+ * through the 2027 roster overlay. A presidential player country with no
+ * president is a broken world, and `eraContract.test.ts` S5 fails on exactly
+ * that; a generic 2020 holder was the earlier stopgap.
  */
 const SEAT_GROUPS_2027: SeatGroups = {
   US: [
-    ...US_EXECUTIVE_2020,
+    ...US_EXECUTIVE_2027,
     ...US_HOUSE_2027,
     ...US_SENATE_2027,
     ...US_STATE_SENATE_2020,
