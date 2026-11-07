@@ -30,3 +30,21 @@ describe("RunningSoldReading own-site line", () => {
     expect(container.textContent).not.toContain("to your sites");
   });
 });
+
+describe("RunningSoldReading own-truck haul line", () => {
+  it("shows what the own trucks hauled, with a tooltip separating it from 'to your sites'", () => {
+    const { container } = render(<RunningSoldReading {...base} ownTruckHaulTeu={1234} />);
+    const line = Array.from(container.querySelectorAll("[title]")).find((el) =>
+      el.textContent?.includes("Own trucks hauled")
+    );
+    expect(line?.textContent).toBe("Own trucks hauled 1,234 TEU");
+    expect(line?.getAttribute("title")).toContain("separate from 'to your sites'");
+  });
+
+  it("omits the line when zero or missing", () => {
+    for (const teu of [0, null, undefined]) {
+      const { container } = render(<RunningSoldReading {...base} ownTruckHaulTeu={teu} />);
+      expect(container.textContent).not.toContain("Own trucks hauled");
+    }
+  });
+});

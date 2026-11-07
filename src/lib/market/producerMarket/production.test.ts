@@ -242,10 +242,11 @@ describe("own-site deliveries at market value (captive stage 3)", () => {
     ],
   });
   const consumer = plant({ id: "consumer" });
+  const optedIn = (p: typeof mine) => ({ ...p, ownSiteMarketValue: true });
   const request = {
     turn: 1,
     accounts,
-    producers: [mine, consumer],
+    producers: [optedIn(mine), optedIn(consumer)],
     // An outside seller clears the lane at 8 while the mine asks 10.
     externalOffers: [
       {
@@ -368,12 +369,29 @@ describe("own-site deliveries at market value (captive stage 3)", () => {
     expect(stage3.accounts).toEqual(stage2.accounts);
   });
 
+  it("books no entries for a company on Free transfer pricing", () => {
+    const free = advanceProducerEconomy({
+      ...request,
+      producers: [mine, consumer],
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    for (const p of free.producers) {
+      expect(p.internalSupplyIncome).toBeUndefined();
+      expect(p.internalSupplyCharge).toBeUndefined();
+    }
+    expect(byId(free, "mine").products[0].captiveUnitValue).toBeUndefined();
+  });
+
   it("keeps an explicit internal transfer price instead of adding a second entry", () => {
-    const priced = { ...mine, internalTransferPricing: { mode: "cost" as const } };
-    const base = advanceProducerEconomy({ ...request, producers: [priced, consumer] });
+    const priced = optedIn({ ...mine, internalTransferPricing: { mode: "cost" as const } });
+    const base = advanceProducerEconomy({
+      ...request,
+      producers: [priced, optedIn(consumer)],
+    });
     const stage3 = advanceProducerEconomy({
       ...request,
-      producers: [priced, consumer],
+      producers: [priced, optedIn(consumer)],
       captiveMarketValue: true,
     });
     expect(byId(stage3, "mine").internalSupplyIncome).toBe(byId(base, "mine").internalSupplyIncome);
