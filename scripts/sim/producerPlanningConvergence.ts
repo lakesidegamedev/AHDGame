@@ -9,6 +9,52 @@ import type { advanceProducerEconomy } from "../../src/lib/market/producerMarket
 type Request = Parameters<typeof advanceProducerEconomy>[0];
 type Result = ReturnType<typeof advanceProducerEconomy>;
 
+/** Restore the callback JSON drops, using only attribution in the frozen fixture. */
+export function producerPlanningReplayRequest(frozen: {
+  request: Request;
+  result?: Pick<Result, "tradeReceipt">;
+}): Request {
+  const { request } = frozen;
+  const offers = new Map(frozen.result?.tradeReceipt.offers.map((offer) => [offer.id, offer]));
+  const orders = new Map(frozen.result?.tradeReceipt.orders.map((order) => [order.id, order]));
+  const countriesByWallet = new Map<string, Set<string>>();
+  const countriesByState = new Map<string, Set<string>>();
+  const addCountry = (index: Map<string, Set<string>>, key: string, country: string) => {
+    const countries = index.get(key) ?? new Set<string>();
+    countries.add(country);
+    index.set(key, countries);
+  };
+  for (const household of request.households ?? []) {
+    if (!household.countryId) continue;
+    addCountry(countriesByWallet, household.accountId, household.countryId);
+    if (household.stateId) addCountry(countriesByState, household.stateId, household.countryId);
+  }
+  const producerCountries = new Map<string, string | undefined>();
+  for (const producer of request.producers) {
+    // Receipt rows retain the original callback's result, including an absent
+    // country. Prefer them to household inference, even when they are untagged.
+    const rows = [
+      ...producer.outputs.map((output) =>
+        offers.get(JSON.stringify([producer.id, "output", output.commodity]))
+      ),
+      ...producer.inputs.map((input) =>
+        orders.get(JSON.stringify([producer.id, "input", input.commodity]))
+      ),
+    ].filter((row) => row != null);
+    const countries = new Set(
+      rows.length > 0
+        ? rows.map((row) => row.countryId)
+        : [
+            ...(countriesByWallet.get(producer.labourRecipientAccountId) ?? []),
+            ...(countriesByState.get(producer.stateId ?? "") ?? []),
+          ]
+    );
+    if (countries.size > 1) throw new Error(`Ambiguous frozen country for producer ${producer.id}`);
+    producerCountries.set(producer.id, countries.values().next().value);
+  }
+  return { ...request, countryOfProducer: (id) => producerCountries.get(id) };
+}
+
 function option(name: string): string | undefined {
   const index = process.argv.indexOf(name);
   return index < 0 ? undefined : process.argv[index + 1];
@@ -22,21 +68,9 @@ async function main() {
   const budget = option("--budget-ms");
   const engine = path.resolve(option("--engine") ?? "src/lib/market/producerMarket/production.ts");
   const fixture = readFileSync(inputPath);
-  const request = (JSON.parse(fixture.toString()) as { request: Request }).request;
-  // JSON cannot retain the host's country lookup callback. Reconstruct it from
-  // the same frozen state's household books, never current production data.
-  const countries = new Map<string, string>();
-  for (const household of request.households ?? []) {
-    if (!household.stateId || !household.countryId) continue;
-    const previous = countries.get(household.stateId);
-    if (previous && previous !== household.countryId) throw new Error("Ambiguous frozen country");
-    countries.set(household.stateId, household.countryId);
-  }
-  const producerCountries = new Map(
-    request.producers.map((p) => [p.id, countries.get(p.stateId ?? "")])
+  const request = producerPlanningReplayRequest(
+    JSON.parse(fixture.toString()) as Parameters<typeof producerPlanningReplayRequest>[0]
   );
-  if ([...producerCountries.values()].some((country) => !country))
-    throw new Error("Incomplete frozen countries");
   const engineModule = (await import(pathToFileURL(engine).href)) as {
     advanceProducerEconomy: typeof advanceProducerEconomy;
   };
@@ -46,7 +80,6 @@ async function main() {
     {
       ...request,
       maximumPlanningPasses: passes,
-      countryOfProducer: (id) => producerCountries.get(id),
     },
     budget == null
       ? undefined
@@ -133,7 +166,9 @@ async function main() {
   );
 }
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : "Producer planning simulation failed");
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : "Producer planning simulation failed");
+    process.exitCode = 1;
+  });
+}
