@@ -647,6 +647,7 @@ export function SectorRow({
               fill={sector.fillRate}
               band={sector.fillRateBand}
               ownSiteShare={sector.ownSiteShare}
+              ownTruckHaulTeu={sector.ownTruckHaulTeu}
               plantCount={plantCount}
               className="items-end"
             />
@@ -830,6 +831,7 @@ export function SectorRow({
                     fill={sector.fillRate}
                     band={sector.fillRateBand}
                     ownSiteShare={sector.ownSiteShare}
+                    ownTruckHaulTeu={sector.ownTruckHaulTeu}
                     plantCount={plantCount}
                   />
                 </dd>

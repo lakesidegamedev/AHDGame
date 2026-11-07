@@ -157,8 +157,13 @@ export async function loadCorporationDetailView(args: {
     sectorFieldToCorpCcy
   );
 
-  const { labourWagesEnabled, plantsMode, commandEconomyEnabled, realizedGrowthRate } =
-    await loadSectorModeFlags(db, corporation);
+  const {
+    labourWagesEnabled,
+    plantsMode,
+    commandEconomyEnabled,
+    realizedGrowthRate,
+    ownTruckTeuByState,
+  } = await loadSectorModeFlags(db, corporation);
 
   const { sectorDetails, totals, wageBillAnchorPerTurnBySectorId, physicalRollups } =
     buildSectorDetails({
@@ -169,6 +174,7 @@ export async function loadCorporationDetailView(args: {
       plantsMode,
       commandEconomyEnabled,
       labourWagesEnabled,
+      ownTruckTeuByState,
       revenueRealizationRatio,
       restatement,
       tariffs: { allTariffs, activeFtaPairs, activeSubsidies },
