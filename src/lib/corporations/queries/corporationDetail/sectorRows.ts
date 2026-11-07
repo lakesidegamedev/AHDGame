@@ -1,3 +1,4 @@
+import { loadOwnTruckTeuByState } from "@/lib/corporations/ownTruckHaul";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import type { CountryOperatingTotals } from "./countryStatements";
 import {
@@ -123,6 +124,8 @@ export interface SectorModeFlags {
   plantsMode: boolean;
   commandEconomyEnabled: boolean;
   realizedGrowthRate: number | null;
+  /** TEU this company's own trucks hauled last turn, per origin state. Empty below plants. */
+  ownTruckTeuByState: Record<string, number>;
 }
 
 /**
@@ -180,7 +183,15 @@ export async function loadSectorModeFlags(
       )
     : null;
 
-  return { labourWagesEnabled, plantsMode, commandEconomyEnabled, realizedGrowthRate };
+  const ownTruckTeuByState = plantsMode ? await loadOwnTruckTeuByState(db, corporation) : {};
+
+  return {
+    labourWagesEnabled,
+    plantsMode,
+    commandEconomyEnabled,
+    realizedGrowthRate,
+    ownTruckTeuByState,
+  };
 }
 
 export interface SectorRowContext {
@@ -192,6 +203,8 @@ export interface SectorRowContext {
   plantsMode: boolean;
   commandEconomyEnabled?: boolean;
   labourWagesEnabled: boolean;
+  /** From loadSectorModeFlags; absent means no own-truck figure. */
+  ownTruckTeuByState?: Record<string, number>;
   revenueRealizationRatio: number;
   restatement: SectorCurrencyRestatement;
   tariffs: Pick<TurnReferenceData, "allTariffs" | "activeFtaPairs" | "activeSubsidies">;
@@ -915,6 +928,12 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       // Share of output handed to the company's own other sites (no sale, no
       // revenue). Null when none, or not last turn's receipt.
       ownSiteShare: ownSite?.share ?? null,
+      // TEU the company's own trucks hauled out of this state last turn.
+      // Logistics rows only; null when none.
+      ownTruckHaulTeu:
+        plantsMode && sector.sectorType === "logistics"
+          ? (ctx.ownTruckTeuByState?.[sector.stateId] ?? null)
+          : null,
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
       mothballed,

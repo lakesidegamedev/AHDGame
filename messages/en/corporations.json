@@ -1090,6 +1090,11 @@
     "commodityMarket": {
       "substitutionOrders": "plus {units} substitution orders",
       "substitutionOrdersExplanation": "Households placed these after their first choice sold out. They are not counted as demand here, so they do not make this good read as short."
+    },
+    "sectorSupplyPriority": {
+      "label": "Sell to outside buyers before my own plants",
+      "help": "Your own plants then get only what outside buyers leave. Off by default.",
+      "failed": "Failed to update"
     }
   }
 }

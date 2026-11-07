@@ -445,6 +445,7 @@ export function prepareProducerPhysicalSector(input: {
   if (pricing?.transferPricing && pricing.transferPricing !== "free") {
     plan.internalTransferPricing = { mode: pricing.transferPricing, discount: pricing.discount };
   }
+  if (sector.sellOutsideFirst === true) plan.sellOutsideFirst = true;
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
     const last = (
