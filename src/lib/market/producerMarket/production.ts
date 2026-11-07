@@ -82,6 +82,11 @@ export interface ProducedStock {
 export interface ProductionPlan {
   id: string;
   internalTransferPricing?: { mode: InternalTransferPricing; discount?: number };
+  /**
+   * Opt in to own-site deliveries booked at market value (captiveMarketValue).
+   * Unset for a company on Free transfer pricing, which books no entries.
+   */
+  ownSiteMarketValue?: boolean;
   accountId: string;
   /** State the plant site is in; freight buys its own state's offers first. */
   stateId?: string;
@@ -1360,13 +1365,17 @@ export function advanceProducerEconomy(
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
-  // Own-site deliveries at market value, for companies without their own transfer price.
+  // Own-site deliveries at market value, for plans that opt in (never Free or priced companies).
   const captiveValue = input.captiveMarketValue
     ? captiveMarketValue({
         deliveries: market.internalDeliveries ?? [],
         offers: postedOffers,
         clearingByLane: laneClearingPrices(market.prices),
-        pricedAccounts: internalAccountingAccounts,
+        valuedAccounts: new Set(
+          plans
+            .filter((p) => p.ownSiteMarketValue && !internalAccountingAccounts.has(p.accountId))
+            .map((p) => p.accountId)
+        ),
       })
     : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
