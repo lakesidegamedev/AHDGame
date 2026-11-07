@@ -257,3 +257,83 @@ describe("commodityDominanceRatio for goods sold only where they are made", () =
     ).toBeNull();
   });
 });
+
+describe("commodityDominanceRatio for country-booked services (ticket 1787)", () => {
+  const logistics = (id: string, stateId: string, countryId: string, capitalStock: number) =>
+    ({
+      _id: id,
+      sectorType: "logistics",
+      capitalStock,
+      queuedUnits: 0,
+      strategyId: null,
+      stateId,
+      countryId,
+    }) as CommodityDominanceSector;
+  const base = {
+    commodities: ["freight" as const],
+    targetSectorId: "az",
+    targetStateId: "AZ",
+    targetCountryId: "US",
+    extraUnits: 0,
+    isNatcorp: false,
+    turn: 10,
+    demandOf: () => 100_000,
+    stateDemandOf: () => 168,
+  };
+
+  it("measures freight against its country's demand, counting the firm's fleet in that country", () => {
+    const sectors = [
+      logistics("az", "AZ", "US", 100),
+      logistics("tx", "TX", "US", 100),
+      logistics("on", "ON", "CA", 100_000),
+    ];
+    const state = commodityDominanceRatio({ ...base, sectors });
+    const country = commodityDominanceRatio({
+      ...base,
+      sectors,
+      countryDemandOf: (_c, countryId) => (countryId === "US" ? 16_800 : null),
+    });
+    const usOnly = commodityDominanceRatio({
+      ...base,
+      sectors: sectors.slice(0, 2),
+      countryDemandOf: () => 16_800,
+    });
+    // Both US sites count; the Canadian fleet does not.
+    expect(country.ratio).toBeCloseTo(usOnly.ratio, 9);
+    // 100x the demand: a toll that read 45x in one state reads 1x across the country.
+    expect(country.ratio).toBeLessThan(state.ratio / 40);
+  });
+
+  it("keeps healthcare on the state book and freight on the state when no country reading exists", () => {
+    expect(
+      commodityDominanceMarket({
+        commodity: "healthcare_services",
+        targetStateId: "AZ",
+        worldDemand: 500,
+        stateDemand: 5,
+        targetCountryId: "US",
+        countryDemand: 400,
+      })
+    ).toEqual({ demand: 5, stateId: "AZ" });
+    expect(
+      commodityDominanceMarket({
+        commodity: "construction_services",
+        targetStateId: "AZ",
+        worldDemand: 500,
+        stateDemand: 5,
+        targetCountryId: "US",
+        countryDemand: 400,
+      })
+    ).toEqual({ demand: 400, stateId: null, countryId: "US" });
+    expect(
+      commodityDominanceMarket({
+        commodity: "freight",
+        targetStateId: "AZ",
+        worldDemand: 500,
+        stateDemand: 5,
+        targetCountryId: "US",
+        countryDemand: null,
+      })
+    ).toEqual({ demand: 5, stateId: "AZ" });
+  });
+});

@@ -12,8 +12,10 @@ import {
 import type { prepareProducerSector } from "./producerSectorPlan";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
 
-/** Planning passes for a live funded turn (the shadow uses 8). */
-export const LIVE_PLANNING_PASSES = 16;
+/** Stop on convergence, with a bounded fallback for difficult live markets. */
+export const LIVE_PLANNING_PASSES = 64;
+/** Cooperative budget includes market preparation; final clearing still completes. */
+export const LIVE_PLANNING_BUDGET_MS = 30_000;
 
 export { producerWalletId, type ProducerWalletScope };
 
@@ -88,6 +90,7 @@ export async function runCorporationProducerMarket(
       | "trackCountryBooks"
       | "credit"
       | "salesAdvanceAtClearing"
+      | "salesAdvanceRevenueShare"
       | "restartProbes"
       | "householdIncomeSpend"
       | "captiveShortValue"
@@ -165,11 +168,11 @@ export async function runCorporationProducerMarket(
   const targets = prepared.map((row) => row.target);
   const result = await settleProducerTurn(db, {
     worldEpoch: input.worldEpoch,
+    planningBudgetMs: LIVE_PLANNING_BUDGET_MS,
     production: {
       ...input.demand,
-      // Settle like the shadow does, with headroom: 8 passes land within
-      // 0.02% of 32 on a t300 replay, while the default 128 let a slow turn
-      // spend well over a minute here against the phase timeout.
+      // Small aggregate differences can conceal large site-level errors.
+      // Stop when settled, or retain diagnostics when a safety limit is reached.
       maximumPlanningPasses: LIVE_PLANNING_PASSES,
       turn: input.turn,
       accounts: openingAccounts,

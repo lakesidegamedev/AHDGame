@@ -1618,7 +1618,10 @@ describe("spillover measurement tags", () => {
       : value && typeof value === "object"
         ? Object.fromEntries(
             Object.entries(value)
-              .filter(([k]) => k !== "spilloverRequested" && k !== "spilloverRequestedUnits")
+              .filter(
+                ([k]) =>
+                  k !== "spilloverRequested" && k !== "spilloverRequestedUnits" && k !== "planning"
+              )
               .map(([k, v]) => [k, untagged(v)])
           )
         : value;
@@ -1627,7 +1630,8 @@ describe("spillover measurement tags", () => {
     // Digest of this fixture's full result (accounts, payables, producers,
     // trade receipt, prices, order outcomes, spillover, country books) from
     // the settlement before spillover was tagged. The tags are measurement
-    // only, so with them removed the result must not change by a byte.
+    // only, so with them and planning diagnostics removed the settlement
+    // numbers must not change by a byte. Keep the original financial digest.
     const json = JSON.stringify(untagged(run()));
     expect(createHash("sha256").update(json).digest("hex")).toBe(
       "8b7485b3de05658f83b615512cc96e9980d1a615ac1708b7ccd2ef65a603827d"
