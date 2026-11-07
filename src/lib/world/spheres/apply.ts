@@ -26,6 +26,12 @@ export interface TaggedMacroContribution {
 }
 
 export interface SphereMacroApplyResult {
+  /**
+   * Background-macro contributions applied to the world total, by entity.
+   * The price phase places the background-tier countries' share in their own
+   * national books (#5702).
+   */
+  background: { entityId: string; contribution: MacroMarketContribution }[];
   entitiesRouted: number;
   routed: SphereRoutedContribution[];
   explanations: SphereEffectExplanation[];
@@ -108,6 +114,10 @@ export async function applySphereRoutedMacroContributions(
   );
 
   return {
+    background: background.map((item) => ({
+      entityId: item.entityId,
+      contribution: item.contribution,
+    })),
     entitiesRouted: routed.length,
     routed,
     explanations,

@@ -1399,6 +1399,14 @@ function applyRosterAccess(
       }
       continue;
     }
+    // A background country (2027, #5702) is an aggregate economy, not a full
+    // one. This is the one roster tier that DOES decide the simulation tier:
+    // left alone, config-fallback entries kept Ireland full-autonomous, so the
+    // globe listed it as an economic power and nothing seeded its macro book.
+    if (tier === "background") {
+      out.push(asBackgroundTierEntry(entry));
+      continue;
+    }
     // `latent` cannot occur here: latent countries are unregistered by
     // definition, and `eraRoster.test.ts` asserts they stay out of COUNTRY_ORDER.
     const legacyAccess: LegacyCountryAccess =
@@ -1434,6 +1442,10 @@ function applyRosterAccess(
     if (present.has(countryId)) continue;
     const tier = tierFor(presetId, countryId);
     if (tier === "absent" || tier === "latent") continue;
+    if (tier === "background") {
+      out.push(asBackgroundTierEntry(buildCountryEntry(presetId, countryId, "hidden")));
+      continue;
+    }
     out.push(
       buildCountryEntry(
         presetId,
@@ -1443,6 +1455,30 @@ function applyRosterAccess(
     );
   }
   return out;
+}
+
+const BACKGROUND_TIER_BLOCKER =
+  "Background country: an aggregate economy with no regions, sectors or politicians simulated.";
+
+/**
+ * A registered country the era roster runs as a background economy. Sphere,
+ * UN and recognition data are kept; only the tier, archetype and readiness
+ * change, matching the other background-macro entities.
+ */
+function asBackgroundTierEntry(entry: WorldEntityManifestEntry): WorldEntityManifestEntry {
+  return {
+    ...entry,
+    simulationTier: "background-macro",
+    economicArchetype: "macro",
+    readiness: {
+      autonomous: "blocked",
+      player: "blocked",
+      hardBlockers: [BACKGROUND_TIER_BLOCKER],
+      flavorGaps: [],
+    },
+    legacyAccess: "hidden",
+    legacyStatus: "coming-soon",
+  };
 }
 
 /** Build a preset manifest with the roster overlaid onto its registered countries. */

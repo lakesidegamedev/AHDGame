@@ -9,6 +9,8 @@ import { getMacroCountriesCollection } from "@/lib/db/collections/macroCountries
 import { computeMacroContribution } from "./kernel";
 import { ACTIVE_MACRO_COUNTRY_FILTER, isActiveMacroCountry } from "./retirement";
 import { isMacroTickTurn, MACRO_TICK_INTERVAL } from "./schedule";
+import { advanceMacroGrowth } from "./rules/growth";
+import { MACRO_TURNS_PER_YEAR } from "./seedBuilder";
 
 export interface MacroCountryTurnResult {
   countriesConsidered: number;
@@ -85,21 +87,34 @@ export async function processMacroCountryTurn(
           Number.isFinite(country.shockModifier) && country.shockModifier > 0
             ? country.shockModifier
             : 1;
+        const shockModifier =
+          baseShock *
+          crisisMacroOutputMultiplier(exposure) *
+          arabTradeMultiplier(
+            crisis?.find((state) => state.defKey === "arab_uprisings"),
+            country.entityId
+          );
+        // Annual trend growth since the last tick (2027 background countries;
+        // documents without a trend return null and keep their sectors).
+        const grownSectors = advanceMacroGrowth({
+          sectors: country.sectors,
+          trendGrowth: country.trendGrowth,
+          shockModifier,
+          lastTickTurn: country.lastMacroTickTurn,
+          turn,
+          turnsPerYear: MACRO_TURNS_PER_YEAR,
+        });
         return {
           updateOne: {
             filter: { _id: country._id },
             update: {
               $set: {
+                ...(grownSectors ? { sectors: grownSectors } : {}),
                 contribution: computeMacroContribution(
                   {
                     ...country,
-                    shockModifier:
-                      baseShock *
-                      crisisMacroOutputMultiplier(exposure) *
-                      arabTradeMultiplier(
-                        crisis?.find((state) => state.defKey === "arab_uprisings"),
-                        country.entityId
-                      ),
+                    ...(grownSectors ? { sectors: grownSectors } : {}),
+                    shockModifier,
                   },
                   turn
                 ),

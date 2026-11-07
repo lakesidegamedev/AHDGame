@@ -4,6 +4,7 @@ import { getAuthored1953MacroCountry } from "@/lib/world/macro/roster1953";
 import { getTransitionMacroCountry } from "@/lib/world/transitions";
 import { getMacroCountriesCollection } from "@/lib/db/collections/macroCountries";
 import { buildBackgroundMacroCountry } from "./backgroundSeed";
+import { buildBackground2027MacroCountry, isAuthoredBackground2027 } from "./background2027";
 
 /**
  * Collections that must remain empty for a Tier-2 macro country.
@@ -56,7 +57,13 @@ export async function seedMacroCountries(
     if (entry.status !== "sovereign") continue;
 
     if (entry.simulationTier === "background-macro") {
-      docs.push(buildBackgroundMacroCountry(entry, preset, now));
+      // The 2027 background countries (#5702) are real trading economies with
+      // authored 2027 data; every other background entity keeps the estimate.
+      docs.push(
+        isAuthoredBackground2027(preset, entry.entityId)
+          ? buildBackground2027MacroCountry(entry.entityId, now)
+          : buildBackgroundMacroCountry(entry, preset, now)
+      );
       continue;
     }
 
