@@ -170,17 +170,24 @@ export function shortageGrowthFinanceUnits(input: {
   return Math.max(cash, Math.min(whole(input.stepCapUnits), fundable));
 }
 
+/** Share of its cash a company at or under its floor may put into a short-lane financed build. */
+export const SHORTAGE_GROWTH_FINANCE_FLOOR_HELD_CASH_SHARE = 0.1;
+
 /**
  * Most of its own cash a company may contribute to a short-lane financed
  * build: its headroom above the floor, or a quarter of what it holds when that
- * is larger. Never more than it holds.
+ * is larger. Never more than it holds. With `floorHeld` (nppDividendAfterTaxStage
+ * >= 2) a company at or under its floor puts in at most a tenth of its cash.
  */
 export function shortageGrowthCashContributionLimit(
   cashLocal: number,
-  cashFloorLocal: number
+  cashFloorLocal: number,
+  floorHeld = false
 ): number {
   if (!(Number.isFinite(cashLocal) && cashLocal > 0)) return 0;
   const floor = Number.isFinite(cashFloorLocal) ? cashFloorLocal : cashLocal;
+  if (floorHeld && cashLocal <= floor)
+    return cashLocal * SHORTAGE_GROWTH_FINANCE_FLOOR_HELD_CASH_SHARE;
   return Math.min(
     cashLocal,
     Math.max(cashLocal - floor, cashLocal * SHORTAGE_GROWTH_FINANCE_CASH_SHARE)
