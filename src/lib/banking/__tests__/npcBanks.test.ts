@@ -182,6 +182,29 @@ describe("npcBanks", () => {
   }
 
   describe("seedNpcBanks", () => {
+    it("batched maintenance preserves seeding and repeat-run eligibility", async () => {
+      wireSpawnToIssueCharter();
+      db.collectionMocks.states!.find.mockImplementation(() => ({
+        toArray: async () => [
+          { _id: "DC", countryId: "US" },
+          { _id: "LON", countryId: "UK" },
+          { _id: "MOW", countryId: "RU" },
+        ],
+      }));
+      const { seedNpcBanks } = await importNpcBanks();
+      const first = await seedNpcBanks(db as unknown as Db, undefined, { batchReads: true });
+      expect(first.created).toBe(3 * NPC_BANKS_PER_COUNTRY);
+      expect(first.charterFailures).toBe(0);
+      const spawned = spawnNppCorporation.mock.calls.length;
+      const scalar = await seedNpcBanks(db as unknown as Db);
+      const stateReads = db.collectionMocks.states!.findOne.mock.calls.length;
+      const batched = await seedNpcBanks(db as unknown as Db, undefined, { batchReads: true });
+      expect(batched).toEqual(scalar);
+      expect(batched.skippedExisting).toBe(first.created);
+      expect(spawnNppCorporation.mock.calls).toHaveLength(spawned);
+      expect(db.collectionMocks.states!.findOne.mock.calls).toHaveLength(stateReads);
+    });
+
     it("is idempotent: second call creates nothing", async () => {
       const { getCharterCapitalRequirement } = await import("../charter");
       const requirement = await getCharterCapitalRequirement(db as unknown as Db, "USD");
@@ -417,6 +440,32 @@ describe("npcBanks", () => {
       expect(summary).toEqual({ banksChecked: 0, banksUpdated: 0 });
       expect(db.collectionMocks.corporations!.updateOne).not.toHaveBeenCalled();
     });
+  });
+
+  it("reuses country corridors for unchanged banks and reads only charter fields", async () => {
+    const charter = {
+      type: "retail" as const,
+      status: "active" as const,
+      currency: "USD" as const,
+      charteredTurn: 1,
+      postedCapital: 1,
+      depositOffset: modernDepositQuartile,
+      lendingOffset: modernLendingMid,
+      blacklist: {},
+    };
+    db.collectionMocks.corporations!.find.mockReturnValue({
+      toArray: async () => [makeCorp({ bankCharter: charter }), makeCorp({ bankCharter: charter })],
+    });
+    const { runNpcBankPolicy } = await importNpcBanks();
+    expect(await runNpcBankPolicy(db as unknown as Db, 10)).toEqual({
+      banksChecked: 2,
+      banksUpdated: 0,
+    });
+    expect(db.collectionMocks.bankingLaws!.findOne).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.corporations!.find).toHaveBeenCalledWith(expect.anything(), {
+      projection: { bankCharter: 1 },
+    });
+    expect(db.collectionMocks.corporations!.updateOne).not.toHaveBeenCalled();
   });
 
   describe("corridorDepositTarget", () => {

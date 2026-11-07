@@ -106,7 +106,7 @@ type DepositTaker = {
  */
 export interface BankingTurnOptions {
   /**
-   * v2: one cohort read for the per-bank deposit-ceiling sectors and one
+   * By default, one cohort read for the per-bank deposit-ceiling sectors and one
    * thresholds read per turn, instead of one of each per bank. Reads only, and
    * every value is the one the per-bank path would have fetched.
    */
@@ -269,10 +269,10 @@ async function runBankingTurn(
   // A depositor saving in two currencies at two banks orders those banks.
   const lockKeysByBank = await bankPassLockKeys(db, turn, depositTakers);
   const lock = new KeyedQueue();
-  // v2: the per-bank reads that do not depend on the bank's pass. Both are
+  // The per-bank reads that do not depend on the bank's pass. Both are
   // turn-level snapshots, so hoisting them cannot reorder a money movement.
   const passCaches: BankPassCaches = { npcShareByBankId, cbById, premiumReceiptByKey };
-  if (options.batchPerBankReads && depositTakers.length > 0) {
+  if (options.batchPerBankReads !== false && depositTakers.length > 0) {
     const sectors = await db
       .collection<CorporateSector>("corporateSectors")
       .find(
@@ -292,6 +292,7 @@ async function runBankingTurn(
       )
       .toArray();
     const byBank = new Map<string, CorporateSector[]>();
+    for (const row of depositTakers) byBank.set(row.corp._id.toString(), []);
     for (const sector of sectors) {
       const id = sector.corporationId?.toString();
       if (!id) continue;
@@ -301,6 +302,7 @@ async function runBankingTurn(
     }
     passCaches.depositCeilingSectorsByBankId = byBank;
     passCaches.txThresholds = await loadTxThresholds(db);
+    passCaches.eraUnitScale = await loadWorldEraUnitScale(db);
   }
   const runBank = async (row: DepositTaker) => {
     const bankResult = await lock.run(lockKeysByBank.get(row.corp._id.toString()) ?? [], () =>
@@ -420,18 +422,19 @@ async function runBankingTurn(
 }
 
 type BankPassCaches = {
+  eraUnitScale?: number;
   npcShareByBankId: Map<string, number>;
   premiumReceiptByKey: Map<string, FrozenInsurancePremiumReceipt>;
   cbById: Map<
     string,
     Pick<CentralBank, "_id" | "primeRate" | "inflationHistory" | "externalBroadMoney">
   >;
-  /** v2 only: financial sectors per deposit taker, read once for the cohort. */
+  /** Batched mode: financial sectors per deposit taker, read once for the cohort. */
   depositCeilingSectorsByBankId?: ReadonlyMap<
     string,
     readonly Pick<CorporateSector, "capitalStock" | "revenue" | "strategyId" | "sectorType">[]
   >;
-  /** v2 only: the turn's transaction-log thresholds, read once. */
+  /** Batched mode: the turn's transaction-log thresholds, read once. */
   txThresholds?: TxThresholds;
 };
 
@@ -583,7 +586,11 @@ async function processOneBank(
   // alone above the ceiling are grandfathered: NPC target contribution → 0.
   const preloadedSectors = caches.depositCeilingSectorsByBankId?.get(bankIdHex);
   const capacityCeiling = preloadedSectors
-    ? depositCeilingFromSectors(live.bankCharter, preloadedSectors, await loadWorldEraUnitScale(db))
+    ? depositCeilingFromSectors(
+        live.bankCharter,
+        preloadedSectors,
+        caches.eraUnitScale ?? (await loadWorldEraUnitScale(db))
+      )
     : await getBankDepositCeiling(db, {
         ...corp,
         bankCharter: live.bankCharter,

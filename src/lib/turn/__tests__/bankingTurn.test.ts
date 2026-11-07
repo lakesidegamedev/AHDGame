@@ -78,7 +78,9 @@ function selectorMatches(observed: unknown, live: unknown): boolean {
   return observed === live;
 }
 
-describe("processBankingTurn", () => {
+describe.each([false, true, undefined])("processBankingTurn (batch reads: %s)", bankingScenarios);
+
+function bankingScenarios(batchPerBankReads: boolean | undefined) {
   let db: MockDb;
   let bankId: ObjectId;
   let bankCorp: Corporation;
@@ -408,7 +410,9 @@ describe("processBankingTurn", () => {
     // Default: large financial capacity so ceiling does not bind existing tests
     // (250_000 units × 0.5 × 1.2M = 150B).
     db.collectionMocks.corporateSectors!.find.mockReturnValue(
-      findCursor([{ capitalStock: 250_000, sectorType: "financial", revenue: 0 }])
+      findCursor([
+        { corporationId: bankId, capitalStock: 250_000, sectorType: "financial", revenue: 0 },
+      ])
     );
   });
 
@@ -417,7 +421,7 @@ describe("processBankingTurn", () => {
       _id: "default",
       privateBankingEnabled: false,
     });
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(summary).toEqual({
       banksProcessed: 0,
       depositInterestPaid: 0,
@@ -454,7 +458,7 @@ describe("processBankingTurn", () => {
   });
 
   it("reads the feature policy exactly once per turn", async () => {
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     // Other readers (the ledger shadow flag, tx-log settings) share the
     // document; only the banking policy projection is counted here.
     const policyReads = db.collectionMocks.gameConfig!.findOne.mock.calls.filter(
@@ -468,7 +472,7 @@ describe("processBankingTurn", () => {
   });
 
   it("is idempotent: second call same turn is a no-op", async () => {
-    const first = await processBankingTurn(db as unknown as Db, TURN);
+    const first = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(first.banksProcessed).toBe(1);
     expect(liveCorp.bankCharter!.lastBankingTurn).toBe(TURN);
 
@@ -476,7 +480,7 @@ describe("processBankingTurn", () => {
     const liqBefore = liveCorp.bankCharter!.cashReserves;
     const savBefore = characterState.savings;
 
-    const second = await processBankingTurn(db as unknown as Db, TURN);
+    const second = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(second.banksProcessed).toBe(0);
     expect(cbState.externalBroadMoney).toBe(cbBefore);
     expect(liveCorp.bankCharter!.cashReserves).toBe(liqBefore);
@@ -509,7 +513,7 @@ describe("processBankingTurn", () => {
       return originalUpdate!(filter, update);
     });
 
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     expect(publicationFilter?.["bankCharter.charteredTurn"]).toBe(1);
     expect(publicationFilter?.["bankCharter.currency"]).toBe("USD");
@@ -563,7 +567,7 @@ describe("processBankingTurn", () => {
       return originalUpdate!(filter, update);
     });
 
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     expect(publicationFilters).toHaveLength(2);
     expect(publicationFilters[0]["bankCharter.lastBankingIncomeTurn"]).toEqual({
@@ -611,7 +615,9 @@ describe("processBankingTurn", () => {
       db.collectionMocks.bankLoans!.insertOne.mockRejectedValueOnce(
         new Error("tranche write interrupted")
       );
-      const first = await processBankingTurn(db as unknown as Db, TURN).catch(() => undefined);
+      const first = await processBankingTurn(db as unknown as Db, TURN, {
+        batchPerBankReads,
+      }).catch(() => undefined);
       expect(first?.banksProcessed ?? 0).toBe(0);
       const vaultAfterInterrupted = liveCorp.bankCharter!.cashReserves;
       const poolAfterInterrupted = cbState.externalBroadMoney;
@@ -624,7 +630,7 @@ describe("processBankingTurn", () => {
           return record;
         });
       }
-      const retry = await processBankingTurn(db as unknown as Db, TURN);
+      const retry = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
       expect(retry.banksProcessed).toBe(1);
       expect(liveCorp.bankCharter!.cashReserves).toBeCloseTo(vaultAfterInterrupted!, 6);
       expect(cbState.externalBroadMoney).toBeCloseTo(poolAfterInterrupted, 6);
@@ -632,7 +638,7 @@ describe("processBankingTurn", () => {
       expect(fee).toBeGreaterThan(0);
       expect(liveCorp.bankCharter!.lastBankingLoanOriginationFees).toBe(fee);
       expect(loans.length).toBeGreaterThan(0);
-      await processBankingTurn(db as unknown as Db, TURN);
+      await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
       expect(liveCorp.bankCharter!.loanOriginationFeesLifetime).toBe(fee);
     }
   );
@@ -667,7 +673,7 @@ describe("processBankingTurn", () => {
       termTurns: 48,
       status: "current",
     });
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(liveCorp.bankCharter!.lastBankingLoanOriginationFees).toBe(0);
     expect(liveCorp.bankCharter!.loanOriginationFeesLifetime ?? 0).toBe(0);
     expect(cbState.externalBroadMoney).toBe(0);
@@ -710,7 +716,7 @@ describe("processBankingTurn", () => {
     // premium = 2%. Interest = 48000 * 0.02 / 48 = 20.
     const expectedInterest = (savBefore * 2) / 100 / TURNS_PER_YEAR;
 
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     const characterCredit = characterState.savings - savBefore;
     const premiumPaid = fundState.balance - fundBefore;
@@ -758,7 +764,7 @@ describe("processBankingTurn", () => {
     // Interest = 48000 * 0.02 / 48 = 20.
     const expectedInterest = (savBefore * 2) / 100 / TURNS_PER_YEAR;
 
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     const charter = liveCorp.bankCharter!;
     const premiumPaid = fundState.balance - fundBefore;
@@ -822,7 +828,7 @@ describe("processBankingTurn", () => {
     const fundBefore = fundState.balance;
     const savBefore = characterState.savings;
 
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     const interestPaid = characterState.savings - savBefore;
     const premiumPaid = fundState.balance - fundBefore;
@@ -846,7 +852,7 @@ describe("processBankingTurn", () => {
     expect(premiumPaid).toBeCloseTo(expectedPremium, 5);
     expect(BASE_PREMIUM_ANNUAL).toBe(0.004);
 
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(fundState.insuredDepositExposureTurnsLifetime).toBeCloseTo(insured, 8);
     expect(premiumReceipts.filter((receipt) => receipt._id === premiumKey)).toHaveLength(1);
   });
@@ -873,7 +879,7 @@ describe("processBankingTurn", () => {
       ])
     );
 
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     const broadAfter = cbState.externalBroadMoney;
     const npcAfter = liveCorp.bankCharter!.npcDeposits ?? 0;
 
@@ -932,7 +938,7 @@ describe("processBankingTurn", () => {
     });
 
     const savBefore = characterState.savings;
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     expect(summary.depositInterestShortfall).toBeGreaterThan(0);
     expect(summary.depositInterestPaid).toBeLessThanOrEqual(10 + 1e-9);
@@ -962,7 +968,7 @@ describe("processBankingTurn", () => {
     db.collectionMocks.states!.find.mockReturnValue(findCursor([{ _id: "CA", gdp: 0 }]));
 
     const savBefore = characterState.savings;
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     expect(characterState.savings - savBefore).toBe(0);
     expect(summary.depositInterestPaid).toBe(0);
@@ -1017,7 +1023,7 @@ describe("processBankingTurn", () => {
     const principalDue = outstanding / termTurns;
     const paymentDue = interestDue + principalDue;
 
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
 
     expect(summary.loanInterestCollected).toBeCloseTo(interestDue, 5);
     expect(summary.loanPrincipalRepaid).toBeCloseTo(principalDue, 5);
@@ -1067,7 +1073,7 @@ describe("processBankingTurn", () => {
     loans = [loan];
     liveCorp.bankCharter!.totalLoans = outstanding;
 
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(summary.defaultsWrittenOff).toBeCloseTo(outstanding, 5);
     expect(loans[0].status).toBe("defaulted");
     expect(liveCorp.bankCharter!.totalLoans).toBeCloseTo(0, 5);
@@ -1081,7 +1087,7 @@ describe("processBankingTurn", () => {
   it("stops NPC deposit inflow at the capacity ceiling", async () => {
     // Ceiling = 10 units × 0.5 × 1.2M = 6_000_000. Player holds 48k.
     db.collectionMocks.corporateSectors!.find.mockReturnValue(
-      findCursor([{ capitalStock: 10, sectorType: "financial", revenue: 0 }])
+      findCursor([{ corporationId: bankId, capitalStock: 10, sectorType: "financial", revenue: 0 }])
     );
     liveCorp.bankCharter!.npcDeposits = 0;
     bankCorp.bankCharter!.npcDeposits = 0;
@@ -1100,7 +1106,7 @@ describe("processBankingTurn", () => {
       ])
     );
 
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     const npc = liveCorp.bankCharter!.npcDeposits ?? 0;
     const player = characterState.savings;
     const ceiling = liveCorp.bankCharter!.depositCeiling ?? 0;
@@ -1111,7 +1117,7 @@ describe("processBankingTurn", () => {
 
   it("allows NPC outflow even when total deposits exceed the ceiling", async () => {
     db.collectionMocks.corporateSectors!.find.mockReturnValue(
-      findCursor([{ capitalStock: 10, sectorType: "financial", revenue: 0 }])
+      findCursor([{ corporationId: bankId, capitalStock: 10, sectorType: "financial", revenue: 0 }])
     );
     // Ceiling 6M; start NPC well above it so flow must be outward.
     liveCorp.bankCharter!.npcDeposits = 20_000_000;
@@ -1121,7 +1127,7 @@ describe("processBankingTurn", () => {
     cbState.externalBroadMoney = 100_000_000;
 
     const before = liveCorp.bankCharter!.npcDeposits!;
-    const summary = await processBankingTurn(db as unknown as Db, TURN);
+    const summary = await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     expect(summary.npcDepositDelta).toBeLessThan(0);
     expect(liveCorp.bankCharter!.npcDeposits!).toBeLessThan(before);
   });
@@ -1130,7 +1136,7 @@ describe("processBankingTurn", () => {
     // Tiny ceiling (1 unit × 0.5 × 1.2M = 600k); player holds 48k normally —
     // bump player savings above the ceiling.
     db.collectionMocks.corporateSectors!.find.mockReturnValue(
-      findCursor([{ capitalStock: 1, sectorType: "financial", revenue: 0 }])
+      findCursor([{ corporationId: bankId, capitalStock: 1, sectorType: "financial", revenue: 0 }])
     );
     characterState.savings = 2_000_000;
     const aggregateCursor = {
@@ -1145,14 +1151,14 @@ describe("processBankingTurn", () => {
     cbState.externalBroadMoney = 100_000_000;
 
     const before = liveCorp.bankCharter!.npcDeposits!;
-    await processBankingTurn(db as unknown as Db, TURN);
+    await processBankingTurn(db as unknown as Db, TURN, { batchPerBankReads });
     // NPC target is 0 -> outflow toward zero; player principal is grandfathered
     // (interest may still credit the savings balance).
     expect(liveCorp.bankCharter!.npcDeposits!).toBeLessThan(before);
     expect(characterState.savings).toBeGreaterThanOrEqual(2_000_000);
     expect(liveCorp.bankCharter!.depositCeiling).toBe(600_000);
   });
-});
+}
 
 vi.mock("@/lib/budget/incomePayout", async () => {
   const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
