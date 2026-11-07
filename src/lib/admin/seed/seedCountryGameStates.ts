@@ -41,15 +41,18 @@ const NPP: Tier = { enabledForPlayers: false, economyPreview: false, status: "be
 const GLOBAL_GAME_STATE_COUNTRY_ID = COUNTRY_CONFIGS.US.id;
 
 /** The row the roster says a country should carry in a given preset. */
-type RosterRow = Tier & { absentInEra: boolean };
+type RosterRow = Tier & { absentInEra: boolean; backgroundCountry: boolean };
 
 const TIER_ROWS: Record<CountryEraTier, RosterRow | null> = {
-  player: { ...PLAYER, absentInEra: false },
-  econ: { ...ECON, absentInEra: false },
-  npp: { ...NPP, absentInEra: false },
+  player: { ...PLAYER, absentInEra: false, backgroundCountry: false },
+  econ: { ...ECON, absentInEra: false, backgroundCountry: false },
+  npp: { ...NPP, absentInEra: false, backgroundCountry: false },
+  // Registered and not joinable, like an NPP country, but the flag takes it
+  // out of every per-country turn phase (#5702).
+  background: { ...NPP, absentInEra: false, backgroundCountry: true },
   // A country absent from this era gets the NPP row plus the flag. It is a
   // separate concept from dissolution — see `absentInEra` in gameState.ts.
-  absent: { ...NPP, absentInEra: true },
+  absent: { ...NPP, absentInEra: true, backgroundCountry: false },
   // Latent countries are unregistered by definition, so they are never in
   // COUNTRY_ORDER and this loop never reaches them. Null rather than a row, so
   // a roster/registry contradiction fails loudly instead of writing a state
@@ -113,8 +116,9 @@ export function getPresetEnablementTier(preset: string, countryId: CountryId): T
   if (tierId === "absent") return null;
   const row = TIER_ROWS[tierId];
   if (!row) return null;
-  const { absentInEra: _absentInEra, ...tier } = row;
+  const { absentInEra: _absentInEra, backgroundCountry: _backgroundCountry, ...tier } = row;
   void _absentInEra;
+  void _backgroundCountry;
   return tier;
 }
 
@@ -155,6 +159,9 @@ export async function seedCountryGameStates(
           // world moving 1991 -> 1953 brings East Germany back rather than
           // stranding a flag the previous era set.
           absentInEra: tier.absentInEra,
+          // Same true-or-false rule, so a world moving 2027 -> 2019 puts a
+          // background country back into the full simulation.
+          backgroundCountry: tier.backgroundCountry,
           updatedAt: now,
         },
         $setOnInsert: {

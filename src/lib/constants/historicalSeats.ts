@@ -14,7 +14,7 @@
 
 import type { CountryId } from "./countries";
 import { recordPresetFallback } from "@/lib/seeds/presetSelector";
-import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
+import { isBackgroundInPreset, tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import { COUNTRY_ORDER } from "./countries";
 import { US_HOUSE_2027 } from "@/lib/seeds/reference/usHouse2027";
 import { US_SENATE_2027 } from "@/lib/seeds/reference/usSenate2027";
@@ -4325,7 +4325,11 @@ export function getPresetSeats(presetId: string): HistoricalSeat[] {
   if (!EXPLICIT_SEAT_PRESETS.has(presetId)) {
     recordPresetFallback("historicalSeats:getPresetSeats", presetId);
   }
-  return Object.values(seatGroupsFor(presetId)).flat();
+  // Background countries (#5702) seat no NPP politicians: they stay in the
+  // seat table as authored data, but the seeding path never sees them.
+  return Object.entries(seatGroupsFor(presetId))
+    .filter(([countryId]) => !isBackgroundInPreset(presetId, countryId))
+    .flatMap(([, seats]) => seats ?? []);
 }
 
 /**

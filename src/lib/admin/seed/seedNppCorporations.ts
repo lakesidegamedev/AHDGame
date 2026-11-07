@@ -4,6 +4,7 @@
  * consumes available market capacity. Player miners use supported deposits.
  */
 
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import type { Db } from "mongodb";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import { chooseSeedExtractionSite } from "@/lib/extraction/rules/seedPlacement";
@@ -84,7 +85,10 @@ export function nppCorpSpawnPlan(preset: string, startingYear: number): NppCorpC
   // US runs off the global GameState and is excluded from the enablement map,
   // but it is always the flagship player-enabled country.
   const usId = COUNTRY_CONFIGS.US.id;
-  const countries: CountryId[] = [usId, ...mapped];
+  // Background countries (#5702) run no corporations.
+  const countries: CountryId[] = [usId, ...mapped].filter(
+    (countryId) => !isBackgroundInPreset(preset, countryId)
+  );
   const plan: NppCorpCountryPlan[] = [];
 
   for (const countryId of countries) {

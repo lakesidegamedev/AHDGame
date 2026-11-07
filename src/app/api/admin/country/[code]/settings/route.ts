@@ -29,6 +29,7 @@ import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 import {
   countryBackgroundModeForEraTier,
   countryRequirementLevelForEraTier,
+  type CountryBackgroundMode,
   type CountryRequirementLevel,
 } from "@/lib/world/countryRequirementLevel";
 import { enterCountryForPlayers, exitCountryForPlayers } from "@/lib/world/playerHandoff";
@@ -85,7 +86,7 @@ function buildReadinessProfiles(input: {
   source: "reset-preset";
   activeLevel: CountryRequirementLevel;
   presetLevel: CountryRequirementLevel;
-  backgroundMode: "npp" | "latent" | "absent" | null;
+  backgroundMode: CountryBackgroundMode | null;
   contentStatus: "complete" | "gaps" | "not-assessed";
   contentGaps: FailedCapability[];
   profiles: ReadinessProfileRow[];

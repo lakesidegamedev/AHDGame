@@ -132,7 +132,16 @@ export const ECONOMIC_POWER_FEATURE_IDS_BY_PRESET: Readonly<Record<string, reado
   // 2023, and Brazil and Nigeria carry the same 1953-gated full-autonomous
   // promotion gap they do elsewhere. Re-derived from the manifest by
   // countryTiers.test.ts.
-  "2027-default": ["372"],
+  // UK, DE, JP and CN are NPP-run full simulations in 2027 (#5702). Ireland
+  // is a background country, but its manifest entry still says full-autonomous
+  // until the background macro seed lands.
+  "2027-default": [
+    "156", // CN
+    "276", // DE
+    "372", // IE
+    "392", // JP
+    "826", // UK
+  ],
   "2019-default": [
     "156", // CN
     "276", // DE

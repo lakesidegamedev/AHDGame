@@ -223,6 +223,7 @@ import { getUaSeedConfig } from "@/lib/seeds/ua/uaSeed";
 import { getBlrSeedConfig } from "@/lib/seeds/blr/blrSeed";
 import { getBalSeedConfig } from "@/lib/seeds/bal/balSeed";
 import { isEasternBlocEra } from "@/lib/seeds/presetSelector";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
@@ -1132,7 +1133,12 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   if (mode !== "vacant" && !globallyVacant) {
     const { seedEconTierRosters, seedEconTierRostersForCountry } =
       await import("@/lib/admin/seed/seedEconTierRosters");
-    const econRosters = await seedEconTierRosters(db, preIteration ? "priors" : "winners", log);
+    const econRosters = await seedEconTierRosters(
+      db,
+      preIteration ? "priors" : "winners",
+      log,
+      preset
+    );
     log(
       `Seeded econ-tier rosters (FR/IT/ES/SE/TR): ${econRosters.orgRows} org rows, ` +
         `${econRosters.nppsCreated} NPPs, ${econRosters.officialsCreated} officials`
@@ -1210,6 +1216,13 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // chains end to end. No family mirrors a race in a DIFFERENT country, and the
   // turn loop already drives this same registry fully concurrently every turn,
   // so per-country sequencing is the conservative half of that.
+  // Background countries (#5702) hold no full-engine elections, so their
+  // spawners are replaced by a no-op. Every other preset runs them unchanged.
+  const forCountry =
+    (countryId: string, run: () => Promise<void>): (() => Promise<void>) =>
+    async () => {
+      if (!isBackgroundInPreset(preset, countryId)) await run();
+    };
   await guarded("electionBattery", () =>
     withElectionGameStateSnapshot(db, async () => {
       await Promise.all(
@@ -1217,69 +1230,69 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
           async () => {
             await ensurePerpetualElections(now, gameState.currentTurn);
           },
-          async () => {
+          forCountry("UK", async () => {
             await ensureUKElections(now);
-          },
-          async () => {
+          }),
+          forCountry("JP", async () => {
             await ensureJPElections(now);
-          },
-          async () => {
+          }),
+          forCountry("DE", async () => {
             await ensureDEElections(now);
-          },
-          async () => {
+          }),
+          forCountry("BR", async () => {
             await ensureBRElections(now);
             await ensureBRGovernorElections(now);
-          },
-          async () => {
+          }),
+          forCountry("NG", async () => {
             await ensureNGElections(now);
-          },
-          async () => {
+          }),
+          forCountry("IE", async () => {
             await ensureIEElections(now);
             await ensureIEUachtaranElections(now);
             await ensureIELocalCouncilElections(now);
             await ensureIECathaoirleachElections(now);
-          },
-          async () => {
+          }),
+          forCountry("CN", async () => {
             await ensureCNElections(now);
             await ensureCNPeoplesCongressElections(now);
             await ensureCNGovernorElections(now);
-          },
+          }),
           // RU (status+era gated — no-ops unless the preset enables the Soviet Union).
-          async () => {
+          forCountry("RU", async () => {
             await ensureRUSupremeSovietElections(now);
             await ensureRUNationalitiesElections(now);
             await ensureRURepublicSovietElections(now);
             await ensureRUGovernorElections(now);
-          },
+          }),
           // DD (status+era gated — no-ops unless the preset enables East Germany).
-          async () => {
+          forCountry("DD", async () => {
             await ensureDDVolkskammerElections(now);
             await ensureDDGovernorElections(now);
-          },
+          }),
           // Beta parliamentary countries (#3239) — status-gated no-ops unless the
           // country is beta/active; ES additionally era-gated (1953: no elections).
           // Upper chambers / Senates (#3791) — same status gate, and each stays
           // after its own lower chamber; SE has no elected upper chamber
           // (unicameral since 1970), so no ensureSESenateElections.
-          async () => {
+          forCountry("FR", async () => {
             await ensureFRElections(now);
             await ensureFRSenateElections(now);
-          },
-          async () => {
+          }),
+          forCountry("IT", async () => {
             await ensureITElections(now);
             await ensureITSenateElections(now);
-          },
-          async () => {
+          }),
+          forCountry("ES", async () => {
             await ensureESElections(now);
             await ensureESSenateElections(now);
-          },
-          async () => {
+          }),
+          forCountry("SE", async () => {
             await ensureSEElections(now);
-          },
-          async () => {
+          }),
+          forCountry("TR", async () => {
             await ensureTRElections(now);
             await ensureTRSenateElections(now);
-          },
+          }),
         ].map((run) => run())
       );
     })
@@ -1412,7 +1425,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     // `spawnFoundingElections` never writes it.
     await guarded("spawnFoundingElections", () =>
       withElectionGameStateSnapshot(db, async () => {
-        const result = await spawnFoundingElections(db, now, { skipRegionalCouncil, log });
+        const result = await spawnFoundingElections(db, now, { skipRegionalCouncil, log, preset });
         if (result.failed > 0) {
           throw new Error(`${result.failed} founding election family/families failed to spawn`);
         }

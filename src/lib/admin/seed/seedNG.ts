@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import {
   State,
@@ -400,6 +401,12 @@ export async function seedNGGovernors(
     );
   }
 
+  // A background Nigeria (#5702) seats no NPP governors. The reset above still
+  // clears any left by a previous world.
+  if (isBackgroundInPreset(preset, "NG")) {
+    log(`Skipped NG Governors (${preset}): background country`);
+    return;
+  }
   const { NG_GOVERNORS_2019, NG_GOVERNORS_1991, NG_GOVERNORS_1953 } =
     await import("@/lib/constants/historicalSeats");
   const { seedFromSeats } = await import("@/lib/npp/seedHistorical");

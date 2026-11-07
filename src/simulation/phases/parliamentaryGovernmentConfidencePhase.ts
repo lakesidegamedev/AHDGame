@@ -3,7 +3,7 @@ import {
   resetCompletedSnapConfidence,
   type CompletedSnapConfidence,
 } from "@/lib/turn/snapConfidence";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getParliamentaryCountryIds } from "@/lib/turn/parliamentaryGovernment";
 import { tickParliamentaryGovernmentConfidence } from "@/lib/uk/confidence/confidenceGaugeStore";
@@ -16,7 +16,9 @@ export async function runParliamentaryGovernmentConfidencePhase(
   completedSnaps: readonly CompletedSnapConfidence[] = []
 ): Promise<void> {
   const preset = await getGameStatePreset(db);
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const registered = new Set(await getFullSimulationCountryIds(db));
   const countryIds = getParliamentaryCountryIds(preset).filter(
     (countryId) => countryId !== "UK" && registered.has(countryId)
   );

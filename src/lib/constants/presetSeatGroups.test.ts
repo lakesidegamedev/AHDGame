@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SHIPPING_PRESETS } from "@/lib/world/eraRoster";
+import { isBackgroundInPreset, SHIPPING_PRESETS } from "@/lib/world/eraRoster";
 import { getPresetFallbacks, resetPresetFallbacks } from "@/lib/seeds/presetSelector";
 import {
   BLOC_CHAMBERS_1953,
@@ -171,7 +171,11 @@ describe("preset seat groups", () => {
   it("assigns every seat to exactly one country", () => {
     for (const preset of ALL_PRESETS) {
       const groups = seatGroupsFor(preset);
-      const total = Object.values(groups).reduce((a, rows) => a + rows.length, 0);
+      // Background countries (#5702) keep their authored rows here, but the
+      // seeding path (`getPresetSeats`) never sees them.
+      const total = Object.entries(groups)
+        .filter(([countryId]) => !isBackgroundInPreset(preset, countryId))
+        .reduce((a, [, rows]) => a + (rows?.length ?? 0), 0);
       expect(total, preset).toBe(getPresetSeats(preset).length);
     }
   });

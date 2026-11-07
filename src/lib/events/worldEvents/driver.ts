@@ -17,6 +17,7 @@ import type { Character } from "@/lib/db/types/character";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { EventDefinition } from "@/lib/db/types/events";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import { getEventCooldownLedgerCollection } from "@/lib/db/collections/eventCooldownLedger";
 import { getEventDefinitionsCollection } from "@/lib/db/collections/eventDefinitions";
 import { isWorldEventsEnabled } from "@/lib/events/featureFlag";
@@ -107,7 +108,7 @@ async function offerGlobalHostCountryEvent(
     return "skipped";
   }
 
-  const activeCountries = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
+  const activeCountries = await worldEventCountries(db);
   if (activeCountries.length === 0) {
     return "skipped";
   }
@@ -316,6 +317,18 @@ async function offerScheduledEventForCountry(
 }
 
 /**
+ * Countries that host world events: the configured active countries, minus
+ * any the world holds in the background tier (#5702). The static status filter
+ * is kept so presets without background countries behave exactly as before.
+ */
+async function worldEventCountries(db: Db): Promise<CountryId[]> {
+  const tiers = await loadCountryTiers(db);
+  return COUNTRY_ORDER.filter(
+    (id) => COUNTRY_CONFIGS[id].status === "active" && tiers.tierOf(id) !== "background"
+  );
+}
+
+/**
  * Per-turn producer for scheduled World Events (Phase 1). Registered
  * alongside `worldEventsMaintenance` in `turnPhaseRegistry.ts`. No-op when
  * `worldEventsEnabled` is off (default) or no schedule-bearing definitions
@@ -365,7 +378,7 @@ export async function processWorldEventsTurn(
     ? await loadActiveWarEmergencyMitigationPctMap(db, currentTurn)
     : new Map<string, number>();
 
-  const activeCountries = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
+  const activeCountries = await worldEventCountries(db);
 
   let offered = 0;
   let skipped = 0;

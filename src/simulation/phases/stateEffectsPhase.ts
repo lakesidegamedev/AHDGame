@@ -4,6 +4,8 @@
  * it back into the registry array at the exact same position, so phase
  * registration ORDER — which is behavior — is unchanged.
  */
+import type { CountryId } from "@/lib/constants/countries";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { processStatePolicyEffects } from "@/lib/policyEffects";
 import { processAllStateDemographics } from "@/lib/demographicEffects";
@@ -147,6 +149,10 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     // Regional budgets alternate turns (see regionalBudgetCadence.ts). A phase
     // that is not due is marked skipped so turn logs and turndiag still list it.
     const regionalBudgetCadence = resolveRegionalBudgetCadence();
+    // Background countries (#5702) have no regional government to fund. Read
+    // inside each phase, so a phase that is not due costs nothing.
+    const isBackground = async (countryId: CountryId) =>
+      (await loadCountryTiers(db)).tierOf(countryId) === "background";
     const runRegionalBudgetPhase = <T>(name: string, fn: () => Promise<T>): Promise<T | null> =>
       regionalBudgetPhaseDue(name, newTurn, regionalBudgetCadence)
         ? runtime.runPhase(name, fn)
@@ -239,8 +245,9 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       // dissolved on turn 550 (#1323). The phase key keeps its original name for
       // the same reason `cnPresidentSync` below does.
       runRegionalBudgetPhase("deRegionalBudgetProcessing", async () => {
+        const tiers = await loadCountryTiers(db);
         const results = await Promise.all(
-          LAENDER_MODEL_COUNTRIES.map((id) =>
+          LAENDER_MODEL_COUNTRIES.filter((id) => tiers.tierOf(id) !== "background").map((id) =>
             processLaenderRegionalBudgets(db, id, newTurn, gameState.preset)
           )
         );
@@ -256,8 +263,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       runRegionalBudgetPhase("cnRegionalBudgetProcessing", () =>
         processAllOnePartyRegionalBudgets(db, newTurn, gameState.preset)
       ),
-      runRegionalBudgetPhase("ruRegionalBudgetProcessing", () =>
-        processRURegionalBudgets(db, newTurn)
+      runRegionalBudgetPhase("ruRegionalBudgetProcessing", async () =>
+        (await isBackground("RU")) ? { regionsProcessed: 0 } : processRURegionalBudgets(db, newTurn)
       ),
       runtime.runPhase("politicalMetricsDynamics", async () => {
         // Regional delivery factors are outcomes inputs. Wait only for the two

@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import type { Corporation, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
@@ -210,6 +211,11 @@ export async function seedNpcBanks(
   const blocked = await loadPrivateEnterpriseBlockedCountries(db);
 
   for (const countryId of ALL_COUNTRY_IDS) {
+    // Background countries (#5702) run no corporations, banks included.
+    if (isBackgroundInPreset(preset, countryId)) {
+      result.skippedIneligible += NPC_BANKS_PER_COUNTRY;
+      continue;
+    }
     const hqState = NPP_CAPITAL_STATES[countryId];
     if (!hqState) {
       result.skippedIneligible += NPC_BANKS_PER_COUNTRY;

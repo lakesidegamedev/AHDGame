@@ -44,7 +44,7 @@ import type { NPP } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { isPlannedEconomy, plannedShare } from "@/lib/constants/commandEconomy";
 import { loadConditionsSignal } from "@/lib/turn/npp/billSponsorship";
 import { getNppAutonomyLevel, nppAutonomyAtLeast, nppAutonomyLevelAtLeast } from "./featureFlag";
@@ -527,7 +527,9 @@ export async function runNppGovernmentPhases(gameNow: Date, currentTurn: number)
   // agenda, cabinet formation, ministerial orders, autonomous foreign policy —
   // a ghost government legislating and declaring for a country that no longer
   // exists.
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const registered = new Set(await getFullSimulationCountryIds(db));
   const countries = (Object.keys(COUNTRY_CONFIGS) as CountryId[]).filter((countryId) =>
     registered.has(countryId)
   );
