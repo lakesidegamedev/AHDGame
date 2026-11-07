@@ -63,7 +63,7 @@ export interface NodeSpec {
 }
 
 /** rdScore cost per decade tier, 20% below the v2 curve (6/8/10/14/16/22/30/38/48/60). */
-const DECADE_COST: Record<string, number> = {
+export const DECADE_COST: Record<string, number> = {
   "1940": 5,
   "1950": 6,
   "1960": 8,
@@ -7148,7 +7148,10 @@ function specToNodeV3(
 function buildTreeForSector(sectorType: OperatingSectorType): TechTreeNode[] {
   const nodes: TechTreeNode[] = [];
   for (const decade of TECH_DECADES) {
-    const cost = DECADE_COST[decade.id] ?? 12;
+    const cost = DECADE_COST[decade.id];
+    if (cost === undefined) {
+      throw new Error(`Tech tree: no DECADE_COST entry for tier "${decade.id}"`);
+    }
     // Base 5 (slots 1–5) + extend each branch: slots 6,7 then slots 8,9 so each
     // sub-path is a chain of four (2→4→6→8 and 3→5→7→9).
     const corpSpecs = [

@@ -45,13 +45,23 @@ export function getDecadeById(decadeId: string): TechDecade | undefined {
   return TECH_DECADES.find((d) => d.id === decadeId);
 }
 
+/** Exclusive upper bound reported for the open-ended last tier. */
+const OPEN_ENDED_END_YEAR = 2100;
+
 /**
  * The decade bracket a given calendar year falls into. Years before the first
- * bracket clamp to the earliest; years past the last clamp to the latest.
+ * bracket clamp to the earliest. Past the last authored tier the last tier
+ * stays current (same id, so stored unlocks keep working) but is reported as an
+ * open-ended bracket ("2029+") instead of its stale authored range.
  */
 export function getDecadeForYear(year: number): TechDecade {
   for (let i = TECH_DECADES.length - 1; i >= 0; i--) {
-    if (year >= TECH_DECADES[i].startYear) return TECH_DECADES[i];
+    const decade = TECH_DECADES[i];
+    if (year < decade.startYear) continue;
+    if (i === TECH_DECADES.length - 1 && year >= decade.endYear) {
+      return { ...decade, label: `${decade.startYear}+`, endYear: OPEN_ENDED_END_YEAR };
+    }
+    return decade;
   }
   return TECH_DECADES[0];
 }

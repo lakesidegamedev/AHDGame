@@ -15,8 +15,18 @@ describe("eraFromYear", () => {
   });
   it("clamps outside the supported domain", () => {
     expect(eraFromYear(1900).id).toBe("1950s");
-    expect(eraFromYear(2099).id).toBe("2040s");
-    expect(ERA_DOMAIN).toEqual({ min: 1950, max: 2049 });
+    expect(eraFromYear(2150).id).toBe("2090s");
+    expect(ERA_DOMAIN).toEqual({ min: 1950, max: 2099 });
+  });
+  it("labels 2050 and later as the 2050s", () => {
+    expect(eraFromYear(2049).id).toBe("2040s");
+    expect(eraFromYear(2050)).toEqual({
+      id: "2050s",
+      label: "2050s",
+      startYear: 2050,
+      endYear: 2059,
+    });
+    expect(eraFromYear(2051).id).toBe("2050s");
   });
 });
 
