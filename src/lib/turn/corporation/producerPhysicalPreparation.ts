@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
 import {
   ownDemandRunShare,
   withCaptiveDeliveries,
@@ -370,22 +371,22 @@ export function prepareProducerPhysicalSector(input: {
         : lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity);
       const reference =
         prices[commodity] * (ratio ?? lookups.priceRatioByCommodity.get(commodity) ?? 1);
-      // A buyer will bid up to what the market last cleared at (capped at 3x its own
-      // reference), but only on the bid side: the output reference and the 1.25x
-      // headroom stay on the unfloored reference, so the floor cannot feed on its own
-      // clearing prices turn after turn.
-      let bidFloor = 0;
-      if ((env.clearingReferenceStage ?? 0) >= 1 && !isStateScopedCommodity(commodity)) {
-        const cleared = env.lastClearingPriceByCommodity?.get(commodity);
-        if (cleared != null && Number.isFinite(cleared) && cleared > reference)
-          bidFloor = Math.min(cleared, reference * 3);
-      }
+      // Only the buying limit follows the clearing price. Keep output references
+      // independent, and allow the same headroom over either buying anchor.
+      const cleared =
+        (env.clearingReferenceStage ?? 0) >= 1 && !isStateScopedCommodity(commodity)
+          ? env.lastClearingPriceByCommodity?.get(commodity)
+          : undefined;
       return [
         commodity,
         {
           book: isStateScopedCommodity(commodity) ? `state:${sector.stateId}` : "world",
           referenceUnitPrice: reference,
-          maximumInputUnitPrice: Math.max(reference * input.inputPriceHeadroom, bidFloor),
+          maximumInputUnitPrice: producerInputBidLimit({
+            referenceUnitPrice: reference,
+            headroom: input.inputPriceHeadroom,
+            clearingUnitPrice: cleared,
+          }),
         },
       ] as const;
     })

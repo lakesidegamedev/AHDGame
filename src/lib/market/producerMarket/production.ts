@@ -917,6 +917,7 @@ export function advanceProducerEconomy(
           units,
           maximumUnitPrice: recipe.maximumUnitPrice,
           priority: 1,
+          fairShare: true,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
           ...(p.stateId ? { stateId: p.stateId } : {}),
