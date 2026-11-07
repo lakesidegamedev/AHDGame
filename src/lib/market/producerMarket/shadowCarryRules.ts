@@ -16,6 +16,7 @@
  *
  * Pure: plain data in, plain data out.
  */
+import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { distributeProfits, type ProfitOwnerKind } from "./profitDistributionRules";
 import type { MarketAccount } from "./rules";
 import type { ProducedStock, PurchasedStock } from "./production";
@@ -94,10 +95,7 @@ export function plantEconomyShare(valueAddedPerTurn: number, gdpPerTurn: number)
  * Construction services follow (owner yes, 2026-10-30): crews travel within a
  * country, and a state book left plants that need a trace of them idle.
  */
-const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set([
-  "freight",
-  "construction_services",
-]);
+const COUNTRY_SCOPED_SHADOW_COMMODITIES = { has: isCountryBookCommodity };
 
 /**
  * A stock row's book with a country-scoped commodity's state or country book

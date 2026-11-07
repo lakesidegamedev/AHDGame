@@ -250,6 +250,8 @@ export interface NppPlantsContext {
    * services) against the building sector's own state.
    */
   commodityStateDemandOf?: (commodity: CommodityType, stateId: string) => number | null;
+  /** Country demand for freight and construction services (country books). */
+  commodityCountryDemandOf?: (commodity: CommodityType, countryId: string) => number | null;
   /**
    * Every sector of a corporation's control group as dominance sectors, set
    * once the group toll stage is on. Absent = price on the corporation alone.

@@ -16,6 +16,8 @@ import {
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import type { CommodityTollModel } from "@/lib/corporations/rules/commodityDominanceRamp";
+import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
+import type { State } from "@/lib/db/types";
 import {
   commodityDominanceMarket,
   commodityDominanceRatio,
@@ -78,6 +80,9 @@ export interface CommodityDominanceContext {
   demand: Partial<Record<CommodityType, number>>;
   /** Target state's demand per state-scoped commodity, absent when unknown. */
   stateDemand?: Partial<Record<CommodityType, number>>;
+  /** Target country's demand per country-booked service (freight, construction). */
+  countryDemand?: Partial<Record<CommodityType, number>>;
+  targetCountryId?: string | null;
   targetSectorId: string;
   /** State the target sector sits in, for state-scoped commodities. */
   targetStateId?: string | null;
@@ -211,6 +216,19 @@ export async function loadCommodityDominanceContext(
     if (commodities.length === 0) return null;
     const targetStateId = pricedTarget.stateId ? String(pricedTarget.stateId) : null;
     const readsState = targetStateId != null && commodities.some(isStateScopedCommodity);
+    const targetCountryId = pricedTarget.countryId ? String(pricedTarget.countryId) : null;
+    const countryStateIds =
+      targetCountryId && commodities.some(isCountryBookCommodity)
+        ? (
+            await db
+              .collection<State>("states")
+              .find(
+                { countryId: targetCountryId as State["countryId"] },
+                { projection: { _id: 1 } }
+              )
+              .toArray()
+          ).map((s) => String(s._id))
+        : [];
     const priceDocs = await db
       .collection<CommodityPrice>("commodityPrices")
       .find(
@@ -220,22 +238,31 @@ export async function loadCommodityDominanceContext(
             commodity: 1,
             globalDemand: 1,
             ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
+            ...Object.fromEntries(countryStateIds.map((id) => [`stateDemand.${id}`, 1])),
           },
         }
       )
       .toArray();
     const demand: Partial<Record<CommodityType, number>> = {};
     const stateDemand: Partial<Record<CommodityType, number>> = {};
+    const countryDemand: Partial<Record<CommodityType, number>> = {};
     for (const doc of priceDocs) {
       demand[doc.commodity] = doc.globalDemand;
       const local = targetStateId ? doc.stateDemand?.[targetStateId] : undefined;
       if (typeof local === "number") stateDemand[doc.commodity] = local;
+      if (countryStateIds.length > 0 && isCountryBookCommodity(doc.commodity))
+        countryDemand[doc.commodity] = countryStateIds.reduce(
+          (sum, id) => sum + (Number(doc.stateDemand?.[id]) || 0),
+          0
+        );
     }
     return {
       sectors: pricedSectors,
       commodities,
       demand,
       stateDemand,
+      countryDemand,
+      targetCountryId,
       targetSectorId: String(args.sector._id),
       targetStateId,
       isNatcorp: !!args.corporation.countryOwnerId,
@@ -259,8 +286,10 @@ export function commodityDominanceFor(
     commodities: ctx.commodities,
     demandOf: (c) => ctx.demand[c],
     stateDemandOf: (c) => ctx.stateDemand?.[c],
+    countryDemandOf: (c) => ctx.countryDemand?.[c],
     targetSectorId: ctx.targetSectorId,
     targetStateId: ctx.targetStateId,
+    targetCountryId: ctx.targetCountryId,
     extraUnits,
     isNatcorp: ctx.isNatcorp,
     turn: ctx.turn,
@@ -283,6 +312,8 @@ export function commodityTollModels(ctx: CommodityDominanceContext): CommodityTo
       targetStateId: ctx.targetStateId,
       worldDemand: ctx.demand[commodity],
       stateDemand: ctx.stateDemand?.[commodity],
+      targetCountryId: ctx.targetCountryId,
+      countryDemand: ctx.countryDemand?.[commodity],
     });
     if (!market) continue;
     const demandUnits = market.demand;

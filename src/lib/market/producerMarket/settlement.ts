@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import { accountId } from "@/lib/ledger/accounts";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -12,6 +13,7 @@ import { producerPayableReceiptKeys, type ProducerPayable } from "./payablesRule
 import { advanceProducerCapacity, type ProducerCapacityState } from "./capacityRules";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { advanceProducerEconomy } from "./production";
+import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
 
@@ -54,7 +56,7 @@ interface ProducerTurnRecord {
   payload: string;
   status: "frozen" | "settled";
   /**
-   * Turn warnings observed while settling (ownership drift). Stored beside the
+   * Turn warnings observed while settling (planning limits and ownership drift). Stored beside the
    * receipt so a retry after the turn is marked settled returns the same list.
    */
   settlementWarnings?: string[];
@@ -493,7 +495,7 @@ export interface SettlementClose {
 export type SettledEconomyResult = EconomyResult & {
   close?: SettlementClose;
   /**
-   * Deterministic warnings for sectors that settled with their frozen owner,
+   * Frozen planning-limit and ownership warnings,
    * for the corporation host to forward to the turn warning channel.
    */
   turnWarnings?: string[];
@@ -535,6 +537,8 @@ export async function settleProducerTurn(
   input: {
     worldEpoch: string;
     production: ProducerTurnProduction;
+    /** Cooperative market budget; a clearing pass and final settlement are never interrupted. */
+    planningBudgetMs?: number;
     bindings: readonly ProducerCashBinding[];
     targets: readonly ProducerSectorTarget[];
     /** Closing transfers computed from the settled market, frozen with it. */
@@ -586,7 +590,19 @@ export async function settleProducerTurn(
       targets: input.targets,
       capacities,
       result: (() => {
-        const market = advanceProducerEconomy(production);
+        const started = performance.now();
+        const market = advanceProducerEconomy(
+          production,
+          input.planningBudgetMs == null
+            ? undefined
+            : {
+                maximumElapsedMs: input.planningBudgetMs,
+                elapsedMs: () => performance.now() - started,
+              }
+        );
+        // Freeze the actual pass count so offline replay does not need a clock.
+        // The requested ceiling and stop reason remain in the diagnostics.
+        if (market.planning) production.maximumPlanningPasses = market.planning.passes;
         return input.close
           ? applySettlementClose(
               market,
@@ -609,7 +625,10 @@ export async function settleProducerTurn(
     // Validate native balances and restricted cash targets before claiming any receipt.
     const verification = await verifyPhysicalTargets(db, payload);
     cashWithLedger(redirectFrozenOwnerCash(payload, verification.cashRedirect), candidate.digest);
-    candidate.settlementWarnings = verification.turnWarnings;
+    candidate.settlementWarnings = [
+      ...verification.turnWarnings,
+      ...producerPlanningWarnings(payload.result.planning),
+    ];
     await stageReceiptChunks(db, encoded.chunks);
     try {
       await turns.insertOne(candidate);
@@ -710,9 +729,23 @@ export async function settleProducerTurn(
   }
   await turns.updateOne(
     { _id: key, digest: record.digest, status: "frozen" },
-    { $set: { status: "settled", settlementWarnings: verification.turnWarnings } }
+    {
+      $set: {
+        status: "settled",
+        settlementWarnings: [
+          ...verification.turnWarnings,
+          ...producerPlanningWarnings(frozen.result.planning),
+        ],
+      },
+    }
   );
-  return { ...frozen.result, turnWarnings: verification.turnWarnings };
+  return {
+    ...frozen.result,
+    turnWarnings: [
+      ...verification.turnWarnings,
+      ...producerPlanningWarnings(frozen.result.planning),
+    ],
+  };
 }
 
 /** Recover before preparing a new turn from sectors that may already have advanced. */
