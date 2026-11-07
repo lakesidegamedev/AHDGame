@@ -148,9 +148,10 @@ export function DeliveryLimitedPill({
   return (
     <span
       className={`inline-flex max-w-full flex-wrap items-center justify-end gap-x-1 text-right text-[11px] font-medium leading-tight text-warning ${className}`.trim()}
-      title={`${label} limited. ${formatFillPercent(fraction)} of this sector's output could not reach buyers outside this state. ${explanation} ${action} Cutting production is not the fix.`}
+      title={`${label} limited. For the worst-affected good this sector makes, ${formatFillPercent(fraction)} could not reach buyers outside this state. Its other goods may be moving fine, so this is not the share of the whole sector's output. ${explanation} ${action} Cutting production is not the fix.`}
     >
       {label}
+      <span className="font-normal">up to</span>
       <span className="font-mono tabular-nums">{formatFillPercent(fraction)}</span>
       <span className="font-normal">stuck</span>
     </span>
@@ -416,7 +417,7 @@ export function RunningSoldReading({
   ownSiteShare?: number | null;
   className?: string;
 }) {
-  const ownSite = ownSiteLabel(ownSiteShare);
+  const ownSite = ownSiteLabel(ownSiteShare, "all output");
   if (plantCount === 0) {
     return (
       <span
@@ -466,7 +467,7 @@ export function RunningSoldReading({
       {ownSite && (
         <span
           className="tabular-nums text-muted"
-          title="This output went to your company's other sites, so it earns no revenue here and is not counted as sold. The plant is supplying the company, not failing."
+          title="Share of everything this sector made, all products together, that went to your company's other sites. It earns no revenue here and is not counted as sold. The plant is supplying the company, not failing. Goods your own trucks haul to other buyers are not part of this figure."
         >
           {ownSite}
         </span>
