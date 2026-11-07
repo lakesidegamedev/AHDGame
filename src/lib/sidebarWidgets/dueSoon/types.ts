@@ -1,9 +1,23 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countriesCore";
 
-type DueSoonKind = (typeof DUE_SOON_KINDS)[number];
+/** What the player owes: decides the row label and nothing else. */
+export const DUE_SOON_KINDS = [
+  "billVote",
+  "overrideVote",
+  "billSign",
+  "stateBillVote",
+  "stateOverrideVote",
+  "stateBillSign",
+  "corpVote",
+  "privatizationVote",
+  "debate",
+  "partyElection",
+  "confirmation",
+] as const;
+export type DueSoonKind = (typeof DUE_SOON_KINDS)[number];
 
-type DueSoonPosition = "chair" | "viceChair" | "treasurer";
+export type DueSoonPosition = "chair" | "viceChair" | "treasurer";
 
 export interface DueSoonItem {
   kind: DueSoonKind;
@@ -38,7 +52,7 @@ export interface PlayerSeat {
 }
 
 /** Party standing, for leadership ballots. */
-interface DueSoonMember {
+export interface DueSoonMember {
   party?: string;
   homeState?: string;
   partyJoinedTurn?: number | null;

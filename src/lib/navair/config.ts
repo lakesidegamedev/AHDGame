@@ -1,4 +1,31 @@
+/**
+ * What each naval vessel and air wing does. NAVAL_TYPES (Carrier Strike Group,
+ * Guided-Missile Destroyer, Attack Submarine, Frigate Squadron, Amphibious Group)
+ * and AIR_TYPES carry power and crew; ORGANIC_AA is how much of a hull fights
+ * aircraft (carriers 0.55, submarines near zero). NAVAL_MISSIONS (Blockade, Sea
+ * Control, Sea Denial, Escort, Transit, Return to Port) and AIR_MISSIONS set lane
+ * pressure, combat weight and the readiness each mission costs per turn.
+ */
+/**
+ * Blue Water: tuning and taxonomy.
+ *
+ * Every balance number in the engine lives here, following AHD's own rule that
+ * `src/lib/military/calc.ts` may contain no magic numbers. Unit archetypes are the
+ * real AHD ones (`src/lib/constants/military.ts` UNIT_TYPES) with their published
+ * `power` untouched, so a formation is worth the same here as it is in the game.
+ */
+
+/** Naval archetypes, verbatim from AHD UNIT_TYPES.naval. */
+const NAVAL_TYPES = {
+  "Carrier Strike Group": { icon: "carrier", power: 99, personnel: 7500, speed: 2 },
+  "Guided-Missile Destroyer": { icon: "ship", power: 64, personnel: 330, speed: 2 },
+  "Attack Submarine": { icon: "sub", power: 81, personnel: 130, speed: 2 },
+  "Frigate Squadron": { icon: "ship", power: 49, personnel: 600, speed: 2 },
+  "Amphibious Group": { icon: "carrier", power: 70, personnel: 2800, speed: 1 },
+} as const;
+
 export type NavalType = keyof typeof NAVAL_TYPES;
+export type NavalTypeInfo = (typeof NAVAL_TYPES)[NavalType];
 
 /** Air archetypes, verbatim from AHD UNIT_TYPES.air (Drone Command is 1995+, so omitted). */
 export const AIR_TYPES = {
@@ -6,6 +33,26 @@ export const AIR_TYPES = {
   "Bomber Squadron": { icon: "jet", power: 84, personnel: 900, radius: 2 },
   "Airlift Wing": { icon: "transport", power: 38, personnel: 1500, radius: 2 },
   "Air Defense Wing": { icon: "missile", power: 66, personnel: 1100, radius: 0 },
+} as const;
+
+export type AirType = keyof typeof AIR_TYPES;
+export type AirTypeInfo = (typeof AIR_TYPES)[AirType];
+
+/**
+ * How much of a hull's own combat value is available to shoot down aircraft.
+ *
+ * A carrier's number is high because the number IS its air wing: this model does not
+ * embark separate squadrons, so the CSG's organic fighters are folded into its own
+ * self-defence. A destroyer is the dedicated AAW escort of the period and rates second.
+ * A submarine dives and contributes essentially nothing, which is what makes a
+ * sub-only blockade cheap to mount and cheap to break.
+ */
+export const ORGANIC_AA: Record<NavalType, number> = {
+  "Carrier Strike Group": 0.55,
+  "Guided-Missile Destroyer": 0.4,
+  "Frigate Squadron": 0.28,
+  "Amphibious Group": 0.15,
+  "Attack Submarine": 0.04,
 } as const;
 
 /** Which hulls can fly missions. Only the carrier: that is the point of a carrier. */
@@ -67,7 +114,7 @@ export const NAVAL_MISSIONS = {
   },
 } as const;
 
-type NavalMissionKey = keyof typeof NAVAL_MISSIONS;
+export type NavalMissionKey = keyof typeof NAVAL_MISSIONS;
 export type NavalMission = (typeof NAVAL_MISSIONS)[NavalMissionKey];
 
 /** Air missions. One per wing per turn. */
@@ -109,8 +156,10 @@ export const AIR_MISSIONS = {
   },
 } as const;
 
-type AirMissionKey = keyof typeof AIR_MISSIONS;
+export type AirMissionKey = keyof typeof AIR_MISSIONS;
 export type AirMission = (typeof AIR_MISSIONS)[AirMissionKey];
+
+export const ESCORT_AA_BONUS = 2.0;
 
 /**
  * How much port capacity a formation consumes to operate out of a region.
