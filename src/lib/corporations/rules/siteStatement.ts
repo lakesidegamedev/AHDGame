@@ -117,6 +117,19 @@ export function consolidateSiteStatements(statements: readonly SiteStatement[]) 
   return { revenue, totalCost, profit: revenue - totalCost };
 }
 
+/**
+ * The bridge between the site rows and the consolidated total. Each row
+ * profit includes its own internal supply income and charge; the company total
+ * removes both. When income and charges do not offset inside the listed sites
+ * the two figures differ by exactly the net charge, so the total must say so.
+ */
+export function reconcileSiteStatements(statements: readonly SiteStatement[]) {
+  const income = statements.reduce((n, s) => n + s.income, 0);
+  const charge = statements.reduce((n, s) => n + s.charge, 0);
+  const rowsProfit = statements.reduce((n, s) => n + s.profit, 0);
+  return { income, charge, rowsProfit, netCharge: charge - income };
+}
+
 /** Cost detail may be joined only to the turn actually stamped on the summary. */
 export function matchingSiteReceipt<T extends { turn: number }>(sector: {
   plantsPnl?: { source?: string; turn?: number } | null;
