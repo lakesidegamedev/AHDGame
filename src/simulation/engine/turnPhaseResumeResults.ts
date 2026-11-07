@@ -147,6 +147,28 @@ function appliedState(
   }
 }
 
+/**
+ * Phases a crash resume must never pass over while interrupted. Their output is
+ * the economy itself: `corporationTurn` settles the funded producer market and
+ * every plant's profit, and `commodityPrices`, `lineOfCreditTurn` and the
+ * treasury read what it settled. An interrupted run may have committed any
+ * prefix of its writes (the funded settlement is journaled and replays by key,
+ * but the legacy tail still has unkeyed increments and inserts), so it cannot be
+ * proven safe to rerun, and skipping it completes the turn with the economy
+ * missing (turn 736). The resume refuses instead and holds the turn for repair.
+ * A phase that failed with TurnMustStopError is not interrupted by this
+ * definition: it stopped before the unkeyed writes and reruns by contract.
+ */
+const RESUME_BLOCKING_WHEN_INTERRUPTED: ReadonlySet<string> = new Set(["corporationTurn"]);
+
+export function phaseBlocksResumeWhenInterrupted(name: string): boolean {
+  return RESUME_BLOCKING_WHEN_INTERRUPTED.has(name);
+}
+
+/** Recorded on an interrupted phase the resume does not rerun. */
+export const INTERRUPTED_PHASE_NOT_RERUN_MESSAGE =
+  "interrupted by a crash before it finished; not rerun, so its work for this turn may be missing or partial";
+
 export interface CrashedTurnPhaseState {
   completed: Set<string>;
   interrupted: Set<string>;
