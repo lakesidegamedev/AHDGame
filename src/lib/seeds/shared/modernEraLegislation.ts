@@ -499,6 +499,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.4 },
       { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.3 },
       { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.2 },
     ],
     demographicEffects: [
       { dim: "age", bucket: "young", target: "economicLean", direction: 0.2 },
@@ -557,6 +558,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.4 },
       { metricCategoryId: "infrastructure", metricId: "powerGridReliability", weight: -0.3 },
       { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.2 },
     ],
     demographicEffects: [
       { dim: "urbanization", bucket: "rural", target: "economicLean", direction: -0.3 },

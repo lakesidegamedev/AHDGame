@@ -228,6 +228,7 @@ export type ProducerPhysicalEnv = Pick<
     | "politicalBaseModifiersByState"
     | "regionalConditionMarginByState"
     | "stateOwnershipConcentrationByCountry"
+    | "energyTransition"
   >;
 };
 
