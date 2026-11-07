@@ -39,7 +39,7 @@ export const YU_UN_MEMBER_SINCE = 1945;
 export const YU_WORLD_REGION: WorldEntityRegion = "europe";
 
 /** Where an NPP corporation is seated when it has no other home. */
-export const YU_NPP_CAPITAL_STATE = "";
+export const YU_NPP_CAPITAL_STATE = "YU_SRB";
 
 /* No YU_NON_PARTY_INDEPENDENT_BIAS: the registry has no YU entry, and
    `nonPartyIndependentBias` is optional in the contract. A country with no nudge

@@ -116,7 +116,7 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   IE: IE_NPP_CAPITAL_STATE,
   NG: NG_NPP_CAPITAL_STATE, // federal capital (Abuja/FCT) sits in the North-Central zone
   BR: BR_NPP_CAPITAL_STATE,
-  HU: HU_NPP_CAPITAL_STATE, // coming-soon: regions not yet seeded
+  HU: HU_NPP_CAPITAL_STATE,
   PL: PL_NPP_CAPITAL_STATE,
   RO: RO_NPP_CAPITAL_STATE,
   YU: YU_NPP_CAPITAL_STATE,

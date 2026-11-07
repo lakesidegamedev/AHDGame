@@ -39,7 +39,7 @@ export const RO_UN_MEMBER_SINCE = 1955;
 export const RO_WORLD_REGION: WorldEntityRegion = "europe";
 
 /** Where an NPP corporation is seated when it has no other home. */
-export const RO_NPP_CAPITAL_STATE = "";
+export const RO_NPP_CAPITAL_STATE = "RO_BUC";
 
 /* No RO_NON_PARTY_INDEPENDENT_BIAS: the registry has no RO entry, and
    `nonPartyIndependentBias` is optional in the contract. A country with no nudge
