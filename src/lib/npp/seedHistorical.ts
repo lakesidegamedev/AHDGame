@@ -7,11 +7,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { generateUniqueNPPName } from "./nameGenerator";
 import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
-import {
-  getHistoricalRosterEntry,
-  rosterPortraitUrl,
-  type HistoricalRosterEntry,
-} from "./historicalRosters";
+import { getHistoricalRosterEntry, type HistoricalRosterEntry } from "./historicalRosters";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { reserveSequentialIds } from "@/lib/db/sequentialId";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
@@ -344,10 +340,10 @@ export interface SeedFromSeatsOptions {
   skipAlreadySeatedChambers?: boolean;
 
   /**
-   * Reset preset id (e.g. "1991-default"). When it names a rostered preset,
-   * seated NPPs take the authored real officeholder (name, birth year,
-   * portrait) instead of a generated fictional identity. Absent or unrostered
-   * presets — backfills, admin spawns, other eras — keep generated names.
+   * Reset preset id (e.g. "2027-default"). When it names a rostered preset,
+   * authored seats take their fixed fictional identity (name, birth year)
+   * instead of a generated one. Absent or unrostered presets, backfills and
+   * admin spawns keep generated names.
    */
   presetId?: string;
 }
@@ -645,8 +641,8 @@ export async function seedFromSeats(
       continue;
     }
 
-    // Rostered presets seat the real officeholder; everything else generates
-    // a fictional identity as before.
+    // Rostered seats take their authored (fictional) identity; everything else
+    // generates one.
     const rosterEntry = rosterFor(seat);
     let rosterBirthYear: number | null = null;
 
@@ -696,13 +692,11 @@ export async function seedFromSeats(
     const currentOffice = seatWinners ? buildOfficeType(seat) : null;
 
     // Assign demographics and avatar using the same pipeline as dynamic NPP generation.
-    // Rostered officeholders keep their real gender, political-class ethnicity,
-    // and portrait (pool id when one is findable, demographic pick otherwise).
+    // Rostered seats keep their authored gender and ethnicity; the portrait is
+    // always the generic demographic pick, never a specific person's photo.
     const gender = rosterEntry ? rosterEntry.gender : Math.random() < 0.5 ? "male" : "female";
     const ethnicity = rosterEntry ? rosterEntry.ethnicity : weightedRandomEthnicity(nppCountryId);
-    const avatarUrl = rosterEntry?.portraitId
-      ? rosterPortraitUrl(rosterEntry.portraitId)
-      : selectPoliticianImage(nppCountryId, gender, ethnicity, name);
+    const avatarUrl = selectPoliticianImage(nppCountryId, gender, ethnicity, name);
 
     // Create NPP
     const nppId = new ObjectId();
@@ -710,7 +704,7 @@ export async function seedFromSeats(
       _id: nppId,
       sequentialId,
       name,
-      // Real age for rostered officeholders; absent otherwise (legacy and
+      // Authored age for rostered seats; absent otherwise (legacy and
       // generated NPPs stay exempt from V5 mortality until healed/stamped).
       ...(rosterBirthYear != null ? { birthYear: rosterBirthYear } : {}),
       countryId: nppCountryId,
@@ -847,7 +841,7 @@ export async function seedHistoricalOfficials(
   // no-op there; it earns its keep on the seed-only / re-run paths
   // (`bootstrapGameWorld({ seedOnly })`, the admin re-seed buttons) that do NOT
   // wipe first.
-  // presetId flows through so rostered presets seat real officeholders.
+  // presetId flows through so rostered presets seat their authored identities.
   const result = await seedFromSeats(db, seats, seedMode, {
     skipAlreadySeatedChambers: true,
     presetId,

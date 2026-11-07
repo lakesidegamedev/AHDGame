@@ -77,8 +77,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 1,
     historicalOccupants: [
       {
-        key: "rehnquist-1991",
-        name: "William Rehnquist",
+        key: "renwick-1991",
+        name: "William H. Renwick",
         party: US_REP, // elevated to Chief by Reagan, 1986
         economicLean: 4,
         socialLean: 4,
@@ -87,8 +87,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "death",
       },
       {
-        key: "roberts-2005",
-        name: "John Roberts",
+        key: "rowe-2005",
+        name: "Jonathan Rowe",
         party: US_REP, // nominated by George W. Bush
         economicLean: 3,
         socialLean: 3,
@@ -103,8 +103,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 2,
     historicalOccupants: [
       {
-        key: "white-1991",
-        name: "Byron White",
+        key: "whitcomb-1991",
+        name: "Raymond T. Whitcomb",
         party: US_DEM, // nominated by JFK, but frequently voted with the Court's conservative bloc (dissented in Roe and Casey)
         economicLean: 1,
         socialLean: 2,
@@ -113,8 +113,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "ginsburg-1993",
-        name: "Ruth Bader Ginsburg",
+        key: "sterling-1993",
+        name: "Miriam Gold Sterling",
         party: US_DEM, // nominated by Clinton
         economicLean: -4,
         socialLean: -4,
@@ -123,8 +123,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "death",
       },
       {
-        key: "barrett-2020",
-        name: "Amy Coney Barrett",
+        key: "cole-2020",
+        name: "Margaret Ellison Cole",
         party: US_REP, // nominated by Trump
         economicLean: 4,
         socialLean: 4,
@@ -139,8 +139,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 3,
     historicalOccupants: [
       {
-        key: "marshall-1991",
-        name: "Thurgood Marshall",
+        key: "marlow-1991",
+        name: "Thaddeus Marlow",
         party: US_DEM, // nominated by LBJ
         economicLean: -4,
         socialLean: -5,
@@ -149,8 +149,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "thomas-1991",
-        name: "Clarence Thomas",
+        key: "thornton-1991",
+        name: "Calvin Thornton",
         party: US_REP, // nominated by George H.W. Bush
         economicLean: 5,
         socialLean: 5,
@@ -165,8 +165,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 4,
     historicalOccupants: [
       {
-        key: "blackmun-1991",
-        name: "Harry Blackmun",
+        key: "blaylock-1991",
+        name: "Henry A. Blaylock",
         party: US_REP, // nominated by Nixon, but authored Roe and became one of the Court's most liberal members
         economicLean: -2,
         socialLean: -4,
@@ -175,8 +175,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "breyer-1994",
-        name: "Stephen Breyer",
+        key: "brewster-1994",
+        name: "Simon Brewster",
         party: US_DEM, // nominated by Clinton
         economicLean: -3,
         socialLean: -3,
@@ -185,8 +185,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "jackson-2022",
-        name: "Ketanji Brown Jackson",
+        key: "jamison-2022",
+        name: "Kendra Brooks Jamison",
         party: US_DEM, // nominated by Biden
         economicLean: -3,
         socialLean: -3,
@@ -201,8 +201,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 5,
     historicalOccupants: [
       {
-        key: "stevens-1991",
-        name: "John Paul Stevens",
+        key: "stetson-1991",
+        name: "Paul Stetson",
         party: US_REP, // nominated by Ford, but became a leading liberal voice by the end of his tenure
         economicLean: -2,
         socialLean: -3,
@@ -211,8 +211,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "kagan-2010",
-        name: "Elena Kagan",
+        key: "kaminski-2010",
+        name: "Elise Kaminski",
         party: US_DEM, // nominated by Obama
         economicLean: -3,
         socialLean: -3,
@@ -227,8 +227,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 6,
     historicalOccupants: [
       {
-        key: "oconnor-1991",
-        name: "Sandra Day O'Connor",
+        key: "ostrander-1991",
+        name: "Susan Ostrander",
         party: US_REP, // nominated by Reagan; the Court's pivotal swing vote for most of her tenure
         economicLean: 1,
         socialLean: -1,
@@ -237,8 +237,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "alito-2006",
-        name: "Samuel Alito",
+        key: "amato-2006",
+        name: "Salvatore Amato",
         party: US_REP, // nominated by George W. Bush
         economicLean: 4,
         socialLean: 4,
@@ -255,8 +255,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 7,
     historicalOccupants: [
       {
-        key: "scalia-1991",
-        name: "Antonin Scalia",
+        key: "varela-1991",
+        name: "Anthony Varela",
         party: US_REP, // nominated by Reagan
         economicLean: 4,
         socialLean: 5,
@@ -265,8 +265,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "death",
       },
       {
-        key: "gorsuch-2017",
-        name: "Neil Gorsuch",
+        key: "gorham-2017",
+        name: "Nathan Gorham",
         party: US_REP, // nominated by Trump
         economicLean: 3,
         socialLean: 3,
@@ -281,8 +281,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 8,
     historicalOccupants: [
       {
-        key: "kennedy-1991",
-        name: "Anthony Kennedy",
+        key: "kessler-1991",
+        name: "Arthur M. Kessler",
         party: US_REP, // nominated by Reagan; the Roberts Court's swing vote — authored Romer, Lawrence, and Obergefell
         economicLean: 2,
         socialLean: -1,
@@ -291,8 +291,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "kavanaugh-2018",
-        name: "Brett Kavanaugh",
+        key: "keegan-2018",
+        name: "Bradley Keegan",
         party: US_REP, // nominated by Trump
         economicLean: 3,
         socialLean: 3,
@@ -307,8 +307,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 9,
     historicalOccupants: [
       {
-        key: "souter-1991",
-        name: "David Souter",
+        key: "seaver-1991",
+        name: "Douglas H. Seaver",
         party: US_REP, // nominated by George H.W. Bush, but became a reliably liberal vote
         economicLean: -2,
         socialLean: -3,
@@ -317,8 +317,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "sotomayor-2009",
-        name: "Sonia Sotomayor",
+        key: "valdemoro-2009",
+        name: "Sofia Valdemoro",
         party: US_DEM, // nominated by Obama
         economicLean: -4,
         socialLean: -4,

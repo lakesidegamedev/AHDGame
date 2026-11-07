@@ -157,8 +157,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 1,
     historicalOccupants: [
       {
-        key: "vinson-1953",
-        name: "Fred M. Vinson",
+        key: "vickery-1953",
+        name: "Frank M. Vickery",
         party: "1", // Truman (D) appointee
         economicLean: 1,
         socialLean: 1,
@@ -167,8 +167,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "warren-1953",
-        name: "Earl Warren",
+        key: "halloran-1953",
+        name: "Edwin Halloran",
         party: "2", // Eisenhower (R) appointee; jurisprudence ran far more liberal in practice
         economicLean: -2,
         socialLean: -4,
@@ -177,8 +177,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "burger-1969",
-        name: "Warren E. Burger",
+        key: "bergman-1969",
+        name: "Walter E. Bergman",
         party: "2", // Nixon (R) appointee
         economicLean: 2,
         socialLean: 2,
@@ -187,8 +187,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "rehnquist-cj-1986",
-        name: "William H. Rehnquist",
+        key: "renwick-cj-1986",
+        name: "William H. Renwick",
         party: "2", // Reagan (R) elevation to Chief Justice
         economicLean: 4,
         socialLean: 4,
@@ -197,8 +197,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "roberts-2005",
-        name: "John G. Roberts Jr.",
+        key: "rowe-2005",
+        name: "Jonathan Rowe",
         party: "2", // George W. Bush (R) appointee
         economicLean: 3,
         socialLean: 3,
@@ -213,8 +213,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 2,
     historicalOccupants: [
       {
-        key: "black-1953",
-        name: "Hugo L. Black",
+        key: "bancroft-1953",
+        name: "Hollis L. Bancroft",
         party: "1", // FDR (D) appointee, 1937
         economicLean: -3,
         socialLean: -3,
@@ -223,8 +223,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "powell-1972",
-        name: "Lewis F. Powell Jr.",
+        key: "prewitt-1972",
+        name: "Leland F. Prewitt Jr.",
         party: "2", // Nixon (R) appointee
         economicLean: 1,
         socialLean: 1,
@@ -233,8 +233,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kennedy-1988",
-        name: "Anthony M. Kennedy",
+        key: "kessler-1988",
+        name: "Arthur M. Kessler",
         party: "2", // Reagan (R) appointee
         economicLean: 2,
         socialLean: 0, // famous swing vote; authored Obergefell majority
@@ -243,8 +243,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kavanaugh-2018",
-        name: "Brett M. Kavanaugh",
+        key: "keegan-2018",
+        name: "Bradley Keegan",
         party: "2", // Trump (R) appointee
         economicLean: 3,
         socialLean: 3,
@@ -259,8 +259,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 3,
     historicalOccupants: [
       {
-        key: "reed-1953",
-        name: "Stanley F. Reed",
+        key: "reeve-1953",
+        name: "Stanford Reeve",
         party: "1", // FDR (D) appointee, 1938
         economicLean: 1,
         socialLean: 1,
@@ -269,8 +269,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "whittaker-1957",
-        name: "Charles E. Whittaker",
+        key: "wakefield-1957",
+        name: "Charles E. Wakefield",
         party: "2", // Eisenhower (R) appointee
         economicLean: 1,
         socialLean: 1,
@@ -279,8 +279,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "white-1962",
-        name: "Byron R. White",
+        key: "whitcomb-1962",
+        name: "Raymond T. Whitcomb",
         party: "1", // Kennedy (D) appointee; dissented in Roe and Miranda
         economicLean: 0,
         socialLean: 2,
@@ -289,8 +289,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "ginsburg-1993",
-        name: "Ruth Bader Ginsburg",
+        key: "sterling-1993",
+        name: "Miriam Gold Sterling",
         party: "1", // Clinton (D) appointee
         economicLean: -3,
         socialLean: -4,
@@ -299,8 +299,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "barrett-2020",
-        name: "Amy Coney Barrett",
+        key: "cole-2020",
+        name: "Margaret Ellison Cole",
         party: "2", // Trump (R) appointee
         economicLean: 3,
         socialLean: 4,
@@ -315,8 +315,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 4,
     historicalOccupants: [
       {
-        key: "frankfurter-1953",
-        name: "Felix Frankfurter",
+        key: "feldmann-1953",
+        name: "Oskar Feldmann",
         party: "1", // FDR (D) appointee, 1939; judicial-restraint advocate
         economicLean: 0,
         socialLean: 1,
@@ -325,8 +325,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "goldberg-1962",
-        name: "Arthur J. Goldberg",
+        key: "stroud-1962",
+        name: "Martin J. Stroud",
         party: "1", // Kennedy (D) appointee
         economicLean: -2,
         socialLean: -2,
@@ -338,8 +338,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "fortas-1965",
-        name: "Abe Fortas",
+        key: "fairchild-1965",
+        name: "Abel Fairchild",
         party: "1", // Johnson (D) appointee
         economicLean: -2,
         socialLean: -3,
@@ -350,8 +350,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "blackmun-1970",
-        name: "Harry A. Blackmun",
+        key: "blaylock-1970",
+        name: "Henry A. Blaylock",
         party: "2", // Nixon (R) appointee; drifted sharply liberal over his tenure
         economicLean: -1,
         socialLean: -3,
@@ -360,8 +360,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "breyer-1994",
-        name: "Stephen G. Breyer",
+        key: "brewster-1994",
+        name: "Simon Brewster",
         party: "1", // Clinton (D) appointee
         economicLean: -2,
         socialLean: -2,
@@ -370,8 +370,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "jackson-2022",
-        name: "Ketanji Brown Jackson",
+        key: "jamison-2022",
+        name: "Kendra Brooks Jamison",
         party: "1", // Biden (D) appointee
         economicLean: -3,
         socialLean: -3,
@@ -386,8 +386,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 5,
     historicalOccupants: [
       {
-        key: "douglas-1953",
-        name: "William O. Douglas",
+        key: "dorsey-1953",
+        name: "Wendell O. Dorsey",
         party: "1", // FDR (D) appointee, 1939; longest tenure in Court history
         economicLean: -4,
         socialLean: -4,
@@ -396,8 +396,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "stevens-1975",
-        name: "John Paul Stevens",
+        key: "stetson-1975",
+        name: "Paul Stetson",
         party: "2", // Ford (R) appointee; drifted markedly liberal over his tenure
         economicLean: -2,
         socialLean: -2,
@@ -406,8 +406,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kagan-2010",
-        name: "Elena Kagan",
+        key: "kaminski-2010",
+        name: "Elise Kaminski",
         party: "1", // Obama (D) appointee
         economicLean: -2,
         socialLean: -2,
@@ -422,8 +422,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 6,
     historicalOccupants: [
       {
-        key: "rh-jackson-1953",
-        name: "Robert H. Jackson",
+        key: "jessup-1953",
+        name: "Russell H. Jessup",
         party: "1", // FDR (D) appointee, 1941; Nuremberg chief prosecutor
         economicLean: 0,
         socialLean: 0,
@@ -432,8 +432,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "harlan-1955",
-        name: "John Marshall Harlan II",
+        key: "harwood-1955",
+        name: "John Harwood III",
         party: "2", // Eisenhower (R) appointee
         economicLean: 2,
         socialLean: 2,
@@ -442,8 +442,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "rehnquist-aj-1972",
-        name: "William H. Rehnquist",
+        key: "renwick-aj-1972",
+        name: "William H. Renwick",
         party: "2", // Nixon (R) appointee
         economicLean: 4,
         socialLean: 4,
@@ -455,8 +455,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "scalia-1986",
-        name: "Antonin Scalia",
+        key: "varela-1986",
+        name: "Anthony Varela",
         party: "2", // Reagan (R) appointee
         economicLean: 4,
         socialLean: 5,
@@ -465,8 +465,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "gorsuch-2017",
-        name: "Neil M. Gorsuch",
+        key: "gorham-2017",
+        name: "Nathan Gorham",
         party: "2", // Trump (R) appointee; seat sat vacant ~14 months (2016-17)
         economicLean: 3,
         socialLean: 3,
@@ -481,8 +481,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 7,
     historicalOccupants: [
       {
-        key: "burton-1953",
-        name: "Harold Hitz Burton",
+        key: "burkett-1953",
+        name: "Harold Burkett",
         party: "2", // lifelong Republican (former OH senator), appointed by Truman (D)
         economicLean: 1,
         socialLean: 1,
@@ -491,8 +491,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "stewart-1958",
-        name: "Potter Stewart",
+        key: "stanwick-1958",
+        name: "Porter Stanwick",
         party: "2", // Eisenhower (R) appointee
         economicLean: 1,
         socialLean: -1,
@@ -501,8 +501,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "oconnor-1981",
-        name: "Sandra Day O'Connor",
+        key: "ostrander-1981",
+        name: "Susan Ostrander",
         party: "2", // Reagan (R) appointee; first woman justice
         economicLean: 1,
         socialLean: 0,
@@ -511,8 +511,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "alito-2006",
-        name: "Samuel A. Alito Jr.",
+        key: "amato-2006",
+        name: "Salvatore Amato",
         party: "2", // George W. Bush (R) appointee
         economicLean: 4,
         socialLean: 4,
@@ -527,8 +527,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 8,
     historicalOccupants: [
       {
-        key: "tc-clark-1953",
-        name: "Tom C. Clark",
+        key: "clayburn-1953",
+        name: "Thomas C. Clayburn",
         party: "1", // Truman (D) appointee, 1949
         economicLean: 0,
         socialLean: -1,
@@ -538,8 +538,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "marshall-1967",
-        name: "Thurgood Marshall",
+        key: "marlow-1967",
+        name: "Thaddeus Marlow",
         party: "1", // Johnson (D) appointee; former NAACP chief counsel, argued Brown
         economicLean: -4,
         socialLean: -4,
@@ -548,8 +548,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "thomas-1991",
-        name: "Clarence Thomas",
+        key: "thornton-1991",
+        name: "Calvin Thornton",
         party: "2", // George H.W. Bush (R) appointee
         economicLean: 4,
         socialLean: 5,
@@ -564,8 +564,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 9,
     historicalOccupants: [
       {
-        key: "minton-1953",
-        name: "Sherman Minton",
+        key: "minden-1953",
+        name: "Stuart Minden",
         party: "1", // Truman (D) appointee, 1949
         economicLean: 0,
         socialLean: 1,
@@ -574,8 +574,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "brennan-1956",
-        name: "William J. Brennan Jr.",
+        key: "brannigan-1956",
+        name: "Walter J. Brannigan",
         party: "1", // lifelong Democrat, appointed by Eisenhower (R) for 1956 election-year balance
         economicLean: -4,
         socialLean: -4,
@@ -584,8 +584,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "souter-1990",
-        name: "David H. Souter",
+        key: "seaver-1990",
+        name: "Douglas H. Seaver",
         party: "2", // George H.W. Bush (R) appointee; voted markedly more liberal in practice
         economicLean: -1,
         socialLean: -2,
@@ -594,8 +594,8 @@ const SCOTUS_1953_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "sotomayor-2009",
-        name: "Sonia Sotomayor",
+        key: "valdemoro-2009",
+        name: "Sofia Valdemoro",
         party: "1", // Obama (D) appointee
         economicLean: -3,
         socialLean: -3,
