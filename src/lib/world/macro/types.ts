@@ -24,6 +24,23 @@ export interface MacroMarketContribution {
 }
 
 /**
+ * A background country's realised trade in the funded producer market (#5702),
+ * read back by the kernel so capacity follows what actually sold.
+ */
+export interface MacroFundedTrade {
+  /** Funded turn this record last folded in. */
+  turn: number;
+  /** Lagged share of offered export value that sold, 0-1. */
+  exportFill: number;
+  /** Lagged share of import demand value that was bought, 0-1. */
+  importFill: number;
+  /** The lagged fills before `turn`, so a retried turn recomputes the same record. */
+  prior: { exportFill: number; importFill: number } | null;
+  /** That turn's trade, anchor value. */
+  last: { offeredValue: number; soldValue: number; requestedValue: number; boughtValue: number };
+}
+
+/**
  * Market vs planned aggregate archetype.
  * Planned economies use COMECON-style leakage into the shared world market and
  * never seed market corporations (#3719).
@@ -82,6 +99,8 @@ export interface MacroCountryState {
   resources: Partial<Record<ExtractableResource, number>>;
   sectors: Partial<Record<OperatingSectorType, MacroSectorState>>;
   contribution: MacroMarketContribution;
+  /** Funded-market trade, background countries on a funded world only; absent otherwise. */
+  fundedTrade?: MacroFundedTrade;
   dataQuality: MacroCountryDataQuality;
   lastMacroTickTurn: number | null;
   createdAt: Date;

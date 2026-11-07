@@ -324,6 +324,79 @@ export function investmentReturnMoves(
 }
 
 /**
+ * Mints each background country's trading budget for this turn (#5702): what
+ * its macro demand would spend at reference prices. The country's own money
+ * is not modelled, so the budget comes from outside the world economy, like a
+ * public buyer's, and whatever is in the wallet at close goes back there.
+ */
+export function backgroundFundingMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-background-funding:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_background_funding",
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "background economy import budget",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "background economy trading wallet",
+        },
+      ],
+    }));
+}
+
+/**
+ * Burns a background country's closing cash: its unspent budget plus what its
+ * exports earned. The wallet ends every turn empty, so money in (budget and
+ * export receipts) equals money out (imports and this return).
+ */
+export function backgroundReturnMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-background-return:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_background_return",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "background economy closing cash",
+        },
+        {
+          kind: "burn",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "background economy trade settles outside the world economy",
+        },
+      ],
+    }));
+}
+
+/**
  * Folds one turn's per-country moves of a single kind into ONE money move, so
  * the turn pays one journal claim and one bulk write instead of a claim and a
  * write per country. Every wallet still appears exactly once (the batch throws
