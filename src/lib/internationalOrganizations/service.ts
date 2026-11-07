@@ -20,6 +20,7 @@ import {
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { nppGovernedMembers } from "@/lib/internationalOrganizations/ballotRoll";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import {
   loadWithdrawnMemberKeys,
   recordOrganizationWithdrawal,
@@ -267,6 +268,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     leadership,
     leadershipElections,
     customOrgs,
+    tiers,
   ] = await Promise.all([
     (await getOrganizationMembershipsCollection(db)).find({}).toArray(),
     getAllCountryAccess(db),
@@ -288,7 +290,11 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     (await getOrganizationLeadershipCollection(db)).find({}).toArray(),
     (await getOrganizationLeadershipElectionsCollection(db)).find({ status: "pending" }).toArray(),
     loadCustomOrganizations(db),
+    loadCountryTiers(db),
   ]);
+  // Background members (#5702) vote by script on every ballot the policy roll
+  // covers, so they hold a policy vote exactly as the resolver seats them.
+  const backgroundMembers = new Set<string>(tiers.backgroundIds);
 
   const membersByOrg = new Map<InternationalOrganizationId, OrganizationMembership[]>();
   for (const m of memberships) {
@@ -429,6 +435,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
         hasPolicyVote:
           hasVote ||
           nppGoverned.has(m.countryId as CountryId) ||
+          backgroundMembers.has(m.countryId) ||
           activeRolls.get(id)?.has(m.countryId) === true,
         isCountry,
       };
