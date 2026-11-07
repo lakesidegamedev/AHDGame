@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
-import { runSavingsCommand } from "@/lib/savings/accountsShell";
+import { ensureSavingsAccount, runSavingsCommand } from "@/lib/savings/accountsShell";
 import { moveCharacterSavings } from "@/lib/banking/deposits";
 import { buildSavingsComparison } from "@/lib/savings/shadow";
 import { processBankingTurn } from "@/lib/turn/bankingTurn";
@@ -131,6 +131,35 @@ describe("authoritative savings writes", () => {
       (db.collection("centralBanks").docs[0] as { householdSavingsLiability: number })
         .householdSavingsLiability
     ).toBe(1_250);
+  });
+
+  it("rebuilds an account whose migration receipt is applied but whose record is missing", async () => {
+    const first = await ensureSavingsAccount(db as unknown as Db, OWNER, "USD", TURN);
+    expect(first).toMatchObject({ balance: 1_000 });
+    const liabilityBefore = (
+      db.collection("centralBanks").docs[0] as { householdSavingsLiability: number }
+    ).householdSavingsLiability;
+    // The account record is lost; the applied receipt stays behind.
+    await db.collection("savingsAccounts").deleteOne({ ownerId: OWNER, currency: "USD" });
+    expect(db.collection("savingsAccounts").docs).toHaveLength(0);
+
+    const rebuilt = await ensureSavingsAccount(db as unknown as Db, OWNER, "USD", TURN);
+    expect(rebuilt).toMatchObject({ id: first!.id, balance: 1_000, holder: "centralBank" });
+    expect(db.collection("savingsAccounts").docs).toHaveLength(1);
+    // Rebuilding replays only the insert: the holder-side counters do not move again.
+    expect(
+      (db.collection("centralBanks").docs[0] as { householdSavingsLiability: number })
+        .householdSavingsLiability
+    ).toBe(liabilityBefore);
+
+    const deposited = await runSavingsCommand(
+      db as unknown as Db,
+      OWNER,
+      "USD",
+      { type: "deposit", amount: 100 },
+      "c-rebuilt"
+    );
+    expect(deposited.ok).toBe(true);
   });
 
   it("moves the whole backing on a holder change and leaves the balance untouched", async () => {
