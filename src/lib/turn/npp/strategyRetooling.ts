@@ -36,6 +36,11 @@ interface StrategyRetoolContext {
   now: Date;
   currentYear: number;
   techTreesEnabled: boolean;
+  /**
+   * World frontier research per lane, read once per turn. Absent keeps every
+   * breakthrough method closed.
+   */
+  sectorResearchByLane?: ReadonlyMap<string, number>;
   plantsEnabled: boolean;
   priceRatioOf: CommodityPriceRatioFn;
 }
@@ -74,6 +79,7 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
     const strategies = SECTOR_STRATEGIES[operatingType as OperatingSectorType];
     if (!strategies || strategies.length < 2) continue;
     const countryId = sector.countryId ?? ctx.corp.countryId;
+    const world = { sectorResearch: ctx.sectorResearchByLane?.get(operatingType) };
     const currentId = sector.strategyId ?? "standard";
     const current = strategies.find((strategy) => strategy.id === currentId);
     if (!current) {
@@ -83,8 +89,13 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
       ) {
         const standard = strategies.find((strategy) => strategy.id === "standard");
         const isOpen = (candidate: (typeof strategies)[number]) =>
-          !getStrategyAvailability(ctx.corp, candidate, ctx.currentYear, ctx.techTreesEnabled)
-            .locked;
+          !getStrategyAvailability(
+            ctx.corp,
+            candidate,
+            ctx.currentYear,
+            ctx.techTreesEnabled,
+            world
+          ).locked;
         // A retired standard sends the repair on to standard's successor.
         const target =
           standard && isOpen(standard)
@@ -110,8 +121,13 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
         strategies,
         ctx.currentYear,
         (candidate) =>
-          !getStrategyAvailability(ctx.corp, candidate, ctx.currentYear, ctx.techTreesEnabled)
-            .locked,
+          !getStrategyAvailability(
+            ctx.corp,
+            candidate,
+            ctx.currentYear,
+            ctx.techTreesEnabled,
+            world
+          ).locked,
         (candidate) => strategyPriceScore(candidate, countryId, ctx.priceRatioOf)
       );
       if (successor) {
@@ -132,7 +148,8 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
         ctx.corp,
         candidate,
         ctx.currentYear,
-        ctx.techTreesEnabled
+        ctx.techTreesEnabled,
+        world
       );
       if (availability.locked) continue;
       const score = strategyPriceScore(candidate, countryId, ctx.priceRatioOf);

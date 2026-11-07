@@ -37,6 +37,7 @@ import {
 import { officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { createNPP, type NPPGenerationContext } from "@/lib/npp/generator";
 import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
+import { createSystemNewsPost } from "@/lib/news";
 import { mergePartyInto } from "./proposals";
 import {
   FOUNDING_BENCH_SIZE,
@@ -47,6 +48,8 @@ import {
   nationalVoteShares,
   planPartyRenewal,
   recordHeldRegions,
+  renewalNewsPost,
+  type RenewalNewsEvent,
   type FoundingPlan,
   type RenewalCycleSnapshot,
   type RenewalNpp,
@@ -355,7 +358,9 @@ export async function processPartyRenewal(
     .toArray();
 
   const eventWrites: AnyBulkWriteOperation<PartyRenewalState>[] = [];
+  const news: RenewalNewsEvent[] = [];
   for (const w of acting) {
+    const countryName = COUNTRY_CONFIGS[w.countryId]?.name ?? w.countryId;
     const nppsByParty = new Map<string, RenewalNpp[]>();
     for (const n of npps) {
       if (n.countryId !== w.countryId) continue;
@@ -396,6 +401,12 @@ export async function processPartyRenewal(
           partyId: fold.partyId,
           relatedPartyId: fold.targetPartyId,
         });
+        news.push({
+          kind: "fold",
+          countryName,
+          partyName: source.name,
+          relatedPartyName: target.name,
+        });
         summary.folds++;
       } catch (error) {
         console.warn(`[Turn] party renewal: fold of ${w.countryId}/${fold.partyId} skipped`, error);
@@ -419,12 +430,19 @@ export async function processPartyRenewal(
           partyId,
           relatedPartyId: plan.splinter.parentPartyId,
         });
+        news.push({
+          kind: "splinter",
+          countryName,
+          partyName: plan.splinter.name,
+          relatedPartyName: parent.name,
+        });
         summary.splinters++;
       }
     }
     if (plan.founding) {
       const partyId = await applyFounding(db, w.countryId, w.cycle, currentTurn, plan.founding);
       events.push({ kind: "founding", cycle: w.cycle, turn: currentTurn, partyId });
+      news.push({ kind: "founding", countryName, partyName: plan.founding.name });
       summary.foundings++;
     }
     if (events.length > 0) {
@@ -443,6 +461,16 @@ export async function processPartyRenewal(
   }
   if (eventWrites.length > 0) {
     await getPartyRenewalStatesCollection(db).bulkWrite(eventWrites);
+  }
+  // Players see the map change in the news feed. A failed post never undoes
+  // the renewal it reports.
+  for (const event of news) {
+    const { title, content } = renewalNewsPost(event);
+    try {
+      await createSystemNewsPost(content, "election", { title, db });
+    } catch (error) {
+      console.warn(`[Turn] party renewal: news post skipped`, error);
+    }
   }
   return summary;
 }

@@ -33,6 +33,11 @@ export interface NppCorpDecisionContext {
   labourWagesEnabled?: boolean;
   currentYear?: number;
   techTreesEnabled?: boolean;
+  /**
+   * World frontier research per operating lane, read once per turn. Opens
+   * breakthrough methods to retooling; absent keeps them closed.
+   */
+  sectorResearchByLane?: ReadonlyMap<string, number>;
   /** The corp's country runs NPP engine 6 (autonomy v6); absent reads as engine 5. */
   engineSix?: boolean;
   /** Net per-turn debt service in anchor currency; positive is a drag. */

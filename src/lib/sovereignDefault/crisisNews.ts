@@ -21,7 +21,7 @@ export async function emitAuctionUndersubscribedNews(
   demandRatio: number
 ): Promise<void> {
   const content =
-    `Bond Auction Undersubscribed — ${countryCode}: market demand ${formatDemand(demandRatio)}. ` +
+    `Bond Auction Undersubscribed in ${countryCode}: market demand ${formatDemand(demandRatio)}. ` +
     `Treasury raised funds at a yield premium; investor confidence is wavering.`;
   await createSystemNewsPost(content, "sovereign");
 }
@@ -33,7 +33,7 @@ export async function emitAuctionFailedNews(
 ): Promise<void> {
   const displayCount = Math.min(consecutiveCount, FAILED_AUCTION_COUNT_FOR_CRISIS);
   const content =
-    `Bond Auction Failed — ${countryCode}: demand collapsed to ${formatDemand(demandRatio)} ` +
+    `Bond Auction Failed in ${countryCode}: demand collapsed to ${formatDemand(demandRatio)} ` +
     `(${displayCount}/${FAILED_AUCTION_COUNT_FOR_CRISIS} consecutive failed auctions). ` +
     `One more failure may force a sovereign-debt crisis.`;
   await createSystemNewsPost(content, "sovereign");
@@ -41,7 +41,7 @@ export async function emitAuctionFailedNews(
 
 export async function emitCrisisFiredNews(countryCode: string, currentTurn: number): Promise<void> {
   const content =
-    `Sovereign Debt Crisis — ${countryCode}: bond auctions have failed ${FAILED_AUCTION_COUNT_FOR_CRISIS} ` +
+    `Sovereign Debt Crisis in ${countryCode}: bond auctions have failed ${FAILED_AUCTION_COUNT_FOR_CRISIS} ` +
     `consecutive times. The head of state must choose a resolution path within 12 hours. ` +
     `(turn ${currentTurn})`;
   await createSystemNewsPost(content, "sovereign");
@@ -61,7 +61,7 @@ export async function emitBailoutGrantedNews(
   principal: number
 ): Promise<void> {
   const content =
-    `Sovereign Crisis Resolved — ${countryCode}: IMF bailout granted ` +
+    `Sovereign Crisis Resolved in ${countryCode}: IMF bailout granted ` +
     `(${formatPrincipalAbbrev(principal)} facility). Country enters recovery; austerity in effect. ` +
     `(turn ${currentTurn})`;
   await createSystemNewsPost(content, "sovereign");
@@ -73,7 +73,7 @@ export async function emitRepudiatedNews(
   bondsAffected: number
 ): Promise<void> {
   const content =
-    `Sovereign Default — ${countryCode}: government has repudiated all outstanding ` +
+    `Sovereign Default in ${countryCode}: government has repudiated all outstanding ` +
     `sovereign debt (${bondsAffected} bond series). Bond markets locked; recovery beginning. ` +
     `(turn ${currentTurn})`;
   await createSystemNewsPost(content, "sovereign");
@@ -87,7 +87,7 @@ export async function emitRestructuredNews(
 ): Promise<void> {
   const haircutPct = Math.round(haircutPercent * 100);
   const content =
-    `Sovereign Restructuring — ${countryCode}: ${haircutPct}% haircut applied to ` +
+    `Sovereign Restructuring in ${countryCode}: ${haircutPct}% haircut applied to ` +
     `${bondsAffected} sovereign bond series, with extended maturities. Recovery beginning. ` +
     `(turn ${currentTurn})`;
   await createSystemNewsPost(content, "sovereign");
@@ -100,7 +100,7 @@ export async function emitMonetizedNews(
   inflationShockPp: number
 ): Promise<void> {
   const content =
-    `Sovereign Monetization — ${countryCode}: central bank printed ` +
+    `Sovereign Monetization in ${countryCode}: central bank printed ` +
     `${formatPrincipalAbbrev(printedAmount)} to cover the financing gap, ` +
     `adding ${inflationShockPp.toFixed(1)} percentage points to inflation. ` +
     `(turn ${currentTurn})`;
@@ -112,7 +112,7 @@ export async function emitRecoveryCompleteNews(
   currentTurn: number
 ): Promise<void> {
   const content =
-    `Sovereign Recovery Complete — ${countryCode}: bond markets re-opened; ` +
+    `Sovereign Recovery Complete in ${countryCode}: bond markets re-opened; ` +
     `credit rating reset. (turn ${currentTurn})`;
   await createSystemNewsPost(content, "sovereign");
 }

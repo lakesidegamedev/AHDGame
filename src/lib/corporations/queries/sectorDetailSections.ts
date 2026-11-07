@@ -120,6 +120,7 @@ import {
   getStrategyAvailability,
   getSectorTechEffects,
   getSectorTechEffectsForYear,
+  sunsetRetoolCostMultiplier,
   type TechCorpView,
 } from "@/lib/constants/techTree";
 import { COMMODITY_BASE_PRICES, computeBlendedMarginModifiers } from "@/lib/constants/commodities";
@@ -676,6 +677,9 @@ export function buildSectorStrategySection(args: {
     strategyCapacityMultipliers,
     marginProjection,
   } = args;
+  const baseRetoolCost =
+    readCorpEconomicAnchor(sector.revenue, sectorHostLiquidCode, sectorHostFxRate) *
+    STRATEGY_RETOOL_COST_FRACTION;
   return {
     currentStrategyId: sector.strategyId ?? "standard",
     operatingSectorType: sectorType,
@@ -704,10 +708,7 @@ export function buildSectorStrategySection(args: {
       sector.transitionCooldownUntilTurn != null
         ? Math.max(0, sector.transitionCooldownUntilTurn - currentTurn)
         : 0,
-    retoolCost: Math.round(
-      readCorpEconomicAnchor(sector.revenue, sectorHostLiquidCode, sectorHostFxRate) *
-        STRATEGY_RETOOL_COST_FRACTION
-    ),
+    retoolCost: Math.round(baseRetoolCost),
     availableStrategies: (() => {
       // Strategy-picker revenue preview (extraction only): projected ₳/turn
       // at current lagged prices, capacity-clamped per resource — the number
@@ -793,13 +794,17 @@ export function buildSectorStrategySection(args: {
         };
       };
 
+      const sectorStrategies = getSectorStrategies(
+        sectorType,
+        mediaOperatingModelsEnabled,
+        sector.mediaDiscriminator,
+        args.preset
+      );
+      const currentStrategyRow = sectorStrategies.find(
+        (s) => s.id === (sector.strategyId ?? "standard")
+      );
       return (
-        getSectorStrategies(
-          sectorType,
-          mediaOperatingModelsEnabled,
-          sector.mediaDiscriminator,
-          args.preset
-        ).map((s) => {
+        sectorStrategies.map((s) => {
           const availability = getStrategyAvailability(
             techCorpView,
             s,
@@ -808,6 +813,11 @@ export function buildSectorStrategySection(args: {
             { sectorResearch: args.sectorResearch }
           );
           const projection = projectStrategy(s);
+          // Converting off a retired method onto a named successor is
+          // discounted; the retool command charges the same multiplier.
+          const retoolCostMultiplier = techTreesEnabled
+            ? sunsetRetoolCostMultiplier(currentStrategyRow, s.id, techCurrentYear)
+            : 1;
           return {
             id: s.id,
             name: s.name,
@@ -815,6 +825,8 @@ export function buildSectorStrategySection(args: {
             locked: availability.locked,
             lockReason: availability.reason ?? null,
             minDecade: s.minDecade ?? null,
+            retoolCostMultiplier,
+            retoolCost: Math.round(baseRetoolCost * retoolCostMultiplier),
             // Percentage points this strategy would move the effective margin
             // by, at today's commodity prices. null when redacted.
             projectedMarginDelta: projection.marginDelta,

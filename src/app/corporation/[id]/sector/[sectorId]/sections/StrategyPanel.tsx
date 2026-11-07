@@ -162,6 +162,8 @@ export default function StrategyPanel({
       <p className="text-xs text-muted mb-4">
         Changes commodity inputs and outputs. Switching costs{" "}
         {formatAmount(strategy.retoolCost, liquidCode)} and takes 12 turns to complete.
+        {strategy.availableStrategies.some((s) => (s.retoolCostMultiplier ?? 1) < 1) &&
+          " Your current method is retired, so switching to one of its successors costs less."}
       </p>
       {plantsCapacityUnits != null && plantsCapacityUnits > 0 && (
         <p className="mb-4 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground">
@@ -348,6 +350,15 @@ export default function StrategyPanel({
                                   ? `≈ ${formatAmount(s.projectedRevenuePerTurn, liquidCode)}/turn gross`
                                   : ""}
                         </span>
+                        {!isCurrent &&
+                          !unavailable &&
+                          s.retoolCost != null &&
+                          (s.retoolCostMultiplier ?? 1) < 1 && (
+                            <span className="block text-[10px] font-medium text-success">
+                              Switch costs {formatAmount(s.retoolCost, liquidCode)}: retired method
+                              discount
+                            </span>
+                          )}
                         {s.id === suggestedStrategyId && !isCurrent && !unavailable && (
                           <span className="block text-[10px] font-medium text-info">
                             Buyers here are short of what this makes
@@ -429,6 +440,10 @@ export default function StrategyPanel({
               targetStrategyId={pendingStrategyId}
               dailyRevenue={sector.revenue ?? 0}
               liquidCurrencyCode={corporation.liquidCurrencyCode}
+              retoolCostMultiplier={
+                strategy.availableStrategies.find((s) => s.id === pendingStrategyId)
+                  ?.retoolCostMultiplier
+              }
               loading={strategyUpdating}
               onConfirm={() => {
                 onStrategyChange(pendingStrategyId);

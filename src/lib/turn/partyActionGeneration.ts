@@ -18,6 +18,7 @@ import {
   psInvestmentRate,
 } from "./politicalStrength/strengthConstants";
 import { resolvePartyPsCap, resolvePartyTier } from "@/lib/parties/partyTier";
+import { effectivePsInvestmentBudget } from "@/lib/parties/rules/nppTreasurySpendDown";
 import {
   computeNppActionPointGain,
   nppActionPointCap,
@@ -201,13 +202,22 @@ export async function processPartyActionGeneration(
         party.psCapEarnedRegions?.length ?? 0,
         nationalCapForCountry(party.countryId)
       );
+    const nationalRate = psInvestmentRate(party.countryId, "national");
     const gain = computePartyPsGain({
       current: party.politicalStrength ?? 0,
       cap,
       treasury: party.treasury ?? 0,
       passivePerTurn: NATIONAL_PASSIVE_PS_PER_TURN,
-      psInvestmentBudget: party.psInvestmentBudget ?? 0,
-      psInvestmentRatePerPs: psInvestmentRate(party.countryId, "national"),
+      // An NPP-run party spends its surplus here so its treasury does not
+      // compound without limit.
+      psInvestmentBudget: effectivePsInvestmentBudget({
+        party,
+        chairBudget: party.psInvestmentBudget ?? 0,
+        treasury: party.treasury ?? 0,
+        ratePerPs: nationalRate,
+        maxPsPerTurn: PS_INVESTMENT_MAX_TIERS,
+      }),
+      psInvestmentRatePerPs: nationalRate,
     });
     if (gain.total <= 0 && gain.investmentDebit <= 0) continue;
 

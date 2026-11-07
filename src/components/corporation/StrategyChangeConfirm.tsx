@@ -37,6 +37,8 @@ interface StrategyChangeConfirmProps {
   dailyRevenue: number;
   /** Corp's liquidCurrencyCode — drives formatAmount wallet-pref display. */
   liquidCurrencyCode?: string | null;
+  /** Multiplier on the retool fee; below 1 for a discounted sunset conversion. */
+  retoolCostMultiplier?: number;
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -112,6 +114,7 @@ export default function StrategyChangeConfirm({
   targetStrategyId,
   dailyRevenue,
   liquidCurrencyCode,
+  retoolCostMultiplier = 1,
   onConfirm,
   onCancel,
   loading,
@@ -175,7 +178,8 @@ export default function StrategyChangeConfirm({
   const target = strategies.find((s) => s.id === targetStrategyId) as SectorStrategy | undefined;
   if (!current || !target) return null;
 
-  const retoolCost = dailyRevenue * STRATEGY_RETOOL_COST_FRACTION;
+  const retoolCost = dailyRevenue * STRATEGY_RETOOL_COST_FRACTION * retoolCostMultiplier;
+  const sunsetDiscount = retoolCostMultiplier < 1;
   const hasMarketData = Object.keys(marketData).length > 0;
 
   // Estimate commodity margin impact
@@ -217,6 +221,11 @@ export default function StrategyChangeConfirm({
         <span className="text-sm font-semibold text-foreground">Switch to {target.name}?</span>
         <span className="text-xs text-error font-medium">
           Retooling cost {fmtMoney(retoolCost)}
+          {sunsetDiscount && (
+            <span className="ml-1 text-success">
+              ({Math.round((1 - retoolCostMultiplier) * 100)}% off: replaces a retired method)
+            </span>
+          )}
         </span>
       </div>
 

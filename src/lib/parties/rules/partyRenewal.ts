@@ -643,3 +643,42 @@ export function reentryRegions(
     .map(([region]) => region)
     .sort();
 }
+
+/** One renewal event, named for the news feed. */
+export interface RenewalNewsEvent {
+  kind: "splinter" | "founding" | "fold";
+  countryName: string;
+  /** The new party (splinter, founding) or the party that folded. */
+  partyName: string;
+  /** The parent of a splinter, or the party a folded one joined. */
+  relatedPartyName?: string;
+}
+
+/** Headline and body for a renewal event's system news post. */
+export function renewalNewsPost(event: RenewalNewsEvent): { title: string; content: string } {
+  const { countryName, partyName, relatedPartyName } = event;
+  switch (event.kind) {
+    case "splinter":
+      return {
+        title: `${partyName} splits from ${relatedPartyName ?? "its parent party"}`,
+        content:
+          `A faction of ${relatedPartyName ?? "an established party"} in ${countryName} has ` +
+          `broken away to form ${partyName}. Its members take their seats and candidacies ` +
+          `with them.`,
+      };
+    case "founding":
+      return {
+        title: `${partyName} founded in ${countryName}`,
+        content:
+          `${partyName} has been founded in ${countryName} to speak for voters no ` +
+          `existing party represents. It starts with a small bench in one region.`,
+      };
+    case "fold":
+      return {
+        title: `${partyName} folds into ${relatedPartyName ?? "a larger party"}`,
+        content:
+          `After two weak elections, ${partyName} in ${countryName} has dissolved and its ` +
+          `members have joined ${relatedPartyName ?? "a larger party"}.`,
+      };
+  }
+}

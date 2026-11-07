@@ -20,6 +20,11 @@ export interface FoundingRecipeWorld {
   /** In-game year; 0 or absent when unknown, which admits no era-gated recipe. */
   currentYear?: number;
   techTreesEnabled: boolean;
+  /**
+   * World frontier research per lane, read once per turn. Absent keeps every
+   * breakthrough method closed.
+   */
+  sectorResearchByLane?: ReadonlyMap<string, number>;
 }
 
 /**
@@ -40,9 +45,12 @@ export function foundingRecipeAvailable(
     mediaDiscriminator: identity.mediaDiscriminator ?? null,
     unlockedTechNodeIds: [],
   };
+  const sectorResearch = world.sectorResearchByLane?.get(lane);
   return (recipe) => {
     if (recipe.minDecade && !(year > 0 && isDecadeReached(recipe.minDecade, year))) return false;
-    return !getStrategyAvailability(newCompany, recipe, year, world.techTreesEnabled).locked;
+    return !getStrategyAvailability(newCompany, recipe, year, world.techTreesEnabled, {
+      sectorResearch,
+    }).locked;
   };
 }
 

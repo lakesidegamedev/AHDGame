@@ -15,6 +15,7 @@ import {
   recordHeldRegions,
   reentryRegions,
   renewalAbbreviation,
+  renewalNewsPost,
   splinterConditions,
   splinterPartyName,
   splinterPosition,
@@ -417,5 +418,40 @@ describe("multi-cycle fixture", () => {
     expect(parties.length).toBeGreaterThanOrEqual(3);
     const { seats } = elect(parties, priorSeats);
     expect(seats.get("1")!).toBeLessThan(0.55);
+  });
+});
+
+describe("renewalNewsPost", () => {
+  const dash = /[\u2013\u2014]/;
+
+  it("names both parties on a splinter and a fold", () => {
+    const splinter = renewalNewsPost({
+      kind: "splinter",
+      countryName: "Italy",
+      partyName: "Reform Movement",
+      relatedPartyName: "Centre Union",
+    });
+    expect(splinter.title).toBe("Reform Movement splits from Centre Union");
+    expect(splinter.content).toContain("Italy");
+    const fold = renewalNewsPost({
+      kind: "fold",
+      countryName: "Italy",
+      partyName: "Small Party",
+      relatedPartyName: "Centre Union",
+    });
+    expect(fold.title).toBe("Small Party folds into Centre Union");
+    expect(fold.content).toContain("joined Centre Union");
+  });
+
+  it("announces a founding in its country without dashes", () => {
+    const founding = renewalNewsPost({
+      kind: "founding",
+      countryName: "Spain",
+      partyName: "Green Future",
+    });
+    expect(founding.title).toBe("Green Future founded in Spain");
+    for (const post of [founding]) {
+      expect(dash.test(post.title + post.content)).toBe(false);
+    }
   });
 });
