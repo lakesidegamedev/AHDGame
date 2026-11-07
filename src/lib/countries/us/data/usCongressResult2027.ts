@@ -25,12 +25,12 @@ import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
  * Class 2 (R).
  *
  * Sources:
- * - AP News, "2026 U.S. House Election Results" and "2026 U.S. Senate
- *   Election Results", race calls as of November 6, 2026.
+ * - AP News, 2026 US House election results and 2026 US Senate election
+ *   results pages, race calls as of November 6, 2026.
  * - Wikipedia, "2026 United States House of Representatives elections" and
  *   "2026 United States Senate elections", district and race tables
  *   compiled from AP calls, revision of November 6, 2026.
- * - NBC News, "U.S. House Elections 2026 Live Results", November 2026.
+ * - NBC News, 2026 House election live results page, November 2026.
  *
  * Do not silently refresh these numbers. A later count or the certified
  * result must update the status line, the uncalled lists and the rosters
