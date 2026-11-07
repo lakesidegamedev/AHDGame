@@ -32,7 +32,6 @@
  */
 import { largestRemainderSeats } from "@/lib/turn/election/seatAllocation";
 import { allocateViaSainteLague } from "@/lib/turn/election/sainteLagueAllocation";
-import { bgDhondtSeats } from "@/lib/countries/bg/rules/ordinaryElection";
 import {
   electorateCentre,
   FOLD_VOTE_SHARE,
@@ -341,6 +340,32 @@ export function austerityPenalty(
 
 // ─── Seats and government ─────────────────────────────────────────────────────
 
+/** D'Hondt highest averages: each seat goes to the largest votes / (seats won + 1). */
+function dhondtSeats(
+  votes: readonly { partyId: string; votes: number }[],
+  seats: number
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const v of votes) out[v.partyId] = 0;
+  for (let n = 0; n < seats; n++) {
+    let best: string | null = null;
+    let bestQuotient = -1;
+    for (const v of votes) {
+      const quotient = v.votes / (out[v.partyId] + 1);
+      if (
+        quotient > bestQuotient ||
+        (quotient === bestQuotient && best !== null && v.partyId < best)
+      ) {
+        best = v.partyId;
+        bestQuotient = quotient;
+      }
+    }
+    if (best === null) break;
+    out[best] += 1;
+  }
+  return out;
+}
+
 function proportionalSeats(
   shares: readonly { partyId: string; voteShare: number }[],
   seats: number,
@@ -358,10 +383,9 @@ function proportionalSeats(
       votes.filter((v) => v.votes / total >= threshold).map((v) => v.partyId)
     );
     if (eligible.size === 0) for (const v of votes) eligible.add(v.partyId);
-    return bgDhondtSeats(
-      votes.map((v, i) => ({ id: v.partyId, party: v.partyId, votes: v.votes, listOrder: i })),
-      seats,
-      eligible
+    return dhondtSeats(
+      votes.filter((v) => eligible.has(v.partyId)),
+      seats
     );
   }
   return largestRemainderSeats(
