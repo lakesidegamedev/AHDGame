@@ -1,21 +1,32 @@
 /**
  * Later-era national laws for the US and UK law books: the 2027 band (AI
  * liability, data protection, housing supply, critical minerals, cyber
- * resilience, platform content) and the 2030 band (automation tax, wage
+ * resilience, platform content, and the climate laws: carbon price, coal
+ * phase-out, clean power standard), the 2030 band (automation tax, wage
  * insurance, carbon border adjustment, heat standards, pension age indexation,
- * nuclear licensing). The same twelve laws exist in the legacy catalogue for
- * DE, JP, CN and IE (seeds/shared/modernEraLegislation.ts).
+ * nuclear licensing), the 2035 band (climate adaptation fund, managed retreat,
+ * basic income pilot, gene editing, space traffic) and the 2040 band
+ * (automation dividend, four-day week, digital currency, sovereign wealth
+ * fund). The same laws exist in the legacy catalogue for DE, JP, CN and IE
+ * (seeds/shared/modernEraLegislation.ts).
  *
  * Every law carries an era `window`: it cannot be filed before its first year,
- * and an enacted one stays in force whatever the year. They are national only.
+ * and an enacted one stays in force whatever the year. The automation tax also
+ * closes to new bills in 2040, when the automation dividend replaces it. They are national only.
  * A `both` law with a window would need year-aware regional read fallbacks
  * (see regionalDefaults.test.ts), so zoning and heat standards have no state
  * variant.
  *
  * Winners are the positive targets. Payers come through the same channels the
  * rest of the book uses: a cost on a budget line, and one negative target (the
- * metric the law trades away). The automation tax and the carbon border
- * adjustment raise real revenue through gdpRevenueFraction.
+ * metric the law trades away). The automation tax, the carbon price and the
+ * carbon border adjustment raise real revenue through gdpRevenueFraction, as do the
+ * automation dividend (a levy paid back out as a dividend), digital currency
+ * (seigniorage) and the sovereign wealth fund (its returns). Pension age
+ * indexation carries a negative cost from its second rung: a saving on the
+ * pension line.
+ * In energy transition worlds the climate laws and the minerals recycling
+ * duty also reach firms' input costs and emissions (energyTransition/rules).
  *
  * Every law seeds at level 0, so adding them moves no day-one budget, metric
  * or equilibrium.
@@ -38,7 +49,9 @@ interface LevelSpec {
 
 interface ModernLawSpec {
   slug: string;
-  from: 2027 | 2030;
+  from: 2027 | 2030 | 2035 | 2040;
+  /** First year no new bill may file the law; an enacted one stays in force. */
+  until?: number;
   category: PoliticalMetricCategoryId;
   /** Winners first (the first entry sets the law's lean), then the payer. */
   targets: Array<{ metricId: PoliticalMetricId; weight: number }>;
@@ -226,14 +239,14 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
       {
         name: "Domestic Extraction Drive",
         description:
-          "The reserve grows and new mines and refineries at home get fast permits and price floors.",
+          "The reserve grows, new mines and refineries at home get fast permits and price floors, and makers must recover a tenth of the rare earths they use from scrap.",
         cost: 0.001,
       },
       {
         name: { US: "Minerals Security Program", UK: "Minerals Security Programme" },
         description: {
-          US: "A full program: a large reserve, state stakes in refining, and long contracts with friendly suppliers.",
-          UK: "A full programme: a large reserve, state stakes in refining, and long contracts with friendly suppliers.",
+          US: "A full program: a large reserve, state stakes in refining, long contracts with friendly suppliers, and a recycling duty that recovers a fifth of rare earth use.",
+          UK: "A full programme: a large reserve, state stakes in refining, long contracts with friendly suppliers, and a recycling duty that recovers a fifth of rare earth use.",
         },
         cost: 0.0016,
       },
@@ -328,10 +341,153 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
       },
     ],
   },
+  {
+    slug: "carbonPrice",
+    from: 2027,
+    category: "environment",
+    targets: [
+      { metricId: "environment.stewardship", weight: 0.5 },
+      { metricId: "environment.urbanAir", weight: 0.3 },
+      { metricId: "economy.householdIncome", weight: -0.3 },
+      { metricId: "economy.productivity", weight: -0.25 },
+    ],
+    title: {
+      US: "Carbon Pricing Act",
+      UK: "Carbon Price Act",
+    },
+    description: {
+      US: "Charges power plants and heavy industry for every ton of carbon they release. The treasury and clean producers gain; coal and gas power, chemical works, factories and their customers pay.",
+      UK: "Charges power plants and heavy industry for every ton of carbon they release. The treasury and clean producers gain; coal and gas power, chemical works, factories and their customers pay.",
+    },
+    noStatute: "Carbon released by power plants and industry carries no charge.",
+    levels: [
+      {
+        name: "Token Carbon Fee",
+        description:
+          "A small charge per ton that funds monitoring and barely moves prices. Coal and gas plants notice it.",
+        cost: 0.00005,
+        revenue: 0.001,
+      },
+      {
+        name: "Moderate Carbon Price",
+        description:
+          "A real charge per ton. Coal power, chemicals and steel pay noticeably more to run.",
+        cost: 0.0001,
+        revenue: 0.002,
+      },
+      {
+        name: "High Carbon Price",
+        description:
+          "A steep charge per ton that makes coal power a losing business and pushes industry to cleaner methods.",
+        cost: 0.00015,
+        revenue: 0.004,
+      },
+      {
+        name: "Full Social Cost of Carbon",
+        description:
+          "Every ton pays its full estimated damage. Fossil power and heavy industry pay heavily and prices rise across the shops.",
+        cost: 0.0002,
+        revenue: 0.007,
+      },
+    ],
+  },
+  {
+    slug: "coalPhaseOut",
+    from: 2027,
+    category: "environment",
+    targets: [
+      { metricId: "environment.urbanAir", weight: 0.5 },
+      { metricId: "environment.stewardship", weight: 0.3 },
+      { metricId: "environment.energySecurity", weight: -0.3 },
+      { metricId: "economy.workerSecurity", weight: -0.25 },
+    ],
+    title: {
+      US: "Coal Power Phase-Out Act",
+      UK: "Coal Power (Closure) Act",
+    },
+    description: {
+      US: "Sets a date by which coal power must close, with help for the towns that lose it. Clean air and clean generators gain; coal plant owners, miners and grid reliability pay.",
+      UK: "Sets a date by which coal power must close, with help for the towns that lose it. Clean air and clean generators gain; coal plant owners, miners and grid reliability pay.",
+    },
+    noStatute: "Coal plants run for as long as their owners find them worth running.",
+    levels: [
+      {
+        name: "Distant Closure Date",
+        description:
+          "Coal power must close in about two decades. Owners have time to run old plants down.",
+        cost: 0.0002,
+      },
+      {
+        name: "Firm Closure Date",
+        description:
+          "Coal power must close well within two decades, and running costs climb as the date nears.",
+        cost: 0.0005,
+      },
+      {
+        name: "Early Closure Date",
+        description:
+          "Coal power must close within about a decade, with retraining money for the towns that lose it.",
+        cost: 0.001,
+      },
+      {
+        name: "Rapid Coal Exit",
+        description:
+          "Coal power must close within a few years. Old plants become costly at once and coal towns get a large support fund.",
+        cost: 0.0015,
+      },
+    ],
+  },
+  {
+    slug: "cleanPowerStandard",
+    from: 2027,
+    category: "environment",
+    targets: [
+      { metricId: "environment.stewardship", weight: 0.45 },
+      { metricId: "environment.energySecurity", weight: 0.3 },
+      { metricId: "environment.affordability", weight: -0.3 },
+    ],
+    title: {
+      US: "Clean Electricity Standard Act",
+      UK: "Clean Power Standard Act",
+    },
+    description: {
+      US: "Requires a set share of the country's power to come from clean sources. Fossil plants buy certificates for the shortfall. Clean generators gain; fossil power and power bills pay.",
+      UK: "Requires a set share of the country's power to come from clean sources. Fossil plants buy certificates for the shortfall. Clean generators gain; fossil power and power bills pay.",
+    },
+    noStatute: "No share of power has to come from clean sources.",
+    levels: [
+      {
+        name: "Two-Fifths Clean",
+        description:
+          "Two fifths of power must be clean. Fossil plants pay for certificates when the country falls short.",
+        cost: 0.0001,
+      },
+      {
+        name: "Three-Fifths Clean",
+        description: "Three fifths of power must be clean, and the shortfall charge grows with it.",
+        cost: 0.0002,
+      },
+      {
+        name: "Four-Fifths Clean",
+        description:
+          "Four fifths of power must be clean. Gas and coal plants pay heavily unless renewables, storage and nuclear are built.",
+        cost: 0.0004,
+      },
+      {
+        name: "Near-Zero Carbon Grid",
+        description:
+          "Almost all power must be clean, and every fossil plant pays a steep charge while the country falls short.",
+        cost: 0.0006,
+      },
+    ],
+  },
   // ── 2030 ────────────────────────────────────────────────────────────────
   {
     slug: "automationTax",
     from: 2030,
+    // The automation dividend replaces it: from 2040 the levy is filed as part
+    // of the dividend, and an automation tax already in force stays in force.
+    until: 2040,
     category: "economy",
     targets: [
       { metricId: "economy.workerSecurity", weight: 0.45 },
@@ -537,6 +693,8 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
       UK: "The State Pension age moves only when Parliament votes to change it.",
     },
     levels: [
+      // A negative cost is a saving on the pension line: fewer years of
+      // pension paid, net of running the review.
       {
         name: "Periodic Review",
         description: "An independent review recommends a pension age every few years.",
@@ -545,19 +703,19 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
       {
         name: "Partial Indexation",
         description: "The pension age rises by half of each gain in life expectancy.",
-        cost: 0.00004,
+        cost: -0.0006,
       },
       {
         name: "Full Indexation",
         description:
           "The pension age moves with life expectancy, keeping the share of adult life spent retired fixed.",
-        cost: 0.00006,
+        cost: -0.0012,
       },
       {
         name: "Accelerated Indexation",
         description:
           "The pension age rises faster than life expectancy until the system is fully funded.",
-        cost: 0.00008,
+        cost: -0.002,
       },
     ],
   },
@@ -606,6 +764,435 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
       },
     ],
   },
+  // ── 2035 ────────────────────────────────────────────────────────────────
+  {
+    slug: "climateAdaptationFund",
+    from: 2035,
+    category: "environment",
+    targets: [
+      { metricId: "infrastructure.condition", weight: 0.45 },
+      { metricId: "environment.stewardship", weight: 0.3 },
+      { metricId: "economy.fiscal", weight: -0.25 },
+    ],
+    title: {
+      US: "Climate Adaptation Fund Act",
+      UK: "Climate Adaptation Fund Act",
+    },
+    description: {
+      US: "Pays for sea walls, flood defenses, cooler cities and water storage so the country can live with a hotter climate. Exposed towns gain; taxpayers pay.",
+      UK: "Pays for sea walls, flood defences, cooler cities and water storage so the country can live with a hotter climate. Exposed towns gain; taxpayers pay.",
+    },
+    noStatute: "Places protect themselves from floods, fires and heat with what they already have.",
+    levels: [
+      {
+        name: "Risk Mapping",
+        description: "The state maps flood, fire and heat risk and publishes it for every area.",
+        cost: 0.0003,
+      },
+      {
+        name: "Matched Grants",
+        description: {
+          US: "A fund matches what states and towns spend on flood defenses and heat shelters.",
+          UK: "A fund matches what councils spend on flood defences and heat shelters.",
+        },
+        cost: 0.0012,
+      },
+      {
+        name: "National Defense Works",
+        description: {
+          US: "The fund builds sea walls, levees and reservoirs to a national standard.",
+          UK: "The fund builds sea walls, flood barriers and reservoirs to a national standard.",
+        },
+        cost: 0.0028,
+      },
+      {
+        name: "Climate Ready Nation",
+        description:
+          "A long-term fund rebuilds roads, rail, power and homes to cope with the climate expected later in the century.",
+        cost: 0.005,
+      },
+    ],
+  },
+  {
+    slug: "managedRetreat",
+    from: 2035,
+    category: "infrastructure",
+    budgetKeyOverride: { US: "infrastructure", UK: "other" },
+    targets: [
+      { metricId: "infrastructure.publicHousing", weight: 0.4 },
+      { metricId: "environment.conservation", weight: 0.35 },
+      { metricId: "infrastructure.ownership", weight: -0.3 },
+      { metricId: "society.tradition", weight: -0.25 },
+    ],
+    title: {
+      US: "Managed Retreat and Relocation Act",
+      UK: "Managed Retreat and Coastal Relocation Act",
+    },
+    description: {
+      US: "Buys out homes on coasts and floodplains that can no longer be defended and helps families move. Future flood victims and wetlands gain; homeowners and old communities pay.",
+      UK: "Buys out homes on coasts and floodplains that can no longer be defended and helps families move. Future flood victims and wetlands gain; homeowners and old communities pay.",
+    },
+    noStatute: "Owners rebuild after every flood, and the state pays to repair them each time.",
+    levels: [
+      {
+        name: "Voluntary Buyouts",
+        description: "Owners of homes flooded again and again may sell them to the state.",
+        cost: 0.0004,
+      },
+      {
+        name: "No Rebuild Zones",
+        description:
+          "New building is banned on the most exposed land, and owners there are offered a buyout.",
+        cost: 0.0012,
+      },
+      {
+        name: "Planned Relocation",
+        description:
+          "Whole communities on failing coasts are moved to new homes inland, with the state paying the cost.",
+        cost: 0.0025,
+      },
+      {
+        name: "Compulsory Retreat",
+        description:
+          "The state may require people to leave land it judges indefensible, paying less than the old market value.",
+        cost: 0.004,
+      },
+    ],
+  },
+  {
+    slug: "basicIncomePilot",
+    from: 2035,
+    category: "economy",
+    budgetKeyOverride: { US: "socialSecurity", UK: "welfare" },
+    targets: [
+      { metricId: "economy.householdIncome", weight: 0.45 },
+      { metricId: "economy.workerSecurity", weight: 0.3 },
+      { metricId: "society.familyStability", weight: 0.25 },
+      { metricId: "economy.productivity", weight: -0.3 },
+    ],
+    title: {
+      US: "Basic Income Pilot Act",
+      UK: "Universal Basic Income Pilot Act",
+    },
+    description: {
+      US: "Pays a regular cash income with no conditions to a group of residents to test whether it works. People in the pilot gain security; taxpayers pay and some work less.",
+      UK: "Pays a regular cash income with no conditions to a group of residents to test whether it works. People in the pilot gain security; taxpayers pay and some work less.",
+    },
+    noStatute: "Cash support comes only through means-tested benefits with work conditions.",
+    levels: [
+      {
+        name: "Local Trials",
+        description: "A few towns pay a small monthly income to every adult for two years.",
+        cost: 0.0005,
+      },
+      {
+        name: "Regional Pilot",
+        description: {
+          US: "Several states pay a basic income to a large sample of adults and study the results.",
+          UK: "Several regions pay a basic income to a large sample of adults and study the results.",
+        },
+        cost: 0.002,
+      },
+      {
+        name: "Youth and Carer Income",
+        description:
+          "Every young adult and every unpaid carer in the country gets a basic income with no conditions.",
+        cost: 0.006,
+      },
+      {
+        name: "National Basic Income Trial",
+        description:
+          "Every adult gets a modest basic income as a national trial, replacing some smaller benefits.",
+        cost: 0.015,
+      },
+    ],
+  },
+  {
+    slug: "geneEditingRegulation",
+    from: 2035,
+    category: "health",
+    targets: [
+      { metricId: "health.outcomes", weight: 0.45 },
+      { metricId: "education.research", weight: 0.3 },
+      { metricId: "society.tradition", weight: -0.3 },
+    ],
+    title: {
+      US: "Human Gene Editing Act",
+      UK: "Human Genome Editing Act",
+    },
+    description: {
+      US: "Sets which gene therapies may be licensed and paid for, and where the line on editing human embryos sits. Patients and researchers gain; religious and traditional objectors pay.",
+      UK: "Sets which gene therapies may be licensed and paid for, and where the line on editing human embryos sits. Patients and researchers gain; religious and traditional objectors pay.",
+    },
+    noStatute:
+      "Gene editing falls under general medicines law, and most therapies sit in legal limbo.",
+    levels: [
+      {
+        name: "Research Licenses",
+        description: {
+          US: "Laboratories may edit human cells under license, and editing embryos for birth is banned.",
+          UK: "Laboratories may edit human cells under licence, and editing embryos for birth is banned.",
+        },
+        cost: 0.0001,
+      },
+      {
+        name: "Approved Therapies",
+        description:
+          "Gene therapies for serious inherited diseases may be approved and prescribed.",
+        cost: 0.0003,
+      },
+      {
+        name: "Funded Gene Medicine",
+        description:
+          "Approved gene therapies are paid for by the public health system, and a national regulator speeds up trials.",
+        cost: 0.0008,
+      },
+      {
+        name: "Heritable Editing Allowed",
+        description: {
+          US: "Editing embryos to prevent serious disease is allowed under strict license, and public funding covers it.",
+          UK: "Editing embryos to prevent serious disease is allowed under strict licence, and public funding covers it.",
+        },
+        cost: 0.0014,
+      },
+    ],
+  },
+  {
+    slug: "spaceTrafficAct",
+    from: 2035,
+    category: "defense",
+    targets: [
+      { metricId: "defense.security", weight: 0.4 },
+      { metricId: "infrastructure.utilities", weight: 0.3 },
+      { metricId: "economy.competition", weight: -0.25 },
+    ],
+    title: {
+      US: "Space Traffic Management Act",
+      UK: "Space Traffic and Orbital Safety Act",
+    },
+    description: {
+      US: "Tracks satellites and debris, sets rules for launches and makes operators clear their dead satellites from orbit. Satellite services and defense gain; launch firms pay for compliance.",
+      UK: "Tracks satellites and debris, sets rules for launches and makes operators clear their dead satellites from orbit. Satellite services and defence gain; launch firms pay for compliance.",
+    },
+    noStatute:
+      "Operators launch under old licensing rules and nobody is responsible for crowded orbits.",
+    levels: [
+      {
+        name: "Tracking Service",
+        description: "The state tracks objects in orbit and warns operators of likely collisions.",
+        cost: 0.0001,
+      },
+      {
+        name: "Debris Rules",
+        description: "Every new satellite must carry a plan to leave orbit at the end of its life.",
+        cost: 0.0003,
+      },
+      {
+        name: "Orbital Traffic Control",
+        description: {
+          US: "A regulator assigns orbits, can order maneuvers and fines operators who leave debris behind.",
+          UK: "A regulator assigns orbits, can order manoeuvres and fines operators who leave debris behind.",
+        },
+        cost: 0.0006,
+      },
+      {
+        name: "Orbital Clean-Up Duty",
+        description: {
+          US: "Operators pay into a fund that removes old debris, and the military may clear threats to key satellites.",
+          UK: "Operators pay into a fund that removes old debris, and the armed forces may clear threats to key satellites.",
+        },
+        cost: 0.001,
+      },
+    ],
+  },
+  // ── 2040 ────────────────────────────────────────────────────────────────
+  {
+    slug: "automationDividend",
+    from: 2040,
+    category: "economy",
+    budgetKeyOverride: { US: "socialSecurity", UK: "welfare" },
+    targets: [
+      { metricId: "economy.householdIncome", weight: 0.45 },
+      { metricId: "society.socialMobility", weight: 0.3 },
+      { metricId: "economy.productivity", weight: -0.3 },
+    ],
+    title: {
+      US: "Automation Dividend Act",
+      UK: "Automation Dividend Act",
+    },
+    description: {
+      US: "Taxes the output of machines and software and pays it back to every resident as a yearly dividend. Households gain a share of automated wealth; the firms that automate pay.",
+      UK: "Taxes the output of machines and software and pays it back to every resident as a yearly dividend. Households gain a share of automated wealth; the firms that automate pay.",
+    },
+    noStatute: "The gains from automation go to the firms that own the machines.",
+    levels: [
+      {
+        name: "Token Dividend",
+        description: "A small levy on automated output is paid out as an annual dividend.",
+        cost: 0.0021,
+        revenue: 0.002,
+      },
+      {
+        name: "Shared Gains Dividend",
+        description: "A larger levy funds a dividend worth a few weeks of wages each year.",
+        cost: 0.0052,
+        revenue: 0.005,
+      },
+      {
+        name: "Citizens Share",
+        description:
+          "Every resident holds a share in a national automation fund that pays a dividend every quarter.",
+        cost: 0.0103,
+        revenue: 0.01,
+      },
+      {
+        name: "Full Automation Dividend",
+        description:
+          "A heavy levy on automated output pays a dividend large enough to live on for many households.",
+        cost: 0.0155,
+        revenue: 0.015,
+      },
+    ],
+  },
+  {
+    slug: "fourDayWeek",
+    from: 2040,
+    category: "economy",
+    targets: [
+      { metricId: "society.familyStability", weight: 0.4 },
+      { metricId: "health.prevention", weight: 0.3 },
+      { metricId: "economy.productivity", weight: -0.3 },
+    ],
+    title: {
+      US: "Four-Day Work Week Act",
+      UK: "Four-Day Working Week Act",
+    },
+    description: {
+      US: "Shortens the standard working week to four days without a cut in pay. Workers and families gain time; employers pay for the lost hours.",
+      UK: "Shortens the standard working week to four days without a cut in pay. Workers and families gain time; employers pay for the lost hours.",
+    },
+    noStatute: "The working week is whatever employers and workers agree.",
+    levels: [
+      {
+        name: "Right to Request",
+        description:
+          "Workers may ask for a four-day week, and employers must give a reason to refuse.",
+        cost: 0.0001,
+      },
+      {
+        name: "Public Sector Trial",
+        description:
+          "Government departments move to a four-day week and report on output and wellbeing.",
+        cost: 0.0004,
+      },
+      {
+        name: "Thirty-Two Hour Standard",
+        description:
+          "Overtime pay starts after thirty-two hours a week, so most employers move to four days.",
+        cost: 0.0008,
+      },
+      {
+        name: "Four-Day Week Mandate",
+        description:
+          "A four-day week on full pay is the legal standard for every employer, enforced by inspectors.",
+        cost: 0.0015,
+      },
+    ],
+  },
+  {
+    slug: "digitalCurrencyLegalTender",
+    from: 2040,
+    category: "economy",
+    targets: [
+      { metricId: "economy.stability", weight: 0.4 },
+      { metricId: "economy.competition", weight: 0.3 },
+      { metricId: "order.dueProcess", weight: -0.3 },
+    ],
+    title: {
+      US: "Digital Dollar Act",
+      UK: "Digital Pound Act",
+    },
+    description: {
+      US: "Makes a central bank digital dollar legal tender alongside cash. Payments get cheaper and safer; privacy and the banks that hold deposits pay.",
+      UK: "Makes a Bank of England digital pound legal tender alongside cash. Payments get cheaper and safer; privacy and the banks that hold deposits pay.",
+    },
+    noStatute: "Money is cash and bank deposits. The central bank issues no digital currency.",
+    levels: [
+      {
+        name: "Wholesale Digital Money",
+        description: "Banks settle payments with each other in central bank digital money.",
+        cost: 0.0001,
+      },
+      {
+        name: "Retail Pilot",
+        description:
+          "Households may hold a capped amount of digital currency in a central bank wallet.",
+        cost: 0.0002,
+      },
+      {
+        name: "Legal Tender",
+        description:
+          "Digital currency is legal tender: every shop must accept it, and the state earns a margin on issuing it.",
+        cost: 0.0004,
+        revenue: 0.0005,
+      },
+      {
+        name: "Cashless Transition",
+        description:
+          "Digital currency becomes the main form of money, cash is phased out and every payment leaves a record.",
+        cost: 0.0006,
+        revenue: 0.001,
+      },
+    ],
+  },
+  {
+    slug: "sovereignWealthFundMandate",
+    from: 2040,
+    category: "economy",
+    targets: [
+      { metricId: "economy.stability", weight: 0.4 },
+      { metricId: "economy.fiscal", weight: 0.3 },
+      { metricId: "economy.competition", weight: -0.25 },
+    ],
+    title: {
+      US: "American Sovereign Wealth Fund Act",
+      UK: "National Wealth Fund Act",
+    },
+    description: {
+      US: "Sets up a national investment fund, paid into from the budget, that owns stakes in firms at home and abroad. Future budgets gain its returns; taxpayers pay in today and private investors face a state rival.",
+      UK: "Sets up a national investment fund, paid into from the budget, that owns stakes in firms at home and abroad. Future budgets gain its returns; taxpayers pay in today and private investors face a state rival.",
+    },
+    noStatute: "The state owns no investment fund, and surpluses go to paying down debt.",
+    levels: [
+      {
+        name: "Seed Fund",
+        description: "A small fund invests windfall revenue and reports its returns each year.",
+        cost: 0.002,
+        revenue: 0.0005,
+      },
+      {
+        name: "Strategic Investment Mandate",
+        description:
+          "The fund is paid into every year and backs domestic industries the state judges strategic.",
+        cost: 0.005,
+        revenue: 0.0015,
+      },
+      {
+        name: "Global Portfolio Fund",
+        description:
+          "A large fund invests worldwide under an independent board, with its returns paid into the budget.",
+        cost: 0.01,
+        revenue: 0.0035,
+      },
+      {
+        name: "National Ownership Fund",
+        description:
+          "The fund takes large stakes in major companies and pays a share of its returns into the budget.",
+        cost: 0.015,
+        revenue: 0.006,
+      },
+    ],
+  },
 ];
 
 function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLaw {
@@ -628,7 +1215,7 @@ function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLa
     category: spec.category,
     allowedScope: "national",
     baselineLevel: 0,
-    window: { from: spec.from },
+    window: { from: spec.from, ...(spec.until !== undefined ? { until: spec.until } : {}) },
     levels,
     ...(spec.budgetKeyOverride ? { budgetKeyOverride: spec.budgetKeyOverride[countryId] } : {}),
   };

@@ -48,11 +48,18 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   congresoDiputados: "lowerChamber",
   riksdag: "lowerChamber",
   milletMeclisi: "lowerChamber",
+  nationalrat: "lowerChamber",
+  eduskunta: "lowerChamber",
+  vouli: "lowerChamber",
+  // BR Chamber of Deputies.
+  chamber: "lowerChamber",
   // upper chambers
   senate: "upperChamber",
   senat: "upperChamber",
   sangiin: "upperChamber",
   seanad: "upperChamber",
+  senato: "upperChamber",
+  senado: "upperChamber",
   nationalitiesDeputy: "upperChamber",
   // sub-national chambers
   stateSenate: "subNationalChamber",

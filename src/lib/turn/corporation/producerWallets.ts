@@ -19,6 +19,7 @@ export function producerWalletId(worldEpoch: string, scope: ProducerWalletScope)
       "investmentBuyer",
       "operatingPayee",
       "backgroundEconomy",
+      "tariffCollector",
     ].includes(scope.kind) ||
     !ZOD_CURRENCY_ENUM.includes(scope.currency)
   )

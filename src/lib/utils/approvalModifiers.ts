@@ -26,10 +26,11 @@ import { resolveModifierDef } from "@/lib/states/conditions/resolveModifierDef";
 import {
   netModifierEffect,
   POSITIVE_MODIFIER_NET_CAP,
+  prioritizeModifiers,
   type ActiveModifier,
 } from "@/lib/approval/activeModifier";
 
-export { netModifierEffect, POSITIVE_MODIFIER_NET_CAP };
+export { netModifierEffect, POSITIVE_MODIFIER_NET_CAP, prioritizeModifiers };
 export type { ActiveModifier };
 
 export interface Condition {
@@ -63,7 +64,6 @@ export interface EvaluateModifiersOptions {
   year?: number | null;
 }
 
-const HEADLINE_MODIFIER_CAP = 8;
 /**
  * Net-positive approval from named modifiers is capped so seed-day badge stacks
  * (right-lane freefires + cheap-housing + low-crime clusters) cannot push every
@@ -811,41 +811,6 @@ export function evaluateModifiers(
     }
   }
   return active;
-}
-
-/**
- * Split active modifiers into headline (highest-impact) and remainder lists for
- * compact UIs such as the state overview conditions card.
- */
-export function prioritizeModifiers(
-  modifiers: ActiveModifier[],
-  opts?: { max?: number }
-): { headline: ActiveModifier[]; remainder: ActiveModifier[] } {
-  const max = opts?.max ?? HEADLINE_MODIFIER_CAP;
-  if (modifiers.length <= max) {
-    return { headline: modifiers, remainder: [] };
-  }
-  // Sort by absolute margin effect first (most impactful on profit margins),
-  // then by absolute approval effect as tie-breaker.
-  //
-  // The war block is exempt from the margin pass. It declares `marginEffect: 0`
-  // deliberately — it is purely political and must not reach profit margins —
-  // which under a margin-first sort would rank it below every economic
-  // condition and drop the largest approval swing in the game into the hidden
-  // remainder. It is ranked on approval magnitude instead.
-  const isPolitical = (m: ActiveModifier) => m.source === "war";
-  const sorted = [...modifiers].sort((a, b) => {
-    const marginA = isPolitical(a) ? Math.abs(a.effect) : Math.abs(a.marginEffect ?? 0);
-    const marginB = isPolitical(b) ? Math.abs(b.effect) : Math.abs(b.marginEffect ?? 0);
-    if (marginB !== marginA) return marginB - marginA;
-    const impact = Math.abs(b.effect) - Math.abs(a.effect);
-    if (impact !== 0) return impact;
-    return a.label.localeCompare(b.label);
-  });
-  return {
-    headline: sorted.slice(0, max),
-    remainder: sorted.slice(max),
-  };
 }
 
 /**

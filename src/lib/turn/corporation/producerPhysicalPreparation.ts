@@ -32,6 +32,7 @@ import {
   withSunsetPenalty,
 } from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { withEnergyTransition } from "@/lib/energyTransition/policies";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import {
   LOW_USE_COLD_UPKEEP_FRACTION,
@@ -168,6 +169,8 @@ export type ProducerPhysicalEnv = Pick<
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
   runPlanStage?: number;
+  /** gameConfig.producerTariffStage: >= 1 charges import tariffs in the funded market (tariffRules). */
+  tariffStage?: number;
   /** gameConfig.producerSalesAdvancePriceStage >= 1: the sales advance judges a run on its inputs' clearing prices. */
   salesAdvanceAtClearing?: boolean;
   /** gameConfig.producerSalesAdvanceRevenueShare: expected sales a run may borrow against (default 0.9). */
@@ -227,6 +230,7 @@ export type ProducerPhysicalEnv = Pick<
     | "politicalBaseModifiersByState"
     | "regionalConditionMarginByState"
     | "stateOwnershipConcentrationByCountry"
+    | "energyTransition"
   >;
 };
 
@@ -303,7 +307,12 @@ export function prepareProducerPhysicalSector(input: {
     lookups.labourDemandWageIndexByState?.get(sector.stateId),
     countryId
   );
-  const tech =
+  const operatingType = getOperatingSectorType(
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
+  const tech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
           getSectorTechEffectsForYear(
@@ -313,15 +322,16 @@ export function prepareProducerPhysicalSector(input: {
             sector.industryModel,
             sector.mediaDiscriminator
           ),
-          getOperatingSectorType(
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          operatingType,
           sector.strategyId,
           currentYear
         )
-      : NEUTRAL_TECH_EFFECTS;
+      : NEUTRAL_TECH_EFFECTS,
+    lookups.energyTransition,
+    sector,
+    operatingType,
+    currentYear
+  );
   const recipe = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
     sector.strategyId ?? "standard",
@@ -333,11 +343,6 @@ export function prepareProducerPhysicalSector(input: {
     lookups.preset,
     lookups.hardwareInputReliefStartTurn,
     { advertisingInput: env.advertisingInput === true }
-  );
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
   );
   const outputRateValueBasis = Object.values(recipe.supply).reduce<number>(
     (sum, value) => sum + (value ?? 0),

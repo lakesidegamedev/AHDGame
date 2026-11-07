@@ -1,4 +1,5 @@
 import { getEraContext } from "@/lib/era/context";
+import { depositProspectCostMultiplier } from "@/lib/energyTransition/prospecting";
 import { createHash } from "node:crypto";
 import { ObjectId, type Db, type Filter } from "mongodb";
 import type { StateBudget } from "@/lib/db/types/budget";
@@ -176,7 +177,11 @@ export async function launchGovernmentProspect(
   let priorSuccessCount =
     fundedClaim?.priorSuccessCount ??
     (await surveysCol.countDocuments({ stateId, resource, status: "succeeded" }));
-  let costAnchor = fundedClaim?.costAnchor ?? prospectCostAnchor(priorSuccessCount);
+  // Energy transition worlds: a worked-out deposit costs more to survey from 2035.
+  let costAnchor =
+    fundedClaim?.costAnchor ??
+    prospectCostAnchor(priorSuccessCount) *
+      depositProspectCostMultiplier(cap, resource, await getEraContext(db));
   const countryCode = COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode | undefined;
   const fxByCurrency = await loadFxRatesByCurrency(db);
   let cashCurrency: CurrencyCode = (fundedClaim?.currencyCode ??

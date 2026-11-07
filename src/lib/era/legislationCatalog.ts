@@ -15,7 +15,10 @@
 
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
-import { MODERN_ERA_LEGISLATION_ERA_ENTRIES } from "@/lib/seeds/shared/modernEraLegislation";
+import {
+  MODERN_ERA_LEGISLATION_ERA_ENTRIES,
+  MODERN_ERA_LEGISLATION_UNTIL_ENTRIES,
+} from "@/lib/seeds/shared/modernEraLegislation";
 import {
   isNewGenerationLawActive,
   isNewGenerationLawFileable,
@@ -744,7 +747,7 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   // Banking separation: reusable charter law, era-universal for every legislature.
   ...BANKING_SEPARATION_ERA_ENTRIES,
   ...MECHANICAL_LEGISLATION_ERA_ENTRIES,
-  // 2027 and 2030 law types (AI liability, housing supply, wage insurance, ...).
+  // 2027 to 2040 law types (AI liability, wage insurance, climate adaptation, ...).
   ...MODERN_ERA_LEGISLATION_ERA_ENTRIES,
 };
 
@@ -755,9 +758,15 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
  * effects; only proposing and sponsoring stop. Keys must be LEGISLATION_ERA keys
  * and each year must fall after the entry's first fileable year.
  *
- * Empty on purpose: no type retires yet.
+ * Each entry names the successor that takes over its filing.
  */
-export const LEGISLATION_ERA_UNTIL: Record<string, number> = {};
+export const LEGISLATION_ERA_UNTIL: Record<string, number> = {
+  // The four-day work week (2040) takes over the working-hours side of the
+  // older work culture reform law, which already offered a four-day option.
+  jp_work_culture_reform: 2040,
+  // The automation dividend (2040) replaces the automation tax for new bills.
+  ...MODERN_ERA_LEGISLATION_UNTIL_ENTRIES,
+};
 
 /**
  * Types whose classification predates their windowed PRIMARY metric — either

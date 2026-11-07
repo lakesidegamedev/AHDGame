@@ -47,7 +47,6 @@ import { CandidateFile, type CandidateFileRequirement } from "./CandidateFile";
 import { OnePartyStateNotice } from "./OnePartyStateNotice";
 import { useImagePick, uploadCharacterImage, settleWithin } from "./useImagePick";
 import { EDUCATION_OPTIONS, GENDER_OPTIONS, RACE_OPTIONS, labelFor } from "./creatorOptions";
-import { generateUniqueNPPNameAndGender } from "@/lib/npp/nameGenerator";
 import { buildConversationSteps, type ConversationStepId } from "./conversationSteps";
 import { ConversationShell } from "./ConversationShell";
 import { useStartingPartyOptions } from "./useStartingPartyOptions";
@@ -478,11 +477,14 @@ export default function CreateCharacterClient() {
    * randomizer used to carry its own thirty US first names and thirty US
    * surnames, so rolling Japan or Turkey handed you an American name.
    */
-  const handleRandomize = useCallback(() => {
+  const handleRandomize = useCallback(async () => {
     if (!countryOptions || countryOptions.length === 0) return;
     const randomCountry = pick(countryOptions);
     const cId = randomCountry.id;
 
+    // Every country's name pools are loaded on the first roll rather than
+    // shipped with the page, since most players never press Randomize.
+    const { generateUniqueNPPNameAndGender } = await import("@/lib/npp/nameGenerator");
     // The generated gender is carried into demographics so the name and the
     // character it describes agree.
     const generated =

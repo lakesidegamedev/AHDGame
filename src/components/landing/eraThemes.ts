@@ -7,8 +7,9 @@ import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
 import { SHOWCASE_1991, TICKER_1991 } from "./broadcast1991";
 import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
+import type { EraId } from "@/lib/seeds/presetSelector";
 
-export type EraId = "1953" | "1979" | "1991" | "1999" | "2007" | "2019" | "2023" | "2027";
+export type { EraId };
 
 export type EraAccess = {
   enabledForPlayers: boolean;

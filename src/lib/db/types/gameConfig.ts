@@ -343,6 +343,16 @@ export interface GameConfig {
    */
   producerRunPlanStage?: number;
   /**
+   * Funded producer market: 1 charges import tariffs on cross-border sales.
+   * A buyer sees the landed price (posted price plus the importer's tariff)
+   * when deciding to buy, each sale pays the tariff to the importing country,
+   * and the turn moves it into that country's treasury cash. Turning it on
+   * also closes routes a full naval blockade shuts. Needs
+   * producerFundedBookStage >= 1 so every order and offer knows its country.
+   * 0 or absent = off.
+   */
+  producerTariffStage?: 0 | 1;
+  /**
    * Funded producer market: >= 1 judges whether a cash-short company's run
    * pays for itself (the sales advance) with its inputs at last turn's
    * clearing price, never above the bid ceiling, instead of at the ceiling.

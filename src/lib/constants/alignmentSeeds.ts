@@ -20,14 +20,16 @@
  * Client-safe: no db imports.
  */
 
-/** Live year each start begins at, for pole and era resolution. */
-export const PRESET_YEAR: Record<string, number> = {
-  "1953-default": 1953,
-  "1979-default": 1979,
-  "1991-default": 1991,
-  "2019-default": 2019,
-  "2023-default": 2023,
-};
+import { getStartingYearForPreset, SEED_PRESET_IDS } from "@/lib/constants/turnTime";
+
+/**
+ * Live year each start begins at, for pole and era resolution. Derived from
+ * the shipping preset list so no start is missing: an absent start seeds no
+ * organisation members.
+ */
+export const PRESET_YEAR: Record<string, number> = Object.fromEntries(
+  SEED_PRESET_IDS.map((preset) => [preset, getStartingYearForPreset(preset)])
+);
 
 export const DEFAULT_PRESET = "2019-default";
 
@@ -535,3 +537,19 @@ export const AUTHORED_ALIGNMENT: Record<string, Record<string, number[]>> = {
     ZA: [20, 16, 26, 22],
   },
 };
+
+/**
+ * Authored rows for a start. A shipping start with no rows of its own uses the
+ * nearest earlier start that has them (1999 and 2007 read 1991, 2027 reads
+ * 2023), which shares its pole order. Unknown presets get none.
+ */
+export function authoredAlignmentFor(preset: string): Record<string, number[]> | undefined {
+  const own = AUTHORED_ALIGNMENT[preset];
+  if (own) return own;
+  const index = (SEED_PRESET_IDS as readonly string[]).indexOf(preset);
+  for (let i = index - 1; i >= 0; i--) {
+    const rows = AUTHORED_ALIGNMENT[SEED_PRESET_IDS[i]];
+    if (rows) return rows;
+  }
+  return undefined;
+}

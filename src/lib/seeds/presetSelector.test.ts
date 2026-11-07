@@ -2,12 +2,15 @@ import { beforeEach, describe, it, expect } from "vitest";
 import {
   eraForPreset,
   isKnownPreset,
+  presetForEra,
+  SEED_ERA_IDS,
   selectPresetBundle,
   selectPresetBundleOptional,
   getPresetFallbacks,
   resetPresetFallbacks,
   type EraId,
 } from "./presetSelector";
+import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 
 describe("eraForPreset", () => {
   it.each([
@@ -43,6 +46,17 @@ describe("isKnownPreset", () => {
 
   it.each(["custom", "2024-default", "", "random"])("returns false for %s", (preset) => {
     expect(isKnownPreset(preset)).toBe(false);
+  });
+});
+
+describe("every shipping preset is wired", () => {
+  it.each(SEED_PRESET_IDS)("%s is known and round-trips through its era", (preset) => {
+    expect(isKnownPreset(preset)).toBe(true);
+    expect(presetForEra(eraForPreset(preset))).toBe(preset);
+  });
+
+  it("lists one era per shipping preset, oldest first", () => {
+    expect(SEED_ERA_IDS).toEqual(SEED_PRESET_IDS.map((preset) => preset.slice(0, 4)));
   });
 });
 

@@ -17,10 +17,11 @@ export interface MajorDefaultParty {
  * 2026-06-18 tier proposal). Any default party NOT listed here seeds **Minor**;
  * custom parties always seed Minor.
  *
- * `presets` narrows a Major status to specific eras — needed only where a party
- * exists in BOTH presets but is Major in only one (DE Greens, BR PT). Era-
- * exclusive parties (e.g. JP JSP/CDP, IE SF, BR PMDB/PFL/PL) only seed in their
- * own preset anyway, so they need no `presets` filter.
+ * `presets` narrows a Major status to specific eras, needed only where a party
+ * seeds in eras where it is Minor (DE Greens, BR PT before 2019). Build ranges
+ * with `seedPresetsFrom` so a new preset is covered. Era-exclusive parties
+ * (e.g. JP JSP/CDP, IE SF, BR PMDB/PFL/PL) only seed in their own presets
+ * anyway, so they need no `presets` filter.
  *
  * Seed tier is only the STARTING value — the `partyTierTurn` phase recomputes
  * tier from live Org every turn, so this just sets the badge/cap at game start.

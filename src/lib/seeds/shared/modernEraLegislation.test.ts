@@ -5,6 +5,7 @@ import {
   isLegislationTypeFileable,
   isNewThisEra,
   LEGISLATION_ERA,
+  LEGISLATION_ERA_UNTIL,
 } from "@/lib/era/legislationCatalog";
 import { countDomainTypes, getCostClass } from "@/lib/era/legislationCostCatalog";
 import { isMonotoneLadder } from "@/lib/legislature/optionIntensity";
@@ -31,6 +32,9 @@ const BAND_2027 = [
   "critical_minerals_stockpile",
   "cyber_resilience_mandate",
   "platform_content_law",
+  "carbon_price",
+  "coal_phase_out",
+  "clean_power_standard",
 ];
 const BAND_2030 = [
   "automation_tax",
@@ -40,11 +44,26 @@ const BAND_2030 = [
   "pension_age_indexation",
   "nuclear_licensing_reform",
 ];
+const BAND_2035 = [
+  "climate_adaptation_fund",
+  "managed_retreat",
+  "basic_income_pilot",
+  "gene_editing_regulation",
+  "space_traffic_act",
+];
+const BAND_2040 = [
+  "automation_dividend",
+  "four_day_week",
+  "digital_currency_legal_tender",
+  "sovereign_wealth_fund_mandate",
+];
 
-describe("2027 and 2030 law types", () => {
-  it("authors exactly the two bands, for every covered legislature", () => {
+describe("2027 to 2040 law types", () => {
+  it("authors exactly the four bands, for every covered legislature", () => {
     expect(MODERN_ERA_LAWS.filter((l) => l.from === 2027).map((l) => l.slug)).toEqual(BAND_2027);
     expect(MODERN_ERA_LAWS.filter((l) => l.from === 2030).map((l) => l.slug)).toEqual(BAND_2030);
+    expect(MODERN_ERA_LAWS.filter((l) => l.from === 2035).map((l) => l.slug)).toEqual(BAND_2035);
+    expect(MODERN_ERA_LAWS.filter((l) => l.from === 2040).map((l) => l.slug)).toEqual(BAND_2040);
     expect(MODERN_ERA_TYPE_IDS).toHaveLength(
       MODERN_ERA_LAWS.length * MODERN_ERA_LEGISLATURE_SPECS.length
     );
@@ -79,14 +98,33 @@ describe("2027 and 2030 law types", () => {
     }
   });
 
-  it("is fileable in a 2027 world: the 2027 band at once, the 2030 band when 2030 arrives", () => {
+  it("is fileable in a 2027 world: the 2027 band at once, each later band when its year arrives", () => {
     for (const id of MODERN_ERA_TYPE_IDS) {
-      const from = lawBySlug.get(slugOf(id))!.from;
+      const { from, until } = lawBySlug.get(slugOf(id))!;
       expect(isLegislationTypeFileable(id, 2027), id).toBe(from === 2027);
-      for (const year of [2030, 2035, 2050]) {
-        expect(isLegislationTypeFileable(id, year), `${id} @ ${year}`).toBe(true);
+      for (const year of [2030, 2035, 2040, 2050]) {
+        const open = year >= from && (until === undefined || year < until);
+        expect(isLegislationTypeFileable(id, year), `${id} @ ${year}`).toBe(open);
       }
     }
+  });
+
+  it("retires the automation tax and the work culture law when their successors open", () => {
+    for (const spec of MODERN_ERA_LEGISLATURE_SPECS) {
+      const tax = `${spec.prefix}_automation_tax`;
+      const dividend = `${spec.prefix}_automation_dividend`;
+      expect(LEGISLATION_ERA_UNTIL[tax], tax).toBe(2040);
+      expect(isLegislationTypeFileable(tax, 2039), tax).toBe(true);
+      expect(isLegislationTypeFileable(tax, 2040), tax).toBe(false);
+      expect(isLegislationTypeFileable(dividend, 2040), dividend).toBe(true);
+      // Retired from filing, not from force: budgets, effects and seeds still see it.
+      expect(isLegislationTypeActive(tax, 2045), tax).toBe(true);
+    }
+    expect(LEGISLATION_ERA_UNTIL.jp_work_culture_reform).toBe(2040);
+    expect(isLegislationTypeFileable("jp_work_culture_reform", 2039)).toBe(true);
+    expect(isLegislationTypeFileable("jp_work_culture_reform", 2040)).toBe(false);
+    expect(isLegislationTypeActive("jp_work_culture_reform", 2040)).toBe(true);
+    expect(isLegislationTypeFileable("jp_four_day_week", 2040)).toBe(true);
   });
 
   it("is eligible for NPP sponsorship: national, with a seven-option ladder", () => {

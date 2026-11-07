@@ -13,6 +13,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { depositProspectCostMultiplier } from "@/lib/energyTransition/prospecting";
 import {
   prospectDurationTurns,
   PROSPECT_MAX_ACTIVE_PER_INITIATOR,
@@ -127,7 +128,10 @@ export async function launchCorpProspect(
     resource,
     status: "succeeded",
   });
-  const costAnchor = prospectCostAnchor(priorSuccessCount);
+  // Energy transition worlds: a worked-out deposit costs more to survey from 2035.
+  const era = await getEraContext(db);
+  const depletionMultiplier = depositProspectCostMultiplier(cap, resource, era);
+  const costAnchor = prospectCostAnchor(priorSuccessCount) * depletionMultiplier;
   const fxRate = await getCorpFxRate(db, corporation);
   const costLocal = anchorToCorpLiquidCapital(costAnchor, corporation, fxRate);
   const currencyCode = resolveCorpLiquidCurrencyCode(corporation) ?? "USD";
@@ -179,7 +183,7 @@ export async function launchCorpProspect(
     // digitally-processed one. Stamped at LAUNCH so a survey already in the
     // ground keeps the duration it was sold with, even if the clock rolls
     // into a new era before it resolves.
-    completesTurn: turn + prospectDurationTurns((await getEraContext(db)).year),
+    completesTurn: turn + prospectDurationTurns(era.year),
     costAnchor,
     rdScoreAtStart: corporation.rdScore ?? 0,
     status: "active",
@@ -198,7 +202,7 @@ export async function launchCorpProspect(
       costLocal,
       currencyCode,
       priorSuccessCount,
-      costMultiplier: prospectCostMultiplier(priorSuccessCount),
+      costMultiplier: prospectCostMultiplier(priorSuccessCount) * depletionMultiplier,
     },
   };
 }

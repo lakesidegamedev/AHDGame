@@ -21,7 +21,7 @@ import {
   statusAt,
   type AlignmentCountryKey,
 } from "@/lib/constants/alignmentRoster";
-import { AUTHORED_ALIGNMENT, DEFAULT_PRESET, PRESET_YEAR } from "@/lib/constants/alignmentSeeds";
+import { authoredAlignmentFor, DEFAULT_PRESET, PRESET_YEAR } from "@/lib/constants/alignmentSeeds";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
 import { resolveSeedRoster } from "@/lib/internationalOrganizations/founding";
 import { getCountryAlignmentsCollection } from "@/lib/db/collections";
@@ -124,13 +124,14 @@ export function resolveOpeningShares(params: {
   // opening shares can quietly reintroduce a nation that joins on turn one.
   const cap = (row: number[]) => capNonMemberShares(row, poles, params.key, params.preset, year);
 
-  const authored = AUTHORED_ALIGNMENT[params.preset]?.[params.key];
+  const rows = authoredAlignmentFor(params.preset);
+  const authored = rows?.[params.key];
   if (authored)
     return { shares: rowToShares(cap(authored), poles), provenance: "authored", eraKey };
 
   const entry = ROSTER_BY_KEY[params.key];
   const metro = entry?.metro;
-  const metroRow = metro ? AUTHORED_ALIGNMENT[params.preset]?.[metro] : undefined;
+  const metroRow = metro ? rows?.[metro] : undefined;
 
   if (metroRow) {
     const dependent = statusAt(params.key, year) === "dependent";
