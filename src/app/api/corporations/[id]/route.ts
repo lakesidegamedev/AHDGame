@@ -406,6 +406,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
             row.deliveryLimitedFraction = null;
             // Same class of intel: who a rival's output goes to.
             row.ownSiteShare = null;
+            row.ownTruckHaulTeu = null;
             row.managementProfit = null;
             row.siteStatement = null;
             row.ownSiteMemoValue = null;
