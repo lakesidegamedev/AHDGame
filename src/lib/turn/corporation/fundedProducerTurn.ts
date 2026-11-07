@@ -86,6 +86,12 @@ import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBoo
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
+import {
+  tariffCollectorScopes,
+  tariffsAtClose,
+  tariffSweepMoves,
+  type TariffClose,
+} from "./fundedTariffs";
 import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
@@ -280,9 +286,11 @@ export async function runFundedProducerTurn(
 
   // Public buyer wallet per country, in the country's budget currency.
   const countryCurrency = new Map<string, CurrencyCode>();
+  const budgetIdByCountry = new Map<string, string>();
   for (const b of lookups.federalBudgets) {
     const code = resolveCountryCurrencyCode(b);
     if (code) countryCurrency.set(String(b.countryId), code as CurrencyCode);
+    if (b.countryId) budgetIdByCountry.set(String(b.countryId), String(b._id));
   }
   const publicScope = (countryId: string): ProducerWalletScope => {
     const currency = countryCurrency.get(countryId);
@@ -399,11 +407,20 @@ export async function runFundedProducerTurn(
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
+  // One tariff account per importing country (producerTariffStage); none when off.
+  const tariffScopes = tariffCollectorScopes(
+    demand.importTariffs,
+    (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency
+  );
+  const tariffCollector = new Map(
+    tariffScopes.map((s) => [s.countryId, producerWalletId(worldEpoch, s)])
+  );
   const walletScopes = [
     ...demand.walletScopes,
     ...publicScopes,
     ...investmentScopes,
     ...traders.map((t) => t.scope),
+    ...tariffScopes,
   ];
   const scopeById = new Map(walletScopes.map((s) => [producerWalletId(worldEpoch, s), s]));
   await createProducerWallets(db, worldEpoch, walletScopes);
@@ -637,6 +654,16 @@ export async function runFundedProducerTurn(
   // thousands of money moves (each costs several prod round trips).
   const closeAtSettlement = (market: EconomyResult): SettlementClose => {
     const closingCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
+    // Import tariffs come off the buyers' cash first, so every later closing
+    // transfer plans from what is left (producerTariffStage).
+    const tariffs = demand.importTariffs
+      ? tariffsAtClose({
+          market,
+          table: demand.importTariffs,
+          collectorOf: (c) => tariffCollector.get(c) ?? null,
+          closingCash,
+        })
+      : null;
     const settledProfitByCorp = new Map<string, number>();
     const revenueBySector = new Map<string, number>();
     for (const r of market.producers) {
@@ -645,6 +672,10 @@ export async function runFundedProducerTurn(
       const sectorId = demand.planSector.get(r.id);
       if (sectorId) revenueBySector.set(sectorId, r.revenue);
     }
+    // A company's tariff on its imported inputs is a cost of the turn.
+    for (const [id, paid] of tariffs?.paidByAccount ?? [])
+      if (settledProfitByCorp.has(id))
+        settledProfitByCorp.set(id, settledProfitByCorp.get(id)! - paid);
     const transfers: SettlementClose["transfers"] = planFundedClose({
       settledProfitByCorp,
       closingCash,
@@ -659,6 +690,7 @@ export async function runFundedProducerTurn(
       toAccountId: t.to.id,
       amountAnchor: t.amountAnchor,
     }));
+    if (tariffs) transfers.unshift(...tariffs.transfers);
     // Public funding kept for next turn on lines that stayed short. Set aside
     // before transition support and grants so the pool they draw on excludes it.
     const carryTargetByCountry: Record<string, LineCarry> = {};
@@ -830,6 +862,14 @@ export async function runFundedProducerTurn(
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
         publicCarryTarget: carryTargetByCountry,
         ...(spillShare > 0 ? { procurementSpillByCountry: spillByCountry } : {}),
+        ...(tariffs
+          ? {
+              importTariffs: {
+                ...tariffs.meta,
+                paidByAccount: Object.fromEntries(tariffs.paidByAccount),
+              },
+            }
+          : {}),
       },
     };
   };
@@ -877,6 +917,7 @@ export async function runFundedProducerTurn(
       ],
       ...(demand.backgroundOffers.length > 0 ? { externalOffers: demand.backgroundOffers } : {}),
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
+      ...(demand.importTariffs ? { importTariffs: demand.importTariffs } : {}),
       spilloverShare: input.env.spilloverShare,
       ownSitesFirst: input.env.ownSitesFirst,
       // An explicit "market first" supply priority is honoured (issue 5505): own
@@ -1166,6 +1207,9 @@ export async function runFundedProducerTurn(
             : {}),
         }))
       : undefined;
+  const tariffMeta = settled.result.close?.meta?.importTariffs as
+    (TariffClose["meta"] & { paidByAccount: Record<string, number> }) | undefined;
+  const tariffPaidBy = tariffMeta?.paidByAccount ?? {};
   // What each background country sold and bought, read back by its macro
   // kernel so its capacity follows the trade it really did.
   const backgroundTrade =
@@ -1175,7 +1219,10 @@ export async function runFundedProducerTurn(
           offers: demand.backgroundOffers,
           orders: demand.backgroundOrders,
           openingCash: new Map(settled.openingAccounts.map((a) => [a.id, a.cash])),
-          closingCash: new Map(settled.result.accounts.map((a) => [a.id, a.cash])),
+          // Tariff a background country paid on imports is not a smaller export.
+          closingCash: new Map(
+            settled.result.accounts.map((a) => [a.id, a.cash + (tariffPaidBy[a.id] ?? 0)])
+          ),
           fills: producerFillSpend(settled.result.tradeReceipt),
         })
       : null;
@@ -1260,6 +1307,15 @@ export async function runFundedProducerTurn(
           coverage: (close?.meta?.coverageByCountry as Record<string, number> | undefined) ?? {},
         },
         closeTransfers: close?.transfers.length ?? 0,
+        ...(tariffMeta
+          ? {
+              importTariffs: {
+                collectedByImporter: tariffMeta.collectedByImporter,
+                paid: tariffMeta.paid,
+                shortfall: tariffMeta.shortfall,
+              },
+            }
+          : {}),
         ...(settled.result.spillover ? { spillover: settled.result.spillover } : {}),
       },
     }
@@ -1280,7 +1336,15 @@ export async function runFundedProducerTurn(
       await db
         .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
         .find(
-          { _id: { $in: [...returnWallets.map((w) => w.id), ...traders.map((t) => t.accountId)] } },
+          {
+            _id: {
+              $in: [
+                ...returnWallets.map((w) => w.id),
+                ...traders.map((t) => t.accountId),
+                ...tariffCollector.values(),
+              ],
+            },
+          },
           { projection: { cash: 1 } }
         )
         .toArray()
@@ -1399,6 +1463,28 @@ export async function runFundedProducerTurn(
       )
     )
   );
+
+  // Collected import tariffs go to each importer's Treasury cash.
+  const tariffSweep = tariffSweepMoves({
+    worldEpoch,
+    turn,
+    collectors: tariffScopes.map((s) => ({
+      countryId: s.countryId,
+      walletId: tariffCollector.get(s.countryId)!,
+      currency: s.currency,
+    })),
+    heldLocal,
+    budgetIdOf: (c) => budgetIdByCountry.get(c) ?? null,
+    rateOf,
+  });
+  for (const kind of ["producer_tariff_treasury", "producer_tariff_return"])
+    await apply(
+      batchProducerMoves(
+        worldEpoch,
+        turn,
+        tariffSweep.filter((m) => m.kind === kind)
+      )
+    );
 
   // A background wallet ends the turn empty: its unspent budget and its export
   // receipts leave the world economy, as its budget came in.
