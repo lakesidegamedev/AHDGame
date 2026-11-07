@@ -10,7 +10,13 @@ export interface ProducerEconomyAccount {
   /** Stable identity within a world, including the world's epoch. */
   _id: string;
   worldEpoch: string;
-  kind: "households" | "publicBuyer" | "investmentBuyer" | "operatingPayee";
+  kind:
+    | "households"
+    | "publicBuyer"
+    | "investmentBuyer"
+    | "operatingPayee"
+    /** A background country's macro economy trading in the funded market (#5702). */
+    | "backgroundEconomy";
   countryId: string;
   stateId?: string;
   currency: string;

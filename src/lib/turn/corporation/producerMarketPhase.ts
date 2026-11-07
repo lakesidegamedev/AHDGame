@@ -264,5 +264,10 @@ async function publishHostState(
     totals.expenses += receipt.revenue - receipt.profit;
     totals.profit += receipt.profit;
   }
-  return { result: settled.result, closingSectors, operatingByCorporation };
+  return {
+    result: settled.result,
+    closingSectors,
+    operatingByCorporation,
+    openingAccounts: settled.openingAccounts,
+  };
 }

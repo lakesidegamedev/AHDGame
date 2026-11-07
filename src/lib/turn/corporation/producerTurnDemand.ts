@@ -61,6 +61,11 @@ import {
   type RouteOffer,
   type RouteOrder,
 } from "@/lib/market/producerMarket/routeRules";
+import {
+  backgroundOrderEligibility,
+  backgroundTradeLines,
+  type BackgroundEconomy,
+} from "@/lib/market/producerMarket/backgroundTradeRules";
 
 /**
  * Funded-market demand for one producer turn: every plant prepared from its
@@ -92,6 +97,8 @@ export async function buildProducerTurnDemand(
     householdIncomeFloor?: number;
     /** Each country's plant-economy share at its first funded turn (see heldShares). */
     openingShareByCountry?: ReadonlyMap<string, number>;
+    /** Background countries trading their macro economy (#5702); absent or empty: none. */
+    backgroundEconomies?: readonly BackgroundEconomy[];
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -570,12 +577,19 @@ export async function buildProducerTurnDemand(
     (c) => refPrice(c as CommodityType, ""),
     PRICE_HEADROOM
   ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));
+  // Background countries (#5702): their macro supply and demand as offers and
+  // orders on the world book, priced like every other buyer's references.
+  const background = backgroundTradeLines({
+    economies: input.backgroundEconomies ?? [],
+    referencePrice: (c) => refPrice(c as CommodityType, ""),
+    priceHeadroom: PRICE_HEADROOM,
+    unitsPerTurnDivisor: TURNS_PER_DAY,
+  });
+  const backgroundOffers = background.offers;
+  const backgroundOrders = background.orders;
   const routes = lookups.tradeRoutes;
-  let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
-  if (routes) {
-    const open = (c: string, from: string, to: string) =>
-      routes.affinityFor(c as CommodityType, from as never, to as never) > 0;
-    const offers: RouteOffer[] = producers.flatMap((p) =>
+  const worldRouteOffers = (): RouteOffer[] => [
+    ...producers.flatMap((p) =>
       p.plan.outputs
         .filter((o) => o.book === "world")
         .map((o) => ({
@@ -583,7 +597,30 @@ export async function buildProducerTurnDemand(
           commodity: o.commodity,
           sellerCountry: planCountry.get(p.plan.id) ?? "",
         }))
+    ),
+    ...backgroundOffers.map((o) => ({
+      id: o.id,
+      commodity: o.commodity,
+      sellerCountry: o.countryId ?? "",
+    })),
+  ];
+  // A background order never buys its own country's offer, so it always names
+  // its sellers: every other country's world offer on an open route.
+  if (backgroundOrders.length > 0) {
+    const eligible = backgroundOrderEligibility(
+      backgroundOrders,
+      worldRouteOffers(),
+      routes
+        ? (c, from, to) => routes.affinityFor(c as CommodityType, from as never, to as never) > 0
+        : null
     );
+    for (const o of backgroundOrders) o.eligibleOfferIds = eligible.get(o.id) ?? [];
+  }
+  let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
+  if (routes) {
+    const open = (c: string, from: string, to: string) =>
+      routes.affinityFor(c as CommodityType, from as never, to as never) > 0;
+    const offers: RouteOffer[] = worldRouteOffers();
     const orders: RouteOrder[] = [
       ...producers.flatMap((p) =>
         p.plan.inputs
@@ -636,6 +673,8 @@ export async function buildProducerTurnDemand(
     )
   );
   return {
+    backgroundOffers,
+    backgroundOrders,
     skippedSectors,
     preparedSectors,
     walletScopes,

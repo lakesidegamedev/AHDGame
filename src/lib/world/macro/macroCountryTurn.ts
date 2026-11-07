@@ -10,6 +10,7 @@ import { computeMacroContribution } from "./kernel";
 import { ACTIVE_MACRO_COUNTRY_FILTER, isActiveMacroCountry } from "./retirement";
 import { isMacroTickTurn, MACRO_TICK_INTERVAL } from "./schedule";
 import { advanceMacroGrowth } from "./rules/growth";
+import { scaleMacroCapacity, tradeCapacityFactorAtTick } from "./rules/tradeFeedback";
 import { MACRO_TURNS_PER_YEAR } from "./seedBuilder";
 
 export interface MacroCountryTurnResult {
@@ -96,7 +97,7 @@ export async function processMacroCountryTurn(
           );
         // Annual trend growth since the last tick (2027 background countries;
         // documents without a trend return null and keep their sectors).
-        const grownSectors = advanceMacroGrowth({
+        const trendSectors = advanceMacroGrowth({
           sectors: country.sectors,
           trendGrowth: country.trendGrowth,
           shockModifier,
@@ -104,6 +105,17 @@ export async function processMacroCountryTurn(
           turn,
           turnsPerYear: MACRO_TURNS_PER_YEAR,
         });
+        // Capacity follows the exports that really sold on funded turns since
+        // the last tick (background countries only; 1 everywhere else).
+        const tradeFactor = tradeCapacityFactorAtTick({
+          fundedTrade: country.fundedTrade,
+          lastTickTurn: country.lastMacroTickTurn,
+          tradeExposure: country.tradeExposure,
+        });
+        const grownSectors =
+          tradeFactor === 1
+            ? trendSectors
+            : scaleMacroCapacity(trendSectors ?? country.sectors, tradeFactor);
         return {
           updateOne: {
             filter: { _id: country._id },
