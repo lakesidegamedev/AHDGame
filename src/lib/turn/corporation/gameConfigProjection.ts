@@ -58,6 +58,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerHouseholdSavingsDrawShare: 1,
   producerShortageAskStage: 1,
   producerShortageAskMaxStep: 1,
+  producerSalesAdvanceRevenueShare: 1,
   producerAskBuyerTieStage: 1,
   producerPriceMaxMultiplier: 1,
   producerFundedRestartStage: 1,

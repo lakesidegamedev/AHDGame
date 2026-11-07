@@ -188,6 +188,21 @@ describe("sales fund the run", () => {
     expect(owed(run.payables)).toBeGreaterThan(0);
   });
 
+  it("a thinner cushion (producerSalesAdvanceRevenueShare) runs a thin-margin plant on no cash", () => {
+    const thin = (salesAdvanceRevenueShare?: number) =>
+      advanceProducerEconomy({
+        turn: 2,
+        accounts: accounts(0),
+        producers: [mill({ expectedUnitRevenue: 3.85 })],
+        externalOffers: [ore],
+        externalOrders: [buyer()],
+        ...(salesAdvanceRevenueShare ? { salesAdvanceRevenueShare } : {}),
+      });
+    expect(thin().producers[0].producedUnits).toBe(0);
+    expect(thin(0.97).producers[0].producedUnits).toBeGreaterThan(5);
+    expect(total(thin(0.97).accounts)).toBeCloseTo(total(accounts(0)));
+  });
+
   it("does not advance a run whose sales would not pay for it", () => {
     const run = advanceProducerEconomy({
       turn: 2,

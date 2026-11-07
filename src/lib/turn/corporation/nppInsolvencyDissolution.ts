@@ -83,6 +83,13 @@ const DISSOLUTION_ANCHOR_THRESHOLD = -1_000_000;
 // the 1953 sims had a median 52-turn negative streak; 30 turns is well past any
 // cyclical dip while still clearing zombies within a season.
 export const PERSISTENT_INSOLVENCY_GRACE_TURNS = 30;
+
+/** gameConfig.nppInsolvencyGraceTurns when it is a whole number of at least 1, else the default. */
+export function insolvencyGraceTurns(configured: number | undefined | null): number {
+  return typeof configured === "number" && Number.isInteger(configured) && configured >= 1
+    ? configured
+    : PERSISTENT_INSOLVENCY_GRACE_TURNS;
+}
 // Turns a defaulted, unresolved bond may linger before its NPP issuer is wound
 // down. The bondTurn auto-resolver gets this many attempts at refinance /
 // restructure first; only defaults it could never cure land here.
@@ -106,8 +113,12 @@ export async function processNppInsolventCorpDissolution(
   // fairly soft, so a hands-off world keeps the historical spare-everyone shape.
   const gc = await db
     .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    .findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1, nppInsolvencyGraceTurns: 1 } }
+    );
   const commandEconomyEnabled = gc?.commandEconomyEnabled === true;
+  const graceTurns = insolvencyGraceTurns(gc?.nppInsolvencyGraceTurns);
   const gs = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
@@ -222,7 +233,7 @@ export async function processNppInsolventCorpDissolution(
       // Trigger 2: persistently insolvent past the grace window and still
       // effectively cashless this turn.
       const since = insolventSinceById.get(idStr);
-      if (since != null && turn - since >= PERSISTENT_INSOLVENCY_GRACE_TURNS) {
+      if (since != null && turn - since >= graceTurns) {
         return true;
       }
       // Trigger 3: a bond default the auto-resolver could never cure.
