@@ -15,15 +15,10 @@ describe("historicalRosters key scheme", () => {
     expect(rosterKey("US", "governor", "CA", "democrat", 0)).toBe("US|governor|CA|democrat|0");
   });
 
-  it("rosters only the 2027 preset", () => {
+  it("rosters only the 2019 and 2027 presets", () => {
+    expect(isRosteredPreset("2019-default")).toBe(true);
     expect(isRosteredPreset("2027-default")).toBe(true);
-    for (const preset of [
-      "1953-default",
-      "1979-default",
-      "1991-default",
-      "2019-default",
-      "empty",
-    ]) {
+    for (const preset of ["1953-default", "1979-default", "1991-default", "empty"]) {
       expect(isRosteredPreset(preset)).toBe(false);
     }
   });
@@ -35,6 +30,14 @@ describe("historicalRosters key scheme", () => {
     expect(
       getHistoricalRosterEntry("2019-default", "UK", "commons", "LON", "uk_conservative", 0)
     ).toBeUndefined();
+  });
+});
+
+describe("2019 Irish president roster", () => {
+  it("seats a fictional Uachtar\u00e1n already in a second term", () => {
+    expect(
+      getHistoricalRosterEntry("2019-default", "IE", "uachtaran", "IE", "ie_ind", 0)
+    ).toMatchObject({ name: "Declan Fitzmaurice", priorExecutiveTerms: 2 });
   });
 });
 
@@ -68,6 +71,17 @@ describe("2027 US executive roster", () => {
     expect(vicePresident).toMatchObject({ name: "Colin Ashby", birthYear: 1982 });
     expect(president).not.toHaveProperty("portraitId");
     expect(vicePresident).not.toHaveProperty("portraitId");
+  });
+
+  it("records the president's second term and no prior terms for the vice president", () => {
+    expect(
+      getHistoricalRosterEntry("2027-default", "US", "president", "US", "republican", 0)
+        ?.priorExecutiveTerms
+    ).toBe(2);
+    expect(
+      getHistoricalRosterEntry("2027-default", "US", "vicePresident", "US", "republican", 0)
+        ?.priorExecutiveTerms
+    ).toBeUndefined();
   });
 
   it("leaves the rest of the 2027 board to generated identities", () => {

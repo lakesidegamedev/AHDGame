@@ -14,6 +14,9 @@ export const ROSTER_2027_US: RosterMap = {
     birthYear: 1951,
     gender: "male",
     ethnicity: "white",
+    // Two years into a second term, so the term limit bars a third election
+    // and he cannot run in 2028.
+    priorExecutiveTerms: 2,
   },
   "US|vicePresident|US|republican|0": {
     name: "Colin Ashby",

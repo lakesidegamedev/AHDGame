@@ -44,9 +44,9 @@ async function allRosterEntries(): Promise<Array<[string, RosterMap[string]]>> {
 }
 
 describe("no real identities in new worlds", () => {
-  it("only the 2027 preset carries authored seat identities", () => {
+  it("only the 2019 and 2027 presets carry authored seat identities", () => {
     const rostered = RESET_PRESETS.map((p) => p.id).filter(isRosteredPreset);
-    expect(rostered).toEqual(["2027-default"]);
+    expect(rostered.sort()).toEqual(["2019-default", "2027-default"]);
   });
 
   it("no authored seat identity is a real politician or pins a portrait", async () => {

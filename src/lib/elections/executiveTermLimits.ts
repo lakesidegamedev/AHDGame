@@ -2,6 +2,12 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import type { Character } from "@/lib/db/types";
 
+/**
+ * Term snapshot for anyone who can run for the executive. Player characters
+ * carry career history and stored terms; NPPs carry stored terms only (seeded
+ * prior terms for a real incumbent plus terms won in game), so the same limit
+ * applies to both.
+ */
 type CharacterExecutiveTermSnapshot = Pick<Character, "careerHistory" | "executiveTermsServed">;
 
 function getHistoricalExecutiveTermsServed(

@@ -722,6 +722,10 @@ export async function seedFromSeats(
       // identifies which chamber the candidate was seeded for — the key the
       // idempotency guard needs.
       seededForOfficeType: seat.officeType,
+      // A real incumbent already in a later term keeps it toward the limit.
+      ...(rosterEntry?.priorExecutiveTerms
+        ? { executiveTermsServed: { [nppCountryId]: rosterEntry.priorExecutiveTerms } }
+        : {}),
       personality: generateDefaultPersonality(),
       generatedAt: now,
       retiredAt: null,

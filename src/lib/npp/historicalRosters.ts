@@ -3,8 +3,8 @@
  *
  * `seedFromSeats` creates one NPP per seat row with a random fictional name.
  * A preset can pin a specific seat to an authored identity instead, for
- * example so the 2027 president opens with a fixed name, age and party
- * history. Every authored identity is FICTIONAL: no world seats a real
+ * example so the 2027 president opens with a fixed name, age and terms
+ * already served. Every authored identity is FICTIONAL: no world seats a real
  * politician or claims a real person's identity, and no entry pairs a
  * portrait with the real person it depicts. Portraits for these seats come
  * from the generic demographic pick, the same as any generated NPP.
@@ -27,10 +27,16 @@ export interface HistoricalRosterEntry {
   birthYear: number;
   gender: NPPGender;
   ethnicity: NPPEthnicity;
+  /**
+   * Executive terms this identity has already served toward the country's
+   * term limit, including the term in progress at the preset start. Set only
+   * where the source records it; absent = none counted.
+   */
+  priorExecutiveTerms?: number;
 }
 
 /** Presets with authored fictional seat identities. */
-const ROSTERED_PRESETS = ["2027-default"] as const;
+const ROSTERED_PRESETS = ["2019-default", "2027-default"] as const;
 export type RosteredPreset = (typeof ROSTERED_PRESETS)[number];
 
 export function isRosteredPreset(presetId: string): presetId is RosteredPreset {
@@ -49,11 +55,14 @@ export function rosterKey(
 }
 
 // Per-preset maps, populated from `./rosters/*` below.
+import { ROSTER_2019_IE as R19_IE } from "./rosters/p2019-ie";
 import { ROSTER_2027_US as R27_US } from "./rosters/p2027-us";
 
 export type RosterMap = Record<string, HistoricalRosterEntry>;
 
 const ROSTERS: Record<RosteredPreset, RosterMap> = {
+  // 2019 names only the Irish president; the rest of the board is generated.
+  "2019-default": Object.assign({}, R19_IE),
   // 2027 names only the US executive; the rest of the board is generated.
   "2027-default": Object.assign({}, R27_US),
 };

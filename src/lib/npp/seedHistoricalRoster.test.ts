@@ -127,50 +127,73 @@ describe("seedFromSeats historical roster", () => {
     }
   );
 
-  it.each(["1991-default", "2019-default"])(
-    "seats a generated Irish Uachtar\u00e1n at %s opening",
-    async (preset) => {
-      const presidentialSeats = seatGroupsFor(preset).IE!.filter(
-        (seat) => seat.officeType === "uachtaran"
-      );
-      expect(presidentialSeats).toEqual([
-        { state: "IE", officeType: "uachtaran", party: "ie_ind" },
-      ]);
+  it.each([
+    ["1991-default", undefined],
+    ["2019-default", "Declan Fitzmaurice"],
+  ])("seats a fictional Irish Uachtar\u00e1n at %s opening", async (preset, authoredName) => {
+    const presidentialSeats = seatGroupsFor(preset).IE!.filter(
+      (seat) => seat.officeType === "uachtaran"
+    );
+    expect(presidentialSeats).toEqual([{ state: "IE", officeType: "uachtaran", party: "ie_ind" }]);
 
-      const result = await seedFromSeats(ctx.db as unknown as Db, presidentialSeats, "winners", {
-        presetId: preset,
-      });
-      expect(result).toMatchObject({ nppsCreated: 1, officialsCreated: 1 });
-      expect(ctx.npps).toHaveLength(1);
-      expect(ctx.npps[0]).toMatchObject({ countryId: "IE", currentOffice: { type: "uachtaran" } });
-      expect(ctx.npps[0]).not.toHaveProperty("birthYear");
-      expect(["Mary Robinson", "Michael D. Higgins"]).not.toContain(ctx.npps[0]!.name);
-      expect(ctx.officials).toHaveLength(1);
-      expect(ctx.officials[0]).toMatchObject({
-        countryId: "IE",
-        officeType: "uachtaran",
-        state: "IE",
-        characterName: ctx.npps[0]!.name,
-      });
+    const result = await seedFromSeats(ctx.db as unknown as Db, presidentialSeats, "winners", {
+      presetId: preset,
+    });
+    expect(result).toMatchObject({ nppsCreated: 1, officialsCreated: 1 });
+    expect(ctx.npps).toHaveLength(1);
+    expect(ctx.npps[0]).toMatchObject({ countryId: "IE", currentOffice: { type: "uachtaran" } });
+    if (authoredName) expect(ctx.npps[0]!.name).toBe(authoredName);
+    else expect(ctx.npps[0]).not.toHaveProperty("birthYear");
+    expect(["Mary Robinson", "Michael D. Higgins"]).not.toContain(ctx.npps[0]!.name);
+    expect(ctx.officials).toHaveLength(1);
+    expect(ctx.officials[0]).toMatchObject({
+      countryId: "IE",
+      officeType: "uachtaran",
+      state: "IE",
+      characterName: ctx.npps[0]!.name,
+    });
 
-      const seatId = buildSeatId("IE", "uachtaran", "IE");
-      ctx.db.collection("seats");
-      ctx.db.collectionMocks.seats!.find.mockReturnValue({
-        toArray: vi
-          .fn()
-          .mockResolvedValue([
-            { _id: seatId, countryId: "IE", electionType: "uachtaran", state: "IE" },
-          ]),
-      });
-      ctx.db.collectionMocks.electedOfficials!.find.mockReturnValue({
-        toArray: vi.fn().mockResolvedValue(ctx.officials),
-      });
-      expect(await collectSeatIntegrity(ctx.db as unknown as Db)).toEqual({
-        orphanedOfficialCount: 0,
-        seatBackedSeatsWithoutOfficials: 0,
-      });
-    }
-  );
+    const seatId = buildSeatId("IE", "uachtaran", "IE");
+    ctx.db.collection("seats");
+    ctx.db.collectionMocks.seats!.find.mockReturnValue({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: seatId, countryId: "IE", electionType: "uachtaran", state: "IE" },
+        ]),
+    });
+    ctx.db.collectionMocks.electedOfficials!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(ctx.officials),
+    });
+    expect(await collectSeatIntegrity(ctx.db as unknown as Db)).toEqual({
+      orphanedOfficialCount: 0,
+      seatBackedSeatsWithoutOfficials: 0,
+    });
+  });
+
+  it("carries the seeded 2027 president's two terms and none for the vice president", async () => {
+    const executive = seatGroupsFor("2027-default").US!.filter(
+      (seat) => seat.officeType === "president" || seat.officeType === "vicePresident"
+    );
+    await seedFromSeats(ctx.db as unknown as Db, executive, "winners", {
+      presetId: "2027-default",
+    });
+
+    const byName = new Map(ctx.npps.map((n) => [n.name, n]));
+    expect(byName.get("Warren Hollister")).toMatchObject({ executiveTermsServed: { US: 2 } });
+    expect(byName.get("Colin Ashby")).not.toHaveProperty("executiveTermsServed");
+  });
+
+  it.each([
+    ["1991-default", undefined],
+    ["2019-default", { IE: 2 }],
+  ])("stamps prior Uachtaran terms only where %s records them", async (preset, expected) => {
+    const seats = seatGroupsFor(preset).IE!.filter((seat) => seat.officeType === "uachtaran");
+    await seedFromSeats(ctx.db as unknown as Db, seats, "winners", { presetId: preset });
+
+    expect(ctx.npps).toHaveLength(1);
+    expect(ctx.npps[0]!.executiveTermsServed).toEqual(expected);
+  });
 
   it.each(["1999-default", "2007-default"])(
     "does not back-project the 2019 presidential seat into %s",

@@ -258,6 +258,44 @@ describe("seatPresidentialExecutive", () => {
     expect((officialSet![1] as { $set: Record<string, unknown> }).$set.isActing).toBe(true);
   });
 
+  it.each([
+    ["an elected NPP term", 1, false, true],
+    ["a founding NPP term", 0, false, false],
+    ["an acting NPP presidency", 1, true, false],
+  ] as const)("counts %s toward the NPP's limit: %s", async (_label, cycle, acting, counts) => {
+    const nppId = new ObjectId();
+    const election = makeElection({ cycle });
+    const winnerCandidate = {
+      _id: new ObjectId(),
+      isNPP: true,
+      nppId,
+      characterName: "NPP Winner",
+      party: "1",
+    } as unknown as ElectionCandidate;
+
+    await seatPresidentialExecutive(db as unknown as Db, {
+      election,
+      winnerCandidate,
+      now: NOW,
+      acting,
+    });
+
+    const termWrite = db.collectionMocks["npps"]!.updateOne.mock.calls.find(
+      (c) => (c[1] as { $inc?: unknown })?.$inc
+    );
+    if (!counts) {
+      expect(termWrite).toBeUndefined();
+      return;
+    }
+    expect(termWrite).toEqual([
+      { _id: nppId, lastExecutiveTermElectionId: { $ne: election._id.toString() } },
+      {
+        $inc: { "executiveTermsServed.US": 1 },
+        $set: { lastExecutiveTermElectionId: election._id.toString() },
+      },
+    ]);
+  });
+
   it("keeps the local head of state seated when an election resolves", async () => {
     const pinnedId = new ObjectId();
     const winnerId = new ObjectId();
