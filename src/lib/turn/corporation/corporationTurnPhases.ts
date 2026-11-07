@@ -112,9 +112,17 @@ export async function persistLabourDemand(args: {
   db: Db;
   labourDemandByState: Map<string, number>;
   labourDemandWageIndexByState?: Map<string, number>;
+  /** 2027 world only: workers automation no longer employs, per state. */
+  automationDisplacedByState?: Map<string, number>;
   turn: number | undefined;
 }): Promise<void> {
-  const { db, labourDemandByState, labourDemandWageIndexByState, turn } = args;
+  const {
+    db,
+    labourDemandByState,
+    labourDemandWageIndexByState,
+    automationDisplacedByState,
+    turn,
+  } = args;
   if (typeof turn !== "number") return;
 
   // Write every region, including zero-demand regions, so rollups can
@@ -136,6 +144,13 @@ export async function persistLabourDemand(args: {
           "economic.labourDemand.value": Math.round(labourDemandByState.get(stateId) ?? 0),
           "economic.labourDemandWageIndex.value": labourDemandWageIndexByState?.get(stateId) ?? 1,
           "economic.labourDemandTurn": turn,
+          ...(automationDisplacedByState
+            ? {
+                "economic.automationDisplaced.value": Math.round(
+                  automationDisplacedByState.get(stateId) ?? 0
+                ),
+              }
+            : {}),
         },
       },
     },

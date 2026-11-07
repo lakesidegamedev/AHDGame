@@ -112,6 +112,14 @@ import {
   crisisPotentialGrowthPenalty,
   type CrisisEconomicExposure,
 } from "@/lib/livingConflict/rules/economicExposure";
+import { loadSocietyLawPositions, presetUsesSocietyPressures } from "@/lib/societyPressures/shell";
+import { NO_SOCIETY_LAWS } from "@/lib/societyPressures/rules/laws";
+import {
+  advanceRegionSocietyPressures,
+  type SocietyPressureState,
+} from "@/lib/societyPressures/rules/region";
+import { fundingResponse } from "./spendingChannel";
+import { EDU_SPEND_HALF_SAT } from "./registry/education";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -232,6 +240,8 @@ interface PrevMetricsDoc {
   _id: string;
   labourEmployment?: EmploymentState;
   labourProductivity?: ProductivityState;
+  /** 2027 world: automation absorption, housing stock and education index. */
+  societyPressure?: SocietyPressureState;
   livingConflictExposure?: CrisisEconomicExposure;
   /** §6.1 (P7b): the region's LAGGED economic model, for sector GDP concentration. */
   economicModel?: EconomicModelState;
@@ -246,6 +256,7 @@ interface PrevMetricsDoc {
     laborForce?: { value?: number };
     labourDemand?: { value?: number };
     labourDemandTurn?: number;
+    automationDisplaced?: { value?: number };
   };
 }
 
@@ -331,6 +342,11 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     "economic.labourTightness.value": 1,
     "economic.labourParticipationDemandBonus.value": 1,
     "economic.labourDemandTurn": 1,
+    // 2027 society pressures (absent in other worlds, so projecting is free).
+    societyPressure: 1,
+    "economic.automationDisplaced.value": 1,
+    "social.housingSupplyGrowth.value": 1,
+    "education.universityEnrollment.value": 1,
     // Generic nodes (P2+): prev value/simBaseline + external seed/lagged reads,
     // derived from the registry at module load.
     ...GENERIC_PROJECTION,
@@ -484,6 +500,12 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     baselineYear: eraGameState?.startingYear,
   });
 
+  // 2027 world: enacted zoning and wage insurance laws, one read for all countries.
+  const societyOn = presetUsesSocietyPressures(eraGameState?.preset ?? undefined);
+  const societyLaws = societyOn
+    ? await loadSocietyLawPositions(db, [...new Set(realStates.map((s) => s.countryId))])
+    : new Map<string, typeof NO_SOCIETY_LAWS>();
+
   // One in-memory pass over the political boards already loaded above. This
   // avoids a country-by-country query loop on the multiplayer turn path.
   const healthTotalsByCountry = new Map<
@@ -542,7 +564,10 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     updateOne: {
       filter: { _id: string };
       update: {
-        $set: Record<string, number | Date | EmploymentState | ProductivityState>;
+        $set: Record<
+          string,
+          number | Date | EmploymentState | ProductivityState | SocietyPressureState
+        >;
         $unset?: Record<string, "">;
       };
     };
@@ -1062,6 +1087,41 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     }
     const envelopes = { ...cachedEnvelopes };
 
+    // 2027 world: education, automation absorption and housing for this region.
+    // Housing pressure moves the cost of living target; absorbed workers become
+    // background labour demand in the employment step below.
+    const society = societyOn
+      ? advanceRegionSocietyPressures({
+          turn,
+          turnsPerYear: TURNS_PER_YEAR,
+          countryId,
+          previous: priorMetricDoc?.societyPressure,
+          adults: state.votingEligiblePopulation ?? (state.population ?? 0) * 0.78,
+          automationDisplaced: hasCurrentLabourDemand
+            ? (readMetricPath(priorMetricDoc, "economic.automationDisplaced", "value") ?? 0)
+            : undefined,
+          supplyGrowthPct:
+            readMetricPath(prevDoc, "social.housingSupplyGrowth", "value") ??
+            politicalInputs.legacyValue(state._id, "social.housingSupplyGrowth") ??
+            undefined,
+          universityEnrollment:
+            readMetricPath(prevDoc, "education.universityEnrollment", "value") ??
+            politicalInputs.legacyValue(state._id, "education.universityEnrollment") ??
+            undefined,
+          educationSpendingResponse: fundingResponse(
+            spending.education ?? 0,
+            EDU_SPEND_HALF_SAT,
+            100
+          ),
+          outputGap: hasTrend ? state.outputGap : 0,
+          laws: societyLaws.get(countryId) ?? NO_SOCIETY_LAWS,
+        })
+      : undefined;
+    if (society) {
+      targetNudges["economic.costOfLiving"] =
+        (targetNudges["economic.costOfLiving"] ?? 0) + society.costOfLivingNudge;
+    }
+
     const registry =
       resetSystemVersionsForCountry(eraGameState, RESET_V2_READY, countryId).cabinet === "v2"
         ? CABINET_V2_MACRO_NODES
@@ -1084,6 +1144,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
             outputGap: hasTrend ? state.outputGap : 0,
             medianIncome: readMetricPath(prevDoc, "economic.medianIncome", "value"),
             policy: employmentPolicies.get(state._id),
+            absorbedJobs: society?.absorbedJobs,
             previous: prevDoc?.labourEmployment,
           })
         : undefined;
@@ -1182,13 +1243,23 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // Macro only. Every node evaluated above is a macro node, so the filter is
     // a guard rather than a router: a political path reaching it would mean
     // something is trying to persist a board metric into the macro doc.
-    const macroSet: Record<string, number | Date | EmploymentState | ProductivityState> = {};
+    const macroSet: Record<
+      string,
+      number | Date | EmploymentState | ProductivityState | SocietyPressureState
+    > = {};
     for (const [key, value] of Object.entries(setFields)) {
       if (key === "lastUpdated") continue;
       if (isMacroMetricPath(key)) macroSet[key] = value;
     }
     if (Object.keys(macroSet).length > 0) {
       if (employment) macroSet.labourEmployment = employment.state;
+      if (society) {
+        macroSet.societyPressure = society.state;
+        macroSet["population.housingPressure.value"] =
+          Math.round(society.state.housingPressure * 10) / 10;
+        macroSet["population.tertiaryAttainment.value"] =
+          Math.round(society.state.educationIndex * 10) / 10;
+      }
       if (persistCrisisExposure) {
         for (const [key, value] of Object.entries(crisisExposure))
           macroSet[`livingConflictExposure.${key}`] = value;

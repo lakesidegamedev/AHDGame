@@ -677,6 +677,8 @@ export interface SectorCalculationsResult {
   labourDemandByState: Map<string, number>;
   /** Desired-worker-weighted wage bid used to divide a scarce labour pool. */
   labourDemandWageIndexByState: Map<string, number>;
+  /** 2027 world only: per-state workers automation methods no longer employ. */
+  automationDisplacedByState?: Map<string, number>;
   /**
    * v3 Phase 6: strike trigger/resolution events emitted this turn, for
    * `index.ts` (which owns `db`) to translate into sentiment pulses. Empty

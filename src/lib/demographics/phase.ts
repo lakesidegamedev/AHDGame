@@ -49,6 +49,8 @@ import {
   presetUsesDemographicPaths,
   regionPathTfr,
 } from "./rules/demographicPaths";
+import { persistAgingCostPressure } from "@/lib/societyPressures/shell";
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
@@ -887,7 +889,7 @@ export async function runDemographicFlows(
     });
   }
 
-  return freezeAndApplyDemographicFlowPlan(db, {
+  const stats = await freezeAndApplyDemographicFlowPlan(db, {
     worldEpochId,
     turn,
     regions,
@@ -895,4 +897,16 @@ export async function runDemographicFlows(
     refugeeReceptions: receptions.results,
     civilianLosses: civilianLosses.results,
   });
+  // 2027 world: pension and health cost pressure from this turn's national
+  // age structures, read back by the federal budget.
+  if (presetUsesSocietyPressures(gameState?.preset) && gameYear !== null) {
+    await persistAgingCostPressure(db, {
+      turn,
+      year: gameYear,
+      workingAge: workLo,
+      retirementAge: workHi,
+      regions: works.map((w) => ({ countryId: w.countryId, vector: w.vector })),
+    });
+  }
+  return stats;
 }

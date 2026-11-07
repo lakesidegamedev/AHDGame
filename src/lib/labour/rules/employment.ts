@@ -55,6 +55,11 @@ export interface EmploymentInput {
   outputGap?: number;
   medianIncome?: number;
   policy?: EmploymentPolicy;
+  /**
+   * 2027 world: workers displaced by automation whom the wider economy has
+   * since found work for. Added to background labour demand.
+   */
+  absorbedJobs?: number;
   previous?: EmploymentState;
 }
 
@@ -204,7 +209,9 @@ export function advanceEmployment(input: EmploymentInput): EmploymentResult {
   const publicJobs = income > 0 ? nonnegative(policy.publicEmploymentAnnual) / income : 0;
   const backgroundTarget = Math.max(
     0,
-    supply * (1 - cyclicalRate / 100 - referenceShare) + publicJobs
+    supply * (1 - cyclicalRate / 100 - referenceShare) +
+      publicJobs +
+      nonnegative(input.absorbedJobs)
   );
   const rate =
     1 -

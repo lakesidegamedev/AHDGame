@@ -177,6 +177,10 @@ export const APPROVAL_EXCLUDED_METRICS = new Set([
   // Realized-flow diagnostic readout (§8.2) — surfaced for UI comparison against
   // the policy migrationRate input, not an approval term.
   "realizedMigrationRate",
+  // 2027 world readouts: housing pressure reaches voters through the cost of
+  // living, and the education index through re-employment after automation.
+  "housingPressure",
+  "tertiaryAttainment",
   // Surfaced supply-side trend (P1c-1) — redundant with the gdpGrowth it drives;
   // `laborForce` is a raw headcount. Neither is an approval term.
   "potentialGrowth",

@@ -856,6 +856,7 @@ export async function processCorporationTurn(
     automationIndexByState,
     labourDemandByState,
     labourDemandWageIndexByState,
+    automationDisplacedByState,
     strikeEvents,
     capacityBindingEvents,
     settledMarketingSpendAnchorByBuyerId,
@@ -1001,6 +1002,7 @@ export async function processCorporationTurn(
     db,
     labourDemandByState,
     labourDemandWageIndexByState,
+    automationDisplacedByState,
     turn,
   });
 

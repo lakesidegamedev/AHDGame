@@ -5,6 +5,7 @@ import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { EconomicSystemTarget, JurisdictionMode, LawImplementationMode } from "./legislation";
 import type { SubhourStepStamp } from "@/lib/turn/subhour/stepFraction";
+import type { AgingCostPressure } from "@/lib/societyPressures/rules/agingCosts";
 import type { SubhourGrowthMetricBase, SubhourInflationBase } from "@/lib/turn/subhour/stepBase";
 
 export type CreditRating = "AAA" | "AA" | "A" | "BBB" | "BB" | "B" | "CCC";
@@ -708,6 +709,12 @@ export interface FederalBudget {
    * run the country.
    */
   fiscalConsolidation?: FiscalConsolidationState;
+  /**
+   * 2027 world: pension and health cost multipliers from the national age
+   * structure, written each turn by the population phase and applied to the
+   * pension and health lines by `calculateFederalSpending`.
+   */
+  agingCostPressure?: AgingCostPressure;
   /**
    * Audit stamp written by `mergeNationalFisc` when this country dissolved into
    * another and its treasury, debt and bonds were assumed by the successor. The

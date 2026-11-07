@@ -1782,6 +1782,31 @@ export const metricCategories: MetricCategory[] = [
         minValue: 0,
         maxValue: 3,
       },
+      {
+        id: "housingPressure",
+        name: "Housing Pressure",
+        unit: "index",
+        description: "Households per available home (100 = every household housed)",
+        detailedDescription:
+          "Households (adults divided by the usual number of adults per home) against the stock of homes. New construction adds homes and zoning rules decide how much planned building gets finished. Above 100 it pushes up the cost of living. Excluded from approval scoring; its effect reaches voters through the cost of living.",
+        isHigherBetter: false,
+        decimals: 1,
+        minValue: 50,
+        maxValue: 200,
+      },
+      {
+        id: "tertiaryAttainment",
+        name: "Adults With Degrees",
+        unit: "percent",
+        description: "Percent of adults with a university or college education",
+        detailedDescription:
+          "Moves slowly as new graduates replace older adults, following university enrolment and education funding. A better educated workforce finds new work faster after automation. Excluded from approval scoring.",
+        isHigherBetter: true,
+        formatSuffix: "%",
+        decimals: 1,
+        minValue: 0,
+        maxValue: 80,
+      },
     ],
   },
   {
