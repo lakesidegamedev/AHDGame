@@ -39,6 +39,7 @@ import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
 import { nonLawSpendingAmount } from "./rules/nonLawSpending";
 import { applyCategoryScale } from "./rules/fiscalStabilizer";
+import { applyAgingCostScale } from "@/lib/societyPressures/rules/agingCosts";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 
@@ -391,8 +392,13 @@ export async function calculateFederalSpending(
 
   return normalizeFederalSpending({
     // Cuts from an AI government's consolidation package (#5703) persist as a
-    // per-category scale, so they survive this rebuild from enacted laws.
-    byCategory: applyCategoryScale(byCategory, budget.fiscalConsolidation?.categoryScale),
+    // per-category scale, so they survive this rebuild from enacted laws. In
+    // the 2027 world the pension and health lines first follow the age
+    // structure (absent elsewhere, so a no-op).
+    byCategory: applyCategoryScale(
+      applyAgingCostScale(byCategory, budget.agingCostPressure),
+      budget.fiscalConsolidation?.categoryScale
+    ),
     stateGrants,
     debtInterest,
     total: 0,

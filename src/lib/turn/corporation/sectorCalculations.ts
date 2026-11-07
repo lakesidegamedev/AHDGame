@@ -1,3 +1,4 @@
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { planDividendAllocation } from "@/lib/corporations/rules/dividendAllocation";
 import { hasCorporateCashPayables, corporatePayoutCash } from "./rules/corporateTaxPriority";
 import { holdingMaturationWrites } from "./holdingMaturationWrites";
@@ -168,6 +169,10 @@ export function processSectors(
   // populated in worlds where wages are off.
   const labourDemandByState = makeLabourDemandByState();
   const labourDemandWageIndexByState = new Map<string, WageIndexAccumulator>();
+  // 2027 world: workers automation methods no longer employ, per state.
+  const automationDisplacedByState = presetUsesSocietyPressures(lookups.preset)
+    ? makeLabourDemandByState()
+    : undefined;
   // v3 Phase 6: strike trigger/resolution events, for index.ts (which owns
   // db) to turn into sentiment pulses. Same "collect during the pure loop,
   // consume after" pattern as sectorFxSpreadFees below.
@@ -216,6 +221,7 @@ export function processSectors(
     labourDemandWageIndexByState,
     fundedHeadcountBySectorId:
       (lookups.fundedHeadcountStage ?? 0) >= 1 ? funded?.headcountBySectorId : undefined,
+    automationDisplacedByState,
     pendingStrikeEvents,
     pendingCapacityBindingEvents,
     sectorOps,
@@ -1879,6 +1885,7 @@ export function processSectors(
     labourDemandWageIndexByState: new Map(
       Array.from(labourDemandWageIndexByState, ([stateId, acc]) => [stateId, resolveWageIndex(acc)])
     ),
+    ...(automationDisplacedByState ? { automationDisplacedByState } : {}),
     strikeEvents: pendingStrikeEvents,
     capacityBindingEvents: pendingCapacityBindingEvents,
     settledMarketingSpendAnchorByBuyerId: new Map(marketingSpendAnchorByBuyerId),

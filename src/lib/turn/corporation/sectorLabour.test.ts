@@ -259,3 +259,47 @@ describe("resolveSectorHeadcount on a funded turn", () => {
     expect(demand.get("s1") ?? 0).toBe(0);
   });
 });
+
+describe("resolveSectorHeadcount with an automation crew factor", () => {
+  const base = {
+    revenue: 1_000_000,
+    stateId: "s1",
+    rawWorkforceSkillByState: new Map<string, number>(),
+    politicalBoard: undefined,
+    staffingFactor: 1,
+  };
+
+  it("wants fewer workers and records the ones it shed", () => {
+    const conventional = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+    });
+    const demand = makeLabourDemandByState();
+    const displaced = makeLabourDemandByState();
+    const automated = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: demand,
+      labourPerUnitFactor: 0.5,
+      automationDisplacedByState: displaced,
+    });
+    expect(automated.desiredWorkers).toBe(Math.round(conventional.desiredWorkers * 0.5));
+    expect(demand.get("s1")).toBe(automated.desiredWorkers);
+    expect(displaced.get("s1")).toBeCloseTo(automated.desiredWorkers, 6);
+  });
+
+  it("leaves a conventional plant unchanged and sheds no one", () => {
+    const displaced = makeLabourDemandByState();
+    const plain = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+    });
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      labourPerUnitFactor: 1,
+      automationDisplacedByState: displaced,
+    });
+    expect(out.desiredWorkers).toBe(plain.desiredWorkers);
+    expect(displaced.get("s1") ?? 0).toBe(0);
+  });
+});

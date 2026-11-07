@@ -33,6 +33,7 @@ import {
   undergroundSectorKey,
 } from "@/lib/unions/undergroundEffects";
 import { servicesStrikeSoftening } from "@/lib/unions/unionServices";
+import { displacedWorkers } from "@/lib/societyPressures/rules/automation";
 import {
   accumulateLabourDemand,
   filledWorkers,
@@ -166,15 +167,32 @@ export function resolveSectorHeadcount(args: {
    * workers the plan actually employs rather than nameplate staffing.
    */
   fundedHeadcount?: { desiredWorkers: number; workers: number };
+  /**
+   * 2027 world: crew per unit relative to a conventional plant, below 1 for
+   * automation methods. A funded headcount already carries it.
+   */
+  labourPerUnitFactor?: number;
+  /** 2027 world: per-state workers automation no longer employs. */
+  automationDisplacedByState?: Map<string, number>;
 }): { desiredWorkers: number; workers: number } {
   const rawSkill =
     args.rawWorkforceSkillByState.get(args.stateId) ??
     args.politicalBoard?.["education.adultSkills"] ??
     null;
+  const factor = args.labourPerUnitFactor ?? 1;
   const desiredWorkers = args.fundedHeadcount
     ? args.fundedHeadcount.desiredWorkers
-    : calculateWorkers(args.revenue, rawSkill);
+    : factor < 1
+      ? Math.max(1, Math.round(calculateWorkers(args.revenue, rawSkill) * factor))
+      : calculateWorkers(args.revenue, rawSkill);
   accumulateLabourDemand(args.labourDemandByState, args.stateId, desiredWorkers);
+  if (args.automationDisplacedByState) {
+    accumulateLabourDemand(
+      args.automationDisplacedByState,
+      args.stateId,
+      displacedWorkers(desiredWorkers, factor)
+    );
+  }
   if (args.labourDemandWageIndexByState) {
     let wageDemand = args.labourDemandWageIndexByState.get(args.stateId);
     if (!wageDemand) {

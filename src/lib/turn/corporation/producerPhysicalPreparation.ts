@@ -1,4 +1,6 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { automationLabourFactor } from "@/lib/societyPressures/rules/automation";
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
 import {
   ownDemandRunShare,
@@ -588,6 +590,10 @@ export function prepareProducerPhysicalSector(input: {
     labourDemandByState: env.labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: sector.wageLevel,
+    labourPerUnitFactor: automationLabourFactor(
+      sector.strategyId,
+      presetUsesSocietyPressures(lookups.preset)
+    ),
   });
   const metrics = lookups.stateMetricsByState?.get(sector.stateId);
   const staffedShare =
