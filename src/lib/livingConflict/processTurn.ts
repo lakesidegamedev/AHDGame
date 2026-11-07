@@ -27,10 +27,13 @@ import { reconcileNorthernIrelandRatification } from "./northernIrelandRatificat
 import {
   allParticipants,
   driveConflictTurn,
+  nationsForRoles,
   type ConflictParticipants,
   type DrivenEvent,
 } from "./driver";
 import { GLOBAL_FINANCIAL_CRISIS_KEY, loadFinancialCrisisSignal } from "./financialCrisisPressure";
+import { isFutureConflictFamily, planFutureConflictTurn } from "./futureConflicts";
+import { severeConflictLoad, type SevereMembership } from "./rules/futureConflicts";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -202,8 +205,11 @@ export async function processLivingConflictsTurn(
         .toArray()
     ),
   ]);
+  const regionCountryIds = new Set(
+    countryRows.map((row) => row.countryId).filter((id): id is string => Boolean(id))
+  );
   const availableCountryIds = new Set([
-    ...countryRows.map((row) => row.countryId).filter((id): id is string => Boolean(id)),
+    ...regionCountryIds,
     ...macroCountries.map((country) => country.entityId),
   ]);
   const vietnamExternalPressure = vietnamWorldPressure(tension?.value ?? 0, activeWars);
@@ -211,6 +217,9 @@ export async function processLivingConflictsTurn(
   const defs = allLivingConflictDefs().filter((def) => def.autoOpen !== false);
   let nuclearPrograms: Awaited<ReturnType<typeof listNuclearPrograms>> | null = null;
   let conflictsProcessed = 0;
+  // Severe conflicts already holding each country this turn, in registry
+  // order, so a later family can respect the stacking limit.
+  const severe: SevereMembership[] = [];
   for (const def of defs) {
     if (def.key === "northern_ireland") {
       const reunified = await db.collection<Referendum>("referendums").findOne(
@@ -263,6 +272,19 @@ export async function processLivingConflictsTurn(
       externalPressure = signal.pressure;
       openingTrackDeltas = signal.openingTrackDeltas;
     }
+    if (isFutureConflictFamily(def.key)) {
+      const plan = await planFutureConflictTurn(db, def, {
+        turn: currentTurn,
+        year: currentYear,
+        availableCountryIds,
+        regionCountryIds,
+        tension: tension?.value ?? 0,
+        load: severeConflictLoad(severe, def.key),
+      });
+      participants = plan.participants;
+      externalPressure = plan.externalPressure;
+      observedTrackValues = plan.observedTrackValues;
+    }
     const result = await driveConflictTurn(
       db,
       def,
@@ -273,6 +295,12 @@ export async function processLivingConflictsTurn(
       openingTrackDeltas,
       observedTrackValues
     );
+    if (result.state.hasOpened && result.state.status === "active") {
+      severe.push({
+        defKey: def.key,
+        countryIds: nationsForRoles(participants, def.severeRoles ?? ["belligerent"]),
+      });
+    }
     if (def.key === "northern_ireland") {
       result.state = await reconcileNorthernIrelandRatification(
         db,

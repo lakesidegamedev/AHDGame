@@ -14,6 +14,9 @@ import {
   OIL_DISRUPTION_DEF,
   SUEZ_AFTERMATH_DEF,
 } from "./defs/globalResponseCatalog";
+import { AI_LABOUR_SHOCK_DEF } from "./defs/aiLabourShock";
+import { PACIFIC_STRAIT_DEF } from "./defs/pacificStrait";
+import { INFRASTRUCTURE_CYBERATTACK_DEF } from "./defs/infrastructureCyberattack";
 
 /** Every living-conflict definition, keyed by its stable def key. */
 export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
@@ -30,6 +33,11 @@ export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
   [SUEZ_AFTERMATH_DEF.key]: SUEZ_AFTERMATH_DEF,
   [OIL_DISRUPTION_DEF.key]: OIL_DISRUPTION_DEF,
   [NUCLEAR_INCIDENT_DEF.key]: NUCLEAR_INCIDENT_DEF,
+  // Families that can open after 2027. Kept last so the stacking guard sees
+  // every older conflict holding a country before rolling new hits.
+  [AI_LABOUR_SHOCK_DEF.key]: AI_LABOUR_SHOCK_DEF,
+  [PACIFIC_STRAIT_DEF.key]: PACIFIC_STRAIT_DEF,
+  [INFRASTRUCTURE_CYBERATTACK_DEF.key]: INFRASTRUCTURE_CYBERATTACK_DEF,
 };
 
 export function livingConflictDef(key: string): LivingConflictDef | null {
