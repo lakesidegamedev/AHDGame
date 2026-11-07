@@ -1348,18 +1348,6 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
   // ── Extraction & Mining ───────────────────────────────────────────────
   extraction: [
     {
-      id: "space_resources",
-      requiresTechUnlock: true,
-      minDecade: "2049",
-      researchThreshold: 8000,
-      name: "Space Resources",
-      description:
-        "Lunar and asteroid pilot mining that lands rare earths and metals. Launch energy, electronics and freight make it the most input-hungry way to mine.",
-      // Still filtered by the state's deposit table like every extraction recipe.
-      supply: { rare_earth: 0.62, iron: 0.18 },
-      demand: { energy: 0.26, electronics: 0.14, freight: 0.12, vehicles: 0.08, software: 0.06 },
-    },
-    {
       id: "standard",
       name: "Diversified",
       description:
@@ -1451,6 +1439,18 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       // Buffed 0.54→0.64.
       supply: { timber: 0.64 },
       demand: { vehicles: 0.2, energy: 0.15, freight: 0.15, construction_services: 0.05 },
+    },
+    {
+      id: "space_resources",
+      requiresTechUnlock: true,
+      minDecade: "2049",
+      researchThreshold: 8000,
+      name: "Space Resources",
+      description:
+        "Lunar and asteroid pilot mining that lands rare earths and metals. Launch energy, electronics and freight make it the most input-hungry way to mine.",
+      // Still filtered by the state's deposit table like every extraction recipe.
+      supply: { rare_earth: 0.62, iron: 0.18 },
+      demand: { energy: 0.26, electronics: 0.14, freight: 0.12, vehicles: 0.08, software: 0.06 },
     },
   ],
 };

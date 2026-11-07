@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getStrategy } from "../sectorStrategies";
 import { COMMODITY_TYPES } from "../commodities";
-import { getStrategyAvailability } from "./strategyAvailability";
+import { getStrategyAvailability, isUngatedStrategy } from "./strategyAvailability";
 import { sectorNodeId, TECH_TREE, DECADE_COST } from "./nodes";
 import type { TechCorpView } from "./selectors";
 import { getSectorTechEffectsForYear } from "./selectors";
@@ -81,6 +81,13 @@ describe("tier 2049 breakthrough methods", () => {
     expect(
       getStrategyAvailability({ type: "energy" }, fusion, 2051, true, { sectorResearch: 1e9 })
     ).toMatchObject({ locked: true, reason: "tech" });
+  });
+
+  it("is kept out of automated pickers that skip the tech check", () => {
+    expect(isUngatedStrategy(getStrategy("extraction", "space_resources"))).toBe(false);
+    expect(isUngatedStrategy(getStrategy("extraction", "iron_mining"))).toBe(true);
+    // Extraction's first entry stays the lane default for index fallbacks.
+    expect(SECTOR_STRATEGIES.extraction[0].id).toBe("standard");
   });
 
   it("counts research from the 2039 tier onward only", () => {

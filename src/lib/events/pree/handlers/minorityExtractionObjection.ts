@@ -5,6 +5,7 @@ import { threeTierTable } from "./tiers";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { seededRoll } from "@/lib/events/substrate/rng";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
 
 const KIND = "pree.minorityExtractionObjection";
 
@@ -88,7 +89,9 @@ const handler: EventHandler = {
     const currentId = (sector.strategyId as string | undefined) ?? "standard";
     const currentStrat = extractionStrats.find((s) => s.id === currentId) ?? extractionStrats[0]!;
 
-    const alternatives = extractionStrats.filter((s) => s.id !== currentStrat.id);
+    const alternatives = extractionStrats.filter(
+      (s) => s.id !== currentStrat.id && isUngatedStrategy(s)
+    );
     if (alternatives.length === 0) return null;
 
     const roll = seededRoll(ctx.character._id.toHexString(), ctx.currentTurn, KIND, "extractPick");

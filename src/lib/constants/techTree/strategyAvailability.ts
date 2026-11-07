@@ -81,3 +81,24 @@ export function getStrategyAvailability(
   }
   return { locked: false };
 }
+
+/**
+ * True when the method carries no tech gate at all: no era, unlock,
+ * breakthrough threshold or sunset. Automated pickers that do not run the
+ * per-corporation availability check (the extraction autopilot, seed
+ * placement) choose only from these, so a gated method never reaches a site
+ * by the back door.
+ */
+export function isUngatedStrategy(
+  strategy: Pick<
+    SectorStrategy,
+    "minDecade" | "requiresTechUnlock" | "researchThreshold" | "sunsetDecade"
+  >
+): boolean {
+  return (
+    !strategy.minDecade &&
+    !strategy.requiresTechUnlock &&
+    strategy.researchThreshold == null &&
+    !strategy.sunsetDecade
+  );
+}
