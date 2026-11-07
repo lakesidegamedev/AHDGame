@@ -61,6 +61,17 @@ vi.mock("@/lib/db/collections", () => ({
   getOrganizationProposalsCollection: vi.fn(),
   getOrganizationFundsCollection: vi.fn(),
 }));
+
+// Background countries (#5702) vote through their own suite; these bare db
+// stubs model a world without any.
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: vi.fn().mockResolvedValue({
+    tierOf: () => "npp",
+    registeredIds: [],
+    fullSimulationIds: [],
+    backgroundIds: [],
+  }),
+}));
 vi.mock("@/lib/internationalOrganizations/service", () => ({
   getMembers: vi.fn(async () => roster),
   loadOrganizationDef: vi.fn(),

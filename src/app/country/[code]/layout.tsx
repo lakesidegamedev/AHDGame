@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import { COUNTRY_CONFIGS, getCountryDisplayName, type CountryId } from "@/lib/constants/countries";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getCountryAccess } from "@/lib/countryAccess";
@@ -11,6 +12,11 @@ import { loadCountryWarNotice } from "@/lib/military/countryAtWar";
 import { WartimeBanner } from "./WartimeBanner";
 import { PeaceBanner } from "./PeaceBanner";
 import { loadCountryPeaceNotice } from "@/lib/military/countryPeaceNotice";
+import { getCountryTier } from "@/lib/country/countryTier";
+import { backgroundCountryRoute } from "@/lib/country/background/rules/backgroundCountryView";
+import { loadBackgroundCountryView } from "@/lib/country/background/loadBackgroundCountryView";
+import { STARTING_YEAR } from "@/lib/constants/calendar";
+import { BackgroundCountryOverview } from "./BackgroundCountryOverview";
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -34,7 +40,7 @@ export default async function CountryLayout({ params, children }: Props) {
   if (!config) notFound();
 
   // Parallelize independent DB lookups
-  const [access, user, gameState, war] = await Promise.all([
+  const [access, user, gameState, war, tier] = await Promise.all([
     getCountryAccess(countryId),
     getAuthUserWithCharacter(),
     getGameState(),
@@ -42,6 +48,8 @@ export default async function CountryLayout({ params, children }: Props) {
     // Joined to the batch above rather than awaited after it, so the banner costs
     // no extra round trip on any country page.
     getDb().then((db) => loadCountryWarNotice(db, countryId)),
+    // Same reasoning: one small read, joined to the batch.
+    getDb().then((db) => getCountryTier(db, countryId)),
   ]);
 
   // NOT in the batch above, because it needs the viewer resolved: the peace strip is
@@ -75,6 +83,41 @@ export default async function CountryLayout({ params, children }: Props) {
   // for the same reason: which branch a reader lands in must not change whether they
   // are told a decision is waiting on them.
   const peacetime = peace ? <PeaceBanner notice={peace} countryName={name} /> : null;
+
+  // A background country (#5702) has no regions, legislature, parties or
+  // politicians, so the full overview and its sub-pages have nothing to show.
+  // It gets one aggregate overview instead; every sub-page except the currency
+  // market redirects to it, so no link anywhere lands on an empty
+  // full-simulation page. Admins see the same page: there is nothing else.
+  if (tier === "background") {
+    const route = backgroundCountryRoute((await headers()).get("x-pathname"), countryId);
+    if (route.kind === "redirect") redirect(route.to);
+    if (route.kind === "subpage") {
+      return (
+        <>
+          {wartime}
+          {peacetime}
+          {children}
+        </>
+      );
+    }
+    const view = await getDb().then((db) => loadBackgroundCountryView(db, countryId));
+    return (
+      <>
+        {wartime}
+        {peacetime}
+        <BackgroundCountryOverview
+          view={view}
+          name={name}
+          startingYear={gameState?.startingYear ?? STARTING_YEAR}
+          clock={{
+            preIterationActive: gameState?.preIteration?.active,
+            preIterationTurns: gameState?.preIterationTurns,
+          }}
+        />
+      </>
+    );
+  }
 
   // Admins always see everything — just show a banner when the country is not
   // yet enabled for regular players.

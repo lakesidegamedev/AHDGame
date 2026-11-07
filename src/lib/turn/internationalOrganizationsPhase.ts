@@ -60,6 +60,12 @@ import {
 } from "@/lib/internationalOrganizations/joinApplication";
 import { nppGovernedMembers } from "@/lib/internationalOrganizations/ballotRoll";
 import { castAutonomousOrgVotes } from "@/lib/nppAutonomy/autonomousOrgVoting";
+import {
+  backgroundMembersOf,
+  castBackgroundOrgVotes,
+} from "@/lib/internationalOrganizations/backgroundOrgVoting";
+import { backgroundVotesOn } from "@/lib/internationalOrganizations/rules/backgroundOrgVote";
+import { loadCountryTiers, type CountryTierSnapshot } from "@/lib/country/countryTier";
 import { reconcileAutonomousWarEntryBills } from "@/lib/internationalOrganizations/reconcileAutonomousWarEntry";
 import {
   loadOrganizationWarPlanningContext,
@@ -92,15 +98,23 @@ import {
  * majority ballot a silence costs a yes and nothing worse; on an FTA the voters
  * ARE the parties, each deciding its own agreement, and narrowing that would
  * leave a deal between two modelled neighbours with no voters at all.
+ *
+ * Background members (#5702) sit on the same wider roll: they have no
+ * government, but `castBackgroundOrgVotes` scripts their vote on every ballot
+ * `backgroundVotesOn` names before the resolvers run.
  */
 async function ballotVotingMembers(
   db: Db,
   organizationId: string,
-  kind: OrgBallotKind
+  kind: OrgBallotKind,
+  tiers?: CountryTierSnapshot
 ): Promise<CountryId[]> {
   const players = await votingMembers(db, organizationId);
   if (ballotIsPlayerOnly(kind)) return players;
-  return legislatingMembers(db, organizationId, players);
+  const legislating = await legislatingMembers(db, organizationId, players);
+  if (!tiers || tiers.backgroundIds.length === 0 || !backgroundVotesOn(kind)) return legislating;
+  const background = backgroundMembersOf(await getMembers(db, organizationId), tiers);
+  return Array.from(new Set([...legislating, ...background]));
 }
 
 /**
@@ -157,6 +171,7 @@ export async function processInternationalOrganizationsTurn(
   duesCharged: number;
   tributeCharged: number;
   autonomousVotesCast: number;
+  backgroundVotesCast: number;
   closeTimeBallotsCast?: number;
 }> {
   await reconcileEuropeanTreatyLive(db, currentTurn);
@@ -169,14 +184,19 @@ export async function processInternationalOrganizationsTurn(
   // instead of silently vetoing every membership proposal and FTA. No-op when
   // the autonomy flag is off or no member is autonomy-active.
   const autonomousVotesCast = await castAutonomousOrgVotes(db, currentTurn);
+  // Background countries (#5702) vote by script, once per ballot, before any
+  // ballot is tallied. One tier read; nothing more in a world without them.
+  const tiers = await loadCountryTiers(db);
+  const backgroundVotesCast = await castBackgroundOrgVotes(db, currentTurn, tiers);
   const proposalsResolved = await resolveExpiredMembershipProposals(db, currentTurn);
   const legislationResolved = await resolveExpiredOrganizationLegislation(
     db,
     currentTurn,
-    cashContext
+    cashContext,
+    tiers
   );
   await reconcileAutonomousWarEntryBills(db);
-  const electionsResolved = await resolveExpiredLeadershipElections(db, currentTurn);
+  const electionsResolved = await resolveExpiredLeadershipElections(db, currentTurn, tiers);
   const sanctionsExpired = await expireActiveSanctions(db, currentTurn);
   const directivesExpired = await expireActiveDirectives(db, currentTurn);
   const jointStatementsExpired = await expireActiveJointStatements(db, currentTurn);
@@ -194,6 +214,7 @@ export async function processInternationalOrganizationsTurn(
     duesCharged,
     tributeCharged,
     autonomousVotesCast,
+    backgroundVotesCast,
   };
 }
 
@@ -558,7 +579,8 @@ async function resolveExpiredMembershipProposals(db: Db, currentTurn: number): P
 async function resolveExpiredOrganizationLegislation(
   db: Db,
   currentTurn: number,
-  cashContext: OrganizationCashContext | null
+  cashContext: OrganizationCashContext | null,
+  tiers?: CountryTierSnapshot
 ): Promise<number> {
   const col = await getOrganizationLegislationCollection(db);
   const expired = await col
@@ -583,7 +605,7 @@ async function resolveExpiredOrganizationLegislation(
     // own named parties, each ratifying an agreement it is itself signing.
     // Either way the agreement still *binds* every party once ratified, so only
     // the ballot is narrowed here, not the effect below.
-    const members = await ballotVotingMembers(db, item.organizationId, item.type);
+    const members = await ballotVotingMembers(db, item.organizationId, item.type, tiers);
     const voterSet = new Set<string>(members);
     const votingParties = parties.filter((p): p is CountryId => voterSet.has(p));
     // Close-time ballots (active mode): fill a silent autonomy-active voter
@@ -747,7 +769,11 @@ async function resolveExpiredOrganizationLegislation(
   return resolved;
 }
 
-async function resolveExpiredLeadershipElections(db: Db, currentTurn: number): Promise<number> {
+async function resolveExpiredLeadershipElections(
+  db: Db,
+  currentTurn: number,
+  tiers?: CountryTierSnapshot
+): Promise<number> {
   const electionsCol = await getOrganizationLeadershipElectionsCollection(db);
   const leadershipCol = await getOrganizationLeadershipCollection(db);
   const expired = await electionsCol
@@ -765,7 +791,12 @@ async function resolveExpiredLeadershipElections(db: Db, currentTurn: number): P
     // Electing a chair is a vote like any other, so the roll is the voting one.
     // This also keeps the quorum honest: a silent client state would otherwise
     // count toward turnout it can never supply.
-    const members = await ballotVotingMembers(db, election.organizationId, "leadership_election");
+    const members = await ballotVotingMembers(
+      db,
+      election.organizationId,
+      "leadership_election",
+      tiers
+    );
     // Close-time ballots (active mode): fill a silent autonomy-active voter
     // before the tally; a candidate does not vote on its own election.
     await fillSilentBallots(

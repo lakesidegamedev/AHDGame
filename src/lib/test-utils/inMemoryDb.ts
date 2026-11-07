@@ -344,6 +344,8 @@ function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
       return (args[0] as number) < (args[1] as number);
     case "$eq":
       return sameValue(args[0], args[1]);
+    case "$ne":
+      return !sameValue(args[0], args[1]);
     case "$in":
       return Array.isArray(args[1]) && args[1].some((value) => sameValue(value, args[0]));
     case "$add":
