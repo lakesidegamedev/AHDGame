@@ -2,27 +2,25 @@ import type { RosterMap } from "../historicalRosters";
 
 /**
  * January 2027 US executive. Only the president and vice president are
- * authored; every other 2027 seat keeps a generated identity until its own
- * roster is written.
+ * authored; every other 2027 seat keeps a generated identity.
+ *
+ * Both identities are fictional. The ticket is Republican and two years into
+ * the term that began in January 2025, which is the only thing it carries over
+ * from the real world: party, office and timing, never a real person.
  */
 export const ROSTER_2027_US: RosterMap = {
-  // 47th president, second term began 20 Jan 2025 after the November 2024
-  // election. https://www.whitehouse.gov/administration/donald-j-trump/
   "US|president|US|republican|0": {
-    name: "Donald Trump",
-    birthYear: 1946,
+    name: "Warren Hollister",
+    birthYear: 1951,
     gender: "male",
     ethnicity: "white",
-    portraitId: "donald-trump",
-    // First term 2017 to 2021, second from 2025: the 22nd Amendment bars a
-    // third election, so he cannot run in 2028.
+    // Two years into a second term, so the term limit bars a third election
+    // and he cannot run in 2028.
     priorExecutiveTerms: 2,
   },
-  // 50th vice president, sworn in 20 Jan 2025 on the same ticket.
-  // https://www.whitehouse.gov/administration/jd-vance/
   "US|vicePresident|US|republican|0": {
-    name: "JD Vance",
-    birthYear: 1984,
+    name: "Colin Ashby",
+    birthYear: 1982,
     gender: "male",
     ethnicity: "white",
   },

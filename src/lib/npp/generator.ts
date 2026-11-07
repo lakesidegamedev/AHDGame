@@ -16,6 +16,7 @@ import type {
   LegislationType,
 } from "@/lib/db/types";
 import { generateUniqueNPPNameAndGender } from "./nameGenerator";
+import { portraitAvatarPath } from "./portraitTokens";
 import type { NPPGender, NPPEthnicity } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -125,7 +126,8 @@ export function portraitsForYear<T extends { photoYear?: number | null }>(
  * Falls back progressively: exact match → country+gender → country only.
  * Excludes any portrait whose real-world name matches the NPP's generated name to avoid
  * accidentally assigning e.g. Hillary Clinton's photo to an NPP also named Hillary Clinton.
- * Returns an internal route path so the image URL can be updated without DB migrations.
+ * Returns an internal route path with an opaque token, so neither the URL nor the
+ * response names the person in the photograph.
  */
 export function selectPoliticianImage(
   countryId: CountryId,
@@ -155,7 +157,7 @@ export function selectPoliticianImage(
   const pool = byGender.length > 0 ? byGender : all;
 
   const chosen = pool[Math.floor(Math.random() * pool.length)];
-  return `/api/images/npp-politicians/${chosen.id}`;
+  return portraitAvatarPath(chosen.id);
 }
 
 // ── Ethnicity weighted random ─────────────────────────────────────────────────

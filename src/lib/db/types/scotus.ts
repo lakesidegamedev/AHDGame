@@ -14,9 +14,9 @@ import type { IterationStampFields } from "./gameState";
  * `character.currentOffice` on confirmation/vacancy.
  */
 
-/** One real historical justice's tenure on a given seat, authored by the per-preset content tickets (#3599-#3602). */
+/** One scripted (fictional) justice's tenure on a given seat, authored by the per-preset content tickets (#3599-#3602). */
 export interface HistoricalJusticeOccupant {
-  /** Stable key for this historical figure within the preset's roster data (e.g. "warren-1953"). */
+  /** Stable key for this historical figure within the preset's roster data (e.g. "halloran-1953"). */
   key: string;
   name: string;
   /** Opaque party identifier, same convention as `Character.party` / `NPP.party`. */

@@ -3476,9 +3476,9 @@ export const US_EXECUTIVE_2020: HistoricalSeat[] = [
 
 // Republican ticket, from the 2024 election, sitting in January 2027 two years
 // into the term that began 20 Jan 2025. Unlike the 1992 and 2020 pairs these
-// rows are named: the 2027 roster (`src/lib/npp/rosters/p2027-us.ts`) seats the
-// actual president and vice president, the same overlay the 1991 and 2019
-// presets use for their named officeholders.
+// rows carry fixed identities: the 2027 roster
+// (`src/lib/npp/rosters/p2027-us.ts`) seats a fictional president and vice
+// president. No preset seats a real politician.
 export const US_EXECUTIVE_2027: HistoricalSeat[] = [
   { state: "US", officeType: "president", party: "republican" },
   { state: "US", officeType: "vicePresident", party: "republican" },
@@ -4054,7 +4054,7 @@ export const RESET_PRESETS: ResetPreset[] = [
     id: "2023-default",
     name: "2023 Start Date - Default Parties",
     description:
-      "US 118th Congress (Jan 2023, post-2022 midterms) — Biden presidency, divided government (Republican House / Democratic Senate). Real 2023 Census/BEA/BLS state data + FY2023 budget. Non-US countries fall back to their 2019 bundles.",
+      "US 118th Congress (Jan 2023, post-2022 midterms) — Democratic presidency, divided government (Republican House / Democratic Senate). Real 2023 Census/BEA/BLS state data + FY2023 budget. Non-US countries fall back to their 2019 bundles.",
     countries: presetCountries("2023-default"),
   },
   {
@@ -4187,8 +4187,8 @@ const SEAT_GROUPS_2019: SeatGroups = mergeGroups(SEAT_GROUPS_2020, {
  * only the explicitly modeled aggregate regional offices; their wider 2027
  * legislative rosters remain separate historical-authoring work.
  *
- * The US executive is the January 2027 ticket (`US_EXECUTIVE_2027`), named
- * through the 2027 roster overlay. A presidential player country with no
+ * The US executive is the January 2027 ticket (`US_EXECUTIVE_2027`), given
+ * fixed fictional identities through the 2027 roster overlay. A presidential player country with no
  * president is a broken world, and `eraContract.test.ts` S5 fails on exactly
  * that; a generic 2020 holder was the earlier stopgap.
  */

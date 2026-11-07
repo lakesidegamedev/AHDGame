@@ -90,8 +90,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 1,
     historicalOccupants: [
       {
-        key: "burger-1979",
-        name: "Warren E. Burger",
+        key: "bergman-1979",
+        name: "Walter E. Bergman",
         party: US_REP,
         economicLean: 2,
         socialLean: 3,
@@ -100,8 +100,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "rehnquist-cj-1986",
-        name: "William H. Rehnquist",
+        key: "renwick-cj-1986",
+        name: "William H. Renwick",
         party: US_REP,
         economicLean: 4,
         socialLean: 4,
@@ -110,8 +110,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "roberts-2005",
-        name: "John G. Roberts Jr.",
+        key: "rowe-2005",
+        name: "Jonathan Rowe",
         party: US_REP,
         economicLean: 3,
         socialLean: 3,
@@ -126,8 +126,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 2,
     historicalOccupants: [
       {
-        key: "brennan-1979",
-        name: "William J. Brennan Jr.",
+        key: "brannigan-1979",
+        name: "Walter J. Brannigan",
         party: US_REP,
         economicLean: -4,
         socialLean: -5,
@@ -136,8 +136,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "souter-1990",
-        name: "David H. Souter",
+        key: "seaver-1990",
+        name: "Douglas H. Seaver",
         party: US_REP,
         economicLean: -2,
         socialLean: -3,
@@ -146,8 +146,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "sotomayor-2009",
-        name: "Sonia Sotomayor",
+        key: "valdemoro-2009",
+        name: "Sofia Valdemoro",
         party: US_DEM,
         economicLean: -3,
         socialLean: -4,
@@ -162,8 +162,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 3,
     historicalOccupants: [
       {
-        key: "stewart-1979",
-        name: "Potter Stewart",
+        key: "stanwick-1979",
+        name: "Porter Stanwick",
         party: US_REP,
         economicLean: 1,
         socialLean: 0,
@@ -172,8 +172,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "oconnor-1981",
-        name: "Sandra Day O'Connor",
+        key: "ostrander-1981",
+        name: "Susan Ostrander",
         party: US_REP,
         economicLean: 1,
         socialLean: 1,
@@ -182,8 +182,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "alito-2006",
-        name: "Samuel A. Alito Jr.",
+        key: "amato-2006",
+        name: "Salvatore Amato",
         party: US_REP,
         economicLean: 4,
         socialLean: 4,
@@ -198,8 +198,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 4,
     historicalOccupants: [
       {
-        key: "white-1979",
-        name: "Byron R. White",
+        key: "whitcomb-1979",
+        name: "Raymond T. Whitcomb",
         party: US_DEM,
         economicLean: 0,
         socialLean: 1,
@@ -208,8 +208,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "ginsburg-1993",
-        name: "Ruth Bader Ginsburg",
+        key: "sterling-1993",
+        name: "Miriam Gold Sterling",
         party: US_DEM,
         economicLean: -3,
         socialLean: -5,
@@ -218,8 +218,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "barrett-2020",
-        name: "Amy Coney Barrett",
+        key: "cole-2020",
+        name: "Margaret Ellison Cole",
         party: US_REP,
         economicLean: 4,
         socialLean: 5,
@@ -234,8 +234,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 5,
     historicalOccupants: [
       {
-        key: "marshall-1979",
-        name: "Thurgood Marshall",
+        key: "marlow-1979",
+        name: "Thaddeus Marlow",
         party: US_DEM,
         economicLean: -5,
         socialLean: -5,
@@ -244,8 +244,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "thomas-1991",
-        name: "Clarence Thomas",
+        key: "thornton-1991",
+        name: "Calvin Thornton",
         party: US_REP,
         economicLean: 5,
         socialLean: 5,
@@ -260,8 +260,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 6,
     historicalOccupants: [
       {
-        key: "blackmun-1979",
-        name: "Harry A. Blackmun",
+        key: "blaylock-1979",
+        name: "Henry A. Blaylock",
         party: US_REP,
         economicLean: -1,
         socialLean: -3,
@@ -270,8 +270,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "breyer-1994",
-        name: "Stephen G. Breyer",
+        key: "brewster-1994",
+        name: "Simon Brewster",
         party: US_DEM,
         economicLean: -2,
         socialLean: -3,
@@ -280,8 +280,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "jackson-2022",
-        name: "Ketanji Brown Jackson",
+        key: "jamison-2022",
+        name: "Kendra Brooks Jamison",
         party: US_DEM,
         economicLean: -3,
         socialLean: -4,
@@ -296,8 +296,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 7,
     historicalOccupants: [
       {
-        key: "powell-1979",
-        name: "Lewis F. Powell Jr.",
+        key: "prewitt-1979",
+        name: "Leland F. Prewitt Jr.",
         party: US_REP,
         economicLean: 1,
         socialLean: 1,
@@ -306,8 +306,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kennedy-1988",
-        name: "Anthony M. Kennedy",
+        key: "kessler-1988",
+        name: "Arthur M. Kessler",
         party: US_REP,
         economicLean: 2,
         socialLean: -1,
@@ -316,8 +316,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kavanaugh-2018",
-        name: "Brett M. Kavanaugh",
+        key: "keegan-2018",
+        name: "Bradley Keegan",
         party: US_REP,
         economicLean: 3,
         socialLean: 3,
@@ -334,8 +334,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 8,
     historicalOccupants: [
       {
-        key: "rehnquist-assoc-1979",
-        name: "William H. Rehnquist",
+        key: "renwick-assoc-1979",
+        name: "William H. Renwick",
         party: US_REP,
         economicLean: 4,
         socialLean: 4,
@@ -344,8 +344,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "scalia-1986",
-        name: "Antonin Scalia",
+        key: "varela-1986",
+        name: "Anthony Varela",
         party: US_REP,
         economicLean: 4,
         socialLean: 5,
@@ -354,8 +354,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "gorsuch-2017",
-        name: "Neil M. Gorsuch",
+        key: "gorham-2017",
+        name: "Nathan Gorham",
         party: US_REP,
         economicLean: 3,
         socialLean: 2,
@@ -370,8 +370,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 9,
     historicalOccupants: [
       {
-        key: "stevens-1979",
-        name: "John Paul Stevens",
+        key: "stetson-1979",
+        name: "Paul Stetson",
         party: US_REP,
         economicLean: -3,
         socialLean: -4,
@@ -380,8 +380,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kagan-2010",
-        name: "Elena Kagan",
+        key: "kaminski-2010",
+        name: "Elise Kaminski",
         party: US_DEM,
         economicLean: -3,
         socialLean: -3,

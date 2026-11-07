@@ -89,8 +89,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 1,
       historicalOccupants: [
         {
-          key: "roberts-2019",
-          name: "John Roberts",
+          key: "rowe-2019",
+          name: "Jonathan Rowe",
           party: REPUBLICAN_SEQ_ID,
           // Mildly negative on both axes: the Court's institutionalist swing
           // vote in 2020 (DACA, Bostock, June Medical) — see file header.
@@ -107,8 +107,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 2,
       historicalOccupants: [
         {
-          key: "thomas-2019",
-          name: "Clarence Thomas",
+          key: "thornton-2019",
+          name: "Calvin Thornton",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 4,
           socialLean: 5,
@@ -124,8 +124,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 3,
       historicalOccupants: [
         {
-          key: "ginsburg-2019",
-          name: "Ruth Bader Ginsburg",
+          key: "sterling-2019",
+          name: "Miriam Gold Sterling",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -4,
           socialLean: -5,
@@ -136,8 +136,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
           departureReason: "death",
         },
         {
-          key: "barrett-2021",
-          name: "Amy Coney Barrett",
+          key: "cole-2021",
+          name: "Margaret Ellison Cole",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 3,
           socialLean: 4,
@@ -154,8 +154,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 4,
       historicalOccupants: [
         {
-          key: "breyer-2019",
-          name: "Stephen Breyer",
+          key: "brewster-2019",
+          name: "Simon Brewster",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -3,
@@ -164,8 +164,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
           departureReason: "retirement",
         },
         {
-          key: "jackson-2022",
-          name: "Ketanji Brown Jackson",
+          key: "jamison-2022",
+          name: "Kendra Brooks Jamison",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -4,
@@ -180,8 +180,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 5,
       historicalOccupants: [
         {
-          key: "alito-2019",
-          name: "Samuel Alito",
+          key: "amato-2019",
+          name: "Salvatore Amato",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 4,
           socialLean: 5,
@@ -196,8 +196,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 6,
       historicalOccupants: [
         {
-          key: "sotomayor-2019",
-          name: "Sonia Sotomayor",
+          key: "valdemoro-2019",
+          name: "Sofia Valdemoro",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -5,
@@ -212,8 +212,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 7,
       historicalOccupants: [
         {
-          key: "kagan-2019",
-          name: "Elena Kagan",
+          key: "kaminski-2019",
+          name: "Elise Kaminski",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -4,
@@ -228,8 +228,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 8,
       historicalOccupants: [
         {
-          key: "gorsuch-2019",
-          name: "Neil Gorsuch",
+          key: "gorham-2019",
+          name: "Nathan Gorham",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 3,
           // Lower than the other conservative appointees: textualist/
@@ -247,8 +247,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 9,
       historicalOccupants: [
         {
-          key: "kavanaugh-2019",
-          name: "Brett Kavanaugh",
+          key: "keegan-2019",
+          name: "Bradley Keegan",
           party: REPUBLICAN_SEQ_ID,
           // Mildly negative on economic only: the second GOP-appointee
           // crossover (with Roberts) in Moore v. Harper — see file header.
