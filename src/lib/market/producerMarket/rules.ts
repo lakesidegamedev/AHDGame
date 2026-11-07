@@ -138,6 +138,23 @@ export interface ProducerTradeReceipt {
   tradeCount: number;
 }
 
+/**
+ * One lookup set per eligibility list. Route lists are shared by every order of
+ * a (commodity, buyer country), so building a set per order and per clearing
+ * repeated the same work millions of times on an embargo turn.
+ */
+const eligibleSets = new WeakMap<readonly string[], ReadonlySet<string>>();
+function eligibleSetOf(order: Pick<PurchaseOrder, "eligibleOfferIds">): ReadonlySet<string> | null {
+  const list = order.eligibleOfferIds;
+  if (!list) return null;
+  let set = eligibleSets.get(list);
+  if (!set) {
+    set = new Set(list);
+    eligibleSets.set(list, set);
+  }
+  return set;
+}
+
 /** Own-sites-first distance tier of a seller for a buyer: state, country, anywhere else. */
 export function ownTierOf(
   order: Pick<PurchaseOrder, "stateId" | "countryId">,
@@ -190,7 +207,7 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
   for (const fill of receipt.fills) {
     const order = orders.get(fill.orderId);
     if (!order) throw new Error("Missing producer trade order");
-    const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
+    const eligible = eligibleSetOf(order);
     const suppliers = fill.supplierOfferIds && new Set(fill.supplierOfferIds);
     const internal = fill.kind === "internalTransfer";
     const book = bookKey(order.commodity, order.book);
@@ -768,7 +785,7 @@ export function settleProducerMarket(input: {
     for (const order of orders) {
       if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
       if (marketFirst.has(order.accountId)) continue;
-      const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
+      const eligible = eligibleSetOf(order);
       const ownAll = (
         ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
       ).filter((offer) => !eligible || eligible.has(offer.id));
@@ -851,14 +868,14 @@ export function settleProducerMarket(input: {
           prior?.orderBudget ?? order.maximumSpend ?? Number.MAX_VALUE,
           byPrice,
           { homeCountry: true },
-          order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null
+          eligibleSetOf(order)
         )
       );
     }
   }
   /** The ordinary pass's own-stock fill: the buyer's own offers at no price, pro rata. */
   const fillOwnStock = (order: PurchaseOrder, wanted: number): number => {
-    const eligible = order.eligibleOfferIds && new Set(order.eligibleOfferIds);
+    const eligible = eligibleSetOf(order);
     const own = (
       ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
     ).filter((offer) => !eligible || eligible.has(offer.id));
@@ -1002,7 +1019,7 @@ export function settleProducerMarket(input: {
         quantityGroup.remaining = Math.max(0, quantityGroup.remaining - ownTake);
       return {
         order,
-        eligible: order.eligibleOfferIds && new Set(order.eligibleOfferIds),
+        eligible: eligibleSetOf(order),
         quantityGroup,
         wanted,
         accountLimitId: JSON.stringify(["account", order.accountId]),
@@ -1150,7 +1167,7 @@ export function settleProducerMarket(input: {
     let orderBudget = carriedOrder
       ? carriedOrder.orderBudget
       : (order.maximumSpend ?? Number.MAX_VALUE);
-    const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
+    const eligible = eligibleSetOf(order);
     const key = bookKey(order.commodity, order.book);
     if (!eligible && !order.supplierOfferId && order.contractUnitPrice == null) {
       const ownTake = fillOwnStock(order, wanted);

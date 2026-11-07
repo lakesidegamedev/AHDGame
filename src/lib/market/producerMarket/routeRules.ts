@@ -31,8 +31,9 @@ export interface RouteOffer {
 export type RouteOpen = (commodity: string, exporter: string, importer: string) => boolean;
 
 /**
- * Eligible offer ids per order. Orders that share a commodity and buyer country
- * share one list, so the cost is per (commodity, country), not per order.
+ * Eligible offer ids per order whose route set is restricted. Orders that share
+ * a commodity and buyer country share one list, so the cost is per (commodity,
+ * country), not per order. An order every seller can reach is omitted.
  */
 export function routeEligibility(
   orders: readonly RouteOrder[],
@@ -47,24 +48,29 @@ export function routeEligibility(
     byCountry.set(o.sellerCountry, ids);
     byCommodityCountry.set(o.commodity, byCountry);
   }
-  const cache = new Map<string, readonly string[]>();
+  // null: every seller is reachable, so the order carries no list and clears
+  // like an unrestricted order. One embargo must not hand every buyer in the
+  // world a full list (millions of ids rebuilt into sets on each clearing).
+  const cache = new Map<string, readonly string[] | null>();
   const out: Record<string, readonly string[]> = {};
   for (const order of orders) {
     const key = `${order.commodity}|${order.buyerCountry}`;
     let list = cache.get(key);
     if (!list) {
       const ids: string[] = [];
+      let closed = false;
       const byCountry = byCommodityCountry.get(order.commodity);
       for (const [seller, offerIds] of [...(byCountry ?? new Map<string, string[]>())].sort(
         ([a], [b]) => (a < b ? -1 : 1)
       )) {
         if (seller === order.buyerCountry || open(order.commodity, seller, order.buyerCountry))
           ids.push(...offerIds);
+        else closed = true;
       }
-      list = ids;
+      list = closed ? ids : null;
       cache.set(key, list);
     }
-    out[order.id] = list;
+    if (list) out[order.id] = list;
   }
   return out;
 }
