@@ -119,6 +119,8 @@ import {
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
 
 export interface FundedProducerTurnResult {
+  /** Frozen market-planning and ownership warnings for the turn log. */
+  turnWarnings?: string[];
   receiptsBySectorId: Map<string, FundedReceipt>;
   deferredDistributions?: Map<
     string,
@@ -1329,7 +1331,13 @@ export async function runFundedProducerTurn(
       },
     ]);
   }
-  return { receiptsBySectorId, settledProfitByCorp, headcountBySectorId, deferredDistributions };
+  return {
+    receiptsBySectorId,
+    settledProfitByCorp,
+    headcountBySectorId,
+    deferredDistributions,
+    turnWarnings: settled.result.turnWarnings ?? [],
+  };
 }
 
 /**

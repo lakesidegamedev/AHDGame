@@ -1992,8 +1992,7 @@ export async function processCorporationTurn(
     totalIncomeGenerated: Math.round(totalIncomeGenerated),
     currencyIncomeInternalByCharacterId,
     currencyIncomeFaceByCharacterId,
-    // Clearing book invariant breaches (issue #2054) for the turn warning
-    // channel. Empty unless market clearing ran and a book breached.
-    turnWarnings: clearingInvariantBreaches,
+    // Market planning/ownership diagnostics join clearing invariant warnings.
+    turnWarnings: [...clearingInvariantBreaches, ...(funded?.turnWarnings ?? [])],
   };
 }

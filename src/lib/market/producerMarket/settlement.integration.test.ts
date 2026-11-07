@@ -10,6 +10,7 @@ import { reconcileLedger } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
 import { settleProducerTurn } from "./settlement";
+import { decodeReceipt } from "./receiptStorage";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { prepareProducerSector } from "@/lib/turn/corporation/producerSectorPlan";
@@ -200,6 +201,38 @@ function corporationById(memory: ReturnType<typeof createInMemoryDb>, id: string
 }
 
 describe("frozen producer turn settlement", () => {
+  it("freezes a runtime cutoff's actual pass count and retains diagnostics and warnings on retry", async () => {
+    const { db, input, memory } = fixture();
+    input.production.maximumPlanningPasses = 64;
+    input.planningBudgetMs = 0;
+    input.production.producers = [
+      {
+        ...input.production.producers[0],
+        inputs: [{ commodity: "energy", book: "world", unitsPerOutput: 1, maximumUnitPrice: 1 }],
+      },
+    ];
+    const first = await settleProducerTurn(db, input);
+    expect(first.planning).toMatchObject({
+      passes: 1,
+      maximumPasses: 64,
+      stopReason: "runtime_limit",
+      converged: false,
+    });
+    expect(first.turnWarnings?.[0]).toContain("plant");
+    const record = await db
+      .collection<{ payload: string; digest: string }>("producerEconomyTurns")
+      .findOne({});
+    if (!record) throw new Error("Missing frozen receipt");
+    const frozen = (await decodeReceipt(db, record)) as {
+      request: { maximumPlanningPasses: number };
+    };
+    expect(frozen.request.maximumPlanningPasses).toBe(1);
+    const settled = JSON.stringify(memory.collection("corporateSectors").docs);
+    const repeated = await settleProducerTurn(db, { ...input, planningBudgetMs: 30_000 });
+    expect(repeated).toEqual(first);
+    expect(JSON.stringify(memory.collection("corporateSectors").docs)).toEqual(settled);
+  });
+
   it("settles a real finance-sector plan with the common quote and a physical branch allocation", async () => {
     const { memory, input, db } = fixture();
     await db.collection<CorporateSector>("corporateSectors").updateOne(

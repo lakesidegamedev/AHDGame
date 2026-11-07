@@ -162,6 +162,11 @@ describe("corporation producer market phase", () => {
   it("funds purchases with paid wages and refreshes actual native cash without creating buyer money", async () => {
     const { memory, corp, input, db } = fixture();
     const settled = await runCorporationProducerMarket(db, input);
+    expect(settled.result.planning).toMatchObject({
+      maximumPasses: 64,
+      converged: true,
+      stopReason: "converged",
+    });
     expect(settled.operatingByCorporation.get(corp._id.toHexString())).toMatchObject({
       revenue: expect.closeTo(10, 10),
       expenses: 15,
