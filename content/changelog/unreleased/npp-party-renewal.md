@@ -6,9 +6,9 @@ summary: >-
   politicians, a party that dominates or governs badly for two terms can lose a
   faction, empty political ground can produce a new party, and parties that
   fall under 2% for two elections fold into their nearest neighbour.
-tags: [politics, npp, parties]
+tags: [politics, npp, parties, elections]
 badges: [patch]
-areas: [engine, elections]
+areas: [engine]
 ---
 
 ## What changed
