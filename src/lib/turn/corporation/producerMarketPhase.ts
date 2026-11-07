@@ -11,6 +11,11 @@ import {
 } from "@/lib/market/producerMarket/settlement";
 import type { prepareProducerSector } from "./producerSectorPlan";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
+import {
+  roundStageTimings,
+  stageClock,
+  type StageTimings,
+} from "@/lib/market/producerMarket/stageTimings";
 
 /** Stop on convergence, with a bounded fallback for difficult live markets. */
 export const LIVE_PLANNING_PASSES = 64;
@@ -102,6 +107,8 @@ export async function runCorporationProducerMarket(
 ) {
   const resumed = await resumeProducerTurn(db, input);
   if (resumed) return publishHostState(db, input.corporations, resumed);
+  const timings: StageTimings = {};
+  const clock = stageClock(timings);
   await assertProducerTurnFence(db, input.worldEpoch, input.turn);
   const prepared = input.prepare();
   const corporationIds = new Set(input.corporations.map((corp) => corp._id.toHexString()));
@@ -166,7 +173,9 @@ export async function runCorporationProducerMarket(
     cash: Math.max(0, binding.openingCashLocal / binding.localPerAnchor),
   }));
   const targets = prepared.map((row) => row.target);
+  clock.lap("prepMs");
   const result = await settleProducerTurn(db, {
+    stageTimingsMs: timings,
     worldEpoch: input.worldEpoch,
     planningBudgetMs: LIVE_PLANNING_BUDGET_MS,
     production: {
@@ -183,7 +192,19 @@ export async function runCorporationProducerMarket(
     targets,
     close: input.close,
   });
-  return publishHostState(db, input.corporations, { result, bindings, targets, openingAccounts });
+  const publishStarted = performance.now();
+  const published = await publishHostState(db, input.corporations, {
+    result,
+    bindings,
+    targets,
+    openingAccounts,
+  });
+  timings.publishHostStateMs = performance.now() - publishStarted;
+  // Timing only: one line per turn so the next slow turn names the stage that grew.
+  console.info(
+    `[producer-timing] turn=${input.turn} ${JSON.stringify(roundStageTimings(timings))}`
+  );
+  return published;
 }
 
 type SettledContext = NonNullable<Awaited<ReturnType<typeof resumeProducerTurn>>>;

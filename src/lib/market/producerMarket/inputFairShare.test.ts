@@ -110,6 +110,37 @@ describe("scarce producer inputs", () => {
     }
   );
 
+  it("mixes unrestricted and route-limited buyers across suppliers", () => {
+    const offers = ["one", "two"].map((id) => ({
+      id,
+      accountId: "seller",
+      commodity: "steel",
+      book: "world",
+      units: 30,
+      unitPrice: 1,
+    }));
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "a", cash: 1000 },
+        { id: "b", cash: 1000 },
+        { id: "c", cash: 1000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers,
+      orders: [
+        order("only-one", "a", 100, { eligibleOfferIds: ["one"] }),
+        order("only-two", "b", 100, { eligibleOfferIds: ["two"] }),
+        order("anywhere", "c", 100),
+      ],
+    });
+    expect(Object.fromEntries(result.orders.map((o) => [o.id, o.deliveredUnits]))).toEqual({
+      "only-one": 15,
+      "only-two": 15,
+      anywhere: 30,
+    });
+  });
+
   it("shares a common eligible supplier set proportionally without expanding every supplier fill", () => {
     const offers = ["one", "two"].map((id) => ({
       id,

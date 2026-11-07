@@ -63,6 +63,7 @@ import {
   restartProbe,
   RESTART_PROBE_RUN_SHARE,
 } from "./restartProbeRules";
+import { addStageTiming, listStageTiming, stageClock, type StageTimings } from "./stageTimings";
 
 export interface PurchasedStock {
   commodity: string;
@@ -372,8 +373,10 @@ function recentSoldOf(p: ProductionPlan, commodity: string, book: string): numbe
 
 export function advanceProducerEconomy(
   input: ProducerEconomyInput,
-  execution?: ProducerPlanningExecution
+  execution?: ProducerPlanningExecution,
+  timings?: StageTimings
 ): ProducerEconomyResult {
+  const clock = stageClock(timings);
   const carryRates: Readonly<Record<string, number>> =
     input.carryLossByCommodity ?? COMMODITY_SPOILAGE_PER_TURN;
   const countryOfProducer = input.countryOfProducer;
@@ -1119,7 +1122,9 @@ export function advanceProducerEconomy(
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
   // Units each household order gained from spillover; measurement only.
   let spilloverUnits = new Map<string, number>();
+  let trialRuns = 0; // timing only
   const trial = (track = false) => {
+    trialRuns++;
     const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? [])];
     for (const p of plans)
       for (const output of p.outputs) {
@@ -1210,8 +1215,11 @@ export function advanceProducerEconomy(
   // and settles by fill rate like everyone else.
   for (const p of plans)
     if (!(plannedById.get(p.id)! > 0)) plannedById.set(p.id, physicalMaximum.get(p.id)!);
+  clock.lap("economySetupMs");
   for (let pass = 0; pass < passes; pass++) {
+    const passStarted = performance.now();
     market = trial();
+    clock.lap("planningTrialMs");
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
     let changed = cutShortCredit(market);
     planning.siteChanges = [];
@@ -1253,6 +1261,8 @@ export function advanceProducerEconomy(
       plannedById.set(p.id, Math.max(0, Math.min(originalPlan.get(p.id)!, next)));
     }
     planning.passes = pass + 1;
+    clock.lap("planningOtherMs");
+    listStageTiming(timings, "planningPassMs", performance.now() - passStarted);
     const elapsedMs = execution?.elapsedMs() ?? 0;
     if (!Number.isFinite(elapsedMs) || elapsedMs < 0)
       throw new Error("Invalid planning elapsed time");
@@ -1325,7 +1335,12 @@ export function advanceProducerEconomy(
     ];
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
+  clock.lap("billingMs");
+  addStageTiming(timings, "planningTrialRuns", trialRuns);
+  const trialsBeforeFinal = trialRuns;
   market = settleWithinCredit(input.trackCountryBooks === true);
+  clock.lap("finalClearingMs");
+  addStageTiming(timings, "finalClearingTrialRuns", trialRuns - trialsBeforeFinal);
   if (!market) throw new Error("Missing producer market settlement");
   let spillover: { strandedSpend: number; extraRequested: number; recovered: number } | undefined;
   if ((input.spilloverShare ?? 0) > 0 && householdIds.size > 0) {
@@ -1362,7 +1377,11 @@ export function advanceProducerEconomy(
       const before = spend(market.orders);
       consumerOrders = next.orders;
       spilloverUnits = next.extraUnits;
+      const trialsBeforeSpillover = trialRuns;
+      clock.lap("spilloverPrepMs");
       market = settleWithinCredit(input.trackCountryBooks === true);
+      clock.lap("spilloverClearingMs");
+      addStageTiming(timings, "spilloverTrialRuns", trialRuns - trialsBeforeSpillover);
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
   }
