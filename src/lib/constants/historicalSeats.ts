@@ -16,8 +16,14 @@ import type { CountryId } from "./countries";
 import { recordPresetFallback } from "@/lib/seeds/presetSelector";
 import { isBackgroundInPreset, tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import { COUNTRY_ORDER } from "./countries";
-import { US_HOUSE_2027 } from "@/lib/seeds/reference/usHouse2027";
-import { US_SENATE_2027 } from "@/lib/seeds/reference/usSenate2027";
+import {
+  US_HOUSE_2027_RESULT,
+  US_SENATE_2027_RESULT,
+} from "@/lib/countries/us/data/usCongressResult2027";
+import {
+  US_GOVERNORS_2027,
+  US_STATE_SENATE_2027,
+} from "@/lib/countries/us/data/usStateOffices2027";
 import {
   DE_BUNDESTAG_2027,
   JP_SANGIIN_2027,
@@ -4042,7 +4048,7 @@ export const RESET_PRESETS: ResetPreset[] = [
     id: "2027-default",
     name: "2027 Start Date - Five-Country Modern World",
     description:
-      "January 2027 projection with playable United States, United Kingdom, Japan, Germany, and China. Uses projected US congressional control and the latest completed national elections elsewhere.",
+      "January 2027 with playable United States, United Kingdom, Japan, Germany, and China. Seats the US Congress, governors and state senates from the November 2026 election results and uses the latest completed national elections elsewhere.",
     // Derived like every other preset. Upstream hard-coded the five PLAYER
     // countries here, but this list is what the admin reset picker offers and
     // what /api/admin/reset/presets returns, so it has to name every country the
@@ -4191,14 +4197,19 @@ const SEAT_GROUPS_2019: SeatGroups = mergeGroups(SEAT_GROUPS_2020, {
  * fixed fictional identities through the 2027 roster overlay. A presidential player country with no
  * president is a broken world, and `eraContract.test.ts` S5 fails on exactly
  * that; a generic 2020 holder was the earlier stopgap.
+ *
+ * The US Congress, governors and state senates come from the November 2026
+ * election results (`usCongressResult2027.ts`, `usStateOffices2027.ts`),
+ * replacing the frozen pre-election projection and the 2020 sub-national
+ * rosters.
  */
 const SEAT_GROUPS_2027: SeatGroups = {
   US: [
     ...US_EXECUTIVE_2027,
-    ...US_HOUSE_2027,
-    ...US_SENATE_2027,
-    ...US_STATE_SENATE_2020,
-    ...US_GOVERNORS_2020,
+    ...US_HOUSE_2027_RESULT,
+    ...US_SENATE_2027_RESULT,
+    ...US_STATE_SENATE_2027,
+    ...US_GOVERNORS_2027,
   ],
   UK: [...UK_COMMONS_2027, ...UK_REGIONAL_COUNCIL_2020, ...UK_FIRST_MINISTERS_2020],
   JP: [...JP_SHUGIIN_2027, ...JP_SANGIIN_2027, ...JP_GOVERNORS_2020, ...JP_REGIONAL_COUNCIL_2020],

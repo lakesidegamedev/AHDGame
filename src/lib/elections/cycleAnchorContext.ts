@@ -502,8 +502,8 @@ export const CANONICAL_REAL_ELECTION_YEARS_BY_PRESET: Record<string, PresetElect
     ruRepublicSoviet: null,
     ddVolkskammer: null, // GDR reunified into DE in 1990 — no elections
   },
-  // Draft 2027-default starts in January 2027 after the projected 2026 US
-  // midterms captured by US_CONGRESS_PROJECTION_2027. Fixed-cycle elections
+  // Draft 2027-default starts in January 2027 after the 2026 US midterms
+  // captured by US_CONGRESS_RESULT_2027. Fixed-cycle elections
   // use their next reachable cycle. Dissolution-capable chambers use the legal
   // maximum implied by the last known election, not a claimed scheduled date.
   // Start-year elections are skipped consistently with the 2023 preset's
