@@ -321,11 +321,14 @@ export async function getEnabledCountryIds(): Promise<CountryId[]> {
 export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
   const docs = await db
     .collection<CountryGameState>("countryGameStates")
-    .find({}, { projection: { _id: 1, status: 1, enabledForPlayers: 1 } })
+    .find({}, { projection: { _id: 1, status: 1, enabledForPlayers: 1, backgroundCountry: 1 } })
     .toArray();
   const byId = new Map(docs.map((d) => [String(d._id), d]));
   return registeredBase(docs).filter((countryId) => {
     const doc = byId.get(countryId);
+    // A background country (#5702) is registered but outside the full
+    // simulation: no crises, disasters or health rows for it.
+    if (doc?.backgroundCountry === true) return false;
     const resolved = doc?.status ?? COUNTRY_CONFIGS[countryId].status;
     // `enabledForPlayers: true` is how live worlds opened countries before the
     // status field was consistently set (config may still say "coming-soon").

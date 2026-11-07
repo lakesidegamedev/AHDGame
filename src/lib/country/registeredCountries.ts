@@ -45,6 +45,15 @@ export async function getRegisteredCountryIds(db: Db): Promise<CountryId[]> {
       $or: [{ status: "active" }, { dissolvedTurn: { $ne: null } }, { absentInEra: true }],
     })
     .toArray();
+  return registeredIdsFrom(docs);
+}
+
+/**
+ * The registry answer for a batch of `countryGameStates` rows. Rows that are
+ * neither active, dissolved nor era-absent are ignored, so a caller may pass a
+ * wider read (the tier loader does) and get the same list.
+ */
+export function registeredIdsFrom(docs: CountryGameState[]): CountryId[] {
   const activeExtra = docs
     .filter((d) => d.status === "active" && d.dissolvedTurn == null && d.absentInEra !== true)
     .map((d) => d._id as CountryId)

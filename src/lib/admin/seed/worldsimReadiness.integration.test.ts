@@ -36,7 +36,9 @@ describe("2027 worldsim readiness", () => {
   it("includes the five successor countries in the effective world", async () => {
     const manifest = getWorldEntityPresetManifest("2027-default");
     for (const countryId of ["RU", "PL", "HU", "RO", "BG"]) {
-      expect(tierFor("2027-default", countryId as "RU"), countryId).toBe("npp");
+      // Background since #5702: registered and seeded as countries, outside
+      // the full simulation.
+      expect(tierFor("2027-default", countryId as "RU"), countryId).toBe("background");
       const entry = manifest.entries.find((row) => row.countryId === countryId);
       expect(entry?.legacyAccess, countryId).toBe("hidden");
       expect(entry?.status, countryId).not.toBe("dissolved");

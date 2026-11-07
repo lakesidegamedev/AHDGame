@@ -82,7 +82,7 @@ import {
   runParliamentaryGovernmentPhases,
   runParliamentaryVacancyWatcher,
 } from "@/lib/turn/countryPhases";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import type { CountryId } from "@/lib/constants/countries";
 import { runNppGovernmentPhases } from "@/lib/nppAutonomy/processNppGovernment";
 import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -970,8 +970,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // Registered countries only: the registry is keyed on the static country
         // list, and a country dissolved by a merge would otherwise keep running
         // its bill lifecycle (and, for one-party entries, its legitimacy and
-        // escalation drift) for ever.
-        const registeredForBills = new Set(await getRegisteredCountryIds(db));
+        // escalation drift) for ever. Background countries (#5702) are skipped
+        // too: their bill-lifecycle phases never start.
+        const registeredForBills = new Set(await getFullSimulationCountryIds(db));
         const countryBillPhaseEntries = Object.entries(COUNTRY_BILL_PHASES).filter(([id]) =>
           registeredForBills.has(id as CountryId)
         );
@@ -1518,7 +1519,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // grows a config-driven fallback would resurrect ghost races.
         let countryElectionPhasePromises: Promise<unknown>[] = [];
         if (!foundingActive) {
-          const registeredForElections = new Set(await getRegisteredCountryIds(db));
+          // Full-simulation only: a background country (#5702) runs none of its
+          // country-prefixed election phases.
+          const registeredForElections = new Set(await getFullSimulationCountryIds(db));
           countryElectionPhasePromises = Object.entries(COUNTRY_ELECTION_PHASES)
             .filter(([id]) => registeredForElections.has(id as CountryId))
             .flatMap(([, entries]) =>

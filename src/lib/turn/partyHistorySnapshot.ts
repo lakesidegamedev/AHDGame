@@ -1,4 +1,4 @@
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import type { Db } from "mongodb";
 import type {
   Character,
@@ -19,7 +19,9 @@ type OrgRow = { _id: { countryId: string; partyId: string }; organization: numbe
  * Used by the parties page trend chart.
  */
 export async function snapshotPartyHistory(db: Db, turn: number): Promise<number> {
-  const activeCountries = (await getRegisteredCountryIds(db)).filter(
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const activeCountries = (await getFullSimulationCountryIds(db)).filter(
     (id) => COUNTRY_CONFIGS[id].status === "active" || !COUNTRY_ORDER.includes(id)
   );
   if (activeCountries.length === 0) return 0;

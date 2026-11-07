@@ -85,7 +85,10 @@ describe("S6 — every roster consumer agrees with tierFor", () => {
     // would leave this free to drift in exactly the way S6 exists to prevent.
     for (const preset of SHIPPING_PRESETS) {
       for (const nation of ERA_CONFIGS[eraOf(preset)].nations) {
-        expect(nation.tier, `${preset}/${nation.id}`).toBe(tierFor(preset, nation.id as CountryId));
+        // The landing roster lists a background country the way it lists an
+        // NPP-run one: neither is joinable.
+        const tier = tierFor(preset, nation.id as CountryId);
+        expect(nation.tier, `${preset}/${nation.id}`).toBe(tier === "background" ? "npp" : tier);
       }
     }
   });
@@ -263,7 +266,9 @@ describe("S2 — live countries meet their tier's capability contract", () => {
       "BR (econ): fullAutonomousTier, partiesAuthored",
       "NG (econ): fullAutonomousTier, partiesAuthored",
     ],
-    "2027-default": ["BR (econ): fullAutonomousTier", "NG (econ): fullAutonomousTier"],
+    // Brazil and Nigeria left the econ tier for the background tier (#5702),
+    // which this contract does not assess, so 2027 carries no recorded gap.
+    "2027-default": [],
   };
 
   it.each(["1999-default", "2007-default", "2023-default", "2027-default"] as const)(
@@ -281,6 +286,8 @@ describe("S2 — live countries meet their tier's capability contract", () => {
  * someone marks a coming-soon country full-autonomous, or leaves a playable one
  * as historical presence.
  */
+const NPP_FULL_SIMULATION_PRESETS: ReadonlySet<ShippingPreset> = new Set(["2027-default"]);
+
 describe("S2b — roster tier and simulation tier agree", () => {
   it("every player country is a full-autonomous entity", () => {
     for (const preset of SHIPPING_PRESETS) {
@@ -295,6 +302,10 @@ describe("S2b — roster tier and simulation tier agree", () => {
 
   it("no coming-soon country is a full-autonomous entity", () => {
     for (const preset of SHIPPING_PRESETS) {
+      // 2027 runs its `npp` countries (UK, DE, JP, CN) at full simulation and
+      // keeps the coming-soon countries in the `background` tier instead
+      // (#5702), so there `npp` is not a coming-soon tier.
+      if (NPP_FULL_SIMULATION_PRESETS.has(preset)) continue;
       const manifest = getWorldEntityPresetManifest(preset);
       for (const country of COUNTRY_ORDER) {
         if (tierFor(preset, country) !== "npp") continue;
@@ -518,7 +529,12 @@ describe("S4 — player chambers agree with their era config", () => {
   function s4Failures(preset: ShippingPreset): string[] {
     const out: string[] = [];
     for (const country of COUNTRY_ORDER) {
-      if (tierFor(preset, country) !== "player") continue;
+      const tier = tierFor(preset, country);
+      // 2027's NPP countries are full simulations with seated chambers (#5702),
+      // so their chambers keep this check.
+      const seated =
+        tier === "player" || (tier === "npp" && NPP_FULL_SIMULATION_PRESETS.has(preset));
+      if (!seated) continue;
       for (const chamber of CHAMBERS[country] ?? []) {
         const seeded = seatCountFor(preset, country, chamber);
         if (isVacantChamber(preset, country, chamber)) {

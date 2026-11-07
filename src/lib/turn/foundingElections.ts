@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { COUNTRY_ELECTION_PHASES } from "@/lib/turn/countryPhases";
 
 /**
@@ -73,12 +74,15 @@ export interface FoundingSpawnResult {
 export async function spawnFoundingElections(
   db: Db,
   now: Date,
-  options: { skipRegionalCouncil?: boolean; log?: (msg: string) => void } = {}
+  options: { skipRegionalCouncil?: boolean; log?: (msg: string) => void; preset?: string } = {}
 ): Promise<FoundingSpawnResult> {
   const log = options.log ?? (() => {});
   const skipRegionalCouncil = options.skipRegionalCouncil === true;
 
-  const countries = Object.entries(COUNTRY_ELECTION_PHASES);
+  // Background countries (#5702) hold no full-engine elections.
+  const countries = Object.entries(COUNTRY_ELECTION_PHASES).filter(
+    ([countryId]) => !isBackgroundInPreset(options.preset, countryId)
+  );
   const perCountry = await Promise.all(
     countries.map(async ([countryId, entries]) => {
       let attempted = 0;

@@ -1,4 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { ObjectId } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { UnownedSector } from "@/lib/db/types";
@@ -139,10 +140,13 @@ export async function seedUnownedSectors(
   /** Route (state, sectorType) buckets to the National Corporation instead of unowned. */
   redirectToNatCorpBuckets?: ReadonlySet<string>
 ) {
-  const states = await db
-    .collection<State>("states")
-    .find({ _id: { $not: /^NATIONAL_/ } })
-    .toArray();
+  // Background countries (#5702) keep their regions but run no sectors.
+  const states = (
+    await db
+      .collection<State>("states")
+      .find({ _id: { $not: /^NATIONAL_/ } })
+      .toArray()
+  ).filter((state) => !isBackgroundInPreset(preset, state.countryId));
 
   const now = new Date();
   let inserted = 0;

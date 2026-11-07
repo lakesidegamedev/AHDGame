@@ -14,7 +14,7 @@ import {
   hasConfidenceVoteMechanism,
   COUNTRY_CONFIGS,
 } from "@/lib/constants/countries";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import type { Election } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
@@ -482,8 +482,9 @@ export async function runPostElectionGovernmentPhases(
     // Iterate every REGISTERED country with a configured lower chamber (US
     // included), not just parliamentary countries. Registered, not the raw
     // COUNTRY_ORDER: a country dissolved by a merge stays compiled into the
-    // static list forever, and this loop must stop visiting it.
-    const registered = new Set(await getRegisteredCountryIds(db));
+    // static list forever, and this loop must stop visiting it. Background
+    // countries (#5702) have no legislature here either.
+    const registered = new Set(await getFullSimulationCountryIds(db));
     const countryIds = [...registered].filter(
       (id) => COUNTRY_CONFIGS[id].legislature.lowerChamber.key
     );
@@ -603,8 +604,9 @@ export async function runParliamentaryGovernmentPhases(
   // Registered only: `getParliamentaryCountryIds` filters the STATIC list by
   // config, so a country dissolved by a merge would otherwise keep receiving
   // seat sync, confidence processing and NPP PM appointment every turn — a
-  // ghost government for a state that no longer exists.
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // ghost government for a state that no longer exists. Background countries
+  // (#5702) are skipped for the same reason: no government is simulated.
+  const registered = new Set(await getFullSimulationCountryIds(db));
   const parliamentaryCountries = getParliamentaryCountryIds(preset).filter((id) =>
     registered.has(id)
   );

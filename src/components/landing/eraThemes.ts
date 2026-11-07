@@ -154,7 +154,7 @@ function accessFor(
     const tier = tierFor(preset, id as CountryId);
     if (tier === "player") out[id] = PLAYER;
     else if (tier === "econ") out[id] = ECON;
-    else if (tier === "npp") out[id] = NPP;
+    else if (tier === "npp" || tier === "background") out[id] = NPP;
     // `latent` and `absent` are not shown on the landing page at all.
   }
   return out;
@@ -169,6 +169,9 @@ function nationsFor(
   for (const { id, name } of curated) {
     const tier = tierFor(preset, id as CountryId);
     if (tier === "player" || tier === "econ" || tier === "npp") out.push({ id, name, tier });
+    // A background country is not joinable, so the landing roster lists it the
+    // way it lists an NPP-run one.
+    else if (tier === "background") out.push({ id, name, tier: "npp" });
   }
   return out;
 }

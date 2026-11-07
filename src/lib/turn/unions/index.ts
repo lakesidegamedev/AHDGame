@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { ObjectId } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Character, CorporateSector, State, Union, User } from "@/lib/db/types";
@@ -184,20 +185,17 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // Comparing against the expected total, not just 0, is what heals a partial
   // roster, a single stray doc must never permanently block the backfill.
   const unionCount = await db.collection<Union>("unions").countDocuments({});
-  const seededCountryIds = await db
-    .collection<State>("states")
-    .distinct("countryId", { _id: { $not: /^NATIONAL_/ } });
+  const preset = await getGameStatePresetOrDefault(db);
+  // Same country set seedUnions writes: background countries (#5702) have none.
+  const seededCountryIds = (
+    await db.collection<State>("states").distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
+  ).filter((countryId) => !isBackgroundInPreset(preset, countryId));
   const expectedUnionCount = seededCountryIds.length * OPERATING_SECTOR_TYPES.length;
   if (unionCount < expectedUnionCount) {
     console.warn(
       `[unionsTurn] labourSystemMode is 'full' but union roster is incomplete (${unionCount}/${expectedUnionCount}), backfilling via seedUnions(reset:false)`
     );
-    await seedUnions(
-      db,
-      (msg) => console.warn(`[unionsTurn] ${msg}`),
-      await getGameStatePresetOrDefault(db),
-      false
-    );
+    await seedUnions(db, (msg) => console.warn(`[unionsTurn] ${msg}`), preset, false);
   }
 
   // Union strength decay. Unlike dues and pressure this runs for EVERY union,

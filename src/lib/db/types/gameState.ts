@@ -986,6 +986,19 @@ export interface CountryGameState {
    */
   absentInEra?: boolean;
   /**
+   * True when the world's preset holds this country outside the full
+   * simulation (the `background` era-roster tier, #5702). The country stays
+   * registered, with its country document, currency and exchange rate, but
+   * every per-country turn phase skips it and the bootstrap seeds no
+   * corporations, sectors, NPP politicians or full-engine elections for it.
+   *
+   * Written true OR false by `seedCountryGameStates` on every reset, like
+   * `absentInEra`. Optional and additive: rows written before this field read
+   * `undefined` -> full simulation, exactly the prior behaviour, so live worlds
+   * need no backfill. Read through `@/lib/country/countryTier`, never directly.
+   */
+  backgroundCountry?: boolean;
+  /**
    * When true, non-admin players can view economy-only pages (map, metrics,
    * stockmarket, central bank, budget, forex) even while `enabledForPlayers`
    * is false. Political routes (elections, legislature, parties, etc.) remain

@@ -1,4 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import type { State } from "@/lib/db/types/state";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { Union } from "@/lib/db/types";
@@ -56,9 +57,10 @@ export async function seedUnions(
     ]);
   }
 
-  const countryIds = await db
-    .collection<State>("states")
-    .distinct("countryId", { _id: { $not: /^NATIONAL_/ } });
+  // Background countries (#5702) run no sectors, so they get no unions.
+  const countryIds = (
+    await db.collection<State>("states").distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
+  ).filter((countryId) => !isBackgroundInPreset(preset, countryId));
 
   const now = new Date();
   let upserted = 0;

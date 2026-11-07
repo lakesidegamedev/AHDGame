@@ -25,7 +25,7 @@ import {
   type ResetPresetId,
 } from "@/lib/seeds/presetSelector";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
-import { countriesByTier, SHIPPING_PRESETS } from "@/lib/world/eraRoster";
+import { countriesByTier, isBackgroundInPreset, SHIPPING_PRESETS } from "@/lib/world/eraRoster";
 import {
   getPresetEnablementCountries,
   getPresetEnablementTier,
@@ -116,6 +116,9 @@ export function readinessCountryIds(preset: string): CountryId[] {
     // No enablement map → treat as playable (modern presets).
     // NPP / coming-soon tiers skip readiness (pre-politics / colony).
     if (tier && tier.status === "coming-soon") continue;
+    // Background countries carry no NPP politicians or full-engine elections
+    // by design (#5702), so the political checks do not apply.
+    if (isBackgroundInPreset(preset, id)) continue;
     out.push(id);
   }
   // US runs off global GameState (never in enablement maps) but is always playable.

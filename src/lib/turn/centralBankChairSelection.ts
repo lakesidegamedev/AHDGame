@@ -25,7 +25,7 @@ import type { CentralBank, ChairSelectionPending, FomcSeat } from "@/lib/db/type
 import { FOMC_COMMITTEE_COUNTRY_IDS } from "@/lib/db/types/centralBank";
 import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { createNotifications } from "@/lib/notifications";
 import { createSystemNewsPost } from "@/lib/news";
@@ -344,7 +344,9 @@ export async function processCentralBankChairSelection(
   // bank document, and this phase would otherwise go on running chair terms —
   // opening selections, appointing NPP chairs, posting news — for a dead
   // state's monetary authority.
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const registered = new Set(await getFullSimulationCountryIds(db));
 
   const processedBankIds = new Set<string>();
   for (const countryId of COUNTRY_ORDER) {

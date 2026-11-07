@@ -1,7 +1,7 @@
 import { clamp } from "@/lib/numeric/rules";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { getCountryState, updateCountryState } from "@/lib/countryState";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { logger } from "../observability/logger";
@@ -62,7 +62,9 @@ export async function processSocialAxisDrift(
   // drift for all of them concurrently instead of a serial walk. Registered
   // only: a dissolved country's state doc is kept as a historical record, and
   // drifting it every turn would keep mutating the record after death.
-  const registered = await getRegisteredCountryIds(db);
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const registered = await getFullSimulationCountryIds(db);
   await Promise.all(
     registered.map(async (countryId) => {
       // Isolate each country: a single country's read/write failure must not

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Db, Document } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
-vi.mock("@/lib/country/registeredCountries", () => ({
-  getRegisteredCountryIds: vi.fn().mockResolvedValue(["UK", "JP", "DE"]),
+vi.mock("@/lib/country/countryTier", () => ({
+  getFullSimulationCountryIds: vi.fn().mockResolvedValue(["UK", "JP", "DE"]),
 }));
 vi.mock("@/lib/db/collections/gameState", () => ({
   getGameStatePreset: vi.fn().mockResolvedValue("1991-default"),

@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import {
   getLowerChamberOfficeType,
@@ -292,12 +293,15 @@ export async function seedEconTierRostersForCountry(
 export async function seedEconTierRosters(
   db: Db,
   seedMode: SeedMode = "winners",
-  log: (msg: string) => void = () => {}
+  log: (msg: string) => void = () => {},
+  /** World preset. Background countries in it (#5702) get no NPP roster. */
+  preset?: string
 ): Promise<{ nppsCreated: number; officialsCreated: number; orgRows: number }> {
   let nppsCreated = 0;
   let officialsCreated = 0;
   let orgRows = 0;
   for (const countryId of ECON_TIER_ROSTER_COUNTRIES) {
+    if (isBackgroundInPreset(preset, countryId)) continue;
     const r = await seedEconTierRostersForCountry(db, countryId, seedMode, log);
     nppsCreated += r.nppsCreated;
     officialsCreated += r.officialsCreated;
