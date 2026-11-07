@@ -203,6 +203,7 @@ export const CN_GEOGRAPHY: CountryGeography = {
     flood: ["HD", "HZ", "HN", "DB"],
     wintry: ["DB", "XB", "HB"],
     arid: ["XB", "HB"],
+    hot: ["HN", "HZ", "HD", "XN"],
   },
   demographicCategoryIds: ["cn_voterGroups"],
 };

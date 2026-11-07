@@ -518,14 +518,21 @@ export async function buildProducerTurnDemand(
     referencePrice: refPrice,
     priceHeadroom: PRICE_HEADROOM,
     ...(demandCurve ? { demandCurve } : {}),
-  }).map((h) => ({
-    ...h,
-    ...tagCountry(walletCountry.get(h.accountId)),
-    products: h.products.map((p) => ({
-      ...p,
-      book: shadowBook(p.book, p.commodity, walletCountry.get(h.accountId) ?? ""),
-    })),
-  }));
+  }).map((h) => {
+    // Climate heat raises the energy share of a hot region's basket.
+    const energyDemand = (h.stateId && lookups.climateEnergyDemandByState?.get(h.stateId)) || 1;
+    return {
+      ...h,
+      ...tagCountry(walletCountry.get(h.accountId)),
+      products: h.products.map((p) => ({
+        ...p,
+        ...(p.commodity === "energy" && energyDemand !== 1
+          ? { weight: p.weight * energyDemand }
+          : {}),
+        book: shadowBook(p.book, p.commodity, walletCountry.get(h.accountId) ?? ""),
+      })),
+    };
+  });
   const publicBuyerOrders = publicOrders(
     carriedFunding.map((f) => ({
       accountId: publicAccountId(f.countryId),

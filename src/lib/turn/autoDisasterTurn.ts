@@ -7,11 +7,17 @@ import { getSimulatedCountryIds } from "@/lib/countryAccess";
 export async function processAutoDisasterTurn(
   db: Db,
   turn: number,
-  preloadedGameState?: { autoDisastersEnabled?: boolean; autoCrisisPaused?: boolean }
+  preloadedGameState?: {
+    autoDisastersEnabled?: boolean;
+    autoCrisisPaused?: boolean;
+    startingYear?: number;
+  }
 ): Promise<void> {
   const enabled = await isAutoDisastersEnabled(preloadedGameState);
   if (!enabled) return;
-  const climatePressure = await processClimateFeedbackTurn(db, turn);
+  const climatePressure = await processClimateFeedbackTurn(db, turn, {
+    startingYear: preloadedGameState?.startingYear,
+  });
   // Temporary pause: stay enabled but spawn nothing new this turn.
   if (preloadedGameState?.autoCrisisPaused === true) return;
 

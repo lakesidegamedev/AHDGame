@@ -12,16 +12,18 @@ import {
 import { DEFAULT_DISASTER_COOLDOWN_TURNS } from "./autoCrisisConstants";
 import { disasterTemplatesForCountry } from "./selectDisasterTemplate";
 import { getTemplateDuration } from "./templates";
-import { regionMatchesTags } from "./regionHazards";
+import { getClimateExposureTags, regionMatchesTags } from "./regionHazards";
 import { loadCooldownMap, isOnCooldown, stampCooldown } from "./autoCrisisCooldown";
 import { floorCrisisDuration } from "./crisisDuration";
 import { interpolateLocation } from "./crisisLocation";
 import { isTemplateAllowedInYear } from "./crisisEraWindow";
 import {
   climateLossMultiplier,
+  climateProfileForStartingYear,
   weatherDisasterCadence,
   WEATHER_DISASTER_KEYS,
 } from "./rules/climateFeedback";
+import { climateExposureFromTags, uninsuredLossMultiplier } from "./rules/climateEffects";
 
 interface ResilienceRow {
   _id: string;
@@ -259,11 +261,22 @@ export async function processAutoDisasterSpawn(
       .collection<FederalBudget>("federalBudget")
       .findOne({ countryId }, { projection: { gdp: 1, gdpSmoothed: 1 } });
     const gdp = budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : budget?.gdp;
+    // Worlds with broader climate effects also shift uninsured loss onto the
+    // budget as insurers retreat from exposed regions.
+    const uninsured = climateProfileForStartingYear(gs?.startingYear).broaderEffects
+      ? uninsuredLossMultiplier(
+          pressure,
+          climateExposureFromTags(getClimateExposureTags(countryId, region._id))
+        )
+      : 1;
     if (typeof gdp === "number" && Number.isFinite(gdp) && gdp > 0)
       fiscalCost = Math.max(
         0,
         Math.round(
-          gdp * 0.0002 * climateLossMultiplier(pressure, resilienceByRegion.get(region._id) ?? 50)
+          gdp *
+            0.0002 *
+            climateLossMultiplier(pressure, resilienceByRegion.get(region._id) ?? 50) *
+            uninsured
         )
       );
   }

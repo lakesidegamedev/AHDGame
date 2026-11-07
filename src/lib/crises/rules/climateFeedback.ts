@@ -12,9 +12,92 @@ export interface ClimateExposure {
   globalTonsPerCapita: number;
 }
 
-const BASELINE_TONS_PER_CAPITA = 4;
-const PRESSURE_PER_EXCESS_TON_YEAR = 0.006;
-const PRESSURE_RECOVERY_PER_YEAR = 0.002;
+/**
+ * How a world's atmosphere responds to emissions. Pressure moves once a year by
+ * `pressurePerExcessTonYear` for every ton per capita above the baseline, or
+ * falls by `recoveryPerYear` when emissions sit at or under it.
+ */
+export interface ClimateProfile {
+  /** Pressure before the first annual sample. */
+  startingPressure: number;
+  baselineTonsPerCapita: number;
+  pressurePerExcessTonYear: number;
+  recoveryPerYear: number;
+  /**
+   * Farm yields, heat-driven power demand, insurance costs and uninsured
+   * disaster losses respond to pressure. Off for worlds that have not opted in.
+   */
+  broaderEffects: boolean;
+}
+
+/** Built for centuries of play: from zero, 6 t per capita reaches about 0.28 after 23 years. */
+export const DEFAULT_CLIMATE_PROFILE: ClimateProfile = {
+  startingPressure: 0,
+  baselineTonsPerCapita: 4,
+  pressurePerExcessTonYear: 0.006,
+  recoveryPerYear: 0.002,
+  broaderEffects: false,
+};
+
+/**
+ * The 2027 world (game design). It opens on 0.20 of accumulated pressure and
+ * has 23 annual samples (2027 through 2049) before 2050. The opening world
+ * weighs in at about 7.5 t CO2 per capita once budget effort is applied
+ * (China and the US dominate the population weighting). Three reference paths
+ * from that opening, linear over the 23 samples:
+ *
+ * - delayed: holds at 7.5 t.
+ *   0.20 + 23 x (7.5 - 5.3) x 0.0078 = 0.595.
+ * - central: 7.5 t falling to 6.0 t (stated policies), mean excess 1.45 t.
+ *   0.20 + 23 x 1.45 x 0.0078 = 0.460.
+ * - fast: 7.5 t falling to 4.5 t. Above the 5.3 t baseline for the first 17
+ *   samples (excess sum about 18.9 ton-years, +0.147), then 6 years of
+ *   recovery at 0.001 (-0.006): about 0.34.
+ *
+ * Against the default profile the per-ton effect is 30% stronger (0.0078 vs
+ * 0.006) while the higher baseline (5.3 vs 4 t) leaves room for a transition
+ * to stop the rise within the game's 24 years. `CLIMATE_REFERENCE_PATHS_2027`
+ * holds the three paths; the rules tests replay them.
+ */
+export const WORLD_2027_CLIMATE_PROFILE: ClimateProfile = {
+  startingPressure: 0.2,
+  baselineTonsPerCapita: 5.3,
+  pressurePerExcessTonYear: 0.0078,
+  recoveryPerYear: 0.001,
+  broaderEffects: true,
+};
+
+/** Presets opt in by starting year; every other world keeps the default profile. */
+const CLIMATE_PROFILES_BY_STARTING_YEAR: Readonly<Record<number, ClimateProfile>> = {
+  2027: WORLD_2027_CLIMATE_PROFILE,
+};
+
+export function climateProfileForStartingYear(startingYear: number | undefined): ClimateProfile {
+  return (
+    (startingYear !== undefined ? CLIMATE_PROFILES_BY_STARTING_YEAR[startingYear] : undefined) ??
+    DEFAULT_CLIMATE_PROFILE
+  );
+}
+
+/** Annual global tons per capita for the 2027 reference paths, one value per sample. */
+export const CLIMATE_REFERENCE_PATHS_2027: Readonly<
+  Record<"fast" | "central" | "delayed", number[]>
+> = {
+  fast: Array.from({ length: 23 }, (_, year) => 7.5 - (3 * year) / 22),
+  central: Array.from({ length: 23 }, (_, year) => 7.5 - (1.5 * year) / 22),
+  delayed: Array.from({ length: 23 }, () => 7.5),
+};
+
+/** Replays one sample per year from the profile's starting pressure. */
+export function replayClimatePath(
+  annualTonsPerCapita: readonly number[],
+  profile: ClimateProfile
+): number {
+  let pressure = profile.startingPressure;
+  for (const tons of annualTonsPerCapita)
+    pressure = advanceClimateExposure(pressure, tons, 1, profile).pressure;
+  return pressure;
+}
 
 const clamp = (value: number, lower: number, upper: number) =>
   Math.max(lower, Math.min(upper, value));
@@ -58,7 +141,8 @@ export function populationWeightedEmissions(regions: readonly EmissionsRegion[])
 export function advanceClimateExposure(
   priorPressure: number,
   globalTonsPerCapita: number,
-  elapsedYears: number
+  elapsedYears: number,
+  profile: ClimateProfile = DEFAULT_CLIMATE_PROFILE
 ): ClimateExposure {
   if (
     !Number.isFinite(priorPressure) ||
@@ -69,9 +153,9 @@ export function advanceClimateExposure(
   )
     throw new Error("Climate exposure inputs must be finite and non-negative");
   const changePerYear =
-    globalTonsPerCapita > BASELINE_TONS_PER_CAPITA
-      ? (globalTonsPerCapita - BASELINE_TONS_PER_CAPITA) * PRESSURE_PER_EXCESS_TON_YEAR
-      : -PRESSURE_RECOVERY_PER_YEAR;
+    globalTonsPerCapita > profile.baselineTonsPerCapita
+      ? (globalTonsPerCapita - profile.baselineTonsPerCapita) * profile.pressurePerExcessTonYear
+      : -profile.recoveryPerYear;
   return {
     pressure: clamp(priorPressure + changePerYear * Math.min(elapsedYears, 5), 0, 1),
     globalTonsPerCapita,

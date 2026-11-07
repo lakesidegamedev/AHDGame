@@ -291,6 +291,7 @@ const hazardGroups = {
   volcanic: ["HOK", "TOH", "KAN", "CHU", "KNS", "KYU"],
   flood: ["HOK", "TOH", "KAN", "CHU", "KNS", "CGK", "SHI", "KYU"],
   wintry: ["HOK", "TOH", "CHU"],
+  hot: ["KAN", "KNS", "CGK", "SHI", "KYU"],
 };
 
 /** ⚠️ Cast: projectionCenter and similar fields are tuples, not number[]. */

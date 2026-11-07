@@ -294,6 +294,7 @@ export const US_GEOGRAPHY: CountryGeography = {
     ],
     volcanic: ["HI", "AK", "WA", "OR", "CA"],
     flood: [
+      "DC",
       "LA",
       "MS",
       "MO",
@@ -335,5 +336,6 @@ export const US_GEOGRAPHY: CountryGeography = {
     ],
     wildfire: ["CA", "OR", "WA", "NV", "AZ", "NM", "CO", "MT", "ID", "UT", "TX"],
     arid: ["AZ", "NM", "NV", "UT", "CA", "TX", "OK", "KS", "CO"],
+    hot: ["TX", "FL", "LA", "MS", "AL", "GA", "SC", "AZ", "NV", "NM", "OK", "AR", "HI", "CA"],
   },
 };
