@@ -28,7 +28,8 @@ describe("cyberResilienceScore", () => {
   });
 
   it("rises with a stronger mandate and falls when duties are withdrawn", () => {
-    const at = (mandateOptionIndex: number) => cyberResilienceScore({ ...base, mandateOptionIndex })!;
+    const at = (mandateOptionIndex: number) =>
+      cyberResilienceScore({ ...base, mandateOptionIndex })!;
     expect(at(0)).toBeGreaterThan(at(1));
     expect(at(1)).toBeGreaterThan(at(2));
     expect(at(2)).toBeGreaterThan(at(CYBER_MANDATE_NEUTRAL_INDEX));
