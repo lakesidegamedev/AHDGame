@@ -138,13 +138,42 @@ function normalsToAnchors(metricId: string, normals: NormalAnchor[]): BandAnchor
   }));
 }
 
+/** Year every band curve is defined to, so bands are authored rather than clamped. */
+export const BAND_HORIZON_YEAR = 2050;
+
+/**
+ * Authored 2040 to 2050 drift of the per-country era normal, in each metric's
+ * own units. Invented central path: growth keeps easing with ageing, jobs hold,
+ * life expectancy keeps climbing about 0.1 years a year, crime and poverty drift
+ * down slowly. The band spread around the normal is unchanged.
+ */
+const CORE5_NORMAL_DRIFT_2040_TO_2050: Record<string, number> = {
+  gdpGrowth: -0.1,
+  unemploymentRate: 0,
+  lifeExpectancy: 1,
+  violentCrimeRate: -15,
+  povertyRate: -0.4,
+};
+
+function withHorizonNormal(metricId: string, normals: NormalAnchor[]): NormalAnchor[] {
+  const last = normals[normals.length - 1];
+  if (!last || last.year >= BAND_HORIZON_YEAR) return normals;
+  return [
+    ...normals,
+    {
+      year: BAND_HORIZON_YEAR,
+      value: last.value + (CORE5_NORMAL_DRIFT_2040_TO_2050[metricId] ?? 0),
+    },
+  ];
+}
+
 function buildCore5Curves(): Record<string, MetricBandCurve> {
   const out: Record<string, MetricBandCurve> = {};
   for (const [metricId, byScope] of Object.entries(CORE5_NORMALS)) {
     const curve: MetricBandCurve = { byCountry: {} };
     for (const [scope, normals] of Object.entries(byScope)) {
       if (!normals) continue;
-      const anchors = normalsToAnchors(metricId, normals);
+      const anchors = normalsToAnchors(metricId, withHorizonNormal(metricId, normals));
       if (scope === "global") curve.global = anchors;
       else curve.byCountry![scope as CountryId] = anchors;
     }
@@ -153,7 +182,7 @@ function buildCore5Curves(): Record<string, MetricBandCurve> {
   return out;
 }
 
-export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
+const AUTHORED_METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
   ...buildCore5Curves(),
 
   // ── Distortion set (scored metrics whose 2019 band misjudges old eras) ──────
@@ -618,3 +647,40 @@ export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
     ],
   },
 };
+
+/**
+ * Extends a curve set to {@link BAND_HORIZON_YEAR}. A curve whose last anchor is
+ * earlier gets an explicit 2050 anchor that holds its last band. This keeps the
+ * saturation set's invariant (late anchors equal the static THRESHOLDS band, so
+ * scoring from 2019 on is unchanged) while making the band defined at 2050
+ * instead of relying on clamping. Core-5 curves already carry authored 2050
+ * drift and are left alone.
+ */
+function withHorizonAnchors(
+  curves: Record<string, MetricBandCurve>
+): Record<string, MetricBandCurve> {
+  const extend = (anchors: BandAnchor[] | undefined): BandAnchor[] | undefined => {
+    if (!anchors || anchors.length === 0) return anchors;
+    const last = anchors[anchors.length - 1];
+    if (last.year >= BAND_HORIZON_YEAR) return anchors;
+    return [...anchors, { year: BAND_HORIZON_YEAR, best: last.best, worst: last.worst }];
+  };
+  const out: Record<string, MetricBandCurve> = {};
+  for (const [metricId, curve] of Object.entries(curves)) {
+    const byCountry = curve.byCountry
+      ? Object.fromEntries(
+          Object.entries(curve.byCountry).map(([cc, anchors]) => [cc, extend(anchors)])
+        )
+      : undefined;
+    out[metricId] = {
+      ...curve,
+      ...(curve.global ? { global: extend(curve.global) } : {}),
+      ...(byCountry ? { byCountry } : {}),
+    } as MetricBandCurve;
+  }
+  return out;
+}
+
+export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = withHorizonAnchors(
+  AUTHORED_METRIC_BAND_CURVES
+);

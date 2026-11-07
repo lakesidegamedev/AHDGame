@@ -1,7 +1,8 @@
 /**
  * Historical monetary calibration preserves authored start-year values and
  * interpolates reference rates between them. getEraMonetaryBaseline uses the
- * current game year; modern worlds and missing dates retain their fallbacks.
+ * current game year; 1999-2026 and missing dates retain their fallbacks, and
+ * 2027+ follows an authored macro arc for the largest economies.
  */
 
 import type { CountryId } from "./countries";
@@ -268,17 +269,100 @@ const ERA_ANCHORS: ReadonlyArray<{
   { year: MODERN_ERA_START_YEAR, table: {} },
 ];
 
-/** Missing historical entries use the same modern fallback as exact anchors. */
+/**
+ * First year of the authored 2027+ macro arc. Years from MODERN_ERA_START_YEAR
+ * up to (not including) this one keep the flat modern tables, exactly as before.
+ */
+export const MACRO_ARC_START_YEAR = 2027;
+
+/**
+ * Invented central path for the 2027 world (not a forecast). Each anchor maps
+ * onto the fields the baseline tables actually hold:
+ * - trendGdpGrowth: real trend growth, converging from the 2027 level toward
+ *   the 2045 level as populations age and catch-up fades.
+ * - targetInflation: unchanged from the country's modern baseline (2% for
+ *   US/UK/DE/CN, 1% for JP).
+ * - neutralPrimeRate: nominal, so target inflation + neutral real rate + a
+ *   fixed country premium. The common neutral real rate is 0.8 in 2027, peaks
+ *   at 1.2 in 2035 (electrification and automation investment demand), then
+ *   eases to 0.9 by 2045. The premium keeps each country's modern real-rate
+ *   gap to the common path (JP structurally low, CN structurally high), so
+ *   the 2027 anchor does not step the nominal rate by more than a few tenths.
+ * Interpolation is linear between anchors and holds the 2045 values after.
+ */
+const MACRO_ARC_ANCHOR_YEARS = [2027, 2035, 2045] as const;
+const MACRO_ARC_NEUTRAL_REAL_RATE: Record<(typeof MACRO_ARC_ANCHOR_YEARS)[number], number> = {
+  2027: 0.8,
+  2035: 1.2,
+  2045: 0.9,
+};
+const MACRO_ARC_COUNTRIES: Partial<
+  Record<CountryId, { targetInflation: number; premium: number; trend: [number, number, number] }>
+> = {
+  US: { targetInflation: 2, premium: 0, trend: [1.9, 1.7, 1.5] },
+  UK: { targetInflation: 2, premium: 0, trend: [1.3, 1.25, 1.2] },
+  DE: { targetInflation: 2, premium: 0, trend: [1.0, 0.95, 0.9] },
+  JP: { targetInflation: 1, premium: -0.8, trend: [0.6, 0.55, 0.5] },
+  CN: { targetInflation: 2, premium: 1.2, trend: [3.8, 3.15, 2.5] },
+};
+
+function buildMacroArcTable(index: number): Partial<Record<CountryId, EraMonetaryBaseline>> {
+  const year = MACRO_ARC_ANCHOR_YEARS[index];
+  const out: Partial<Record<CountryId, EraMonetaryBaseline>> = {};
+  for (const [countryId, c] of Object.entries(MACRO_ARC_COUNTRIES)) {
+    out[countryId as CountryId] = {
+      targetInflation: c.targetInflation,
+      neutralPrimeRate:
+        Math.round((c.targetInflation + MACRO_ARC_NEUTRAL_REAL_RATE[year] + c.premium) * 100) / 100,
+      trendGdpGrowth: c.trend[index],
+    };
+  }
+  return out;
+}
+
+const MACRO_ARC_ANCHORS: ReadonlyArray<{
+  year: number;
+  table: Partial<Record<CountryId, EraMonetaryBaseline>>;
+}> = MACRO_ARC_ANCHOR_YEARS.map((year, index) => ({ year, table: buildMacroArcTable(index) }));
+
+/** 2027+ resolution: authored arc for covered countries, undefined (modern fallback) otherwise. */
+function getMacroArcBaseline(
+  countryId: CountryId,
+  currentYear: number
+): EraMonetaryBaseline | undefined {
+  const last = MACRO_ARC_ANCHORS[MACRO_ARC_ANCHORS.length - 1];
+  if (!last.table[countryId]) return undefined;
+  if (currentYear >= last.year) return last.table[countryId];
+  for (let i = 0; i < MACRO_ARC_ANCHORS.length - 1; i++) {
+    const left = MACRO_ARC_ANCHORS[i];
+    const right = MACRO_ARC_ANCHORS[i + 1];
+    if (currentYear === left.year) return left.table[countryId];
+    if (currentYear < right.year) {
+      const a = left.table[countryId];
+      const b = right.table[countryId];
+      if (!a || !b) return a ?? b;
+      return interpolateMonetaryCalibration(
+        a,
+        b,
+        (currentYear - left.year) / (right.year - left.year)
+      );
+    }
+  }
+  return last.table[countryId];
+}
+
+/**
+ * Missing historical entries use the same modern fallback as exact anchors.
+ * 1999 through 2026 resolve to undefined (flat modern tables); 2027 onward uses
+ * the authored macro arc for the countries it covers.
+ */
 export function getEraMonetaryBaseline(
   countryId: CountryId,
   currentYear?: number | null
 ): EraMonetaryBaseline | undefined {
-  if (
-    typeof currentYear !== "number" ||
-    !Number.isFinite(currentYear) ||
-    currentYear >= MODERN_ERA_START_YEAR
-  )
-    return undefined;
+  if (typeof currentYear !== "number" || !Number.isFinite(currentYear)) return undefined;
+  if (currentYear >= MACRO_ARC_START_YEAR) return getMacroArcBaseline(countryId, currentYear);
+  if (currentYear >= MODERN_ERA_START_YEAR) return undefined;
   if (currentYear <= ERA_ANCHORS[0].year) return ERA_ANCHORS[0].table[countryId];
   for (let i = 0; i < ERA_ANCHORS.length - 1; i++) {
     const left = ERA_ANCHORS[i];
