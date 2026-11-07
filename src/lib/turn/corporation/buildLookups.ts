@@ -156,6 +156,7 @@ import {
   energyDemandMultiplier,
 } from "@/lib/crises/rules/climateEffects";
 import { getClimateExposureTags } from "@/lib/crises/regionHazards";
+import { loadBlockadeClosure } from "@/lib/turn/commodity/blockadeClosure";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -1143,6 +1144,7 @@ export async function buildCorporationLookups(
       fundedOverheadStage?: number;
       fundedHeadcountStage?: number;
       fundedValuationStage?: number;
+      producerTariffStage?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
@@ -1157,10 +1159,12 @@ export async function buildCorporationLookups(
           fundedOverheadStage: 1,
           fundedHeadcountStage: 1,
           fundedValuationStage: 1,
+          producerTariffStage: 1,
         },
       }
     );
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
+  const fundedTariffsOn = (overheadCfg?.producerTariffStage ?? 0) >= 1;
   const strengthUpkeepStage =
     typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
   const groupSizeCostsStage =
@@ -1261,6 +1265,7 @@ export async function buildCorporationLookups(
   const tradeScope = tradeEligibilityScope({
     eraUnitScale,
     activeBlockEmbargoCount: countBlockEmbargoes(activeEmbargoDocs),
+    fundedTariffs: fundedTariffsOn,
   });
   let countryClearingBooks: ReturnType<typeof buildCountryClearingBooks> | null = null;
   let tradeRoutes: CorporationLookups["tradeRoutes"] = null;
@@ -1294,12 +1299,16 @@ export async function buildCorporationLookups(
         countries.filter((c) => isCurtained(c, curtainYear, curtainEnabled))
       );
     }
+    // Funded tariffs also close the routes a full naval blockade shuts, read
+    // fresh as the commodity turn does. Off, the graph is built without it.
+    const blockadeClosure = fundedTariffsOn ? await loadBlockadeClosure(db) : undefined;
     const { affinityFor, capUnitsFor, importCostMultiplierFor } = buildTradeAffinity({
       ftaPairs: activeFtaPairs,
       blocsByCountry,
       tariffs: allTariffs,
       embargoes: activeEmbargoDocs,
       ...(curtainedCountries ? { curtainedCountries } : {}),
+      ...(blockadeClosure && blockadeClosure.size > 0 ? { blockadeClosure } : {}),
     });
     tradeRoutes = { affinityFor, importCostMultiplierFor };
     if (tradeScope.countryBooks) {

@@ -168,6 +168,8 @@ export type ProducerPhysicalEnv = Pick<
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
   runPlanStage?: number;
+  /** gameConfig.producerTariffStage: >= 1 charges import tariffs in the funded market (tariffRules). */
+  tariffStage?: number;
   /** gameConfig.producerSalesAdvancePriceStage >= 1: the sales advance judges a run on its inputs' clearing prices. */
   salesAdvanceAtClearing?: boolean;
   /** gameConfig.producerSalesAdvanceRevenueShare: expected sales a run may borrow against (default 0.9). */

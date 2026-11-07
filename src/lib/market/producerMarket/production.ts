@@ -64,6 +64,7 @@ import {
   RESTART_PROBE_RUN_SHARE,
 } from "./restartProbeRules";
 import { addStageTiming, listStageTiming, stageClock, type StageTimings } from "./stageTimings";
+import { landedPriceGate } from "./tariffRules";
 
 export interface PurchasedStock {
   commodity: string;
@@ -1120,6 +1121,8 @@ export function advanceProducerEconomy(
     });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
+  // Posted prices are fixed from here, so one landed-price gate serves every pass.
+  const landedGate = input.importTariffs ? landedPriceGate(offers, input.importTariffs) : null;
   // Units each household order gained from spillover; measurement only.
   let spilloverUnits = new Map<string, number>();
   let trialRuns = 0; // timing only
@@ -1141,7 +1144,9 @@ export function advanceProducerEconomy(
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
-      orders: [...consumerOrders, ...inputOrders()],
+      orders: landedGate
+        ? landedGate([...consumerOrders, ...inputOrders()])
+        : [...consumerOrders, ...inputOrders()],
       ...(track ? { trackCountryBooks: true } : {}),
       ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),

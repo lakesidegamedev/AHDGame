@@ -61,6 +61,7 @@ import {
   type RouteOffer,
   type RouteOrder,
 } from "@/lib/market/producerMarket/routeRules";
+import { importTariffTable, type ImportTariffTable } from "@/lib/market/producerMarket/tariffRules";
 import {
   backgroundOrderEligibility,
   backgroundTradeLines,
@@ -676,6 +677,32 @@ export async function buildProducerTurnDemand(
       restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
   }
 
+  // Import tariffs (producerTariffStage): one rate per open route that can
+  // carry a sale this turn. Needs the funded book's country tags.
+  let importTariffs: ImportTariffTable | undefined;
+  if (routes && (env.tariffStage ?? 0) >= 1 && (env.fundedBookStage ?? 0) >= 1) {
+    const sellerCountriesByCommodity = new Map<string, Set<string>>();
+    for (const o of worldRouteOffers()) {
+      const set = sellerCountriesByCommodity.get(o.commodity) ?? new Set<string>();
+      set.add(o.sellerCountry);
+      sellerCountriesByCommodity.set(o.commodity, set);
+    }
+    importTariffs = importTariffTable({
+      sellerCountriesByCommodity,
+      buyerCountries: new Set([
+        ...planCountry.values(),
+        ...walletCountry.values(),
+        ...funding.map((f) => f.countryId),
+        ...investmentFunding.map((f) => f.countryId),
+        ...backgroundOffers.flatMap((o) => (o.countryId ? [o.countryId] : [])),
+        ...backgroundOrders.flatMap((o) => (o.countryId ? [o.countryId] : [])),
+      ]),
+      importCostMultiplier: (c, from, to) =>
+        routes.importCostMultiplierFor(c as CommodityType, from as never, to as never),
+      open: (c, from, to) => routes.affinityFor(c as CommodityType, from as never, to as never) > 0,
+    });
+  }
+
   const references = Object.fromEntries(
     COMMODITY_TYPES.map((c) => [c, refPrice(c, "")] as const).filter(
       (e): e is readonly [CommodityType, number] => e[1] != null
@@ -690,6 +717,7 @@ export async function buildProducerTurnDemand(
     accounts,
     cashByCorp,
     eligibleOffersByOrder,
+    importTariffs,
     firstWalletByCorp,
     funding,
     /** Per public buyer: each line's order id, fresh outlay and full budget (fresh + carried-in). */

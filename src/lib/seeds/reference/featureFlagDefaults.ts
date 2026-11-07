@@ -151,6 +151,9 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   campaignEraPriceLevelEnabled: true,
   regionalConditionsOverviewEnabled: true,
   firstJoinerBecomesPartyChair: true,
+  // Import tariffs in the funded producer market. Fresh worlds only: a running
+  // world switches it on as a deliberate staged change.
+  producerTariffStage: 1,
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;

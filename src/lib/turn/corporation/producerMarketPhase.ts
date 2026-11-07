@@ -100,6 +100,7 @@ export async function runCorporationProducerMarket(
       | "householdIncomeSpend"
       | "captiveShortValue"
       | "shortageAsk"
+      | "importTariffs"
     >;
     /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
     close?: Parameters<typeof settleProducerTurn>[1]["close"];

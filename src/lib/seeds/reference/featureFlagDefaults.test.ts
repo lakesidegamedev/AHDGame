@@ -42,7 +42,8 @@ function flagFieldsOf(file: string, iface: string): string[] {
   return fields;
 }
 
-const LADDER_TOPS: Record<string, string> = {
+const LADDER_TOPS: Record<string, string | number> = {
+  producerTariffStage: 1,
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
   nppEntryViabilityMode: "enforce",

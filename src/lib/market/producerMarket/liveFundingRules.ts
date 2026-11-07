@@ -397,6 +397,53 @@ export function backgroundReturnMoves(
 }
 
 /**
+ * Moves each country's collected import tariffs (producerTariffStage) out of
+ * its tariff account. A country with a budget receives them as Treasury cash;
+ * one without (a background country with no budget) has them leave the world
+ * economy, as its trading budget does. Two kinds, so each batches on its own.
+ */
+export function tariffRevenueMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string; budgetId: string | null })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-tariff-${r.budgetId ? "treasury" : "return"}:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: r.budgetId ? "producer_tariff_treasury" : "producer_tariff_return",
+      turn,
+      legs: [
+        {
+          kind: "debit" as const,
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId, cash: { $gte: r.amountLocal } },
+          path: "cash",
+          note: "import tariffs collected this turn",
+        },
+        r.budgetId
+          ? {
+              kind: "credit" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              collection: "federalBudget",
+              filter: { _id: r.budgetId },
+              path: "treasuryCashLocal",
+              note: "import tariffs into Treasury cash",
+            }
+          : {
+              kind: "burn" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              note: "import tariffs of a country without a budget",
+            },
+      ],
+    }));
+}
+
+/**
  * Folds one turn's per-country moves of a single kind into ONE money move, so
  * the turn pays one journal claim and one bulk write instead of a claim and a
  * write per country. Every wallet still appears exactly once (the batch throws
