@@ -2,10 +2,8 @@ import type { DemographicCategory } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { LAYER1_DEMOGRAPHICS } from "@/lib/demographics/usDemographics";
-import {
-  DEMOGRAPHIC_LABELS as US_GROUP_LABELS,
-  demographicCategories as usVoterArchetypeCategories,
-} from "@/lib/seeds/demographicCategories";
+import { DEMOGRAPHIC_LABELS as US_GROUP_LABELS } from "@/lib/seeds/demographicLabels";
+import { demographicCategories as usVoterArchetypeCategories } from "@/lib/seeds/voterArchetypeCategories";
 import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
 import { jpDemographicCategories } from "@/lib/countries/jp/data/jpDemographicCategories";
 import { deDemographicCategories } from "@/lib/seeds/de/deDemographicCategories";

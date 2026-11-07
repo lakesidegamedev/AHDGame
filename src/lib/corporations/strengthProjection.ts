@@ -13,7 +13,7 @@ import {
   MARKETING_DECAY_RATE,
   STRENGTH_UPKEEP_STAGE,
   strengthUpkeepActive,
-} from "./strengthUpkeep";
+} from "./strengthUpkeepRules";
 
 interface StrengthProjectionInput {
   marketingBudget?: number | null;
