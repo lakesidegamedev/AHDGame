@@ -12,6 +12,16 @@ vi.mock("@/lib/audit/recordAudit", () => ({
   recordAudit: (...a: unknown[]) => recordAudit(...a),
 }));
 
+const CORP_RESULT = {
+  corporationsProcessed: 1,
+  sectorsProcessed: 2,
+  totalRevenueGenerated: 100,
+  totalIncomeGenerated: 20,
+  turnWarnings: [],
+  currencyIncomeInternalByCharacterId: new Map([["player", 20]]),
+  currencyIncomeFaceByCharacterId: new Map([["player", new Map([["USD", 20]])]]),
+};
+
 function createMockDb() {
   const updateOne = vi.fn().mockResolvedValue({ acknowledged: true });
   return {
@@ -189,6 +199,7 @@ describe("createTurnPhaseRuntime", () => {
       const resultPromise = runtime.runPhase("corporationTurn", async () => {
         substepMarker().mark("load");
         await inFlight;
+        return CORP_RESULT;
       });
       await Promise.resolve();
       await Promise.resolve();
@@ -374,6 +385,7 @@ describe("phase sub-steps and top collections (#2689)", () => {
       steps.mark("write");
       recordRoundTrip("sectors");
       steps.mark("write");
+      return CORP_RESULT;
     });
     await flushAsyncStatusWrites();
     const status = phaseStatuses.corporationTurn;
@@ -412,6 +424,63 @@ describe("phase sub-steps and top collections (#2689)", () => {
 });
 
 describe("phase timeout drain (#3385)", () => {
+  it("retains a corporation result that completes after timeout", async () => {
+    const { db } = createMockDb();
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const runtime = createTurnPhaseRuntime({
+      db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    const gate = deferred<typeof CORP_RESULT>();
+    const result = runtime.runPhase("corporationTurn", () => gate.promise);
+    await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    gate.resolve(CORP_RESULT);
+    await expect(result).resolves.toEqual(CORP_RESULT);
+    expect(phaseStatuses.corporationTurn.status).toBe("completed");
+    const income = await result;
+    await expect(
+      runtime.runPhase("lineOfCreditTurn", async () =>
+        income?.currencyIncomeFaceByCharacterId.get("player")?.get("USD")
+      )
+    ).resolves.toBe(20);
+  });
+
+  it("stops immediately on a failed corporation phase instead of advancing with missing income", async () => {
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses: {},
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    await expect(
+      runtime.runPhase("corporationTurn", async () => {
+        throw new Error("tail failure");
+      })
+    ).rejects.toThrow(/turn stops/);
+  });
+
+  it("preserves retryable market failure even when it arrives after the phase timeout", async () => {
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    const gate = deferred();
+    const result = runtime.runPhase("corporationTurn", async () => {
+      await gate.promise;
+      throw new TurnMustStopError("corporationTurn", new Error("execution deadline"));
+    });
+    const rejected = expect(result).rejects.toBeInstanceOf(TurnMustStopError);
+    await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    gate.resolve();
+    await rejected;
+    expect(phaseStatuses.corporationTurn).toMatchObject({ status: "failed", reason: "mustStop" });
+  });
+
   function deferred<T = void>() {
     let resolve!: (value: T) => void;
     let reject!: (err: unknown) => void;
@@ -565,6 +634,7 @@ describe("phase timeout drain (#3385)", () => {
         marker.mark("beforeTimeout");
         await callbackGate.promise;
         marker.mark("whileDraining");
+        throw new Error("late failure");
       })
       .finally(() => {
         phaseSettled = true;
@@ -581,7 +651,7 @@ describe("phase timeout drain (#3385)", () => {
     expect(failedWrites).toBe(1);
 
     firstFailureWrite.resolve();
-    await expect(slow).resolves.toBeNull();
+    await expect(slow).rejects.toThrow(/turn stops/);
     expect(failedWrites).toBe(2);
     const finalFailure = updateOne.mock.calls
       .map(
