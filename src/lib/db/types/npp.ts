@@ -75,6 +75,16 @@ export interface NPP {
    * from every other creation path (runtime generation, admin spawn).
    */
   seededForOfficeType?: string;
+  /**
+   * Executive terms counted toward the country's `executiveTermLimit`, keyed
+   * by country. Seeded from a roster's `priorExecutiveTerms` for a real
+   * incumbent already in a later term, and incremented each time the NPP is
+   * elected to the executive (founding and acting terms excluded, as for
+   * players). Absent = no terms served.
+   */
+  executiveTermsServed?: Partial<Record<CountryId, number>>;
+  /** Election whose win last incremented `executiveTermsServed` (replay guard). */
+  lastExecutiveTermElectionId?: string;
   personality: NPPPersonality;
   generatedAt: Date;
   retiredAt: Date | null;

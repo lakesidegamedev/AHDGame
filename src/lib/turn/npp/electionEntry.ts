@@ -61,6 +61,7 @@ import {
   slateProtectsCandidacy,
 } from "./slateOverride";
 import { isActiveElectionCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
+import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { isNppAutonomyActive, nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { careerArchetypeModifiersContinuous } from "@/lib/nppAutonomy/v3/careerArchetype";
 import { ChallengerBudget } from "@/lib/nppAutonomy/playerImpactBudget";
@@ -258,6 +259,17 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     });
   };
 
+  // Executive term limits bind NPPs exactly as they bind players: an NPP that
+  // has served the country's maximum never files for the nationwide executive,
+  // including as a sitting incumbent, and its party fields someone else.
+  const termLimitBars = (npp: NPP, primary: Election): boolean => {
+    const countryId = (primary.countryId ?? "US") as CountryId;
+    return (
+      isNationwideDirectExecutiveElection(primary.electionType, primary.state, countryId) &&
+      hasReachedExecutiveTermLimit(npp, countryId)
+    );
+  };
+
   const enterPrimary = async (
     npp: NPP,
     primary: Election,
@@ -265,6 +277,8 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
   ): Promise<boolean> => {
     const { incumbentDefense = false, allowChallenger = false } = options;
     const key = `${primary._id}_${npp.party}`;
+
+    if (termLimitBars(npp, primary)) return false;
 
     // One-party-state guards. Legislative gate blocks banned-party AND
     // independent NPPs from any office; executive gate further restricts
@@ -512,6 +526,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
             n.party === party &&
             !assignedThisTurn.has(n._id.toString()) &&
             isNPPAvailable(n, nppCandidacies, now) &&
+            !termLimitBars(n, primary) &&
             (!ctx.nppElectionEligiblePartyKeys ||
               ctx.nppElectionEligiblePartyKeys.has(`${cid}:${n.party}`))
         )
@@ -817,6 +832,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
           // #906: don't pull a chair-slated compliant NPP into a race they
           // weren't slated to as an ambitious challenger.
           if (slateSuppressesAutoPick(npp, slateMaps)) return false;
+          if (termLimitBars(npp, primary)) return false;
           return isNPPAvailable(npp, nppCandidacies, now);
         });
         const challengerPool = presidential

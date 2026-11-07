@@ -14,6 +14,9 @@ export const ROSTER_2027_US: RosterMap = {
     gender: "male",
     ethnicity: "white",
     portraitId: "donald-trump",
+    // First term 2017 to 2021, second from 2025: the 22nd Amendment bars a
+    // third election, so he cannot run in 2028.
+    priorExecutiveTerms: 2,
   },
   // 50th vice president, sworn in 20 Jan 2025 on the same ticket.
   // https://www.whitehouse.gov/administration/jd-vance/

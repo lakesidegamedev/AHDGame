@@ -18,6 +18,8 @@ import { createNPP, calculateQualityBonus, type NPPGenerationContext } from "@/l
 import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
 import { isActiveElectionCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
+import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideExecutive";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { getChallengerSupplyPolicy } from "./rules/challengerSupply";
 
@@ -260,7 +262,16 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
     .collection<NPP>("npps")
     .find(
       { retiredAt: null, isTechnocrat: { $ne: true } },
-      { projection: { _id: 1, name: 1, party: 1, countryId: 1, homeState: 1 } }
+      {
+        projection: {
+          _id: 1,
+          name: 1,
+          party: 1,
+          countryId: 1,
+          homeState: 1,
+          executiveTermsServed: 1,
+        },
+      }
     )
     .toArray();
   const freeByBucket = new Map<string, NPP[]>();
@@ -273,6 +284,24 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
     const k = `${n.countryId ?? "US"}:${n.party}:${n.homeState ?? ""}`;
     (freeByBucket.get(k) ?? freeByBucket.set(k, []).get(k)!).push(n);
   }
+
+  // Same order as a plain pop(), but a term-limited NPP is never fielded for
+  // the nationwide executive (executiveTermLimits.ts).
+  const takeFree = (bucket: string, primary: Election): NPP | undefined => {
+    const pool = freeByBucket.get(bucket);
+    if (!pool) return undefined;
+    const country = (primary.countryId ?? "US") as CountryId;
+    const executive = isNationwideDirectExecutiveElection(
+      primary.electionType,
+      primary.state,
+      country
+    );
+    for (let i = pool.length - 1; i >= 0; i--) {
+      if (executive && hasReachedExecutiveTermLimit(pool[i]!, country)) continue;
+      return pool.splice(i, 1)[0];
+    }
+    return undefined;
+  };
 
   // statePartyOrg presence + org (for the challenger's quality bonus).
   const spoRows = await db
@@ -326,7 +355,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
       // else generate one only in a non-player country. Paid recruitment and
       // roster limits must not be bypassed by empty races in player countries.
       const bucket = `${country}:${party}:${state}`;
-      let npp = freeByBucket.get(bucket)?.pop();
+      let npp = takeFree(bucket, primary);
       if (!npp) {
         if (!supply.canGenerate) continue;
         npp = await createNPP(
@@ -383,7 +412,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
       );
       if (party) {
         const bucket = `${country}:${party}:${state}`;
-        let npp = freeByBucket.get(bucket)?.pop();
+        let npp = takeFree(bucket, primary);
         if (!npp) {
           npp = await createNPP(
             { state, party, countryId: country as CountryId, quality: 0 },
