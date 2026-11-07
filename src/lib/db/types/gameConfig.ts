@@ -339,7 +339,10 @@ export interface GameConfig {
    * last turn, not only what it made, so a run cut by short inputs or cash does
    * not lower the next plan; a plant that sold out at a profit grows by a fixed
    * step of capacity a turn; and only a second glut turn in a row drops a plant
-   * to its floor (one glut turn steps it down). 0 or absent = off.
+   * to its floor (one glut turn steps it down). >= 2: the never-below-last-
+   * turn's-sales floor subtracts stock held beyond producerStockCover turns of
+   * sales, so a plant sitting on a pile sells from it instead of making more.
+   * 0 or absent = off.
    */
   producerRunPlanStage?: number;
   /**

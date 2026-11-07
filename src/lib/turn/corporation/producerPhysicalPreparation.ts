@@ -528,6 +528,9 @@ export function prepareProducerPhysicalSector(input: {
           floor: runFloor,
           soldOutGrowth: soldOutGrowth(receipt),
           demandPlan: (env.demandPlanStage ?? 0) >= 1,
+          ...((env.runPlanStage ?? 0) >= 2
+            ? { stockCoverTurns: Math.max(1, env.stockCoverTurns ?? 1) }
+            : {}),
         })
       : (env.demandPlanStage ?? 0) >= 1
         ? demandPlanRunShare(receipt, runFloor, soldOutGrowth(receipt))
