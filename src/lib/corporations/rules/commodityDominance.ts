@@ -9,17 +9,23 @@
  * output of a commodity (owned operating capacity plus queued builds, in
  * commodity units) over what the world actually wants of it.
  *
- * Freight and the local services sell only in the state that makes them, so
- * for those the market is the target sector's state: the firm's capacity in
- * that state over that state's demand. Measuring them against the world let a
- * firm's idle trucks in another country price a build in a starved state.
+ * Freight and construction sell anywhere in their own country, so for those
+ * the market is the target sector's country: the firm's capacity in that
+ * country over that country's demand. The other local services sell only in the
+ * state that makes them, so their market is the target sector's state. Measuring
+ * either against the world let a firm's idle trucks in another country price a
+ * build in a starved state; measuring freight against one small state priced an
+ * ordinary logistics arm at many times the market it actually sells into.
  *
  * Rules only: plain data in, plain data out. The shell loads documents and
  * demand, this module prices them.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_BASE_PRICES, commodityMixWeight } from "@/lib/constants/commodities";
-import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import {
+  isCountryBookCommodity,
+  isStateScopedCommodity,
+} from "@/lib/market/rules/commodityMarketScope";
 import {
   supplierCommoditySupplyMix,
   supplierScaledCapacityUnits,
@@ -46,24 +52,40 @@ export interface CommodityDominanceResult {
 export interface CommodityDominanceMarket {
   /** Demand of that market (units/day). */
   demand: number;
-  /** State the market is confined to, or null for the world. */
+  /** State the market is confined to, or null for the world or a country. */
   stateId: string | null;
+  /** Country the market is confined to, or null for the world or a state. */
+  countryId: string | null;
 }
 
 /**
- * Market for `commodity` when the firm builds in `targetStateId`. A commodity
- * that sells only where it is made is measured against the target state's
- * demand when that is known; everything else, and a state-scoped commodity
- * with no state reading, falls back to world demand. Null when the chosen
+ * Market for `commodity` when the firm builds in `targetStateId` of
+ * `targetCountryId`. A country-book commodity (freight, construction) is
+ * measured against its country's demand when that is known; any other commodity
+ * that sells only where it is made against the target state's demand when that
+ * is known; everything else, and a local commodity with no reading, falls back
+ * to the next wider reading, ending at world demand. Null when the chosen
  * market has no positive demand, which the toll treats as unmeasurable.
  */
 export function commodityDominanceMarket(args: {
   commodity: CommodityType;
   targetStateId?: string | null;
+  targetCountryId?: string | null;
   worldDemand: number | null | undefined;
   stateDemand?: number | null | undefined;
+  countryDemand?: number | null | undefined;
 }): CommodityDominanceMarket | null {
   const stateId = args.targetStateId ? String(args.targetStateId) : null;
+  const countryId = args.targetCountryId ? String(args.targetCountryId) : null;
+  if (
+    countryId != null &&
+    isCountryBookCommodity(args.commodity) &&
+    typeof args.countryDemand === "number" &&
+    Number.isFinite(args.countryDemand) &&
+    args.countryDemand > 0
+  ) {
+    return { demand: args.countryDemand, stateId: null, countryId };
+  }
   const local =
     stateId != null &&
     isStateScopedCommodity(args.commodity) &&
@@ -71,14 +93,15 @@ export function commodityDominanceMarket(args: {
     Number.isFinite(args.stateDemand);
   const demand = local ? args.stateDemand : args.worldDemand;
   if (typeof demand !== "number" || !Number.isFinite(demand) || !(demand > 0)) return null;
-  return { demand, stateId: local ? stateId : null };
+  return { demand, stateId: local ? stateId : null, countryId: null };
 }
 
 /** True when `sector` sells into `market` (any sector for a world market). */
 export function sectorInDominanceMarket(
-  sector: Pick<CommodityDominanceSector, "stateId">,
+  sector: Pick<CommodityDominanceSector, "stateId" | "countryId">,
   market: CommodityDominanceMarket
 ): boolean {
+  if (market.countryId != null) return String(sector.countryId ?? "") === market.countryId;
   return market.stateId == null || String(sector.stateId ?? "") === market.stateId;
 }
 
@@ -108,8 +131,10 @@ export function memoSupplyMixOf(
  * to commodity units through the same chain production uses; `extraUnits` of
  * new capacity are added to `targetSectorId` so one oversized order cannot slip
  * under the ramp. Commodities with no known positive demand are skipped.
- * State-scoped commodities read `stateDemandOf` for `targetStateId` and count
- * only capacity in that state (see {@link commodityDominanceMarket}).
+ * Country-book commodities read `countryDemandOf` for `targetCountryId` and
+ * count only capacity in that country; other state-scoped commodities read
+ * `stateDemandOf` for `targetStateId` and count only capacity in that state
+ * (see {@link commodityDominanceMarket}).
  *
  * `supplyMixOf` is a per-sector mix memo owned by the caller. One decision
  * prices this ratio for every sector it might build on, and the mix depends only
@@ -121,8 +146,10 @@ export function commodityDominanceRatio(args: {
   commodities: readonly CommodityType[];
   demandOf: (commodity: CommodityType) => number | null | undefined;
   stateDemandOf?: (commodity: CommodityType, stateId: string) => number | null | undefined;
+  countryDemandOf?: (commodity: CommodityType, countryId: string) => number | null | undefined;
   targetSectorId: string;
   targetStateId?: string | null;
+  targetCountryId?: string | null;
   extraUnits: number;
   isNatcorp: boolean;
   turn: number;
@@ -150,9 +177,15 @@ export function commodityDominanceRatio(args: {
   let worst: CommodityDominanceResult = { ratio: 0, commodity: null };
   for (const commodity of args.commodities) {
     const targetStateId = args.targetStateId ? String(args.targetStateId) : null;
+    const targetCountryId = args.targetCountryId ? String(args.targetCountryId) : null;
     const market = commodityDominanceMarket({
       commodity,
       targetStateId,
+      targetCountryId,
+      countryDemand:
+        targetCountryId && args.countryDemandOf
+          ? args.countryDemandOf(commodity, targetCountryId)
+          : undefined,
       worldDemand: args.demandOf(commodity),
       stateDemand:
         targetStateId && args.stateDemandOf

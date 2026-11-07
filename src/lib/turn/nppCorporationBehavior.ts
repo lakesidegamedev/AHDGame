@@ -515,6 +515,8 @@ export async function processNppCorporationDecisions(
       commodityDemandOf: (commodity) => priceByCommodity.get(commodity)?.globalDemand ?? null,
       commodityStateDemandOf: (commodity, stateId) =>
         priceByCommodity.get(commodity)?.stateDemand?.[stateId] ?? null,
+      commodityCountryDemandOf: (commodity, countryId) =>
+        priceByCommodity.get(commodity)?.nationalDemand?.[countryId] ?? null,
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
       ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),

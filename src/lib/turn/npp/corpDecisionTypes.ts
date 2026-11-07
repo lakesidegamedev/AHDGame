@@ -251,6 +251,12 @@ export interface NppPlantsContext {
    */
   commodityStateDemandOf?: (commodity: CommodityType, stateId: string) => number | null;
   /**
+   * One country's demand for a commodity from the same price book, or null when
+   * unknown. The toll measures country-book commodities (freight, construction)
+   * against the building sector's own country.
+   */
+  commodityCountryDemandOf?: (commodity: CommodityType, countryId: string) => number | null;
+  /**
    * Every sector of a corporation's control group as dominance sectors, set
    * once the group toll stage is on. Absent = price on the corporation alone.
    */

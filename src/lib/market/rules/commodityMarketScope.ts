@@ -25,3 +25,12 @@ export function isStateScopedCommodity(commodity: CommodityType): boolean {
 }
 
 export const STATE_SCOPED_COMMODITIES = COMMODITY_TYPES.filter(isStateScopedCommodity);
+
+/**
+ * Services that trade on one book per country in the funded market: freight
+ * and construction crews travel anywhere inside their own country, even though
+ * contracts for them still name a state.
+ */
+export function isCountryBookCommodity(commodity: CommodityType): boolean {
+  return commodity === "freight" || commodity === "construction_services";
+}

@@ -24,7 +24,10 @@ import {
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
-import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import {
+  isCountryBookCommodity,
+  isStateScopedCommodity,
+} from "@/lib/market/rules/commodityMarketScope";
 import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
@@ -78,9 +81,13 @@ export interface CommodityDominanceContext {
   demand: Partial<Record<CommodityType, number>>;
   /** Target state's demand per state-scoped commodity, absent when unknown. */
   stateDemand?: Partial<Record<CommodityType, number>>;
+  /** Target country's demand per country-book commodity (freight, construction). */
+  countryDemand?: Partial<Record<CommodityType, number>>;
   targetSectorId: string;
   /** State the target sector sits in, for state-scoped commodities. */
   targetStateId?: string | null;
+  /** Country the target sector sits in, for country-book commodities. */
+  targetCountryId?: string | null;
   isNatcorp: boolean;
   turn: number;
   currentYear: number;
@@ -210,7 +217,9 @@ export async function loadCommodityDominanceContext(
     const commodities = sectorOutputCommodities(pricedTarget, args.turn);
     if (commodities.length === 0) return null;
     const targetStateId = pricedTarget.stateId ? String(pricedTarget.stateId) : null;
+    const targetCountryId = pricedTarget.countryId ? String(pricedTarget.countryId) : null;
     const readsState = targetStateId != null && commodities.some(isStateScopedCommodity);
+    const readsCountry = targetCountryId != null && commodities.some(isCountryBookCommodity);
     const priceDocs = await db
       .collection<CommodityPrice>("commodityPrices")
       .find(
@@ -220,24 +229,30 @@ export async function loadCommodityDominanceContext(
             commodity: 1,
             globalDemand: 1,
             ...(readsState ? { [`stateDemand.${targetStateId}`]: 1 } : {}),
+            ...(readsCountry ? { [`nationalDemand.${targetCountryId}`]: 1 } : {}),
           },
         }
       )
       .toArray();
     const demand: Partial<Record<CommodityType, number>> = {};
     const stateDemand: Partial<Record<CommodityType, number>> = {};
+    const countryDemand: Partial<Record<CommodityType, number>> = {};
     for (const doc of priceDocs) {
       demand[doc.commodity] = doc.globalDemand;
       const local = targetStateId ? doc.stateDemand?.[targetStateId] : undefined;
       if (typeof local === "number") stateDemand[doc.commodity] = local;
+      const national = targetCountryId ? doc.nationalDemand?.[targetCountryId] : undefined;
+      if (typeof national === "number") countryDemand[doc.commodity] = national;
     }
     return {
       sectors: pricedSectors,
       commodities,
       demand,
       stateDemand,
+      countryDemand,
       targetSectorId: String(args.sector._id),
       targetStateId,
+      targetCountryId,
       isNatcorp: !!args.corporation.countryOwnerId,
       turn: args.turn,
       currentYear: args.currentYear,
@@ -259,8 +274,10 @@ export function commodityDominanceFor(
     commodities: ctx.commodities,
     demandOf: (c) => ctx.demand[c],
     stateDemandOf: (c) => ctx.stateDemand?.[c],
+    countryDemandOf: (c) => ctx.countryDemand?.[c],
     targetSectorId: ctx.targetSectorId,
     targetStateId: ctx.targetStateId,
+    targetCountryId: ctx.targetCountryId,
     extraUnits,
     isNatcorp: ctx.isNatcorp,
     turn: ctx.turn,
@@ -281,8 +298,10 @@ export function commodityTollModels(ctx: CommodityDominanceContext): CommodityTo
     const market = commodityDominanceMarket({
       commodity,
       targetStateId: ctx.targetStateId,
+      targetCountryId: ctx.targetCountryId,
       worldDemand: ctx.demand[commodity],
       stateDemand: ctx.stateDemand?.[commodity],
+      countryDemand: ctx.countryDemand?.[commodity],
     });
     if (!market) continue;
     const demandUnits = market.demand;
