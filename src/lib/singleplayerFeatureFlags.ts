@@ -56,12 +56,15 @@ const LABELS: Record<SingleplayerFeatureFlagKey, string> = {
   lawAdministrationEnabled: "Law administration",
   regionalLegislationFinanceEnabled: "Regional legislation finance",
   canonicalPoliticalMetricsEnabled: "Canonical political metrics",
+  nppTurnoverEnabled: "Politician aging and retirement",
 };
 
 const descriptions: Partial<Record<SingleplayerFeatureFlagKey, string>> = {
   autoSectorSeedEnabled: "Periodically seed unowned sectors.",
   nppOffensiveInitiationEnabled: "Let autonomous countries start wars.",
   nppOffensiveJoinEnabled: "Let autonomous countries join offensives.",
+  nppTurnoverEnabled:
+    "Computer-run politicians grow old, retire and die, and are replaced by younger members of their party.",
 };
 
 /**

@@ -340,6 +340,13 @@ export interface GameState {
   nppAutonomyEnabledBy?: string;
   nppAutonomyEnabledAt?: string;
   /**
+   * NPP turnover: seated NPPs die of old age and retire from 70, replaced by a
+   * younger NPP of the same party in the same office, whatever the autonomy
+   * level. Absent keeps the legacy behaviour (mortality only, at V5); false
+   * switches it off. Fresh worlds seed true.
+   */
+  nppTurnoverEnabled?: boolean;
+  /**
    * Foreign-policy planner rollout. Absent defaults to shadow so autonomous
    * countries produce auditable intent without changing world state.
    */

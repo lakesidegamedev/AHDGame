@@ -4,12 +4,16 @@ import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import {
   annualDeathProbability,
+  annualRetirementProbability,
+  backfillBirthYear,
   nppAgeAtYear,
+  nppRetiresThisTurn,
   processNppMortality,
   randomReplacementBirthYear,
 } from "@/lib/npp/mortality";
 import type { NPP } from "@/lib/db/types/npp";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
+import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 
 vi.mock("@/lib/nppAutonomy/featureFlag", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/nppAutonomy/featureFlag")>();
@@ -81,6 +85,39 @@ describe("randomReplacementBirthYear", () => {
   });
 });
 
+describe("annualRetirementProbability", () => {
+  it("is zero before 70, climbs to 35% at 80 and holds", () => {
+    expect(annualRetirementProbability(69)).toBe(0);
+    expect(annualRetirementProbability(70)).toBeCloseTo(0.05);
+    expect(annualRetirementProbability(75)).toBeCloseTo(0.2);
+    expect(annualRetirementProbability(80)).toBeCloseTo(0.35);
+    expect(annualRetirementProbability(95)).toBeCloseTo(0.35);
+    expect(annualRetirementProbability(Number.NaN)).toBe(0);
+  });
+
+  it("rolls per turn at the annual rate divided by turns per year", () => {
+    expect(nppRetiresThisTurn(80, () => 0.35 / 48 - 1e-9, 48)).toBe(true);
+    expect(nppRetiresThisTurn(80, () => 0.35 / 48 + 1e-9, 48)).toBe(false);
+    expect(nppRetiresThisTurn(60, () => 0, 48)).toBe(false);
+    expect(nppRetiresThisTurn(80, () => 0, 0)).toBe(false);
+  });
+});
+
+describe("backfillBirthYear", () => {
+  it("is deterministic per id and lands on ages 35-70", () => {
+    const ages = new Set<number>();
+    for (let i = 0; i < 500; i++) {
+      const id = new ObjectId().toHexString();
+      const y = backfillBirthYear(id, 2027);
+      expect(backfillBirthYear(id, 2027)).toBe(y);
+      expect(2027 - y).toBeGreaterThanOrEqual(35);
+      expect(2027 - y).toBeLessThanOrEqual(70);
+      ages.add(2027 - y);
+    }
+    expect(ages.size).toBeGreaterThan(20);
+  });
+});
+
 describe("processNppMortality", () => {
   let db: MockDb;
 
@@ -122,7 +159,7 @@ describe("processNppMortality", () => {
       mintReplacement: mintStub,
     });
 
-    expect(result).toEqual({ deaths: 1, replacements: 1 });
+    expect(result).toMatchObject({ deaths: 1, retirements: 0, replacements: 1 });
     const npps = db.collectionMocks["npps"];
     expect(npps.insertOne).toHaveBeenCalledTimes(1);
     expect(npps.updateOne).toHaveBeenCalledWith(
@@ -287,7 +324,7 @@ describe("processNppMortality", () => {
           rng,
           mintReplacement: mint,
         })
-      ).toEqual({ deaths: 0, replacements: 0 });
+      ).toMatchObject({ deaths: 0, retirements: 0, replacements: 0 });
       expect(rng).not.toHaveBeenCalled();
       expect(mint).not.toHaveBeenCalled();
       expect(db.collectionMocks["npps"].insertOne).not.toHaveBeenCalled();
@@ -310,7 +347,7 @@ describe("processNppMortality", () => {
         rng: () => 0,
         mintReplacement: mintStub,
       })
-    ).toEqual({ deaths: 1, replacements: 1 });
+    ).toMatchObject({ deaths: 1, retirements: 0, replacements: 1 });
   });
   it("leaves the young alive", async () => {
     vi.mocked(nppAutonomyAtLeast).mockResolvedValue(true);
@@ -323,7 +360,7 @@ describe("processNppMortality", () => {
       mintReplacement: mintStub,
     });
 
-    expect(result).toEqual({ deaths: 0, replacements: 0 });
+    expect(result).toMatchObject({ deaths: 0, retirements: 0, replacements: 0 });
     expect(db.collectionMocks["npps"].insertOne).not.toHaveBeenCalled();
   });
 
@@ -347,7 +384,133 @@ describe("processNppMortality", () => {
       mintReplacement: mintStub,
     });
 
-    expect(result).toEqual({ deaths: 0, replacements: 0 });
+    expect(result).toMatchObject({ deaths: 0, retirements: 0, replacements: 0 });
     expect(rng).not.toHaveBeenCalled();
+  });
+
+  describe("nppTurnoverEnabled", () => {
+    function setTurnover(value: boolean | undefined) {
+      db.collection("gameState");
+      db.collectionMocks["gameState"].findOne.mockResolvedValue(
+        value === undefined ? {} : { nppTurnoverEnabled: value }
+      );
+    }
+
+    function seedWithBackfill(missing: Array<{ _id: ObjectId }>, docs: NPP[]) {
+      db.collection("npps");
+      db.collectionMocks["npps"].find
+        .mockReturnValueOnce({
+          limit: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(missing) }),
+        })
+        .mockReturnValue({
+          project: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(docs) }),
+        });
+    }
+
+    it("is on for fresh worlds", () => {
+      expect(DEFAULT_GAME_STATE_FLAGS.nppTurnoverEnabled).toBe(true);
+    });
+
+    it("turns NPPs over below V5 when the flag is on", async () => {
+      setTurnover(true);
+      vi.mocked(nppAutonomyAtLeast).mockResolvedValue(false);
+      seedWithBackfill([], [npp({ countryId: "UK", birthYear: 1900 })]);
+
+      const result = await processNppMortality(db as unknown as Db, {
+        now: new Date("2027-01-01T00:00:00Z"),
+        year: 2027,
+        rng: () => 0,
+        mintReplacement: mintStub,
+      });
+
+      expect(result).toMatchObject({ deaths: 1, replacements: 1 });
+      expect(nppAutonomyAtLeast).not.toHaveBeenCalled();
+    });
+
+    it("retires an old survivor and seats a successor like a death", async () => {
+      setTurnover(true);
+      const old = npp({ birthYear: 1947 }); // 80 in 2027
+      seedWithBackfill([], [old]);
+      const rolls = [0.99, 0]; // survive the death roll, then retire
+      const mint = vi.fn(mintStub);
+
+      const result = await processNppMortality(db as unknown as Db, {
+        now: new Date("2027-01-01T00:00:00Z"),
+        year: 2027,
+        rng: () => rolls.shift() ?? 0.99,
+        mintReplacement: mint,
+      });
+
+      expect(result).toMatchObject({ deaths: 0, retirements: 1, replacements: 1 });
+      expect(mint).toHaveBeenCalledTimes(1);
+      expect(db.collectionMocks["npps"].updateOne).toHaveBeenCalledWith(
+        { _id: old._id },
+        {
+          $set: expect.objectContaining({ retiredAt: expect.any(Date), currentOffice: null }),
+        }
+      );
+      expect(db.collectionMocks["electedOfficials"]!.updateMany).toHaveBeenCalledWith(
+        { nppId: old._id },
+        expect.anything()
+      );
+    });
+
+    it("backfills missing birth years for seated NPPs", async () => {
+      setTurnover(true);
+      const missing = [{ _id: new ObjectId() }, { _id: new ObjectId() }];
+      seedWithBackfill(missing, []);
+
+      const result = await processNppMortality(db as unknown as Db, {
+        now: new Date("2027-01-01T00:00:00Z"),
+        year: 2027,
+        rng: () => 0.99,
+        mintReplacement: mintStub,
+      });
+
+      expect(result.birthYearsAssigned).toBe(2);
+      const [ops] = db.collectionMocks["npps"].bulkWrite.mock.calls[0];
+      expect(ops).toHaveLength(2);
+      expect(ops[0].updateOne.filter).toEqual({ _id: missing[0]._id, birthYear: null });
+      expect(ops[0].updateOne.update.$set.birthYear).toBe(
+        backfillBirthYear(missing[0]._id.toHexString(), 2027)
+      );
+    });
+
+    it("keeps the V5 gate, no retirement and no backfill when the flag is absent", async () => {
+      setTurnover(undefined);
+      vi.mocked(nppAutonomyAtLeast).mockImplementation(
+        async (_db, countryId) => countryId === "US"
+      );
+      const rng = vi.fn().mockReturnValueOnce(0.99).mockReturnValue(0);
+      seedNpps([npp({ birthYear: 1947 }), npp({ countryId: "UK", birthYear: 1900 })]);
+
+      const result = await processNppMortality(db as unknown as Db, {
+        now: new Date("2027-01-01T00:00:00Z"),
+        year: 2027,
+        rng,
+        mintReplacement: mintStub,
+      });
+
+      // The US 80-year-old survives the only roll it gets; the UK NPP is gated.
+      expect(result).toEqual({ deaths: 0, retirements: 0, replacements: 0, birthYearsAssigned: 0 });
+      expect(rng).toHaveBeenCalledTimes(1);
+      expect(db.collectionMocks["npps"].bulkWrite).not.toHaveBeenCalled();
+    });
+
+    it("does nothing when the flag is off", async () => {
+      setTurnover(false);
+      vi.mocked(nppAutonomyAtLeast).mockResolvedValue(true);
+      seedNpps([npp({ birthYear: 1900 })]);
+
+      const result = await processNppMortality(db as unknown as Db, {
+        now: new Date("2027-01-01T00:00:00Z"),
+        year: 2027,
+        rng: () => 0,
+        mintReplacement: mintStub,
+      });
+
+      expect(result).toEqual({ deaths: 0, retirements: 0, replacements: 0, birthYearsAssigned: 0 });
+      expect(db.collectionMocks["npps"].find).not.toHaveBeenCalled();
+    });
   });
 });

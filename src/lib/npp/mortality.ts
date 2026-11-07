@@ -1,7 +1,9 @@
 /**
- * Under V5, seated NPPs age each game year and can be replaced after death.
+ * Seated NPPs age each game year and can be replaced after death. The
+ * `nppTurnoverEnabled` game-state flag turns this on everywhere and adds
+ * old-age retirement; with the flag absent the legacy V5 country gate applies.
  * Native slate financial owners retain their filed people and accounts.
- * This shell applies country gates, persists retirement, and updates office references.
+ * This shell applies the gates, persists departures, and updates office references.
  * @see processNppMortality
  */
 
@@ -15,28 +17,71 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { CabinetMember } from "@/lib/db/types/cabinet";
 import type { CountryLeaderState } from "@/lib/db/types/countryLeaderState";
+import type { GameState } from "@/lib/db/types/gameState";
 import { closeCeoTenure, openCeoTenure } from "@/lib/corporations/ceoHistory";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { generateNPP } from "@/lib/npp/generator";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import {
+  backfillBirthYear,
   isEligibleNppForMortality,
   nppAgeAtYear,
   nppDiesThisTurn,
+  nppRetiresThisTurn,
   randomReplacementBirthYear,
 } from "./rules/mortality";
 
 export {
   annualDeathProbability,
+  annualRetirementProbability,
+  backfillBirthYear,
   isEligibleNppForMortality,
   nppAgeAtYear,
   nppDiesThisTurn,
+  nppRetiresThisTurn,
   randomReplacementBirthYear,
 } from "./rules/mortality";
 
 export interface NppMortalityResult {
   deaths: number;
+  retirements: number;
   replacements: number;
+  /** Office-holders without a birth year that were given one this pass. */
+  birthYearsAssigned: number;
+}
+
+/** Most birth-year-less office-holders backfilled in one pass. */
+export const BIRTH_YEAR_BACKFILL_PER_TURN = 500;
+
+/**
+ * Give seated NPPs that were seeded without a birth year a deterministic one,
+ * a bounded batch per turn, so they can age out like everyone else.
+ */
+async function backfillMissingBirthYears(db: Db, year: number, now: Date): Promise<number> {
+  const missing = await db
+    .collection<NPP>("npps")
+    .find(
+      {
+        retiredAt: null,
+        birthYear: null,
+        isTechnocrat: { $ne: true },
+        currentOffice: { $exists: true, $ne: null },
+      },
+      { projection: { _id: 1 } }
+    )
+    .limit(BIRTH_YEAR_BACKFILL_PER_TURN)
+    .toArray();
+  if (missing.length === 0) return 0;
+  await db.collection<NPP>("npps").bulkWrite(
+    missing.map(({ _id }) => ({
+      updateOne: {
+        filter: { _id, birthYear: null },
+        update: { $set: { birthYear: backfillBirthYear(_id.toHexString(), year), updatedAt: now } },
+      },
+    })),
+    { ordered: false }
+  );
+  return missing.length;
 }
 
 /** A minted random successor, ready to insert (needs no further DB reads). */
@@ -63,9 +108,11 @@ async function mintRandomSuccessor(
 }
 
 /**
- * Roll mortality for every live, aged, non-technocrat NPP in a V5 country.
- * Each death retires the NPP and seats a new random NPP of the same party in
- * the same office(s) immediately.
+ * Roll mortality (and, with the turnover flag, retirement) for every live,
+ * aged, non-technocrat seated NPP. `nppTurnoverEnabled` true covers every
+ * country, false switches the pass off, and absent keeps the legacy V5 country
+ * gate with mortality only. Each departure retires the NPP and seats a new
+ * random NPP of the same party in the same office(s) immediately.
  */
 export async function processNppMortality(
   db: Db,
@@ -82,6 +129,14 @@ export async function processNppMortality(
   const { now, year, rng } = opts;
   const mint =
     opts.mintReplacement ?? ((dead: NPP, y: number) => mintRandomSuccessor(db, dead, y, rng));
+
+  const flags = await db
+    .collection<GameState>("gameState")
+    .findOne({ _id: "current" }, { projection: { nppTurnoverEnabled: 1 } });
+  const turnover = flags?.nppTurnoverEnabled;
+  if (turnover === false)
+    return { deaths: 0, retirements: 0, replacements: 0, birthYearsAssigned: 0 };
+  const birthYearsAssigned = turnover === true ? await backfillMissingBirthYears(db, year, now) : 0;
 
   const candidates = await db
     .collection<NPP>("npps")
@@ -121,9 +176,11 @@ export async function processNppMortality(
     : [];
   const nativeOwnerIds = new Set(nativeOwners.flatMap((id) => (id ? [id.toHexString()] : [])));
 
-  // Per-country V5 gate, resolved once per country per pass.
+  // Per-country V5 gate, resolved once per country per pass. The turnover flag
+  // replaces it outright.
   const v5ByCountry = new Map<string, boolean>();
   const isV5 = async (countryId: CountryId): Promise<boolean> => {
+    if (turnover === true) return true;
     const key = countryId;
     let v = v5ByCountry.get(key);
     if (v === undefined) {
@@ -134,6 +191,7 @@ export async function processNppMortality(
   };
 
   let deaths = 0;
+  let retirements = 0;
   let replacements = 0;
   const deadIds: ObjectId[] = [];
   const successions: Array<{ deadId: ObjectId; successor: NPP }> = [];
@@ -152,7 +210,10 @@ export async function processNppMortality(
     if (!(await isV5(countryId))) continue;
     const age = nppAgeAtYear(npp, year);
     if (age == null) continue;
-    if (!nppDiesThisTurn(age, rng, TURNS_PER_YEAR)) continue;
+    // Leaders retire at any point; the succession below carries their posts to
+    // the successor, and party leadership contests run as usual afterwards.
+    const dies = nppDiesThisTurn(age, rng, TURNS_PER_YEAR);
+    if (!dies && !(turnover === true && nppRetiresThisTurn(age, rng, TURNS_PER_YEAR))) continue;
 
     const replacement = await mint(npp as NPP, year);
     replacement.createdAt = now;
@@ -207,13 +268,14 @@ export async function processNppMortality(
 
     successions.push({ deadId: npp._id as ObjectId, successor: replacement });
     deadIds.push(npp._id as ObjectId);
-    deaths += 1;
+    if (dies) deaths += 1;
+    else retirements += 1;
     replacements += 1;
   }
 
   if (successions.length > 0) await seatSuccessors(db, successions, now, opts.turn);
 
-  // A dead NPP must not stay on as a company's CEO. Its NPP-run companies are
+  // A departed NPP must not stay on as a company's CEO. Its NPP-run companies are
   // marked vacant, so the caretaker step seats a living NPP next turn (by
   // sector record at v6). Player companies were handed to the successor above.
   if (deadIds.length > 0) {
@@ -225,7 +287,7 @@ export async function processNppMortality(
       );
   }
 
-  return { deaths, replacements };
+  return { deaths, retirements, replacements, birthYearsAssigned };
 }
 
 /**
