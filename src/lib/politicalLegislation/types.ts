@@ -83,13 +83,17 @@ export interface PoliticalLaw {
   /** §7 authored 1953 enacted level. Program laws only; tax laws omit. */
   baselineLevel?: 0 | 1 | 2 | 3 | 4;
   /**
-   * Era existence window, inclusive at both ends. Absent = always active.
+   * Era filing window. `from` is the first year a bill may file the law;
+   * `until`, when set, is the first year it may not. A window controls FILING
+   * only: an enacted law stays in force, keeps its budget line and keeps its
+   * effects after `until`. Before `from` the law is hidden from every filing
+   * path and has no seeded record. Absent = always fileable.
    * Political laws carry their OWN windows rather than joining LEGISLATION_ERA,
    * so the era-gate invariant (new-generation ids never appear in the legacy era
    * catalogs, where a tagging sweep could silently zero their budget lines)
-   * stays intact — see eraGate.test.ts.
+   * stays intact. See eraGate.test.ts.
    */
-  window?: { from: number; to: number | null };
+  window?: { from: number; until?: number };
   /**
    * Year-anchored day-one enacted level, ascending by year. Absent = the scalar
    * baselineLevel applies at every year. Interpolated then rounded to a whole

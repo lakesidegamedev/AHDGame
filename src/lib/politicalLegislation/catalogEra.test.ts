@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCatalog, isLawActive, baselineLevelFor } from "./catalog";
+import { getCatalog, isLawActive, isLawFileable, baselineLevelFor } from "./catalog";
 import { LAW_COUNTRY_IDS, type PoliticalLaw } from "./types";
 
 const law = (over: Partial<PoliticalLaw>): PoliticalLaw =>
@@ -12,15 +12,30 @@ describe("isLawActive", () => {
   });
 
   it("respects an open-ended window", () => {
-    const l = law({ window: { from: 1964, to: null } });
+    const l = law({ window: { from: 1964 } });
     expect(isLawActive(l, 1963)).toBe(false);
     expect(isLawActive(l, 1964)).toBe(true);
   });
 
-  it("respects a closed window inclusively", () => {
-    const l = law({ window: { from: 1964, to: 1990 } });
+  it("keeps a law in existence after its filing window closes", () => {
+    const l = law({ window: { from: 1964, until: 1990 } });
     expect(isLawActive(l, 1990)).toBe(true);
-    expect(isLawActive(l, 1991)).toBe(false);
+    expect(isLawActive(l, 2049)).toBe(true);
+  });
+});
+
+describe("isLawFileable", () => {
+  it("is true for a law with no window, at any year", () => {
+    expect(isLawFileable(law({}), 1953)).toBe(true);
+    expect(isLawFileable(law({}), 2049)).toBe(true);
+  });
+
+  it("files from `from` up to but not including `until`", () => {
+    const l = law({ window: { from: 1964, until: 1990 } });
+    expect(isLawFileable(l, 1963)).toBe(false);
+    expect(isLawFileable(l, 1964)).toBe(true);
+    expect(isLawFileable(l, 1989)).toBe(true);
+    expect(isLawFileable(l, 1990)).toBe(false);
   });
 });
 
@@ -62,11 +77,14 @@ describe("getCatalog", () => {
     }
   });
 
-  it("returns the same set at 1953 as unfiltered, since no law declares a window yet", () => {
+  it("drops only windowed laws whose window has not opened", () => {
     for (const countryId of LAW_COUNTRY_IDS) {
       expect(getCatalog(countryId, 1953).map((l) => l.id)).toEqual(
-        getCatalog(countryId).map((l) => l.id)
+        getCatalog(countryId)
+          .filter((l) => l.window == null || l.window.from <= 1953)
+          .map((l) => l.id)
       );
     }
+    expect(getCatalog("US", 2030).map((l) => l.id)).toEqual(getCatalog("US").map((l) => l.id));
   });
 });

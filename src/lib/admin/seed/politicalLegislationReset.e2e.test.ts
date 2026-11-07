@@ -15,7 +15,7 @@ import type { Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { legislationTypes as oldReferenceTypes } from "@/lib/seeds/reference/legislationTypes";
-import { getCatalog } from "@/lib/politicalLegislation/catalog";
+import { getCatalog, isLawActive } from "@/lib/politicalLegislation/catalog";
 import { budgetKeyForLaw } from "@/lib/politicalLegislation/budgetKeys";
 import { LAW_COUNTRY_IDS } from "@/lib/politicalLegislation/types";
 import {
@@ -168,8 +168,10 @@ describe("1953 reset — end-to-end political-legislation verification", () => {
         // catalog existed. PR #17 added the six DD Land laws on 2026-08-12 and
         // this test went red on `development` and shipped red to `main`,
         // reporting a seeding bug that was not there.
+        // Later-era laws (window opening after 1953) get a type, so they are
+        // ready when the world reaches their year, but no 1953 row.
         if (law.kind !== "tax" && law.allowedScope !== "regional") {
-          expect(policyStore.has(law.id), `policy ${law.id}`).toBe(true);
+          expect(policyStore.has(law.id), `policy ${law.id}`).toBe(isLawActive(law, 1953));
         }
       }
     }

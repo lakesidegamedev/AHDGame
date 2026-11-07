@@ -16,6 +16,11 @@
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
 import { MODERN_ERA_LEGISLATION_ERA_ENTRIES } from "@/lib/seeds/shared/modernEraLegislation";
+import {
+  isNewGenerationLawActive,
+  isNewGenerationLawFileable,
+  newGenerationLawWindowFrom,
+} from "@/lib/politicalLegislation/catalog";
 
 export const LEGISLATION_ERA: Record<string, number | "always"> = {
   // ── Windowed (74) — numbers are the first fileable calendar year ──────────
@@ -784,13 +789,16 @@ const NEW_BADGE_YEARS = 2;
 
 /**
  * True if the type may exist at `year`. Null year (flag off / legacy) ⇒ true.
- * "always" ⇒ true. Unknown typeId ⇒ true (fail-open; validation forbids it).
+ * "always" ⇒ true. A new-generation law answers from its own `window` start,
+ * which never closes, so enacted laws stay in force. Unknown typeId ⇒ true
+ * (fail-open; validation forbids it).
  */
 export function isLegislationTypeActive(typeId: string, year: number | null): boolean {
   typeId = typeId.split(/__(?:income|capital)_/)[0];
   if (year == null || !Number.isFinite(year)) return true;
   const from = LEGISLATION_ERA[typeId];
-  if (from === undefined || from === "always") return true;
+  if (from === undefined) return isNewGenerationLawActive(typeId, year) ?? true;
+  if (from === "always") return true;
   return year >= from;
 }
 
@@ -800,10 +808,15 @@ export function isLegislationTypeActive(typeId: string, year: number | null): bo
  * {@link LEGISLATION_ERA_UNTIL} year. Use this on filing, sponsoring and
  * proposal-picker paths only; enacted laws keep resolving through
  * isLegislationTypeActive so they stay in force after filing closes.
+ *
+ * New-generation laws (US, UK, RU, DD law books) carry their own `window` and
+ * follow the same rule: fileable while from <= year < until.
  */
 export function isLegislationTypeFileable(typeId: string, year: number | null): boolean {
   if (!isLegislationTypeActive(typeId, year)) return false;
   if (year == null || !Number.isFinite(year)) return true;
+  const newGeneration = isNewGenerationLawFileable(typeId, year);
+  if (newGeneration != null) return newGeneration;
   const until = LEGISLATION_ERA_UNTIL[typeId.split(/__(?:income|capital)_/)[0]];
   return until === undefined || year < until;
 }
@@ -811,7 +824,7 @@ export function isLegislationTypeFileable(typeId: string, year: number | null): 
 /** True while `from <= year <= from + NEW_BADGE_YEARS`. Null year / "always" ⇒ false. */
 export function isNewThisEra(typeId: string, year: number | null): boolean {
   if (year == null || !Number.isFinite(year)) return false;
-  const from = LEGISLATION_ERA[typeId];
+  const from = LEGISLATION_ERA[typeId] ?? newGenerationLawWindowFrom(typeId);
   if (from === undefined || from === "always") return false;
   return year >= from && year - from <= NEW_BADGE_YEARS;
 }

@@ -34,9 +34,8 @@ export async function runBackfillPoliticalLegislationTypes(
     return { notes: [`Preset ${preset} is not a political-legislation preset; nothing to do.`] };
   }
 
-  // Null year (era system off) projects the whole catalog, matching what the
-  // seeder does for a legacy world.
-  const projected = getProjectedPoliticalLegislationTypes(year ?? undefined);
+  // The whole catalog, matching the seeder: era windows gate filing at runtime.
+  const projected = getProjectedPoliticalLegislationTypes();
   const collection = db.collection<LegislationType>("legislationTypes");
   const existing = await collection
     .find({ _id: { $in: projected.map((t) => t._id) } }, { projection: { _id: 1 } })

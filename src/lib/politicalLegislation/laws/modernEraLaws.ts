@@ -1,0 +1,643 @@
+/**
+ * Later-era national laws for the US and UK law books: the 2027 band (AI
+ * liability, data protection, housing supply, critical minerals, cyber
+ * resilience, platform content) and the 2030 band (automation tax, wage
+ * insurance, carbon border adjustment, heat standards, pension age indexation,
+ * nuclear licensing). The same twelve laws exist in the legacy catalogue for
+ * DE, JP, CN and IE (seeds/shared/modernEraLegislation.ts).
+ *
+ * Every law carries an era `window`: it cannot be filed before its first year,
+ * and an enacted one stays in force whatever the year. They are national only.
+ * A `both` law with a window would need year-aware regional read fallbacks
+ * (see regionalDefaults.test.ts), so zoning and heat standards have no state
+ * variant.
+ *
+ * Winners are the positive targets. Payers come through the same channels the
+ * rest of the book uses: a cost on a budget line, and one negative target (the
+ * metric the law trades away). The automation tax and the carbon border
+ * adjustment raise real revenue through gdpRevenueFraction.
+ *
+ * Every law seeds at level 0, so adding them moves no day-one budget, metric
+ * or equilibrium.
+ */
+
+import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../../politicalMetrics/types";
+import type { LawLevel, PoliticalLaw } from "../types";
+
+type ModernLawCountry = "US" | "UK";
+
+/** Text that differs by country; a plain string is shared. */
+type Copy = string | { US: string; UK: string };
+
+interface LevelSpec {
+  name: Copy;
+  description: Copy;
+  cost?: number;
+  revenue?: number;
+}
+
+interface ModernLawSpec {
+  slug: string;
+  from: 2027 | 2030;
+  category: PoliticalMetricCategoryId;
+  /** Winners first (the first entry sets the law's lean), then the payer. */
+  targets: Array<{ metricId: PoliticalMetricId; weight: number }>;
+  budgetKeyOverride?: { US: string; UK: string };
+  title: { US: string; UK: string };
+  description: { US: string; UK: string };
+  /** Levels 1 to 4; level 0 is the shared "no statute" rung below. */
+  levels: [LevelSpec, LevelSpec, LevelSpec, LevelSpec];
+  noStatute: Copy;
+}
+
+const pick = (copy: Copy, countryId: ModernLawCountry): string =>
+  typeof copy === "string" ? copy : copy[countryId];
+
+export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
+  // ── 2027 ────────────────────────────────────────────────────────────────
+  {
+    slug: "aiLiabilityTransparency",
+    from: 2027,
+    category: "governance",
+    targets: [
+      { metricId: "governance.integrity", weight: 0.45 },
+      { metricId: "order.dueProcess", weight: 0.3 },
+      { metricId: "economy.productivity", weight: -0.25 },
+    ],
+    title: {
+      US: "Artificial Intelligence Accountability Act",
+      UK: "Artificial Intelligence (Liability and Transparency) Act",
+    },
+    description: {
+      US: "Makes the builders and users of automated systems answer for the harm they cause and say what their systems decide.",
+      UK: "Makes the builders and users of automated systems answer for the harm they cause and say what their systems decide.",
+    },
+    noStatute: "Automated systems answer to no law of their own. Harm is argued case by case.",
+    levels: [
+      {
+        name: "Disclosure Notices",
+        description: "People must be told when an automated system makes a decision about them.",
+        cost: 0.00005,
+      },
+      {
+        name: "Audit and Liability",
+        description:
+          "High-risk systems are audited before use, and whoever deploys them pays for the harm they do.",
+        cost: 0.00012,
+      },
+      {
+        name: "Licensed Deployment",
+        description: {
+          US: "High-risk systems need a license to run and must keep logs a regulator can inspect.",
+          UK: "High-risk systems need a licence to run and must keep logs a regulator can inspect.",
+        },
+        cost: 0.00025,
+      },
+      {
+        name: "Strict Liability Regime",
+        description:
+          "Builders and users carry strict liability, and opaque systems are barred from public decisions.",
+        cost: 0.0004,
+      },
+    ],
+  },
+  {
+    slug: "dataProtectionOverhaul",
+    from: 2027,
+    category: "governance",
+    targets: [
+      { metricId: "order.dueProcess", weight: 0.45 },
+      { metricId: "governance.integrity", weight: 0.25 },
+      { metricId: "economy.competition", weight: -0.25 },
+    ],
+    title: {
+      US: "Consumer Data Privacy Act",
+      UK: "Data Protection and Digital Rights Act",
+    },
+    description: {
+      US: "Sets what companies may collect about people, how long they may keep it and who they may sell it to.",
+      UK: "Sets what companies may collect about people, how long they may keep it and who they may sell it to.",
+    },
+    noStatute: "Personal data is governed by a patchwork of old rules and company terms.",
+    levels: [
+      {
+        name: "Breach Notification",
+        description: "Firms must report data breaches quickly and tell the people affected.",
+        cost: 0.00004,
+      },
+      {
+        name: "Access and Consent Rights",
+        description:
+          "People can see, correct and delete what firms hold, and sale of data needs consent.",
+        cost: 0.0001,
+      },
+      {
+        name: { US: "Data Minimization Rules", UK: "Data Minimisation Rules" },
+        description:
+          "Firms may collect only what a service needs, with heavy fines for misuse and smaller firms squeezed by compliance.",
+        cost: 0.0002,
+      },
+      {
+        name: "Data Sovereignty Code",
+        description:
+          "A strict code: sensitive data stays at home, profiling for advertising is banned, and a strong regulator polices it.",
+        cost: 0.00035,
+      },
+    ],
+  },
+  {
+    slug: "housingSupplyZoning",
+    from: 2027,
+    category: "infrastructure",
+    targets: [
+      { metricId: "infrastructure.ownership", weight: 0.5 },
+      { metricId: "infrastructure.development", weight: 0.35 },
+      { metricId: "economy.householdIncome", weight: 0.25 },
+      { metricId: "environment.conservation", weight: -0.25 },
+    ],
+    title: {
+      US: "Housing Supply and Zoning Reform Act",
+      UK: "Planning and Housing Supply Act",
+    },
+    description: {
+      US: "Pushes towns and states to let more homes be built, with grants for those that do. Renters and first buyers gain; open land and local control pay.",
+      UK: "Pushes councils to let more homes be built, with grants for those that do. Renters and first buyers gain; green fields and local control pay.",
+    },
+    noStatute: "Local rules decide what may be built, and most land stays zoned as it is.",
+    levels: [
+      {
+        name: "Incentive Grants",
+        description: "Grants reward places that approve new homes quickly.",
+        cost: 0.0003,
+      },
+      {
+        name: "Building by Right",
+        description:
+          "Homes that meet a national code are approved by right, with no local veto on denser housing near transit.",
+        cost: 0.0008,
+      },
+      {
+        name: "Upzoning Mandate",
+        description:
+          "Every place must allow small apartment blocks on residential land and meet a national housing target.",
+        cost: 0.0015,
+      },
+      {
+        name: { US: "National Build Program", UK: "National Build Programme" },
+        description:
+          "Targets are enforced from the centre, new towns are planned, and the state funds the roads and pipes they need.",
+        cost: 0.0025,
+      },
+    ],
+  },
+  {
+    slug: "criticalMineralsStockpile",
+    from: 2027,
+    category: "defense",
+    targets: [
+      { metricId: "defense.defenseIndustry", weight: 0.45 },
+      { metricId: "environment.energySecurity", weight: 0.35 },
+      { metricId: "environment.resourceDev", weight: 0.25 },
+      { metricId: "environment.conservation", weight: -0.25 },
+    ],
+    title: {
+      US: "Critical Minerals Stockpile Act",
+      UK: "Critical Minerals Reserve Act",
+    },
+    description: {
+      US: "Builds a national reserve of lithium, rare earths and other minerals that batteries, chips and weapons need. Industry gains supply security; the treasury and wild land pay.",
+      UK: "Builds a national reserve of lithium, rare earths and other minerals that batteries, chips and weapons need. Industry gains supply security; the treasury and wild land pay.",
+    },
+    noStatute: "The country buys minerals on the open market and holds no reserve.",
+    levels: [
+      {
+        name: "Supply Mapping",
+        description: "The state tracks where key minerals come from and where supply could fail.",
+        cost: 0.0002,
+      },
+      {
+        name: "Strategic Reserve",
+        description: {
+          US: "A reserve holds several months of supply for defense and grid industries.",
+          UK: "A reserve holds several months of supply for defence and grid industries.",
+        },
+        cost: 0.0005,
+      },
+      {
+        name: "Domestic Extraction Drive",
+        description:
+          "The reserve grows and new mines and refineries at home get fast permits and price floors.",
+        cost: 0.001,
+      },
+      {
+        name: { US: "Minerals Security Program", UK: "Minerals Security Programme" },
+        description: {
+          US: "A full program: a large reserve, state stakes in refining, and long contracts with friendly suppliers.",
+          UK: "A full programme: a large reserve, state stakes in refining, and long contracts with friendly suppliers.",
+        },
+        cost: 0.0016,
+      },
+    ],
+  },
+  {
+    slug: "cyberResilienceMandate",
+    from: 2027,
+    category: "defense",
+    targets: [
+      { metricId: "defense.security", weight: 0.45 },
+      { metricId: "infrastructure.utilities", weight: 0.35 },
+      { metricId: "governance.administration", weight: 0.25 },
+      { metricId: "economy.competition", weight: -0.25 },
+    ],
+    title: {
+      US: "Cyber Resilience Mandate",
+      UK: "Cyber Security and Resilience Act",
+    },
+    description: {
+      US: "Sets security duties for grids, hospitals, banks and the firms that supply them. Critical services gain; small suppliers pay for compliance.",
+      UK: "Sets security duties for grids, hospitals, banks and the firms that supply them. Critical services gain; small suppliers pay for compliance.",
+    },
+    noStatute: "Security is left to each operator, and attacks are reported if the victim chooses.",
+    levels: [
+      {
+        name: "Incident Reporting",
+        description: "Operators of critical services must report serious attacks to the state.",
+        cost: 0.0001,
+      },
+      {
+        name: "Baseline Standards",
+        description:
+          "Critical operators must meet a security baseline and pass regular inspections.",
+        cost: 0.0003,
+      },
+      {
+        name: "Supply Chain Duties",
+        description:
+          "The duties extend to suppliers, and insecure products may not be sold to critical services.",
+        cost: 0.0006,
+      },
+      {
+        name: "National Cyber Shield",
+        description:
+          "A national agency can direct operators during an attack and runs joint defence of the grid and the banks.",
+        cost: 0.001,
+      },
+    ],
+  },
+  {
+    slug: "platformContentLaw",
+    from: 2027,
+    category: "governance",
+    targets: [
+      { metricId: "order.communityTrust", weight: 0.4 },
+      { metricId: "society.civicLife", weight: 0.3 },
+      { metricId: "governance.openness", weight: -0.3 },
+    ],
+    title: {
+      US: "Platform Accountability Act",
+      UK: "Online Platforms Act",
+    },
+    description: {
+      US: "Sets what large online platforms must remove and how fast. Users gain protection from abuse; open speech pays at the stricter end.",
+      UK: "Sets what large online platforms must remove and how fast. Users gain protection from abuse; open speech pays at the stricter end.",
+    },
+    noStatute: "Platforms set their own rules and carry no duty for what users post.",
+    levels: [
+      {
+        name: "Transparency Reports",
+        description: "Large platforms must publish how they moderate and what they take down.",
+        cost: 0.00003,
+      },
+      {
+        name: "Duty of Care",
+        description:
+          "Platforms must act on illegal content and protect children, under a regulator that can fine them.",
+        cost: 0.00008,
+      },
+      {
+        name: "Takedown Deadlines",
+        description:
+          "Harmful posts must come down within hours, and repeat failures cost a share of turnover.",
+        cost: 0.00015,
+      },
+      {
+        name: "Licensed Platforms",
+        description:
+          "Large platforms need a licence, verify their users and answer for what they spread.",
+        cost: 0.00025,
+      },
+    ],
+  },
+  // ── 2030 ────────────────────────────────────────────────────────────────
+  {
+    slug: "automationTax",
+    from: 2030,
+    category: "economy",
+    targets: [
+      { metricId: "economy.workerSecurity", weight: 0.45 },
+      { metricId: "economy.mobility", weight: 0.3 },
+      { metricId: "economy.productivity", weight: -0.35 },
+    ],
+    title: {
+      US: "Automation Tax Act",
+      UK: "Robotics and Automation Levy",
+    },
+    description: {
+      US: "Taxes firms that replace workers with machines and software. Displaced workers and the treasury gain; productivity and investment pay.",
+      UK: "Taxes firms that replace workers with machines and software. Displaced workers and the treasury gain; productivity and investment pay.",
+    },
+    noStatute: "Machines and software that replace workers are taxed like any other investment.",
+    levels: [
+      {
+        name: "Reporting Duty",
+        description:
+          "Large firms report jobs lost to automation and pay a small levy on the largest cuts.",
+        cost: 0.00003,
+        revenue: 0.001,
+      },
+      {
+        name: "Displacement Levy",
+        description: "A levy is charged on each job automated away, paid into retraining.",
+        cost: 0.00005,
+        revenue: 0.002,
+      },
+      {
+        name: "Robot Payroll Tax",
+        description:
+          "Automated work is taxed as if it were wages, so machines carry the payroll cost of the jobs they replace.",
+        cost: 0.00008,
+        revenue: 0.0035,
+      },
+      {
+        name: "Full Automation Tax",
+        description:
+          "A broad tax on automated output funds the welfare state, at a real cost to investment.",
+        cost: 0.0001,
+        revenue: 0.005,
+      },
+    ],
+  },
+  {
+    slug: "wageInsurance",
+    from: 2030,
+    category: "economy",
+    budgetKeyOverride: { US: "socialSecurity", UK: "welfare" },
+    targets: [
+      { metricId: "economy.mobility", weight: 0.45 },
+      { metricId: "education.adultSkills", weight: 0.3 },
+      { metricId: "economy.stability", weight: 0.25 },
+      { metricId: "economy.fiscal", weight: -0.25 },
+    ],
+    title: {
+      US: "Wage Insurance Act",
+      UK: "Earnings Protection Act",
+    },
+    description: {
+      US: "Tops up the pay of workers who lose a job and take a lower paid one. Displaced workers gain; taxpayers pay.",
+      UK: "Tops up the pay of workers who lose a job and take a lower paid one. Displaced workers gain; taxpayers pay.",
+    },
+    noStatute: "A worker who takes a lower paid job after a layoff absorbs the whole loss.",
+    levels: [
+      {
+        name: "Pilot Scheme",
+        description: "Workers in the hardest hit trades get a short top-up after a layoff.",
+        cost: 0.0005,
+      },
+      {
+        name: "Half the Gap",
+        description: "Displaced workers get half the drop in pay back for two years.",
+        cost: 0.0012,
+      },
+      {
+        name: "Insurance with Retraining",
+        description:
+          "The top-up runs longer and comes with paid retraining for anyone who wants it.",
+        cost: 0.0022,
+      },
+      {
+        name: "Universal Earnings Cover",
+        description:
+          "Every worker is covered for most of a pay cut after a layoff, for as long as it lasts.",
+        cost: 0.0035,
+      },
+    ],
+  },
+  {
+    slug: "carbonBorderAdjustment",
+    from: 2030,
+    category: "environment",
+    targets: [
+      { metricId: "environment.stewardship", weight: 0.45 },
+      { metricId: "environment.urbanAir", weight: 0.3 },
+      { metricId: "economy.householdIncome", weight: -0.25 },
+      { metricId: "defense.diplomacy", weight: -0.25 },
+    ],
+    title: {
+      US: "Carbon Border Adjustment Act",
+      UK: "Carbon Border Adjustment Mechanism Act",
+    },
+    description: {
+      US: "Charges imports for the carbon released in making them. Clean producers and the treasury gain; shoppers and trading partners pay.",
+      UK: "Charges imports for the carbon released in making them. Clean producers and the treasury gain; shoppers and trading partners pay.",
+    },
+    noStatute: "Imports pay no charge for the carbon released in making them.",
+    levels: [
+      {
+        name: "Emissions Reporting",
+        description:
+          "Importers of steel, cement and aluminium must report the carbon in what they bring in, with a token fee.",
+        cost: 0.00005,
+        revenue: 0.0005,
+      },
+      {
+        name: "Heavy Industry Charge",
+        description: "Carbon-heavy imports pay a charge that matches what home producers pay.",
+        cost: 0.0001,
+        revenue: 0.001,
+      },
+      {
+        name: "Broad Border Charge",
+        description:
+          "The charge covers most manufactured imports, and partners threaten to answer in kind.",
+        cost: 0.00015,
+        revenue: 0.002,
+      },
+      {
+        name: "Full Carbon Border",
+        description:
+          "Every import pays for its carbon at a high price, with steep costs in the shops and strained trade ties.",
+        cost: 0.0002,
+        revenue: 0.003,
+      },
+    ],
+  },
+  {
+    slug: "heatLabourStandards",
+    from: 2030,
+    category: "economy",
+    targets: [
+      { metricId: "economy.workerSecurity", weight: 0.4 },
+      { metricId: "health.prevention", weight: 0.35 },
+      { metricId: "economy.productivity", weight: -0.25 },
+    ],
+    title: {
+      US: "Workplace Heat Safety Act",
+      UK: "Heat and Working Conditions Act",
+    },
+    description: {
+      US: "Sets rest breaks, water, shade and stop-work limits for jobs done in extreme heat. Outdoor and warehouse workers gain; employers pay in lost hours.",
+      UK: "Sets rest breaks, water, shade and stop-work limits for jobs done in extreme heat. Outdoor and warehouse workers gain; employers pay in lost hours.",
+    },
+    noStatute: "No rule says when it is too hot to work.",
+    levels: [
+      {
+        name: "Heat Guidance",
+        description: "The state publishes advice on working in heat, with no penalties.",
+        cost: 0.00005,
+      },
+      {
+        name: "Water, Shade and Rest",
+        description: "Employers must provide water, shade and rest breaks above a set temperature.",
+        cost: 0.0001,
+      },
+      {
+        name: "Stop-Work Thresholds",
+        description:
+          "Outdoor work stops above a set heat index, with inspections and fines for breaches.",
+        cost: 0.0002,
+      },
+      {
+        name: "Climate Work Code",
+        description:
+          "A full code: cooled workplaces, shifted hours and paid heat days, enforced by a dedicated inspectorate.",
+        cost: 0.0003,
+      },
+    ],
+  },
+  {
+    slug: "pensionAgeIndexation",
+    from: 2030,
+    category: "economy",
+    budgetKeyOverride: { US: "socialSecurity", UK: "statePensions" },
+    targets: [
+      { metricId: "economy.fiscal", weight: 0.5 },
+      { metricId: "society.demography", weight: 0.25 },
+      { metricId: "health.socialInsurance", weight: -0.35 },
+    ],
+    title: {
+      US: "Retirement Age Indexation Act",
+      UK: "State Pension Age Indexation Act",
+    },
+    description: {
+      US: "Ties the age at which retirement benefits start to life expectancy. The public finances gain; workers nearing retirement pay with more years of work.",
+      UK: "Ties the State Pension age to life expectancy. The public finances gain; workers nearing retirement pay with more years of work.",
+    },
+    noStatute: {
+      US: "The retirement age moves only when Congress votes to change it.",
+      UK: "The State Pension age moves only when Parliament votes to change it.",
+    },
+    levels: [
+      {
+        name: "Periodic Review",
+        description: "An independent review recommends a pension age every few years.",
+        cost: 0.00002,
+      },
+      {
+        name: "Partial Indexation",
+        description: "The pension age rises by half of each gain in life expectancy.",
+        cost: 0.00004,
+      },
+      {
+        name: "Full Indexation",
+        description:
+          "The pension age moves with life expectancy, keeping the share of adult life spent retired fixed.",
+        cost: 0.00006,
+      },
+      {
+        name: "Accelerated Indexation",
+        description:
+          "The pension age rises faster than life expectancy until the system is fully funded.",
+        cost: 0.00008,
+      },
+    ],
+  },
+  {
+    slug: "nuclearLicensingReform",
+    from: 2030,
+    category: "environment",
+    targets: [
+      { metricId: "environment.energySecurity", weight: 0.5 },
+      { metricId: "environment.affordability", weight: 0.35 },
+      { metricId: "environment.conservation", weight: -0.25 },
+    ],
+    title: {
+      US: "Nuclear Licensing Modernization Act",
+      UK: "Nuclear Licensing Reform Act",
+    },
+    description: {
+      US: "Speeds up approval of new reactors, including small modular designs. Energy security and power bills gain; local objectors and nature sites pay.",
+      UK: "Speeds up approval of new reactors, including small modular designs. Energy security and power bills gain; local objectors and nature sites pay.",
+    },
+    noStatute:
+      "Each reactor is licensed from scratch, and approval takes the better part of a decade.",
+    levels: [
+      {
+        name: "Regulator Staffing",
+        description: "The nuclear regulator hires staff to clear its backlog of applications.",
+        cost: 0.0001,
+      },
+      {
+        name: "Approved Designs",
+        description:
+          "A reactor design approved once can be built anywhere without a fresh review of the design.",
+        cost: 0.0003,
+      },
+      {
+        name: "Fast-Track Siting",
+        description:
+          "Designated sites get fast permits, and local objections are heard on a fixed timetable.",
+        cost: 0.0006,
+      },
+      {
+        name: { US: "Nuclear Build Program", UK: "Nuclear Build Programme" },
+        description:
+          "Licensing is cut to a few years, with state backed finance for a fleet of new reactors.",
+        cost: 0.001,
+      },
+    ],
+  },
+];
+
+function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLaw {
+  const levels = [
+    { name: "No Statute", description: pick(spec.noStatute, countryId) },
+    ...spec.levels.map((level): LawLevel => ({
+      name: pick(level.name, countryId),
+      description: pick(level.description, countryId),
+      ...(level.cost !== undefined ? { gdpCostFraction: level.cost } : {}),
+      ...(level.revenue !== undefined ? { gdpRevenueFraction: level.revenue } : {}),
+    })),
+  ] as [LawLevel, LawLevel, LawLevel, LawLevel, LawLevel];
+  return {
+    id: `${countryId.toLowerCase()}.sec.${spec.slug}`,
+    countryId,
+    kind: "secondary",
+    targets: spec.targets.map((target) => ({ ...target })),
+    title: spec.title[countryId],
+    description: spec.description[countryId],
+    category: spec.category,
+    allowedScope: "national",
+    baselineLevel: 0,
+    window: { from: spec.from },
+    levels,
+    ...(spec.budgetKeyOverride ? { budgetKeyOverride: spec.budgetKeyOverride[countryId] } : {}),
+  };
+}
+
+export const US_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
+  buildLaw(spec, "US")
+);
+
+export const UK_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
+  buildLaw(spec, "UK")
+);

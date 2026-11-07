@@ -50,6 +50,8 @@ import { moderatedBillTitle, moderatedBillText } from "@/lib/api/schemas/congres
 import { validateBillAdministration } from "@/lib/legislature/jurisdiction";
 import { findAdministrationConflict } from "@/lib/legislature/administrationConflictCheck";
 import { getGameState } from "@/lib/gameState";
+import { getEraContext } from "@/lib/era/context";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { snapshotBillPolicyProvisions, validateBillProvisions } from "@/lib/congress/billProposal";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
@@ -470,6 +472,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             );
           }
         }
+      }
+    }
+
+    // Era gate: a cabinet bill cannot file a law outside its filing window.
+    if (legislationTypeId) {
+      const { year: eraYear } = await getEraContext(db);
+      if (!isLegislationTypeFileable(legislationTypeId, eraYear)) {
+        return NextResponse.json(
+          badRequest("This legislation is not available in this era.").toJson(),
+          { status: 400 }
+        );
       }
     }
 

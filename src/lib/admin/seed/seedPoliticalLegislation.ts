@@ -56,16 +56,18 @@ const OPENING_COMPOSITION_REFIT_1991: ReadonlySet<string> = new Set(["US", "UK"]
 export { isPoliticalPipelinePreset as isPoliticalLegislationPreset } from "@/lib/politicalMetrics/pipelinePreset";
 
 /**
- * The projected docs seedLegislationTypes upserts. Omitting `year` projects the
- * whole catalog; passing one projects only the laws that exist then, so a world
- * never gets a proposable type for a law outside its era window.
+ * The projected docs seedLegislationTypes upserts: the whole catalog. A law's
+ * era `window` gates FILING at runtime (isLegislationTypeFileable), so a type
+ * whose window opens later must already exist when the world reaches that
+ * year, and one whose filing has closed must still resolve for enacted laws.
+ * The world year some seed callers still pass is accepted and not used.
  */
-export function getProjectedPoliticalLegislationTypes(year?: number): LegislationType[] {
+export function getProjectedPoliticalLegislationTypes(_year?: number): LegislationType[] {
   return LAW_COUNTRY_IDS.flatMap((countryId) =>
     [
-      ...getCatalog(countryId, year),
+      ...getCatalog(countryId),
       // Historical bills still resolve their aggregate instrument after a reseed.
-      ...[...getCoreCatalog(countryId, year), ...getRegionalCatalog(countryId, year)].filter(
+      ...[...getCoreCatalog(countryId), ...getRegionalCatalog(countryId)].filter(
         (law) => law.taxPolicy?.taxType === "incomeTax"
       ),
     ].map(projectLawToLegislationType)
