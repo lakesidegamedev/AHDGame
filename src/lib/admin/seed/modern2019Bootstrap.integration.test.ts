@@ -33,11 +33,20 @@ it("builds the five 2019 transition countries before region-derived stages", asy
       .collection("corporations")
       .findOne({ countryOwnerId: "RU", isPrimaryNationalCorporation: true })
   ).toMatchObject({ name: "Russian Federation", liquidCurrencyCode: "RUB" });
+  // Russia opens with no ordinary private corporations; its only owned sectors
+  // are the two NPP banks every market economy gets (seedNpcBanks).
+  expect(
+    await db.collection("corporateSectors").countDocuments({
+      countryId: "RU",
+      corporationId: { $exists: true },
+      sectorType: { $ne: "financial" },
+    })
+  ).toBe(0);
   expect(
     await db
-      .collection("corporateSectors")
-      .countDocuments({ countryId: "RU", corporationId: { $exists: true } })
-  ).toBe(0);
+      .collection("corporations")
+      .countDocuments({ countryId: "RU", npcBankSeedKey: { $exists: true } })
+  ).toBe(2);
   const { runConformanceChecks } = await import("@/lib/admin/seedDiagnostic/conformance");
   const { checks } = await runConformanceChecks(db, { preset: "2019-default" });
   const critical = checks.filter((check) => check.severity === "critical");
