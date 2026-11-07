@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Db } from "mongodb";
-import { getColdWarDials, PEACETIME_DIALS } from "./dials";
+import { dialTensionReading, getColdWarDials, PEACETIME_DIALS } from "./dials";
+import { stepBlocDyads } from "./rules/blocTension";
 import {
   deriveVietnamDials,
   emptyVietnamState,
@@ -75,5 +76,52 @@ describe("Cold War console dials", () => {
       }
       expect(dials.procurementMultiplier).toBeGreaterThanOrEqual(1);
     }
+  });
+});
+
+describe("dialTensionReading (2027 bloc pairs)", () => {
+  it("reads the hotter of the global value and the hottest pair", () => {
+    const dyads = stepBlocDyads(undefined, {
+      "us-cn": 55,
+      "us-nonAligned": 10,
+      "cn-nonAligned": 8,
+    });
+    expect(dialTensionReading(20, dyads)).toBe(55);
+    expect(dialTensionReading(70, dyads)).toBe(70);
+    expect(dialTensionReading(20, undefined)).toBe(20);
+  });
+});
+
+describe("Cold War console dials in a multipolar world", () => {
+  it("answer the hottest bloc pair when the global value is calm", async () => {
+    const db = {
+      collection(name: string) {
+        return {
+          async findOne() {
+            if (name !== "coldWarTension") return null;
+            return {
+              _id: "current",
+              value: 20,
+              pressureFloor: 20,
+              updatedTurn: 5,
+              events: [],
+              blocDyads: [
+                { pair: "us-cn", value: 70, floor: 70 },
+                { pair: "us-nonAligned", value: 10, floor: 10 },
+                { pair: "cn-nonAligned", value: 8, floor: 8 },
+              ],
+            };
+          },
+        };
+      },
+    } as unknown as Db;
+    const dials = await getColdWarDials(db);
+    expect(dials.source).toBe("tension");
+    expect(dials.defcon).toBe(3);
+    expect(dials.blocTension?.find((d) => d.pair === "us-cn")).toEqual({
+      pair: "us-cn",
+      value: 70,
+      band: "CRISIS",
+    });
   });
 });

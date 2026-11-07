@@ -99,6 +99,9 @@ export function extractMacroInputs(bank: CentralBank): MacroInputs {
     inflationRate: finiteOr(bank.inflationHistory?.at(-1)?.rate, 0),
     gdpGrowth: finiteOr(bank.gdpGrowthHistory?.at(-1)?.rate, 0),
     tradeGrowth: finiteOr(bank.tradeGrowth, 0),
+    ...(Number.isFinite(bank.backgroundTradePressure)
+      ? { tradeBalancePressure: bank.backgroundTradePressure }
+      : {}),
   };
 }
 
