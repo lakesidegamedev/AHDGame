@@ -9,7 +9,8 @@ function marginForModifier(modifier: ActiveModifier): number | null {
     modifier.source === "address" ||
     modifier.source === "war" ||
     modifier.source === "banking" ||
-    modifier.source === "market"
+    modifier.source === "market" ||
+    modifier.source === "fiscal"
   )
     return null;
   if (modifier.marginEffect === 0) return null;

@@ -132,3 +132,15 @@ export async function emitImfBoardStatementNews(
   const content = `IMF Board ${verb} ${countryCode}'s bailout terms.${body} ${tone}`;
   await createSystemNewsPost(content, "sovereign");
 }
+
+export async function emitInterestSpiralCrisisNews(
+  countryCode: string,
+  currentTurn: number,
+  spiralYears: number
+): Promise<void> {
+  const content =
+    `Sovereign Debt Crisis: ${countryCode}: debt interest has taken more than half of ` +
+    `government revenue for ${spiralYears} fiscal years in a row. The government is ` +
+    `restructuring its sovereign debt. (turn ${currentTurn})`;
+  await createSystemNewsPost(content, "sovereign");
+}

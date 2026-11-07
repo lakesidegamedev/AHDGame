@@ -59,6 +59,8 @@ export function buildModifierTitle(modifier: ActiveModifier): string {
     return "Taxpayer-funded bank failure backstop relative to GDP. Approval cost fades over one game year; confidence is measured separately.";
   if (modifier.source === "market")
     return "Approval cost of a market adjustment: plants losing money across the economy and unemployment above its level when the adjustment began. Measured, never a reward for a response; fades over one game year after it ends.";
+  if (modifier.source === "fiscal")
+    return "Approval cost of the austerity budget the government enacted to close its deficit, larger for a bigger package. Fades over one game year.";
   if (modifier.source === "war") return WAR_TITLES[modifier.id] ?? WAR_FALLBACK_TITLE;
   return METRIC_TITLE;
 }

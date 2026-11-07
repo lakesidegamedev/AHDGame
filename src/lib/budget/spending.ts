@@ -38,6 +38,7 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
 import { nonLawSpendingAmount } from "./rules/nonLawSpending";
+import { applyCategoryScale } from "./rules/fiscalStabilizer";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 
@@ -389,7 +390,9 @@ export async function calculateFederalSpending(
   if (capacityRepair > 0) byCategory[CAPACITY_REPAIR_SPENDING_KEY] = capacityRepair;
 
   return normalizeFederalSpending({
-    byCategory,
+    // Cuts from an AI government's consolidation package (#5703) persist as a
+    // per-category scale, so they survive this rebuild from enacted laws.
+    byCategory: applyCategoryScale(byCategory, budget.fiscalConsolidation?.categoryScale),
     stateGrants,
     debtInterest,
     total: 0,

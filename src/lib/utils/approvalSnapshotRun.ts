@@ -6,6 +6,10 @@ import {
   loadMarketAdjustmentEffects,
   marketAdjustmentApprovalModifiers,
 } from "@/lib/crises/marketAdjustment/approvalEffects";
+import {
+  fiscalConsolidationApprovalModifiers,
+  loadFiscalConsolidationApprovalEffects,
+} from "@/lib/budget/fiscalStabilizer";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
@@ -98,11 +102,13 @@ export async function snapshotApprovalsForTurn(
   const plan = planApprovalSnapshot(activeIds, belligerents, documented, seeded);
   const bankFailures = await loadBankFailureEffects(db, turn, bankFailurePolitics);
   const marketAdjustment = await loadMarketAdjustmentEffects(db, turn, marketAdjustmentStage);
+  const fiscalConsolidation = await loadFiscalConsolidationApprovalEffects(db, turn);
   await Promise.all(
     plan.ids.map((id) => {
       const modifiers = [
         ...bankFailureApprovalModifiers(bankFailures.get(id)),
         ...marketAdjustmentApprovalModifiers(marketAdjustment.get(id)),
+        ...fiscalConsolidationApprovalModifiers(fiscalConsolidation.get(id)),
       ];
       return modifiers.length > 0
         ? snapshotApprovalHistory(db, id, turn, telemetryCtx, modifiers)
