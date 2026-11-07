@@ -18,7 +18,7 @@ import {
 } from "@shared/constants/legislation";
 import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
 import { getEraContext } from "@/lib/era/context";
-import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { stampTaxSliderProvisions } from "@/lib/politicalLegislation/taxSlider";
 import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -414,7 +414,7 @@ export async function validateStateBillProvisions(
   // Null year (flag off / legacy) ⇒ every type active, byte-identical.
   const { year: eraYear } = await getEraContext(db);
   for (const provision of policyProvisionsForCheck) {
-    if (!isLegislationTypeActive(provision.legislationTypeId, eraYear)) {
+    if (!isLegislationTypeFileable(provision.legislationTypeId, eraYear)) {
       return { ok: false, status: 400, error: "This legislation is not available in this era." };
     }
   }

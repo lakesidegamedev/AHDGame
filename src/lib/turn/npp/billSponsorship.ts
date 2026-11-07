@@ -77,7 +77,7 @@ import {
 } from "@/lib/nppAutonomy/v6/rules/whipCount";
 import { nppGovernmentWhipFor } from "@/lib/nppAutonomy/v6/rules/governmentWhip";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
-import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
@@ -956,7 +956,7 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
       // Planned economies also drop clearly market-liberalizing scenario levers.
       const planned = isPlannedEconomy(countryId, currentYear, commandEconomyEnabled);
       const legTypes = legTypesRaw.filter((lt) => {
-        if (!isLegislationTypeActive(lt._id, eraYear)) return false;
+        if (!isLegislationTypeFileable(lt._id, eraYear)) return false;
         if (
           countryId === COUNTRY_CONFIGS.US.id &&
           lt._id === "us_media_communications" &&

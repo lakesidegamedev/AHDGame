@@ -50,7 +50,7 @@ import {
 } from "@/lib/labour/unionLaws";
 import { getEraContext } from "@/lib/era/context";
 import { resolveTaxSliderProvisionFields } from "@/lib/politicalLegislation/taxSlider";
-import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { validateBillAdministration } from "@/lib/legislature/jurisdiction";
 import { findAdministrationConflict } from "@/lib/legislature/administrationConflictCheck";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -693,7 +693,7 @@ export async function validateBillProvisions(
     if (!lt) {
       return { ok: false, status: 400, error: `Invalid legislation type: ${ltId}.` };
     }
-    if (!isLegislationTypeActive(lt._id, eraYear)) {
+    if (!isLegislationTypeFileable(lt._id, eraYear)) {
       return {
         ok: false,
         status: 400,

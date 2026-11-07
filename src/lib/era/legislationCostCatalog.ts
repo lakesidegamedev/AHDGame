@@ -7,6 +7,10 @@
  * Spec: docs/superpowers/specs/2026-07-06-era-legislation-costs-design.md
  */
 import { MECHANICAL_TYPE_IDS } from "@/lib/mechanicalLaws/legislation";
+import {
+  MODERN_ERA_COST_CLASSES,
+  MODERN_ERA_TYPE_IDS,
+} from "@/lib/seeds/shared/modernEraLegislation";
 import { getIncomeAnchor } from "./metricCatalog";
 import { bankingSeparationLegislationTypes } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { JP_ECONOMY } from "@/lib/countries/jp/economy";
@@ -32,6 +36,8 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   ...BANKING_SEPARATION_COST_CLASSES,
   // Mechanical laws (competition, subsidiary limits, foreign investment) cost nothing.
   ...Object.fromEntries(MECHANICAL_TYPE_IDS.map((id) => [id, "none" as CostClass])),
+  // 2027 and 2030 law types: hand-priced per option (see modernEraLegislation.ts).
+  ...MODERN_ERA_COST_CLASSES,
   bal_economic_system: "none",
   bal_enterprise_levy: "none",
   bal_foreign_trade: "none",
@@ -962,6 +968,9 @@ interface MaterializeType {
 
 const round5 = (n: number) => Math.round(n * 1e5) / 1e5;
 
+/** Types that carry their own per-option cost fractions and claim no domain share. */
+const HAND_PRICED_TYPE_IDS: ReadonlySet<string> = new Set(MODERN_ERA_TYPE_IDS);
+
 /** Group key for the per-domain type count: country scope + policy domain. */
 function domainKey(type: MaterializeType): string {
   return `${(type.countryScope ?? "us").toUpperCase()}|${type.policyDomain}`;
@@ -977,6 +986,9 @@ export function countDomainTypes(types: MaterializeType[]): Map<string, number> 
   const counts = new Map<string, number>();
   for (const t of types) {
     if (getCostClass(t._id) === "none") continue;
+    // Hand-priced late-era laws must not split (and so reprice) the domain
+    // share of the laws that were already calibrated against it.
+    if (HAND_PRICED_TYPE_IDS.has(t._id)) continue;
     const k = domainKey(t);
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }

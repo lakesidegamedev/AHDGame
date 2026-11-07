@@ -25,9 +25,17 @@ const TARGETS_BY_COUNTRY = new Map<string, Set<string>>([
   ["UK", turnoutTargetIdsForCountry("UK")],
 ]);
 
+/** Every other prefix resolves to its own electorate, falling back to the US one. */
 function targetsFor(legislationTypeId: string): Set<string> {
   const prefix = legislationTypeId.slice(0, legislationTypeId.indexOf("_")).toUpperCase();
-  return TARGETS_BY_COUNTRY.get(prefix) ?? (TARGETS_BY_COUNTRY.get("US") as Set<string>);
+  if (!TARGETS_BY_COUNTRY.has(prefix)) {
+    const own = turnoutTargetIdsForCountry(prefix);
+    TARGETS_BY_COUNTRY.set(
+      prefix,
+      own.size > 0 ? own : (TARGETS_BY_COUNTRY.get("US") as Set<string>)
+    );
+  }
+  return TARGETS_BY_COUNTRY.get(prefix) as Set<string>;
 }
 
 describe("seeded legislation demographic effects", () => {

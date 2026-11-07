@@ -13,7 +13,7 @@ import {
 import { BILL_CATEGORIES, CATEGORY_TO_POLICY_DOMAINS } from "@shared/constants/legislation";
 import { LEGISLATION_TYPES_CACHE_TAG } from "@/lib/legislation/cacheTag";
 import { getEraContext } from "@/lib/era/context";
-import { isLegislationTypeActive, isNewThisEra } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable, isNewThisEra } from "@/lib/era/legislationCatalog";
 import { attachPoliticalLegislationEstimates } from "@/lib/politicalLegislation/estimates";
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
@@ -153,7 +153,7 @@ export async function GET(request: Request) {
       eraYear == null
         ? types
         : types
-            .filter((t) => isLegislationTypeActive(String(t._id), eraYear))
+            .filter((t) => isLegislationTypeFileable(String(t._id), eraYear))
             .map((t) => ({ ...t, eraNew: isNewThisEra(String(t._id), eraYear) }));
     const usLawPicker = country == null || country === "us";
     let mediaOwnershipBillAvailable = true;
