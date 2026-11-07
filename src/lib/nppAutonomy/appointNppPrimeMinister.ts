@@ -21,6 +21,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { tallySeatsByParty, appointPrimeMinister } from "@/lib/turn/parliamentaryGovernment";
 import { chooseAutonomousCabinet } from "@/lib/government/rules/autonomousSupport";
+import { refusalBlocks } from "@/lib/government/rules/coalitionRefusals";
 import { isNppAutonomyActive } from "./featureFlag";
 
 /**
@@ -67,9 +68,18 @@ export async function appointNppPrimeMinister(
     .collection<PoliticalParty>("politicalParties")
     .find(
       { countryId, sequentialId: { $in: Object.keys(seatsByParty).map(Number) } },
-      { projection: { sequentialId: 1, economicPosition: 1, socialPosition: 1 } }
+      {
+        projection: { sequentialId: 1, abbreviation: 1, economicPosition: 1, socialPosition: 1 },
+      }
     )
     .toArray();
+  // Parties that refuse to govern together never share a cabinet, and a
+  // refuser will not tolerate the other's minority either.
+  const refusals = gov.coalitionRefusals ?? [];
+  const abbreviationOf = (id: string) =>
+    parties.find((p) => String(p.sequentialId) === id)?.abbreviation ?? "";
+  const blocked = (a: string, b: string) =>
+    refusalBlocks(refusals, abbreviationOf(a), abbreviationOf(b));
   const support = chooseAutonomousCabinet(
     Object.entries(seatsByParty).map(([id, seats]) => {
       const party = parties.find((p) => String(p.sequentialId) === id);
@@ -81,7 +91,8 @@ export async function appointNppPrimeMinister(
       };
     }),
     nppMps.flatMap((mp) => (mp.party ? [mp.party] : [])),
-    majorityThreshold
+    majorityThreshold,
+    blocked
   );
   if (!support) return false;
   const governingPartyId = support.leadPartyId;

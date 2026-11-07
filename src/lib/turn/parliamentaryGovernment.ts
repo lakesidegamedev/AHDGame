@@ -49,7 +49,7 @@ import {
   isParliamentarySystem,
 } from "@/lib/constants/countries";
 import {
-  getLiveLowerChamberSeats,
+  getFormationChamberSeats,
   lowerChamberMajorityThreshold,
 } from "@/lib/legislature/lowerChamberSeats";
 import { computeParliamentaryGovernmentTally } from "@/lib/congress/governmentVoteBreakdown";
@@ -237,7 +237,7 @@ export async function ensureParliamentaryGovernmentFormation(
   if (existing) return null;
 
   const seatsByParty = await tallySeatsByParty(db, countryId, preset);
-  const totalSeats = await getLiveLowerChamberSeats(db, countryId);
+  const totalSeats = await getFormationChamberSeats(db, countryId, seatsByParty, preset);
   const now = new Date();
 
   const doc: GovernmentFormation = {
@@ -283,8 +283,6 @@ export async function updateParliamentaryGovernmentSeats(
   countryId: CountryId,
   preset?: string
 ): Promise<void> {
-  const totalSeats = await getLiveLowerChamberSeats(db, countryId);
-  const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
   const govCol = getGovernmentFormationsCollection(db);
 
   const existing = await govCol.findOne({ _id: countryId });
@@ -297,6 +295,8 @@ export async function updateParliamentaryGovernmentSeats(
   }
 
   const seatsByParty = await tallySeatsByParty(db, countryId, preset);
+  const totalSeats = await getFormationChamberSeats(db, countryId, seatsByParty, preset);
+  const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
   const now = new Date();
 
   if (
@@ -440,8 +440,6 @@ export async function resetParliamentaryGovernmentAfterElection(
   countryId: CountryId,
   now: Date
 ): Promise<void> {
-  const totalSeats = await getLiveLowerChamberSeats(db, countryId);
-  const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
   const govCol = getGovernmentFormationsCollection(db);
 
   const [existing, seatsByParty, gameStateDoc] = await Promise.all([
@@ -449,6 +447,8 @@ export async function resetParliamentaryGovernmentAfterElection(
     tallySeatsByParty(db, countryId),
     db.collection<{ _id: string; currentTurn: number }>("gameState").findOne({ _id: "current" }),
   ]);
+  const totalSeats = await getFormationChamberSeats(db, countryId, seatsByParty);
+  const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
 
   const cycle = (existing?.cycle ?? 0) + 1;
   const currentTurn = gameStateDoc?.currentTurn ?? 0;
@@ -1637,12 +1637,11 @@ export async function checkAppointmentEligibility(
   const runtime = await getCountryState(db, countryId);
   const runtimeConfig = { governmentType: runtime.governmentType };
   const { lowerOfficeType } = await loadRuntimeCountryOffices(db, countryId);
-  const liveLowerSeats = await getLiveLowerChamberSeats(db, countryId);
-  const minorityThreshold = minoritySeatThreshold(liveLowerSeats);
-
   // Always compute live to avoid stale stored seatsByParty when a player
   // switches parties mid-term and their seat moves to a new party.
   const seatsByParty = await tallySeatsByParty(db, countryId);
+  const liveLowerSeats = await getFormationChamberSeats(db, countryId, seatsByParty);
+  const minorityThreshold = minoritySeatThreshold(liveLowerSeats);
 
   // --- Check as coalition chair first ---
   // A chair of both a party and a qualifying coalition nominates for the whole

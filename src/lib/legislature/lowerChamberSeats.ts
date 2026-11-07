@@ -1,4 +1,4 @@
-import { liveSingleTierChamber } from "./rules/liveChamber";
+import { formationChamberSeats, liveSingleTierChamber } from "./rules/liveChamber";
 /**
  * Live lower-chamber size = the sum of the country's region `houseDistricts`.
  *
@@ -133,6 +133,27 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
     .toArray();
   const sum = regions.reduce((acc, r) => acc + (r.houseDistricts ?? 0), 0);
   return liveSingleTierChamber(countryId, sum, config.legislature.lowerChamber.seats);
+}
+
+/**
+ * Lower-chamber size for government formation majority math: the live chamber,
+ * or the seated total when a list-tier chamber is seated short of it (see
+ * {@link formationChamberSeats}).
+ */
+export async function getFormationChamberSeats(
+  db: Db,
+  countryId: CountryId,
+  seatsByParty: Record<string, number>,
+  preset?: string
+): Promise<number> {
+  const liveSeats = await getLiveLowerChamberSeats(db, countryId);
+  const config = getCountryConfig(countryId, preset ?? (await readActivePreset(db)));
+  const seated = Object.values(seatsByParty).reduce((sum, seats) => sum + seats, 0);
+  return formationChamberSeats(
+    liveSeats,
+    seated,
+    isListTierMethod(config.electionSystems.lowerChamber)
+  );
 }
 
 /** Simple-majority threshold for a chamber of `totalSeats`. */
