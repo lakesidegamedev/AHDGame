@@ -163,6 +163,8 @@ export type ProducerPhysicalEnv = Pick<
   runPlanStage?: number;
   /** gameConfig.producerSalesAdvancePriceStage >= 1: the sales advance judges a run on its inputs' clearing prices. */
   salesAdvanceAtClearing?: boolean;
+  /** gameConfig.producerSalesAdvanceRevenueShare: expected sales a run may borrow against (default 0.9). */
+  salesAdvanceRevenueShare?: number;
   /** gameConfig.producerZombieRestartStage >= 1: idle plants with no sales may run a restart probe. */
   restartProbes?: boolean;
   /** gameConfig.producerHouseholdIncomeSpendStage >= 1: households spend from income (householdSpendRules). */

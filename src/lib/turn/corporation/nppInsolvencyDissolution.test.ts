@@ -21,6 +21,7 @@ import { executeCorporationBondDefaultDissolution } from "@/lib/bonds/executeCor
 import {
   processNppInsolventCorpDissolution,
   PERSISTENT_INSOLVENCY_GRACE_TURNS,
+  insolvencyGraceTurns,
   LINGERING_DEFAULT_GRACE_TURNS,
 } from "./nppInsolvencyDissolution";
 
@@ -335,5 +336,14 @@ describe("processNppInsolventCorpDissolution", () => {
       const res = await processNppInsolventCorpDissolution(db, TURN);
       expect(res.dissolved).toBe(0);
     });
+  });
+});
+
+describe("insolvencyGraceTurns", () => {
+  it("reads a whole number of at least 1 from gameConfig, else 30", () => {
+    expect(insolvencyGraceTurns(8)).toBe(8);
+    expect(insolvencyGraceTurns(undefined)).toBe(PERSISTENT_INSOLVENCY_GRACE_TURNS);
+    expect(insolvencyGraceTurns(0)).toBe(PERSISTENT_INSOLVENCY_GRACE_TURNS);
+    expect(insolvencyGraceTurns(2.5)).toBe(PERSISTENT_INSOLVENCY_GRACE_TURNS);
   });
 });

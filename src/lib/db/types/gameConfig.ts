@@ -387,6 +387,17 @@ export interface GameConfig {
   /** Largest raise in one turn under producerShortageAskStage. Absent = 0.05. */
   producerShortageAskMaxStep?: number;
   /**
+   * Share of a run's expected sales a company may borrow against to run on
+   * little or no cash (salesAdvanceRules). Inside (0, 1]; absent = 0.9.
+   */
+  producerSalesAdvanceRevenueShare?: number;
+  /**
+   * Turns an AI company may stay insolvent and cashless before it is wound down
+   * and its plants pass to funded owners (nppInsolvencyDissolution). Whole
+   * number >= 1; absent = 30.
+   */
+  nppInsolvencyGraceTurns?: number;
+  /**
    * Funded producer market: >= 1 makes an automatic seller choose, among asks
    * within 1% of its best expected profit, the one the most buyers can pay
    * (quoteProducer buyerTieBreak). Stops a whole lane posting a hair above a

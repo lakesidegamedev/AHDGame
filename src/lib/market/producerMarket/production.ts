@@ -395,6 +395,7 @@ export function advanceProducerEconomy(input: {
    * instead of at the ceiling (gameConfig.producerSalesAdvancePriceStage).
    */
   salesAdvanceAtClearing?: boolean;
+  salesAdvanceRevenueShare?: number; // gameConfig.producerSalesAdvanceRevenueShare; absent = 0.9
   /**
    * Let an idle plant whose company cannot fund a run and that sold nothing
    * last turn run a small probe on intra-turn credit against its output's
@@ -647,6 +648,7 @@ export function advanceProducerEconomy(input: {
           free,
           need,
           expectedRevenue: expectedRevenue.get(id) ?? 0,
+          revenueShare: input.salesAdvanceRevenueShare,
           ...(expectedNeed ? { expectedNeed: expectedNeed.get(id) ?? need } : {}),
         })
       );
@@ -655,6 +657,7 @@ export function advanceProducerEconomy(input: {
           free,
           need,
           runShare: salesFunded,
+          revenueShare: input.salesAdvanceRevenueShare,
           ...(expectedNeed ? { expectedRevenue: expectedRevenue.get(id) ?? 0 } : {}),
         });
         if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && amount > 0)
