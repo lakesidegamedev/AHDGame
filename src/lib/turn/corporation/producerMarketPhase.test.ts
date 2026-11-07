@@ -9,9 +9,12 @@ import { producerPayableId } from "@/lib/market/producerMarket/payablesRules";
 import { prepareProducerSector } from "./producerSectorPlan";
 import {
   producerWalletId,
+  LIVE_MARKET_EXECUTION_BUDGET_MS,
+  liveMarketExecutionBudgetMs,
   runCorporationProducerMarket,
   type ProducerWalletScope,
 } from "./producerMarketPhase";
+import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -298,4 +301,14 @@ it("holds positive operating receipts out of spendable cash and replays the froz
   const replayed = await db.collection("corporations").findOne({ _id: corp._id });
   expect(replayed?.pendingOperatingCash).toBe(stored?.pendingOperatingCash);
   expect(replayed?.liquidCapital).toBe(1000);
+});
+
+describe("live market execution deadline", () => {
+  it("scales with the phase timeout and leaves a quarter of the phase for settlement", () => {
+    // Production runs a 20-minute corporation phase; a fixed 180 s deadline failed turn 743.
+    expect(liveMarketExecutionBudgetMs(20 * 60 * 1000)).toBe(900_000);
+    expect(liveMarketExecutionBudgetMs(4 * 60 * 1000)).toBe(180_000);
+    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBe(liveMarketExecutionBudgetMs(PHASE_TIMEOUT_MS));
+    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBeLessThan(PHASE_TIMEOUT_MS);
+  });
 });
