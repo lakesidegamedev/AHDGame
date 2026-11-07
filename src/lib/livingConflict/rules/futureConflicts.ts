@@ -193,7 +193,7 @@ export const CYBER_TENSION_FLOOR = 15;
 
 export interface CyberSignal {
   countryId: string;
-  /** Utilities resilience proxy, 0..100; null when the country has no board. */
+  /** Cyber resilience score, 0..1 (`cyber/rules.ts`); null when the country has no board. */
   resilience: number | null;
 }
 
@@ -201,7 +201,7 @@ export interface CyberSignal {
 export function cyberAnnualProbability(tension: number, signal: CyberSignal): number {
   if (!Number.isFinite(tension) || tension < CYBER_TENSION_FLOOR) return 0;
   if (signal.resilience === null) return 0;
-  const exposure = 1.5 - clamp(signal.resilience, 0, 100) / 100;
+  const exposure = 1.5 - clamp(signal.resilience, 0, 1);
   return clamp((0.04 + (0.2 * Math.min(100, tension)) / 100) * exposure, 0, 0.4);
 }
 

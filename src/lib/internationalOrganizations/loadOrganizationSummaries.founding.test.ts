@@ -123,6 +123,11 @@ describe("loadOrganizationSummaries — founding-year visibility", () => {
       "WARSAW_PACT",
       "NON_ALIGNED",
       "COMECON",
+      "CRITICAL_MINERALS_CLUB",
+      "CLIMATE_ADAPTATION_PACT",
+      "AI_SAFETY_ACCORD",
+      "ARCTIC_AGREEMENT",
+      "SPACE_TRAFFIC_RULES",
     ]);
   });
 });

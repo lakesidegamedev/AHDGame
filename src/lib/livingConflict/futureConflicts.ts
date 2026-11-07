@@ -6,7 +6,7 @@
  * wave costs one state read and nothing else.
  */
 import type { Db } from "mongodb";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { loadCyberResilience } from "@/lib/cyber/resilience";
 import { loadConflictState, type ConflictParticipants } from "./driver";
 import { normalizeConflictState, phaseFor } from "./engine";
 import { calendarWindowOpen } from "./rules/openingWindow";
@@ -84,26 +84,9 @@ export async function loadLabourSignals(db: Db, countryIds: string[]): Promise<L
   });
 }
 
-/** Utilities resilience proxy: the mean regional utilities score on the political board. */
+/** Cyber resilience (0..1) per country, from the shared cyber resilience score. */
 export async function loadCyberSignals(db: Db, countryIds: string[]): Promise<CyberSignal[]> {
-  if (countryIds.length === 0) return [];
-  // Board values are keyed by literal dotted ids, so the field cannot be
-  // projected on its own path; read the values record.
-  const rows = await db
-    .collection<Pick<PoliticalMetricsDoc, "countryId" | "values">>("politicalMetrics")
-    .find({ countryId: { $in: countryIds } } as never, {
-      projection: { _id: 0, countryId: 1, values: 1 },
-    })
-    .toArray();
-  return countryIds.map((countryId) => ({
-    countryId,
-    resilience: mean(
-      rows
-        .filter((row) => row.countryId === countryId)
-        .map((row) => row.values?.["infrastructure.utilities"])
-        .filter(finite)
-    ),
-  }));
+  return loadCyberResilience(db, countryIds);
 }
 
 export interface FutureConflictTurnContext {

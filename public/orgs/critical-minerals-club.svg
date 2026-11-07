@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="Critical Minerals Club emblem">
+  <title>Critical Minerals Club</title>
+  <rect width="240" height="160" fill="#5C4627"/>
+  <g transform="translate(120 80)">
+    <circle r="52" fill="#8A6D3B"/>
+    <polygon points="0,-34 30,-17 30,17 0,34 -30,17 -30,-17" fill="none" stroke="#F2E2C2" stroke-width="4"/>
+    <polygon points="0,-16 14,-8 14,8 0,16 -14,8 -14,-8" fill="#F2E2C2"/>
+  </g>
+</svg>

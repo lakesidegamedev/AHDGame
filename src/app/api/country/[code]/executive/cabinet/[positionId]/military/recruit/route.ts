@@ -19,6 +19,7 @@ import {
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import {
   DEFENSE_POSITION_BY_COUNTRY,
+  archetypeResearchBlock,
   getBranches,
   getUnitTypesForYear,
 } from "@/lib/constants/military";
@@ -95,6 +96,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
+
+    // Research gate before any resource moves: a modern formation needs materiel the
+    // country's own defence industry has researched and delivered.
+    if (archetype.requiredArsenalGrade != null) {
+      const stocked = await getNationalArsenal(db, countryId);
+      const blocked = archetypeResearchBlock(archetype, stocked.grade[branch.domain]);
+      if (blocked) return errorResponse(400, blocked);
+    }
+
     const membersCol = getCabinetMembersCollection(db);
     const member = await membersCol.findOne({ countryId, positionId });
 

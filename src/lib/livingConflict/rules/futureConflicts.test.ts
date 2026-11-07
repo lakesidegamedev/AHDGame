@@ -172,11 +172,11 @@ describe("strait and cyber conditions", () => {
   });
 
   it("scales cyberattacks up with tension and down with resilience", () => {
-    const signal = { countryId: "UK", resilience: 50 };
+    const signal = { countryId: "UK", resilience: 0.5 };
     expect(cyberAnnualProbability(10, signal)).toBe(0);
     expect(cyberAnnualProbability(70, signal)).toBeGreaterThan(cyberAnnualProbability(30, signal));
-    expect(cyberAnnualProbability(70, { ...signal, resilience: 90 })).toBeLessThan(
-      cyberAnnualProbability(70, { ...signal, resilience: 20 })
+    expect(cyberAnnualProbability(70, { ...signal, resilience: 0.9 })).toBeLessThan(
+      cyberAnnualProbability(70, { ...signal, resilience: 0.2 })
     );
     expect(cyberAnnualProbability(70, { ...signal, resilience: null })).toBe(0);
   });

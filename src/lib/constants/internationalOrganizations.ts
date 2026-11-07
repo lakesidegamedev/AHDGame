@@ -38,7 +38,18 @@ import { BAL_CABINET_SEAT_IDS } from "@/lib/countries/bal/institutionsFacts";
  * (string) — runtime validation distinguishes the two.
  */
 export type BuiltInInternationalOrganizationId =
-  "EU" | "NATO" | "UN" | "COMMONWEALTH" | "WARSAW_PACT" | "NON_ALIGNED" | "COMECON";
+  | "EU"
+  | "NATO"
+  | "UN"
+  | "COMMONWEALTH"
+  | "WARSAW_PACT"
+  | "NON_ALIGNED"
+  | "COMECON"
+  | "CRITICAL_MINERALS_CLUB"
+  | "CLIMATE_ADAPTATION_PACT"
+  | "AI_SAFETY_ACCORD"
+  | "ARCTIC_AGREEMENT"
+  | "SPACE_TRAFFIC_RULES";
 
 /**
  * Identifier for any international organization — either a built-in literal
@@ -623,6 +634,94 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
       "Members coordinate national economic plans, specialise production across the community, and settle mutual trade through clearing arrangements under a common secretariat.",
     category: "economic",
   },
+  // Post-2027 treaty organisations. Each founds empty in its year and countries
+  // accede by choice. Their terms are a treaty directive (`orgDirectives.ts`)
+  // that lapses after five years unless the members renew it.
+  CRITICAL_MINERALS_CLUB: {
+    id: "CRITICAL_MINERALS_CLUB",
+    name: "Critical Minerals Club",
+    shortName: "Minerals Club",
+    description:
+      "A club of producer and consumer states that pool stockpiles of lithium, cobalt, rare earths and other critical minerals and guarantee supply to one another.",
+    logoPath: "/orgs/critical-minerals-club.svg",
+    foundingMembers: [],
+    foundedYear: 2028,
+    leadership: {
+      title: "Secretary-General of the Minerals Club",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members share mineral stockpiles in a shortage, coordinate purchases and agree not to embargo one another. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  CLIMATE_ADAPTATION_PACT: {
+    id: "CLIMATE_ADAPTATION_PACT",
+    name: "Climate Adaptation Finance Pact",
+    shortName: "Adaptation Pact",
+    description:
+      "A finance pact that pools money for sea walls, drainage, heat shelters and drought-proof farming in the member states most exposed to a warming climate.",
+    logoPath: "/orgs/climate-adaptation-pact.svg",
+    foundingMembers: [],
+    foundedYear: 2029,
+    leadership: {
+      title: "Chair of the Adaptation Fund",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members pay into a common adaptation fund and agree shared standards for flood and heat defences. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  AI_SAFETY_ACCORD: {
+    id: "AI_SAFETY_ACCORD",
+    name: "AI Safety Accord",
+    shortName: "AI Accord",
+    description:
+      "An accord on the testing, incident reporting and limits of advanced artificial intelligence, with a shared evaluation body.",
+    logoPath: "/orgs/ai-safety-accord.svg",
+    foundingMembers: [],
+    foundedYear: 2030,
+    leadership: {
+      title: "Director of the AI Safety Board",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members test advanced AI systems before release, report serious incidents to one another and refuse to deploy systems the evaluation body finds unsafe. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  ARCTIC_AGREEMENT: {
+    id: "ARCTIC_AGREEMENT",
+    name: "Arctic Agreement",
+    shortName: "Arctic",
+    description:
+      "An agreement on shipping lanes, fishing, resource claims and search and rescue in a melting Arctic.",
+    logoPath: "/orgs/arctic-agreement.svg",
+    foundingMembers: [],
+    foundedYear: 2032,
+    leadership: {
+      title: "Chair of the Arctic Council",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members settle claims through talks, share search and rescue and agree common rules for shipping and drilling in Arctic waters. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  SPACE_TRAFFIC_RULES: {
+    id: "SPACE_TRAFFIC_RULES",
+    name: "Space Traffic Rules",
+    shortName: "Space Traffic",
+    description:
+      "A treaty body that tracks satellites and debris, coordinates orbits and sets rules against weapons tests that litter orbit.",
+    logoPath: "/orgs/space-traffic-rules.svg",
+    foundingMembers: [],
+    foundedYear: 2034,
+    leadership: {
+      title: "Director of Space Traffic Coordination",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members share tracking data, give notice of launches and manoeuvres, and refrain from tests that create lasting debris. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
 };
 
 export const INTERNATIONAL_ORGANIZATION_ORDER: BuiltInInternationalOrganizationId[] = [
@@ -633,6 +732,11 @@ export const INTERNATIONAL_ORGANIZATION_ORDER: BuiltInInternationalOrganizationI
   "WARSAW_PACT",
   "NON_ALIGNED",
   "COMECON",
+  "CRITICAL_MINERALS_CLUB",
+  "CLIMATE_ADAPTATION_PACT",
+  "AI_SAFETY_ACCORD",
+  "ARCTIC_AGREEMENT",
+  "SPACE_TRAFFIC_RULES",
 ];
 
 export function getOrganizationDef(

@@ -22,13 +22,18 @@ import {
 import { getStartingYearForPreset } from "./turnTime";
 
 describe("INTERNATIONAL_ORGANIZATIONS", () => {
-  it("has EU, NATO, UN, COMMONWEALTH, WARSAW_PACT, NON_ALIGNED, COMECON", () => {
+  it("has the cold war built-ins and the post-2027 treaty organisations", () => {
     expect(Object.keys(INTERNATIONAL_ORGANIZATIONS).sort()).toEqual([
+      "AI_SAFETY_ACCORD",
+      "ARCTIC_AGREEMENT",
+      "CLIMATE_ADAPTATION_PACT",
       "COMECON",
       "COMMONWEALTH",
+      "CRITICAL_MINERALS_CLUB",
       "EU",
       "NATO",
       "NON_ALIGNED",
+      "SPACE_TRAFFIC_RULES",
       "UN",
       "WARSAW_PACT",
     ]);
@@ -72,7 +77,7 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
     });
   });
 
-  it("orders the Non-Aligned Movement last among built-ins", () => {
+  it("orders the post-2027 treaty organisations after the cold war built-ins", () => {
     expect(INTERNATIONAL_ORGANIZATION_ORDER).toEqual([
       "EU",
       "NATO",
@@ -81,6 +86,11 @@ describe("INTERNATIONAL_ORGANIZATIONS", () => {
       "WARSAW_PACT",
       "NON_ALIGNED",
       "COMECON",
+      "CRITICAL_MINERALS_CLUB",
+      "CLIMATE_ADAPTATION_PACT",
+      "AI_SAFETY_ACCORD",
+      "ARCTIC_AGREEMENT",
+      "SPACE_TRAFFIC_RULES",
     ]);
   });
 
