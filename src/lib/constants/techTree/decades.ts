@@ -36,6 +36,7 @@ export const TECH_DECADES: readonly TechDecade[] = [
   { id: "2009", label: "2009–2019", startYear: 2009, endYear: 2019 },
   { id: "2019", label: "2019–2029", startYear: 2019, endYear: 2029 },
   { id: "2029", label: "2029–2039", startYear: 2029, endYear: 2039 },
+  { id: "2039", label: "2039-2049", startYear: 2039, endYear: 2049 },
 ] as const;
 
 export type TechDecadeId = (typeof TECH_DECADES)[number]["id"];
@@ -52,7 +53,7 @@ const OPEN_ENDED_END_YEAR = 2100;
  * The decade bracket a given calendar year falls into. Years before the first
  * bracket clamp to the earliest. Past the last authored tier the last tier
  * stays current (same id, so stored unlocks keep working) but is reported as an
- * open-ended bracket ("2029+") instead of its stale authored range.
+ * open-ended bracket (e.g. "2039+") instead of its stale authored range.
  */
 export function getDecadeForYear(year: number): TechDecade {
   for (let i = TECH_DECADES.length - 1; i >= 0; i--) {

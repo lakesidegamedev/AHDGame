@@ -503,4 +503,53 @@ export const LOGISTICS_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agent-Run Dispatch",
+      description: "Agents assign every truck and driver without a dispatch office.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.06 },
+        { kind: "inputCost", commodity: "vehicles", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Guaranteed Arrival Contracts",
+      description: "Hard delivery guarantees price scarce capacity at its true worth.",
+      effects: [
+        { kind: "plantOutput", pct: 0.018 },
+        { kind: "laborCostReduction", pct: 0.02 },
+      ],
+    },
+    {
+      name: "Zero-Emission Freight Certification",
+      description:
+        "A certified clean fleet clears every city access rule and carbon border charge.",
+      effects: [{ kind: "tariffShield", pct: 0.13 }],
+    },
+    {
+      name: "Self-Running Freight Network",
+      description: "The network reprices, reroutes and repositions itself without planners.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.095 },
+        { kind: "logisticsStrength", flat: 38 },
+      ],
+    },
+    {
+      name: "Remote Delivery Services",
+      description: "Orbital relays sell guaranteed delivery to the most remote customers.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "freight", pct: 0.08 },
+      ],
+    },
+    {
+      name: "Supply Security Compacts",
+      description:
+        "Treaty infrastructure partnerships make the network part of national supply security.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.19 },
+      ],
+    },
+  ],
 };

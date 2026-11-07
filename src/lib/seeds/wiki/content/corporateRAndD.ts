@@ -12,7 +12,7 @@ Set a daily **R&D budget** in the Budget section of the **CEO Office** tab. Each
 | Base gain with any budget | 1.2 per turn, plus 0.78 x ln(1 + budget / 100,000) |
 | Decay | 3% of current score per turn |
 | Diminishing returns | Gain falls as score rises; halved at score 100, and falls faster above it |
-| Node score cost | Set by decade: 5 (1940s), 6, 8, 11, 13 (1979), 18, 24, 30, 38 (2019), 48 (2029) |
+| Node score cost | Set by decade: 5 (1940s), 6, 8, 11, 13 (1979), 18, 24, 30, 38 (2019), 48 (2029), 60 (2039) |
 | Specialization cost | 2 times the decade cost; capstones 3 times |
 | Node cash cost | Value of the node over one game year, or 5% of daily revenue for nodes with no running value |
 | Overhead cap | R&D, marketing, logistics and CEO salary together cannot exceed 150% of daily revenue |
@@ -38,7 +38,9 @@ Worker morale also nudges efficiency: paying wages above baseline makes your R&D
 
 ## Reading the Tech tab
 
-Every private corporation has a **Tech** tab listing research nodes organized by **decade tier**. The world's current calendar year (derived from the active era preset plus elapsed game years) determines which decade you research. Decades before the current one show as baseline research: a corporation founded after them gets the main nodes of both lanes free, and their specializations can no longer be researched. Future decades open when the clock reaches them. A world that starts in 2019 only ever researches the final two tiers; a 1953 start begins at the 1950s tier and walks the rest of the tree over decades.
+Every private corporation has a **Tech** tab listing research nodes organized by **decade tier**. The world's current calendar year (derived from the active era preset plus elapsed game years) determines which decade you research. Decades before the current one show as baseline research: a corporation founded after them gets the main nodes of both lanes free, and their specializations can no longer be researched. Future decades open when the clock reaches them. A world that starts in 2019 researches the 2019 tier and every later one; a 1953 start begins at the 1950s tier and walks the rest of the tree over decades. The last tier, 2039, opens in 2039 and stays current from then on.
+
+The **2039 tier** centers the Corporate lane on agent-run operations, automated compliance and supply networks that survive disruption. Its Sector lanes unlock new production methods, each with heavier inputs than the methods it competes with: grid-scale storage and advanced fission for energy, direct air capture for chemicals, biofoundries for healthcare, humanoid robotics for manufacturing, agentic services for technology, cellular agriculture, printed mass timber for construction, drone swarms for defense, orbital constellations for telecommunications, orbital logistics, and personalized media for both media types.
 
 Each decade forks into two **lanes**:
 

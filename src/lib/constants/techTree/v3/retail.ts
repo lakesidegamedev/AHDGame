@@ -469,4 +469,52 @@ export const RETAIL_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Automated Store Operations",
+      description: "Shelf robots and agent scheduling run stores with small teams.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.05 },
+        { kind: "inputCost", commodity: "energy", pct: 0.055 },
+      ],
+    },
+    {
+      name: "Default Agent Placement",
+      description: "Being the preferred store of shopping agents wins orders before people search.",
+      effects: [
+        { kind: "plantOutput", pct: 0.018 },
+        { kind: "marketingStrength", flat: 18 },
+      ],
+    },
+    {
+      name: "Fair Pricing Audits",
+      description: "Published pricing audits keep competition regulators away.",
+      effects: [{ kind: "dominanceShield", pct: 0.12 }],
+    },
+    {
+      name: "Autonomous Last Mile",
+      description: "Robot vans and sidewalk couriers deliver at a fraction of today's cost.",
+      effects: [
+        { kind: "inputCost", commodity: "freight", pct: 0.15 },
+        { kind: "logisticsStrength", flat: 36 },
+      ],
+    },
+    {
+      name: "Experience Flagships",
+      description: "Destination stores built around events sell at full price.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 34 },
+      ],
+    },
+    {
+      name: "Essential Supply Charter",
+      description:
+        "Agreements to keep essentials stocked in emergencies protect the firm in any crisis.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.15 },
+      ],
+    },
+  ],
 };

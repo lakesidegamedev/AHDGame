@@ -422,4 +422,45 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agent-Managed Power Saving",
+      description: "Agents put idle radios to sleep and cut the power bill.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.09 }],
+    },
+    {
+      name: "Assured Connectivity Tiers",
+      description: "Contracted coverage anywhere on the map bills premium rates.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Trusted Carrier Status",
+      description: "Approved status under national security rules shuts foreign rivals out.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Self-Configuring Networks",
+      description: "Networks add and tune capacity without new staff.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "network_services", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Holographic Calling Tiers",
+      description: "Life-size calling sells as the network's top premium plan.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 38 },
+      ],
+    },
+    {
+      name: "Global Spectrum Agreements",
+      description: "Satellite and ground licenses cover whole regions across borders.",
+      effects: [
+        { kind: "tariffShield", pct: 0.21 },
+        { kind: "expansionDiscount", pct: 0.19 },
+      ],
+    },
+  ],
 };

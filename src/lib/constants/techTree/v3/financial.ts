@@ -467,4 +467,52 @@ export const FINANCIAL_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agent-Run Operations Desk",
+      description: "Agents handle onboarding, servicing and collections end to end.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.06 },
+        { kind: "outputRate", commodity: "financial_services", pct: 0.045 },
+      ],
+    },
+    {
+      name: "Verified Outcome Advice",
+      description: "Advice priced on measured client results holds a premium.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Real-Time Supervisory Feeds",
+      description: "Regulators read the books live, so examinations rarely find surprises.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.09 },
+        { kind: "tariffShield", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Machine Credit Markets",
+      description: "Agents lend, price and settle credit with each other at almost no cost.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "financial_services", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Private Agent Banking",
+      description: "Dedicated agent bankers for the very wealthy price at the top of the market.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 30 },
+      ],
+    },
+    {
+      name: "Bloc-Neutral Clearing",
+      description:
+        "Clearing that every currency bloc accepts keeps capital moving through sanctions.",
+      effects: [
+        { kind: "tariffShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.16 },
+      ],
+    },
+  ],
 };
