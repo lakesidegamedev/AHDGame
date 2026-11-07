@@ -33,6 +33,20 @@ const CLIENT_SAFE_MODULES = [
 ];
 
 /**
+ * Light halves split out of heavy modules so client components can read them.
+ * Each heavy module re-exports its light half, so server callers are unchanged.
+ */
+const CLIENT_SAFE_SPLITS = [
+  // approvalModifiers reads every country's geography through its era patches.
+  "src/lib/approval/activeModifier.ts",
+  // strengthUpkeep reads the whole tech tree for the dominance shield.
+  "src/lib/corporations/strengthUpkeepRules.ts",
+  // demographicCategories carries every era's tables and the state overrides.
+  "src/lib/seeds/voterArchetypeCategories.ts",
+  "src/lib/seeds/demographicLabels.ts",
+];
+
+/**
  * ⚠️ DERIVED ACROSS EVERY COUNTRY, not listed for one. The MODULE NAMES above are
  * the deliberate part -- each is a leaf a client-reachable registry reads. Which
  * COUNTRIES are covered is not a judgement call: the registries forward all 29
@@ -56,6 +70,7 @@ const CLIENT_SAFE = [
     }
   }),
   "src/lib/countries/ru/russian1991Config.ts",
+  ...CLIENT_SAFE_SPLITS,
 ];
 
 /**
@@ -105,6 +120,10 @@ function sourceFiles(dir: string): string[] {
     if (statSync(full).isDirectory()) return sourceFiles(full);
     return /\.tsx?$/.test(entry) && !entry.includes(".test.") ? [full] : [];
   });
+}
+
+function staticModuleSpecifiers(source: string): string[] {
+  return [...source.matchAll(STATIC_MODULE_REFERENCE)].map((match) => match[1] ?? match[2]);
 }
 
 function moduleSpecifiers(source: string): string[] {
@@ -229,4 +248,65 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
         `move the value to a client-safe leaf or stop the client from reaching it.\n`
     ).toEqual(LEGACY_TRANSITIVE_COUNTRY_BOUNDARY);
   }, 60_000);
+});
+
+/**
+ * Server-side modules that client code used to reach through a single shared
+ * helper, each pulling hundreds of kilobytes of seed or rule data into the
+ * browser. Their light parts now live in the CLIENT_SAFE_SPLITS above. A
+ * dynamic `import()` is allowed: it loads a separate chunk only when used.
+ */
+const SERVER_HEAVY_MODULES = [
+  // Every country's geography and census data, through the era patches.
+  "src/lib/utils/approvalModifiers.ts",
+  "src/lib/states/conditions/resolveModifierDef.ts",
+  // The full technology tree.
+  "src/lib/constants/techTree/index.ts",
+  "src/lib/corporations/strengthUpkeep.ts",
+  // Every country's name pools: loaded on demand by the character creator.
+  "src/lib/npp/nameGenerator.ts",
+  // Non-playable country metric boards, the largest data file in the repo.
+  "src/lib/politicalMetrics/seeds/nonPlayableBoards.ts",
+];
+
+describe("server-heavy modules stay out of the static client graph", () => {
+  it("no use-client file statically reaches a server-heavy module", () => {
+    const CLIENT_ROOTS = ["src/app", "src/components", "src/hooks", "src/contexts"];
+    const clientEntries = CLIENT_ROOTS.flatMap(sourceFiles)
+      .map((file) => file.split("\\").join("/"))
+      .filter((file) => /^\s*["']use client["']/.test(readFileSync(file, "utf8")));
+
+    const parent = new Map<string, string | null>(clientEntries.map((file) => [file, null]));
+    const pending = [...clientEntries];
+    const reachable = new Set<string>();
+    while (pending.length > 0) {
+      const file = pending.pop();
+      if (!file || reachable.has(file)) continue;
+      reachable.add(file);
+      for (const specifier of staticModuleSpecifiers(readFileSync(file, "utf8"))) {
+        const target = resolveLocalModule(file, specifier);
+        if (!target || reachable.has(target)) continue;
+        if (!parent.has(target)) parent.set(target, file);
+        pending.push(target);
+      }
+    }
+
+    const chains = SERVER_HEAVY_MODULES.filter((file) => reachable.has(file)).map((file) => {
+      const chain: string[] = [];
+      for (let at: string | null | undefined = file; at; at = parent.get(at)) chain.unshift(at);
+      return chain.join("\n    -> ");
+    });
+    expect(
+      chains,
+      `\nClient code statically imports a server-heavy module:\n\n  ` +
+        chains.join("\n\n  ") +
+        `\n\nImport the light sibling module, or load the heavy one with import().\n`
+    ).toEqual([]);
+  }, 60_000);
+
+  it("every listed server-heavy module exists", () => {
+    for (const file of SERVER_HEAVY_MODULES) {
+      expect(statSync(file).isFile(), `${file} is missing`).toBe(true);
+    }
+  });
 });

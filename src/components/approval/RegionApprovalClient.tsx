@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import type { ActiveModifier } from "@/lib/approval/activeModifier";
 import { regionUrl, regionApiSubUrl, approvalUrl } from "@/lib/urls";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryCode } from "@/lib/country/countryCodes";
