@@ -54,6 +54,9 @@ const WageLevelPanel = dynamic(() => import("./sections/WageLevelPanel"), {
 });
 const PricingPanel = dynamic(() => import("./sections/PricingPanel"), { loading: PanelFallback });
 const CapitalPanel = dynamic(() => import("./sections/CapitalPanel"), { loading: PanelFallback });
+const SupplyPriorityPanel = dynamic(() => import("./sections/SupplyPriorityPanel"), {
+  ssr: false,
+});
 const InventoryPanel = dynamic(() => import("./sections/InventoryPanel"), {
   loading: PanelFallback,
 });
@@ -989,6 +992,14 @@ export default function SectorDetailPage() {
                 sectorId={sectorId}
                 isCeo={isCeo}
                 inventory={plants.truth.inventory}
+              />
+            )}
+
+            {isCeo && plants?.truth && (
+              <SupplyPriorityPanel
+                corporationId={corpId}
+                sectorId={sectorId}
+                sellOutsideFirst={plants.truth.sellOutsideFirst === true}
               />
             )}
 
