@@ -181,7 +181,7 @@ describe("2027 and 2030 law types", () => {
         ...t.positions.map((p) => p.name),
         ...t.policyOptions!.flatMap((o) => [o.name, o.explanation ?? ""]),
       ].join("\n");
-      expect(/[–—]/.test(copy), t._id).toBe(false);
+      expect(/[\u2013\u2014]/.test(copy), t._id).toBe(false);
     }
   });
 });
