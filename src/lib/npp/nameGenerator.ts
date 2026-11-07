@@ -738,6 +738,17 @@ const COUNTRY_NAME_POOLS: Record<
 };
 
 /**
+ * A country's own name pool (first names of both genders, surnames), or null
+ * when it has none and its generator falls back to the US pool. For callers
+ * that draw names with their own seeded rng instead of this module's.
+ */
+export function countryNamePool(
+  countryId: string
+): { firstNames: readonly string[]; surnames: readonly string[]; surnameFirst?: boolean } | null {
+  return COUNTRY_NAME_POOLS[countryId.toUpperCase()] ?? null;
+}
+
+/**
  * True when `name` could have been produced by `countryId`'s own pool.
  *
  * Used by the NPP name heal to find politicians seeded before their country

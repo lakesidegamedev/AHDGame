@@ -78,6 +78,12 @@ export interface IndexFund {
   lastRebalancedAt?: Date;
   /** Serializes non-transactional redemption fallback on standalone Mongo. */
   redemptionLock?: { token: ObjectId; expiresAt: Date };
+  /**
+   * Present only on a background country's national index (#5702): the fund
+   * holds cash marked to the country's aggregate output index, never
+   * equities or bonds, so the turn's fund passes leave it alone.
+   */
+  nationalIndex?: { entityId: string };
   /** A7: failing-corporation streaks, for the incumbent grace period. */
   listingFailureStreaks?: IndexFundListingFailureStreak[];
 
@@ -161,6 +167,8 @@ export type IndexFundTransactionKind =
   | "liquidity_quote_buy"
   | "liquidity_quote_sell"
   | "capital_injection"
+  /** A national index fund marked to its country's output index (#5702). */
+  | "national_index_mark"
   // A5 sponsorship
   | "sponsor_seed_capital"
   | "expense_fee"

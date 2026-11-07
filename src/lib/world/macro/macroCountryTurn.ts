@@ -12,11 +12,20 @@ import { isMacroTickTurn, MACRO_TICK_INTERVAL } from "./schedule";
 import { advanceMacroGrowth } from "./rules/growth";
 import { scaleMacroCapacity, tradeCapacityFactorAtTick } from "./rules/tradeFeedback";
 import { MACRO_TURNS_PER_YEAR } from "./seedBuilder";
+import {
+  advanceBackgroundNation,
+  loadBackgroundNationContext,
+  type BackgroundNationUpdate,
+} from "./backgroundNation";
+import { macroAggregateOutput } from "./rules/backgroundBudget";
+import { markNationalIndexFunds, type NationalIndexMark } from "./nationalIndexFunds";
 
 export interface MacroCountryTurnResult {
   countriesConsidered: number;
   countriesUpdated: number;
   updatedEntityIds: string[];
+  /** Background countries that held a national election this tick (#5702). */
+  nationalElections?: string[];
 }
 
 /**
@@ -31,6 +40,7 @@ export async function processMacroCountryTurn(
   const tickBucket = (turn - 1) % MACRO_TICK_INTERVAL;
   const countries = await collection.find({ tickBucket, ...ACTIVE_MACRO_COUNTRY_FILTER }).toArray();
   const updatedEntityIds: string[] = [];
+  const nationalElections: string[] = [];
   const now = new Date();
 
   for (const country of countries) {
@@ -46,7 +56,17 @@ export async function processMacroCountryTurn(
   if (due.length > 0) {
     const config = await db
       .collection("gameState")
-      .findOne({ _id: "current" as never }, { projection: { livingConflictsEnabled: 1 } });
+      .findOne(
+        { _id: "current" as never },
+        { projection: { livingConflictsEnabled: 1, currentYear: 1, resetWorldId: 1 } }
+      );
+    // 2027 background countries: national politics, budget state and index (#5702).
+    const nationContext = await loadBackgroundNationContext(db, due, {
+      year: config?.currentYear,
+      worldSeed: String(config?.resetWorldId ?? "world"),
+      turnsPerYear: MACRO_TURNS_PER_YEAR,
+    });
+    const indexMarks: NationalIndexMark[] = [];
     const crisis = config?.livingConflictsEnabled
       ? await db
           .collection<LivingConflictState>("livingConflicts")
@@ -116,6 +136,18 @@ export async function processMacroCountryTurn(
           tradeFactor === 1
             ? trendSectors
             : scaleMacroCapacity(trendSectors ?? country.sectors, tradeFactor);
+        const nation: BackgroundNationUpdate | null = nationContext
+          ? advanceBackgroundNation(
+              country,
+              nationContext,
+              turn,
+              macroAggregateOutput(grownSectors ?? country.sectors)
+            )
+          : null;
+        if (nation?.indexMark) indexMarks.push(nation.indexMark);
+        if (nation?.events.some((event) => event.kind === "election")) {
+          nationalElections.push(country.entityId);
+        }
         return {
           updateOne: {
             filter: { _id: country._id },
@@ -131,6 +163,7 @@ export async function processMacroCountryTurn(
                   turn
                 ),
                 ...(persistExposure ? { livingConflictExposure: exposure } : {}),
+                ...(nation?.set ?? {}),
                 lastMacroTickTurn: turn,
                 updatedAt: now,
               },
@@ -140,11 +173,13 @@ export async function processMacroCountryTurn(
       }),
       { ordered: false }
     );
+    await markNationalIndexFunds(db, indexMarks, turn, now);
   }
 
   return {
     countriesConsidered: countries.length,
     countriesUpdated: updatedEntityIds.length,
     updatedEntityIds,
+    ...(nationalElections.length > 0 ? { nationalElections } : {}),
   };
 }
