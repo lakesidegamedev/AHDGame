@@ -13,6 +13,7 @@ import type { EnactedLaw } from "@/lib/db/types/budget";
 import { ObjectId } from "mongodb";
 import { inferCountryIdFromStateId } from "@/lib/congress/resolveBillCountryId";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
+import { isUnseededEraLaw } from "@/lib/politicalLegislation/catalog";
 import {
   canonicalizeLegislationTypeId,
   getEquivalentLegislationTypeIds,
@@ -384,6 +385,12 @@ export async function checkCurrentPolicyLevel(
           const opt = byId.get(id)?.policyOptions?.[level];
           if (opt?.id) policyMap.set(id, opt.id);
         }
+      }
+    } else {
+      // National scope: a later-era law has no seeded row until its first bill,
+      // and the engine reads it at level 0, so "no statute" is the current law.
+      for (const id of canonicalLegTypeIds) {
+        if (!policyMap.has(id) && isUnseededEraLaw(id)) policyMap.set(id, "l0");
       }
     }
   }

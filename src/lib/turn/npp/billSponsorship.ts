@@ -51,6 +51,7 @@ import {
 } from "@/lib/nppAutonomy/selectNppBill";
 import { loadPoliticalConditionsDomains } from "@/lib/politicalLegislation/conditionsSignal";
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { isUnseededEraLaw } from "@/lib/politicalLegislation/catalog";
 import type { PoliticalMetricsCountryId } from "@/lib/politicalMetrics/types";
 import { proposeNppNationalBill } from "@/lib/nppAutonomy/proposeNppNationalBill";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
@@ -967,6 +968,13 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
         if (planned && isMarketLiberalLegislationType(lt)) return false;
         return true;
       });
+      // A later-era law has no seeded row until its first bill; it sits at level
+      // 0, so an NPP must not sponsor "no statute" for it.
+      for (const lt of legTypes) {
+        if (!currentPolicyOptionIds.has(lt._id) && isUnseededEraLaw(lt._id)) {
+          currentPolicyOptionIds.set(lt._id, "l0");
+        }
+      }
 
       // Engine 6.5 (v6): who votes in the lower chamber, for the sponsor's count.
       // Player seats are the live chamber tally (directives) less NPP seats; with

@@ -34,12 +34,9 @@ export async function seedLegislationTypes(
   const baseTypes = politicalLegislation
     ? legislationTypes.filter((t) => !isOldLegislationTypeExcluded(t))
     : legislationTypes;
-  // Resolved here rather than plumbed through every caller: the projected
-  // catalog must reflect the world's YEAR (era windows), and a caller that
-  // forgot to pass it would silently seed laws outside their window.
-  const { resolveWorldSeedYear } = await import("@/lib/era/context");
-  const year = await resolveWorldSeedYear(db, preset);
-  const projectedTypes = politicalLegislation ? getProjectedPoliticalLegislationTypes(year) : [];
+  // Every law is projected, windowed or not: a window gates filing at runtime,
+  // so a later-era type must already exist when the world reaches its year.
+  const projectedTypes = politicalLegislation ? getProjectedPoliticalLegislationTypes() : [];
   const seedSet = [...baseTypes, ...projectedTypes];
 
   // Upsert-by-_id instead of drop+insertMany (ticket #0860): a destructive
