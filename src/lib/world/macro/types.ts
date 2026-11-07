@@ -35,7 +35,7 @@ export type MacroEconomicSystem = "market" | "planned";
  * seeds are authored per era and must not inherit modern-preset bundles.
  */
 export interface MacroCountryDataQuality {
-  provenance: "authored-1953" | "estimated-background" | "succession-derived";
+  provenance: "authored-1953" | "authored-2027" | "estimated-background" | "succession-derived";
   economicSystem: MacroEconomicSystem;
   /** Required fields that were absent or non-positive at seed time. */
   missingFields: string[];
@@ -72,6 +72,13 @@ export interface MacroCountryState {
   tradeExposure: number;
   /** Optional shock multiplier applied on the next kernel tick (default 1). */
   shockModifier: number;
+  /**
+   * Annual real trend growth (0.02 = 2% a year). Absent: the economy does not
+   * grow, which is how every pre-2027 macro document behaves. Applied per
+   * kernel tick for the turns elapsed, never as a per-turn compounding of the
+   * annual rate (see `rules/growth.ts`).
+   */
+  trendGrowth?: number;
   resources: Partial<Record<ExtractableResource, number>>;
   sectors: Partial<Record<OperatingSectorType, MacroSectorState>>;
   contribution: MacroMarketContribution;

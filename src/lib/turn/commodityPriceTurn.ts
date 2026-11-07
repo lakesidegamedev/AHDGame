@@ -86,7 +86,7 @@ import {
   activeExtractionContractFilter,
 } from "@/lib/db/collections/extractionContracts";
 import type { State } from "@/lib/db/types/state";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
 import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
@@ -115,6 +115,11 @@ import type { Tariff } from "@/lib/db/types/tariff";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { applySphereRoutedMacroContributions } from "@/lib/world/spheres";
+import {
+  addBackgroundBooksToCountries,
+  backgroundCountryContributions,
+  placeBackgroundBooksInStates,
+} from "@/lib/world/macro/rules/countryBooks";
 import { depletedCapacityDoc } from "@/lib/extraction/depletion";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -221,8 +226,12 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // leave countries whose only bonds were seeded at game start with zero demand once
   // those bonds age out — the 1-year window keeps demand stable across countries with
   // infrequent sovereign issuance (JP, CA, DE).
-  const [countries, ledgerConfig] = await Promise.all([
-    getRegisteredCountryIds(db),
+  // The tier snapshot is the registry read plus the background flag, in the
+  // same round trip: `registeredIds` is exactly what getRegisteredCountryIds
+  // returned, and `backgroundIds` names the countries whose book comes from
+  // their macro economy (#5702). Empty on every world without the flag.
+  const [countryTiers, ledgerConfig] = await Promise.all([
+    loadCountryTiers(db),
     db.collection<GameConfig>("gameConfig").findOne(
       { _id: "default" },
       {
@@ -240,6 +249,8 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       }
     ),
   ]);
+  const countries = countryTiers.registeredIds;
+  const backgroundCountryIds = new Set<string>(countryTiers.backgroundIds);
   const marketSystemMode = await getMarketSystemMode(ledgerConfig);
   const plantsLedgerEnabled = marketAtLeast(marketSystemMode, "plants");
   const productsEnabled = ledgerConfig?.productLinesV2Enabled === true && plantsLedgerEnabled;
@@ -725,7 +736,28 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // kernel tick participates in every normal-turn global market calculation,
   // routed through primary-sphere rules so secondary ties cannot duplicate
   // the full benefit package (#3717).
-  await applySphereRoutedMacroContributions(db, global, turn);
+  const macroApplied = await applySphereRoutedMacroContributions(db, global, turn);
+
+  // Background countries (#5702): their regions hold no sectors or modelled
+  // households, so their book is their macro economy. The world total already
+  // carries it; here the same units land in the country's own regions so the
+  // national book, freight sourcing and trade clearing treat it as a buyer and
+  // seller. The state-built demand legs below run over market states only, so
+  // a background country's regions and budgets are not counted twice.
+  const marketStates =
+    backgroundCountryIds.size === 0
+      ? allStates
+      : allStates.filter((state) => !backgroundCountryIds.has(state.countryId));
+  const unplacedBackgroundBooks =
+    backgroundCountryIds.size === 0
+      ? []
+      : placeBackgroundBooksInStates(
+          backgroundCountryContributions(macroApplied.background, backgroundCountryIds),
+          buildStatesByCountry(
+            allStates.filter((state) => backgroundCountryIds.has(state.countryId))
+          ),
+          byState
+        );
 
   // ── Demand legs ───────────────────────────────────────────────────────
   applyAdvertisingDemand(
@@ -739,7 +771,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   );
 
   if (demographicsDemandEnabled) {
-    applyDemographicsUplift(allStates, global, byState);
+    applyDemographicsUplift(marketStates, global, byState);
   }
 
   const healthcareOtherDemandByState = new Map(
@@ -774,7 +806,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         priorGlobalSupply: plantsLedgerEnabled
           ? globalDemandCapSupply(priorGlobalSupply)
           : undefined,
-        states: allStates.map((s) => ({
+        states: marketStates.map((s) => ({
           stateId: s._id,
           countryId: s.countryId,
           gdp: s.gdp ?? 0,
@@ -799,7 +831,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
 
   // Built once here: sovereign issuance allocation (latent financial leg) and
   // government regional distribution read the same country → state-GDP shares.
-  const statesByCountry = buildStatesByCountry(allStates);
+  const statesByCountry = buildStatesByCountry(marketStates);
 
   applyLatentFinancialDemand(
     {
@@ -820,7 +852,12 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
 
   applyRateSensitiveDemand(
     {
-      allStateBudgets,
+      allStateBudgets:
+        backgroundCountryIds.size === 0
+          ? allStateBudgets
+          : allStateBudgets.filter(
+              (budget) => !backgroundCountryIds.has(stateToCountry.get(budget.stateId) ?? "")
+            ),
       stateToCountry,
       fxRateForCountry,
       centralBankByCountry,
@@ -834,11 +871,15 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // Sector-allocated S/D (including advertising, latent financial). Healthcare
   // govt demand is applied after this block so it can be attributed per country.
   const byCountry = aggregateByCountry(byState, stateToCountry);
+  addBackgroundBooksToCountries(unplacedBackgroundBooks, byCountry);
 
   // ── Government spending → commodity demand ────────────────────────────
   applyGovernmentDemand(
     {
-      federalBudgets,
+      federalBudgets:
+        backgroundCountryIds.size === 0
+          ? federalBudgets
+          : federalBudgets.filter((budget) => !backgroundCountryIds.has(budget.countryId)),
       supplyCapMultiple: governmentSupplyCap,
       ledgerBasePrices: LEDGER_BASE_PRICES,
       fxRateForCountry,
