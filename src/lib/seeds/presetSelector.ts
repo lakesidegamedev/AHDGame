@@ -8,7 +8,21 @@
  * while allowing 1991-default bundles to opt in incrementally.
  */
 
-export type EraId = "1953" | "1979" | "1991" | "1999" | "2007" | "2019" | "2023" | "2027";
+import { SEED_PRESET_IDS, type SeedPresetId } from "@/lib/constants/turnTime";
+
+type EraOfPreset<P> = P extends `${infer Year}-default` ? Year : never;
+
+/**
+ * The era of every shipping preset, derived from `SEED_PRESET_IDS` so a new
+ * preset adds its era here and every `Record<EraId, ...>` table stops
+ * compiling until it covers the new era.
+ */
+export type EraId = EraOfPreset<SeedPresetId>;
+
+/** Every era id, oldest first. Non-empty tuple so it can feed `z.enum`. */
+export const SEED_ERA_IDS = SEED_PRESET_IDS.map((preset) =>
+  preset.slice(0, 4)
+) as unknown as readonly [EraId, ...EraId[]];
 
 export type ResetPresetId =
   | "1953-default"

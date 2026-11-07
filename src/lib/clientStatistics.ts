@@ -3,6 +3,7 @@ import { z } from "zod";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { NPP_AUTONOMY_LEVELS } from "@/lib/nppAutonomy/levels";
+import { SEED_ERA_IDS } from "@/lib/seeds/presetSelector";
 
 /**
  * Anonymous aggregate telemetry ingress validation.
@@ -54,7 +55,7 @@ const MAX_SECTOR_ENTRIES = 32;
 export const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Era allowlist: every seed era the game can actually bootstrap. */
-const ALLOWED_ERAS = ["1953", "1979", "1991", "1999", "2007", "2019", "2023"] as const;
+const ALLOWED_ERAS = SEED_ERA_IDS;
 
 /** Setup mode allowlist. Mirrors SingleplayerMode. */
 const ALLOWED_MODES = ["normal", "head-of-state", "worldsim"] as const;
