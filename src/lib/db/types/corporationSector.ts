@@ -505,6 +505,12 @@ export interface CorporateSector {
    * output-gating factor (telemetry).
    */
   capitalStock?: number;
+  /**
+   * Capacity-weighted build year of the sector's plants, blended as new
+   * capacity lands (energy transition worlds only). Absent means the opening
+   * fleet's assumed age for its type and method (energyTransition/rules).
+   */
+  capacityVintageYear?: number;
   /** Last turn's physical capacity in its blended recipe units during retooling. */
   operatingCapacityUnits?: number;
   operatingCapacityTurn?: number | null;

@@ -24,6 +24,9 @@ const SLUGS_2027 = [
   "criticalMineralsStockpile",
   "cyberResilienceMandate",
   "platformContentLaw",
+  "carbonPrice",
+  "coalPhaseOut",
+  "cleanPowerStandard",
 ];
 const SLUGS_2030 = [
   "automationTax",
@@ -33,6 +36,7 @@ const SLUGS_2030 = [
   "pensionAgeIndexation",
   "nuclearLicensingReform",
 ];
+const REVENUE_SLUGS = ["automationTax", "carbonPrice", "carbonBorderAdjustment"];
 const METRIC_IDS = new Set<string>(POLITICAL_METRIC_FAMILIES.map((family) => family.id));
 
 function allCopy(law: PoliticalLaw): string[] {
@@ -47,7 +51,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
   const laws = BOOKS[countryId];
   const cc = countryId.toLowerCase();
 
-  it("authors the six 2027 and six 2030 laws as national secondaries seeded at level 0", () => {
+  it("authors the nine 2027 and six 2030 laws as national secondaries seeded at level 0", () => {
     expect(laws.map((law) => law.id)).toEqual(
       [...SLUGS_2027, ...SLUGS_2030].map((slug) => `${cc}.sec.${slug}`)
     );
@@ -105,8 +109,8 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
     }
   });
 
-  it("gives the automation tax and the carbon border adjustment real, rising revenue", () => {
-    for (const slug of ["automationTax", "carbonBorderAdjustment"]) {
+  it("gives the automation tax, carbon price and carbon border adjustment real, rising revenue", () => {
+    for (const slug of REVENUE_SLUGS) {
       const law = laws.find((entry) => entry.id === `${cc}.sec.${slug}`)!;
       const revenue = law.levels!.slice(1).map((level) => level.gdpRevenueFraction ?? 0);
       expect(revenue.every((value, i) => value > 0 && (i === 0 || value > revenue[i - 1]))).toBe(
@@ -119,9 +123,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       const doc = projectLawToLegislationType(law);
       expect(doc.policyOptions![4].costModelV2?.gdpRevenueFraction).toBe(revenue[3]);
     }
-    const others = laws.filter(
-      (law) => !law.id.endsWith(".automationTax") && !law.id.endsWith(".carbonBorderAdjustment")
-    );
+    const others = laws.filter((law) => !REVENUE_SLUGS.includes(law.id.split(".")[2]));
     for (const law of others) {
       expect(law.levels!.every((level) => level.gdpRevenueFraction === undefined)).toBe(true);
     }
@@ -218,7 +220,7 @@ describe("seed projection", () => {
   });
 
   it("authors each spec once for both countries", () => {
-    expect(MODERN_ERA_LAW_SPECS).toHaveLength(12);
-    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(12);
+    expect(MODERN_ERA_LAW_SPECS).toHaveLength(15);
+    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(15);
   });
 });
