@@ -62,7 +62,11 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   inflationRecalc: 600,
   primaryResolution: 2000,
   voteAccumulation: 4500,
-  bankingTurn: 1000,
+  // A fresh 2027 world measured 1,095 on turns 2-4 (bankMoneyMoves 456,
+  // corporations 198, bankLoans 141). The journal share is each settlement's
+  // own claim, leg stamps and completion, the crash-safety writes, not a
+  // per-row read, so it grows with the bank count rather than batching away.
+  bankingTurn: 1300,
   recomputeSharePrices: 1000,
   electionResolution: 2000,
   primarySnapshots: 800,

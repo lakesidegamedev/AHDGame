@@ -3787,6 +3787,9 @@ const COUNTRY_CLIENT_ERA_CONFIG_OVERRIDES: Record<
       },
       usdExchangeRate: 0.01081,
     },
+    TR: {
+      currencyCode: "TRY",
+    },
   },
   "1991-default": {
     UK: {

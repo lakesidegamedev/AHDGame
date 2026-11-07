@@ -1055,6 +1055,8 @@ export const ERA_COUNTRY_CONFIG_OVERRIDES: Record<
     BG: BG_ERAS["2027-default"]?.config,
     PL: PL_ERAS["2027-default"]?.config,
     RU: RU_ERAS["2027-default"]?.config,
+    // Modern lira: the 2027 budget and bonds seed in TRY.
+    TR: TR_ERAS["2027-default"]?.config,
   },
   "1991-default": {
     UK: UK_ERAS["1991-default"]?.config,

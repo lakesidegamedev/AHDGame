@@ -81,6 +81,7 @@ export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] 
   "ESP",
   "SEK",
   "TRL",
+  "TRY",
   "GRD",
   "ATS",
   "FIM",
@@ -138,6 +139,7 @@ export const ZOD_ACTIVE_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyC
   "ESP",
   "SEK",
   "TRL",
+  "TRY",
   "GRD",
   "ATS",
   "FIM",
@@ -533,6 +535,25 @@ export const INITIAL_RATES_1979: Partial<Record<CountryId, number>> = {
  */
 export const INITIAL_RATES_2027: Partial<Record<CountryId, number>> = {
   ...INITIAL_RATES,
+  // 2024 annual averages, local currency per USD, carried into January 2027.
+  // World Bank WDI PA.NUS.FCRF (official exchange rate, period average):
+  // https://api.worldbank.org/v2/country/GBR;JPN;SWE;TUR;BRA;CHN;NGA/indicator/PA.NUS.FCRF?date=2024&format=json
+  // The SE and TR national budgets inherit 2019 rows written in game units
+  // priced at the old 4.29 SEK and 34.5 TRL rows; the 2027 budget overlay
+  // rebases them to these rates at constant USD value (see budgets.ts).
+  UK: 0.7824,
+  JP: 151.37,
+  BR: 5.389,
+  CN: 7.1975,
+  NG: 1478.97,
+  SE: 10.568,
+  // Modern lira (TRY). The 2005 redenomination removed six zeros, so the
+  // seeded TRL row of earlier presets is not this currency.
+  TR: 32.806,
+  // DE (EUR) stays at the 0.92 game anchor every euro conversion is built on;
+  // the 2024 average was 0.9239. FR, IT, ES, GR, AT and FI keep their legacy
+  // rows: in this preset they are only conversion factors from the inherited
+  // legacy-unit budgets into EUR, and every euro member trades at the DE row.
   // 2024 annual USD averages from the issuing central banks. The modern
   // regional GDP anchors are also observed in 2024 PLN and RON, respectively.
   // https://nbp.pl/wp-content/uploads/2025/06/Financial-Statements-of-Narodowy-Bank-Polski-as-at-31-December-2024.pdf
@@ -545,7 +566,9 @@ export const INITIAL_RATES_2027: Partial<Record<CountryId, number>> = {
   // https://www.ecb.europa.eu/press/pr/date/2026/html/ecb.pr260101~c830245e42.en.html
   BG: BGN_PER_EUR * 0.92,
   // Latest completed annual NBH average, reported by KSH for 2025. This is
-  // an explicit fallback for the future preset, not a 2027 observation.
+  // an explicit fallback for the future preset, not a 2027 observation. It is
+  // kept over the 2024 average (365.69) because the HU budget and bonds are
+  // authored in 2025 forints.
   // https://www.ksh.hu/evkonyvek/2025/magyar-statisztikai-zsebkonyv-2025/pdf/statistical_pocketbook_of_hungary_2025.pdf
   HU: 353.2,
   // Explicit RUB fallback for the future preset, not a 2027 observation:
@@ -695,15 +718,16 @@ export const SPREAD_FEE_CENTRAL_BANK_RATIO =
  * Seed-time home currency for a country in a preset. Era-blind
  * {@link COUNTRY_CURRENCY_MAP} stays the identity source for every other era;
  * only a 2027-default bootstrap resolves euro members to EUR (see
- * `isEuroAdopted`), RU to RUB, PL to PLN and RO to RON. Every other country
- * and every other preset pass through unchanged, so 1991 behavior is
- * byte-identical.
+ * `isEuroAdopted`), RU to RUB, PL to PLN, RO to RON and TR to TRY (2027
+ * only). Every other country and every other preset pass through unchanged,
+ * so 1991 behavior is byte-identical.
  */
 export function getSeedCurrencyCode(countryId: CountryId, preset: string): CurrencyCode {
   if (isEuroAdopted(countryId, preset)) return "EUR";
   if (isRubleAdopted(countryId, preset)) return "RUB";
   if ((preset === "2019-default" || preset === "2027-default") && countryId === "PL") return "PLN";
   if ((preset === "2019-default" || preset === "2027-default") && countryId === "RO") return "RON";
+  if (preset === "2027-default" && countryId === "TR") return "TRY";
   if (preset === "2019-default" && countryId === "BG") return "BGN";
   return COUNTRY_CURRENCY_MAP[countryId];
 }
@@ -829,7 +853,8 @@ export function eraRateForCurrency(
   )
     return undefined;
   if (code === "BGN" && preset !== "2019-default") return undefined;
-  if (code === "RUB" || code === "PLN" || code === "RON" || code === "BGN") {
+  if (code === "TRY" && preset !== "2027-default") return undefined;
+  if (code === "RUB" || code === "PLN" || code === "RON" || code === "BGN" || code === "TRY") {
     const countryId = CURRENCY_ANCHOR_COUNTRY[code];
     const rate = eraRates[countryId] ?? INITIAL_RATES[countryId];
     return rate !== undefined && rate > 0 ? rate : undefined;
