@@ -826,6 +826,9 @@ export async function runFundedProducerTurn(
         : {}),
       stockCoverTurns: input.env.stockCoverTurns,
       ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
+      ...(validRevenueShare(input.env.salesAdvanceRevenueShare)
+        ? { salesAdvanceRevenueShare: input.env.salesAdvanceRevenueShare }
+        : {}),
       ...(input.env.restartProbes ? { restartProbes: true } : {}),
       ...((input.env.householdIncomeSpendStage ?? 0) >= 1
         ? {
@@ -1623,4 +1626,9 @@ export async function reconcileAppliedFunding(db: Db, move: MoneyMove): Promise<
   let result = await applyMoneyMove(db, correction);
   if (result.status === "replayed") result = await resumeMoneyMove(db, correction.key);
   return result.status === "applied" || result.status === "replayed";
+}
+
+/** A configured sales-advance revenue share is used only inside (0, 1]. */
+function validRevenueShare(share: number | undefined): share is number {
+  return typeof share === "number" && Number.isFinite(share) && share > 0 && share <= 1;
 }
