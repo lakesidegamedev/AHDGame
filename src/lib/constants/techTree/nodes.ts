@@ -1525,8 +1525,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Social Distribution",
-        description: "Social sharing amplifies reach.",
-        effects: [{ kind: "marketingStrength", flat: 60 }],
+        description: "Social sharing amplifies reach and unlocks the Social Platform model.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "social_platform" },
+          { kind: "marketingStrength", flat: 60 },
+        ],
       },
       {
         name: "Cloud Production",
@@ -1542,8 +1545,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Influencer Networks",
-        description: "Creator partnerships extend reach.",
-        effects: [{ kind: "marketingStrength", flat: 70 }],
+        description: "Creator partnerships extend reach and unlock the Creator Network model.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "creator_network" },
+          { kind: "marketingStrength", flat: 70 },
+        ],
       },
       {
         name: "Short-Form Video",
@@ -1567,8 +1573,9 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
     "2029": [
       {
         name: "AI-Generated Content",
-        description: "Generative pipelines slash production cost.",
+        description: "Generative pipelines slash production cost and unlock AI-Generated Media.",
         effects: [
+          { kind: "unlockStrategy", strategyId: "ai_generated_media" },
           { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
@@ -3832,8 +3839,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Creator Platforms",
-        description: "Creator ecosystems scale content cheaply.",
-        effects: [{ kind: "marketingStrength", flat: 60 }],
+        description:
+          "Creator ecosystems scale content cheaply and unlock the Creator Network model.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "creator_network" },
+          { kind: "marketingStrength", flat: 60 },
+        ],
       },
     ],
     "2029": [
@@ -3852,8 +3863,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Generative Game Content",
-        description: "AI-built worlds slash production cost.",
-        effects: [{ kind: "growthCostReduction", pct: 0.08 }],
+        description: "AI-built worlds slash production cost and unlock AI-Generated Media.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "ai_generated_media" },
+          { kind: "growthCostReduction", pct: 0.08 },
+        ],
       },
       {
         name: "Holographic Entertainment",

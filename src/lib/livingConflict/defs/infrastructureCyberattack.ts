@@ -1,7 +1,7 @@
 /**
  * Infrastructure cyberattack. State-backed intrusions into power grids and
- * networks, more likely when world tension is high and a country's utilities
- * are fragile. An intrusion can be contained before it causes outages; an
+ * networks, more likely when world tension is high and a country's cyber
+ * resilience (`cyber/rules.ts`: mandate law, technology, utilities) is low. An intrusion can be contained before it causes outages; an
  * outage always moves into restoration as crews repair systems. Opening
  * conditions and rolls live in `rules/futureConflicts.ts`.
  */

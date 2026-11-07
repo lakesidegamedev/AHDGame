@@ -802,8 +802,11 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
     },
     {
       name: "Mixed Reality Venues",
-      description: "Physical venues are layered with digital shows.",
-      effects: [{ kind: "marketingStrength", flat: 95 }],
+      description: "Physical venues are layered with digital shows. Unlocks Immersive Media.",
+      effects: [
+        { kind: "unlockStrategy", strategyId: "immersive_media" },
+        { kind: "marketingStrength", flat: 95 },
+      ],
     },
     {
       name: "Creator Content Markets",

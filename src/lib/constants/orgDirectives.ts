@@ -28,7 +28,21 @@ export interface DirectiveDef {
   delta: number;
   /** One-line description of the bloc policy + its effect direction. */
   blurb: string;
+  /**
+   * Treaty terms: only these organisations may table it. Unset means any organisation
+   * whose category may table directives.
+   */
+  organizationIds?: readonly string[];
+  /** Turns the directive stays active; defaults to {@link DIRECTIVE_DURATION_TURNS}. */
+  durationTurns?: number;
 }
+
+/**
+ * How long a treaty's terms run before they lapse (240 turns, five in-game years).
+ * Members renew them by passing the terms again; a renewal while the terms are still
+ * in force does not stack their effect.
+ */
+export const TREATY_TERM_TURNS = 240;
 
 /**
  * The directive menu. All five target node-backed metrics (verified against the
@@ -76,6 +90,58 @@ export const DIRECTIVE_CATALOG: DirectiveDef[] = [
     delta: -1.5,
     blurb: "Bloc-wide emissions standards cut carbon emissions per capita.",
   },
+  // Treaty terms of the post-2027 organisations. Each belongs to one organisation and
+  // lapses after TREATY_TERM_TURNS unless the members renew it.
+  // - governance.publicTrust          [0, 100], higher better → +1.5
+  // - economic.investorConfidence     [0, 100], higher better → +1.5
+  // - environment.floodRisk           [1, 30],  lower better  → -1
+  // - economic.tradeGrowth            [-30, 30], higher better → +0.5
+  // - infrastructure.broadbandAccess  [0, 100], higher better → +1.5
+  {
+    key: "ai_safety_terms",
+    label: "AI Safety Accord Terms",
+    metricId: "publicTrust",
+    delta: 1.5,
+    blurb: "Shared testing and incident reporting for advanced AI raise public trust.",
+    organizationIds: ["AI_SAFETY_ACCORD"],
+    durationTurns: TREATY_TERM_TURNS,
+  },
+  {
+    key: "critical_minerals_terms",
+    label: "Critical Minerals Club Terms",
+    metricId: "investorConfidence",
+    delta: 1.5,
+    blurb: "Shared stockpiles and supply guarantees steady investors in mineral-hungry industry.",
+    organizationIds: ["CRITICAL_MINERALS_CLUB"],
+    durationTurns: TREATY_TERM_TURNS,
+  },
+  {
+    key: "climate_adaptation_terms",
+    label: "Climate Adaptation Finance Terms",
+    metricId: "floodRisk",
+    delta: -1,
+    blurb: "Pooled finance for sea walls and drainage cuts flood risk across members.",
+    organizationIds: ["CLIMATE_ADAPTATION_PACT"],
+    durationTurns: TREATY_TERM_TURNS,
+  },
+  {
+    key: "arctic_terms",
+    label: "Arctic Agreement Terms",
+    metricId: "tradeGrowth",
+    delta: 0.5,
+    blurb: "Agreed shipping lanes and search and rescue open northern trade routes.",
+    organizationIds: ["ARCTIC_AGREEMENT"],
+    durationTurns: TREATY_TERM_TURNS,
+  },
+  {
+    key: "space_traffic_terms",
+    label: "Space Traffic Rules",
+    metricId: "broadbandAccess",
+    delta: 1.5,
+    blurb: "Shared tracking and debris rules keep satellite services running.",
+    organizationIds: ["SPACE_TRAFFIC_RULES"],
+    durationTurns: TREATY_TERM_TURNS,
+  },
 ];
 
 const DIRECTIVE_BY_KEY = new Map<string, DirectiveDef>(DIRECTIVE_CATALOG.map((d) => [d.key, d]));
@@ -83,6 +149,21 @@ const DIRECTIVE_BY_KEY = new Map<string, DirectiveDef>(DIRECTIVE_CATALOG.map((d)
 /** Look up a directive definition by its stored key, or undefined if unknown. */
 export function getDirectiveDef(key: string | undefined): DirectiveDef | undefined {
   return key == null ? undefined : DIRECTIVE_BY_KEY.get(key);
+}
+
+/** Whether an organisation may table this directive (treaty terms belong to one). */
+export function isDirectiveAvailableTo(def: DirectiveDef, organizationId: string): boolean {
+  return def.organizationIds == null || def.organizationIds.includes(organizationId);
+}
+
+/** The directives an organisation may table: the general menu plus its own treaty terms. */
+export function directivesForOrganization(organizationId: string): DirectiveDef[] {
+  return DIRECTIVE_CATALOG.filter((def) => isDirectiveAvailableTo(def, organizationId));
+}
+
+/** True for treaty terms, which do not stack when renewed while still in force. */
+export function isTreatyTerm(def: DirectiveDef): boolean {
+  return def.organizationIds != null;
 }
 
 /** True if `key` names a known directive in the catalog. */
@@ -97,3 +178,8 @@ export function isDirectiveKey(key: string): boolean {
  * stops being read and the engine smooths the metric back — no cleanup write.
  */
 export const DIRECTIVE_DURATION_TURNS = 96;
+
+/** Turns a passed directive stays active. */
+export function directiveDurationTurns(key: string | undefined): number {
+  return getDirectiveDef(key)?.durationTurns ?? DIRECTIVE_DURATION_TURNS;
+}

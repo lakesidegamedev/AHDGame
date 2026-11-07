@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getUnitTypesForYear, type Branch } from "@/lib/constants/military";
+import { TECH_TIERS, getUnitTypesForYear, type Branch } from "@/lib/constants/military";
 import { unitPurchasePrice } from "@/lib/military/procurement";
 import { MilIcon, fmtMoneyAbs, fmtMoneySigned } from "./militaryUi";
 
@@ -140,6 +140,14 @@ export function RecruitPanel({
               <span className="text-muted">Combat power</span>
               <span className="tabular font-semibold text-gov-soft">{archetype.power}</span>
             </div>
+            {archetype.requiredArsenalGrade != null && (
+              <div className="flex justify-between py-0.5">
+                <span className="text-muted">Needs arsenal grade</span>
+                <span className="tabular text-foreground">
+                  {TECH_TIERS[archetype.requiredArsenalGrade]}
+                </span>
+              </div>
+            )}
           </div>
 
           {priceUnknown && (

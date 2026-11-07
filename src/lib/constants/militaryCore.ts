@@ -28,6 +28,30 @@ export interface UnitArchetype {
   establishedYear?: number;
   /** Optional era gate; same semantics as Branch.dissolvedYear. */
   dissolvedYear?: number;
+  /**
+   * Research gate: the minimum grade (0..3, same scale as `techTier`) of materiel the
+   * national arsenal must hold for this domain. Arsenal grade is what the country's
+   * defence industry has researched and delivered (`gradeCeilingFor`), so a country with
+   * no researched supplier cannot raise the formation however much money it has.
+   */
+  requiredArsenalGrade?: number;
+}
+
+/**
+ * Why a country cannot raise this archetype on research grounds, or null when it can.
+ * `arsenalGrade` is the national arsenal's grade for the archetype's domain.
+ */
+export function archetypeResearchBlock(
+  archetype: Pick<UnitArchetype, "type" | "requiredArsenalGrade">,
+  arsenalGrade: number | null | undefined
+): string | null {
+  const need = archetype.requiredArsenalGrade;
+  if (need == null || need <= 0) return null;
+  if ((arsenalGrade ?? 0) >= need) return null;
+  return (
+    `${archetype.type} needs ${TECH_TIERS[need] ?? "advanced"} materiel in the national ` +
+    `arsenal. Domestic defence industry must research and deliver it first.`
+  );
 }
 export interface PostureDef {
   id: Posture;
@@ -133,6 +157,17 @@ export const UNIT_TYPES: Record<UnitDomain, UnitArchetype[]> = {
       personnel: 900,
       power: 57,
     },
+    // Short-range jammers, interceptors and guns against small drones and loitering munitions.
+    {
+      type: "Counter-Drone Battalion",
+      icon: "missile",
+      cost: 1500,
+      upkeep: 75,
+      personnel: 700,
+      power: 55,
+      establishedYear: 2027,
+      requiredArsenalGrade: 2,
+    },
   ],
   naval: [
     {
@@ -160,6 +195,17 @@ export const UNIT_TYPES: Record<UnitDomain, UnitArchetype[]> = {
       upkeep: 190,
       personnel: 2800,
       power: 70,
+    },
+    // Uncrewed surface and undersea craft run from a small crewed mother ship.
+    {
+      type: "Autonomous Naval Drone Flotilla",
+      icon: "ship",
+      cost: 2000,
+      upkeep: 85,
+      personnel: 250,
+      power: 62,
+      establishedYear: 2030,
+      requiredArsenalGrade: 2,
     },
   ],
   air: [
@@ -190,6 +236,27 @@ export const UNIT_TYPES: Record<UnitDomain, UnitArchetype[]> = {
       personnel: 600,
       power: 59,
       establishedYear: 1995,
+    },
+    {
+      type: "Loitering Munition Wing",
+      icon: "drone",
+      cost: 1400,
+      upkeep: 60,
+      personnel: 400,
+      power: 58,
+      establishedYear: 2027,
+      requiredArsenalGrade: 2,
+    },
+    // High-energy lasers and microwave emitters; cheap per shot, dear to run.
+    {
+      type: "Directed Energy Air Defense Wing",
+      icon: "missile",
+      cost: 3000,
+      upkeep: 150,
+      personnel: 700,
+      power: 80,
+      establishedYear: 2040,
+      requiredArsenalGrade: 3,
     },
   ],
   rocket: [
@@ -247,6 +314,17 @@ export const UNIT_TYPES: Record<UnitDomain, UnitArchetype[]> = {
       personnel: 900,
       power: 80,
       establishedYear: 2019,
+    },
+    // Proliferated low-orbit sensing and relay satellites for targeting and early warning.
+    {
+      type: "Space Sensing Constellation",
+      icon: "satellite",
+      cost: 4200,
+      upkeep: 180,
+      personnel: 600,
+      power: 78,
+      establishedYear: 2030,
+      requiredArsenalGrade: 2,
     },
   ],
   marine: [

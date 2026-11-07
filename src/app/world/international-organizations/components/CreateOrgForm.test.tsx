@@ -63,7 +63,7 @@ describe("CreateOrgForm", () => {
     fireEvent.click(screen.getByText("Found organization"));
     expect(
       screen.getByText(
-        /not match a built-in org \(EU, NATO, UN, Commonwealth, Warsaw Pact, Non-Aligned, COMECON\)/
+        /not match a built-in org \(EU, NATO, UN, Commonwealth, Warsaw Pact, Non-Aligned, COMECON, Minerals Club, Adaptation Pact, AI Accord, Arctic, Space Traffic\)/
       )
     ).toBeTruthy();
   });

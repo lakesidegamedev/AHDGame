@@ -3,7 +3,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { ORG_PROPOSAL_VOTING_TURNS } from "@/lib/constants/internationalOrganizations";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
-import { getDirectiveDef } from "@/lib/constants/orgDirectives";
+import { getDirectiveDef, isDirectiveAvailableTo } from "@/lib/constants/orgDirectives";
 import { POSTURE_META, isAlertPosture, type AlertPosture } from "@/lib/constants/orgPosture";
 import { getAgencyDef } from "@/lib/constants/orgAgencies";
 import {
@@ -275,6 +275,13 @@ export async function proposeOrganizationLegislation(params: {
         ok: false as const,
         status: 400,
         error: `Unknown directive: ${input.directiveKey}.`,
+      };
+    }
+    if (!isDirectiveAvailableTo(def, orgId)) {
+      return {
+        ok: false as const,
+        status: 400,
+        error: `${def.label} belongs to another organisation.`,
       };
     }
     const title = input.title?.trim() || `${orgId} Directive: ${def.label}`;

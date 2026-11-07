@@ -52,7 +52,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { loadOrgFoundingContext } from "@/lib/internationalOrganizations/founding";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import { DIRECTIVE_DURATION_TURNS } from "@/lib/constants/orgDirectives";
+import { directiveDurationTurns } from "@/lib/constants/orgDirectives";
 import { JOINT_STATEMENT_DURATION_TURNS } from "@/lib/internationalOrganizations/jointStatement";
 import {
   admitMember,
@@ -613,7 +613,9 @@ async function resolveExpiredOrganizationLegislation(
       const sanctionsExpiresOnTurn =
         item.type === "sanctions" ? currentTurn + SANCTIONS_DURATION_TURNS : undefined;
       const directiveExpiresOnTurn =
-        item.type === "directive" ? currentTurn + DIRECTIVE_DURATION_TURNS : undefined;
+        item.type === "directive"
+          ? currentTurn + directiveDurationTurns(item.directiveKey)
+          : undefined;
       const jointStatementExpiresOnTurn =
         item.type === "joint_statement" ? currentTurn + JOINT_STATEMENT_DURATION_TURNS : undefined;
       const agencyExpiresOnTurn =
