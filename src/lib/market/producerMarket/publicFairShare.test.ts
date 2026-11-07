@@ -184,7 +184,7 @@ describe("fair-share public clearing", () => {
     expect(delivered(result, "JP")).toBeCloseTo(100, 9);
   });
 
-  it("leaves eligibility-filtered orders on their ordinary pass", () => {
+  it("shares each supplier only among eligible buyers", () => {
     const result = market(
       markPublicFairShare([
         gov("AT", 100, { eligibleOfferIds: ["offer-de-a"] }),
@@ -192,7 +192,7 @@ describe("fair-share public clearing", () => {
         gov("UK", 200),
       ])
     );
-    expect(delivered(result, "AT")).toBe(60);
+    expect(delivered(result, "AT")).toBeCloseTo(15);
     expect(delivered(result, "AT") + delivered(result, "JP") + delivered(result, "UK")).toBeCloseTo(
       130,
       9

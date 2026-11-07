@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { settleProducerMarket, type PurchaseOrder } from "./rules";
+import { producerTrades, settleProducerMarket, type PurchaseOrder } from "./rules";
+import { routeEligibility } from "./routeRules";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 
 const order = (
@@ -85,10 +86,120 @@ describe("scarce producer inputs", () => {
     ).toEqual({ a: 20, b: 20, reserved: 20 });
   });
 
-  it("keeps restricted routes outside the pooled allocation", () => {
+  it("does not allocate supply across a closed route", () => {
     expect(
       fills(clear([order("a", "a", 100, { eligibleOfferIds: [] }), order("b", "b", 100)]))
     ).toEqual({ a: 0, b: 60 });
+  });
+
+  it.each([false, true])(
+    "shares route-eligible supply regardless of order ids (renamed=%s)",
+    (renamed) => {
+      const buyers = [
+        order(renamed ? "zzz" : "aaa", "a", 100, { countryId: "JP" }),
+        order(renamed ? "aaa" : "zzz", "b", 100, { countryId: "US" }),
+      ];
+      const eligible = routeEligibility(
+        buyers.map((o) => ({ id: o.id, commodity: o.commodity, buyerCountry: o.countryId! })),
+        [{ id: "steel", commodity: "steel", sellerCountry: "US" }],
+        () => true
+      );
+      const result = clear(buyers.map((o) => ({ ...o, eligibleOfferIds: eligible[o.id] })));
+      expect(result.orders.map((o) => o.deliveredUnits)).toEqual([30, 30]);
+      expect([...producerTrades(result.tradeReceipt)].map((t) => t.units)).toEqual([30, 30]);
+    }
+  );
+
+  it("shares a common eligible supplier set proportionally without expanding every supplier fill", () => {
+    const offers = ["one", "two"].map((id) => ({
+      id,
+      accountId: "seller",
+      commodity: "steel",
+      book: "world",
+      units: 30,
+      unitPrice: 1,
+    }));
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "a", cash: 1000 },
+        { id: "b", cash: 1000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers,
+      orders: [
+        order("a", "a", 100, { eligibleOfferIds: ["one", "two"] }),
+        order("b", "b", 200, { eligibleOfferIds: ["two", "one"] }),
+      ],
+    });
+    expect(fills(result)).toEqual({ a: 20, b: 40 });
+    expect(result.tradeReceipt.fills).toHaveLength(2);
+    expect([...producerTrades(result.tradeReceipt)].reduce((n, t) => n + t.units, 0)).toBeCloseTo(
+      60
+    );
+  });
+
+  it("shares overlapping routes without buying embargoed supply and replays exact sellers", () => {
+    const buyers = [
+      order("aaa", "a", 100, { countryId: "JP" }),
+      order("zzz", "b", 100, { countryId: "US" }),
+    ];
+    const offers = [
+      {
+        id: "shared",
+        accountId: "seller",
+        countryId: "UK",
+        commodity: "steel",
+        book: "world",
+        units: 60,
+        unitPrice: 1,
+      },
+      {
+        id: "us-only",
+        accountId: "seller",
+        countryId: "US",
+        commodity: "steel",
+        book: "world",
+        units: 60,
+        unitPrice: 1,
+      },
+      {
+        id: "blocked",
+        accountId: "seller",
+        countryId: "RU",
+        commodity: "steel",
+        book: "world",
+        units: 100,
+        unitPrice: 1,
+      },
+    ];
+    const eligible = routeEligibility(
+      buyers.map((o) => ({ id: o.id, commodity: o.commodity, buyerCountry: o.countryId! })),
+      offers.map((o) => ({ id: o.id, commodity: o.commodity, sellerCountry: o.countryId })),
+      (_, from) => from === "UK"
+    );
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "a", cash: 1000 },
+        { id: "b", cash: 40 },
+        { id: "seller", cash: 0 },
+      ],
+      offers,
+      orders: buyers.map((o) => ({ ...o, eligibleOfferIds: eligible[o.id] })),
+      trackCountryBooks: true,
+    });
+    expect(result.orders.find((o) => o.id === "aaa")!.deliveredUnits).toBeGreaterThan(0);
+    expect(result.orders.find((o) => o.id === "zzz")!.deliveredUnits).toBeCloseTo(40);
+    expect(result.offers.find((o) => o.id === "blocked")!.soldUnits).toBe(0);
+    const trades = [...producerTrades(result.tradeReceipt)];
+    expect(trades.every((t) => eligible[t.orderId].includes(t.offerId))).toBe(true);
+    for (const offer of result.offers) {
+      expect(
+        trades.filter((t) => t.offerId === offer.id).reduce((n, t) => n + t.units, 0)
+      ).toBeCloseTo(offer.soldUnits);
+    }
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(1040);
   });
 
   it("does not favor splitting the same demand over more sites", () => {
@@ -97,7 +208,7 @@ describe("scarce producer inputs", () => {
     expect(result.accounts.reduce((sum, a) => sum + a.cash, 0)).toBe(2000);
   });
 
-  it("marks actual producer input orders", () => {
+  it.each([false, true])("shares actual producer inputs with route lists enabled=%s", (routes) => {
     const plant = (id: string, accountId: string): ProductionPlan => ({
       id,
       accountId,
@@ -143,7 +254,19 @@ describe("scarce producer inputs", () => {
         },
       ],
     };
-    const result = advanceProducerEconomy(input);
+    const eligible = routeEligibility(
+      input.producers.map((p) => ({
+        id: JSON.stringify([p.id, "input", "steel"]),
+        commodity: "steel",
+        buyerCountry: "US",
+      })),
+      [{ id: "steel", commodity: "steel", sellerCountry: "US" }],
+      () => true
+    );
+    const result = advanceProducerEconomy({
+      ...input,
+      ...(routes ? { eligibleOffersByOrder: eligible } : {}),
+    });
     expect(result.producers[0].producedUnits).toBeCloseTo(result.producers[1].producedUnits);
     expect(
       result.tradeReceipt.orders.filter((o) => o.commodity === "steel").every((o) => o.fairShare)

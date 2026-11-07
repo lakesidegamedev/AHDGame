@@ -10,7 +10,7 @@ badges: [patch]
 areas: [engine]
 ---
 
-- Ordinary producer input orders of equal priority share available supply according to their remaining demand, price limits and budgets.
+- Ordinary producer input orders of equal priority share available supply according to their remaining demand, price limits and budgets, including orders with trade-route eligibility lists.
 - Plants sharing company cash also share that budget fairly within each allocation, instead of the first plant spending its siblings' shares.
-- Own-site delivery priority, local freight priority, restricted routes and supplier reservations remain in effect.
+- Own-site delivery priority, local freight priority, restricted routes and supplier reservations remain in effect. Route-constrained receipts retain the exact supplying offers.
 - Input buying limits apply existing price headroom to the last clearing price, bounded against an independent reference. Output reference prices do not change.
