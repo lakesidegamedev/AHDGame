@@ -21,6 +21,8 @@ import {
 export const LIVE_PLANNING_PASSES = 64;
 /** Cooperative budget includes market preparation; final clearing still completes. */
 export const LIVE_PLANNING_BUDGET_MS = 30_000;
+/** Leave the rest of the 20-minute corporation phase for durable settlement and other work. */
+export const LIVE_MARKET_EXECUTION_BUDGET_MS = 180_000;
 
 export { producerWalletId, type ProducerWalletScope };
 
@@ -178,6 +180,7 @@ export async function runCorporationProducerMarket(
     stageTimingsMs: timings,
     worldEpoch: input.worldEpoch,
     planningBudgetMs: LIVE_PLANNING_BUDGET_MS,
+    executionBudgetMs: LIVE_MARKET_EXECUTION_BUDGET_MS,
     production: {
       ...input.demand,
       // Small aggregate differences can conceal large site-level errors.

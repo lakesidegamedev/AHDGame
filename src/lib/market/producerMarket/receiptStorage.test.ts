@@ -1,9 +1,67 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { decodeReceipt, encodeReceipt, stageReceiptChunks } from "./receiptStorage";
 
 describe("chunked producer receipts", () => {
+  it("stores nested route and supplier lists once and restores shared arrays", async () => {
+    const memory = createInMemoryDb();
+    const ids = Array.from({ length: 500 }, (_, i) => `supplier:${i}`);
+    const original = {
+      eligibility: { a: ids, b: ids },
+      orders: Array.from({ length: 1000 }, (_, i) => ({ id: i, eligibleOfferIds: ids })),
+      fills: Array.from({ length: 1000 }, (_, i) => ({ id: i, supplierOfferIds: [...ids] })),
+    };
+    const encoded = encodeReceipt(original);
+    expect(encoded.chunks.length).toBeLessThan(10);
+    await stageReceiptChunks(memory as unknown as Db, encoded.chunks);
+    const restored = (await decodeReceipt(memory as unknown as Db, encoded)) as typeof original;
+    expect(restored).toEqual(original);
+    expect(restored.orders[0].eligibleOfferIds).toBe(restored.eligibility.a);
+    expect(restored.fills[999].supplierOfferIds).toBe(restored.eligibility.a);
+  });
+
+  it("reads the legacy flat chunk format without migration", async () => {
+    const memory = createInMemoryDb();
+    const rows = [{ supplierOfferIds: ["a", "b"] }];
+    const json = JSON.stringify(rows);
+    const id = createHash("sha256").update(json).digest("hex");
+    memory.collection("producerEconomyTurnChunks").docs.push({
+      _id: id,
+      payload: gzipSync(json).toString("base64"),
+    });
+    const root = JSON.stringify({ fills: { $producerReceiptArray: [id], count: 1 } });
+    expect(
+      await decodeReceipt(memory as unknown as Db, {
+        payload: gzipSync(root).toString("base64"),
+        digest: createHash("sha256").update(root).digest("hex"),
+      })
+    ).toEqual({ fills: rows });
+  });
+
+  it("rejects a missing nested supplier chunk before returning a receipt", async () => {
+    const memory = createInMemoryDb();
+    const encoded = encodeReceipt({
+      orders: Array.from({ length: 129 }, (_, id) => ({
+        id,
+        suppliers: Array.from({ length: 129 }, (_, i) => `supplier:${i}`),
+      })),
+    });
+    await stageReceiptChunks(memory as unknown as Db, encoded.chunks);
+    memory.collection("producerEconomyTurnChunks").docs.splice(0, 1);
+    await expect(decodeReceipt(memory as unknown as Db, encoded)).rejects.toThrow("Missing");
+  });
+
+  it("checks the host deadline during encoding", () => {
+    expect(() =>
+      encodeReceipt({ orders: [1] }, () => {
+        throw new Error("deadline");
+      })
+    ).toThrow("deadline");
+  });
+
   it("round-trips a complete receipt beyond a Mongo document without changing any rows", async () => {
     const memory = createInMemoryDb();
     const db = memory as unknown as Db;

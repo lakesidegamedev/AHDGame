@@ -357,6 +357,8 @@ const bookKey = (commodity: string, book: string) => JSON.stringify([commodity, 
 
 /** One pure clearing pass. Seller receipts, buyer charges and observed prices share the same trades. */
 export function settleProducerMarket(input: {
+  /** Host-owned deadline, checked within a clearing before any persistent writes. */
+  checkBudget?: () => void;
   turn: number;
   accounts: readonly MarketAccount[];
   offers: readonly ProducerOffer[];
@@ -392,10 +394,22 @@ export function settleProducerMarket(input: {
   /** Report units moved between a company's own sites, per offer and order. */
   trackInternalDeliveries?: boolean;
 }): ProducerMarketResult {
+  input.checkBudget?.();
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
   unique(input.offers, "offer");
   unique(input.orders, "order");
+  // Route lists are shared by commodity/country. Do not rebuild the same large
+  // set for each plant and each own-stock/ordinary/fair allocation pass.
+  const supplierIds = new WeakMap<readonly ProducerOffer[], string[]>();
+  const idsForSuppliers = (suppliers: readonly ProducerOffer[]) => {
+    let ids = supplierIds.get(suppliers);
+    if (!ids) {
+      ids = suppliers.map((offer) => offer.id);
+      supplierIds.set(suppliers, ids);
+    }
+    return ids;
+  };
   const cash = new Map(input.accounts.map((a) => [a.id, nonNegative(a.cash, "operating cash")]));
   // Opening budgets prevent a circular chain of unfunded sales from financing itself.
   const budgets = new Map(cash);
@@ -785,7 +799,7 @@ export function settleProducerMarket(input: {
     for (const order of orders) {
       if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
       if (marketFirst.has(order.accountId)) continue;
-      const eligible = eligibleSetOf(order);
+      const eligible = eligibleSetOf(order) ?? null;
       const ownAll = (
         ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
       ).filter((offer) => !eligible || eligible.has(offer.id));
@@ -868,7 +882,7 @@ export function settleProducerMarket(input: {
           prior?.orderBudget ?? order.maximumSpend ?? Number.MAX_VALUE,
           byPrice,
           { homeCountry: true },
-          eligibleSetOf(order)
+          eligibleSetOf(order) ?? null
         )
       );
     }
@@ -918,6 +932,7 @@ export function settleProducerMarket(input: {
     take: number,
     suppliers?: readonly ProducerOffer[]
   ): number => {
+    input.checkBudget?.();
     const key = bookKey(order.commodity, order.book);
     const amount = take * price;
     if (!Number.isFinite(amount)) throw new Error("Non-finite trade value");
@@ -957,7 +972,7 @@ export function settleProducerMarket(input: {
           kind: "sale",
           unitPrice: price,
           units: take,
-          ...(suppliers ? { supplierOfferIds: suppliers.map((offer) => offer.id) } : {}),
+          ...(suppliers ? { supplierOfferIds: idsForSuppliers(suppliers) } : {}),
         },
         poolOffers
       )
@@ -1032,40 +1047,32 @@ export function settleProducerMarket(input: {
       };
     });
     type Member = (typeof members)[number];
-    // Which members can buy from each supplier does not depend on the price
-    // level, so work it out once per group: invert the route lists instead of
-    // testing every supplier against every member at every level.
-    const routed = members.some((m) => m.eligible);
-    const unrestricted: number[] = [];
-    const restricted = new Map<string, number[]>();
-    if (routed) {
-      members.forEach((m, i) => {
-        if (!m.eligible) unrestricted.push(i);
-        else
-          for (const id of m.eligible) {
-            const list = restricted.get(id);
-            if (list) list.push(i);
-            else restricted.set(id, [i]);
-          }
-      });
-    }
-    const indicesCache = new Map<string, number[]>();
-    const indicesOf = (supplierId: string): number[] => {
-      let indices = indicesCache.get(supplierId);
-      if (!indices) {
-        const own = restricted.get(supplierId) ?? [];
-        indices =
-          unrestricted.length === 0
-            ? own
-            : own.length === 0
-              ? unrestricted
-              : [...unrestricted, ...own].sort((x, y) => x - y);
-        indicesCache.set(supplierId, indices);
-      }
-      return indices;
-    };
     const key = bookKey(group[0].commodity, group[0].book);
+    const routed = members.some((m) => m.eligible);
+    // Reachability depends on route classes, not the number of plants sharing
+    // each class. Reuse member cohorts across every supplier and price level.
+    const classes = [...new Set(members.map((m) => m.eligible))];
+    const classOf = new Map(classes.map((set, i) => [set, i]));
+    const cohortMembers = new Map<string, Member[]>();
+    const reachability = new Map<string, { key: string; live: Member[] }>();
+    const reachable = (supplier: ProducerOffer) => {
+      let result = reachability.get(supplier.id);
+      if (!result) {
+        const indices = classes.flatMap((set, i) => (!set || set.has(supplier.id) ? [i] : []));
+        const key = JSON.stringify(indices);
+        let live = cohortMembers.get(key);
+        if (!live) {
+          const allowed = new Set(indices);
+          live = members.filter((m) => allowed.has(classOf.get(m.eligible)!));
+          cohortMembers.set(key, live);
+        }
+        result = { key, live };
+        reachability.set(supplier.id, result);
+      }
+      return result;
+    };
     for (const [price, pool] of sortedPoolsByBook.get(key) ?? []) {
+      input.checkBudget?.();
       // What a member could still buy at this level: target, reservation group,
       // limit price, and the order, account and spend-group budgets.
       const capOf = (m: Member): number => {
@@ -1086,15 +1093,14 @@ export function settleProducerMarket(input: {
       const cohorts = new Map<string, { suppliers: ProducerOffer[]; live: Member[] }>();
       if (routed) {
         for (const supplier of offersByPool.get(pool) ?? []) {
-          const indices = indicesOf(supplier.id);
-          if (indices.length === 0) continue;
-          const cohortKey = indices.join(",");
-          const cohort = cohorts.get(cohortKey) ?? {
+          const { key, live } = reachable(supplier);
+          if (live.length === 0) continue;
+          const cohort = cohorts.get(key) ?? {
             suppliers: [],
-            live: indices.map((i) => members[i]),
+            live,
           };
           cohort.suppliers.push(supplier);
-          cohorts.set(cohortKey, cohort);
+          cohorts.set(key, cohort);
         }
       }
       const levels = routed ? [...cohorts.values()] : [{ suppliers: undefined, live: members }];
@@ -1153,6 +1159,7 @@ export function settleProducerMarket(input: {
   };
   // Phase 2: the ordinary book pass over every order at its residual target.
   const clearOrder = (order: PurchaseOrder): void => {
+    input.checkBudget?.();
     const fairGroup = fairGroupOf.get(order.id);
     if (fairGroup) {
       // The whole group clears at its first member's place in the queue.
@@ -1167,7 +1174,7 @@ export function settleProducerMarket(input: {
     let orderBudget = carriedOrder
       ? carriedOrder.orderBudget
       : (order.maximumSpend ?? Number.MAX_VALUE);
-    const eligible = eligibleSetOf(order);
+    const eligible = eligibleSetOf(order) ?? null;
     const key = bookKey(order.commodity, order.book);
     if (!eligible && !order.supplierOfferId && order.contractUnitPrice == null) {
       const ownTake = fillOwnStock(order, wanted);
