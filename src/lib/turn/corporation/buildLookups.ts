@@ -157,6 +157,11 @@ import {
 } from "@/lib/crises/rules/climateEffects";
 import { getClimateExposureTags } from "@/lib/crises/regionHazards";
 import { loadBlockadeClosure } from "@/lib/turn/commodity/blockadeClosure";
+import {
+  loadTransitionPolicies,
+  renewablesReliabilityEntry,
+  summarisePowerFleet,
+} from "@/lib/energyTransition/policies";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -1590,10 +1595,29 @@ export async function buildCorporationLookups(
   // heat lifts household energy demand. One extra read, only when opted in.
   const climateEnergyDemandByState = new Map<string, number>();
   const climateProfile = climateProfileForStartingYear(gameState?.startingYear);
+  let energyTransition: CorporationLookups["energyTransition"];
   if (climateProfile.broaderEffects) {
-    const climate = await db
-      .collection<ClimateFeedbackState>("climateFeedbackState")
-      .findOne({ _id: "world" }, { projection: { pressure: 1 } });
+    const [climate, transitionPolicyByCountry] = await Promise.all([
+      db
+        .collection<ClimateFeedbackState>("climateFeedbackState")
+        .findOne({ _id: "world" }, { projection: { pressure: 1 } }),
+      loadTransitionPolicies(db),
+    ]);
+    // Energy transition (same opt-in): climate laws and the national clean
+    // share price each sector's inputs in sectorTurn; renewables without
+    // firming lose output through the disaster-effect channel below.
+    const fleet = summarisePowerFleet(allSectors);
+    energyTransition = {
+      // broaderEffects is only on for a world with a known starting year.
+      startingYear: gameState?.startingYear ?? 0,
+      policyByCountry: transitionPolicyByCountry,
+      cleanShareByCountry: fleet.cleanShareByCountry,
+    };
+    for (const [stateId, penalty] of fleet.renewablesPenaltyByState)
+      activeDisasterEffectsByState.set(stateId, [
+        ...(activeDisasterEffectsByState.get(stateId) ?? []),
+        renewablesReliabilityEntry(penalty),
+      ]);
     const pressure = climate?.pressure ?? climateProfile.startingPressure;
     for (const s of states) {
       const id = String(s._id);
@@ -1927,7 +1951,7 @@ export async function buildCorporationLookups(
     nationalDominanceShareBySectorId,
     stateSectorSpecializationByState,
     activeDisasterEffectsByState,
-    ...(climateProfile.broaderEffects ? { climateEnergyDemandByState } : {}),
+    ...(climateProfile.broaderEffects ? { climateEnergyDemandByState, energyTransition } : {}),
     regionalConditionMarginByState,
     corporateEmbargoSuppression,
     // Legacy full-mothball embargo model DISABLED (ticket 984): always use the

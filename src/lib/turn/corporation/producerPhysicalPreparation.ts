@@ -32,6 +32,7 @@ import {
   withSunsetPenalty,
 } from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { withEnergyTransition } from "@/lib/energyTransition/policies";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import {
   LOW_USE_COLD_UPKEEP_FRACTION,
@@ -229,6 +230,7 @@ export type ProducerPhysicalEnv = Pick<
     | "politicalBaseModifiersByState"
     | "regionalConditionMarginByState"
     | "stateOwnershipConcentrationByCountry"
+    | "energyTransition"
   >;
 };
 
@@ -305,7 +307,12 @@ export function prepareProducerPhysicalSector(input: {
     lookups.labourDemandWageIndexByState?.get(sector.stateId),
     countryId
   );
-  const tech =
+  const operatingType = getOperatingSectorType(
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
+  const tech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
           getSectorTechEffectsForYear(
@@ -315,15 +322,16 @@ export function prepareProducerPhysicalSector(input: {
             sector.industryModel,
             sector.mediaDiscriminator
           ),
-          getOperatingSectorType(
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          operatingType,
           sector.strategyId,
           currentYear
         )
-      : NEUTRAL_TECH_EFFECTS;
+      : NEUTRAL_TECH_EFFECTS,
+    lookups.energyTransition,
+    sector,
+    operatingType,
+    currentYear
+  );
   const recipe = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
     sector.strategyId ?? "standard",
@@ -335,11 +343,6 @@ export function prepareProducerPhysicalSector(input: {
     lookups.preset,
     lookups.hardwareInputReliefStartTurn,
     { advertisingInput: env.advertisingInput === true }
-  );
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
   );
   const outputRateValueBasis = Object.values(recipe.supply).reduce<number>(
     (sum, value) => sum + (value ?? 0),

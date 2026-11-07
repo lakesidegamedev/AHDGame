@@ -433,6 +433,16 @@ export interface CorporationLookups {
    * with broader climate effects only). Absent or missing state reads as 1.
    */
   climateEnergyDemandByState?: Map<string, number>;
+  /**
+   * Energy transition inputs (same opt-in as broader climate effects): the
+   * world's starting year for opening plant vintages, each country's climate
+   * law levels and the clean share of its power fleet. Absent elsewhere.
+   */
+  energyTransition?: {
+    startingYear: number;
+    policyByCountry: Map<string, import("@/lib/energyTransition/rules").TransitionPolicy>;
+    cleanShareByCountry: Map<string, number>;
+  };
   /** Named regional conditions (approval modifiers) stacked into sector margins. */
   regionalConditionMarginByState?: Map<string, number>;
   /** Live era year (null while eraSystemEnabled is off) — gates inactive metric margin signals. */

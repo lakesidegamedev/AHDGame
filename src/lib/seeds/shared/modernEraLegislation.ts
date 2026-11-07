@@ -345,12 +345,12 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       {
         name: "State Minerals Corporation",
         explanation:
-          "A state company buys and holds two years of national demand for every critical mineral and may take stakes in foreign mines.",
+          "A state company buys and holds two years of national demand for every critical mineral and may take stakes in foreign mines. Makers must recover a fifth of the rare earths they use from scrap.",
       },
       {
         name: "Strategic Minerals Reserve",
         explanation:
-          "The state holds a year of national demand for the most vital minerals and releases it in a supply crisis.",
+          "The state holds a year of national demand for the most vital minerals and releases it in a supply crisis. Makers must recover a tenth of the rare earths they use from scrap.",
       },
       {
         name: "Emergency Minerals Buffer",
@@ -489,6 +489,177 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
         name: "Free Speech Shield",
         explanation:
           "Platforms are immune from liability for user posts and are barred from removing lawful content.",
+      },
+    ],
+  },
+  {
+    slug: "carbon_price",
+    from: 2027,
+    name: "Carbon Price Act",
+    description: "Charges power plants and heavy industry for every ton of carbon they release",
+    explanation:
+      "This act decides whether power plants, chemical works, factories, mines and cement makers pay a charge on each ton of carbon they release. A price pushes coal and gas power and heavy industry toward cleaner methods and cuts emissions, but raises their running costs, power bills and prices in the shops. The charge is a regulatory levy here: its revenue does not yet appear as a separate budget line.",
+    policyDomain: "environment",
+    subCategory: "Carbon pricing",
+    committee: "Energy and Environment",
+    effects: [
+      { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.6 },
+      { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.4 },
+      { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.2 },
+    ],
+    demographicEffects: [
+      { dim: "age", bucket: "young", target: "economicLean", direction: 0.2 },
+      { dim: "urbanization", bucket: "rural", target: "economicLean", direction: -0.2 },
+    ],
+    options: [
+      {
+        name: "Full Social Cost of Carbon",
+        explanation:
+          "Every ton pays its full estimated damage. Coal and gas power and heavy industry pay heavily and prices rise across the shops.",
+      },
+      {
+        name: "High Carbon Price",
+        explanation:
+          "A steep charge per ton makes coal power a losing business and pushes industry to cleaner methods.",
+      },
+      {
+        name: "Moderate Carbon Price",
+        explanation:
+          "A real charge per ton. Coal power, chemicals and steel pay noticeably more to run.",
+      },
+      {
+        name: "No Carbon Price",
+        explanation: "Carbon released by power plants and industry carries no charge.",
+      },
+      {
+        name: "Voluntary Offsets",
+        explanation:
+          "Firms may buy offsets to call themselves carbon neutral. Nothing is charged by the state.",
+      },
+      {
+        name: "Fuel Price Relief",
+        explanation:
+          "Duties on coal, gas and power are cut to keep energy cheap for homes and industry.",
+      },
+      {
+        name: "Carbon Charge Ban",
+        explanation: "Any charge on carbon is banned, and existing energy duties are lifted.",
+      },
+    ],
+  },
+  {
+    slug: "coal_phase_out",
+    from: 2027,
+    name: "Coal Power Phase-Out",
+    description: "Sets a date by which coal power must close and who pays for the closures",
+    explanation:
+      "This act decides whether coal power stations must close by a set date. An earlier date cleans the air and cuts emissions, and running costs of old plants climb as the date nears, but owners lose their plants, mining towns lose jobs, the grid loses firm supply until replacements are built, and the state pays compensation and retraining.",
+    policyDomain: "environment",
+    subCategory: "Coal power",
+    committee: "Energy and Environment",
+    budgetLine: "industry",
+    gdpCostFractions: [0.0015, 0.001, 0.0005, 0, 0, 0.0002, 0.0006],
+    effects: [
+      { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.5 },
+      { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.4 },
+      { metricCategoryId: "infrastructure", metricId: "powerGridReliability", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.2 },
+    ],
+    demographicEffects: [
+      { dim: "urbanization", bucket: "rural", target: "economicLean", direction: -0.3 },
+    ],
+    options: [
+      {
+        name: "Rapid Coal Exit",
+        explanation:
+          "Coal power must close within a few years. Old plants become costly at once and coal towns get a large support fund.",
+      },
+      {
+        name: "Early Closure Date",
+        explanation:
+          "Coal power must close within about a decade, with retraining money for the towns that lose it.",
+      },
+      {
+        name: "Firm Closure Date",
+        explanation:
+          "Coal power must close well within two decades, and running costs climb as the date nears.",
+      },
+      {
+        name: "No Phase-Out",
+        explanation: "Coal plants run for as long as their owners find them worth running.",
+      },
+      {
+        name: "Coal Reserve Plants",
+        explanation:
+          "Coal plants are kept on standby as a reserve for winter peaks, and the state pays them to stay open.",
+      },
+      {
+        name: "Coal Lifeline",
+        explanation:
+          "Coal plants that would close get a state payment to keep running and keep their mines open.",
+      },
+      {
+        name: "Coal Guarantee",
+        explanation:
+          "The state guarantees coal power a share of the grid and pays to keep every plant and mine open.",
+      },
+    ],
+  },
+  {
+    slug: "clean_power_standard",
+    from: 2027,
+    name: "Clean Power Standard",
+    description: "Requires a set share of the country's power to come from clean sources",
+    explanation:
+      "This act decides what share of power must come from renewables, storage, nuclear and other clean sources. When the country falls short, coal and gas plants pay for certificates, so a high standard rewards building clean power and punishes fossil plants. It cuts emissions, but raises power bills while the clean fleet is built.",
+    policyDomain: "environment",
+    subCategory: "Clean power",
+    committee: "Energy and Environment",
+    budgetLine: "industry",
+    gdpCostFractions: [0.0006, 0.0004, 0.0002, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.6 },
+      { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.4 },
+      { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.2 },
+    ],
+    options: [
+      {
+        name: "Near-Zero Carbon Grid",
+        explanation:
+          "Almost all power must be clean, and every fossil plant pays a steep charge while the country falls short.",
+      },
+      {
+        name: "Four-Fifths Clean",
+        explanation:
+          "Four fifths of power must be clean. Gas and coal plants pay heavily unless renewables, storage and nuclear are built.",
+      },
+      {
+        name: "Three-Fifths Clean",
+        explanation:
+          "Three fifths of power must be clean, and fossil plants pay for the shortfall.",
+      },
+      {
+        name: "No Standard",
+        explanation: "No share of power has to come from clean sources.",
+      },
+      {
+        name: "Technology Neutral Grid",
+        explanation:
+          "Every source competes on price alone, and clean power gets no preference in grid access.",
+      },
+      {
+        name: "Firm Power First",
+        explanation:
+          "Grid operators must favour plants that run on demand, which in practice means coal and gas.",
+      },
+      {
+        name: "Renewables Cap",
+        explanation:
+          "The share of wind and solar on the grid is capped to protect existing plants.",
       },
     ],
   },

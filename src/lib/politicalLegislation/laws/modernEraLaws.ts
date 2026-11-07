@@ -1,7 +1,8 @@
 /**
  * Later-era national laws for the US and UK law books: the 2027 band (AI
  * liability, data protection, housing supply, critical minerals, cyber
- * resilience, platform content), the 2030 band (automation tax, wage
+ * resilience, platform content, and the climate laws: carbon price, coal
+ * phase-out, clean power standard), the 2030 band (automation tax, wage
  * insurance, carbon border adjustment, heat standards, pension age indexation,
  * nuclear licensing), the 2035 band (climate adaptation fund, managed retreat,
  * basic income pilot, gene editing, space traffic) and the 2040 band
@@ -18,12 +19,14 @@
  *
  * Winners are the positive targets. Payers come through the same channels the
  * rest of the book uses: a cost on a budget line, and one negative target (the
- * metric the law trades away). The automation tax and the carbon border
- * adjustment raise real revenue through gdpRevenueFraction, as do the
+ * metric the law trades away). The automation tax, the carbon price and the
+ * carbon border adjustment raise real revenue through gdpRevenueFraction, as do the
  * automation dividend (a levy paid back out as a dividend), digital currency
  * (seigniorage) and the sovereign wealth fund (its returns). Pension age
  * indexation carries a negative cost from its second rung: a saving on the
  * pension line.
+ * In energy transition worlds the climate laws and the minerals recycling
+ * duty also reach firms' input costs and emissions (energyTransition/rules).
  *
  * Every law seeds at level 0, so adding them moves no day-one budget, metric
  * or equilibrium.
@@ -236,14 +239,14 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
       {
         name: "Domestic Extraction Drive",
         description:
-          "The reserve grows and new mines and refineries at home get fast permits and price floors.",
+          "The reserve grows, new mines and refineries at home get fast permits and price floors, and makers must recover a tenth of the rare earths they use from scrap.",
         cost: 0.001,
       },
       {
         name: { US: "Minerals Security Program", UK: "Minerals Security Programme" },
         description: {
-          US: "A full program: a large reserve, state stakes in refining, and long contracts with friendly suppliers.",
-          UK: "A full programme: a large reserve, state stakes in refining, and long contracts with friendly suppliers.",
+          US: "A full program: a large reserve, state stakes in refining, long contracts with friendly suppliers, and a recycling duty that recovers a fifth of rare earth use.",
+          UK: "A full programme: a large reserve, state stakes in refining, long contracts with friendly suppliers, and a recycling duty that recovers a fifth of rare earth use.",
         },
         cost: 0.0016,
       },
@@ -335,6 +338,146 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
         description:
           "Large platforms need a licence, verify their users and answer for what they spread.",
         cost: 0.00025,
+      },
+    ],
+  },
+  {
+    slug: "carbonPrice",
+    from: 2027,
+    category: "environment",
+    targets: [
+      { metricId: "environment.stewardship", weight: 0.5 },
+      { metricId: "environment.urbanAir", weight: 0.3 },
+      { metricId: "economy.householdIncome", weight: -0.3 },
+      { metricId: "economy.productivity", weight: -0.25 },
+    ],
+    title: {
+      US: "Carbon Pricing Act",
+      UK: "Carbon Price Act",
+    },
+    description: {
+      US: "Charges power plants and heavy industry for every ton of carbon they release. The treasury and clean producers gain; coal and gas power, chemical works, factories and their customers pay.",
+      UK: "Charges power plants and heavy industry for every ton of carbon they release. The treasury and clean producers gain; coal and gas power, chemical works, factories and their customers pay.",
+    },
+    noStatute: "Carbon released by power plants and industry carries no charge.",
+    levels: [
+      {
+        name: "Token Carbon Fee",
+        description:
+          "A small charge per ton that funds monitoring and barely moves prices. Coal and gas plants notice it.",
+        cost: 0.00005,
+        revenue: 0.001,
+      },
+      {
+        name: "Moderate Carbon Price",
+        description:
+          "A real charge per ton. Coal power, chemicals and steel pay noticeably more to run.",
+        cost: 0.0001,
+        revenue: 0.002,
+      },
+      {
+        name: "High Carbon Price",
+        description:
+          "A steep charge per ton that makes coal power a losing business and pushes industry to cleaner methods.",
+        cost: 0.00015,
+        revenue: 0.004,
+      },
+      {
+        name: "Full Social Cost of Carbon",
+        description:
+          "Every ton pays its full estimated damage. Fossil power and heavy industry pay heavily and prices rise across the shops.",
+        cost: 0.0002,
+        revenue: 0.007,
+      },
+    ],
+  },
+  {
+    slug: "coalPhaseOut",
+    from: 2027,
+    category: "environment",
+    targets: [
+      { metricId: "environment.urbanAir", weight: 0.5 },
+      { metricId: "environment.stewardship", weight: 0.3 },
+      { metricId: "environment.energySecurity", weight: -0.3 },
+      { metricId: "economy.workerSecurity", weight: -0.25 },
+    ],
+    title: {
+      US: "Coal Power Phase-Out Act",
+      UK: "Coal Power (Closure) Act",
+    },
+    description: {
+      US: "Sets a date by which coal power must close, with help for the towns that lose it. Clean air and clean generators gain; coal plant owners, miners and grid reliability pay.",
+      UK: "Sets a date by which coal power must close, with help for the towns that lose it. Clean air and clean generators gain; coal plant owners, miners and grid reliability pay.",
+    },
+    noStatute: "Coal plants run for as long as their owners find them worth running.",
+    levels: [
+      {
+        name: "Distant Closure Date",
+        description:
+          "Coal power must close in about two decades. Owners have time to run old plants down.",
+        cost: 0.0002,
+      },
+      {
+        name: "Firm Closure Date",
+        description:
+          "Coal power must close well within two decades, and running costs climb as the date nears.",
+        cost: 0.0005,
+      },
+      {
+        name: "Early Closure Date",
+        description:
+          "Coal power must close within about a decade, with retraining money for the towns that lose it.",
+        cost: 0.001,
+      },
+      {
+        name: "Rapid Coal Exit",
+        description:
+          "Coal power must close within a few years. Old plants become costly at once and coal towns get a large support fund.",
+        cost: 0.0015,
+      },
+    ],
+  },
+  {
+    slug: "cleanPowerStandard",
+    from: 2027,
+    category: "environment",
+    targets: [
+      { metricId: "environment.stewardship", weight: 0.45 },
+      { metricId: "environment.energySecurity", weight: 0.3 },
+      { metricId: "environment.affordability", weight: -0.3 },
+    ],
+    title: {
+      US: "Clean Electricity Standard Act",
+      UK: "Clean Power Standard Act",
+    },
+    description: {
+      US: "Requires a set share of the country's power to come from clean sources. Fossil plants buy certificates for the shortfall. Clean generators gain; fossil power and power bills pay.",
+      UK: "Requires a set share of the country's power to come from clean sources. Fossil plants buy certificates for the shortfall. Clean generators gain; fossil power and power bills pay.",
+    },
+    noStatute: "No share of power has to come from clean sources.",
+    levels: [
+      {
+        name: "Two-Fifths Clean",
+        description:
+          "Two fifths of power must be clean. Fossil plants pay for certificates when the country falls short.",
+        cost: 0.0001,
+      },
+      {
+        name: "Three-Fifths Clean",
+        description: "Three fifths of power must be clean, and the shortfall charge grows with it.",
+        cost: 0.0002,
+      },
+      {
+        name: "Four-Fifths Clean",
+        description:
+          "Four fifths of power must be clean. Gas and coal plants pay heavily unless renewables, storage and nuclear are built.",
+        cost: 0.0004,
+      },
+      {
+        name: "Near-Zero Carbon Grid",
+        description:
+          "Almost all power must be clean, and every fossil plant pays a steep charge while the country falls short.",
+        cost: 0.0006,
       },
     ],
   },
