@@ -29,6 +29,10 @@ export const CORPORATE_BOND_TERM_PREMIUMS: Record<BondMaturityTurns, number> = {
   96: 0,
   240: 1.0,
   336: 1.75,
+  // Sovereign-only tenors. Corporations cannot issue them; listed so a stored
+  // bond of any tenor prices without a fallback.
+  480: 2.25,
+  1440: 3.0,
 };
 
 // ── Bond issuance constants ──────────────────────────────────────────────────

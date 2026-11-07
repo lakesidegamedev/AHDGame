@@ -38,6 +38,8 @@ export interface NppCorpDecisionContext {
    * breakthrough methods to retooling; absent keeps them closed.
    */
   sectorResearchByLane?: ReadonlyMap<string, number>;
+  /** Technology diffusion facts for the turn; absent opens methods on the calendar. */
+  techDiffusion?: import("@/lib/constants/techTree/diffusion").TechDiffusionSnapshot;
   /** The corp's country runs NPP engine 6 (autonomy v6); absent reads as engine 5. */
   engineSix?: boolean;
   /** Net per-turn debt service in anchor currency; positive is a drag. */

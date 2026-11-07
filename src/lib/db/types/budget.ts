@@ -844,9 +844,10 @@ export interface FederalBudget {
    * Keys are turn counts (48, 96, 240); values are fractions summing to 1.
    * Used by the quarterly scheduled issuance path to split deficit+rollover
    * across multiple maturities. Falls back to SOVEREIGN_RECONCILE_DISTRIBUTION
-   * when absent.
+   * when absent (or, in worlds with long tenors, on the debt manager's mix).
+   * 480 and 1440 appear only in worlds that opt in to long tenors.
    */
-  sovereignBondProfile?: Partial<Record<48 | 96 | 240, number>>;
+  sovereignBondProfile?: Partial<Record<48 | 96 | 240 | 480 | 1440, number>>;
   /** Turn at which the sovereignBondProfile was last changed. Used for rate-limiting. */
   sovereignBondProfileLastChangedTurn?: number;
   updatedAt: Date;

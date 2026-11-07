@@ -69,6 +69,8 @@ export interface CabinetOfficeData {
     lastChangedTurn: number;
   } | null;
   sovereignBondProfile: Record<number, number> | null;
+  /** Maturities (turns) the bond profile may use in this world. */
+  sovereignBondMaturities?: number[];
   debtPrincipal: number;
   sovereignBondsOutstanding: number;
   activeOrders: Array<{

@@ -101,6 +101,8 @@ import {
   foundingRecipeFor,
   type FoundingRecipeWorld,
 } from "@/lib/turn/npp/foundingRecipeChoice";
+import { loadTechDiffusionSnapshot } from "@/lib/corporations/techTree/diffusion";
+import { presetUsesTechDiffusion } from "@/lib/constants/techTree/diffusion";
 import { resolveShareExecutionPrice } from "@/lib/corporations/marketExecution";
 import { deriveCeoArchetype } from "@/lib/turn/ceoArchetype";
 
@@ -1851,6 +1853,7 @@ export async function foundNppCorporationsSurplus(
         currentYear: 1,
         startingYear: 1,
         currentTurn: 1,
+        preset: 1,
       },
     }
   );
@@ -1862,6 +1865,11 @@ export async function foundNppCorporationsSurplus(
       (world?.startingYear ?? STARTING_YEAR) +
         Math.floor(((world?.currentTurn ?? currentTurn) - 1) / TURNS_PER_YEAR),
     techTreesEnabled: world?.sectorTechTreesEnabled === true,
+    // Diffusion worlds: an AI founding adopts at its country's lag.
+    techDiffusion:
+      world?.sectorTechTreesEnabled === true && presetUsesTechDiffusion(world.preset)
+        ? await loadTechDiffusionSnapshot(db)
+        : undefined,
   };
   // Group canonical persisted identities by the operating lane used by founding.
   const operatingLaneExpression = (typeField: string) => ({

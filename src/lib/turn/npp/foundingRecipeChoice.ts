@@ -8,6 +8,7 @@ import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constan
 import { SECTOR_STRATEGIES, type SectorStrategy } from "@/lib/constants/sectorStrategies";
 import { isDecadeReached } from "@/lib/constants/techTree/decades";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
+import type { TechDiffusionSnapshot } from "@/lib/constants/techTree/diffusion";
 import {
   chooseFoundingRecipe,
   DEFAULT_RECIPE_ID,
@@ -25,6 +26,11 @@ export interface FoundingRecipeWorld {
    * breakthrough method closed.
    */
   sectorResearchByLane?: ReadonlyMap<string, number>;
+  /**
+   * Readiness by country and method operators, read once per turn in worlds
+   * with technology diffusion. Absent opens methods on the calendar alone.
+   */
+  techDiffusion?: TechDiffusionSnapshot;
 }
 
 /**
@@ -35,7 +41,8 @@ export interface FoundingRecipeWorld {
  */
 export function foundingRecipeAvailable(
   lane: OperatingSectorType,
-  world: FoundingRecipeWorld
+  world: FoundingRecipeWorld,
+  countryId?: string
 ): (recipe: SectorStrategy) => boolean {
   const year = world.currentYear ?? 0;
   const identity = operatingSectorIdentity(lane);
@@ -46,10 +53,16 @@ export function foundingRecipeAvailable(
     unlockedTechNodeIds: [],
   };
   const sectorResearch = world.sectorResearchByLane?.get(lane);
+  // An AI founding adopts at its country's lag: it never licenses early.
+  const diffusion =
+    world.techDiffusion && countryId
+      ? { snapshot: world.techDiffusion, countryId, adopter: "npp" as const }
+      : undefined;
   return (recipe) => {
     if (recipe.minDecade && !(year > 0 && isDecadeReached(recipe.minDecade, year))) return false;
     return !getStrategyAvailability(newCompany, recipe, year, world.techTreesEnabled, {
       sectorResearch,
+      diffusion,
     }).locked;
   };
 }
@@ -75,7 +88,7 @@ export function foundingRecipeFor(
     recipes: SECTOR_STRATEGIES[lane],
     countryId,
     priceRatioOf,
-    isAvailable: foundingRecipeAvailable(lane, world),
+    isAvailable: foundingRecipeAvailable(lane, world, countryId),
     ...(site
       ? {
           inputAvailabilityOf: (recipe: SectorStrategy) =>
@@ -128,7 +141,7 @@ export function foundingLanePeakShortage(
       recipes: SECTOR_STRATEGIES[lane],
       countryId,
       priceRatioOf,
-      isAvailable: foundingRecipeAvailable(lane, world),
+      isAvailable: foundingRecipeAvailable(lane, world, countryId),
     })
   );
 }
