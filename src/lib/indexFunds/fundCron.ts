@@ -259,11 +259,16 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       }),
     ])
   );
-  let funds = await listServiceableFunds(db);
-  const redemptionServiceFundIds = funds.map((fund) => fund._id);
+  const serviceableFunds = await listServiceableFunds(db);
+  const redemptionServiceFundIds = serviceableFunds.map((fund) => fund._id);
+  // A background country's national index (#5702) is cash marked to its
+  // output index by the macro kernel: it owns no equities or bonds, so it
+  // skips NAV, bond deployment and rebalancing and is only served below for
+  // its redemption queue and snapshot.
+  let funds = serviceableFunds.filter((fund) => !fund.nationalIndex);
   // Load valuation side ledgers once before Pass 1 so NAV includes committed
   // bid escrow and counts queued redemption units as the claims they are.
-  const fundIds = funds.map((fund) => fund._id);
+  const fundIds = redemptionServiceFundIds;
   const openOrdersEscrowByFundId = await loadOpenOrdersEscrowByFundId(db, fundIds);
   const queuedUnitsByFundId = await loadQueuedRedemptionUnitsByFundId(db, fundIds);
   const initialBondPrincipalByFundId = await sumFundBondHoldingsByFundId(db, funds, exchangeRates);

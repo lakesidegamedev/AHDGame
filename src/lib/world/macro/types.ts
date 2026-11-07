@@ -2,6 +2,9 @@ import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economic
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
+import type { BackgroundFiscalState } from "./rules/backgroundBudget";
+import type { NationalIndexState } from "./rules/nationalIndex";
+import type { NationalPoliticsState } from "./rules/nationalPolitics";
 
 /** Aggregate sector slice for a sphere-macro (Tier-2) country. */
 export interface MacroSectorState {
@@ -101,6 +104,15 @@ export interface MacroCountryState {
   contribution: MacroMarketContribution;
   /** Funded-market trade, background countries on a funded world only; absent otherwise. */
   fundedTrade?: MacroFundedTrade;
+  /**
+   * 2027 background countries only (#5702): national government, approval and
+   * elections. Written by the kernel tick; absent until the first one.
+   */
+  nationalPolitics?: NationalPoliticsState;
+  /** 2027 background countries only: the macro-derived national budget state. */
+  nationalFiscal?: BackgroundFiscalState;
+  /** 2027 background countries only: the investable national index level. */
+  nationalIndex?: NationalIndexState;
   dataQuality: MacroCountryDataQuality;
   lastMacroTickTurn: number | null;
   createdAt: Date;

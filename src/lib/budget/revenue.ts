@@ -43,6 +43,8 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
+import { BACKGROUND_NATION_PRESET } from "@/lib/world/macro/rules/backgroundConstitution";
+import { backgroundBudgetRefresh, loadBackgroundBudgetSources } from "./backgroundBudget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import {
   NON_LAW_CALIBRATION_VERSION,
@@ -620,8 +622,27 @@ export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[])
   const sourcedImportsByCountry = moneyWiringEnabled
     ? await loadLatestSourcedImportAggregates(db, await getCurrentTurn(db))
     : new Map<string, { tariffPaid: number; importValue: number }>();
+  // 2027 background countries derive their budget from their macro economy
+  // (#5702). Only the 2027 preset has them, so other worlds pay no read.
+  const backgroundSources =
+    eraContext?.preset === BACKGROUND_NATION_PRESET ? await loadBackgroundBudgetSources(db) : null;
   const results = await Promise.all(
     budgets.map(async (budget) => {
+      const background = backgroundSources?.get(String(budget.countryId ?? budget._id));
+      if (background && budget.debt) {
+        const refresh = backgroundBudgetRefresh(
+          budget,
+          background,
+          sovereignStockAnnualService({
+            principal: budget.debt.principal,
+            book: couponBooks.get(background.countryId) ?? null,
+            marginalRate: budget.debt.interestRate,
+            imfBailoutActive: budget.imfSovereignBailoutActive,
+          }),
+          now
+        );
+        if (refresh) return refresh;
+      }
       // Skip budgets missing taxRates (e.g. incompletely seeded countries) —
       // one bad document must not crash the entire corporation turn phase.
       if (!budget.taxRates) return null;
