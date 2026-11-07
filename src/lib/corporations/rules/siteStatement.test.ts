@@ -4,6 +4,7 @@ import {
   sectorSiteStatement,
   scaleSiteStatement,
   consolidateSiteStatements,
+  reconcileSiteStatements,
   matchingSiteReceipt,
 } from "./siteStatement";
 import { fundedSectorOps, fundedSectorResult } from "@/lib/market/producerMarket/fundedSectorRules";
@@ -151,4 +152,23 @@ it("does not join cost details from a different turn or an undated summary", () 
   expect(
     matchingSiteReceipt({ plantsPnl: { source: "funded", turn: 2 }, producerSettlement: receipt })
   ).toBe(receipt);
+});
+
+describe("reconcileSiteStatements", () => {
+  it("bridges the row sum to the consolidated profit by the net internal charge", () => {
+    const rows = [
+      siteStatement({ revenue: 1000, totalCost: 400, charge: 300 }),
+      siteStatement({ revenue: 2000, totalCost: 900, charge: 200 }),
+    ];
+    const r = reconcileSiteStatements(rows);
+    expect(r).toEqual({ income: 0, charge: 500, rowsProfit: 1200, netCharge: 500 });
+    expect(consolidateSiteStatements(rows).profit - r.rowsProfit).toBe(r.netCharge);
+  });
+  it("has no gap when income and charge offset", () => {
+    const rows = [
+      siteStatement({ revenue: 1000, totalCost: 400, income: 300 }),
+      siteStatement({ revenue: 2000, totalCost: 900, charge: 300 }),
+    ];
+    expect(reconcileSiteStatements(rows).netCharge).toBe(0);
+  });
 });
