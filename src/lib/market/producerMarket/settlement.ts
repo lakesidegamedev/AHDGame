@@ -573,7 +573,9 @@ export async function settleProducerTurn(
       throw new Error("Invalid producer execution budget");
     const checkBudget = () => {
       if (input.executionBudgetMs != null && performance.now() - started >= input.executionBudgetMs)
-        throw new Error("Producer market execution deadline exceeded before settlement");
+        throw new Error(
+          `Producer market execution deadline exceeded before settlement (stage timings ms: ${JSON.stringify(roundStageTimings(timings))})`
+        );
     };
     await verifyOpeningProducerPayables(db, {
       worldEpoch: input.worldEpoch,
