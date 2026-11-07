@@ -167,5 +167,5 @@ export function readBaseline(root = process.cwd()): RatchetBaseline {
 export function writeBaseline(files: CommentCounts, root = process.cwd()): void {
   const sorted = Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
   const body: RatchetBaseline = { note: BASELINE_NOTE, files: sorted };
-  writeFileSync(join(root, BASELINE_PATH), JSON.stringify(body, null, 1) + "\n");
+  writeFileSync(join(root, BASELINE_PATH), JSON.stringify(body, null, 2) + "\n");
 }
