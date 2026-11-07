@@ -9,8 +9,10 @@ type CountryScope = NonNullable<LegislationType["countryScope"]>;
 type ChamberKey = LegislationType["positions"][number]["chamber"];
 
 /**
- * Law types that first become fileable in 2027 or 2030, generated for every
- * legacy-catalog legislature that runs the full simulation in a modern world.
+ * Law types that first become fileable in 2027, 2030, 2035 or 2040, generated
+ * for every legacy-catalog legislature that runs the full simulation in a
+ * modern world. A law with an `until` year stops taking new bills that year
+ * (LEGISLATION_ERA_UNTIL); one already enacted stays in force.
  *
  * Each law is a seven-option ladder ordered left to right. The centre option
  * (index 3) is "no statute": no cost, no effect, and it is what a world seeds
@@ -26,7 +28,7 @@ type ChamberKey = LegislationType["positions"][number]["chamber"];
  */
 
 /** Spending line a law's cost books to; resolved per country below. */
-type BudgetLine = "technology" | "housing" | "industry" | "security" | "welfare";
+type BudgetLine = "technology" | "housing" | "industry" | "security" | "welfare" | "environment";
 
 export interface ModernEraLegislatureSpec {
   /** Id prefix, e.g. "de" gives "de_ai_liability_act". */
@@ -48,6 +50,7 @@ export const MODERN_ERA_LEGISLATURE_SPECS: readonly ModernEraLegislatureSpec[] =
       industry: "other",
       security: "defense",
       welfare: "welfare",
+      environment: "environment",
     },
   },
   {
@@ -60,6 +63,7 @@ export const MODERN_ERA_LEGISLATURE_SPECS: readonly ModernEraLegislatureSpec[] =
       industry: "economic",
       security: "defense",
       welfare: "social",
+      environment: "environment",
     },
   },
   {
@@ -72,6 +76,7 @@ export const MODERN_ERA_LEGISLATURE_SPECS: readonly ModernEraLegislatureSpec[] =
       industry: "other",
       security: "defense",
       welfare: "socialSecurity",
+      environment: "infrastructure",
     },
   },
   {
@@ -84,6 +89,7 @@ export const MODERN_ERA_LEGISLATURE_SPECS: readonly ModernEraLegislatureSpec[] =
       industry: "other",
       security: "defense",
       welfare: "socialProtection",
+      environment: "other",
     },
   },
 ];
@@ -100,7 +106,9 @@ interface ModernEraLaw {
   /** Id suffix after the country prefix. */
   slug: string;
   /** First fileable calendar year. */
-  from: 2027 | 2030;
+  from: 2027 | 2030 | 2035 | 2040;
+  /** First year no new bill may file the law; an enacted one stays in force. */
+  until?: number;
   name: string;
   description: string;
   explanation: string;
@@ -659,6 +667,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "automation_tax",
     from: 2030,
+    // The automation dividend replaces it for new bills from 2040.
+    until: 2040,
     name: "Automation Tax",
     description: "Sets whether firms pay a levy when they replace workers with robots and software",
     explanation:
@@ -1002,6 +1012,507 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       },
     ],
   },
+  // ── 2035 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "climate_adaptation_fund",
+    from: 2035,
+    name: "Climate Adaptation Fund",
+    description:
+      "Pays for flood defences, cooler cities and water storage so the country can live with a hotter climate",
+    explanation:
+      "This act decides how much the state spends preparing for floods, droughts, fires and heatwaves that are now certain to come. A large fund protects towns, farms and infrastructure and cuts the damage each disaster does, but it is paid for by taxpayers and gives the state a bigger role in where and how things are built.",
+    policyDomain: "environment",
+    subCategory: "Climate adaptation",
+    committee: "Energy and Environment",
+    budgetLine: "environment",
+    gdpCostFractions: [0.005, 0.0028, 0.0012, 0, 0, 0, 0],
+    // Both targets are engine roots, not readouts of the environment channel.
+    effects: [
+      { metricCategoryId: "environment", metricId: "climateResilience", weight: 0.6 },
+      { metricCategoryId: "environment", metricId: "naturalDisasterPreparedness", weight: 0.4 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.2 },
+    ],
+    demographicEffects: [{ dim: "age", bucket: "young", target: "economicLean", direction: 0.2 }],
+    options: [
+      {
+        name: "Climate Ready Nation",
+        explanation:
+          "A long-term fund rebuilds roads, rail, power and homes to cope with the climate expected later in the century.",
+      },
+      {
+        name: "National Defence Works",
+        explanation:
+          "The state builds sea walls, flood barriers and reservoirs to a national standard.",
+      },
+      {
+        name: "Adaptation Grants",
+        explanation:
+          "A fund matches what regions and towns spend on flood defences and heat shelters.",
+      },
+      {
+        name: "No Adaptation Fund",
+        explanation: "Places protect themselves with the budgets they already have.",
+      },
+      {
+        name: "Insurance-Led Adaptation",
+        explanation:
+          "Insurers price climate risk and owners pay to protect their own property. The state only publishes risk maps.",
+      },
+      {
+        name: "Local Responsibility",
+        explanation: "Adaptation is left to regions and towns, with no national money.",
+      },
+      {
+        name: "Disaster Relief Only",
+        explanation:
+          "The state spends nothing on preparation and pays only for emergency relief after a disaster.",
+      },
+    ],
+  },
+  {
+    slug: "managed_retreat",
+    from: 2035,
+    name: "Managed Retreat Programme",
+    description: "Buys out homes on coasts and floodplains that can no longer be defended",
+    explanation:
+      "This act decides whether the state helps people leave land that floods again and again, and whether it can make them go. Moving out of harm's way saves lives and ends the cost of rebuilding after every flood, but homeowners lose value, old coastal and riverside towns empty out, and the buyouts cost taxpayers.",
+    policyDomain: "housing",
+    subCategory: "Climate relocation",
+    committee: "Housing",
+    budgetLine: "housing",
+    gdpCostFractions: [0.004, 0.0025, 0.0012, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "environment", metricId: "naturalDisasterPreparedness", weight: 0.5 },
+      { metricCategoryId: "environment", metricId: "climateResilience", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "propertyValueIndex", weight: -0.4 },
+      { metricCategoryId: "economic", metricId: "ruralRevitalization", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.2 },
+    ],
+    demographicEffects: [
+      { dim: "age", bucket: "senior", target: "economicLean", direction: -0.2 },
+      { dim: "urbanization", bucket: "rural", target: "economicLean", direction: -0.2 },
+    ],
+    options: [
+      {
+        name: "Compulsory Retreat",
+        explanation:
+          "The state may require people to leave land it judges indefensible, paying less than the old market value.",
+      },
+      {
+        name: "Planned Relocation",
+        explanation:
+          "Whole communities on failing coasts and floodplains are moved to new homes on safer ground at public cost.",
+      },
+      {
+        name: "Voluntary Buyouts",
+        explanation:
+          "Owners of homes flooded again and again may sell them to the state, and new building on the worst land is banned.",
+      },
+      {
+        name: "No Retreat Policy",
+        explanation: "Owners rebuild after every flood under the existing rules.",
+      },
+      {
+        name: "Rebuild in Place",
+        explanation:
+          "Flooded homes may be rebuilt on the same land if they are raised or flood-proofed.",
+      },
+      {
+        name: "Owner's Right to Rebuild",
+        explanation:
+          "Owners may always rebuild on their own land, and planners may not refuse because of flood risk.",
+      },
+      {
+        name: "Coastal Development Freedom",
+        explanation:
+          "Building is allowed on any coast or floodplain, and the state makes no buyout offers.",
+      },
+    ],
+  },
+  {
+    slug: "basic_income_pilot",
+    from: 2035,
+    name: "Universal Basic Income Pilot",
+    description: "Tests paying a regular cash income with no conditions",
+    explanation:
+      "This act decides whether the state pays a regular income with no conditions to some or all adults as a trial. People in the pilot gain security and time, and spend more in their local economy, but the trial costs taxpayers and some people work fewer hours.",
+    policyDomain: "labor",
+    subCategory: "Basic income",
+    committee: "Labour and Social Affairs",
+    budgetLine: "welfare",
+    gdpCostFractions: [0.005, 0.002, 0.0005, 0, 0, 0, 0],
+    // Poverty and inequality relief arrives through the welfare spending
+    // channel this law books to; targeting them directly would double count.
+    effects: [
+      { metricCategoryId: "social", metricId: "workLifeBalance", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "consumerConfidence", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.2 },
+    ],
+    demographicEffects: [
+      { dim: "income", bucket: "low", target: "economicLean", direction: 0.4 },
+      { dim: "age", bucket: "young", target: "economicLean", direction: 0.2 },
+    ],
+    options: [
+      {
+        name: "National Basic Income Trial",
+        explanation:
+          "Every adult gets a modest basic income as a national trial, replacing some smaller benefits.",
+      },
+      {
+        name: "Youth and Carer Income",
+        explanation:
+          "Every young adult and every unpaid carer gets a basic income with no conditions.",
+      },
+      {
+        name: "Local Basic Income Trials",
+        explanation: "A few towns pay a small monthly income to every adult for two years.",
+      },
+      {
+        name: "No Basic Income Pilot",
+        explanation: "Cash support comes only through means-tested benefits.",
+      },
+      {
+        name: "Conditional Cash Trials",
+        explanation: "Trials pay extra cash only to people who work or train.",
+      },
+      {
+        name: "Work-First Benefits",
+        explanation: "Benefits are tied more tightly to looking for and taking work.",
+      },
+      {
+        name: "Basic Income Ban",
+        explanation:
+          "No public body may pay an unconditional income, and existing local trials end.",
+      },
+    ],
+  },
+  {
+    slug: "gene_editing_regulation",
+    from: 2035,
+    name: "Gene Editing Regulation",
+    description:
+      "Sets which gene therapies may be licensed and whether human embryos may be edited",
+    explanation:
+      "This act decides how the state licenses and pays for editing human genes. A licensed and funded system brings cures for inherited diseases to patients safely and keeps public trust, but costs money and slows research with rules. Light rules let private clinics move fast, with more risk and less public confidence.",
+    policyDomain: "technology",
+    subCategory: "Biotechnology",
+    committee: "Health",
+    budgetLine: "technology",
+    gdpCostFractions: [0.0012, 0.0006, 0.0002, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "healthcare", metricId: "lifeExpectancy", weight: 0.3 },
+      { metricCategoryId: "governance", metricId: "publicTrust", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "rdIntensity", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "Public Gene Medicine Service",
+        explanation:
+          "Licensed gene therapies are free through public health care, and a national regulator runs every trial. Editing embryos for birth is banned.",
+      },
+      {
+        name: "Licensed Gene Therapies",
+        explanation:
+          "Gene therapies for serious inherited diseases may be licensed and prescribed under strict oversight.",
+      },
+      {
+        name: "Research Licences",
+        explanation:
+          "Laboratories may edit human cells under licence, and editing embryos for birth is banned.",
+      },
+      {
+        name: "No Gene Editing Statute",
+        explanation: "Gene editing falls under general medicines law.",
+      },
+      {
+        name: "Light-Touch Approval",
+        explanation: "Gene therapies are approved on the same fast track as ordinary medicines.",
+      },
+      {
+        name: "Open Biotech Market",
+        explanation:
+          "Private clinics may offer gene therapies once safety data is published, with no state licence.",
+      },
+      {
+        name: "Biotech Freedom Act",
+        explanation:
+          "Gene editing needs no licence, including on embryos, and regulators may not add new rules.",
+      },
+    ],
+  },
+  {
+    slug: "space_traffic_act",
+    from: 2035,
+    name: "Space Traffic Act",
+    description: "Tracks satellites and debris and sets rules for crowded orbits",
+    explanation:
+      "This act decides how the state manages the satellites and debris crowding the orbits that internet, navigation and defence depend on. Strong rules keep services running and protect military satellites, but cost a regulator and add duties for launch firms.",
+    policyDomain: "technology",
+    subCategory: "Space",
+    committee: "Digital Affairs",
+    budgetLine: "technology",
+    gdpCostFractions: [0.001, 0.0006, 0.0003, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "infrastructure", metricId: "broadbandAccess", weight: 0.3 },
+      { metricCategoryId: "governance", metricId: "militaryReadiness", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "Orbital Clean-Up Duty",
+        explanation:
+          "Operators pay into a fund that removes old debris, and the armed forces may clear threats to key satellites.",
+      },
+      {
+        name: "Orbital Traffic Control",
+        explanation:
+          "A regulator assigns orbits, can order manoeuvres and fines operators who leave debris behind.",
+      },
+      {
+        name: "Debris Rules",
+        explanation: "Every new satellite must carry a plan to leave orbit at the end of its life.",
+      },
+      {
+        name: "No Space Traffic Law",
+        explanation:
+          "Operators launch under old licensing rules, and nobody manages crowded orbits.",
+      },
+      {
+        name: "Industry Space Codes",
+        explanation: "Operators agree their own codes for sharing orbits, endorsed by the state.",
+      },
+      {
+        name: "Open Launch Licensing",
+        explanation: "Launch licences are granted quickly with only basic safety checks.",
+      },
+      {
+        name: "Space Deregulation Act",
+        explanation:
+          "Launches need no licence beyond flight safety, and operators carry no debris duties.",
+      },
+    ],
+  },
+  // ── 2040 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "automation_dividend",
+    from: 2040,
+    name: "Automation Dividend",
+    description: "Taxes the output of machines and software and pays it back to every resident",
+    explanation:
+      "This act decides whether a levy on automated output is paid back to every resident as a regular dividend. Households share in the wealth machines create and inequality narrows, but the firms that automate pay, and investors grow wary. From the year this act opens it replaces the automation tax for new bills. The levy and the dividend are regulatory here: they do not yet appear as separate budget lines.",
+    policyDomain: "economic",
+    subCategory: "Automation",
+    committee: "Economic Affairs",
+    effects: [
+      { metricCategoryId: "social", metricId: "incomeInequality", weight: 0.4 },
+      { metricCategoryId: "economic", metricId: "consumerConfidence", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.3 },
+      { metricCategoryId: "governance", metricId: "roboticsAdoption", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.2 },
+    ],
+    demographicEffects: [
+      { dim: "income", bucket: "low", target: "economicLean", direction: 0.4 },
+      { dim: "income", bucket: "high", target: "economicLean", direction: -0.3 },
+    ],
+    options: [
+      {
+        name: "Full Automation Dividend",
+        explanation:
+          "A heavy levy on automated output pays a dividend large enough to live on for many households.",
+      },
+      {
+        name: "Citizens Share",
+        explanation:
+          "Every resident holds a share in a national automation fund that pays a dividend every quarter.",
+      },
+      {
+        name: "Shared Gains Dividend",
+        explanation: "A small levy on automated output is paid out as an annual dividend.",
+      },
+      {
+        name: "No Automation Dividend",
+        explanation: "The gains from automation go to the firms that own the machines.",
+      },
+      {
+        name: "Voluntary Profit Sharing",
+        explanation: "Firms that share automation profits with staff get a small tax relief.",
+      },
+      {
+        name: "Employee Share Incentives",
+        explanation:
+          "Workers may buy shares in their employer on generous tax terms instead of a dividend.",
+      },
+      {
+        name: "Automation Ownership Freedom",
+        explanation:
+          "Automated output may never be taxed as a separate base, and any automation levy is repealed.",
+      },
+    ],
+  },
+  {
+    slug: "four_day_week",
+    from: 2040,
+    name: "Four-Day Work Week",
+    description: "Sets whether the standard working week shrinks to four days on full pay",
+    explanation:
+      "This act decides the length of the standard working week. A four-day week on full pay gives workers and families more time and better health, but employers pay for the lost hours, and small firms feel it most.",
+    policyDomain: "labor",
+    subCategory: "Working time",
+    committee: "Labour and Social Affairs",
+    effects: [
+      { metricCategoryId: "social", metricId: "workLifeBalance", weight: 0.6 },
+      { metricCategoryId: "population", metricId: "birthRate", weight: 0.2 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "smallBusinessFormation", weight: -0.25 },
+    ],
+    demographicEffects: [
+      { dim: "age", bucket: "young", target: "economicLean", direction: 0.3 },
+      { dim: "income", bucket: "low", target: "economicLean", direction: 0.2 },
+    ],
+    options: [
+      {
+        name: "Four-Day Week Mandate",
+        explanation:
+          "A four-day week on full pay is the legal standard for every employer, enforced by inspectors.",
+      },
+      {
+        name: "Thirty-Two Hour Standard",
+        explanation:
+          "Overtime pay starts after thirty-two hours a week, so most employers move to four days.",
+      },
+      {
+        name: "Right to Request",
+        explanation:
+          "Workers may ask for a four-day week, and employers must give a reason to refuse.",
+      },
+      {
+        name: "No Working Week Law",
+        explanation: "The working week is whatever employers and workers agree under existing law.",
+      },
+      {
+        name: "Flexible Hours Opt-Outs",
+        explanation: "Workers may sign away limits on their weekly hours.",
+      },
+      {
+        name: "Longer Hours Freedom",
+        explanation: "Weekly hour limits are relaxed and overtime pay starts later.",
+      },
+      {
+        name: "Working Time Deregulation",
+        explanation: "Statutory limits on weekly working hours are repealed.",
+      },
+    ],
+  },
+  {
+    slug: "digital_currency_legal_tender",
+    from: 2040,
+    name: "Digital Currency Legal Tender Act",
+    description: "Sets whether a central bank digital currency is legal tender alongside cash",
+    explanation:
+      "This act decides whether the central bank issues a digital currency that every shop must accept. Digital money makes payments cheaper and harder to hide from tax and corruption, but every payment leaves a record the state can see, and banks lose deposits.",
+    policyDomain: "technology",
+    subCategory: "Digital money",
+    committee: "Economic Affairs",
+    budgetLine: "technology",
+    gdpCostFractions: [0.0006, 0.0004, 0.0002, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "governance", metricId: "corruptionIndex", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "tradeGrowth", weight: 0.2 },
+      { metricCategoryId: "governance", metricId: "civilLiberties", weight: -0.4 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.2 },
+    ],
+    options: [
+      {
+        name: "Cashless Digital Currency",
+        explanation:
+          "Digital currency becomes the main form of money, cash is phased out, and every payment leaves a record.",
+      },
+      {
+        name: "Digital Legal Tender",
+        explanation:
+          "Digital currency is legal tender alongside cash, and every shop must accept it.",
+      },
+      {
+        name: "Retail Digital Pilot",
+        explanation:
+          "Households may hold a capped amount of digital currency in a central bank wallet.",
+      },
+      {
+        name: "No Digital Currency",
+        explanation:
+          "Money is cash and bank deposits. The central bank issues no digital currency.",
+      },
+      {
+        name: "Cash Guarantee",
+        explanation:
+          "Shops must keep accepting cash, and the central bank studies digital money only.",
+      },
+      {
+        name: "Private Stablecoin Licensing",
+        explanation:
+          "Licensed private firms may issue digital money backed by reserves, and the state issues none.",
+      },
+      {
+        name: "Digital Currency Ban",
+        explanation: "The central bank is barred from issuing any digital currency to the public.",
+      },
+    ],
+  },
+  {
+    slug: "sovereign_wealth_fund_mandate",
+    from: 2040,
+    name: "Sovereign Wealth Fund Mandate",
+    description: "Sets up a national investment fund paid into from the budget",
+    explanation:
+      "This act decides whether the state builds a national investment fund and what it may buy. A large fund backs strategic industry and research and leaves future generations an asset, but taxpayers pay in today and private investors face a state rival. The fund's returns are not yet booked as a separate budget line.",
+    policyDomain: "economic",
+    subCategory: "Public investment",
+    committee: "Economic Affairs",
+    budgetLine: "industry",
+    gdpCostFractions: [0.005, 0.003, 0.0012, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: 0.4 },
+      { metricCategoryId: "economic", metricId: "rdIntensity", weight: 0.2 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "smallBusinessFormation", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "National Ownership Fund",
+        explanation:
+          "The fund takes large stakes in major companies and pays a share of its returns into the budget.",
+      },
+      {
+        name: "Strategic Investment Fund",
+        explanation:
+          "The fund is paid into every year and backs domestic industries the state judges strategic.",
+      },
+      {
+        name: "Seed Wealth Fund",
+        explanation: "A small fund invests windfall revenue and reports its returns each year.",
+      },
+      {
+        name: "No Wealth Fund",
+        explanation: "The state owns no investment fund.",
+      },
+      {
+        name: "Debt Repayment Rule",
+        explanation: "Any budget surplus must go to paying down public debt instead of investing.",
+      },
+      {
+        name: "Surplus Tax Rebates",
+        explanation: "Any budget surplus is returned to taxpayers as a rebate.",
+      },
+      {
+        name: "State Holdings Sell-Off",
+        explanation:
+          "Any state investment holdings are sold, and the state is barred from building new ones.",
+      },
+    ],
+  },
 ];
 
 function costFor(law: ModernEraLaw, i: number): number {
@@ -1070,6 +1581,16 @@ export const MODERN_ERA_TYPE_IDS: readonly string[] = modernEraLegislationTypes.
 export const MODERN_ERA_LEGISLATION_ERA_ENTRIES: Record<string, number> = Object.fromEntries(
   MODERN_ERA_LEGISLATURE_SPECS.flatMap((spec) =>
     MODERN_ERA_LAWS.map((law) => [`${spec.prefix}_${law.slug}`, law.from])
+  )
+);
+
+/** Filing close years (LEGISLATION_ERA_UNTIL entries) for laws a later one replaces. */
+export const MODERN_ERA_LEGISLATION_UNTIL_ENTRIES: Record<string, number> = Object.fromEntries(
+  MODERN_ERA_LEGISLATURE_SPECS.flatMap((spec) =>
+    MODERN_ERA_LAWS.filter((law) => law.until !== undefined).map((law) => [
+      `${spec.prefix}_${law.slug}`,
+      law.until!,
+    ])
   )
 );
 

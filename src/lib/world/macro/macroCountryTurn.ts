@@ -14,11 +14,18 @@ import { scaleMacroCapacity, tradeCapacityFactorAtTick } from "./rules/tradeFeed
 import { MACRO_TURNS_PER_YEAR } from "./seedBuilder";
 import {
   advanceBackgroundNation,
+  isBackgroundNation,
   loadBackgroundNationContext,
   type BackgroundNationUpdate,
 } from "./backgroundNation";
 import { macroAggregateOutput } from "./rules/backgroundBudget";
 import { markNationalIndexFunds, type NationalIndexMark } from "./nationalIndexFunds";
+import {
+  applyBackgroundForeignPolicy,
+  loadBackgroundForeignContext,
+  planBackgroundForeignPolicy,
+  type ForeignPolicyPlan,
+} from "./backgroundForeignPolicy";
 
 export interface MacroCountryTurnResult {
   countriesConsidered: number;
@@ -26,6 +33,8 @@ export interface MacroCountryTurnResult {
   updatedEntityIds: string[];
   /** Background countries that held a national election this tick (#5702). */
   nationalElections?: string[];
+  /** Scripted foreign policy actions this tick (#5702 section 5). */
+  foreignPolicy?: Awaited<ReturnType<typeof applyBackgroundForeignPolicy>>;
 }
 
 /**
@@ -41,6 +50,7 @@ export async function processMacroCountryTurn(
   const countries = await collection.find({ tickBucket, ...ACTIVE_MACRO_COUNTRY_FILTER }).toArray();
   const updatedEntityIds: string[] = [];
   const nationalElections: string[] = [];
+  let foreignPolicy: MacroCountryTurnResult["foreignPolicy"];
   const now = new Date();
 
   for (const country of countries) {
@@ -67,6 +77,13 @@ export async function processMacroCountryTurn(
       turnsPerYear: MACRO_TURNS_PER_YEAR,
     });
     const indexMarks: NationalIndexMark[] = [];
+    // Scripted foreign policy for the same countries (#5702 section 5).
+    const foreignContext = nationContext
+      ? await loadBackgroundForeignContext(db, due.filter(isBackgroundNation), turn, {
+          livingConflictsEnabled: config?.livingConflictsEnabled === true,
+        })
+      : null;
+    const foreignPlans: ForeignPolicyPlan[] = [];
     const crisis = config?.livingConflictsEnabled
       ? await db
           .collection<LivingConflictState>("livingConflicts")
@@ -148,6 +165,16 @@ export async function processMacroCountryTurn(
         if (nation?.events.some((event) => event.kind === "election")) {
           nationalElections.push(country.entityId);
         }
+        const foreignPlan =
+          foreignContext && isBackgroundNation(country)
+            ? planBackgroundForeignPolicy(
+                country,
+                nation?.set.nationalPolitics ?? country.nationalPolitics,
+                foreignContext,
+                turn
+              )
+            : null;
+        if (foreignPlan) foreignPlans.push(foreignPlan);
         return {
           updateOne: {
             filter: { _id: country._id },
@@ -164,6 +191,7 @@ export async function processMacroCountryTurn(
                 ),
                 ...(persistExposure ? { livingConflictExposure: exposure } : {}),
                 ...(nation?.set ?? {}),
+                ...(foreignPlan ? { foreignPolicy: foreignPlan.state } : {}),
                 lastMacroTickTurn: turn,
                 updatedAt: now,
               },
@@ -174,6 +202,15 @@ export async function processMacroCountryTurn(
       { ordered: false }
     );
     await markNationalIndexFunds(db, indexMarks, turn, now);
+    if (foreignContext && foreignPlans.length > 0) {
+      foreignPolicy = await applyBackgroundForeignPolicy(
+        db,
+        foreignPlans,
+        foreignContext,
+        turn,
+        now
+      );
+    }
   }
 
   return {
@@ -181,5 +218,6 @@ export async function processMacroCountryTurn(
     countriesUpdated: updatedEntityIds.length,
     updatedEntityIds,
     ...(nationalElections.length > 0 ? { nationalElections } : {}),
+    ...(foreignPolicy ? { foreignPolicy } : {}),
   };
 }

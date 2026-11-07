@@ -67,3 +67,35 @@ describe("recipe-aware founding weights", () => {
     expect(funded[0]).toBeGreaterThan(funded[1] * 5);
   });
 });
+
+describe("foundingRecipeAvailable under technology diffusion", () => {
+  const pharma = SECTOR_STRATEGIES.chemical_industries.find((r) => r.id === "pharmaceuticals")!;
+  const tierYear = Number(pharma.minDecade);
+  const world = {
+    currentYear: tierYear + 5,
+    techTreesEnabled: true,
+    techDiffusion: {
+      readinessByCountry: new Map([
+        ["DE", 0.8],
+        ["NG", 0.2],
+      ]),
+      operatorCountriesByStrategy: new Map([["pharmaceuticals", new Set(["DE"])]]),
+    },
+  };
+
+  it("founds on a new method only once it has reached the founder's country", () => {
+    expect(foundingRecipeAvailable("chemical_industries", world, "DE")(pharma)).toBe(true);
+    expect(foundingRecipeAvailable("chemical_industries", world, "NG")(pharma)).toBe(false);
+    expect(
+      foundingRecipeAvailable(
+        "chemical_industries",
+        { ...world, currentYear: tierYear + 12 },
+        "NG"
+      )(pharma)
+    ).toBe(true);
+  });
+
+  it("keeps the calendar gate when no country is given", () => {
+    expect(foundingRecipeAvailable("chemical_industries", world)(pharma)).toBe(true);
+  });
+});

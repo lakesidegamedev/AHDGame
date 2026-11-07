@@ -36,7 +36,7 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   ...BANKING_SEPARATION_COST_CLASSES,
   // Mechanical laws (competition, subsidiary limits, foreign investment) cost nothing.
   ...Object.fromEntries(MECHANICAL_TYPE_IDS.map((id) => [id, "none" as CostClass])),
-  // 2027 and 2030 law types: hand-priced per option (see modernEraLegislation.ts).
+  // 2027 to 2040 law types: hand-priced per option (see modernEraLegislation.ts).
   ...MODERN_ERA_COST_CLASSES,
   bal_economic_system: "none",
   bal_enterprise_levy: "none",

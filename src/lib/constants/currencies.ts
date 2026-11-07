@@ -252,6 +252,11 @@ export const PRIME_RATE_SENSITIVITY = 0.02;
 export const INFLATION_SENSITIVITY = 0.015;
 export const GDP_GROWTH_SENSITIVITY = 0.01;
 export const TRADE_GROWTH_SENSITIVITY = 0.005;
+/**
+ * Macro-target move per unit of a background country's trade-balance pressure
+ * (#5702): the pressure is bounded at +/-0.5, so the target moves at most 4%.
+ */
+export const TRADE_BALANCE_SENSITIVITY = 0.08;
 
 // ── Absolute-inflation depreciation (carry-trade fix, #3064 Phase 2) ──────────
 // The macro target's inflation term is a deviation from each currency's OWN

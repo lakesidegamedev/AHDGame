@@ -101,19 +101,26 @@ import {
 } from "./forcedSovereignRollover";
 import { publicFloatNovationShare } from "./rules/publicFloatNovation";
 import { refundSovereignMaturityShortfall } from "./sovereignMaturityRefunding";
+import { debtManagerMaturityMix, presetUsesLongSovereignTenors } from "./rules/sovereignTenors";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
+/** Policy-rate history (turns) the debt manager compares the current rate against: four years. */
+export const DEBT_MANAGER_RATE_HISTORY_TURNS = 192;
 export const SOVEREIGN_BOND_MATURITY_TURNS: BondMaturityTurns = 48;
 
 /**
  * Term premium (pp over prime rate) added to sovereign bond coupon for longer-dated paper.
  * Mirrors real-world yield-curve steepening: 1yr T-bills at par prime, 2yr notes +0.25pp,
- * 5yr bonds +0.75pp. Used by issuance and the admin auto-reconcile endpoint.
+ * 5yr bonds +0.75pp, 10yr +1.25pp and 30yr +1.75pp (the long tenors issue only in worlds
+ * that opt in, see ./rules/sovereignTenors). Used by issuance and the admin auto-reconcile
+ * endpoint.
  */
 export const SOVEREIGN_BOND_TERM_PREMIUMS: Partial<Record<BondMaturityTurns, number>> = {
   48: 0,
   96: 0.25,
   240: 0.75,
+  480: 1.25,
+  1440: 1.75,
 };
 
 /**
@@ -599,11 +606,13 @@ export function sovereignRolloverFromBonds(
 export async function issueScheduledSovereignBondSeries(
   db: Db,
   turn: number,
-  now: Date
+  now: Date,
+  options: { preset?: string } = {}
 ): Promise<number> {
   if (!shouldIssueQuarterlySovereignBondSeries(turn)) {
     return 0;
   }
+  const longTenors = presetUsesLongSovereignTenors(options.preset);
 
   // One read per scheduled quarter: the #1001 tranche-consolidation dark
   // gate. Absent or false keeps the historical ladder exactly as issued.
@@ -637,6 +646,26 @@ export async function issueScheduledSovereignBondSeries(
   const sovereignCountries = configuredCountries.filter((countryId) =>
     budgetByCountry.has(countryId)
   );
+  // Long-tenor worlds: every country's recent policy-rate history in one read,
+  // for the debt manager's maturity mix.
+  const rateHistoryByCountry = new Map<CountryId, number[]>();
+  if (longTenors && sovereignCountries.length > 0) {
+    const banks = await db
+      .collection<CentralBank>("centralBanks")
+      .find(
+        { _id: { $in: [...new Set(sovereignCountries.map((countryId) => getBankId(countryId)))] } },
+        { projection: { interestRateHistory: { $slice: -DEBT_MANAGER_RATE_HISTORY_TURNS } } }
+      )
+      .toArray();
+    const historyByBank = new Map(
+      banks.map((bank) => [bank._id, (bank.interestRateHistory ?? []).map((point) => point.rate)])
+    );
+    // A shared bank (a currency union) gives each member the same history.
+    for (const countryId of sovereignCountries) {
+      const history = historyByBank.get(getBankId(countryId));
+      if (history) rateHistoryByCountry.set(countryId, history);
+    }
+  }
   for (const countryId of sovereignCountries) {
     const budget = budgetByCountry.get(countryId);
     if (!budget) continue;
@@ -694,7 +723,17 @@ export async function issueScheduledSovereignBondSeries(
 
     const primeRate =
       centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
-    const distribution = budgetDoc.sovereignBondProfile ?? SOVEREIGN_RECONCILE_DISTRIBUTION;
+    // A finance minister's profile always wins. Without one, worlds with long
+    // tenors hand the mix to the debt manager, which lengthens maturity when
+    // rates are low against their history; other worlds keep the fixed ladder.
+    const distribution =
+      budgetDoc.sovereignBondProfile ??
+      (longTenors
+        ? debtManagerMaturityMix({
+            currentRate: primeRate,
+            rateHistory: rateHistoryByCountry.get(countryId) ?? [],
+          })
+        : SOVEREIGN_RECONCILE_DISTRIBUTION);
 
     const bondDocs: Omit<Bond, "_id">[] = [];
 

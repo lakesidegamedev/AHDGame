@@ -53,6 +53,7 @@ import type { CommodityPrice } from "@/lib/db/types";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { getStrategyAvailability, sunsetRetoolCostMultiplier } from "@/lib/constants/techTree";
 import { loadSectorFrontierResearch } from "@/lib/corporations/techTree/frontierResearch";
+import { loadStrategyDiffusionWorld } from "@/lib/corporations/techTree/diffusion";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -60,13 +61,15 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 
-const STRATEGY_LOCK_MESSAGE: Record<"era" | "tech" | "research" | "sunset", string> = {
-  era: "This production method is not available in this era yet.",
-  tech: "Unlock this production method in the Tech tree first.",
-  research:
-    "This production method needs more research across its sector before anyone can build it.",
-  sunset: "This production method has been retired and is closed to new sites.",
-};
+const STRATEGY_LOCK_MESSAGE: Record<"era" | "tech" | "research" | "sunset" | "diffusion", string> =
+  {
+    era: "This production method is not available in this era yet.",
+    tech: "Unlock this production method in the Tech tree first.",
+    research:
+      "This production method needs more research across its sector before anyone can build it.",
+    sunset: "This production method has been retired and is closed to new sites.",
+    diffusion: "This production method has not reached this country yet.",
+  };
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -202,10 +205,19 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       return errorResponse(400, "This business model is not available in this era yet.");
     }
     // Breakthrough methods also need the sector's world research total.
-    const sectorResearch =
+    const [sectorResearch, diffusion] = await Promise.all([
       techTreesEnabled && targetStrategy.researchThreshold != null
-        ? await loadSectorFrontierResearch(db, sectorType)
-        : undefined;
+        ? loadSectorFrontierResearch(db, sectorType)
+        : undefined,
+      // Diffusion worlds: the method must have reached the sector's country.
+      // A player company may license it early where a foreign company runs it.
+      loadStrategyDiffusionWorld(db, {
+        preset: gameState?.preset,
+        techTreesEnabled,
+        countryId: sector.countryId,
+        adopter: corporation.ceoType === "npp" ? "npp" : "player",
+      }),
+    ]);
     const availability = getStrategyAvailability(
       {
         type: corporation.type,
@@ -216,10 +228,16 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       targetStrategy,
       currentYear,
       techTreesEnabled,
-      { sectorResearch }
+      { sectorResearch, diffusion }
     );
     if (availability.locked) {
-      return errorResponse(400, STRATEGY_LOCK_MESSAGE[availability.reason ?? "tech"]);
+      const message = STRATEGY_LOCK_MESSAGE[availability.reason ?? "tech"];
+      return errorResponse(
+        400,
+        availability.reason === "diffusion" && availability.opensYear != null
+          ? `${message} It opens here in ${availability.opensYear}.`
+          : message
+      );
     }
     // Retiring a sunset method for one of its named successors is discounted.
     const sunsetCostMultiplier = techTreesEnabled

@@ -16,15 +16,31 @@ import { autoGrantedNodeIds, getUnlockedStrategyIds, type TechCorpView } from ".
 import { getOperatingSectorType } from "../sectorStrategies";
 import { isBreakthroughReached } from "./breakthrough";
 import { isStrategySunset } from "./sunset";
+import {
+  countryDiffusionContext,
+  strategyOpenYear,
+  type DiffusionAdopter,
+  type TechDiffusionSnapshot,
+} from "./diffusion";
 
 export interface StrategyAvailability {
   locked: boolean;
   /**
    * Why it's locked: the world hasn't reached the era, the corp hasn't
    * unlocked it, the sector's world research has not reached the method's
-   * breakthrough threshold, or the method has been retired (sunset).
+   * breakthrough threshold, the method has been retired (sunset), or the
+   * method has not yet reached the corporation's country (diffusion).
    */
-  reason?: "era" | "tech" | "research" | "sunset";
+  reason?: "era" | "tech" | "research" | "sunset" | "diffusion";
+  /** For a diffusion lock: the first year the method opens in the country. */
+  opensYear?: number;
+}
+
+/** Country access for one company (see ./diffusion). */
+export interface StrategyDiffusionWorld {
+  snapshot: TechDiffusionSnapshot;
+  countryId: string;
+  adopter: DiffusionAdopter;
 }
 
 export interface StrategyAvailabilityWorld {
@@ -34,6 +50,11 @@ export interface StrategyAvailabilityWorld {
    * closed.
    */
   sectorResearch?: number;
+  /**
+   * Country access for worlds with technology diffusion. Absent keeps the
+   * calendar-only gate: the method opens everywhere on its tier year.
+   */
+  diffusion?: StrategyDiffusionWorld;
 }
 
 /**
@@ -56,6 +77,18 @@ export function getStrategyAvailability(
   }
   if (strategy.minDecade && !isDecadeReached(strategy.minDecade, currentYear)) {
     return { locked: true, reason: "era" };
+  }
+  if (world.diffusion) {
+    const country = countryDiffusionContext(
+      world.diffusion.snapshot,
+      world.diffusion.countryId,
+      world.diffusion.adopter,
+      strategy.id
+    );
+    const opensYear = country ? strategyOpenYear(strategy, country) : undefined;
+    if (opensYear !== undefined && currentYear < opensYear) {
+      return { locked: true, reason: "diffusion", opensYear };
+    }
   }
   if (strategy.requiresTechUnlock) {
     // Merge DB-stored nodes with auto-granted past-decade nodes so that:

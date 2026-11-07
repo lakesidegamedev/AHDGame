@@ -4,6 +4,7 @@ import { livingVietnamAsLegacyState } from "@/lib/livingConflict/vietnamCompat";
 import { listNuclearPrograms } from "@/lib/db/collections/nuclearPrograms";
 import { getConflictsCollection, listActiveConflicts } from "@/lib/db/collections/conflicts";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
+import type { CountryId } from "@/lib/constants/countries";
 import {
   nuclearArmedCountryIds,
   warPressures,
@@ -27,6 +28,9 @@ export interface StandingPressureSnapshot {
   pressures: TensionPressures;
   warSummary: WarPressureSummary;
   totalWarheads: number;
+  /** The wars the pressures were read from, for the 2027 bloc dyads. */
+  wars: WarPressureInput[];
+  nuclearCountries: ReadonlySet<CountryId>;
 }
 
 /** Adapt the canonical conflict document to the pressure model in one place. */
@@ -75,14 +79,13 @@ export function buildStandingPressureSnapshot(
     (sum, program) => sum + Math.max(0, program.warheads),
     0
   );
-  const warSummary = warPressures(
-    input.conflicts,
-    nuclearArmedCountryIds(input.programs),
-    input.currentTurn
-  );
+  const nuclearCountries = nuclearArmedCountryIds(input.programs);
+  const warSummary = warPressures(input.conflicts, nuclearCountries, input.currentTurn);
   return {
     totalWarheads,
     warSummary,
+    wars: input.conflicts,
+    nuclearCountries,
     pressures: {
       escalationLevel: input.escalationLevel,
       activeCrises: input.activeCrises,

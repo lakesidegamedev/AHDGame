@@ -69,7 +69,11 @@ describe("readStandingPressureSnapshot", () => {
     });
 
     expect(db.collectionMocks.crises!.countDocuments).toHaveBeenCalledWith({ status: "active" });
-    expect(snapshot).toEqual({
+    expect(snapshot.wars).toHaveLength(1);
+    expect([...snapshot.nuclearCountries].sort()).toEqual(expect.arrayContaining(["US"]));
+    expect({ ...snapshot, wars: undefined, nuclearCountries: undefined }).toEqual({
+      wars: undefined,
+      nuclearCountries: undefined,
       totalWarheads: 1214,
       warSummary: {
         nuclearWarIntensity: 70,

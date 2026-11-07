@@ -24,6 +24,7 @@ import {
   SOVEREIGN_ISSUANCE_INTERVAL_TURNS,
 } from "./sovereign";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
+import { getBankId } from "@/lib/centralBank/helpers";
 
 function createMockDb() {
   const db = createEmptyMockDb();
@@ -969,6 +970,48 @@ describe("issueScheduledSovereignBondSeries", () => {
     const persisted = await db.collection("federalBudget").findOne({ _id: budget._id });
     expect(persisted.debt.principal).toBe(budget.debt.principal + 225_000_000_000);
     expect(debtWrites[0][1].$inc["debt.principal"]).toBe(225_000_000_000);
+  });
+
+  it("hands the mix to the debt manager in long-tenor worlds when no profile is set", async () => {
+    const { db } = setupScheduledMocks({ primeRate: 2 });
+    // Rates have averaged 5% recently, so 2% is cheap money: borrow long.
+    db.collectionMocks["centralBanks"]!.find.mockReturnValue({
+      toArray: async () => [
+        {
+          _id: getBankId(COUNTRY_CONFIGS.US.id),
+          interestRateHistory: Array.from({ length: 48 }, (_, turn) => ({ turn, rate: 5 })),
+        },
+      ],
+    });
+
+    await issueScheduledSovereignBondSeries(db as unknown as Db, TURN, new Date(), {
+      preset: "2027-default",
+    });
+
+    const bondDocs = db.collectionMocks["bonds"]!.insertOne.mock.calls.map(
+      ([doc]) => doc as Omit<Bond, "_id">
+    );
+    const maturities = bondDocs.map((bond) => bond.maturityTurns).sort((a, b) => a - b);
+    expect(maturities).toEqual([48, 96, 240, 480, 1440]);
+    const thirty = bondDocs.find((bond) => bond.maturityTurns === 1440)!;
+    const oneYear = bondDocs.find((bond) => bond.maturityTurns === 48)!;
+    expect(thirty.totalIssued).toBeGreaterThan(oneYear.totalIssued);
+    expect(thirty.couponRate).toBeGreaterThan(oneYear.couponRate);
+  });
+
+  it("keeps a finance minister's profile in long-tenor worlds", async () => {
+    const { db } = setupScheduledMocks({
+      budget: makeBudget({ sovereignBondProfile: { 240: 0.5, 480: 0.5 } }),
+    });
+
+    await issueScheduledSovereignBondSeries(db as unknown as Db, TURN, new Date(), {
+      preset: "2027-default",
+    });
+
+    const maturities = db.collectionMocks["bonds"]!.insertOne.mock.calls.map(
+      ([doc]) => (doc as Omit<Bond, "_id">).maturityTurns
+    ).sort((a, b) => a - b);
+    expect(maturities).toEqual([240, 480]);
   });
 
   it("issues scheduled tranches for every configured country with a national budget", async () => {

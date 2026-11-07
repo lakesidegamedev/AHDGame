@@ -321,6 +321,8 @@ export interface AvailableStrategy {
   /** Strategy is gated by decade or an unlocked tech node. */
   locked?: boolean;
   lockReason?: string | null;
+  /** For a diffusion lock: the year the method reaches the sector's country. */
+  lockOpensYear?: number | null;
   minDecade?: string | null;
 }
 

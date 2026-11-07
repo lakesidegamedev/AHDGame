@@ -113,7 +113,6 @@ import {
   type OwnSupplyRow,
 } from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
-import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   getCorpFxRate,
   fxRateForSectorHostFromMap,
@@ -152,7 +151,6 @@ import {
   computeSectorMarginSection,
   computeSectorMarketPosition,
   computeSectorTaxSection,
-  computeTechGrowthCostReductionPct,
   buildSectorPlantsSection,
 } from "@/lib/corporations/queries/sectorDetailSections";
 import {
@@ -172,7 +170,7 @@ import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 
 import type { SiblingCorpProjection } from "./sectorDetailTypes";
-import { loadLaneBreakthroughResearch } from "@/lib/corporations/techTree/frontierResearch";
+import { computeTechGrowthCostReductionPct, loadSectorTechContext } from "./sectorTechContext";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -778,19 +776,14 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // Operating strategy: resolve effective supply/demand rates
     const currentTurn = gameState?.currentTurn ?? 0;
     // Tech-tree production-method gating for the strategy picker (inert when off).
-    const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
-    const techCurrentYear =
-      gameState?.currentYear ??
-      STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
-    const techCorpView = {
-      type: corporation.type,
-      industryModel: corporation.industryModel,
-      mediaDiscriminator: corporation.mediaDiscriminator,
-      unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-      techDecadeLane: corporation.techDecadeLane,
-      frontierProgrammes: corporation.frontierProgrammes,
-    };
-    const sectorResearch = await loadLaneBreakthroughResearch(db, sectorType, techTreesEnabled);
+    const { techTreesEnabled, techCurrentYear, techCorpView, strategyWorld } =
+      await loadSectorTechContext(db, {
+        gameState,
+        corporation,
+        sector,
+        lane: sectorType,
+        preset: sectorDetailPreset,
+      });
     const effectiveRates = getEffectiveStrategyRatesForOperatingModel(
       sectorType,
       sector.strategyId ?? "standard",
@@ -1330,9 +1323,13 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           sectorDetailPreset
         ),
         isAvailable: (candidate) =>
-          !getStrategyAvailability(techCorpView, candidate, techCurrentYear, techTreesEnabled, {
-            sectorResearch,
-          }).locked,
+          !getStrategyAvailability(
+            techCorpView,
+            candidate,
+            techCurrentYear,
+            techTreesEnabled,
+            strategyWorld
+          ).locked,
         supplyFor: (candidate) =>
           applyExtractionResourceCapacityToSupply(
             sectorType,
@@ -1927,7 +1924,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         techCorpView,
         techCurrentYear,
         techTreesEnabled,
-        sectorResearch,
+        strategyWorld,
         mediaOperatingModelsEnabled: governorConfig?.mediaOperatingModelsEnabled === true,
         shouldRedact,
         stateResources,

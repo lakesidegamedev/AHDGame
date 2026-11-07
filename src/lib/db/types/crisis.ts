@@ -490,6 +490,12 @@ export interface Crisis {
    *  economic/political systems don't block each other's "one active" guards.
    *  Absent on manually-created crises. */
   autoSource?: "disaster" | "condition" | "random";
+  /**
+   * A positive event (trade offer, hosting bid, accord) delivered through the
+   * crisis machinery. Copied from the template. Opportunities never count
+   * toward the severe-crisis stacking limit and are never deferred by it.
+   */
+  opportunity?: boolean;
   /** Bounded automatic weather-disaster treasury charge, reconciled by crisis ID. */
   autoDisasterFiscalCost?: number;
   // NEW: interaction definition
@@ -518,6 +524,12 @@ export interface CrisisAutoCooldown {
    * on legacy rows, which are read as armed.
    */
   armed?: boolean;
+  /**
+   * Turn a random-tier spawn was won but held back by the severe-crisis
+   * stacking guard. A deferred spawn lands, without re-rolling, as soon as the
+   * country has a free slot. Cleared when the crisis spawns.
+   */
+  deferredTurn?: number;
   updatedAt: Date;
 }
 

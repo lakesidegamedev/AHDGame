@@ -420,6 +420,12 @@ export interface CentralBank {
   gdpGrowthHistory: TurnSnapshot[];
   /** Mirrored from FederalBudget.economicFactors.tradeGrowth each turn (read-cache) */
   tradeGrowth?: number;
+  /**
+   * Background countries only (#5702): smoothed funded-trade balance pressure,
+   * -0.5 (deficit) to 0.5 (surplus), written on the macro kernel tick and read
+   * into the FX macro target. Absent on every other bank.
+   */
+  backgroundTradePressure?: number;
   /** Accumulated spread fee revenue from forex trading (40% of all spreads, home-currency pool). */
   forexRevenue?: number;
   /**

@@ -7,6 +7,7 @@ import {
   STRATEGY_COOLDOWN_TURNS,
 } from "@/lib/constants/sectorStrategies";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
+import type { TechDiffusionSnapshot } from "@/lib/constants/techTree/diffusion";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import type { CommodityPriceRatioFn } from "@/lib/turn/npp/marketSignals";
 import { isObsoleteNppParentStrategy, sunsetRepairTarget } from "./rules/obsoleteStrategyRepair";
@@ -41,6 +42,11 @@ interface StrategyRetoolContext {
    * breakthrough method closed.
    */
   sectorResearchByLane?: ReadonlyMap<string, number>;
+  /**
+   * Readiness by country and method operators in worlds with technology
+   * diffusion. NPPs adopt at their country's lag; absent keeps the calendar.
+   */
+  techDiffusion?: TechDiffusionSnapshot;
   plantsEnabled: boolean;
   priceRatioOf: CommodityPriceRatioFn;
 }
@@ -79,7 +85,12 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
     const strategies = SECTOR_STRATEGIES[operatingType as OperatingSectorType];
     if (!strategies || strategies.length < 2) continue;
     const countryId = sector.countryId ?? ctx.corp.countryId;
-    const world = { sectorResearch: ctx.sectorResearchByLane?.get(operatingType) };
+    const world = {
+      sectorResearch: ctx.sectorResearchByLane?.get(operatingType),
+      diffusion: ctx.techDiffusion
+        ? { snapshot: ctx.techDiffusion, countryId, adopter: "npp" as const }
+        : undefined,
+    };
     const currentId = sector.strategyId ?? "standard";
     const current = strategies.find((strategy) => strategy.id === currentId);
     if (!current) {

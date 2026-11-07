@@ -8777,7 +8777,7 @@ const rawLegislationTypes: LegislationType[] = [
   // ── Banking separation (reusable per-country charter law; all legislatures) ──
   ...bankingSeparationLegislationTypes,
   ...mechanicalLegislationTypes,
-  // 2027 and 2030 law types for the legacy-catalog legislatures (DE, JP, CN, IE).
+  // 2027 to 2040 law types for the legacy-catalog legislatures (DE, JP, CN, IE).
   ...modernEraLegislationTypes,
 
   // ── Scotland / Wales legislation types — PURPOSEFULLY POSTPONED ────────────

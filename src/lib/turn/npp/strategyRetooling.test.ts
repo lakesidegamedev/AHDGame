@@ -266,3 +266,48 @@ describe("NPP retooling onto a 2049 breakthrough method", () => {
     expect(decision?.updates.strategyId).not.toBe("fusion_commercial");
   });
 });
+
+describe("NPP retooling under technology diffusion", () => {
+  const plant = sector({
+    sectorType: "energy",
+    mediaDiscriminator: null,
+    strategyId: "renewables",
+    effectiveProfitMargin: -10,
+  });
+  const corp = makeCorporation({
+    _id: plant.corporationId,
+    type: "energy",
+    countryId: "US",
+    ceoType: "npp",
+    unlockedTechNodeIds: [sectorNodeId("energy", "2049", 1)],
+  });
+  const diffusion = (operators: string[] = []) => ({
+    readinessByCountry: new Map([["US", 0.8]]),
+    operatorCountriesByStrategy: new Map([["fusion_commercial", new Set(operators)]]),
+  });
+  const base = { corp, sectorResearchByLane: new Map([["energy", 1e9]]) };
+
+  it("waits for the country lag before adopting a new tier's method", () => {
+    const early = decide(
+      plant,
+      { energy: 3 },
+      { ...base, currentYear: 2050, techDiffusion: diffusion() }
+    );
+    expect(early?.updates.strategyId).not.toBe("fusion_commercial");
+    const onTime = decide(
+      plant,
+      { energy: 3 },
+      { ...base, currentYear: 2052, techDiffusion: diffusion() }
+    );
+    expect(onTime?.updates).toMatchObject({ strategyId: "fusion_commercial" });
+  });
+
+  it("does not license early from a foreign operator", () => {
+    const decision = decide(
+      plant,
+      { energy: 3 },
+      { ...base, currentYear: 2050, techDiffusion: diffusion(["DE"]) }
+    );
+    expect(decision?.updates.strategyId).not.toBe("fusion_commercial");
+  });
+});

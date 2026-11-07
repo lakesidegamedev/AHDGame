@@ -136,7 +136,7 @@ function getCountryLegislationTypeQuery(countryId: CountryId) {
   return { countryScope };
 }
 
-function matchesCountryLegislationType(
+export function matchesCountryLegislationType(
   countryId: CountryId,
   legislationType: LegislationType
 ): boolean {
