@@ -39,6 +39,7 @@ import {
   countryRequirementLevelForAccess,
   type CountryRequirementLevel,
 } from "@/lib/world/countryRequirementLevel";
+import { NPP_AUTONOMY_LEVEL_RANK } from "@/lib/nppAutonomy/levels";
 
 export interface CountryAccess {
   enabledForPlayers: boolean;
@@ -74,20 +75,19 @@ export interface CountryAccess {
   nppGoverned: boolean;
 }
 
-const NPP_LEVEL_RANK: Record<string, number> = { off: 0, v0: 1, v1: 2, v2: 3, v3: 4, v4: 5 };
-
 /**
  * Read the global NPP-autonomy level directly off `gameState` (mirrors
  * `getNppAutonomyLevel`). Inlined here rather than imported from
  * `nppAutonomy/featureFlag` to avoid an import cycle — that module imports
- * `isCountryEnabledForPlayers` from this one.
+ * `isCountryEnabledForPlayers` from this one. The rank map comes from the
+ * dependency-free `levels` module so it can never fall behind a new tier.
  */
 async function readGlobalNppLevelRank(db: Db): Promise<number> {
   const doc = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1 } });
   const level = doc?.nppAutonomyLevel ?? (doc?.nppAutonomyEnabled === true ? "v0" : "off");
-  return NPP_LEVEL_RANK[level] ?? 0;
+  return NPP_AUTONOMY_LEVEL_RANK[level] ?? 0;
 }
 
 /**
@@ -194,7 +194,8 @@ export async function getCountryAccessFromDb(db: Db, countryId: CountryId): Prom
   const economyPreview = !enabledForPlayers && (doc?.economyPreview ?? false);
 
   // A non-player country is "NPP-governed" once the global autonomy level is v1+.
-  const nppGoverned = !enabledForPlayers && (await readGlobalNppLevelRank(db)) >= NPP_LEVEL_RANK.v1;
+  const nppGoverned =
+    !enabledForPlayers && (await readGlobalNppLevelRank(db)) >= NPP_AUTONOMY_LEVEL_RANK.v1;
 
   // Mirrors `registeredBase()`: the static base, plus a latent country whose
   // activation flipped its row to "active".
@@ -270,7 +271,7 @@ export async function getAllCountryAccess(dbArg?: Db): Promise<Record<CountryId,
       // Everything `registeredBase()` yields is registered by construction.
       registered: true,
       econOnly: !enabledForPlayers,
-      nppGoverned: !enabledForPlayers && globalNppRank >= NPP_LEVEL_RANK.v1,
+      nppGoverned: !enabledForPlayers && globalNppRank >= NPP_AUTONOMY_LEVEL_RANK.v1,
     };
   }
   return out;
