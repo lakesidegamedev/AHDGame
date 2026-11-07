@@ -9,8 +9,9 @@
  * price for its lane, or the selling site's ask when the lane did not trade.
  * The seller books that as internal supply income and the receiving site books
  * the same amount as an internal supply charge, so the company's totals are
- * unchanged. Companies that chose an explicit internal transfer price already
- * book their own entries and are left alone.
+ * unchanged. Only accounts that opt in are valued: a company on Free transfer
+ * pricing books nothing between its own sites, and one with an explicit
+ * internal transfer price already books its own entries.
  *
  * Pure: settled internal deliveries, offers and lane prices in, matching
  * per-offer income and per-order charges out.
@@ -54,15 +55,15 @@ export function captiveMarketValue(input: {
   deliveries: readonly InternalDeliveryRow[];
   offers: ReadonlyMap<string, CaptiveMarketOffer>;
   clearingByLane: ReadonlyMap<string, number>;
-  /** Accounts with an explicit internal transfer price; they keep their own entries. */
-  pricedAccounts?: ReadonlySet<string>;
+  /** Accounts that opted in to market-value entries; every other account books none. */
+  valuedAccounts: ReadonlySet<string>;
 }): CaptiveMarketValue {
   const incomeByOffer = new Map<string, number>();
   const chargeByOrder = new Map<string, number>();
   for (const row of input.deliveries) {
     const units = positive(row.units);
     const offer = input.offers.get(row.offerId);
-    if (!(units > 0) || !offer || input.pricedAccounts?.has(offer.accountId)) continue;
+    if (!(units > 0) || !offer || !input.valuedAccounts.has(offer.accountId)) continue;
     const unitPrice =
       positive(input.clearingByLane.get(laneKeyOf(offer.commodity, offer.book))) ||
       positive(offer.unitPrice);
