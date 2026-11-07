@@ -10,6 +10,7 @@ import { reconcileLedger } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
 import { settleProducerTurn } from "./settlement";
+import type { StageTimings } from "./stageTimings";
 import { decodeReceipt } from "./receiptStorage";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
@@ -725,5 +726,68 @@ describe("frozen producer turn settlement", () => {
     memory.collection("corporateSectors").docs[0].corporationId = new ObjectId(thirdOwnerId);
     await expect(settleProducerTurn(db, input)).rejects.toThrow("nowhere to book its cash");
     expect(memory.collection("ledgerEntries").docs).toHaveLength(0);
+  });
+});
+
+describe("producer turn stage timings", () => {
+  async function settle(sink?: StageTimings) {
+    vi.useFakeTimers({ toFake: ["Date"] }); // createdAt is inside the digest
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    try {
+      const { db, input } = fixture();
+      const result = await settleProducerTurn(db, { ...input, stageTimingsMs: sink });
+      const record = await db
+        .collection<{ digest: string; stageTimingsMs?: StageTimings }>("producerEconomyTurns")
+        .findOne({});
+      return { result, record: record! };
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
+  it("records finite whole-millisecond stages without changing the result or digest", async () => {
+    const sink: StageTimings = {};
+    const timed = await settle(sink);
+    const plain = await settle();
+    expect(timed.result).toEqual(plain.result);
+    expect(timed.record.digest).toBe(plain.record.digest);
+    const stored = timed.record.stageTimingsMs!;
+    for (const key of [
+      "verifyOpeningPayablesMs",
+      "advanceEconomyMs",
+      "validateTargetsMs",
+      "encodeReceiptMs",
+      "verifyPhysicalAndCashMs",
+      "stageChunksMs",
+      "insertReceiptMs",
+      "settleTransitionMs",
+      "publishPayablesMs",
+      "sectorBulkWriteMs",
+      "economySetupMs",
+      "planningTrialMs",
+      "planningPassMs",
+      "planningTrialRuns",
+      "finalClearingMs",
+      "finalClearingTrialRuns",
+      "settleTotalMs",
+    ])
+      expect(stored, key).toHaveProperty(key);
+    for (const value of Object.values(stored))
+      for (const n of Array.isArray(value) ? value : [value]) {
+        expect(Number.isInteger(n)).toBe(true);
+        expect(n).toBeGreaterThanOrEqual(0);
+      }
+    expect(stored.finalClearingTrialRuns).toBeGreaterThanOrEqual(1);
+    expect(plain.record.stageTimingsMs).toBeDefined(); // the record always carries its own
+  });
+
+  it("skips timings on a replay of a settled turn", async () => {
+    const { db, input } = fixture();
+    await settleProducerTurn(db, input);
+    const turns = db.collection<{ stageTimingsMs?: StageTimings }>("producerEconomyTurns");
+    const first = (await turns.findOne({}))!.stageTimingsMs;
+    const sink: StageTimings = {};
+    await settleProducerTurn(db, { ...input, stageTimingsMs: sink });
+    expect((await turns.findOne({}))!.stageTimingsMs).toEqual(first);
   });
 });
