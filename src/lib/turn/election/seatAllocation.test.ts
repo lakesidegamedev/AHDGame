@@ -971,3 +971,97 @@ describe("sovereign Scottish and Welsh chamber elections", () => {
     expect(result.winners).toHaveLength(2);
   });
 });
+
+describe("allocateSeats - fragmented proportional chambers", () => {
+  // 2001 Polish Sejm, Masovia: the plurality party had 21.7% and seated all
+  // 62 members while the gate for unlisted chambers was 20%.
+  const masovia: RankedCandidate[] = [
+    { id: "psl", votes: 217, party: "4" },
+    { id: "kpn", votes: 180, party: "5" },
+    { id: "kln", votes: 152, party: "7" },
+    { id: "sdrp", votes: 151, party: "6" },
+    { id: "pc-a", votes: 86, party: "3" },
+    { id: "pc-b", votes: 76, party: "3" },
+    { id: "ko-a", votes: 70, party: "2" },
+    { id: "ko-b", votes: 68, party: "2" },
+  ];
+
+  it("uses the standard 10% gate for every proportional chamber, not the 20% fallback", () => {
+    for (const type of [
+      "sejm",
+      "senat",
+      "senato",
+      "senado",
+      "nationalAssembly",
+      "chamberOfThePeople",
+      "chamberOfNations",
+      "unionCongressDeputy",
+      "sangiin",
+    ]) {
+      expect(getMultiSeatMinShare(type)).toBe(0.1);
+    }
+    expect(getMultiSeatMinShare("governor")).toBe(0.2);
+  });
+
+  it("splits a fragmented Sejm region across parties instead of seating the plurality party alone", () => {
+    const { seatsEstimate } = allocateSeats(
+      "sejm",
+      "PL_MAZ",
+      62,
+      masovia,
+      1000,
+      undefined,
+      undefined,
+      undefined,
+      "PL"
+    );
+    expect(seatsEstimate.psl).toBeLessThan(31);
+    expect(Object.values(seatsEstimate).filter((s) => s > 0).length).toBeGreaterThanOrEqual(5);
+    expect(Object.values(seatsEstimate).reduce((a, b) => a + b, 0)).toBe(62);
+  });
+
+  it("never apportions a bloc on less than half the vote, even under a 20% gate", () => {
+    // NG-style "house" keeps the 20% gate; only one party clears it here.
+    const field: RankedCandidate[] = [
+      { id: "a", votes: 30, party: "1" },
+      { id: "b", votes: 19, party: "2" },
+      { id: "c", votes: 18, party: "3" },
+      { id: "d", votes: 17, party: "4" },
+      { id: "e", votes: 16, party: "5" },
+    ];
+    const { seatsEstimate } = allocateSeats(
+      "house",
+      "NG_NC",
+      20,
+      field,
+      100,
+      { NG_NC: 20 },
+      undefined,
+      undefined,
+      "NG"
+    );
+    expect(seatsEstimate.a).toBeLessThan(20);
+    expect(seatsEstimate.b).toBeGreaterThan(0);
+    expect(seatsEstimate.a + seatsEstimate.b + seatsEstimate.c).toBe(20);
+    expect(seatsEstimate.d).toBe(0);
+  });
+
+  it("still seats a genuine majority party alone when no rival clears the gate", () => {
+    const field: RankedCandidate[] = [
+      { id: "a", votes: 82, party: "1" },
+      { id: "b", votes: 18, party: "2" },
+    ];
+    const { seatsEstimate } = allocateSeats(
+      "house",
+      "NG_NC",
+      10,
+      field,
+      100,
+      { NG_NC: 10 },
+      undefined,
+      undefined,
+      "NG"
+    );
+    expect(seatsEstimate.a).toBe(10);
+  });
+});

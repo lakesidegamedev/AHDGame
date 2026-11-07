@@ -46,3 +46,11 @@ describe("getMultiSeatMinShare", () => {
     expect(getMultiSeatMinShare("governor", 5)).toBe(0.2);
   });
 });
+
+describe("getMultiSeatMinShare for unlisted proportional chambers", () => {
+  it("falls back to the standard gate for any multi-seat chamber", () => {
+    expect(getMultiSeatMinShare("sejm", 62, "PL")).toBe(0.1);
+    expect(getMultiSeatMinShare("senato", 20, "IT")).toBe(0.1);
+    expect(getMultiSeatMinShare("unionCongressDeputy", 100, "RU")).toBe(0.1);
+  });
+});

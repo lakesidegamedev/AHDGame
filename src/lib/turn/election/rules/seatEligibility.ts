@@ -1,4 +1,5 @@
 import { US_CONFIG } from "@/lib/countries/us/institutionsFacts";
+import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 
 /**
  * Multi-seat election eligibility. The US House gate scales with the size of
@@ -71,6 +72,13 @@ export function getMultiSeatMinShare(
   ) {
     return STANDARD_MULTI_SEAT_MIN_SHARE;
   }
+
+  // Every other proportional chamber gets the standard gate too. The list
+  // above grew one chamber per incident, and anything missing from it fell
+  // through to 20%: in a five-to-seven party system only the plurality party
+  // clears that, so it took every seat in the region (the 2001 Polish Sejm
+  // seated 460 of 460 for one party on 22-29% of the vote).
+  if (MULTI_SEAT_TYPES.has(electionType)) return STANDARD_MULTI_SEAT_MIN_SHARE;
 
   return 0.2;
 }
