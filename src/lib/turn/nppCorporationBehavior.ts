@@ -882,7 +882,8 @@ export async function processNppCorporationDecisions(
             ? {
                 cashContributionLimitLocal: shortageGrowthCashContributionLimit(
                   cashAfterDecisionLocal,
-                  decision.cashFloorLocal ?? 0
+                  decision.cashFloorLocal ?? 0,
+                  plants?.holdExpansionAtCashFloor === true
                 ),
               }
             : {}),

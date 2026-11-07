@@ -10,6 +10,7 @@ import {
   SHORTAGE_GROWTH_FINANCE_CASH_SHARE,
   SHORTAGE_GROWTH_FINANCE_CONTRIBUTION_SHARE,
   resolveShortageGrowthFinanceConfig,
+  shortageGrowthCashContributionLimit,
   type ShortageGrowthFinanceConfig,
 } from "./rules/shortageGrowthFinance";
 
@@ -22,7 +23,7 @@ const stageOn = resolveShortageGrowthFinanceConfig({ nppShortageGrowthFinanceSta
 /** A sold-out funded retail plant whose owner holds 60% of its cash floor. */
 function decide(
   shortageGrowthFinance?: { config: ShortageGrowthFinanceConfig; pressure: number | undefined },
-  options: { profit?: number } = {}
+  options: { profit?: number; floorHold?: boolean } = {}
 ) {
   const cash = floor * 0.6;
   const corp = {
@@ -97,6 +98,7 @@ function decide(
     preset: "2019-default",
     primeRateOf: () => 0,
     costOfLivingOf: () => null,
+    ...(options.floorHold ? { holdExpansionAtCashFloor: true } : {}),
   });
   return { decision, cash };
 }
@@ -151,5 +153,25 @@ describe("short-lane growth finance in the NPP decision", () => {
   it("refuses an unprofitable plant", () => {
     const d = decide({ config: stageOn, pressure: 1.6 }, { profit: -5_000 }).decision;
     expect((d.constructionFinanceIntents ?? []).some((i) => i.shortageGrowth)).toBe(false);
+  });
+});
+
+describe("short-lane finance under the cash-floor hold (nppDividendAfterTaxStage 2)", () => {
+  it("still requests short-lane finance for a company under its floor", () => {
+    const { decision } = decide({ config: stageOn, pressure: 1.6 }, { floorHold: true });
+    expect(growthIntents(decision).some((i) => i.shortageGrowth)).toBe(true);
+    expect(decision.liquidCapitalDelta).toBe(0);
+  });
+
+  it("without short-lane finance the hold still stops growth", () => {
+    const { decision } = decide(undefined, { floorHold: true });
+    expect(growthIntents(decision)).toEqual([]);
+    expect(decision.newSectors ?? []).toEqual([]);
+  });
+
+  it("caps the held company's own share at a tenth of its cash", () => {
+    expect(shortageGrowthCashContributionLimit(1000, 2000, true)).toBeCloseTo(100);
+    expect(shortageGrowthCashContributionLimit(1000, 2000)).toBeCloseTo(250);
+    expect(shortageGrowthCashContributionLimit(3000, 2000, true)).toBeCloseTo(1000);
   });
 });
