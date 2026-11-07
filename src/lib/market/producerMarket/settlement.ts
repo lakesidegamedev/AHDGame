@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import { accountId } from "@/lib/ledger/accounts";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -542,6 +543,8 @@ export async function settleProducerTurn(
     production: ProducerTurnProduction;
     /** Cooperative market budget; a clearing pass and final settlement are never interrupted. */
     planningBudgetMs?: number;
+    /** Compute and receipt-preparation ceiling; expiry stops before claiming or moving cash. */
+    executionBudgetMs?: number;
     bindings: readonly ProducerCashBinding[];
     targets: readonly ProducerSectorTarget[];
     /** Closing transfers computed from the settled market, frozen with it. */
@@ -551,6 +554,7 @@ export async function settleProducerTurn(
   }
 ): Promise<SettledEconomyResult> {
   const timings: StageTimings = input.stageTimingsMs ?? {};
+  const phaseSteps = substepMarker();
   const startedAt = performance.now();
   const clock = stageClock(timings);
   const turn = input.production.turn;
@@ -561,6 +565,16 @@ export async function settleProducerTurn(
   clock.lap("fenceAndLookupMs");
   let claimedPayload: FrozenProducerTurn | undefined;
   if (!record) {
+    const started = performance.now();
+    if (
+      input.executionBudgetMs != null &&
+      (!Number.isFinite(input.executionBudgetMs) || input.executionBudgetMs <= 0)
+    )
+      throw new Error("Invalid producer execution budget");
+    const checkBudget = () => {
+      if (input.executionBudgetMs != null && performance.now() - started >= input.executionBudgetMs)
+        throw new Error("Producer market execution deadline exceeded before settlement");
+    };
     await verifyOpeningProducerPayables(db, {
       worldEpoch: input.worldEpoch,
       turn,
@@ -601,14 +615,15 @@ export async function settleProducerTurn(
       targets: input.targets,
       capacities,
       result: (() => {
-        const started = performance.now();
+        phaseSteps.mark("producerMarket.prepare");
         const market = advanceProducerEconomy(
           production,
-          input.planningBudgetMs == null
+          input.planningBudgetMs == null && input.executionBudgetMs == null
             ? undefined
             : {
-                maximumElapsedMs: input.planningBudgetMs,
+                maximumElapsedMs: input.planningBudgetMs ?? Number.MAX_VALUE,
                 elapsedMs: () => performance.now() - started,
+                checkBudget,
               },
           timings
         );
@@ -628,7 +643,8 @@ export async function settleProducerTurn(
     clock.lap("closeMs");
     validateTargets(payload);
     clock.lap("validateTargetsMs");
-    const encoded = encodeReceipt(payload);
+    checkBudget();
+    const encoded = encodeReceipt(payload, checkBudget);
     clock.lap("encodeReceiptMs");
     const candidate: ProducerTurnRecord = {
       _id: key,
@@ -646,7 +662,8 @@ export async function settleProducerTurn(
       ...producerPlanningWarnings(payload.result.planning),
     ];
     clock.lap("verifyPhysicalAndCashMs");
-    await stageReceiptChunks(db, encoded.chunks);
+    await stageReceiptChunks(db, encoded.chunks, checkBudget);
+    checkBudget();
     clock.lap("stageChunksMs");
     try {
       await turns.insertOne(candidate);
@@ -769,6 +786,7 @@ export async function settleProducerTurn(
       },
     }
   );
+  phaseSteps.mark("producerMarket.publish");
   return {
     ...frozen.result,
     turnWarnings: [

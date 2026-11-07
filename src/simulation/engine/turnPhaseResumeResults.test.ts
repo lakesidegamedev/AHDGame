@@ -6,6 +6,7 @@ import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   hasCompleteSovereignFlows,
+  encodeResumeResult,
   isResumeFailClosedError,
   readCrashedTurnPhaseState,
   TurnPhaseCompletionPersistError,
@@ -19,6 +20,68 @@ import {
 } from "@/simulation/engine/turnResumeBootstrap";
 
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
+
+describe("corporate completion results", () => {
+  it("round-trips current per-currency income through JSON without losing Maps", () => {
+    const result = {
+      ...CORP_RESULT,
+      currencyIncomeFaceByCharacterId: new Map([
+        [
+          "player",
+          new Map([
+            ["USD", 20],
+            ["GBP", 15],
+            ["JPY", 2000],
+          ]),
+        ],
+      ]),
+    };
+    const stored = encodeResumeResult("corporationTurn", result);
+    const statuses = {
+      corporationTurn: { status: "completed" },
+    } as unknown as TurnPhaseTelemetryMap;
+    const restored = readCrashedTurnPhaseState(
+      statuses,
+      JSON.parse(JSON.stringify({ corporationTurn: stored }))
+    );
+    expect(restored.results.corporationTurn).toEqual(result);
+    expect(encodeResumeResult("corporationTurn", restored.results.corporationTurn)).toEqual(stored);
+  });
+
+  it("refuses malformed or incomplete income rather than assuming zero", () => {
+    expect(
+      encodeResumeResult("corporationTurn", {
+        ...CORP_RESULT,
+        currencyIncomeFaceByCharacterId: undefined,
+      })
+    ).toBeNull();
+    expect(
+      encodeResumeResult("corporationTurn", {
+        ...CORP_RESULT,
+        currencyIncomeInternalByCharacterId: [["player", NaN]],
+      })
+    ).toBeNull();
+    expect(
+      encodeResumeResult("corporationTurn", {
+        ...CORP_RESULT,
+        currencyIncomeInternalByCharacterId: [
+          ["player", 1],
+          ["player", 2],
+        ],
+      })
+    ).toBeNull();
+  });
+});
+
+const CORP_RESULT = {
+  corporationsProcessed: 1,
+  sectorsProcessed: 2,
+  totalRevenueGenerated: 100,
+  totalIncomeGenerated: 20,
+  turnWarnings: [],
+  currencyIncomeInternalByCharacterId: new Map([["player", 20]]),
+  currencyIncomeFaceByCharacterId: new Map([["player", new Map([["USD", 20]])]]),
+};
 
 /** A gameState document that applies the runtime's dotted `$set` writes. */
 function createGameStateDb(failWhen?: (set: Record<string, unknown>) => boolean) {
@@ -357,7 +420,7 @@ describe("crash resume of result-carrying phases (#3429)", () => {
       phaseStatuses: {},
       warnings: [],
       currentPhaseRef: { current: null },
-    }).runPhase("corporationTurn", async () => ({ huge: "x".repeat(10_000) }));
+    }).runPhase("indexFundTurn", async () => ({ huge: "x".repeat(10_000) }));
     expect(doc.processingPhaseResults).toEqual({});
   });
 
@@ -415,7 +478,7 @@ describe("crash resume of result-carrying phases (#3429)", () => {
     expect(statuses.corporationTurn).toMatchObject({ status: "failed", reason: "mustStop" });
 
     const bond = vi.fn(async () => BOND_RESULT);
-    const corporation = vi.fn(async () => 1);
+    const corporation = vi.fn(async () => CORP_RESULT);
     const resumed = resumedRuntime(doc, db);
     await resumed.runPhase("bondTurn", bond);
     await resumed.runPhase("corporationTurn", corporation);
@@ -628,7 +691,7 @@ describe("interrupted phases are never silently applied (turn 736)", () => {
     }
   });
 
-  it("reruns corporationTurn after TurnMustStopError, and skips a completed one", async () => {
+  it("reruns a retryable failure, but refuses a legacy completed corporation phase without its result", async () => {
     const mustStop = {
       corporationTurn: { status: "failed", reason: "mustStop" },
     } as unknown as TurnPhaseTelemetryMap;
@@ -644,10 +707,14 @@ describe("interrupted phases are never silently applied (turn 736)", () => {
     const runtime = resumedRuntime(doc, db);
     const corp = vi.fn(async () => "corp");
     const prices = vi.fn(async () => "prices");
-    await runtime.runPhase("corporationTurn", corp);
-    await runtime.runPhase("commodityPrices", prices);
+    await expect(runtime.runPhase("corporationTurn", corp)).rejects.toBeInstanceOf(
+      TurnResumeResultUnavailableError
+    );
+    await expect(runtime.runPhase("commodityPrices", prices)).rejects.toBeInstanceOf(
+      TurnResumeResultUnavailableError
+    );
     expect(corp).not.toHaveBeenCalled();
-    expect(prices).toHaveBeenCalledOnce();
+    expect(prices).not.toHaveBeenCalled();
   });
 
   it("records another interrupted phase as failed, not as applied, and does not rerun it", async () => {
