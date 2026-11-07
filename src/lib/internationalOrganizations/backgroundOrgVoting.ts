@@ -30,6 +30,12 @@ import {
   getOrganizationMembershipsCollection,
 } from "@/lib/db/collections";
 import { MACRO_COUNTRIES_COLLECTION } from "@/lib/db/collections/macroCountries";
+import type { MacroCountryState } from "@/lib/world/macro/types";
+import type {
+  HeadOfGovernment,
+  NationalParty,
+  NationalPoliticsState,
+} from "@/lib/world/macro/rules/nationalPolitics";
 import { loadCountryTiers, type CountryTierSnapshot } from "@/lib/country/countryTier";
 import { pendingOrganizationVoteOp } from "@/lib/internationalOrganizations/voteWrite";
 import {
@@ -62,17 +68,14 @@ export const BACKGROUND_VOTED_RESOLUTIONS = RESOLUTION_KINDS.filter(backgroundVo
  * written by the background politics model when it runs; absent, the vote
  * simply has no ideology term.
  */
-interface BackgroundVoterDoc {
-  entityId: string;
-  displayName?: string;
-  tradeExposure?: number;
-  fiscalCapacity?: number;
-  nationalPolitics?: {
-    parties?: { partyId: string; economic?: number }[];
-    governmentPartyIds?: string[];
-    head?: { name?: string };
+type BackgroundVoterDoc = Pick<MacroCountryState, "entityId"> &
+  Partial<Pick<MacroCountryState, "displayName" | "tradeExposure" | "fiscalCapacity">> & {
+    nationalPolitics?: {
+      parties?: Pick<NationalParty, "partyId" | "economic">[];
+      governmentPartyIds?: NationalPoliticsState["governmentPartyIds"];
+      head?: Partial<Pick<HeadOfGovernment, "name">>;
+    };
   };
-}
 
 /** Ruling party economic position, or null when the politics model has not run. */
 export function rulingEconomicPosition(doc: BackgroundVoterDoc | undefined): number | null {

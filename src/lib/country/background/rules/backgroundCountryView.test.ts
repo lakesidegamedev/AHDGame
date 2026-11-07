@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { makeSeededRng } from "@/lib/events/substrate/rng";
+import { BACKGROUND_CONSTITUTIONS } from "@/lib/world/macro/rules/backgroundConstitution";
+import { initNationalPolitics } from "@/lib/world/macro/rules/nationalPolitics";
 import {
   backgroundCountryRoute,
   buildBilateralTrade,
@@ -51,6 +54,60 @@ describe("buildPoliticsView", () => {
     expect(view?.headPartyName).toBe("Beta");
     expect(view?.parties[0].inGovernment).toBe(true);
     expect(view?.parties[1].partyColor).toBe("#888888");
+  });
+});
+
+describe("buildPoliticsView with the national politics model's own state", () => {
+  it("reads the state the model writes", () => {
+    const state = initNationalPolitics({
+      constitution: BACKGROUND_CONSTITUTIONS.FR,
+      parties: [
+        {
+          partyId: "l",
+          name: "Left",
+          abbreviation: "L",
+          color: "#c00",
+          economic: -3,
+          social: -2,
+          strength: 3,
+        },
+        {
+          partyId: "c",
+          name: "Centre",
+          abbreviation: "C",
+          color: "#fc0",
+          economic: 0.5,
+          social: 0,
+          strength: 4,
+        },
+        {
+          partyId: "r",
+          name: "Right",
+          abbreviation: "R",
+          color: "#00c",
+          economic: 3,
+          social: 3,
+          strength: 3,
+        },
+      ],
+      turn: 1,
+      year: 2027,
+      turnsPerYear: 48,
+      output: 1000,
+      inflation: 2,
+      expectations: { trendGrowth: 0.01, naturalUnemployment: 7 },
+      namePool: { firstNames: ["Alex"], surnames: ["Durand"] },
+      rng: makeSeededRng("page"),
+    });
+    const view = buildPoliticsView(state);
+    expect(view).not.toBeNull();
+    expect(view?.totalSeats).toBe(BACKGROUND_CONSTITUTIONS.FR.seats);
+    expect(view?.headName).toBe(state?.head.name);
+    expect(view?.governmentPartyNames.length).toBeGreaterThan(0);
+    expect(view?.nextElectionTurn).toBe(state?.nextElectionTurn);
+    expect(buildEconomyView({ budget: null, politicsEconomy: state?.economy }).unemployment).toBe(
+      state?.economy.unemployment
+    );
   });
 });
 

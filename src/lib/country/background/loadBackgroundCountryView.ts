@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants/internationalOrganizations";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { MACRO_COUNTRIES_COLLECTION } from "@/lib/db/collections/macroCountries";
+import type { MacroCountryState } from "@/lib/world/macro/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import {
   buildBilateralTrade,
@@ -14,7 +15,6 @@ import {
   buildPoliticsView,
   type BackgroundCountryView,
   type CommodityFlows,
-  type NationalPoliticsInput,
   type TariffRow,
 } from "./rules/backgroundCountryView";
 
@@ -23,14 +23,10 @@ const TRADE_PARTNER = COUNTRY_CONFIGS.US.id;
 const MAX_BONDS = 5;
 const MAX_CRISES = 5;
 
-interface MacroDoc {
-  entityId: string;
-  population?: number;
-  /** Written by the background politics model when it runs; absent until then. */
-  nationalPolitics?: NationalPoliticsInput;
-  /** The national index level, written beside the politics state. */
-  nationalIndex?: { level?: number };
-}
+type MacroDoc = Pick<
+  MacroCountryState,
+  "entityId" | "population" | "nationalPolitics" | "nationalIndex"
+>;
 
 interface BudgetDoc {
   _id: string;
