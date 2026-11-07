@@ -1,6 +1,9 @@
 "use client";
 
-import { consolidateSiteStatements } from "@/lib/corporations/rules/siteStatement";
+import {
+  consolidateSiteStatements,
+  reconcileSiteStatements,
+} from "@/lib/corporations/rules/siteStatement";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   OPERATING_SECTOR_TYPES,
@@ -565,6 +568,9 @@ export default function SectorsTab({
                   statements.length === sortedSectors.length
                     ? consolidateSiteStatements(statements)
                     : null;
+                const reconciliation = consolidated ? reconcileSiteStatements(statements) : null;
+                const showReconciliation =
+                  reconciliation != null && Math.abs(reconciliation.netCharge * scaleFactor) >= 0.5;
                 const totalRev = consolidated?.revenue ?? sumSectorDisplayRevenue(sortedSectors);
                 const totalProfit =
                   consolidated?.profit ??
@@ -625,8 +631,19 @@ export default function SectorsTab({
                       {financialsRedacted ? "n/a" : fmtMoney(totalRev * scaleFactor)}
                     </span>
                     <span></span>
-                    <span className={`${cellNum} text-right ${signTone(totalProfit)}`}>
-                      {fmtMoney(totalProfit * scaleFactor)}
+                    <span className="flex flex-col items-end text-right">
+                      <span className={`${cellNum} ${signTone(totalProfit)}`}>
+                        {fmtMoney(totalProfit * scaleFactor)}
+                      </span>
+                      {showReconciliation ? (
+                        <span
+                          data-testid="sector-total-reconciliation"
+                          className={`${cellNum} text-[10px] font-normal text-muted`}
+                          title={`The rows above add up to ${fmtMoney(reconciliation.rowsProfit * scaleFactor)}. Each row is charged ${fmtMoney(reconciliation.charge * scaleFactor)} for supplies from your other sites and credited ${fmtMoney(reconciliation.income * scaleFactor)} for supplies it sent. The total removes both, so it differs from the rows by ${fmtMoney(reconciliation.netCharge * scaleFactor)}.`}
+                        >
+                          Rows add to {fmtMoney(reconciliation.rowsProfit * scaleFactor)}
+                        </span>
+                      ) : null}
                     </span>
                     <span className={`${cellNum} text-right text-xs text-foreground`}>
                       {financialsRedacted ? "n/a" : totalWorkers.toLocaleString("en-US")}
