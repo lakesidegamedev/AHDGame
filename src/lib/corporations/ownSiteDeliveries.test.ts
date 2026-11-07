@@ -55,6 +55,7 @@ describe("ownSiteLabel", () => {
     expect(ownSiteLabel(1)).toBe("100% to your sites");
     expect(ownSiteLabel(0.404)).toBe("40% to your sites");
     expect(ownSiteLabel(0.001)).toBe("<1% to your sites");
+    expect(ownSiteLabel(0.65, "all output")).toBe("65% of all output to your sites");
   });
   it("is null when nothing went to own sites", () => {
     expect(ownSiteLabel(0)).toBeNull();
