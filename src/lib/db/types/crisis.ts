@@ -525,7 +525,16 @@ export interface CrisisAutoCooldown {
  *  (no hurricanes in landlocked regions, tornadoes only on plains, etc.). A
  *  region's tags are curated in `src/lib/crises/regionHazards.ts`. */
 export type HazardTag =
-  "coastal" | "seismic" | "tornado" | "volcanic" | "flood" | "wintry" | "wildfire" | "arid";
+  | "coastal"
+  | "seismic"
+  | "tornado"
+  | "volcanic"
+  | "flood"
+  | "wintry"
+  | "wildfire"
+  | "arid"
+  /** Long hot summers: climate pressure adds cooling demand here. */
+  | "hot";
 
 /** Geographic eligibility for an auto-spawned crisis. */
 export interface CrisisGeo {

@@ -428,6 +428,11 @@ export interface CorporationLookups {
     string,
     import("@/lib/crises/disasterMarginPenalty").DisasterEffectEntry[]
   >;
+  /**
+   * stateId -> household energy demand multiplier from climate heat (worlds
+   * with broader climate effects only). Absent or missing state reads as 1.
+   */
+  climateEnergyDemandByState?: Map<string, number>;
   /** Named regional conditions (approval modifiers) stacked into sector margins. */
   regionalConditionMarginByState?: Map<string, number>;
   /** Live era year (null while eraSystemEnabled is off) — gates inactive metric margin signals. */

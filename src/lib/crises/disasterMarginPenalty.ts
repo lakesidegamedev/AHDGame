@@ -8,6 +8,11 @@ export interface DisasterEffectEntry {
   strategyId: string | null;
   /** See CrisisEffect.physicality. Absent = financial (margin-only). */
   physicality?: "physical" | "financial";
+  /**
+   * A standing condition rebuilt every turn (climate pressure) rather than an
+   * event: applies at full `value` with no decay or expiry.
+   */
+  persistent?: boolean;
 }
 
 type DecayCrisis = Pick<Crisis, "effects" | "startTurn" | "durationTurns" | "regionIds">;
@@ -109,12 +114,15 @@ export function computeDisasterPenaltySplit(
   for (const entry of entries) {
     if (entry.sectorType && entry.sectorType !== sector.sectorType) continue;
     if (entry.strategyId && entry.strategyId !== sector.strategyId) continue;
-    if (entry.durationTurns <= 0) continue;
-    const expiryTurn = entry.startTurn + entry.durationTurns;
-    const turnsRemaining = expiryTurn - currentTurn;
-    if (turnsRemaining <= 0) continue;
-    const clamped = Math.min(turnsRemaining, entry.durationTurns);
-    const decayed = entry.value * (clamped / entry.durationTurns);
+    let decayed = entry.value;
+    if (!entry.persistent) {
+      if (entry.durationTurns <= 0) continue;
+      const expiryTurn = entry.startTurn + entry.durationTurns;
+      const turnsRemaining = expiryTurn - currentTurn;
+      if (turnsRemaining <= 0) continue;
+      const clamped = Math.min(turnsRemaining, entry.durationTurns);
+      decayed = entry.value * (clamped / entry.durationTurns);
+    }
     if (plantsEnabled && entry.physicality === "physical") {
       productionPenalty += decayed;
     } else {

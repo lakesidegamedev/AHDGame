@@ -148,6 +148,14 @@ import { ownRouteKey, recordedGroupRouteMembers } from "@/lib/market/internalSup
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
 import { countBlockEmbargoes, tradeEligibilityScope } from "./rules/tradeEligibilityScope";
+import type { ClimateFeedbackState } from "@/lib/crises/climateTurn";
+import { climateProfileForStartingYear } from "@/lib/crises/rules/climateFeedback";
+import {
+  climateEffectEntries,
+  climateExposureFromTags,
+  energyDemandMultiplier,
+} from "@/lib/crises/rules/climateEffects";
+import { getClimateExposureTags } from "@/lib/crises/regionHazards";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -1568,6 +1576,31 @@ export async function buildCorporationLookups(
   // Live year for era-aware regional-condition margins; null while the flag is off.
   const eraYear = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
 
+  // Standing climate effects for worlds that opt in (the 2027 world): farm
+  // yield loss and insurance premiums ride the disaster-effect channel, and
+  // heat lifts household energy demand. One extra read, only when opted in.
+  const climateEnergyDemandByState = new Map<string, number>();
+  const climateProfile = climateProfileForStartingYear(gameState?.startingYear);
+  if (climateProfile.broaderEffects) {
+    const climate = await db
+      .collection<ClimateFeedbackState>("climateFeedbackState")
+      .findOne({ _id: "world" }, { projection: { pressure: 1 } });
+    const pressure = climate?.pressure ?? climateProfile.startingPressure;
+    for (const s of states) {
+      const id = String(s._id);
+      if (NATIONAL_SCOPE_IDS.has(id)) continue;
+      const exposure = climateExposureFromTags(getClimateExposureTags(s.countryId, id));
+      const entries = climateEffectEntries(pressure, exposure);
+      if (entries.length > 0)
+        activeDisasterEffectsByState.set(id, [
+          ...(activeDisasterEffectsByState.get(id) ?? []),
+          ...entries,
+        ]);
+      const energy = energyDemandMultiplier(pressure, exposure);
+      if (energy !== 1) climateEnergyDemandByState.set(id, energy);
+    }
+  }
+
   // SP4 §4a: political margin overlays for playable regions — the sector-margin
   // engine resolves demolished political signals from these instead of the
   // (stripped) stateMetrics docs. One batch read, one map per region.
@@ -1885,6 +1918,7 @@ export async function buildCorporationLookups(
     nationalDominanceShareBySectorId,
     stateSectorSpecializationByState,
     activeDisasterEffectsByState,
+    ...(climateProfile.broaderEffects ? { climateEnergyDemandByState } : {}),
     regionalConditionMarginByState,
     corporateEmbargoSuppression,
     // Legacy full-mothball embargo model DISABLED (ticket 984): always use the

@@ -246,8 +246,9 @@ export const DE_GEOGRAPHY: CountryGeography = {
   },
   hazardGroups: {
     coastal: ["SH", "HH", "BRE", "MV", "NI"],
-    flood: ["NW", "RP", "BW", "BY", "SN", "ST", "BB", "NI", "SH", "HE"],
+    flood: ["NW", "RP", "BW", "BY", "SN", "ST", "BB", "NI", "SH", "HE", "SL", "BE"],
     wintry: ["BY", "BW", "SN", "TH", "ST"],
+    hot: ["BW", "RP"],
   },
   demographicCategoryIds: ["de_voterGroups"],
 };

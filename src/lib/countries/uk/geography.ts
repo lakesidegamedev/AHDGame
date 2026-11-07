@@ -267,7 +267,7 @@ export const UK_GEOGRAPHY: CountryGeography = {
   },
   hazardGroups: {
     coastal: ["SEE", "SWE", "EAE", "YHU", "NWE", "NEE", "SCO", "WAL", "NIR"],
-    flood: ["LON", "SWE", "EAE", "YHU", "NWE", "SEE", "WAL", "SCO"],
+    flood: ["LON", "SWE", "EAE", "YHU", "NWE", "SEE", "WAL", "SCO", "EMI", "WMI"],
     wintry: ["SCO", "NEE", "NWE", "YHU", "NIR"],
   },
   demographicCategoryIds: ["uk_voterGroups"],
