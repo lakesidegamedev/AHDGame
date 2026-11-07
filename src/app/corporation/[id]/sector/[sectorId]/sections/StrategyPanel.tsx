@@ -47,9 +47,12 @@ interface StrategyPanelProps {
 }
 
 /** Short player copy for why a production method cannot be picked. */
-function lockReasonLabel(reason: string | null | undefined): string {
+function lockReasonLabel(reason: string | null | undefined, opensYear?: number | null): string {
   if (reason === "research") return "awaiting a research breakthrough in this sector";
   if (reason === "sunset") return "retired, closed to new sites";
+  if (reason === "diffusion") {
+    return opensYear != null ? `reaches this country in ${opensYear}` : "not yet in this country";
+  }
   return reason ?? "locked";
 }
 
@@ -345,7 +348,7 @@ export default function StrategyPanel({
                             : zeroYield
                               ? "no deposits in this state"
                               : s.locked
-                                ? lockReasonLabel(s.lockReason)
+                                ? lockReasonLabel(s.lockReason, s.lockOpensYear)
                                 : s.projectedRevenuePerTurn != null
                                   ? `≈ ${formatAmount(s.projectedRevenuePerTurn, liquidCode)}/turn gross`
                                   : ""}

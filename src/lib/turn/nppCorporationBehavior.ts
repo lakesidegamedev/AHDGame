@@ -145,6 +145,11 @@ import {
   corpTechCashFloorLocal,
 } from "@/lib/corporations/dailyGrossRevenue";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
+import { loadTechDiffusionSnapshot } from "@/lib/corporations/techTree/diffusion";
+import {
+  presetUsesTechDiffusion,
+  type TechDiffusionSnapshot,
+} from "@/lib/constants/techTree/diffusion";
 import { loadFrontierResearchByLane } from "@/lib/corporations/techTree/frontierResearch";
 import { loadNppPlacementSignals } from "@/lib/turn/npp/fragileMarketSupply";
 import {
@@ -324,6 +329,8 @@ export async function processNppCorporationDecisions(
             corporationId: 1,
             nationalizedAtTurn: 1,
             mothballed: 1,
+            // Where each method already runs, for technology diffusion.
+            strategyId: 1,
             capitalStock: 1,
             // Physical saturation per cell: see rules/marketSaturation.
             demandThrottleFactor: 1,
@@ -348,6 +355,7 @@ export async function processNppCorporationDecisions(
           currentYear: 1,
           startingYear: 1,
           currentTurn: 1,
+          preset: 1,
         },
       }
     ),
@@ -553,8 +561,11 @@ export async function processNppCorporationDecisions(
   // 2049 breakthrough methods to NPP retooling and founding.
   let techCurrentYear = 0;
   let sectorResearchByLane: ReadonlyMap<string, number> | undefined;
+  // Diffusion worlds: readiness by country, and the method operators taken
+  // from the sector rows already in hand.
+  let techDiffusion: TechDiffusionSnapshot | undefined;
   if (techTreesEnabled) {
-    const [gs, researchByLane] = await Promise.all([
+    const [gs, researchByLane, diffusion] = await Promise.all([
       db
         .collection<GameState>("gameState")
         .findOne(
@@ -562,8 +573,12 @@ export async function processNppCorporationDecisions(
           { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
         ),
       loadFrontierResearchByLane(db, techTreesEnabled),
+      presetUsesTechDiffusion(strategyGate?.preset)
+        ? loadTechDiffusionSnapshot(db, { sectors: globalSectors })
+        : undefined,
     ]);
     sectorResearchByLane = researchByLane;
+    techDiffusion = diffusion;
     const startingYear = gs?.startingYear ?? STARTING_YEAR;
     techCurrentYear =
       gs?.currentYear ??
@@ -630,6 +645,7 @@ export async function processNppCorporationDecisions(
               Math.floor(((strategyGate?.currentTurn ?? turn) - 1) / TURNS_PER_YEAR),
           techTreesEnabled,
           sectorResearchByLane,
+          techDiffusion,
         }
       : undefined;
   // Founding never lands a plant its state cannot supply: the recipe it would
@@ -817,6 +833,7 @@ export async function processNppCorporationDecisions(
       currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
       techTreesEnabled,
       sectorResearchByLane,
+      techDiffusion,
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,

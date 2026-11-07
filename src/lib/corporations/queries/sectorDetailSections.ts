@@ -119,8 +119,7 @@ import { computePriceRealization } from "@/lib/market/priceRealization";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import {
   getStrategyAvailability,
-  getSectorTechEffects,
-  getSectorTechEffectsForYear,
+  type StrategyAvailabilityWorld,
   type TechCorpView,
 } from "@/lib/constants/techTree";
 import { COMMODITY_BASE_PRICES, computeBlendedMarginModifiers } from "@/lib/constants/commodities";
@@ -584,37 +583,6 @@ export type SectorPurchaseBlockReason =
   | "actions_paused"
   | "state_controlled";
 
-/** Tech-tree growth-cost reduction (%) shown on the financials panel. */
-export function computeTechGrowthCostReductionPct(args: {
-  techTreesEnabled: boolean;
-  mediaOperatingModelsEnabled?: boolean;
-  techCurrentYear: number;
-  techCorpView: TechCorpView;
-  sectorType: CorporationType;
-  industryModel?: CorporateSector["industryModel"];
-  mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
-}): number {
-  const {
-    techTreesEnabled,
-    techCurrentYear,
-    techCorpView,
-    sectorType,
-    industryModel,
-    mediaDiscriminator,
-  } = args;
-  if (!techTreesEnabled) return 0;
-  const effects = techCurrentYear
-    ? getSectorTechEffectsForYear(
-        techCorpView,
-        sectorType,
-        techCurrentYear,
-        industryModel,
-        mediaDiscriminator
-      )
-    : getSectorTechEffects(techCorpView, sectorType, industryModel, mediaDiscriminator);
-  return Math.round((1 - effects.growthCostMultiplier) * 100 * 10) / 10;
-}
-
 /** Strategy panel: current/available strategies, transition and cost fields. */
 export function buildSectorStrategySection(args: {
   preset?: string;
@@ -630,8 +598,8 @@ export function buildSectorStrategySection(args: {
   techCorpView: TechCorpView;
   techCurrentYear: number;
   techTreesEnabled: boolean;
-  /** World frontier research in this lane, for breakthrough methods. */
-  sectorResearch?: number;
+  /** Breakthrough research and, in diffusion worlds, country access. */
+  strategyWorld?: StrategyAvailabilityWorld;
   mediaOperatingModelsEnabled?: boolean;
   shouldRedact: boolean;
   stateResources: Partial<Record<ExtractableResource, number>> | null | undefined;
@@ -806,7 +774,7 @@ export function buildSectorStrategySection(args: {
             s,
             techCurrentYear,
             techTreesEnabled,
-            { sectorResearch: args.sectorResearch }
+            args.strategyWorld
           );
           const projection = projectStrategy(s);
           return {
@@ -815,6 +783,7 @@ export function buildSectorStrategySection(args: {
             description: s.description,
             locked: availability.locked,
             lockReason: availability.reason ?? null,
+            lockOpensYear: availability.opensYear ?? null,
             minDecade: s.minDecade ?? null,
             ...strategyRetoolPricing(args, strategies, s.id),
             // Margin points this strategy would move, at today's prices. null when redacted.

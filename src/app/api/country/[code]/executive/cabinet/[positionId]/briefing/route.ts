@@ -125,6 +125,10 @@ import {
 } from "@/lib/db/collections/cabinetSettings";
 import { getGameState } from "@/lib/gameState";
 import {
+  presetUsesLongSovereignTenors,
+  sovereignIssuanceMaturities,
+} from "@/lib/bonds/rules/sovereignTenors";
+import {
   expireMinisterialOrders,
   isMinisterialOrderActive,
 } from "@/lib/cabinet/ministerialOrderLifecycle";
@@ -969,6 +973,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
         chancellorAllocationPercent: null,
       })),
       sovereignBondProfile: budget?.sovereignBondProfile ?? null,
+      sovereignBondMaturities: [
+        ...sovereignIssuanceMaturities(presetUsesLongSovereignTenors(gameState?.preset)),
+      ],
       debtPrincipal: budget?.debt?.principal ?? 0,
       sovereignBondsOutstanding: sovereignBonds.reduce((sum, b) => sum + (b.totalIssued ?? 0), 0),
       canAct,

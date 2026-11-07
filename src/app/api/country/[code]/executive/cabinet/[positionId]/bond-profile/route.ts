@@ -12,21 +12,27 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { getGameState } from "@/lib/gameState";
-import { SOVEREIGN_BOND_MATURITY_ADMIN_OPTIONS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import {
+  SOVEREIGN_LONG_MATURITIES,
+  presetUsesLongSovereignTenors,
+  sovereignIssuanceMaturities,
+} from "@/lib/bonds/rules/sovereignTenors";
 import type { FederalBudget } from "@/lib/db/types/budget";
 
+// Shape check only: whether the world allows 10 and 30 year paper is checked
+// against the game state below.
 const bondProfileSchema = z.record(z.string(), z.number().min(0).max(1)).refine(
   (dist) => {
     const keys = Object.keys(dist).map(Number);
-    if (keys.some((k) => !SOVEREIGN_BOND_MATURITY_ADMIN_OPTIONS.includes(k as BondMaturityTurns)))
-      return false;
+    if (keys.some((k) => !SOVEREIGN_LONG_MATURITIES.includes(k as BondMaturityTurns))) return false;
     const total = Object.values(dist).reduce((s, v) => s + v, 0);
     return Math.abs(total - 1) < 0.001;
   },
   {
-    message: "distribution keys must be valid maturity turns (48/96/240) and values must sum to 1",
+    message:
+      "distribution keys must be valid maturity turns (48/96/240, plus 480/1440 where long tenors are open) and values must sum to 1",
   }
 );
 
@@ -84,6 +90,13 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const gameState = await getGameState();
     const currentTurn = gameState?.currentTurn ?? 1;
+    const allowed = sovereignIssuanceMaturities(presetUsesLongSovereignTenors(gameState?.preset));
+    const disallowed = Object.entries(parsed.data).some(
+      ([turns, share]) => share > 0 && !allowed.includes(Number(turns) as BondMaturityTurns)
+    );
+    if (disallowed) {
+      return errorResponse(400, "10 and 30 year bonds are not available in this world");
+    }
     const budgetId = getNationalBudgetId(countryId);
     const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
     if (!budget) {
@@ -102,8 +115,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Convert string keys from JSON to BondMaturityTurns numbers.
     const distribution = Object.fromEntries(
-      Object.entries(parsed.data).map(([k, v]) => [Number(k) as BondMaturityTurns, v])
-    ) as Partial<Record<BondMaturityTurns, number>>;
+      Object.entries(parsed.data)
+        .filter(([k, v]) => v > 0 || allowed.includes(Number(k) as BondMaturityTurns))
+        .map(([k, v]) => [Number(k) as BondMaturityTurns, v])
+    ) as Partial<Record<48 | 96 | 240 | 480 | 1440, number>>;
 
     const now = new Date();
     await db.collection<FederalBudget>("federalBudget").updateOne(

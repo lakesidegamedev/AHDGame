@@ -694,6 +694,7 @@ export default function CabinetOfficePage() {
                           debtPrincipal: data.debtPrincipal ?? 0,
                           sovereignBondsOutstanding: data.sovereignBondsOutstanding ?? 0,
                           sovereignBondProfile: data.sovereignBondProfile ?? null,
+                          sovereignBondMaturities: data.sovereignBondMaturities,
                           currentTurn: data.currentTurn ?? 1,
                         }
                       : null

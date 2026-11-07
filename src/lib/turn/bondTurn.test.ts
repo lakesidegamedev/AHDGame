@@ -1135,7 +1135,8 @@ describe("processBondTurn", () => {
     expect(issueScheduledSovereignBondSeries).toHaveBeenCalledWith(
       expect.anything(),
       10,
-      expect.any(Date)
+      expect.any(Date),
+      expect.objectContaining({})
     );
   });
 

@@ -137,7 +137,7 @@ export async function processBondTurn(
       { $unset: { bondDefaultCreditPenaltyUntilTurn: "" }, $set: { updatedAt: now } }
     );
 
-  await issueScheduledSovereignBondSeries(db, turn, now);
+  await issueScheduledSovereignBondSeries(db, turn, now, { preset: gameState?.preset });
   steps.mark("sovereignIssuance");
   // Snapshot new at-par issuance before the placement sweep can add cash to
   // those same bonds. Reconcile tranches convert existing debt, not proceeds.

@@ -7,12 +7,13 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 /**
  * Maturity in turns (48 turns = 1 game year).
  * 48/96/240 are historical corporate + sovereign choices; 336 = 7 years (new corporate only).
+ * 480 (10 years) and 1440 (30 years) are sovereign only, in worlds that opt in to long tenors.
  */
-export type BondMaturityTurns = 48 | 96 | 240 | 336;
+export type BondMaturityTurns = 48 | 96 | 240 | 336 | 480 | 1440;
 export type BondIssuerType = "corporation" | "sovereign";
 
 /** Every maturity value that may appear on stored bond documents (including legacy 1yr corporate). */
-export const BOND_MATURITY_OPTIONS: BondMaturityTurns[] = [48, 96, 240, 336];
+export const BOND_MATURITY_OPTIONS: BondMaturityTurns[] = [48, 96, 240, 336, 480, 1440];
 
 /**
  * New corporate bond issuance: minimum 2 game years, then 5yr and 7yr.
@@ -30,6 +31,8 @@ export const BOND_MATURITY_LABELS: Record<BondMaturityTurns, string> = {
   96: "2 Year",
   240: "5 Year",
   336: "7 Year",
+  480: "10 Year",
+  1440: "30 Year",
 };
 
 // ── Bond Document ────────────────────────────────────────────────────────────
