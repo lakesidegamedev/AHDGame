@@ -7,7 +7,7 @@ summary: >-
   chance, and most have a way to soften or prevent the damage.
 tags: [crises, events, world]
 badges: [minor]
-areas: [engine, content]
+areas: [engine]
 ---
 
 ## What changed
