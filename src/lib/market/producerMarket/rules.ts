@@ -1015,6 +1015,38 @@ export function settleProducerMarket(input: {
       };
     });
     type Member = (typeof members)[number];
+    // Which members can buy from each supplier does not depend on the price
+    // level, so work it out once per group: invert the route lists instead of
+    // testing every supplier against every member at every level.
+    const routed = members.some((m) => m.eligible);
+    const unrestricted: number[] = [];
+    const restricted = new Map<string, number[]>();
+    if (routed) {
+      members.forEach((m, i) => {
+        if (!m.eligible) unrestricted.push(i);
+        else
+          for (const id of m.eligible) {
+            const list = restricted.get(id);
+            if (list) list.push(i);
+            else restricted.set(id, [i]);
+          }
+      });
+    }
+    const indicesCache = new Map<string, number[]>();
+    const indicesOf = (supplierId: string): number[] => {
+      let indices = indicesCache.get(supplierId);
+      if (!indices) {
+        const own = restricted.get(supplierId) ?? [];
+        indices =
+          unrestricted.length === 0
+            ? own
+            : own.length === 0
+              ? unrestricted
+              : [...unrestricted, ...own].sort((x, y) => x - y);
+        indicesCache.set(supplierId, indices);
+      }
+      return indices;
+    };
     const key = bookKey(group[0].commodity, group[0].book);
     for (const [price, pool] of sortedPoolsByBook.get(key) ?? []) {
       // What a member could still buy at this level: target, reservation group,
@@ -1032,23 +1064,20 @@ export function settleProducerMarket(input: {
       // Unrestricted books retain their lazy pooled path. With routes, propose
       // shares at each reachable supplier simultaneously, so the first buyer
       // cannot drain a supplier before another eligible buyer gets its share.
-      const routed = members.some((m) => m.eligible);
       // Sellers reachable by the same buyers are interchangeable at this price.
       // Group them once rather than retaining an order-by-supplier fill matrix.
       const cohorts = new Map<string, { suppliers: ProducerOffer[]; live: Member[] }>();
       if (routed) {
         for (const supplier of offersByPool.get(pool) ?? []) {
-          const indices = members.flatMap((m, i) =>
-            !m.eligible || m.eligible.has(supplier.id) ? [i] : []
-          );
+          const indices = indicesOf(supplier.id);
           if (indices.length === 0) continue;
-          const key = JSON.stringify(indices);
-          const cohort = cohorts.get(key) ?? {
+          const cohortKey = indices.join(",");
+          const cohort = cohorts.get(cohortKey) ?? {
             suppliers: [],
             live: indices.map((i) => members[i]),
           };
           cohort.suppliers.push(supplier);
-          cohorts.set(key, cohort);
+          cohorts.set(cohortKey, cohort);
         }
       }
       const levels = routed ? [...cohorts.values()] : [{ suppliers: undefined, live: members }];
