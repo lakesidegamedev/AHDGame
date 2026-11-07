@@ -61,6 +61,7 @@ export function producerStageEnv(
         producerProcurementSpillShare?: number;
         producerShortageGrowthStage?: number;
         producerCaptiveDeliveryStage?: number;
+        fundedValuationOwnSiteCreditStage?: number;
         producerJointRunStage?: number;
         producerRunPlanStage?: number;
         producerSalesAdvancePriceStage?: number;
@@ -96,6 +97,7 @@ export function producerStageEnv(
     publicFairShareStage: config?.producerPublicFairShareStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
+    ownSiteValuationCredit: (config?.fundedValuationOwnSiteCreditStage ?? 0) >= 1,
     jointRunStage: config?.producerJointRunStage,
     runPlanStage: config?.producerRunPlanStage,
     salesAdvanceAtClearing: (config?.producerSalesAdvancePriceStage ?? 0) >= 1,

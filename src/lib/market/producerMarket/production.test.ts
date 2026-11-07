@@ -1930,3 +1930,178 @@ describe("own freight and the input gauge", () => {
     expect(JSON.stringify(run(2))).toBe(JSON.stringify(run(2, false)));
   });
 });
+
+describe("own-site deliveries credited to the valuation only", () => {
+  const mine = plant({
+    id: "mine",
+    inputs: [],
+    outputs: [
+      {
+        commodity: "energy",
+        book: "world",
+        unitsPerOutput: 2,
+        policy: { kind: "manual", unitPrice: 10 },
+        referenceUnitPrice: 10,
+        storable: true,
+      },
+    ],
+  });
+  const consumer = plant({ id: "consumer" });
+  const outside = {
+    externalOffers: [
+      {
+        id: "outside",
+        accountId: "supplier",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        unitPrice: 8,
+      },
+    ],
+    externalOrders: [
+      {
+        id: "town",
+        accountId: "households",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        maximumUnitPrice: 9,
+      },
+    ],
+  };
+  const request = { turn: 1, accounts, producers: [mine, consumer], ...outside };
+  const byId = (r: ReturnType<typeof advanceProducerEconomy>, id: string) =>
+    r.producers.find((p) => p.id === id)!;
+  const physical = (r: ReturnType<typeof advanceProducerEconomy>) =>
+    r.producers.map((p) => [
+      p.id,
+      p.producedUnits,
+      p.deliveredUnits,
+      p.soldUnits,
+      p.revenue,
+      p.cashFlow,
+      p.profit,
+      p.internalSupplyIncome,
+      p.internalSupplyCharge,
+    ]);
+
+  it("credits the supplier and charges the receiver the lane price, netting to zero", () => {
+    const on = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    const units = byId(on, "mine").products[0].internalDeliveredUnits!;
+    expect(units).toBeGreaterThan(0);
+    expect(byId(on, "mine").soldUnits).toBe(0);
+    expect(byId(on, "mine").revenue).toBe(0);
+    expect(byId(on, "mine").valuationCredit).toBeCloseTo(units * 8, 8);
+    expect(byId(on, "consumer").valuationCharge).toBeCloseTo(units * 8, 8);
+    const credit = on.producers.reduce((n, p) => n + (p.valuationCredit ?? 0), 0);
+    const charge = on.producers.reduce((n, p) => n + (p.valuationCharge ?? 0), 0);
+    expect(credit).toBeCloseTo(charge, 8);
+  });
+
+  it("changes no account, cash, profit or site entry, and is absent when off", () => {
+    const off = advanceProducerEconomy(request);
+    const on = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    for (const p of off.producers) {
+      expect(p.valuationCredit).toBeUndefined();
+      expect(p.valuationCharge).toBeUndefined();
+    }
+    expect(on.accounts).toEqual(off.accounts);
+    expect(physical(on)).toEqual(physical(off));
+  });
+
+  it("treats a Free company and a company with no mode set alike", () => {
+    const free = advanceProducerEconomy({
+      ...request,
+      producers: [mine, consumer].map((p) => ({
+        ...p,
+        internalTransferPricing: { mode: "free" as const },
+      })),
+      ownSiteValuationCredit: true,
+    });
+    const unset = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    expect(byId(free, "mine").valuationCredit).toBeGreaterThan(0);
+    expect(byId(free, "mine").valuationCredit).toBe(byId(unset, "mine").valuationCredit);
+    expect(byId(free, "consumer").valuationCharge).toBe(byId(unset, "consumer").valuationCharge);
+  });
+
+  it("falls back to the site's ask when the lane did not trade", () => {
+    const on = advanceProducerEconomy({
+      ...request,
+      externalOffers: [],
+      externalOrders: [],
+      ownSiteValuationCredit: true,
+    });
+    const units = byId(on, "mine").products[0].internalDeliveredUnits!;
+    expect(units).toBeGreaterThan(0);
+    expect(byId(on, "mine").valuationCredit).toBeCloseTo(units * 10, 8);
+    expect(byId(on, "consumer").valuationCharge).toBeCloseTo(units * 10, 8);
+  });
+
+  it("leaves a company with an explicit transfer price on its own entries", () => {
+    const priced = [mine, consumer].map((p) => ({
+      ...p,
+      internalTransferPricing: { mode: "cost" as const },
+    }));
+    const base = advanceProducerEconomy({ ...request, producers: priced });
+    const on = advanceProducerEconomy({
+      ...request,
+      producers: priced,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(base, "mine").internalSupplyIncome).toBeGreaterThan(0);
+    for (const p of on.producers) {
+      expect(p.valuationCredit).toBeUndefined();
+      expect(p.valuationCharge).toBeUndefined();
+    }
+    expect(physical(on)).toEqual(physical(base));
+  });
+
+  it("does not credit twice an opted-in company whose market-value entries are booked", () => {
+    const optedIn = [mine, consumer].map((p) => ({ ...p, ownSiteMarketValue: true }));
+    const booked = advanceProducerEconomy({
+      ...request,
+      producers: optedIn,
+      captiveMarketValue: true,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(booked, "mine").internalSupplyIncome).toBeGreaterThan(0);
+    for (const p of booked.producers) {
+      expect(p.valuationCredit).toBeUndefined();
+      expect(p.valuationCharge).toBeUndefined();
+    }
+    // The same opt-in while that booking is off books nothing, so the credit applies.
+    const unbooked = advanceProducerEconomy({
+      ...request,
+      producers: optedIn,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(unbooked, "mine").valuationCredit).toBeGreaterThan(0);
+  });
+
+  it("credits an unset company under stage 3 that did not opt in", () => {
+    const on = advanceProducerEconomy({
+      ...request,
+      captiveMarketValue: true,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(on, "mine").internalSupplyIncome).toBeUndefined();
+    expect(byId(on, "mine").valuationCredit).toBeGreaterThan(0);
+  });
+
+  it("credits a newly founded company's first turn and the first turn after the switch alike", () => {
+    // Nothing is stamped on a new plan (no prior run share, glut count or stock).
+    const founded = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    expect(byId(founded, "mine").plannedRunShare).toBeUndefined();
+    expect(byId(founded, "mine").valuationCredit).toBeGreaterThan(0);
+    // The turn before the switch carries no fields; the next one adds them without
+    // moving anything physical.
+    const before = advanceProducerEconomy(request);
+    const after = advanceProducerEconomy({ ...request, turn: 2, ownSiteValuationCredit: true });
+    expect(byId(before, "mine").valuationCredit).toBeUndefined();
+    expect(byId(after, "mine").valuationCredit).toBeCloseTo(
+      byId(founded, "mine").valuationCredit!,
+      8
+    );
+    expect(physical(after)).toEqual(physical(before));
+  });
+});
