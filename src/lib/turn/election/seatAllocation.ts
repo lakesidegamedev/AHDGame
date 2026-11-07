@@ -162,7 +162,7 @@ export function largestRemainderSeats(
     ? [...candidates]
         .sort((a, b) => b.votes - a.votes)
         .slice(0, Math.min(totalSeats, candidates.length))
-    : eligible;
+    : admitUntilMajority(candidates, eligible, votesByGroup, groupKey, opts.totalVotesForShare);
 
   const poolVotes = pool.reduce((sum, c) => sum + c.votes, 0);
   if (pool.length === 0 || poolVotes === 0) {
@@ -181,6 +181,38 @@ export function largestRemainderSeats(
   for (const a of assigned) seats[a.id] = a.seats;
 
   return { seats, poolIds: pool.map((c) => c.id), poolVotes, usedFallback };
+}
+
+/**
+ * A multi-seat bloc is never apportioned on the votes of less than half the
+ * electorate. When the gate leaves a pool that holds under 50% of the votes
+ * (typically one plurality party in a fragmented field), the next-strongest
+ * party groups are readmitted until the pool holds a majority. Without this a
+ * party on a quarter of the vote took the whole bloc, and a few cycles of that
+ * turned multi-party countries into one-party legislatures.
+ */
+function admitUntilMajority(
+  candidates: ReadonlyArray<ApportionmentCandidate>,
+  eligible: ApportionmentCandidate[],
+  votesByGroup: ReadonlyMap<string, number>,
+  groupKey: (c: ApportionmentCandidate) => string,
+  totalVotesForShare: number
+): ApportionmentCandidate[] {
+  if (totalVotesForShare <= 0) return eligible;
+  const admitted = new Set(eligible.map(groupKey));
+  let poolShare = 0;
+  for (const k of admitted) poolShare += votesByGroup.get(k) ?? 0;
+  if (poolShare / totalVotesForShare >= 0.5) return eligible;
+
+  const waiting = [...votesByGroup.entries()]
+    .filter(([k, v]) => !admitted.has(k) && v > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  for (const [k, v] of waiting) {
+    if (poolShare / totalVotesForShare >= 0.5) break;
+    admitted.add(k);
+    poolShare += v;
+  }
+  return candidates.filter((c) => admitted.has(groupKey(c)));
 }
 
 export interface SeatAllocationResult {
