@@ -598,36 +598,38 @@ export async function buildProducerTurnDemand(
     eligibleOffersByOrder = routeEligibility(orders, offers, open);
     // One list per (commodity, buyer country): households, public and
     // marketing orders repeat the same pairs, and each call regroups every offer.
-    const listCache = new Map<string, readonly string[]>();
+    const listCache = new Map<string, readonly string[] | undefined>();
     const listFor = (commodity: string, country: string) => {
       const key = `${commodity}|${country}`;
-      let list = listCache.get(key);
-      if (!list) {
-        list =
-          routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x ?? [];
-        listCache.set(key, list);
-      }
-      return list;
+      if (!listCache.has(key))
+        listCache.set(
+          key,
+          routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x
+        );
+      return listCache.get(key);
+    };
+    const restrict = (row: { eligibleOfferIds?: readonly string[] }, list?: readonly string[]) => {
+      if (list) row.eligibleOfferIds = list;
     };
     for (const h of households)
       for (const product of h.products)
         if (product.book === "world")
-          (product as { eligibleOfferIds?: readonly string[] }).eligibleOfferIds = listFor(
-            product.commodity,
-            walletCountry.get(h.accountId) ?? ""
+          restrict(
+            product as { eligibleOfferIds?: readonly string[] },
+            listFor(product.commodity, walletCountry.get(h.accountId) ?? "")
           );
     const publicCountry = new Map(funding.map((f) => [publicAccountId(f.countryId), f.countryId]));
     for (const o of publicBuyerOrders)
       if (o.book === "world")
-        o.eligibleOfferIds = listFor(o.commodity, publicCountry.get(o.accountId) ?? "");
+        restrict(o, listFor(o.commodity, publicCountry.get(o.accountId) ?? ""));
     const investmentCountry = new Map(
       investmentFunding.map((f) => [investmentAccountId(f.countryId), f.countryId])
     );
     for (const o of investmentBuyerOrders)
       if (o.book === "world")
-        o.eligibleOfferIds = listFor(o.commodity, investmentCountry.get(o.accountId) ?? "");
+        restrict(o, listFor(o.commodity, investmentCountry.get(o.accountId) ?? ""));
     for (const o of marketingOrders)
-      o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
+      restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
   }
 
   const references = Object.fromEntries(
