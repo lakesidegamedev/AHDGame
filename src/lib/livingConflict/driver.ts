@@ -2,6 +2,7 @@ import { advanceArabRegionalTurn, reconcileArabTerrorismSpillover } from "./arab
 import { advancePandemicState, pandemicOpeningYear, PANDEMIC_KEY } from "./rules/pandemic";
 import type { Db } from "mongodb";
 import { hasRequiredBelligerents } from "./rules/participants";
+import { openingWindowOpen } from "./rules/openingWindow";
 import type {
   ConflictActor,
   ConflictRole,
@@ -104,13 +105,6 @@ export interface DriveResult {
   events: DrivenEvent[];
 }
 
-function inWindow(def: LivingConflictDef, year: number | null | undefined): boolean {
-  if (def.fromYear !== undefined && (typeof year !== "number" || year < def.fromYear)) return false;
-  if (def.untilYear !== undefined && (typeof year !== "number" || year > def.untilYear))
-    return false;
-  return true;
-}
-
 /**
  * Advance one conflict by one turn. Pure over its inputs apart from the two DB
  * calls (load/save), so the sequencing is testable against a fake db.
@@ -153,17 +147,7 @@ export async function driveConflictTurn(
       year < pandemicOpeningYear(participants)
     )
       return { state, events: [] };
-    // A surviving federation in the authored 2027 world is an explicit
-    // counterfactual, not a replay of the historical 1991-2010 window.
-    const survivingFederation =
-      def.key === "yugoslav_dissolution" &&
-      state.openingProvenance?.preset === "2027-default" &&
-      state.openingDisposition === "counterfactual" &&
-      year === 2027;
-    if (
-      (!inWindow(def, year) && !survivingFederation) ||
-      !hasRequiredBelligerents(def, participants)
-    ) {
+    if (!openingWindowOpen(def, state, year) || !hasRequiredBelligerents(def, participants)) {
       return { state, events: [] };
     }
     if (def.minimumOpeningPressure !== undefined && externalPressure < def.minimumOpeningPressure) {
