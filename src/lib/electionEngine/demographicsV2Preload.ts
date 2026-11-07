@@ -96,6 +96,7 @@ export function loadElectionDemographicsGameState(db: Db): Promise<GameState | n
         resetWorldId: 1,
         resetVersionSeeds: 1,
         demographicsSystemVersion: 1,
+        nppPartyRenewalEnabled: 1,
       },
     }
   );

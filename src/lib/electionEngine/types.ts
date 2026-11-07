@@ -468,6 +468,11 @@ export interface AccumulateVoteTurnPreload {
    */
   eraSystemEnabled?: boolean;
   /**
+   * gameState.nppPartyRenewalEnabled. When true the seat-share incumbency
+   * shield stops growing past half the seats (#5704).
+   */
+  partyRenewalEnabled?: boolean;
+  /**
    * Seeded per-state snapshots (`demographicDefaults` collection), used by the
    * granular substrate to fold legislation-driven lean drift onto cells.
    */

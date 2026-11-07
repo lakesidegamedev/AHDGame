@@ -144,6 +144,13 @@ export interface PoliticalParty {
   isDefunct?: boolean;
   defunctAtTurn?: number;
   mergedIntoPartyId?: ObjectId;
+  /** Set on a party created by NPP party renewal: how and when it formed. */
+  renewalOrigin?: {
+    kind: "splinter" | "founding";
+    cycle: number;
+    /** Splinter parent's sequential id. */
+    parentPartyId?: string;
+  };
   /**
    * Presidential primary calendar family. Determines wave schedule + delegate table.
    * Built-in parties (democrat/green/progressive/dem-socialist → "dem",

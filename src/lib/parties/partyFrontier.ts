@@ -13,6 +13,11 @@
  * the same signal `checkPartyPresence` uses, so a recruited NPP extends the
  * frontier and a party expands outward one hop at a time.
  *
+ * Party renewal (#5704) adds re-entry: a region the party held in either of the
+ * last two renewal cycles stays in its frontier, so a wipe-out is not a
+ * permanent lock-out. Worlds without party renewal have no renewal rows and
+ * keep the plain one-hop frontier.
+ *
  * Presence is always read LIVE. Never gate on `statePartyOrg.hasPresence` —
  * that cached flag only refreshes on membership events and lags, which is the
  * same reason the Build Org foothold rule re-checks presence live.
@@ -22,6 +27,8 @@ import { STATE_ADJACENCY, adjacentStates } from "@/lib/constants/stateAdjacency"
 import type { Character, ElectedOfficial, NPP, PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { connectedGrowthFrontier, type TerritoryAdjacency } from "./rules/territory";
+import { reentryRegions } from "./rules/partyRenewal";
+import { getPartyRenewalStatesCollection } from "@/lib/db/collections/partyRenewalStates";
 
 /** Keep paths inside the country's current region set, including transferred regions. */
 export function getTerritoryAdjacency(
@@ -159,14 +166,43 @@ export async function getPartyFrontier(
 ): Promise<{ presence: Set<string>; frontier: Set<string> }> {
   const regions = regionIds ?? (await getCountryRegionIds(db, countryId));
   const presence = await getPartyPresenceStates(db, countryId, partyId, regions);
-  return {
+  const frontier = connectedGrowthFrontier(
     presence,
-    frontier: connectedGrowthFrontier(
-      presence,
-      expandFrontier(countryId, presence),
-      getTerritoryAdjacency(countryId, regions)
-    ),
-  };
+    expandFrontier(countryId, presence),
+    getTerritoryAdjacency(countryId, regions)
+  );
+  // An empty presence already fails open, so only a present party needs the read.
+  if (presence.size > 0) {
+    const reentry = await loadReentryRegions(db, countryId, [partyId]);
+    for (const region of reentry.get(partyId) ?? []) {
+      if (regions.includes(region)) frontier.add(region);
+    }
+  }
+  return { presence, frontier };
+}
+
+/** Regions each party may re-enter under party renewal. Empty without renewal rows. */
+export async function loadReentryRegions(
+  db: Db,
+  countryId: CountryId,
+  partyIds: readonly string[]
+): Promise<Map<string, string[]>> {
+  const row = await getPartyRenewalStatesCollection(db).findOne(
+    { _id: countryId },
+    {
+      projection: {
+        cycleIndex: 1,
+        ...Object.fromEntries(partyIds.map((id) => [`heldRegions.${id}`, 1])),
+      },
+    }
+  );
+  const out = new Map<string, string[]>();
+  if (!row) return out;
+  for (const id of partyIds) {
+    const regions = reentryRegions(row.heldRegions?.[id], row.cycleIndex ?? 0);
+    if (regions.length > 0) out.set(id, regions);
+  }
+  return out;
 }
 
 /** Batch live presence for a country's parties without expanding adjacency. */
@@ -217,17 +253,22 @@ export async function getPartyFrontiers(
   if (partyIds.length === 0) return new Map();
   const regions = await getCountryRegionIds(db, countryId);
   const presence = await getPartyPresenceMap(db, countryId, partyIds, regions);
+  const present = [...presence].filter(([, states]) => states.size > 0).map(([id]) => id);
+  const reentry = present.length > 0 ? await loadReentryRegions(db, countryId, present) : new Map();
   return new Map(
     [...presence].map(([id, states]) => [
       id,
       states.size === 0
         ? null
         : [
-            ...connectedGrowthFrontier(
-              states,
-              expandFrontier(countryId, states),
-              getTerritoryAdjacency(countryId, regions)
-            ),
+            ...new Set([
+              ...connectedGrowthFrontier(
+                states,
+                expandFrontier(countryId, states),
+                getTerritoryAdjacency(countryId, regions)
+              ),
+              ...(reentry.get(id) ?? []).filter((region: string) => regions.includes(region)),
+            ]),
           ].sort(),
     ])
   );

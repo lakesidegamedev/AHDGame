@@ -122,6 +122,13 @@ export interface TurnLog {
       speakerVotesCast: number;
     } | null;
 
+    nppPartyRenewal?: {
+      countries: number;
+      splinters: number;
+      foundings: number;
+      folds: number;
+    } | null;
+
     billLifecycle: {
       billsProcessed: number;
       billsPassed: number;

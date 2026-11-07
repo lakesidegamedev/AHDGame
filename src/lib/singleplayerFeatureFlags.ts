@@ -57,6 +57,7 @@ const LABELS: Record<SingleplayerFeatureFlagKey, string> = {
   regionalLegislationFinanceEnabled: "Regional legislation finance",
   canonicalPoliticalMetricsEnabled: "Canonical political metrics",
   nppTurnoverEnabled: "Politician aging and retirement",
+  nppPartyRenewalEnabled: "Party renewal",
 };
 
 const descriptions: Partial<Record<SingleplayerFeatureFlagKey, string>> = {
@@ -65,6 +66,8 @@ const descriptions: Partial<Record<SingleplayerFeatureFlagKey, string>> = {
   nppOffensiveJoinEnabled: "Let autonomous countries join offensives.",
   nppTurnoverEnabled:
     "Computer-run politicians grow old, retire and die, and are replaced by younger members of their party.",
+  nppPartyRenewalEnabled:
+    "Computer-run parties can split, new parties can form in empty political ground, and parties under 2% fold.",
 };
 
 /**

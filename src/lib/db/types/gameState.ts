@@ -347,6 +347,15 @@ export interface GameState {
    */
   nppTurnoverEnabled?: boolean;
   /**
+   * NPP party renewal: in NPP-run countries a long-dominant or unpopular party
+   * can splinter, an empty stretch of the ideological map can found a new
+   * party, a party under 2% for two general elections folds into its nearest
+   * neighbour, the seat-share incumbency shield stops growing past half the
+   * seats, and a party may re-enter regions it held within two cycles.
+   * Absent or false keeps the legacy frozen roster. Fresh worlds seed true.
+   */
+  nppPartyRenewalEnabled?: boolean;
+  /**
    * Foreign-policy planner rollout. Absent defaults to shadow so autonomous
    * countries produce auditable intent without changing world state.
    */

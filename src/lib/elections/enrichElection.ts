@@ -95,6 +95,7 @@ import { selectGeneralPhaseDisplayCandidates } from "@/lib/elections/generalPhas
 import { computeElectoralVotes } from "@/lib/elections/electoralVoteService";
 import { getFundsByPartyForElection } from "@/lib/electionEngine/fundsByParty";
 import { getIncumbentSeatShareByParty } from "@/lib/electionEngine/incumbentSeatShare";
+import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
 import {
   resolveSingleSeatLegislativeIncumbent,
   isSingleSeatLegislativeRace,
@@ -1041,7 +1042,12 @@ export async function _enrichElection(
     // single-winner race (US Senate + executives), so the card can never show
     // a prior vote split as an "Incumbency" row on a vacant seat.
     if (seatShareMap.size > 0) {
-      incumbentSeatShareByPartyMap = Object.fromEntries(seatShareMap);
+      // Same ratchet cap the vote engine applies under party renewal.
+      incumbentSeatShareByPartyMap = Object.fromEntries(
+        gameState?.nppPartyRenewalEnabled === true
+          ? capIncumbentSeatShares(seatShareMap)
+          : seatShareMap
+      );
     }
 
     // Per-party registration for the race's state so the driver card can
