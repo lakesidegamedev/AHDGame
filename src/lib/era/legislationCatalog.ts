@@ -15,6 +15,7 @@
 
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
+import { MODERN_ERA_LEGISLATION_ERA_ENTRIES } from "@/lib/seeds/shared/modernEraLegislation";
 
 export const LEGISLATION_ERA: Record<string, number | "always"> = {
   // ── Windowed (74) — numbers are the first fileable calendar year ──────────
@@ -738,7 +739,20 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   // Banking separation: reusable charter law, era-universal for every legislature.
   ...BANKING_SEPARATION_ERA_ENTRIES,
   ...MECHANICAL_LEGISLATION_ERA_ENTRIES,
+  // 2027 and 2030 law types (AI liability, housing supply, wage insurance, ...).
+  ...MODERN_ERA_LEGISLATION_ERA_ENTRIES,
 };
+
+/**
+ * Optional end of filing for a LEGISLATION_ERA entry: the first calendar year in
+ * which no NEW bill may legislate the type. Old laws fade rather than vanish, so
+ * an enacted law of the type stays in force, keeps its budget line and keeps its
+ * effects; only proposing and sponsoring stop. Keys must be LEGISLATION_ERA keys
+ * and each year must fall after the entry's first fileable year.
+ *
+ * Empty on purpose: no type retires yet.
+ */
+export const LEGISLATION_ERA_UNTIL: Record<string, number> = {};
 
 /**
  * Types whose classification predates their windowed PRIMARY metric — either
@@ -778,6 +792,20 @@ export function isLegislationTypeActive(typeId: string, year: number | null): bo
   const from = LEGISLATION_ERA[typeId];
   if (from === undefined || from === "always") return true;
   return year >= from;
+}
+
+/**
+ * True if a NEW bill may legislate the type at `year`: it exists
+ * ({@link isLegislationTypeActive}) and has not passed its
+ * {@link LEGISLATION_ERA_UNTIL} year. Use this on filing, sponsoring and
+ * proposal-picker paths only; enacted laws keep resolving through
+ * isLegislationTypeActive so they stay in force after filing closes.
+ */
+export function isLegislationTypeFileable(typeId: string, year: number | null): boolean {
+  if (!isLegislationTypeActive(typeId, year)) return false;
+  if (year == null || !Number.isFinite(year)) return true;
+  const until = LEGISLATION_ERA_UNTIL[typeId.split(/__(?:income|capital)_/)[0]];
+  return until === undefined || year < until;
 }
 
 /** True while `from <= year <= from + NEW_BADGE_YEARS`. Null year / "always" ⇒ false. */
