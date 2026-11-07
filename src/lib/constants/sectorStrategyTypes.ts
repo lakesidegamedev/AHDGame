@@ -43,6 +43,21 @@ export interface SectorStrategy {
    */
   minDecade?: string;
   requiresTechUnlock?: boolean;
+  /**
+   * Breakthrough gate: cumulative world frontier research in this method's
+   * sector (rdScore spent on late-tier research by every corporation in the
+   * sector, see techTree/breakthrough) must reach this before the method
+   * opens, on top of `minDecade`. A sector nobody researches never gets it.
+   */
+  researchThreshold?: number;
+  /**
+   * Tier id from which this method is retired: closed to new sites and
+   * retools, existing sites pay a rising operating penalty, and a retool to
+   * one of `successorIds` gets a conversion discount. See techTree/sunset.
+   */
+  sunsetDecade?: string;
+  /** Named successors a sunset method converts to at the discount. */
+  successorIds?: string[];
   /** Present on virtual strategy definitions backed by the media model catalog. */
   mediaOperatingModelId?: MediaOperatingModelId;
 }

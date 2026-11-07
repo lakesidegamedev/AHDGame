@@ -494,4 +494,48 @@ export const VEHICLES_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Self-Sequencing Lines",
+      description: "Lines reorder parts and stations on their own as demand shifts.",
+      effects: [
+        { kind: "growthCostReduction", pct: 0.05 },
+        { kind: "laborCostReduction", pct: 0.05 },
+      ],
+    },
+    {
+      name: "Personal Cabin Editions",
+      description: "Cabins tuned to each owner sell as the premium option.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Mobility Network Contracts",
+      description: "City mobility contracts guarantee volume through any retail slump.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Lights-Out Vehicle Plants",
+      description: "Plants build vehicles start to finish with a small supervisory team.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "vehicles", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Rolling Living Suites",
+      description: "Vehicles sold as mobile homes and offices price like luxury property.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 34 },
+      ],
+    },
+    {
+      name: "Planetary Mobility Programs",
+      description: "Region-wide transit and freight deals tie the firm into transport policy.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "tariffShield", pct: 0.2 },
+      ],
+    },
+  ],
 };

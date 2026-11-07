@@ -505,4 +505,51 @@ export const MEDIA_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Autonomous Fact Engines",
+      description: "Agents verify every claim and image the moment it appears.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.065 },
+        { kind: "inputCost", commodity: "software", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Verified Reality Subscriptions",
+      description: "Readers pay more for news proven by signed sensors.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Synthetic Media Standards",
+      description: "Audited labels for generated media keep the outlet clear of new liability.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.11 },
+        { kind: "tariffShield", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Self-Running Newsrooms",
+      description: "Agents cover every beat worldwide with one editor signing off.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "growthCostReduction", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Neural Sponsorship Feeds",
+      description: "Sponsors buy placement in briefings delivered straight to one reader.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Cultural Sovereignty Deals",
+      description: "Local studios in every market meet the strictest content quotas.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.16 },
+      ],
+    },
+  ],
 };

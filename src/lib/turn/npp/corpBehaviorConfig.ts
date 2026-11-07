@@ -11,6 +11,7 @@ import {
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { frontierResearchInc } from "@/lib/corporations/techTree/frontierResearch";
 
 /**
  * Pick one deterministic, affordable node per turn. Sector-lane nodes win ties
@@ -120,6 +121,7 @@ export function maybePushNppTechUnlock(args: {
   const techInc: Record<string, number> = {
     rdScore: -techNode.cost,
     liquidCapital: -cashCost,
+    ...frontierResearchInc(techNode.decadeId, techNode.cost),
   };
   if (grants.marketingStrength > 0) techInc.marketingStrength = grants.marketingStrength;
   if (grants.logisticsStrength > 0) techInc.logisticsStrength = grants.logisticsStrength;

@@ -12,7 +12,7 @@ areas: [engine]
 
 ## What changed
 
-- A new research tier opens in 2039 and stays current after 2049. Main nodes cost 60 R&D score, specializations 120 and capstones 180.
+- A new research tier opens in 2039. Main nodes cost 60 R&D score, specializations 120 and capstones 180.
 - The Corporate lane covers agent-run operations, automated compliance and supply networks that survive disruption.
 - Every sector has a full 2039 Sector lane, including a specialization and capstones.
 - New production methods, each unlocked by a 2039 Sector node:

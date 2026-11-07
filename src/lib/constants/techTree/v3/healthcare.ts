@@ -518,4 +518,49 @@ export const HEALTHCARE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Autonomous Care Pathways",
+      description: "Agents run each patient's care from first symptom to recovery.",
+      effects: [{ kind: "laborCostReduction", pct: 0.065 }],
+    },
+    {
+      name: "Healthspan Memberships",
+      description: "Members pay a yearly fee for added healthy years, not for treatment.",
+      effects: [
+        { kind: "plantOutput", pct: 0.019 },
+        { kind: "marketingStrength", flat: 17 },
+      ],
+    },
+    {
+      name: "Gene Therapy Licensing",
+      description: "Certified editing platforms clear new gene therapy rules ahead of rivals.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Robotic Care Campuses",
+      description: "Robots run surgery prep, pharmacy and wards around a small clinical team.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "inputCost", commodity: "pharmaceuticals", pct: 0.11 },
+      ],
+    },
+    {
+      name: "One-Dose Cure Portfolios",
+      description: "Single-dose gene cures price against a lifetime of avoided treatment.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "healthcare_services", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Planetary Biodefense Contracts",
+      description:
+        "Standing contracts to answer any pandemic within weeks guarantee long-term funding.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

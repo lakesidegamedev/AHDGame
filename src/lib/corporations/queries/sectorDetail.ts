@@ -172,6 +172,7 @@ import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 
 import type { SiblingCorpProjection } from "./sectorDetailTypes";
+import { loadLaneBreakthroughResearch } from "@/lib/corporations/techTree/frontierResearch";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -628,6 +629,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                         mediaDiscriminator: 1,
                         unlockedTechNodeIds: 1,
                         techDecadeLane: 1,
+                        frontierProgrammes: 1,
                       }
                     : {}),
                 },
@@ -786,7 +788,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       mediaDiscriminator: corporation.mediaDiscriminator,
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
+      frontierProgrammes: corporation.frontierProgrammes,
     };
+    const sectorResearch = await loadLaneBreakthroughResearch(db, sectorType, techTreesEnabled);
     const effectiveRates = getEffectiveStrategyRatesForOperatingModel(
       sectorType,
       sector.strategyId ?? "standard",
@@ -1326,8 +1330,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           sectorDetailPreset
         ),
         isAvailable: (candidate) =>
-          !getStrategyAvailability(techCorpView, candidate, techCurrentYear, techTreesEnabled)
-            .locked,
+          !getStrategyAvailability(techCorpView, candidate, techCurrentYear, techTreesEnabled, {
+            sectorResearch,
+          }).locked,
         supplyFor: (candidate) =>
           applyExtractionResourceCapacityToSupply(
             sectorType,
@@ -1922,6 +1927,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         techCorpView,
         techCurrentYear,
         techTreesEnabled,
+        sectorResearch,
         mediaOperatingModelsEnabled: governorConfig?.mediaOperatingModelsEnabled === true,
         shouldRedact,
         stateResources,

@@ -524,4 +524,47 @@ export const AGRICULTURE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Closed-Loop Nutrient Farms",
+      description: "Every nutrient is recovered and fed back into the next crop.",
+      effects: [{ kind: "inputCost", commodity: "fertilizers", pct: 0.1 }],
+    },
+    {
+      name: "Designer Nutrition Harvests",
+      description: "Crops bred for each buyer's health goals sell well above commodity grade.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Global Food Resilience Pacts",
+      description:
+        "Treaty food-supply programs guarantee market access whatever the trade climate.",
+      effects: [{ kind: "tariffShield", pct: 0.14 }],
+    },
+    {
+      name: "Self-Running Fermentation Halls",
+      description: "Fermentation halls run themselves and power each other with waste heat.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "inputCost", commodity: "energy", pct: 0.12 },
+      ],
+    },
+    {
+      name: "Personal Nutrition Brands",
+      description: "Food made to each household's genome sells at the top of the market.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "food", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Planetary Food Reserves",
+      description:
+        "Holding reserves that feed several nations makes the firm politically untouchable.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

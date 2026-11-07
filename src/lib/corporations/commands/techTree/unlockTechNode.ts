@@ -13,6 +13,7 @@ import {
   buildTechUnlockTxEntry,
   refundSpecForNode,
 } from "@/lib/corporations/techTree/techUnlockLedger";
+import { frontierResearchInc } from "@/lib/corporations/techTree/frontierResearch";
 import {
   canUnlock,
   getCommittedLane,
@@ -127,7 +128,11 @@ export async function unlockTechNode(
 
   // One-time strength grants applied here (not recomputed each turn).
   const grants = sumStrengthGrants(node.effects);
-  const inc: Record<string, number> = { rdScore: -node.cost, liquidCapital: -cashCost };
+  const inc: Record<string, number> = {
+    rdScore: -node.cost,
+    liquidCapital: -cashCost,
+    ...frontierResearchInc(node.decadeId, node.cost),
+  };
   if (grants.marketingStrength > 0) inc.marketingStrength = grants.marketingStrength;
   if (grants.logisticsStrength > 0) inc.logisticsStrength = grants.logisticsStrength;
 

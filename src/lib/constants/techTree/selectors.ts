@@ -23,6 +23,7 @@ import {
   type AggregatedTechEffects,
   type TechEffect,
 } from "./effects";
+import { frontierProgrammeEffects, type FrontierProgrammeCounts } from "./frontier";
 import {
   TECH_DECADES,
   getDecadeById,
@@ -39,6 +40,8 @@ export interface TechCorpView {
   unlockedTechNodeIds?: string[];
   /** Committed lane per decade id; absent decade ⇒ uncommitted. */
   techDecadeLane?: Record<string, TechLane>;
+  /** Frontier programmes bought after the last tier (see ./frontier). */
+  frontierProgrammes?: FrontierProgrammeCounts;
 }
 
 /** All nodes in a sector's tree. */
@@ -119,6 +122,7 @@ export function getSectorTechEffects(
       return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
     return isPrimary ? node.effects : [];
   });
+  if (isPrimary) effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
   return aggregateTechEffects(effects);
 }
 
@@ -410,5 +414,7 @@ export function getSectorTechEffectsForYear(
       return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
     return isPrimary ? node.effects : [];
   });
+  // Frontier programmes belong to no decade, so they never expire.
+  if (isPrimary) effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
   return aggregateTechEffects(effects);
 }

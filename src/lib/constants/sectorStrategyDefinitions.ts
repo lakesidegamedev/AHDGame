@@ -7,6 +7,23 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
   // ── Energy ──────────────────────────────────────────────────────────────
   energy: [
     {
+      id: "fusion_commercial",
+      requiresTechUnlock: true,
+      minDecade: "2049",
+      researchThreshold: 6000,
+      name: "Commercial Fusion",
+      description:
+        "Fleet-scale fusion plants that follow the pilots. The highest clean output, bought with the heaviest rare earth, electronics, steel and licensing bill of any power method.",
+      supply: { energy: 0.92 },
+      demand: {
+        rare_earth: 0.14,
+        electronics: 0.16,
+        steel: 0.16,
+        chemicals: 0.1,
+        consulting_services: 0.12,
+      },
+    },
+    {
       id: "grid_storage_utility",
       requiresTechUnlock: true,
       minDecade: "2039",
@@ -59,6 +76,10 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       id: "standard",
       name: "Conventional",
       description: "Traditional fossil-fuel energy generation with established infrastructure.",
+      // Coal-heavy conventional power retires with the 2039 tier: closed to new
+      // plants, rising running costs for old ones, discounted conversion.
+      sunsetDecade: "2039",
+      successorIds: ["advanced_fission", "renewables"],
       // Matches SECTOR_SUPPLY/SECTOR_DEMAND in commodities.ts (energy output 0.65, oil 0.07, rare_earth 0.04; rare_earth covers copper).
       supply: { energy: 0.65 },
       demand: {
@@ -247,6 +268,17 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
 
   // ── Technology ────────────────────────────────────────────────────────
   technology: [
+    {
+      id: "neural_interfaces",
+      requiresTechUnlock: true,
+      minDecade: "2049",
+      researchThreshold: 7000,
+      name: "Neural Interfaces",
+      description:
+        "Brain-computer interfaces for work and medicine. High-value devices and software, with rare earths, power and a large compliance and safety bill.",
+      supply: { software: 0.48, electronics: 0.22 },
+      demand: { rare_earth: 0.08, energy: 0.14, consulting_services: 0.12, chemicals: 0.04 },
+    },
     {
       id: "agentic_services",
       requiresTechUnlock: true,
@@ -461,6 +493,23 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
 
   healthcare: [
     {
+      id: "gene_therapy_scale",
+      requiresTechUnlock: true,
+      minDecade: "2049",
+      researchThreshold: 5000,
+      name: "Gene Therapy at Scale",
+      description:
+        "Curative gene therapies made in volume. Strong care output with a medicine co-product, held back by lab chemicals, compute and a heavy regulatory bill.",
+      supply: { healthcare_services: 0.56, pharmaceuticals: 0.12 },
+      demand: {
+        chemicals: 0.12,
+        electronics: 0.1,
+        software: 0.12,
+        energy: 0.06,
+        consulting_services: 0.08,
+      },
+    },
+    {
       id: "biofoundry",
       requiresTechUnlock: true,
       minDecade: "2039",
@@ -550,6 +599,10 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
     {
       id: "standard",
       name: "Standard",
+      // Combustion-engine lines retire with the 2049 tier in favor of electric
+      // and autonomous vehicles.
+      sunsetDecade: "2049",
+      successorIds: ["ev", "autonomous_driving"],
       description: "Traditional automotive manufacturing with internal combustion focus.",
       supply: { vehicles: 0.5 },
       demand: {
@@ -844,6 +897,23 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
 
   // ── Real Estate ───────────────────────────────────────────────────────
   real_estate: [
+    {
+      id: "autonomous_districts",
+      requiresTechUnlock: true,
+      minDecade: "2049",
+      researchThreshold: 5000,
+      name: "Autonomous Districts",
+      description:
+        "Whole neighborhoods run by agents, storage and sensors. More service per building, paid for with software, electronics, power and constant network traffic.",
+      supply: { real_estate_services: 0.6 },
+      demand: {
+        software: 0.14,
+        electronics: 0.1,
+        energy: 0.1,
+        network_services: 0.06,
+        construction_services: 0.06,
+      },
+    },
     {
       id: "proptech",
       requiresTechUnlock: true,
@@ -1277,6 +1347,18 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
 
   // ── Extraction & Mining ───────────────────────────────────────────────
   extraction: [
+    {
+      id: "space_resources",
+      requiresTechUnlock: true,
+      minDecade: "2049",
+      researchThreshold: 8000,
+      name: "Space Resources",
+      description:
+        "Lunar and asteroid pilot mining that lands rare earths and metals. Launch energy, electronics and freight make it the most input-hungry way to mine.",
+      // Still filtered by the state's deposit table like every extraction recipe.
+      supply: { rare_earth: 0.62, iron: 0.18 },
+      demand: { energy: 0.26, electronics: 0.14, freight: 0.12, vehicles: 0.08, software: 0.06 },
+    },
     {
       id: "standard",
       name: "Diversified",

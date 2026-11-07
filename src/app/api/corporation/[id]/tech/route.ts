@@ -64,6 +64,11 @@ import {
   TECH_NODE_CASH_REVENUE_FRACTION,
   type TechCorpView,
   type TechLane,
+  isFrontierOpen,
+  frontierProgrammeCost,
+  frontierPurchaseCount,
+  FRONTIER_OUTPUT_PCT,
+  FRONTIER_INPUT_PCT,
 } from "@/lib/constants/techTree";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
@@ -132,6 +137,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       industryModel: corporation.industryModel,
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
+      frontierProgrammes: corporation.frontierProgrammes,
     };
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));
@@ -375,6 +381,23 @@ export async function GET(_request: Request, { params }: RouteParams) {
       breakthroughChance,
       breakthroughInterval: RD_INNOVATION_INTERVAL,
       decades,
+      // Repeatable frontier programmes after the last tier. Null when redacted.
+      frontier: redact
+        ? null
+        : (() => {
+            const purchases = frontierPurchaseCount(corporation.frontierProgrammes);
+            const open = isFrontierOpen(corpView, operatingSectorType, currentYear);
+            const nextCost = frontierProgrammeCost(purchases);
+            return {
+              open,
+              outputCount: corporation.frontierProgrammes?.output ?? 0,
+              inputCount: corporation.frontierProgrammes?.input ?? 0,
+              nextCost,
+              outputPctPerProgramme: FRONTIER_OUTPUT_PCT * 100,
+              inputPctPerProgramme: FRONTIER_INPUT_PCT * 100,
+              affordable: open && isCeo && (rdScore ?? 0) >= nextCost,
+            };
+          })(),
     });
   } catch (error) {
     return handleRouteError(error);

@@ -24,7 +24,11 @@ import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
-import { getSectorTechEffectsForYear, NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree";
+import {
+  getSectorTechEffectsForYear,
+  NEUTRAL_TECH_EFFECTS,
+  withSunsetPenalty,
+} from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import {
@@ -299,12 +303,21 @@ export function prepareProducerPhysicalSector(input: {
   );
   const tech =
     env.techTreesEnabled && currentYear != null
-      ? getSectorTechEffectsForYear(
-          corp,
-          sector.sectorType,
-          currentYear,
-          sector.industryModel,
-          sector.mediaDiscriminator
+      ? withSunsetPenalty(
+          getSectorTechEffectsForYear(
+            corp,
+            sector.sectorType,
+            currentYear,
+            sector.industryModel,
+            sector.mediaDiscriminator
+          ),
+          getOperatingSectorType(
+            sector.sectorType,
+            sector.industryModel,
+            sector.mediaDiscriminator
+          ),
+          sector.strategyId,
+          currentYear
         )
       : NEUTRAL_TECH_EFFECTS;
   const recipe = getEffectiveStrategyRatesForOperatingModel(

@@ -471,4 +471,46 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       ],
     },
   ],
+  "2049": [
+    {
+      name: "Self-Powering Compute",
+      description: "Data centers run on their own fusion and storage.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.1 }],
+    },
+    {
+      name: "Cognitive Seat Licensing",
+      description: "Neural assistant seats are priced like expert staff, not software.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Neural Data Certification",
+      description:
+        "Certified neural privacy keeps interface sales open under the strictest data rules.",
+      effects: [{ kind: "tariffShield", pct: 0.14 }],
+    },
+    {
+      name: "Self-Evolving Platforms",
+      description: "Platforms redesign and upgrade themselves under a small review board.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "software", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Mind-Linked Companions",
+      description: "Assistants linked to the user's thoughts carry unmatched pricing power.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 36 },
+      ],
+    },
+    {
+      name: "Planetary Compute Utilities",
+      description: "Running compute for whole regions makes the firm a strategic asset.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

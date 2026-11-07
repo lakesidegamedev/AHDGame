@@ -4,6 +4,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { sumStrengthGrants, type TechTreeNode } from "@/lib/constants/techTree";
 import type { ActionAuditInput, Corporation, FinancialTxLogEntry } from "@/lib/db/types";
 import { emitTxStrict, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
+import { frontierResearchInc } from "./frontierResearch";
 
 /**
  * Finance-history ledger rows for sector tech-tree unlocks (ticket #1998).
@@ -127,6 +128,9 @@ export function buildTechUnlockRefundUpdate(spec: TechUnlockRefundSpec): {
   };
   if ((spec.marketingGrant ?? 0) > 0) $inc.marketingStrength = -(spec.marketingGrant ?? 0);
   if ((spec.logisticsGrant ?? 0) > 0) $inc.logisticsStrength = -(spec.logisticsGrant ?? 0);
+  for (const [field, amount] of Object.entries(frontierResearchInc(spec.decadeId, spec.rdCost))) {
+    $inc[field] = -amount;
+  }
   return {
     $inc,
     $pull: { unlockedTechNodeIds: spec.nodeId },

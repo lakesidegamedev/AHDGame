@@ -135,19 +135,30 @@ export function chooseFoundingRecipe<R extends FoundingRecipeOption>(args: {
   if (!standard) return undefined;
   const standardScore = strategyPriceScore(standard, args.countryId, args.priceRatioOf) ?? 0;
   const standardStarved = isInputStarved(args.inputAvailabilityOf?.(standard));
+  // A retired (sunset) standard is closed to new plants: the founding builds
+  // the best open recipe instead, with no shortage or advantage bar.
+  const standardRetired = !args.isAvailable(standard);
   let best: { id: string; score: number } | null = null;
+  let firstOpen: string | undefined;
   for (const recipe of recipes) {
     if (recipe.id === DEFAULT_RECIPE_ID) continue;
     if (!args.isAvailable(recipe)) continue;
     if (isInputStarved(args.inputAvailabilityOf?.(recipe))) continue;
+    firstOpen ??= recipe.id;
     if (
+      !standardRetired &&
       recipePeakOutputRatio(recipe, args.countryId, args.priceRatioOf) < FOUNDING_RECIPE_SHORT_RATIO
     )
       continue;
     const score = strategyPriceScore(recipe, args.countryId, args.priceRatioOf);
     if (score == null) continue;
-    if (!standardStarved && score - standardScore < FOUNDING_RECIPE_MIN_ADVANTAGE) continue;
+    if (
+      !standardRetired &&
+      !standardStarved &&
+      score - standardScore < FOUNDING_RECIPE_MIN_ADVANTAGE
+    )
+      continue;
     if (!best || score > best.score) best = { id: recipe.id, score };
   }
-  return best?.id;
+  return best?.id ?? (standardRetired ? firstOpen : undefined);
 }

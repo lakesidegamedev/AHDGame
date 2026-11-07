@@ -184,3 +184,33 @@ describe("NPP strategy choice respects a parent-directed strategy", () => {
     });
   });
 });
+
+describe("NPP sites on a retired (sunset) method convert to a successor", () => {
+  const energy = (overrides: Partial<CorporateSector> = {}) =>
+    sector({
+      sectorType: "energy",
+      mediaDiscriminator: null,
+      strategyId: "standard",
+      effectiveProfitMargin: 10,
+      ...overrides,
+    });
+
+  it("converts a profitable conventional plant once the 2039 sunset arrives", () => {
+    const decision = decide(energy(), {}, { currentYear: 2040 });
+    // Advanced fission needs the corporation's own 2039 node; renewables is
+    // inherited from a past decade, so it is the open successor.
+    expect(decision?.updates).toMatchObject({
+      strategyId: "renewables",
+      transitionFromStrategyId: "standard",
+      transitionStartTurn: 100,
+    });
+  });
+
+  it("leaves the same plant alone before the sunset", () => {
+    expect(decide(energy(), {}, { currentYear: 2038 })).toBeNull();
+  });
+
+  it("leaves it alone with tech trees off, where nothing retires", () => {
+    expect(decide(energy(), {}, { currentYear: 2040, techTreesEnabled: false })).toBeNull();
+  });
+});

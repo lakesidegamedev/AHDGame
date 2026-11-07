@@ -25,6 +25,7 @@ import { TECH_DECADES } from "./decades";
 import { SECTOR_EARLY_FILL } from "./earlySectorFill";
 import { CORPORATE_V3, SECTOR_V3 } from "./v3";
 import { TIER_2039_CORPORATE, TIER_2039_SECTOR } from "./tier2039";
+import { TIER_2049_CORPORATE, TIER_2049_SECTOR } from "./tier2049";
 
 export type TechLane = "generic" | "sector";
 
@@ -76,6 +77,7 @@ export const DECADE_COST: Record<string, number> = {
   "2019": 38,
   "2029": 48,
   "2039": 60,
+  "2049": 75,
 };
 
 /**
@@ -7108,10 +7110,12 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
 // Slots 1-9 for every lane in a single module per tier; slots 10-15 stay in ./v3.
 const LATE_TIER_CORPORATE: Record<string, NodeSpec[]> = {
   "2039": TIER_2039_CORPORATE,
+  "2049": TIER_2049_CORPORATE,
 };
 
 const LATE_TIER_SECTOR: Record<string, Record<OperatingSectorType, NodeSpec[]>> = {
   "2039": TIER_2039_SECTOR,
+  "2049": TIER_2049_SECTOR,
 };
 
 function specToNode(
