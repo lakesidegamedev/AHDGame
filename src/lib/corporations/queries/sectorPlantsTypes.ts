@@ -341,6 +341,8 @@ export interface SectorPlantsSection {
      * once it reaches STRANDED_WARN_TURNS.
      */
     lowFillTurns: number;
+    /** The CEO's opt-in to sell to outside buyers before the company's own plants. */
+    sellOutsideFirst?: boolean;
     /**
      * Inventory of unsold storable output (design-realization-legs §6): the
      * toggle state plus the pile. Null-ish zeros before the first inventory

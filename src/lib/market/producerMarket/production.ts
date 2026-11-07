@@ -87,6 +87,8 @@ export interface ProductionPlan {
    * Unset for a company on Free transfer pricing, which books no entries.
    */
   ownSiteMarketValue?: boolean;
+  /** The sector's opt-in to sell to outside buyers before the company's own plants. */
+  sellOutsideFirst?: boolean;
   accountId: string;
   /** State the plant site is in; freight buys its own state's offers first. */
   stateId?: string;
@@ -1077,6 +1079,7 @@ export function advanceProducerEconomy(
           unitPrice: quote.unitPrice,
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
           ...(p.stateId ? { stateId: p.stateId } : {}),
+          ...(p.sellOutsideFirst ? { sellOutsideFirst: true as const } : {}),
         },
         quote: quoteInput,
       });

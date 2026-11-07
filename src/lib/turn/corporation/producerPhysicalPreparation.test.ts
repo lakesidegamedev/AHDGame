@@ -109,6 +109,14 @@ describe("physical producer preparation", () => {
       }).prepared.plan.internalTransferPricing
     ).toBeUndefined();
   });
+  it("carries the sell-outside-first flag into the plan only when the sector sets it", () => {
+    const { input, sector } = fixture();
+    expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBeUndefined();
+    sector.sellOutsideFirst = false;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBeUndefined();
+    sector.sellOutsideFirst = true;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBe(true);
+  });
   it("retains sale-only quotes for stored goods outside the current production recipe", () => {
     const { input, sector } = fixture();
     sector.producerInventory!.outputStock = [

@@ -7,7 +7,7 @@ import type { Corporation } from "@/lib/db/types";
 import { MODERN_DEPOSIT_CORRIDOR, MODERN_LENDING_CORRIDOR } from "@/lib/banking/regulationQ";
 import { NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
 import { NPC_BANKS_PER_COUNTRY } from "../npcBanks";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -146,7 +146,12 @@ describe("npcBanks", () => {
         // finds an eligible corp (a USD-treasury RU corp would fail RUB
         // eligibility and must surface, not silently skip).
         const countryId = input.countryId as CountryId;
-        const currency = COUNTRY_CURRENCY_MAP[countryId] ?? "USD";
+        // Same preset-aware code the real spawn gives the treasury.
+        const { loadWorldPreset } = await import("@/lib/currency/gdpAnchorRate");
+        const currency =
+          getSeedCurrencyCode(countryId, await loadWorldPreset(_db)) ??
+          COUNTRY_CURRENCY_MAP[countryId] ??
+          "USD";
         const corp = makeCorp({
           _id: new ObjectId(),
           name: input.name,
