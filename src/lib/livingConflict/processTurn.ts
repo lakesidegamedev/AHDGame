@@ -34,6 +34,8 @@ import {
 import { GLOBAL_FINANCIAL_CRISIS_KEY, loadFinancialCrisisSignal } from "./financialCrisisPressure";
 import { isFutureConflictFamily, planFutureConflictTurn } from "./futureConflicts";
 import { severeConflictLoad, type SevereMembership } from "./rules/futureConflicts";
+import { loadActiveSevereCrisisRows } from "@/lib/crises/severeCrisisLoad";
+import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severeLoad";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -220,6 +222,10 @@ export async function processLivingConflictsTurn(
   // Severe conflicts already holding each country this turn, in registry
   // order, so a later family can respect the stacking limit.
   const severe: SevereMembership[] = [];
+  // Active crisis templates count against the same limit, so a country held by
+  // two severe crises is not hit by a new conflict wave either. Read once, only
+  // when a wave family is reached.
+  let crisisLoad: Map<string, number> | null = null;
   for (const def of defs) {
     if (def.key === "northern_ireland") {
       const reunified = await db.collection<Referendum>("referendums").findOne(
@@ -273,13 +279,14 @@ export async function processLivingConflictsTurn(
       openingTrackDeltas = signal.openingTrackDeltas;
     }
     if (isFutureConflictFamily(def.key)) {
+      crisisLoad ??= severeLoadByCountry(await loadActiveSevereCrisisRows(db), []);
       const plan = await planFutureConflictTurn(db, def, {
         turn: currentTurn,
         year: currentYear,
         availableCountryIds,
         regionCountryIds,
         tension: tension?.value ?? 0,
-        load: severeConflictLoad(severe, def.key),
+        load: mergeSevereLoads(severeConflictLoad(severe, def.key), crisisLoad),
       });
       participants = plan.participants;
       externalPressure = plan.externalPressure;

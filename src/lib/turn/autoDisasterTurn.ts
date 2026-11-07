@@ -3,6 +3,7 @@ import { isAutoDisastersEnabled } from "@/lib/crises/featureFlag";
 import { processAutoDisasterSpawn } from "@/lib/crises/autoDisasterSpawn";
 import { processClimateFeedbackTurn } from "@/lib/crises/climateTurn";
 import { getSimulatedCountryIds } from "@/lib/countryAccess";
+import { loadCountrySevereLoad } from "@/lib/crises/severeCrisisLoad";
 
 export async function processAutoDisasterTurn(
   db: Db,
@@ -29,7 +30,13 @@ export async function processAutoDisasterTurn(
   // Status-based, not player-enablement: these fire wherever the engine is
   // simulating, including countries deliberately closed to players.
   const countryIds = await getSimulatedCountryIds(db);
+  // One read of the cross-system stacking load for every country.
+  const severeLoad = await loadCountrySevereLoad(db, new Set<string>(countryIds));
   for (const countryId of countryIds) {
-    await processAutoDisasterSpawn(db, countryId, turn, { enabled: true, climatePressure });
+    await processAutoDisasterSpawn(db, countryId, turn, {
+      enabled: true,
+      climatePressure,
+      severeLoad,
+    });
   }
 }

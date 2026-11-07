@@ -97,6 +97,7 @@ export async function createCrisisFromTemplate(
     autoSource: params.autoSource,
     interactionDefinition: template.interactionDefinition,
     globalResponse: params.globalResponse ?? template.globalResponse,
+    ...(template.opportunity === true ? { opportunity: true } : {}),
     ...(livingConflictEventId !== undefined ? { livingConflictEventId } : {}),
   };
 
