@@ -1028,8 +1028,6 @@ export interface BondInfo {
   issuanceLimitedBy?: "perIssuance" | "leverage" | "exitEquity";
   isCeo: boolean;
   cooldownTurnsRemaining: number;
-  /** ISO instant until which issuance is frozen for the launch window, else null. */
-  issuanceFrozenUntil?: string | null;
   currentTurn: number;
   creditDiagnostics?: CreditDiagnostics;
   bondDefaultCreditPenalty?: {

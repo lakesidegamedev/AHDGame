@@ -21,7 +21,6 @@ import {
 } from "@/lib/bonds/primaryMarket";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import {
-  BOND_ISSUANCE_FREEZE_UNTIL,
   BOND_ISSUANCE_COOLDOWN_TURNS,
   BOND_ISSUANCE_COOLDOWN_TURNS_PRIVATE,
   BOND_ISSUANCE_MIN_HEADROOM,
@@ -437,10 +436,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       isCeo,
       cooldownTurnsRemaining,
       currentTurn,
-      issuanceFrozenUntil:
-        BOND_ISSUANCE_FREEZE_UNTIL && Date.now() < BOND_ISSUANCE_FREEZE_UNTIL.getTime()
-          ? BOND_ISSUANCE_FREEZE_UNTIL.toISOString()
-          : null,
     });
   } catch (error) {
     return handleRouteError(error);
@@ -490,16 +485,6 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const gameState = await getGameState();
     const currentTurn = gameState?.currentTurn ?? 1;
-
-    // Launch-window freeze: block all corporate bond issuance until the freeze
-    // instant passes. Time-boxed to give the opening days an easier start; it
-    // lifts itself with no deploy. See BOND_ISSUANCE_FREEZE_UNTIL.
-    if (BOND_ISSUANCE_FREEZE_UNTIL && Date.now() < BOND_ISSUANCE_FREEZE_UNTIL.getTime()) {
-      return errorResponse(
-        400,
-        "Bond issuance is paused for the opening of the world and will reopen shortly."
-      );
-    }
 
     // Check cooldown (private corps have a halved cooldown).
     const postEffectiveCooldown = corporation.isPrivate

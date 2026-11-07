@@ -1,5 +1,5 @@
 /**
- * Real historical officeholders for the 1991/2019 seated presets.
+ * Real historical officeholders for the 1991/2019/2027 seated presets.
  *
  * `seedFromSeats` creates one NPP per seat row with a random fictional name.
  * For the 1991-default and 2019-default presets that erases the era: every
@@ -34,7 +34,7 @@ export interface HistoricalRosterEntry {
 }
 
 /** Presets with authored real-person rosters. */
-const ROSTERED_PRESETS = ["1991-default", "2019-default"] as const;
+const ROSTERED_PRESETS = ["1991-default", "2019-default", "2027-default"] as const;
 export type RosteredPreset = (typeof ROSTERED_PRESETS)[number];
 
 export function isRosteredPreset(presetId: string): presetId is RosteredPreset {
@@ -66,12 +66,15 @@ import { ROSTER_2019_JP as R19_JP } from "./rosters/p2019-jp";
 import { ROSTER_2019_DE as R19_DE } from "./rosters/p2019-de";
 import { ROSTER_2019_CN as R19_CN } from "./rosters/p2019-cn";
 import { ROSTER_2019_IE as R19_IE } from "./rosters/p2019-ie";
+import { ROSTER_2027_US as R27_US } from "./rosters/p2027-us";
 
 export type RosterMap = Record<string, HistoricalRosterEntry>;
 
 const ROSTERS: Record<RosteredPreset, RosterMap> = {
   "1991-default": Object.assign({}, R91_US, R91_UK, R91_JP, R91_DE, R91_CN, R91_BR, R91_IE),
   "2019-default": Object.assign({}, R19_US, R19_UK, R19_JP, R19_DE, R19_CN, R19_IE),
+  // 2027 names only the US executive so far; the rest of the board is generated.
+  "2027-default": Object.assign({}, R27_US),
 };
 
 /**

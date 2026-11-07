@@ -1,7 +1,7 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
@@ -111,19 +111,6 @@ export default function BondsTab({
   const [bondActionError, setBondActionError] = useState("");
   const [bondActionSuccess, setBondActionSuccess] = useState("");
   const [bondActionLoading, setBondActionLoading] = useState(false);
-  // Clock for the launch-window freeze, advanced once when the freeze lifts so
-  // the controls unlock without a reload.
-  const [now, setNow] = useState(() => Date.now());
-  const frozenUntilMs = bondInfo?.issuanceFrozenUntil
-    ? new Date(bondInfo.issuanceFrozenUntil).getTime()
-    : null;
-  useEffect(() => {
-    if (frozenUntilMs == null) return;
-    const wait = frozenUntilMs - Date.now();
-    if (!(wait > 0)) return;
-    const timer = setTimeout(() => setNow(Date.now()), Math.min(wait + 250, 2_147_483_647));
-    return () => clearTimeout(timer);
-  }, [frozenUntilMs]);
 
   async function issueBond() {
     setBondActionError("");
@@ -309,10 +296,6 @@ export default function BondsTab({
           // (ticket #1083). `bondsAvailable` is false below the dust floor.
           const effectiveMin = bondInfo.minIssuance ?? 100_000;
           const bondsUnavailable = bondInfo.bondsAvailable === false;
-          // Launch-window freeze: issuance is paused server-side until this
-          // instant. Mirror it in the UI so the control reads as disabled
-          // rather than erroring on submit.
-          const issuanceFrozen = frozenUntilMs != null && now < frozenUntilMs;
           const cooldown = bondInfo.cooldownTurnsRemaining;
           // parsedFaceValue is ₳; formatAmountIn takes anchor and formats in a specific currency.
           const inLiquid = (anchor: number) =>
@@ -323,8 +306,7 @@ export default function BondsTab({
             !!liquidCode &&
             displayCurrencyPreference !== "local" &&
             nativeDisplay !== userPrefDisplay;
-          const sliderDisabled =
-            effectiveCap === 0 || bondsUnavailable || cooldown > 0 || issuanceFrozen;
+          const sliderDisabled = effectiveCap === 0 || bondsUnavailable || cooldown > 0;
 
           const preview = isValidInput
             ? (() => {
@@ -345,13 +327,7 @@ export default function BondsTab({
           return (
             <DenseSection
               title="Issue bonds"
-              meta={
-                cooldown > 0
-                  ? `cooldown, ${cooldown} turns left`
-                  : issuanceFrozen
-                    ? "paused for the world opening"
-                    : "CEO"
-              }
+              meta={cooldown > 0 ? `cooldown, ${cooldown} turns left` : "CEO"}
             >
               <div className="grid gap-x-8 gap-y-4 pt-1 md:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="min-w-0 space-y-3">
@@ -378,11 +354,6 @@ export default function BondsTab({
                   {cooldown > 0 && (
                     <p className="text-xs text-warning">
                       Cooldown: {cooldown} turns remaining before the next issue.
-                    </p>
-                  )}
-                  {issuanceFrozen && (
-                    <p className="text-xs text-warning">
-                      Bond issuance is paused for the opening of the world and will reopen shortly.
                     </p>
                   )}
 
@@ -433,7 +404,7 @@ export default function BondsTab({
                     <SmallButton
                       tone="primary"
                       onClick={() => void issueBond()}
-                      disabled={bondActionLoading || cooldown > 0 || issuanceFrozen}
+                      disabled={bondActionLoading || cooldown > 0}
                     >
                       {bondActionLoading ? "Issuing..." : "Issue bonds"}
                     </SmallButton>
