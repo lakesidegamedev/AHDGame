@@ -55,6 +55,8 @@ export type ProducerEconomyInput = {
    * instead of at the ceiling (gameConfig.producerSalesAdvancePriceStage).
    */
   salesAdvanceAtClearing?: boolean;
+  /** Share of expected sales a run may borrow against; absent keeps the 0.9 default. */
+  salesAdvanceRevenueShare?: number;
   /**
    * Let an idle plant whose company cannot fund a run and that sold nothing
    * last turn run a small probe on intra-turn credit against its output's

@@ -90,6 +90,7 @@ export async function runCorporationProducerMarket(
       | "trackCountryBooks"
       | "credit"
       | "salesAdvanceAtClearing"
+      | "salesAdvanceRevenueShare"
       | "restartProbes"
       | "householdIncomeSpend"
       | "captiveShortValue"

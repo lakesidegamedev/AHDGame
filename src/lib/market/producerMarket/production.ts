@@ -552,6 +552,7 @@ export function advanceProducerEconomy(
           free,
           need,
           expectedRevenue: expectedRevenue.get(id) ?? 0,
+          revenueShare: input.salesAdvanceRevenueShare,
           ...(expectedNeed ? { expectedNeed: expectedNeed.get(id) ?? need } : {}),
         })
       );
@@ -560,6 +561,7 @@ export function advanceProducerEconomy(
           free,
           need,
           runShare: salesFunded,
+          revenueShare: input.salesAdvanceRevenueShare,
           ...(expectedNeed ? { expectedRevenue: expectedRevenue.get(id) ?? 0 } : {}),
         });
         if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && amount > 0)
