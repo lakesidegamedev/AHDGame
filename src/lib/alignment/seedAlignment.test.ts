@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ALIGNMENT_ERAS, polesForYear } from "@/lib/constants/alignmentEras";
 import { ALIGNMENT_ROSTER, existsAt } from "@/lib/constants/alignmentRoster";
 import { AUTHORED_ALIGNMENT, PRESET_YEAR } from "@/lib/constants/alignmentSeeds";
+import { getStartingYearForPreset, SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 import { axisFor } from "./project";
 import { JOIN_SHARE, LEAVE_SHARE } from "./membershipEligibility";
 import { resolveOpeningShares } from "./seedAlignment";
@@ -44,6 +45,22 @@ describe("resolveOpeningShares — derived", () => {
   it("falls back to the default for an entity with no authored row and no metropole", () => {
     const r = resolveOpeningShares({ key: "VA", preset: "1991-default" });
     expect(["authored", "default"]).toContain(r.provenance);
+  });
+});
+
+describe("every shipping start is covered", () => {
+  // A hand-kept year map stopped at 2023 and skipped 1999 and 2007, so those
+  // worlds seeded no organisation members and every nation at the default lean.
+  it.each(SEED_PRESET_IDS)("%s has its starting year", (preset) => {
+    expect(PRESET_YEAR[preset]).toBe(getStartingYearForPreset(preset));
+  });
+
+  it("a start without its own rows reads the nearest earlier authored start", () => {
+    expect(AUTHORED_ALIGNMENT["2027-default"]).toBeUndefined();
+    const cn = resolveOpeningShares({ key: "CN", preset: "2027-default" });
+    expect(cn.provenance).toBe("authored");
+    expect(cn.shares).toEqual(resolveOpeningShares({ key: "CN", preset: "2023-default" }).shares);
+    expect(resolveOpeningShares({ key: "CN", preset: "1999-default" }).provenance).toBe("authored");
   });
 });
 

@@ -33,11 +33,11 @@ import { isLayer1PositionsEnabled } from "@/lib/seeds/layer1PositionsFlag";
 import { calculateStateLean } from "@/lib/utils/demographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
-import type { EraId } from "@/lib/seeds/presetSelector";
+import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
 
 const LEGACY_CATEGORY_IDS = ["race", "gender", "education", "wealth", "age", "ideology"] as const;
 
-const VALID_ERAS = ["1953", "1979", "1991", "1999", "2007", "2019", "2023"] as const;
+const VALID_ERAS = SEED_ERA_IDS;
 
 const ReseedBodySchema = z
   .object({
@@ -314,7 +314,15 @@ async function resolveUsCensusBundle(
       const { stateCensusData2023 } = await import("@/lib/seeds/stateCensusData2023");
       return stateCensusData2023;
     }
-    default:
+    case "2027": {
+      const { stateCensusData2027 } = await import("@/lib/seeds/stateCensusData2027");
+      return stateCensusData2027;
+    }
+    case "2019":
       return fallback;
+    default: {
+      const unhandled: never = era;
+      return unhandled;
+    }
   }
 }

@@ -31,6 +31,11 @@ export const SEED_PRESET_IDS = [
 
 export type SeedPresetId = (typeof SEED_PRESET_IDS)[number];
 
+/** `first` and every later shipping preset, so era ranges include new presets. */
+export function seedPresetsFrom(first: SeedPresetId): SeedPresetId[] {
+  return SEED_PRESET_IDS.slice(SEED_PRESET_IDS.indexOf(first));
+}
+
 /**
  * Presets currently being authored. Draft presets have a calendar identity but
  * MUST NOT be offered to reset or singleplayer callers until their seed lanes,
