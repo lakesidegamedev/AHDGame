@@ -8,6 +8,7 @@ import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
 import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
+import { attemptNppConstructionFinance } from "./nppConstructionFinanceAttempts";
 import { producerStageEnv, runFundedProducerTurn } from "./fundedProducerTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -111,7 +112,6 @@ import {
 } from "./corporationTurnPhases";
 import { getGameState } from "@/lib/gameState";
 import { deleteDivestedNppSectors } from "../npp/divestmentPersistence";
-import { requestConstructionFinance } from "@/lib/banking/constructionFinance";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { logger } from "../../observability/logger";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
@@ -1098,33 +1098,12 @@ export async function processCorporationTurn(
     }
     mark("productVentures");
   }
-  let constructionFinanceFundedCount = 0;
-  let constructionFinancePendingCount = 0;
-  let constructionFinanceFailedCount = nppConstructionFinanceBacklogCount;
-  for (const candidate of nppConstructionFinanceRequests) {
-    const result = await requestConstructionFinance({
-      db,
-      enabled: true,
-      sector: candidate.sector,
-      corporation: candidate.corporation,
-      bankId: candidate.bankId,
-      requestId: `npp-${turn ?? 0}-${candidate.sector._id.toHexString()}`,
-      principal: candidate.principal,
-      termTurns: candidate.termTurns,
-      constructionCostLocal: candidate.costLocal,
-      collateralCostLocal: candidate.costLocal,
-      maximumCostLocal: candidate.costLocal,
-      order: candidate.order,
-      preloadedFundingContext: candidate.preloadedFundingContext,
-      buildContext: candidate.buildContext,
-    });
-    if (!result.ok) {
-      constructionFinanceFailedCount += 1;
-      continue;
-    }
-    if (result.pending) constructionFinancePendingCount += 1;
-    else constructionFinanceFundedCount += 1;
-  }
+  const constructionFinance = await attemptNppConstructionFinance({
+    db,
+    turn: turn ?? 0,
+    requests: nppConstructionFinanceRequests,
+    backlogCount: nppConstructionFinanceBacklogCount,
+  });
   if (nppConstructionFinanceCandidateCount > 0) {
     corpAuditEntries.push({
       source: "turn",
@@ -1136,9 +1115,10 @@ export async function processCorporationTurn(
       meta: {
         candidates: nppConstructionFinanceCandidateCount,
         attempted: nppConstructionFinanceRequests.length,
-        funded: constructionFinanceFundedCount,
-        pendingApproval: constructionFinancePendingCount,
-        deferredOrRejected: constructionFinanceFailedCount,
+        funded: constructionFinance.funded,
+        pendingApproval: constructionFinance.pending,
+        deferredOrRejected: constructionFinance.failed,
+        failureReasons: constructionFinance.failureReasons,
         turn,
       },
     });
