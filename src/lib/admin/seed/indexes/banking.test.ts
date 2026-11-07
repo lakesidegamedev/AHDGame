@@ -10,6 +10,21 @@ import { seedBankingIndexes } from "./banking";
 describe("seedBankingIndexes", () => {
   beforeEach(() => ensureIndexMock.mockReset());
 
+  it("restores non-unique bank servicing and all-currency savings lookups after reset", async () => {
+    await seedBankingIndexes({} as unknown as Db, vi.fn());
+    for (const [collection, key] of [
+      ["corporations", { npcBankSeedKey: 1 }],
+      ["characters", { "currencyBalances.savingsHolder.$**": 1 }],
+      ["bankLoans", { bankCorporationId: 1, status: 1, borrowerType: 1, lastProcessedTurn: 1 }],
+    ] as const) {
+      const call = ensureIndexMock.mock.calls.find(
+        (c) => c[1] === collection && JSON.stringify(c[2]) === JSON.stringify(key)
+      );
+      expect(call).toBeDefined();
+      expect(call![3].unique).not.toBe(true);
+    }
+  });
+
   it("keeps unfinished-move prefix lookups indexed", async () => {
     await seedBankingIndexes({} as unknown as Db, vi.fn());
 

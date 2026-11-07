@@ -193,6 +193,21 @@ describe("processTurn() — full turn flow", () => {
     db.collection("gameConfig");
     db.collectionMocks["gameConfig"].findOne.mockResolvedValue(null);
 
+    // The producer-path fence reads its claim back after inserting it. Keep
+    // claims for this test so successful inserts behave like persisted writes.
+    const producerClaims = new Map<string, { _id: string; path: string }>();
+    db.collection("producerPathClaims");
+    db.collectionMocks["producerPathClaims"].insertOne.mockImplementation(async (claim) => {
+      if (producerClaims.has(claim._id)) {
+        throw Object.assign(new Error("Duplicate producer-path claim"), { code: 11000 });
+      }
+      producerClaims.set(claim._id, { ...claim });
+      return { insertedId: claim._id };
+    });
+    db.collectionMocks["producerPathClaims"].findOne.mockImplementation(
+      async ({ _id }) => producerClaims.get(_id) ?? null
+    );
+
     // Set up sub-processor return values
     const actionRefresh = await import("@/lib/turn/actionRefresh");
     vi.mocked(actionRefresh.processActionRefresh).mockResolvedValue(undefined as never);

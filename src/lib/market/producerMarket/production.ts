@@ -1138,6 +1138,7 @@ export function advanceProducerEconomy(
         });
       }
     return settleProducerMarket({
+      checkBudget: execution?.checkBudget,
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
