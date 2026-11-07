@@ -4,13 +4,14 @@
  * 2049 production methods (lib/constants/techTree/breakthrough).
  *
  * One aggregate per call. Command and query paths call it once for the lane
- * they are pricing; the turn does not read it.
+ * they are pricing; the NPP turn phases read every lane at once with
+ * `loadFrontierResearchByLane`.
  */
 import type { Db } from "mongodb";
 import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Corporation } from "@/lib/db/types";
 import { countsAsFrontierResearch } from "@/lib/constants/techTree/breakthrough";
-import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 
 /** Mongo filter for the corporations whose tech tree is this lane's. */
 export function laneCorporationFilter(lane: OperatingSectorType): Record<string, unknown> {
@@ -51,6 +52,83 @@ export async function loadLaneBreakthroughResearch(
   if (!techTreesEnabled) return undefined;
   const gated = (SECTOR_STRATEGIES[lane] ?? []).some((s) => s.researchThreshold != null);
   return gated ? loadSectorFrontierResearch(db, lane) : undefined;
+}
+
+/** One grouped corporation identity and its summed frontier research. */
+export interface FrontierResearchIdentityRow {
+  type?: string | null;
+  industryModel?: string | null;
+  mediaDiscriminator?: string | null;
+  total?: number | null;
+}
+
+/**
+ * Folds grouped identity rows into per-lane totals. A row counts toward a lane
+ * only when its identity is exactly that lane's (the `laneCorporationFilter`
+ * match), so the totals equal what `loadSectorFrontierResearch` returns.
+ */
+export function frontierResearchByLane(
+  rows: readonly FrontierResearchIdentityRow[]
+): Map<OperatingSectorType, number> {
+  const byLane = new Map<OperatingSectorType, number>();
+  for (const row of rows) {
+    if (typeof row.type !== "string") continue;
+    const total = row.total;
+    if (typeof total !== "number" || !Number.isFinite(total) || total <= 0) continue;
+    const lane = getOperatingSectorType(
+      row.type,
+      row.industryModel ?? null,
+      row.mediaDiscriminator ?? null
+    ) as OperatingSectorType;
+    const identity = operatingSectorIdentity(lane);
+    if (
+      identity.sectorType !== row.type ||
+      (identity.industryModel ?? null) !== (row.industryModel ?? null) ||
+      (identity.mediaDiscriminator ?? null) !== (row.mediaDiscriminator ?? null)
+    ) {
+      continue;
+    }
+    byLane.set(lane, (byLane.get(lane) ?? 0) + total);
+  }
+  return byLane;
+}
+
+/**
+ * Every lane's world frontier research in one aggregate, for the turn's NPP
+ * retooling and founding. Undefined when tech trees are off, which keeps every
+ * breakthrough method closed exactly as an unknown total does.
+ */
+export async function loadFrontierResearchByLane(
+  db: Db,
+  techTreesEnabled: boolean
+): Promise<ReadonlyMap<OperatingSectorType, number> | undefined> {
+  if (!techTreesEnabled) return undefined;
+  const rows = await db
+    .collection<Corporation>("corporations")
+    .aggregate<FrontierResearchIdentityRow>([
+      { $match: { frontierResearchSpent: { $gt: 0 } } },
+      {
+        $group: {
+          _id: {
+            type: "$type",
+            industryModel: "$industryModel",
+            mediaDiscriminator: "$mediaDiscriminator",
+          },
+          total: { $sum: "$frontierResearchSpent" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          type: "$_id.type",
+          industryModel: "$_id.industryModel",
+          mediaDiscriminator: "$_id.mediaDiscriminator",
+          total: 1,
+        },
+      },
+    ])
+    .toArray();
+  return frontierResearchByLane(rows);
 }
 
 /**

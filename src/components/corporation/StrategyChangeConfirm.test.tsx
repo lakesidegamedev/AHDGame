@@ -16,7 +16,11 @@ vi.mock("@/lib/observability/fetchJson", () => ({
 
 afterEach(cleanup);
 
-function renderConfirm(props: { industryModel?: string | null; targetStrategyId: string }) {
+function renderConfirm(props: {
+  industryModel?: string | null;
+  targetStrategyId: string;
+  retoolCostMultiplier?: number;
+}) {
   return render(
     <StrategyChangeConfirm
       sectorType="manufacturing"
@@ -24,6 +28,7 @@ function renderConfirm(props: { industryModel?: string | null; targetStrategyId:
       currentStrategyId="standard"
       targetStrategyId={props.targetStrategyId}
       dailyRevenue={1000}
+      retoolCostMultiplier={props.retoolCostMultiplier}
       onConfirm={() => {}}
       onCancel={() => {}}
     />
@@ -39,5 +44,17 @@ describe("StrategyChangeConfirm operating model", () => {
   it("does not offer vehicle strategies to an ordinary manufacturing plant", () => {
     const { container } = renderConfirm({ industryModel: null, targetStrategyId: "ev" });
     expect(container.textContent).toBe("");
+  });
+});
+
+describe("StrategyChangeConfirm sunset discount", () => {
+  it("shows the discounted retool fee", () => {
+    renderConfirm({ industryModel: "vehicles", targetStrategyId: "ev", retoolCostMultiplier: 0.4 });
+    expect(screen.getByText(/Retooling cost/).textContent).toContain("60% off");
+  });
+
+  it("shows no discount by default", () => {
+    renderConfirm({ industryModel: "vehicles", targetStrategyId: "ev" });
+    expect(screen.getByText(/Retooling cost/).textContent).not.toContain("off");
   });
 });

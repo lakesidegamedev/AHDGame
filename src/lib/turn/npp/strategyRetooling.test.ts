@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import { getStrategyForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { sectorNodeId } from "@/lib/constants/techTree/nodes";
 import { chooseNppStrategyRetool } from "./strategyRetooling";
 
 function sector(overrides: Partial<CorporateSector> = {}): CorporateSector {
@@ -212,5 +213,56 @@ describe("NPP sites on a retired (sunset) method convert to a successor", () => 
 
   it("leaves it alone with tech trees off, where nothing retires", () => {
     expect(decide(energy(), {}, { currentYear: 2040, techTreesEnabled: false })).toBeNull();
+  });
+});
+
+describe("NPP retooling onto a 2049 breakthrough method", () => {
+  // Corporation with the 2049 energy node that unlocks commercial fusion.
+  const fusionCorp = (item: CorporateSector) =>
+    makeCorporation({
+      _id: item.corporationId,
+      type: "energy",
+      countryId: "US",
+      ceoType: "npp",
+      unlockedTechNodeIds: [sectorNodeId("energy", "2049", 1)],
+    });
+  const plant = sector({
+    sectorType: "energy",
+    mediaDiscriminator: null,
+    strategyId: "renewables",
+    effectiveProfitMargin: -10,
+  });
+  const base = {
+    corp: fusionCorp(plant),
+    currentYear: 2050,
+  };
+
+  it("adopts fusion once the lane's world research reaches the threshold", () => {
+    const decision = decide(
+      plant,
+      { energy: 3 },
+      { ...base, sectorResearchByLane: new Map([["energy", 1e9]]) }
+    );
+    expect(decision?.updates).toMatchObject({ strategyId: "fusion_commercial" });
+  });
+
+  it("keeps fusion closed below the threshold or without the total", () => {
+    const below = decide(
+      plant,
+      { energy: 3 },
+      { ...base, sectorResearchByLane: new Map([["energy", 1]]) }
+    );
+    expect(below?.updates.strategyId).not.toBe("fusion_commercial");
+    const unknown = decide(plant, { energy: 3 }, base);
+    expect(unknown?.updates.strategyId).not.toBe("fusion_commercial");
+  });
+
+  it("reads the plant's own lane, not another lane's research", () => {
+    const decision = decide(
+      plant,
+      { energy: 3 },
+      { ...base, sectorResearchByLane: new Map([["software", 1e9]]) }
+    );
+    expect(decision?.updates.strategyId).not.toBe("fusion_commercial");
   });
 });

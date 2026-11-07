@@ -145,6 +145,7 @@ import {
   corpTechCashFloorLocal,
 } from "@/lib/corporations/dailyGrossRevenue";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
+import { loadFrontierResearchByLane } from "@/lib/corporations/techTree/frontierResearch";
 import { loadNppPlacementSignals } from "@/lib/turn/npp/fragileMarketSupply";
 import {
   buildMarketSaturationIndex,
@@ -548,14 +549,21 @@ export async function processNppCorporationDecisions(
   const entryDiagnostics: NppMarketEntryDiagnostic[] = [];
 
   // Resolve the world's current decade once for NPP tech-tree auto-picks.
+  // World frontier research per lane, one aggregate for the cohort: opens the
+  // 2049 breakthrough methods to NPP retooling and founding.
   let techCurrentYear = 0;
+  let sectorResearchByLane: ReadonlyMap<string, number> | undefined;
   if (techTreesEnabled) {
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
-      );
+    const [gs, researchByLane] = await Promise.all([
+      db
+        .collection<GameState>("gameState")
+        .findOne(
+          { _id: "current" },
+          { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
+        ),
+      loadFrontierResearchByLane(db, techTreesEnabled),
+    ]);
+    sectorResearchByLane = researchByLane;
     const startingYear = gs?.startingYear ?? STARTING_YEAR;
     techCurrentYear =
       gs?.currentYear ??
@@ -621,6 +629,7 @@ export async function processNppCorporationDecisions(
             (strategyGate?.startingYear ?? STARTING_YEAR) +
               Math.floor(((strategyGate?.currentTurn ?? turn) - 1) / TURNS_PER_YEAR),
           techTreesEnabled,
+          sectorResearchByLane,
         }
       : undefined;
   // Founding never lands a plant its state cannot supply: the recipe it would
@@ -807,6 +816,7 @@ export async function processNppCorporationDecisions(
       labourWagesEnabled,
       currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
       techTreesEnabled,
+      sectorResearchByLane,
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,

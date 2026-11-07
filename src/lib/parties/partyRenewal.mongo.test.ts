@@ -187,6 +187,16 @@ describe.skipIf(!REAL_MONGO_ENABLED)("party renewal on real Mongo", () => {
     expect(state?.lastCycle).toBe(2);
     expect(state?.snapshots).toHaveLength(2);
     expect(state?.events.map((e: { kind: string }) => e.kind).sort()).toEqual(["fold", "splinter"]);
+    // Players read both changes in the news feed.
+    const titles = (await db.collection("newsPosts").find({ isSystem: true }).toArray()).map(
+      (post) => post.title
+    );
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("folds into"),
+        expect.stringMatching(/^Union Reform Party splits from /),
+      ])
+    );
   });
 
   it("lets a party back into a region it held within two cycles", async () => {

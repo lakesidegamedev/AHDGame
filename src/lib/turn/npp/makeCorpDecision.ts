@@ -742,6 +742,7 @@ export function makeNppCorpDecision(
       now,
       currentYear: ctx.currentYear ?? 0,
       techTreesEnabled: ctx.techTreesEnabled ?? false,
+      sectorResearchByLane: ctx.sectorResearchByLane,
       plantsEnabled: plants?.enabled === true,
       priceRatioOf,
     });

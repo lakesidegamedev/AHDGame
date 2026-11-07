@@ -311,6 +311,13 @@ export interface AvailableStrategy {
    */
   capacityRescaleRatio?: number;
   capacityAfterRetool?: number | null;
+  /**
+   * Retool fee for switching to this strategy, in ₳. Below the sector-wide
+   * `retoolCost` when converting off a retired method onto a named successor.
+   */
+  retoolCost?: number;
+  /** Multiplier on the base retool fee: 1, or the sunset conversion discount. */
+  retoolCostMultiplier?: number;
   /** Strategy is gated by decade or an unlocked tech node. */
   locked?: boolean;
   lockReason?: string | null;

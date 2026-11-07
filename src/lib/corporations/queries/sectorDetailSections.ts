@@ -102,6 +102,7 @@ import {
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import { strategyRetoolPricing } from "./strategyRetoolPricing";
 import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import {
@@ -799,7 +800,7 @@ export function buildSectorStrategySection(args: {
           mediaOperatingModelsEnabled,
           sector.mediaDiscriminator,
           args.preset
-        ).map((s) => {
+        ).map((s, _index, strategies) => {
           const availability = getStrategyAvailability(
             techCorpView,
             s,
@@ -815,16 +816,15 @@ export function buildSectorStrategySection(args: {
             locked: availability.locked,
             lockReason: availability.reason ?? null,
             minDecade: s.minDecade ?? null,
-            // Percentage points this strategy would move the effective margin
-            // by, at today's commodity prices. null when redacted.
+            ...strategyRetoolPricing(args, strategies, s.id),
+            // Margin points this strategy would move, at today's prices. null when redacted.
             projectedMarginDelta: projection.marginDelta,
             // Fractional change to realized revenue via price realization.
             projectedRealizationDelta: projection.realizationDelta,
             // D9 capacity rescale preview (plants tier): retooling re-denominates
             // capacity into the new output mix at equal value, so the unit count
-            // moves even though nothing was built or scrapped. Shipped for every
-            // mode (harmless below plants, where the page does not read it) using
-            // the SAME `capacityRescaleRatio` the retool command applies.
+            // moves though nothing was built or scrapped. Shipped for every mode
+            // (unread below plants) using the retool command's `capacityRescaleRatio`.
             capacityRescaleRatio: capacityRescaleRatio(
               sectorType,
               sector.strategyId,
