@@ -44,6 +44,11 @@ import {
 import { inheritedCalibrationRegion } from "@/lib/resetMetrics/rules/conversionCalibration";
 import { loadResetPolicyPressure } from "@/lib/resetMetrics/loadPolicyPressure";
 import { fertilityPolicyIndex } from "@/lib/resetMetrics/rules/fertilityPolicy";
+import {
+  mortalityImprovementFactor,
+  presetUsesDemographicPaths,
+  regionPathTfr,
+} from "./rules/demographicPaths";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
@@ -95,6 +100,8 @@ const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
  * Replacement TFR anchoring the index→TFR map (from the Task-6 stationarity
  * calibration). Index 50 (neutral `birthRate`) → this TFR → flat population.
  * MUST stay in sync with `cohortFlows.sim.test.ts`'s REPLACEMENT_TFR.
+ * Presets on country demography paths (2027) set births from the path
+ * instead; see `rules/demographicPaths.ts`.
  */
 const REPLACEMENT_TFR = 2.06;
 
@@ -565,6 +572,25 @@ export async function runDemographicFlows(
     TURNS_PER_YEAR
   );
 
+  // Country demography paths (2027 world): the national TFR follows the
+  // country path and each region keeps its seeded spread around the
+  // population-weighted country mean of the seeded birthRate index.
+  const usePaths = presetUsesDemographicPaths(gameState?.preset) && gameYear !== null;
+  const countryMeanBirthIndex = new Map<string, number>();
+  if (usePaths) {
+    const sums = new Map<string, { weighted: number; pop: number }>();
+    for (const p of preps) {
+      if (v2Countries.has(p.countryId as "US" | "UK" | "JP")) continue;
+      const pop = totalPopulation(p.before);
+      const acc = sums.get(p.countryId) ?? { weighted: 0, pop: 0 };
+      acc.weighted += val(p.m?.population?.birthRate, 50) * pop;
+      acc.pop += pop;
+      sums.set(p.countryId, acc);
+    }
+    for (const [countryId, acc] of sums)
+      countryMeanBirthIndex.set(countryId, acc.pop > 0 ? acc.weighted / acc.pop : 50);
+  }
+
   // Pass 1c: advance each cohort with the bounded net.
   const works: RegionWork[] = [];
   for (const p of preps) {
@@ -629,6 +655,16 @@ export async function runDemographicFlows(
       migrantShareMale: 0.5,
       servingFemaleByAge: p.conscription.servingFemaleByAge,
     };
+    if (usePaths && !useResetMetrics) {
+      inputs.fertilityRate = regionPathTfr({
+        countryId: p.countryId,
+        year: gameYear!,
+        demographyScore,
+        regionIndex: seededBirthRate,
+        countryMeanIndex: countryMeanBirthIndex.get(p.countryId) ?? seededBirthRate,
+      });
+      inputs.mortalityImprovement = mortalityImprovementFactor(p.countryId, gameYear!);
+    }
     if (useResetMetrics) {
       const board = v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!;
       const reference =
