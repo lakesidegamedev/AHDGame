@@ -1918,7 +1918,7 @@ export async function buildCorporationLookups(
     nationalDominanceShareBySectorId,
     stateSectorSpecializationByState,
     activeDisasterEffectsByState,
-    climateEnergyDemandByState,
+    ...(climateProfile.broaderEffects ? { climateEnergyDemandByState } : {}),
     regionalConditionMarginByState,
     corporateEmbargoSuppression,
     // Legacy full-mothball embargo model DISABLED (ticket 984): always use the
