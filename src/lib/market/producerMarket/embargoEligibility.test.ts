@@ -44,7 +44,8 @@ function eligibleFor(embargoes: TradeEmbargo[], buyerCountry: string): string[] 
     offers,
     (commodity, from, to) => affinityFor(commodity as never, from as never, to as never) > 0
   );
-  return [...eligibility.order].sort();
+  // No list means the order is unrestricted: every seller is eligible.
+  return [...(eligibility.order ?? offers.map((o) => o.id))].sort();
 }
 
 describe("a modern world keeps one book but an embargo still binds", () => {
@@ -55,6 +56,15 @@ describe("a modern world keeps one book but an embargo still binds", () => {
     expect(
       tradeEligibilityScope({ eraUnitScale: 1, activeBlockEmbargoCount: 1 }).countryBooks
     ).toBe(false);
+  });
+
+  it("attaches no list to a buyer every seller can reach", () => {
+    const eligibility = routeEligibility(
+      [{ id: "order", commodity: "iron", buyerCountry: "FR" }],
+      offers,
+      () => true
+    );
+    expect(eligibility.order).toBeUndefined();
   });
 
   it("keeps every seller eligible when no embargo is in force", () => {
