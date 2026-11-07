@@ -25,3 +25,12 @@ export function isStateScopedCommodity(commodity: CommodityType): boolean {
 }
 
 export const STATE_SCOPED_COMMODITIES = COMMODITY_TYPES.filter(isStateScopedCommodity);
+
+/**
+ * State-scoped services the funded market books per country: freight (owner yes,
+ * 2026-10-19) and construction services (owner yes, 2026-10-30) sell anywhere
+ * in their own country.
+ */
+export function isCountryBookCommodity(commodity: string): boolean {
+  return commodity === "freight" || commodity === "construction_services";
+}
