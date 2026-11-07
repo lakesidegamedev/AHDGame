@@ -896,6 +896,9 @@ export function advanceProducerEconomy(
       .filter((p) => p.internalTransferPricing && p.internalTransferPricing.mode !== "free")
       .map((p) => p.accountId)
   );
+  const freeTransferAccounts = new Set(
+    plans.filter((p) => p.internalTransferPricing?.mode === "free").map((p) => p.accountId)
+  );
   const inputOrders = (): PurchaseOrder[] =>
     plans.flatMap((p) =>
       p.inputs.flatMap((recipe) => {
@@ -1367,6 +1370,7 @@ export function advanceProducerEconomy(
         offers: postedOffers,
         clearingByLane: laneClearingPrices(market.prices),
         pricedAccounts: internalAccountingAccounts,
+        freeAccounts: freeTransferAccounts,
       })
     : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
