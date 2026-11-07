@@ -68,6 +68,7 @@ export function producerStageEnv(
         producerHouseholdIncomeSpendStage?: number;
         producerHouseholdSavingsDrawShare?: number;
         producerShortageAskStage?: number;
+        producerSalesAdvanceRevenueShare?: number;
         producerShortageAskMaxStep?: number;
         producerAskBuyerTieStage?: number;
         producerPriceMaxMultiplier?: number;
@@ -98,6 +99,7 @@ export function producerStageEnv(
     jointRunStage: config?.producerJointRunStage,
     runPlanStage: config?.producerRunPlanStage,
     salesAdvanceAtClearing: (config?.producerSalesAdvancePriceStage ?? 0) >= 1,
+    salesAdvanceRevenueShare: config?.producerSalesAdvanceRevenueShare,
     restartProbes: (config?.producerZombieRestartStage ?? 0) >= 1,
     householdIncomeSpendStage: config?.producerHouseholdIncomeSpendStage,
     householdSavingsDrawShare: config?.producerHouseholdSavingsDrawShare,
