@@ -17,6 +17,7 @@
  * Rules only: plain data in, plain data out. The shell loads documents and
  * demand, this module prices them.
  */
+import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_BASE_PRICES, commodityMixWeight } from "@/lib/constants/commodities";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
@@ -48,6 +49,8 @@ export interface CommodityDominanceMarket {
   demand: number;
   /** State the market is confined to, or null for the world. */
   stateId: string | null;
+  /** Country the market is confined to (country-booked services), else absent. */
+  countryId?: string | null;
 }
 
 /**
@@ -62,7 +65,21 @@ export function commodityDominanceMarket(args: {
   targetStateId?: string | null;
   worldDemand: number | null | undefined;
   stateDemand?: number | null | undefined;
+  /** Target country and its demand, for services the funded market books per country. */
+  targetCountryId?: string | null;
+  countryDemand?: number | null | undefined;
 }): CommodityDominanceMarket | null {
+  // Freight and construction sell across their country (funded market), so a
+  // builder is measured against the country, not one state: in Arizona 168
+  // units/day of freight demand priced a modest logistics arm at 45x.
+  if (
+    isCountryBookCommodity(args.commodity) &&
+    args.targetCountryId &&
+    typeof args.countryDemand === "number" &&
+    Number.isFinite(args.countryDemand) &&
+    args.countryDemand > 0
+  )
+    return { demand: args.countryDemand, stateId: null, countryId: String(args.targetCountryId) };
   const stateId = args.targetStateId ? String(args.targetStateId) : null;
   const local =
     stateId != null &&
@@ -76,9 +93,10 @@ export function commodityDominanceMarket(args: {
 
 /** True when `sector` sells into `market` (any sector for a world market). */
 export function sectorInDominanceMarket(
-  sector: Pick<CommodityDominanceSector, "stateId">,
+  sector: Pick<CommodityDominanceSector, "stateId" | "countryId">,
   market: CommodityDominanceMarket
 ): boolean {
+  if (market.countryId) return String(sector.countryId ?? "") === market.countryId;
   return market.stateId == null || String(sector.stateId ?? "") === market.stateId;
 }
 
@@ -121,8 +139,10 @@ export function commodityDominanceRatio(args: {
   commodities: readonly CommodityType[];
   demandOf: (commodity: CommodityType) => number | null | undefined;
   stateDemandOf?: (commodity: CommodityType, stateId: string) => number | null | undefined;
+  countryDemandOf?: (commodity: CommodityType, countryId: string) => number | null | undefined;
   targetSectorId: string;
   targetStateId?: string | null;
+  targetCountryId?: string | null;
   extraUnits: number;
   isNatcorp: boolean;
   turn: number;
@@ -157,6 +177,11 @@ export function commodityDominanceRatio(args: {
       stateDemand:
         targetStateId && args.stateDemandOf
           ? args.stateDemandOf(commodity, targetStateId)
+          : undefined,
+      targetCountryId: args.targetCountryId,
+      countryDemand:
+        args.targetCountryId && args.countryDemandOf
+          ? args.countryDemandOf(commodity, String(args.targetCountryId))
           : undefined,
     });
     if (!market) continue;

@@ -30,7 +30,7 @@ import {
   type NppFoundingCashWitness,
 } from "@/lib/turn/npp/foundingCashLedger";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, GameState, ExchangeRate } from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameState, ExchangeRate, State } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
@@ -515,6 +515,13 @@ export async function processNppCorporationDecisions(
       commodityDemandOf: (commodity) => priceByCommodity.get(commodity)?.globalDemand ?? null,
       commodityStateDemandOf: (commodity, stateId) =>
         priceByCommodity.get(commodity)?.stateDemand?.[stateId] ?? null,
+      commodityCountryDemandOf: countryDemandResolver(
+        priceByCommodity,
+        await db
+          .collection<State>("states")
+          .find({}, { projection: { _id: 1, countryId: 1 } })
+          .toArray()
+      ),
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
       ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),
@@ -1101,5 +1108,29 @@ export async function processNppCorporationDecisions(
     constructionFinanceBacklogCount,
     ...(foundingCashWitnesses.length ? { foundingCashWitnesses } : {}),
     ...(reinvestmentCashWitnesses.length ? { reinvestmentCashWitnesses } : {}),
+  };
+}
+
+/** Country demand per commodity: the sum of its states' demand, memoised per lookup. */
+function countryDemandResolver(
+  priceByCommodity: ReadonlyMap<string, { stateDemand?: Record<string, number> | null }>,
+  states: readonly Pick<State, "_id" | "countryId">[]
+): (commodity: string, countryId: string) => number | null {
+  const statesByCountry = new Map<string, string[]>();
+  for (const s of states) {
+    const list = statesByCountry.get(String(s.countryId)) ?? [];
+    list.push(String(s._id));
+    statesByCountry.set(String(s.countryId), list);
+  }
+  const memo = new Map<string, number | null>();
+  return (commodity, countryId) => {
+    const key = `${commodity}|${countryId}`;
+    if (memo.has(key)) return memo.get(key)!;
+    const byState = priceByCommodity.get(commodity)?.stateDemand;
+    const ids = statesByCountry.get(countryId) ?? [];
+    const value =
+      byState && ids.length ? ids.reduce((n, id) => n + (Number(byState[id]) || 0), 0) : null;
+    memo.set(key, value);
+    return value;
   };
 }
