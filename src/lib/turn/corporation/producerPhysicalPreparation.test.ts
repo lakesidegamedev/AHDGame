@@ -3,6 +3,7 @@ import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rul
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
+import type { CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import {
   prepareProducerPhysicalSector,
@@ -57,6 +58,26 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("applies clearing headroom only to buying limits, across countries", () => {
+    for (const countryId of ["US", "UK", "JP"] as const) {
+      const { input, env } = fixture();
+      input.corporation.countryId = countryId;
+      input.sector.countryId = countryId;
+      const baseline = prepareProducerPhysicalSector(input).prepared.plan;
+      const recipe = baseline.inputs.find((i) => i.book === "world")!;
+      expect(recipe).toBeDefined();
+      const clearing = recipe.maximumUnitPrice * 1.2;
+      env.clearingReferenceStage = 1;
+      env.lastClearingPriceByCommodity = new Map([[recipe.commodity as CommodityType, clearing]]);
+      const prepared = prepareProducerPhysicalSector(input).prepared.plan;
+      expect(
+        prepared.inputs.find((i) => i.commodity === recipe.commodity)!.maximumUnitPrice
+      ).toBeCloseTo(clearing * 1.25);
+      expect(prepared.outputs).toEqual(baseline.outputs);
+      env.clearingReferenceStage = 0;
+      expect(prepareProducerPhysicalSector(input).prepared.plan.inputs).toEqual(baseline.inputs);
+    }
+  });
   it("carries pricing from the company or its inherited parent policy into the funded plan", () => {
     const { input } = fixture();
     input.corporation.internalSupplyPolicy = {

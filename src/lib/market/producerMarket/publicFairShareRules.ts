@@ -1,5 +1,5 @@
 /**
- * Public buyers share a scarce world book fairly.
+ * Public buyers and producer plants share scarce market supply fairly.
  *
  * Settlement takes orders of equal priority in id order, and a public order's
  * id embeds its country code, so whatever the home-first pass leaves on a
@@ -8,7 +8,8 @@
  * none. With gameConfig.producerPublicFairShareStage on, public world-book
  * orders are flagged so settleProducerMarket clears each price level across
  * them together, pro rata to what each still wants. Plain data in, plain data
- * out.
+ * out. Producer input orders use the same allocation without a stage switch.
+ * Shared budgets are capped simultaneously before any sibling spends them.
  */
 import type { PurchaseOrder } from "./rules";
 
@@ -50,7 +51,34 @@ export function proRataShares(
       shares[i] = rows[i].cap;
       left = Math.max(0, left - rows[i].cap);
     }
-    open = open.filter((i) => !capped.includes(i));
+    const cappedIds = new Set(capped);
+    open = open.filter((i) => !cappedIds.has(i));
   }
   return shares;
+}
+
+/** Cap simultaneous shares before paying, so siblings cannot spend each other's budget by id. */
+export function capSharedShares(
+  shares: readonly number[],
+  limits: readonly (readonly { id: string; units: number }[])[]
+): number[] {
+  const totals = new Map<string, number>();
+  const caps = new Map<string, number>();
+  limits.forEach((row, i) => {
+    for (const limit of row) {
+      totals.set(limit.id, (totals.get(limit.id) ?? 0) + shares[i]);
+      caps.set(limit.id, Math.min(caps.get(limit.id) ?? Infinity, limit.units));
+    }
+  });
+  // Most funded books have enough shared cash. Avoid visiting every limit a
+  // second time when the proposed allocation already fits every joint cap.
+  if ([...caps].every(([id, cap]) => totals.get(id)! <= cap)) return [...shares];
+  return shares.map((share, i) => {
+    let scale = 1;
+    for (const limit of limits[i]) {
+      const total = totals.get(limit.id)!;
+      if (total > 0) scale = Math.min(scale, Math.max(0, caps.get(limit.id)!) / total);
+    }
+    return share * scale;
+  });
 }

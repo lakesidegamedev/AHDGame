@@ -889,9 +889,11 @@ export function makeNppCorpDecision(
   const surplusCash = liquidCapital - effectiveCashFloor;
   // Plants idle for want of cash hold founding and every reinvestment leg.
   // nppDividendAfterTaxStage >= 2: no founding or growth from cash at or under the floor.
-  const cashCutHold =
-    corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn) ||
-    (plants?.holdExpansionAtCashFloor === true && !(surplusCash > 0));
+  // A short-lane financed build still goes through (rules/shortageGrowthFinance): the
+  // cash growth budget is zero under the floor, so only the loan can size units.
+  const cashRunCut = corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn);
+  const floorHold = plants?.holdExpansionAtCashFloor === true && !(surplusCash > 0);
+  const cashCutHold = cashRunCut || floorHold;
   const entry = evaluateNppEntry({
     corp,
     sectors: sectorsAfterConversion(sectors, conversionApplied),
@@ -1387,7 +1389,7 @@ export function makeNppCorpDecision(
           )
         ),
         property_unavailable: !!sector.forSale || hasProtectedConstructionProperty(sector),
-        cash_cut_run: cashCutHold,
+        cash_cut_run: cashRunCut || (floorHold && !ctx.shortageGrowthFinance),
       });
       if (preSizingGate) {
         observeReinvestCandidate(preSizingGate, sector, capitalStock, null, 0, null);

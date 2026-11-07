@@ -85,6 +85,7 @@ const PRIVATE_REDACTED_SECTOR_FIELDS = [
   "fillRate",
   "fillRateBand",
   "ownSiteShare",
+  "ownTruckHaulTeu",
   // Internal supply between the corp's own sites: who its output goes to, and
   // with the booked profit beside it, how much.
   "managementProfit",

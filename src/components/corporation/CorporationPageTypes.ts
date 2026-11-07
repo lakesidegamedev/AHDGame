@@ -835,6 +835,8 @@ export interface SectorDetail {
    * Insider-only; null when none.
    */
   ownSiteShare?: number | null;
+  /** TEU the company's own trucks hauled out of this state last turn (logistics rows). Insider-only. */
+  ownTruckHaulTeu?: number | null;
   /**
    * Profit with income and charges between the company's own sites counted
    * (priced internal transfers). Display only; null when there are none.
