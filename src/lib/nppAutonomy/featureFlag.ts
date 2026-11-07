@@ -3,25 +3,17 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState, NppAutonomyLevel } from "@/lib/db/types/gameState";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { NPP_AUTONOMY_LEVEL_RANK } from "./levels";
 
 export type { NppAutonomyLevel };
 
 /**
  * Canonical ordering of the autonomy levels. Exported so callers never hand-roll
- * a local copy (nppActionProcessing used to) and never compare with strict
- * equality — `level === "v3"` silently turns a v3+ feature OFF at v4, which is
- * exactly the bug class this export exists to prevent.
+ * a local copy (nppActionProcessing and countryAccess used to) and never compare
+ * with strict equality: `level === "v3"` silently turns a v3+ feature OFF at v4,
+ * which is exactly the bug class this export exists to prevent.
  */
-export const NPP_AUTONOMY_LEVEL_RANK: Record<NppAutonomyLevel, number> = {
-  off: 0,
-  v0: 1,
-  v1: 2,
-  v2: 3,
-  v3: 4,
-  v4: 5,
-  v5: 6,
-  v6: 7,
-};
+export { NPP_AUTONOMY_LEVEL_RANK };
 
 const LEVEL_RANK = NPP_AUTONOMY_LEVEL_RANK;
 
