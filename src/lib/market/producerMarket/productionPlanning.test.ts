@@ -53,6 +53,23 @@ function request() {
 }
 
 describe("production planning execution limits", () => {
+  it("checks a whole-operation deadline inside final clearing too", () => {
+    const input = request();
+    input.producers = input.producers.filter((p) => p.id === "power");
+    let planningFinished = false;
+    expect(() =>
+      advanceProducerEconomy(input, {
+        elapsedMs: () => {
+          planningFinished = true;
+          return 0;
+        },
+        maximumElapsedMs: 30_000,
+        checkBudget: () => {
+          if (planningFinished) throw new Error("deadline");
+        },
+      })
+    ).toThrow("deadline");
+  });
   it("finishes early when every site and the credit allocation stop changing", () => {
     const elapsedMs = vi.fn(() => 0);
     const result = advanceProducerEconomy(request(), { elapsedMs, maximumElapsedMs: 30_000 });

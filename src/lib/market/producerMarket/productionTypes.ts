@@ -101,6 +101,8 @@ export type ProducerEconomyInput = {
 };
 
 export type ProducerPlanningExecution = {
+  /** Independent whole-operation deadline supplied by the host. */
+  checkBudget?: () => void;
   /** The host owns the clock. Checked between whole clearing passes only. */
   elapsedMs: () => number;
   maximumElapsedMs: number;
