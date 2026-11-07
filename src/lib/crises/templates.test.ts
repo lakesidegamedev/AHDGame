@@ -179,10 +179,16 @@ describe("P3.5 margin-shock physicality classification", () => {
     expect(physical).toEqual(
       [
         "bridge_collapse",
+        // 2027 world: a fab fire, a dock strike, a depot lockout and a grid
+        // emergency each plainly stop output, like their older counterparts.
+        "chip_fab_fire",
+        "grid_emergency",
         "industrial_accident",
         "labor_strikes",
         "port_closure",
+        "port_workers_strike",
         "power_grid_failure",
+        "robotic_depot_lockout",
         "steel_strike",
         "supply_chain_disruption",
         // Three struck sectors, so the wildcat strike carries three physical
