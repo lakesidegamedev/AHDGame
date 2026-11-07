@@ -68,9 +68,9 @@ async function runNppTurn(
   });
   mark("processNppMortality");
 
-  if (mortality.deaths > 0) {
+  if (mortality.replacements > 0 || mortality.birthYearsAssigned > 0) {
     console.log(
-      `[Turn] NPP mortality: ${mortality.deaths} deaths, ${mortality.replacements} successors seated`
+      `[Turn] NPP mortality: ${mortality.deaths} deaths, ${mortality.retirements} retirements, ${mortality.replacements} successors seated, ${mortality.birthYearsAssigned} birth years assigned`
     );
   }
 

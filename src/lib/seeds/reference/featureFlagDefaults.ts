@@ -53,6 +53,8 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   nppAutonomyLevel: FRESH_WORLD_FLAG_EXCLUSIONS.nppAutonomyLevel.value,
   // Kept in sync with nppAutonomyLevel for legacy readers.
   nppAutonomyEnabled: true,
+  // NPP death and retirement, independent of the autonomy level.
+  nppTurnoverEnabled: true,
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
   nppOffensiveInitiationEnabled: true,

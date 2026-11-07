@@ -109,7 +109,7 @@ describe.skipIf(!uri)("Native slate custody through actual mortality processing"
         process.stdout.write(
           JSON.stringify({ path: `native-${country}-${seats}`, ...metrics }) + "\n"
         );
-        expect(result).toEqual({ deaths: 0, replacements: 0 });
+        expect(result).toMatchObject({ deaths: 0, retirements: 0, replacements: 0 });
         expect(rng).not.toHaveBeenCalled();
         expect(mint).not.toHaveBeenCalled();
         expect(metrics.commands).toBe(2);
@@ -131,7 +131,7 @@ describe.skipIf(!uri)("Native slate custody through actual mortality processing"
       const { db, ownerId } = await fixture(country, 1, false);
       try {
         const { result, mint } = await run(db);
-        expect(result).toEqual({ deaths: 1, replacements: 1 });
+        expect(result).toMatchObject({ deaths: 1, retirements: 0, replacements: 1 });
         expect(mint).toHaveBeenCalledTimes(1);
         const successor = await db.collection("npps").findOne({ _id: { $ne: ownerId } });
         expect(successor).toBeTruthy();
@@ -151,7 +151,7 @@ describe.skipIf(!uri)("Native slate custody through actual mortality processing"
     const { db } = await fixture("BG", 1, true);
     try {
       await db.collection("electedOfficials").updateMany({}, { $set: { seatsHeld: 0 } });
-      expect((await run(db)).result).toEqual({ deaths: 1, replacements: 1 });
+      expect((await run(db)).result).toMatchObject({ deaths: 1, retirements: 0, replacements: 1 });
     } finally {
       await db.dropDatabase();
     }

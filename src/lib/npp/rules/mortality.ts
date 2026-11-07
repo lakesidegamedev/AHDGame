@@ -1,5 +1,6 @@
 /**
- * Under V5, seated NPPs age each game year and can die; successors inherit seats.
+ * When NPP turnover is on (or under V5), seated NPPs age each game year, can die
+ * and, with the turnover flag, retire; successors inherit seats.
  * These pure calculations use the supplied year, turn count, and RNG, with no database access.
  * @see nppDiesThisTurn
  */
@@ -49,5 +50,36 @@ export function nppDiesThisTurn(age: number, rng: () => number, turnsPerYear: nu
 /** Generate a working-age replacement birth year from an injected RNG. */
 export function randomReplacementBirthYear(currentYear: number, rng: () => number): number {
   const age = 32 + Math.floor(rng() * 37);
+  return currentYear - age;
+}
+
+/**
+ * Annual retirement probability for a sitting politician at the supplied age.
+ * Nobody retires before 70; from 70 the chance climbs linearly from 5% to 35%
+ * at 80 and holds there.
+ */
+export function annualRetirementProbability(age: number): number {
+  if (!Number.isFinite(age) || age < 70) return 0;
+  return Math.min(0.35, 0.05 + ((age - 70) * 0.3) / 10);
+}
+
+/** Roll one turn of retirement using an injected RNG and turns-per-year value. */
+export function nppRetiresThisTurn(age: number, rng: () => number, turnsPerYear: number): boolean {
+  if (!Number.isFinite(turnsPerYear) || turnsPerYear <= 0) return false;
+  return rng() < annualRetirementProbability(age) / turnsPerYear;
+}
+
+/**
+ * Deterministic stand-in birth year for an office-holder seeded without one,
+ * so they can age out. The id seeds an age of 35-70 at the supplied year; the
+ * same id always gets the same age.
+ */
+export function backfillBirthYear(id: string, currentYear: number): number {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const age = 35 + ((hash >>> 0) % 36);
   return currentYear - age;
 }
