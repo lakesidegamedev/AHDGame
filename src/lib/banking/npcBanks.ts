@@ -6,6 +6,7 @@ import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
 import {
   COUNTRY_CURRENCY_MAP,
   getCountryIdForCurrency,
+  getSeedCurrencyCode,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import { NPP_CAPITAL_STATES, spawnNppCorporation } from "@/lib/admin/spawnNppCorporation";
@@ -222,7 +223,10 @@ export async function seedNpcBanks(
       continue;
     }
 
-    const currency = COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode | undefined;
+    // Same preset-aware code spawnNppCorporation gives the bank's treasury: the
+    // charter is refused when the two differ (2019 Poland banks in PLN, not PLZ).
+    const currency = (getSeedCurrencyCode(countryId, preset) ?? COUNTRY_CURRENCY_MAP[countryId]) as
+      CurrencyCode | undefined;
     if (!currency) {
       result.skippedIneligible += NPC_BANKS_PER_COUNTRY;
       continue;
@@ -403,14 +407,28 @@ export async function runNpcBankPolicy(db: Db, _turn: number): Promise<NpcBankPo
 }
 
 /**
- * Turn-phase entry: no-op when private banking is off. Does not seed.
+ * Turn-phase entry: no-op when private banking is off.
+ *
+ * Seeds first. A country that was a planned economy when the world was created
+ * got no NPP banks (the seed skips countries closed to private enterprise), and
+ * nothing seeded them once the marketization dial opened. A 1991 world reached
+ * 2005 with Poland, Romania, Czechoslovakia, Hungary, Bulgaria, Yugoslavia and
+ * the USSR bankless, so their companies could never borrow to build. The seed is
+ * idempotent (one key per slot), so on every other turn it finds the banks and
+ * creates nothing. A seeding failure is logged and never stops the turn.
  */
 export async function processNpcBankPolicyTurn(
   db: Db,
   turn: number
-): Promise<NpcBankPolicySummary> {
+): Promise<NpcBankPolicySummary & { banksSeeded?: number }> {
   if (!(await isPrivateBankingEnabled())) {
     return { ...ZERO_POLICY };
   }
-  return runNpcBankPolicy(db, turn);
+  let banksSeeded = 0;
+  try {
+    banksSeeded = (await seedNpcBanks(db)).created;
+  } catch (err) {
+    console.error("[npcBanks] seeding market-economy banks failed", err);
+  }
+  return { ...(await runNpcBankPolicy(db, turn)), ...(banksSeeded > 0 ? { banksSeeded } : {}) };
 }

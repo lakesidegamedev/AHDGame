@@ -31,6 +31,7 @@ import { runInAuditContext, turnPhaseTraceId } from "@/lib/observability/context
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import {
   encodeResumeResult,
+  INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
   phaseRequiresResumeResult,
   TurnPhaseCompletionPersistError,
   TurnResumeResultUnavailableError,
@@ -213,7 +214,7 @@ export function createTurnPhaseRuntime(input: {
         : {}),
       ...(options.topCollections?.length ? { topCollections: options.topCollections } : {}),
       ...(options.substeps ? { substeps: options.substeps } : {}),
-      ...(status === "skipped" && options.resumeCarried
+      ...((status === "skipped" || status === "failed") && options.resumeCarried
         ? { resumeCarried: options.resumeCarried }
         : {}),
       status,
@@ -332,6 +333,16 @@ export function createTurnPhaseRuntime(input: {
       }
       // Carry the restored copy forward, so a second crash can restore it again.
       const result = restored !== null ? encodeResumeResult(name, restored) : null;
+      if (resumeCarried === "interrupted") {
+        // Never record an unfinished phase as applied: it failed, and says so.
+        warnings.push(`${name}: ${INTERRUPTED_PHASE_NOT_RERUN_MESSAGE}`);
+        await setPhaseStatus(name, "failed", {
+          reason: "other",
+          message: INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
+          resumeCarried,
+        });
+        return restored;
+      }
       await setPhaseStatus(name, "skipped", {
         reason: "upstreamAbort",
         message:

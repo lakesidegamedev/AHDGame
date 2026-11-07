@@ -342,6 +342,7 @@ function OperationsRow({
                 fill={sector.fillRate}
                 band={sector.fillRateBand}
                 ownSiteShare={sector.ownSiteShare}
+                ownTruckHaulTeu={sector.ownTruckHaulTeu}
                 plantCount={sectorPlantCount(sector)}
                 className="items-end"
               />

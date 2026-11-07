@@ -29,6 +29,12 @@ export interface ProducerOffer {
   countryId?: string;
   /** State the selling site is in; freight clears against local demand first. */
   stateId?: string;
+  /**
+   * The owner's opt-in (suggestion 427): this site sells to outside buyers
+   * before the company's own plants. Own-sites-first skips the offer; whatever
+   * outside buyers leave still reaches the own plants free, in the ordinary pass.
+   */
+  sellOutsideFirst?: true;
 }
 
 export interface PurchaseOrder {
@@ -124,6 +130,8 @@ export interface ProducerTradeReceipt {
      * buyer's country outside that state, 2 anywhere else. Absent = all own offers.
      */
     ownTier?: 0 | 1 | 2;
+    /** An own-sites-first fill that left out the company's `sellOutsideFirst` offers. */
+    skipOutsideFirst?: true;
     /** Exact supplier subset for a route-constrained fair-share leg. */
     supplierOfferIds?: readonly string[];
   }>;
@@ -193,7 +201,8 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
       (!eligible || eligible.has(offer.id)) &&
       (!fill.sellerState || offer.stateId === fill.sellerState) &&
       (!fill.homeCountry || offer.countryId === order.countryId) &&
-      (fill.ownTier == null || ownTierOf(order, offer) === fill.ownTier);
+      (fill.ownTier == null || ownTierOf(order, offer) === fill.ownTier) &&
+      !(fill.skipOutsideFirst && offer.sellOutsideFirst);
     // Internal transfers and contract/supplier orders ignore the posted price
     // and keep the full-book scan. An ordinary public order takes exactly the
     // offers posted at the fill's price, which the bucket already holds.
@@ -760,9 +769,11 @@ export function settleProducerMarket(input: {
       if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
       if (marketFirst.has(order.accountId)) continue;
       const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
-      const own = (
+      const ownAll = (
         ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
       ).filter((offer) => !eligible || eligible.has(offer.id));
+      const skipOutsideFirst = ownAll.some((offer) => offer.sellOutsideFirst);
+      const own = skipOutsideFirst ? ownAll.filter((offer) => !offer.sellOutsideFirst) : ownAll;
       if (own.length === 0) continue;
       let wanted = order.units;
       for (const ownTier of [0, 1, 2] as const) {
@@ -774,7 +785,14 @@ export function settleProducerMarket(input: {
         fills.push(
           fillsWithCountries(
             order,
-            { orderId: order.id, kind: "internalTransfer", unitPrice: 0, units: take, ownTier },
+            {
+              orderId: order.id,
+              kind: "internalTransfer",
+              unitPrice: 0,
+              units: take,
+              ownTier,
+              ...(skipOutsideFirst ? { skipOutsideFirst: true as const } : {}),
+            },
             tier
           )
         );
@@ -1210,9 +1228,16 @@ export function settleProducerMarket(input: {
     }
   };
   // Market-first companies buy last, so outside buyers clear their output first.
+  // A site that opted to sell outside first defers its company's orders the same way.
+  const outsideFirstAccounts = new Set(
+    input.ownSitesFirst
+      ? input.offers.filter((offer) => offer.sellOutsideFirst).map((offer) => offer.accountId)
+      : []
+  );
   const deferred: PurchaseOrder[] = [];
   for (const order of orders) {
-    if (marketFirst.has(order.accountId)) deferred.push(order);
+    if (marketFirst.has(order.accountId) || outsideFirstAccounts.has(order.accountId))
+      deferred.push(order);
     else clearOrder(order);
   }
   for (const order of deferred) clearOrder(order);
