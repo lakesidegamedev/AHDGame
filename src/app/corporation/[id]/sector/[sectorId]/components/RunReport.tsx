@@ -224,7 +224,7 @@ export default function RunReport({
 
       {price != null && unitCost > 0 && (
         <div data-testid="unit-economics">
-          <p className="mb-1 text-body-xs font-medium text-muted">Each unit last turn</p>
+          <p className="mb-1 text-body-xs font-medium text-muted">Each unit sold last turn</p>
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-track">
             <div className="flex h-full">
               {costs.map((c) => (
@@ -254,6 +254,9 @@ export default function RunReport({
                 {margin >= 0 ? "Earns" : "Loses"} {formatAmount(Math.abs(margin))} a unit.
               </span>
             )}
+            {(report.unsoldShare ?? 0) >= 0.005
+              ? ` The cost includes the ${fmtPct(report.unsoldShare ?? 0)} you made but did not sell.`
+              : ""}
             {report.ownSiteValued
               ? " Units sent to your own sites are valued at your asking price."
               : ""}
