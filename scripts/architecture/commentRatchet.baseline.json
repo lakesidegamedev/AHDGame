@@ -12185,6 +12185,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/energyTransition/rules.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/env.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
