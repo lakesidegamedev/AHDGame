@@ -81,7 +81,7 @@ const REGISTRY: Record<string, Registered> = {
     writers: ["creditTreasuryProceeds"],
     witness: [{ kind: "own-row", txTypes: ["gov_tax_revenue"] }],
   },
-  "src/app/api/corporations/route.ts": {
+  "src/lib/corporations/commands/founding/foundCorporation.ts": {
     writers: ["creditTreasuryProceeds"],
     witness: [{ kind: "own-row", txTypes: ["corp_capital_seed"] }],
   },
