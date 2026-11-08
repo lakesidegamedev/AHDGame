@@ -1,6 +1,12 @@
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { createHash } from "node:crypto";
-import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import {
+  ObjectId,
+  type AnyBulkWriteOperation,
+  type Collection,
+  type Db,
+  type Document,
+} from "mongodb";
 import {
   ELECTION_SHIFT_TURNS,
   boundPartyShift,
@@ -56,6 +62,30 @@ function shiftId(crisisId: ObjectId, countryId: string, partyId: string, region:
     .update(`${crisisId.toHexString()}:blame:${countryId}:${partyId}:${region}`)
     .digest("hex");
   return new ObjectId(digest.slice(0, 24));
+}
+
+/**
+ * Ordered bulk write that records a receipt for every op it applied. If an op
+ * fails, the ones before it have landed and are receipted, so a retry resumes
+ * at the failure instead of repeating additive writes.
+ */
+async function writeReceipted<T extends Document>(
+  collection: Collection<T>,
+  items: { key: string; op: AnyBulkWriteOperation<T> }[],
+  receipts: WriteReceipts | undefined
+): Promise<void> {
+  if (items.length === 0) return;
+  try {
+    await collection.bulkWrite(
+      items.map((item) => item.op),
+      { ordered: true }
+    );
+  } catch (error) {
+    const failedAt = (error as { writeErrors?: { index?: number }[] }).writeErrors?.[0]?.index;
+    for (const item of items.slice(0, failedAt ?? 0)) receipts?.mark(item.key);
+    throw error;
+  }
+  for (const item of items) receipts?.mark(item.key);
 }
 
 /**
@@ -119,30 +149,45 @@ export async function settleCrisisConsequences(
     }
   }
 
-  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+  const nationalOps: { key: string; op: AnyBulkWriteOperation<GovernmentApproval> }[] = [];
   for (const [countryId, delta] of nationalApproval) {
-    if (Math.abs(delta) < 0.01) continue;
     const key = `national:${countryId}`;
-    if (receipts?.done.has(key)) continue;
-    await approvals.updateOne(
-      { _id: countryId as GovernmentApproval["_id"] },
-      clampedApproval(delta)
-    );
-    receipts?.mark(key);
-    result.approvalWrites += 1;
+    if (Math.abs(delta) < 0.01 || receipts?.done.has(key)) continue;
+    nationalOps.push({
+      key,
+      op: {
+        updateOne: {
+          filter: { _id: countryId as GovernmentApproval["_id"] },
+          update: clampedApproval(delta),
+        },
+      },
+    });
   }
-  const stateApprovals = db.collection<StateApprovalHistory>("stateApprovalHistory");
+  const stateOps: { key: string; op: AnyBulkWriteOperation<StateApprovalHistory> }[] = [];
   for (const [stateId, { countryId, delta }] of stateApproval) {
-    if (Math.abs(delta) < 0.01) continue;
     const key = `state:${stateId}`;
-    if (receipts?.done.has(key)) continue;
-    await stateApprovals.updateOne(
-      { _id: stateId, countryId: countryId as StateApprovalHistory["countryId"] },
-      clampedApproval(delta)
-    );
-    receipts?.mark(key);
-    result.approvalWrites += 1;
+    if (Math.abs(delta) < 0.01 || receipts?.done.has(key)) continue;
+    stateOps.push({
+      key,
+      op: {
+        updateOne: {
+          filter: { _id: stateId, countryId: countryId as StateApprovalHistory["countryId"] },
+          update: clampedApproval(delta),
+        },
+      },
+    });
   }
+  await writeReceipted(
+    db.collection<GovernmentApproval>("governmentApprovals"),
+    nationalOps,
+    receipts
+  );
+  await writeReceipted(
+    db.collection<StateApprovalHistory>("stateApprovalHistory"),
+    stateOps,
+    receipts
+  );
+  result.approvalWrites = nationalOps.length + stateOps.length;
 
   const regionIds =
     targets.scope === "local" || targets.scope === "state" ? [...targets.regionIds] : [];

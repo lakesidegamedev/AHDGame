@@ -42,7 +42,8 @@ function makeDb(characters: Record<string, unknown>[]) {
       if (name === "governmentApprovals" || name === "stateApprovalHistory") {
         const sink = name === "governmentApprovals" ? approvalUpdates : stateUpdates;
         return {
-          updateOne: async (filter: unknown, update: unknown) => void sink.push({ filter, update }),
+          bulkWrite: async (ops: { updateOne: { filter: unknown; update: unknown } }[]) =>
+            void ops.forEach((op) => sink.push(op.updateOne)),
         };
       }
       if (name === "countryModifiers") return { bulkWrite: modifierWrites };

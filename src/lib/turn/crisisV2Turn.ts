@@ -438,7 +438,7 @@ async function retryClosedDeliveries(db: Db, turn: number): Promise<void> {
         { status: "resolved", "v2.pendingDelivery": { $exists: true } },
         { projection: LIVE_PROJECTION }
       )
-      .toArray()) as unknown as LiveCrisis[];
+      .toArray()) as LiveCrisis[];
     if (closed.length === 0) return;
     const world = await loadWorld(db);
     for (const crisis of closed) {
