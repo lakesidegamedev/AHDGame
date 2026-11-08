@@ -13,6 +13,8 @@ export interface AlertRecipient {
   userId: string;
   countryId?: string;
   homeState?: string;
+  /** Holds any office. Country-wide and global alerts go only to officeholders. */
+  holdsOffice?: boolean;
 }
 
 export type AlertKind = "decision" | "stage";
@@ -53,7 +55,7 @@ export function alertAudience(crisis: AlertCrisis, candidates: AlertRecipient[])
   const users = new Set<string>();
   for (const c of candidates) {
     const hit =
-      (!!c.countryId && countryIds.includes(c.countryId)) ||
+      (!!c.countryId && countryIds.includes(c.countryId) && !!c.holdsOffice) ||
       (!!c.homeState && regionIds.includes(c.homeState));
     if (hit) users.add(c.userId);
   }

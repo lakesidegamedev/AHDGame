@@ -98,18 +98,28 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
     reach.regionIds.forEach((r) => regionIds.add(r));
   }
   const rows = await db
-    .collection<{ userId?: ObjectId; countryId?: string; homeState?: string }>("characters")
+    .collection<{
+      userId?: ObjectId;
+      countryId?: string;
+      homeState?: string;
+      currentOffice?: unknown;
+    }>("characters")
     .find(
       {
         active: { $ne: false },
         $or: [{ countryId: { $in: [...countryIds] } }, { homeState: { $in: [...regionIds] } }],
       },
-      { projection: { userId: 1, countryId: 1, homeState: 1 } }
+      { projection: { userId: 1, countryId: 1, homeState: 1, currentOffice: 1 } }
     )
     .toArray();
   const candidates: AlertRecipient[] = rows
     .filter((r) => r.userId)
-    .map((r) => ({ userId: r.userId!.toString(), countryId: r.countryId, homeState: r.homeState }));
+    .map((r) => ({
+      userId: r.userId!.toString(),
+      countryId: r.countryId,
+      homeState: r.homeState,
+      holdsOffice: !!r.currentOffice,
+    }));
 
   const notifications = due.flatMap(({ crisis, kind }) => {
     const copy = COPY[kind](crisis.name);
