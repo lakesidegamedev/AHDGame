@@ -70,7 +70,7 @@ describe("notifyCrisisChanges", () => {
     decisionTree: [{ nodeId, type: "choice" }],
   });
 
-  function setup(previousSignature: string | undefined, modified: number) {
+  function setup(previousSignature: string | undefined, previousTurn = 39) {
     sent.calls = [];
     const db = createMockDb();
     db.collection("crises").find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([crisis]) });
@@ -79,10 +79,11 @@ describe("notifyCrisisChanges", () => {
       toArray: vi
         .fn()
         .mockResolvedValue(
-          previousSignature ? [{ _id: crisisId.toString(), signature: previousSignature }] : []
+          previousSignature
+            ? [{ _id: crisisId.toString(), signature: previousSignature, turn: previousTurn }]
+            : []
         ),
     });
-    states.updateOne.mockResolvedValue({ modifiedCount: modified });
     db.collection("characters").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ userId, countryId: "US" }]),
     });
@@ -91,7 +92,7 @@ describe("notifyCrisisChanges", () => {
 
   it("alerts a player once when the node changes", async () => {
     interactions.map = new Map([[crisisId.toString(), interaction("n2")]]);
-    const { db } = setup("n1|open|0", 1);
+    const { db } = setup("n1|open|0");
     expect(await notifyCrisisChanges(db, 40)).toBe(1);
     const [note] = sent.calls[0] as Array<{ metadata: Record<string, unknown>; type: string }>;
     expect(note.type).toBe("crisis");
@@ -102,19 +103,21 @@ describe("notifyCrisisChanges", () => {
     });
   });
 
-  it("stays quiet when the position is unchanged or another run already claimed it", async () => {
+  it("stays quiet when the position is unchanged", async () => {
     interactions.map = new Map([[crisisId.toString(), interaction("n1")]]);
-    const same = setup("n1|open|0", 1);
-    expect(await notifyCrisisChanges(same.db, 40)).toBe(0);
+    expect(await notifyCrisisChanges(setup("n1|open|0").db, 40)).toBe(0);
+  });
 
+  it("sends one alert per crisis per turn", async () => {
     interactions.map = new Map([[crisisId.toString(), interaction("n2")]]);
-    const raced = setup("n1|open|0", 0);
-    expect(await notifyCrisisChanges(raced.db, 40)).toBe(0);
+    const { db, states } = setup("n1|open|0", 40);
+    expect(await notifyCrisisChanges(db, 40)).toBe(0);
+    expect(states.bulkWrite).toHaveBeenCalledTimes(1);
   });
 
   it("records a first sighting without alerting", async () => {
     interactions.map = new Map([[crisisId.toString(), interaction("n1")]]);
-    const { db, states } = setup(undefined, 0);
+    const { db, states } = setup(undefined);
     expect(await notifyCrisisChanges(db, 40)).toBe(0);
     expect(states.bulkWrite).toHaveBeenCalledTimes(1);
   });

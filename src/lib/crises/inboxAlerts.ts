@@ -30,9 +30,9 @@ const COPY: Record<AlertKind, (name: string) => { title: string; message: string
 
 /**
  * Tell affected players when a crisis moves to a new node or opens a new
- * decision. The per-crisis signature is claimed atomically, so a crisis alerts
- * at most once per change however often this runs, and each player gets one
- * message per crisis per turn.
+ * decision. The stored signature means a crisis alerts once per change, the
+ * stored turn caps it at one alert per turn, and each player is addressed once
+ * per crisis.
  */
 export async function notifyCrisisChanges(db: Db, turn: number): Promise<number> {
   const crises = await db
@@ -60,39 +60,31 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
   const states = db.collection<AlertStateRow>("crisisAlertState");
   const previous = new Map(
     (await states.find({ _id: { $in: crises.map((c) => c._id.toString()) } }).toArray()).map(
-      (row) => [row._id, row.signature]
+      (row) => [row._id, row]
     )
   );
 
-  const due: Array<{ crisis: Crisis; kind: AlertKind; nodeId: string | null }> = [];
-  const baselines: Array<{ id: string; signature: string }> = [];
+  const due: Array<{ crisis: Crisis; kind: AlertKind }> = [];
+  const writes: Array<{ id: string; signature: string }> = [];
   for (const crisis of crises) {
     const interaction = interactions.get(crisis._id.toString());
     if (!interaction) continue;
     const id = crisis._id.toString();
     const signature = crisisAlertSignature(interaction);
+    const before = previous.get(id);
+    if (before?.signature === signature) continue;
+    writes.push({ id, signature });
+    // One alert per crisis per turn: a second move in the same turn waits for the next.
+    if (before?.turn === turn) continue;
     const node = interaction.decisionTree.find((n) => n.nodeId === interaction.currentNodeId);
     const decisionOpen = !interaction.resolvedAt && !!node && node.type !== "terminal";
-    const kind = alertKindForChange(previous.get(id), signature, decisionOpen);
-    if (previous.get(id) === signature) continue;
-    if (kind) {
-      const claim = await states.updateOne(
-        { _id: id, signature: previous.get(id) },
-        { $set: { signature, turn } }
-      );
-      if (claim.modifiedCount === 1) due.push({ crisis, kind, nodeId: interaction.currentNodeId });
-    } else {
-      baselines.push({ id, signature });
-    }
+    const kind = alertKindForChange(before?.signature, signature, decisionOpen);
+    if (kind) due.push({ crisis, kind });
   }
-  if (baselines.length > 0) {
+  if (writes.length > 0) {
     await states.bulkWrite(
-      baselines.map(({ id, signature }) => ({
-        updateOne: {
-          filter: { _id: id },
-          update: { $setOnInsert: { signature, turn } },
-          upsert: true,
-        },
+      writes.map(({ id, signature }) => ({
+        updateOne: { filter: { _id: id }, update: { $set: { signature, turn } }, upsert: true },
       }))
     );
   }
@@ -119,14 +111,14 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
     .filter((r) => r.userId)
     .map((r) => ({ userId: r.userId!.toString(), countryId: r.countryId, homeState: r.homeState }));
 
-  const notifications = due.flatMap(({ crisis, kind, nodeId }) => {
+  const notifications = due.flatMap(({ crisis, kind }) => {
     const copy = COPY[kind](crisis.name);
     return alertAudience(crisis, candidates).map((userId) => ({
       userId: new ObjectId(userId),
       type: "crisis" as const,
       title: copy.title,
       message: copy.message,
-      metadata: { crisisId: crisis._id.toString(), alertTurn: turn, alertKind: kind, nodeId },
+      metadata: { crisisId: crisis._id.toString(), alertTurn: turn, alertKind: kind },
     }));
   });
   await createNotifications(notifications);
