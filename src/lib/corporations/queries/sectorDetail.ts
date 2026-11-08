@@ -8,6 +8,7 @@ import {
   loadCommodityDominanceContext,
 } from "@/lib/corporations/commodityDominanceContext";
 import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
+import { corpCanProspect } from "@/lib/constants/prospecting";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import { runningFlowsPerTurn } from "@/lib/corporations/rules/operatingReserve";
 import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondReference";
@@ -1764,6 +1765,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // Drives the Prospect modal's success-odds / yield preview (corp-side
         // prospecting math is a pure function of rdScore).
         rdScore: corporation.rdScore ?? 0,
+        // The launch command refuses companies whose own type is not
+        // extraction, so the sector page only offers Prospect when this is true.
+        canProspect: corpCanProspect(corporation),
         ...(governorConfig?.mediaEditorialEnabled === true && sector.sectorType === "media"
           ? { mediaEditorialEnabled: true, editorialStance }
           : {}),
