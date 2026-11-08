@@ -1,0 +1,735 @@
+/**
+ * Capacity economy rules: unit yields, strategy rescaling, era columns, build
+ * time and the build price. Plain data in, plain data out; the tables live in
+ * `constants/capacityEconomyTables`.
+ */
+
+import { eraForPreset } from "@/lib/seeds/presetSelector";
+import {
+  constructionPriceForDailyRevenue,
+  expansionCostMultiplier,
+  investmentBuildTurns,
+} from "@/lib/corporations/investment/rules";
+import {
+  GROWTH_COST_MULTIPLIER,
+  acumenGrowthCostMultiplier,
+  acumenRateSensitivity,
+  dominanceDensityFactor,
+  getDominanceGrowthCostMultiplier,
+  getNationalDominanceGrowthCostMultiplier,
+  type OperatingSectorType,
+  type MediaDiscriminator,
+} from "@/lib/constants/corporations";
+import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
+import { commodityDominanceMultiplier as commodityMultiplier } from "./commodityDominanceRamp";
+import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
+import {
+  SECTOR_STRATEGIES,
+  getStrategyForOperatingModel,
+  getOperatingSectorType,
+} from "@/lib/constants/sectorStrategies";
+import { TECH_BUILD_TIME_PER_GROWTH_REDUCTION } from "@/lib/constants/techTree/effects";
+import { eraLaborMultiplier } from "@/lib/labour/laborCost";
+import {
+  CAPACITY_ANCHOR_YEAR,
+  CAPACITY_BUILD_TURNS_DEFAULT,
+  CAPACITY_BUILD_TURNS_TABLE,
+  CAPACITY_ERA_MODERN_PRICE_INDEX,
+  CAPACITY_ERA_PRICE_ANCHORS,
+  CAPACITY_FOUNDING_DISCOUNT,
+  CAPACITY_REVENUE_PER_WORKER,
+  DEFAULT_STRATEGY_ID,
+  HOST_BUILD_PRICE_INDEX_MAX,
+  HOST_BUILD_PRICE_INDEX_MIN,
+} from "@/lib/constants/capacityEconomyTables";
+
+/**
+ * The output mix a sector is priced against: its default ("standard") strategy,
+ * falling back to the first ungated strategy and finally to the first listed —
+ * mirroring `getStrategy`'s fallback, but skipping tech-tree/decade-gated
+ * strategies, which cannot be a 1953 world's baseline.
+ */
+export function defaultSupplyRates(
+  sectorType: OperatingSectorType,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): Partial<Record<CommodityType, number>> {
+  const operatingType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
+  const strategies = SECTOR_STRATEGIES[operatingType] ?? [];
+  const chosen =
+    strategies.find((s) => s.id === DEFAULT_STRATEGY_ID) ??
+    strategies.find((s) => !s.requiresTechUnlock && !s.minDecade) ??
+    strategies[0];
+  return chosen?.supply ?? {};
+}
+
+/**
+ * Unit yield k(type): output units per ₳ of daily revenue, exactly the
+ * per-revenue slope of `impliedOutputUnits`.
+ *
+ * `unitScale` is the world's era unit-basis scale (`getEraUnitScale(preset)`,
+ * 1 for every modern world, ~70 for 1953): the base-price table below is
+ * 2019-calibrated, and a pre-modern world's ₳ figures are era-nominal, so
+ * without the scale a "unit" stays a modern-sized quantum and the era's whole
+ * economy collapses into a handful of units. The scale is REQUIRED, not
+ * defaulted, so the compiler enumerates every conversion site — a site that
+ * converts ₳→units with the scale and units→₳ without it drifts the two legs
+ * of a stored pair by the era ratio, silently and permanently.
+ */
+export function capacityUnitYield(
+  sectorType: OperatingSectorType,
+  unitScale: number,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): number {
+  const supply = defaultSupplyRates(sectorType, industryModel, mediaDiscriminator);
+  let k = 0;
+  for (const commodity of Object.keys(supply) as CommodityType[]) {
+    const rate = supply[commodity] ?? 0;
+    const base = COMMODITY_BASE_PRICES[commodity];
+    if (rate > 0 && base > 0) k += rate / base;
+  }
+  return k * safeUnitScale(unitScale);
+}
+
+/** Garbage-tolerant guard: a missing/non-finite/non-positive scale means 1 (modern basis). */
+export function safeUnitScale(unitScale: number | null | undefined): number {
+  return typeof unitScale === "number" && Number.isFinite(unitScale) && unitScale > 0
+    ? unitScale
+    : 1;
+}
+
+/**
+ * RPU — ₳ of daily revenue that one unit/day of capacity supports at full
+ * utilization. Reciprocal of {@link capacityUnitYield}, so it carries the
+ * era unit scale in the denominator: one 1953 unit earns era-scale ₳.
+ */
+export function revenuePerCapacityUnit(
+  sectorType: OperatingSectorType,
+  unitScale: number,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): number {
+  const k = capacityUnitYield(sectorType, unitScale, industryModel, mediaDiscriminator);
+  return k > 0 ? 1 / k : 0;
+}
+
+// ─── D9: capacity is ONE currency, but its VALUE is strategy-dependent ───────
+
+/**
+ * Unit yield k for an ARBITRARY output mix (not just the default strategy's).
+ * Same Σ(rate_c / basePrice_c) the engine's `impliedOutputUnits` applies.
+ */
+export function unitYieldForSupply(
+  supply: Partial<Record<CommodityType, number>>,
+  unitScale: number
+): number {
+  let k = 0;
+  for (const commodity of Object.keys(supply ?? {}) as CommodityType[]) {
+    const rate = supply[commodity] ?? 0;
+    const base = COMMODITY_BASE_PRICES[commodity];
+    if (rate > 0 && base > 0) k += rate / base;
+  }
+  return k * safeUnitScale(unitScale);
+}
+
+/**
+ * RPU for a SPECIFIC strategy of a sector type — ₳ of daily revenue one unit/day
+ * of capacity supports while the sector runs that production method.
+ *
+ * `revenuePerCapacityUnit` above is this evaluated at the sector's default
+ * ("standard") strategy; the build-price anchor is deliberately priced there, so
+ * capacity has one price regardless of what you later point it at (D9). This
+ * function is the other half of D9: the price is strategy-blind, so the STOCK
+ * has to be renormalized when the strategy changes.
+ *
+ * Returns 0 for a sector type with no strategy table at all — `getStrategy`
+ * THROWS on an unknown type, and this runs inside player-facing retool routes
+ * where a legacy/garbage `sectorType` must degrade to "no rescale", never to a
+ * 500. `capacityRescaleRatio` reads 0 as "nothing to do" and returns 1.
+ */
+export function revenuePerCapacityUnitForStrategy(
+  sectorType: OperatingSectorType,
+  strategyId: string | null | undefined,
+  unitScale: number,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): number {
+  const operatingType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
+  if (!SECTOR_STRATEGIES[operatingType]?.length) return 0;
+  const strategy = getStrategyForOperatingModel(
+    sectorType,
+    strategyId ?? DEFAULT_STRATEGY_ID,
+    industryModel,
+    mediaDiscriminator
+  );
+  const k = unitYieldForSupply(strategy?.supply ?? {}, unitScale);
+  return k > 0 ? 1 / k : 0;
+}
+
+/**
+ * D9 — RPU NORMALIZATION AT THE RETOOL BOUNDARY.
+ *
+ * `capitalStock` is a count of "output units per day". Under plants the sector's
+ * nameplate is `capitalStock × mixPrice`, and `mixPrice` is exactly the RPU of
+ * whatever strategy the sector is running (mixPrice = revenue / units =
+ * 1 / Σ(rate/base) = RPU — see `plantsMixPrice` in sectorTurn). Those units are
+ * NOT commensurable across production methods: a coal miner's mix prices at
+ * ~$60/unit while a rare-earth miner's prices in the tens of thousands, so a
+ * coal→rare-earth retool would re-price the very same physical plant by 140-327×
+ * — capacity you never built and never paid for, conjured by a $250k retool fee.
+ *
+ * The fix is to re-scale the STOCK so the NAMEPLATE is invariant across the
+ * retool:
+ *
+ *     capacity_new × RPU_new = capacity_old × RPU_old
+ *     capacity_new = capacity_old × RPU_old / RPU_new
+ *
+ * Read plainly: a plant worth ₳X/day of output is still worth ₳X/day of output
+ * the moment after you decide to point it at a different product. What changes
+ * afterwards is what the market pays for that output (price realization), the
+ * transition margin penalty, and the retool fee — all of which already exist.
+ * Retooling is a re-aim, not a capital grant.
+ *
+ * TRANSITION WINDOW: owned stock and paid orders use the destination basis.
+ * The turn converts that stock into the blended recipe's physical units for
+ * production, and converts produced units back before charging the held opex
+ * anchor. Nameplate value stays constant through the blend; depreciation and
+ * new construction still move owned stock in the usual way.
+ *
+ * Returns `capitalStock` unchanged when there is nothing meaningful to do (no
+ * stock, a strategy with no priced output on either side, a non-finite input) —
+ * a sector with no priced mix has no nameplate to keep invariant.
+ */
+export function rescaleCapacityForStrategyChange(
+  capitalStock: number | null | undefined,
+  sectorType: OperatingSectorType,
+  fromStrategyId: string | null | undefined,
+  toStrategyId: string | null | undefined,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): number {
+  const stock =
+    typeof capitalStock === "number" && Number.isFinite(capitalStock) ? capitalStock : 0;
+  if (stock <= 0) return stock;
+  const ratio = capacityRescaleRatio(
+    sectorType,
+    fromStrategyId,
+    toStrategyId,
+    industryModel,
+    mediaDiscriminator
+  );
+  return stock * ratio;
+}
+
+/**
+ * The bare RPU_old / RPU_new ratio {@link rescaleCapacityForStrategyChange}
+ * applies. Exported because build orders IN FLIGHT must move by the same factor:
+ * `unitsOrdered` is denominated in the same units as `capitalStock`, so an order
+ * placed under the old mix would otherwise land as mispriced capacity. Their
+ * `costPaidAnchor` is deliberately NOT touched — that is cash already spent, and
+ * CIP / the cancellation refund must keep reporting the ₳ actually paid.
+ *
+ * Returns exactly 1 whenever the rescale is undefined or a no-op.
+ */
+export function capacityRescaleRatio(
+  sectorType: OperatingSectorType,
+  fromStrategyId: string | null | undefined,
+  toStrategyId: string | null | undefined,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): number {
+  if ((fromStrategyId ?? DEFAULT_STRATEGY_ID) === (toStrategyId ?? DEFAULT_STRATEGY_ID)) return 1;
+  // The era unit scale cancels in the from/to ratio, so this stays scale-free
+  // by construction (passing the world's real scale would change nothing).
+  const rpuFrom = revenuePerCapacityUnitForStrategy(
+    sectorType,
+    fromStrategyId,
+    1,
+    industryModel,
+    mediaDiscriminator
+  );
+  const rpuTo = revenuePerCapacityUnitForStrategy(
+    sectorType,
+    toStrategyId,
+    1,
+    industryModel,
+    mediaDiscriminator
+  );
+  if (!(rpuFrom > 0) || !(rpuTo > 0) || !Number.isFinite(rpuFrom / rpuTo)) return 1;
+  return rpuFrom / rpuTo;
+}
+
+/**
+ * Apply the retool rescale to a whole build queue, in place-free form.
+ * `unitsOrdered` scales; everything else (paid cash, turn stamps) is untouched.
+ *
+ * `strategyId` is deliberately CARRIED THROUGH UNCHANGED by the spread. It
+ * records the strategy an order was PRICED at, not the strategy the sector now
+ * runs, and that is exactly what keeps the paid basis honest: an order bought
+ * as coal stays recorded as coal while its `unitsOrdered` is divided down so
+ * the nameplate it delivers is unchanged. Re-stamping it to the destination
+ * strategy without also re-charging the order would assert the corp had paid
+ * the rare-earth price when it had not.
+ */
+export function rescaleBuildQueueForStrategyChange<T extends { unitsOrdered: number }>(
+  queue: readonly T[] | null | undefined,
+  ratio: number
+): T[] {
+  if (!Array.isArray(queue) || queue.length === 0) return [];
+  if (!Number.isFinite(ratio) || ratio === 1) return [...queue];
+  return queue.map((order) => ({
+    ...order,
+    unitsOrdered:
+      Number.isFinite(order.unitsOrdered) && order.unitsOrdered > 0
+        ? order.unitsOrdered * ratio
+        : order.unitsOrdered,
+  }));
+}
+
+// ─── Tech output multiplier, expressed in CAPACITY units ─────────────────────
+
+/**
+ * Scalar by which a tech tree's per-commodity `outputRateMult` raises the
+ * UNITS a capacity produces.
+ *
+ * `sectorTurn` applies `outputRateMult` to the supply rates it reports
+ * (`effectiveSupply`), but `producedUnits` comes from `capitalStock`, not
+ * supply rates, so the tech effect must be applied to units here too. The
+ * scalar is the ratio of unit yields under scaled vs. unscaled mix:
+ *
+ *     mult = Σ(rate_c × m_c / base_c) / Σ(rate_c / base_c)
+ *
+ * Returns exactly 1 for an empty multiplier map, keeping the flip identity.
+ */
+export function techOutputUnitsMultiplier(
+  supply: Partial<Record<CommodityType, number>> | null | undefined,
+  outputRateMult: Record<string, number> | null | undefined
+): number {
+  if (!supply || !outputRateMult || Object.keys(outputRateMult).length === 0) return 1;
+  let base = 0;
+  let scaled = 0;
+  for (const commodity of Object.keys(supply) as CommodityType[]) {
+    const rate = supply[commodity] ?? 0;
+    const price = COMMODITY_BASE_PRICES[commodity];
+    if (!(rate > 0) || !(price > 0)) continue;
+    const contribution = rate / price;
+    const mult = outputRateMult[commodity];
+    base += contribution;
+    scaled += contribution * (Number.isFinite(mult) && mult > 0 ? mult : 1);
+  }
+  return base > 0 ? scaled / base : 1;
+}
+
+/**
+ * Interpolate nominal price levels geometrically between authored calibration
+ * years. Equal year increments have equal proportional changes within a span,
+ * preserving the anchors without imposing a price shock at an era boundary.
+ * Outside the authored range, hold the nearest endpoint. Missing or invalid
+ * years retain the modern fallback.
+ */
+export function capacityEraPriceIndex(year: number | null | undefined): number {
+  if (typeof year !== "number" || !Number.isFinite(year)) {
+    return CAPACITY_ERA_MODERN_PRICE_INDEX;
+  }
+  const first = CAPACITY_ERA_PRICE_ANCHORS[0];
+  if (year <= first.year) return first.priceIndex;
+  for (let i = 1; i < CAPACITY_ERA_PRICE_ANCHORS.length; i++) {
+    const upper = CAPACITY_ERA_PRICE_ANCHORS[i];
+    const lower = CAPACITY_ERA_PRICE_ANCHORS[i - 1];
+    if (year <= upper.year) {
+      const progress = (year - lower.year) / (upper.year - lower.year);
+      return lower.priceIndex * Math.pow(upper.priceIndex / lower.priceIndex, progress);
+    }
+  }
+  return CAPACITY_ERA_MODERN_PRICE_INDEX;
+}
+
+/**
+ * Labour-column era multiplier, derived live from `eraLaborMultiplier` and
+ * renormalized to 1.0 at the 1953 anchor (the era table above documents the
+ * resulting values; this function is the source of truth).
+ */
+export function capacityEraLaborIndex(year: number | null | undefined): number {
+  const anchor = eraLaborMultiplier(CAPACITY_ANCHOR_YEAR);
+  const here = eraLaborMultiplier(
+    typeof year === "number" && Number.isFinite(year) ? year : undefined
+  );
+  return anchor > 0 ? here / anchor : 1;
+}
+
+// ─── Public anchors ─────────────────────────────────────────────────────────
+
+/**
+ * Undiscounted construction price per unit of daily capacity. The 1991 preset
+ * uses one day of nominal output; all other presets retain the legacy growth
+ * multiplier and price column. Without a preset, the year selects the basis.
+ * Passing the originating preset keeps a 1991 world's price stable as it ages.
+ */
+export function capacityPricePerUnit(
+  sectorType: OperatingSectorType,
+  year: number,
+  unitScale: number,
+  strategyId: string | null | undefined,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null,
+  preset?: string
+): number {
+  const dailyRevenue = revenuePerCapacityUnitForStrategy(
+    sectorType,
+    strategyId,
+    unitScale,
+    industryModel,
+    mediaDiscriminator
+  );
+  return uses1991Construction(year, preset)
+    ? constructionPriceForDailyRevenue(dailyRevenue)
+    : dailyRevenue * GROWTH_COST_MULTIPLIER * capacityEraPriceIndex(year);
+}
+
+/**
+ * Workers needed to staff one unit/day of capacity in `sectorType`, at the
+ * world's `year`, at neutral workforce skill (50).
+ *
+ *     laborIntensity = RPU / CAPACITY_REVENUE_PER_WORKER × eraLaborIndex(year)
+ *
+ * Pass `strategyId` for a sector running (or previewed with) a non-default
+ * production method: its units earn that method's RPU, so its crew per unit
+ * must scale with the same RPU. A heavy-machinery line needs far more workers
+ * per unit than a standard factory; showing the default crew understates jobs
+ * by the ratio of the two RPUs. Falls back to the default-strategy RPU.
+ */
+export function laborIntensity(
+  sectorType: OperatingSectorType,
+  year: number,
+  unitScale: number,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null,
+  strategyId?: string | null
+): number {
+  // RPU carries the era unit scale in its denominator, so workers-per-unit
+  // shrinks by the same factor unit counts grow — total staffing for a given
+  // real capacity is era-invariant.
+  const strategyRpu = strategyId
+    ? revenuePerCapacityUnitForStrategy(
+        sectorType,
+        strategyId,
+        unitScale,
+        industryModel,
+        mediaDiscriminator
+      )
+    : 0;
+  const rpu =
+    strategyRpu > 0 && Number.isFinite(strategyRpu)
+      ? strategyRpu
+      : revenuePerCapacityUnit(sectorType, unitScale, industryModel, mediaDiscriminator);
+  return (rpu / CAPACITY_REVENUE_PER_WORKER) * capacityEraLaborIndex(year);
+}
+
+/** Turns to complete a new build. Existing orders keep their stored window. */
+export function CAPACITY_BUILD_TURNS(sectorType: OperatingSectorType, founding = false): number {
+  return investmentBuildTurns(
+    CAPACITY_BUILD_TURNS_TABLE[sectorType] ?? CAPACITY_BUILD_TURNS_DEFAULT,
+    founding
+  );
+}
+
+/**
+ * Construction turns after the tech tree's growth-cost reduction.
+ * `growthCostMultiplier` is the capped aggregate (1 = no tech). Never below 1.
+ */
+export function techBuildTurns(baseTurns: number, growthCostMultiplier = 1): number {
+  const mult =
+    Number.isFinite(growthCostMultiplier) && growthCostMultiplier > 0 && growthCostMultiplier <= 1
+      ? growthCostMultiplier
+      : 1;
+  const timeMult = 1 - TECH_BUILD_TIME_PER_GROWTH_REDUCTION * (1 - mult);
+  return Math.max(1, Math.round(baseTurns * timeMult));
+}
+
+function uses1991Construction(year: number, preset?: string): boolean {
+  return preset == null ? year === 1991 : eraForPreset(preset) === "1991";
+}
+
+/**
+ * Host price-level multiplier on build price from the host state's 100-centered
+ * `costOfLiving` index. 1.0 at neutral 100, and 1.0 when the metric is absent
+ * (no metrics engine, legacy state, test fixture).
+ */
+export function hostBuildPriceIndex(costOfLivingIndex: number | null | undefined): number {
+  if (typeof costOfLivingIndex !== "number" || !Number.isFinite(costOfLivingIndex)) return 1;
+  if (costOfLivingIndex <= 0) return 1;
+  return Math.min(
+    HOST_BUILD_PRICE_INDEX_MAX,
+    Math.max(HOST_BUILD_PRICE_INDEX_MIN, costOfLivingIndex / 100)
+  );
+}
+
+/** Inputs to {@link computeBuildCost}. */
+export interface BuildCostInputs {
+  sectorType: OperatingSectorType;
+  industryModel?: string | null;
+  mediaDiscriminator?: MediaDiscriminator | null;
+  /** Capacity units ordered (output units/day). */
+  units: number;
+  /**
+   * The production method the capacity will run. REQUIRED (pass `null` for the
+   * sector-type default) so the compiler enumerates every build-pricing site:
+   * capacity is priced at the RPU of the product it will actually make, not the
+   * type's default mix. See {@link capacityPricePerUnit} for why.
+   */
+  strategyId: string | null;
+  /** World year for the legacy era price column. */
+  year: number;
+  /** Originating reset preset, so the calibration survives clock advancement. */
+  preset?: string;
+  /**
+   * The world's era unit-basis scale (`getEraUnitScale(preset)`). REQUIRED so
+   * the compiler enumerates every pricing site: 1 for modern worlds, ~70 for
+   * 1953, where it deflates the per-unit ₳ price to the era's money.
+   */
+  eraUnitScale: number;
+  /** Sector's (state, type) market share %, for the dominance multiplier. */
+  marketSharePercent?: number;
+  /**
+   * Owning corporation's aggregate share of this (country, type) market.
+   * The harsher of the local and national antitrust tolls prices the build.
+   */
+  nationalMarketSharePercent?: number;
+  /**
+   * Distinct RIVAL corporations holding a sector in the same (state, type) cell
+   * — the building corp's own sectors excluded. Scales the dominance toll by
+   * how contested the market is (see {@link dominanceDensityFactor}).
+   *
+   * Absent ⇒ treated as crowded (full toll). That is the safe default: a caller
+   * that has not resolved density must not accidentally hand out a discount.
+   */
+  competitorCount?: number;
+  /**
+   * The firm's potential output (owned operating capacity plus queued builds,
+   * including this order) of the worst commodity this sector makes, over world
+   * demand for it. Drives the commodity-level toll, which is NOT discounted by
+   * rival density or the tech shield. Absent ⇒ no commodity toll.
+   */
+  commodityDominanceRatio?: number;
+  /** Host country's prime rate (%), for the financing multiplier. */
+  primeRate?: number;
+  /** CEO Business Acumen; neutral when absent (NPP / vacant CEO). */
+  acumen?: number;
+  /** True for the founding build — applies {@link CAPACITY_FOUNDING_DISCOUNT}. */
+  founding?: boolean;
+  /**
+   * Host state's 100-centered `costOfLiving` metric. Absent ⇒ neutral (1.0).
+   * Resolved through {@link hostBuildPriceIndex}, which owns the clamp.
+   */
+  hostCostOfLivingIndex?: number | null;
+  /**
+   * The corp's aggregated tech growth-cost multiplier
+   * (`AggregatedTechEffects.growthCostMultiplier`, already capped at
+   * TECH_GROWTH_REDUCTION_CAP). Absent ⇒ 1 (no tech / tree disabled).
+   */
+  techGrowthCostMultiplier?: number;
+  /**
+   * The corp's aggregated tech dominance shield
+   * (`AggregatedTechEffects.dominanceShield`, already capped at
+   * TECH_SHIELD_CAP). Under plants the build multiplier is the whole dominance
+   * toll, so the shield cuts that toll's excess over 1.0. Absent ⇒ 0.
+   */
+  techDominanceShield?: number;
+}
+
+/** Itemized build cost, so UI/tests/NPPs can show WHY a build costs what it does. */
+export interface BuildCostBreakdown {
+  /** Base anchor currency per capacity unit in the world's nominal unit basis. */
+  unitPriceAnchor: number;
+  /** Dominance penalty multiplier (1 below the dominance threshold). */
+  dominanceMultiplier: number;
+  /**
+   * The commodity-level part of {@link dominanceMultiplier}: 1 unless the firm's
+   * potential output exceeds half of world demand for a commodity it makes.
+   * `dominanceMultiplier` is the larger of the local/national toll and this.
+   */
+  commodityDominanceMultiplier: number;
+  /** Prime-rate financing multiplier, acumen-dampened (1 at prime 0). */
+  rateMultiplier: number;
+  /** CEO Business Acumen flat discount multiplier (1 at neutral acumen). */
+  acumenMultiplier: number;
+  /** Tech-tree build-cost discount multiplier (1 with no tech / tree off). */
+  techMultiplier: number;
+  /** Host-country price-level multiplier (1 at a neutral cost of living). */
+  hostPriceMultiplier: number;
+  /** Founding discount multiplier (1 for an ordinary build). */
+  foundingMultiplier: number;
+  /** Discount for ordinary expansion; founder pricing is unchanged. */
+  expansionMultiplier: number;
+  /** Total ₳ charged for the order. */
+  totalAnchor: number;
+}
+
+/**
+ * THE build price. One exported pure function so the command, the UI preview,
+ * NPP behaviour and the tests can never disagree about what a build costs.
+ *
+ *     total = units × capacityPricePerUnit(type, year)
+ *                   × max(localDominanceMult, nationalDominanceMult)
+ *                     adjusted for competitorCount and the tech dominance
+ *                     shield (excess over 1.0 only)
+ *                   × rateMult(primeRate, acumen)
+ *                   × acumenMult(acumen)
+ *                   × techMult(growthCostMultiplier)
+ *                   × hostPriceMult(costOfLiving)
+ *                   × foundingMult × expansionMult
+ *
+ * The situational multipliers are deliberately the SAME ones the legacy growth
+ * path charges (`calculateDailyGrowthCost`): dominance
+ * (`getDominanceGrowthCostMultiplier`), the acumen-dampened prime-rate term
+ * `max(0.5, 1 + primeRate/10 × acumenRateSensitivity(acumen))`, the flat
+ * `acumenGrowthCostMultiplier` discount, and the tech tree's capped
+ * growth-cost reduction. Building capacity through the queue and buying it
+ * through the growth slider must not price differently, or one of the two
+ * becomes the only rational choice — and under plants the growth slider is
+ * vestigial, so any modifier left wired only to growth cost is simply DEAD.
+ * That is why acumen and the tech discount are re-homed here rather than
+ * duplicated.
+ *
+ * ─── DOMINANCE IS TOLLED HERE, AND (UNDER PLANTS) ONLY HERE ─────────────────
+ * Pre-plants, a dominant sector paid three separate dominance tolls: a margin
+ * percentage-point penalty, a revenue tax (the "regulatory burden"), and this
+ * growth/build-cost multiplier. That was defensible when growth was a slider
+ * whose cost was small relative to revenue. Under plants it is not: capacity is
+ * bought outright, so the build multiplier alone is a large, visible, up-front
+ * charge, and stacking a permanent margin penalty and a permanent revenue tax on
+ * top of it triple-charges the same condition and makes market leadership
+ * strictly self-defeating.
+ *
+ * The plants design therefore consolidates: dominance is a BARRIER TO
+ * EXPANSION, not a tax on operating. A dominant sector pays more to grow — a
+ * price it can choose not to pay by not growing — and runs its existing plants
+ * at an undistorted margin. `sectorTurn` gates the margin penalty and the
+ * revenue tax off when plants is on; this multiplier is the whole toll.
+ *
+ * Because it IS the whole toll, it is also scaled by how contested the cell is
+ * (`dominanceDensityFactor`, suggestion #30). 60% of a two-firm state and 60%
+ * of a five-firm state are not the same achievement, and charging them alike
+ * left thin markets unbuilt while demand went unserved. Density scales only the
+ * toll's excess over 1.0, so a sub-threshold sector is unaffected at any
+ * density and the price stays continuous in both share and rival count.
+ * (The dominance multiplier on the legacy growth-cost line is left alone: that
+ * line is itself vestigial under plants and gating it would move the flip-turn
+ * numbers for a dominant sector, which the flip identity forbids.)
+ *
+ * `capacityPricePerUnit` selects the preset-qualified basis. The legacy growth
+ * slider retains its separate pricing outside plants mode.
+ */
+export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
+  const {
+    sectorType,
+    industryModel,
+    mediaDiscriminator,
+    units,
+    strategyId,
+    year,
+    preset,
+    eraUnitScale,
+    marketSharePercent = 0,
+    nationalMarketSharePercent = 0,
+    competitorCount,
+    commodityDominanceRatio: commodityRatio = 0,
+    primeRate = 0,
+    acumen = NEUTRAL_STAT,
+    founding = false,
+    hostCostOfLivingIndex = null,
+    techGrowthCostMultiplier = 1,
+    techDominanceShield = 0,
+  } = inputs;
+  const safeUnits = Number.isFinite(units) && units > 0 ? units : 0;
+  const unitPriceAnchor = capacityPricePerUnit(
+    sectorType,
+    year,
+    eraUnitScale,
+    strategyId,
+    industryModel,
+    mediaDiscriminator,
+    preset
+  );
+  // Dominance is scaled by how contested the cell is. The factor multiplies the
+  // toll's EXCESS over 1.0, so a market with no rivals still pays a monopoly
+  // premium, just a smaller one — and a sub-threshold sector (multiplier 1) is
+  // untouched at any density.
+  // Local and national dominance are alternative views of the same antitrust
+  // condition, so take the harsher toll and density-adjust it once. Stacking
+  // both would double-charge a corporation dominant at both grains.
+  const localShare = Number.isFinite(marketSharePercent) ? marketSharePercent : 0;
+  const nationalShare = Number.isFinite(nationalMarketSharePercent)
+    ? nationalMarketSharePercent
+    : 0;
+  const rawDominance = Math.max(
+    getDominanceGrowthCostMultiplier(localShare),
+    getNationalDominanceGrowthCostMultiplier(nationalShare)
+  );
+  // Tech dominance shield: neutralises a fraction of the toll's excess, so a
+  // sub-threshold sector (excess 0) is untouched and the price stays continuous
+  // in share. Clamped below 1 so a malformed caller cannot zero the toll.
+  const dominanceShield =
+    Number.isFinite(techDominanceShield) && techDominanceShield > 0
+      ? Math.min(0.95, techDominanceShield)
+      : 0;
+  const localDominanceMultiplier =
+    1 + (rawDominance - 1) * dominanceDensityFactor(competitorCount) * (1 - dominanceShield);
+  // Commodity-level toll: potential output of a commodity over what the world
+  // wants of it. Deliberately undiscounted by rival density or the shield, which
+  // exist for thin local markets, not for owning several worlds' worth of one
+  // good. The harsher of the two tolls prices the build.
+  const commodityDominanceMultiplier = commodityMultiplier(commodityRatio);
+  const dominanceMultiplier = Math.max(localDominanceMultiplier, commodityDominanceMultiplier);
+  const rateMultiplier = Math.max(
+    0.5,
+    1 + ((Number.isFinite(primeRate) ? primeRate : 0) / 10) * acumenRateSensitivity(acumen)
+  );
+  // Acumen leg 2 of 2. `acumenRateSensitivity` above dampens the CEO's exposure
+  // to prime rates; this is the flat discount `calculateDailyGrowthCost` also
+  // applies. Under plants the growth path is vestigial, so without this the
+  // Business Acumen stat's cost effect was half dead — it still softened rates
+  // but its headline "growth is cheaper" clause bought nothing.
+  const acumenMultiplier = acumenGrowthCostMultiplier(acumen);
+  // Tech-tree `growthCostReduction` becomes a BUILD-price discount for the same
+  // reason. The value handed in is already the capped aggregate
+  // (1 − min(TECH_GROWTH_REDUCTION_CAP, Σ pct)), so the cap that applied to
+  // growth cost applies here unchanged — no second, looser cap is introduced.
+  // Clamped defensively to (0, 1] so a malformed caller cannot zero or invert a
+  // build price.
+  const techMultiplier =
+    Number.isFinite(techGrowthCostMultiplier) &&
+    techGrowthCostMultiplier > 0 &&
+    techGrowthCostMultiplier <= 1
+      ? techGrowthCostMultiplier
+      : 1;
+  const hostPriceMultiplier = hostBuildPriceIndex(hostCostOfLivingIndex);
+  const foundingMultiplier = founding
+    ? uses1991Construction(year, preset)
+      ? 1
+      : CAPACITY_FOUNDING_DISCOUNT
+    : 1;
+  const expansionMultiplier = expansionCostMultiplier(founding);
+  return {
+    unitPriceAnchor,
+    dominanceMultiplier,
+    commodityDominanceMultiplier,
+    rateMultiplier,
+    acumenMultiplier,
+    techMultiplier,
+    hostPriceMultiplier,
+    foundingMultiplier,
+    expansionMultiplier,
+    totalAnchor:
+      safeUnits *
+      unitPriceAnchor *
+      dominanceMultiplier *
+      rateMultiplier *
+      acumenMultiplier *
+      techMultiplier *
+      hostPriceMultiplier *
+      foundingMultiplier *
+      expansionMultiplier,
+  };
+}

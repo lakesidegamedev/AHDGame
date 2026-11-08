@@ -89,6 +89,8 @@
     "postinstall": "node scripts/install/patch-mongodb-transaction-cursors.mjs && node scripts/install/verify-braces-depth.mjs && node scripts/install/patch-lightweight-chart-gestures.mjs",
     "comment:ratchet": "tsx scripts/architecture/commentRatchet.cli.ts check",
     "comment:ratchet:lower": "tsx scripts/architecture/commentRatchet.cli.ts lower",
+    "constants-functions": "tsx scripts/architecture/constantsFunctionRatchet.cli.ts check",
+    "constants-functions:lower": "tsx scripts/architecture/constantsFunctionRatchet.cli.ts lower",
     "country-branches": "tsx scripts/architecture/countryBranchRatchet.cli.ts check",
     "country-branches:lower": "tsx scripts/architecture/countryBranchRatchet.cli.ts lower",
     "data-access:ratchet": "tsx scripts/architecture/dataAccessRatchet.cli.ts check",

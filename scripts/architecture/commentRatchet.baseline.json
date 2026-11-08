@@ -4654,7 +4654,11 @@
       "narrativeLines": 1
     },
     "src/lib/constants/capacityEconomy.ts": {
-      "longBlocks": 9,
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/constants/capacityEconomyTables.ts": {
+      "longBlocks": 3,
       "narrativeLines": 1
     },
     "src/lib/constants/capacityPricing.guard.test.ts": {
@@ -5339,6 +5343,10 @@
     },
     "src/lib/corporations/retoolRescale.ts": {
       "longBlocks": 2,
+      "narrativeLines": 0
+    },
+    "src/lib/corporations/rules/capacityEconomy.ts": {
+      "longBlocks": 5,
       "narrativeLines": 0
     },
     "src/lib/corporations/rules/commodityDominance.ts": {
