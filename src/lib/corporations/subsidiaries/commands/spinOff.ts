@@ -236,7 +236,7 @@ export async function spinOff(
     const gameState = await getGameState(db);
     const baselineTechNodeIds = autoGrantedNodeIds(
       sectorType,
-      resolveGameYear(gameState) ?? STARTING_YEAR
+      resolveGameYear(gameState ?? {}) ?? STARTING_YEAR
     );
     // Create the wholly parent-owned private corp. Parent holds 100% of shares.
     const corpDoc: Omit<Corporation, "_id"> & { _id: ObjectId } = {

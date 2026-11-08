@@ -22,7 +22,7 @@ async function backfillSpinOffTechBaselines(
       projection: { currentYear: 1, currentTurn: 1, startingYear: 1 },
     }
   );
-  const currentYear = resolveGameYear(gameState) ?? STARTING_YEAR;
+  const currentYear = resolveGameYear(gameState ?? {}) ?? STARTING_YEAR;
   const corporations = await db
     .collection<SpinOffTechRow>("corporations")
     .find({ isSpinOff: true })

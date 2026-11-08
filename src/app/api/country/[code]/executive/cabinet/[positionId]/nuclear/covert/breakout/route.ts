@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: NuclearRouteParams) {
       return errorResponse(409, "The breakout test has already been conducted.");
     }
 
-    const turn = gs.currentTurn ?? 0;
+    const turn = gs?.currentTurn ?? 0;
 
     // Open the overt programme: the fission device adopts as if tested, and
     // any warheads a prior programme somehow held are kept, not clobbered.
