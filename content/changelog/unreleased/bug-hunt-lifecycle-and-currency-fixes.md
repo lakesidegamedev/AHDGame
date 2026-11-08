@@ -15,7 +15,7 @@ areas: [engine]
 
 - Party percent budgets (turnout, suppression, registration) estimated
   per-turn income in anchor units while treasuries hold local campaign money,
-  so non-US parties spent the wrong share of income — far too little in
+  so non-US parties spent the wrong share of income: far too little in
   high-denomination currencies like JPY and NGN, too much where the local
   rate is under 1. Estimates now use the same conversion and population base
   as the deposits.
