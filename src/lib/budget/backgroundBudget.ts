@@ -53,6 +53,7 @@ export async function loadBackgroundBudgetSources(
           entityId: 1,
           fiscalCapacity: 1,
           sectors: 1,
+          realizedOutputFactor: 1,
           nationalFiscal: 1,
           "nationalPolitics.parties": 1,
           "nationalPolitics.governmentPartyIds": 1,
@@ -66,7 +67,7 @@ export async function loadBackgroundBudgetSources(
     out.set(doc.entityId, {
       countryId: doc.entityId,
       fiscalCapacity: doc.fiscalCapacity,
-      output: macroAggregateOutput(doc.sectors),
+      output: macroAggregateOutput(doc.sectors, doc.realizedOutputFactor),
       fiscal: doc.nationalFiscal,
       governmentEconomicPosition: doc.nationalPolitics
         ? governmentEconomicPosition(doc.nationalPolitics)

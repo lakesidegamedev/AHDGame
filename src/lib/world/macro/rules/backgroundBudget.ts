@@ -68,9 +68,16 @@ const finite = (value: number | null | undefined, fallback = 0): number =>
 
 const clamp = (value: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, value));
 
-/** Aggregate output: capacity times productivity over every sector. */
+/** The stability and shock multiplier market production applies to capacity output. */
+export function realizedOutputFactor(stability: number, shockModifier: number): number {
+  const shock = Number.isFinite(shockModifier) && shockModifier > 0 ? shockModifier : 1;
+  return clamp(finite(stability, 1), 0, 1) * shock;
+}
+
+/** Aggregate output: capacity times productivity over every sector, times the realized factor. */
 export function macroAggregateOutput(
-  sectors: Partial<Record<string, Pick<MacroSectorState, "capacity" | "productivity">>> | undefined
+  sectors: Partial<Record<string, Pick<MacroSectorState, "capacity" | "productivity">>> | undefined,
+  factor = 1
 ): number {
   let total = 0;
   for (const sector of Object.values(sectors ?? {})) {
@@ -78,7 +85,7 @@ export function macroAggregateOutput(
     const value = finite(sector.capacity) * finite(sector.productivity, 1);
     if (value > 0) total += value;
   }
-  return total;
+  return total * Math.max(0, finite(factor, 1));
 }
 
 /** The opening fiscal state: programmes sized so the first budget runs the authored primary balance. */

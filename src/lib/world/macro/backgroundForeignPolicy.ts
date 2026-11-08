@@ -22,6 +22,7 @@ import type { Tariff } from "@/lib/db/types/tariff";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import { blocOfAlignment } from "@/lib/coldwar/rules/blocTension";
 import { joinSide } from "@/lib/military/joinSide";
+import { getMacroCountriesCollection } from "@/lib/db/collections/macroCountries";
 import type { MacroCountryState } from "./types";
 import type { NationalPoliticsState } from "./rules/nationalPolitics";
 import {
@@ -36,6 +37,7 @@ import {
   tradeBalancePressure,
   type ForeignPolicyLogEntry,
   type MacroForeignPolicyState,
+  type PendingTariffWrite,
   type ScriptedEmbargo,
   type WarSides,
 } from "./rules/foreignPolicy";
@@ -252,18 +254,14 @@ export async function loadBackgroundForeignContext(
 export interface ForeignPolicyPlan {
   countryId: string;
   state: MacroForeignPolicyState;
-  tariffWrites: {
-    scopeType: "economy_wide" | "origin_country";
-    targetOriginCountryId?: string;
-    rate: number;
-  }[];
+  tariffWrites: PendingTariffWrite[];
   impose: {
     targetCountry: string;
     commodities: ScriptedEmbargo["commodity"][];
     expiresTurn: number;
   }[];
   lift: string[];
-  joins: { conflictId: string; side: "A" | "B" }[];
+  joins: { resolutionId: string; conflictId: string; side: "A" | "B" }[];
   responses: { interactionId: ObjectId; optionId: string; roles: string[] }[];
 }
 
@@ -310,11 +308,33 @@ export function planBackgroundForeignPolicy(
 
   // Tariffs, stepped toward the stance.
   const target = targetTariffStance({ countryId, stance, euMember: orgs.has("EU"), bloc });
-  const current = context.tariffs.get(countryId) ?? [];
+  // Rates decided on an earlier tick but not confirmed written still count as current.
+  const pendingTariffs = prior?.pendingTariffs ?? [];
+  const tariffKey = (t: { scopeType: string; targetOriginCountryId?: string }) =>
+    `${t.scopeType}:${t.targetOriginCountryId ?? ""}`;
+  const overlay = new Map(pendingTariffs.map((t) => [tariffKey(t), t]));
+  const current = [
+    ...(context.tariffs.get(countryId) ?? []).map((row) => {
+      const pendingRow = overlay.get(tariffKey(row));
+      return pendingRow ? { ...row, rate: pendingRow.rate } : row;
+    }),
+    ...pendingTariffs
+      .filter(
+        (t) =>
+          !(context.tariffs.get(countryId) ?? []).some((row) => tariffKey(row) === tariffKey(t))
+      )
+      .map((t) => ({
+        countryId: countryId as CountryId,
+        scopeType: t.scopeType,
+        targetOriginCountryId: t.targetOriginCountryId as CountryId | undefined,
+        rate: t.rate,
+      })),
+  ];
   const currentWide = current.find((t) => t.scopeType === "economy_wide")?.rate ?? null;
   const economyWide = stepTariff(currentWide, target.economyWide);
   const tariffWrites: ForeignPolicyPlan["tariffWrites"] = [];
-  // A retried tick has already stepped its tariffs once.
+  // A retried tick has already stepped its tariffs once; its undelivered
+  // writes are carried in `pendingTariffs` and replayed below.
   const retried = prior?.updatedTurn === turn;
   if (economyWide !== currentWide && !retried) {
     tariffWrites.push({ scopeType: "economy_wide", rate: economyWide });
@@ -384,6 +404,16 @@ export function planBackgroundForeignPolicy(
   const decided = new Set((prior?.warDecisions ?? []).map((d) => d.resolutionId));
   const decisions: MacroForeignPolicyState["warDecisions"] = [];
   const joins: ForeignPolicyPlan["joins"] = [];
+  // A join decided earlier whose enrolment was never confirmed is delivered again.
+  const carried = (prior?.warDecisions ?? []).map((d) => {
+    if (!d.pending) return d;
+    const conflict = d.conflictId
+      ? context.conflicts.find((c) => String(c._id) === d.conflictId)
+      : undefined;
+    if (!conflict || !d.side) return { ...d, pending: false };
+    joins.push({ resolutionId: d.resolutionId, conflictId: d.conflictId!, side: d.side });
+    return d;
+  });
   for (const call of context.joinCalls) {
     const resolutionId = String(call._id);
     if (!orgs.has(call.organizationId) || decided.has(resolutionId)) continue;
@@ -410,8 +440,13 @@ export function planBackgroundForeignPolicy(
       intensity: conflict.intensity ?? 0,
       partnerOnSide: chosen.some((c) => partners.has(c)),
     });
-    decisions.push({ resolutionId, joined: decision.join, turn });
-    if (decision.join) joins.push({ conflictId: String(conflict._id), side });
+    decisions.push({
+      resolutionId,
+      joined: decision.join,
+      turn,
+      ...(decision.join ? { pending: true, conflictId: String(conflict._id), side } : {}),
+    });
+    if (decision.join) joins.push({ resolutionId, conflictId: String(conflict._id), side });
     log.push({
       turn,
       kind: "war",
@@ -458,6 +493,10 @@ export function planBackgroundForeignPolicy(
       })
     : (prior?.tradePressure ?? null);
 
+  const writeByKey = new Map(pendingTariffs.map((t) => [tariffKey(t), t]));
+  for (const t of tariffWrites) writeByKey.set(tariffKey(t), t);
+  const undelivered = [...writeByKey.values()];
+
   const alignment = context.alignments.get(countryId);
   return {
     countryId,
@@ -467,11 +506,12 @@ export function planBackgroundForeignPolicy(
       alignmentPull: stanceAlignmentPull(stance, alignment?.shares ?? {}),
       tariff: { economyWide: retried ? (currentWide ?? economyWide) : economyWide, targeted },
       tradePressure,
-      warDecisions: [...decisions, ...(prior?.warDecisions ?? [])].slice(0, DECISION_HISTORY),
+      pendingTariffs: undelivered,
+      warDecisions: [...decisions, ...carried].slice(0, DECISION_HISTORY),
       log: pushLog(prior?.log ?? [], log),
       updatedTurn: turn,
     },
-    tariffWrites,
+    tariffWrites: undelivered,
     impose: sanctions.impose,
     lift: sanctions.lift.map((l) => l.targetCountry),
     joins,
@@ -584,15 +624,44 @@ export async function applyBackgroundForeignPolicy(
       : null,
   ]);
 
+  // The decisions were saved as pending before any command ran. Each is marked
+  // done only once its command has been delivered, so a failure is retried.
+  const deliveredJoins = new Set<string>();
+  let joinError: unknown = null;
   let warsJoined = 0;
   for (const plan of plans) {
     for (const join of plan.joins) {
       const conflict = context.conflicts.find((c) => String(c._id) === join.conflictId);
       if (!conflict) continue;
-      await joinSide(db, conflict as ConflictDoc, plan.countryId as CountryId, join.side, turn);
+      try {
+        await joinSide(db, conflict as ConflictDoc, plan.countryId as CountryId, join.side, turn);
+      } catch (err) {
+        joinError ??= err;
+        continue;
+      }
+      deliveredJoins.add(`${plan.countryId}:${join.resolutionId}`);
       warsJoined++;
     }
   }
+  const settled: AnyBulkWriteOperation<MacroCountryState>[] = plans.map((plan) => ({
+    updateOne: {
+      filter: { _id: plan.countryId as never },
+      update: {
+        $set: {
+          "foreignPolicy.pendingTariffs": [],
+          "foreignPolicy.warDecisions": plan.state.warDecisions.map((d) =>
+            d.pending && deliveredJoins.has(`${plan.countryId}:${d.resolutionId}`)
+              ? { ...d, pending: false }
+              : d
+          ),
+        },
+      },
+    },
+  }));
+  if (settled.length > 0) {
+    await (await getMacroCountriesCollection(db)).bulkWrite(settled, { ordered: false });
+  }
+  if (joinError) throw joinError;
 
   let responses = 0;
   let responsesRefused = 0;

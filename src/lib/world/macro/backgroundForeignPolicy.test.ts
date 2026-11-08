@@ -15,6 +15,17 @@ import { macroTickBucket, MACRO_TICK_INTERVAL } from "./schedule";
 import { backgroundGovernmentActorId, backgroundTariffSourceId } from "./backgroundForeignPolicy";
 import { loadBackgroundStancePulls } from "@/lib/alignment/backgroundStancePulls";
 
+const joinFault = vi.hoisted(() => ({ fail: false }));
+vi.mock("@/lib/military/joinSide", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/military/joinSide")>();
+  return {
+    ...actual,
+    joinSide: (...args: Parameters<typeof actual.joinSide>) => {
+      if (joinFault.fail) throw new Error("join delivery failed");
+      return actual.joinSide(...args);
+    },
+  };
+});
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
   emitTxBulk: vi.fn(async () => undefined),
@@ -168,6 +179,71 @@ describe("background country scripted foreign policy on the kernel tick", () => 
       .findOne({ _id: "TR" })) as unknown as MacroCountryState;
     expect(after.foreignPolicy?.warDecisions).toHaveLength(1);
     expect(after.foreignPolicy?.log.some((e) => e.kind === "lift")).toBe(true);
+  });
+
+  it("keeps a war join pending when delivery fails and delivers it on the next tick", async () => {
+    const { db, firstTick } = fixture();
+    const d = db as unknown as Db;
+    joinFault.fail = true;
+    try {
+      await expect(processMacroCountryTurn(d, firstTick)).rejects.toThrow("join delivery failed");
+    } finally {
+      joinFault.fail = false;
+    }
+    const saved = (await db
+      .collection("macroCountries")
+      .findOne({ _id: "TR" })) as unknown as MacroCountryState;
+    const decision = saved.foreignPolicy!.warDecisions[0];
+    expect(decision).toMatchObject({ joined: true, pending: true });
+    const before = await db.collection("conflicts").findOne({ _id: conflictId });
+    expect((before?.sideB as { countries: string[] }).countries).not.toContain("TR");
+
+    await processMacroCountryTurn(d, firstTick + MACRO_TICK_INTERVAL);
+    const war = await db.collection("conflicts").findOne({ _id: conflictId });
+    expect((war?.sideB as { countries: string[] }).countries).toContain("TR");
+    const after = (await db
+      .collection("macroCountries")
+      .findOne({ _id: "TR" })) as unknown as MacroCountryState;
+    expect(after.foreignPolicy!.warDecisions).toHaveLength(1);
+    expect(after.foreignPolicy!.warDecisions[0].pending).toBe(false);
+  });
+
+  it("redelivers tariff writes that failed instead of dropping them", async () => {
+    const { db, firstTick } = fixture();
+    const d = db as unknown as Db;
+    const real = db.collection.bind(db);
+    let failTariffs = true;
+    (db as unknown as { collection: unknown }).collection = (name: string) => {
+      const collection = real(name);
+      if (name !== "tariffs") return collection;
+      return new Proxy(collection, {
+        get: (target, key) =>
+          key === "bulkWrite" && failTariffs
+            ? async () => {
+                throw new Error("tariff write failed");
+              }
+            : (target as never)[key],
+      });
+    };
+    await expect(processMacroCountryTurn(d, firstTick)).rejects.toThrow("tariff write failed");
+    const saved = (await db
+      .collection("macroCountries")
+      .findOne({ _id: "TR" })) as unknown as MacroCountryState;
+    const pending = saved.foreignPolicy!.pendingTariffs ?? [];
+    expect(pending.length).toBeGreaterThan(0);
+    expect(await db.collection("tariffs").countDocuments({})).toBe(0);
+
+    failTariffs = false;
+    await processMacroCountryTurn(d, firstTick + MACRO_TICK_INTERVAL);
+    const wide = await db
+      .collection("tariffs")
+      .findOne({ countryId: "TR", scopeType: "economy_wide" });
+    const wanted = pending.find((t) => t.scopeType === "economy_wide");
+    expect(wide?.rate).toBeGreaterThanOrEqual(wanted?.rate ?? 0);
+    const after = (await db
+      .collection("macroCountries")
+      .findOne({ _id: "TR" })) as unknown as MacroCountryState;
+    expect(after.foreignPolicy!.pendingTariffs).toEqual([]);
   });
 
   it("leaves non-background macro documents untouched", async () => {

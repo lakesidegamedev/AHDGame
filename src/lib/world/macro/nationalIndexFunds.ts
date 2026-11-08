@@ -9,8 +9,8 @@
  * leg. The fund cron leaves its assets alone (see `isNationalIndexFund`) and
  * only serves its redemption queue and snapshots.
  *
- * Batched: one fund read, at most one insert, one queued-unit read, one bulk
- * fund write, one transaction insert and one ledger emission per tick.
+ * Batched: a fund read, at most one insert, one queued-unit read, a fresh fund
+ * read and one conditional bulk write (re-priced on a miss), one transaction insert and one ledger emission per tick.
  */
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { IndexFund, IndexFundTransaction } from "@/lib/db/types/indexFund";
@@ -19,6 +19,28 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { markNationalIndexFund, nationalIndexFundIdentity } from "./rules/nationalIndex";
+
+const MARK_ATTEMPTS = 3;
+const FUND_PROJECTION = {
+  slug: 1,
+  name: 1,
+  anchorCurrencyCode: 1,
+  quotedNav: 1,
+  unitSupply: 1,
+  cashAnchor: 1,
+  nationalIndex: 1,
+} as const;
+type FundRead = Pick<
+  IndexFund,
+  | "_id"
+  | "slug"
+  | "name"
+  | "anchorCurrencyCode"
+  | "quotedNav"
+  | "unitSupply"
+  | "cashAnchor"
+  | "nationalIndex"
+>;
 
 export interface NationalIndexMark {
   countryId: string;
@@ -62,17 +84,7 @@ export async function markNationalIndexFunds(
   const existing = await funds
     .find(
       { "nationalIndex.entityId": { $in: marks.map((m) => m.countryId) } },
-      {
-        projection: {
-          slug: 1,
-          name: 1,
-          anchorCurrencyCode: 1,
-          quotedNav: 1,
-          unitSupply: 1,
-          cashAnchor: 1,
-          nationalIndex: 1,
-        },
-      }
+      { projection: FUND_PROJECTION }
     )
     .toArray();
   const byCountry = new Map(existing.map((f) => [f.nationalIndex!.entityId, f]));
@@ -90,70 +102,109 @@ export async function markNationalIndexFunds(
     }
   }
 
-  const present = marks.filter((m) => byCountry.has(m.countryId));
+  let pending = marks.filter((m) => byCountry.has(m.countryId));
+  const present = pending;
   if (present.length === 0) return { created: missing.length, marked: 0 };
   const queued = await loadQueuedRedemptionUnitsByFundId(
     db,
     present.map((m) => byCountry.get(m.countryId)!._id)
   );
-  const writes: AnyBulkWriteOperation<IndexFund>[] = [];
+  // A subscription can land between the read and the write. Each write is
+  // conditional on the supply and NAV it was priced from; a miss is re-read
+  // and re-priced, so cash always backs every unit.
   const transactions: IndexFundTransaction[] = [];
   const legs: TxInput[] = [];
-  for (const mark of present) {
-    const fund = byCountry.get(mark.countryId)!;
-    const { cashDelta } = markNationalIndexFund({
-      quotedNav: fund.quotedNav,
-      newNav: mark.nav,
-      unitSupply: fund.unitSupply,
-      queuedUnits: queued.get(String(fund._id)) ?? 0,
-      cashAnchor: fund.cashAnchor,
-    });
-    writes.push({
-      updateOne: {
-        filter: { _id: fund._id },
-        update: {
-          $set: { quotedNav: mark.nav, backingRatio: 1, updatedAt: now },
-          ...(cashDelta !== 0 ? { $inc: { cashAnchor: cashDelta } } : {}),
+  let marked = 0;
+  const markAttempt = async (attempt: number): Promise<void> => {
+    if (attempt >= MARK_ATTEMPTS || pending.length === 0) return;
+    const fresh = await funds
+      .find(
+        { "nationalIndex.entityId": { $in: pending.map((m) => m.countryId) } },
+        { projection: FUND_PROJECTION }
+      )
+      .toArray();
+    for (const f of fresh) byCountry.set(f.nationalIndex!.entityId, f);
+    const writes: AnyBulkWriteOperation<IndexFund>[] = [];
+    const attempted: { mark: NationalIndexMark; fund: FundRead; cashDelta: number }[] = [];
+    for (const mark of pending) {
+      const fund = byCountry.get(mark.countryId)!;
+      const { cashDelta } = markNationalIndexFund({
+        quotedNav: fund.quotedNav,
+        newNav: mark.nav,
+        unitSupply: fund.unitSupply,
+        queuedUnits: queued.get(String(fund._id)) ?? 0,
+        cashAnchor: fund.cashAnchor,
+      });
+      attempted.push({ mark, fund, cashDelta });
+      writes.push({
+        updateOne: {
+          filter: { _id: fund._id, unitSupply: fund.unitSupply, quotedNav: fund.quotedNav },
+          update: {
+            $set: { quotedNav: mark.nav, backingRatio: 1, updatedAt: now },
+            ...(cashDelta !== 0 ? { $inc: { cashAnchor: cashDelta } } : {}),
+          },
         },
-      },
-    });
-    if (cashDelta === 0) continue;
-    transactions.push({
-      _id: new ObjectId(),
-      fundId: fund._id,
-      kind: "national_index_mark",
-      turn,
-      navAnchor: mark.nav,
-      amountAnchor: cashDelta,
-      note: `Marked to the ${mark.displayName} output index`,
-      createdAt: now,
-    });
-    // Attributed like an admin fund mint: the counterparty is the background
-    // economy, whose own money is not modelled (see the funded-market trade).
-    legs.push({
-      type: "admin_transfer",
-      turn,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: fund._id,
-      subjectName: fund.name,
-      amount: cashDelta,
-      anchorAmount: cashDelta,
-      currencyCode: fund.anchorCurrencyCode,
-      counterpartyType: "system",
-      counterpartyName: `${mark.displayName} economy`,
-      meta: {
+      });
+    }
+    await funds.bulkWrite(writes, { ordered: false });
+    // The write stamps `updatedAt: now`, so a fund carrying the new NAV and
+    // that stamp took this attempt's write.
+    const after = await funds
+      .find(
+        { _id: { $in: attempted.map((a) => a.fund._id) } },
+        { projection: { quotedNav: 1, updatedAt: 1 } }
+      )
+      .toArray();
+    const landed = new Set(
+      after.filter((f) => f.updatedAt?.getTime() === now.getTime()).map((f) => String(f._id))
+    );
+    const retry: NationalIndexMark[] = [];
+    for (const a of attempted) {
+      if (!landed.has(String(a.fund._id))) {
+        retry.push(a.mark);
+        continue;
+      }
+      marked++;
+      if (a.cashDelta === 0) continue;
+      transactions.push({
+        _id: new ObjectId(),
+        fundId: a.fund._id,
         kind: "national_index_mark",
-        ...(cashDelta > 0 ? { mint: true } : { burn: true }),
-        fundSlug: fund.slug,
-        countryId: mark.countryId,
-      },
-    });
-  }
-  if (writes.length > 0) await funds.bulkWrite(writes, { ordered: false });
+        turn,
+        navAnchor: a.mark.nav,
+        amountAnchor: a.cashDelta,
+        note: `Marked to the ${a.mark.displayName} output index`,
+        createdAt: now,
+      });
+      // Attributed like an admin fund mint: the counterparty is the background
+      // economy, whose own money is not modelled (see the funded-market trade).
+      legs.push({
+        type: "admin_transfer",
+        turn,
+        createdAt: now,
+        subjectType: "corporation",
+        subjectId: a.fund._id,
+        subjectName: a.fund.name,
+        amount: a.cashDelta,
+        anchorAmount: a.cashDelta,
+        currencyCode: a.fund.anchorCurrencyCode,
+        counterpartyType: "system",
+        counterpartyName: `${a.mark.displayName} economy`,
+        meta: {
+          kind: "national_index_mark",
+          ...(a.cashDelta > 0 ? { mint: true } : { burn: true }),
+          fundSlug: a.fund.slug,
+          countryId: a.mark.countryId,
+        },
+      });
+    }
+    pending = retry;
+    await markAttempt(attempt + 1);
+  };
+  await markAttempt(0);
   if (transactions.length > 0) {
     await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);
   }
   if (legs.length > 0) await emitTxBulk(db, legs, await loadTxThresholds(db));
-  return { created: missing.length, marked: present.length };
+  return { created: missing.length, marked };
 }

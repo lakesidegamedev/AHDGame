@@ -18,7 +18,7 @@ import {
   loadBackgroundNationContext,
   type BackgroundNationUpdate,
 } from "./backgroundNation";
-import { macroAggregateOutput } from "./rules/backgroundBudget";
+import { macroAggregateOutput, realizedOutputFactor } from "./rules/backgroundBudget";
 import { markNationalIndexFunds, type NationalIndexMark } from "./nationalIndexFunds";
 import {
   applyBackgroundForeignPolicy,
@@ -146,12 +146,13 @@ export async function processMacroCountryTurn(
           tradeFactor === 1
             ? trendSectors
             : scaleMacroCapacity(trendSectors ?? country.sectors, tradeFactor);
+        const outputFactor = realizedOutputFactor(country.stability, shockModifier);
         const nation: BackgroundNationUpdate | null = nationContext
           ? advanceBackgroundNation(
               country,
               nationContext,
               turn,
-              macroAggregateOutput(grownSectors ?? country.sectors)
+              macroAggregateOutput(grownSectors ?? country.sectors, outputFactor)
             )
           : null;
         if (nation?.indexMark) indexMarks.push(nation.indexMark);
@@ -182,6 +183,7 @@ export async function processMacroCountryTurn(
                   },
                   turn
                 ),
+                realizedOutputFactor: outputFactor,
                 ...(persistExposure ? { livingConflictExposure: exposure } : {}),
                 ...(nation?.set ?? {}),
                 ...(foreignPlan ? { foreignPolicy: foreignPlan.state } : {}),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { getDebtThreshold } from "@/lib/budget/debt";
+import { computeMacroContribution } from "../kernel";
 import { BACKGROUND_CONSTITUTIONS } from "./backgroundConstitution";
 import {
   advancePriceLevel,
@@ -9,6 +10,7 @@ import {
   closeBackgroundFiscalYear,
   initialBackgroundFiscal,
   macroAggregateOutput,
+  realizedOutputFactor,
   type BackgroundFiscalState,
 } from "./backgroundBudget";
 import {
@@ -282,5 +284,46 @@ describe("a background budget cannot spiral without a political response", () =>
     expect(defeats(stabilized.afterFirstPackage)).toBeGreaterThan(
       defeats(drifting.afterFirstPackage)
     );
+  });
+});
+
+describe("realized output", () => {
+  const sectors = {
+    agriculture: { capacity: 600, productivity: 1 },
+    manufacturing: { capacity: 400, productivity: 1.5 },
+  };
+
+  it("scales aggregate output by stability and shock", () => {
+    const factor = realizedOutputFactor(0.8, 0.5);
+    expect(factor).toBeCloseTo(0.4, 10);
+    expect(macroAggregateOutput(sectors, factor)).toBeCloseTo(
+      macroAggregateOutput(sectors) * 0.4,
+      6
+    );
+  });
+
+  it("treats a missing or invalid shock as none", () => {
+    expect(realizedOutputFactor(1, Number.NaN)).toBe(1);
+    expect(realizedOutputFactor(1, 0)).toBe(1);
+    expect(realizedOutputFactor(2, 1)).toBe(1);
+  });
+
+  it("matches the output market production applies", () => {
+    const state = {
+      sectors: Object.fromEntries(
+        Object.entries(sectors).map(([k, v]) => [k, { ...v, domesticDemand: 0 }])
+      ),
+      resources: {},
+      stability: 0.7,
+      tradeExposure: 0.5,
+      shockModifier: 0.5,
+      population: 0,
+      economicSystem: "market",
+    };
+    const produced = Object.values(computeMacroContribution(state as never, 1).bySector).reduce(
+      (sum, s) => sum + (s?.output ?? 0),
+      0
+    );
+    expect(macroAggregateOutput(sectors, realizedOutputFactor(0.7, 0.5))).toBeCloseTo(produced, 1);
   });
 });
