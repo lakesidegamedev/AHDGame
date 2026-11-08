@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 import { selectPresetBundle, selectPresetBundleOptional } from "@/lib/seeds/presetSelector";
 import { assertSeedContractForReset } from "@/lib/admin/resetPreflight";
-import { checkSeedContract } from "./checkSeedContract";
+import { checkSeedContract, stateFigureGaps } from "./checkSeedContract";
 import { ERA_INVARIANT_DATASETS, PRESET_DATASETS } from "./registry";
 import { REGION_TABLES } from "./regionTables";
 import { SeedContractError, type SeedContractGap } from "./seedContractError";
@@ -97,6 +97,49 @@ describe("seed contract per preset", () => {
     expect(checkSeedContract("2031-default")).toEqual([
       { dataset: "preset", detail: '"2031-default" is not a shipping preset' },
     ]);
+  });
+});
+
+describe("state figures", () => {
+  it.each(SEED_PRESET_IDS)(
+    "%s gives every simulated state a positive GDP and population",
+    (preset) => {
+      expect(stateFigureGaps(preset)).toEqual([]);
+    }
+  );
+
+  it("rejects a state with a missing, zero or non-finite figure", () => {
+    const row = (_id: string, gdp: number | undefined, population: number | undefined) =>
+      ({ _id, gdp, population }) as never;
+    const gaps = stateFigureGaps("2027-default", {
+      US: {
+        seededIn: ["2027-default"],
+        table: {
+          "2027-default": [
+            row("OK", 10, 5),
+            row("NOGDP", undefined, 5),
+            row("ZERO", 10, 0),
+            row("NAN", Number.NaN, Number.POSITIVE_INFINITY),
+          ],
+        },
+      },
+    });
+    expect(gaps.map((gap) => gap.detail)).toEqual([
+      "NOGDP has no finite positive gdp for 2027-default",
+      "ZERO has no finite positive population for 2027-default",
+      "NAN has no finite positive gdp and population for 2027-default",
+    ]);
+  });
+
+  it("skips a country the preset holds as a background country", () => {
+    const gaps = stateFigureGaps("2027-default", {
+      BR: {
+        seededIn: ["2027-default"],
+        table: { "2027-default": [{ _id: "X" } as never] },
+      },
+    });
+    expect(backgroundCountriesFor("2027-default")).toContain("BR");
+    expect(gaps).toEqual([]);
   });
 });
 

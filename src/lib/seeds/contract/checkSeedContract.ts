@@ -25,7 +25,7 @@ import { shouldReconcileStateGdpForPreset } from "@/lib/admin/seed/reconcileStat
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
 import { PRESET_DATASETS, simulatesRegions, type PresetDataset } from "./registry";
-import { REGION_TABLES } from "./regionTables";
+import { REGION_TABLES, type CountryRegionTable } from "./regionTables";
 import { SeedContractError, type SeedContractGap } from "./seedContractError";
 import { checkSeedDataFiles } from "./dataFiles";
 import { DUPLICATE_SIMILARITY_THRESHOLD, numericSimilarity } from "./rules/similarity";
@@ -83,6 +83,35 @@ function scaleGap(dataset: string, finding: ScaleFinding): SeedContractGap {
     dataset: `${dataset}:${finding.countryId}`,
     detail: `${finding.check}: ${finding.detail}`,
   };
+}
+
+/**
+ * Campaign income and cost scalars divide by a state's GDP and population, so
+ * every state of every country the preset simulates must carry finite positive
+ * figures of its own.
+ */
+export function stateFigureGaps(
+  preset: SeedPresetId,
+  tables: Readonly<Record<string, CountryRegionTable>> = REGION_TABLES
+): SeedContractGap[] {
+  const gaps: SeedContractGap[] = [];
+  for (const [countryId, entry] of Object.entries(tables)) {
+    if (!entry.seededIn.includes(preset) || !simulatesRegions(preset, countryId)) continue;
+    const rows = entry.table[preset];
+    if (!rows) continue;
+    for (const row of rows) {
+      const bad = (["gdp", "population"] as const).filter(
+        (field) =>
+          !(typeof row[field] === "number" && Number.isFinite(row[field]) && row[field] > 0)
+      );
+      if (bad.length === 0) continue;
+      gaps.push({
+        dataset: `stateFigures:${countryId}`,
+        detail: `${String(row._id)} has no finite positive ${bad.join(" and ")} for ${preset}`,
+      });
+    }
+  }
+  return gaps;
 }
 
 function scaleGaps(preset: SeedPresetId): SeedContractGap[] {
@@ -167,7 +196,13 @@ export function checkSeedContract(preset: string): SeedContractGap[] {
   const duplicates = PRESET_DATASETS.map((dataset) => duplicateGap(dataset, id)).filter(
     (gap): gap is SeedContractGap => gap !== null
   );
-  return [...coverageGaps(id), ...duplicates, ...scaleGaps(id), ...checkSeedDataFiles()];
+  return [
+    ...coverageGaps(id),
+    ...duplicates,
+    ...scaleGaps(id),
+    ...stateFigureGaps(id),
+    ...checkSeedDataFiles(),
+  ];
 }
 
 /** Throws `SeedContractError` listing every gap when `preset` may not seed. */
