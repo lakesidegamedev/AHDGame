@@ -431,6 +431,11 @@ function planRecoveryRunShareCore(
     soldOutGrowth?: number;
     /** Partial sell-through plans from expected sales (producerDemandPlanStage >= 1). */
     demandPlan?: boolean;
+    /**
+     * producerRunPlanStage >= 2: turns of sales a plant may hold in stock before
+     * the never-below-sales floor counts the excess (see planRecoveryRunShare).
+     */
+    stockCoverTurns?: number;
   } = {}
 ): number {
   const floor = options.floor ?? OUTPUT_RUN_FLOOR;
@@ -514,6 +519,15 @@ export function planRecoveryRunShare(
     glutTurnsThrough(prior) >= GLUT_TURNS_TO_FLOOR
   )
     return next;
-  const soldShare = Math.min(1, finite(prior.soldUnits) / active);
+  const sold = finite(prior.soldUnits);
+  // Stage 2 (owner 2026-11-08): stock held beyond the cover is sold from the pile,
+  // not made again. Gas plants sold what they made each turn and kept an equal
+  // pile, so the floor held the run at full and world stock grew ~28k units a turn.
+  const cover = options.stockCoverTurns;
+  const excessStock =
+    typeof cover === "number" && Number.isFinite(cover) && cover >= 0
+      ? Math.max(0, Math.max(0, offered - sold) - cover * sold)
+      : 0;
+  const soldShare = Math.min(1, Math.max(0, sold - excessStock) / active);
   return Math.max(next, soldShare);
 }

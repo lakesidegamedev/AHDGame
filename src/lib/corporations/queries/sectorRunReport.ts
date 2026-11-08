@@ -69,6 +69,7 @@ export interface RunReportStages {
   producerRunPlanStage?: number;
   producerLowUseCostStage?: number;
   producerRunPaceDrop?: number;
+  producerStockCover?: number;
 }
 
 const MAX_FORECAST_TURNS = 99;
@@ -105,7 +106,13 @@ export function buildRunReport(
   const signals = runSignals(read, floor);
   if (!signals) return null;
   const planned = runPlan
-    ? planRecoveryRunShare(read, { floor, demandPlan })
+    ? planRecoveryRunShare(read, {
+        floor,
+        demandPlan,
+        ...((stages?.producerRunPlanStage ?? 0) >= 2
+          ? { stockCoverTurns: Math.max(1, stages?.producerStockCover ?? 1) }
+          : {}),
+      })
     : demandPlan
       ? demandPlanRunShare(read, floor)
       : nextRunShare(read, floor);
@@ -149,6 +156,7 @@ export const RUN_REPORT_STAGE_PROJECTION = {
   producerRunPlanStage: 1,
   producerLowUseCostStage: 1,
   producerRunPaceDrop: 1,
+  producerStockCover: 1,
 } as const;
 
 /**
