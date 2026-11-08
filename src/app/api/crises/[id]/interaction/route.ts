@@ -8,6 +8,7 @@ import {
   canCharacterInteract,
   resolveCharacterRoles,
   isMultiResponderNode,
+  decisionAnsweredByLever,
 } from "@/lib/crises/interactionEngine";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import type { FederalBudget } from "@/lib/db/types/budget";
@@ -82,6 +83,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             crisisDecisionRegion(character)
           ) &&
           !alreadyResponded &&
+          !decisionAnsweredByLever(crisis, interaction.decisionTree, activeNode) &&
           (!crisis.globalResponse || !!globalResponseRoleFor(crisis, character.countryId))
         : false;
 

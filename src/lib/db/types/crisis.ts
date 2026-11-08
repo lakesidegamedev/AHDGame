@@ -501,6 +501,16 @@ export interface Crisis {
    * crisis runs. `routedTurn` is the turn the cuts were computed for.
    */
   v2Output?: CrisisV2Output;
+  /** Population orders raised by Crisis v2 effects; the demographics phase consumes them. */
+  populationOrders?: CrisisPopulationOrders;
+}
+
+export interface CrisisPopulationOrders {
+  epochId: string;
+  /** True while any order below is still pending, so the phase reads only live crises. */
+  pending: boolean;
+  civilianLoss: ConflictCivilianLossOrder[];
+  reception: RefugeeReceptionOrder[];
 }
 
 export interface CrisisV2Output {

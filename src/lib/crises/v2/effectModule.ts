@@ -22,6 +22,9 @@ export type EffectIntent =
       fromRegionId?: string;
       fromCountryId?: string;
       toRegionId?: string;
+      /** Reception services per person as a share of GDP per head; with `fromCountryId` only. */
+      serviceGdpShare?: number;
+      serviceTurns?: number;
     }
   | { kind: "bankStress"; delta: number }
   | { kind: "bondYield"; deltaBps: number }
@@ -39,13 +42,22 @@ export type EffectIntent =
   /** Share of the resident population lost outright (deaths, not migration). */
   | { kind: "populationLoss"; fraction: number; countryId?: string }
   /** Share of the regional capital stock destroyed. */
-  | { kind: "capitalStock"; fraction: number; regionId?: string }
+  | {
+      kind: "capitalStock";
+      fraction: number;
+      regionId?: string;
+      maxOutstandingShare?: number;
+      repairTurns?: number;
+      repairCostMultiplier?: number;
+    }
   /** Participating governments restrict trade in a commodity with the target role. */
   | {
       kind: "tradeRestriction";
       commodity: CommodityType;
       targetRole: string;
       durationTurns: number;
+      /** Countries that restrict; absent = the crisis's countries outside the target role. */
+      sourceCountryIds?: readonly string[];
     };
 
 export interface EffectContext {

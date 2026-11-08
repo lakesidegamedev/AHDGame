@@ -33,7 +33,6 @@ const SCOPE_BY_TEMPLATE_SCOPE: Record<CrisisTemplate["scope"], CrisisScope> = {
 const BASE_LEVER_MITIGATION = 2;
 const MITIGATION_PER_REDUCED_TURN = 2;
 const MAX_LEVER_MITIGATION = 12;
-const POOLED_LEVER_MITIGATION = 4;
 const MITIGATION_CAP = 25;
 
 export function legacyDefinitionId(templateKey: string): string {
@@ -77,25 +76,15 @@ function optionLever(
 }
 
 /**
- * Decision options become levers by the office the node asks for. Aid and
- * collective nodes become one pooled lever each, held by the head of state,
- * since the contribution is shared. Nodes that ask only for cabinet or "any"
- * responder have no single office to hold the lever and stay on the decision.
+ * Choice options become levers by the office the node asks for. Aid and
+ * collective nodes move real treasury money through the aid and pooled-target
+ * paths, so they stay on those paths and get no lever. Choice nodes that ask
+ * only for cabinet or "any" responder have no single office to hold the lever
+ * and stay on the decision.
  */
 export function leversFromDecisionTree(tree: readonly CrisisDecisionNode[]): CrisisLeverDef[] {
   const levers = new Map<string, CrisisLeverDef>();
   for (const node of tree) {
-    if (node.type === "aid" || node.type === "collective") {
-      const id = `pool.${node.nodeId}`;
-      levers.set(id, {
-        id,
-        role: "headOfState",
-        label: node.title,
-        mitigation: POOLED_LEVER_MITIGATION,
-        cost: {},
-      });
-      continue;
-    }
     if (node.type !== "choice") continue;
     const roles = node.requiredRoles.flatMap((r) => NODE_ROLE_TO_CRISIS_ROLE[r] ?? []);
     if (roles.length === 0) continue;
@@ -111,6 +100,22 @@ export function leversFromDecisionTree(tree: readonly CrisisDecisionNode[]): Cri
     }
   }
   return [...levers.values()];
+}
+
+/**
+ * Whether a lever now answers this decision option. A converted crisis is
+ * answered through its levers, so the decision path must not also apply the
+ * option's cost and effects.
+ */
+export function optionAnsweredByLever(
+  tree: readonly CrisisDecisionNode[],
+  nodeId: string,
+  optionId: string
+): boolean {
+  const prefix = `${nodeId}.${optionId}`;
+  return leversFromDecisionTree(tree).some(
+    (lever) => lever.id === prefix || lever.id.startsWith(`${prefix}@`)
+  );
 }
 
 export interface ConvertTemplateInput {

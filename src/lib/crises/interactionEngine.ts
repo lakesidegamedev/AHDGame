@@ -7,6 +7,7 @@ import { prepareRefugeeReceptionOrder } from "@/lib/livingConflict/refugeeRecept
 import { applyLivingConflictFallback } from "@/lib/livingConflict/fallbackTrajectory";
 import { canCharacterInteract, canRespondToCrisis } from "./rules/authorization";
 import { collectiveDurationReduction } from "./rules/collectiveReduction";
+import { isLegacyDefinitionId, optionAnsweredByLever } from "./v2/legacyConvert";
 export { canCharacterInteract } from "./rules/authorization";
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
 import type {
@@ -459,6 +460,22 @@ function deadlineForNode(node: CrisisDecisionNode | null): Date | null {
  * Submit a decision choice for a crisis interaction.
  * Returns the updated interaction and the next node (null once resolved).
  */
+/** A converted crisis answers covered choice options through levers, never both. */
+export function decisionAnsweredByLever(
+  crisis: Pick<Crisis, "v2">,
+  tree: readonly CrisisDecisionNode[],
+  node: CrisisDecisionNode,
+  optionId?: string
+): boolean {
+  if (!crisis.v2 || !isLegacyDefinitionId(crisis.v2.definitionId) || node.type !== "choice") {
+    return false;
+  }
+  if (optionId) return optionAnsweredByLever(tree, node.nodeId, optionId);
+  return (node.options ?? []).some((option) =>
+    optionAnsweredByLever(tree, node.nodeId, option.optionId)
+  );
+}
+
 export async function submitCrisisDecision(
   db: Db,
   interactionId: ObjectId,
@@ -487,6 +504,9 @@ export async function submitCrisisDecision(
   }
 
   const crisis = await db.collection<Crisis>("crises").findOne({ _id: interaction.crisisId });
+  if (crisis && decisionAnsweredByLever(crisis, interaction.decisionTree, currentNode, optionId)) {
+    throw conflict("This crisis is answered through its levers");
+  }
   if (crisis && !canRespondToCrisis(crisis, currentNode, countryId, regionId)) {
     throw forbidden("You are not authorized to make this decision for this country or region");
   }

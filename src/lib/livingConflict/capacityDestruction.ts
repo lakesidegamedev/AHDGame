@@ -9,6 +9,7 @@ import type { Crisis, GlobalResponseOutcome } from "@/lib/db/types/crisis";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import type {
+  CapacityDestructionSpec,
   CapacityDestructionSummary,
   ConflictCapacityObligation,
 } from "@/lib/db/types/conflictCapacity";
@@ -78,6 +79,30 @@ export async function applyConflictCapacityDestruction(
   const spec = outcome.capacityDestruction;
   const conflictKey = crisis.globalResponse?.conflictKey;
   if (!spec || !conflictKey) return undefined;
+  return applyCapacityDestructionSpec(db, {
+    spec,
+    conflictKey,
+    resolutionId,
+    outcomeId: outcome.outcomeId,
+    outcomeLabel: outcome.label,
+  });
+}
+
+export interface CapacityDestructionRequest {
+  spec: CapacityDestructionSpec;
+  /** Groups the obligations; any stable key for the source of the damage. */
+  conflictKey: string;
+  resolutionId: string;
+  outcomeId: string;
+  outcomeLabel: string;
+}
+
+/** The shared writer: conflict outcomes and Crisis v2 capital intents both land here. */
+export async function applyCapacityDestructionSpec(
+  db: Db,
+  request: CapacityDestructionRequest
+): Promise<CapacityDestructionSummary | undefined> {
+  const { spec, conflictKey, resolutionId } = request;
   await ensureCapacityIndexes(db);
   const obligations = db.collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS);
   const existing = await obligations.find({ resolutionId, conflictKey }).toArray();
@@ -124,8 +149,8 @@ export async function applyConflictCapacityDestruction(
           update: {
             $setOnInsert: {
               conflictKey,
-              outcomeId: outcome.outcomeId,
-              outcomeLabel: outcome.label,
+              outcomeId: request.outcomeId,
+              outcomeLabel: request.outcomeLabel,
               resolutionId,
               regionId: planned.regionId,
               ...(planned.regionName ? { regionName: planned.regionName } : {}),

@@ -9,6 +9,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { ensureDemographicWorldEpoch } from "@/lib/demographics/worldEpoch";
+import { completeCrisisPopulationOrders } from "./crisisPopulationOutbox";
 import {
   requestedConflictCivilianLoss,
   type ConflictCivilianLossOrder,
@@ -154,8 +155,12 @@ export async function materializeConflictCivilianLossResults(
     .toArray();
   if (recorded.length !== results.length)
     throw new Error("Civilian loss history was not confirmed");
+  const crisisResults = results.filter((result) => result.origin === "crisis");
+  await completeCrisisPopulationOrders(db, { civilianLoss: crisisResults, reception: [] });
+  const interactionResults = results.filter((result) => result.origin !== "crisis");
+  if (interactionResults.length === 0) return;
   const completed = await db.collection<CrisisInteraction>("crisisInteractions").bulkWrite(
-    results.map((result) => ({
+    interactionResults.map((result) => ({
       updateOne: {
         filter: {
           _id: new ObjectId(result.interactionId),
@@ -173,6 +178,6 @@ export async function materializeConflictCivilianLossResults(
     })),
     { ordered: true }
   );
-  if (completed.matchedCount !== results.length)
+  if (completed.matchedCount !== interactionResults.length)
     throw new Error("Civilian loss outcome completion was not confirmed");
 }

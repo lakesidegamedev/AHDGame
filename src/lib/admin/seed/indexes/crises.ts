@@ -62,6 +62,18 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The demographics phase reads crises whose population orders are still pending.
+  await ensureIndex(
+    db,
+    "crises",
+    { "populationOrders.epochId": 1 },
+    {
+      name: "crises_population_orders_pending",
+      partialFilterExpression: { "populationOrders.pending": true },
+    },
+    log
+  );
+
   // The claim behind a lever pull: one use per holder, lever and turn.
   await ensureIndex(
     db,

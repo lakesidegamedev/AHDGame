@@ -114,6 +114,8 @@ export function refugeeAdmissionAuthorization(
 export interface RefugeeReceptionOrder {
   _id: string;
   worldEpochId: string;
+  /** Set when a Crisis v2 effect raised this, so completion is recorded on the crisis instead of an interaction. */
+  origin?: "crisis";
   interactionId: string;
   crisisId: string;
   nodeId: string;
@@ -140,6 +142,8 @@ export interface RefugeeReceptionRoute {
 export interface RefugeeReceptionResult {
   _id: string;
   worldEpochId: string;
+  /** Set when a Crisis v2 effect raised this, so completion is recorded on the crisis instead of an interaction. */
+  origin?: "crisis";
   interactionId: string;
   crisisId: string;
   originCountryId: string;
@@ -305,6 +309,7 @@ export function planRefugeeReceptions(
     results.push({
       _id: order._id,
       worldEpochId,
+      ...(order.origin ? { origin: order.origin } : {}),
       interactionId: order.interactionId,
       crisisId: order.crisisId,
       originCountryId: order.originCountryId,

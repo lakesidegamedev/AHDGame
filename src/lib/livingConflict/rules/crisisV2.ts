@@ -289,7 +289,10 @@ export function convertLivingConflictDef(def: LivingConflictDef): CrisisDefiniti
       inaction: { graceTurns: 100_000, perTurn: 0, growthPerTurn: 0, maxPerTurn: 0 },
     },
     levers: [],
-    effectModules: campaignRuleRefs(def),
+    // Outcome rules fire for the outcome a response selected, which only the
+    // response resolver knows. Listing them here would apply every outcome's
+    // rules when the mirror reaches its peak.
+    effectModules: [],
     spillover: CAMPAIGN_SPILLOVER[def.key] ?? [],
     scarRules: [],
     forcedEvents: [],
