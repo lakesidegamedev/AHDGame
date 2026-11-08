@@ -47,6 +47,8 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { subscribeIndexFundSchema } from "@/lib/api/schemas/indexFunds";
 import { recordAudit } from "@/lib/audit/recordAudit";
 
+class FundQuoteMovedError extends Error {}
+
 // POST /api/investment-funds/[slug]/subscribe - Subscribe (buy) fund units
 // Auth: logged-in user with a character
 // Requires "full" mode - partial mode blocks player transactions.
@@ -236,14 +238,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           positionCredited = true;
 
           // Increment fund unit supply and cash anchor.
-          await db.collection("indexFunds").updateOne(
-            { _id: fund._id },
+          // A national fund is re-marked each tick; the units were priced at the
+          // quote read above, so a moved NAV must not take this credit.
+          const credit = await db.collection("indexFunds").updateOne(
+            {
+              _id: fund._id,
+              ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
+            },
             {
               $inc: { unitSupply: units, cashAnchor: totalCostAnchor },
               $set: { updatedAt: new Date() },
             },
             mongoOpts
           );
+          if (credit?.matchedCount === 0) throw new FundQuoteMovedError();
           fundCredited = true;
 
           // Record the subscription transaction.
@@ -369,6 +377,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         } catch (error) {
           // The debit was rolled back or compensated; undo the conversion too.
           await reverseExplicitPayConversionOrCapture(db, subscribeConversion, "funds.subscribe");
+          if (error instanceof FundQuoteMovedError) {
+            return errorResponse(409, "The fund price just moved. Please try again.");
+          }
           throw error;
         }
 

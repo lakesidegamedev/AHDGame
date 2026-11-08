@@ -93,6 +93,12 @@ export interface MacroCountryState {
   /** Optional shock multiplier applied on the next kernel tick (default 1). */
   shockModifier: number;
   /**
+   * Stability times shock the last tick applied to market production (default
+   * 1). Fiscal GDP and the national index scale capacity output by the same
+   * factor so a shock hits supply, tax base and index together.
+   */
+  realizedOutputFactor?: number;
+  /**
    * Annual real trend growth (0.02 = 2% a year). Absent: the economy does not
    * grow, which is how every pre-2027 macro document behaves. Applied per
    * kernel tick for the turns elapsed, never as a per-turn compounding of the

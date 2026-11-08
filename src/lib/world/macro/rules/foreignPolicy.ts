@@ -92,6 +92,12 @@ export interface ForeignPolicyLogEntry {
 }
 
 /** The scripted foreign policy state stored on a background macro document. */
+export interface PendingTariffWrite {
+  scopeType: "economy_wide" | "origin_country";
+  targetOriginCountryId?: string;
+  rate: number;
+}
+
 export interface MacroForeignPolicyState {
   stance: ForeignStance;
   bloc: WorldBlocId;
@@ -101,8 +107,20 @@ export interface MacroForeignPolicyState {
   tariff: { economyWide: number; targeted: { targetCountryId: string; rate: number } | null };
   /** Smoothed funded-trade balance pressure written to the central bank. */
   tradePressure: number | null;
-  /** One decision per bloc war call; a refusal is final. */
-  warDecisions: { resolutionId: string; joined: boolean; turn: number }[];
+  /** Tariff rows decided but not yet confirmed written; redelivered until cleared. */
+  pendingTariffs?: PendingTariffWrite[];
+  /**
+   * One decision per bloc war call; a refusal is final. A join stays `pending`
+   * (with its conflict and side) until the enrolment has been delivered.
+   */
+  warDecisions: {
+    resolutionId: string;
+    joined: boolean;
+    turn: number;
+    pending?: boolean;
+    conflictId?: string;
+    side?: "A" | "B";
+  }[];
   log: ForeignPolicyLogEntry[];
   updatedTurn: number;
 }
