@@ -7,12 +7,6 @@
     "src/app/api/actions/execute/route.ts": {
       "characters": 1
     },
-    "src/app/api/actions/poll/route.ts": {
-      "characters": 5,
-      "politicalParties": 1,
-      "states": 2,
-      "untyped": 2
-    },
     "src/app/api/admin/achievements/bulk-grant/route.ts": {
       "characters": 1,
       "untyped": 1
@@ -785,25 +779,15 @@
       "characters": 2,
       "untyped": 4
     },
-    "src/app/api/auth/apple/callback/route.ts": {
-      "untyped": 2
-    },
     "src/app/api/auth/character/route.ts": {
-      "characters": 7,
-      "gameState": 1,
-      "states": 2,
-      "untyped": 15
+      "characters": 1,
+      "states": 1,
+      "untyped": 2
     },
     "src/app/api/auth/delete-account/route.ts": {
       "characters": 1,
       "electedOfficials": 1,
       "untyped": 6
-    },
-    "src/app/api/auth/discord/callback/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/auth/google/callback/route.ts": {
-      "untyped": 2
     },
     "src/app/api/auth/login/route.ts": {
       "untyped": 2
@@ -1876,14 +1860,6 @@
       "corporations": 4,
       "gameState": 1,
       "states": 1
-    },
-    "src/app/api/country/[code]/region/[id]/economy/route.ts": {
-      "characters": 2,
-      "corporateSectors": 1,
-      "corporations": 3,
-      "gameState": 1,
-      "states": 1,
-      "untyped": 2
     },
     "src/app/api/country/[code]/region/[id]/legislature/route.ts": {
       "characters": 1,
@@ -3048,6 +3024,12 @@
       "electedOfficials": 2,
       "untyped": 1
     },
+    "src/lib/actions/pollCommission.ts": {
+      "characters": 5,
+      "politicalParties": 1,
+      "states": 2,
+      "untyped": 2
+    },
     "src/lib/actions/pollPartyColors.ts": {
       "politicalParties": 1
     },
@@ -3628,6 +3610,15 @@
     },
     "src/lib/audit/relatedSupplyAgreements.ts": {
       "corporations": 1
+    },
+    "src/lib/auth/characterCreation.ts": {
+      "characters": 6,
+      "gameState": 1,
+      "states": 1,
+      "untyped": 13
+    },
+    "src/lib/auth/oauth/providerLogin.ts": {
+      "untyped": 2
     },
     "src/lib/auth/providerIdentityIndexes.ts": {
       "untyped": 1
@@ -5601,6 +5592,14 @@
     },
     "src/lib/country/recomputeNationalApproval.ts": {
       "states": 1
+    },
+    "src/lib/country/regionEconomyView.ts": {
+      "characters": 2,
+      "corporateSectors": 1,
+      "corporations": 3,
+      "gameState": 1,
+      "states": 1,
+      "untyped": 2
     },
     "src/lib/country/rescopeLegislationCatalogue.ts": {
       "untyped": 1
