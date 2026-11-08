@@ -115,7 +115,8 @@ export async function markNationalIndexFunds(
   const transactions: IndexFundTransaction[] = [];
   const legs: TxInput[] = [];
   let marked = 0;
-  for (let attempt = 0; attempt < MARK_ATTEMPTS && pending.length > 0; attempt++) {
+  const markAttempt = async (attempt: number): Promise<void> => {
+    if (attempt >= MARK_ATTEMPTS || pending.length === 0) return;
     const fresh = await funds
       .find(
         { "nationalIndex.entityId": { $in: pending.map((m) => m.countryId) } },
@@ -198,7 +199,9 @@ export async function markNationalIndexFunds(
       });
     }
     pending = retry;
-  }
+    await markAttempt(attempt + 1);
+  };
+  await markAttempt(0);
   if (transactions.length > 0) {
     await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);
   }
