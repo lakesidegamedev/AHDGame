@@ -1,15 +1,10 @@
 /**
  * Terms the first election after a one-party-state conversion runs under.
  *
- * A conversion records them on the country's `pendingPostConversionElection`
- * marker, the post-conversion step stamps them on every snap race it opens,
- * and general resolution applies them through these two functions:
- *
  * - `voteSharePenalty` (forced conversions): the former ruling party's votes
  *   scale by `1 + penalty` before seats are allocated.
  * - `legacyReservationPct`: the former ruling party keeps at least that share
- *   of each region's seats, provided it stood a candidate there. A
- *   reservation cannot seat someone who never ran.
+ *   of each region's seats, provided it stood a candidate there.
  *
  * Both are no-ops for every election without `conversionTerms`.
  */

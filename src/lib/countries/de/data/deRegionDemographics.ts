@@ -1,25 +1,10 @@
 import type { StateDemographics } from "@/lib/db/types";
 
 /**
- * German Bundesländer demographic composition using the 12 DE voter archetypes.
- *
- * Each Land defines the population share of each archetype (summing to 100%)
- * plus baseline lean and turnout values. Regional character is expressed
- * through the population mix, not archetype-specific lean variation — fine-
- * tuning per-Land lean/turnout is a future enhancement.
- *
- * `categoryWeights: { de_voterGroups: 100 }` references the profile defined
- * in deDemographicCategories.ts.
- *
- * Mix calibration is based on:
- * - 2021 Bundestag Zweitstimmen by Land
- * - Reliable polling (ARD Deutschlandtrend, Forschungsgruppe Wahlen)
- * - 2022 Destatis regional demographic profiles
- *
- * Design principle: every archetype has a non-zero population in every Land
- * (or close to it) — regional character comes from mix weight, not exclusion.
- * A few archetypes are legitimately ~zero in some Länder (e.g. Landwirte in
- * city-states like Berlin or Bremen).
+ * German Bundesländer demographics using the 12 DE voter archetypes.
+ * Each Land sets archetype population shares (summing to 100%), plus baseline lean and turnout.
+ * Regional character comes from the population mix, not per-Land archetype lean variation.
+ * categoryWeights references the profile in deDemographicCategories.ts.
  */
 export const deRegionDemographics: StateDemographics[] = [
   // ── Süden ──────────────────────────────────────────────────────────────────

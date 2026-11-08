@@ -43,18 +43,16 @@ export interface SectorShedResult {
  * unowned-sector pool. Mutates `lookups.sectorsByCorp` entries in place so any
  * downstream turn-step in the same pipeline sees the reduced values.
  *
- * Caller is responsible for filtering `sheddingCorps` to the right candidate set.
- * `reasonLabel` is included in the diagnostic log (e.g. "Vacant CEO" or "Inactive CEO").
+ * Caller must filter `sheddingCorps` to the right candidate set. `reasonLabel`
+ * appears in the diagnostic log (e.g. "Vacant CEO" or "Inactive CEO").
  *
- * ─── UNDER PLANTS THIS SHEDS CAPACITY, NOT REVENUE ──────────────────────────
+ * ─── UNDER PLANTS THIS SHEDS CAPACITY, NOT REVENUE ────────────────────────
  * At `marketSystemMode >= "plants"` the turn processor restates
- * `sector.revenue` from `capitalStock × mixPrice` every turn. The legacy shed
- * was therefore doubly wrong there: the `$inc` on the corp's revenue was undone
- * on the next tick (so the corp KEPT its capacity), while the unowned pool was
- * credited anyway — capacity conserved on one side and created on the other,
- * i.e. a per-turn market-share mint. Under plants the shed instead removes
- * `rate × capitalStock` units of plant from the corp and credits the same
- * quantity of demand-side headroom to the pool, and never touches revenue.
+ * `sector.revenue` from `capitalStock × mixPrice` every turn, so a revenue
+ * `$inc` is undone next tick: the corp keeps its capacity while the pool is
+ * credited anyway, minting market-share per turn. Under plants the shed
+ * instead removes `rate × capitalStock` plant from the corp and credits the
+ * same demand-side headroom to the pool, never touching revenue.
  */
 export async function shedSectorsForCorps(
   db: Db,
@@ -132,29 +130,11 @@ export async function shedSectorsForCorps(
       shedWorkers = Math.min(shedWorkers, workers);
 
       if (plantsEnabled) {
-        // FLIP TURN: the capacity shed is DEFERRED one turn.
-        //
-        // This runs before `processSectors`, and it is `sectorTurn` that
-        // performs the lazy per-sector flip migration — until it has run,
-        // `plantsStartTurn` is null and `capitalStock` does not yet mean what
-        // this function assumes. Shedding here on that turn is unsound in both
-        // directions:
-        //
-        //  - `capitalStock` absent (never ran under capital mode): stock reads 0,
-        //    so the shed silently removed nothing while still shedding workers.
-        //  - `capitalStock` present: the units WERE credited to the unowned pool
-        //    and decremented on the corp, but `sectorTurn`'s flip adoption then
-        //    takes `max(storedCapacity, seedCapitalStock(nameplate))` off a
-        //    `revenue` this branch deliberately never touches — which is the
-        //    PRE-shed level — and restores the capacity, overwriting the `$inc`
-        //    in the same turn. Capacity conserved on the corp and created in the
-        //    pool: a one-off market-share MINT on every vacant/inactive-CEO
-        //    sector in the world, on the turn plants is switched on.
-        //
-        // Deferring costs one turn of attrition and leaves the world conserved.
-        // The next turn `plantsStartTurn` is stamped, `capitalStock` is
-        // authoritative, and the shed proceeds normally. Workers still shed on
-        // the flip turn, exactly as they did when `capitalStock` was absent.
+        // FLIP TURN: capacity shed is DEFERRED one turn. Until sectorTurn stamps
+        // plantsStartTurn and makes capitalStock authoritative, shedding is unsound:
+        // capitalStock may read 0 (shed silently drops stock but still removes workers),
+        // or the flip adoption would restore the pre-shed capacity and mint market
+        // share globally. One turn of attrition preserves conservation.
         const plantsCapacityEstablished = s.plantsStartTurn != null;
         // Capacity is the quantity; revenue is derived and must not be touched.
         const stock =
@@ -162,16 +142,14 @@ export async function shedSectorsForCorps(
             ? Math.max(0, s.capitalStock)
             : 0;
         // Round ONCE, here, and use the same number for the in-memory mutation,
-        // the pool credit and the persisted `$inc`. The three used to disagree:
-        // the mutation and the credit took the unrounded figure while the `$inc`
-        // rounded to 2dp, so `processSectors` later in this same turn derived
-        // revenue from a `capitalStock` that differed from what was written, and
-        // the gap compounded turn over turn.
+        // the pool credit and the persisted `$inc`. If they disagree,
+        // `processSectors` derives revenue from a `capitalStock` that differs
+        // from what was written, and the gap compounds turn over turn.
         //
         // On the flip turn this is ZERO rather than a skipped iteration: `stock`
-        // keeps the doc's real value, so the in-memory mutation and the `$inc`
-        // below are both no-ops on capacity (they must not write 0 over a real
-        // stock), while the WORKER shed still runs.
+        // keeps the doc's real value, so the mutation and `$inc` are no-ops on
+        // capacity (they must not write 0 over a real stock) while the WORKER
+        // shed still runs.
         const continuousShedUnits = plantsCapacityEstablished
           ? Math.round(Math.min(stock, stock * rate) * 100) / 100
           : 0;
@@ -327,12 +305,8 @@ export async function shedSectorsForCorps(
         const industryModel = s.industryModel ?? null;
         const mediaDiscriminator = s.mediaDiscriminator ?? null;
         const key = `${s.stateId}\0${s.sectorType}\0${industryModel ?? ""}\0${mediaDiscriminator ?? ""}`;
-        // The pool row this shed creates carries a countryId every reader
-        // filters on, so it is the country the STATE is in and never a
-        // hardcoded one (ticket #1271: the same defect `buildCapacity`,
-        // `expandSector` and `restoreSectorsToUnowned` carried, still live in
-        // the turn processor, where it could mint replacements for exactly the
-        // rows the pool heal repairs).
+        // The pool row this shed creates carries a countryId every reader filters
+        // on, so use the country the STATE is in, never a hardcoded one.
         const countryId = (lookups.stateCountryMap.get(s.stateId) ?? s.countryId) as CountryId;
         const prev = unownedDeltas.get(key);
         if (prev) prev.revenue += shedRevAnchor;

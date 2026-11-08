@@ -1,22 +1,8 @@
 /**
- * Perpetual election spawning — re-export barrel.
+ * Perpetual election spawning re-export barrel.
  *
- * The implementation lives under `perpetualElections/` (#586). This file keeps
- * the module's public surface identical so its 18 importers are untouched, and
- * so a single-country calendar change is a small diff instead of one against a
- * 4,000-line module.
- *
- *   engine.ts    timers, canonical spawn, duplicate/stale cleanup, batched
- *                announcements, the GameState snapshot, and the
- *                `ensurePerpetualElections` orchestrator
- *   shared.ts    helpers used by more than one country: regional delegates,
- *                beta parliament/senate, seceded chambers, regional governors,
- *                peer-race timing, and the per-country liveness gates
- *   countries/   one module per country calendar. The Eastern-bloc,
- *                beta-parliament and UK-devolved schedulers are grouped,
- *                because each is a thin wrapper over a shared helper and a
- *                file per country would be nine one-line modules.
- *   registry.ts  `SPAWN_ELECTIONS_REGISTRY`, which fans out to the countries
+ * Keeps the public surface of `perpetualElections/` identical so importers are
+ * untouched and a single-country calendar change is a small diff.
  */
 
 export {

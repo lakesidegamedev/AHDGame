@@ -818,11 +818,10 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
     ? await loadEuropeanTreatyContext(db, currentTurn)
     : null;
 
-  // v3 full-agency: scales the deterministic sponsor's personal cooldown by
-  // their own legislativeActivityMult (see PartySponsorshipAttempt.v3Active).
-  // Below v3, cooldown stays the fixed NPP_SPONSOR_COOLDOWN_TURNS.
-  // v3 AND ABOVE — a strict `=== "v3"` here used to drop the archetype-scaled
-  // cooldown back to the flat one the moment the level was raised to v4.
+  // v3+: scale the deterministic sponsor's cooldown by their own
+  // legislativeActivityMult (see PartySponsorshipAttempt.v3Active). Below v3,
+  // cooldown stays the fixed NPP_SPONSOR_COOLDOWN_TURNS. Use at-least-v3, not
+  // equality, so raising the level keeps the archetype-scaled cooldown.
   const autonomyLevel = await getNppAutonomyLevel(db);
   const v3Active = nppAutonomyLevelAtLeast(autonomyLevel, "v3");
 

@@ -31,21 +31,16 @@ import {
 /**
  * Ensure every UK region has an active/upcoming Commons election.
  *
- * Spawns anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. When the admin fast-forwards a regular
- * cycle via the "Modify Timers" PATCH, the next regular stays on calendar
- * (endTurn = anchors.ukCommons + (N - 1) x UK_COMMONS_CYCLE_PERIOD_HOURS). A snap
- * election resets the term clock: the post-snap regular ends at
- * `snap.endTurn + 240`, and every later regular keeps counting from that
- * shifted schedule (`shiftedScheduleEndTurn + 240`) until another snap moves
- * it again. The stamp is the scheduled turn, so admin acceleration still
+ * Spawns anchor to the canonical LARP schedule via
+ * {@link pickNextCanonicalCycle}. A regular fast-forward stays on calendar
+ * (endTurn = anchors.ukCommons + (N - 1) x UK_COMMONS_CYCLE_PERIOD_HOURS). A
+ * snap election resets the term clock: the post-snap regular ends at
+ * `snap.endTurn + 240`, and later regulars count from that shifted schedule
+ * until another snap. The stamp is the scheduled turn, so admin acceleration
  * cannot drag the calendar. See `planNextLowerChamberCycle`.
  *
- * 24h-primary / 24h-general gate: if currentTurn has eaten too deep into the
- * next canonical window, the spawner walks forward to the following cycle
- * rather than producing a stub race.
- *
- * Called from turnSystem after ensurePerpetualElections.
+ * If currentTurn has eaten too deep into the next canonical window, the spawner
+ * walks forward rather than producing a stub race.
  */
 export async function ensureUKElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
@@ -72,10 +67,8 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
     })
     .toArray();
 
-  // Heal live races that still carry the modern 650-seat map under a 1953
-  // world (or any other era mismatch). Same pattern as NG houseDistricts
-  // force-heal — without this, projections keep reading the wrong totalSeats
-  // until the next cycle, even after allocateSeats is era-aware (#1058).
+  // Heal live races whose totalSeats does not match the era's expected map.
+  // Without this, projections read the wrong totalSeats until the next cycle.
   const seatHealOps: AnyBulkWriteOperation<Election>[] = liveElections.flatMap((e) => {
     const expected = e.state ? commonsSeatsByRegion[e.state] : undefined;
     if (expected == null || e.totalSeats === expected) return [];

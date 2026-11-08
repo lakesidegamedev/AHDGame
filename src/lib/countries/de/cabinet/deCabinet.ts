@@ -45,5 +45,3 @@ export const DE_CABINET_POSITIONS = [
     order: 11,
   },
 ] as const;
-
-export type DECabinetPositionId = (typeof DE_CABINET_POSITIONS)[number]["id"];

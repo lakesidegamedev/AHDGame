@@ -29,10 +29,8 @@ import {
 } from "./engine";
 
 /**
- * Config for one country's per-region multi-seat delegate election family
- * (CN NPC Delegate / CN Provincial Congress / BR Câmara today; the three RU
- * Supreme Soviet families in Phase 3). Every field below is the ONLY thing
- * that differed between the previously-duplicated spawners.
+ * Config for one country's per-region multi-seat delegate election family.
+ * Each field is what differs between the regional delegate spawners.
  */
 export interface RegionalDelegateSpec {
   /** Frozen ballots retain their capacity; the country owns any law transition. */
@@ -41,20 +39,15 @@ export interface RegionalDelegateSpec {
   /** electionType === officeType key (the CN convention). */
   electionType: string;
   /**
-   * The AUTHORITATIVE per-region seat count, computed from the full region list
-   * so families that apportion across regions can see every region at once.
-   * Simple families return a constant map (CN, RU Nationalities) or derive
-   * per-doc (RU Union: houseDistricts; RU republic soviets: stateSenateSeats).
+   * Authoritative per-region seat count, computed from the full region list so
+   * cross-region apportionment sees every region at once.
    *
-   * Authoritative, not advisory: a region present here has its spawned race
-   * sized from this map even when a previous cycle said otherwise, because the
-   * chamber's live size is the region docs and a race is a delegation to it.
-   * OMIT a region the map cannot size — an absent entry means "no authoritative
-   * number", and the spawn falls back to the previous cycle's count.
+   * A region present here has its spawned race sized from this map even over a
+   * previous cycle's count. OMIT a region the map cannot size: an absent entry
+   * falls back to the previous cycle's count.
    *
-   * `preset` is the ACTIVE world preset (`ctx.preset`) so era-apportioned
-   * families can size the race the way the seed and the country config do —
-   * CN's chamber is 2,980 deputies in the modern eras but 1,226 in 1953 (#3779).
+   * `preset` is the active world preset so era-apportioned families size races
+   * consistently with the seed.
    */
   seatsForRegions: (
     regions: State[],
@@ -75,9 +68,8 @@ export interface RegionalDelegateSpec {
   statusGated?: boolean;
   /**
    * Liveness gate applied when `statusGated`. Defaults to
-   * `countryElectionsLive` (strict beta/active). RU overrides it with
-   * `ruElectionsLive` so its Supreme Soviet also runs under the NPP governing
-   * brain while RU itself stays `coming-soon` and never player-enabled (#3386).
+   * `countryElectionsLive`. RU overrides with `ruElectionsLive` so its
+   * Supreme Soviet also runs under the NPP governing brain.
    */
   electionsLiveGate?: (db: Db, countryId: CountryId) => Promise<boolean>;
   /** Human label for the log line + announcements, e.g. "NPC Delegate", "Câmara". */
@@ -108,20 +100,13 @@ export function seatsFromRegionField(
 
 /**
  * Heal `totalSeats` on a regional delegate race already in flight when its
- * chamber was resized (#1262).
+ * chamber was resized.
  *
- * The spawn-time force below only reaches the NEXT cycle. A race running when
- * the region changed size is never corrected, and for these families that is not
- * cosmetic: `allocateSeats` overrides `totalSeats` from a live map for the US
- * House and the Commons ONLY, so every other family allocates over the number on
- * the Election doc. Sachsen's Landtag race carried the 1953 seed's 24 into a
- * chamber the region doc sizes at 161 — `rescaleRegionDelegations` had already
- * reseated the sitting delegation to 161, so resolving that race would have cut
- * it back to 24.
- *
- * Exactly the shape and the reason of {@link buildHouseSeatHealOps} (#1190) and
- * the Commons heal in {@link ensureUKElections}; this is the same repair for the
- * families the shared delegate spawner owns.
+ * The spawn-time force only reaches the NEXT cycle, so a race running when the
+ * region changed size is never corrected. `allocateSeats` overrides
+ * `totalSeats` from a live map for the US House and the Commons ONLY; every
+ * other family allocates over the number on the Election doc, so a stale race
+ * would shrink the delegation.
  */
 export function buildDelegateSeatHealOps(
   liveElections: Pick<Election, "_id" | "state" | "totalSeats">[],
@@ -380,24 +365,11 @@ export async function countryElectionsLive(db: Db, countryId: CountryId): Promis
 }
 
 /**
- * RU-specific election gate (#3386). RU is intentionally `coming-soon` — its
- * economy/UI/forex aren't launch-ready — so it must NOT be flipped to
- * beta/active just to un-freeze its legislature. But under the standard
- * `countryElectionsLive` gate a `coming-soon` RU spawns nothing, so the Supreme
- * Soviet seeded at bootstrap is never re-elected (frozen forever).
- *
- * Decouple the two: RU's Supreme Soviet / Nationalities / republic-soviet
- * families run when EITHER
- *   - RU is genuinely live (`beta`/`active`) — the eventual launch, and the
- *     headless sim harness, which forces `status: "active"` for scoped
- *     countries; OR
- *   - RU is NPP-governed (global NPP autonomy ≥ v1 and RU still NOT
- *     player-enabled). `nppGoverned` is false whenever `enabledForPlayers` is
- *     true, so this path surfaces RU's legislature READ-ONLY (the NPP governing
- *     brain runs the elections, per-action APIs still block office-taking) —
- *     it never flips RU to player-live.
- *
- * Scoped to RU on purpose: NG/FR/IT/ES/SE/TR keep the strict beta/active gate.
+ * RU-specific election gate. RU is intentionally `coming-soon`, so the standard
+ * `countryElectionsLive` gate spawns nothing for its legislature. Run RU's
+ * chambers when RU is genuinely live (`beta`/`active`) OR when RU is
+ * NPP-governed (global NPP autonomy >= v1 and not player-enabled), which
+ * surfaces the legislature read-only without flipping RU to player-live.
  */
 export async function ruElectionsLive(db: Db, _countryId: CountryId = "RU"): Promise<boolean> {
   const { status, nppGoverned } = await getCountryAccessFromDb(db, "RU");
@@ -555,45 +527,15 @@ export async function ensureBetaParliamentElections(
 
 /**
  * Ensure every region of a beta-tier country's SENATE has an active/upcoming
- * election. Sibling to `ensureBetaParliamentElections` (lower chambers): same
- * per-region multi-seat spawn shape and gate (`countryElectionsLive`), but
- * seats are sourced from `state.stateSenateSeats` — NOT `houseDistricts`,
- * which is the LOWER chamber's seat map and is seeded independently (see
- * `seedEconTierRosters.ts`, which sources `r.stateSenateSeats` for exactly
- * this reason).
+ * election. Sibling to `ensureBetaParliamentElections`, but seats come from
+ * `state.stateSenateSeats`, NOT `houseDistricts` (that is the lower chamber's
+ * seat map, seeded independently).
  *
- * Without this spawner a lapsed senator's seat is NEVER refilled: no
- * equivalent of `ensureBetaParliamentElections` exists for any Senate, so
- * every upper chamber in the game trends toward empty as terms lapse with
- * nothing re-electing them (measured: TR Senate 100% vacant, FR 52.5%, IT
- * 11.4% vacant at turn 654 of a 1953-default world).
+ * Without this spawner lapsed senators are never refilled and upper chambers
+ * trend toward empty as terms lapse.
  *
- * No snap-election handling — unlike the lower-chamber spawner there is no
- * existing snap-senate concept in this codebase, so this intentionally omits
- * the `snap_${electionType}` family the lower-chamber spawner includes.
- *
- * SIMPLIFICATIONS (real-world structure vs. what's modeled here):
- *  - FR Sénat: real senators serve staggered terms via indirect election by
- *    departmental electoral colleges — one-third (pre-2004) or one-half
- *    (2004+) of seats renewed every 3 years, 9-year term per senator. This
- *    spawner elects the WHOLE chamber at once every 9 years instead, matching
- *    the country's own `upperElectionSystem.seatsContested: "all"`
- *    declaration. There's no seat-series/class data model for FR (unlike the
- *    US Senate's `senateClass` mechanism), so partial renewal is not modeled.
- *  - IT Senato della Repubblica: directly elected. Senato and Camera have
- *    been elected on the SAME DAY for the Republic's entire history (both
- *    dissolve together) — this rides the itCamera anchor (see
- *    `canonicalTurnsForCycle`'s "senato" case), which is historically
- *    accurate, not a simplification.
- *  - TR Senate of the Republic (Cumhuriyet Senatosu, 1961-1980): historically
- *    one-third renewed every 2 years (6-year term per senator), and abolished
- *    after the 1980 coup. This spawner elects the whole chamber at once on a
- *    fixed 6-year cycle and does not model partial renewal or the 1980
- *    abolition (era-gated off entirely outside 1953-default instead — see
- *    `trSenato` in cycleAnchorContext.ts).
- *  - ES Senado: era-gated OFF in 1953-default exactly like
- *    `congresoDiputados` (Franco dictatorship) via a shared null anchor —
- *    not a new simplification, mirrors the existing Congreso gate.
+ * No snap-election handling: no snap-senate concept exists, unlike the
+ * lower-chamber spawner's `snap_${electionType}` family.
  */
 export async function ensureBetaSenateElections(
   countryId: CountryId,
@@ -1049,18 +991,14 @@ export async function ensureRegionalGovernorElections(
 export const UK_GOVERNOR_REGIONS: ReadonlySet<string> = new Set(["SCO", "WAL", "NIR", "LON"]);
 
 /**
- * Spawn a US presidential election if none is currently active or upcoming.
- * Used by the admin "Spawn Presidential Election" tool. Bypasses the turn-year
- * check — invoke when the normal Spawn Missing Elections cron didn't create one.
+ * Spawn a US presidential election if none is active or upcoming. Admin tool,
+ * bypasses the turn-year check for recovery when the cron missed one.
  *
- * Anchors timing to the canonical LARP schedule via `pickNextCanonicalCycle`
- * so admin-recovery docs are indistinguishable from cron-spawned docs (same
- * `seatId`, `electionYear`, `startTime` / `primaryEndTime` / `endTime`).
- * When the canonical window has already eroded past the 24h+24h gate, falls
- * back to a `now`-anchored doc so the admin button still unblocks recovery.
+ * Uses `pickNextCanonicalCycle` so docs match cron-spawned ones (same `seatId`,
+ * `electionYear`, times), falling back to `now`-anchored when the canonical
+ * window eroded past the 24h+24h gate.
  *
- * Atomic via findOneAndUpdate + upsert + $setOnInsert: if two admins click the
- * button simultaneously, only one document is inserted. The other call returns
+ * Atomic via findOneAndUpdate + upsert + $setOnInsert; concurrent callers get
  * the existing doc with created=false.
  */
 export async function ensurePresidentialElection(

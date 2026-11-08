@@ -28,22 +28,13 @@ export interface PhaseVoteBill {
 }
 
 /**
- * Shared vote-core for the unified bill-lifecycle engines (national walker AND
- * the regional walker). Scopes a bill's raw vote map to the chamber's CURRENT
- * seat holders (weighting by seatsHeld, via the shared
- * {@link scopeVotesToCurrentSeatHolders} core) and returns both the scoped
- * totals used for the pass/fail decision AND a frozen {@link BillVoteSnapshot}
- * for the display layer. This is the single place the engines solve
- * election-boundary scoping (#0836) and result freezing (#0982).
- *
- * Pass `stateId` for sub-national bills — it pins the roster lookup to that
- * state's chamber. Pass voteField `"overrideVotes"` for the state veto-override
- * phase (single-chamber map with `overrideVotesFor/Against` aggregates).
- *
- * Fallback: when there are no current-holder survivors to scope (no votes, no
- * matching officials, or every voter has left the seat), freeze the stored
- * aggregate against the raw vote map so the snapshot's headline still matches
- * the decision the caller makes from `totals`.
+ * Shared vote core for the national and regional bill walkers. Scopes a
+ * bill's votes to current seat holders (weighted by seatsHeld), returning
+ * scoped totals for the pass/fail decision and a frozen vote snapshot for
+ * display. Pass `stateId` for sub-national bills; pass voteField
+ * `"overrideVotes"` for veto-override phases. When no current holders
+ * survive, freeze the stored aggregate so the snapshot headline matches
+ * `totals`.
  */
 export async function resolvePhaseVotes(
   db: Db,

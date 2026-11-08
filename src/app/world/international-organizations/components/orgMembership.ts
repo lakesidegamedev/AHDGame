@@ -1,12 +1,6 @@
 import type { OrgMemberId } from "@/lib/db/types/internationalOrganization";
-import type { CountryId } from "@/lib/constants/countries";
 import { ROSTER_BY_KEY } from "@/lib/constants/alignmentRoster";
 import type { OrgSummary } from "../orgTypes";
-
-/** Whether `countryId` is a member of `org`. */
-export function isCountryInOrg(org: OrgSummary, countryId: CountryId): boolean {
-  return org.members.some((m) => m.countryId === countryId);
-}
 
 /** Index every org under each of its member countries (insertion order preserved). */
 export function orgMembersByCountry(orgs: OrgSummary[]): Map<OrgMemberId, OrgSummary[]> {

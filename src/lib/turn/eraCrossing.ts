@@ -14,19 +14,16 @@ export interface EraCrossingResult {
 }
 
 /**
- * Decade-era crossing fires in Week 1 of years ending in 0, exactly like the
- * census (`shouldRunCensus`): `currentYear` increments at year rollover, so
- * the first turn it becomes ≡0 mod 10 IS Week 1; `lastEraCrossedYear` guards
- * re-fire. No preset start year (1953/1979/1991/2019) is ≡0 mod 10, so
- * nothing fires at bootstrap.
+ * Decade-era crossing fires in Week 1 of years ending in 0, same as the census
+ * (`shouldRunCensus`): `currentYear` increments at year rollover, so the first
+ * turn it becomes ≡0 mod 10 IS Week 1; `lastEraCrossedYear` guards re-fire. No
+ * preset start year is ≡0 mod 10, so nothing fires at bootstrap.
  *
- * The whole phase is gated on `eraSystemEnabled` — while the era system is
- * disabled, no marker is stamped and no news posts (and scoring stays legacy
- * via getEraContext). When the flag is enabled mid-decade, the phase quietly
- * self-heals `currentEraId` on the next turn without posting a "decade
- * begins" wire item; news only fires on a real decade rollover. Scoring never
- * reads the stamp (it computes from currentYear), so a missed stamp cannot
- * skew math.
+ * The whole phase is gated on `eraSystemEnabled`. When the flag is enabled
+ * mid-decade, the phase self-heals `currentEraId` on the next turn without
+ * posting a wire item; news only fires on a real decade rollover. Scoring
+ * never reads the stamp (it computes from currentYear), so a missed stamp
+ * cannot skew math.
  */
 export function shouldCrossEra(
   currentYear: number,

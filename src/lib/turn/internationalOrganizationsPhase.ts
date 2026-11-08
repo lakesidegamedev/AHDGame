@@ -77,31 +77,24 @@ import {
   captureDiplomaticExpiry,
 } from "./internationalOrganizationsEffects";
 
-/**
+/*
  * Voting roster for one ballot. Shadow/off preserve the player-only baseline.
- * Active mode adds modelled members that have a formed NPP government and a
- * legislature capable of resolving the consequences of their vote — except on
- * the player-only ballots `ballotIsPlayerOnly` names.
+ * Active mode adds modelled members with a formed NPP government and a
+ * legislature able to resolve the consequences of their vote, except on the
+ * player-only ballots `ballotIsPlayerOnly` names.
  *
- * ADMISSION, WAR DECLARATION, AND WAR ENTRY KEEP THE PLAYER-ONLY ROLL, whatever
- * the rollout mode.
- * That is the rule `orgMembership.ts` already states for client states, and it
- * is here for the same reason: on those ballots a member is asked to consent to
- * someone else's business, and its silence is indistinguishable from a veto. An
- * NPP government plans once every six turns and executes a single ranked action,
- * so across a 24-turn ballot it has four contested chances to vote. Seating it
- * there made every Warsaw Pact admission unwinnable: China closed 5-of-7 and
- * North Korea 2-of-7 with no "no" votes cast at all, purely because Poland and
- * Czechoslovakia never got round to it (ticket #1257).
+ * ADMISSION, WAR DECLARATION, AND WAR ENTRY KEEP THE PLAYER-ONLY ROLL whatever
+ * the rollout mode. On those ballots a member consents to someone else's
+ * business, and its silence is indistinguishable from a veto. An NPP
+ * government plans once every six turns and executes a single ranked action, so
+ * across a 24-turn ballot it has only four contested chances to vote.
  *
- * Everything else keeps the wider roll and the modelled bloc keeps its say. On a
- * majority ballot a silence costs a yes and nothing worse; on an FTA the voters
- * ARE the parties, each deciding its own agreement, and narrowing that would
- * leave a deal between two modelled neighbours with no voters at all.
+ * On a majority ballot a silence costs a yes and nothing worse; on an FTA the
+ * voters ARE the parties and narrowing that would leave a deal between two
+ * modelled neighbours with no voters at all.
  *
- * Background members (#5702) sit on the same wider roll: they have no
- * government, but `castBackgroundOrgVotes` scripts their vote on every ballot
- * `backgroundVotesOn` names before the resolvers run.
+ * Background members sit on the same wider roll; `castBackgroundOrgVotes`
+ * scripts their vote on every ballot `backgroundVotesOn` names.
  */
 async function ballotVotingMembers(
   db: Db,
@@ -118,17 +111,15 @@ async function ballotVotingMembers(
 }
 
 /**
- * Members that can be ASKED TO LEGISLATE: player-enabled members, plus — in
- * active mode — modelled members whose formed NPP government can sponsor a bill
+ * Members that can be ASKED TO LEGISLATE: player-enabled members, plus, in
+ * active mode, modelled members whose formed NPP government can sponsor a bill
  * through a real legislature.
  *
- * This is deliberately NOT the same list as the player-only ballot roll. Being
- * unable to reliably *vote within a deadline* is what disqualifies an NPP member
- * from an admission, declaration, or entry resolution; it says nothing about
- * whether that country can be handed a war-entry bill once the bloc has already
- * decided. `join_conflict` needs exactly this wider set (bloc war entry, #1067):
- * France's NPP premier sponsors her own ratification bill even though France
- * holds no ballot on the resolution that produced it.
+ * Deliberately not the player-only ballot roll: inability to vote within a
+ * deadline disqualifies an NPP from an admission, declaration, or entry
+ * resolution, but not from being handed a war-entry bill. `join_conflict`
+ * needs this wider set: France's NPP premier sponsors her own ratification
+ * bill even though France holds no ballot on the resolution that produced it.
  */
 async function legislatingMembers(
   db: Db,
@@ -143,18 +134,15 @@ async function legislatingMembers(
 /**
  * International-organizations turn phase.
  *
- * Three independent sub-resolvers run sequentially against the same DB so each
- * later step sees the membership changes the earlier step committed (e.g. an
- * EU admission in step 1 enlarges the voter pool that step 2 measures FTA
- * unanimity against). Inter-org effects are not concurrent within the phase.
+ * Three sub-resolvers run sequentially against the same DB so each sees the
+ * membership changes the prior step committed (e.g. an EU admission enlarges
+ * the voter pool for FTA unanimity). They do not run concurrently.
  *
  *   1. Resolve expired membership proposals (unanimous current members).
- *   2. Resolve expired org legislation: FTAs activate when every named party
- *      voted "yes". Non-party members of the host org are not bound and have
- *      no vote. Active FTAs are the data the tariff override layer reads each
- *      turn.
- *   3. Resolve expired leadership elections: simple majority of current
- *      members elects; ties leave the seat unchanged.
+ *   2. Resolve expired legislation: FTAs activate when every named party
+ *      voted yes; non-party org members are not bound and do not vote.
+ *   3. Resolve expired leadership elections: simple majority; ties leave the
+ *      seat unchanged.
  */
 export async function processInternationalOrganizationsTurn(
   db: Db,
@@ -329,19 +317,15 @@ async function chargeAllOrganizationContributions(
   let duesCharged = 0;
   let tributeCharged = 0;
   for (const orgId of orgIds) {
-    // ─── Every member contributes exactly once (#1156) ──────────────────────
+    // ─── Every member contributes exactly once ─────────────────────────────
     //
     // `orgMembership` partitions the roll into voters (dues) and everyone else
-    // (tribute), and its docblock promises "nobody is billed twice and nobody
-    // is billed not at all". The second half was not true: tribute exists only
-    // for the two armed blocs, so in EVERY other organisation the non-voting
-    // members were assessed nothing at all and sat on the roll for free. That
-    // is what players saw as members who never pay dues.
-    //
-    // Where the organisation levies tribute the partition stands untouched.
-    // Where it does not, non-voting members are assessed ordinary dues like
-    // anyone else — they are still members, they still have an economy, and
-    // there is no second instrument to catch them.
+    // (tribute). Tribute only exists for the two armed blocs, so in every other
+    // organisation non-voting members were assessed nothing and sat on the roll
+    // free. Where the organisation levies tribute the partition stands; where
+    // it does not, non-voting members are assessed ordinary dues like anyone
+    // else (they are still members with an economy, and no other instrument
+    // catches them).
     const duesPayers = (await leviesTributeFor(orgId))
       ? (votersByOrg.get(orgId) ?? [])
       : [...(votersByOrg.get(orgId) ?? []), ...(nonVotersByOrg.get(orgId) ?? [])];

@@ -2,22 +2,17 @@ import type { StateMetrics } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * Nigeria geopolitical-zone initial metrics — approximate 2022–2023 NBS /
- * NDLEA / NOI Polls / TI / V-Dem data, tuned for gameplay feel.
- *
- * Units and conventions:
- *   unemploymentRate   — %, e.g. 33.3 means 33.3%
- *   medianIncome       — annual household income in NGN
- *   gdpGrowth          — year-over-year % change
- *   povertyRate        — % below the national poverty line
- *   costOfLiving       — index, 100 = national mean
- *   crimeRate          — incidents per 100k population
- *   lifeExpectancy     — years at birth
- *   carbonEmissions    — tons CO2 per capita per year (lower = better)
- *   corruptionIndex    — 0-100 scale (lower = cleaner; Transparency Int'l style)
- *   voterTurnout       — % turnout in most recent general election
- *
- * All values use `{ value, trend? }` wrappers expected by the engine.
+ * Nigeria geopolitical-zone initial metrics. Units:
+ * unemploymentRate  %
+ * medianIncome      annual household income, NGN
+ * gdpGrowth         year-over-year % change
+ * povertyRate       % below national poverty line
+ * costOfLiving      index, 100 = national mean
+ * crimeRate         incidents per 100k population
+ * lifeExpectancy    years at birth
+ * carbonEmissions   tons CO2 per capita per year (lower = better)
+ * corruptionIndex   0-100, lower = cleaner
+ * voterTurnout      % in most recent general election
  */
 
 function mv(value: number, trend?: number) {

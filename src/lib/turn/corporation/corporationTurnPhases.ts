@@ -162,18 +162,14 @@ export async function persistLabourDemand(args: {
 
 /**
  * Phase 3c: Credit dividends to corporate shareholders (₳ amounts → recipient corp treasury currency).
- * Characters receive dividend auto-conversion via executeMarketMakerTrade below; corp treasuries keep
- * cash in home currency using the same anchor→local conversion as operating flows.
+ * Characters receive dividend auto-conversion via executeMarketMakerTrade; corp treasuries keep cash in
+ * home currency using the same anchor→local conversion as operating flows.
  *
- * Dividend income received by a corp is taxed at the recipient's home-country
- * federal rate applied to 50% of the received amount (dividend-received
- * deduction convention). State/regional tax never applies to dividend income.
- * The recipient's `liquidCapital` increments by the net (gross − tax); the
- * tax amount is logged to `dividendTaxPaidByCountry` so the turn metrics
- * stay auditable (written to the same-turn corporationHistory row below).
+ * Dividend income received by a corp is taxed at the recipient's home-country federal rate on 50% of the
+ * received amount (dividend-received deduction). State/regional tax never applies. `liquidCapital`
+ * increments by the net; the tax is logged to `dividendTaxPaidByCountry` for the turn metrics.
  *
- * Returns `dividendTaxPaidByCountry` (corpId → countryId → ₳) so the ledger
- * emission phase can fold the dividend-received tax into gov totals.
+ * Returns `dividendTaxPaidByCountry` (corpId → countryId → ₳) for the ledger emission phase.
  */
 export async function creditCorpDividends(args: {
   db: Db;
@@ -200,11 +196,7 @@ export async function creditCorpDividends(args: {
     thresholds,
   } = args;
   const dividendTaxPaidByCountry = new Map<string, Map<string, number>>();
-  // Net dividend income (local ccy, per-turn) each corp received from holding
-  // other corps' shares. Reporting-only: the cash is already credited to
-  // liquidCapital above; this map is threaded to the Phase 8 history snapshot so
-  // the corp Financials can surface it as a P&L line (issue #3109) WITHOUT
-  // touching the cash-driving `income` field.
+  // Net dividend income (local ccy, per-turn) each corp received from holding other corps' shares. Reporting-only: cash is already credited to liquidCapital; this map feeds the Financials P&L line without touching the cash-driving income field.
   const dividendIncomeReceivedByCorpId = new Map<string, number>();
   const corpDividendRecipientTxEntries: Omit<
     FinancialTxLogEntry,
@@ -334,13 +326,10 @@ export async function creditCorpDividends(args: {
       void emitTxBulk(db, corpDividendRecipientTxEntries, thresholds);
     }
 
-    // The dividend-received-deduction tax is folded into the same-turn
-    // corporationHistory row's federal/combined + domestic per-country tax
-    // fields — but that row does not exist yet at this point in Phase 3c
-    // (it is INSERTED in Phase 8 by snapshotMarketCap). An updateOne here would
-    // therefore no-op (#3115), so instead we return `dividendTaxPaidByCountry`
-    // and snapshotMarketCap folds it into the row at insert time (mirroring how
-    // #3109 threads dividendIncomeReceived).
+    // The dividend-received-deduction tax cannot be written to a
+    // corporationHistory row here: the row does not exist until Phase 8
+    // (snapshotMarketCap inserts it). Return per-country amounts so
+    // snapshotMarketCap folds them in at insert time.
   }
   return { dividendTaxPaidByCountry, dividendIncomeReceivedByCorpId };
 }
@@ -348,35 +337,19 @@ export async function creditCorpDividends(args: {
 /**
  * Phase 4: Update domestic/foreign corporate profits tax bases: 75% GDP-derived + 25% actual
  * annualised corp income. Domestic = corp HQ'd in the sector's country; foreign = elsewhere.
- * Only applies where we have real corp data — jurisdictions with no HQ'd corps keep existing base.
+ * Only applies where we have real corp data - jurisdictions with no HQ'd corps keep existing base.
  *
- * The 75% "GDP-derived floor" uses THIS COUNTRY's own authored GDP-share for each base -
- * `federalBudget.taxBaseGdpShareBaseline`, captured once at seed time from the country's
- * actual seeded `taxBases` (see `buildNationalBudgetSeed` in seeds/reference/budgets.ts) -
- * falling back to the generic `GDP_DOMESTIC_CORPORATE_FACTOR`/`GDP_FOREIGN_CORPORATE_FACTOR`
- * constants only for budgets that predate the baseline field. Fiscal-scale audit,
- * 2026-07-29: this used to floor EVERY country at the same universal 6%/2%-of-GDP split
- * regardless of what was seeded. A command economy's authored enterprise-surplus base (e.g.
- * 1953 Eastern Bloc, ~13.5%/4.5% of GDP - the "Total Surplus Remittance" mechanism, not
- * Western-style corporate profit) got crashed down to the generic 4.5%/1.5% floor within the
- * first in-game year (real corp income for these SOEs is near-zero, so the 25% "actual"
- * term barely moved it), silently erasing ~9 points of GDP in revenue the country was never
- * told it lost. The same universal floor pushed countries seeded BELOW 6%/2% (e.g. CN, at
- * 3%/1%) the other way, inflating their revenue instead. Either direction is a seed-value
- * override the player has no way to see or reverse - using the country's own baseline
- * fixes both directions at once without touching the blend's actual/GDP-floor ratio.
+ * The 75% GDP floor uses THIS COUNTRY's authored GDP-share per base
+ * (`federalBudget.taxBaseGdpShareBaseline`, captured at seed time), falling back to the
+ * generic `GDP_DOMESTIC_CORPORATE_FACTOR`/`GDP_FOREIGN_CORPORATE_FACTOR` constants only for
+ * budgets predating that field. A single universal floor would silently override authored
+ * seed values in both directions (crushing command-economy surplus bases, inflating
+ * low-seeded Western ones).
  *
- * Currency convention (v0.2.6 locked decision #3):
- *   - `taxBases.domesticCorporateProfits` / `taxBases.foreignCorporateProfits` are stored in
- *     the owning country's currency (JPY for JP, GBP for UK, USD for US). NOT in ₳.
- *   - `domesticIncomeByCountry` / `foreignIncomeByCountry` (and state variants) are ₳
- *     accumulators populated by `sectorCalculations.ts`, which normalizes every sector's
- *     operating income to anchor regardless of the owning corp's home currency. Cross-corp
- *     summation is always anchor-native.
- *   - `b.gdp` / `sb.stateGdp` are stored in the country's currency.
- *   - Multiply the ₳ accumulator by fxRate (country-local per 1 ₳) so the 25% "actual corp"
- *     weight lands in the same units as the 75% GDP-derived floor before they're blended.
- *   - USD path keeps fxRate=1.0 — no-op for corps / states in the anchor-currency country.
+ * Currency: `taxBases.domesticCorporateProfits`/`foreignCorporateProfits` and `b.gdp`/
+ * `sb.stateGdp` are in the owning country's currency, NOT ₳. The income accumulators are
+ * ₳-normalized by `sectorCalculations.ts`; multiply by fxRate (country-local per 1 ₳) so the
+ * 25% actual term lands in the same units as the GDP floor. USD path keeps fxRate=1.0.
  */
 export async function updateCorporateTaxBases(args: {
   db: Db;
@@ -439,16 +412,12 @@ export async function updateCorporateTaxBases(args: {
     await db.collection<FederalBudget>("federalBudget").bulkWrite(federalTaxBaseOps);
   }
 
-  // State tax bases: same split treatment. A state gets written to if it has any
-  // domestic OR foreign corp activity in this turn.
-  // NOTE: unlike the federal path above, this still floors on the universal
-  // GDP_DOMESTIC/FOREIGN_CORPORATE_FACTOR constants - StateBudget has no
-  // per-state equivalent of taxBaseGdpShareBaseline yet. Known residual from
-  // the 2026-07-29 fiscal-scale audit; state-level seeds were not found to
-  // author a divergent corporate-base ratio the way the 1953 Eastern Bloc
-  // federal seeds do, so this is lower-priority than the federal fix but not
-  // proven safe for every state seed - flag before relying on state-level
-  // corporate tax-base shares in a command economy.
+  // State tax bases: a state gets written to if it has any domestic OR foreign
+  // corp activity this turn. Unlike the federal path, this floors on the
+  // universal GDP_DOMESTIC/FOREIGN_CORPORATE_FACTOR constants, since StateBudget
+  // has no per-state equivalent of taxBaseGdpShareBaseline. Not proven safe for
+  // every state seed; flag before relying on state-level corporate tax-base
+  // shares in a command economy.
   const operatingStates = Array.from(
     new Set([...domesticIncomeByOperatingState.keys(), ...foreignIncomeByOperatingState.keys()])
   );
@@ -502,27 +471,10 @@ export async function updateCorporateTaxBases(args: {
 }
 
 /**
- * Emit corp_revenue (per corp) + corp_salary + corp_dividend (per character)
- * + corp_tax_paid (per corp) + gov_tax_revenue (per country).
- *
- * Pre-Phase-3 the route emitted a single fund_credit row per (character,
- * currency) carrying mixed CEO salary + dividend amounts under
- * `meta.source = "corp_income"`. That made it impossible to split the two
- * flows in admin queries — and CEO salary forensics in particular needed
- * to distinguish "this came from MY corp's wage bill" from "this came as
- * shareholder dividend on a corp I don't run". Phase 3 splits them by
- * walking ceoSalaryPayments and dividendPayments separately so each
- * payment kind gets its own tx row with the matching counterparty corp.
- *
- * Tax flows were entirely off-ledger pre-Phase-3 — only the budget tax
- * bases got updated. Phase 3 emits both sides: `corp_tax_paid` per corp
- * (the deduction) and `gov_tax_revenue` per (country, taxType) (the
- * collection). The amount on each corp row is the sum of federal + state
- * tax paid by that corp this turn, in the corp's home currency. Per-country
- * gov_tax_revenue rows aggregate operating tax across every corp HQ'd in
- * or operating in that country — including the dividend-received tax slice
- * accumulated in `dividendTaxPaidByCountry`.
- * Fire-and-forget — must not throw into the turn pipeline.
+ * Emit corp_revenue, corp_salary, corp_dividend, corp_tax_paid, and
+ * gov_tax_revenue ledgers for this turn. Each flow is split by kind so admin
+ * queries can distinguish CEO salary from shareholder dividend on the same
+ * corp. Fire-and-forget: must not throw into the turn pipeline.
  */
 export async function emitCorporationTurnTx(args: {
   db: Db;
@@ -577,10 +529,8 @@ export async function emitCorporationTurnTx(args: {
 
     const totalTaxAnchor = (snap.federalTaxPaid ?? 0) + (snap.stateTaxPaid ?? 0);
 
-    // The cash writer keeps fractional native units. Witness the signed
-    // pre-tax operating result and its tax debit at the same precision.
-    // Losses consume cash even when there is no positive revenue row (#992).
-    // On a funded turn the settlement already witnessed the producer profit.
+    // The cash writer keeps fractional native units; match its precision
+    // for operating result and tax debit. Losses consume cash with no revenue row.
     const revenueAnchorPreTax =
       snap.income + Math.max(0, totalTaxAnchor) - (snap.settledProducerProfitAnchor ?? 0);
     const operatingLocal = anchorToCorpCapital(revenueAnchorPreTax, resolved, fx);

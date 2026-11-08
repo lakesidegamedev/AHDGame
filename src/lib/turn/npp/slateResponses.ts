@@ -1,22 +1,13 @@
 /**
- * Per-turn slate processing.
+ * Per-turn slate processing, two idempotent coupled passes:
  *
- * Two coupled passes:
+ * 1) processSlateResponses: resolves each invited/legacy-considering
+ *    SlateCandidate via decideNPPSlateResponse and writes accepted/declined.
  *
- * 1) `processSlateResponses(ctx)` — for every `invited` (and any legacy
- *    `considering`) SlateCandidate, runs the deterministic resolver
- *    (`decideNPPSlateResponse`), which decides on the NPP's compliance, and
- *    writes the result (`accepted` / `declined`) back to the slate row.
- *
- * 2) `fileAcceptedSlateRows(ctx)` — for every `accepted` SlateCandidate that
- *    hasn't yet been converted, inserts a corresponding `ElectionCandidate`
- *    on the parent election and marks the slate row `filed`. Called from
- *    `processElectionEntry` AFTER incumbent defenders re-file but BEFORE the
- *    generic party-pool fallback so Slate challengers can still create a
- *    same-party primary against the sitting NPP.
- *
- * Both passes are idempotent — re-running the same turn is a no-op once
- * everything that can transition has transitioned.
+ * 2) fileAcceptedSlateRows: converts each accepted, unfiled SlateCandidate
+ *    into an ElectionCandidate and marks the row filed. Called from
+ *    processElectionEntry after incumbent defenders re-file but before the
+ *    party-pool fallback, so Slate challengers can form a same-party primary.
  */
 
 import { ObjectId } from "mongodb";
@@ -478,27 +469,25 @@ export async function trimOverCapSlates(ctx: NPPContext): Promise<SlateTrimSumma
   return summary;
 }
 
-/**
- * Insert ElectionCandidate rows for every accepted slate row that has not
- * yet been filed. Called from `processElectionEntry` after incumbent-defense
- * runs but before the generic party-pool fallback, so accepted slate rows can
- * still create a same-party primary against a defending NPP.
+/*
+ * Insert ElectionCandidate rows for every accepted slate row that has not yet
+ * been filed. Called from `processElectionEntry` after incumbent-defense runs
+ * but before the generic party-pool fallback, so accepted slate rows can still
+ * create a same-party primary against a defending NPP.
  *
- * Ticket #1181 — two changes to how a row that cannot file is handled:
+ * A row that cannot file is still tombstoned as `withdrawn`, but carries a
+ * `refusalReason` so the slate view can render it instead of hiding it. A
+ * silent failure would be indistinguishable from an assignment that never
+ * saved.
  *
- * 1. The chair outranks the autopilot. When the party's challenger slot in the
- *    race is held by an NPP the generic party-pool fallback picked (i.e. one
- *    with no chair-issued slate row of their own), that candidacy is withdrawn
- *    and the chair's pick files in its place. A slot held by a defending
- *    incumbent, or by another chair-issued slate candidate, still wins.
- * 2. Every row this pass gives up on records WHY. It is still tombstoned as
- *    `withdrawn`, but with a `refusalReason`, and the slate view now renders
- *    reason-carrying tombstones instead of hiding them — previously the row
- *    just disappeared and the chair had no way to tell a silent failure from
- *    an assignment that never saved.
+ * The chair outranks the autopilot: when the party's challenger slot holds an
+ * NPP picked by the generic party-pool fallback (no chair-issued slate row of
+ * its own), that candidacy is withdrawn and the chair's pick files instead. A
+ * slot held by a defending incumbent or another chair-issued slate candidate
+ * still wins.
  *
- * Returns counts so the caller can avoid double-filling slots that the
- * slate already covered.
+ * Returns counts so the caller can avoid double-filling slots the slate
+ * already covered.
  */
 export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilingSummary> {
   const { db, now, nppMap, candidatesByElection } = ctx;
@@ -637,11 +626,8 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         queueSkipped(row, "ineligible_region");
         continue;
       }
-      // Commons by-elections (#860) fill only vacated seats and resolve
-      // additively: a sitting MP holding an in-state Commons seat is never
-      // filed into a special_commons race, since a sitting winner would
-      // double-seat. Seatless challengers file normally below. Seat data comes
-      // from the shared context load, so this adds no per-row round trip.
+      // Commons by-elections fill only vacated seats: skip sitting MPs already
+      // holding an in-state Commons seat to avoid double-seating.
       if (isSpecialCommonsElection(election.electionType)) {
         const offices = ctx.officialsByNPP.get(candidateKey) ?? [];
         const holdsInStateCommonsSeat = offices.some(
@@ -748,15 +734,14 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         (candidate) => !activeIncumbents.includes(candidate)
       );
 
-      // Race capacity. A party may field at most SLATE_ASSIGNMENT_CAP
-      // candidates here, players and NPPs drawing on one pool, so a chair can
-      // build a slate several deep rather than one pick at a time.
+      // Race capacity. A party may field at most SLATE_ASSIGNMENT_CAP candidates
+      // here, players and NPPs drawing on one pool, so a chair can build a slate
+      // several deep rather than one pick at a time.
       //
-      // #1181 survives as the tie-break for a race that is genuinely full: a
-      // slot held by an NPP the generic party-pool fallback picked, who is
-      // neither defending a seat nor holding a chair-issued row, yields so the
-      // chair's instruction is not silently discarded. Below the cap nobody has
-      // to give way and both simply stand, which is what the primary is for.
+      // When a race is genuinely full, an NPP slot filled by the generic
+      // party-pool fallback (neither defending a seat nor holding a chair-issued
+      // row) yields so the chair's instruction is not discarded. Below the cap
+      // nobody gives way and both simply stand, which is what the primary is for.
       const pendingDisplacements: ElectionCandidate[] = [];
       if (!entitledHolders(election, row.partyId).has(candidateKey)) {
         const displaceable = activeChallengers.filter((candidate) =>
@@ -852,17 +837,14 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
 /**
  * Withdraw one NPP candidacy from a race and clean up after it.
  *
- * Three callers: the filing pass, taking a slot from an auto-picked NPP so a
- * chair's pick can stand on a full race (#1181), the trim pass, bringing a
- * race that is over the cap back inside it, and engine 6.4 primary
- * consolidation (electionEntry.ts). Mirrors the slate-withdraw cleanup used by
- * `reconcileSlateMoves` and the slate DELETE route: mark the candidacy
- * withdrawn, scrub the vote tally, archive the campaign, and drop the NPP from
- * the turn's in-memory candidacy state so nothing re-files them.
+ * Mark the candidacy withdrawn, scrub the vote tally, archive the campaign,
+ * and drop the NPP from the turn's in-memory candidacy state so nothing
+ * re-files them. Mirrors the cleanup in `reconcileSlateMoves` and the slate
+ * DELETE route.
  *
  * `candidatesByElection` carries persisted candidate ids. Candidates inserted
- * earlier in this turn receive their final `_id` before the batched upsert, so
- * the withdrawal can update that row directly instead of re-reading it first.
+ * earlier this turn receive their final `_id` before the batched upsert, so
+ * the withdrawal can update that row directly.
  */
 export async function withdrawCandidacyFromRace(
   ctx: NPPContext,

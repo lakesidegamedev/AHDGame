@@ -1,17 +1,13 @@
 /**
- * SCOTUS Nomination Lifecycle (#3598).
+ * SCOTUS Nomination Lifecycle.
  *
- * Reuses the cabinet-nomination Senate-majority-vote lifecycle's machinery
- * as-is: `nppCabinetVote` (party-line auto-vote), `computeCabinetNominationTally`
- * (seat-weighted re-tally scoped to current Senate seats), and `didPass`
- * (votesFor > votesAgainst). Mirrors `processCabinetNominationLifecycle`'s
- * two-part turn shape:
- *  A. NPP senator votes on active nominations (party-line preference)
- *  B. Close expired votes and resolve confirmed/rejected
+ * Reuses the cabinet-nomination machinery: `nppCabinetVote` (party-line
+ * auto-vote), `computeCabinetNominationTally` (seat-weighted re-tally scoped
+ * to current Senate seats), and `didPass` (votesFor > votesAgainst). Same
+ * two-part turn shape: NPP senators vote, then expired votes resolve.
  *
- * The one genuine extension over cabinet nominations: a SCOTUS nominee may be
- * a generated NPP "legal scholar" as well as a player character (cabinet
- * nominations are player-character-only today) — see `nominateJustice.ts`.
+ * The one extension: a SCOTUS nominee may be a generated NPP legal scholar
+ * as well as a player character. See `nominateJustice.ts`.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";

@@ -1,12 +1,12 @@
 /**
- * The live funded producer turn (funded-market cutover, phase B slice S3).
+ * The live funded producer turn.
  *
  * Runs only when `resolveProducerPath` selects the funded path, before the
  * legacy per-sector pass. In order:
  * 1. build this turn's funded demand with the same builder the shadow uses;
- * 2. create any missing wallets, mint each public buyer's funding (the plant
- *    share of the outlay the treasury already spends) and, on the world's
- *    first funded turn only, the owner-approved household opening cash;
+ * 2. create missing wallets, mint each public buyer's funding (the plant share
+ *    of the outlay the treasury already spends), and on the first funded turn
+ *    only the owner-approved household opening cash;
  * 3. settle the market (cash, stock, payables and receipts, idempotent per turn);
  * 4. book the close: AI profit (60%) and operating income to households, state
  *    remittances to the treasury, unspent public funding burned.

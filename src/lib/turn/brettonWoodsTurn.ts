@@ -1,36 +1,25 @@
 /**
- * Bretton Woods exit turn phase (issue #7) — shell around
- * `src/lib/monetary/brettonWoods.ts`.
+ * Bretton Woods exit turn phase, shell around `monetary/brettonWoods.ts`.
  *
- * The rules module is complete and tested, but for a while nothing called it:
- * the world was flagged for a monetary regime change that could never happen.
- * This phase is the wiring. It runs every turn, positioned after inflationRecalc
- * (which settles the US inflation gap this turn's drain reads) and before
- * forexTurn (which applies the persisted regime's band and drift).
+ * Positioned after inflationRecalc (which settles the US inflation gap this
+ * turn's drain reads) and before forexTurn (which applies the persisted
+ * regime's band and drift).
  *
- * Per-turn work:
- * 1. Step US gold cover from foreign dollar claims (non-US central banks' USD
- *    spread-fee reserves, valued in the internal anchor off the live USD rate)
- *    against the US reserve position, plus the US inflation gap. Cover is
- *    tracked on the USD exchange-rate row; absent = full cover (1).
- * 2. Suspend convertibility once the cover is exhausted in an eligible year:
- *    every participating pegged currency (see `participatesInFloat` — command
- *    economies never leave the peg) moves to `suspended`, stamped this turn.
- * 3. Float suspended currencies once they have served the transition.
+ * Per turn:
+ * 1. Step US gold cover from foreign dollar claims against the US reserve
+ *    position plus the inflation gap. Cover lives on the USD exchange-rate row;
+ *    absent means full cover (1).
+ * 2. Suspend convertibility once cover is exhausted in an eligible year: every
+ *    participating pegged currency moves to `suspended`, stamped this turn.
+ * 3. Float suspended currencies after the transition.
  *
- * Sourcing notes (documented proxies, not new mechanics — the formulas,
- * thresholds and coefficients are untouched in the rules module):
- * - There is no US gold-stock field anywhere in the schema, so the reserve
- *   side is the US central-bank reserve position (`reserveBalance` +
- *   `forexRevenue`) in USD face, converted at the live USD rate. Both sides
- *   are then in the same internal units, so the claims/cover ratio the drain
- *   reads is well-scaled without a new constant.
- * - No reserve signal (US position absent or non-positive) means no new
- *   information, so the claims term holds cover flat rather than inventing
- *   pressure; the inflation gap can still erode it.
- * - Worlds without exchange-rate rows yet (first turn, before forexTurn seeds
- *   them) track nothing — one turn of drain, worth thousandths of cover, is
- *   skipped rather than persisted somewhere the readers never look.
+ * Sourcing proxies (no schema changes; formulas untouched):
+ * - No US gold-stock field exists; reserve side is `reserveBalance` +
+ *   `forexRevenue` in USD face at the live rate, so both sides share units.
+ * - No reserve signal means no new information: the claims term holds cover
+ *   flat; the inflation gap can still erode it.
+ * - Worlds without exchange-rate rows yet skip one turn of drain rather than
+ *   persisting it where readers do not look.
  */
 
 import type { Db } from "mongodb";

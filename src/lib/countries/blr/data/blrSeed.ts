@@ -8,20 +8,11 @@ import {
   makeEasternBlocBaselines,
 } from "@/lib/seeds/shared/easternBlocMetrics";
 
-/** Byelorussian SSR seed config — six oblasts in both Cold-War eras.
- *  1953: reconstruction after the worst war damage of any Soviet republic.
- *       Minsk being rebuilt from the foundations, MAZ trucks just stood up,
- *       Soligorsk potash barely into mining, the west still pacifying after the
- *       anti-Soviet partisan war, and the Brest crossing carrying the union's
- *       traffic to Poland.
- *  1979: the union's machine-building and electronics showcase. MAZ/BelAZ/MTZ,
- *       Polatsk and Mazyr refineries on Druzhba crude, potash at full output.
- *       Growth is Soviet-average and slowing.
+/** Byelorussian SSR seed config: six oblasts in both Cold-War eras.
  *
- *  Every override key must be a region `_id` from blrRegions*.ts (the `BLR_`
- *  codes that also key public/blr-regions.json and src/lib/maps/blrGeometry.ts).
- *  A key that matches no region is silently dropped, which is exactly what the
- *  old `BY_BEL` typo did to this country. */
+ *  Override keys must be region `_id`s from blrRegions*.ts (the `BLR_` codes
+ *  also used by public/blr-regions.json and src/lib/maps/blrGeometry.ts).
+ *  Unmatched keys are silently dropped. */
 export function getBlrSeedConfig(preset: string): EasternBlocSeedConfig {
   const is1953 = preset === "1953-default";
   const regions = is1953 ? blrRegions1953 : blrRegions;

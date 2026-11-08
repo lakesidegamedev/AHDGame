@@ -1,21 +1,13 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * Nigeria Voter Archetypes — 8 mutually-exclusive attitudinal/demographic
- * groups covering the contemporary Nigerian political landscape.
- *
- * Design principle: each archetype is defined by attitudes and demographics,
- * not geography or party affiliation. Every group can exist in every
- * geo-political zone; regional character is expressed through population
+ * Nigeria voter archetypes: 8 mutually-exclusive attitudinal/demographic groups.
+ * Defined by attitudes and demographics, not geography or party; every group can
+ * exist in any geo-political zone. Regional character comes from population
  * percentages in ngRegionDemographics.ts.
  *
- * Each group has:
- *   defaultEconomicLean: -5 (far left / redistribution) to +5 (far right / markets)
- *   defaultSocialLean:   -5 (progressive / liberal) to +5 (traditional / conservative)
- *   defaultTurnout:      baseline participation rate (Nigerian INEC avg ~35-50%;
- *                        significantly lower than Brazil's compulsory system)
- *
- * demographicProfileId: "ng_voterGroups"
+ * Leans range from -5 (left/progressive) to +5 (right/traditional).
+ * defaultTurnout is a baseline rate (INEC avg ~35-50%).
  */
 export const ngDemographicCategories: DemographicCategory[] = [
   {

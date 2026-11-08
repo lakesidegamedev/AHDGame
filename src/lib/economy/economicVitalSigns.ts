@@ -73,8 +73,7 @@ type Inputs = {
   globalWealth: WealthListSnapshot | null;
   money: MoneySupplySnapshot[];
   /**
-   * Per-country inflation, keyed by country. Shaped like the health snapshot's
-   * economy block it used to be read from; built from national budgets now,
+   * Per-country inflation, keyed by country. Built from national budgets,
    * so vital signs no longer wait on the health snapshot (which runs after
    * the turn lock is released).
    */
@@ -95,10 +94,8 @@ type Inputs = {
   eraUnitScale?: number;
   history?: VitalSignsHistoryRow[];
   /**
-   * Fund demand snapshot for the #1001 sovereign demand-gap cross-section.
-   * Assembled by `snapshotEconomicVitalSigns` from projected reads; absent in
-   * unit tests and older callers, in which case the per-country rows carry no
-   * `demandGapByReason` and read exactly as before.
+   * Fund demand snapshot; absent in unit tests and older callers, in which
+   * case per-country rows carry no `demandGapByReason` and read as before.
    */
   sovereignDemand?: SovereignFundDemandInput;
 };
@@ -723,18 +720,12 @@ function monetaryActivity(
 /**
  * Per-account primary-leg turnover over the window, grouped in Mongo.
  *
- * The previous version pulled every ledger entry in the window into Node and
- * summed the legs there. On a measured world that was 61,398 documents and
- * 23.5MB for a result of 1,389 rows and 88KB — a 273x difference in what
- * crosses the wire and gets deserialized, and BSON deserialization is the
- * single largest consumer of turn CPU.
+ * Grouping by full account string rather than by kind is deliberate: it keeps
+ * `isRealAccount` / `accountKind` as the one definition in TypeScript instead
+ * of restating those rules as pipeline expressions that could drift.
  *
- * Grouping by the full account string rather than by kind is deliberate: it
- * keeps `isRealAccount` / `accountKind` as the one definition in TypeScript
- * instead of restating those rules as pipeline expressions that could drift.
- *
- * Uses only $match/$unwind/$group/$abs, so it stays within the aggregation
- * surface the rest of the app relies on.
+ * Uses only $match/$unwind/$group/$abs, staying within the aggregation surface
+ * the rest of the app relies on.
  */
 function fillByTurn(flows: CommodityFlow[]): Map<number, number> {
   const totals = new Map<number, { demand: number; cleared: number }>();
@@ -850,10 +841,10 @@ export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
     "takeover_buyout",
   ]);
   const economicTrades = input.trades.filter((trade) => economicTradeKinds.has(trade.kind));
-  // The eligible tradable set (#2033): zero-share / zero-float rows stay
-  // visible as firms but leave every breadth denominator, and the retained
-  // 48-turn window is intersected with it so dissolved/delisted corporations
-  // cannot linger in a numerator after leaving the current listings.
+  // Eligible tradable set: zero-share / zero-float rows stay visible as firms
+  // but leave every breadth denominator. The retained 48-turn window is
+  // intersected with it so dissolved/delisted corporations cannot linger in a
+  // numerator after leaving current listings.
   const tradable = listings.filter(isTradableListing);
   const tradableIds = tradableListingIds(listings);
   const quality = marketQuality(tradable, input.shareOrders, economicTrades);
@@ -966,7 +957,7 @@ export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
   );
   const totalCredit = input.money.reduce((sum, row) => sum + Math.max(0, row.creditOutstanding), 0);
   // Bond-pool settlement inventory excluded from observed M2 under the v3
-  // boundary (#2021). Legacy rows predate the field and contribute zero, so a
+  // boundary. Legacy rows predate the field and contribute zero, so a
   // mixed-version window under-reports rather than inventing history.
   const totalExcludedBondPoolCash = input.money.reduce(
     (sum, row) => sum + Math.max(0, row.excludedBondPoolCash ?? 0),
@@ -1102,8 +1093,8 @@ export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
     production: {
       sectorsObserved: input.sectors.length,
       // Commodities whose recorded demand was cut by the 1.5x caps this turn,
-      // and the worst latent shortage among them (#1460). Every unmet-share
-      // figure elsewhere in this report is measured AFTER those caps.
+      // and the worst latent shortage among them. Every unmet-share figure
+      // elsewhere in this report is measured AFTER those caps.
       demandTruncatedCommodities: metric(
         input.prices.filter((p) => (p.demandTruncatedUnits ?? 0) > 0).length,
         input.prices.length,
@@ -1509,10 +1500,8 @@ function resolveGapFundHome(fund: Pick<IndexFund, "countryId" | "anchorCurrencyC
 }
 
 /**
- * Assemble the #1001 demand-gap input from the loader's projected reads plus
- * the already-loaded bonds. All reads are batched; the per-fund bond
- * principal is valued in memory from the `bonds` read the securities section
- * already performs, so this adds no per-row query.
+ * Assemble the demand-gap input from projected reads plus loaded bonds.
+ * The per-fund bond principal is valued in memory, adding no per-row query.
  */
 function assembleSovereignFundDemand(
   bonds: Bond[],
@@ -1597,11 +1586,11 @@ function assembleSovereignFundDemand(
             INDEX_FUND_RESERVE_CASH_BUFFER_FRACTION * breakdown.totalBackingAnchor
           )
       ),
-      // Coverage funds ensured under the #1001 domestic gate carry no standing
+      // Coverage funds ensured under the domestic gate carry no standing
       // definition entry; like the deploy path (`deployBondReserveFromCash`),
       // a country bond fund with a home country means its home-sovereign
-      // mandate. Without this the classifier skips the fund and reports its
-      // home issues as `no_domestic_fund` after coverage ensured it.
+      // mandate. Otherwise the classifier skips the fund and reports its
+      // home issues as `no_domestic_fund`.
       bondUniverse:
         fund.kind === "bond"
           ? (universeBySlug.get(fund.slug) ??
@@ -1781,9 +1770,9 @@ export async function snapshotEconomicVitalSigns(
       })
       .sort({ turn: 1 })
       .toArray(),
-    // #1001 demand-gap inputs: three batched projected reads, no per-row
-    // loop. Fund holdings arrays stay out of the projection; the bond
-    // principal comes from the `bonds` read above, computed in memory below.
+    // Demand-gap inputs: three batched projected reads, no per-row loop.
+    // Fund holdings arrays stay out of the projection; the bond principal
+    // comes from the `bonds` read above, computed in memory below.
     db
       .collection<IndexFund>("indexFunds")
       .find(

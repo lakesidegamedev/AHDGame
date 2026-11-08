@@ -5,19 +5,11 @@ import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { ruRegions1991 } from "./ruRegions1991";
 
 /**
- * The RU slot is the whole Soviet Union at the 1991 opening. Its ten RSFSR
- * economic regions retain their 1991 anchors; the other fourteen union
- * republics are bounded aggregate regions under the same federal issuer.
- * Their populations are January 1990 observations and their output is a
- * transparent proxy from 1988 net-material-product shares against the Russian
- * 1991 ruble anchor. This is not a claim of observed republic GDP in 1991.
- *
- * The 1989 USSR Congress seated 2,250 deputies: 1,500 district seats and 750
- * public-organization seats. The game has one regional seat ledger, so this
- * opening allocation distributes all 2,250 seats by population as a bounded
- * representation. It must not be presented as the historical constituency map.
- * https://data.ipu.org/election-summary/PDF/USSR_1989.PDF
- * https://thedocs.worldbank.org/en/doc/571751632222790357-0560011991/original/WorldBankGroupArchivesFolder30382302.pdf
+ * RU slot represents the whole USSR at the 1991 opening. Ten RSFSR
+ * regions keep 1991 anchors; other republics are bounded aggregates with
+ * Jan 1990 populations and a 1988 NMP-share proxy output, not observed
+ * 1991 republic GDP. The 1989 Congress's 2,250 seats are approximated by
+ * population across one regional ledger; do not present as the historical map.
  */
 const republicRows = Object.entries(SOVIET_REPUBLIC_REFERENCE_1990).filter(
   ([entityId]) => entityId !== "RU"

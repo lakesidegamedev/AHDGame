@@ -82,10 +82,7 @@ export async function runAutoReelectionEntry(
     .collection<ElectedOfficial>("electedOfficials")
     .find({ characterId: { $in: characterIds } })
     .toArray();
-  // Characters whose target seat comes from a currently held office. A Commons
-  // by-election (#860) fills only vacated seats, so these holders must never
-  // auto-file for a special_commons race sharing their seat key — a sitting
-  // winner would double-seat (additive resolution never sweeps).
+  // Characters already holding an office: a by-election fills only vacated seats, so auto-filing here would double-seat a sitting winner (additive resolution never sweeps).
   const holdersFromOffice = new Set<string>();
   for (const office of offices) {
     if (!office.characterId) continue;
@@ -280,8 +277,7 @@ export async function runAutoReelectionEntry(
       pendingNames.push(character.name);
 
       // Record the decision, not the write. A later election sharing this seat
-      // key must see this entry as blocking, which is what the sequential
-      // insertOne used to give us for free.
+      // key must see this entry as blocking.
       existingEntry.add(`${electionKey}:${characterKey}`);
       let set = blockingElectionsByCharacter.get(characterKey);
       if (!set) blockingElectionsByCharacter.set(characterKey, (set = new Set()));

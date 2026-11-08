@@ -1,29 +1,21 @@
 /**
- * SCOTUS Docket Turn (#3598).
+ * SCOTUS Docket Turn.
  *
  * Fires pending Docket cases once their authored decision year's turn is
- * reached. Evaluates `decideCaseOutcome` (pure, unit-tested in isolation)
- * against the currently seated justices' leans on the case's tagged axis. An
- * affirmed case is a no-op on the enactment pipeline (matches how the rest of
- * the timeline already plays out). A diverged case with an authored `effect`
- * synthesizes a minimal bill-shaped object and drives it through the
- * EXISTING `onBillEnacted` pipeline — same enactment -> metric-registry ->
- * regional-lean-drift flow real legislation uses — tagged
- * `source: "scotus_ruling"` for attribution.
+ * reached. Evaluates `decideCaseOutcome` (pure, unit-tested) against seated
+ * justices' leans on the case's tagged axis. An affirmed case is a no-op on
+ * the enactment pipeline. A diverged case with an authored `effect`
+ * synthesizes a minimal bill-shaped object and drives it through the EXISTING
+ * `onBillEnacted` pipeline, tagged `source: "scotus_ruling"` for attribution.
  *
- * Every decided case — affirmed or diverged, with or without an `effect` —
- * gets a full news/wire post (`generateScotusRulingNews`, previously this
- * turn posted nothing at all: see that module's doc comment). A case
- * authored with `demographicSignal` instead of/alongside `effect` (the
- * reapportionment cases — Baker v. Carr, Reynolds v. Sims, Wesberry v.
- * Sanders) additionally records a `countryHistoryEvents` row so a future,
- * separately-owned demographic-realignment mechanism can react to it; this
- * turn does not itself move seats or district lines.
+ * Every decided case gets a full news/wire post via `generateScotusRulingNews`.
+ * A case authored with `demographicSignal` additionally records a
+ * `countryHistoryEvents` row so a separately-owned demographic-realignment
+ * mechanism can react; this turn does not itself move seats or district lines.
  *
- * `historicalOutcomeLocked` cases (race/equal-protection doctrine — Brown v.
- * Board and similar) skip composition-driven divergence entirely: `outcome`
- * is always "affirmed". This is a deliberate, permanent product decision, not
- * a gap — see `decideCaseOutcome`'s doc comment.
+ * `historicalOutcomeLocked` cases (race/equal-protection doctrine) skip
+ * composition-driven divergence and always affirm; see `decideCaseOutcome`'s
+ * doc comment for the rationale.
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -62,11 +54,10 @@ export async function processScotusDocketTurn(
     .find({ countryId: "US", status: "pending" })
     .toArray();
 
-  // Compare on the CALENDAR turn, not the raw one. `yearToTurn` maps an authored
-  // decisionYear onto turn 1 = week 1 of `startingYear`, but a world with a
-  // founding phase burns `preIterationTurns` before that calendar starts, so the
-  // raw turn runs a full game year ahead of the year the player sees. Off the raw
-  // turn the live 1961 world decided the 1962 docket (#1208).
+  // Compare on the CALENDAR turn, not the raw one: `yearToTurn` anchors to
+  // week 1 of `startingYear`, but a founding phase burns `preIterationTurns`
+  // before that, so the raw turn runs a full game year ahead of the year the
+  // player sees.
   const calTurn = calendarTurn(currentTurn, {
     preIterationActive: gameState?.preIteration?.active,
     preIterationTurns: gameState?.preIterationTurns,
@@ -89,11 +80,9 @@ export async function processScotusDocketTurn(
   const now = new Date();
 
   for (const docketCase of dueCases) {
-    // historicalMajorityDirection is optional on DocketCase only to accommodate
-    // procedurally-spawned surprise cases (#3607), which are always inserted
-    // directly as status: "decided" and therefore never appear in the
-    // `status: "pending"` query above — every case reaching this loop is real
-    // curated content and always has this field authored.
+    // historicalMajorityDirection is optional only for procedurally-spawned
+    // surprise cases, which are inserted as status: "decided" and never reach
+    // this pending-case loop. Every case here is curated and has it authored.
     const decision = decideCaseOutcome(
       seatedJustices,
       docketCase.axis,

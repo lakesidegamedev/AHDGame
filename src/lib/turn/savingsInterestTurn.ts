@@ -380,11 +380,9 @@ export async function processSavingsInterestTurn(
       }
     }
 
-    // v3 full-agency: accrue/compound interest on autonomous NPP savings in an
-    // isolated pass (same forex two-phase model, writing to `npps`). Gated so
-    // the player path is unaffected below v3.
-    // v3 AND ABOVE — a strict `=== "v3"` here used to switch NPP savings
-    // interest back off the moment the level was raised to v4.
+    // v3+: accrue/compound interest on autonomous NPP savings in an isolated
+    // pass (same two-phase forex model, writing to `npps`). Must be a minimum
+    // version gate, not `=== "v3"`, or raising the autonomy level disables it.
     if (nppAutonomyLevelAtLeast(await getNppAutonomyLevel(db), "v3")) {
       await processNppSavingsInterest(
         db,

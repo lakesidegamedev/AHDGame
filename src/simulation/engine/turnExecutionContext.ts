@@ -51,17 +51,8 @@ export async function buildTurnExecutionContext(input: {
 
   const nextTurnTime = nextScheduledTurnAfter(realNow, resolveTurnCronMinute(), gameState.fastMode);
 
-  // Turn-init projections (#2166): the full character/state documents are never
-  // needed here. The turn path reads only:
-  // - characters: processActionRefresh (currentOffice, countryId, actions,
-  //   stats, statXp, debateDecayAnchor, politicalInfluence, nationalInfluence,
-  //   infamy, favorability, party), processFundGeneration (homeState,
-  //   donorBaseLevel, currentOffice, countryId, politicalInfluence, party,
-  //   name), processPartyInfluenceTurn (countryId, party, policies,
-  //   partyInfluence, infamy, stats). turnSystem.ts uses characters.length.
-  // - states: processFundGeneration (population, gdp, countryId),
-  //   processNppFundGeneration (population, countryId), processPartyGOTV
-  //   (population, gdp, votingEligiblePopulation).
+  // Turn-init projection: the turn path reads only the fields listed in the
+  // projection below; full documents are never needed here.
   const charactersCollection = await getCharactersCollection(db);
   const characters = await charactersCollection
     .find(

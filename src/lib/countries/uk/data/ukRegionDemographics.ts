@@ -3,22 +3,15 @@ import type { StateDemographics } from "@/lib/db/types";
 /**
  * UK region demographics using UK voter archetypes.
  *
- * Each region has a composition of the 12 UK voter groups (populations sum to 100%).
- * Economic and social leans are calibrated to actual voting patterns in each region.
+ * Each region has a composition of the 12 UK voter groups (populations sum to
+ * 100%). `categoryWeights` uses `uk_voterGroups: 100` to match the UK
+ * demographic profile ID (`uk_archetypes`) in CountryConfig.
  *
- * The `categoryWeights` uses `uk_voterGroups: 100` to match the UK demographic
- * profile ID ("uk_archetypes") defined in CountryConfig.
+ * Every archetype has a non-zero population in every region: regional
+ * character is expressed through the mix, not dedicated regional-identity
+ * slots zeroed out elsewhere.
  *
- * All values are approximate estimates based on:
- * - 2019 UK General Election results by region
- * - 2021 UK Census regional data
- * - British Election Study wave data
- *
- * Design principle: every archetype has a non-zero population in every region.
- * Regional character is expressed through the population mix, not dedicated
- * regional-identity slots that are zeroed out elsewhere.
- *
- * Group IDs match ukDemographicCategories.ts `uk_voterGroups` groups.
+ * Group IDs match `uk_voterGroups` in ukDemographicCategories.ts.
  */
 export const ukRegionDemographics: StateDemographics[] = [
   // ── London ─────────────────────────────────────────────────────────────────

@@ -1,22 +1,16 @@
 /**
- * East Germany (DD) Cabinet positions — Council of Ministers of the GDR
- * (Ministerrat der DDR). The General Secretary (DD's executive/head-of-government
- * office; see COUNTRY_CONFIGS.DD `generalSecretary`) appoints ministers directly
- * from Volkskammer deputies, mirroring the USSR Council of Ministers pattern.
+ * East Germany (DD) Cabinet positions , Council of Ministers of the GDR.
+ * The General Secretary appoints ministers directly from Volkskammer
+ * deputies, mirroring the USSR Council of Ministers pattern.
  *
- * Slot IDs deliberately mirror RU_CABINET_POSITIONS one-for-one (a command-economy
- * council with the same portfolios/levers) so DD reuses the RU cabinet mechanics
- * verbatim (see ddCabinetMechanics.ts) — the IDs are internal, the `name`s are the
- * GDR-authentic labels players see. The head-of-government slot uses the id
- * `generalSecretary` to match DD's executive office key (the CN `premier` pattern),
- * and `minister_of_finance` matches COUNTRY_CONFIGS.DD.financeMinisterCabinetId.
+ * Slot IDs mirror RU_CABINET_POSITIONS one-for-one so DD reuses the RU
+ * cabinet mechanics verbatim; the `name`s are the GDR-authentic labels
+ * players see. `generalSecretary` matches DD's executive office key, and
+ * `minister_of_finance` matches COUNTRY_CONFIGS.DD.financeMinisterCabinetId.
  *
- * Year gating: canonical names are 1970s-authentic, so 1979 is clean and every
- * band/gate below is a 1950s correction — the National Defence ministry (1956,
- * before which the KVP sat under Interior), the Culture ministry (1954), the
- * Deutsche Notenbank → Staatsbank rename (1968), and the SED leader's
- * First Secretary title (1953–1976). DD's post-1990 absence is country-level
- * registration, not seat gating.
+ * Year gating: canonical names are 1970s-authentic; every gate below is a
+ * 1950s correction. DD's post-1990 absence is country-level registration,
+ * not seat gating.
  */
 export const DD_CABINET_POSITIONS = [
   {
@@ -115,5 +109,3 @@ export const DD_CABINET_POSITIONS = [
     yearEnabled: 1950,
   },
 ] as const;
-
-export type DDCabinetPositionId = (typeof DD_CABINET_POSITIONS)[number]["id"];

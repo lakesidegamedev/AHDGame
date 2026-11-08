@@ -103,11 +103,9 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
 
       // Fetch all data needed for snapshots
       const corporationsCollection = database.collection<Corporation>("corporations");
-      // Compatibility repair for auction shells that later completed an IPO.
-      // The late-IPO path used to clear isPrivate without clearing the auction's
-      // hiddenFromExchange marker, leaving a public corporation absent from every
-      // exchange forever. Future IPOs clear it in goPublic; this repairs existing
-      // public rows before each idempotent snapshot build.
+      // Repairs public corporations left with hiddenFromExchange set by a
+      // late IPO that cleared isPrivate but not the auction marker, which
+      // hides them from every exchange. New IPOs clear it in goPublic.
       await corporationsCollection.updateMany(
         {
           isPrivate: { $ne: true },
@@ -620,9 +618,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           .collection<{ corporationId: ObjectId; income?: number }>("corporationHistory")
           .aggregate<{ _id: ObjectId; income: number }>([
             { $match: { corporationId: { $in: bailoutCorpIds } } },
-            // Sort on the group key first so the {corporationId, turn} index serves
-            // match, sort and $first as a DISTINCT_SCAN (one entry per corporation)
-            // instead of walking the whole history by turn (#2693).
+            // Sort by group key first so the {corporationId, turn} index serves the pipeline as a DISTINCT_SCAN instead of walking the full history.
             { $sort: { corporationId: 1, turn: -1 } },
             { $group: { _id: "$corporationId", income: { $first: "$income" } } },
           ])
@@ -1079,9 +1075,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           })(),
           publicFloat: corp.publicFloat ?? 0,
           exchange: getExchange(corp),
-          // Canonical tradability flag (#2033): zero-share / zero-float
-          // rows stay visible as operating firms but leave every
-          // tradable denominator and numerator.
+          // Canonical tradability: zero-share or zero-float rows stay visible but leave all tradable denominators and numerators.
           isTradable: isTradableListing({
             totalShares,
             publicFloat: corp.publicFloat ?? 0,

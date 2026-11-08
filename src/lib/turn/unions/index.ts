@@ -52,32 +52,15 @@ export interface UnionsTurnResult {
 }
 
 /**
- * Give every sector that nobody represents to the seeded union for its
- * (countryId, sectorType), and report how many were adopted.
+ * Adopt every unrepresented sector into the seeded union for its
+ * (countryId, sectorType) and return how many were adopted.
  *
- * Union dues v1 replaced implicit coverage (a union covered every sector
- * matching its country and industry) with an explicit
- * `CorporateSector.representingUnionId` pointer, but nothing ever populated
- * that pointer for the sectors that already existed. The result on a live world
- * was that NO sector pointed at any union, so every union had 0 members, 0
- * average wage, no dues base, and an approval target stuck at the 55 base: the
- * union pages showed no workers, approval was identical everywhere, and
- * switching services on changed nothing because there were no represented
- * sectors to change.
+ * Runs in the turn rather than as a one-shot migration because sectors are
+ * created in several places that know nothing about unions.
  *
- * Doing this in the turn rather than as a one-shot migration is deliberate.
- * Sectors are created in several places (world seeding, NPP founding, player
- * expansion), and none of them know about unions, so a migration would fix
- * today's world and silently leak new unrepresented sectors forever. This is
- * the same "conversion not reinvention" shape as the roster backfill above.
- *
- * Only NPC SEEDED unions adopt: `foundedByCharacterId` is null (the one
- * roster union per industry) AND the union is not player-led. Vacant and
- * NPP-led seeded unions still cover new shops so the world does not leak
- * unrepresented sectors. A player who claimed the Newspaper Guild must
- * organize new shops, not inherit every NPP expansion for free.
- * A sector already pointing somewhere is never touched, so a rival that won a
- * shop keeps it, and losing a raid does not hand the shop back on the next turn.
+ * Only NPC seeded unions adopt (foundedByCharacterId null and not
+ * player-led); a player-claimed union must organize new shops itself. A
+ * sector already pointing at a union is never touched.
  */
 export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
   const unrepresented = await db
@@ -121,40 +104,24 @@ export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
 
 /**
  * Union dues v1 turn-processing pass, for every OWNED, non-suspended union:
- * resolve the sectors it represents (`CorporateSector.representingUnionId`),
- * derive real `members` and their member-weighted `averageAnnualWage` from
- * those sectors, credit `duesIncomePerTurn`, debit `servicesCostPerTurn`,
- * debit political contributions (a share of remaining free cash flow, paid
- * to organizers by influence), and trend `approval` toward `approvalTarget`.
- * Unowned unions are skipped entirely: no treasury/approval changes, so
- * Phase 5's NPC drift stays untouched for the sectors they represent
- * ("conversion not reinvention").
+ * resolve represented sectors (`CorporateSector.representingUnionId`), derive `members`
+ * and member-weighted `averageAnnualWage`, credit `duesIncomePerTurn`, debit
+ * `servicesCostPerTurn`, debit political contributions (share of free cash flow to
+ * organizers by influence), and trend `approval` toward `approvalTarget`.
+ * Unowned unions are skipped entirely so Phase 5's NPC drift stays untouched.
  *
- * The service bill NEVER pushes the treasury negative: if this turn's dues
- * income can't cover it, next turn's services lapse without a charge or
- * entitlement. Approval and all other service effects use this turn's prepaid
- * receipt, not the next purchase.
+ * The service bill NEVER pushes the treasury negative: if this turn's dues cannot cover it,
+ * next turn's services lapse without charge. Approval and other service effects use this
+ * turn's prepaid receipt, not the next purchase.
  *
- * Also auto-vacates leadership for leaders inactive beyond
- * `INACTIVE_CEO_TURN_THRESHOLD` turns, reuses the exact same constant and
- * `User.lastActivity`/`createdAt` signal as `inactiveCeoSectorShed.ts`'s CEO
- * analog (code-review fix #5: unions previously had no vacancy mechanism at
- * all, unlike CEOs, so one inactive leader permanently locked an industry).
- * A vacated union is excluded from this turn's dues/services/approval (it's
- * no longer owned as of this turn).
+ * Also auto-vacates leadership for leaders inactive beyond `INACTIVE_CEO_TURN_THRESHOLD`,
+ * mirroring `inactiveCeoSectorShed.ts` (uses `User.lastActivity`/`createdAt`). A vacated
+ * union is excluded from this turn's processing.
  *
- * Gated on `labourSystemMode >= "full"` (code-review fix #10), previously
- * this ran unconditionally, so disabling the feature after testing still
- * silently moved every union's treasury/approval forever with no way for a
- * (now locked-out) leader to counteract it. Skipping while disabled freezes
- * state instead.
+ * Gated on `labourSystemMode >= "full"`; when disabled, union state is frozen.
  *
- * Registered in `src/simulation/phases/turnPhaseRegistry.ts` immediately
- * after `"corporationTurn"`, reads sector `unionization`/`workers`/
- * `wagePerWorker` state that phase writes this same turn, though this pass
- * itself only touches `unions`/`characters` documents (and reads
- * `corporateSectors`), and writes a `union_contribution` financialTxLog row
- * per organizer payout.
+ * Registered immediately after `"corporationTurn"` and reads sector state that phase
+ * writes this same turn.
  */
 
 export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTurnResult> {

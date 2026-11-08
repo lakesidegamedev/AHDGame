@@ -1,14 +1,13 @@
 /**
  * Margin-modifier accumulation: tariffs, subsidies, supply scaling, and the
- * policy stack (#588).
+ * policy stack.
  *
  * Pure computation split out of processSector. All modifiers are additive
- * percentage-point adjustments to sector.profitMargin; the total is soft-capped
- * by softCapEffectiveMargin (negative effective margins are intentional).
- * Includes the P3.5 disaster split partition: the physical leg gates tonnage
- * (returned as disasterOutputFactor) while the not-yet-ramped remainder stays
- * a margin hit (disasterPhysicalDeferred), so the two legs always sum to the
- * pre-P3.5 total. No reads or writes here, only the turn inputs.
+ * percentage-point adjustments to sector.profitMargin; the total is
+ * soft-capped by softCapEffectiveMargin (negative effective margins are
+ * intentional). The disaster split gates tonnage via disasterOutputFactor
+ * while the not-yet-ramped remainder stays a margin hit
+ * (disasterPhysicalDeferred). No reads or writes here, only the turn inputs.
  */
 
 import {
@@ -300,12 +299,8 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     effectiveSupply,
     effectiveDemand
   );
-  // Export reward: a margin premium for producing a commodity this country
-  // actually exports into foreign deficits (export intensity from the prior
-  // turn's trade snapshot, one-turn lag like the commodity balances above).
-  // Empty map before the first trade turn → 0.
-  // Under the trade-exposure embargo the sector's remaining sales are domestic,
-  // so it no longer earns the export-reward margin premium.
+  // Export reward: margin premium for commodities this country exports into foreign deficits (export intensity from prior turn's trade snapshot, one-turn lag). Empty map before first trade turn means 0.
+  // Under the trade-exposure embargo, remaining sales are domestic, so no export-reward premium.
   const exportPremiumMod = embargoTradeExposureActive
     ? 0
     : computeExportPremium(
@@ -323,9 +318,9 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     lookups.stateSectorSpecializationByState.get(sector.stateId),
     operatingSectorType
   );
-  // Sector type match: +5pp primary, +2.5pp secondary, -15pp mismatch. SOEs are
-  // exempt - a NatCorp is a diversified state holding company, not a
-  // specialized private firm (Bug #0775).
+  // Sector type match: +5pp primary, +2.5pp secondary, -15pp mismatch.
+  // SOEs are exempt: a NatCorp is a diversified state holding company, not a
+  // specialized private firm.
   const sectorTypeMatchMod = isStateOwned(corp)
     ? 0
     : getSectorTypeMatchModifier(
@@ -388,28 +383,17 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     turn != null &&
     turn - corp.typeSwitchTurn < TYPE_SWITCH_PENALTY_TURNS;
   const typeSwitchMod = typeSwitchPenaltyActive ? TYPE_SWITCH_MARGIN_PENALTY : 0;
-  // Dominance margin penalty: 0 at ≤50% share, scales to -15pp at 100%.
+  // Dominance margin penalty: 0 at <=50% share, scales to -15pp at 100%.
   // Models regulatory pressure, customer backlash, and political risk that
   // accumulate as a sector tightens its grip on its (state, sectorType).
-  // SOEs are exempt — a nationalized industry is a state monopoly by design,
-  // so anti-trust/political-risk dominance pressure doesn't fit (Bug #0775).
-  // P3a scoped touch #2a — DOMINANCE TOLL CONSOLIDATION (plants only).
-  // Under plants, dominance is charged ONCE, at build time, as a multiplier on
-  // the capacity price (`computeBuildCost`, which documents the design in full).
-  // Keeping this permanent margin penalty as well would triple-charge the same
-  // condition alongside the revenue tax below, on a tier where capacity is
-  // bought outright rather than accrued off a cheap slider. Dominance under
-  // plants is a barrier to EXPANSION, not a tax on operating.
-  // SOEs remain exempt in every mode (a nationalized industry is a state
-  // monopoly by design, Bug #0775). Non-plants worlds are unchanged.
-  // Under plants the toll is FADED OUT over `plantsRampLambda` rather than
-  // switched off: λ = 0 on the flip turn keeps flip-day numbers byte-identical
-  // for a dominant sector, rising to a full consolidation over the same ramp
-  // every other plants leg uses.
+  // SOEs are exempt (a nationalized industry is a state monopoly by design).
+  // Under plants, dominance is charged once at build time as a multiplier on
+  // capacity price (`computeBuildCost`); this permanent margin penalty is
+  // faded out over `plantsRampLambda` so it does not triple-charge the same
+  // condition alongside the revenue tax. Non-plants worlds are unchanged.
   // Running dominance cost (gameConfig.dominanceRunningCostScale): on plants
-  // worlds a group keeps paying a share of the penalty for as long as it holds
-  // the market, measured on the control group's combined share, so it fades
-  // away as that share falls to the threshold.
+  // worlds a group keeps paying a share of the penalty while it holds the
+  // market, measured on the control group's combined share.
   const running = lookups.dominanceRunningCost;
   const sectorKey = sector._id.toString();
   const dominanceShares = running

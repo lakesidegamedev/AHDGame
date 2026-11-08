@@ -37,17 +37,12 @@ const CONTESTABLE_SINGLE_SEAT = ["governor", "special_governor", "senate"] as co
 /**
  * One-party-state MULTI-SEAT sub-national congress types that also need a
  * direct candidate floor. The "incumbent defense fields the chamber"
- * assumption above breaks for a one-party congress that starts with NO seeded
- * incumbents (e.g. a fresh standup, or a preset that doesn't seed the chamber):
- * with no seat-holders to defend and only the scarce priority-ordered generic
- * fill left, the primary can close with ZERO candidates and the whole chamber
- * resolves EMPTY — never populated by an election (#3388).
+ * assumption breaks for a one-party congress with NO seeded incumbents (fresh
+ * standup or unseeded preset): with no seat-holders to defend and only scarce
+ * priority-ordered generic fill, the primary can close with ZERO candidates
+ * and the chamber resolves EMPTY, never populated by an election.
  *
- * CN Provincial People's Congress (`peoplesCongress`) is the CN case. The RU
- * Supreme Soviet families are tracked separately (#3387/#3388 RU half) and are
- * intentionally NOT listed here. DD Land assemblies (`landAssembly`) are the
- * East German analog of CN's provincial congress — vacant at founding until
- * backfill/challenger supply seats them (ticket #1044).
+ * RU Supreme Soviet families are tracked separately and intentionally not here.
  */
 const CONTESTABLE_MULTI_SEAT_ONEPARTY = ["peoplesCongress", "landAssembly"] as const;
 
@@ -125,37 +120,34 @@ const MAX_CHALLENGERS_PER_TURN = 400;
 /**
  * File bench "challenger" candidates into open primaries that would otherwise
  * resolve UNCONTESTED / EMPTY:
- *   - directly-elected single-seat offices (governor, senate), and
- *   - one-party multi-seat sub-national congresses (CN peoplesCongress), and
+ *   - directly-elected single-seat offices (governor, senate),
+ *   - one-party multi-seat sub-national congresses (CN peoplesCongress),
  *   - regional chambers vulnerable to concurrent-cycle pool exhaustion.
  *
  * Single-winner races seat exactly one incumbent, so to be a contest the OTHER
  * major party needs a candidate. The generic NPP entry (nppBehavior Phase 2)
  * consumes its scarce free-NPP pool highest-RACE_PRIORITY-first, so governor
- * (LAST in RACE_PRIORITY) is starved and its short primary window closes empty —
- * Governor came back {0 candidates : 50 races} in the elections-only sim.
+ * (LAST in RACE_PRIORITY) is starved and its short primary window closes empty.
  *
- * A one-party congress (CN People's Congress) that starts with no seeded
- * incumbents has no seat-holders to defend, so it too relies entirely on that
- * scarce generic fill and can close with ZERO candidates — the chamber never
- * gets populated (#3388). Filing the ruling/approved default parties directly
- * here guarantees the primary is non-empty so the multi-seat PR general seats
- * winners.
+ * A one-party congress (CN People's Congress) with no seeded incumbents has no
+ * seat-holders to defend, so it too relies entirely on that scarce generic fill
+ * and can close with ZERO candidates; filing the approved default parties
+ * directly guarantees a non-empty primary so the PR general seats winners.
  *
  * This phase runs just before nppBehavior and files the challenger DIRECTLY into
  * the specific primary (not via the priority-ordered Phase-2 fill), so the
- * lowest-priority race is guaranteed a candidate. It reuses an available free
- * NPP from that (party, home-state) bucket when one exists. Only non-player
- * countries may generate a replacement via `createNPP` (positions inherited
- * from the party doc, so a correctly-seeded party yields a correctly-positioned
+ * lowest-priority race is guaranteed a candidate. It reuses a free NPP from
+ * that (party, home-state) bucket when one exists. Only non-player countries
+ * may generate a replacement via `createNPP` (positions inherited from the
+ * party doc, so a correctly-seeded party yields a correctly-positioned
  * challenger).
  *
- * Bounded + self-extinguishing: only fires for an open single-seat primary that
- * (a) has no candidate for that major party, (b) where the party has genuine
- * regional presence. Once filed, the party has a candidate and the condition
- * stops. nppBehavior's own Phase-2 (which reloads context after this phase) then
- * sees the filed candidate and does not double-fill. Runs in both the live
- * engine and the elections-only sim. Returns the number of candidates filed.
+ * Bounded and self-extinguishing: only fires for an open single-seat primary
+ * that (a) has no candidate for that major party, (b) where the party has
+ * genuine regional presence. Once filed, the condition stops, and nppBehavior's
+ * Phase-2 (which reloads context after this phase) does not double-fill. Runs
+ * in the live engine and the elections-only sim. Returns the number of
+ * candidates filed.
  */
 export async function processChallengerGeneration(now: Date): Promise<number> {
   const db = await getDb();

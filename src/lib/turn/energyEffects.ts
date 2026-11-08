@@ -75,23 +75,9 @@ export function computeRegionEnergyDeltas(
 }
 
 /**
- * Turn step for one (country, energy seat): per-region plant mixes nudge that
- * region's energy metrics toward their mix targets (→ bucket.regional), and total
- * fleet upkeep vs the energy envelope tilts national budgetBalance. Read-only budget.
+ * Turn step for one (country, energy seat): per-region plant mixes nudge that region's energy metrics toward their mix targets (→ bucket.regional), and total fleet upkeep vs the energy envelope tilts national budgetBalance. Read-only budget.
  *
- * SP4/SP5 note, SUPERSEDED for this step by the step-6 cutover — kept because
- * it still describes the SIBLING cabinet steps. The problem was that the
- * regional `stateMetrics` read has no doc to find for a country whose political
- * half was stripped, so `current` baselined at 0 and the nudges were computed
- * against a value that did not exist. It was inert only because
- * `ministerialOrderProcessing` drops those demolished paths before the bulk
- * write.
- *
- * This step now resolves `current` from the political board for any board
- * country, so the baseline is real rather than 0. The same broken read shape
- * still exists in the sibling estate / infra / military cabinet steps, and the
- * original note's advice holds for them: the store contract belongs in one
- * shared guard, not four one-off early returns.
+ * This step resolves `current` from the political board for any board country so the baseline is real rather than 0 (a stripped political half has no stateMetrics doc to read). The same broken read shape still exists in the sibling estate / infra / military cabinet steps; the fix belongs in one shared guard, not four one-off early returns.
  */
 export async function applyEnergyEffects(
   db: Db,
@@ -155,10 +141,10 @@ export async function applyEnergyEffects(
       // against a negative "current" would read as RAISING renewable share.
       renewable: fromBoard("environment.renewableEnergy"),
       carbon: fromBoard("environment.carbonEmissions"),
-      // Reliability is the one target that is band-converted (score → uptime),
-      // so it is the one `current` that must use the SAME band. Ticket #1142:
-      // era-aware target vs era-blind current made the gap negative for every
-      // mix in the game, and this metric maps 1:1 onto `infrastructure.utilities`,
+      // Reliability is the one target that is band-converted (score to uptime),
+      // so it is the one `current` that must use the SAME band. Mixing an
+      // era-aware target with an era-blind current makes the gap negative for
+      // every mix, and this metric maps 1:1 onto `infrastructure.utilities`,
       // so the channel could only ever drag that family down.
       reliability: fromBoard("infrastructure.powerGridReliability", era),
     };

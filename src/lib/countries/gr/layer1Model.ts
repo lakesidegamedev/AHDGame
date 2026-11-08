@@ -1,18 +1,8 @@
 /**
- * Greece (GR) Layer-1 demographic model — census-consuming. Mirrors the TR
- * model.
- *
- * economicLean: -5 (socialist/left) … +5 (market/right)
- * socialLean:   -5 (progressive/anti-establishment) … +5 (royalist/traditional)
- *
- * 1979 anchor: the intensely politicised post-junta republic — a conservative
- * ND-voting right, a rising PASOK left riding "Allagi", a Moscow-line KKE with
- * civil-war roots, an Athens working class, a smallholder countryside, and a
- * shipping/business bourgeoisie.
- *
- * 1953 anchor: the post-civil-war kingdom — royalist right (Greek Rally) vs
- * centrist republicans vs a banned communist left voting EDA; the national
- * schism (venizelist/royalist) and the civil war are the live cleavages.
+ * GR Layer-1 demographic model, census-consuming. Mirrors TR.
+ * economicLean: -5 socialist .. +5 market. socialLean: -5 progressive .. +5 traditional.
+ * 1979: post-junta republic, ND right vs rising PASOK left, Moscow-line KKE, urban/rural split.
+ * 1953: post-civil-war kingdom, royalist right vs centrist republicans, banned left voting EDA.
  */
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";

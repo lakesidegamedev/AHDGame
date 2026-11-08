@@ -447,11 +447,7 @@ export function aggregateByCountry(
       const stateBal = stateMap.get(c)!;
       const countryBal = countryBals.get(c)!;
       countryBal.supply += stateBal.supply;
-      // Per-country national demand uplift for command economies whose seeded
-      // downstream capacity has no reachable buyer (ticket-1072). Pure lookup
-      // defaulting to 1, applied ONLY to this national leg — the global book
-      // is untouched — so market economies and unlisted (country, commodity)
-      // pairs are byte-identical.
+      // Per-country national demand uplift for commanded economies whose downstream capacity has no reachable buyer. Applied only to this national leg; the global book is untouched.
       countryBal.demand += stateBal.demand * countryCommodityDemandMultiplier(countryId, c);
     }
   }

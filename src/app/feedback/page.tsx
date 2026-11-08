@@ -213,32 +213,6 @@ function FeedbackBoardInner() {
     }
   }, [items, selectedIds, fetchList]);
 
-  const _handleStatusChange = useCallback(
-    async (issueNumber: number, newStatus: string) => {
-      try {
-        const res = await fetch(`/api/admin/suggestions/${issueNumber}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          setError(apiErrorText(data, "Update failed"));
-          return;
-        }
-        setItems((prev) =>
-          prev.map((item) =>
-            item.issueNumber === issueNumber ? { ...item, status: newStatus } : item
-          )
-        );
-        void fetchTabCounts();
-      } catch {
-        setError("Network error");
-      }
-    },
-    [fetchTabCounts]
-  );
-
   return (
     <div className="min-h-screen bg-background pb-16">
       {/* Hero */}

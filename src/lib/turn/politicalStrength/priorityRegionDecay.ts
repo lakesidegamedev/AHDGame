@@ -4,22 +4,16 @@ import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 
 /**
  * Per-turn validator for `Party.priorityRegion`. Auto-evicts ineligible
- * states from the cluster but does NOT replace them — the cooldown stays
- * in effect until the original 168-turn lockout expires.
+ * states from the cluster but does NOT replace them; the cooldown stays in
+ * effect until the original 168-turn lockout expires.
  *
- * Per plan §"Phase 3 — Decisions Recorded During Execution" D6:
- *   - lock survives chair turnover (no chairId-based eviction)
- *   - states drop out automatically when ineligible
- *   - slot stays empty until cooldown expires
+ * - lock survives chair turnover (no chairId-based eviction)
+ * - states drop out automatically when ineligible
+ * - slot stays empty until cooldown expires
  *
- * "Ineligible" criteria for a state still in the cluster:
- *   - The state row no longer exists in `statePartyOrg` for this party
- *     (state split / merged / removed from the country's region set)
- *   - The party's `organization` in that state is `0` (lost presence)
- *
- * Future criteria (e.g. "state is uncontested for the party") can be added
- * without changing the wiring; for now keep the rule conservative so we
- * don't auto-evict states the player can still meaningfully prioritize.
+ * "Ineligible" for a state still in the cluster:
+ *   - no longer present in `statePartyOrg` for this party
+ *   - the party's `organization` in that state is `0`
  */
 export interface PriorityRegionDecayResult {
   partiesScanned: number;

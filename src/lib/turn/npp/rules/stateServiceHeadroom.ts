@@ -1,20 +1,11 @@
 /**
  * Unowned headroom for local service markets, read from measured demand.
  *
- * Under plants the unowned pool is meant to be unmet demand in capacity units,
- * but nothing refills it from demand. Growth and the yearly auto-seed both
- * multiply it, and founding draws clamp it at zero, so a cell that an
- * incumbent once filled stays at zero for good. Healthcare, real estate and
- * construction sell only in their own state, so a zero pool there closes the
- * state to every new entrant and to autopilot growth, however short the state
- * book reads. Live turn 663: healthcare pools in CA, NY, FL, TX, PA and four
- * Japanese regions were 0 while those state books were 362,722 units short.
- *
- * With `nppStateServiceHeadroomStage` on, the NPP pass reads such a cell's
- * headroom as the larger of the pool and the state book's unmet demand less the
- * capacity already in flight there. The persisted pool is not rewritten; draws
- * still clamp it at zero. Plain data in, plain data out; the NPP shell loads
- * the books and the build queues.
+ * The persisted pool can sit at zero permanently (founding draws clamp it,
+ * nothing refills it from demand), which closes a state to new entrants
+ * however short the state book reads. When the stage flag is on, headroom
+ * is the larger of the pool and the state book's unmet demand less capacity
+ * already in flight. The persisted pool is not rewritten.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";

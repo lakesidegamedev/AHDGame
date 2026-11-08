@@ -6,18 +6,12 @@ import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 
 /**
  * RO's institutions, as pure data.
- *
- * ⚠ GENERATED FROM `__snapshots__/ro.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-institutions.ts RO --force
- *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
- * registries that want one seat id or the legislative process import from HERE,
- * while `institutions.ts` composes these with the cabinet and is heavy. A
- * registry that reads a single string through the heavy module ships the whole
- * cabinet to the browser, which is a regression this work has already shipped
- * once. `clientSafeLeafModules.test.ts` enforces it.
+ * GENERATED FROM `__snapshots__/ro.pre-move.json`. Regenerate with:
+ * npx tsx scripts/countries/gen-country-institutions.ts RO --force
+ * KEEP THIS FILE FREE OF VALUE IMPORTS: it is the light half of the pair.
+ * Registries wanting one seat id import from HERE; `institutions.ts` composes
+ * these with the cabinet and is heavy, so importing through it ships the whole
+ * cabinet to the browser. `clientSafeLeafModules.test.ts` enforces this.
  */
 
 export const RO_CONFIG: CountryConfig = {

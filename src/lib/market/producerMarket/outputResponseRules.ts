@@ -1,23 +1,15 @@
 /**
- * Output follows price (market recovery plan, phase 5), for the unified
- * producer market. Replaces the demand throttle and the loss run with one rule
- * read from the plant's own last settled receipt:
- *
- * - each unit sold did not pay for its inputs, wages and site costs -> run
- *   less, a step a turn;
- * - it sold out and each unit paid -> run more, a step a turn;
- * - otherwise move toward what actually sold, with a small probe above it so
- *   the plant keeps testing for more demand.
- *
- * - it sold almost nothing (a glut) -> drop straight to the probe run, so a plant
- *   stops buying inputs to make goods nobody buys, and grow back a step a turn
+ * Output follows price, from the plant's last settled receipt:
+ * - unit did not pay for inputs, wages, site -> run less, a step a turn;
+ * - sold out and unit paid -> run more, a step a turn;
+ * - otherwise move toward what sold, with a small probe above it;
+ * - glut (sold almost nothing) -> drop to the probe run, grow back a step
  *   once sales return.
  *
- * Wages and site running costs follow the run (producerPhysicalPreparation), so
- * they are in the per-unit test: running less saves them. A floor keeps a
- * probe run on the book so a plant can see prices recover.
+ * Wages and site costs follow the run, so they are in the per-unit test.
+ * A floor keeps a probe run on the book.
  *
- * Pure: last receipt in, run share for this turn out.
+ * Pure: last receipt in, run share out.
  */
 
 export const OUTPUT_RUN_FLOOR = 0.1;
@@ -108,16 +100,10 @@ export function liveLineReceipt<T extends PriorReceipt & { products?: readonly R
   return { ...receipt, products: live, offeredUnits, soldUnits, revenue };
 }
 
-/**
- * Whether a plant's last run lost money in a way that running less would fix.
- * A plant that sold out at a price above the materials each unit consumed is
- * not losing on the margin: its loss is the minimum crew and site bill spread
- * over a small run, and running more spreads it thinner. Braking it would
- * shrink it further and raise the per-unit bill again, a spiral into
- * mothballing (fresh-economy proof, 2026-10-25: 332 of 343 sold-out losing
- * plants covered their materials, median run 0.4%). Plants that never become
- * profitable are still caught by the chronic-loss mothball.
- */
+// Whether a plant lost money on the margin, not just from spreading
+// fixed costs over a small run. Braking sold-out plants that covered
+// materials would shrink them further and spiral into mothballing.
+// Chronic-loss mothball catches plants that never turn profitable.
 function marginalLoss(input: {
   sold: number;
   produced: number;
@@ -492,11 +478,11 @@ function planRecoveryRunShareCore(
 }
 
 /**
- * Owner invariant (2026-11-04): a plant never plans to make less than it sold
- * last turn. Glut, loss and ratchet rules can only lower the plan down to that
- * line. The one exception is a plant that has gone a second consecutive turn
- * without selling (sell-through under GLUT_SELL_THROUGH): it may drop to the
- * floor, and on the first such turn it already only steps down gradually.
+ * Invariant: a plant never plans to make less than it sold last turn. Glut,
+ * loss and ratchet rules can only lower the plan down to that line. The one
+ * exception is a plant that has gone a second consecutive turn without
+ * selling (sell-through under GLUT_SELL_THROUGH): it may drop to the floor,
+ * and on the first such turn it already only steps down gradually.
  */
 export function planRecoveryRunShare(
   prior: PriorReceipt | null | undefined,

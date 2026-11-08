@@ -232,20 +232,13 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           phaseResults,
           warnings,
         } = context;
-        // When an admin pauses corporation actions, the corporate turn phase
-        // (sector revenue, operating income, dividends, market-cap/history
-        // snapshots) is skipped entirely, this is what makes the admin toggle's
-        // "corporate phases will be skipped during turn processing" promise true.
-        // Bond servicing (processBondTurn) is intentionally NOT skipped here: it
-        // settles existing contractual coupons/maturities, including sovereign
-        // bonds held by players, which are not "corporation actions".
-        //
-        // That is still true of SETTLEMENT, but processBondTurn now gates its own
-        // default DETECTION on this same flag (ticket #1198). Paying a coupon out
-        // of a corp whose revenue this pause just switched off is contractual;
-        // liquidating it for the resulting cash hole is the pause's own doing.
-        // Corporation #624 was defaulted twice that way. See Phase 3 in
-        // `bondTurn.ts` for the full argument.
+        // Skipping the corporate turn phase is what makes the admin pause
+        // toggle's "corporate phases will be skipped" promise true. Bond
+        // servicing (processBondTurn) is NOT skipped: it settles contractual coupons/maturities,
+        // which are not corporation actions. processBondTurn still gates its own
+        // default detection on this same flag: liquidating a corp for a cash hole the
+        // pause itself created is not contractual. See `bondTurn.ts` for the full
+        // argument.
         const corpActionsPaused = gameState.corporationActionsPaused === true;
         // Skip the disaster spawner while corporate actions are paused: the
         // corporation turn (which applies the onset margin penalty) is skipped
@@ -339,15 +332,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           processNppUnionBehavior(context.db, newTurn)
         );
 
-        // Decolonization. The sovereignty-transition engine in
-        // src/lib/world/transitions had NO turn-path caller at all, so the
-        // colonial map never changed: Ghana 1957, Somalia and the Congo 1960,
-        // Algeria 1962, Guyana 1966 and South Yemen 1967 all fall inside a
-        // 1953 world's 1000-turn span and none of them happened. Runs on the
-        // in-game year boundary only.
-        // Authoritative turn-context year, not the persisted gameState year which
-        // is only stamped at turn end and would fire boundary transitions one
-        // turn late (#2059).
+        // Decolonization. Runs on the in-game year boundary only.
+        // Source year is the authoritative turn-context year, not the persisted
+        // gameState year which is stamped at turn end and would fire boundary
+        // transitions one turn late.
         await runtime.runPhase("decolonization", () =>
           processDecolonizationTurn(context.db, newTurn, currentYear)
         );
@@ -400,10 +388,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             totalRevenueGenerated: corpTurnResults.totalRevenueGenerated,
             totalIncomeGenerated: corpTurnResults.totalIncomeGenerated,
           };
-          // Clearing book invariant breaches (issue #2054) join the turn
-          // warning channel here, so the completed-turn health snapshot
-          // counts them. The includes-guard keeps a retried or replayed
-          // corporation phase from recording the same breach twice.
+          // Clearing book invariant breaches join the turn warning channel
+          // here, so the completed-turn health snapshot counts them. The
+          // includes-guard keeps a retried or replayed corporation phase from
+          // recording the same breach twice.
           for (const warning of corpTurnResults.turnWarnings ?? []) {
             if (!warnings.includes(warning)) warnings.push(warning);
           }
@@ -674,8 +662,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // Currency income comes only from this turn's corporationTurn result.
           // When that phase ran but left no result (it failed, or a crash resume
           // skipped it), the income is unknown, not zero: stop before auto-pay
-          // can size anything from an empty map (#3429). A paused corporation
-          // turn really earned nothing.
+          // can size anything from an empty map. A paused corporation turn truly
+          // earned nothing.
           if (gameState.forexEnabled === true && !corpActionsPaused && !corpTurnResults) {
             throw new Error(
               "lineOfCreditTurn needs this turn's corporationTurn currency income, which is unavailable"
@@ -978,8 +966,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // Registered countries only: the registry is keyed on the static country
         // list, and a country dissolved by a merge would otherwise keep running
         // its bill lifecycle (and, for one-party entries, its legitimacy and
-        // escalation drift) for ever. Background countries (#5702) are skipped
-        // too: their bill-lifecycle phases never start.
+        // escalation drift) for ever. Background countries are skipped too:
+        // their bill-lifecycle phases never start.
         const registeredForBills = new Set(await getFullSimulationCountryIds(db));
         const countryBillPhaseEntries = Object.entries(COUNTRY_BILL_PHASES).filter(([id]) =>
           registeredForBills.has(id as CountryId)
@@ -1000,11 +988,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             processStateBillTimers(realNow, undefined, billLifecycleContext)
           ),
           runtime.runPhase("cabinetNominations", () => processCabinetNominationLifecycle(realNow)),
-          // SCOTUS (#3598): runs in the same parallel group as cabinetNominations
-          // (a like-shaped Senate-confirmation lifecycle) and BEFORE
-          // socialAxisDrift below, a diverged case's synthesized enactment
-          // writes statePolicies this same turn, and socialAxisDrift reads
-          // whatever statePolicies rows the bill phases just wrote.
+          // SCOTUS: parallel with cabinetNominations; must precede socialAxisDrift
+          // so a diverged case's synthesized statePolicies are visible same turn.
           runtime.runPhase("scotusTurn", () =>
             processScotusTurn(gameState.currentTurn, realNow, db)
           ),
@@ -1016,15 +1001,15 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // FOMC seat confirmations, a like-shaped Senate-confirmation lifecycle,
           // appended last so the index math above is unchanged.
           runtime.runPhase("fomcNominations", () => processFomcNominationLifecycle(realNow)),
-          // UK party-leadership challenges (#861): expire stale gatherings and
-          // resolve closed ballots. UK-gated no-op elsewhere; appended last so
-          // the index math above is unchanged.
+          // UK party-leadership challenges: expire stale gatherings and resolve
+          // closed ballots. UK-gated no-op elsewhere; appended last so the index
+          // math above is unchanged.
           runtime.runPhase("ukLeadershipChallenges", () =>
             processUkLeadershipChallengeTurn(db, gameState.currentTurn, realNow)
           ),
-          // UK party conferences (#862): annual schedule/open/ratify/complete
-          // lifecycle per party. UK-gated no-op elsewhere; appended after the
-          // leadership phase so the index math above is unchanged.
+          // UK party conferences: annual schedule/open/ratify/complete per party.
+          // UK-gated no-op elsewhere; appended last so the index math above is
+          // unchanged.
           runtime.runPhase("ukPartyConferences", () =>
             processUkPartyConferenceTurn(db, gameState.currentTurn, realNow)
           ),
@@ -1169,10 +1154,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         if (executiveEndorsementsResult) {
           phaseResults.executiveEndorsements = executiveEndorsementsResult;
         }
-        // Player endorsements must not outlive their issuer's party alignment
-        // (ticket #1179). Same placement rationale as governor/executive above:
-        // withdraw BEFORE campaignTurn so the defector's per-turn action grant
-        // to the old party's candidate stops this very turn.
+        // Sweep BEFORE campaignTurn: player endorsements must not outlive
+        // the issuer's party alignment, so the defector's per-turn action
+        // grant to the old party's candidate stops this very turn.
         const playerEndorsementSweepResult = await runtime.runPhase(
           "playerEndorsementPartySweep",
           async () => {
@@ -1521,10 +1505,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // the turn that completes the phase still suppresses (resume next turn).
         const foundingActive = context.gameState.preIteration?.active === true;
 
-        // Registered countries only — a dissolved country's spawners are
-        // harmless today (they iterate regions it no longer has) but every one
-        // of them still runs queries every turn, and any spawner that ever
-        // grows a config-driven fallback would resurrect ghost races.
+        // Registered countries only: a dissolved country's spawners still run queries every turn, and a config-driven fallback could resurrect ghost races.
         let countryElectionPhasePromises: Promise<unknown>[] = [];
         if (!foundingActive) {
           // Full-simulation only: a background country (#5702) runs none of its
@@ -1651,15 +1632,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
 
         const { runIndexFundCron } = await import("@/lib/indexFunds/fundCron");
-        // Was a bare await with no runtime.runPhase() wrapper, the ONLY phase in
-        // the entire registry invisible to TurnPhaseTelemetryMap (confirmed: every
-        // other adapter uses runPhase/markPhaseSkipped). Found via the headless sim
-        // harness: turnLogs.phaseStatuses showed the last tracked phase
-        // (gameHealthSnapshot, the entry right before this one) ending ~11s into a
-        // turn that took ~108s total, the missing ~97s was entirely this phase,
-        // with zero telemetry trace and zero Sentry slow-phase reporting in
-        // production either. Wrapping it fixes both: visibility here, AND
-        // production's existing >30s slow-phase alerting now covers this phase too.
+        // Must go through runtime.runPhase so the phase is visible to
+        // TurnPhaseTelemetryMap and production slow-phase alerting. A bare
+        // await here leaves it untracked.
         const result = await runtime.runPhase(
           "indexFunds",
           selectPhaseImplementation(context.engine, "indexFunds", {
@@ -1725,12 +1700,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
       },
     },
-    // --- Shadow ledger (registered LAST) --------------------------------------
-    // Snapshot the authoritative money balances AFTER every value-affecting
-    // phase has run, then reconcile this turn's shadow ledger entries against
-    // the snapshot diff. Shadow-only and flag-gated (`ledgerShadow`, off in prod
-    // seeds, on in the sim harness), zero game-behavior impact. See
-    // docs/plans/2026-07-05-shadow-ledger-plan.md §2/§3.
+    // Shadow ledger (registered LAST): snapshot money balances after all
+    // value-affecting phases, then reconcile shadow entries against the diff.
+    // Shadow-only, flag-gated (`ledgerShadow`), zero game-behavior impact.
     {
       key: "ledgerBalanceSnapshot",
       async execute(context, runtime) {
@@ -1765,9 +1737,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           );
           return;
         }
-        // Stamp the turn's banking mode from the already-loaded turn config:
-        // zero extra round trips, and the persisted doc carries per-turn
-        // banking history for the #992 evidence gate.
+        // Stamp banking mode from the already-loaded turn config: no extra
+        // round trips, and the persisted doc carries per-turn banking history.
         const report = await runtime.runPhase("ledgerReconcile", () =>
           reconcileTurn(db, newTurn, { savingsAccountsMode: config?.savingsAccountsMode ?? null })
         );

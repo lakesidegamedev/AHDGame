@@ -1,19 +1,14 @@
 /**
- * Soviet Union (RU) Cabinet mechanics — Council of Ministers (spec §3, D7).
- * Drives the per-position Office page: national/regional metrics, tier
- * settings, and emergencies.
+ * RU Cabinet mechanics: Council of Ministers. Drives per-position Office page
+ * metrics, tier settings, and emergencies.
  *
- * Depth note (CN precedent): five portfolio positions — Finance, Foreign
- * Trade, Internal Trade, the Gosbank liaison, and Agriculture — carry tier
- * settings; the rest are leadership/coordination or line ministries shipping
- * national metrics only. D7 requires the Foreign vs Internal Trade seats to
- * be MECHANICALLY distinct: Foreign Trade tiers act on growth (the state
- * import-export monopoly), Internal Trade tiers act on consumer costs and
- * employment (domestic goods distribution) — pinned by
- * ruCabinetEffectPaths.test.ts.
+ * Five positions (Finance, Foreign Trade, Internal Trade, Gosbank liaison,
+ * Agriculture) carry tier settings; the rest ship national metrics only.
+ * Foreign Trade tiers act on growth; Internal Trade tiers act on consumer costs
+ * and employment. Pinned by ruCabinetEffectPaths.test.ts.
  *
- * No ministerial orders (the orders dispatch returns [] for RU — NG/IE
- * precedent). Shared types live in cabinetMechanicsTypes.ts.
+ * No ministerial orders for RU (dispatch returns []). Shared types live in
+ * cabinetMechanicsTypes.ts.
  */
 import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanicsTypes";
 

@@ -1,5 +1,4 @@
 import { clamp01 } from "@/lib/numeric/rules";
-import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 
 /**
  * Bloc stress — the price of holding a bloc together.
@@ -146,6 +145,3 @@ export function blocStressLabel(stress: number): "Settled" | "Strained" | "Overe
   if (stress < 0.6) return "Strained";
   return "Overextended";
 }
-
-/** The pole a bloc pushes for, for callers mapping orgs to stress. */
-export type BlocPole = AlignmentPoleId;

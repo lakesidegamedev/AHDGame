@@ -90,14 +90,9 @@ export interface CorporationLookups {
    * Sum of `totalIssued` for each corp's active (non-defaulted) corporate bonds.
    * Subtracted from balance-sheet equity in the share-price formula so issuing
    * a bond is neutral on share price (cash inflow offset by debt liability).
-   *
-   * Natcorps (`countryOwnerId` set) are excluded from this map — their bond
-   * interest is already government-subsidized (`perTurnBondDragOnNetIncome = 0`)
-   * and the principal is treated as sovereign-backed. Subtracting principal
-   * while waiving interest would be internally inconsistent.
-   *
-   * Defaulted bonds are excluded — they no longer represent a payable
-   * obligation in this game's settlement model.
+   * Natcorps excluded: their bond interest is government-subsidized
+   * (`perTurnBondDragOnNetIncome = 0`) and the principal is sovereign-backed,
+   * so subtracting principal while waiving interest would be inconsistent.
    */
   issuedBondDebtByCorpId: Map<string, number>;
   /** Corp-to-corp equity stakes (holder → list of issuers). */
@@ -335,10 +330,9 @@ export interface CorporationLookups {
   /**
    * Foreign demand nobody serves that each country's producers could win, per
    * commodity, from the latest trade snapshot's reachable books
-   * (`unmetForeignDemand`, ticket #1162). An exporter's clearing book pins
-   * demand to supply, so without this term the demand throttle reads no room
-   * for an exporter whose foreign buyers are still short. Empty before the
-   * first trade turn.
+   * (`unmetForeignDemand`). An exporter's clearing book pins demand to supply,
+   * so without this term the demand throttle reads no room for an exporter
+   * whose foreign buyers are still short. Empty before the first trade turn.
    */
   unmetForeignDemandByCountry?: Map<string, Map<CommodityType, number>>;
   rawStateBalances: Map<string, Map<CommodityType, { supply: number; demand: number }>>;

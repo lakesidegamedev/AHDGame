@@ -1,22 +1,17 @@
 /**
- * Background countries in the funded producer market (#5702).
+ * Background countries in the funded producer market.
  *
  * A background country runs no plants and seats no households, so on a funded
  * turn it would otherwise place no orders and post no offers, and the price
- * phase (which rebuilds every ledger from the settled market) would lose it.
- * Here its macro economy becomes one trading account per country:
+ * phase would lose it. Here its macro economy becomes one trading account:
  *
- * - Offers: the traded share of its macro supply (the kernel's contribution,
- *   already scaled by trade exposure) posted at the reference price.
- * - Orders: the traded share of its macro demand, bid like a public buyer:
- *   spend at the reference price, a price ceiling with the same headroom, so
- *   it buys fewer units when prices rise.
- * - Only goods that cross borders trade: local services and the per-country
- *   service books (freight, construction) stay out, as they do for every
- *   other foreign buyer.
- * - Routes: its orders may take any seller the trade matrix lets reach it and
- *   never its own offers (its domestic trade is not in the exposed share).
- *   Other buyers reach its offers through the same route rule.
+ * - Offers: traded share of macro supply at the reference price.
+ * - Orders: traded share of macro demand, bid like a public buyer (price
+ *   ceiling with headroom, so it buys fewer units when prices rise).
+ * - Only cross-border goods trade; local services and per-country service
+ *   books stay out.
+ * - Routes: its orders may take any seller the trade matrix allows and never
+ *   its own offers, and vice versa.
  *
  * Pure: macro contributions and prices in, offers, orders and per-country
  * trade outcomes out.

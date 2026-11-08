@@ -21,17 +21,6 @@ import type { FiscalRatios } from "./fiscalMirror";
 import type { GameConfig } from "@/lib/db/types";
 import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 
-/**
- * A cross-collection rollup computed once per turn and fed to registry nodes
- * via `{provider: "<name>"}` inputs (spec P0 R1). Nodes never do their own
- * cross-collection DB reads — that is what keeps "add a metric = add an entry"
- * true for sector/stock-integrating nodes.
- */
-export interface ExternalAggregateProvider<T> {
-  name: string;
-  run(db: Db): Promise<T>;
-}
-
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
   ownedByState: Map<

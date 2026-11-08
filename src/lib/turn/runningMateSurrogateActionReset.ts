@@ -9,12 +9,11 @@ import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
  * Refill each active presidential ticket's shared running-mate surrogate action
  * pool to the ruleset cap once per Eastern-time calendar day.
  *
- * Mirrors `resetVicePresidentActions` exactly: a per-turn sweep gated by the
- * daily boundary, so a ticket gets `vpSurrogateActionCap` surrogate actions each
- * day rather than every turn. Scoped to presidential campaigns whose ticket has
- * a resolved running mate; the pool has no meaning otherwise. The cap is read
- * from `presidentialRulesetFor(election)` so a race frozen to an older ruleset
- * keeps its own cap (rules-freeze seam).
+ * A per-turn sweep gated by the daily boundary, so a ticket gets
+ * `vpSurrogateActionCap` surrogate actions each day rather than every turn.
+ * Scoped to presidential campaigns with a resolved running mate; the pool has
+ * no meaning otherwise. The cap comes from `presidentialRulesetFor(election)`
+ * so a race frozen to an older ruleset keeps its own cap.
  */
 export async function resetRunningMateSurrogateActions(
   db: Db

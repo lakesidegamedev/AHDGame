@@ -691,9 +691,9 @@ export async function resolveOneGeneralElection(
     const totalSeats = election.totalSeats ?? 1;
     // House seat counts are preset-dependent (1990 vs 2020 census). Fetch the
     // active preset only for House races; other multi-seat types ignore the
-    // `houseSeats` arg, so `undefined` correctly falls through to the default.
-    // Commons likewise needs the era map (625 in 1953 vs modern 650) — without
-    // it allocateSeats always used the modern UK_COMMONS_SEATS (ticket #1058).
+    // houseSeats arg, so undefined correctly falls through to the default.
+    // Commons likewise needs the era map (625 in 1953 vs modern 650); without
+    // it allocateSeats always used the modern UK_COMMONS_SEATS.
     let houseSeats: Record<string, number> | undefined;
     let commonsSeats: Record<string, number> | undefined;
     let allocationMethod = election.allocationMethod;
@@ -705,10 +705,9 @@ export async function resolveOneGeneralElection(
     if (election.electionType === "house") {
       gsForHouse = await (await getGameStateCollection(db)).findOne({ _id: "current" });
       // Live (census-updated) House apportionment; equals the preset seed until a
-      // decennial census reapportions (P1d-2). `currentYear` keeps a state
-      // admitted mid-game in the map — without it the admitted set is built as of
-      // the preset year, so `authoritativeSeats` silently fell back to the
-      // election's own `totalSeats` for Alaska and Hawaii (#1190).
+      // decennial census reapportions. `currentYear` keeps states admitted
+      // mid-game in the map; without it `authoritativeSeats` silently fell back
+      // to the election's own `totalSeats`.
       houseSeats = (await loadApportionment(db, gsForHouse?.preset, gsForHouse?.currentYear))
         .houseSeats;
     }
@@ -1025,11 +1024,10 @@ export async function resolveOneGeneralElection(
 
     if (isMultiSeat) {
       if (isSpecialCommonsElection(election.electionType)) {
-        // ADDITIVE seating (#860): a by-election fills only its claimed
-        // vacancies. Remove holder-less `commons` rows (the tombstones the
-        // watcher recorded vacancies for) up to the seats this race filled,
-        // and leave every seated MP untouched. Sitting MPs keep their rows;
-        // the winner loop below inserts fresh rows for the filled seats.
+        // ADDITIVE seating: a by-election fills only its claimed vacancies. Remove
+        // holder-less `commons` rows (tombstones for recorded vacancies) up to the
+        // seats this race filled, and leave every seated MP untouched; the winner
+        // loop below inserts fresh rows for filled seats.
         const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
         if (seatsFilled > 0) {
           const vacantRows = await db
@@ -1786,10 +1784,9 @@ export async function resolveOneGeneralElection(
     if (election.electionType === "senate") {
       await triggerLeadershipElectionsAfterChamberVote(db, "senate", now);
     }
-    // Sweep stale currentOffice for any multi-seat election type — losers and
-    // non-runners who still claim this constituency get cleared. Skipped for
-    // Commons by-elections (#860): the rest of the delegation was not on the
-    // ballot, so sitting MPs keep their seats and their currentOffice.
+    // Sweep stale currentOffice for multi-seat elections: losers and non-runners
+    // get cleared. Skipped for Commons by-elections since the rest of the
+    // delegation was not on the ballot; sitting MPs keep their seats.
     if (
       MULTI_SEAT_TYPES.has(election.electionType) &&
       !isSpecialCommonsElection(election.electionType) &&

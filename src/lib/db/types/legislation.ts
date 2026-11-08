@@ -70,22 +70,6 @@ export type BillStatus =
  */
 export type BillChamber = "house" | "senate" | "joint" | (string & {});
 
-export interface BillVoteTally {
-  votesFor: number;
-  votesAgainst: number;
-  votesAbstain: number;
-  votes: Record<string, "for" | "against" | "abstain">;
-  votingStartedAt?: Date;
-  votingEndsAt?: Date;
-  /**
-   * Game-clock turn on which voting closes. Server-side resolution checks
-   * `currentTurn >= votingEndsOnTurn` rather than comparing dates, so the
-   * deadline doesn't drift with real-clock vs game-clock divergence.
-   * Optional during the transition; new bills set both.
-   */
-  votingEndsOnTurn?: number;
-}
-
 export interface PolicyProvision {
   type?: "policy"; // optional for backwards compat with existing docs
   legislationTypeId: string;
@@ -672,7 +656,7 @@ export interface Bill {
 }
 
 /** Tariff targeting scope — only applicable to tariff legislation */
-export interface TariffScope {
+interface TariffScope {
   type: "universal" | "per_country" | "per_category";
   /** Target country code when type is "per_country" */
   targetCountry?: string;
@@ -680,9 +664,9 @@ export interface TariffScope {
   targetCategory?: string;
 }
 
-export type EffectScope = "national" | "state";
+type EffectScope = "national" | "state";
 
-export interface LegislationEffectTarget {
+interface LegislationEffectTarget {
   metricCategoryId: MetricCategoryId;
   metricId: string;
   scope: EffectScope;

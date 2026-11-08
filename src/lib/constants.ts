@@ -65,8 +65,6 @@ export const US_STATES = [
   "WY",
 ] as const;
 
-export type StateAbbreviation = (typeof US_STATES)[number];
-
 /**
  * Representative landmark/landscape photos for each state.
  * All URLs verified via the Wikipedia pageimages API. Freely licensed via Wikimedia Commons.

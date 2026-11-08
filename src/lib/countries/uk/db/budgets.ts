@@ -9,12 +9,12 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 const BUDGET_VOTING_HOURS = 24;
 
 /**
- * UK Budget persistence + lifecycle (epic #856, ticket #858).
- * Collection: "ukBudgets" — one document per fiscal year.
+ * UK Budget persistence and lifecycle.
+ * Collection: "ukBudgets", one document per fiscal year.
  *
  * Lifecycle: draft → tabled → passed | defeated. A defeat fires the
- * `budgetDefeat` confidence event (the biggest single gauge hit) — the key
- * connective piece between the Budget and the confidence gauge.
+ * `budgetDefeat` confidence event (the biggest single gauge hit), linking the
+ * Budget to the confidence gauge.
  */
 
 function getUKBudgetsCollection(db: Db) {

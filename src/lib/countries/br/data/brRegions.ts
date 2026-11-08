@@ -3,18 +3,10 @@ import type { State } from "@/lib/db/types";
 /**
  * Brazil IBGE macro-regions as State-compatible documents.
  *
- * The 5 macro-regions are the playable sub-national units. Each region
- * contributes a share of the 513 Chamber of Deputies seats (open-list PR
- * by state in practice; FPTP is used here as a placeholder).
+ * houseDistricts must sum to 513 across regions.
+ * stateSenateSeats must sum to 81 across regions.
  *
- * - `population` — 2023 IBGE estimates (people).
- * - `gdp` — regional GDP in millions of BRL.
- * - `houseDistricts` — Chamber of Deputies seats allocated to the region
- *     (must sum to 513 across all 5 regions).
- * - `stateSenateSeats` — Federal Senate seats allocated to the region
- *     (must sum to 81 across all 5 regions).
- * - `region` — IBGE macro-region grouping used for regional filters.
- * - `votingSystem` — Placeholder; actual system is open-list PR.
+ * votingSystem is a placeholder; real system is open-list PR.
  */
 export const brRegions: State[] = [
   // ── Norte ──────────────────────────────────────────────────────────────────

@@ -1,19 +1,8 @@
-/**
- * NPP CEO careers and pay demands: the turn shell around
- * `corporations/rules/nppCeoCareer`.
- *
- * Every corporation run by an NPP CEO (NPP companies, subsidiaries with an NPP
- * CEO, caretakers) gets a pay review every 24 turns. The CEO asks for a salary
- * sized to its level and the company's trailing profit; the owner accepts,
- * counters or replaces the CEO. When nobody answers within the window, the
- * corporation's operator policy decides. Salary already flows to the NPP's own
- * funds through the corporation turn, so this pass only sets `ceoSalary`.
- *
- * Runs once per turn before the sector calculations, so a salary set here is
- * paid this turn. Reads: one `npps` $in, one `corporationHistory` aggregate,
- * and the free-NPP pool once per country that needs a replacement. Writes:
- * one corporations bulkWrite.
- */
+// Every NPP-run corporation gets a pay review every 24 turns: the CEO
+// demands a salary sized to level and trailing profit; owner accepts,
+// counters, or replaces. Unanswered windows fall to the operator policy.
+// Salary flows via the corporation turn; this pass only sets ceoSalary.
+// Runs before sector calcs so today's salary pays this turn.
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporationCeoPay } from "@/lib/db/types/corporation";

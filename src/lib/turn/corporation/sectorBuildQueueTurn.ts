@@ -87,11 +87,7 @@ export function resolveBuildQueueTurn(args: BuildQueueTurnArgs): BuildQueueTurn 
           o != null && Number.isFinite(o.unitsOrdered) && o.unitsOrdered > 0 && o.onlineTurn != null
       )
     : [];
-  // A legacy order delivers its whole `unitsOrdered` the turn it comes due; a
-  // `smooth` order delivers only the slices due since the build step last ran,
-  // so a large build ramps in instead of landing as one lump (see
-  // buildDelivery.ts). Both sum identically. Normally that is one turn's slice;
-  // after an economy pause it is every slice the paused turns skipped (#5169).
+  // A legacy order delivers all `unitsOrdered` when due; a `smooth` order delivers only slices since the last build step, so large builds ramp in (see buildDelivery.ts). Both sum identically. Normally one turn's slice; after an economy pause it is every skipped slice.
   const buildsSettledTurn = resolveBuildSettledTurn(
     currentTurn,
     sector.buildDeliverySettledTurn,
@@ -142,13 +138,12 @@ export function resolveBuildQueueTurn(args: BuildQueueTurnArgs): BuildQueueTurn 
     sector.mediaDiscriminator,
     args.preset
   );
-  // C10: the credit keys on the ACCRUED COST, not on the target slider.
-  // `currentGrowthCost` is what the sector is being billed THIS turn;
-  // `targetGrowthRate` is where the owner has pointed the slider NEXT. A player
-  // who winds the slider back to 0 still pays a decaying `currentGrowthRate`
-  // for several turns, so gating on the target confiscated exactly the spend of
-  // the players who had already stopped growing. If cost was charged, capacity
-  // is owed.
+  // The credit keys on the ACCRUED COST, not on the target slider.
+  // `currentGrowthCost` is what the sector is billed THIS turn;
+  // `targetGrowthRate` is where the slider points NEXT. A player who winds
+  // the slider to 0 still pays a decaying `currentGrowthRate` for several
+  // turns, so gating on target confiscated spend from players already stopping
+  // growth. If cost was charged, capacity is owed.
   const flipGrowthCreditOrder: SectorBuildOrder | null =
     isFlipTurn && growthCostAnchorForFlip > 0 && capacityUnitPriceAnchor > 0
       ? {

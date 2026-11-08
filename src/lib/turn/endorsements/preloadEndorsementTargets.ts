@@ -2,17 +2,11 @@ import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 
 /**
- * Shared preload for the two endorsement-withdrawal turn phases (#575).
+ * Shared preload for the two endorsement-withdrawal turn phases.
  *
- * Both phases used to resolve their election and candidate one `findOne` at a
- * time, inside the loop over active endorsements — so a busy election cycle
- * holding hundreds of endorsements cost hundreds of serial round trips on the
- * turn hot path, latency-bound rather than compute-bound.
- *
- * Both phases read exactly one field off each row (`status`), so this projects
- * to it and returns plain status maps rather than documents. A missing key and
- * a non-active status collapse to the same decision at the call site, which is
- * what the original `!row || row.status !== "active"` did.
+ * Both phases read only `status` per row, so this projects to it and returns
+ * status maps rather than documents. A missing key and a non-active status
+ * collapse to the same decision at the call site.
  */
 export interface EndorsementTargetStatuses {
   /** electionId → status. Absent key means the election row does not exist. */

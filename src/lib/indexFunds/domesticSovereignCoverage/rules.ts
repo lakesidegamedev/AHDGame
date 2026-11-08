@@ -1,30 +1,3 @@
-/**
- * Domestic sovereign-bond coverage planner (#1001).
- *
- * Pure rules module: plain data in, plain data out. No database, wall clock,
- * randomness, or environment reads, so the headless harness can copy it.
- *
- * Countries with an active domestic fund reach zero unheld sovereign issues
- * while countries without one keep 20+ unheld issues each, and the allocator
- * is country-local: foreign funds never buy a country fund's paper. The gated
- * coverage step therefore ensures exactly one home-sovereign bond fund per
- * uncovered sovereign issuer. Everything after that (cash debit, market
- * pricing, holder caps, rating eligibility, default skips) runs through the
- * existing real-cash deploy path unchanged.
- *
- * The plan is deliberately narrow:
- * - home paper only (the seed universe is homeOnly sovereign, the same shape
- *   as every seeded country bond fund in fundDefinitions);
- * - only registered sovereign countries that carry a national budget (so the
- *   rating-eligibility read has something to read) and at least one live
- *   sovereign issue (no demand, nothing to cover);
- * - capital controls are NOT consulted: home paper always clears the
- *   currency gates, mirroring isGlobalFundBondEligible;
- * - deterministic: the output is sorted by country id.
- */
-
-export const DOMESTIC_SOVEREIGN_COVERAGE_FLAG = "domesticSovereignBondCoverageEnabled";
-
 /** Slug convention shared with BOND_FUND_DEFINITIONS country funds. */
 export function domesticSovereignBondFundSlug(countryId: string): string {
   return `${countryId.toLowerCase()}_sovereign_bonds`;

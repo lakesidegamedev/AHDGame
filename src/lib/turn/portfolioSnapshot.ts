@@ -376,10 +376,8 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   const db = await getDb();
   const now = new Date();
 
-  // Every corp gets a snapshot so that corps holding only liquidCapital (no
-  // stocks/bonds) still have Net Worth history. Previously this query scoped
-  // to corps with shareholder rows, which silently dropped cash-only corps
-  // from the chart entirely.
+  // Every corp gets a snapshot so cash-only corps (no stocks/bonds) still have Net
+  // Worth history.
   const [allCorps, bonds, fxByCurrency, reserved, fundPositions] = await Promise.all([
     db
       .collection<Corporation>("corporations")

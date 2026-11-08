@@ -1,19 +1,14 @@
 import type { MetricPresetBundle } from "@/lib/seeds/cn/cnMetricPresets";
 
-/**
- * 1953 China — Mao Zedong / PRC First Five-Year Plan (1953-57); Korean War ending (armistice
- * July 1953); agricultural collectivisation beginning (mutual aid teams → cooperatives);
- * Soviet-model industrialisation; population ~588M. Life expectancy ~42–44 (up from ~36 in 1949).
- * Near-total illiteracy (60-70%); literacy campaign underway. No nuclear (first test 1964).
- * State media monopoly. Gender equality promoted in Mao ideology (Marriage Law 1950) but deeply
- * patriarchal in practice outside cities. Massive rural poverty; Hukou system establishing.
+/*
+ * 1953 China seed metrics.
  *
- * `seedCNStateMetrics` overlays this onto modern `cnStateMetrics` with a PARTIAL merge — any
- * path absent here silently retains the ~2023 base. Core economic/demographic paths below
- * (gdpGrowth, medianIncome, povertyRate, urbanizationRate, …) pin against that leak; values
- * follow `metricCatalog` CORE5 / INCOME_ANCHORS where authored, and `cnRegionCensusData1953`
- * for regional urbanization tilts. Windowed roots that baselines zero (broadband, social
- * credit, Belt-and-Road, social media) are pinned here too so metrics and baselines agree.
+ * `seedCNStateMetrics` overlays this onto modern `cnStateMetrics` with a PARTIAL merge,
+ * so any path absent here silently retains the ~2023 base. Core economic/demographic
+ * paths are pinned here to prevent that leak; values follow `metricCatalog` where
+ * authored, and `cnRegionCensusData1953` for regional tilts. Windowed roots that
+ * baselines zero (broadband, social credit, Belt-and-Road, social media) are pinned
+ * so metrics and baselines agree.
  */
 
 const CN_REGIONS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"] as const;
@@ -21,15 +16,10 @@ const CN_REGIONS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"] as const;
 const NATIONAL_1953: Record<string, number> = {
   // ── Core paths (modern cnStateMetrics leaks without these — anti-anachronism) ──
   "economic.gdpGrowth": 6.0, // metricCatalog CORE5 CN 1953; 1st FYP reconstruction boom
-  // #income-gdp-scale-audit: the 1953 CN budget GDP (NATIONAL_BUDGET_SEED_CONFIGS_1953)
-  // is USD-anchored ($33.3B; ¥CNY 82B / 2.46, like US/DE/JP/NG/IT), but this
-  // overlay's old 400 was mislabeled "USD-anchored" while actually tracking a
-  // stale CNY-nominal figure (¥1,000 pre-#3498) — the two conventions never
-  // matched, so the ratio came out 7.2x GDP/capita ($33.3B / 588M = $56.63;
-  // medianIncomeGdpScale1953.test.ts band is [0.8, 2.6]). Re-authored in the
-  // GDP's actual USD convention: $80 national (ratio ~1.45) — plausible for
-  // 1953 China, among the poorest countries in the world at official exchange
-  // rates (nominal, not PPP).
+  // 1953 CN budget GDP is USD-anchored ($33.3B; 82B CNY / 2.46). This overlay
+  // uses the same USD convention: $80 national ratio ~1.45, plausible for 1953
+  // China (among world's poorest at official exchange rates, nominal not PPP).
+  // medianIncomeGdpScale1953.test.ts band is [0.8, 2.6].
   "economic.medianIncome": 80,
   "economic.povertyRate": 30, // metricCatalog CORE5 CN 1953 (gameplay-scaled; absolute poverty higher)
   "economic.unemploymentRate": 4.5, // metricCatalog CORE5 CN 1953; open unemployment low under command

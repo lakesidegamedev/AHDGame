@@ -1,17 +1,9 @@
 /**
- * Ireland Region Census Profiles — 2023 (post-pandemic) era.
+ * Ireland Region Census Profiles, 2023 era.
  *
- * Era anchor: CSO Census of Population 2022 (with 2023 population estimates).
- * Every value is independently authored from historical knowledge of each
- * region in 2023 — NOT scaled or derived from any other era file.
- *
- * 2023 Ireland: roughly 20% foreign-born (CSO 2022: ~20% of usual residents
- * born abroad), with Dublin and the cities most diverse and even rural
- * counties reshaped by EU workers, Ukrainian arrivals, and asylum
- * accommodation. Graduate share among the EU's highest (50%+ third-level in
- * Dublin's adult population), severe housing crisis pushing commuters ever
- * further out, and a visibly ageing population versus the boom years. Income
- * tiers are era-neutral relative tiers.
+ * Anchored to CSO Census 2022 with 2023 population estimates.
+ * Every value is independently authored for 2023, NOT scaled or derived
+ * from another era file. Income tiers are era-neutral relative tiers.
  */
 
 import type { IERegionLayer1 } from "@/lib/seeds/ie/ieRegionCensusData";

@@ -231,11 +231,10 @@ export async function recordPrimarySnapshots(
   applyStandingAds(allCandidates, charMap);
   const nppMap = enrichmentPreload.nppsById;
 
-  // Presidential-only: compute per-state projections FIRST (also writes the
-  // per-state polling history to the tally). The returned projections drive a
-  // delegate-consistent national standing on the primarySnapshots doc below, so
-  // the persisted standing (read by wiki/discord/trend) matches the delegate
-  // winner instead of the old calcPresidentPrimaryScore ranking (#3022).
+  // Presidential-only: compute per-state projections first (also writes
+  // per-state polling history). Returned projections drive a
+  // delegate-consistent national standing, so persisted standing matches
+  // the delegate winner.
   const presProjections = await recordPresidentialStatePollingSnapshots(
     db,
     early ? [] : activeElections.filter((e) => usesLegacyPresidentialCampaign(e)),
@@ -362,10 +361,8 @@ export async function recordPrimarySnapshots(
   // banked three slices; the primary accrual would do the same. A split turn
   // holds an early and a rest snapshot; each half is recorded once.
   const recordedParts = new Map<string, (TurnSlicePart | undefined)[]>();
-  // The { electionId, turn } index (2026-10-27-player-read-indexes) serves this
-  // as an equality lookup. The older { electionId, recordedAt } index could only
-  // bound the election, so every already-recorded turn of the race was fetched
-  // and filtered in memory on each turn and half-hour tick.
+  // The { electionId, turn } index makes this an equality lookup; keep it
+  // that way to avoid fetching and filtering prior turns in memory.
   const sameTurnSnapshots = await db
     .collection<PrimarySnapshot>("primarySnapshots")
     .find(
@@ -434,11 +431,10 @@ export async function recordPrimarySnapshots(
     const regionalAdBonuses: Record<string, number> = {};
     const byParty: Record<string, PrimarySnapshotEntry[]> = {};
 
-    // Presidential standings derive from the SAME per-state vote projection that
-    // produces the delegate winner (#3022): rank by projected delegates, votes
-    // as tiebreak, with delegate share as the displayed sharePct. Falls back to
-    // the ideology score only for a party with no projected votes yet (very
-    // early primary). Non-presidential races keep calcPrimaryScore untouched.
+    // Presidential standings derive from the same per-state projection as
+    // the delegate winner: rank by projected delegates, votes as tiebreak,
+    // delegate share as sharePct. Falls back to ideology score only for a
+    // party with no projected votes yet.
     const presStandingByCandidate = new Map<string, { standing: number; sharePct: number }>();
     const presPartiesWithProjection = new Set<string>();
     if (isPresident) {
@@ -725,10 +721,9 @@ export async function recordPrimarySnapshots(
 }
 
 /**
- * @internal recordPrimarySnapshots helper — per-state projection history for pres
- * primaries. Returns the per-election projected votes-by-state (party → state →
- * candidate → votes) so the caller can build a delegate-consistent national
- * standing for the primarySnapshots doc from the SAME projection (#3022).
+ * @internal recordPrimarySnapshots helper, per-state projection history for pres
+ * primaries. Returns projected votes-by-state so the caller can build a
+ * delegate-consistent national standing from the same projection.
  */
 type PresProjectionByElection = Map<string, Record<string, Record<string, Record<string, number>>>>;
 

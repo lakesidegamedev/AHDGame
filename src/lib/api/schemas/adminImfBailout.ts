@@ -23,5 +23,3 @@ export const adminImfBailoutSchema = z.object({
    */
   incomeCapturePercent: z.number().min(1).max(45).optional(),
 });
-
-export type AdminImfBailoutBody = z.infer<typeof adminImfBailoutSchema>;

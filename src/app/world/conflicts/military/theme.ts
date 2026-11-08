@@ -31,12 +31,3 @@ export const TYPE_COLOR = {
   REGIONAL: "#3fb6a8",
   LOGISTICS: MIL_COLOR.gold,
 } as const;
-
-/** Effectiveness/status intent -> cw color. */
-export function intentColor(intent: "success" | "warn" | "error"): string {
-  return intent === "success"
-    ? MIL_COLOR.green
-    : intent === "warn"
-      ? MIL_COLOR.gold
-      : MIL_COLOR.amber;
-}

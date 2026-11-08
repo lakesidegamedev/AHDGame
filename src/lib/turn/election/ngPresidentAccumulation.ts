@@ -1,17 +1,15 @@
 /**
- * Per-zone vote accumulation for NG presidential elections — the NG arm of the
- * presidential pipeline (the US electoral-college accumulation in
- * `presidentialElectionEngine` is untouched). Called each turn for an active NG
- * presidential race; writes per-geopolitical-zone candidate tallies into the
- * tally's `totalVotesByUnit` so `decideNGPresidentOutcome` can apply the
+ * Per-zone vote accumulation for NG presidential elections. Called each turn
+ * for an active NG presidential race; writes per-geopolitical-zone tallies into
+ * `totalVotesByUnit` so `decideNGPresidentOutcome` can apply the
  * federal-character spread rule at resolution.
  *
- * Distribution model (v1): within each zone, the turn's vote pool is split among
- * candidates in proportion to their party's seeded `statePartyOrg` in that zone,
- * weighted by zone population. This yields the correct per-zone vote *shares* the
- * spread rule needs; it is intentionally simpler than the US swing-flow engine.
- * Standing targeted ads add the shared, bounded demographic audience bonus
- * to organization weights. Without ads, the original organization weights remain.
+ * Within each zone, the turn's vote pool splits among candidates in proportion
+ * to their party's seeded `statePartyOrg` in that zone, weighted by zone
+ * population. This yields the per-zone vote shares the spread rule needs and is
+ * intentionally simpler than the US swing-flow engine. Standing targeted ads
+ * add the shared, bounded demographic audience bonus to organization weights;
+ * without ads, the original organization weights remain.
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";

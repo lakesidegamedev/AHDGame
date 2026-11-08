@@ -20,24 +20,17 @@ export function outcomeFor(position: number): SettlementOutcome | null {
   return null;
 }
 
-/**
- * Next turn's ladder heat, and the quiet-turn counter that governs decay.
- *
- * Coercive plays raise it but CANNOT cross to the armed rung: taking the bloc
- * to the brink is a deliberate act by an authority seat, not something that
- * accumulates.
- *
- * Decay is SLOWER THAN ACCUMULATION, and that asymmetry is the whole point. A
- * rung is lost only after `LADDER_DECAY_TURNS` consecutive turns with nothing
- * coercive, so holding a position costs coercion one turn in three rather than
- * every turn. Decaying on every quiet turn set a hidden 50% threshold — a bloc
- * had to act on more than half of all turns just to stand still — which no
- * bloc in the catalogue can sustain, so the ladder collapsed to zero and the
- * brink was unreachable rather than expensive. See the constant.
- *
- * `quietTurns` counts CONSECUTIVE ticks with nothing coercive. Any coercive
- * play resets it, and so does a rung actually being lost.
- */
+// Next turn's ladder heat, and the quiet-turn counter that governs decay.
+//
+// Coercive plays raise it but CANNOT cross to the armed rung; arming is a
+// deliberate authority-seat act, not an accumulation.
+//
+// A rung is lost only after LADDER_DECAY_TURNS consecutive quiet turns, so
+// decay is slower than accumulation by design: decaying every quiet turn sets
+// a hidden 50% threshold no bloc can sustain, collapsing the ladder to zero.
+//
+// `quietTurns` counts CONSECUTIVE coercive-free ticks; a coercive play or a
+// lost rung resets it.
 export function nextHeat(params: { current: number; added: number; quietTurns?: number }): {
   heat: number;
   quietTurns: number;

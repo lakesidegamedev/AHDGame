@@ -1,24 +1,21 @@
 /**
- * nppCorporateAttacks — autonomous NPP corporate aggression (NPP-autonomy V2.2).
+ * nppCorporateAttacks, autonomous NPP corporate aggression.
  *
  * NPP-run corporations (spawned NPP corps and player-appointed caretaker CEOs)
- * don't just expand into unowned markets — they go on the offensive, launching
- * the same economic **sector attacks** a player corp can, capturing market share
- * from rival owned sectors. Targets are chosen **by rule** (best capture
- * opportunity in a market the attacker operates in) and may be NPP-owned or
- * player-owned alike — the attack is indifferent to who owns the defender, so a
- * player corp is a legitimate target exactly as another NPP corp is.
+ * go on the offensive, launching the same economic sector attacks a player corp
+ * can and capturing market share from rival owned sectors. Targets are chosen
+ * by rule (best capture opportunity in a market the attacker operates in) and
+ * may be NPP-owned or player-owned alike; the attack is indifferent to owner.
  *
- * Everything routes through the **same** cost/capture helpers as the player
- * attack path (`calculateAttackCostAnchor`, `calculateSplitMsCost`,
+ * Everything routes through the same cost/capture helpers as the player attack
+ * path (`calculateAttackCostAnchor`, `calculateSplitMsCost`,
  * `fetchAttackerDefenderShares`, the dominance/underdog multipliers,
  * `ATTACK_OWNED_CONTESTED_FRACTION`) so an autonomous attack and a player attack
- * resolve identically — no bespoke "NPP damage" and no way to exceed the normal
- * mechanic. Aggression is bounded: only `aggressive`-archetype corps attack,
- * only with surplus cash + MS, and only once per `ATTACK_COOLDOWN_TURNS`.
+ * resolve identically. Aggression is bounded: only `aggressive`-archetype corps
+ * attack, only with surplus cash + MS, and only once per `ATTACK_COOLDOWN_TURNS`.
  *
- * Gating: `nppAutonomyAtLeast(attacker.countryId, "v2")` — economic aggression is
- * the comingle-tier capability. A no-op below v2 / where autonomy is off.
+ * Gating: `nppAutonomyAtLeast(attacker.countryId, "v2")`. No-op below v2 or
+ * where autonomy is off.
  */
 
 import type { Db } from "mongodb";
@@ -144,10 +141,10 @@ export interface NppAttackResult {
 }
 
 /**
- * Defender-facing message for an autonomous revenue attack below plants
- * (suggestion #324). Names the attacking corp, the sector, and the state, and
- * says what the $ figure is. Pure, so notification copy can be pinned by unit
- * test. Plants-economy splits write their own copy in `executeNppPlantSplit`.
+ * Defender-facing message for an autonomous revenue attack below plants.
+ * Names the attacker corp, sector, and state, and clarifies the $ figure is
+ * revenue moved, not profit or total sector value. Pure for unit testing.
+ * Plants-economy splits write their own copy in `executeNppPlantSplit`.
  */
 export function formatNppSectorAttackDefenderMessage(args: {
   attackerName: string;
@@ -619,13 +616,10 @@ export async function runNppCorporateAttacks(
   });
   if (eligibleAttackers.length === 0) return 0;
 
-  // All corporateSectors, once — grouped by owning corp (own-market lookup)
-  // and by (stateId, sectorType) bucket (rival lookup), replacing the two
-  // per-attacker queries above.
-  // Attack targeting and execution use only the Pick<CorporateSector, ...>
-  // contract below: owner/market identity plus the capacity and revenue basis.
-  // Avoid decoding every plant and labor telemetry field while building the
-  // two in-memory indexes.
+  // All corporateSectors loaded once, indexed by owning corp (own-market
+  // lookup) and by (stateId, sectorType) bucket (rival lookup). Only the
+  // Pick<CorporateSector, ...> fields are projected to avoid decoding plant
+  // and labor telemetry.
   const allSectors = await db
     .collection<CorporateSector>("corporateSectors")
     .find(

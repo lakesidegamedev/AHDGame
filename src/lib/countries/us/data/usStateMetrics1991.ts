@@ -1,34 +1,4 @@
-/**
- * 1991-era state metrics. Derives from the existing
- * `generateStateMetrics` pipeline but applies era-floor adjustments to
- * fields that didn't exist or were dramatically different in 1991:
- *
- *   - `infrastructure.broadbandAccess`: clamped to 0 (residential broadband
- *     effectively didn't exist in 1991; experimental cable-modem deployments
- *     began 1995).
- *   - `mediaInformation.socialMediaSentiment`: clamped to 0 (no platforms
- *     existed).
- *   - `mediaInformation.disinformationRisk`: clamped to ≤20 (pre-internet info
- *     environment).
- *   - `mediaInformation.mediaPolarization`: clamped to ≤35 (cable news
- *     polarization had not yet started; Fox News didn't launch until 1996).
- *   - `economic.unemploymentRate`: +1.5pp baseline shift to reflect the
- *     1990-91 recession.
- *   - `economic.gdpGrowth`: -2pp baseline shift (1991 US growth was -0.1%).
- *   - `publicSafety.crimeRate`: +35% (1991-1993 was the US crime-rate peak).
- *   - `publicSafety.violentCrimeRate`: +40%.
- *   - `publicSafety.incarcerationRate`: -25% (mass-incarceration ramp was
- *     mid-1990s on).
- *   - `population.urbanizationRate`: -3pp.
- *   - `population.medianAge`: -5.
- *   - `healthcare.lifeExpectancy`: -3.
- *   - `healthcare.uninsuredRate`: +4pp (pre-ACA, pre-1997 SCHIP).
- *   - `governance.voterTurnout`: +5pp.
- *   - `governance.debtToGdp`: ×0.5 (US debt was 60% in 1991 vs 130% today).
- *   - `mediaInformation.pressFreedom`, `newsTrust`: +10pp each.
- *   - All nominal-dollar fields (medianIncome, costOfLiving) scaled to 1991.
- */
-
+/** 1991-era state metrics: the modern generated pipeline with era adjustments applied. */
 import { clamp } from "@/lib/numeric/rules";
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { stateMetrics as stateMetrics2020 } from "./usStateMetrics";

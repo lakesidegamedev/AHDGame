@@ -15,37 +15,20 @@ import {
 } from "./data/jpSeats";
 
 /**
- * Japan's elections. Phase D3.
+ * SERVER ONLY. Importing from a client component pulls the DB driver
+ * into the browser bundle via ./elections/perpetual. Not re-exported
+ * from ../jp/index.ts.
  *
- * ⚠️ SERVER ONLY. `./elections/perpetual` reaches `getDb`, so importing this
- * module from a client component pulls the database driver into the browser
- * bundle. It is deliberately NOT re-exported from `../jp/index.ts`.
- *
- * ⚠️ The seat tables are the values four coverage rules missed. They live in
- * `constants/states.ts`, which is not Japan-named and carries no `JP:` key, so
- * neither the object-key scan nor the filename scan found them. They are
- * reproduced here from the pre-move snapshot; `constants/states.ts` keeps the
- * declarations and D7 decides whether it forwards.
- *
- * ⚠️ Functions are composed by IMPORT, never by literal. `toEqual` compares
- * functions by REFERENCE, so the ordinary harness is blind to them: a re-export
- * passes tautologically and a re-declaration fails despite identical behaviour.
- * MOVED_THUNK_REGISTRIES pins them by resolved behaviour instead.
+ * Functions are composed by IMPORT, never by literal: toEqual compares
+ * functions by reference, so a re-export passes tautologically and a
+ * re-declaration fails despite identical behavior. MOVED_THUNK_REGISTRIES
+ * pins them by resolved behavior.
  */
 
 /**
- * Japan's chamber seat tables.
- *
- * ⚠️ IMPORTED, NOT DECLARED, AND THAT IS THE WHOLE POINT. These were written
- * out here by value AND in `constants/states.ts`, with nothing keeping the two
- * in step. Measured, `===` said different objects and `JSON.stringify` said
- * equal values: correct on the day it was written, silently divergent after the
- * first edit to either side.
- *
- * The comment that used to sit here said they were "reproduced from the pre-move
- * snapshot" and that a later phase would "decide whether it forwards". The
- * decision is made: `jp/data/jpSeats.ts` holds them, `constants/states.ts`
- * forwards, and this reads the same objects.
+ * Japan's chamber seat tables, imported from `jp/data/jpSeats.ts` so they stay
+ * the same objects as `constants/states.ts` rather than copied values that
+ * silently diverge.
  */
 
 /**

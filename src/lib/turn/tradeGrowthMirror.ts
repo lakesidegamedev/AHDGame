@@ -3,16 +3,13 @@
  *
  * The forex phase reads all macro indicators from centralBanks to avoid
  * multi-collection reads during rate computation. This mirror copies
- * FederalBudget.economicFactors.tradeGrowth -> CentralBank.tradeGrowth
- * once per turn during national aggregation (Group 12).
+ * FederalBudget.economicFactors.tradeGrowth -> CentralBank.tradeGrowth once per
+ * turn during national aggregation.
  *
- * **Currency (v0.2.6):** `tradeGrowth` is a percentage -- unit-agnostic -- so the
- * per-country mirror copies the value verbatim. Both sides of the copy live in
- * the same country's namespace (federal budget <-> central bank), so no FX
- * conversion is required even though the budget is denominated in country
- * currency.
- *
- * See docs/design/currency-exchange.md "CentralBank Schema Addition".
+ * `tradeGrowth` is a percentage (unit-agnostic), so the mirror copies the value
+ * verbatim. Both sides live in the same country's namespace (federal budget <->
+ * central bank), so no FX conversion is needed even though the budget is in
+ * country currency.
  */
 
 import type { Db } from "mongodb";

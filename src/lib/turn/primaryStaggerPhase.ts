@@ -1,17 +1,10 @@
 /**
- * Presidential primary stagger phase.
- *
- * During the final 6 turns of a presidential primary, states vote in waves
- * modeled on the real 2020 calendar (see `primaryCalendar.ts`). Each turn
- * inside the window unlocks one more wave, and missed turns catch up every
- * outstanding wave in-order on the next successful pass.
- *
- * For every party running in the primary, the wave's states accumulate
- * intra-party votes (filtered to that party's candidates), delegates are
- * allocated per the state party chair's choice (or family default), and
- * momentum fav bumps are applied to wave winners.
- *
- * Called from `primaryResolution.ts` before the existing primary-end check.
+ * Primary stagger phase: during the final 6 turns of a presidential primary,
+ * one wave of states unlocks per turn; missed turns catch up all outstanding
+ * waves in order on the next pass. Each party accumulates intra-party votes
+ * per wave, allocates delegates per the state chair, and applies momentum bumps
+ * to wave winners. Invoked from `primaryResolution.ts` before the primary-end
+ * check.
  */
 
 import { primaryWinMomentumFromTally } from "@/lib/elections/primaryRegional/rules";
@@ -119,20 +112,16 @@ function clampTo(value: number, lo: number, hi: number): number {
 }
 
 /**
- * Expectation-beating momentum, concept #2 (the vote-share carry).
+ * Vote-share momentum: a candidate that beats its projected national share in
+ * a wave accumulates decayed points that multiply its vote in LATER waves.
  *
- * Two distinct "momentum" ideas live in this file and must not be conflated:
- *   1. Favorability-bump momentum — the PRIMARY_MOMENTUM_WIN_BONUS /
- *      PRIMARY_MOMENTUM_UPSET_BONUS fav points applied to the wave winner's
- *      character/npp. Orthogonal, untouched by this subsystem.
- *   2. Vote-share momentum (this) — a candidate that beats its projected
- *      national share in a wave accumulates decayed points that multiply its
- *      vote in LATER waves.
+ * Distinct from favorability-bump momentum (PRIMARY_MOMENTUM_WIN_BONUS /
+ * PRIMARY_MOMENTUM_UPSET_BONUS), which applies fav points to the wave winner
+ * and is untouched by this subsystem. Do not conflate the two.
  *
- * `momentumMultiplier` maps a candidate's carried momentum points into a vote
- * multiplier for the current wave. At cap 0 (the ship value) it returns exactly
- * 1, so the vote path is byte-identical to the no-momentum engine until the cap
- * is calibrated at t384.
+ * `momentumMultiplier` maps carried momentum points into a vote multiplier for
+ * the current wave. At cap 0 it returns exactly 1, so the vote path is
+ * byte-identical to the no-momentum engine.
  */
 export function momentumMultiplier(priorPoints: number, cap: number): number {
   if (cap <= 0) return 1;
@@ -571,12 +560,10 @@ export async function runPrimaryStaggerWaveIfDue(
     Record<string, AllocationMethod>
   > = structuredCloneOr(tally.primaryAllocationByState ?? {});
 
-  // Vote-share momentum carried INTO this wave (accumulated from prior waves).
-  // Read-only here; the new accumulated value is computed after the wave votes.
+  // Vote-share momentum carried INTO this wave from prior waves.
+  // Read-only here; new accumulated value computed after the wave votes.
   // partyId -> candidateId -> points.
-  // Win momentum: states won in earlier waves boost a candidate's vote in this
-  // one (moderate, decayed, capped; see primaryRegional/rules.ts). Read from
-  // the tally before this wave's results are merged in.
+  // Win momentum from the tally before this wave's results merge in.
   const winMomentum = primaryWinMomentumFromTally(tally);
 
   const priorMomentum: Record<string, Record<string, number>> = momentumEnabled
@@ -825,11 +812,9 @@ export async function runPrimaryStaggerWaveIfDue(
         );
       }
 
-      // Rally support now counts in the primary too. Previously only the
-      // general election read supportMoodMultiplier (voteDistribution.ts), so a
-      // whole primary season of rallies / rally-tour moved zero votes. Mirror
-      // the general's mood application here: support 50 → 1.0×, ranging
-      // 0.6×–1.4× at the extremes. Undefined support degrades to 1.0×.
+      // Rally support applies in primaries too: mirror the general election's
+      // mood multiplier (support 50 maps to 1.0x, 0.6x to 1.4x at extremes).
+      // Undefined support degrades to 1.0x.
       for (const ec of partyCandidates) {
         const rawCandidate = candidates.find((c) => c._id.toString() === ec.candidateId);
         const mood = supportMoodMultiplier(rawCandidate?.support);

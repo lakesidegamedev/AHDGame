@@ -14,16 +14,11 @@ import {
 /**
  * Brazil's elections.
  *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
+ * SERVER ONLY. The spawners reach `getDb`.
  *
- * ⚠️ ONE CHAMBER TABLE, AND THE SENATE'S ABSENCE IS DELIBERATE. The
  * Chamber of Deputies has a denormalised table that must agree with
- * `brRegions[*].houseDistricts`; its 513 seats are the fixed constitutional
- * allocation and were checked against the sum. The Senate has no table at all --
- * its 81 seats are `brRegions[*].stateSenateSeats`, read from the live regions,
- * the same way East Germany's Volkskammer and Russia's Soviet of the Union work.
- * A denormalised copy here would be a second source for a number the regions
- * already carry.
+ * `brRegions[*].houseDistricts` (fixed at 513 seats). The Senate has none by
+ * design: its seats are `brRegions[*].stateSenateSeats`, read live.
  */
 /*
  * ⚠️ `currentTurn` IS THE IN-FLIGHT TURN AND MUST BE THREADED. The turn
@@ -44,11 +39,9 @@ const spawn = async (now: Date, currentTurn?: number): Promise<SpawnElectionsRes
 /**
  * The election phases, in the order `countryPhases.ts` declares them.
  *
- * ⚠️ `spawn` AND `electionPhases` ARE DIFFERENT LISTS AND THIS COUNTRY HAS
- * BOTH. `spawn` is the continuity check the perpetual-election registry runs;
- * these are the turn phases. They overlap but are not the same set -- the
- * folder previously carried only `spawn`, so anything reading the folder for a
- * country's phases got nothing. The harness compares this list against
+ * `spawn` and `electionPhases` are different lists and this country has both.
+ * `spawn` is the continuity check the perpetual-election registry runs; these
+ * are the turn phases. The harness compares this list against
  * `COUNTRY_ELECTION_PHASES` entry by entry, `fn` by reference.
  */
 const phases: CountryElectionPhaseEntry[] = [

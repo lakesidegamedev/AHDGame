@@ -1,23 +1,21 @@
 /**
- * UK Commons by-election watcher (epic #856, #860).
+ * UK Commons by-election watcher.
  *
- * Fills Commons seats that go vacant mid-term (death, retirement, resignation,
+ * Fills Commons seats vacated mid-term (death, retirement, resignation,
  * defection, recall) with an off-calendar `special_commons` race that contests
- * ONLY the vacated seat(s): the regional electorate scaled to
+ * ONLY the vacated seats: the regional electorate scaled to
  * vacatedSeats / totalRegionSeats (see `byElectionCarve.ts`).
  *
- * Runs AFTER `byElectionWatcher` so US/RU governor specials settle first;
- * both watchers read settled seat state. Like its governor sibling it is
- * suppressed during founding (every seat is being elected, so there are no
- * mid-term vacancies to backfill).
+ * Runs AFTER `byElectionWatcher` so US/RU governor specials settle first; both
+ * read settled seat state. Suppressed during founding, when every seat is being
+ * elected and there are no mid-term vacancies to backfill.
  *
- * Non-interference mirrors `byElections.ts`: `special_commons` lands in its
- * own group in `cleanupDuplicateElections`, is invisible to the perpetual
- * spawner (which keys off `commons`), seats winners as plain `commons`, and
- * resolves additively (sitting MPs keep their rows). A by-election only runs
- * when it resolves before the region's next general, and a snap dissolution
- * cancels any that are live, so a special never seats into a delegation a
- * general has already replaced.
+ * `special_commons` lands in its own group in `cleanupDuplicateElections`, is
+ * invisible to the perpetual spawner (which keys off `commons`), seats winners
+ * as plain `commons`, and resolves additively (sitting MPs keep their rows). A
+ * by-election only runs when it resolves before the region's next general, and a
+ * snap dissolution cancels any live one, so a special never seats into a
+ * delegation a general has already replaced.
  */
 
 import { ObjectId } from "mongodb";
@@ -80,7 +78,7 @@ export type CommonsByElectionGate =
  * - A live special is already filling the region's seats.
  * - A live general (regular or snap) suppresses only when it resolves before
  *   a by-election could. Regular races are `active` for their whole term, so
- *   counting any live general as cover blocked every by-election (#1379).
+ *   counting any live general as cover would block every by-election.
  * - After a finished special the region waits out the retry cooldown, so an
  *   uncontested vacancy does not respawn a race every turn.
  */

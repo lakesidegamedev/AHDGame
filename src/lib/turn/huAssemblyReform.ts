@@ -6,8 +6,7 @@ import { apportionSeats as apportionRegionSeats } from "@/lib/seeds/reference/ru
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 
-export const HU_REFORM_YEAR = 2014;
-export const HU_REFORM_SEATS = 199;
+const HU_REFORM_SEATS = 199;
 
 export function hu2014RegionSeats(regions: State[]): Record<string, number> {
   if (regions.length === 0 || regions.some((region) => !(region.population > 0))) {

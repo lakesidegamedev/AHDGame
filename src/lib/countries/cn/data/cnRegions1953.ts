@@ -1,20 +1,17 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE , DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's region data. All values are authored for 1953 directly.
  * Type-only imports are allowed.
  *
- * PRC macro-regions for the 1953-default preset (first Five-Year Plan begins;
- * 1953 census — first PRC census; Korean War armistice; Stalin dies).
+ * PRC macro-regions for the 1953-default preset.
  * The 7 game macro-regions are structurally stable; era-specific values are
- * 1953-census population (582M total), ~1953 regional GDP in **USD millions**
- * (USD-anchored like US/DE — refs #3498; ¥CNY 82B at official ~2.46 CNY/USD ≈
- * $33.3B), and an approximate seat distribution from the 1954 First NPC
- * (1,226 deputies).
+ * 1953-census population (582M total), ~1953 regional GDP in **USD millions**,
+ * and an approximate seat distribution from the 1954 First NPC (1,226 deputies).
  *
  * NOTE: Tibet (XZ) and Xinjiang (XJ) are included in the XN/XB macro-regions;
- * elections in 1953 China were a top-down process — NPC seats here model the
- * formal allocation, not competitive elections.
+ * 1953 China elections were top-down, so NPC seats model formal allocation, not
+ * competitive elections.
  */
 import type { State } from "@/lib/db/types";
 

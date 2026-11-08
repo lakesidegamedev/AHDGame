@@ -1,31 +1,17 @@
 /**
  * Opening the German Question.
  *
- * ADMIN-STARTED ONLY. Nothing in the turn loop opens a settlement crisis: an
- * operator decides when the question is asked, from the admin surface, and it
- * may be asked at any point in a world's life. There is no era window and no
- * re-open cooldown gating the start.
+ * ADMIN-STARTED ONLY: nothing in the turn loop opens this. Two preconditions:
  *
- * Two preconditions, both of which are about the world being in a state where
- * the question means anything:
+ * - no crisis is already live, since two would both tick; and
+ * - the two Germanies are still separate, checked against the country
+ *   registry rather than a flag so any reunification closes the door.
  *
- *   - no crisis is already live, because two would both tick; and
- *   - the two Germanies are still separate states, because a question about
- *     whether they should merge is meaningless once they have.
+ * A third refusal is safety: an un-actuated resolution is a pending merge, and
+ * opening on top would dissolve the challenger a tick later.
  *
- * The second is checked against the country registry rather than against a
- * flag, so a reunification that has already happened — by this crisis or by
- * anything else — closes the door on its own.
- *
- * A third refusal is a safety check rather than a rule: a resolution that has
- * not been actuated yet is a merge still pending, and opening on top of it
- * would produce a crisis whose challenger is dissolved a tick later. That is
- * the "still separate" condition being violated one turn in the future.
- *
- * Concurrency: two admins pressing at once both read "none live". The unique
- * partial index on `{ kind }` where `status: "open"` is the real guard; the read
- * below is the cheap path that gives a readable error instead of relying on a
- * caught duplicate key.
+ * Concurrency: the unique partial index on { kind } where status: "open" is
+ * the real guard; the read is the cheap path for a readable error.
  */
 import type { Db, Filter } from "mongodb";
 import { MongoServerError } from "mongodb";

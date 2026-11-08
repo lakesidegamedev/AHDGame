@@ -1,23 +1,6 @@
 /**
- * Japan's chamber seat tables: Shugiin and Sangiin seats per region, and the
- * governorships.
- *
- * \u26a0\ufe0f THESE HAD TWO DEFINITIONS AND NOTHING KEEPING THEM EQUAL. They were
- * declared in `constants/states.ts` and declared AGAIN, by value, inside
- * `jp/elections.ts`, whose own comment said they were "reproduced here from the
- * pre-move snapshot" and that a later phase would "decide whether it forwards".
- * That decision was never made. Measured, `===` said different objects and
- * `JSON.stringify` said equal values -- correct on the day it was written and
- * silently divergent after the first edit to either side, which is precisely the
- * failure country folders exist to end.
- *
- * It survived because the 41-forwarder identity harness only checks registries
- * with a `JP:` key, and these have none: `constants/states.ts` is keyed by
- * REGION, and the country lives in the symbol name. Four separate coverage rules
- * missed this file for the same reason.
- *
- * `constants/states.ts` now re-exports from here, so every consumer is
- * unchanged and there is one definition.
+ * Japan's chamber seat tables: Shugiin and Sangiin seats per region, plus governorships.
+ * Single definition: constants/states.ts re-exports from here.
  */
 
 /** Shugiin (House of Representatives) seat counts per region. Total = 465. */
@@ -63,13 +46,11 @@ export const JP_SANGIIN_SEATS: Record<string, number> = {
 export const TOTAL_JP_SANGIIN_SEATS = 248;
 
 /**
- * Shugiin seats per region — the 1986-94 medium-constituency system, in force
+ * Shugiin seats per region: the 1986-94 medium-constituency system, in force
  * for `1991-default`. Mirrors `jpRegions1991.houseDistricts` exactly.
  *
- * ⚠️ JAPAN HAD NO ERA SEAT MAPS AT ALL, and unlike the UK it had no selector
- * either. A 1991 world declared a 512-seat Shugiin, seated 512, and then
- * spawned and allocated its elections against the modern 465 — the same defect
- * ticket #1058 fixed for the 1953 Commons, two chambers over.
+ * ⚠️ Japan has no era seat maps and no selector, so a 1991 world would declare
+ * 512 Shugiin seats yet spawn and allocate elections against the modern 465.
  */
 export const JP_SHUGIIN_SEATS_1991: Record<string, number> = {
   HOK: 23,

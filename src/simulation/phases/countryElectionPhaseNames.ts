@@ -66,5 +66,3 @@ export const COUNTRY_ELECTION_PHASE_NAMES = [
   "atElections",
   "fiElections",
 ] as const;
-
-export type CountryElectionPhaseName = (typeof COUNTRY_ELECTION_PHASE_NAMES)[number];

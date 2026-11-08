@@ -7,11 +7,7 @@
  */
 
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  ReadinessResult,
-  WorldEconomicArchetype,
-  WorldSimulationTier,
-} from "./worldEntityManifest";
+import type { WorldEconomicArchetype, WorldSimulationTier } from "./worldEntityManifest";
 
 export const PRESET_1953 = "1953-default" as const;
 
@@ -84,13 +80,6 @@ export interface TierReclassificationRecord {
   appliedTier: WorldSimulationTier;
   reason: string;
   followUpIssues: string[];
-}
-
-export interface ManifestReadinessSnapshot {
-  autonomous: ReadinessResult;
-  player: ReadinessResult;
-  hardBlockers: string[];
-  flavorGaps: string[];
 }
 
 /**

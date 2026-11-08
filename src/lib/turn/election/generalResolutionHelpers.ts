@@ -296,7 +296,7 @@ export async function resolveElectionWithNoTally(
   }
   // An empty Commons by-election seats nobody: reopen its claimed vacancies
   // so the watcher retries after the cooldown instead of stranding the seats
-  // as `scheduled` behind a finished race (#860).
+  // as `scheduled` behind a finished race.
   if (isSpecialCommonsElection(election.electionType)) {
     await reopenCommonsVacanciesForRetry(db, election._id, now);
   }
@@ -423,8 +423,7 @@ export async function resolveElectionWithZeroVotes(
     }
   }
   // An empty Commons by-election seats nobody: reopen its claimed vacancies
-  // so the watcher retries after the cooldown instead of stranding the seats
-  // as `scheduled` behind a finished race (#860).
+  // so the watcher retries after cooldown instead of leaving them `scheduled`.
   if (isSpecialCommonsElection(election.electionType)) {
     await reopenCommonsVacanciesForRetry(db, election._id, now);
   }
@@ -548,8 +547,7 @@ export async function resolveElectionWithNoRankedCandidates(
     }
   }
   // An empty Commons by-election seats nobody: reopen its claimed vacancies
-  // so the watcher retries after the cooldown instead of stranding the seats
-  // as `scheduled` behind a finished race (#860).
+  // so the watcher retries after cooldown instead of leaving them `scheduled`.
   if (isSpecialCommonsElection(election.electionType)) {
     await reopenCommonsVacanciesForRetry(db, election._id, now);
   }

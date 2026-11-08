@@ -1,11 +1,10 @@
 /**
- * NPP caretaker-minister resignation shell (epic #856, ticket #859).
+ * NPP caretaker-minister resignation shell.
  *
- * The decision is pure (`./rules/nppResignation.ts`); this module loads the
- * seat, vacates it, and records the flat `ministerResigned` confidence hit —
+ * Decision logic is pure in `./rules/nppResignation.ts`; this module loads the
+ * seat, vacates it, and records the flat `ministerResigned` confidence hit:
  * heavier for a Great Office of State, matching the player-resignation flow.
- * UK-only, like every other confidence-gauge writer: the gauge persists on
- * the `ukGovernment` singleton and has no meaning elsewhere.
+ * UK-only: the confidence gauge persists on the `ukGovernment` singleton.
  */
 
 import type { Db, ObjectId } from "mongodb";

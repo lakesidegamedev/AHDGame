@@ -3,7 +3,6 @@
  */
 
 import type { ObjectId } from "mongodb";
-import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import type { NpcGovernmentType, NpcIdeology } from "./npcConstants";
 
 export interface NpcExecutiveProfile {
@@ -32,9 +31,4 @@ export interface NpcCountryState {
   turnsSinceLastDefault: number | null;
   /** Pre-computed: monetize unavailable when current inflation > 8% */
   inflationGateExceeded: boolean;
-}
-
-export interface NpcOptionScore {
-  option: SovereignResolutionChoice;
-  score: number;
 }

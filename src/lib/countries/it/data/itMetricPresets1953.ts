@@ -1,10 +1,10 @@
 /**
- * Italy 1953 metric overlays — USD-anchored medianIncome (refs #3498).
+ * Italy 1953 metric overlays: USD-anchored medianIncome.
  *
  * Modern `itStateMetrics` stores household income in lira millions; without an
  * era overlay those magnitudes leak into 1953-default. These overlays pin
- * medianIncome to ~$400–900 USD (Miracolo just starting; North richer than South),
- * matching the US/DE USD-anchored convention.
+ * medianIncome to ~$400-900 USD (North richer than South), matching the US/DE
+ * convention.
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 
@@ -33,13 +33,9 @@ const NATIONAL_1953: Record<string, number> = {
   "healthcare.nhsWaitingTime": 15, // weeks; fragmented mutue with a sharp north-south gap; the SSN is 25 years away
   "population.urbanizationRate": 42,
   "population.medianAge": 30,
-  // 0-100 fertility INDEX (population.birthRate; metricDefinitions
-  // `unit: "index"`), NOT a crude per-1000 rate. Real Italy 1953 TFR ≈2.3
-  // (ISTAT) — birthRateIndexToTFR(60, 2.06) = 2.06*(0.4+0.6*1.2) = 2.27. This
-  // field was previously ABSENT, so IT fell through seedCohortVectors'
-  // DEFAULT_BIRTH_RATE = 50 (TFR 2.06) — modestly understating the still-
-  // above-replacement early-1950s Italian fertility, before the Miracolo-era
-  // fertility decline of the 1960s-70s.
+  // 0-100 fertility INDEX (population.birthRate; `unit: "index"`), NOT a crude
+  // per-1000 rate. Real Italy 1953 TFR ≈2.3 (ISTAT); birthRateIndexToTFR(60, 2.06) = 2.27.
+  // Authored so the seed does not fall through to DEFAULT_BIRTH_RATE = 50 (TFR 2.06).
   "population.birthRate": 60,
 };
 

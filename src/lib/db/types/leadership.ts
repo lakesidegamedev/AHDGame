@@ -121,7 +121,7 @@ export interface CongressLeader extends IterationStampFields {
   updatedAt: Date;
 }
 
-export type NominationStatus = "open" | "voting" | "confirmed" | "failed" | "cancelled";
+type NominationStatus = "open" | "voting" | "confirmed" | "failed" | "cancelled";
 
 export interface SpeakerElection {
   _id: "current";
@@ -380,22 +380,6 @@ export interface SenateLeadershipNomination extends IterationStampFields {
   votesAgainst: number;
   votes: Record<string, "for" | "against">;
   whippedFromVote?: WhippedFromVoteMap;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-/** @deprecated Use SenateLeadershipNomination with role "pro_tempore" instead. */
-export interface ProTemporeNomination {
-  _id: ObjectId;
-  nomineeId: ObjectId;
-  nomineeName: string;
-  nomineeParty?: string;
-  nominatedById: ObjectId;
-  nominatedByName: string;
-  status: NominationStatus;
-  votesFor: number;
-  votesAgainst: number;
-  votes: Record<string, "for" | "against">;
   createdAt: Date;
   updatedAt: Date;
 }

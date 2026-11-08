@@ -427,11 +427,11 @@ export function PolicyEffectIndicators({
         </div>
       )}
 
-      {/* Archetype Approvals */}
+      {/* Voter group approvals */}
       {approvalEffects.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           <span className="text-body-sm font-medium text-muted w-full mb-0.5">
-            Archetype approvals
+            Voter group approvals
           </span>
           {approvalEffects.map(({ name, direction, isGood, isMajor }) => (
             <span

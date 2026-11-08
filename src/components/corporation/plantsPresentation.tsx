@@ -61,48 +61,6 @@ export function formatUnits(value: number | null | undefined): string {
 }
 
 /**
- * Fill-rate chip.
- *
- * Shows the exact percentage when the viewer has it (owner and insiders), and
- * the band word when they do not (rivals — the exact rate is attack-targeting
- * intel, see financialFogOfWar). Both render the same chip in the same colour,
- * so a rival can see the shape of the market without being handed the number.
- */
-export function FillChip({
-  fill,
-  band,
-  className = "",
-}: {
-  fill: number | null | undefined;
-  band: FillRateBand | null | undefined;
-  className?: string;
-}) {
-  if (band == null) {
-    return (
-      <span
-        className={`text-xs tabular-nums text-muted ${className}`.trim()}
-        title="This sector produced nothing last turn, so it has no fill rate."
-      >
-        n/a
-      </span>
-    );
-  }
-  const exact = fill != null && Number.isFinite(fill);
-  return (
-    <span
-      className={`font-mono text-[13px] font-medium tabular-nums ${FILL_BAND_TEXT[band]} ${className}`.trim()}
-      title={
-        exact
-          ? `${fillBandSentence(band)}. Fill rate is the share of what this sector produced that it actually sold.`
-          : `${fillBandSentence(band)}. You do not have access to this corporation's exact fill rate.`
-      }
-    >
-      {exact ? formatFillPercent(fill) : fillBandShort(band)}
-    </span>
-  );
-}
-
-/**
  * Below this share, a delivery-limited fraction is rounding and gets no
  * qualifier. One threshold so the row, the sector page and the tooltips all
  * start saying "freight" at the same point.
@@ -184,7 +142,7 @@ function formatPlantCount(plants: number): string {
  * and (for smooth orders) how many land each turn. `plantUnits` is the
  * sector's fixed plant size in capacity units.
  */
-export function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: number) {
+function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: number) {
   const size = Math.max(1, plantUnits);
   const ordered = queue.unitsOrdered / size;
   const remaining = queue.unitsRemaining / size;

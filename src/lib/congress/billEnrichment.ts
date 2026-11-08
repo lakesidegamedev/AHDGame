@@ -61,19 +61,6 @@ import {
 export type { NationalizationProvisionDetail };
 
 /**
- * One projected-effect chip on the bill detail page. `direction` is the way the
- * metric's VALUE moves when switching from the current law to the proposed one
- * (a delta, not the absolute push), and `isGood` is whether that movement is
- * beneficial given the metric's polarity. Computed via the shared
- * {@link pushesValueUp} helper so it stays consistent with the metric detail page.
- */
-export interface BillProvisionEffect {
-  metric: string;
-  direction: "up" | "down";
-  isGood: boolean;
-}
-
-/**
  * One resolved provision on the national bill page.
  *
  * Now an alias of the shared {@link ProvisionDisplay}: the national and regional

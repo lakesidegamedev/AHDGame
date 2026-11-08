@@ -24,18 +24,16 @@ export {
  */
 
 /**
- * Regional-presence gate for NPP candidate fielding (1953 sim forensics: NPP
- * entry had no regional-party gating, so SNP NPPs homed in London happily
- * contested English seats).
+ * Regional-presence gate for NPP candidate fielding.
  *
- * A party with NO statePartyOrg row in a region — or an explicit
- * `hasPresence: false` — has no local organisation there and must not field
+ * A party with NO statePartyOrg row in a region, or an explicit
+ * `hasPresence: false`, has no local organisation there and must not field
  * NEW candidates in that region. Entirely data-driven (statePartyOrg
  * presence), no hardcoded country tables.
  *
- * Deliberate exemptions:
+ * Exemptions:
  * - Regions with no statePartyOrg data at all (`stateHasOrgData === false`):
- *   unseeded worlds / countries without org rows keep the legacy behavior.
+ *   unseeded worlds keep the legacy behavior.
  * - Independents: they never have org rows by design.
  * - Incumbent defense is NOT routed through this gate (callers skip it): a
  *   sitting seat-holder may always appear in their own defense primary.

@@ -3,17 +3,10 @@
  *
  * Plain data in, plain data out: no clock, rng or ambient state.
  *
- * Founding used to pick a sector type and always build its "standard" recipe.
- * The sector-type shortage score read only the static SECTOR_SUPPLY outputs,
- * so goods made only by a non-standard recipe (fertilizers, pharmaceuticals)
- * could never draw a founding, and a new chemical plant added glutted
- * chemicals even while fertilizers sat at zero supply. A plant that wanted the
- * shortage recipe then had to wait for the retool pass and a 12-turn blend.
- *
- * Founding now scores every recipe the type can run, on the same price score
- * the retool pass uses, and builds the best one when it clearly beats the
- * standard recipe and makes a good that is actually short. Otherwise it stays
- * on standard.
+ * Founding scores every recipe the sector type can run, using the same price
+ * score the retool pass uses, and builds the best one when it clearly beats
+ * the standard recipe and makes a short good. Otherwise it stays on standard,
+ * so goods made only by a non-standard recipe can draw a founding.
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";

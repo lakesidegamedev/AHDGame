@@ -76,21 +76,17 @@ async function computePayoffIntent(
  * Apply the completion payoff exactly once per conference: favorability rows
  * for the ratified platform's salient groups (gated by UK_CONFERENCE_PAYOFF
  * until worldsim calibration) plus a PS credit clamped at the party's tier
- * cap. Claim + reconcile protocol:
+ * cap.
  *
- * 1. Claim: one guarded write fixes the payoff INTENT (cohesion grant from
- *    the claim-time party, approval groups from the ratified proposal) and
- *    marks the row claimed. Resumes replay the same intent, never a
- *    recomputation from drifted state.
- * 2. Approval rows reconcile via upserts keyed by
- *    (sourceConferenceId, groupId): replays converge, concurrent writers
- *    cannot duplicate.
- * 3. The cohesion credit lands in ONE conditional party write that sets the
- *    `lastConferencePayoffId` receipt atomically with the `$inc`: replays
- *    and concurrent callers match zero documents and cannot double-credit.
- * 4. Settle: a guarded write flips `payoffSettledTurn` only after every
- *    effect verifies durable. Returns applied:true solely to the settler,
- *    so turn telemetry counts each payoff once.
+ * - Claim: one guarded write fixes the payoff intent and marks the row
+ *   claimed. Replays reuse the intent, never recompute from drifted state.
+ * - Approval rows upsert on (sourceConferenceId, groupId): replays converge,
+ *   concurrent writers cannot duplicate.
+ * - Cohesion credit lands in one conditional write setting
+ *   `lastConferencePayoffId` atomically with `$inc`, so replays match zero
+ *   documents and cannot double-credit.
+ * - Settle: flips `payoffSettledTurn` only after every effect is durable;
+ *   returns applied:true solely to the settler.
  */
 export async function applyConferencePayoff(
   db: Db,

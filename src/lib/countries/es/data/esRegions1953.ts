@@ -1,19 +1,15 @@
 import type { State } from "@/lib/db/types";
 
-/**
- * Spain regions — 1953-era values (Francoist Spain).
+/*
+ * Spain regions, 1953 (Francoist Spain).
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Values authored for 1953 directly. Spain 1953: pop ≈ 28.2M (1950 census);
- * GDP ≈ 440B pesetas nominal. Franco's autarky regime; 1953 was the year of
- * the Concordat with the Vatican and the US Mutual Defense Assistance Pact.
- * The Cortes Franquistas (corporatist parliament) had no competitive elections.
+ * SEED INDEPENDENCE: values authored for 1953 directly, do not derive from another era.
  *
- * - `population` — 1950 census estimates.
- * - `gdp` — regional GDP in millions of pesetas (ESP).
- * - `houseDistricts` — Cortes Franquistas seats (nominal; sum ≈ 350 procuradores).
- * - `stateSenateSeats` — regime-era representation (notional).
- * - `votingSystem` — rcv (approximation; elections were not free).
+ * - `population`: 1950 census estimates.
+ * - `gdp`: regional GDP in millions of pesetas.
+ * - `houseDistricts`: Cortes Franquistas seats (nominal; sum ~350 procuradores).
+ * - `stateSenateSeats`: regime-era representation (notional).
+ * - `votingSystem`: rcv (approximation; elections were not free).
  */
 export const esRegions1953: State[] = [
   {

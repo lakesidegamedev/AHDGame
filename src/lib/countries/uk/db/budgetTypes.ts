@@ -1,14 +1,14 @@
 import type { ObjectId } from "mongodb";
 
 /**
- * UK annual Budget (epic #856, ticket #858, Cluster B).
+ * UK annual Budget.
  *
  * A dedicated Budget subsystem: the Chancellor authors an annual bundle of tax
  * levers + departmental spending allocations, tables it, and the Commons votes
  * it as a single confidence matter. Defeat fires the `budgetDefeat` confidence
  * event (the biggest single hit on the gauge).
  *
- * One document per fiscal year. See ops-knowledge `uk-rework-design-2026-08-25`.
+ * One document per fiscal year.
  */
 
 export type UKBudgetStatus =

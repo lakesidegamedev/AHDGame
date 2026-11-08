@@ -107,38 +107,36 @@ function capacityRescaleUpdate(
 }
 
 /**
- * Extraction auto strategy adoption ("C3", Phase 1a of the extraction-capacity
- * remediation). Capacity is enforced per state, and the shortage commodities
- * (copper/rare_earth/timber) have large idle headroom in states where broad-mix
- * ("standard") miners sit — they extract copper at rate 0.15 instead of the
- * focused 0.72. This phase nudges NPP-owned standard extraction sectors that
- * sit on a shortage deposit *with per-state headroom* onto the matching focused
- * mining strategy, gradually, so real utilization rises and the capacity haircut
- * recedes at its source (rather than being masked by the Phase-0 floor).
+ * Extraction auto strategy adoption. Capacity is enforced per state, and the
+ * shortage commodities (copper/rare_earth/timber) have large idle headroom in
+ * states where broad-mix ("standard") miners sit: they extract copper at rate
+ * 0.15 instead of the focused 0.72. Pass 1 nudges NPP-owned standard extraction
+ * sectors that sit on a shortage deposit with per-state headroom onto the
+ * matching focused mining strategy, gradually, so real utilization rises and the
+ * capacity haircut recedes at its source rather than being masked by the floor.
  *
  * Self-limiting: only global-shortage resources (S/D < SHORTAGE_SD) are targeted
  * and only states with headroom (stateSupply < capacity) are eligible, both read
- * fresh each run — so as conversions lift supply the resource stops qualifying,
+ * fresh each run, so as conversions lift supply the resource stops qualifying,
  * which doubles as a glut guard. Gated on gameState.extractionAutoStrategyEnabled.
  *
- * Pass 2 (t899 misallocation remediation): NPP-run miners are additionally
- * re-scored every run by normalized expected contribution: damped output prices,
- * deposit headroom, lagged aggregate sellability and input availability, with
- * variable input bills in plants mode. Below clearing, prices are global; at
- * clearing and above, reachable prices fall back to global prices.
- * Off retains the legacy raw-price score. A meaningfully better recipe can move
- * a miner out of an unsupported deposit. Player-CEO sectors are never touched
- * by either retool pass. Same flag/cadence as pass 1.
+ * Pass 2: NPP-run miners are additionally re-scored every run by normalized
+ * expected contribution: damped output prices, deposit headroom, lagged aggregate
+ * sellability and input availability, with variable input bills in plants mode.
+ * Below clearing, prices are global; at clearing and above, reachable prices fall
+ * back to global prices. Off retains the legacy raw-price score. A meaningfully
+ * better recipe can move a miner out of an unsupported deposit. Player-CEO
+ * sectors are never touched by either retool pass. Same flag and cadence as pass 1.
  *
- * Pass 3 places a new NPP extraction corporation through the shared founding
- * core when a genuine global shortage has idle state deposit capacity and the
- * state has no extraction sector that can be re-pointed. Placement has its own
- * cap, separate from retools, because each placement creates a corporation.
+ * Pass 3 places a new NPP extraction corporation through the shared founding core
+ * when a genuine global shortage has idle state deposit capacity and the state has
+ * no extraction sector that can be re-pointed. Placement has its own cap, separate
+ * from retools, because each placement creates a corporation.
  *
- * There is no generic (non-extraction) pass here. That used to start a
- * transition + 24-turn cooldown on global prices before `nppCorporationBehavior`
- * section 2e could re-score the same sector on reachable prices. Generic
- * retools belong to 2e.
+ * There is no generic (non-extraction) pass here: a generic retool would start a
+ * transition and 24-turn cooldown on global prices before
+ * `nppCorporationBehavior` section 2e re-scores the same sector on reachable
+ * prices. Generic retools belong to 2e.
  */
 export const EXTRACTION_AUTO_STRATEGY_CADENCE_TURNS = 1;
 // Seven direct shortage retools plus the existing three expected-revenue

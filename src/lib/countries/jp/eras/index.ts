@@ -10,18 +10,10 @@ import { JP_2023 } from "./2023";
 import { JP_2027 } from "./2027";
 
 /**
- * Japan's per-era overrides, one per shipping preset.
- *
- * ⚠️ EVERY preset in `SHIPPING_PRESETS` gets a file -- eight since upstream's
- * 2027 preset (#1687) merged in. An earlier revision listed five and dropped
- * 1999 and 2007, for which Japan carries real region, census and demographic
- * data. `contract.test.ts` asserts the count against `SHIPPING_PRESETS` rather
- * than a literal, so the next preset fails loudly here instead of silently
- * leaving Japan without an era.
- *
- * ⚠️ Japan has TWO config overrides, 1953 and 1991, and 1953 carries a full
- * 466/248 legislature. A table naming only 1991 loses it silently, which is why
- * eraConfigOverrides.test.ts now pins both.
+ * Every preset in SHIPPING_PRESETS needs an era override here;
+ * contract.test.ts asserts the count so a new preset fails loudly.
+ * Japan also has TWO config overrides (1953 and 1991): 1953 carries a full
+ * 466/248 legislature, so both must be pinned by eraConfigOverrides.test.ts.
  */
 export const JP_ERAS: Record<ShippingPreset, CountryEraOverride> = {
   "1953-default": JP_1953,

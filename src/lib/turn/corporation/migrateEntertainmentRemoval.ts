@@ -1,13 +1,12 @@
 /**
- * One-time data migration for the removal of the entertainment commodity
- * (2026-10-19). Runs at the start of the corporation turn, before lookups load
- * sectors, so the first turn on the new recipes also runs on rescaled stock.
+ * One-time data migration for the removal of the entertainment commodity.
+ * Runs at the start of the corporation turn, before lookups load sectors, so
+ * the first turn on the new recipes also runs on rescaled stock.
  *
- * 1. Rescales owned units on every sector whose mix carried entertainment
- *    (entertainmentRemovalRescale.ts), moving the same fields a strategy
- *    switch moves: capital stock, plant ledger, build queue and the per-unit
- *    opex anchor. Each sector update is stamped, so a crash part-way through
- *    never applies the ratio twice.
+ * 1. Rescales owned units on every sector whose mix carried entertainment,
+ *    moving the same fields a strategy switch moves: capital stock, plant
+ *    ledger, build queue and the per-unit opex anchor. Each sector update is
+ *    stamped, so a crash part-way through never applies the ratio twice.
  * 2. Clears the commodity's keys from sector telemetry maps and macro
  *    contributions.
  * 3. Archives, then deletes, documents keyed by the commodity (prices,

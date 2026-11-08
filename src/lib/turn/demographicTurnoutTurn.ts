@@ -285,20 +285,12 @@ function calculatePartyRevenueFromContext(
 }
 
 /**
- * Process party GOTV spending for all active party budgets.
- * Boosts demographics within 2 points of party position.
+ * Process party GOTV spending and boost demographics within 2 points of the
+ * party position.
  *
- * gotvBudgetPercent (0-25) is the percentage of hourly revenue allocated to GOTV.
- * The actual dollar amount spent each turn is computed from this percentage.
- *
- * @param budgets - Optional array of budgets for testing. If not provided, fetches active budgets from DB.
- * @param turnoutData - Optional array of turnout data for testing. If not provided, fetches from DB.
- * @param partyPosition - Optional party position for testing. If not provided, fetches from DB.
- * @param revenueOverride - Optional revenue for testing. If provided, skips DB revenue calculation.
- * @param preloadedStateMap - Optional pre-loaded state map to avoid duplicate DB query.
- * @param statePartyOrgOverrides - Optional state party orgs for testing (treasury source for state budgets). If not provided with `budgets`, state-scope treasury defaults to 0.
- * @param politicalPartyOverrides - Optional political parties for testing (treasury source for national budgets). If not provided with `budgets`, national-scope treasury defaults to 0.
- * @returns Updated turnout data and budgets
+ * `gotvBudgetPercent` (0-25) is the share of hourly revenue spent on GOTV.
+ * Optional params are for testing or to skip DB lookups; when `budgets` are
+ * passed without party overrides, the relevant treasury defaults to 0.
  */
 export async function processPartyGOTV(
   budgets?: PartyBudget[],

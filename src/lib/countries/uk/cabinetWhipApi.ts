@@ -108,7 +108,7 @@ async function resolveWhipTarget(
 }
 
 /**
- * Withdraw the whip (epic #856, ticket #859): PM-only party suspension.
+ * Withdraw the whip: PM-only party suspension.
  *
  * The MP keeps their seat but sits as an independent with elevated reselection
  * risk, and is barred from cabinet appointment until restored. The guarded

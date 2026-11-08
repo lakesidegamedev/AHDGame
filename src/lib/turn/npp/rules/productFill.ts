@@ -1,17 +1,10 @@
 /**
- * Per-product fill for the NPP reinvestment gate (gameConfig.nppGrowthPerProductFillStage).
+ * Per-product fill for the NPP reinvestment gate.
  *
- * The gate reads fill = sold / produced across the whole receipt. A plant with
- * co-products (defense: ordnance and chemicals; construction: services and
- * materials; logistics: freight and consulting) is held shut by whichever
- * product sells worst, and units handed to the company's own sites never count
- * as sold. A short product that sells out is then never allowed to grow.
- *
- * With the stage on, fill is the best sell-through of any product the sector
- * makes: (sold + own-site deliveries) over offered. Without product rows the
- * caller keeps the old reading.
- *
- * Pure: receipt rows in, a number out.
+ * Whole-receipt fill = sold / produced lets a co-product plant be held shut by
+ * its worst-selling product, and own-site deliveries never count. With the
+ * stage on, fill is the best (sold + internal deliveries) / offered of any
+ * product the sector makes; without product rows the caller keeps the old reading.
  */
 
 export interface ProductFillRow {

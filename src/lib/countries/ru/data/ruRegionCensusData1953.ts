@@ -1,30 +1,10 @@
-/**
- * USSR Region Census Profiles — Layer 1 demographic breakdown per region (1953).
+/*
+ * USSR region census profiles, 1953. Authored directly, not derived from
+ * another era. Each dimension sums to 100 (%).
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1953 directly. NOT imported/transformed from ruRegionCensusData.ts.
- *
- * Key 1953 anchors (vs 1979):
- * - Education: HIGHER primary_or_below, LOWER university — mass literacy campaign
- *   was recent; secondary schooling not yet universal in periphery. Completed
- *   higher education nationally was only a few percent by the 1959 census, so
- *   university shares here stay in the low-to-mid single digits outside the
- *   Moscow/Leningrad cores.
- * - Urbanization: LOWER urban, HIGHER rural — the 1926→1959 urbanization surge
- *   was still underway; Central Asia and Caucasus heavily rural. National
- *   urban ≈48% matches the 1959 census.
- * - Ethnicity: similar macro-groupings but Kazakhstan still Russian-plurality
- *   (post-Gulag deportation settlers + prewar colonization).
- * - Age: HIGHER young cohort — postwar baby boom + WWII deaths skewed population
- *   young. Senior share lower (high WWII casualties).
- * - Income: MORE compressed (planned economy, Stalinist wage levelling).
- *
- * Ukraine, Byelorussia and the Baltics used to be RU regions here under the
- * territorial-extent merge. They are separate game countries now (UKR/BLR/BAL)
- * and carry their own census bundles, so their rows have left this file.
- * Titular nationalities of the remaining republics map to the "other"
- * ethnicity bucket.
- * Each dimension sums to 100 (%).
+ * Ukraine, Byelorussia and the Baltics are separate countries now, so their
+ * rows are not here. Titular nationalities of remaining republics map to the
+ * "other" ethnicity bucket.
  */
 
 import type { SURegionLayer1 } from "@/lib/seeds/ru/ruRegionCensusData";

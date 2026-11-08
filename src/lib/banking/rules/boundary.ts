@@ -149,8 +149,6 @@ export type BankCommand =
       amount: number;
     };
 
-export type BankCommandType = BankCommand["type"];
-
 /**
  * Document ids inside a transition are written as `{ $oid: "<hex>" }`. The
  * rules zone cannot construct a driver ObjectId, and a transition has to be
@@ -205,7 +203,7 @@ export interface TransitionProjection {
   note: string;
 }
 
-export interface TransitionEvent {
+interface TransitionEvent {
   kind: BankingAuditEventKind;
   command: string;
   subjectType?: string;
@@ -231,7 +229,7 @@ export interface BankingTransition {
   event: TransitionEvent;
 }
 
-export type DecisionRefusal =
+type DecisionRefusal =
   | { code: "capability"; capability: CapabilityKey; denial: CapabilityDenial }
   | { code: "lifecycle"; stage: BankLifecycleStage; action: LifecycleAction }
   | { code: "invalid_amount" }

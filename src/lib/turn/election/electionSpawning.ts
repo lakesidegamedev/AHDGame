@@ -1,6 +1,5 @@
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { Election, GameState } from "@/lib/db/types";
-import { DE_WAHLKREIS_SEATS } from "@/lib/constants";
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import { getSeatIdFromElection } from "@/lib/seats";
@@ -11,7 +10,6 @@ import {
   type CycleAnchorContext,
 } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
-import { generateLandeslistenForCycle } from "@/lib/elections/germanyLandesliste";
 import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
 
 /**
@@ -39,31 +37,15 @@ async function getCurrentTurnAndCtx(
   };
 }
 
-/**
- * True while the pre-iteration founding phase is still running.
+/*
+ * True while the pre-iteration founding phase is running.
  *
- * These spawners are called from `generalResolution` the instant a race
- * resolves — they are NOT part of the `electionCoverageAndSuccession` battery
- * that `turnPhaseRegistry` suppresses during the founding phase. Without this
- * guard, the moment a founding race resolved, `pickNextCanonicalCycle` saw
- * `preIterationActive` still set and handed back ANOTHER cycle 0, so:
- *
- *   - `detectPreIterationComplete` (which ends the phase only when no
- *     active/upcoming cycle-0 race is left) never fired — the founding phase
- *     ran forever, the calendar stayed pinned to the era's starting year, and
- *     the historical stagger never re-emerged; and
- *   - every subsequent lower-chamber election was another 48-turn "founding"
- *     sprint instead of that body's real multi-year term.
- *
- * Measured on a 1953-default founding sim: at turn 49 the 603 founding races
- * resolved and immediately re-spawned 66 fresh cycle-0 races (US house ×48,
- * UK commons ×12, NG house ×6), leaving `preIteration.active` true at turn 50.
- *
- * Skipping the spawn here is correct rather than merely safe: the suppressed
- * `ensurePerpetualElections` battery spawns the real cycle 1 on the very next
- * turn, by which point `detectPreIterationComplete` has stamped
- * `preIterationTurns`, so the new cycle lands on its offset historical anchor.
- * Spawning here instead would anchor it against a not-yet-written offset.
+ * These spawners run from generalResolution when a race resolves and are not
+ * suppressed by turnPhaseRegistry during the founding phase. Without the
+ * guard, a resolving founding race would spawn another cycle 0, so the phase
+ * never ends and later races get founding-length terms instead of real ones.
+ * Skipping here is correct: the suppressed ensurePerpetualElections battery
+ * spawns the real next cycle on the following turn with the offset stamped.
  */
 function foundingPhaseActive(ctx: CycleAnchorContext): boolean {
   return ctx.preIterationActive === true;
@@ -127,10 +109,9 @@ export async function spawnHouseElection(db: Db, fromElection: Election, now: Da
       state: fromElection.state!,
     }),
     status,
-    // Live apportionment FIRST (#1190): inheriting the resolving race's count
-    // handed a delegation reapportioned by the census its stale size, and that
-    // number then propagated to every later cycle. `fromElection.totalSeats`
-    // stays the fallback for a state the seats map does not carry.
+    // Live apportionment FIRST: inheriting the resolving race's count would
+    // hand a reapportioned delegation its stale size and propagate it to later
+    // cycles. `fromElection.totalSeats` is the fallback for unmapped states.
     totalSeats: liveHouseSeats[fromElection.state!] || fromElection.totalSeats || 1,
     startTime,
     primaryEndTime,
@@ -242,80 +223,4 @@ export async function spawnCommonsElection(
   console.log(
     `[Turn] Commons election spawned for ${fromElection.state} cycle ${spawn.cycle} status=${status} — id ${inserted.insertedId}`
   );
-}
-
-/**
- * Spawn the next Bundestag election for a Bundesland on the canonical LARP
- * schedule. Called from `generalResolution` after a per-Land Bundestag cycle
- * resolves. Mirrors `spawnCommonsElection`: one multi-seat Election doc per
- * Land, with `totalSeats` set to the Land's Wahlkreise count. The AMS list-
- * tier reconciliation (germanyAMS.ts) runs once all 16 Land elections complete.
- */
-export async function spawnBundestagElection(
-  db: Db,
-  fromElection: Election,
-  now: Date
-): Promise<void> {
-  const existing = await db.collection<Election>("elections").findOne({
-    electionType: "bundestag",
-    state: fromElection.state,
-    status: { $in: ["active", "upcoming"] },
-  });
-  if (existing) return;
-
-  const { currentTurn, ctx } = await getCurrentTurnAndCtx(db);
-  // See foundingPhaseActive: the founding cycle re-spawn loop lives here.
-  if (foundingPhaseActive(ctx)) return;
-  const spawn = pickNextCanonicalCycle({
-    electionType: "bundestag",
-    prevCycle: fromElection.cycle ?? 0,
-    currentTurn,
-    ctx,
-  });
-  if (!spawn) {
-    console.warn(
-      `[spawnBundestagElection] no canonical cycle within gate for ${fromElection.state} after cycle ${fromElection.cycle}`
-    );
-    return;
-  }
-
-  const canonical = DEFAULT_DURATIONS.bundestag ?? DEFAULT_DURATIONS.commons;
-  const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-  const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-  const newElection: Omit<Election, "_id"> = {
-    countryId: "DE",
-    state: fromElection.state,
-    electionType: "bundestag",
-    cycle: spawn.cycle,
-    electionYear: electionToLarpYear("bundestag", spawn.cycle, undefined, undefined, ctx),
-    seatId: getSeatIdFromElection({
-      countryId: "DE",
-      electionType: "bundestag",
-      state: fromElection.state!,
-    }),
-    status: "active",
-    totalSeats: fromElection.totalSeats ?? DE_WAHLKREIS_SEATS[fromElection.state!] ?? 1,
-    startTime: now,
-    primaryEndTime,
-    endTime,
-    startTurn: currentTurn,
-    primaryEndTurn: spawn.primaryEndTurn,
-    endTurn: spawn.endTurn,
-    durationHours: canonical.durationHours,
-    primaryDurationHours: canonical.primaryDurationHours,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const inserted = await db
-    .collection<Election>("elections")
-    .insertOne(withCampaignRules(newElection) as Election);
-  console.log(
-    `[Turn] Bundestag election spawned for ${fromElection.state} cycle ${spawn.cycle} status=${newElection.status} - id ${inserted.insertedId}`
-  );
-
-  // Seed Landeslisten for the new cycle so chairs have an edit window before the
-  // AMS list tier consumes them. Idempotent + preserves existing chair edits.
-  await generateLandeslistenForCycle(db, spawn.cycle);
 }

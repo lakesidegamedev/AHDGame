@@ -42,10 +42,9 @@ export const INERTIA = 0.4;
  * into the policy delta permanently. Capping it lets natural decay actually
  * pull gdpGrowth back toward sector fundamentals.
  */
-// v0 balance fix (2026-06-30): 8 → 4. The policy-coexistence delta was a large
-// part of the structural demand–potential wedge (+5–13% sector signal vs ~1–2%
-// potential) that pinned the output gap. Halving the cap keeps the impulse closer
-// to cyclical. See docs/plans/2026-06-30-macro-balance-v0.md (#2).
+// Cap on the policy-coexistence delta. A larger cap made the structural
+// demand-potential wedge dominate the output gap; keep the impulse cyclical.
+// See docs/plans/2026-06-30-macro-balance-v0.md.
 export const MAX_POLICY_DELTA = 4;
 
 /**
@@ -139,14 +138,13 @@ export function computeWeightedGrowthRate(
 }
 
 /**
- * Σ owned-sector realized revenue in HOST-STATE currency (the unit
+ * Sum of owned-sector realized revenue in HOST-STATE currency (the unit
  * `CorporateSector.revenue` / `realizedRevenue` are stored in).
  *
  * The plants cyclical signal MUST compare this sum turn-to-turn, not the
- * ₳-normalized one. ₳ restatement uses each turn's FX, so a 0.2% GBP move
- * annualizes to ~10pp of phantom GDP growth — the UK "jig every turn"
- * (ticket #1084). Host/host cancels FX. Same per-sector realized-vs-nameplate
- * preference as {@link sumRealizedRevenue} under plants.
+ * ₳-normalized one: ₳ restatement uses each turn's FX, so small FX moves
+ * annualize to large phantom GDP growth. Host/host cancels FX. Same
+ * realized-vs-nameplate preference as {@link sumRealizedRevenue} under plants.
  */
 export function sumHostRealizedRevenue(
   sectors: Array<{ hostRevenue: number; hostRealizedRevenue?: number }>
@@ -174,30 +172,21 @@ export const SECTOR_SIGNAL_MIN = -10;
 export const SECTOR_SIGNAL_MAX = 15;
 
 /**
- * Plants mode (P2, decision D7) — the cyclical sector signal from REALIZED
- * revenue instead of the sector `currentGrowthRate` field.
- *
- * Under `marketSystemMode >= "plants"` revenue is derived from produced units
- * against plant capacity, so `currentGrowthRate` no longer drives revenue and is
- * vestigial: feeding it into the GDP demand impulse would read a number nothing
- * else respects. The honest replacement is the region's realized-revenue delta,
- * annualized:
+ * Plants mode: cyclical sector signal from realized revenue instead of the
+ * vestigial `currentGrowthRate` field, which no longer drives revenue when
+ * revenue comes from produced units vs plant capacity.
  *
  *   growth = (now / prev − 1) × 100 × (turnsPerYear / turnsSincePrev)
  *
- * Region level, not per sector: there is no per-sector previous-revenue snapshot
- * in the engine's pipeline, whereas the phase already persists per-region stocks
- * on the `states` doc (`outputGap`, `capitalStock`) — the region rollup rides
- * that same pattern and needs one number per region.
+ * Region level, not per sector: no per-sector prior-revenue snapshot exists,
+ * but the phase already persists per-region stocks on the `states` doc.
  *
- * The unowned mass does NOT enter this formula. Its old job was the 0.5 pin that
- * damped owned-sector swings in a weighted average; a realized-revenue delta is
- * already bounded here and smoothed by the node EMA downstream, so the pin would
- * only be a constant drag.
+ * The unowned 0.5 pin is omitted: realized-revenue delta is already bounded
+ * and EMA-smoothed downstream, so the pin would be a constant drag.
  *
  * Returns `null` when there is no usable baseline (flip turn, unseeded region,
- * zero/absent prior, non-positive turn gap) — the caller then falls back to the
- * legacy signal so the flip turn produces no artificial spike.
+ * zero/absent prior, non-positive turn gap) so the caller falls back without a
+ * flip-turn spike.
  */
 export function computeRealizedRevenueGrowthRate(
   realizedNow: number,
@@ -357,18 +346,16 @@ export function interpolateRevenueBaselineValue(bracket: RevenueBaselineBracket)
 
 /**
  * The baseline the trend measures against: the interpolated EMA level exactly
- * `REVENUE_TREND_TARGET_SPAN` turns back, linearly interpolated between the
- * two snapshots bracketing that target turn (span 48, so the annualizer is 1).
- * The interpolated value rolls continuously as the target turn advances one
- * turn at a time and meets each snapshot exactly as the target crosses it, so
- * baseline handoff carries no discontinuity.
+ * `REVENUE_TREND_TARGET_SPAN` turns back, linearly interpolated between the two
+ * snapshots bracketing that target turn. The interpolated value rolls
+ * continuously as the target advances and meets each snapshot exactly as the
+ * target crosses it, so baseline handoff has no discontinuity.
  *
- * Fallbacks, in order: an exact snapshot hit returns that snapshot; when the
- * target falls outside the log (shallow history above the minimum span, stale
- * snapshots, or a single point) the nearest snapshot at least
- * `REVENUE_TREND_MIN_SPAN` turns old is returned with its actual span, exactly
- * as before. Null while the log is too young — the caller falls back to the
- * one-turn signal.
+ * Fallbacks: an exact snapshot hit returns that snapshot; when the target is
+ * outside the log (shallow history, stale snapshots, or a single point), the
+ * nearest snapshot at least `REVENUE_TREND_MIN_SPAN` turns old is returned with
+ * its actual span. Null while the log is too young; the caller then falls back
+ * to the one-turn signal.
  */
 export function selectRevenueTrendBaseline(
   snapshots: RevenueSnapshot[] | undefined,
@@ -426,24 +413,21 @@ export function computeTrailingRevenueGrowthRate(
 /**
  * Σ owned-sector REALIZED revenue for a region (the plants-mode realized rollup).
  *
- * Prefers each sector's persisted `realizedRevenue` — what it actually earned
- * after every realization leg — falling back to nominal `revenue` for sectors
- * the turn processor has not written one for yet. Same basis as
- * `sectorEconomicRevenue` (src/lib/corporations/sectorRevenueBasis.ts).
+ * Uses each sector's persisted `realizedRevenue` (what it actually earned after
+ * every realization leg), falling back to nominal `revenue` where the turn
+ * processor has not written one yet. Same basis as `sectorEconomicRevenue`
+ * (src/lib/corporations/sectorRevenueBasis.ts).
  *
- * The distinction is load-bearing under plants: there `revenue` is the capacity
- * NAMEPLATE (capacity × mixPrice), and P2 capacity only depreciates. Summing
- * nameplate made both this rollup AND the baseline snapshot the phase persists
- * fall at the depreciation rate every turn, so the cyclical signal read a
- * permanent ~-2.4%/yr recession with no player cause. Both ends must use the
- * realized basis or the delta compares unlike quantities.
+ * Under plants, `revenue` is the capacity NAMEPLATE (capacity × mixPrice) and
+ * only depreciates, so summing it makes this rollup and the persisted baseline
+ * fall at the depreciation rate every turn and reads a permanent false
+ * recession. Both ends must use the realized basis or the delta compares
+ * unlike quantities.
  *
- * BELOW plants the realized basis must NOT be used. `realizedRevenue` is written
- * by the sector turn in EVERY mode, so preferring it unconditionally would shift
- * state GDP and the persisted `sectorRealizedRevenue` baseline from nameplate to
- * realized on every capital-mode and legacy-mode world. `plantsEnabled` is
- * therefore required, not optional: callers must thread the mode they already
- * resolved for the phase rather than defaulting it.
+ * Below plants the realized basis must NOT be used: `realizedRevenue` is written
+ * in every mode, so preferring it unconditionally would shift state GDP and the
+ * baseline from nameplate to realized. `plantsEnabled` is required, not
+ * optional: callers must thread the mode they already resolved.
  */
 export function sumRealizedRevenue(
   sectors: Array<{ revenue: number; realizedRevenue?: number }>,

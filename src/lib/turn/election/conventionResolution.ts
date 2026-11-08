@@ -1,22 +1,15 @@
 /**
- * Presidential nomination resolution (rework, Part A).
+ * Resolves a presidential nomination deterministically, no RNG. Tiebreaks:
+ * delegates, then national primary votes, then candidate id.
  *
- * Replaces the silent plurality pick for a delegate race with an explicit,
- * deterministic result:
+ * With conventions enabled: if a candidate holds a majority of pledged
+ * delegates they win the first ballot; otherwise run multi-ballot elimination,
+ * dropping the lowest candidate each ballot and redistributing their delegates
+ * to survivors by ideological/coalition affinity plus an endorsement bonus,
+ * until a survivor holds a majority.
  *
- *   * delegate_majority — a candidate already holds a majority of the family's
- *     pledged delegates; they are nominated on the first ballot.
- *   * convention — no first-ballot majority and the ruleset enables conventions:
- *     run multi-ballot elimination. Each ballot the field's lowest candidate is
- *     dropped and their delegates are released to the survivors, weighted by
- *     ideological/coalition AFFINITY (shared with the suspend-transfer model) plus
- *     a bonus toward any survivor the dropped candidate actively endorsed. Ballots
- *     repeat until a survivor holds a majority of the remaining delegates.
- *
- * Fully deterministic: every tiebreak is delegates, then national primary votes,
- * then candidate id. No RNG. When conventions are disabled the function returns
- * null for a no-majority race so the caller keeps today's plurality fallback
- * exactly (v1/v2 behavior).
+ * With conventions disabled: returns null for a no-majority race so the caller
+ * uses the plurality fallback.
  */
 
 import { getDelegateMajority, type PrimaryCalendarFamily } from "@/lib/constants/primaryCalendar";

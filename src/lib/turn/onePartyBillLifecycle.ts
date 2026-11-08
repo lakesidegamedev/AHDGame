@@ -1,19 +1,13 @@
-/**
+/*
  * One-Party State Bill Lifecycle Processor
  *
- * Called once per turn. Iterates every country with
- * `governmentType: "onePartyState"` and handles expired bill votes.
- * One-party states are unicameral by default (CN) — bills originate and
- * pass in the lower chamber only, with no assent delay. Bicameral one-party
- * configs (RU: `legislature.bicameral` + `upperElectionSystem`) run the JP
- * crossover instead (D8/D9): a bill must clear BOTH chambers, each by the
- * cast-votes majority rule; a second-chamber rejection kills the bill (no
- * override chamber in a one-party state).
+ * Runs once per turn over every `governmentType: "onePartyState"` country.
+ * Default is unicameral (CN): bills pass in the lower chamber only, no assent delay.
+ * Bicameral configs (RU) require BOTH chambers to pass; a second-chamber
+ * rejection kills the bill (no override).
  *
- * Also drives the per-turn ruling-party confidence drift: any bills
- * enacted this turn become policy-alignment inputs, and any unprocessed
- * purge events recorded against the country are folded in and marked
- * processed once consumed.
+ * Also folds enacted bills into policy-alignment inputs and consumes pending
+ * purge events.
  */
 import { governmentLeaderReference, leaderStateId } from "@/lib/government/leaderReference";
 
@@ -290,9 +284,8 @@ async function processCountryBills(
     );
   }
 
-  // Resolve this country's expired lower-chamber bills through the unified engine
-  // (single vote → immediate enact; votes scoped + snapshotted, #0836/#0982). The
-  // engine returns the enacted categories the regime drifts below consume.
+  // Resolve expired lower-chamber bills via the unified engine and
+  // return enacted categories for regime drift.
   const engineResult = await runBillLifecycle(
     db,
     buildOnePartyBillConfig(config, preset),

@@ -1,18 +1,13 @@
 /**
  * Japan's domain affinities, in the Layer-1 census-bucket vocabulary.
  *
- * Moved out of `src/lib/bucketAffinities.ts`, which now forwards to this. The
- * values are unchanged: they were produced by running Japan's authored
- * archetype table through `archetypeValuesToBuckets`, the exact projection the
- * vote engine applied at read time, so they are behaviour-identical to the
- * archetype tables they replaced by construction.
+ * These are the output of running Japan's archetype table through
+ * `archetypeValuesToBuckets`, the same projection the vote engine applies at
+ * read time, so they are behaviour-identical to the archetype tables.
  *
- * ⚠ THE REGISTRY TYPE CANNOT CATCH A MISTAKE HERE.
- * `DOMAIN_BUCKET_AFFINITIES` is `Record<string, Record<string, Record<string,
- * number>>>` -- every key is `string`, so a misspelled domain or bucket is not a
- * type error. It projects onto nothing and the bill lands with no approval
- * effect, silently. That is the failure the bucket vocabulary was introduced to
- * remove, and it returns the moment a key is typed by hand.
+ * The registry type cannot catch a mistake here: keys are plain strings, so a
+ * misspelled domain or bucket is not a type error. It projects onto nothing
+ * and the bill lands with no approval effect, silently.
  *
  * Read with `bucketAffinitiesFor("JP", domain)`, never by indexing directly:
  * the accessor is what applies the per-domain fallback.

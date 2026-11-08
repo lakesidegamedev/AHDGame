@@ -84,19 +84,14 @@ export async function applyResolutionEffect(
   currentTurn: number,
   expiresTurn?: number,
   /**
-   * The roster that can be ASKED TO LEGISLATE about this resolution: for
+   * The roster that can be asked to legislate on this resolution: for
    * `join_conflict`, the legislating roll (player-enabled members plus, in
    * active mode, modelled members with a formed NPP government).
    *
-   * Separate from `members`, which is every modelled member: an effect that binds
-   * a country (sanctions, aid) is not the same set as one that asks a country to
-   * legislate. `join_conflict` needs the wider player + NPP legislating roll;
-   * `declare_war` receives the player ballot and classifies NPP members itself.
-   *
-   * It is also NOT the ballot. An NPP-governed member holds no vote on an entry
-   * resolution — a silence under unanimity is a veto — and is still handed the
-   * war the bloc voted for. Callers for other resolution types pass the ballot,
-   * which for those coincides with this roll.
+   * Distinct from `members` and from the ballot: `join_conflict` needs the wider
+   * player + NPP roll, `declare_war` receives the player ballot and classifies
+   * NPP members itself, and an NPP-governed member is handed the war under
+   * unanimity without voting.
    */
   votingMemberIds: CountryId[] = [],
   foundingContext: Pick<OrgFoundingContext, "europeanIntegration"> = {},

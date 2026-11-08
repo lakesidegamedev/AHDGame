@@ -1,13 +1,11 @@
 /**
- * Per-region, per-era HAND-AUTHORED values for Brazil's new overhaul ROOT metrics.
+ * Per-region, per-era hand-authored values for Brazil's overhaul ROOT metrics.
  * Consumed via `getRegionMetricPresets` and overlaid by `seedBRStateMetrics` /
- * `seedBRBaselines` AFTER `applyEra1991Adjustments`. The preset is the SINGLE SOURCE OF
- * TRUTH for these metrics in both eras; `uniformMetricDefault` is a fallback only.
+ * `seedBRBaselines` AFTER `applyEra1991Adjustments`. The preset is the SINGLE
+ * SOURCE OF TRUTH in both eras; `uniformMetricDefault` is a fallback only.
  *
- * BOTH eras are authored (national baseline + per-region tilts), per the 2026-06-15 decision.
- * 2019 = post-Real-Plan Brazil; 1991 = the hyperinflation years (pre-Real-Plan 1994; Collor's
- * 1990-92 recession, asset freeze), a young post-dictatorship democracy (redemocratized 1985,
- * 1988 Constitution) with a still-closed import-substitution economy just beginning to open.
+ * 2019 = post-Real-Plan Brazil; 1991 = hyperinflation years, a young
+ * post-dictatorship democracy with a still-closed import-substitution economy.
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics BR authors). */

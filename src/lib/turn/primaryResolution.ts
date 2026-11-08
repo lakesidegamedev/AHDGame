@@ -305,11 +305,9 @@ export async function resolvePrimariesIfNeeded(
       db,
     });
 
-    // UK manifestos finalise at the primary→general transition (epic #856):
-    // lock each player party's complete draft, auto-generate + lock NPP
-    // manifestos. Only writes to the `manifestos` collection; the vote-share
-    // effect stays gated by UK_MANIFESTO_VOTE_EFFECT, so this is inert on the
-    // result until that flag is set.
+    // UK manifestos finalise at the primary to general transition: lock
+    // player party drafts and auto-generate NPP manifestos. Only writes to
+    // `manifestos`; vote-share effect gated by UK_MANIFESTO_VOTE_EFFECT.
     if (
       election.countryId === "UK" &&
       (election.electionType === "commons" || election.electionType === "snap_commons")
@@ -384,10 +382,9 @@ export async function resolvePrimariesIfNeeded(
 
       let scored: { candidateId: string; characterName: string; score: number }[];
 
-      // Vote fallback: stagger ran and recorded per-state votes but no delegates
-      // crossed zero yet (e.g. admin-forced resolution mid-stagger). Rank by the
-      // national sum of real per-state votes so the winner still matches the
-      // vote engine rather than the ideology score (#3022).
+      // Stagger may record per-state votes before any delegates cross zero.
+      // Rank by national sum of real votes so the winner matches the vote
+      // engine, not the ideology score.
       const partyStateVotes = usesLegacyPresidentialCampaign(election)
         ? presidentialTally?.primaryStateVotes?.[partyId]
         : undefined;

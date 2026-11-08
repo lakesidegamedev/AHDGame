@@ -30,17 +30,11 @@ import {
 /**
  * Ensure every JP region has an active or upcoming Shugiin election.
  *
- * Spawns anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. When the admin fast-forwards a regular
- * cycle via "Modify Timers", the next regular stays on calendar
- * (endTurn = anchors.jpShugiin + (N - 1) x dur.durationHours). A snap election
- * resets the term clock: the post-snap regular anchors to `snap.endTurn + 192`,
- * and later regulars keep counting from that shifted schedule until another
- * snap moves it. See `planNextLowerChamberCycle`.
- *
- * 24h-primary / 24h-general gate: if currentTurn has eaten too deep into the
- * next canonical window, the spawner walks forward to the following cycle
- * rather than producing a stub race.
+ * Spawns anchor to the canonical schedule via {@link pickNextCanonicalCycle}.
+ * A snap election resets the term clock; later regulars count from the
+ * shifted schedule until another snap moves it. See `planNextLowerChamberCycle`.
+ * If the current turn has eaten too deep into the next canonical window, the
+ * spawner walks forward to the following cycle rather than producing a stub race.
  */
 export async function ensureJPElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
@@ -258,26 +252,17 @@ export async function ensureJPElections(now: Date, inFlightTurn?: number): Promi
 
 /**
  * Ensure Sangiin elections exist for JP regions in BOTH classes.
- * Half of the active era's Sangiin seats (252 in 1991, otherwise 248) are
- * contested every 3 game years (144 turns) per class; each class runs on its
- * own 6-year (288-turn) cycle anchored to its real-world election date
- * (JP_SANGIIN_CYCLE1_END_TURN). Each class is processed independently.
  *
- * Spawned cycles anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. A new cycle's `endTime` is derived from the
- * real-world Sangiin election year, not from `now + 144h`. If the admin fast-
- * forwards a prior cycle, the next cycle is not pulled along with it — it
- * stays on the calendar. When the canonical next-cycle window is already past
- * (or would leave <24h primary / <24h general remaining from `currentTurn`),
- * the spawner skips forward to the following Sangiin half-election.
+ * Each class runs a 6-year (288-turn) cycle anchored to its real-world
+ * election date (JP_SANGIIN_CYCLE1_END_TURN); half of the era's seats
+ * (252 in 1991, else 248) are contested every 3 game years (144 turns).
  *
- * Status is set relative to the canonical startTurn:
- *   • startTurn > currentTurn → "upcoming" (startTime in the future)
- *   • startTurn ≤ currentTurn → "active"  (startTime anchored at startTurn,
- *     which may be in the past — primary/general windows still align to the
- *     canonical endTurn).
- *
- * `advanceElectionTimers` flips "upcoming" → "active" once startTime ≤ now.
+ * Spawned cycles anchor to the canonical schedule via
+ * {@link pickNextCanonicalCycle}, not now + 144h. If the canonical window
+ * is already past or leaves <24h primary / <24h general from currentTurn,
+ * the spawner skips to the next half-election. Status is "upcoming" when
+ * startTurn > currentTurn, else "active"; `advanceElectionTimers` flips
+ * upcoming to active once startTime <= now.
  */
 export async function ensureJPCouncillorElections(
   now: Date,
@@ -449,22 +434,13 @@ export async function ensureJPCouncillorElections(
 // ─── Japan: Regional Council (prefectural assembly) ──────────────────────────
 
 /**
- * Ensure every JP region has an active or upcoming regionalCouncil election.
+ * Mirrors the region's live Shugiin race (timestamps, cycle, electionYear)
+ * so both resolve together on a JP-correct calendar, bypassing the
+ * UK-anchored regionalCouncil branch in canonicalCycle.ts. Falls back to
+ * the Shugiin canonical schedule when no live race exists.
  *
- * Synchronized with the Shugiin cycle — the JP analogue of the UK pattern
- * (Regional Council tracks Commons). When a live Shugiin race exists for the
- * region, the regional council mirrors its timestamps, cycle, and electionYear
- * exactly so both resolve together on a JP-correct calendar. This sidesteps the
- * UK-anchored `regionalCouncil` branch in canonicalCycle.ts (which would put JP
- * councils on the UK GE calendar). When no live Shugiin exists to mirror, falls
- * back to the Shugiin canonical schedule.
- *
- * Ordering note: this runs concurrently with ensureJPElections (the country
- * election phases share a Promise.all), so a Shugiin race created on the same
- * turn may not be visible yet. That's fine — in steady state and on the
- * first-deploy heal a live Shugiin from prior turns is present (mirror path),
- * and at clean roll-over/bootstrap the fallback recomputes the identical
- * Shugiin canonical cycle, so both land on the same schedule either way.
+ * Runs concurrently with ensureJPElections, so a Shugiin created this turn
+ * may not be visible. Both paths converge on the same schedule, so that's fine.
  */
 export async function ensureJPRegionalCouncilElections(
   now: Date,

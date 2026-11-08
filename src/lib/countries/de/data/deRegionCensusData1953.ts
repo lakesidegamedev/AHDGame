@@ -1,26 +1,11 @@
 /**
- * Germany (FRG) Region Census Profiles — 1953 era.
- *
- * 1953-default companion to {@link deRegionCensusData} (the 2019 profiles).
- * Anchored on West German Volkszählung 1950 and 1961 microdata.
- *
- * Era anchors (Adenauer's FRG / post-currency-reform boom): the 1948 Deutsche
- * Mark reform had ended hyperinflation; the Wirtschaftswunder was just starting
- * (real GDP grew ~7-10% p.a. 1950–1957) but the average income was still low;
- * Gastarbeiter recruitment had NOT yet begun (first treaty with Italy was 1955)
- * so the foreign population was almost entirely Heimatvertriebene (expellees
- * from the east) and DP-camp survivors — counted here as "german" since they
- * were ethnically German or had been absorbed; education was recovering from
- * WWII disruptions — Volksschule + Lehre dominated, Abitur rare (~7%), and
- * university attainment in the adult stock was very low (~5-6%) due to lost
- * student cohorts 1940–1946. Age structure: the large 1930s cohorts (now
- * 20-25) enter the labour force; a large senior cohort from WWI survivors;
- * the 1945 birth cohort is just 8 — so "young" (18-29) is thinner than 1979.
- *
- * The game keeps a unified Land set; for 1953 all regions model FRG (West).
- * The divided Berlin is modelled as the West Berlin rump only.
- *
- * All values independently authored — NOT scaled from any other era's file.
+ * Germany (FRG) 1953 region census profiles.
+ * Anchored on 1950 and 1961 Volkszählung microdata. Post-currency-reform,
+ * pre-Gastarbeiter era: foreign population is mostly Heimatvertriebene and
+ * DPs counted as german; education skewed to Volksschule/Lehre (Abitur rare);
+ * age skewed older (WWII losses, large WWI senior cohort). All regions model
+ * West Germany; Berlin is the West rump. Values independently authored, NOT
+ * scaled from other eras.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

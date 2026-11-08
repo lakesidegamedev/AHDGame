@@ -1,37 +1,21 @@
 /**
- * Era Checkpoint Turn — applies each active `EraCheckpoint`'s pull to the
+ * Era Checkpoint Turn, applies each active `EraCheckpoint`'s pull to the
  * targeted states' Layer-1 census buckets (see
- * `src/lib/demographics/eraCheckpoints.ts` for the full design writeup).
+ * `src/lib/demographics/eraCheckpoints.ts`).
  *
- * Every checkpoint target is a (`dim`, `bucket`) pair, so one substrate moves
- * per lean target: `demographicDefaults.layer1PositionOverrides[dim][bucket]
- * .<axis>`, a durable per-census-bucket position delta. This is the ONLY
- * channel the granular vote path reads a checkpoint's pull through. See the
- * module doc on `src/lib/demographics/granularElectorate.ts` for why an
- * archetype-level `groups[id].<axis>` write is invisible to it.
+ * Every checkpoint target is a (`dim`, `bucket`) pair. Lean pulls go through
+ * `layer1PositionOverrides[dim][bucket].<axis>`; turnout pulls go through
+ * `layer1TurnoutOverrides[dim][bucket]` and are applied BEFORE cell
+ * derivation via `applyDurableBucketTurnoutShift`. These are the only
+ * channels the granular vote path reads, archetype-level writes are
+ * invisible to it.
  *
- * `axis: "turnout"` targets (the Voting Rights Act checkpoint's channel:
- * enfranchisement, not lean) move a parallel substrate:
- * `demographicDefaults.layer1TurnoutOverrides[dim][bucket]`, a durable
- * turnout-rate delta consumed by `granularElectorate.ts`'s
- * `buildUsTurnoutRates`/`applyTurnoutRateOverlay` BEFORE cell derivation —
- * routed through `applyDurableBucketTurnoutShift` rather than the lean
- * function, since turnout is a bounded 0-100 percentage, not a signed lean
- * axis (see those functions' doc comments in `durableRealignment.ts`).
+ * Counter-pressure still reads ARCHETYPES; bill shifts are projected onto
+ * buckets via `archetypeValuesToBuckets` before netting.
  *
- * Counter-pressure still reads legislation authored against ARCHETYPES: an
- * active bill's per-archetype shift is projected onto buckets through
- * `archetypeValuesToBuckets` before netting, so a player's legislation
- * contests a checkpoint with no new authoring convention needed.
- *
- * Ordering requirement: this MUST run strictly after `processAllStateDemographics`
- * (`src/lib/demographicEffects.ts`) within the same turn, never concurrently with
- * it: both write `demographicDefaults` for the same state, and running them in
- * the same `Promise.all` would race a lost update (the same class of bug
- * documented in `stateEffectsPhase.ts`'s S4 comment for
- * crisisTurn/ministerialOrders/policyEffects). `processEraCheckpointsTurn` reads
- * `demographicDefaults` fresh, so as long as it is awaited AFTER the
- * legislation/decay writer commits, there is no race.
+ * Ordering: MUST run strictly after `processAllStateDemographics` in the same
+ * turn, awaited, never in the same `Promise.all`, both write
+ * `demographicDefaults` for the same state and would race a lost update.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -96,8 +80,8 @@ async function resolveActiveCheckpoints(
 
   // Everything below is in CALENDAR space: `resolveCheckpointStartTurn` maps a
   // trigger case's raw `decidedAtTurn` through the same clock, and every
-  // `fallbackStartTurn` is authored as `yearToTurn(...)`, already a calendar
-  // turn. `durationTurns` is a span, identical in either space (#1208).
+  // `fallbackStartTurn` is authored via `yearToTurn(...)`. `durationTurns` is
+  // a span, identical in either space.
   const calTurn = calendarTurn(currentTurn, clock);
   return checkpoints
     .map((checkpoint) => ({

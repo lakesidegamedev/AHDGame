@@ -1,20 +1,19 @@
 /**
- * SCOTUS Tenure Turn (#3598).
+ * SCOTUS Tenure Turn.
  *
  * Two independent clocks, one per seat state:
  *
  *  - Original Roster seats (`isDivergent === false`): the justice seated at
- *    the preset's start leaves on their authored historical date. That opens
- *    a real vacancy for the in-game President and Senate. Later historical
+ *    the preset's start leaves on their authored historical date, opening a
+ *    real vacancy for the in-game President and Senate. Later historical
  *    occupants are reference data only; the game must never appoint them
- *    automatically over the players' constitutional choice (ticket #1289).
+ *    automatically over the players' constitutional choice.
  *
  *  - Divergent seats (`isDivergent === true`): flat per-turn hazard clock
  *    (`rollDivergentDeparture`), age-agnostic, uncapped on the high end.
  *    Applies to player-held seats as well as generated NPPs; otherwise a
- *    confirmed player stays on the Court forever (ticket #1135). The
- *    occupant and president are notified when the seat opens, and the UI
- *    shows the death chance while they sit.
+ *    confirmed player stays on the Court forever. The occupant and president
+ *    are notified when the seat opens, and the UI shows the death chance.
  */
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -170,10 +169,10 @@ export async function processScotusTenureTurn(
   const gameState = await getGameState();
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
-  // Scripted departures are CALENDAR dates, so they resolve against the calendar
-  // turn — a founding phase shifts the raw turn a full game year ahead of the
-  // year the player sees (#1208). The divergent-seat hazard below stays on the
-  // raw turn: it measures turns SERVED, a duration, not a date.
+  // Scripted departures are CALENDAR dates, so they resolve against the
+  // calendar turn: a founding phase shifts raw turns ahead of the year the
+  // player sees. The divergent-seat hazard below stays on the raw turn,
+  // since it measures turns SERVED, not a date.
   const calTurn = calendarTurn(currentTurn, {
     preIterationActive: gameState?.preIteration?.active,
     preIterationTurns: gameState?.preIterationTurns,

@@ -121,14 +121,12 @@ function treasuryBudgetProjection(
 }
 
 /**
- * Per-turn fiscal accrual (spec §4). For each country's federalBudget, move a
- * 1/TURNS_PER_YEAR slice of the current primary balance (revenue minus spending
- * excluding debt interest) into the signed treasuryBalance, then deduct live
- * debt-service on the bond-owned principal stock. This phase owns treasury cash
- * only: `debt.principal` belongs to the bond ledger (see
- * bonds/sovereignPrincipal.ts) and is never re-derived from the balance here
- * (#1975). Replaces the annual deficit jump that
- * processFiscalYear/processAnnualDebt used to apply.
+ * Per-turn fiscal accrual. For each country's federalBudget, move a
+ * 1/TURNS_PER_YEAR slice of the primary balance (revenue minus spending
+ * excluding debt interest) into treasuryBalance, then deduct live debt-service
+ * on the bond-owned principal stock. treasuryBalance only; `debt.principal`
+ * belongs to the bond ledger (bonds/sovereignPrincipal.ts) and is never
+ * re-derived here.
  */
 export async function processTreasuryTurn(_turn: number): Promise<{ countriesProcessed: number }> {
   const db = await getDb();
@@ -209,9 +207,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // is answered by the coupon prefetch below, in the same grouping that already
   // reads the queue, instead of a separate distinct over the whole collection.
   const liveCountries = await getRegisteredCountryIdSet(db);
-  // Read once for every flag posture: the coupon book prices debt service on
-  // the stock (issue #2089) even when bank/treasury cash ledgers are off.
-  // Holder arrays are only needed by the funded coupon paths.
+  // Read once for all flag postures: coupon book prices debt service on the stock even when cash ledgers are off. Holder arrays are only needed by funded coupon paths.
   const holderPathsEnabled = bankTreasury || treasuryCashLedgerEnabled;
   const sovereignBonds = await db
     .collection<Bond>("bonds")

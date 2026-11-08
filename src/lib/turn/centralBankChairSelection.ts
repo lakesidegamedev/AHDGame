@@ -1,22 +1,12 @@
 import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 /**
- * Central Bank Chair Selection Phase
- *
- * Runs each turn after centralBankChairTurn (infamy/bonuses).
- * When a chair's term expires, selects a new chair from the executive
- * nomination pool. The market/wealth pool (30% of picks used to be drawn from
- * the nation's richest players) was removed: a chair is someone the executive
- * put forward, not whoever the leaderboard says is rich this turn.
- *
- * The selected player must **accept** before the appointment is finalized.
- * Refusals re-run the weighted draw with decliners excluded; with no
- * candidates the seat may stay vacant (or an NPP technocrat is seated when
- * autonomy is on).
- *
- * Lobbying funds shift weights within the pool. `ChairSelectionPending.pool`
- * keeps its "economic" arm only so pending docs written before the removal
- * still resolve.
+ * Central Bank Chair Selection Phase: runs each turn after
+ * centralBankChairTurn. On term expiry, selects a chair from the executive
+ * nomination pool (never a wealth/market pool). The selected player must
+ * accept; refusals re-run the draw with decliners excluded. With no
+ * candidates the seat stays vacant, or an NPP technocrat is seated when
+ * autonomy is on. Lobbying shifts weights within the pool.
  */
 
 import { ObjectId } from "mongodb";
@@ -340,12 +330,9 @@ export async function processCentralBankChairSelection(
 
   const rng = makeSeededRng(`cbchair:${currentTurn}${CB_CHAIR_RNG_SALT}`);
 
-  // Registered countries only: a country dissolved by a merge keeps its central
-  // bank document, and this phase would otherwise go on running chair terms —
-  // opening selections, appointing NPP chairs, posting news — for a dead
-  // state's monetary authority.
-  // Full-simulation countries only: a background country (#5702) has no
-  // politicians, government or legislature for this phase to run.
+  // Registered, full-simulation countries only: a merged-away country keeps
+  // its central bank document, and a background country has no politicians,
+  // government or legislature for this phase to run.
   const registered = new Set(await getFullSimulationCountryIds(db));
 
   const processedBankIds = new Set<string>();

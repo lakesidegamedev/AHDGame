@@ -1,21 +1,11 @@
 /**
- * Central Bank Chair Turn Processing
+ * Central Bank Chair Turn Processing.
  *
- * Each turn:
- * 1. Compute chair infamy from inflation & GDP growth
- *    - High inflation → infamy up, low inflation → infamy down
- *    - Low growth → infamy up, high growth → infamy down
- *    - Natural 5% decay per turn (same as character infamy)
- *    - Positive effects (infamy reduction) are dampened at higher scrutiny:
- *      multiplier = max(0.1, 1 - chairInfamy/150)
- *    - Clamped to 0-100
+ * Chair infamy from inflation and GDP growth: high inflation or low growth raises it, low inflation or high growth lowers it, with natural 5% decay per turn (same as character infamy). Positive effects are dampened at higher scrutiny: multiplier = max(0.1, 1 - chairInfamy/150). Clamped 0-100.
  *
- * 2. Apply chair bonuses with infamy penalty
- *    - Base: +0.5 national influence per turn
- *    - If chairInfamy > 25: halve to +0.25 NPI, debit 1.5 actions
- *      (actionRefresh grants chairActionBonus = 3; net becomes 1.5)
+ * Chair bonus: +0.5 national influence per turn base; if chairInfamy > 25, halve to +0.25 NPI and debit 1.5 actions (actionRefresh grants chairActionBonus = 3, net 1.5).
  *
- * Runs after inflation recalc so inflation/GDP values are current.
+ * Runs after inflation recalc so inflation and GDP values are current.
  */
 
 import { aggregateEuroPolicyIndicators, euroPolicyBankId } from "@/lib/currency/euro/rules";

@@ -5,11 +5,9 @@ import type { Character, ElectedOfficial, StatePartyOrg, PartyBudget, NPP } from
  * Check if a party has presence in a state.
  * Presence = at least 1 player character OR 1 elected official OR 1 active NPP.
  *
- * An NPP private citizen (a non-player politician who is a party member homed in
- * the state but holds no office) counts as presence — without this, a state whose
- * only party affiliation is NPPs is wrongly treated as empty, blocking Build Org
- * for the national chair / vice-chair / campaigner. Officials are still checked
- * separately because an NPP can hold office in a state other than its home state.
+ * An NPP private citizen homed in the state counts, otherwise states with only
+ * NPP members block Build Org for chairs and campaigners. Officials are checked
+ * separately because an NPP can hold office outside its home state.
  *
  * @param db - Database connection
  * @param stateId - State to check

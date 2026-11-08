@@ -1,11 +1,10 @@
 /**
- * Read model for the UK Commons vacancy/recall status surface (ticket #860).
+ * Read model for the UK Commons vacancy/recall status surface.
  *
- * Loads the player-reachable slice in a fixed order with one query per
- * collection (no per-row reads): live vacancies, active recall petitions,
- * the `special_commons` races covering the vacancy states, their candidates,
- * and the viewer's own held Commons seat. Plain JSON-safe data out so both
- * the GET route and tests can consume it without touching BSON.
+ * Loads the player-reachable slice in a fixed order: live vacancies, active
+ * recall petitions, `special_commons` races covering vacancy states, their
+ * candidates, and the viewer's held Commons seat. Plain JSON-safe data out so
+ * the GET route and tests consume it without touching BSON.
  */
 
 import { ObjectId } from "mongodb";

@@ -311,29 +311,16 @@ const CAPITAL_1991: PositionsBlock = {
 };
 
 /**
- * 1991-era US state census profiles — independently authored, anchored to the
- * 1990 Census (not derived from the 2019 data in `stateCensusData.ts`).
+ * 1991-era US state census profiles, anchored to the 1990 Census.
  *
- * Used both for the region-page census display and for seed-time Layer-1
- * demographic generation under the `1991-default` preset.
+ * Used for the region-page census display and for seed-time Layer-1 demographic
+ * generation under the `1991-default` preset.
  *
- * Methodology: each state was hand-authored from 1990 Census tabulations and
- * period political history rather than scaled from 2019 values.
+ * SEED INDEPENDENCE: each state hand-authored from 1990 Census tabulations, not
+ * scaled from the 2019 data.
  *
- * National reference points (1990 Census):
- * - Race: non-Hispanic White ~76-80%, Black ~12%, Hispanic ~9%, Asian ~3%.
- * - Education: bachelor's degree or higher ~20% of adults (graduate ~7%).
- * - Median age ~32.8 — markedly younger than 2019; seniors a smaller share.
- * - Ideology coding reflects the immediate post-Cold-War moment: evangelical
- *   mobilization at high tide across the South (Moral Majority aftermath),
- *   Gulf War patriotism elevated, environmentalists a modest post-Earth-Day-
- *   1990 presence, progressives far smaller than 2019, Reagan-Democrat
- *   blue-collar identity strong in the industrial Midwest, California still
- *   purple-ish (it voted GOP in every presidential race 1968-1988), and the
- *   Deep South's partisan realignment still in progress (Democratic
- *   governors/legislatures atop culturally conservative electorates).
- * - Ideology values are independent group shares and do NOT sum to 100;
- *   the scale conventions match the 2019 file.
+ * Ideology values are independent group shares and do NOT sum to 100; scale
+ * conventions match the 2019 file.
  */
 export const stateCensusData1991: Record<string, Layer1Config> = {
   // ---- Northeast ----

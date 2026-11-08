@@ -22,20 +22,15 @@ export type PartialTxEntry = Omit<
 export const BOND_HISTORY_INTEREST_INDEX_KEY = { bondId: 1, totalInterestPaid: -1 } as const;
 
 /**
- * Largest `totalInterestPaid` recorded for each bond, the base each new
- * history row accumulates onto.
+ * Largest `totalInterestPaid` recorded for each bond, the base each new history
+ * row accumulates onto.
  *
- * bondHistory gains a row per live bond per turn, so a `$group`/`$max` over it
- * fetches every row the game has ever written for those bonds (about a million
- * documents by the time a world is a few hundred turns old). Sorting on
- * `{ bondId, totalInterestPaid: -1 }` and taking `$first` asks the same
- * question, and with that index Mongo answers it with a DISTINCT_SCAN that
- * reads one key per bond. `$sort` descending orders values the way `$max`
- * compares them (null and missing last), so the two return the same number.
- *
- * The index is hinted so the fast plan is never a planner guess. A world that
- * has not installed it yet rejects the hint with BadValue; that falls back to
- * the original `$max` pipeline, so the answer never depends on the index.
+ * A `$group`/`$max` over bondHistory scans every row ever written. Sorting on
+ * `{ bondId, totalInterestPaid: -1 }` and taking `$first` lets the hinted index
+ * answer with a DISTINCT_SCAN reading one key per bond; `$sort` descending
+ * treats null/missing the same as `$max` does. A world without the index rejects
+ * the hint with BadValue, falling back to the `$max` pipeline, so the answer is
+ * index-independent.
  */
 export async function loadPriorBondInterest(
   db: Db,

@@ -1,20 +1,18 @@
 /**
- * Finland (FI) Layer-1 demographic model — census-consuming. Mirrors the
+ * Finland (FI) Layer-1 demographic model, census-consuming. Mirrors the
  * TR/GR/AT models.
  *
- * economicLean: -5 (socialist/left) … +5 (market/right)
- * socialLean:   -5 (progressive/secular) … +5 (agrarian/traditional)
+ * economicLean: -5 (socialist/left) to +5 (market/right)
+ * socialLean:   -5 (progressive/secular) to +5 (agrarian/traditional)
  *
- * 1979 anchor: the late-Kekkonen multiparty field — a big SDP anchored in the
- * lähiö suburbs and industrial towns, the Centre holding the emptying
- * countryside, a rising urban Kokoomus kept from office by the eastern
- * relationship, and SKDL redoubts in the mill towns, the smallholder east and
- * Lapland.
+ * 1979 anchor: late-Kekkonen multiparty field. Big SDP in lähiö suburbs and
+ * industrial towns, Centre in the emptying countryside, rising urban Kokoomus
+ * kept from office by the eastern relationship, SKDL redoubts in mill towns,
+ * the smallholder east and Lapland.
  *
- * 1953 anchor: the postwar republic — an agrarian-dominated countryside
- * (Maalaisliitto), a divided working class split between SDP and SKDL, the
- * Swedish-speaking coasts liberal, and the resettled Karelian east radicalised
- * in both agrarian and communist directions.
+ * 1953 anchor: postwar republic. Agrarian-dominated countryside (Maalaisliitto),
+ * working class split between SDP and SKDL, Swedish-speaking coasts liberal,
+ * resettled Karelian east radicalised in both agrarian and communist directions.
  */
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";

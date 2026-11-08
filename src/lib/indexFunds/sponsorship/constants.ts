@@ -37,9 +37,6 @@ export const MIN_EXPENSE_RATIO_ANNUAL = 0.001;
  */
 export const FEE_SUSPENDED_BELOW_BACKING_RATIO = 0.9;
 
-/** Turns a wind-up may run before the remaining holdings are sold at any price. */
-export const WIND_DOWN_GRACE_TURNS = 24;
-
 /**
  * Per-turn expense fee in ₳. Annual ratio spread evenly across the game year.
  * Pure so the card and the engine cannot disagree about what a ratio costs.

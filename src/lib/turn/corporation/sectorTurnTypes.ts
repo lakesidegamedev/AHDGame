@@ -38,7 +38,7 @@ export interface SectorTurnEnv {
   fundedHeadcountBySectorId?: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
   /**
    * 2027 world only: per-state workers automation methods no longer employ.
-   * Its presence switches the automation crew factors on.
+   * Presence enables automation crew factors.
    */
   automationDisplacedByState?: Map<string, number>;
   pendingStrikeEvents: SectorCalculationsResult["strikeEvents"];

@@ -1,25 +1,17 @@
 /**
- * Per-turn recompute of `State.topSectorsCache` — the top-3 corporate
- * sectors by aggregate per-turn revenue for each state.
+ * Per-turn recompute of `State.topSectorsCache`: top-3 corporate sectors by
+ * aggregate per-turn revenue per state.
  *
- * Reads `corporateSectors` (state-scoped, see schema in `db/types/corporation.ts`),
- * groups by `(stateId, sectorType)`, sums `revenue`, sorts descending,
- * and writes the top `TOP_N` per state into `states.topSectorsCache`.
+ * Groups `corporateSectors` by `(stateId, sectorType)`, sums `revenue`,
+ * sorts descending, and writes the top `TOP_N` per state.
  *
- * Each cache entry is tagged with `specializationBonus`:
- *   - `"primary"` when the sector matches `State.sectorSpecializations.primary`
- *     (+10pp regional margin bonus the state grants this sector)
- *   - `"secondary"` when it matches `.secondary` (+5pp)
- *   - `null` otherwise
+ * Cache entries are tagged with `specializationBonus`: `"primary"` (+10pp
+ * regional margin) when the sector matches `sectorSpecializations.primary`,
+ * `"secondary"` (+5pp) for secondary, `null` otherwise.
  *
- * Called from `stateEffectsAndNationalAggregation` in
- * `turnPhaseRegistry.ts` so the State Overview tab's Economy card has
- * fresh data on every page load without paying an aggregation cost
- * on each request.
- *
- * Empty / no-activity states get an empty `sectors` array; the
- * Overview falls back to `sectorSpecializations.{primary, secondary}`
- * for display when the cache is empty.
+ * Called from `stateEffectsAndNationalAggregation` so the Overview Economy
+ * card has fresh data without per-request aggregation. Empty states get an
+ * empty `sectors` array and the UI falls back to `sectorSpecializations`.
  */
 
 import type { Db } from "mongodb";

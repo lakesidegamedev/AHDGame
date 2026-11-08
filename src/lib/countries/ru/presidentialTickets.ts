@@ -1,7 +1,7 @@
 /**
  * Russian direct candidates register a president and vice-president ticket.
- * prepareRussianPresidentialTickets preserves a chosen player running mate and
- * fills an unpaired ticket from a distinct same-party NPC before counting begins.
+ * A chosen player running mate is preserved; an unpaired ticket is filled
+ * from a distinct same-party NPC.
  */
 import { type Db, type ClientSession } from "mongodb";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";

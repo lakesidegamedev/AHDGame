@@ -371,11 +371,11 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
     // 1991 Soviet Congress of People's Deputies; gated to the Union constitution.
     { name: "ruUnionCongressElections", fn: ensureRUUnionCongressElections },
   ],
-  // DD Volkskammer + Land assemblies + Land First Secretaries — status-gated
-  // + era-gated (null anchor outside 1953/1979) like RU; per-game
-  // countryGameStates enablement (1953/1979 PLAYER) activates them. Land
-  // assemblies must spawn before governors so the First Secretary queue has
-  // legislature NPPs to sponsor through (ticket #1044).
+  // DD Volkskammer + Land assemblies + Land First Secretaries: status-gated,
+  // era-gated (null anchor outside 1953/1979) like RU, per-game countryGameStates
+  // enablement (1953/1979 PLAYER) activates them. Land assemblies must spawn
+  // before governors so the First Secretary queue has legislature NPPs to
+  // sponsor through.
   DD: [
     { name: "ddVolkskammerElections", fn: ensureDDVolkskammerElections },
     { name: "ddLandAssemblyElections", fn: ensureDDLandAssemblyElections },
@@ -421,17 +421,11 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
     { name: "walGovernorElections", fn: ensureWALGovernorElections },
     { name: "walRegionalCouncilElections", fn: ensureWALRegionalCouncilElections },
   ],
-  // Beta parliamentary countries (#3239) — no-ops while `coming-soon` (gated
-  // on runtime country status inside each ensure fn, like NG); flipping the
-  // status to beta/active activates the lower-chamber cycle. ES additionally
-  // era-gates: 1953-default spawns nothing (Franco dictatorship).
-  // Upper chambers (Senates, #3791): sibling phases to the lower-chamber
-  // spawner above, sourced from `state.stateSenateSeats` instead of
-  // `houseDistricts`. See `ensureBetaSenateElections` in perpetualElections.ts
-  // for the per-country simplification notes (FR full-chamber 9y renewal, IT
-  // concurrent-with-Camera, ES concurrent-with-Congreso + era-gated, TR
-  // 1953-default-only 6y full-chamber renewal). SE has no elected upper
-  // chamber (unicameral since 1970) — no senate phase.
+  // Beta parliamentary countries: no-ops while `coming-soon` (gated on
+  // runtime country status inside each ensure fn). ES era-gates: 1953-default
+  // spawns nothing (Franco dictatorship). Upper chambers are sibling phases to
+  // the lower-chamber spawner, sourced from `state.stateSenateSeats` instead of
+  // `houseDistricts`. SE has no elected upper chamber (unicameral since 1970).
   FR: [
     { name: "frElections", fn: ensureFRElections },
     { name: "frSenateElections", fn: ensureFRSenateElections },
@@ -481,10 +475,9 @@ export async function runPostElectionGovernmentPhases(
 
   if (generalResolved > 0) {
     // Iterate every REGISTERED country with a configured lower chamber (US
-    // included), not just parliamentary countries. Registered, not the raw
-    // COUNTRY_ORDER: a country dissolved by a merge stays compiled into the
-    // static list forever, and this loop must stop visiting it. Background
-    // countries (#5702) have no legislature here either.
+    // included), not the raw COUNTRY_ORDER: merged-away countries stay in the
+    // static list and must stop being visited. Background countries have no
+    // legislature.
     const registered = new Set(await getFullSimulationCountryIds(db));
     const countryIds = [...registered].filter(
       (id) => COUNTRY_CONFIGS[id].legislature.lowerChamber.key
@@ -602,11 +595,10 @@ export async function runParliamentaryGovernmentPhases(
 ): Promise<void> {
   const db = await getDb();
   const preset = await getGameStatePreset(db);
-  // Registered only: `getParliamentaryCountryIds` filters the STATIC list by
-  // config, so a country dissolved by a merge would otherwise keep receiving
-  // seat sync, confidence processing and NPP PM appointment every turn — a
-  // ghost government for a state that no longer exists. Background countries
-  // (#5702) are skipped for the same reason: no government is simulated.
+  // Registered only: getParliamentaryCountryIds filters the STATIC list by
+  // config, so a dissolved country would otherwise keep receiving seat sync,
+  // confidence processing and NPP PM appointment every turn (ghost government).
+  // Background countries are skipped for the same reason: no government is simulated.
   const registered = new Set(await getFullSimulationCountryIds(db));
   const parliamentaryCountries = getParliamentaryCountryIds(preset).filter((id) =>
     registered.has(id)

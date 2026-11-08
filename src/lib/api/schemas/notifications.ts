@@ -17,8 +17,6 @@ export const notificationsPatchSchema = z.object({
     .optional(),
 });
 
-export type NotificationsPatchBody = z.infer<typeof notificationsPatchSchema>;
-
 export const notificationPreferenceActionSchema = z.union([
   z.object({ action: z.literal("mail"), muted: z.boolean() }),
   z.object({
@@ -26,5 +24,3 @@ export const notificationPreferenceActionSchema = z.union([
     type: z.enum(NOTIFICATION_TYPES),
   }),
 ]);
-
-export type NotificationPreferenceActionBody = z.infer<typeof notificationPreferenceActionSchema>;

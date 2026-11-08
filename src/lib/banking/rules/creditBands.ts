@@ -130,10 +130,6 @@ export function getLendingProfile(id: LendingProfileId | undefined): LendingProf
   );
 }
 
-export function isLendingProfileId(value: unknown): value is LendingProfileId {
-  return typeof value === "string" && (LENDING_PROFILE_IDS as readonly string[]).includes(value);
-}
-
 /** Bands a profile originates into, best credit first. */
 export function bandsForProfile(profileId: LendingProfileId | undefined): CreditBand[] {
   const floor = getLendingProfile(profileId).floorBand;

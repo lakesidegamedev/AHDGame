@@ -1,7 +1,6 @@
 /**
  * Russia seats only a certified president and vice-president ticket.
- * materializeRussianPresidentialSeating archives replaced offices and vacates
- * the winners' incompatible seats, preserving the remaining Congress and government.
+ * Seating archives replaced offices and vacates the winners' incompatible seats.
  */
 import { type Db, type ClientSession, type ObjectId } from "mongodb";
 import type {

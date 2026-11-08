@@ -1,15 +1,13 @@
 /**
- * Crash-resume results for phases whose output a later phase consumes (#3429).
+ * Crash-resume results for phases whose output a later phase consumes.
  *
- * A resumed turn skips every phase the dead holder already applied, so those
- * phases return nothing. That is only safe for a phase nobody downstream reads.
- * `bondTurn` is not one: V2 treasury cash settles from its actual sovereign
- * flows. A phase listed here persists a bounded, typed copy of its result in the
- * same gameState write that records it completed, and the resume path hands
- * that copy back instead of rerunning committed writes.
+ * A resumed turn skips phases the dead holder already applied, so those return
+ * nothing. Safe only for phases nobody downstream reads. `bondTurn` is not one:
+ * V2 treasury cash settles from its flows. A phase listed here persists a
+ * bounded typed copy of its result in the same write that marks it complete,
+ * and resume hands that copy back instead of rerunning.
  *
- * Plain data only: no database, clock or environment. The runtime shell owns
- * the writes.
+ * Plain data only: no database, clock or environment.
  */
 import type { BondTurnResult } from "@/lib/turn/bondTurn";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";

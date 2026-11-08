@@ -1,28 +1,17 @@
-/**
+/*
  * v2: cohort-batched NPP relocation-bond credit.
  *
- * `resolveNppMarketEntryCredit` is the only DB-touching call inside the NPP
- * decision loop, and it is a per-corporation fan of six reads plus one insert:
+ * resolveNppMarketEntryCredit does six reads plus one insert per corporation
+ * inside the NPP decision loop, dominating corporationTurn cost. None of the
+ * reads depends on other corporations (each is keyed by the corp's own id) and
+ * new bonds carry an empty holder list, so the reads preload as one cohort
+ * bundle and the inserts batch into one insertMany.
  *
- *   bonds (latest, for cooldown)      bonds (unmatured, for existing debt)
- *   corporateSectors (for the NPV)    gameConfig (market mode)
- *   bonds held as a creditor          gameState (currentYear)
- *   corporationHistory (latest income)
- *
- * On the production copy that is ~8 round trips for every corporation that asks
- * for entry credit — ~1.1k of them — which is most of corporationTurn's 9k
- * round trips and ~150s. None of those reads depends on another corporation:
- * every one is keyed by the corp's own id, and a new bond is issued with an
- * empty holder list, so no later corp in the loop can see it. That makes the
- * whole fan preloadable as one cohort bundle and the inserts deferrable to one
- * `insertMany`.
- *
- * The decision math is deliberately duplicated from `issueRelocationBond.ts`
- * rather than shared with it. Sharing would have changed the v1 code the bench
- * compares against, and a shared mistake would then be invisible to the parity
- * run: both engines would agree with each other and disagree with production.
- * v1 stays byte-for-byte what it was; this file is what the bench proves equal
- * to it on a full production-sized copy.
+ * The decision math is intentionally duplicated from issueRelocationBond.ts
+ * rather than shared: sharing would change v1, and a shared bug would be
+ * invisible to the parity bench (both engines would agree, both wrong). v1
+ * stays byte-for-byte unchanged; this file is what the bench proves equal to
+ * it on a production-sized copy.
  */
 
 import { ObjectId, type Db } from "mongodb";
