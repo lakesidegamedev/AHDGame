@@ -1,22 +1,18 @@
 /**
- * Curated Registration / Org bootstrap seed values per the plan's
- * Bootstrap Seed appendix (Pass 1 lane templates + Pass 2 curated
- * assignments). Source of truth:
+ * Curated Registration / Org bootstrap seed values (Pass 1 lane templates
+ * plus Pass 2 curated assignments).
  *
- *   docs/plans/archive/2026-05/2026-05-03-political-system-rework.md
- *     §"Bootstrap Seed Curation - Pass 1 / Pass 2"
- *
- * Per design doc §4.4, every per-state row must satisfy:
+ * Every per-state row must satisfy:
  *
  *   Σ partyReg + independent + unregistered = 100
  *   Σ partyOrg + unaffiliatedOrg            = 100
  *
  * The migration validates these invariants before writing.
  *
- * Party identifiers are the `politicalParties.abbreviation` (the values
- * the seed files actually use, e.g. "DEM"/"REP"/"CON"/"LAB"/"LDP"). The
- * migration translates abbreviations to `sequentialId` strings before
- * writing to `StatePartyOrg`.
+ * Party identifiers are the `politicalParties.abbreviation` (the values the
+ * seed files use, e.g. "DEM"/"REP"/"CON"/"LAB"/"LDP"). The migration
+ * translates abbreviations to `sequentialId` strings before writing to
+ * `StatePartyOrg`.
  */
 
 export interface SeedShare {

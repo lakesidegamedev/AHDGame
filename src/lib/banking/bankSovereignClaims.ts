@@ -712,8 +712,7 @@ async function fundClaimEscrow(
 ): Promise<{ charter: CorporationCharterState["bankCharter"] } | null> {
   const corps = db.collection<CorporationCharterState>("corporations");
   // The caller already read this claim's escrow slot off the bank book, so the
-  // placeholder only needs writing when the slot is missing. It used to be an
-  // unmatched guarded write on every claim of every turn.
+  // placeholder only needs writing when the slot is missing.
   if (!escrowExists) await ensureClaimEscrowSlot(db, claim);
   // One probe for every open attempt. Each is resumed to a terminal state, and
   // any that stays partial refuses the claim below, so a second read of the

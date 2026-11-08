@@ -1,20 +1,13 @@
 /**
  * Acting-chair authority helpers.
  *
- * Per the 2026-05-22 walkthrough decision: when `PoliticalParty.chairId`
- * is null AND `viceChairId` is set, the vice-chair inherits all chair
- * AUTHORITY functions (Chair Office access, parliamentary PM proposal,
- * coalition actions, etc.) until a new chair is elected or admin-
- * appointed.
+ * When `chairId` is null and `viceChairId` is set, the vice-chair inherits
+ * all chair AUTHORITY (Chair Office access, parliamentary PM proposal,
+ * coalition actions, etc.) until a new chair is elected or appointed. The
+ * vice-chair does not become the chair: `chairId` stays null and their role
+ * is unchanged; only acting authority expands.
  *
- * The VC does NOT become the chair (no schema mutation; `chairId` stays
- * null; `viceChairId` stays set). The VC's *role* is unchanged — only
- * their *acting authority* expands while the chair slot is vacant.
- *
- * Use these helpers for AUTHORIZATION checks. For IDENTITY display
- * ("the chair of this party is X"), read `party.chairId` directly.
- *
- * See `docs/plans/archive/2026-05/2026-05-22-vc-acting-chair-and-remove-office-holder.md`.
+ * Use for AUTHORIZATION checks. For IDENTITY display, read `party.chairId`.
  */
 
 import type { ObjectId } from "mongodb";

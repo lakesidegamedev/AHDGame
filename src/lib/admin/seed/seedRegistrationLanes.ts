@@ -1,21 +1,11 @@
 /**
- * Bootstrap-time Reg/Org seeding from curated lane templates.
+ * Seeding Reg/Org from curated lane templates. Runs after statePartyOrg seeding.
+ * For each StateRegistrationSeed: maps party abbr to politicalParties.sequentialId,
+ * updates statePartyOrg with organization and registration, upserts
+ * stateRegistrationPool with independent and unregistered.
  *
- * Runs after every country's `statePartyOrg` rows have been seeded
- * (`runSeed` + country-specific `seed*StatePartyOrg`). For each
- * `StateRegistrationSeed` row:
- *   - Maps the seed's party `abbr` to that country's `politicalParties`
- *     `sequentialId`.
- *   - Updates the matching `statePartyOrg` row with `.organization` and
- *     `.registration` values from the seed.
- *   - Upserts a `stateRegistrationPool` row holding `.independent` and
- *     `.unregistered`.
- *
- * Preset-aware: `2019-default` (and any 2019-* variants) use the curated
- * 2019-era data in `registrationLanes.ts`; `1991-default` uses the
- * 1991-era curation in `registrationLanes1991.ts`. Unknown presets skip
- * Reg seeding entirely (`statePartyOrg.registration` stays undefined,
- * the politics turn phase is a no-op for those states until data lands).
+ * Preset-aware: each preset maps to its own curated registrationLanes file.
+ * Unknown presets skip Reg seeding entirely.
  */
 
 import type { Db } from "mongodb";

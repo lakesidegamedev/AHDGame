@@ -2,23 +2,21 @@ import type { FiscalAnchor1991 } from "@/lib/constants/fiscalAnchors1991";
 import { rebaseBudgetNominals } from "./rebaseBudgetNominals";
 
 /**
- * Re-anchors a seeded national budget to sourced 1991 aggregates (#3034).
+ * Re-anchors a seeded national budget to sourced 1991 aggregates.
  *
- * The rows for these countries were authored in 1979 local currency (or in a
- * 1979-rate "game unit"), so their nominals were off by the 1979 to 1991
- * inflation and by the 1979 exchange rate. This rule is pure: it takes the
- * authored row and the sourced anchor and returns the 1991 row.
+ * Authored rows used 1979 local currency (or a 1979-rate game unit), so their
+ * nominals were off by 1979-to-1991 inflation and by the 1979 exchange rate.
+ * Pure: takes the authored row and the sourced anchor, returns the 1991 row.
  *
- *  1. GDP becomes the sourced 1991 nominal GDP in legacy currency, and every
- *     other nominal (other revenue, debt, ceiling, spending lines, state
- *     grants) is scaled by the same factor, so authored fiscal SHARES hold.
+ *  1. GDP becomes sourced 1991 nominal GDP, and every other nominal (other
+ *     revenue, debt, ceiling, spending lines, state grants) scales by the same
+ *     factor, so authored fiscal SHARES hold.
  *  2. Where the anchor has IMF general government gross debt, principal is set
  *     to that share of GDP and the ceiling keeps its authored headroom ratio.
  *  3. `deriveSpendingFromTotal` is for rows whose spending composition is
- *     1979 only (no 1991 authoring exists). It rescales the categorised lines
- *     and state grants together so that they plus the interest bill equal the
- *     IMF general government expenditure share of GDP, keeping the 1979 mix.
- *     Rows that were authored for 1991 keep their own spending shares.
+ *     1979 only. It rescales categorised lines and state grants together so
+ *     that they plus the interest bill equal the IMF expenditure share of GDP,
+ *     keeping the 1979 mix. Rows authored for 1991 keep their own shares.
  */
 interface BudgetRow {
   gdp: number;

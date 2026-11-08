@@ -12,13 +12,11 @@ export type ResignUnionLeadershipResult =
   { ok: true; status: 200 } | { ok: false; status: number; error: string };
 
 /**
- * v3 Phase 8 code-review fix #5: a leader-initiated, voluntary release of
- * union leadership. Before this, leadership could never be reclaimed once
- * claimed (`claimUnion` unconditionally 409s whenever the union already has
- * an owner) — one inactive/banned/quitting leader permanently locked an
- * entire industry's union for the rest of the game. Mirrors CEO vacancy:
- * treasury/membershipPressure are left untouched, the union just becomes
- * unmanned (Phase 5's NPC drift resumes for its sectors).
+ * Leader-initiated, voluntary release of union leadership. `claimUnion`
+ * unconditionally 409s when a union already has an owner, so without this an
+ * inactive leader would permanently lock the industry's union. Mirrors CEO
+ * vacancy: treasury and membershipPressure are untouched, the union simply
+ * becomes unmanned (NPC drift resumes for its sectors).
  */
 export async function resignUnionLeadership(
   db: Db,
@@ -39,7 +37,7 @@ export async function resignUnionLeadership(
   if (!union.ownerId || union.ownerId.toString() !== character._id.toString()) {
     return { ok: false, status: 403, error: "You do not lead this union." };
   }
-  // Union ban (player suggestion #93): the union is suspended wholesale while
+  // Union ban: the union is suspended wholesale while
   // banned — leadership is frozen in place (not vacated) so a repeal restores
   // the union exactly as the ban found it.
   if (await isUnionsBanned(db, union.countryId)) {

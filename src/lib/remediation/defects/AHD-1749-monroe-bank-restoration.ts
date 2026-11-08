@@ -13,13 +13,12 @@ import type {
   VerifyResult,
 } from "../types";
 
-// Support #1749, Monroe Indrustry (seq 2857). The turn-601 failure waterfall
-// froze a resolution record: vault + USD insurance fund paid the household
-// book into the central bank. The 22,150.23 player book returned to the CB as
-// householdSavingsLiability, so it is not restored here; the bank reopens with
-// npc/total deposits equal to the household book. Owner decision: reopen the
-// old universal charter and have the game mint the 304,203.61 shortfall.
-// liquidCapital is never touched. Legs are READ from the frozen record.
+// Frozen turn-601 waterfall resolution: vault plus USD insurance fund
+// paid the household book into the central bank. The 22,150.23 household
+// book returned to the CB as householdSavingsLiability, so it is not
+// restored here; the bank reopens with npc/total deposits equal to the
+// household book. The game mints the 304,203.61 shortfall. liquidCapital
+// is never touched. Legs are READ from the frozen record.
 
 export const DEFECT_ID = "AHD-1749-monroe-bank-restoration";
 export const CASH_AT_WATERFALL = 7_709_632.58738934;

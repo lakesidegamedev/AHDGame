@@ -68,12 +68,12 @@ const CONFIG_DERIVED_TRANSFER_FIELD: Partial<
   CN: "centralTransferGrant",
   DE: "federalEqualizationGrant",
   // DD funds its Länder from the same config-derived equalization pool DE does
-  // (see `federalEqualizationGrantPerCapita` on the DD config), and had the same
-  // hole: the 16 Länder were each credited a transfer that `spending.stateGrants`
-  // recorded as DDM 0, so DDM 8.0B/yr showed up as regional income with no national
-  // expense (#1323). Booked under the plan-economy lapse rule below — DD is
-  // marketization level 0, so an allocation a Land never draws down lapses
-  // rather than being charged to the centre.
+  // (see `federalEqualizationGrantPerCapita` on the DD config). Without booking
+  // the grant here, the 16 Länder each receive a transfer that
+  // `spending.stateGrants` records as DDM 0, showing regional income with no
+  // national expense. Booked under the plan-economy lapse rule below: an
+  // allocation a Land never draws down lapses rather than being charged to the
+  // centre.
   DD: "federalEqualizationGrant",
   // UK joined this set when the political-legislation v2 catalog retired
   // `uk_local_government_funding`: with no isGrant law left to book it, the
@@ -391,7 +391,7 @@ export async function calculateFederalSpending(
   if (capacityRepair > 0) byCategory[CAPACITY_REPAIR_SPENDING_KEY] = capacityRepair;
 
   return normalizeFederalSpending({
-    // Cuts from an AI government's consolidation package (#5703) persist as a
+    // Cuts from an AI government's consolidation package persist as a
     // per-category scale, so they survive this rebuild from enacted laws. In
     // the 2027 world the pension and health lines first follow the age
     // structure (absent elsewhere, so a no-op).
@@ -486,7 +486,7 @@ export async function syncFederalBudgetSpending(db: Db, countryId: CountryId): P
   const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
   if (!budget) return;
 
-  // Same stock-service rule as the turn and fiscal-year paths (#2089): bonds
+  // Same stock-service rule as the turn and fiscal-year paths: bonds
   // at their locked coupons, any uncovered remainder at the marginal rate.
   const couponBooks = await loadSovereignCouponBooks(db, [countryId]);
   const debtInterest = sovereignStockAnnualService({

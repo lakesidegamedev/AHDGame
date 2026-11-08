@@ -1,13 +1,12 @@
 /**
- * Shell for the fiscal stabilizer (#5703). The rules live in
+ * Shell for the fiscal stabilizer. The rules live in
  * `./rules/fiscalStabilizer.ts`; this file loads what they need, turns a
  * package into budget writes, and reports it in the news and approval.
  *
  * The package goes through the ordinary budget write path, not bill
  * sponsorship: spending cuts become a per-category scale that
  * `calculateFederalSpending` applies on every recompute, and tax rises become
- * `taxRatePhaseIn` targets that the treasury turn ramps toward a point a turn,
- * exactly as an enacted tax change would.
+ * `taxRatePhaseIn` targets that the treasury turn ramps toward a point a turn.
  */
 import type { Db } from "mongodb";
 import type {

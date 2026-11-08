@@ -167,7 +167,7 @@ export async function proposeOrganizationLegislation(params: {
     // An organisation sanctions an OUTSIDER. Aid below is gated the other way —
     // its recipient must be a member — and sanctions was the one resolution with
     // no relationship test at all, so a bloc could embargo one of its own
-    // (ticket #1285). The fan-out makes that concrete: every member except the
+    //. The fan-out makes that concrete: every member except the
     // target blocks it in both directions, which is an alliance ordering itself
     // to blockade a member it is simultaneously sworn to defend.
     if (members.has(target)) {

@@ -1,21 +1,20 @@
 /**
- * 1991 household income vintage rules (#3370 NG, #3371 TR, #3376 CN; parent #3316).
+ * 1991 household income vintage rules.
  *
  * Pure: plain data in, plain data out. No database, clock, randomness or env.
  *
- * `economic.medianIncome` is ANNUAL HOUSEHOLD median income in the region's
- * local currency. GDP per resident is a per-person output measure. The two are
- * different quantities and are NOT expected to be equal; the proxy below only
- * keeps them in the same currency vintage and in a bounded relationship.
+ * `economic.medianIncome` is ANNUAL HOUSEHOLD median income in local currency,
+ * NOT GDP per resident (a per-person output measure). They are different
+ * quantities and not expected to be equal; the proxy below only keeps them in
+ * the same currency vintage and in a bounded relationship:
  *
  *   household median = GDP per resident
  *                    x mean household size
  *                    x household income share of GDP
  *                    x median / mean household income
  *
- * Every factor is bounded so a typo cannot reintroduce a 2023-naira or
- * 1979-lira scale error. The result is a gameplay proxy, not a measured
- * historical median.
+ * Every factor is bounded so a typo cannot reintroduce a wrong-currency-vintage
+ * scale error. The result is a gameplay proxy, not a measured historical median.
  */
 
 export interface HouseholdIncomeProxy {

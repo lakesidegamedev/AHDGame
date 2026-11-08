@@ -17,18 +17,14 @@ export interface RacePresenceEntry {
 /**
  * Campaign Presence for every candidate in the live presidential race.
  *
- * Why this exists: the Campaign Presence map previously rendered only the
- * VIEWER's own per-state levels. A player who never ran for President saw their
- * own (usually empty) map and none of the actual candidates' — which reads as a
- * bug, because the panel is framed as presidential infrastructure. Returning the
- * whole field lets the map show contested ground and lets a non-candidate follow
- * the race at all.
+ * The panel is framed as presidential infrastructure, so showing only the
+ * viewer's own (usually empty) levels reads as a bug. Returning the whole
+ * field lets the map show contested ground and lets a non-candidate follow
+ * the race. Presence is deliberately public: it is physical campaign
+ * infrastructure visible on the ground, so there is no fog-of-war.
  *
- * Presence is deliberately public: it is physical campaign infrastructure that
- * the opposing campaign can see on the ground, so there is no fog-of-war here.
- *
- * Returns `[]` when there is no live presidential race, which callers should
- * treat as "hide the selector" rather than an error.
+ * Returns `[]` when there is no live presidential race, which callers
+ * should treat as "hide the selector" rather than an error.
  */
 export async function loadRacePresence(db: Db, viewerId: ObjectId): Promise<RacePresenceEntry[]> {
   const election = await db

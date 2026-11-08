@@ -16,7 +16,7 @@ export type WhipChamber = BillWhip["chamber"];
 
 /** Map from chamber key to the congressLeaders roles that may whip in it.
  *  Whips have whip authority by definition — historically the position was
- *  scaffolded but never wired in (bug user-report 2026-05-17). */
+ *  scaffolded but never wired in. */
 const CHAMBER_LEADER_ROLES: Record<string, Array<Pick<CongressLeader, "role">["role"]>> = {
   house: [
     "speaker_of_the_house",

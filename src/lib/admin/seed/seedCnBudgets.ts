@@ -23,10 +23,9 @@ export async function seedCnBudgets(
     ],
     seedCorporations: async (statesForBudgets) => {
       const { generateCountryOwnedSeedData } = await import("@/lib/seeds/reference/budgets");
-      // Command Economy v2 (#3496): when `commandEconomyEnabled` is on AND CN is in
-      // its fully-command era (First-Five-Year-Plan band), the CN seed splits into
-      // one SOE per commanding-height sector (see generateCountryOwnedSeedData).
-      // Dual-track / market CN eras are unaffected, and flag-off is byte-identical.
+      // When commandEconomyEnabled is on AND CN is in its fully-command era,
+      // the CN seed splits into one SOE per commanding-height sector.
+      // Dual-track / market eras and flag-off are unaffected.
       const gameConfig = await db
         .collection<GameConfig>("gameConfig")
         .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });

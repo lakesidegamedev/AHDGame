@@ -1,18 +1,10 @@
 /**
- * One bond read for a whole reserve-deployment pass.
- *
- * `deployBondReserveFromCash` is called once per fund, and each call used to
- * read the issues it can buy, the sovereign rating table and the exchange-rate
- * gate for itself. On a world with dozens of funds that is dozens of scans of
- * the same collection in one turn. This module loads the union of every fund's
- * candidate query once and answers each fund from memory, applying the filters,
- * ranking and sort the per-fund query applied.
- *
- * Funds compete for the same public float, and that ordering is part of the
- * economic result, so the in-memory view has to follow each settled purchase:
- * `applyPurchase` moves the units out of `publicFloat` and into the fund's
- * holder row, exactly as the settlement write did. A later fund therefore sees
- * the same issue list a fresh read would have returned.
+ * One bond read shared across a reserve-deployment pass. Loads the union of
+ * every fund's candidate query once, then applies the same filters, ranking
+ * and sort per fund from memory. Funds compete for the same public float, so
+ * `applyPurchase` must move units from `publicFloat` into the fund's holder
+ * row exactly as the settlement write does, so later funds see the same issue
+ * list a fresh read would return.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Bond, IndexFund } from "@/lib/db/types";

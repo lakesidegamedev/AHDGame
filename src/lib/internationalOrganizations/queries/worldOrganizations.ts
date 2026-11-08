@@ -75,12 +75,8 @@ export async function loadWorldOrganizationsView(db: Db) {
       loadPactEntryWarnings(db),
     ]
   );
-  // Entity-wide throughout. `loadUsdGdpByCountry` used to be called here as
-  // well, for a country-only member table; `loadGdpUsdMillionsByEntity` is a
-  // superset of it (it starts from the same query and adds macro entities), so
-  // keeping both would have been two reads for one answer.
-  // One read for the whole sweep: the dues/tribute split needs it per org, and
-  // `getAllCountryAccess` is two round-trips.
+  // One read for the whole sweep: the dues/tribute split needs GDP per org.
+  // `loadGdpUsdMillionsByEntity` is a superset of the country-only loader.
   const [access, gdpByEntity, worldGdpMillions] = await Promise.all([
     getAllCountryAccess(db),
     loadGdpUsdMillionsByEntity(db, [...allEntities], preset),
@@ -170,11 +166,8 @@ export async function loadWorldOrganizationsView(db: Db) {
           "US") as CountryId;
         const duesRateAnnual = fundRow?.duesRateAnnual ?? DEFAULT_ORG_DUES_RATE_ANNUAL;
         const fundRate = getGdpAnchorRate(fundCountry, preset);
-        // Dues and tribute PARTITION the roll — `orgMembership` is explicit that
-        // nobody is billed both and nobody is billed neither — so the projected
-        // income has to split the same way the charge does. Summing every priced
-        // member into the dues line, as this used to, billed France and Italy at
-        // the dues rate on paper while the turn phase charged them tribute.
+        // Dues and tribute PARTITION the roll: each member is billed exactly
+        // one, so projected income must split the same way the charge does.
         const annualOf = (
           rows: typeof memberGdp,
           rate: number // annual, as a fraction of GDP

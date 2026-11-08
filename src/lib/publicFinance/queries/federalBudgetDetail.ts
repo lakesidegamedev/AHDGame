@@ -433,12 +433,10 @@ export async function loadFederalBudgetDetail(params: {
     .map((state) => {
       const regionalBudget = regionalBudgetMap.get(state._id);
       const stateBudget = stateBudgetMap.get(state._id);
-      // Table lookup, not an if/else chain with a default: the chain this
-      // replaced ended in `westminsterGrant`, so any country it did not name
-      // read the UK's field and reported DDM 0 instead of failing. DD lost its
-      // Länder grants that way (#1323). `undefined` here means "no grant field
-      // mapped for this country", which falls back to the stateBudgets figure
-      // exactly as a missing regionalBudget does.
+      // Table lookup, not an if/else chain with a default fallback: a chained default
+      // would report DDM 0 instead of the correct figure for unnamed countries.
+      // `undefined` here means "no grant field mapped for this country", which falls
+      // back to the stateBudgets figure exactly as a missing regionalBudget does.
       const federalGrants =
         regionalGrantAmount(budgetCountryId, regionalBudget) ??
         stateBudget?.revenue?.federalGrants ??
@@ -508,7 +506,7 @@ export async function loadFederalBudgetDetail(params: {
     // surplus tile counts vs the force's actual upkeep, plus the appropriation
     // pot. Upkeep beyond the line leaves the treasury as debt without touching
     // any spending row, which is the usual reason a balance falls under a
-    // surplus (ticket #1269). Read-only; the turn phase stays the sole writer.
+    // surplus. Read-only; the turn phase stays the sole writer.
     defenseFunding,
     // International organization dues or tribute debited directly from the
     // treasury. These are also read-only; the turn phase remains the sole writer.

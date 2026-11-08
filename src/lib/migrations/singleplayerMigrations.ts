@@ -1,21 +1,16 @@
 // Migrations for singleplayer worlds.
 //
-// A hosted world gets its registry migrations from an operator
-// (`npm run migrate`) and its required repairs from `instrumentation.ts`. A
-// local world gets neither: the standalone server never calls `register()`,
-// and there is no operator. A save outlives the build that created it, so a
-// client update opens an old world with new code that assumes those
-// migrations ran.
+// A hosted world gets registry migrations from an operator and required
+// repairs from instrumentation.ts; a local world gets neither (the standalone
+// server never calls register(), and there is no operator). A save outlives
+// the build that created it, so a client update opens an old world with new
+// code that assumes those migrations ran.
 //
-// The rule: a world seeded by a build is current with that build's registry.
-// World creation stamps every migration the build knows (the baseline marker
-// records that it happened). On every start, pending migrations run in
-// registry order, so a later build applies exactly the ones written after the
-// world's build.
-//
-// Saves created before the baseline existed carry no stamp. No desktop client
-// bundled a game from before 2026-09-04 (singleplayer shipped 2026-09-05), so
-// for those the catch-up starts at that date.
+// A world seeded by a build is current with that build's registry: creation
+// stamps every migration the build knows, and on every start pending
+// migrations run in registry order, so a later build applies exactly the ones
+// written after the world's build. Saves predating the baseline stamp
+// catch up from that baseline date.
 
 import type { Db } from "mongodb";
 import { resumePendingDemographicFlowReceipts } from "@/lib/demographics/flowJournal";

@@ -21,39 +21,28 @@ export interface CountryReadinessReport {
 }
 
 /**
- * Generate a per-country readiness report. Driven by
- * COUNTRY_READINESS_EXPECTATIONS so every supported country gets the same
- * diagnostic.
+ * Generate a per-country readiness report driven by COUNTRY_READINESS_EXPECTATIONS.
+ * Returns null when the country has no expectations entry (caller should 404).
+ * Reads only, never writes.
  *
- * Returns null when the country has no expectations entry (caller should
- * 404). Reads only — never writes.
- *
- * `preset` makes the expectations era-aware, through
- * `getReadinessExpectations`. The entries in COUNTRY_READINESS_EXPECTATIONS
- * describe the modern world, but region counts are era-dependent — 1953/1979
- * seed the 11 western Länder while 1991+ seed the reunified 16 — so a flat
- * expectation reports a correct historical seed as incomplete. The party roster
- * is era-dependent for the same reason, and used to name the CPSU in a 2019
- * world. Pass the preset when the caller knows it; otherwise it is read from
- * gameState, and when neither is available the authored entry is used as-is
- * rather than assuming a modern default.
+ * `preset` makes the expectations era-aware via `getReadinessExpectations`.
+ * Region counts and party rosters differ by era (1953/1979 seed 11 Länder, 1991+
+ * seed 16; rosters name era-appropriate parties), so the modern authored entry
+ * would flag a correct historical seed as incomplete. Falls back to gameState's
+ * preset, then to the authored entry as-is.
  */
 /**
  * Total SEATS in a collection, not the number of rows holding them.
  *
- * ⚠️ THE TWO ARE NOT THE SAME, AND THE EXPECTATIONS ARE WRITTEN IN SEATS.
  * `seats` stores one row per constituency with a `totalSeats` count, and
  * `electedOfficials` one row per (region, party) with a `seatsHeld` count.
- * Japan's 465-seat Shugiin is 8 rows in `seats` and 51 in `electedOfficials`.
- * Counting rows against `seatMin: 713` therefore reported "found 32" for a
- * fully and correctly seeded Diet -- a false alarm on every reset, for every
- * country: the UK read 12 against 650 while holding exactly 650.
+ * Japan's 465-seat Shugiin is 8 rows in `seats` and 51 in `electedOfficials`,
+ * so counting rows produces false alarms against seat expectations.
  *
- * ⚠️ A MISSING COUNT MEANS ONE SEAT, NOT ZERO. Single-seat offices omit the
- * field entirely rather than storing 1: US senate (100 rows), governors,
- * president and Ireland's uachtaran all have no `totalSeats`. Summing without
- * the fallback scores the entire US Senate as nothing. The field is never
- * explicitly 0, so `$ifNull` is safe here and `$max` against 1 would be wrong.
+ * A missing count means ONE seat, not zero: single-seat offices omit the field
+ * rather than storing 1 (US senate, governors, president, Ireland's uachtaran).
+ * The field is never explicitly 0, so `$ifNull` is correct and `$max` against 1
+ * would be wrong.
  */
 async function sumSeats(
   db: Db,

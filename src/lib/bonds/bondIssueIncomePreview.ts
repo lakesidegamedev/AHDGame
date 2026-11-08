@@ -1,11 +1,10 @@
 /**
- * Issue-bond income preview, in the same daily/turn units the rest of the
- * corporation UI uses.
+ * Issue-bond income preview in daily/turn units, matching the rest of the
+ * corporation UI.
  *
- * Coupon cost is annual % × face, then divided by the two financial days in a
- * game year (48 turns / 24 turns-per-day). The preview compares that daily
- * coupon against retained daily income so "Income after" matches what will
- * actually hit cash, not the nameplate projection (ticket #1109).
+ * Coupon cost is annual % × face divided by the two financial days in a game
+ * year (48 turns / 24 turns-per-day). Compare that daily coupon against
+ * retained daily income so "Income after" matches cash, not the nameplate.
  */
 
 import { GROWTH_RATE_TURNS_PER_YEAR, TURNS_PER_DAY } from "@/lib/constants/corporations";

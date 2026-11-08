@@ -142,8 +142,8 @@ export function formatDiagnosticSummary(report: SeedDiagnosticReport): string {
 }
 
 /**
- * Build a critical diagnostic_error report when the diagnostic itself throws.
- * Never used to abort a reset — callers wrap runSeedDiagnostic in try/catch.
+ * Build a diagnostic_error report when the diagnostic itself throws.
+ * Callers wrap runSeedDiagnostic in try/catch; never used to abort a reset.
  */
 export function diagnosticErrorReport(
   message: string,

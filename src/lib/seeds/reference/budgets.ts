@@ -146,7 +146,7 @@ import { getStateResourceCapacity, lookupStateResourceCapacity } from "./stateRe
 /**
  * Default legal structure stamped on each country's sovereign issuer corporation.
  * Mirrors the per-country defaults from
- * `scripts/migrations/deprecated/2026-05-07-set-legal-structure-defaults.ts` — folded into
+ * a retired migration, folded into
  * the seed so a fresh world doesn't depend on the backfill migration ever
  * running.
  */
@@ -181,7 +181,7 @@ export const SOVEREIGN_CORP_LEGAL_STRUCTURE: Partial<Record<CountryId, LegalStru
   YU: YU_ECONOMY.sovereignCorpLegalStructure,
   // Econ-tier market democracies (corporate-sector seed-gap fix): promoted
   // from the abstract sphere-macro tier to full-autonomous (seedEconTierRosters
-  // #3253, seedManifest.ts) with no bespoke joint-stock legal form authored yet
+  // seedManifest.ts) with no bespoke joint-stock legal form authored yet
   // — same neutral fallback used for every other country here without one.
   FR: FR_ECONOMY.sovereignCorpLegalStructure,
   IT: IT_ECONOMY.sovereignCorpLegalStructure,
@@ -258,7 +258,7 @@ export interface NationalBudgetSeedConfig {
    * Era the row's economic factors and fiscal calibration were authored for.
    * Set by {@link overlayNationalBudgetConfigs} when a row is carried into a
    * newer preset without an explicit override, so rewriting `fiscalYear` can
-   * never disguise stale factors as authored for the target era (#2076).
+   * never disguise stale factors as authored for the target era.
    * Absent on explicitly authored rows, where it equals `fiscalYear`.
    */
   sourceFiscalYear?: number;
@@ -337,7 +337,7 @@ export interface NationalBudgetSeedConfig {
     incomeTax: string;
     domesticCorporateTax: string;
     /**
-     * Foreign corporate tax bill id. Wired in PR 1 but the actual bill is seeded in PR 2.
+     * Foreign corporate tax bill id. The bill itself is seeded separately.
      * If absent, the foreign rate mirrors the domestic rate at seed time (day-one parity).
      */
     foreignCorporateTax?: string;
@@ -350,18 +350,16 @@ export interface NationalBudgetSeedConfig {
      */
     solidaritySurcharge?: string;
     /**
-     * CN-only Land Value-Added Tax (土地增值税) bill id. Optional — non-CN countries omit.
-     * Added 2026-05-27 with the CN legislation overhaul (PR1).
+     * CN-only Land Value-Added Tax (土地增值税) bill id. Optional, omitted by non-CN countries.
      */
     landValueAddedTax?: string;
     /**
      * CN-only Urban Maintenance & Construction Tax (城市维护建设税) bill id. Optional —
-     * non-CN countries omit. Added 2026-05-27 with the CN legislation overhaul (PR1).
+     * non-CN countries omit. with the CN legislation overhaul.
      */
     urbanMaintenanceTax?: string;
     /**
-     * CN-only Stamp Duty (印花税) bill id. Optional — non-CN countries omit.
-     * Added 2026-05-27 with the CN legislation overhaul (PR1).
+     * CN-only Stamp Duty (印花税) bill id. Optional, omitted by non-CN countries.
      */
     stampDuty?: string;
     /**
@@ -370,18 +368,15 @@ export interface NationalBudgetSeedConfig {
      */
     propertyTax?: string;
     /**
-     * IE-only Universal Social Charge bill id. Optional — non-IE countries omit.
-     * Added 2026-05-27 with the IE legislation overhaul (PR1).
+     * IE-only Universal Social Charge bill id. Optional, omitted by non-IE countries.
      */
     universalSocialCharge?: string;
     /**
-     * IE-only Capital Gains Tax bill id. Optional — non-IE countries omit.
-     * Added 2026-05-27 with the IE legislation overhaul (PR1).
+     * IE-only Capital Gains Tax bill id. Optional, omitted by non-IE countries.
      */
     capitalGainsTax?: string;
     /**
-     * IE-only Excise Duty bill id. Optional — non-IE countries omit.
-     * Added 2026-05-27 with the IE legislation overhaul (PR1).
+     * IE-only Excise Duty bill id. Optional, omitted by non-IE countries.
      */
     exciseDuty?: string;
   };
@@ -484,8 +479,8 @@ function deriveTaxRates(
     }
   }
 
-  // Day-one parity: if foreign bill is not yet seeded (PR 1 state), mirror the domestic rate.
-  // PR 2 will populate taxPolicyIds.foreignCorporateTax and this branch becomes a no-op.
+  // Day-one parity: if foreign bill is not yet seeded (not yet seeded), mirror the domestic rate.
+  // Once taxPolicyIds.foreignCorporateTax is populated this branch is a no-op.
   if (!config.taxPolicyIds.foreignCorporateTax) {
     taxRates.foreignCorporateTax = taxRates.domesticCorporateTax;
   }
@@ -581,16 +576,12 @@ import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 
 /**
  * Authored historical fiscal baselines for 1953 (Korean War defense shares,
- * pre-Medicare healthcare, occupation-cost DE defense, etc.). The modern
- * legislation catalog's absolute per-capita costs, even after GDP-indexed
- * scaling, preserve peacetime 1991 *composition* — e.g. US defense ≈2% GDP
- * instead of the authored ~14%.
+ * pre-Medicare healthcare, occupation-cost DE defense). The modern catalog's
+ * per-capita costs preserve 1991 composition even after GDP scaling.
  *
- * Political-legislation countries (US/UK/RU/DD) use the full authored table
- * (v2 sync overwrites day-one anyway). Other 1953 countries only override the
- * historically-sensitive defense/healthcare categories so command-economy /
- * developing-country baselines don't invent structural 30–40% GDP deficits
- * against revenue still derived from the modern tax dials.
+ * Political-legislation countries use the full authored table. Other 1953
+ * countries only override defense/healthcare so command-economy and developing
+ * baselines don't invent 30-40% GDP deficits against modern-derived revenue.
  */
 const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as const;
 
@@ -603,10 +594,10 @@ const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as cons
  *
  * CN: "infrastructure" is the First-Five-Year-Plan's defining category (Soviet
  * -assisted heavy industry, the 156 key projects) — the single biggest line in
- * CN's authored baseline, previously priced entirely off the modern per-domain
- * era catalog (calibrated for 2023 CN's marginal infrastructure policy, not a
- * command economy's total investment programme), which is why fiscal audit
- * F-11 found CN spending collapsed to under 10% of GDP.
+ * CN's authored baseline. Pricing it off the modern per-domain era catalog
+ * (calibrated for 2023 CN's marginal infrastructure policy, not a command
+ * economy's total investment programme) collapses CN spending to under 10% of
+ * GDP.
  *
  * JP: "infrastructure" (the authored key was "publicWorks" — see the 1953 JP
  * config rename below — a name mismatch that made the reconstruction-
@@ -617,7 +608,7 @@ const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as cons
  *
  * DE: "welfare" and "transport" — same class of bug as JP's rename, found
  * while auditing DE's +13.1%-of-GDP day-26 surplus (fiscal-scale audit,
- * 2026-07-28). DE's authored 1953 baseline (see the DE 1953 config below) used
+ * DE's authored 1953 baseline (see the DE 1953 config below) used
  * "socialSecurity" and "infrastructure", but none of `deLegislationTypes.ts`'s
  * ~40 budgetCategory-bearing laws use those literal strings — DE's Bismarckian
  * pensions/unemployment-insurance laws are categorized "welfare" and its
@@ -639,11 +630,11 @@ const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as cons
  * per-capita ladder's default option happens to compute.
  *
  * AT/FI/FR/GR/IT/SE/TR: "socialSecurity", "education", "infrastructure",
- * "other" — the seven market-democracy 1953 seeds previously fell back to
+ * "other", the seven market-democracy 1953 seeds would otherwise fall back to
  * `baselineSpendingByCategory` wholesale (their sole legislation type touching
  * the budget was the welfare-state law, and it carried no cost — see the
  * legislationCostCatalog.ts header). Each now authors one `gdpPerCapitaMultiplier`-
- * costed spending law per category (fiscal-scale audit, 2026-07-28): the
+ * costed spending law per category: the
  * welfare-state law for socialSecurity, plus new health/education/
  * infrastructure/defense/other/grant laws. Pinning the four non-defense/
  * non-healthcare categories here is the same safety net DE/BR use — the
@@ -682,7 +673,7 @@ const EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY: Partial<Record<string, readonly stri
 // `baselineStateGrants` (~3% of GDP) exactly rather than its per-capita
 // ladder's raw default.
 // AT/FI/FR/GR/IT/SE/TR each authored a new `isGrant` local-government transfer
-// law (at_local_grants et al., fiscal-scale audit 2026-07-28) — same treatment
+// law (at_local_grants et al., fiscal-scale), same treatment
 // so it reconciles to `baselineStateGrants` exactly.
 const GRANT_OVERRIDE_COUNTRIES = new Set(["JP", "BR", "AT", "FI", "FR", "GR", "IT", "SE", "TR"]);
 
@@ -804,7 +795,7 @@ function deriveSpending(
  * budget. Mirrors the explicit zero-fill the
  * `sovereignDefaultPhase1FederalBudget.ts` migration applies to legacy budgets
  * — folded into the seed so a brand-new game doesn't depend on that migration
- * ever running. See `docs/reset-and-seed-contract.md`.
+ * ever running.
  */
 function sovereignDefaultBudgetFields(): Pick<
   SupportedNationalBudget,
@@ -975,7 +966,7 @@ function buildNationalBudgetSeed(config: NationalBudgetSeedConfig): SupportedNat
     // guardrail (`taxBaseGdpShareBaseline`, see budget.ts) tracks toward, and
     // that `updateCorporateTaxBases`'s per-turn floor blends against instead of
     // a single universal modern-mixed-economy constant (fiscal-scale audit,
-    // 2026-07-29: a command economy's authored corporate/enterprise-surplus
+    // A command economy's authored corporate/enterprise-surplus
     // base sits far above that constant; seeding this here - rather than
     // relying on fiscalBaseGrowth's deferred self-heal, which can run AFTER the
     // corp-turn phase has already overwritten taxBases for the turn - stops the
@@ -986,7 +977,7 @@ function buildNationalBudgetSeed(config: NationalBudgetSeedConfig): SupportedNat
     // an economy that moves: DD authored DDM 4.5B against a DDM 50B GDP — a
     // deliberate 9% enterprise-remittance share, in line with the rest of the
     // bloc — and by turn 575 that same DDM 4.5B was 1.5% of a reunified DDM 271B
-    // economy (#1323). Capturing the authored SHARE at seed time is what keeps
+    // economy. Capturing the authored SHARE at seed time is what keeps
     // the line proportionate. Guarded against a zero/absent GDP so a malformed
     // config leaves the field unset rather than seeding Infinity.
     otherRevenueGdpShareBaseline: config.gdp > 0 ? config.otherRevenue / config.gdp : undefined,
@@ -1137,12 +1128,11 @@ function deriveEnactedLaws(
     });
   }
 
-  // 1953: rewrite spending-law cost fields for historically-sensitive categories
+  // Rewrite spending-law cost fields for historically-sensitive categories
   // so runtime calculateFederalSpending reproduces authored defense/healthcare
   // (plus per-country extras, see EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY) shares.
-  // gdpPerCapitaMultiplier × gdp is the legacy GDP-share form and is not
-  // re-scaled by getGdpIndexedCostScale. Political countries seed no old laws
-  // (above). Other countries only rescale defense/healthcare by default.
+  // gdpPerCapitaMultiplier × gdp is the legacy GDP-share form, not rescaled by
+  // getGdpIndexedCostScale. Political countries seed no old laws (above).
   if (
     (preferCategoryBaselineOverrides(config) || config.calibratedSpendingBaseline) &&
     config.gdp > 0
@@ -1467,11 +1457,10 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       lastUpdated: new Date(),
     },
     // IE's headline GDP (€500B) is inflated ~2.3× by MNC profit-shifting vs real
-    // domestic activity (GNI* ~€220B), so applying tax bases to it overstated
-    // revenue to ~43% of GDP (real Irish tax take ~18-20%). Lower the
-    // income/wage/sales base ratios accordingly (corporate kept high — MNC
-    // corporation tax is genuinely large). fix/default-laws 2026-06-03.
-    // currencyCode IEP at EUR-parity rate (0.92) — euro-era display shows €.
+    // domestic activity (GNI* ~€220B); using it as a tax base overstated revenue
+    // to ~43% of GDP (real take ~18-20%). Lower income/wage/sales base ratios;
+    // corporate kept high since MNC corporation tax is genuinely large.
+    // currencyCode IEP at EUR-parity rate (0.92), euro-era display shows €.
     taxBaseRatios: {
       taxableIncome: 0.13,
       corporateProfits: 0.22, // elevated due to MNC headquarters (real)
@@ -1487,9 +1476,8 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 2023,
     },
     creditRating: "AA",
-    // Reconciled (fix/default-laws, 2026-06-03) to the Σ(per-capita × population)
-    // of the IE default spending laws seeded from ieLegislationTypes, so the
-    // no-laws fallback matches the with-laws expenditure breakdown.
+    // Must equal Σ(per-capita × population) of IE default spending laws
+    // so the no-laws fallback matches the with-laws expenditure breakdown.
     baselineSpendingByCategory: {
       health: 24_490_200_000,
       education: 10_985_400_000,
@@ -1591,11 +1579,9 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       tradeGrowth: 4.5,
       lastUpdated: new Date(),
     },
-    // CN income tax + social insurance were modelled at statutory rates against
-    // broad bases, overstating revenue to ~42% of GDP (real Chinese individual
-    // income tax is ~1% of GDP and the general-budget tax take ~17%). Lower the
-    // income/wage bases to effective levels; VAT/corporate kept. fix/default-laws
-    // 2026-06-03.
+    // CN statutory rates against broad bases overstated revenue to ~42% of GDP;
+    // real individual income tax is ~1% of GDP and general-budget tax take ~17%.
+    // Income/wage bases are set to effective levels; VAT/corporate kept.
     taxBaseRatios: {
       taxableIncome: 0.03,
       corporateProfits: 0.14,
@@ -1611,7 +1597,7 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 2024,
     },
     creditRating: "A",
-    // Reconciled (fix/default-laws, 2026-06-03) to the Σ(per-capita × population)
+    // Reconciled to the Σ(per-capita × population)
     // of the CN default spending laws seeded from cnLegislationTypes, so the
     // no-laws fallback matches the with-laws expenditure breakdown. publicSafety
     // (public security + criminal justice) is now its own line.
@@ -1675,9 +1661,8 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 2019,
     },
     creditRating: "B",
-    // Reconciled to the NG spending calibration in ngLegislationTypes.ts
-    // (Σ per-capita × 200M population per category). publicSafety + agriculture
-    // are now explicit lines (previously folded into `other`).
+    // Must equal the NG spending calibration in ngLegislationTypes.ts
+    // (Σ per-capita × 200M population per category).
     baselineSpendingByCategory: {
       socialSecurity: 1_500_000_000_000,
       healthcare: 300_000_000_000,
@@ -1700,19 +1685,12 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       salesTax: "ng_vat_rate",
     },
   },
-  // ── 2019 western-market calibrations (#2076) ───────────────────────────────
-  // Before this block the 2019 preset inherited these eight countries from the
-  // 1991 bundle (ES/IT/FR/SE/TR) or the 1979 bundle (GR/AT/FI), with only
-  // fiscalYear rewritten: 1991/1979 inflation, wage, debt and spending inputs
-  // seeded turn one as if authored for 2019. Each row below is explicit for
-  // 2019. Method: game-unit GDP scales the country's latest authored row by
-  // the real USD-nominal GDP ratio 1991->2019 (GR/AT/FI: 1979->2019); spending
-  // composition and tax-base ratios carry over structurally; inflation, wage,
-  // growth, debt ratios, yields and ratings are 2019 anchors (Eurostat/IMF/
-  // World Bank 2019 actuals, rounded). Currency codes keep the game's legacy
-  // identity per country (EUR is DE-only), unchanged from the older rows.
-  // ── France FY2019 (Macron second-year budget, euros via FRF game units) ───
-  // 2019: inflation 1.1%, growth 1.8%, debt ~98% GDP, 10y ~0.1%, AA.
+  // 2019 western-market calibrations.
+  // Each row is explicit for 2019 rather than inherited from the 1991 or 1979
+  // bundle. Game-unit GDP scales the latest authored row by real USD-nominal
+  // GDP ratio; spending composition and tax-base ratios carry over; inflation,
+  // wage, growth, debt ratios, yields and ratings are 2019 anchors. Currency
+  // codes keep the game's legacy identity per country (EUR is DE-only).
   {
     budgetId: "FR",
     countryId: "FR",
@@ -2371,11 +2349,10 @@ const NATIONAL_BUDGET_SEED_CONFIGS_1991: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 1991,
     },
     creditRating: "AA",
-    // Reconciled (fix/default-laws, 2026-06-03) to the IE default spending laws
-    // scaled by the IE cost-scale low anchor (0.20; see COST_SCALE_ANCHORS in
-    // src/lib/budget/costs.ts) — ~32% of 1991 GDP in categories; ~41.7% total incl.
-    // debt service. Keys align to the legislation category vocabulary
-    // (socialProtection/transport/housing).
+    // Reconciled to the IE default spending laws scaled by the IE cost-scale
+    // low anchor (0.20; see COST_SCALE_ANCHORS in src/lib/budget/costs.ts).
+    // ~32% of 1991 GDP in categories; ~41.7% total incl. debt service. Keys
+    // align to the legislation category vocabulary.
     baselineSpendingByCategory: {
       health: 3_385_410_000,
       education: 1_518_570_000,
@@ -2490,10 +2467,9 @@ const NATIONAL_BUDGET_SEED_CONFIGS_1991: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 1991,
     },
     creditRating: "BBB",
-    // Reconciled (fix/default-laws, 2026-06-03) to the CN default spending laws
-    // scaled by the CN cost-scale low anchor (0.02; see COST_SCALE_ANCHORS in
-    // src/lib/budget/costs.ts) — ~17% of 1991 GDP. Adds the publicSafety line
-    // (public security + criminal justice).
+    // CN default spending laws scaled by the CN cost-scale low anchor
+    // (0.02; see COST_SCALE_ANCHORS in src/lib/budget/costs.ts). Includes
+    // publicSafety (public security + criminal justice).
     baselineSpendingByCategory: {
       education: 67_256_640_000,
       infrastructure: 72_166_560_000,
@@ -2629,10 +2605,10 @@ const NATIONAL_BUDGET_SEED_CONFIGS_1991: NationalBudgetSeedConfig[] = [
       salesTax: "fr_vat",
     },
   },
-  // ── Italy FY1991 — Andreotti VII pre-Tangentopoli budget (lira) ─────────────
-  // Nominals re-anchored at assembly (anchorFiscal1991) to WDI 1991 GDP,
-  // ITL 1,549,584B at 1,240.6 ITL/USD = $1.25T, and IMF gross debt 105.3% of
-  // GDP; the literals keep only the authored shares. The defining feature is the historically accurate
+  // Italy FY1991, Andreotti VII pre-Tangentopoli budget (lira).
+  // Literals are authored shares, re-anchored at assembly (anchorFiscal1991) to
+  // WDI 1991 GDP (ITL 1,549,584B at 1,240.6 ITL/USD = $1.25T) and IMF gross
+  // debt 105.3% of GDP. The defining feature is the historically accurate
   // ~10%-of-GDP deficit: debt ~98% of GDP at ~11.5% BTP yields makes the
   // interest bill alone ~11% of GDP. Spend ~52%, revenue ~42%.
   {
@@ -3233,7 +3209,7 @@ function makeEasternBlocBudget(
         tradeGrowth: 3.0,
         lastUpdated: new Date(0),
       },
-      // Fiscal-budget scale (same ruling-#15 discipline as makeEasternBlocBudget1953),
+      // Fiscal-budget scale (same fiscal-scale discipline as makeEasternBlocBudget1953),
       // NOT the state's total economic footprint. The prior ratios (corp 0.62,
       // taxableSales 1.1, otherRevenue 18.5% GDP) were authored as if revenue
       // should approach plan-investment spend (~85% GDP). Charged at the milder
@@ -3370,7 +3346,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1979: NationalBudgetSeedConfig[] = [
       tradeGrowth: 3.0,
       lastUpdated: new Date(0),
     },
-    // Nominally balanced Soviet budget (refs #3246): profit remittances +
+    // Nominally balanced Soviet budget: profit remittances +
     // turnover tax extract the plan surplus, so revenue ≈ spend (~57% vs ~60%).
     taxBaseRatios: {
       taxableIncome: 0.05, // tiny flat wage tax
@@ -3379,10 +3355,9 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1979: NationalBudgetSeedConfig[] = [
       importValue: 0.1,
       taxableSales: 0.75, // turnover-tax base (gross turnover)
     },
-    // As in 1953, every absolute rouble line is the whole-Union figure scaled by
-    // 0.7325 (= ₽439.5B / ₽600B), RU's share of the regional GDP rollup after
-    // Ukraine, Byelorussia and the Baltics left. Keeps the "revenue ≈ spend"
-    // shape of refs #3246 instead of spending Union money on 73% of the economy.
+    // Every absolute rouble line is the whole-Union figure scaled by 0.7325
+    // (RU's share of the regional GDP rollup after Ukraine, Byelorussia and
+    // the Baltics left), preserving the revenue ≈ spend shape.
     otherRevenue: 51_000_000_000,
     debt: {
       principal: 37_000_000_000, // minimal external debt
@@ -3835,7 +3810,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1979: NationalBudgetSeedConfig[] = [
       tradeGrowth: 3.0,
       lastUpdated: new Date(0),
     },
-    // Fiscal-budget scale (ruling #15), matching makeEasternBlocBudget: VEB profit
+    // Fiscal-budget scale, matching makeEasternBlocBudget: VEB profit
     // remittances + product levy land ~55% of NMP against ~58% authored spend —
     // not the prior footprint bases (corp 0.68, taxableSales 1.3) that produced
     // ~98% GDP revenue. GDR consumer/rent subsidies stay on the spend side.
@@ -3888,7 +3863,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1979: NationalBudgetSeedConfig[] = [
       tradeGrowth: 3.5,
       lastUpdated: new Date(0),
     },
-    // Fiscal-budget scale (ruling #15), matching makeEasternBlocBudget: New
+    // Fiscal-budget scale, matching makeEasternBlocBudget: New
     // Economic Mechanism softened extraction vs orthodoxy, but the prior
     // footprint bases (corp 0.64, taxableSales 1.25) still produced ~92% GDP
     // revenue. Same fiscal bases as the shared helper land ~55% against ~58% spend.
@@ -4403,7 +4378,7 @@ function makeEasternBlocBudget1953(
         tradeGrowth: 2.0,
         lastUpdated: new Date(0),
       },
-      // Fiscal-budget scale (RU/DD ruling-#15 discipline), NOT the state's total
+      // Fiscal-budget scale (RU/DD fiscal-scale discipline), NOT the state's total
       // economic footprint. The prior ratios (corp 0.60, taxableSales 1.05,
       // otherRevenue 15.5% GDP) were authored for ~76% GDP revenue under the
       // milder shared easternBlocPolicyConfig rates (enterprise 55%, product
@@ -4473,24 +4448,10 @@ function makeEasternBlocBudget1953(
 /**
  * 1953 preset national-budget seed configs.
  *
- * ## GDP denomination convention
- *
- * By deliberate design, country GDP is stored in LOCAL CURRENCY — the UK in
- * pounds, the USSR in rubles, France in francs, etc. Cross-country GDP
- * comparison is invalid and that is accepted.
- *
- * However, a subset of 1953 countries have their GDP values stored in USD
- * (their `currencyCode` is display-only). These are:
- *   - IT (Italy):   $17B  — ₤10.6T / 625 ITL/USD
- *   - JP (Japan):   $25.8B — ¥9.3T / 360 JPY/USD
- *   - CN (China):   $33.3B — ¥CNY 82B / 2.46 CNY/USD
- *   - NG (Nigeria): $3.4B  — £1.2B WAP × $2.80/£
- *
- * All other 1953 countries are local-currency. The machine-readable marker
- * lives in `gdpDenomination.ts` (`GDP_DENOMINATION_1953`) and is pinned by
- * a guard test. Do NOT add a new USD-anchored country without updating both.
- *
- * See gdpDenomination.ts for the definitive table.
+ * GDP is normally in local currency; cross-country comparison is invalid.
+ * A few countries (IT, JP, CN, NG) store GDP in USD with `currencyCode`
+ * display-only. The authoritative marker is `GDP_DENOMINATION_1953` in
+ * `gdpDenomination.ts`, pinned by a guard test; update both together.
  */
 export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
   // ── United States FY1953 — Eisenhower / 83rd Congress ───────────────────────
@@ -4591,8 +4552,8 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
     // sweep; UK revenue = authored rates × bases + revenue.lawRevenue.
     // (Supersedes dev's era-scaled NHS ladder — the OLD uk_nhs_funding type no
     // longer seeds on the 1953 preset, so its revenue config has no referent.)
-    // Policy configs point at the era-correct 1953 table (spec §4.2a — this
-    // block previously wired the MODERN config, a latent inconsistency).
+    // Policy configs point at the era-correct 1953 table (the MODERN
+    // config would be a latent inconsistency).
     policyDefaults: COUNTRY_POLICY_CONFIGS_1953.uk.defaults,
     policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.uk.optionIndexes,
     seedTaxRatesOverride: SEED_TAX_RATES_1953.UK,
@@ -4635,7 +4596,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       tradeGrowth: 3.0,
       lastUpdated: new Date(0),
     },
-    // Ruling #15 (political-legislation spec §4.2/§4.2a): re-authored to the
+    // Re-authored to the
     // HISTORICAL fiscal budget (≈₽535B outlays / ≈₽540B revenue ≈ 38% of GDP,
     // turnover-tax anchored) — the prior seed spent ₽1,110B ≈ 79% of GDP, which
     // conflated the state's total economic footprint with the fiscal budget and
@@ -4654,11 +4615,11 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       importValue: 0.18,
       taxableSales: 0.55, // turnover-tax the dominant revenue source (31% rate)
     },
-    // EVERY absolute rouble line below is the ruling-#15 whole-Union figure
+    // EVERY absolute rouble line below is the fiscal-scale whole-Union figure
     // multiplied by 0.735 (= ₽1,029,166M / ₽1,400,000M), the share of the
     // regional GDP rollup RU kept when Ukraine, Byelorussia and the Baltics
     // became their own countries. Scaling rather than re-authoring preserves
-    // ruling #15's shape: outlays ≈38% of GDP, turnover-tax anchored, near
+    // the fiscal-scale rule's shape: outlays ≈38% of GDP, turnover-tax anchored, near
     // balance on day one. The republics' own budgets carry the other 26.5%.
     otherRevenue: 113_000_000_000, // state loans, price-equalization profits, state property
     debt: {
@@ -4745,7 +4706,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
     },
   },
   // ── Italy FY1953 — First Republic / Christian Democrats ─────────────────────
-  // GDP ≈ $17B USD-equivalent (₤10.6T at 625 ITL/USD; refs #3498 USD-anchor).
+  // GDP ≈ $17B USD-equivalent (₤10.6T at 625 ITL/USD).
   // 'Miracolo Economico' just starting; modest welfare vs. 1979; Marshall Plan
   // investment winding down but legacy strong. Amounts are USD-anchored (like
   // US/DE); currencyCode ITL is display-only.
@@ -4829,17 +4790,11 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 1953,
     },
     creditRating: "BB", // autarky + political isolation; poor credit access
-    // Rescaled ~0.55x the original hand-authored total (fiscal-scale audit,
-    // 2026-07-28): the lines below summed to ₧85B + ₧6B grants = ₧91B (47% of
-    // GDP) against this config's own revenue side (₧37.1B / 18.7% of GDP,
-    // undented further by a separate `es_customs_tariff` revenue gap — see
-    // audit notes) — a ₧56.3B / 28.4%-of-GDP structural deficit from turn 1,
-    // never checked against the revenue this same config produces. Financed
-    // onto debt at the (uncapped past CCC) credit-rating interest schedule
-    // (src/lib/budget/debt.ts), a 650-turn sandbox run compounded this to
-    // 167.9% of GDP spending / 904% debt-to-GDP / CCC. Rescaling brings the
-    // day-1 deficit to ~8% of GDP (₧15.8B) while preserving the category mix.
-    // See BR's 1953 config for the same class of fix.
+    // Rescaled ~0.55x the original hand-authored total: lines summed to
+    // 47% of GDP against this config's own 18.7%-of-GDP revenue, a 28.4%
+    // structural deficit that compounded to 904% debt-to-GDP over 650
+    // turns. Rescaling brings day-1 deficit to ~8% of GDP while preserving
+    // category mix.
     baselineSpendingByCategory: {
       socialSecurity: 9_000_000_000, // Seguro de Vejez + Seguro de Enfermedad
       healthcare: 2_000_000_000,
@@ -4876,21 +4831,9 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       tradeGrowth: 5.0,
       lastUpdated: new Date(0),
     },
-    // taxableIncome/wagesAndSalaries cut from 0.42/0.45 to 0.35/0.42 (fiscal-
-    // scale audit, 2026-07-28, follow-up to the 2026-07-28 income/social-charges
-    // bracket fix below). Sweden's wage economy was more formalized than
-    // Finland's in 1953 (LO-SAF Saltsjöbaden, 1938) so it keeps a wider base
-    // than FI's agrarian-economy 0.1/0.15, but 0.42/0.45 combined with even the
-    // "standard" (not maximalist) income/social-charges brackets still landed
-    // revenue at ~43-48% of GDP — above what a "folkhem under active
-    // construction" (se_welfare_state's own 1953 framing, not yet mature)
-    // economy realistically collected. Trimmed toward DE's Bismarckian
-    // 0.3/0.4 formal-wage-economy ratios, giving Sweden credit for its more
-    // advanced labor-market institutions without re-inflating to the original
-    // footprint-scale figures (verified against getInitialNationalBudgetsForPreset
-    // ("1953-default"): 43.5%/36.4%/+7.1%-of-GDP → ~38.2%/36.4%/+1.9%, a small
-    // prudent surplus consistent with the AAA rating and "strong export
-    // surplus" framing above, rather than an implausible >40%-of-GDP tax take).
+    // Sweden's 1953 wage economy was more formalized than Finland's, so it keeps
+    // a wider tax base than FI, but narrower ratios keep revenue consistent with
+    // a folkhem under construction rather than a mature welfare state.
     taxBaseRatios: {
       taxableIncome: 0.35,
       corporateProfits: 0.05,
@@ -5099,21 +5042,10 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       tradeGrowth: 3.0,
       lastUpdated: new Date(0),
     },
-    // taxableIncome/wagesAndSalaries cut from footprint-scale (0.26/0.38) to
-    // fiscal-scale (fiscal-scale audit, 2026-07-28): 1953 Finland was still
-    // substantially agrarian (urbanization crossed 50% only around 1970), so
-    // the formal PAYE/payroll base subject to fi_income_tax (65%, "the
-    // standard progressive schedule") and fi_social_charges (22%, "the
-    // standard") was much narrower than a fully industrialized peer (DE 0.3/
-    // 0.4, JP 0.25/0.38). At the old ratios this config alone produced $333.7B
-    // revenue (42.2% of GDP) against $124B spend (15.7%) — a $200.8B/+25.4%-
-    // of-GDP day-1 SURPLUS (verified against the sandbox `ahd_sim_grand53r3`
-    // DB's turn-26 federalBudget doc), implausible for a small state that had
-    // just finished delivering war reparations in kind (1952) and was in a
-    // recession year. The cut brings revenue to ≈$211.5B (26.8% of GDP, in
-    // line with Nordic-era tax/GDP ratios before the 1960s-80s welfare-state
-    // tax expansion) against the unchanged $124B spend — a small, defensible
-    // ≈11% of GDP surplus, not a >25% one.
+    // 1953 Finland was still substantially agrarian, so the formal PAYE/payroll
+    // base was much narrower than a fully industrialized peer's. Wider ratios
+    // produced an implausible day-1 surplus; these keep revenue in line with
+    // pre-1960s Nordic tax/GDP ratios.
     taxBaseRatios: {
       taxableIncome: 0.1,
       corporateProfits: 0.06,
@@ -5134,11 +5066,9 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       socialSecurity: 28_000_000_000, // war pensions + child allowances (1948)
       education: 18_000_000_000,
       healthcare: 10_000_000_000,
-      // Bumped 26B → 32B (fiscal-scale audit follow-up, 2026-07-28): the
-      // Oulujoki hydro scheme (Pyhäkoski/Montta) and the ~400,000-person
-      // Karelian resettlement land-settlement program (asutustoiminta) were
-      // BOTH large, concurrently-running state capital programs in 1953, not
-      // sequential — 26B understated their combined scale.
+      // Oulujoki hydro (Pyhäkoski/Montta) and the ~400,000-person Karelian
+      // resettlement land-settlement program (asutustoiminta) ran concurrently
+      // as large state capital programs in 1953; 32B reflects their combined scale.
       infrastructure: 32_000_000_000, // resettlement roads, hydro dams (Oulujoki), rail
       other: 18_000_000_000, // farm supports, Karelian compensation payments
     },
@@ -5214,7 +5144,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
     },
   },
   // ── Japan FY1953 — post-Occupation recovery / Korean War boom ───────────────
-  // GDP ≈ $25.8B USD-equivalent (¥9.3T at 360 JPY/USD Bretton Woods; refs #3498
+  // GDP ≈ $25.8B USD-equivalent (¥9.3T at 360 JPY/USD Bretton Woods
   // USD-anchor). Occupation ended Apr 1952; Korean War procurement boosted
   // industry; Article 9 → Self-Defense Forces tiny (~1% GNP). Amounts below are
   // USD-anchored (like US/DE); currencyCode JPY is display-only.
@@ -5280,7 +5210,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
     },
   },
   // ── China FY1953 — People's Republic / First Five-Year Plan ─────────────────
-  // GDP ≈ $33.3B USD-equivalent (¥CNY 82B at official ~2.46 CNY/USD; refs #3498
+  // GDP ≈ $33.3B USD-equivalent (¥CNY 82B at official ~2.46 CNY/USD
   // USD-anchor). Korean War armistice July 1953; 1st FYP started 1953 with Soviet
   // technical aid; mass land reform completed; PLA huge. Amounts are USD-anchored
   // (like US/DE); currencyCode CNY is display-only.
@@ -5387,24 +5317,12 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
       ceilingLastRaisedYear: 1953,
     },
     creditRating: "BB",
-    // Rescaled to ~half the original hand-authored total (fiscal-scale audit,
-    // 2026-07-28): the lines below summed to Cr$163B + Cr$20B grants = Cr$183B
-    // (57% of GDP) against this config's OWN revenue side (taxRateOverrides
-    // below, documented at "~21% of GDP" and landing at Cr$71B/21.5%) — a
-    // Cr$117B / 35.5%-of-GDP structural deficit from turn 1, authored without
-    // ever being checked against the revenue this same config produces. No
-    // real government (fictional or historical) runs that every year; financed
-    // onto debt at the credit-rating interest schedule (src/lib/budget/debt.ts,
-    // uncapped past CCC), a 650-turn sandbox run compounded it to 185% of GDP
-    // spending / 1009% debt-to-GDP / CCC. Halving brings the day-1 deficit to
-    // ~7.7% of GDP (Cr$25.5B) — a real but sane Korean-War-era gap — while
-    // preserving the category mix and flavour. See ES's 1953 config for the
-    // same class of fix.
-    //
-    // Every key below is now also booked by a real spending law
-    // (brLegislationTypes.ts) and pinned to this exact figure at the default
-    // option via EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY.BR / GRANT_OVERRIDE_COUNTRIES
-    // (this file) — BR is no longer relying solely on the baseline fallback.
+    // Scaled so day-1 spending stays consistent with this config's own
+    // revenue side (~21% of GDP): the prior totals produced a ~35%-of-GDP
+    // structural deficit from turn 1, which compounded to runaway debt.
+    // Every key below is also pinned by a real spending law
+    // (brLegislationTypes.ts) via EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY.BR /
+    // GRANT_OVERRIDE_COUNTRIES, so the baseline is no longer the sole source.
     baselineSpendingByCategory: {
       socialSecurity: 12_500_000_000,
       healthcare: 4_000_000_000,
@@ -5416,13 +5334,11 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
     baselineStateGrants: 10_000_000_000,
     policyDefaults: COUNTRY_POLICY_CONFIGS_1953.br.defaults,
     policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.br.optionIndexes,
-    // Legislation-derived (brLegislationTypes.ts, added with the BR legislation
-    // module): each dial's default policyOptionOverrides index (below) is
-    // authored at the SAME rate the old taxRateOverrides stopgap used to hard-
-    // code (income 18%, corporate 18%, IAP/payroll 20%, IVC/sales 10%, tariff
-    // 18%; foreignCorporateTax has no separate bill and mirrors domestic per
-    // deriveTaxRates's day-one-parity fallback), so revenue.total is unchanged
-    // from the pre-legislation stopgap — see brLegislationTypes.test.ts.
+    // Each dial's default policyOptionOverrides index (below) is authored at
+    // the same rate the old taxRateOverrides stopgap hard-coded (income 18%,
+    // corporate 18%, IAP/payroll 20%, IVC/sales 10%, tariff 18%; foreignCorporateTax
+    // mirrors domestic per deriveTaxRates), so revenue.total is unchanged.
+    // See brLegislationTypes.test.ts.
     taxPolicyIds: {
       incomeTax: "br_income_tax_rate",
       domesticCorporateTax: "br_corporate_tax",
@@ -5488,7 +5404,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
   // Colonial Nigeria under the Crown; Eastern/Western/Northern Regions established;
   // Richards Constitution (1946) → Macpherson (1951) → Lyttleton (1954 federal);
   // groundnuts, cocoa, palm oil exports. GDP ≈ $3.4B USD-equivalent (£1.2B WAP at
-  // $2.80/£; refs #3498 USD-anchor). Currency was the West African pound (pegged
+  // $2.80/£). Currency was the West African pound (pegged
   // 1:1 to GBP) — the naira did not exist until 1973. Amounts are USD-anchored
   // (like US/DE); currencyCode NGN is display-only.
   {
@@ -5559,7 +5475,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
     // authored slider rates × these ratios reproduce the DD catalog's receipts
     // (product levy the anchor). Fiscal share held to ~35-40% of NMP — the
     // prior ~90% authored spend conflated the state's total economic footprint
-    // with the fiscal budget (same structural fix as RU ruling #15).
+    // with the fiscal budget (same structural fix as RU the fiscal-scale rule).
     taxBaseRatios: {
       taxableIncome: 0.35,
       corporateProfits: 0.08, // VEB remittance base (75/25 domestic/foreign split)
@@ -5692,11 +5608,10 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_1953: NationalBudgetSeedConfig[] = [
 ];
 
 /**
- * Re-anchors a FR/IT/ES/SE/TR/GR/AT/FI row to the sourced 1991 national
- * accounts (#3034). Other countries pass through. For the AT/FI/GR carry-forward
- * the 1991 real growth and CPI inflation replace the 1979 factors, and the
- * spending lines are derived from the sourced expenditure share. See
- * fiscalAnchors1991.ts for every source and conversion.
+ * Re-anchors FR/IT/ES/SE/TR/GR/AT/FI rows to the sourced 1991 national
+ * accounts; other countries pass through. For AT/FI/GR carry-forward, 1991
+ * real growth and CPI inflation replace the 1979 factors and spending lines
+ * derive from sourced expenditure share. See fiscalAnchors1991.ts for sources.
  */
 function anchorFiscal1991(config: NationalBudgetSeedConfig, carriedFrom1979: boolean) {
   const country = config.countryId as string;
@@ -5740,10 +5655,10 @@ function getUncalibratedNationalBudgetSeedConfigsForPreset(
           {
             ...config,
             fiscalYear: 1991,
-            // Documented fallback (#2076): no 1991-authored row exists for these
-            // countries, so the 1979 calibration (tax bases, rates, wage growth,
-            // spending mix) carries forward visibly tagged. The 1991 aggregates
-            // below are sourced, see anchorFiscal1991.
+            // Documented fallback: no 1991-authored row exists for these countries,
+            // so the 1979 calibration (tax bases, rates, wage growth, spending mix)
+            // carries forward visibly tagged. The 1991 aggregates below are sourced,
+            // see anchorFiscal1991.
             sourceFiscalYear: config.sourceFiscalYear ?? config.fiscalYear,
           },
           true
@@ -6027,7 +5942,7 @@ function overlayNationalBudgetConfigs(
     const override = overrideByCountry.get(config.countryId);
     if (override) return override;
     if (inheritedFiscalYear === undefined) return config;
-    // Tag the source era (#2076): the rewritten fiscalYear says which world
+    // Tag the source era: the rewritten fiscalYear says which world
     // the row seeds, sourceFiscalYear says which era authored its factors.
     return {
       ...config,
@@ -6051,9 +5966,9 @@ export interface NationalBudgetSeedProvenance {
 }
 
 /**
- * Per-country provenance for a preset's budget roster. Conformance surface
- * for #2076: every cross-era inheritance is observable with source and
- * target era instead of hidden behind a rewritten fiscalYear.
+ * Per-country provenance for a preset's budget roster: every cross-era
+ * inheritance is observable with source and target era instead of hidden
+ * behind a rewritten fiscalYear.
  */
 export function getNationalBudgetSeedProvenance(preset: string): NationalBudgetSeedProvenance[] {
   return getNationalBudgetSeedConfigsForPreset(preset).map((config) => {
@@ -6170,7 +6085,7 @@ const RU_PUBLIC_CORPORATION_SEQUENTIAL_ID = 900_009;
  * Corp. Ids are derived deterministically from a per-country base so reseeds
  * are idempotent.
  */
-// Legacy SOEs used `700…000` + 3 hex digits (suffix < 0x1000). Ticket #1014
+// Legacy SOEs used `700…000` + 3 hex digits (suffix < 0x1000).
 // widened every Eastern-bloc country to one SOE per CorporationType (17×8 =
 // 0x88 headroom → 0x100 bands). Placing those bands at 0x100–0xc00 collided
 // with live legacy ObjectIds (BG/RO/YU overwrote RU/CN/DD). New layout uses a
@@ -6406,35 +6321,17 @@ function buildCommandSoeCorpEntries(params: {
   });
 }
 
-// ── 1953 market-economy state enterprises (corporate-sector seed-gap fix) ──
-// FR/IT/SE/TR/GR/AT/FI are market democracies, not command economies — they
-// don't get the RU/CN/Warsaw-Pact multi-SOE stack above. But all seven were
-// promoted from the abstract "sphere-macro" tier to full-autonomous
-// (ECON_TIER_ROSTER_COUNTRIES in seedEconTierRosters.ts fixed the matching
-// political-roster gap, #3253) and NONE of them were ever given a matching
-// entry in this function, so every one of them seeded ZERO producing
-// corporations — an economic ghost exactly like the pre-fix RU/Warsaw-Pact
-// countries, just without the SOE mechanism to catch it. Unlike RU/CN's
-// planned economies (state owns 100% of the commanding heights), each of
-// these seven is modeled as ONE state-holding corporation that owns a
-// REALISTIC MINORITY/PLURALITY SHARE of a handful of real 1953 nationalized
-// anchors — the rest of each targeted sector, plus every sector not listed,
-// stays in the `unownedSectors` pool for players to found new corporations
-// against (same "gravity, not rails" shape as the UK NHS corp above).
+// 1953 market-economy state enterprises. FR/IT/SE/TR/GR/AT/FI are market
+// democracies without the RU/CN/Warsaw-Pact SOE stack, but each is modeled
+// as ONE state-holding corporation that owns a realistic minority/plurality
+// share of a handful of nationalized anchors; the rest of each sector (and
+// every unlisted sector) stays in `unownedSectors` for players to found new
+// corporations against. 1953 preset only: by later presets several of these
+// firms were privatized.
 //
-// Scoped to the 1953 preset only: by 1979/1991/2019 several of these firms
-// were privatized (Renault 1996, ENDESA, ENI's later partial float, …) and
-// modeling that drift correctly is out of scope for this fix.
-//
-// ES (Spain) is deliberately EXCLUDED and kept dormant (see
-// DORMANT_MARKET_STATE_ENTERPRISE_SPECS below): the 2026-07-28 owner decision
-// demoted Spain from full-autonomous to sphere-macro for 1953-default only
-// (Franco's dictatorship never holds a legislative election in this preset —
-// see worldEntityManifest.ts). seedMacroCountries.ts's own invariant is that
-// sphere-macro entities get ZERO corporations/corporateSectors — a real INI
-// state-holding corp would contradict that abstraction, so its authored spec
-// (ENSIDESA/ENDESA/SEAT/RENFE) is preserved as inert reference for a possible
-// future Tier-2 migration rather than deleted outright.
+// ES is excluded and kept dormant (DORMANT_MARKET_STATE_ENTERPRISE_SPECS):
+// for 1953-default Spain is sphere-macro, whose invariant is zero
+// corporations/corporateSectors, so its spec is preserved as inert reference.
 interface MarketStateEnterpriseSectorSpec {
   type: OperatingSectorType;
   /**
@@ -6558,13 +6455,12 @@ function buildMarketStateEnterpriseCorpEntries(params: {
 }
 
 /**
- * The seven ACTIVE market-economy specs (ES moved to
- * {@link DORMANT_MARKET_STATE_ENTERPRISE_SPECS} on 2026-07-28 — see the
- * section doc comment above). OIDs continue the 700…0XXX single-corp
- * sequence (US 011, UK 001, JP 021, DE 031, IE 041, BR 051, CN 061, NG 071,
- * RU 081, DD 091 → this block 0A1-121) and the 900_0NN sequentialId sequence
- * (DD 900_010 → 900_011-900_018). Distinct from the SOE_ID_BASE_BY_COUNTRY hex
- * ranges (0xa00+), which are reserved for the command-economy per-sector SOEs.
+ * The ACTIVE market-economy specs (ES lives in
+ * {@link DORMANT_MARKET_STATE_ENTERPRISE_SPECS}). OIDs continue the 700…0XXX
+ * single-corp sequence (US 011 … DD 091, this block 0A1-121) and the 900_0NN
+ * sequentialId sequence (DD 900_010, then 900_011-900_018). Distinct from the
+ * SOE_ID_BASE_BY_COUNTRY hex ranges (0xa00+), reserved for command-economy
+ * per-sector SOEs.
  */
 const MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] = [
   // France — the 1945 Liberation nationalizations (de Gaulle's provisional
@@ -6720,14 +6616,11 @@ const MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] = [
 
 /**
  * Dormant market-state-enterprise spec for Spain (ES), left out of
- * {@link MARKET_STATE_ENTERPRISE_SPECS} on 2026-07-28. Spain was demoted from
- * full-autonomous to sphere-macro for 1953-default only (Franco's dictatorship
- * never holds a legislative election in that preset — see
- * worldEntityManifest.ts). Sphere-macro entities must seed ZERO corporations
- * (seedMacroCountries.ts's own invariant), so a real INI state-holding corp
- * would contradict Spain's new abstract-economy classification. Kept here,
- * not seeded by {@link generateCountryOwnedSeedData}, as inert reference for a
- * possible future Tier-2 migration.
+ * {@link MARKET_STATE_ENTERPRISE_SPECS}. Spain is sphere-macro for
+ * 1953-default (Franco never holds a legislative election in that preset).
+ * Sphere-macro entities must seed ZERO corporations, so a real INI
+ * state-holding corp would contradict Spain's classification. Kept as
+ * inert reference for a possible future Tier-2 migration.
  */
 export const DORMANT_MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] = [
   // Spain — INI (Instituto Nacional de Industria, 1941), Franco's autarky-era
@@ -7161,8 +7054,7 @@ export function generateCountryOwnedSeedData(
       userOid: `00000000000000000000a${(index * 3 + 3).toString(16).padStart(3, "0")}`,
       // Own block (900_019-900_027), disjoint from the sovereign sequence
       // US 900_001 through DD 900_010 AND from the 1953 market state-enterprise
-      // block 900_011-900_018 below. The previous 900_009 base reused seven ids
-      // across both blocks (issue #2028), which blocked unique-index creation.
+      // block 900_011-900_018, to keep the unique index valid.
       sequentialId: 900_019 + index,
       name,
       headquartersState,
@@ -7221,21 +7113,15 @@ export function generateCountryOwnedSeedData(
     });
   }
 
-  // ── CN command-era SOEs (Command Economy v2, #3496) ──────────────────────
-  // Unlike RU (no player corps → the state owns EVERYTHING), CN is a playable,
-  // market-capable country whose producing supply normally comes from player
-  // corporations + the unowned market pool. So CN gets the RU-style per-sector
-  // SOE split ONLY in its FULLY-COMMAND band (the First-Five-Year-Plan era,
-  // scheduled marketization < COMMAND_CEILING), where the state legitimately
-  // owns the commanding heights and there is no private producing base yet. In
-  // the dual-track (1979–92) and socialist-market (1993+) bands CN keeps today's
-  // shape (bare sovereign issuer; supply from player/market corps), so those
-  // eras never sprout a full command SOE stack. The bare CN sovereign issuer
-  // seeded above stays the primary bond-issuer identity — these SOEs are the
-  // non-primary producing arms with deterministic 0xB00-range ids that never
-  // collide with the issuer or player-founded corporations. Only OWNED sectors
-  // count as commodity supply, so this adds the SOE-performance channel without
-  // double-counting the unowned market pool.
+  // ── CN command-era SOEs ──────────────────────────────────────────────────
+  // Unlike RU, CN is playable with market-capable supply from player corps, so
+  // CN gets the RU-style per-sector SOE split ONLY in its fully-command band
+  // (scheduled marketization < COMMAND_CEILING). Dual-track and socialist-market
+  // bands keep the bare sovereign issuer; supply comes from player/market corps.
+  // SOEs are the non-primary producing arms with deterministic 0xB00-range ids
+  // that never collide with the issuer or player-founded corporations. Only
+  // OWNED sectors count as commodity supply, so this adds the SOE-performance
+  // channel without double-counting the unowned market pool.
   const cnStates = states.filter((state) => state.countryId === "CN" && state.gdp > 0);
   if (commandEconomyEnabled && cnStates.length > 0 && commandEconomySoeSectors("CN").length > 0) {
     const cnSeedYear = getNationalBudgetSeedConfigsForPreset(preset).find(
@@ -7268,22 +7154,13 @@ export function generateCountryOwnedSeedData(
     }
   }
 
-  // ── Warsaw-Pact satellite SOEs (command-economy seed-gap fix) ────────────
-  // DD/PL/HU/CS/BG/RO are Warsaw-Pact command economies (MARKETIZATION_SCHEDULE
-  // keeps every one of them under COMMAND_CEILING through the 1953/1979 window
-  // this seeder ever runs for — `seedEasternBlocBudget` gates its whole pass on
-  // `isEasternBlocEra`). Before this fix these six had ZERO producing corporate
-  // objects: DD's only "corporation" was its bare bond-issuer shell (pushed by
-  // `sovereignIssuerSpec` above, `sectors: []`), and the other five had no
-  // country-owned corp at all — all six countries' actual output existed only
-  // as `unownedSectors` documents, so a player taking DD (a PLAYER country in
-  // this era) inherited an economy with no enterprises to direct. Like RU (no
-  // player producing base) and unlike CN (which keeps a dual-track/market
-  // band where player/market corps carry supply), each of these six always
-  // gets the full commanding-height SOE split whenever the flag is on AND its
-  // era-scheduled level is fully command — checked explicitly (rather than
-  // assumed) so a future preset for one of them outside the command band
-  // doesn't silently sprout a command SOE stack it shouldn't have.
+  // ── Warsaw-Pact satellite SOEs ─────────────────────────────────────────
+  // These command economies have no country-owned producing corps
+  // otherwise: their output exists only as `unownedSectors`, so a player taking DD
+  // inherited an economy with no enterprises to direct. Each gets the full
+  // commanding-height SOE split only when the flag is on AND its era level is
+  // fully command, so a future preset outside the command band does not sprout
+  // a command SOE stack.
   const WARSAW_PACT_SOE_SPEC: Array<{
     countryId: CountryId;
     namePrefix: string;

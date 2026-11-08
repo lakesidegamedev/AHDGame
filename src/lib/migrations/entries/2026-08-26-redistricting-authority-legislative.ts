@@ -9,16 +9,13 @@ import { legislativeAuthorityPolicy } from "@/lib/redistricting/seedRedistrictin
  * Backfill the redistricting-authority law to "Legislature-drawn" for every US
  * state that has congressional districts.
  *
- * The feature has been live (redistrictingEnabled) with no state ever able to
- * redraw: `us_state_redistricting_authority` was authored against the old
- * legislation catalog and never ported to the v2 typed catalog, so it is not a
- * proposable bill and no statePolicies row is ever written for it. Every state
- * therefore falls to the code default (index 1, bipartisan commission,
- * canDraw:false). That default is also historically wrong for the 1953/1960
- * eras, where legislatures drew the maps.
+ * The authority was authored against the old legislation catalog and never
+ * ported, so no statePolicies row is ever written and every state falls to the
+ * code default (bipartisan commission, canDraw:false). That default is also
+ * wrong for the 1953/1960 eras, where legislatures drew the maps.
  *
  * Insert-only via `$setOnInsert`: a state that already carries an authority row
- * (a future player/SCOTUS change) is left untouched.
+ * is left untouched.
  */
 async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];

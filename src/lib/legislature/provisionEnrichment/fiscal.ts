@@ -14,15 +14,10 @@ import type { FiscalScope, ProvisionFiscal } from "./types";
 /**
  * A provision's fiscal profile, priced at the bill's own scope.
  *
- * Previously national-only, which is why regional bill detail showed no cost or
- * revenue at all. The scope-aware primitives it uses (regionFiscalBase,
- * STATE_TAX_BASE_KEY, the stateBudgets read) are the same ones `estimates.ts`
- * and `billEnactment.ts` already run in production.
- *
  * `bandIndex` is deliberately null, matching what enactment charges
  * (`billEnactment.ts`). The propose modal prices with the real income band and
- * so disagrees with both; reconciling that is balance-adjacent and out of scope
- * here. Do not "fix" it in passing.
+ * so disagrees with both; reconciling that is balance-adjacent and out of
+ * scope. Do not "fix" it in passing.
  */
 export async function resolveProvisionFiscal(
   db: Db,

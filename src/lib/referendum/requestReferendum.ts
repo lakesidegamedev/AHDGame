@@ -5,7 +5,7 @@ import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
  * validate inputs + eligibility + AP, write the referendum doc, decrement AP,
  * return a thin status/body for the API route.
  *
- * See docs/superpowers/specs/2026-06-16-independence-process-design.md.
+ * See the independence-process design.
  */
 import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";

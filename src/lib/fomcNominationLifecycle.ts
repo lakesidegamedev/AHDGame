@@ -271,7 +271,7 @@ export async function processFomcNominationLifecycle(
         });
       }
       // The seat stays vacant and only the proposer can refill it, so a silent
-      // rejection deadlocks the board again (ticket #1238): tell the president
+      // rejection deadlocks the board again: tell the president
       // their pick failed and that they may nominate again.
       const proposerId = await nomineeUserId(db, nom.proposedByPresidentId);
       if (

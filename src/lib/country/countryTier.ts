@@ -12,14 +12,10 @@ import {
 export type { CountryTier } from "@/lib/country/rules/countryTier";
 
 /**
- * One read of every country's tier (#5702).
- *
- * THE resolver every per-country phase uses to decide whether to run for a
- * country. Before it, world events read the static config status, NPP
- * government read the registry and crises read the simulated list, so the
- * three disagreed about which countries existed. A background country stays
- * registered (pages, currency, exchange rate) and drops out of
- * `fullSimulationIds`, which is what phases iterate.
+ * Single source of truth for every country's tier. Per-country phases use
+ * this to decide whether to run. A background country stays registered
+ * (pages, currency, exchange rate) but is excluded from `fullSimulationIds`,
+ * which is what phases iterate.
  */
 export interface CountryTierSnapshot {
   tierOf(countryId: string): CountryTier;

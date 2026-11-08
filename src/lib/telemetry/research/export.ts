@@ -1,5 +1,5 @@
 /**
- * Export shell for the research panels (#2331, #2332, #2333, #2336).
+ * Export shell for the research panels.
  *
  * Read-only and bounded: every request is validated by `parseResearchQuery`
  * (turn window cap, row cap, keyset cursor), reads only the sanitized research

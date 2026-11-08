@@ -35,40 +35,27 @@ const UNOWNED_REVENUE_MULTIPLIER = 1.0;
 const COUNTRY_UNOWNED_REVENUE_MULTIPLIER: Partial<Record<CountryId, number>> = {};
 
 /**
- * Per-country, per-sector seed multiplier for DOWNSTREAM (input-consuming)
- * industry — additive capacity on top of the normalised sector-weight share,
- * not a redistribution of it (ticket-1072).
+ * Per-country, per-sector seed multiplier for DOWNSTREAM (input-consuming) industry:
+ * additive capacity on top of the normalised sector-weight share, not a redistribution
+ * of it.
  *
- * WHY A MULTIPLIER AND NOT A WEIGHT BUMP. `computeUnownedSeedRevenue` sizes a
- * bucket from the country's NORMALISED sector weight, so raising one weight
- * lowers every other sector's share. East Germany's problem is not the shape of
- * its mix, it is that its downstream consumers are absolutely too small against
- * its upstream producers: on the live 1953 world DD carries ~63.1k units of
- * steel SUPPLY against ~10.8k units of steel DEMAND, while Czechoslovakia at a
- * smaller population runs ~95.8k supply against ~80.4k demand. Re-weighting
- * inside a fixed pie tops out near 1.4x; the country needs more downstream
- * plant, not a different slice of the same plant.
+ * WHY A MULTIPLIER, NOT A WEIGHT BUMP. `computeUnownedSeedRevenue` sizes buckets from the
+ * country's NORMALISED sector weight, so raising one weight lowers every other sector.
+ * The DD problem is absolute downstream capacity against upstream supply, not mix shape;
+ * re-weighting inside a fixed pie tops out near 1.4x.
  *
- * WHY DD, AND WHY CONSTRUCTION CARRIES THE STEEL ROLE. The CoCom embargo walls
- * DD steel out of the West, so it cannot export the surplus away, and private
- * founding is banned in a command economy, so no player can build the missing
- * consumers. Construction (the Aufbau/Stalinallee programme, steel demand rate
- * 0.15) is the real downstream steel sink and is multiplied x8 to soak the
- * lignite-fed steel glut.
+ * WHY DD, AND CONSTRUCTION FOR STEEL. CoCom embargo walls DD steel out of the West and
+ * private founding is banned in a command economy, so no player can build the missing
+ * consumers. Construction (Aufbau/Stalinallee, steel demand rate 0.15) is the real
+ * downstream steel sink, multiplied x8 to soak the lignite-fed steel glut.
  *
- * WHY THE VEHICLES LANE IS ONLY x2 (was x10, ticket-1072). Lifting the auto works to
- * x10 back-fired: the vehicles lane's OUTPUT is `vehicles`, a commodity DD cannot sell.
- * Every Warsaw Pact neighbour is already net-long vehicles and the West is
- * CoCom-embargoed, so the extra output just piled up unsold (live prod: DD
- * vehicles supply 3544.5 vs demand 341) while a player's nationalized IFA corp
- * bled ~330k/turn on cars nobody buys. And auto consumes only ~5% of DD's steel
- * demand (auto steel rate 0.25 × vehicles output rate 0.5 ≈ 1,772 of ~33,248),
- * so cutting it back does NOT re-open the steel glut construction is sized to
- * close. Kept at x2 for a token IFA/Wartburg/Robur presence, not as a steel sink.
+ * WHY VEHICLES IS ONLY x2. Vehicles output cannot be sold: Warsaw Pact neighbours are
+ * net-long vehicles and the West is embargoed, so extra output piles up unsold while auto
+ * consumes only ~5% of DD steel demand. Cutting it back does not re-open the steel glut
+ * construction is sized to close. x2 keeps a token IFA/Wartburg/Robur presence.
  *
- * `capitalStock` is derived from this same ₳ figure (see `buildSector` in
- * seeds/reference/budgets.ts), so capacity and revenue move together and no
- * existing sector is cut.
+ * `capitalStock` is derived from this same ₳ figure (see `buildSector`), so capacity and
+ * revenue move together and no existing sector is cut.
  */
 export const COUNTRY_SECTOR_SEED_MULTIPLIER: Partial<
   Record<CountryId, Partial<Record<OperatingSectorType, number>>>
@@ -86,18 +73,15 @@ export function countrySectorSeedMultiplier(countryId: CountryId, sectorType: st
 }
 
 /**
- * Canonical market size (₳) for one (state, sectorType): the single source of
- * truth used by both the seeder and the 1991-recompute heal script. `gdp` is
- * the state's stored GDP (local-currency millions); `usdExchangeRate` normalizes
- * it to ₳, the seed scale + the sector weight shape the market, the result is
- * floored at the era's minimum.
+ * Canonical market size (₳) for one (state, sectorType): shared by the seeder
+ * and the 1991-recompute heal script. `gdp` is state GDP in local-currency
+ * millions; `usdExchangeRate` normalizes it to ₳, the seed scale and sector
+ * weight shape the market, result floored at the era minimum.
  *
- * Both the scale and the floor are resolved per PRESET (see
- * `constants/sectorSeedEra.ts`): the scale is a GDP multiple and is era-neutral
- * today, but the floor is an absolute ₳ amount calibrated on modern nominal
- * GDP, which pinned every sector of half the 1953 world at exactly the floor.
- * Presets outside the era table (all modern presets, and callers passing no
- * preset) resolve the unchanged modern constants.
+ * Scale and floor are resolved per preset (see `constants/sectorSeedEra.ts`):
+ * the floor is an absolute ₳ calibrated on modern nominal GDP, which pinned
+ * every sector of half the 1953 world at the floor. Presets outside the era
+ * table resolve the unchanged modern constants.
  */
 export function computeUnownedSeedRevenue(params: {
   gdp: number;
@@ -118,7 +102,7 @@ export function computeUnownedSeedRevenue(params: {
   );
   const countryMultiplier = COUNTRY_UNOWNED_REVENUE_MULTIPLIER[countryId] ?? 1;
   // Applied AFTER the era floor so the uplift is real capacity rather than
-  // headroom the floor would have swallowed (ticket-1072).
+  // headroom the floor would have swallowed.
   const downstreamMultiplier = countrySectorSeedMultiplier(countryId, sectorType);
   return Math.round(
     Math.max(getMinUnownedSectorRevenue(preset), Math.round(base * UNOWNED_REVENUE_MULTIPLIER)) *
@@ -140,7 +124,7 @@ export async function seedUnownedSectors(
   /** Route (state, sectorType) buckets to the National Corporation instead of unowned. */
   redirectToNatCorpBuckets?: ReadonlySet<string>
 ) {
-  // Background countries (#5702) keep their regions but run no sectors.
+  // Background countries keep their regions but run no sectors.
   const states = (
     await db
       .collection<State>("states")
@@ -267,6 +251,6 @@ export async function seedUnownedSectors(
 
   // Command economies seed SOEs at full market size, then this seeder also
   // inserts a full unowned twin — ownership lands near ~50% and non-SOE
-  // sectors stay unreachable ghosts (ticket #1014). Drain after the upserts.
+  // sectors stay unreachable ghosts. Drain after the upserts.
   await reconcileCommandEconomyUnowned(db, { preset, log });
 }

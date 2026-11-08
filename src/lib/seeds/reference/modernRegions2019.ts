@@ -7,19 +7,14 @@ import { roRegions2027 } from "@/lib/countries/ro/data/roRegions2027";
 import { bgRegions1991 } from "@/lib/countries/bg/data/bgRegions1991";
 
 /**
- * January 2019 national population and current-price GDP in local currency.
- * World Bank population SP.POP.TOTL and GDP NY.GDP.MKTP.CN, year 2019:
- * https://api.worldbank.org/v2/country/RUS;POL;HUN;ROU;BGR/indicator/SP.POP.TOTL?date=2019&format=json
- * https://api.worldbank.org/v2/country/RUS;POL;HUN;ROU;BGR/indicator/NY.GDP.MKTP.CN?date=2019&format=json
+ * January 2019 national population and current-price GDP in local currency,
+ * from World Bank SP.POP.TOTL and NY.GDP.MKTP.CN.
  *
  * Bulgaria's GDP uses Eurostat's 2019 BGN 120,395 million national-account
- * total; the previously transcribed 61,194 million figure was euro-scale and
- * would halve every lev-denominated regional and fiscal amount.
- * https://ec.europa.eu/eurostat/documents/2995521/11563331/2-21102021-AP-EN.pdf/257365fa-8a66-cab8-f60c-06ca9c916a7a
- * The project has game macroregions, not official 2019 GDP series for each.
- * Their within-country shares use the nearest existing democratic region
- * layout and are rescaled to these observed national totals. These shares are
- * explicitly model estimates, not claims of observed regional GDP in 2019.
+ * total; the euro-scale 61,194 million figure would halve every lev amount.
+ * The project has game macroregions with within-country shares based on the
+ * nearest democratic region layout, rescaled to these totals. Shares are
+ * model estimates, not observed regional GDP.
  */
 export const MODERN_2019_NATIONALS = {
   RU: { population: 145_453_291, gdp: 109_608_300_000_000 },

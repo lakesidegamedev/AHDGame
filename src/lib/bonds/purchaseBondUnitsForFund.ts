@@ -74,9 +74,8 @@ export interface BondPurchaseOptions {
   /** Caller flushes ledger rows for completed purchases after the reserve pass. */
   ledgerSink?: TxInput[];
   /**
-   * #992 tranche 6: game turn stamped on the fund-subject ledger row. When
-   * absent no ledger row is emitted (the cash debit still settles) so
-   * turn-less callers keep their old behavior.
+   * Game turn stamped on the fund-subject ledger row. When absent no ledger row
+   * is emitted (the cash debit still settles), preserving old behavior.
    */
   turn?: number;
   /** Preloaded thresholds for the ledger row; avoids a per-purchase read. */
@@ -225,7 +224,7 @@ export async function purchaseBondUnitsForFund(
     if (options?.txSink) options.txSink.push(transaction);
     else await insertFundTransaction(db, transaction);
 
-    // #992 tranche 6: fund-subject ledger leg for the cashAnchor debit above.
+    // Fund-subject ledger leg for the cashAnchor debit above.
     // The bond position is an asset account the shadow ledger does not carry,
     // so the row is single-sided under the shared bond_principal_investment
     // reason (the sale leg shares it, netting per currency). Fund-subject

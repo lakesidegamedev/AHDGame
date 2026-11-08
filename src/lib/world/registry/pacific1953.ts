@@ -1,5 +1,5 @@
 /**
- * Pacific — 1953 Tier-3 registry (#3728).
+ * Pacific, 1953 Tier-3 registry.
  *
  * Australia and New Zealand are sovereign Dominions. Remaining entries are
  * trust territories, colonies, and condominiums. The Trust Territory of the

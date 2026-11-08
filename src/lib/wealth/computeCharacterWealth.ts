@@ -11,19 +11,10 @@ import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 /**
  * ONE definition of a character's net worth, in ₳.
  *
- * There were two: the live wealth-list route and the persisted per-turn
- * snapshot each carried their own ~60-line copy. The snapshot is what
- * `wealthChange24h` / `rankChange24h` are computed against, so any difference
- * between the two makes the leaderboard disagree with its own change column —
- * silently, and for every affected player (#592).
- *
- * They had already drifted on the share price: the route resolved it through
- * `getPublicShareQuote` (which falls back to `DEFAULT_SHARE_PRICE`) while the
- * snapshot read `corp.sharePrice ?? 0`. Today every corporation without a real
- * price stores an explicit `0`, so both skip the holding and the outputs agree
- * — the divergence is latent rather than live. It becomes live the moment one
- * corporation has no `sharePrice` field at all. This module resolves the price
- * the market-facing way, once.
+ * The live wealth-list route and the persisted per-turn snapshot must agree,
+ * since `wealthChange24h` / `rankChange24h` compute against the snapshot;
+ * divergence silently makes the leaderboard disagree with its own change
+ * column. Price resolves the market-facing way via `getPublicShareQuote`.
  */
 
 /** Per-character valuation components, all in ₳. */

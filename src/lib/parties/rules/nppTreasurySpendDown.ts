@@ -1,13 +1,11 @@
 /**
- * Treasury spend-down for NPP-run parties (#5704).
+ * Treasury spend-down for NPP-run parties.
  *
  * A party no player leads never sets a Political Strength investment budget,
- * so its treasury only grows. Each turn it now spends a share of whatever it
- * holds above a reserve target through the same investment channel a chair
- * uses. The reserve is measured in that channel's own price, so it scales with
- * each country's currency and party economy.
- *
- * Plain data in, plain data out.
+ * so its treasury only grows. Each turn it spends a share of whatever it holds
+ * above a reserve through the same investment channel a chair uses. The reserve
+ * is measured in that channel's own price, so it scales with currency and
+ * party economy.
  */
 
 /** Turns of maximum Political Strength investment an NPP party keeps in reserve. */

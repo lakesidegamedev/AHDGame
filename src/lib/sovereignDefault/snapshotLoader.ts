@@ -253,17 +253,11 @@ function applyRecoveryCredibilityBonus(
 }
 
 /**
- * Mean public trust across the country's regions, normalized to 0..1.
+ * Mean public trust across regions, normalized to 0..1.
  *
- * Reads `governance.integrity` — the board family legacy `governance.publicTrust`
- * maps onto, and the SAME family `applyLegacyTrustDelta` writes when a default,
- * a debt penalty, or civil unrest damages trust. Those two halves have to name
- * the same thing or the loop does not close: this used to average the legacy
- * `publicTrust` off a store nothing writes any more, so the demand model saw a
- * flat neutral 0.5 no matter what a country did to its own credibility.
- *
- * The board is already on the 0-100 scale the old normalization assumed, so the
- * arithmetic is unchanged.
+ * Reads `governance.integrity`, the same family `applyLegacyTrustDelta`
+ * writes. These must name the same board or the trust loop does not close.
+ * Board values are on the 0-100 scale.
  */
 function computeTrust(boards: Array<Pick<PoliticalMetricsDoc, "values">>): number {
   if (boards.length === 0) return 0.5; // neutral if missing

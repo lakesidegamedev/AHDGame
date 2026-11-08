@@ -53,7 +53,7 @@ export interface SpendingRollup {
 }
 
 /**
- * Cross-country normalization anchor (#0887 RC2). Every channel HALF_SAT
+ * Cross-country normalization anchor. Every channel HALF_SAT
  * (PS_SPEND_HALF_SAT=900, SOCIAL_SPEND_HALF_SAT=2700, …) was calibrated in
  * ticket #826 against LIVE US per-capita dollars, when the US sim GDP/capita
  * was ≈$24k. Budgets are stored in each country's own currency at its own sim
@@ -61,7 +61,7 @@ export interface SpendingRollup {
  * local per-capita spend lands on arbitrary points of the same saturation
  * curve: UK ~11% response across its whole playable range, JP pinned at ~100%.
  * Normalizing by GDP/capita converts spend into fiscal EFFORT (share of average
- * income), then × this reference re-expresses it in the #826-calibrated units —
+ * income), then × this reference re-expresses it in the calibrated units -
  * US responses are unchanged by construction, and every other country lands on
  * the same effort curve. The per-capita bill-cost ramp (costs scale with
  * GDP/capita) makes each policy option's response stable across eras too.
@@ -130,7 +130,7 @@ export async function spendingProvider(db: Db): Promise<SpendingRollup> {
     const pop = countryPop.get(cid) ?? 0;
     if (pop <= 0) continue;
     const gdpPerCapita = num(fb.gdp) / pop;
-    // No usable GDP → factor 1 (raw local per-capita, the pre-#0887 behavior).
+    // No usable GDP → factor 1 (raw local per-capita, the uncalibrated behavior).
     if (gdpPerCapita > 0) normFactorByCountry.set(cid, US_REFERENCE_GDP_PER_CAPITA / gdpPerCapita);
     const byCat = fb.spending?.byCategory ?? {};
     federalCapitalPerCapita.set(cid, publicCapitalSpend(byCat) / pop);

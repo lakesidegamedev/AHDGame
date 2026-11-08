@@ -49,17 +49,12 @@ function mapSpendError(step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Er
 }
 
 /**
- * Spend one action point and record a central-bank chair nomination so the
- * result is exactly-once on every topology (issue #1672).
- *
- * Under real transactions the debit, the nomination push, and the
- * idempotency receipt join the transaction and commit atomically, preserving
- * the old behavior. On a standalone deployment the fallback runs the same
- * writes as keyed idempotent steps: a crash between the debit and the push
- * leaves an `in_progress` receipt, and retrying with the same key
- * reconciles to exactly one charged nomination instead of charging for a
- * nomination that never landed (or pushing it twice). The push is terminal,
- * so it carries no inverse; a failure there compensates the debit.
+ * Spend one action point and record a chair nomination exactly once.
+ * Under transactions the debit, nomination push, and idempotency receipt
+ * commit atomically. On standalone deployments they run as keyed idempotent
+ * steps: a crash between debit and push leaves an in_progress receipt, and a
+ * retry reconciles to one charged nomination. The push is terminal, so a
+ * failure there compensates the debit.
  */
 export async function applyNominateSpend(
   db: Db,

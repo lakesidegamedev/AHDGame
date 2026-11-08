@@ -234,11 +234,9 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
   }
 
   // ── standing missions for formations nobody commands ────────────────────────
-  // Most of the world is run by nobody: NPC countries, players who have not opened the
-  // war room, and every formation that existed before this subsystem did. Without this,
-  // every navy in the game carries a null mission, no blockade or engagement ever fires,
-  // and naval combat value falls through to the flying-weights fallback. A stored mission
-  // is never overwritten: this fills a blank, it does not overrule a commander.
+  // Without a mission, no blockade or engagement fires and naval combat value
+  // falls back to flying weights. A stored mission is never overwritten: this
+  // fills a blank, it does not overrule a commander.
   let missionsAssigned = 0;
   for (const [region, here] of byRegion) {
     const hostileNavalHere = new Set(

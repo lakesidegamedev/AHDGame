@@ -14,7 +14,7 @@ export interface MajorDefaultParty {
 
 /**
  * Major default parties by country, for seed-time tier assignment (D5, the
- * 2026-06-18 tier proposal). Any default party NOT listed here seeds **Minor**;
+ * tier proposal). Any default party NOT listed here seeds **Minor**;
  * custom parties always seed Minor.
  *
  * `presets` narrows a Major status to specific eras, needed only where a party

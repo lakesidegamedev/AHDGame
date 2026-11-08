@@ -154,12 +154,12 @@ export async function cancelBankFundSubscription(
 }
 
 /**
- * Refund every queued subscription for a fund that is winding down (#4219).
+ * Refund every queued subscription for a winding-down fund.
  *
  * The regular subscription pass never runs for a winding-down fund, so a queued
  * command would hold `completeWindUp` forever and repeat its warning every
- * turn. Refund in one transaction, using the same refund path as a player
- * cancel so the ledger rows and the command receipt agree.
+ * turn. Use the same refund path as a player cancel so ledger rows and the
+ * command receipt agree.
  */
 export async function refundQueuedSubscriptionsForFund(
   db: Db,

@@ -28,21 +28,16 @@ export async function seedBudgets(
         .collection<StateBudget>("stateBudgets")
         .deleteMany({ stateId: { $in: usStateIds }, countryId: "US" });
     }
-    // ⚠️ Only on presets where this function actually rebuilds the US law book.
+    // ⚠️ Only when this function actually rebuilds the US law book.
     //
-    // On a political-legislation preset (1953) the authored US baseline comes
-    // from `seedPoliticalLegislationBaseline`, because
-    // `POLITICAL_LEGISLATION_EXCLUDED_SCOPES` strips the legacy US catalog out
-    // of the budget-derived defaults below. That seeder lives in the
-    // orchestrators, NOT in `runSeed` — so on `POST /api/seed?reset=true` and
-    // `scripts/seed/seed.ts --reset` this delete removed the US law book with nothing
-    // to restore it. MEASURED as enactedLaws 742 -> 642, exactly the 100 US rows.
-    //
-    // Scoping the delete to the US does not help; the US is who loses them.
-    // Calling `seedPoliticalLegislationBaseline` from here would be worse — it
-    // prices every LAW_COUNTRY_ID against `countryFiscalBase`, and on the
-    // standalone path only US budgets exist, so it would silently MISPRICE
-    // UK/RU/DD to fix a US omission. Deleting only what we rebuild is the fix.
+    // On a political-legislation preset the US baseline comes from
+    // `seedPoliticalLegislationBaseline`, which strips the legacy US catalog
+    // via `POLITICAL_LEGISLATION_EXCLUDED_SCOPES`. That seeder lives in the
+    // orchestrators, NOT in `runSeed`, so deleting here would remove the US
+    // law book with nothing to restore it. Calling it from here would be
+    // worse: it prices every LAW_COUNTRY_ID against `countryFiscalBase`, and
+    // on the standalone path only US budgets exist, mispricing UK/RU/DD.
+    // Deleting only what we rebuild is the fix.
     const { isPoliticalLegislationPreset } = await import("./seedPoliticalLegislation");
     if (!isPoliticalLegislationPreset(preset)) {
       await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "US" });

@@ -1,7 +1,7 @@
 /**
- * Pure era check for persisted default parties. A default party whose name is
- * not in the effective roster authored for the preset is a wrong-era row:
- * dissolved, renamed, or tagged for another preset (#2294).
+ * Pure era check for persisted default parties. A default party whose name
+ * is not in the effective roster for the preset is a wrong-era row:
+ * dissolved, renamed, or tagged for another preset.
  */
 export interface PersistedDefaultParty {
   countryId: string;

@@ -40,10 +40,9 @@ export async function seedEasternBlocCountry(
 ) {
   const { countryId, categoryId, regions, parties, categories, metrics, baselines } = cfg;
 
-  // Warsaw-Pact one-party states + their communist rosters only existed in the
-  // Cold-War (1953/1979) eras. In 1991/2019 the successor democracies own this
-  // landmass, so skip entirely rather than seeding a Soviet-era structure into a
-  // post-Soviet world (refs #3269). Matches the RU-regions era gate.
+  // Warsaw-Pact one-party structure only existed in Cold-War eras; skip
+  // in 1991/2019 rather than seeding Soviet-era structure into successors.
+  // Matches the RU-regions era gate.
   const { isEasternBlocEra } = await import("@/lib/seeds/presetSelector");
   if (!isEasternBlocEra(preset)) {
     log(`[${countryId}] skipping Eastern-bloc seed — not a Cold-War era (preset ${preset})`);
@@ -149,7 +148,7 @@ export async function seedEasternBlocBudget(
   countryId: CountryId
 ) {
   // Bloc budgets belong to the Cold-War (1953/1979) one-party states only; skip in
-  // post-Soviet eras so a Soviet-era budget never lands in a 1991/2019 world (#3269).
+  // post-Soviet eras so a Soviet-era budget never lands in a 1991/2019 world.
   const { isEasternBlocEra } = await import("@/lib/seeds/presetSelector");
   if (!isEasternBlocEra(preset)) {
     log(`[${countryId}] skipping Eastern-bloc budget — not a Cold-War era (preset ${preset})`);
@@ -219,10 +218,9 @@ export async function seedEasternBlocBudget(
 
   // Regional gdp is already normalized to the authored national GDP by the
   // single reconcile pass at the end of `seedAllCountryData`, which this budget
-  // block runs after. It used to be repeated here, back when bloc regions were
-  // seeded later than that pass; they are not any more, and nothing between the
-  // two writes `state.gdp`, so the repeat was a no-op. See reconcileStateGdp.ts
-  // for the ordering contract this now depends on.
+  // block runs after. Repeating it here would be a no-op: bloc regions are seeded before
+  // that pass and nothing between the two writes `state.gdp`. See
+  // reconcileStateGdp.ts for the ordering contract this depends on.
   const states = await db.collection<State>("states").find({ countryId }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,

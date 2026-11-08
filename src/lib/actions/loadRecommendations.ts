@@ -390,7 +390,7 @@ export async function loadRecommendationsForUser(
 
   // "Market opportunity" recommendations were about splitting the unowned pool.
   // Under plants that mechanic is retired — you expand by BUILDING PLANTS, which
-  // the per-sector build flow already surfaces (ticket #1145) — so skip the
+  // the per-sector build flow already surfaces, so skip the
   // pool-split economy fetch entirely and don't recommend a dead action.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 

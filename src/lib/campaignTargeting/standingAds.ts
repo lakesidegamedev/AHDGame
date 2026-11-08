@@ -1,7 +1,6 @@
 /**
- * Standing targeted ads follow a character into every candidacy. The read-side
- * overlay retains previously purchased candidate flights without database copies.
- * applyStandingAds only changes loaded documents, never persistent candidacies.
+ * Standing targeted ads follow a character into every candidacy. Mutates only
+ * loaded documents in the read-side overlay; never persists candidacies.
  */
 import type { Character, ElectionCandidate } from "@/lib/db/types";
 import { combinedAds } from "./rules";

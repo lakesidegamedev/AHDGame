@@ -14,7 +14,7 @@ export interface NominateJusticeParams {
   seatNumber: number;
   proposedByPresidentId: ObjectId;
   proposedByPresidentName: string;
-  /** Existing player character path (per #3598, no eligibility restriction). */
+  /** Existing player character path (no eligibility restriction). */
   nomineeCharacterId?: ObjectId;
   /**
    * Generated NPP "legal scholar" path (per #3598, no eligibility restriction).

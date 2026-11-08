@@ -2,9 +2,7 @@
  * A merged party lives on only as a pointer (`mergedIntoPartyId`) to the party
  * that absorbed it. Anything still carrying the absorbed party's id, such as a
  * candidacy filed before the merge, has to be read as the survivor. Otherwise
- * winning that race writes the dead party back onto the winner, which is how
- * fourteen sitting legislators left the US Constitutional Union Party for the
- * party it had absorbed (ticket 1376).
+ * winning that race writes the dead party back onto the winner.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";

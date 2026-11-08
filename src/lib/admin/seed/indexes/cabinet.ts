@@ -14,7 +14,7 @@ export async function seedCabinetIndexes(db: Db, log: (msg: string) => void) {
     { unique: true, name: "cabinetMembers_countryId_positionId" },
     log
   );
-  // One departmental plus one central appointment per UK player (issue #2049);
+  // One departmental plus one central appointment per UK player;
   // every other country keeps one seat per character. The replacement index is
   // created BEFORE the legacy one-seat index below is dropped, so the
   // collection is never without a player-holder guard. Partial so the many

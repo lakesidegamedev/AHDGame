@@ -26,11 +26,9 @@ export async function loadOrganizationLeadershipCandidates(params: { db: Db; org
     return { ok: true as const, body: { candidates: [] as CandidatePick[] } };
   }
 
-  // Chairing an organisation is an office a player holds, so the candidate pool
-  // is the voting roll — player-enabled countries. That also rules out macro
-  // members, which have no cabinet to draw a character from. The COUNTRY_CONFIGS
-  // guard stays as insurance against a stale access row naming a country the
-  // game no longer models.
+  // Candidate pool is the voting roll (player-enabled countries);
+  // macro members are excluded since they have no cabinet. The
+  // COUNTRY_CONFIGS guard defends against stale rows for unmodeled countries.
   const members = (await votingMembers(db, orgId)).filter(
     (id): id is CountryId => id in COUNTRY_CONFIGS
   );

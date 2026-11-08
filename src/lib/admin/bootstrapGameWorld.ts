@@ -309,21 +309,17 @@ export async function seedAllCountryData(
     includeBudgets: false,
   });
 
-  // ─── Country packs ─────────────────────────────────────────────────────────
-  // Packs run CONCURRENTLY; the seeders WITHIN a pack stay sequential.
+  // Packs run CONCURRENTLY; seeders WITHIN a pack stay sequential.
   //
-  // Every pack is scoped to its own countryId, and the counters they allocate
-  // from are per-country (`party`/`coalition` are keyed `<type>_<countryId>`,
-  // see sequentialId.ts). The one GLOBAL counter reachable from here is `npp`,
-  // and only the UK pack touches it, so nothing contends for it. The steps that
-  // genuinely need every country — cohort vectors, the GDP reconcile, the
-  // region-derived stage — are the barriers below and stay sequential.
+  // Each pack is scoped to its own countryId, and per-country counters
+  // (`party`/`coalition` keyed `<type>_<countryId>`) keep packs independent.
+  // The only GLOBAL counter reachable here is `npp`, touched only by the UK
+  // pack. Steps needing every country (cohort vectors, GDP reconcile,
+  // region-derived stage) are sequential barriers below.
   //
-  // ⚠️ Pack logs are BUFFERED and flushed in declaration order, so the emitted
-  // log does not depend on which country finishes first. The seed op-profiler
-  // parses that log for phase gaps and repeated passes; interleaved output would
-  // corrupt the reading. Same reason seedIndexes buffers per module (D1) and the
-  // founding sweep buffers per country (D6).
+  // ⚠️ Pack logs are BUFFERED and flushed in declaration order so the emitted
+  // log does not depend on completion order; the seed op-profiler parses that
+  // log for phase gaps, and interleaved output would corrupt the reading.
   const packBuffers: string[][] = [];
   const pack = (body: (log: (msg: string) => void) => Promise<void>) => {
     const buffer: string[] = [];
@@ -387,7 +383,7 @@ export async function seedAllCountryData(
       await seedCNGovernmentFormation(db, log);
       await seedCnStatePartyOrg(db, resetReference, log, preset);
       // CPSU regional org only in Cold-War eras — mirrors the RU-regions gate
-      // below (the seeder also self-guards on preset). (refs #3269)
+      // below (the seeder also self-guards on preset).
       if (isEasternBlocEra(preset)) {
         await seedRuStatePartyOrg(db, resetReference, log, preset);
       }
@@ -487,7 +483,7 @@ export async function seedAllCountryData(
       await seedDDBaselines(db, resetReference, log, preset);
       await seedDDGovernmentFormation(db, log, preset);
       // National Front regional org/registration only in divided eras — mirrors
-      // the RU-regions gate (the seeder also self-guards on preset). (refs #3269)
+      // the RU-regions gate (the seeder also self-guards on preset).
       if (isEasternBlocEra(preset)) {
         await seedDdStatePartyOrg(db, resetReference, log, preset);
       }
@@ -514,16 +510,11 @@ export async function seedAllCountryData(
     // `getPresetSeats`. This row is the legislature's majority arithmetic.
     seedUSGovernmentFormation(db, log),
 
-    // Warsaw-Pact one-party states. Seeded HERE, alongside the other country
-    // packs, rather than after `seedAllCountryData` returns — they are countries
-    // like any other, and the region-derived stage below has to see their states.
-    // Their BUDGETS stay in bootstrapGameWorld: budgets are region-CONSUMING and
-    // must follow the reconcile barrier.
-    //
-    // Only existed in the Cold-War (1953/1979) eras; in 1991/2019 the successor
-    // democracies own this landmass, so gate the whole block rather than seeding
-    // Soviet-era structures into a post-Soviet world (refs #3269). The seeders
-    // also self-guard on preset.
+    // Warsaw-Pact one-party states. Seeded HERE with the other country packs so
+    // the region-derived stage below sees their states; their BUDGETS stay in
+    // bootstrapGameWorld (region-CONSUMING, must follow the reconcile barrier).
+    // Only exist in Cold-War eras; gate the whole block rather than seeding
+    // Soviet-era structures into a post-Soviet world. Seeders also self-guard.
     pack(async (log) => {
       if (!isEasternBlocEra(preset)) return;
       // The nine one-party states are independent of one another; the shared
@@ -636,10 +627,9 @@ export async function seedAllCountryData(
   await seedCohortVectors(db, preset, log, { replace: true });
 
   // Normalize regional gdp so Σ state.gdp matches each country's authored
-  // national GDP (pre-1999 eras only + tolerance-guarded; see
-  // reconcileStateGdp.ts, refs #3247). Must run after every region seeder above
-  // and BEFORE the state-budget seeders / seedUnownedSectors, which derive
-  // absolute values from state.gdp.
+  // national GDP (pre-1999 eras only, tolerance-guarded). Must run after every
+  // region seeder above and BEFORE the state-budget seeders / seedUnownedSectors,
+  // which derive absolute values from state.gdp.
   const { reconcileStateGdpWithNationalSeeds } = await import("./seed/reconcileStateGdp");
   await reconcileStateGdpWithNationalSeeds(db, log, preset);
 
@@ -760,16 +750,11 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   await seedFiBudgets(db, resetReference, log, preset);
   await seedDdBudgets(db, resetReference, log, preset);
 
-  // Warsaw-Pact BUDGETS. The countries themselves are seeded in
-  // `seedAllCountryData` with every other country pack; only their budgets live
-  // here, because budgets are region-CONSUMING and must follow the reconcile
-  // barrier that closes that function.
-  //
-  // Ukraine, Byelorussia and the Baltics are included: they are now full
-  // countries with their own `states` rows, republican budgets and republican
-  // legislatures, so they need the same federalBudget + enactedLaws treatment as
-  // the satellites. (The historical hazard this comment used to warn about was
-  // budget rows for country ids with zero regions; that no longer applies.)
+  // Warsaw-Pact BUDGETS. Countries are seeded in `seedAllCountryData`; only
+  // budgets live here because budgets are region-CONSUMING and must follow the
+  // reconcile barrier that closes that function. Ukraine, Byelorussia and the
+  // Baltics are full countries with their own `states` rows, so they need the
+  // same federalBudget + enactedLaws treatment as the satellites.
   if (isEasternBlocEra(preset)) {
     for (const cid of ["HU", "PL", "RO", "YU", "BG", "CS", "UKR", "BLR", "BAL"] as const) {
       await guarded(`seedEasternBlocBudget:${cid}`, () =>
@@ -828,9 +813,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   await seedIeBudgets(db, resetReference, log, preset);
   await seedNgBudgets(db, resetReference, log, preset);
   // Materialize scalar debt.principal into tradeable sovereign bond series.
-  // Must run after every national-budget + NatCorp seeder so US/UK (and any
-  // other surplus country) open with a bond float matching WWII/postwar debt
-  // rather than an orphaned principal with zero instruments (#3370 P3).
+  // Must run after every national-budget + NatCorp seeder so surplus countries
+  // open with a bond float matching their debt rather than orphaned principal.
   await guarded("seedSovereignBondInstruments", () => seedSovereignBondInstruments(db, log, 0));
   await seedCountryGameStates(db, preset, getStartingYearForPreset(preset), log);
   await db.collection(WORLD_ENTITY_STATES_COLLECTION).deleteMany({});
@@ -841,9 +825,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // Capture FY2020 baseline snapshot so the budget history dropdown has an initial entry
   await guarded("seedInitialBudgetSnapshots", () => seedInitialBudgetSnapshots(db, log));
   await seedSeats(db, resetReference, log, preset);
-  // SCOTUS (#3598): US-only, preset-gated (mirrors seedPoliticalLegislationBaseline's
-  // placement above). No-ops until the per-preset roster/docket content tickets
-  // (#3599-#3602) land — see src/lib/scotus/presetData/index.ts.
+  // US-only, preset-gated. No-ops until per-preset SCOTUS content exists.
   await seedScotus(db, log, preset, resetReference);
   await seedNGGovernors(db, resetReference, log, preset);
   await seedPartyBudgets(db, resetReference, log);
@@ -869,25 +851,13 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // Forex layer: exchange rates + central banks + money-supply baselines +
   // indexes + the gameState flag.
   //
-  // ⚠️ MUST stay ABOVE the seedOnly return. `resetGameWorld` deletes
-  // `exchangeRates` and `centralBanks`, and this is their only re-seeder — so
-  // with it below the return, the admin "Reset Only" AND "Delete All Data"
-  // buttons (both post without `bootstrap: true`) left a world with no exchange
-  // rates and no central banks, recoverable only by pressing a different button.
-  // `tradeHistory`/`currencyOrders` lost their indexes there too, since
-  // `createForexIndexes` is called from here.
+  // MUST stay ABOVE the seedOnly return. `resetGameWorld` deletes
+  // `exchangeRates` and `centralBanks`, and this is their only re-seeder, so
+  // placing it below leaves Reset Only and Delete All Data worlds with no
+  // forex data or indexes. Do not move it below the return.
   //
-  // ⚠️ `development` still calls this BELOW the return; moving it is this
-  // branch's fix. Keep the position on any future merge — reverting it
-  // reinstates that bug.
-  //
-  // Its old comment claimed it had to follow `initializeGameState` because it
-  // flips `gameState.forexEnabled`. Only the closing flag write touches
-  // gameState, and every path into `bootstrapGameWorld` already has the doc:
-  // the admin/CLI path because `resetGameWorld` upserts it, and the two direct
-  // callers (`scripts/bootstrap-full.ts`, `scripts/sim/runWorld.ts`) because
-  // both call `initializeGameState()` themselves first, as this file's own
-  // `stampInitialGameClock` docstring instructs.
+  // Only the closing flag write touches gameState, so this does not depend on
+  // `initializeGameState` running first; every caller already seeds the doc.
   await guarded("seedForex", () => seedForex(db, log, preset));
 
   // Seed NPP-run market corporations now that the unowned-sector pool, commodity
@@ -968,20 +938,13 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
 
   // Build the initial stock-exchange snapshot so the market page is populated
   // immediately after a reset, even while the game is paused / in maintenance.
-  // Normally the snapshot is (re)built each turn and by the 15-minute refresh
-  // cron, but both skip while paused — so a freshly-reset world would otherwise
-  // show an empty exchange (no corps, including the country National
-  // Corporations) until the first turn runs. All corporations are seeded above
-  // (the budget seeders), so this captures them. Idempotent — safe to re-run.
+  // Both the per-turn rebuild and the refresh cron skip while paused, so
+  // without this a freshly-reset world shows an empty exchange. Idempotent.
   //
   // ⚠️ MUST stay BELOW `seedForex`. This converts each corp through
-  // `getCorpFxRate`, which returns 1.0 when no rate document exists. Built
-  // first, the snapshot was internally inconsistent in units — NG converted
-  // (its rate is written early by `seedNgBudgets`), every other country not.
-  // And it does not self-heal on any useful timescale: `/api/stock-exchange`
-  // serves this document directly, both rebuild paths skip while paused, and a
-  // freshly reset world is sealed in maintenance mode — which is exactly when
-  // an admin is inspecting the new world and the market page is what they check.
+  // `getCorpFxRate`, which returns 1.0 when no rate document exists, so built
+  // first the snapshot mixes converted and unconverted units and does not
+  // self-heal (rebuild paths skip while paused).
   await guarded("generateStockExchangeSnapshots", () =>
     generateStockExchangeSnapshots(gameState.currentTurn, db)
   );
@@ -1056,18 +1019,12 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   }
 
   // Backfill preset national executives independently of the gate above.
-  // Historically this was load-bearing rather than a safety net: the gate used
-  // to re-count officials mid-run, `seedNGGovernors` (a few steps earlier)
-  // always seeds NG-governor NPPs, so the skip branch was ALWAYS taken and
-  // `getPresetSeats` never ran — the executives seeded here were the only part
-  // of the preset roster that reached a fresh world. That is fixed (the gate
-  // now reads the pre-run snapshot, see historicalSeedGate.ts); this block
-  // stays as an idempotent net for seed-only / partially-populated worlds where
-  // the gate legitimately skips. Legislatures and most executives refill through election
-  // resolution, but a preset-defined executive with no near-term race sits
-  // vacant: the 1953 US President + VP (1952 Republican landslide) and BR
-  // President (PTB ticket from the 1950 election) never seat because the US
-  // cycle anchors to 1956 and BR perpetual elections only spawn chamber races.
+  // The gate legitimately skips seed-only / partially-populated worlds, and
+  // legislatures and most executives refill through election resolution, but a
+  // preset-defined executive with no near-term race sits vacant: the 1953 US
+  // President + VP (1952 Republican landslide) and BR President (PTB ticket from
+  // the 1950 election) never seat because the US cycle anchors to 1956 and BR
+  // perpetual elections only spawn chamber races.
   // Seed missing president/VP rows per country from the preset roster.
   // Idempotent (per-country existence check) and scoped to president/VP so
   // legislatures can't double-seat against election-seated deputies.
@@ -1126,7 +1083,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
 
   // Econ-tier democracies (FR/IT/ES/SE/TR) run election cycles but have no
   // authored chambers in historicalSeats.ts, so cycles resolve empty without
-  // candidate supply (#3253). Seed statePartyOrg presence + a minimal
+  // candidate supply. Seed statePartyOrg presence + a minimal
   // major-party incumbent roster. Skipped for the deliberately-empty "vacant"
   // world; priors (founding) mode seeds presence only and leaves chambers
   // vacant for the founding elections.
@@ -1144,31 +1101,19 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
         `${econRosters.nppsCreated} NPPs, ${econRosters.officialsCreated} officials`
     );
 
-    // UK's Commons has the identical root cause as the econ-tier five
-    // (#3253) in exactly the two presets getPresetSeats() documents it as
-    // vacant: "1953-default" ("Democratic legislatures (US/UK/...) start
-    // vacant") and "1979-default" ("The multiparty players (US/UK)... start
-    // vacant"). historicalSeats.ts authors UK_COMMONS_1987/2020 for every
-    // other preset via the earlier historical gate, so calling this
-    // unconditionally would fabricate duplicate incumbents on top of those
-    // already-correct historical rosters. (`seedFromSeats` now skips chambers
-    // that already hold seated NPPs when asked — which this path asks for — but
-    // the preset gate is still the right guard: it expresses WHICH presets leave
-    // the Commons vacant, rather than relying on a dedup to clean up after an
-    // unconditional call.) seedHistorical.ts's own comment
-    // calls the 1953 UK legislature "deliberately-vacant... filled by
-    // backfillMissingSeats", but that function is only ever invoked from the
-    // worldsim script, never real bootstrap — this wires the equivalent fix
-    // into the real path. UK is player-enabled (not econ-tier), so it gets
-    // its own scoped call rather than joining ECON_TIER_ROSTER_COUNTRIES,
-    // reusing the identical underlying seeder.
+    // UK's Commons starts vacant in "1953-default" and "1979-default" per
+    // getPresetSeats(). Every other preset gets UK_COMMONS_1987/2020 from
+    // historicalSeats.ts via the historical gate, so calling this unconditionally
+    // would fabricate duplicate incumbents. The preset gate expresses WHICH presets
+    // leave the Commons vacant rather than relying on dedup. UK is player-enabled,
+    // not econ-tier, so it gets its own scoped call reusing the same seeder.
     if (preset === "1953-default" || preset === "1979-default") {
       // seedOrgRows: false — `seedUKStatePartyOrg` (run earlier in this
       // bootstrap) already seeded UK's real, regionally-calibrated
       // statePartyOrg rows (era polling per region, SNP/Plaid/Sinn Féin
       // confined to their home region). Letting this call's org-row step run
       // too overwrites that data with a flat nationwide grid and re-adds
-      // presence rows for the regionally-confined parties everywhere — #3895.
+      // presence rows for the regionally-confined parties everywhere.
       // Only the incumbent-seat step (below) is what UK actually needs from
       // this seeder.
       const ukRoster = await seedEconTierRostersForCountry(
@@ -1201,23 +1146,14 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   );
 
   const now = new Date();
-  // Every spawner below opens with the SAME GameState read (`getCurrentTurnAndCtx`
-  // — currentTurn, currentYear, and the preset's cycle anchors). Read it once for
-  // the whole battery instead of once per spawner.
-  //
-  // Sound here specifically: bootstrap runs no turns, and every gameState write
-  // on this path — the seal, `initializeGameState`, `stampInitialGameClock` —
-  // has already happened by the time the battery starts. The scope is the
-  // callback's dynamic extent only, so it cannot outlive this block. The
-  // per-turn callers deliberately do not use it; they must see their own turn.
-  // Grouped by country: each country's families stay in order (a few mirror a
-  // sibling race created moments earlier, e.g. a Senate after its lower chamber),
-  // but the countries themselves run concurrently rather than 28 round-trip
-  // chains end to end. No family mirrors a race in a DIFFERENT country, and the
-  // turn loop already drives this same registry fully concurrently every turn,
-  // so per-country sequencing is the conservative half of that.
-  // Background countries (#5702) hold no full-engine elections, so their
-  // spawners are replaced by a no-op. Every other preset runs them unchanged.
+  // Every spawner below opens with the same GameState read; read it once for
+  // the whole battery. Sound because bootstrap runs no turns and all gameState
+  // writes on this path finish before the battery starts. The scope is the
+  // callback's dynamic extent only; per-turn callers must not use it.
+  // Countries run concurrently; families within a country stay in order.
+  // No family mirrors a race in a different country.
+  // Background countries hold no full-engine elections, so their spawners are
+  // replaced by a no-op.
   const forCountry =
     (countryId: string, run: () => Promise<void>): (() => Promise<void>) =>
     async () => {
@@ -1269,11 +1205,9 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
             await ensureDDVolkskammerElections(now);
             await ensureDDGovernorElections(now);
           }),
-          // Beta parliamentary countries (#3239) — status-gated no-ops unless the
-          // country is beta/active; ES additionally era-gated (1953: no elections).
-          // Upper chambers / Senates (#3791) — same status gate, and each stays
-          // after its own lower chamber; SE has no elected upper chamber
-          // (unicameral since 1970), so no ensureSESenateElections.
+          // Beta parliamentary countries: status-gated no-ops unless the country is
+          // beta/active; ES additionally era-gated (1953: no elections). Upper chambers
+          // stay after their lower chamber; SE is unicameral since 1970, no Senate.
           forCountry("FR", async () => {
             await ensureFRElections(now);
             await ensureFRSenateElections(now);

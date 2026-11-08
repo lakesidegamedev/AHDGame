@@ -1,5 +1,5 @@
 /**
- * Kernel-tick shell for a background country's national state (#5702):
+ * Kernel-tick shell for a background country's national state:
  * politics, the fiscal state its budget derives from, and its national index.
  *
  * Runs inside the macro kernel tick, so a country costs nothing on the five

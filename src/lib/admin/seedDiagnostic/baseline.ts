@@ -1,5 +1,5 @@
 /**
- * Seed diagnostic baseline snapshot (PR 2).
+ * Seed diagnostic baseline snapshot.
  *
  * Captures a flat dotted-key map of seeded macro values into
  * `seedDiagnosticBaselines` singleton `{_id:'current'}`. Keys match Mode B
@@ -159,8 +159,8 @@ export async function collectLiveMetrics(
 
 /**
  * Reconstruct a baseline metrics map from seed-file expectations when no
- * `seedDiagnosticBaselines` doc exists (worlds reset before this feature).
- * Sector aggregates and commodity index are omitted (not in seed tables).
+ * `seedDiagnosticBaselines` doc exists. Sector aggregates and commodity
+ * index are omitted (not in seed tables).
  */
 export function reconstructMetricsFromExpectations(
   expect: SeedExpectations

@@ -1,29 +1,16 @@
 /**
  * Unified policy-option builders for legislation seed data.
  *
- * Replaces the per-country helper trees:
- *   - US/UK: policyOptions() (single-axis), policyOptionsBoth() (both axes)
- *   - JP: policyOptionsJP()
- *   - US/UK/JP/IE/CN: taxRateOptionsV3() / taxRateOptions() / taxRateOptionsIE() / taxRateOptionsCN()
- *   - US/UK: withPerCapitaCosts(); JP: withPerCapitaCostsJPY()
+ * effectDirection conventions:
+ *   non-tax policyOptions: left +1, center 0, right -1
+ *   tax taxRateOptions (inverted): left -1 (high rate), right +1 (low rate)
  *
- * Convention notes
- * ----------------
- * Non-tax `policyOptions` uses the US/UK convention:
- *   left  → effectDirection +1 (intervention / expansion)
- *   right → effectDirection -1 (cutback / market)
- *   center → effectDirection  0
+ * effectTargetsWeighted weights are always magnitude; runtime applies
+ * isHigherBetter polarity. Combined they yield correct contribution signs
+ * under src/lib/policyEffects.ts.
  *
- * Tax `taxRateOptions` uses the INVERTED convention (domain-specific):
- *   left  → effectDirection -1 (high rate = revenue extraction; hurts gdpGrowth)
- *   right → effectDirection +1 (low rate = market-friendly)
- *
- * Together with `effectTargetsWeighted` weights (always magnitude; runtime applies
- * isHigherBetter polarity), these conventions produce correct contribution signs
- * for primary metrics under the engine in `src/lib/policyEffects.ts`.
- *
- * Currency on costs lives in `CountryConfig.currency`, not in the helper — there
- * is no JPY-specific helper. Pass local-currency amounts to `withPerCapitaCosts`.
+ * Costs are local currency via CountryConfig.currency; pass amounts to
+ * withPerCapitaCosts. No JPY-specific helper.
  */
 
 import type { LegislationPolicyOption } from "@/lib/db/types/legislation";
@@ -83,14 +70,10 @@ function deriveStanceScore(
  * Build LegislationPolicyOption records from a stance-graded option set.
  *
  * @param typeId  Used to generate option ids: `${typeId}_opt_${i}`.
- * @param opts    Ordered option set (left first → right last).
- * @param axes    Which axis (or both) gets the derived stance score. Required —
- *                explicit at every call site so the score axis is unambiguous.
- *                Use `"economic"` for tax / fiscal / labor types, `"social"`
- *                for cultural / civil-liberties types, `"both"` for welfare /
- *                housing / health types where left-right alignment is felt on
- *                both axes. The non-derived axis is 0 unless the caller
- *                overrides per-option.
+ * @param opts    Ordered option set (left first, right last).
+ * @param axes    Which axis gets the derived stance score. Required so the
+ *                score axis is explicit at every call site. The non-derived
+ *                axis is 0 unless the caller overrides per-option.
  */
 export function policyOptions(
   typeId: string,
@@ -134,7 +117,7 @@ export function policyOptions(
  * dampen it. This is the right-option upside (P6c symmetry) — a tax cut now
  * improves a natural economic metric, not merely the budget line. Scaled by the
  * option's graded intensity so a moderate cut ticks less than a maximum one
- * (Bug #0962: the flat ±value was the sole non-monotone metric on tax laws).
+ *.
  */
 export const TAX_SMALL_BUSINESS_UPSIDE = 0.05;
 
@@ -197,15 +180,13 @@ export function withPerCapitaCosts(
 }
 
 /**
- * Annotate option set with cost as a fraction of GDP (`gdpPerCapitaMultiplier`
- * — the legacy field name predates this GDP-fraction usage, but per
- * `calculatePolicyOptionAnnualCost`/`calculateEnactedLawAnnualCost` it is
- * applied as `multiplier * gdp`, no population term, no country-anchor
- * scale-ramp). Mirrors the CN/JP/DE 1953 spending-calibration pattern
- * (fiscal-scale audit, 2026-07-28): a fraction authored directly off a
- * `baselineSpendingByCategory` amount / gdp ratio reconciles exactly, and
- * — unlike `annualCostPerCapita` — is immune to a future `COST_SCALE_ANCHORS`
- * entry silently rescaling it.
+ * Annotate option set with cost as a fraction of GDP. The legacy field
+ * name `gdpPerCapitaMultiplier` predates this usage: it is applied as
+ * `multiplier * gdp`, no population term, no country-anchor scale-ramp
+ * (see `calculatePolicyOptionAnnualCost`/`calculateEnactedLawAnnualCost`).
+ * A fraction authored off a `baselineSpendingByCategory` / gdp ratio
+ * reconciles exactly and is immune to a future `COST_SCALE_ANCHORS` entry
+ * silently rescaling it.
  */
 export function withGdpFractionCosts(
   options: LegislationPolicyOption[],

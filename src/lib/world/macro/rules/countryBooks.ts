@@ -1,17 +1,16 @@
 /**
- * Background countries as buyers and sellers in their own national book (#5702).
+ * Background countries as buyers and sellers in their own national book.
  *
  * A background country runs no sectors and seats no households, so the
- * engine's state-built legs say nothing about it. Its macro contribution (the
- * traded share of its aggregate supply and demand) is already in the world
- * total; this places the same units in the country's own regions, pro rata by
- * regional GDP, so the national book the trade clearing reads, the freight
- * sourcing network, tariffs, embargoes and the reachable books all see it the
- * way they see any other country. A country with no priced region keeps the
- * units in a stateless national row instead.
+ * engine's state-built legs say nothing about it. Its macro contribution is
+ * already in the world total; this places the same units in the country's
+ * own regions, pro rata by regional GDP, so the national book, freight
+ * sourcing, tariffs, embargoes and reachable books see it like any other
+ * country. A country with no priced region keeps the units in a stateless
+ * national row instead.
  *
- * Pure: balances in, balances mutated in place. No double count: the world
- * total is not touched here.
+ * Pure: balances in, mutated in place. No double count: the world total is
+ * not touched here.
  */
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 import type { MacroMarketContribution } from "../types";

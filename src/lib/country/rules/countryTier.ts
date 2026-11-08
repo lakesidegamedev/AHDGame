@@ -1,5 +1,5 @@
 /**
- * How the turn engine runs each country (#5702).
+ * How the turn engine runs each country.
  *
  * - `player`: registered and open to players. The US is always here: it runs
  *   off the global game state and has no per-country row.
@@ -8,8 +8,6 @@
  *   outside the full simulation. Every per-country turn phase skips it.
  * - `absent`: not registered in this world (era-absent, dissolved, or never
  *   activated).
- *
- * Plain data in, plain data out, so the same answer holds in every host.
  */
 export type CountryTier = "player" | "npp" | "background" | "absent";
 

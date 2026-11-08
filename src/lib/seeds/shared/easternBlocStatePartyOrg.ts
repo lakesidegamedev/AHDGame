@@ -1,31 +1,17 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era's table is authored self-contained. These are one-party states, so
- * regional org is an authored distribution per era, not a vote-share × formula.
- * (Mirrors ruStatePartyOrgCalculations.ts / ddStatePartyOrgCalculations.ts.)
+ * SEED INDEPENDENCE: do not derive from another era. Each era's table is
+ * authored self-contained.
  *
- * Regional party organisation for the six Warsaw-Pact satellites plus the three
- * Soviet union republics modelled as their own countries (UKR/BLR/BAL, whose
- * republican parties were branches of the CPSU but ran their own regional
- * apparat, so the same one-party shape applies). Unlike the
- * GDR — which runs a National Front of five captive parties — each satellite
- * here seeds exactly ONE party, its ruling communist party, so the table is a
- * single org percentage per region rather than a per-party split.
+ * One-party states: regional org is an authored distribution per era, not a
+ * vote-share formula. Covers the six Warsaw-Pact satellites plus UKR/BLR/BAL
+ * (CPSU branches running their own apparat). Unlike the GDR's National Front,
+ * each satellite seeds exactly ONE party, so the table is a single org
+ * percentage per region.
  *
- * Why this matters mechanically, not just as flavour: `statePartyOrg.registration`
- * is what gates the swing-flow engine's §7.3.2 defense via the `regByParty` map.
- * With no row at all, the ruling party falls to the newcomer baseline and is
- * ~20%-peelable under `transferableShare` / `persuasionResistance` — i.e. the
- * PZPR could be organised out of Silesia by a party that did not exist. The
- * shared `seedRegistrationLanes` pipeline only covers US/UK/JP/DE, so these set
- * `registration` inline, following the RU/CN/DD precedent.
- *
- * Historical texture. 1953 org is HIGHER than 1979 almost everywhere: the
- * Stalinist parties were mass-mobilisation organisations at their peak reach,
- * with membership drives, workplace cells and compulsory participation. By 1979
- * the same parties are careerist administrative machines — larger on paper in
- * some countries, but thinner as a share of genuine organised presence, and
- * visibly weaker in the places that had already revolted or resisted.
+ * Mechanically: statePartyOrg.registration gates the swing-flow engine's
+ * defense via regByParty. With no row, the ruling party falls to the newcomer
+ * baseline and is peelable, so registration is set inline here (RU/CN/DD
+ * precedent; seedRegistrationLanes only covers US/UK/JP/DE).
  */
 
 export interface EasternBlocOrgProfile {

@@ -395,7 +395,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_minimum_wage: { economic: 2, social: 0 }, // 1991: no statutory minimum wage (introduced 2015); collective bargaining dominant
       de_renewable_energy_target: { economic: 1, social: 0 }, // 1991: pre-Energiewende, coal + nuclear dominant
       de_immigration_policy: { economic: 0, social: 1 }, // 1991: asylum law amended 1993 (Asylkompromiss) pending
-      // ── PR2 (Healthcare + Education + Social) ───────────────────────────
+      // ── (Healthcare + Education + Social) ───────────────────────────
       de_health_insurance: { economic: 0, social: 0 }, // 1991: GKV stable, GSG 1992 (Seehofer reform) pending
       de_elder_care: { economic: 1, social: 0 }, // 1991: pre-Pflegeversicherung (1995)
       de_mental_health: { economic: 0, social: 0 }, // 1991: status quo
@@ -408,7 +408,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_family_policy: { economic: -1, social: 1 }, // 1991: Erziehungsgeld 1986 in force, traditional family model
       de_unemployment_welfare: { economic: 0, social: 0 }, // 1991: pre-Hartz (2005); BfA active
       de_gender_equality: { economic: 0, social: 0 }, // 1991: GG Art 3 baseline, FüPoG II is 2021
-      // ── PR3 (Defense + Foreign + Tech + Public Safety) ──────────────────
+      // ── (Defense + Foreign + Tech + Public Safety) ──────────────────
       de_bundeswehr_funding: { economic: 1, social: 1 }, // 1991: post-reunification peace dividend; force reduction to 370k
       de_defense_posture: { economic: 0, social: 1 }, // 1991: post-Gulf-War debate on out-of-area deployments
       de_cybersecurity: { economic: 0, social: 0 }, // 1991: pre-internet, no cyber posture
@@ -420,7 +420,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_policing_public_safety: { economic: 0, social: 0 }, // 1991: Länder police, status quo
       de_criminal_justice: { economic: 0, social: 0 }, // 1991: status quo
       de_constitutional_protection: { economic: 0, social: 1 }, // 1991: post-reunification BfV expansion to former GDR
-      // ── PR4 (Economic + Infra + Env + Imm + Agri + Gov + Media) ─────────
+      // ── (Economic + Infra + Env + Imm + Agri + Gov + Media) ─────────
       de_fiscal_stimulus_act: { economic: -1, social: 0 }, // 1991: heavy Aufbau-Ost deficit spending, pre-Schuldenbremse
       de_labor_reform: { economic: 0, social: 0 }, // 1991: status quo, pre-Hartz
       de_sme_mittelstand: { economic: -1, social: 0 }, // 1991: Treuhand restructuring of East-German SOEs
@@ -440,7 +440,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_government_ethics: { economic: 0, social: 0 }, // 1991: pre-Parteispendenaffäre fallout
       de_public_broadcasting: { economic: 0, social: 0 }, // 1991: ARD + ZDF + new private channels (RTL 1984)
       de_press_freedom: { economic: 0, social: 0 }, // 1991: GG Art 5 baseline
-      // ── PR5 (Land-level) ────────────────────────────────────────────────
+      // ── (Land-level) ────────────────────────────────────────────────
       de_land_education: { economic: -1, social: 0 }, // 1991: largest Land budget line, East-rebuilding investment
       de_land_police: { economic: 0, social: 0 }, // 1991: status quo
       de_land_culture: { economic: 0, social: 0 }, // 1991: status quo

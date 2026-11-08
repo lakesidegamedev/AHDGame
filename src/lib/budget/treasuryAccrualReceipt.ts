@@ -54,11 +54,9 @@ function publicationOp(publication: TreasuryAccrualPublication): LedgerEntryOp |
 /**
  * Publish a pass's accrual witnesses in one write.
  *
- * Each row is keyed by the budget and turn it belongs to, so the rows are
- * independent of each other; only the round trips are shared. Publishing them
- * after the lanes moved the cash is the same recovery point as publishing each
- * one before its own lane: a crash before this write leaves the receipt stored
- * on the budget, and the next pass republishes it from there.
+ * Rows are independent, keyed by budget and turn; only round trips are shared.
+ * A crash before this write leaves the receipt on the budget, and the next
+ * pass republishes it.
  */
 export async function publishTreasuryAccrualReceipts(
   db: Db,

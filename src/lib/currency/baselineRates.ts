@@ -15,7 +15,7 @@ type BaselineRates = Partial<Record<CurrencyCode, number>>;
  * for currencies outside the forex set (the Warsaw-Pact bloc in 1953, for
  * example), whose `exchangeRates` documents never exist.
  *
- * ERA-SCOPED (refs #3778): a 1953 world must not be priced with 2019 rates, so
+ * ERA-SCOPED: a 1953 world must not be priced with 2019 rates, so
  * the map is built per preset and cached.
  *
  * Server-side only. Building it needs every country's client config, which is

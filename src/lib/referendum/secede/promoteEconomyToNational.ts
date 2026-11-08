@@ -7,8 +7,7 @@ import { getCountryConfig } from "@/lib/constants/countries";
  * `treasuryBalance` cash by GDP share (a transfer leaves cash with the source;
  * a new sovereign carries its proportional share) and moves the matching share
  * of the sovereign bond stock with it, so each side's stored `debt.principal`
- * still equals its haircut-adjusted active non-defaulted bond face (refs
- * #1975). Cash and debt are separate positions: only the bonds carry
+ * still equals its haircut-adjusted active non-defaulted bond face. Cash and debt are separate positions: only the bonds carry
  * obligations across, never a balance-derived mirror.
  *
  * Sterlingization: the new budget keeps `currencyCode: "GBP"` — no conversion.

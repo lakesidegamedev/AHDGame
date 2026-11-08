@@ -1,15 +1,14 @@
 /**
  * Bond market pool: the cash side of `Bond.publicFloat`.
  *
- * Before this module every trade against the float minted or burned money.
- * Buying from the float destroyed the buyer's cash, selling to it created the
- * seller's proceeds from nothing, and coupons on float units vanished. The
- * pool is the counterparty that was missing: one document per currency, real
- * cash, credited by purchases and by issuer coupon and maturity payments on
- * the units it holds, debited by sales and by primary-market underwriting.
+ * Every float trade would otherwise mint or burn money: buying destroyed the
+ * buyer's cash, selling created proceeds from nothing, and float coupons
+ * vanished. The pool is the counterparty: one document per currency, real
+ * cash, credited by purchases and issuer coupon/maturity payments on its
+ * holdings, debited by sales and primary-market underwriting.
  *
- * Every helper here takes LOCAL amounts in the bond's own currency. Callers
- * that hold anchor values convert before calling.
+ * All helpers here take LOCAL amounts in the bond's own currency. Callers
+ * holding anchor values must convert first.
  */
 
 import type { ClientSession, Db, Filter, UpdateFilter } from "mongodb";

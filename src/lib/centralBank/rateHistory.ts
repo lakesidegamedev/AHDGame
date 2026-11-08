@@ -17,6 +17,6 @@ import { ObjectId } from "mongodb";
  * is a required ObjectId, and the history must record such a move rather than
  * omit it — a history that silently drops every autonomous change is not a
  * history of the rate, and left the pre-1997 Bank of England showing an empty
- * ledger while its rate moved (#1250).
+ * ledger while its rate moved.
  */
 export const SYSTEM_RATE_ACTOR = new ObjectId("000000000000000000000000");

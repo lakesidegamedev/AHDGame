@@ -3,9 +3,7 @@ import type { Db, ObjectId } from "mongodb";
 /**
  * Collections that denormalize an NPP's display name beside `nppId`.
  * Keep this list in sync with any new write path that copies `npp.name`.
- *
- * Ticket #1037: supporter NPP rename updated `npps.name` only, so election
- * polls kept showing the old name while search/management listed the new one.
+ * Skipping one leaves stale names visible in polls and search.
  */
 export async function syncDenormalizedNppName(
   db: Db,

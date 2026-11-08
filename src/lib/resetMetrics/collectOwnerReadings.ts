@@ -887,15 +887,12 @@ export async function collectResetMetricOwnerReadings(
           }
         }
       }
-      // Several v2 outcomes do not yet have a more granular physical ledger in
-      // the game. They carry their opening value forward instead of reading the
-      // retired v1 political score, and the funded law and Cabinet pressure the
-      // board already displays moves them toward its settlement on each refresh
-      // (ticket 1539: the pressure used to be display-only, so energy security
-      // sat at its opening value for 170 turns of enacted energy law). This is
-      // deliberately labelled as a game-calibrated estimate so the UI never
-      // presents it as a fresh measurement. Owners with live ledgers above
-      // remain fail-closed.
+      // These v2 outcomes have no granular physical ledger yet. They carry
+      // their opening value forward rather than reading the retired v1
+      // political score, and funded law plus Cabinet pressure move them toward
+      // settlement on each refresh. Deliberately labelled a game-calibrated
+      // estimate so the UI never presents it as a fresh measurement. Owners
+      // with live ledgers remain fail-closed.
       const pressure = { ...(pressureByBoard.get(board._id) ?? {}) };
       const regions =
         board.scope === "regional"

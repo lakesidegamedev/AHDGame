@@ -127,11 +127,9 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   CS: CS_NPP_CAPITAL_STATE,
   BAL: BAL_NPP_CAPITAL_STATE, // Riga: the largest Baltic city and the regional administrative centre
   RU: RU_NPP_CAPITAL_STATE,
-  // Econ-tier market democracies — capital region (political capital where the
-  // administrative and market capital differ, e.g. Ankara over Istanbul). These
-  // regions are seeded by the econ-tier roster + region seeders, so an NPP corp
-  // can HQ there. Left blank previously, which silently zeroed their NPP-corp
-  // spawn even though the countries are full market economies.
+  // Econ-tier market democracies: capital region (political capital where
+  // administrative and market capital differ, e.g. Ankara). Must be seeded
+  // by the econ-tier roster + region seeders for NPP corp HQ spawn.
   FR: FR_NPP_CAPITAL_STATE, // Île-de-France (Paris)
   IT: IT_NPP_CAPITAL_STATE, // Lazio (Rome)
   ES: ES_NPP_CAPITAL_STATE, // Comunidad de Madrid
@@ -331,18 +329,16 @@ export async function createNppCorporationShell(
   // (an explicit `customCapital` is taken literally):
   //
   //  1. FX: ~₳2M expressed in the country's own currency, so weak-currency
-  //     countries (JP, NG, BR) are not seeded with tiny local books. A flat 2M
-  //     LOCAL left e.g. JP corps at ~19k ₳ vs UK/US at ~2M — an ~800x
-  //     cross-nation gap that also kept those corps below the nominal cash
-  //     floors gating expansion. See balance audit (2026-07-21). Converted at
-  //     the world's market rate, the same rate the cash is valued at: the GDP
-  //     normalization factor differs from it wherever authored GDP is not at
-  //     the era's market rate (1991 NG, PL, BG; 1953 JP, IT), see #2985.
-  //  2. ERA: ₳2,000,000 is a MODERN absolute (refs #3778 §3). 1953 nominal GDP
-  //     is ~70x smaller, so the unscaled default handed a fresh NPP corp more
-  //     cash than several 1953 regional sector markets put together. Deflating
-  //     by the era's nominal scale keeps the founding book the same share of
-  //     the economy it is in a 2019 world. No-op for every modern preset.
+  //     countries are not seeded with tiny local books. A flat 2M LOCAL left some
+  //     corps far below the nominal cash floors gating expansion. Converted at
+  //     the world's market rate, the same rate the cash is valued at (the GDP
+  //     normalization factor differs from it wherever authored GDP is not at the
+  //     era's market rate).
+  //  2. ERA: ₳2,000,000 is a MODERN absolute; 1953 nominal GDP is ~70x smaller, so
+  //     the unscaled default handed a fresh NPP corp more cash than several 1953
+  //     regional sector markets combined. Deflating by the era's nominal scale
+  //     keeps the founding book the same share of the economy as in 2019. No-op
+  //     for every modern preset.
   const techGameState = await db.collection<GameState>("gameState").findOne(
     { _id: "current" },
     {

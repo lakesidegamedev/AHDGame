@@ -1,7 +1,7 @@
 /**
  * Media business models describe which outputs a firm sells and when the model
- * is historically available. `mediaOperatingModelOutputRates` converts a
- * model's value shares into the existing commodity-rate format.
+ * is historically available. `mediaOperatingModelOutputRates` converts value
+ * shares into the commodity-rate format.
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";

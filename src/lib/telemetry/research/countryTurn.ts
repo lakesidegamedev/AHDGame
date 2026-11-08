@@ -1,16 +1,16 @@
 /**
- * Shell for the research country-turn panel (#2331, #2336).
+ * Shell for the research country-turn panel.
  *
  * Runs once per turn from `stateEffectsPhase`, right after the long-horizon
- * context is resolved, so the row for turn N is written with the same state the
- * operational snapshots see. Six batched reads for the whole world, one bulk
- * upsert: never a query per country. Every access goes through the passed `Db`
- * handle, which on sim runs is the isolated sandbox database.
+ * context is resolved, so the row for turn N is written with the same state
+ * the operational snapshots see. Six batched reads for the whole world, one
+ * bulk upsert: never a query per country. Every access goes through the passed
+ * `Db` handle, which on sim runs is the isolated sandbox database.
  *
  * Sovereign principal is the authoritative `federalBudget.debt.principal`
  * (resynced from the bond ledger); the flows come from the same ledger, so the
- * annual reconciliation in `buildAnnualFiscalPanel` exposes any drift between
- * the two instead of hiding it.
+ * annual reconciliation in `buildAnnualFiscalPanel` exposes any drift instead
+ * of hiding it.
  */
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";

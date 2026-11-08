@@ -1,13 +1,11 @@
 /**
  * Interval-based attribution of a turn's wall time to phases and subsystems.
  *
- * Per-phase `ms` values cannot be summed. Phases inside one `Promise.all`
- * group each report the group's shared wall time (about 60 per-country
- * election and bill phases run together), so naive sums reach 1.2x to 1.5x
- * the turn and overstate any saving. This splits every slice of the turn's
- * wall clock equally among the phases open during it, so the attribution sums
- * to the covered wall time. Equal split is a neutral prior on one JavaScript
- * thread, not a CPU measurement (#2691).
+ * Per-phase `ms` values cannot be summed: phases inside one `Promise.all`
+ * group each report the group's shared wall time, so naive sums overstate
+ * the turn by 1.2x to 1.5x. This splits each slice of wall clock equally
+ * among the phases open during it, so attribution sums to covered wall time.
+ * Equal split is a neutral prior on one JS thread, not a CPU measurement.
  *
  * Pure: plain data in, plain data out.
  */

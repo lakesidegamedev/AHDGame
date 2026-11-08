@@ -1,13 +1,12 @@
 /**
- * Restructuring as an outcome of an interest spiral (#5703).
+ * Restructuring as an outcome of an interest spiral.
  *
  * When debt interest has taken more than half of revenue for two fiscal years
  * running, no consolidation package can catch the interest bill. An AI-run
  * country then restructures through the ordinary sovereign-default path: the
- * crisis fires exactly as it would after failed auctions (state, decision row,
- * news), and `applyRestructureResolution` applies the haircut, the market
- * access lock and the move into recovery. Nothing here invents a parallel
- * mechanism; it only decides that the crisis fires and which resolution it gets.
+ * crisis fires as after failed auctions, and `applyRestructureResolution`
+ * applies the haircut, market access lock and recovery. No parallel mechanism
+ * is invented here; this only decides that the crisis fires.
  */
 
 import type { Db, Filter } from "mongodb";

@@ -1,11 +1,11 @@
 /**
- * Shell for the research securities panel (#2332).
+ * Research securities panel.
  *
- * One row per (world, turn) carrying every listed equity and every live bond,
- * written from `stateEffectsPhase` after the turn's trades and snapshots have
- * landed. Seven batched reads, one upsert. Nothing here changes market rules:
- * it observes quotes, executions and holdings exactly as stored, labels how
- * each price was produced, and aggregates holders to classes (no identities).
+ * One row per (world, turn) with every listed equity and live bond, written
+ * from stateEffectsPhase after the turn's trades and snapshots land. Batched
+ * reads, one upsert. Read-only: observes quotes, executions and holdings as
+ * stored, labels how each price was produced, and aggregates holders to classes
+ * without identities.
  */
 import type { Db } from "mongodb";
 import { BOND_UNIT_FACE_VALUE, perTurnCouponPayment } from "@/lib/constants/bonds";

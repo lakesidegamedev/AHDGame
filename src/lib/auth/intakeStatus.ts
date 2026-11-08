@@ -8,12 +8,9 @@ import { isSingleplayer } from "@/lib/singleplayer";
  * character, right now.
  *
  * The mutation routes (`POST /api/auth/register`, the OAuth callbacks,
- * `POST /api/auth/character`) each enforce these gates server-side. The pages
- * in front of them used to know only part of it: the register page reacted to
- * full maintenance but not to closed registration, and `/create-character`
- * checked nothing, so a player filled in every step and learned at submit that
- * creation was closed. Every page now reads this one derivation before it
- * renders a form, so what a page offers and what its route accepts agree.
+ * `POST /api/auth/character`) each enforce these gates server-side. Every page
+ * reads this one derivation before it renders a form, so what a page offers
+ * and what its route accepts agree.
  */
 export type RegistrationClosedReason = "maintenance" | "registration_closed";
 export type CharacterCreationClosedReason = "maintenance";

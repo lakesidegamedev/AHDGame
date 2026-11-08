@@ -54,15 +54,10 @@ export function clientStatusUnauthorized(): boolean {
 /**
  * Fetch `/api/client-status` once per page load.
  *
- * Both the navbar and the status bar need this payload, and they mount in the
- * same commit. Each used to fetch it independently — two requests and ~46 Mongo
- * commands per page view for one bar. Concurrent callers now share one request
- * (and one short-lived result), while each keeps its own mapping and retry
- * policy.
- *
- * The response is always revalidated against the origin: the shared entry only
- * lives for `SHARED_RESULT_MS`, and callers pass their own cache mode, which is
- * honoured by the first request of a page load.
+ * Navbar and status bar mount together and both need this payload, so
+ * concurrent callers share one request and a short-lived result
+ * (`SHARED_RESULT_MS`). Each caller keeps its own mapping and retry policy;
+ * the shared entry is briefly revalidated against the origin.
  */
 export function fetchClientStatusJson(
   url: string,

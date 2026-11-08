@@ -1,13 +1,9 @@
 /**
  * Regional spending breakdown for the region budget page.
  *
- * Lives here rather than in the route because a Next.js route segment may only
- * export handlers — and because the turn engine and the page MUST price the
- * same enactment the same way. They previously did not: the engine priced
- * regional laws through the v2 cost engine while the route read
- * `annualCostPerCapita` off a legacy `legislationTypes` doc. On the
- * political-legislation preset those docs are unseeded, so a London that the
- * engine was charging £59.0M/yr reported £0.0M of spending on its own page.
+ * Lives here rather than in the route because the turn engine and the page
+ * MUST price the same enactment the same way. Sharing this helper keeps them
+ * in agreement.
  */
 
 import type { CountryId } from "@/lib/constants/countries";

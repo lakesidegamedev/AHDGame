@@ -4,17 +4,12 @@ import type { Campaign, Election } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 
 /**
- * Archive the campaigns left in races Campaign Manager no longer covers.
+ * Archive campaigns in races Campaign Manager no longer covers.
+ * These campaigns stop earning, paying upkeep and appearing on campaign
+ * surfaces. Archiving (never deleting) keeps funds, upgrades and history on
+ * the document; field offices are swept by the next upkeep pass.
  *
- * Campaign Manager is the presidential campaign system. Phase 5.5 and #3653
- * had opened it to US senate / governor / house / state senate, UK commons and
- * JP races; those campaigns now stop earning, paying upkeep and appearing on
- * campaign surfaces. Archiving (never deleting) keeps their funds, upgrades and
- * history on the document, the same way a withdrawn candidate's campaign is
- * kept. Their field offices are swept by the next upkeep pass.
- *
- * Idempotent: only non-archived campaigns are considered, so a rerun finds
- * nothing left to archive.
+ * Idempotent: only non-archived campaigns are considered.
  */
 export const migration: Migration = {
   id: "2026-11-01-archive-non-presidential-campaigns",

@@ -38,15 +38,11 @@ function isIndexConflictError(err: unknown): boolean {
 }
 
 // The cooldown gate relies on a unique index over (sourceCountry,targetCountry).
-// Seeding creates it, but ensure it once per process too so the atomic gate is
-// correct even on a DB that predates the seed change. createIndex is idempotent
-// when the name matches the seed's, but an equivalent pair index left under a
-// different name (e.g. the auto-named sourceCountry_1_targetCountry_1 from a
-// build that created it without a name) makes createIndex throw
-// IndexOptionsConflict instead of no-oping — which surfaced as a 500 "Internal
-// server error" on every embargo impose (ticket #1213). Any unique index over
-// the same full key pattern satisfies the atomic gate, so accept such an index
-// rather than failing the player's action.
+// Seeding creates it, but ensure it once per process too, so the atomic gate is
+// correct on a DB that predates the seed change. An equivalent pair index under
+// a different name makes createIndex throw IndexOptionsConflict; any unique
+// index over the same full key pattern satisfies the gate, so accept it rather
+// than failing the player's action.
 let cooldownIndexEnsured = false;
 async function ensureCooldownIndex(col: Collection<TradeEmbargoCooldown>): Promise<void> {
   if (cooldownIndexEnsured) return;

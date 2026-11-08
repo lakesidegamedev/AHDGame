@@ -2,15 +2,11 @@ import type { Db, ObjectId } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
 
 /**
- * v3 Phase 8 code-review fix #8: `Character.unionLeaderOf` is documented as a
- * denormalized read cache of `Union.ownerId` (the source of truth), with a
- * "defensive read-repair on the read path" — but no such repair previously
- * existed anywhere, so any desync (e.g. a crashed request between
- * `claimUnion`'s two writes) was permanent, and could even lock a character
- * out of ever claiming a union again (`claimUnion` 409s whenever
- * `character.unionLeaderOf != null`). These two helpers actually implement
- * the promised repair, called from the read paths that already load a
- * `union`/`character` document.
+ * Self-heal helpers for the `Character.unionLeaderOf` cache, the denormalized
+ * mirror of `Union.ownerId` (source of truth). Desyncs (e.g. a crash between
+ * `claimUnion`'s two writes) would otherwise persist and can lock a character
+ * out of reclaiming, since `claimUnion` 409s when the cache is non-null.
+ * Called from read paths that already load `union`/`character`.
  */
 
 /**

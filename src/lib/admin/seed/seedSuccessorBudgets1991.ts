@@ -68,11 +68,9 @@ export async function seedSuccessorBudgets1991(
       updateOne: { filter: { _id }, update: { $set: budget }, upsert: true },
     }))
   );
-  // RU ownership (issue #2316): seedRuBudgets returns on 1991, so without
-  // this RU gets budgets but no owned producing SOEs. Reuse the RU
-  // generateCountryOwnedSeedData + upsertCountryOwnedCorpEntries path,
-  // limited to RU states and gated on gameConfig.commandEconomyEnabled,
-  // exactly like the RU seeder. Upserts only, so repeat seeding is stable.
+  // seedRuBudgets returns on 1991; seed RU owned producing SOEs
+  // via the RU seeder path (RU states, gated on commandEconomyEnabled).
+  // Upserts only, so repeat seeding is stable.
   const gameConfig = await db
     .collection<GameConfig>("gameConfig")
     .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });

@@ -8,10 +8,8 @@ import { NPP_AUTONOMY_LEVEL_RANK } from "./levels";
 export type { NppAutonomyLevel };
 
 /**
- * Canonical ordering of the autonomy levels. Exported so callers never hand-roll
- * a local copy (nppActionProcessing and countryAccess used to) and never compare
- * with strict equality: `level === "v3"` silently turns a v3+ feature OFF at v4,
- * which is exactly the bug class this export exists to prevent.
+ * Canonical ordering of autonomy levels. Compare via rank, not strict equality:
+ * `level === "v3"` silently disables a v3+ feature at v4.
  */
 export { NPP_AUTONOMY_LEVEL_RANK };
 
@@ -53,7 +51,7 @@ export async function getNppAutonomyWorldContext(
 
 /**
  * Autonomy level read once and served to every `getNppAutonomyLevel` call inside
- * `fn` (#2690). The per-country gates call it once per actor, which re-read the
+ * `fn`. The per-country gates call it once per actor, which re-read the
  * `gameState` singleton about a hundred times a turn.
  *
  * AsyncLocalStorage, not a module cache: the value exists only for the dynamic

@@ -34,20 +34,10 @@ export interface CampaignActionInputs {
 }
 
 /**
- * The whole per-turn accrual rule, in one place.
- *
- * The turn engine pays what this returns and the campaign desk promises what
- * this returns. They used to derive it separately, which is how a campaign came
- * to be shown 15 actions a turn while being credited 8: the desk counted
- * politician endorsements the engine had stopped counting, and it still counted
- * player endorsements in races where the engine gates them, ignored the
- * governor and executive terms, and used a full baseline for NPP-run campaigns
- * the engine halves. Every one of those rules now lives here, so the two cannot
- * disagree again.
- *
- * Sources are summed BEFORE the square root, not curved separately: the curve
- * is what makes stacking endorsements yield less each time, and applying it per
- * source would hand out a bonus for spreading them around.
+ * Single source of the per-turn accrual rule, shared by the turn engine and
+ * the campaign desk so they cannot disagree. Sources are summed BEFORE the
+ * square root: the curve makes stacking endorsements yield less each time, so
+ * applying it per source would reward spreading them around.
  */
 export function campaignActionsPerTurn(inputs: CampaignActionInputs): number {
   const playerBase = Math.max(

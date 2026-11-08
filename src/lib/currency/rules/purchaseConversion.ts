@@ -57,8 +57,8 @@ export function purchaseConversionDelivered(
 /**
  * Smallest practical spend whose delivered amount is at least `target` under
  * the market maker's real rounding. The closed form in purchaseConversionRequired
- * ignores rounding and can land a few units short, which used to strand a
- * conversion when the following exact debit failed.
+ * ignores rounding and can land a few units short, stranding a conversion
+ * when the following exact debit fails.
  */
 export function purchaseConversionMinimumSpend(
   target: number,

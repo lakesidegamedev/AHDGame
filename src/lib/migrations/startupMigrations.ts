@@ -60,13 +60,13 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   repairOrphanIndexFundState,
   providerIdentityIndexes,
   centralBankPricingPhaseIn,
-  // #2688: without these, every per-turn telemetry upsert scans its collection,
+  // Without these, every per-turn telemetry upsert scans its collection,
   // a cost that grows each turn until the index exists.
   longHorizonTelemetryIndexes,
   // Sign in with Apple writes `appleId`; its unique index must exist before
   // the first Apple login can race a duplicate account into existence.
   appleProviderIdentityIndex,
-  // #2049 (player ticket 1368): the UK appoint path allows a departmental minister to take
+  // The UK appoint path allows a departmental minister to take
   // a central title, but the legacy one-seat-per-character unique index
   // rejects that insert until this swap runs, so the DPM appointment failed
   // with a spurious conflict error on worlds that never ran it.
