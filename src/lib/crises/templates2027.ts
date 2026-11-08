@@ -15,7 +15,7 @@ import { fx, gdpLoss, marginShock } from "@/lib/crises/templateHelpers";
  * go years without seeing any of them.
  */
 
-const HERO = {
+export const HERO = {
   heat: "https://images.unsplash.com/photo-1563630381190-77c336ea545a?auto=format&fit=crop&w=1600&q=70",
   fire: "https://images.unsplash.com/photo-1692364221415-654b20e6d1d2?auto=format&fit=crop&w=1600&q=70",
   drought:
@@ -38,7 +38,7 @@ const HERO = {
     "https://images.unsplash.com/photo-1511898634545-c01af8a54dd5?auto=format&fit=crop&w=1600&q=70",
 } as const;
 
-interface ModernOption {
+export interface ModernOption {
   id: string;
   label: string;
   description: string;
@@ -47,7 +47,7 @@ interface ModernOption {
   cutsTurns?: number;
 }
 
-interface ModernCrisisSpec {
+export interface ModernCrisisSpec {
   name: string;
   heroImage: string;
   description: string;
@@ -76,7 +76,7 @@ function option(o: ModernOption): CrisisDecisionOption {
   };
 }
 
-function random(
+export function random(
   cooldownTurns: number,
   spawnChance: number,
   scope: "country" | "global" = "country"
@@ -84,7 +84,7 @@ function random(
   return { kind: "random", cooldownTurns, scope, spawnChance };
 }
 
-function modernCrisis(spec: ModernCrisisSpec): CrisisTemplate {
+export function modernCrisis(spec: ModernCrisisSpec): CrisisTemplate {
   const scope = spec.scope ?? "country";
   return {
     name: spec.name,

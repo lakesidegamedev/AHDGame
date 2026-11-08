@@ -21,7 +21,7 @@ import { fx } from "@/lib/crises/templateHelpers";
  * Nothing here is scheduled: each is a low per-turn roll with a long cooldown.
  */
 
-const HERO = {
+export const HERO = {
   trade:
     "https://images.unsplash.com/photo-1605745341112-85968b19335b?auto=format&fit=crop&w=1600&q=70",
   tax: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1600&q=70",
@@ -35,7 +35,7 @@ const HERO = {
     "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1600&q=70",
 } as const;
 
-interface OpportunityOption {
+export interface OpportunityOption {
   id: string;
   label: string;
   description: string;
@@ -43,7 +43,7 @@ interface OpportunityOption {
   effects: CrisisEffect[];
 }
 
-interface OpportunitySpec {
+export interface OpportunitySpec {
   name: string;
   heroImage: string;
   description: string;
@@ -65,7 +65,7 @@ interface OpportunitySpec {
 /** Unanswered offers lapse after a day of play. */
 const OFFER_WINDOW_MINUTES = 1440;
 
-function random(cooldownTurns: number, spawnChance: number): CrisisAutoTrigger {
+export function random(cooldownTurns: number, spawnChance: number): CrisisAutoTrigger {
   return { kind: "random", cooldownTurns, scope: "country", spawnChance };
 }
 
@@ -79,7 +79,7 @@ function acceptOption(o: OpportunityOption): CrisisDecisionOption {
   };
 }
 
-function opportunity(spec: OpportunitySpec): CrisisTemplate {
+export function opportunity(spec: OpportunitySpec): CrisisTemplate {
   return {
     name: spec.name,
     heroImage: spec.heroImage,

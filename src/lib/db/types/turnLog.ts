@@ -210,6 +210,7 @@ export interface TurnLog {
       swept: number;
       offered: number;
       skippedOffers: number;
+      exhaustedOffers?: number;
     } | null;
 
     worldEventsMaintenance: {

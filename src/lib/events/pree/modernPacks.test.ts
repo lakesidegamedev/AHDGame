@@ -26,6 +26,7 @@ function ctx(overrides: Partial<CharacterEventContext> = {}): CharacterEventCont
     isPolitician: true,
     isCeo: true,
     isInElection: true,
+    ceoOwnershipFraction: 0.9,
     ...overrides,
   };
 }
@@ -34,6 +35,7 @@ const DECADES = [
   ["2020s", 2020, 2029],
   ["2030s", 2030, 2039],
   ["2040s", 2040, 2049],
+  ["2050s", 2050, 2059],
 ] as const;
 
 const DASHES = new RegExp(`[${String.fromCharCode(0x2013)}${String.fromCharCode(0x2014)}]`);
