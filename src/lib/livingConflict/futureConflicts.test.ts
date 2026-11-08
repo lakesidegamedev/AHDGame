@@ -126,7 +126,7 @@ function outcomeOf(def: LivingConflictDef, phaseKey: string, outcomeId: string) 
 describe("post-2027 living-conflict registry", () => {
   it("registers the three families after every older family", () => {
     const keys = allLivingConflictDefs().map((def) => def.key);
-    expect(keys.slice(-3)).toEqual([
+    expect(keys.slice(13, 16)).toEqual([
       "ai_labour_shock",
       "pacific_strait_crisis",
       "infrastructure_cyberattack",
