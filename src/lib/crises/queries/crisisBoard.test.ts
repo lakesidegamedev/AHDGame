@@ -94,7 +94,9 @@ describe("viewerCanActOnCrisis", () => {
   it("refuses a country with no part in a global response", () => {
     const c = crisis({
       scope: "global",
-      globalResponse: { roleByCountry: { FR: "belligerent" } } as Crisis["globalResponse"],
+      globalResponse: {
+        roleByCountry: { FR: "belligerent" },
+      } as unknown as Crisis["globalResponse"],
     });
     expect(viewerCanActOnCrisis(c, interaction(c, node()), viewer)).toBe(false);
   });
