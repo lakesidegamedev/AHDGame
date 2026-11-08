@@ -3,7 +3,7 @@ import { resolvePhaseTimeoutMs, phaseTimeoutMs, PHASE_TIMEOUT_MS } from "@/lib/t
 
 describe("resolvePhaseTimeoutMs", () => {
   it("gives only corporations a five-minute timeout", () => {
-    expect(phaseTimeoutMs("corporationTurn")).toBe(300_000);
+    expect(phaseTimeoutMs("corporationTurn")).toBe(600_000);
     expect(phaseTimeoutMs("treasuryTurn")).toBe(PHASE_TIMEOUT_MS);
   });
   it("defaults to four minutes when unset or invalid", () => {

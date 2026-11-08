@@ -41,9 +41,13 @@ export function resolvePhaseTimeoutMs(
 
 export const PHASE_TIMEOUT_MS = resolvePhaseTimeoutMs();
 
-/** Corporate settlement has a five-minute window; other phases retain their configured limit. */
+/**
+ * Corporate settlement has a ten-minute window; other phases retain their configured limit.
+ * Five minutes capped the market at 225 s, and the live market needs about 240 s
+ * (turn 745 failed three times on the execution deadline).
+ */
 export function phaseTimeoutMs(phase: string): number {
-  return phase === "corporationTurn" ? 5 * 60 * 1000 : PHASE_TIMEOUT_MS;
+  return phase === "corporationTurn" ? 10 * 60 * 1000 : PHASE_TIMEOUT_MS;
 }
 
 export type ProcessingLockSnapshot = Pick<
