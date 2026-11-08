@@ -10,17 +10,10 @@
  */
 
 /**
- * `activityLog` rows that describe the ACCOUNT rather than the world, and so
- * survive a reset. Login/logout rows carry the IP, user agent, fingerprint and
- * tracking id that alt detection (`altDetection/run.ts`) and the moderation
- * dossier read, and `character_deleted` is the moderator marker written before
- * a hard delete. Dropping them let an account rotate its address across a
- * reset with no trail left behind.
- *
- * Every other type is world state and must go: `suspiciousDetection` reads
- * `turn_summary` by `turnNumber`, which restarts at 1, and NPP party capacity
- * counts recent `game_action`/`turn_summary` rows per user, so a surviving
- * world row would be read as the new world's activity.
+ * `activityLog` rows about the ACCOUNT, which survive a reset: login and logout
+ * rows carry the signals alt detection and the moderation dossier read, and
+ * `character_deleted` marks a hard delete. Every other type is world state read
+ * by turn number or recent-activity windows, so it is removed.
  */
 export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
   "login",

@@ -328,9 +328,6 @@ export async function resetAndBootstrapGameWorld(
       log: collect,
     });
     collect(reset.message);
-    const stamped = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1, resetWorldId: 1 } });
 
     // Political metrics are reference rows, but several fields on each row are
     // mutable momentum from the outgoing world. Clear those fields only here,
@@ -636,8 +633,8 @@ export async function resetAndBootstrapGameWorld(
     try {
       const violations = await runResidueScan(db, {
         resetStartedAt,
-        expectedTurn: stamped?.currentTurn ?? 1,
-        resetWorldId: typeof stamped?.resetWorldId === "string" ? stamped.resetWorldId : null,
+        expectedTurn: reset.world?.currentTurn ?? 1,
+        resetWorldId: reset.world?.resetWorldId ?? null,
         referenceReplaced: resetReference,
       });
       for (const violation of violations) {

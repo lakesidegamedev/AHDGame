@@ -356,6 +356,8 @@ interface ResetGameWorldOptions {
 export interface ResetGameWorldResult {
   success: true;
   message: string;
+  /** The identity and turn this teardown stamped on the new world. */
+  world?: { resetWorldId: string; currentTurn: number };
   details: {
     officialsDeleted: number;
     officialsSeeded: number;
@@ -810,6 +812,10 @@ export async function resetGameWorld(
   // rows deleted) are only knowable after the new world exists.
   return {
     success: true,
+    world: {
+      resetWorldId: gameStateUpdate.resetWorldId as string,
+      currentTurn: resetDate.currentTurn,
+    },
     message: options.deleteProfiles
       ? "Game fully reset - all data deleted"
       : "Game reset successfully",
