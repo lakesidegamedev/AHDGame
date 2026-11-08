@@ -645,6 +645,13 @@ export interface TurnLog {
       crisisesProcessed: number;
     } | null;
 
+    crisisV2Turn?: {
+      processed: number;
+      failed: number;
+      resolved: number;
+      opened: number;
+    } | null;
+
     ministerialOrders?: {
       ordersExpired: number;
       ordersActive: number;
