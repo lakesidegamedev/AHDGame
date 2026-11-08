@@ -229,6 +229,8 @@ export interface CrisisInstance {
   scars: CrisisScar[];
   parents: SpilloverRef[];
   children: SpilloverRef[];
+  /** Turn whose step has been claimed; a claimed turn is never stepped twice. */
+  lastEvaluatedTurn?: number;
 }
 
 /** Optional v2 state carried on a stored crisis. */

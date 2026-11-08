@@ -972,6 +972,7 @@ export const RUNTIME: CollectionEntry[] = [
   // Crises / referendums / debates / discussions.
   { name: "crisisAidCommitments", category: "runtime" },
   { name: "crisisInteractions", category: "runtime" },
+  { name: "crisisLeverUses", category: "runtime" },
   { name: "refugeeReceptionHistory", category: "runtime" },
   { name: "conflictCivilianLossHistory", category: "runtime" },
   { name: "conflictCapacityObligations", category: "runtime" },
