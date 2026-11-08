@@ -45,6 +45,8 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { claimFundRedemptionLock } from "@/lib/indexFunds/redemptionLock";
 
+class FundQuoteMovedError extends Error {}
+
 const redeemSchema = z.object({
   corporationId: z
     .string()
@@ -249,7 +251,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           // Burn all accepted units up front. Any unpaid remainder becomes a
           // queued cash payable, not phantom fund units in the NAV denominator.
           const supplyBurn = await db.collection("indexFunds").updateOne(
-            { _id: fund._id, unitSupply: { $gte: units } },
+            {
+              _id: fund._id,
+              unitSupply: { $gte: units },
+              ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
+            },
             {
               $inc: { unitSupply: -units },
               $set: { updatedAt: new Date() },
@@ -257,6 +263,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             s
           );
           if (supplyBurn.matchedCount === 0) {
+            // A national fund is re-marked each tick; the quote was read at the
+            // old NAV, so a moved NAV must not take this redemption.
+            if (fund.nationalIndex) {
+              const current = await db
+                .collection("indexFunds")
+                .findOne({ _id: fund._id }, { projection: { quotedNav: 1 }, ...s });
+              if (current && current.quotedNav !== fund.quotedNav) throw new FundQuoteMovedError();
+            }
             throw new Error("Fund unit supply changed during redemption; please retry.");
           }
           if (compensate) {
@@ -272,6 +286,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
           let fundState = await resolveFundBySlugOrId(db, slug, s);
           if (!fundState) throw new Error("Fund not found");
+          if (fund.nationalIndex && fundState.quotedNav !== fund.quotedNav) {
+            throw new FundQuoteMovedError();
+          }
           let existingQueuedLiabilityAnchor = await getQueuedRedemptionLiabilityAnchor(
             db,
             fundState._id
@@ -302,7 +319,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             // both debit, driving fund cash negative. The queued-redemption path
             // already guards this way; the immediate path did not.
             const cashDebit = await db.collection("indexFunds").updateOne(
-              { _id: fundState!._id, cashAnchor: { $gte: quote.paidAmountAnchor } },
+              {
+                _id: fundState!._id,
+                cashAnchor: { $gte: quote.paidAmountAnchor },
+                ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
+              },
               {
                 $inc: {
                   cashAnchor: -quote.paidAmountAnchor,
@@ -312,6 +333,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
               s
             );
             if (cashDebit.matchedCount === 0) {
+              if (fund.nationalIndex) {
+                const current = await db
+                  .collection("indexFunds")
+                  .findOne({ _id: fundState!._id }, { projection: { quotedNav: 1 }, ...s });
+                if (current && current.quotedNav !== fund.quotedNav) {
+                  throw new FundQuoteMovedError();
+                }
+              }
               throw new Error("FUND_CASH_RACE");
             }
             // Undo for this leg's cash debit, unwound by the outer stack if a
@@ -586,6 +615,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             );
           }
         } catch (err) {
+          if (err instanceof FundQuoteMovedError) {
+            return errorResponse(409, "The fund price just moved. Please try again.");
+          }
           if (err instanceof Error && err.message === "FUND_CASH_RACE") {
             // Another redemption took the cash between the quote and the debit.
             // Nothing was written, so the caller can simply retry.

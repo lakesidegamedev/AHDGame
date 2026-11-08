@@ -83,7 +83,7 @@ export interface IndexFund {
    * holds cash marked to the country's aggregate output index, never
    * equities or bonds, so the turn's fund passes leave it alone.
    */
-  nationalIndex?: { entityId: string };
+  nationalIndex?: { entityId: string; markToken?: string };
   /** A7: failing-corporation streaks, for the incumbent grace period. */
   listingFailureStreaks?: IndexFundListingFailureStreak[];
 

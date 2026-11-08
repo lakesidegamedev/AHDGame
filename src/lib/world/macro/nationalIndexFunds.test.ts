@@ -23,7 +23,7 @@ function fundFixture() {
     quotedNav: 100,
     unitSupply: 100,
     cashAnchor: 10_000,
-    nationalIndex: { entityId: "FR" },
+    nationalIndex: { entityId: "FR" } as { entityId: string; markToken?: string },
     backingRatio: 1,
     updatedAt: undefined as Date | undefined,
   };
@@ -36,7 +36,9 @@ function fakeDb(actual: Fund, beforeFirstWrite: () => void = () => {}) {
   let writes = 0;
   return {
     collection: () => ({
-      find: () => ({ toArray: async () => [{ ...actual }] }),
+      find: () => ({
+        toArray: async () => [{ ...actual, nationalIndex: { ...actual.nationalIndex } }],
+      }),
       bulkWrite: async (ops: any[]) => {
         if (writes++ === 0) beforeFirstWrite();
         let matchedCount = 0;
@@ -45,7 +47,9 @@ function fakeDb(actual: Fund, beforeFirstWrite: () => void = () => {}) {
           if (filter.unitSupply !== undefined && filter.unitSupply !== actual.unitSupply) continue;
           if (filter.quotedNav !== undefined && filter.quotedNav !== actual.quotedNav) continue;
           matchedCount++;
-          Object.assign(actual, update.$set);
+          const { "nationalIndex.markToken": token, ...rest } = update.$set;
+          Object.assign(actual, rest);
+          actual.nationalIndex = { ...actual.nationalIndex, markToken: token };
           actual.cashAnchor += update.$inc?.cashAnchor ?? 0;
         }
         return { matchedCount };
@@ -79,5 +83,19 @@ describe("national index fund marking", () => {
     expect(result.marked).toBe(1);
     expect(actual.quotedNav).toBe(110);
     expect(actual.cashAnchor).toBe(110 * 110);
+  });
+
+  it("does not count another writer's identical timestamp as this mark", async () => {
+    const actual = fundFixture();
+    const now = new Date(5);
+    const db = fakeDb(actual, () => {
+      actual.unitSupply += 10;
+      actual.cashAnchor += 1000;
+      actual.updatedAt = now;
+    });
+    const result = await markNationalIndexFunds(db as never, MARK, 7, now);
+    expect(result.marked).toBe(1);
+    expect(actual.quotedNav).toBe(110);
+    expect(actual.cashAnchor).toBe(110 * actual.unitSupply);
   });
 });
