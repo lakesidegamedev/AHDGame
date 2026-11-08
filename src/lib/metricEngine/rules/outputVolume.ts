@@ -69,6 +69,24 @@ export function valueAddedOutput(sector: OutputVolumeSector, turn: number): numb
   return gross * (1 - intermediateShare(sector, turn));
 }
 
+export type OutputBasis = "gross" | "value_added";
+
+/** Only an explicit marker selects value added; absent or unknown stays on the gross basis. */
+export function resolveOutputBasis(value: unknown): OutputBasis {
+  return value === "value_added" ? "value_added" : "gross";
+}
+
+/** The growth-signal volume for a sector on the world's output basis. */
+export function outputVolumeOnBasis(
+  sector: OutputVolumeSector,
+  turn: number,
+  basis: OutputBasis
+): number | null {
+  return basis === "value_added"
+    ? valueAddedOutput(sector, turn)
+    : constantPriceOutput(sector, turn);
+}
+
 /** A partial observation must never be mistaken for a regional output loss. */
 export function sumObservedOutput(sectors: readonly { outputVolume?: number }[]): number | null {
   if (sectors.length === 0) return null;

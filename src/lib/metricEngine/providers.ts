@@ -1,5 +1,5 @@
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { constantPriceOutput } from "./rules/outputVolume";
+import { outputVolumeOnBasis, resolveOutputBasis } from "./rules/outputVolume";
 import type { Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { warDamageByCountry, type WarDamage } from "@/lib/military/warDamage";
@@ -164,9 +164,11 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
     // labourSystemMode read in the engine phase), not the global getDb().
     db
       .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { marketSystemMode: 1 } })
+      .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, outputBasis: 1 } })
       .catch(() => null),
   ]);
+
+  const outputBasis = resolveOutputBasis(marketConfig?.outputBasis);
 
   const plantsEnabled = marketAtLeast(
     isMarketSystemMode(marketConfig?.marketSystemMode) ? marketConfig.marketSystemMode : "off",
@@ -214,7 +216,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       hostRealized !== undefined
         ? readCorpEconomicAnchor(hostRealized, hostCode, hostRate)
         : undefined;
-    const outputVolume = plantsEnabled ? constantPriceOutput(sector, turn) : null;
+    const outputVolume = plantsEnabled ? outputVolumeOnBasis(sector, turn, outputBasis) : null;
     const list = ownedByState.get(sector.stateId) ?? [];
     // Fallback chain: new field → legacy field → 0 (undefined would propagate NaN).
     const growth = sector.currentGrowthRate ?? sector.growthRate ?? 0;

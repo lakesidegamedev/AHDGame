@@ -114,6 +114,13 @@ describe("fresh-world flag policy", () => {
     }
   });
 
+  it("seeds value-added output growth for fresh worlds and only on insert for top-ups", () => {
+    expect(FRESH_WORLD_GAME_CONFIG_FLAGS.outputBasis).toBe("value_added");
+    const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
+    expect(flags).toHaveProperty("outputBasis", "value_added");
+    expect(settings).not.toHaveProperty("outputBasis");
+  });
+
   it("is what the reference gameConfig seeds", () => {
     expect(referenceGameConfig).toMatchObject(FRESH_WORLD_GAME_CONFIG_FLAGS);
     expect(referenceGameConfig.treasuryCashLedgerEnabled).toBe(true);
