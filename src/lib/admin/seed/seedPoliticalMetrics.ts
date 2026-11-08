@@ -18,7 +18,8 @@ import {
 import { REGIONAL_MODIFIERS_1953 } from "@/lib/politicalMetrics/seeds/regionalModifiers1953";
 import { REGIONAL_TEXTURE_1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
 import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
-import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 
 /**
  * The 1953 preset carrying both authored modifiers and generated texture.
@@ -34,9 +35,7 @@ const PLAYABLE = new Set<string>(POLITICAL_METRIC_COUNTRY_IDS);
  * given a neutral board; a 63-family doc of 50s would look authored while
  * meaning nothing, which is the failure mode this whole project exists to end.
  */
-const BOARD_COUNTRIES = new Set<string>(
-  Object.values(NON_PLAYABLE_BOARDS).flatMap((byCountry) => Object.keys(byCountry))
-);
+const BOARD_COUNTRIES = new Set<string>(NON_PLAYABLE_BOARD_COUNTRY_IDS);
 // PoliticalMetricsCountryId is a subset of CountryId, so the Mongo filter needs
 // the wider element type to satisfy the State schema.
 const SEEDED_FILTER: State["countryId"][] = [
@@ -68,7 +67,7 @@ export async function seedPoliticalMetrics(
   // has no emitted board seeds NO non-playable boards rather than falling back
   // to another era's; a 2019 world wearing 1953 numbers is exactly the silent
   // wrongness this project exists to end.
-  const boardsForPreset = NON_PLAYABLE_BOARDS[preset];
+  const boardsForPreset = getNonPlayableBoards()[preset];
   if (!boardsForPreset) {
     log(`No non-playable political boards emitted for preset ${preset}; playables only`);
   }

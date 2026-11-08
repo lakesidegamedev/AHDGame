@@ -71,7 +71,9 @@ describe("JP metric presets reach the political board", () => {
     // at codegen time rather than written to stateMetrics at seed time. If the
     // overlay stopped being applied, every era's board would collapse to the
     // same numbers — which is exactly the regression this guards.
-    const { NON_PLAYABLE_BOARDS } = await import("@/lib/politicalMetrics/seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (
+      await import("@/lib/politicalMetrics/seeds/nonPlayableBoards")
+    ).getNonPlayableBoards();
     const boardFor = (preset: string) =>
       NON_PLAYABLE_BOARDS[preset]?.JP?.["KAN"] as Record<string, number> | undefined;
     const eras = ["1953-default", "1979-default", "1991-default", "2019-default"].filter((p) =>

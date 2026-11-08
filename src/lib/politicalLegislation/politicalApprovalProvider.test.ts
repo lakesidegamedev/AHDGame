@@ -64,7 +64,9 @@ describe("isPoliticalApprovalCountry", () => {
   });
 
   it("stays in sync with the emitted board rather than a hand-written list", async () => {
-    const { NON_PLAYABLE_BOARDS } = await import("@/lib/politicalMetrics/seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (
+      await import("@/lib/politicalMetrics/seeds/nonPlayableBoards")
+    ).getNonPlayableBoards();
     // Keyed by PRESET first — the countries are one level down.
     for (const byCountry of Object.values(NON_PLAYABLE_BOARDS)) {
       for (const id of Object.keys(byCountry)) {

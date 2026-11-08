@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check . --cache --cache-strategy content --cache-location .cache/prettier/.prettier-cache",
     "prepare": "husky",
-    "generate:composition": "npx tsx scripts/generate-composition-weights.ts && npx prettier --write src/lib/demographics/compositionWeights.generated.ts",
+    "generate:composition": "npx tsx scripts/generate-composition-weights.ts",
     "singleplayer:package": "node scripts/singleplayer/package.mjs",
     "singleplayer:smoke": "node scripts/singleplayer/smoke.mjs",
     "singleplayer:new-game": "npx tsx scripts/singleplayer/new-game.ts",

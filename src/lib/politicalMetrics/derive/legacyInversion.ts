@@ -13,7 +13,7 @@
  *
  * What must NEVER happen is the reverse: `deriveCountryBoard` producing a board
  * at runtime as a fallback for a missing seed. Derivation output is committed
- * and reviewed (see nonPlayableBoards.ts); a live-derived board would ship
+ * and reviewed (see non-playable-boards.json); a live-derived board would ship
  * unreviewed values into game state. This function is a conversion primitive,
  * not that pipeline.
  */

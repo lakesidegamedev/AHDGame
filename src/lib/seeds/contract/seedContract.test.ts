@@ -7,6 +7,7 @@ import { ERA_INVARIANT_DATASETS, PRESET_DATASETS } from "./registry";
 import { REGION_TABLES } from "./regionTables";
 import { SeedContractError, type SeedContractGap } from "./seedContractError";
 import { backgroundCountriesFor } from "@/lib/world/eraRoster";
+import { checkSeedDataFiles, dataFileGaps, SEED_DATA_FILES } from "./dataFiles";
 
 function gapKey(gap: SeedContractGap): string {
   if (gap.detail.startsWith("no authored")) return `${gap.dataset} missing`;
@@ -95,6 +96,49 @@ describe("seed contract per preset", () => {
   it("rejects an unknown preset", () => {
     expect(checkSeedContract("2031-default")).toEqual([
       { dataset: "preset", detail: '"2031-default" is not a shipping preset' },
+    ]);
+  });
+});
+
+describe("generated data files", () => {
+  const file = (id: string) => {
+    const found = SEED_DATA_FILES.find((entry) => entry.id === id);
+    if (!found) throw new Error(`no data file ${id}`);
+    return found;
+  };
+  const copy = <T>(value: T): T => structuredClone(value);
+
+  it("pass their schemas", () => {
+    expect(checkSeedDataFiles()).toEqual([]);
+  });
+
+  it("rejects a board score outside 0 to 100", () => {
+    const boards = file("data:non-playable-boards");
+    const bad = copy(boards.load()) as Record<string, Record<string, Record<string, object>>>;
+    const region = Object.keys(bad["1953-default"].AT)[0];
+    bad["1953-default"].AT[region] = { ...bad["1953-default"].AT[region], "economy.fiscal": 120 };
+    const gaps = dataFileGaps(boards, bad);
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(gaps[0].detail).toContain(`1953-default.AT.${region}.economy.fiscal`);
+  });
+
+  it("rejects a board file missing a listed country or carrying a playable", () => {
+    const boards = file("data:non-playable-boards");
+    const missing = copy(boards.load()) as Record<string, Record<string, unknown>>;
+    delete missing["2019-default"].JP;
+    expect(dataFileGaps(boards, missing).length).toBeGreaterThan(0);
+    const extra = copy(boards.load()) as Record<string, Record<string, unknown>>;
+    extra["2019-default"].US = extra["2019-default"].JP;
+    expect(dataFileGaps(boards, extra).length).toBeGreaterThan(0);
+  });
+
+  it("rejects composition weights that do not sum to 1", () => {
+    const weights = file("data:composition-weights");
+    const bad = copy(weights.load()) as Record<string, Record<string, { w: number }[]>>;
+    const archetype = Object.keys(bad.UK)[0];
+    bad.UK[archetype][0].w += 0.1;
+    expect(dataFileGaps(weights, bad)).toEqual([
+      { dataset: "data:composition-weights", detail: `UK.${archetype}: weights must sum to 1` },
     ]);
   });
 });

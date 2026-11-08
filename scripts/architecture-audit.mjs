@@ -144,6 +144,8 @@ const checks = [
 // SIZE_CAP_ALLOWLIST grandfathers in currently-oversized files awaiting
 // decomposition in later phases. Do not extend the allowlist for new code —
 // add to SIZE_CAP_EXEMPT only for documented data files, with a comment.
+// The cap counts TypeScript only: a `.json` file under a `data/` directory is
+// exempt by rule, so a large table belongs in one rather than on this list.
 
 const SIZE_WARN_LOC = 1200;
 const SIZE_BLOCK_LOC = 2000;
@@ -274,9 +276,6 @@ const SIZE_CAP_EXEMPT = [
   // line whenever an entity gains geometry, which is data entry rather than a
   // decomposition signal — `alignmentRoster.test.ts` is what keeps it honest.
   "src/lib/constants/alignmentRoster.ts",
-  // GENERATED demographic composition weights. The generator emits a typed,
-  // reviewable table of numeric records with no runtime logic.
-  "src/lib/demographics/compositionWeights.generated.ts",
   // GENERATED client projection of COUNTRY_CONFIGS: one typed record per country
   // plus the per-era override rows, and no runtime logic beyond five lookup
   // helpers. Splitting it would put one data table across several files without
@@ -299,12 +298,10 @@ const SIZE_CAP_EXEMPT = [
   "src/lib/politicalLegislation/laws/ukLaws.ts",
   "src/lib/politicalLegislation/laws/ruLaws.ts",
   "src/lib/politicalLegislation/laws/ddLaws.ts",
-  // GENERATED pure-data political boards, emitted by
-  // scripts/debug/derive-nonplayable-boards.ts --emit and committed so the
-  // artifact is reviewable: 4 presets x 147 regions x 63 families of plain
-  // numbers, no logic. Note this is `politicalMetrics/seeds/`, which the
-  // `src/lib/seeds/` prefix above does NOT cover.
-  "src/lib/politicalMetrics/seeds/",
+  // GENERATED regional texture tables, plain numbers with no logic. Both are on
+  // GENERATED_TS_ALLOWLIST below and leave this list when they become data files.
+  "src/lib/politicalMetrics/seeds/regionalTexture1953.ts",
+  "src/lib/politicalMetrics/seeds/regionalTexture1991.ts",
 ];
 
 // Files currently over the size threshold whose decomposition is tracked in
@@ -337,9 +334,78 @@ const SIZE_CAP_ALLOWLIST = new Set([
   "src/components/admin/economy/CommoditiesAdminPanel.tsx",
 ]);
 
+/** A JSON file under a `data/` directory: data by rule, never code. */
+function isDataFile(filePath) {
+  const norm = filePath.replace(/\\/g, "/");
+  return norm.endsWith(".json") && /(?:^|\/)data\//.test(norm);
+}
+
 function isSizeExempt(filePath) {
+  if (isDataFile(filePath)) return true;
   const norm = filePath.replace(/\\/g, "/");
   return SIZE_CAP_EXEMPT.some((suffix) => norm.includes(suffix));
+}
+
+// ---------------------------------------------------------------------------
+// Generated tables are data files
+// ---------------------------------------------------------------------------
+// A file headed "GENERATED ... do not edit" is a table, and a table written as
+// TypeScript is type-checked and bundled as code on every build. Emit it as
+// JSON under a `data/` directory with a schema instead. The allowlist holds the
+// current offenders and may only shrink; an entry whose file no longer carries
+// the header fails so the list cannot go stale.
+
+const GENERATED_HEADER = /generated\b[^\n]{0,40}do not edit/i;
+const GENERATED_HEADER_LINES = 10;
+
+const GENERATED_TS_ALLOWLIST = new Set([
+  // Client projections of the country registry: the browser bundle needs them.
+  "src/lib/constants/countryClientConfig.ts",
+  "src/lib/constants/countryOfficesClient.ts",
+  // Country module facts and era stubs read by client-safe registries.
+  "src/lib/countries/at/geographyFacts.ts",
+  "src/lib/countries/at/institutionsFacts.ts",
+  "src/lib/countries/bg/geographyFacts.ts",
+  "src/lib/countries/bg/institutionsFacts.ts",
+  "src/lib/countries/br/geographyFacts.ts",
+  "src/lib/countries/cn/geographyFacts.ts",
+  "src/lib/countries/cs/geographyFacts.ts",
+  "src/lib/countries/dd/geographyFacts.ts",
+  "src/lib/countries/ru/economy.ts",
+  "src/lib/countries/ru/eras/2019.ts",
+  "src/lib/countries/ru/eras/2023.ts",
+  "src/lib/countries/sco/eras/1953.ts",
+  "src/lib/countries/sco/eras/1979.ts",
+  "src/lib/countries/sco/eras/1991.ts",
+  "src/lib/countries/sco/eras/1999.ts",
+  "src/lib/countries/sco/eras/2007.ts",
+  "src/lib/countries/sco/eras/2019.ts",
+  // Political-metric seed tables: candidates for the next move to data files.
+  "src/lib/politicalMetrics/seeds/approvalNeutrals.ts",
+  "src/lib/politicalMetrics/seeds/regionalTexture1953.ts",
+]);
+
+function hasGeneratedHeader(file) {
+  const head = fs
+    .readFileSync(file, "utf8")
+    .split(/\r?\n/)
+    .slice(0, GENERATED_HEADER_LINES)
+    .join("\n");
+  return GENERATED_HEADER.test(head);
+}
+
+function findGeneratedTsViolations() {
+  /** @type {string[]} */
+  const unlisted = [];
+  const flagged = new Set();
+  for (const file of walkDir(path.resolve(process.cwd(), "src"))) {
+    if (!hasGeneratedHeader(file)) continue;
+    const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
+    flagged.add(rel);
+    if (!GENERATED_TS_ALLOWLIST.has(rel)) unlisted.push(rel);
+  }
+  const stale = [...GENERATED_TS_ALLOWLIST].filter((rel) => !flagged.has(rel));
+  return { unlisted, stale };
 }
 
 function findSizeViolations() {
@@ -1001,6 +1067,24 @@ function main() {
     blockingCount += pinViolations.length;
   } else {
     console.log(`PASS files over ${SIZE_PIN_LOC} LOC stay at or under their pins`);
+  }
+
+  const generated = findGeneratedTsViolations();
+  if (generated.unlisted.length + generated.stale.length > 0) {
+    console.log(
+      `FAIL generated table written as TypeScript (${generated.unlisted.length + generated.stale.length})`
+    );
+    console.log(
+      "   Emit generated tables as JSON under a data/ directory with a schema. GENERATED_TS_ALLOWLIST may only shrink."
+    );
+    for (const rel of generated.unlisted) console.log(`   ${rel} (not allowlisted)`);
+    for (const rel of generated.stale) {
+      console.log(`   ${rel} (allowlisted but no generated header; remove the entry)`);
+    }
+    console.log();
+    blockingCount += generated.unlisted.length + generated.stale.length;
+  } else {
+    console.log("PASS generated tables are data files or allowlisted");
   }
 
   const fatRoutes = findFatRoutes();

@@ -24,23 +24,19 @@ import {
   weightingFor,
 } from "@/lib/utils/governmentApproval";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
-import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { approvalComponent, electorateLean } from "./politicalApproval";
 
 /**
  * Every country whose political metrics come from the board: the four
- * anchor-seeded playables plus the 22 derived non-playables.
+ * anchor-seeded playables plus the 23 derived non-playables.
  *
- * Built from the board file rather than hand-listed so adding a country to the
- * derivation cannot leave its consumers reading a collection that no longer
- * carries it.
+ * Taken from the board schema, which the seed contract holds the board file to
+ * exactly, so this predicate never loads the board table itself.
  */
 const BOARD_COUNTRIES = new Set<string>([
   ...POLITICAL_METRIC_COUNTRY_IDS,
-  // NON_PLAYABLE_BOARDS is keyed by PRESET first, so flatten a level: the top
-  // keys are eras, not countries. Reading them directly would make every
-  // predicate answer "is this country called 1953-default?".
-  ...Object.values(NON_PLAYABLE_BOARDS).flatMap((byCountry) => Object.keys(byCountry)),
+  ...NON_PLAYABLE_BOARD_COUNTRY_IDS,
 ]);
 
 /**

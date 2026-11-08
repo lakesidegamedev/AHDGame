@@ -14,7 +14,9 @@ async function main() {
     await import("@/lib/politicalMetrics/seeds/nationalBaselines1991");
   const { REGIONAL_TEXTURE_1991 } =
     await import("@/lib/politicalMetrics/seeds/regionalTexture1991");
-  const { NON_PLAYABLE_BOARDS } = await import("@/lib/politicalMetrics/seeds/nonPlayableBoards");
+  const NON_PLAYABLE_BOARDS = (
+    await import("@/lib/politicalMetrics/seeds/nonPlayableBoards")
+  ).getNonPlayableBoards();
   const { approvalComponent } = await import("@/lib/politicalLegislation/politicalApproval");
   const { evaluateModifiers, applyModifiers } = await import("@/lib/utils/approvalModifiers");
   const { getCatalog, baselineLevelFor } = await import("@/lib/politicalLegislation/catalog");

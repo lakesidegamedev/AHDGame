@@ -129,10 +129,6 @@
       "longBlocks": 1,
       "narrativeLines": 2
     },
-    "scripts/generate-composition-weights.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "scripts/generate-wiki-last-updated.ts": {
       "longBlocks": 2,
       "narrativeLines": 1
@@ -10530,10 +10526,6 @@
       "narrativeLines": 0
     },
     "src/lib/politicalMetrics/seeds/approvalNeutrals.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/politicalMetrics/seeds/nonPlayableBoards.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },

@@ -91,7 +91,9 @@ describe("politicalApproval — hybrid model properties (spec §2/§6)", () => {
 
 describe("non-playable approval intercepts", () => {
   it("calibrates every country the board covers, in every era it covers", async () => {
-    const { NON_PLAYABLE_BOARDS } = await import("@/lib/politicalMetrics/seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (
+      await import("@/lib/politicalMetrics/seeds/nonPlayableBoards")
+    ).getNonPlayableBoards();
     for (const [presetId, byCountry] of Object.entries(NON_PLAYABLE_BOARDS)) {
       for (const countryId of Object.keys(byCountry)) {
         expect(
@@ -120,7 +122,9 @@ describe("non-playable approval intercepts", () => {
     // THE parity bar for the cutover: on the day-one board, with the seed-time
     // electorate lean of 0, the approval component must be ~0 for every region
     // of every country — otherwise widening the routing lurches approval.
-    const { NON_PLAYABLE_BOARDS } = await import("@/lib/politicalMetrics/seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (
+      await import("@/lib/politicalMetrics/seeds/nonPlayableBoards")
+    ).getNonPlayableBoards();
     const entries = Object.entries(NON_PLAYABLE_BOARDS).flatMap(([presetId, byCountry]) =>
       Object.entries(byCountry).map(([countryId, byRegion]) => ({ presetId, countryId, byRegion }))
     );

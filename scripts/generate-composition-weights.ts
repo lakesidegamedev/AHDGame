@@ -1,16 +1,9 @@
 /**
- * Regenerate `src/lib/demographics/compositionWeights.generated.ts` from the
- * seeded country models.
- *
- * The archetype→bucket weights live in each country's seed
- * (`CountryLayer1Model.composition`). That module also carries every region's
- * census marginals and per-era positions — ~460KB — so a client component that
- * only needs the weights cannot import it. This lifts out the weights alone
- * (~25KB) into a module with no seed dependency.
- *
- * The seed stays the single source of truth: `compositionWeights.test.ts`
- * regenerates this in memory and fails if the checked-in file differs, so the
- * copy cannot drift from the seed it came from.
+ * Regenerate `src/data/demographics/composition-weights.json` from the seeded
+ * country models, so a client component can read archetype weights without
+ * importing a seed's census marginals. The seed stays the source of truth:
+ * `compositionWeights.test.ts` rebuilds the table in memory and fails if the
+ * committed file differs.
  *
  *   npm run generate:composition
  */
@@ -18,55 +11,22 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getCountryLayer1Model } from "../src/lib/seeds/international";
 import type { EraId } from "../src/lib/seeds/presetSelector";
+import {
+  COMPOSITION_ALIASES,
+  COMPOSITION_SEEDED_COUNTRY_IDS,
+} from "../src/lib/demographics/compositionWeightsSchema";
 
 // Composition is era-stable by design (an archetype's defining demographics do
 // not move between eras, only its politics do), so the first era a country is
 // seeded for gives the whole table.
 const PROBE_ERAS: EraId[] = ["2019", "modern", "1979", "1953"] as EraId[];
 
-const COUNTRIES = [
-  "UK",
-  "DE",
-  "JP",
-  "IE",
-  "BR",
-  "CN",
-  "RU",
-  "SE",
-  "FR",
-  "IT",
-  "AT",
-  "DD",
-  "ES",
-  "FI",
-  "GR",
-  "NG",
-  "TR",
-  "HU",
-  "PL",
-  "RO",
-  "YU",
-  "BG",
-  "BLR",
-  "UKR",
-  "CS",
-  "BAL",
-];
-
-/**
- * Countries with no Layer-1 model of their own that share another country's
- * archetype ids. Scotland and Wales use the UK's twelve voter groups; without
- * this they fall through to the US table, which no longer carries UK ids at all,
- * so every one of their archetype-keyed effects registers as an unmapped drop.
- */
-const ALIASES: Record<string, string> = { SCO: "UK", WAL: "UK" };
-
 export function buildCompositionWeights(): Record<
   string,
   Record<string, Array<{ dim: string; key: string; w: number }>>
 > {
   const out: Record<string, Record<string, Array<{ dim: string; key: string; w: number }>>> = {};
-  for (const cc of COUNTRIES) {
+  for (const cc of COMPOSITION_SEEDED_COUNTRY_IDS) {
     for (const era of PROBE_ERAS) {
       let model;
       try {
@@ -88,30 +48,16 @@ export function buildCompositionWeights(): Record<
       }
     }
   }
-  for (const [alias, source] of Object.entries(ALIASES)) {
+  for (const [alias, source] of Object.entries(COMPOSITION_ALIASES)) {
     if (out[source]) out[alias] = out[source];
   }
   return out;
 }
 
-const HEADER = `// GENERATED FILE — do not edit by hand.
-// Regenerate with:  npm run generate:composition
-//
-// Archetype → Layer-1 bucket weights, lifted out of the country seeds so a
-// client bundle can project archetype-keyed effects without pulling in ~460KB
-// of census marginals. The seed remains the source of truth;
-// compositionWeights.test.ts fails if this file drifts from it.
-
-import type { ArchetypeBucketWeight } from "./archetypeBucketMap";
-
-export const COMPOSITION_WEIGHTS: Record<string, Record<string, ArchetypeBucketWeight[]>> =
-`;
-
 function main() {
   const data = buildCompositionWeights();
-  const body = JSON.stringify(data, null, 2);
-  const target = resolve(__dirname, "../src/lib/demographics/compositionWeights.generated.ts");
-  writeFileSync(target, `${HEADER}${body};\n`, "utf8");
+  const target = resolve(__dirname, "../src/data/demographics/composition-weights.json");
+  writeFileSync(target, `${JSON.stringify(data, null, 2)}\n`, "utf8");
   const archetypes = Object.values(data).reduce((s, c) => s + Object.keys(c).length, 0);
   console.log(`Wrote ${Object.keys(data).length} countries / ${archetypes} archetypes → ${target}`);
 }
