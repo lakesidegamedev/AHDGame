@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isBackgroundInPreset, SHIPPING_PRESETS } from "@/lib/world/eraRoster";
-import { getPresetFallbacks, resetPresetFallbacks } from "@/lib/seeds/presetSelector";
+import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 import {
   BLOC_CHAMBERS_1953,
   BLOC_CHAMBERS_1979,
@@ -71,7 +71,12 @@ import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { isListTierMethod } from "@/lib/elections/electionMethod";
 import { formationChamberSeats } from "@/lib/legislature/rules/liveChamber";
 
-const ALL_PRESETS = [...SHIPPING_PRESETS, "empty", "2019-no-parties", "1968-default"];
+/** Presets with no authored roster; seating them throws instead of lending 2020's. */
+const UNSEATED_PRESETS = ["1999-default", "2007-default", "2023-default", "1968-default"];
+const SEATED_SHIPPING_PRESETS: string[] = SHIPPING_PRESETS.filter(
+  (p) => !UNSEATED_PRESETS.includes(p)
+);
+const ALL_PRESETS = [...SEATED_SHIPPING_PRESETS, "empty", "2019-no-parties"];
 
 // Row counts recomputed from the source arrays themselves, independently of the
 // grouping under test. These are the arrays the pre-grouping switch spread.
@@ -156,11 +161,7 @@ describe("preset seat groups", () => {
         IE_UACHTARAN_2019.length +
         modeledBrMacroregionGovernors("2019-default").length +
         modeledIeRegionalOffices("2019-default").length,
-      "1999-default": SOURCE_2020,
-      "2007-default": SOURCE_2020,
-      "2023-default": SOURCE_2020,
       "2019-no-parties": SOURCE_2020,
-      "1968-default": SOURCE_2020,
       "1991-default": SOURCE_1992,
       "1953-default": SOURCE_1953,
       "1979-default": SOURCE_1979,
@@ -224,39 +225,10 @@ describe("preset seat groups", () => {
   });
 });
 
-describe("the silent 2020 seat fallback stays recorded", () => {
-  /**
-   * Regression lock. `getPresetSeats` used to call `recordPresetFallback` from
-   * its `default:` branch, and rewriting it to derive from the seat groups
-   * dropped that call. The whole suite still passed - nothing covered it - and
-   * only an unused-import lint warning gave it away. Without this, a 1999 or
-   * 2007 seed run silently stops reporting that its seat lane took another
-   * era's data.
-   */
-  it("records a fallback for presets with no seat groups of their own", () => {
-    resetPresetFallbacks();
-    getPresetSeats("1999-default");
-    getPresetSeats("2007-default");
-    expect(getPresetFallbacks().map((f) => f.preset)).toEqual(["1999-default", "2007-default"]);
-    expect(getPresetFallbacks()[0].label).toBe("historicalSeats:getPresetSeats");
-  });
-
-  it("records nothing for a preset that owns its seats", () => {
-    resetPresetFallbacks();
-    getPresetSeats("1953-default");
-    getPresetSeats("1979-default");
-    getPresetSeats("1991-default");
-    getPresetSeats("empty");
-    expect(getPresetFallbacks()).toEqual([]);
-  });
-
-  it("records nothing for the 2019 era itself", () => {
-    // recordPresetFallback ignores 2019-era presets: taking 2020 seats in a
-    // 2019 world is not a fallback, it is the data.
-    resetPresetFallbacks();
-    getPresetSeats("2019-default");
-    getPresetSeats("2023-default");
-    expect(getPresetFallbacks().map((f) => f.preset)).toEqual(["2023-default"]);
+describe("a preset without its own roster seats nothing", () => {
+  it.each(UNSEATED_PRESETS)("%s throws instead of taking the 2020 roster", (preset) => {
+    expect(() => getPresetSeats(preset)).toThrow(SeedContractError);
+    expect(() => seatGroupsFor(preset)).toThrow(SeedContractError);
   });
 });
 
@@ -280,10 +252,7 @@ describe("lower-chamber rosters match their chamber", () => {
     // 2021 Bundestag roster is a 201-seat scale of the 736-seat result; the
     // formation majority line follows the seated total (see below) until the
     // first election fills the list tier.
-    "1999-default": { US: 430, DE: 201 },
-    "2007-default": { US: 430, DE: 201 },
     "2019-default": { US: 430, DE: 201, BR: 0 },
-    "2023-default": { US: 430, DE: 201 },
   };
 
   function lowerSeated(preset: string, countryId: CountryId): number {
@@ -298,7 +267,7 @@ describe("lower-chamber rosters match their chamber", () => {
   }
 
   it("every seeded lower chamber sums to its chamber or is a pinned gap", () => {
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_SHIPPING_PRESETS) {
       for (const countryId of Object.keys(seatGroupsFor(preset)) as CountryId[]) {
         if (isBackgroundInPreset(preset, countryId)) continue;
         const chamber = getCountryConfig(countryId, preset).legislature.lowerChamber?.seats;
@@ -315,7 +284,7 @@ describe("lower-chamber rosters match their chamber", () => {
   });
 
   it("a short list-tier roster sets the majority line from its seated total", () => {
-    for (const preset of ["1999-default", "2007-default", "2019-default", "2023-default"]) {
+    for (const preset of ["2019-default"]) {
       const config = getCountryConfig("DE", preset);
       const listTier = isListTierMethod(config.electionSystems.lowerChamber);
       expect(listTier, preset).toBe(true);

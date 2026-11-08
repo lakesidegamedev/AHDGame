@@ -16,6 +16,7 @@ import { brRegions1991 } from "./data/brRegions1991";
 import { brRegions1999 } from "./data/brRegions1999";
 import { brRegions2007 } from "./data/brRegions2007";
 import { brRegions2023 } from "./data/brRegions2023";
+import { brRegions2027 } from "./data/brRegions2027";
 import { brStateMetrics } from "./data/brStateMetrics";
 import {
   BR_ADJACENCY_MAP,
@@ -69,6 +70,7 @@ const regionBundles = {
   "2007-default": brRegions2007,
   "2019-default": brRegions,
   "2023-default": brRegions2023,
+  "2027-default": brRegions2027,
 };
 
 /** Base-era per-modifier threshold overrides and suppressions. */

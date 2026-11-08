@@ -107,6 +107,11 @@ export const COHORT_AGE_SOURCES_1991: Record<string, CohortAgeSource1991> = {
     { young: 1821053, mid: 2077035, mature: 2528845, senior: 1415353 },
     10272691
   ),
+  EUROSTAT_SE: eurostat(
+    "SE",
+    { young: 1447692, mid: 1817139, mature: 1919287, senior: 1526196 },
+    8590630
+  ),
   EUROSTAT_SI: eurostat(
     "SI",
     { young: 362166, mid: 470084, mature: 451669, senior: 216343 },
@@ -155,6 +160,7 @@ export const COHORT_NATIONAL_SOURCE_1991: Record<string, string> = {
   AT: "EUROSTAT_AT",
   FI: "EUROSTAT_FI",
   GR: "EUROSTAT_EL",
+  SE: "EUROSTAT_SE",
 };
 
 /**

@@ -175,7 +175,7 @@ describe("clientStatisticsReportSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects feature flags outside the game allowlist", () => {
+  it("drops feature flags outside the game allowlist instead of rejecting the report", () => {
     const base = validReport();
     const parsed = clientStatisticsReportSchema.safeParse({
       ...base,
@@ -183,6 +183,19 @@ describe("clientStatisticsReportSchema", () => {
         ...base.setup,
         featureFlags: { forexEnabled: true, customFlag: true },
       },
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.setup.featureFlags).toEqual({ forexEnabled: true });
+  });
+
+  it("rejects an oversized feature flag payload", () => {
+    const base = validReport();
+    const featureFlags = Object.fromEntries(
+      Array.from({ length: 201 }, (_, i) => [`flag${i}`, true])
+    );
+    const parsed = clientStatisticsReportSchema.safeParse({
+      ...base,
+      setup: { ...base.setup, featureFlags },
     });
     expect(parsed.success).toBe(false);
   });

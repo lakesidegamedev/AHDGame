@@ -106,14 +106,9 @@ export function getRegionCensusData(
 ): RegionCensus | null {
   const byPreset = CENSUS_BUNDLES[countryId];
   if (!byPreset) return null;
-  // Deliberately NOT selectPresetBundle: that helper throws when neither the
-  // exact preset nor a "2019-default" fallback exists, which is correct for
-  // required seed data but wrong here — this function's contract (see doc
-  // comment above) is to return null for "no bundle for the country" so
-  // callers can skip cleanly: seedCohortVectors skips the state and logs why;
-  // the region-page render path degrades to null instead of crashing. Several
-  // countries (FR/IT/ES/RU/DD, as of 2026-06) only have 1953/1979 bundles
-  // authored — those should skip cleanly under 2019-default, not abort.
+  // Optional on purpose: a country with no census for this preset returns null
+  // and seedCohortVectors skips it. The seed contract reports that gap; another
+  // preset's census is never substituted.
   const bundle = selectPresetBundleOptional(preset ?? DEFAULT_SEED_PRESET, byPreset);
   return bundle?.[stateId] ?? null;
 }

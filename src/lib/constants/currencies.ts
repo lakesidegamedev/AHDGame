@@ -8,7 +8,9 @@
  * to 150% of the base rate (RATE_FLOOR_MULTIPLIER, RATE_CEILING_MULTIPLIER).
  */
 import type { CountryId } from "./countries";
-import { STARTING_YEAR, getStartingYearForPreset } from "./turnTime";
+import { STARTING_YEAR, getStartingYearForPreset, type SeedPresetId } from "./turnTime";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
+import { dataPresetFor } from "@/lib/seeds/presetSelector";
 import { FISCAL_ANCHORS_1991 } from "./fiscalAnchors1991";
 import { BGN_PER_EUR, isEuroAdopted } from "@/lib/currency/rules/euroAdoption";
 import { isRubleAdopted, RU_2027_RUB_PER_USD } from "@/lib/currency/rules/rubleTransition";
@@ -527,80 +529,107 @@ export const INITIAL_RATES_1979: Partial<Record<CountryId, number>> = {
 };
 
 /**
- * Return the initial exchange rates for the given preset.
- * Falls back to INITIAL_RATES (2019-era) for unknown presets.
+ * January 2027 starting rates, local currency per USD, every row listed.
+ * WDI PA.NUS.FCRF 2024 averages for UK, JP, BR, CN, NG, SE and TR (modern
+ * lira); central-bank 2024 averages for PL and RO; the latest NBH annual
+ * average for HU, matching its 2025 forint budget; RUB from the RU_2027 GDP
+ * pair. DE (EUR) is the 0.92 anchor every euro conversion uses and BG converts
+ * at 1.95583 BGN per EUR. FR, IT, ES, GR, AT and FI keep legacy rows that only
+ * convert legacy-unit budgets into EUR; euro members trade at the DE row.
  */
 export const INITIAL_RATES_2027: Partial<Record<CountryId, number>> = {
-  ...INITIAL_RATES,
-  // 2024 annual averages, local currency per USD, carried into January 2027.
-  // World Bank WDI PA.NUS.FCRF (official exchange rate, period average):
-  // https://api.worldbank.org/v2/country/GBR;JPN;SWE;TUR;BRA;CHN;NGA/indicator/PA.NUS.FCRF?date=2024&format=json
-  // The SE and TR national budgets inherit 2019 rows written in game units
-  // priced at the old 4.29 SEK and 34.5 TRL rows; the 2027 budget overlay
-  // rebases them to these rates at constant USD value (see budgets.ts).
+  US: 1.0,
   UK: 0.7824,
   JP: 151.37,
+  DE: 0.92,
+  IE: 0.92,
   BR: 5.389,
   CN: 7.1975,
   NG: 1478.97,
+  RU: RU_2027_RUB_PER_USD,
+  // Placeholder for forex invariants; DD is not seeded in this preset.
+  DD: 2.22,
+  FR: 4.2,
+  IT: 833,
+  ES: 67,
   SE: 10.568,
-  // Modern lira (TRY). The 2005 redenomination removed six zeros, so the
-  // seeded TRL row of earlier presets is not this currency.
   TR: 32.806,
-  // DE (EUR) stays at the 0.92 game anchor every euro conversion is built on;
-  // the 2024 average was 0.9239. FR, IT, ES, GR, AT and FI keep their legacy
-  // rows: in this preset they are only conversion factors from the inherited
-  // legacy-unit budgets into EUR, and every euro member trades at the DE row.
-  // 2024 annual USD averages from the issuing central banks. The modern
-  // regional GDP anchors are also observed in 2024 PLN and RON, respectively.
-  // https://nbp.pl/wp-content/uploads/2025/06/Financial-Statements-of-Narodowy-Bank-Polski-as-at-31-December-2024.pdf
-  // https://muzeu.bnr.ro/uploads/2025-03-07monthlybulletinno.012025_documentpdf_545_1743160358.pdf
+  GR: 37.0,
+  AT: 13.4,
+  FI: 3.9,
+  // Scotland and Wales use sterling.
+  SCO: 0.7824,
+  WAL: 0.7824,
   PL: 3.9812,
   RO: 4.5984,
-  // ECB irrevocable parity: 1 EUR = 1.95583 BGN from 1 January 2026.
-  // The 2027 game EUR anchor is 0.92 EUR per internal unit, so this legacy
-  // cross-rate yields exactly 1/1.95583 when BGN figures become EUR.
-  // https://www.ecb.europa.eu/press/pr/date/2026/html/ecb.pr260101~c830245e42.en.html
   BG: BGN_PER_EUR * 0.92,
-  // Latest completed annual NBH average, reported by KSH for 2025. This is
-  // an explicit fallback for the future preset, not a 2027 observation. It is
-  // kept over the 2024 average (365.69) because the HU budget and bonds are
-  // authored in 2025 forints.
-  // https://www.ksh.hu/evkonyvek/2025/magyar-statisztikai-zsebkonyv-2025/pdf/statistical_pocketbook_of_hungary_2025.pdf
   HU: 353.2,
-  // Explicit RUB fallback for the future preset, not a 2027 observation:
-  // 1 / 0.01081 USD-per-ruble, the usdExchangeRate authored on RU_2027
-  // (World Bank 2024 nominal GDP USD 2,173,836M over Rosstat 2024 GDP RUB
-  // 201,152,000M). See RU_2027_RUB_PER_USD.
-  RU: RU_2027_RUB_PER_USD,
 };
 
-/** World Bank WDI PA.NUS.FCRF, annual 2019 local currency per USD.
- * https://api.worldbank.org/v2/country/RUS;POL;HUN;ROU;BGR/indicator/PA.NUS.FCRF?date=2019&format=json
- * These override Cold War placeholders only for the five post-Soviet NPP
- * countries added to the 2019 world. Other 2019 rates remain unchanged. */
+/**
+ * 2019-default starting rates. The five post-Soviet NPP countries use World
+ * Bank WDI PA.NUS.FCRF 2019 annual averages; every other row is the modern
+ * game anchor from INITIAL_RATES, listed explicitly.
+ */
 export const INITIAL_RATES_2019_TRANSITION: Partial<Record<CountryId, number>> = {
-  ...INITIAL_RATES,
+  US: 1.0,
+  UK: 0.75,
+  JP: 106.0,
+  DE: 0.92,
+  IE: 0.92,
+  BR: 5.0,
+  CN: 7.2,
+  NG: 1550,
   RU: 64.7376583333333,
+  DD: 2.22,
+  FR: 4.2,
+  IT: 833,
+  ES: 67,
+  SE: 4.29,
+  TR: 34.5,
+  GR: 37.0,
+  AT: 13.4,
+  FI: 3.9,
+  SCO: 0.75,
+  WAL: 0.75,
   PL: 3.839375,
   HU: 290.66,
   RO: 4.237925,
   BG: 1.74704166666667,
 };
 
+/** The authored starting-rate table for each preset that has one. */
+export const INITIAL_RATES_BY_PRESET: Partial<
+  Record<SeedPresetId, Partial<Record<CountryId, number>>>
+> = {
+  "1953-default": INITIAL_RATES_1953,
+  "1979-default": INITIAL_RATES_1979,
+  "1991-default": INITIAL_RATES_1991,
+  "2019-default": INITIAL_RATES_2019_TRANSITION,
+  "2027-default": INITIAL_RATES_2027,
+};
+
+/**
+ * Seed-time starting rates for a preset. Throws `SeedContractError` when the
+ * preset has no authored table: rates are never interpolated or borrowed.
+ */
 export function getInitialRates(preset: string): Partial<Record<CountryId, number>> {
-  if (preset === "1953-default") return INITIAL_RATES_1953;
-  if (preset === "1979-default") return INITIAL_RATES_1979;
-  if (preset === "1991-default") return INITIAL_RATES_1991;
-  if (preset === "2019-default") return INITIAL_RATES_2019_TRANSITION;
-  if (preset === "2027-default") return INITIAL_RATES_2027;
-  // 1999 and 2007 have no authored table and used to fall through to the 2019
-  // one, so a 1999 world started with 2019 money: Nigeria at 1550 naira/USD
-  // when the real 1999 rate was about 97, a 16x error on day one. Interpolate
-  // between the authored anchors instead. See getInitialRatesForYear.
-  const year = getStartingYearForPreset(preset);
-  if (year !== STARTING_YEAR) return getInitialRatesForYear(year);
-  return INITIAL_RATES;
+  const rates = INITIAL_RATES_BY_PRESET[dataPresetFor(preset) as SeedPresetId];
+  if (!rates) throw missingPresetEntry(preset, "fxRates");
+  return rates;
+}
+
+/**
+ * Starting-rate anchors for a world that is already running. Never throws, so
+ * an existing world on a preset without an authored table keeps turning: it
+ * reads the authored table when there is one, else the year-interpolated
+ * anchors. Turn code only; seeding uses `getInitialRates`.
+ */
+export function getRuntimeInitialRates(preset?: string): Partial<Record<CountryId, number>> {
+  const rates = preset ? INITIAL_RATES_BY_PRESET[dataPresetFor(preset) as SeedPresetId] : undefined;
+  if (rates) return rates;
+  const year = preset ? getStartingYearForPreset(preset) : STARTING_YEAR;
+  return year === STARTING_YEAR ? INITIAL_RATES : getInitialRatesForYear(year);
 }
 
 /**
@@ -822,7 +851,7 @@ export function eraRateForCurrency(
   preset: string | undefined
 ): number | undefined {
   if (!code) return undefined;
-  const eraRates = getInitialRates(preset ?? "");
+  const eraRates = getRuntimeInitialRates(preset);
   // Modern codes have no era-blind COUNTRY_CURRENCY_MAP entry; that map keeps
   // each predecessor's Cold War/1991 identity. PLN/RON are valid only in 2027.
   if (

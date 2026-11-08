@@ -11,6 +11,8 @@ import { NATIONAL_POLICY_STATE_IDS } from "@/lib/policy/nationalStateId";
 import { GUBERNATORIAL_ACTION_CAP } from "@/lib/constants/governorOffice";
 import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import type { SeedPresetId } from "@/lib/constants/turnTime";
+import { dataPresetFor } from "@/lib/seeds/presetSelector";
 
 /**
  * Default Devolution Policy per (UK region, preset) for newly-seeded First
@@ -19,9 +21,19 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
  * (UUP in 1991, DUP in 2019). LON is excluded — Mayor of London has no
  * devolution axis.
  */
-const UK_DEVOLUTION_POLICY_DEFAULTS: Record<string, Record<string, DevolutionPolicy>> = {
+const UK_DEVOLUTION_POLICY_DEFAULTS: Record<SeedPresetId, Record<string, DevolutionPolicy>> = {
+  // Unionist majorities in Scotland and Stormont; no devolution on the agenda.
+  "1953-default": { SCO: "anti", WAL: "anti", NIR: "anti" },
+  // The Scotland and Wales Acts were government policy before the referendums.
+  "1979-default": { SCO: "pro", WAL: "pro", NIR: "anti" },
   "1991-default": { SCO: "pro", WAL: "pro", NIR: "anti" },
+  // Labour-led devolved governments; a unionist First Minister at Stormont.
+  "1999-default": { SCO: "pro", WAL: "pro", NIR: "anti" },
+  "2007-default": { SCO: "pro", WAL: "pro", NIR: "anti" },
   "2019-default": { SCO: "independence", WAL: "pro", NIR: "anti" },
+  "2023-default": { SCO: "independence", WAL: "pro", NIR: "anti" },
+  // Matches the First Minister parties the 2027 roster seats.
+  "2027-default": { SCO: "independence", WAL: "pro", NIR: "anti" },
 };
 
 function resolveDevolutionPolicyDefault(
@@ -31,9 +43,9 @@ function resolveDevolutionPolicyDefault(
 ): DevolutionPolicy | undefined {
   if (countryId !== "UK") return undefined;
   if (!isUKDevolutionRegion(stateId)) return undefined;
-  const presetMap =
-    UK_DEVOLUTION_POLICY_DEFAULTS[preset] ?? UK_DEVOLUTION_POLICY_DEFAULTS["2019-default"];
-  return presetMap[stateId.toUpperCase()];
+  const presetMap = UK_DEVOLUTION_POLICY_DEFAULTS[dataPresetFor(preset) as SeedPresetId];
+  // A running world on a preset outside the shipping set seeds no default.
+  return presetMap?.[stateId.toUpperCase()];
 }
 
 /**

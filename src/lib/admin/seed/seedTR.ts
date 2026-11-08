@@ -33,26 +33,9 @@ export async function seedTRRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "TR" });
   }
-  const { trRegions } = await import("@/lib/seeds/tr/trRegions");
-  const { trRegions1953 } = await import("@/lib/seeds/tr/trRegions1953");
-  const { trRegions1991 } = await import("@/lib/countries/tr/data/trRegions1991");
-  const { trRegions2013 } = await import("@/lib/countries/tr/data/trRegions2013");
-  const { trRegionsModern } = await import("@/lib/countries/tr/data/trRegionsModern");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "1999-default": trRegions2013,
-      "2007-default": trRegions2013,
-      "2019-default": trRegionsModern,
-      "2023-default": trRegionsModern,
-      "2027-default": trRegionsModern,
-      "1953-default": trRegions1953,
-      "1979-default": trRegions,
-      "1991-default": trRegions1991,
-    },
-    "seedTR:trRegions"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("TR"), "regions:TR");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

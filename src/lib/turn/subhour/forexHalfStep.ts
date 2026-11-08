@@ -3,7 +3,7 @@ import {
   CYCLE_PRESSURE_BY_REGIME,
   INITIAL_RATES,
   getCountryIdForCurrency,
-  getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   reserveCurrencyVolatilityMultiplier,
   type CurrencyCode,
@@ -107,7 +107,7 @@ function positive(value: unknown): value is number {
 /** Pure: what the :30 tick writes. Mirrors processForexTurn's per-country branches. */
 export function planForexHalfStep(input: ForexHalfStepInputs): ForexHalfStepPlan {
   const { turn, preset, euroUnion } = input;
-  const eraInitialRates = getInitialRates(preset);
+  const eraInitialRates = getRuntimeInitialRates(preset);
   const activeCountries = getPresetMonetaryScope(preset).forexCountries;
   const bankMap = new Map(input.banks.map((b) => [b.countryId, b]));
   const rateMap = new Map(input.rows.map((r) => [r._id, r]));

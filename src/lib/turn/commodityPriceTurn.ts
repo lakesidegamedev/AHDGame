@@ -27,7 +27,7 @@ import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
   eraRateForCurrency,
-  getInitialRates,
+  getRuntimeInitialRates,
 } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -503,7 +503,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   });
   const commodityNominalPriceIndex = nominalIndices.current;
   const ledgerCommandEconomyEnabled = ledgerConfig?.commandEconomyEnabled === true;
-  const eraRates = getInitialRates(activePreset);
+  const eraRates = getRuntimeInitialRates(activePreset);
   /** ₳-normalizing FX rate for a country's budget, era-aware. */
   const fxRateForCountry = (countryId: string | undefined): number => {
     const code = (COUNTRY_CURRENCY_MAP[countryId as keyof typeof COUNTRY_CURRENCY_MAP] ??

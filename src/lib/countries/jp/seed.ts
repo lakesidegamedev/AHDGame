@@ -27,35 +27,9 @@ export async function seedJPRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "JP" });
   }
-  const { jpRegions } = await import("@/lib/countries/jp/data/jpRegions");
-  const { jpRegions1953 } = await import("@/lib/countries/jp/data/jpRegions1953");
-  const { jpRegions1979 } = await import("@/lib/countries/jp/data/jpRegions1979");
-  const { jpRegions1991 } = await import("@/lib/countries/jp/data/jpRegions1991");
-  const { jpRegions1999 } = await import("@/lib/countries/jp/data/jpRegions1999");
-  const { jpRegions2007 } = await import("@/lib/countries/jp/data/jpRegions2007");
-  const { jpRegions2023 } = await import("@/lib/countries/jp/data/jpRegions2023");
-  const { jpRegions2027 } = await import("@/lib/countries/jp/data/jpRegions2027");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  // 2027-default is wired explicitly here so this country-local seeder does
-  // not depend on shared preset registry changes. `selectPresetBundle`
-  // has no 2027 entry for JP; without this branch a 2027 world would fall
-  // back to the 1953 bundle.
-  const bundle =
-    preset === "2027-default"
-      ? jpRegions2027
-      : selectPresetBundle(
-          preset,
-          {
-            "1953-default": jpRegions1953,
-            "2019-default": jpRegions,
-            "1979-default": jpRegions1979,
-            "1991-default": jpRegions1991,
-            "1999-default": jpRegions1999,
-            "2007-default": jpRegions2007,
-            "2023-default": jpRegions2023,
-          },
-          "seedJP:jpRegions1953"
-        );
+  const bundle = selectPresetBundle(preset, regionTableFor("JP"), "regions:JP");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return {

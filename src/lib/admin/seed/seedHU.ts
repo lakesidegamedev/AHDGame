@@ -40,20 +40,9 @@ export async function seedHURegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "HU" });
   }
-  const { huRegions2027 } = await import("@/lib/countries/hu/data/huRegions2027");
-  const { huRegions } = await import("@/lib/seeds/hu/huRegions");
-  const { huRegions1953 } = await import("@/lib/seeds/hu/huRegions1953");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "2027-default": huRegions2027,
-      "2019-default": huRegions,
-      "1979-default": huRegions,
-      "1953-default": huRegions1953,
-    },
-    "seedHU:huRegions"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("HU"), "regions:HU");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

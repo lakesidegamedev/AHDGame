@@ -11,29 +11,26 @@ import { states2007 } from "@/lib/seeds/reference/states2007";
 import { states2023 } from "@/lib/seeds/reference/states2023";
 import { states2027 } from "@/lib/seeds/reference/states2027";
 import { selectPresetBundle } from "@/lib/seeds/presetSelector";
+import type { SeedPresetId } from "@/lib/constants/turnTime";
+
+/** US states per preset; also registered with the seed contract. */
+export const US_STATES_BY_PRESET = {
+  "1953-default": states1953,
+  "1979-default": states1979,
+  "1991-default": states1991,
+  "1999-default": states1999,
+  "2007-default": states2007,
+  "2019-default": states,
+  "2023-default": states2023,
+  "2027-default": states2027,
+} as const satisfies Record<SeedPresetId, State[]>;
 
 /**
- * Full era → US-states bundle map. Single source of truth shared by
- * `runCoreSeed` (full core seed) and `seedStates` (targeted admin "states"
- * reseed) so both paths pick the same era bundle (refs #3242 — seedStates
- * previously mapped only 2019/1991/2023, so a targeted reseed on a
- * 1953/1979/1999/2007 world silently wrote 2019 states).
+ * Era → US-states bundle. Shared by `runCoreSeed` (full core seed) and
+ * `seedStates` (targeted admin "states" reseed) so both pick the same bundle.
  */
 export function selectStatesBundleForPreset(preset: string): State[] {
-  return selectPresetBundle(
-    preset,
-    {
-      "1953-default": states1953,
-      "1979-default": states1979,
-      "1991-default": states1991,
-      "1999-default": states1999,
-      "2007-default": states2007,
-      "2019-default": states,
-      "2023-default": states2023,
-      "2027-default": states2027,
-    },
-    "seedStates:states1953"
-  );
+  return selectPresetBundle(preset, US_STATES_BY_PRESET, "regions:US");
 }
 
 export async function seedStates(

@@ -11,6 +11,11 @@ import { ObjectId, type Db } from "mongodb";
 import type { SeedDiagnosticReport } from "@/lib/admin/seedDiagnostic/types";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+// Seed data is checked by the seed contract suite; this suite covers orchestration.
+vi.mock("@/lib/seeds/contract/checkSeedContract", () => ({
+  assertSeedContract: vi.fn(),
+  checkSeedContract: vi.fn(() => []),
+}));
 vi.mock("@/lib/mongodb", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/mongodb")>();
   return { ...actual, getDb: vi.fn() };
@@ -429,6 +434,24 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
 
     await expect(run()).rejects.toThrow("connected database other-world");
+
+    expect(enableMaintenanceMode).not.toHaveBeenCalled();
+    expect(resetGameWorld).not.toHaveBeenCalled();
+    expect(bootstrapGameWorld).not.toHaveBeenCalled();
+    expect(Object.keys(db.collectionMocks)).toHaveLength(0);
+  });
+
+  it("refuses a preset that fails the seed contract before touching the world", async () => {
+    const { assertSeedContract } = await import("@/lib/seeds/contract/checkSeedContract");
+    const { SeedContractError } = await import("@/lib/seeds/contract/seedContractError");
+    vi.mocked(assertSeedContract).mockImplementationOnce(() => {
+      throw new SeedContractError("1953-default", [{ dataset: "fxRates", detail: "missing" }]);
+    });
+    const { enableMaintenanceMode } = await import("@/lib/maintenanceStatus");
+    const { resetGameWorld } = await import("@/lib/admin/resetGameWorld");
+    const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
+
+    await expect(run()).rejects.toThrow(SeedContractError);
 
     expect(enableMaintenanceMode).not.toHaveBeenCalled();
     expect(resetGameWorld).not.toHaveBeenCalled();
