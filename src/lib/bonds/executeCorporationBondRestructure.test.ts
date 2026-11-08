@@ -151,7 +151,10 @@ describe("executeCorporationBondRestructure", () => {
       ])
     );
     db.collection("corporateSectors").find.mockReturnValue(
-      makeCursor([{ _id: idA, corporationId: corpId, revenue: 2000 }])
+      makeCursor([
+        { _id: idA, corporationId: corpId, revenue: 2000 },
+        { _id: idB, corporationId: corpId, revenue: 300 },
+      ])
     );
     db.collection("indexFunds").find.mockReturnValue(
       makeCursor([{ _id: fundId, name: "Index", anchorCurrencyCode: "USD" }])
