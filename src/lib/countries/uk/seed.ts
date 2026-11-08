@@ -33,29 +33,9 @@ export async function seedUKRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "UK" });
   }
-  const { ukRegions } = await import("@/lib/seeds/uk/ukRegions");
-  const { ukRegions1953 } = await import("@/lib/seeds/uk/ukRegions1953");
-  const { ukRegions1979 } = await import("@/lib/seeds/uk/ukRegions1979");
-  const { ukRegions1991 } = await import("@/lib/seeds/uk/ukRegions1991");
-  const { ukRegions1999 } = await import("@/lib/seeds/uk/ukRegions1999");
-  const { ukRegions2007 } = await import("@/lib/seeds/uk/ukRegions2007");
-  const { ukRegions2023 } = await import("@/lib/seeds/uk/ukRegions2023");
-  const { ukRegions2027 } = await import("@/lib/seeds/uk/ukRegions2027");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "1953-default": ukRegions1953,
-      "2019-default": ukRegions,
-      "1979-default": ukRegions1979,
-      "1991-default": ukRegions1991,
-      "1999-default": ukRegions1999,
-      "2007-default": ukRegions2007,
-      "2023-default": ukRegions2023,
-      "2027-default": ukRegions2027,
-    },
-    "seedUK:ukRegions1953"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("UK"), "regions:UK");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return {

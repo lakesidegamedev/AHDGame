@@ -1,6 +1,6 @@
 import {
   getCountryIdForCurrency,
-  getInitialRates,
+  getRuntimeInitialRates,
   INITIAL_RATES,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
@@ -17,7 +17,7 @@ export function onboardingRewardLocalAmount(
   if (!forexEnabled) return anchorAmount;
   const anchorCountry = getCountryIdForCurrency(homeCurrency);
   const fallbackRate =
-    getInitialRates(preset ?? "")[anchorCountry as CountryId] ??
+    getRuntimeInitialRates(preset)[anchorCountry as CountryId] ??
     INITIAL_RATES[anchorCountry as CountryId] ??
     1;
   const homeRate =

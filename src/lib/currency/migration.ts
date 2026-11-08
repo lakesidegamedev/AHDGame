@@ -6,6 +6,7 @@ import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
   getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   getSeedHardPeg,
 } from "@/lib/constants/currencies";
@@ -119,11 +120,11 @@ function buildCharacterUpdateOp(
   // byte-identical to before.
   const homeRate =
     homeCurrency === "EUR"
-      ? (getInitialRates(preset ?? "").DE ?? INITIAL_RATES[doc.countryId] ?? 1)
+      ? (getRuntimeInitialRates(preset).DE ?? INITIAL_RATES[doc.countryId] ?? 1)
       : homeCurrency === "RUB"
-        ? (getInitialRates(preset ?? "").RU ?? INITIAL_RATES[doc.countryId] ?? 1)
+        ? (getRuntimeInitialRates(preset).RU ?? INITIAL_RATES[doc.countryId] ?? 1)
         : preset === "2027-default"
-          ? (getInitialRates(preset)[doc.countryId] ?? INITIAL_RATES[doc.countryId] ?? 1)
+          ? (getRuntimeInitialRates(preset)[doc.countryId] ?? INITIAL_RATES[doc.countryId] ?? 1)
           : (INITIAL_RATES[doc.countryId] ?? 1);
   const cashOnHand = doc.cashOnHand ?? 0;
   const convertedCash = cashOnHand * homeRate;

@@ -21,7 +21,11 @@ import {
   statusAt,
   type AlignmentCountryKey,
 } from "@/lib/constants/alignmentRoster";
-import { authoredAlignmentFor, DEFAULT_PRESET, PRESET_YEAR } from "@/lib/constants/alignmentSeeds";
+import {
+  alignmentYearFor,
+  authoredAlignmentFor,
+  PRESET_YEAR,
+} from "@/lib/constants/alignmentSeeds";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
 import { resolveSeedRoster } from "@/lib/internationalOrganizations/founding";
 import { getCountryAlignmentsCollection } from "@/lib/db/collections";
@@ -117,7 +121,7 @@ export function resolveOpeningShares(params: {
   key: AlignmentCountryKey;
   preset: string;
 }): OpeningShares {
-  const year = PRESET_YEAR[params.preset] ?? PRESET_YEAR[DEFAULT_PRESET];
+  const year = alignmentYearFor(params.preset);
   const poles = polesForYear(year);
   const eraKey = resolveAlignmentEra(year).key;
   // Every branch below caps through the same call, so no future source of
@@ -125,13 +129,13 @@ export function resolveOpeningShares(params: {
   const cap = (row: number[]) => capNonMemberShares(row, poles, params.key, params.preset, year);
 
   const rows = authoredAlignmentFor(params.preset);
-  const authored = rows?.[params.key];
+  const authored = rows[params.key];
   if (authored)
     return { shares: rowToShares(cap(authored), poles), provenance: "authored", eraKey };
 
   const entry = ROSTER_BY_KEY[params.key];
   const metro = entry?.metro;
-  const metroRow = metro ? rows?.[metro] : undefined;
+  const metroRow = metro ? rows[metro] : undefined;
 
   if (metroRow) {
     const dependent = statusAt(params.key, year) === "dependent";
@@ -199,9 +203,8 @@ function seedTargets(
   // reaches into a 2019 world and seeds East Germany, a country that has not
   // existed since 1990: `foundingMembersByEra` has no 2019 entry, so the
   // era-independent fallback applies and carries DD with it.
-  // Known presets only. `year` falls back to the default preset's when a preset
-  // is unrecognised, which for the "empty" preset would invent a 2019 world and
-  // seed NATO's roster into a world that is supposed to contain nothing.
+  // Shipping presets only: the "empty" world reads 2019 data but must not seed
+  // NATO's roster into a world that is supposed to contain nothing.
   const orgSeatsApply = preset in PRESET_YEAR;
   for (const def of orgSeatsApply ? Object.values(INTERNATIONAL_ORGANIZATIONS) : []) {
     if (def.foundedYear != null && year < def.foundedYear) continue;
@@ -218,7 +221,7 @@ export async function seedCountryAlignments(
   preset: string,
   presetCountries: readonly CountryId[]
 ): Promise<number> {
-  const year = PRESET_YEAR[preset] ?? PRESET_YEAR[DEFAULT_PRESET];
+  const year = alignmentYearFor(preset);
   const col = await getCountryAlignmentsCollection(db);
   const now = new Date();
   let inserted = 0;

@@ -15,7 +15,7 @@ import { ok, warn, critical, relCheck } from "./checkFactory";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import {
   COUNTRY_CURRENCY_MAP,
-  getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
@@ -51,7 +51,7 @@ export async function checkNationalBudgets(
       }
     }
   }
-  const rates = getInitialRates(expect.preset);
+  const rates = getRuntimeInitialRates(expect.preset);
   const euroRate = rates.DE;
   const authoredBudgetCurrency = new Map(
     expect.nationalBudgets.map((config) => [config.countryId, config.currencyCode])

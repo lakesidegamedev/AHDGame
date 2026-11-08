@@ -6,7 +6,7 @@
 import { getOpeningPolicyRate } from "@/lib/centralBank/rules/openingPolicyRate";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS, DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
-import { FOREX_ACTIVE_COUNTRIES, getInitialRates } from "@/lib/constants/currencies";
+import { FOREX_ACTIVE_COUNTRIES, getRuntimeInitialRates } from "@/lib/constants/currencies";
 import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 // Re-exported so existing consumers keep their import path; the definition moved
 // to break the readiness/seed import cycle. See regionBundles.ts.
@@ -353,8 +353,8 @@ export function buildSeedExpectations(preset: string): SeedExpectations {
     seededCountryIds,
     forexRates:
       preset === "2027-default"
-        ? { ...getInitialRates(preset), BG: getInitialRates(preset).DE }
-        : getInitialRates(preset),
+        ? { ...getRuntimeInitialRates(preset), BG: getRuntimeInitialRates(preset).DE }
+        : getRuntimeInitialRates(preset),
     forexActiveCountries: monetaryScope.forexCountries,
     monetaryCoverage: {
       centralBankCountries: monetaryScope.centralBankCountries,

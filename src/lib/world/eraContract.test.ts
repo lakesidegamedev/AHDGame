@@ -6,7 +6,7 @@ import {
   isPresidentialGovernmentType,
   type CountryId,
 } from "@/lib/constants/countries";
-import { getPresetSeats, RESET_PRESETS } from "@/lib/constants/historicalSeats";
+import { getPresetSeats, RESET_PRESETS, seatGroupsFor } from "@/lib/constants/historicalSeats";
 import { seatCountFor, seatsForCountry } from "@/lib/constants/presetSeatGroups";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 import { regionBundleFor } from "@/lib/admin/seedDiagnostic/regionBundles";
@@ -39,6 +39,17 @@ const eraOf = (preset: ShippingPreset): EraId => preset.slice(0, 4) as EraId;
  * assertions are about the derivation staying wired, not about hand-kept copies
  * staying in sync.
  */
+
+/** Presets with an authored seat roster; the rest refuse to seat (seed contract). */
+const SEATED_PRESETS = SHIPPING_PRESETS.filter((preset) => {
+  try {
+    seatGroupsFor(preset);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
 describe("S6 — every roster consumer agrees with tierFor", () => {
   it("the world-entity manifest matches the roster for registered countries", () => {
     for (const preset of SHIPPING_PRESETS) {
@@ -353,7 +364,7 @@ describe("S3a — absent countries carry no era data", () => {
   it("seats no chamber for a country the era does not contain", () => {
     // Seats key on officeType rather than countryId, so match through the
     // country's own configured chamber keys.
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_PRESETS) {
       const offices = new Set(getPresetSeats(preset).map((s) => String(s.officeType)));
       for (const country of countriesByTier(preset, "absent")) {
         const legislature = COUNTRY_CONFIGS[country]?.legislature;
@@ -462,7 +473,7 @@ describe("S5 — presidential player countries seed an executive", () => {
 
   it("every presidential player country has a president in every era", () => {
     const missing: string[] = [];
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_PRESETS) {
       for (const country of COUNTRY_ORDER) {
         if (tierFor(preset, country) !== "player") continue;
         if (!isPresidentialGovernmentType(getCountryConfig(country, preset).governmentType)) {
@@ -488,7 +499,7 @@ describe("S5 — presidential player countries seed an executive", () => {
     // the gap is named here instead of being papered over.
     const AUTHORED_WITHOUT_VP = new Set(["1953-default/BR"]);
     const missing: string[] = [];
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_PRESETS) {
       for (const country of COUNTRY_ORDER) {
         const seats = seatsForCountry(preset, country);
         if (!seats.some((s) => s.officeType === "president")) continue;
@@ -587,7 +598,7 @@ describe("S4 — player chambers agree with their era config", () => {
     // chamber now agrees with its era config except the two above.
   };
 
-  it.each([...SHIPPING_PRESETS])("%s", (preset) => {
+  it.each([...SEATED_PRESETS])("%s", (preset) => {
     expect(s4Failures(preset)).toEqual(S4_KNOWN_GAPS[preset] ?? []);
   });
 

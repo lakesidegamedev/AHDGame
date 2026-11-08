@@ -45,22 +45,9 @@ export async function seedDDRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "DD" });
   }
-  const { ddRegions } = await import("@/lib/seeds/dd/ddRegions");
-  const { ddRegions1953 } = await import("@/lib/seeds/dd/ddRegions1953");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  // DD's Länder codes are shared with DE, so the GDR's territory is seeded ONLY in
-  // divided-Germany eras (1953, 1979); unified eras own the eastern Länder under DE
-  // and get an empty bundle. The countryId-scoped delete above still cleans up on
-  // a downgrade.
-  const bundle = selectPresetBundle<State[]>(
-    preset,
-    {
-      "2019-default": [],
-      "1953-default": ddRegions1953,
-      "1979-default": ddRegions,
-    },
-    "seedDD:ddRegions1953"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("DD"), "regions:DD");
   // Always purge the retired DD_* macro-regions when (re)seeding the Länder
   // model — even if `reset` is false. A half-migrated world that kept
   // DD_BER/NOR/SOU on `states` while metrics keyed on BEO/MV/BB/ST/SN/TH left

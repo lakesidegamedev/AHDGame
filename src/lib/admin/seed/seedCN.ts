@@ -25,35 +25,9 @@ export async function seedCNRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "CN" });
   }
-  const { cnRegions } = await import("@/lib/seeds/cn/cnRegions");
-  const { cnRegions1953 } = await import("@/lib/seeds/cn/cnRegions1953");
-  const { cnRegions1979 } = await import("@/lib/seeds/cn/cnRegions1979");
-  const { cnRegions1991 } = await import("@/lib/seeds/cn/cnRegions1991");
-  const { cnRegions1999 } = await import("@/lib/seeds/cn/cnRegions1999");
-  const { cnRegions2007 } = await import("@/lib/seeds/cn/cnRegions2007");
-  const { cnRegions2023 } = await import("@/lib/seeds/cn/cnRegions2023");
-  const { cnRegions2027 } = await import("@/lib/seeds/cn/cnRegions2027");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  // 2027-default is wired explicitly here so this country-local seeder does
-  // not depend on shared preset registry changes. `selectPresetBundle`
-  // has no 2027 entry for CN; without this branch a 2027 world would fall
-  // back to the 1953 bundle.
-  const bundle =
-    preset === "2027-default"
-      ? cnRegions2027
-      : selectPresetBundle(
-          preset,
-          {
-            "1953-default": cnRegions1953,
-            "2019-default": cnRegions,
-            "1979-default": cnRegions1979,
-            "1991-default": cnRegions1991,
-            "1999-default": cnRegions1999,
-            "2007-default": cnRegions2007,
-            "2023-default": cnRegions2023,
-          },
-          "seedCN:cnRegions1953"
-        );
+  const bundle = selectPresetBundle(preset, regionTableFor("CN"), "regions:CN");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

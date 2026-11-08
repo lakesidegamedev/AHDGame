@@ -206,7 +206,7 @@ describe("1991-default seed bundles — coverage", () => {
     expect(usBudget?.gdp).toBeLessThan(10_000_000_000_000); // 1991 GDP < $10T
   });
 
-  it("selectPresetBundle returns the requested bundle and falls back to 2019", () => {
+  it("selectPresetBundle returns the requested bundle and never falls back to 2019", () => {
     const b = selectPresetBundle(
       "1991-default",
       {
@@ -216,14 +216,9 @@ describe("1991-default seed bundles — coverage", () => {
       "test"
     );
     expect(b).toBe("old");
-    const fallback = selectPresetBundle(
-      "unknown",
-      {
-        "2019-default": "current",
-      },
-      "test"
+    expect(() => selectPresetBundle("unknown", { "2019-default": "current" }, "test")).toThrow(
+      /no authored entry/
     );
-    expect(fallback).toBe("current");
   });
 
   it("1991 sector weights skew manufacturing-heavy vs 2019 tech-heavy", () => {

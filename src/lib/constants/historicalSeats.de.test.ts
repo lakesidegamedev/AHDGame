@@ -73,8 +73,8 @@ describe("DE Historical Seats", () => {
     }
   });
 
-  it("getPresetSeats 2020-default includes DE", () => {
-    const seats = getPresetSeats("2020-default");
+  it("getPresetSeats 2019-no-parties (the 2020 roster) includes DE", () => {
+    const seats = getPresetSeats("2019-no-parties");
     const deSeats = seats.filter((s) =>
       [
         "BW",
