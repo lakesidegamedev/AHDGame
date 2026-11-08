@@ -1649,10 +1649,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/app/api/country/[code]/parties/[id]/whip/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/app/api/country/[code]/parties/[id]/whippable-leadership/route.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
