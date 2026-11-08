@@ -156,6 +156,11 @@ describe("executeCorporationBondRestructure", () => {
     db.collection("indexFunds").find.mockReturnValue(
       makeCursor([{ _id: fundId, name: "Index", anchorCurrencyCode: "USD" }])
     );
+    const defaults = await import("@/lib/bonds/corporateBondDefault");
+    vi.mocked(defaults.sumDefaultedBondPrincipal).mockReturnValue(1000);
+    vi.mocked(defaults.computeSectorNpvSum).mockImplementation(
+      (sectors: { revenue: number }[]) => sectors[0]?.revenue ?? 0
+    );
     const { executeCorporationBondRestructure } =
       await import("./executeCorporationBondRestructure");
     const { creditBondPool } = await import("@/lib/bonds/marketPool");
