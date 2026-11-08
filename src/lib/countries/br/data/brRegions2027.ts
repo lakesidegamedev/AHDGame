@@ -1,15 +1,7 @@
 /**
- * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 2027 directly.
- * Type-only imports are allowed.
- *
- * Brazil IBGE macro-regions for the 2027-default preset. Population is a
- * January 2027 projection from the 2022 census and the IBGE annual estimates;
- * GDP (BRL millions) projects the IBGE regional accounts shares onto a 2027
- * nominal GDP of about BRL 14.3 trillion. These are game projections, not
- * observations. The 513-seat Chamber distribution and the 81-seat Senate are
- * structural.
+ * Brazil's IBGE macro-regions for the 2027-default preset, authored for 2027
+ * and not derived from another era. Population and GDP (BRL millions) are
+ * game projections from the 2022 census, IBGE estimates and regional accounts.
  */
 import type { State } from "@/lib/db/types";
 
