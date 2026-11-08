@@ -4,7 +4,6 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
-import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
@@ -103,7 +102,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       !!authUser &&
       !requireCeo(corporation, authUser.userId) &&
       !(await requireCorporationActionsEnabled(db));
-    const canManageAcquisitions = canManageCorporation && !(await requireCorpDealsEnabled(db));
+    const canManageAcquisitions = canManageCorporation;
     const mediaEditorialEnabled = config?.mediaEditorialEnabled === true;
     const mediaOperatingModelsEnabled = config?.mediaOperatingModelsEnabled === true;
     const mediaProductSlatesEnabled =

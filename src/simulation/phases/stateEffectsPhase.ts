@@ -176,7 +176,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         db,
         newTurn,
         regionalBudgetCadence,
-        gameState.regionalLegislationFinanceEnabled === true,
+        true,
         resetSystemVersionsForCountry(gameState, RESET_V2_READY, "UK").legislation === "v2",
         typeof gameState.resetWorldId === "string" ? gameState.resetWorldId : undefined
       )
@@ -185,7 +185,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       processJPRegionalBudgets(
         db,
         newTurn,
-        gameState.regionalLegislationFinanceEnabled === true,
+        true,
         regionalBudgetCadence,
         resetSystemVersionsForCountry(gameState, RESET_V2_READY, "JP").legislation === "v2",
         typeof gameState.resetWorldId === "string" ? gameState.resetWorldId : undefined

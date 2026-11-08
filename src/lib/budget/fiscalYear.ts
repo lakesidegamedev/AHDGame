@@ -134,7 +134,6 @@ export async function processFiscalYear(
     { _id: "current" },
     {
       projection: {
-        regionalLegislationFinanceEnabled: 1,
         resetWorldId: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
@@ -142,26 +141,23 @@ export async function processFiscalYear(
       },
     }
   );
-  const regionalFinanceEnabled = financeState?.regionalLegislationFinanceEnabled === true;
   const usResetLegislationV2 =
     resetSystemVersionsForCountry(financeState, RESET_V2_READY, "US").legislation === "v2";
-  const regionalLegislationTypes = regionalFinanceEnabled
-    ? await db
-        .collection<LegislationType>("legislationTypes")
-        .find(
-          {
-            $or: [
-              { countryScope: { $in: ["us", "uk", "jp"] } },
-              // Legacy records without a countryScope are US laws throughout
-              // the existing policy pipeline and receive administration
-              // metadata from the same compatibility rule.
-              { countryScope: { $exists: false } },
-            ],
-          },
-          { projection: { _id: 1, name: 1, administration: 1, policyOptions: 1 } }
-        )
-        .toArray()
-    : [];
+  const regionalLegislationTypes = await db
+    .collection<LegislationType>("legislationTypes")
+    .find(
+      {
+        $or: [
+          { countryScope: { $in: ["us", "uk", "jp"] } },
+          // Legacy records without a countryScope are US laws throughout
+          // the existing policy pipeline and receive administration
+          // metadata from the same compatibility rule.
+          { countryScope: { $exists: false } },
+        ],
+      },
+      { projection: { _id: 1, name: 1, administration: 1, policyOptions: 1 } }
+    )
+    .toArray();
   const regionalLegislationTypeMap = new Map(
     withLawAdministration(regionalLegislationTypes).map((type) => [type._id, type])
   );
@@ -411,13 +407,12 @@ export async function processFiscalYear(
     const formulaGrantDistribution = isUS
       ? await processFormulaGrants(db, federalRevenue.total, countryId)
       : {};
-    const departmentGrant =
-      isUS && regionalFinanceEnabled
-        ? resolveAnnualRegionalGrantPool({
-            accounts: federalBudget.departmentAccounts ?? {},
-            currentTurn,
-          })
-        : { hasProgram: false, annualPool: 0 };
+    const departmentGrant = isUS
+      ? resolveAnnualRegionalGrantPool({
+          accounts: federalBudget.departmentAccounts ?? {},
+          currentTurn,
+        })
+      : { hasProgram: false, annualPool: 0 };
     const departmentGrantDistribution = departmentGrant.hasProgram
       ? distributeAnnualRegionalGrantPool(
           departmentGrant.annualPool,
@@ -680,7 +675,7 @@ export async function processFiscalYear(
         stateFactors,
         state.gdp,
         currentTurn,
-        regionalFinanceEnabled && countryId === COUNTRY_CONFIGS.US.id,
+        countryId === COUNTRY_CONFIGS.US.id,
         regionalLegislationTypeMap,
         countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : []
       );

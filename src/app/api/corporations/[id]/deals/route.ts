@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
-import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -14,7 +13,6 @@ import {
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
-import { getGameStateCollection } from "@/lib/db/collections";
 import type { Corporation } from "@/lib/db/types";
 import type { AcquisitionOffer } from "@/lib/db/types/acquisitionOffer";
 import {
@@ -51,11 +49,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const gs = await getGameStateCollection(db);
-    const flagDoc = await gs.findOne({ _id: "current" }, { projection: { corpDealsEnabled: 1 } });
-    const enabled = Boolean(flagDoc?.corpDealsEnabled);
-    if (!enabled) return NextResponse.json({ enabled: false, incoming: [], outgoing: [] });
-
     const [deals, subsidiaryAvailable] = await Promise.all([
       listDealsForCorp(db, resolved.corporation._id),
       isSubsidiaryAcquisitionAvailable(db),
@@ -79,8 +72,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
-    const dealsGuard = await requireCorpDealsEnabled(db);
-    if (dealsGuard) return dealsGuard;
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;

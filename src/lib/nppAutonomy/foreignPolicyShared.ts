@@ -104,12 +104,6 @@ export interface ForeignPolicyContext {
   militaryUnits: MilitaryUnit[];
   pendingBattleDeclarations: BattleDeclarationDoc[];
   pendingPeaceOffers: PeaceOfferDoc[];
-  /**
-   * Admin switch for `conduct_war`. False suppresses the candidate outright rather
-   * than refusing it at execution, so the country ranks its remaining options and
-   * spends the slot on one of them instead of burning a whole Tier-1 slot on a refusal.
-   */
-  offensiveInitiationEnabled: boolean;
 }
 
 export interface PersistedForeignPolicyDecision {

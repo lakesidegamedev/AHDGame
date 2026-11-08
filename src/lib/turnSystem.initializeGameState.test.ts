@@ -60,8 +60,6 @@ describe("initializeGameState", () => {
       rpgStatsEnabled: true,
       // Fresh-world policy: every gameplay flag on, NPP autonomy at v4.
       autoSectorSeedEnabled: true,
-      nppOffensiveInitiationEnabled: true,
-      nppOffensiveJoinEnabled: true,
       sectorTechTreesEnabled: true,
       nppAutonomyLevel: "v4",
       nppAutonomyEnabled: true,
@@ -70,17 +68,14 @@ describe("initializeGameState", () => {
     // includes the formerly-staged systems + the granular demographics rework.
     expect(insertedDoc).toMatchObject({
       redistrictingEnabled: true,
-      demographicsLayer1PositionsEnabled: true,
       conflictsEnabled: true,
       coldWarEnabled: true,
-      granularPollEnabled: true,
+      demographicsLayer1PositionsEnabled: true,
       subsidiaryCorporationsEnabled: true,
-      liveElectionResultsEnabled: true,
     });
     // Fresh worlds now boot with every rollout ladder at its top tier
     // (nppAutonomyLevel v4), and the newly-added gameplay flags on.
     expect(insertedDoc).toMatchObject({
-      corpDealsEnabled: true,
       intOrgAlignmentEnabled: true,
     });
     // eurozoneEnabled is era-derived — seedForex sets it per preset, so it is

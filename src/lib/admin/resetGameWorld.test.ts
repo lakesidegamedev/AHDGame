@@ -409,7 +409,6 @@ describe("resetGameWorld", () => {
       iteration: 1,
       nppAutonomyLevel: "v5",
       autoSectorSeedEnabled: false,
-      nppOffensiveJoinEnabled: false,
       settlementCrisisEnabled: false,
     });
     await resetGameWorld(db as never, {
@@ -421,7 +420,6 @@ describe("resetGameWorld", () => {
     assertSetFields(db.collectionMocks.gameState.updateOne, {
       nppAutonomyLevel: "v4",
       autoSectorSeedEnabled: true,
-      nppOffensiveJoinEnabled: true,
       settlementCrisisEnabled: true,
     });
     assertSetFields(db.collectionMocks.gameConfig.updateOne, {

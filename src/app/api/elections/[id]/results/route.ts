@@ -5,7 +5,6 @@ import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import { withApiMetrics } from "@/lib/observability/apiMetrics";
-import { isLiveElectionResultsEnabled } from "@/lib/elections/liveResults/featureFlag";
 import {
   buildResultsPayload,
   payloadFromSnapshot,
@@ -19,7 +18,7 @@ import type { Election, GameState } from "@/lib/db/types";
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 
 // GET /api/elections/[id]/results - Read-only, polling-optimized live results for one election.
-// Auth: public (optional getAuthUser); 403 while the liveElectionResults gate is off for non-admins.
+// Auth: public (optional getAuthUser).
 // Errors: 400, 403, 404
 async function handleGet(
   request: Request,
@@ -44,7 +43,6 @@ async function handleGet(
             pausedAt: 1,
             fastMode: 1,
             preset: 1,
-            liveElectionResultsEnabled: 1,
           },
         }
       ),
@@ -52,9 +50,6 @@ async function handleGet(
     ]);
 
     const isAdmin = user?.isAdmin === true;
-    if (!isLiveElectionResultsEnabled(gameState) && !isAdmin) {
-      return errorResponse(403, "Live election results are not enabled");
-    }
     if (!election) {
       return errorResponse(404, "Election not found");
     }

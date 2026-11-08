@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
-import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { US_STATE_NAMES } from "./ElectionDetailHelpers";
 import type { ElectionDetail } from "./ElectionDetailTypes";
 
@@ -31,14 +30,12 @@ interface ElectionNavigationProps {
 }
 
 export function ElectionNavigation({ election, showLiveLink }: ElectionNavigationProps) {
-  const { liveElectionResultsEnabled } = useWorldFlags();
   const fallbackElectionsHref = `/country/${(election.countryId ?? "US").toLowerCase()}/elections`;
   // Breadcrumb shows the scope only. The full title lives in the <h1> below —
   // rendering it twice, ~40px apart, was pure noise.
   const scopeText =
     election.state === "US" ? "National" : (US_STATE_NAMES[election.state] ?? election.state);
-  const showLiveResults =
-    liveElectionResultsEnabled && election.status !== "upcoming" && showLiveLink !== false;
+  const showLiveResults = election.status !== "upcoming" && showLiveLink !== false;
 
   return (
     <>

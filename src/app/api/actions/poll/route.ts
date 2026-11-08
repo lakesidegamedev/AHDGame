@@ -25,7 +25,6 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { localCampaignBalance } from "@/lib/currency/campaignBalance";
 import { campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import { getGameState } from "@/lib/gameState";
-import { isGranularPollEnabled } from "@/lib/demographics/granularPollFlag";
 import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import { eraYearContextFromGameState } from "@/lib/era/context";
@@ -490,10 +489,10 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Additive granular electorate breakdown: flag-gated, available for the US
-    // and for any country with a CountryLayer1Model, and wrapped so any failure
-    // here never breaks the poll commission.
-    if (pollSnapshot && isGranularPollEnabled(gameState)) {
+    // Additive granular electorate breakdown, available for the US and for any
+    // country with a CountryLayer1Model, and wrapped so any failure here never
+    // breaks the poll commission.
+    if (pollSnapshot) {
       try {
         const countryId = state.countryId ?? "US";
         const isPresidentialGeneral =
