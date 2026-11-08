@@ -2,6 +2,27 @@ import { describe, expect, it } from "vitest";
 import { routeEligibility, tariffTransfers } from "./routeRules";
 
 describe("route eligibility", () => {
+  it("caches fully open routes as well as embargoed routes", () => {
+    let checks = 0;
+    const orders = Array.from({ length: 1000 }, (_, i) => ({
+      id: String(i),
+      commodity: "iron",
+      buyerCountry: i % 2 ? "JP" : "US",
+    }));
+    const result = routeEligibility(
+      orders,
+      [
+        { id: "us", commodity: "iron", sellerCountry: "US" },
+        { id: "jp", commodity: "iron", sellerCountry: "JP" },
+      ],
+      () => {
+        checks++;
+        return true;
+      }
+    );
+    expect(result).toEqual({});
+    expect(checks).toBe(2);
+  });
   const offers = [
     { id: "us-iron", commodity: "iron", sellerCountry: "US" },
     { id: "ru-iron", commodity: "iron", sellerCountry: "RU" },

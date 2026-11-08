@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
+import { gameHealthPhaseCounts } from "@/lib/observability/rules/gameHealthPhaseCounts";
 
 interface AdminAlert {
   key: string;
@@ -30,7 +31,10 @@ export function AdminAlertsStrip({ onNavigate }: AdminAlertsStripProps) {
       .then((data) => {
         const tp = data?.snapshot?.turnProcessing;
         if (!cancelled && tp) {
-          setHealth({ warnings: tp.warningCount ?? 0, errors: tp.errorCount ?? 0 });
+          setHealth({
+            warnings: tp.warningCount ?? 0,
+            errors: gameHealthPhaseCounts(data.snapshot).errors,
+          });
         }
       })
       .catch((err) => {

@@ -10,7 +10,7 @@ import {
   settleProducerTurn,
 } from "@/lib/market/producerMarket/settlement";
 import type { prepareProducerSector } from "./producerSectorPlan";
-import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
 import {
   roundStageTimings,
@@ -23,15 +23,15 @@ export const LIVE_PLANNING_PASSES = 64;
 /** Cooperative budget includes market preparation; final clearing still completes. */
 export const LIVE_PLANNING_BUDGET_MS = 30_000;
 /**
- * Pre-settlement deadline, sized from the phase timeout the deployment actually
- * runs (production raises it to 20 minutes), leaving a quarter of the phase for
- * durable settlement. A fixed 180 s failed turn 743 while the same market had
- * settled within the phase timeout on earlier turns.
+ * Size the pre-settlement deadline from the corporation-specific timeout,
+ * leaving a quarter of the phase for durable settlement and other work.
  */
-export function liveMarketExecutionBudgetMs(phaseTimeoutMs: number): number {
-  return Math.floor(phaseTimeoutMs * 0.75);
+export function liveMarketExecutionBudgetMs(timeoutMs: number): number {
+  return Math.floor(timeoutMs * 0.75);
 }
-export const LIVE_MARKET_EXECUTION_BUDGET_MS = liveMarketExecutionBudgetMs(PHASE_TIMEOUT_MS);
+export const LIVE_MARKET_EXECUTION_BUDGET_MS = liveMarketExecutionBudgetMs(
+  phaseTimeoutMs("corporationTurn")
+);
 
 export { producerWalletId, type ProducerWalletScope };
 

@@ -466,6 +466,30 @@ describe("turn phase registry", () => {
         expect.any(String)
       );
     });
+    it("waits for funding siblings before exposing a failed market to recovery", async () => {
+      const adapter = getTurnPhaseRegistry().find((a) => a.key === "resourceAndFinanceStart")!;
+      let finish!: () => void;
+      const funding = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const failure = new Error("market failed");
+      const runtime = {
+        runPhase: vi.fn(async (name: string) => {
+          if (name === "fundGeneration") await funding;
+          if (name === "corporationTurn") throw failure;
+          return null;
+        }),
+      } as never;
+      let settled = false;
+      const running = adapter.execute(makeContext(false), runtime).finally(() => {
+        settled = true;
+      });
+      const rejected = expect(running).rejects.toBe(failure);
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+      expect(settled).toBe(false);
+      finish();
+      await rejected;
+    });
   });
 });
 
