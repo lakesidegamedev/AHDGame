@@ -53,6 +53,7 @@ interface LeadershipState {
     isCommitteeMember: boolean;
     isPartyMp: boolean;
     canInitiate: boolean;
+    canBack: boolean;
   };
   history: { turn: number; at: string; kind: string; actorName?: string; detail: string }[];
 }

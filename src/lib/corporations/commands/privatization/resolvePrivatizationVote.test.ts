@@ -184,6 +184,8 @@ describe("resolvePrivatizationVote — atomic claim", () => {
       corporationId: corpId,
       lockedBuyoutPrice: 1.1,
       lockedBuyoutCurrency: "USD",
+      // Reserve covers both minority holders (voter + fund) at 1.1.
+      totalReservedCash: 2_200_000,
       votes: [{ characterId: voterId, voteShares: 1_000_000, vote: "yes", castAt: new Date() }],
     });
     const updateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });

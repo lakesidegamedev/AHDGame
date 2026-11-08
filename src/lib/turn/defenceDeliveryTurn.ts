@@ -140,7 +140,7 @@ export async function applyDefenceDeliveries(
         termination: {
           basis: "cause",
           fee: 0,
-          lotsCancelled: Math.max(0, contract.allocatedLots - contract.lotsDelivered),
+          lotsCancelled: Math.max(0, (contract.allocatedLots ?? 0) - (contract.lotsDelivered ?? 0)),
           favorabilityPenalty: 0,
           turn: currentTurn,
         },
