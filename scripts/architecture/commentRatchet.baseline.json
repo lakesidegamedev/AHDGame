@@ -489,10 +489,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "scripts/migrations/migrate-uk-archetypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "scripts/migrations/migrateGovernmentFormation.ts": {
       "longBlocks": 1,
       "narrativeLines": 0

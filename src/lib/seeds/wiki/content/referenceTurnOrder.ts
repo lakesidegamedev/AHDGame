@@ -154,7 +154,7 @@ Crisis turn, naval and air operations, ministerial orders and policy effects run
 
 - **Policy effects**: Active state policies apply their metric effects each turn.
 - **Demographic effects**: State demographic composition shifts based on economic conditions and policy.
-- **Archetype approval decay**: Approval ratings for each demographic archetype decay toward natural baseline.
+- **Voter group approval decay**: Approval bonuses and penalties with each voter group decay toward zero.
 - **Metric decay**: State metrics decay toward baseline values when no policies are active.
 - **Unowned sector growth**: Sectors not owned by any corporation grow autonomously.
 - **Regional budgets**: Regional spending affects state metrics. The UK, Japan, the Länder-model countries, the one-party states and Russia each have their own processor, and they alternate turns (UK, Länder and Russia on even turns, Japan and the one-party states on odd ones).

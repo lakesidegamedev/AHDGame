@@ -154,7 +154,7 @@
     "carveUp": {
       "title": "{state} · Aufteilung",
       "viewDetails": "Staatsdetails ansehen →",
-      "explanation": "Der Anteil jedes Kandidaten = registrierte Wähler × Archetyp × demografische Affinität. Positionsnähe + Einfluss bestimmen die Anziehungskraft; Beliebtheit skaliert die Stimmen bei der Auszählung.",
+      "explanation": "Der Anteil jedes Kandidaten = registrierte Wähler × Wählergruppe × demografische Affinität. Positionsnähe + Einfluss bestimmen die Anziehungskraft; Beliebtheit skaliert die Stimmen bei der Auszählung.",
       "empty": "Für {state} gibt es noch keine prognostizierten Anteile. Die Aufteilung füllt sich, sobald Kandidaten für diese Vorwahl gemeldet sind.",
       "regBase": "Reg.-Basis",
       "topDemographics": "Wichtigste Gruppen: "
