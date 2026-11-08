@@ -9,6 +9,11 @@ import type { InboxItem } from "@/lib/inbox";
 
 vi.mock("./useInboxData", () => ({ useInboxData: vi.fn() }));
 
+let mockSearch = "";
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(mockSearch),
+}));
+
 const mockUseInboxData = vi.mocked(useInboxData);
 
 function notif(id: string): InboxItem {
@@ -149,5 +154,63 @@ describe("InboxClient handleMarkAllRead", () => {
       expect(document.body.textContent).toMatch(/1 item needs/);
     });
     expect(refetch).toHaveBeenCalled();
+  });
+});
+
+describe("InboxClient bell deep link", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetch(() => okJson({ success: true }));
+  });
+
+  afterEach(() => {
+    mockSearch = "";
+    vi.restoreAllMocks();
+  });
+
+  const readOld = (id: string): InboxItem => ({ ...notif(id), unread: false, action: false });
+
+  it("selects the notification named by ?id even when it is outside the default view", async () => {
+    mockSearch = "id=n3";
+    mockUseInboxData.mockReturnValue(
+      hookResult([notif("n1"), notif("n2"), readOld("n3")], vi.fn())
+    );
+
+    render(<InboxClient />);
+
+    await waitFor(() => {
+      const current = document.querySelector('[aria-current="true"]');
+      expect(current?.textContent).toContain("Title n3");
+    });
+  });
+
+  it("marks an unread deep-linked notification read", async () => {
+    mockSearch = "id=n2";
+    mockUseInboxData.mockReturnValue(hookResult([notif("n1"), notif("n2")], vi.fn()));
+
+    render(<InboxClient />);
+
+    await waitFor(() => {
+      const current = document.querySelector('[aria-current="true"]');
+      expect(current?.textContent).toContain("Title n2");
+    });
+    await waitFor(() => {
+      const calls = (global.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+      expect(
+        calls.some((c) => String((c[1] as RequestInit | undefined)?.body).includes('"id":"n2"'))
+      ).toBe(true);
+    });
+  });
+
+  it("falls back to the default selection when the id is unknown", async () => {
+    mockSearch = "id=missing";
+    mockUseInboxData.mockReturnValue(hookResult([notif("n1"), notif("n2")], vi.fn()));
+
+    render(<InboxClient />);
+
+    await waitFor(() => {
+      const current = document.querySelector('[aria-current="true"]');
+      expect(current?.textContent).toContain("Title n1");
+    });
   });
 });
