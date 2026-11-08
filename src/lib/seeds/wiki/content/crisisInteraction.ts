@@ -1,65 +1,71 @@
-export const crisisInteractionContent = `# Crisis Interaction
+export const crisisInteractionContent = `# Crises
 
-A wildfire is burning through a region, a bank has failed, a strike has stopped the ports. You can wait it out, or you can answer it. When a crisis comes with a decision card, the people in charge choose a response, sometimes put treasury money into a shared fund, and their choices change how long the crisis lasts and how hard it hits.
+A bank fails, a flood hits a state, unemployment climbs for months, a war abroad drags in your trade partners. The game treats each of these as a crisis: a situation with a size, a stage and a list of people who can do something about it. You can wait it out or you can answer it, and the outcome depends on what the people in office actually do.
 
-## Where the card comes from
+## What a crisis is
 
-A crisis starts from a game event, from economic or political conditions crossing a trigger, or from the automatic disaster schedule. It applies its effects to state metrics ([National Metrics](/wiki/national-metrics)), [government approval](/wiki/government-approval), corporate profit margins, and in some cases inflation, regional GDP and politicians' stats. Per-turn effects fade linearly from full strength at the start to zero at the end. Crises are created by the game itself, not by players. The wartime society events in [World Events](/wiki/world-events) open as crises with decision cards when world tension is high, and chained campaigns from [Global Response Crises](/wiki/global-response-crises) open their response windows through this same decision system. Crisis alerts and open decisions arrive in the [Notification Center](/wiki/notifications).
+Every crisis has a **severity** from 0 to 100 and a **stage**. Severity is how bad it is right now. The stage is where it is in its life. Effects on [National Metrics](/wiki/national-metrics), [government approval](/wiki/government-approval), corporate profit margins and other systems scale with severity, so a crisis that is shrinking hurts less each turn and one that is growing hurts more.
 
-If the crisis has a decision tree, it appears as a card on your actions page and on **World Crises**. A tree is a short branching story: the first question is the active node, and each option leads to another node, a funding step or the end.
+Crises come from three places:
 
-![Flow from a crisis starting to its decision cards, where an option leads to another node, a funding step with a treasury check, or the end, and an unanswered window resolves on its default.](/wiki-images/diagrams/crisis-interaction-decision-flow.svg)
+- **Scripted events.** Historical and authored shocks that fit the era of your world: wars, pandemics, financial panics, disasters. The long-running international campaigns in [Global Response Crises](/wiki/global-response-crises) are crises of this kind.
+- **Disasters on a schedule.** Regional weather and natural disasters, timed per country and shaped by [climate pressure](/wiki/national-metrics).
+- **Spread from other countries.** A crisis abroad can reach you through trade, finance, alliances, migration or climate. See below.
 
-## Who answers
+Crises are created by the game, never by players. Players decide how they end.
 
-Which card you see depends on your office: heads of government, cabinet members (some cards name a specific seat such as the finance minister), state governors, central bank chairs and party leaders can each get their own questions. If you cannot see a card, you do not hold the office it is addressed to, or the crisis has no decision tree. Single-country crises are answered by the first eligible leader. A crisis put to several countries at once, such as a Vietnam rung, is answered by each country's head of government separately, so one leader's answer never closes another's. Waiting on the other government does not help.
+## The four stages
 
-When the window closes, any unanswered question resolves on its default. Decisions already made stay made. For Vietnam the cautious default holds your current commitment. The turn clock in [Core Systems](/wiki/core-systems) decides cadence, expiry and when windows close.
-
-## Paying into a collective fund
-
-A funding step asks for money from your treasury. The game checks the balance in the [National Budget](/wiki/national-budget) first. If you are short, the option is blocked and shows how much is required against how much you have. A funding step is open to foreign contributors as well as local leaders.
-
-| Item | Value |
+| Stage | What it means |
 | --- | --- |
-| Funding step window (typical) | 24 hours of real time, which is 24 turns |
-| Full funding of a collective fund | Cuts the crisis's total duration by 50% |
-| Funding below target | Cut is proportional: 50% times the share of target raised, rounded down |
-| Vietnam opening windows | 24 turns, 24 real hours |
+| Signal | Early warning. Severity is low but rising. This is the cheapest time to act. |
+| Onset | The crisis has taken hold and its effects begin to bite. |
+| Peak | Full strength. Effects are at their worst and every lever is on the table. |
+| Aftermath | Severity is falling. Emergency pressure eases and recovery starts. A crisis can relapse to peak if severity jumps back up, but a crisis can only do this a limited number of times. |
 
-Take a wildfire crisis with a regional governor decision, then a national suppression fund with a target of 10,000,000.
+When severity drops low enough the crisis is resolved and leaves the active list. A stage also has a minimum length, so a crisis does not skip straight from signal to peak unless severity surges well past the normal threshold. Each crisis type sets its own thresholds and stage lengths. Some crises, such as an authored disaster with a fixed duration, move through the stages on a set schedule instead of reacting to severity.
 
-\`\`\`wiki-chart
-collective-fund-duration-cut
-\`\`\`
+## What moves severity
 
-- The governor picks **Mandatory Evacuation**: the region's GDP growth takes a one-off 1 point hit. **Defend in Place** costs a 0.5 point growth hit and 3 points of government approval, but protects the economy more.
-- Two leaders (heads of government, cabinet members or governors, from any country) contribute 5,000,000 and 2,000,000. The fund reaches 7,000,000, which is 70% of the target.
-- The duration cut is 50% times 70% = 35% of the crisis's total duration. On a crisis lasting 20 turns that is 7 turns cut, rounded down.
-- A third leader who declines gives nothing and loses nothing. The treasury is debited only for what a leader actually commits, and the amount is added to the fund total.
+Each turn severity changes by:
 
-This is why funding is a real fiscal choice. Funding a fund that other governments will fill anyway is cheaper for you than carrying the whole bill.
+- **Drivers push it up.** These are real numbers from the simulation: unemployment, GDP growth, bank stress, how far safety-net spending or interest rates sit from where they should be. Prior policy matters here. A country that already runs a thin safety net or lets its banks run hot feeds the crises that exploit exactly that.
+- **Responses push it down.** Every response (called a lever) removes severity points. There is a cap on how much can be removed in one turn, so stacking many responses has limits.
+- **The stage itself.** Aftermath eases on its own, and some stages shed a little severity each turn.
+- **Inaction pushes it up.** If nobody does anything meaningful for several turns in a row, the crisis starts feeding on itself. After a grace period it adds a growing amount each turn up to a ceiling. Token moves too small to count do not reset the clock.
 
-## Disasters that arrive on a schedule
+## The "if nobody acts" forecast
 
-The automatic schedule creates regional disasters from the same templates, using each template's region-scale duration. It swaps in its own margin shock (below) unless the template already carries one. Players are hit as residents of the region: the penalty lands on sector margins, state metrics and approval, and disasters cut profit margins for sectors in the affected region ([Corporations](/wiki/corporations)). Automatic disasters apply effects only. They have no decision card.
+Every crisis card shows a severity trend and a dashed line for the do-nothing projection: roughly where severity ends up if no one pulls a lever. It holds the current stage and driver pressure fixed, so read it as an estimate ("about"), not a promise. It is there so you can see what waiting costs before you decide.
 
-| Item | Value |
-| --- | --- |
-| Auto-disaster cadence | One per country every 144 turns, staggered by country so they do not all fire together. Under high climate pressure a weather disaster can come early, but never sooner than 108 turns |
-| Same disaster type recurring | At least 144 turns apart in a country |
-| Auto-disaster margin penalty | Minus 10 percentage points on sectors in the hit region, fading linearly to zero by the end |
-| Weather disaster treasury loss | 0.02% of smoothed GDP, scaled up where climate pressure is high and regional resilience is low |
+## Keeping the load sane
 
-Expect a disaster in roughly every 144-turn cycle, so keep enough treasury to afford a response; weather disasters also draw the treasury down directly.
+The game limits how many crises run at once, by size. Local and state crises are cheap and common. A national crisis counts for far more, and a country will not carry more than about two at once. A world-scale crisis counts for most, and only a small number run at a time, spaced at least a day of turns apart. This keeps the world busy without burying everyone in cards.
 
-## Chains
+## Who can act and what it costs
 
-Some historical crises continue across several decisions instead of ending after one. A chain records its family and current stage, so later crises can advance, hold or reduce the same shared situation. Vietnam is the first full chain. The long-running international campaigns, including stages, country memory, tension and nuclear effects, are on [Global Response Crises](/wiki/global-response-crises).
+See [Crisis Responses](/wiki/crisis-responses) for the full list of offices, costs, the emergency bill and how your record is kept.
 
-- Pulling back from a chain lowers your committed support before it lowers the shared stage.
-- Increasing support in a chain spends treasury and moves Cold War readiness, bloc cohesion, war weariness and procurement demand.
-- A flashpoint crisis lets a nation's alignment move faster while it stays open; see [Bloc Alignment & Spheres](/wiki/bloc-spheres).
+## How crises spread between countries
 
-Applies in every current world. A world only sees the era-bound crisis types and chain families that fit its current year; natural disasters are not limited by era. Last checked 2026-10-29, version 1.18.0. Exact rules: [Crisis System](https://docs.lakesidegames.net/design/crisis-system.html)
+A crisis can travel along real links between countries. There are five channels: **trade**, **finance** (bond holdings), **alliance**, **migration** and **climate**. Each link says how much of the source crisis's severity passes on, and from what severity and stage it starts.
+
+- A spread arrives with a delay, based on how the source looked a few turns earlier, so you usually get some warning.
+- Heavier links pass on more. Light links do nothing.
+- Spread either adds severity to a matching crisis already open in the other country, or opens a new one there.
+- Smaller countries that run in the background do not simulate their own response, so their size is what counts. A large background country passes a shock on harder than a small one.
+- A source crisis can only reach a few countries per link per turn.
+
+Governments run by non-player parties answer too. Their head of government, finance minister and central bank chair pull the same executive levers a player would, in proportion to how bad the crisis is, how much their treasury and output can bear, and how willing that government is to intervene. They will not spend their approval into the floor to do it, and there is a cap on how many responses they make in a single turn. A seat held by a player is left to the player.
+
+## The crises page, nav count and inbox
+
+**World Crises** is the one place to see all of it. It opens on a world map. Hotspots are sized and colored by severity and type, and lines show crises that are spreading or that share a war. A side panel shows your personal exposure first: your state, your companies, the sectors you hold shares in, your office. Below the map, crises are grouped by what needs doing: needs a response, escalating, ongoing, winding down, history. You can filter to crises affecting you, conflicts, global, national, regional or debt watch. The old conflicts page now lands here.
+
+Each crisis has a card with its stage track, severity trend with the do-nothing line, and the responses available to you inline. Open one for the detail page: where it stands, a **Who did what** log, and any **Lasting damage**. The same card appears on your actions page when you are in the crisis's scope.
+
+- **Nav count.** The Crises item in the World menu shows how many crises you can currently do something about. Each crisis counts once, however many levers you hold on it.
+- **Inbox alerts.** When a crisis in your country or state moves on to a new step you get a message in your inbox that links to the crisis. Alerts arrive on the next turn after the change, not instantly. See [Notifications](/wiki/notifications).
+
+Last checked 2026-11-08, version 1.20.0. Exact rules: [Crisis System](https://docs.lakesidegames.net/design/crisis-system.html)
 `;
