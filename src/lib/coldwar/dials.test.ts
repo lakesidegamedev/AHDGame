@@ -98,6 +98,7 @@ describe("dialTensionReading (2027 bloc pairs)", () => {
 
 describe("Cold War console dials in a multipolar world", () => {
   it("answer the hottest bloc pair when the global value is calm", async () => {
+    ladder.state = null;
     const db = {
       collection(name: string) {
         return {
