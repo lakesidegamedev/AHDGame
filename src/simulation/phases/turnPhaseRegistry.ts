@@ -1073,7 +1073,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         phaseResults.scotusTurn = scotusTurnResult ?? {
           tenure: { seatsAdvanced: 0, seatsVacatedByHistory: 0, seatsVacatedByHazard: 0 },
           docket: { casesFired: 0, casesAffirmed: 0, casesDiverged: 0 },
-          surpriseCase: { spawned: false },
+          surpriseCase: { spawned: false, decided: 0 },
           nominations: { nominationsProcessed: 0, confirmed: 0, rejected: 0 },
         };
         phaseResults.ukJrSurpriseTurn = ukJrSurpriseResult ?? { spawned: false };

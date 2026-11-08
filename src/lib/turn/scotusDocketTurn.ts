@@ -59,7 +59,7 @@ export async function processScotusDocketTurn(
 
   const pendingCases = await database
     .collection<DocketCase>("docketCases")
-    .find({ countryId: "US", status: "pending" })
+    .find({ countryId: "US", status: "pending", hearingDueTurn: { $exists: false } })
     .toArray();
 
   // Compare on the CALENDAR turn, not the raw one: `yearToTurn` anchors to

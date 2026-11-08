@@ -2,20 +2,20 @@
  * SCOTUS Surprise Case Turn.
  *
  * Each turn, `rollSurpriseCaseSpawn` (pure, unit-tested in isolation) checks
- * whether a procedurally spawned, non-historical Docket case fires. Unlike a
+ * whether a procedurally spawned, non-historical Docket case is filed. A filed
+ * case is inserted as `status: "pending"` with a `hearingDueTurn`, so players
+ * see it on the docket for a few months before the Court rules. Unlike a
  * curated Docket case, a surprise case has no real historical ruling to affirm
- * or diverge from, so there is no "affirms history" no-op state: every spawn
- * produces a ruling, decided purely by the sitting Court's majority headcount on
- * the picked template's tagged axis (`decideCaseOutcome`; see the doc comment on
- * `HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION` for the placeholder direction).
+ * or diverge from, so there is no "affirms history" no-op state: when the
+ * hearing turn arrives the case is decided purely by the sitting Court's
+ * majority headcount at that moment on the template's tagged axis
+ * (`decideCaseOutcome`; see the doc comment on `HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION`).
  *
- * A fired case is synthesized AND resolved in the same turn, inserted into
- * `docketCases` directly as `status: "decided"` (never `"pending"`) and tagged
- * `isSurprise: true`, so it never enters `scotusDocketTurn.ts`'s pending-case
- * query and the history read layer can tell it apart from real historical
- * content. The ruling (when the majority isn't tied) flows through the same
- * `onBillEnacted` pipeline a diverged Docket case uses, tagged
- * `source: "scotus_surprise_ruling"` so audit trails and UI can separate it.
+ * Rows carry `isSurprise: true` and `hearingDueTurn`, which keeps them out of
+ * `scotusDocketTurn.ts`'s pending-case query and lets the history read layer
+ * tell them apart from real historical content. The ruling (when the majority
+ * isn't tied) flows through the same `onBillEnacted` pipeline a diverged Docket
+ * case uses, tagged `source: "scotus_surprise_ruling"`.
  *
  * Runs AFTER `scotusDocketTurn.ts`: a same-turn Court composition change should
  * be reflected before any case is decided.
@@ -34,16 +34,23 @@ import { decideCaseOutcome, type SeatedJusticeLean } from "@/lib/scotus/divergen
 import {
   drawableTemplates,
   rollSurpriseCaseSpawn,
+  surpriseCaseHearingDelayTurns,
   surpriseCaseSpawnProbabilityForYear,
 } from "@/lib/scotus/surpriseCaseSpawn";
-import { SURPRISE_CASE_TEMPLATES, templatesForYear } from "@/lib/scotus/surpriseCaseTemplates";
+import {
+  SURPRISE_CASE_TEMPLATES,
+  templatesForYear,
+  type SurpriseCaseTemplate,
+} from "@/lib/scotus/surpriseCaseTemplates";
 import { generateScotusSurpriseNews } from "@/lib/scotus/scotusNews";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
 export interface ScotusSurpriseCaseTurnResult {
+  /** A new case was filed to the pending docket this turn. */
   spawned: boolean;
   caseKey?: string;
-  majoritySide?: -1 | 0 | 1;
+  /** Pending cases whose hearing turn arrived and were ruled on. */
+  decided: number;
 }
 
 /**
@@ -56,65 +63,23 @@ export interface ScotusSurpriseCaseTurnResult {
  */
 const HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION = 1 as const;
 
-export async function processScotusSurpriseCaseTurn(
-  currentTurn: number,
-  db?: Db,
-  spawnRandomDraw: number = Math.random(),
-  templatePickRandomDraw: number = Math.random()
-): Promise<ScotusSurpriseCaseTurnResult> {
-  const database = db ?? (await getDb());
-
-  const gameState = await getGameState();
-  const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
-  const startingYear = gameState?.startingYear ?? getStartingYearForPreset(preset);
-  // Surprise cases have no authored decisionYear, so this is the current
-  // calendar year. Use the calendar clock: with a founding phase the raw
-  // turn runs a full game year ahead of the year players see, which would
-  // stamp the wrong era on rulings.
-  const decisionYear = yearOfTurn(currentTurn, startingYear, {
-    preIterationActive: gameState?.preIteration?.active,
-    preIterationTurns: gameState?.preIterationTurns,
-  });
-
-  if (!rollSurpriseCaseSpawn(spawnRandomDraw, surpriseCaseSpawnProbabilityForYear(decisionYear))) {
-    return { spawned: false };
-  }
-
-  const heardCases = (
-    await database
-      .collection<DocketCase>("docketCases")
-      .find({ countryId: "US", isSurprise: true }, { projection: { caseKey: 1, decisionYear: 1 } })
-      .toArray()
-  ).map((c) => ({ caseKey: c.caseKey, decisionYear: c.decisionYear }));
-  // Era filter runs BEFORE the dedup pick so the draw is uniform over cases
-  // that could actually be heard this year. The windows cut both ways: a 1953
-  // Court cannot hear a solar-cartel antitrust suit, and a 2019 Court cannot sue
-  // the Bureau of the Budget, which became OMB in 1970.
-  // Filtered on the era clock, not on decisionYear. `decisionYear` is just
-  // startingYear + turns and is what the case is stamped with.
-  const eraYear = (await getEraContext(database)).year;
-  const eraEligible = templatesForYear(SURPRISE_CASE_TEMPLATES, eraYear);
-  const available = drawableTemplates(eraEligible, heardCases, decisionYear);
-  if (available.length === 0) {
-    // Pool exhausted for this era — no unused flavor content left that this
-    // year could plausibly produce. Not an error: the spawn hazard just yields
-    // nothing until the pool grows or the clock moves into a new window.
-    return { spawned: false };
-  }
-  const templateIndex = Math.min(
-    available.length - 1,
-    Math.floor(templatePickRandomDraw * available.length)
-  );
-  const template = available[templateIndex];
-
+async function loadSeatedJustices(database: Db): Promise<SeatedJusticeLean[]> {
   const seats = await database
     .collection<SupremeCourtSeat>("supremeCourtSeats")
     .find({ countryId: "US" })
     .toArray();
-  const seatedJustices: SeatedJusticeLean[] = seats
+  return seats
     .filter((s) => s.justiceCharacterId || s.justiceNppId || s.justiceMode === "historical")
     .map((s) => ({ economicLean: s.economicLean ?? 0, socialLean: s.socialLean ?? 0 }));
+}
 
+async function decidePendingSurpriseCase(
+  database: Db,
+  docketCase: DocketCase,
+  template: SurpriseCaseTemplate,
+  seatedJustices: SeatedJusticeLean[],
+  currentTurn: number
+): Promise<void> {
   const decision = decideCaseOutcome(
     seatedJustices,
     template.axis,
@@ -154,6 +119,105 @@ export async function processScotusSurpriseCaseTurn(
     }));
   }
 
+  await database.collection<DocketCase>("docketCases").updateOne(
+    { _id: docketCase._id, status: "pending" },
+    {
+      $set: {
+        effect: chosenEffect,
+        status: "decided",
+        outcome: "diverged", // surprise cases have no affirm state: every hearing is a ruling
+        decidedAtTurn: currentTurn,
+        decidedAt: now,
+        decisionSeatedFor: decision.positiveCount,
+        decisionSeatedAgainst: decision.negativeCount,
+        ...(enactedLawId && { enactedLawId }),
+        updatedAt: now,
+      },
+    }
+  );
+
+  // Full news/wire post — see scotusNews.ts doc comment (this turn posted
+  // nothing before that module existed).
+  await generateScotusSurpriseNews(template, decision).catch((err) =>
+    console.error(`[scotusSurpriseCaseTurn] news post failed for ${template.templateKey}:`, err)
+  );
+}
+
+async function decideDueSurpriseCases(database: Db, currentTurn: number): Promise<number> {
+  const due = await database
+    .collection<DocketCase>("docketCases")
+    .find({ countryId: "US", status: "pending", hearingDueTurn: { $lte: currentTurn } })
+    .toArray();
+  if (due.length === 0) return 0;
+
+  const seatedJustices = await loadSeatedJustices(database);
+  let decided = 0;
+  for (const docketCase of due) {
+    const template = SURPRISE_CASE_TEMPLATES.find((t) => t.templateKey === docketCase.caseKey);
+    if (!template) {
+      console.error(`[scotusSurpriseCaseTurn] no template for pending case ${docketCase.caseKey}`);
+      continue;
+    }
+    await decidePendingSurpriseCase(database, docketCase, template, seatedJustices, currentTurn);
+    decided++;
+  }
+  return decided;
+}
+
+export async function processScotusSurpriseCaseTurn(
+  currentTurn: number,
+  db?: Db,
+  spawnRandomDraw: number = Math.random(),
+  templatePickRandomDraw: number = Math.random(),
+  hearingDelayRandomDraw: number = Math.random()
+): Promise<ScotusSurpriseCaseTurnResult> {
+  const database = db ?? (await getDb());
+
+  const gameState = await getGameState();
+  const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
+  const startingYear = gameState?.startingYear ?? getStartingYearForPreset(preset);
+  // Surprise cases have no authored decisionYear, so this is the current
+  // calendar year. Use the calendar clock: with a founding phase the raw
+  // turn runs a full game year ahead of the year players see, which would
+  // stamp the wrong era on rulings.
+  const decisionYear = yearOfTurn(currentTurn, startingYear, {
+    preIterationActive: gameState?.preIteration?.active,
+    preIterationTurns: gameState?.preIterationTurns,
+  });
+
+  const decided = await decideDueSurpriseCases(database, currentTurn);
+
+  if (!rollSurpriseCaseSpawn(spawnRandomDraw, surpriseCaseSpawnProbabilityForYear(decisionYear))) {
+    return { spawned: false, decided };
+  }
+
+  const heardCases = (
+    await database
+      .collection<DocketCase>("docketCases")
+      .find({ countryId: "US", isSurprise: true }, { projection: { caseKey: 1, decisionYear: 1 } })
+      .toArray()
+  ).map((c) => ({ caseKey: c.caseKey, decisionYear: c.decisionYear }));
+  // Era filter runs BEFORE the dedup pick so the draw is uniform over cases
+  // that could actually be heard this year. The windows cut both ways: a 1953
+  // Court cannot hear a solar-cartel antitrust suit, and a 2019 Court cannot sue
+  // the Bureau of the Budget, which became OMB in 1970.
+  // Filtered on the era clock, not on decisionYear. `decisionYear` is just
+  // startingYear + turns and is what the case is stamped with.
+  const eraYear = (await getEraContext(database)).year;
+  const eraEligible = templatesForYear(SURPRISE_CASE_TEMPLATES, eraYear);
+  const available = drawableTemplates(eraEligible, heardCases, decisionYear);
+  if (available.length === 0) {
+    // Pool exhausted for this era — no unused flavor content left that this
+    // year could plausibly produce. Not an error: the spawn hazard just yields
+    // nothing until the pool grows or the clock moves into a new window.
+    return { spawned: false, decided };
+  }
+  const templateIndex = Math.min(
+    available.length - 1,
+    Math.floor(templatePickRandomDraw * available.length)
+  );
+  const template = available[templateIndex];
+
   await database.collection<DocketCase>("docketCases").insertOne({
     _id: new ObjectId(),
     countryId: "US",
@@ -162,24 +226,12 @@ export async function processScotusSurpriseCaseTurn(
     title: template.title,
     axis: template.axis,
     decisionYear,
-    effect: chosenEffect,
-    status: "decided",
-    outcome: "diverged", // #3607: surprise cases have no affirm state — every spawn is a ruling
-    decidedAtTurn: currentTurn,
-    decidedAt: now,
-    decisionSeatedFor: decision.positiveCount,
-    decisionSeatedAgainst: decision.negativeCount,
-    ...(enactedLawId && { enactedLawId }),
+    status: "pending",
+    hearingDueTurn: currentTurn + surpriseCaseHearingDelayTurns(hearingDelayRandomDraw),
     isSurprise: true,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
 
-  // Full news/wire post — see scotusNews.ts doc comment (this turn posted
-  // nothing before that module existed).
-  await generateScotusSurpriseNews(template, decision).catch((err) =>
-    console.error(`[scotusSurpriseCaseTurn] news post failed for ${template.templateKey}:`, err)
-  );
-
-  return { spawned: true, caseKey: template.templateKey, majoritySide: decision.majoritySide };
+  return { spawned: true, caseKey: template.templateKey, decided };
 }
