@@ -104,7 +104,7 @@ export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
  */
 const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
   isAdmin: { $ne: true },
-  role: { $nin: ["admin", "moderator", "junior_dev"] },
+  role: { $nin: ["admin", "moderator"] },
   isBanned: { $ne: true },
 });
 

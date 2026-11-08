@@ -42,7 +42,7 @@ export interface User {
   username: string;
   displayName: string;
   password: string;
-  role: "admin" | "moderator" | "junior_dev" | "player";
+  role: "admin" | "moderator" | "player";
   isAdmin?: boolean;
   isBanned?: boolean;
   banReason?: string;
@@ -252,8 +252,6 @@ export interface User {
   modNotes?: ModNote[];
   /** When moderator role was assigned. */
   moderatorSince?: Date;
-  /** When the junior dev (read-only staff) role was assigned. */
-  juniorDevSince?: Date;
   /** When this user last voluntarily retired a character (player_deleted). Used to enforce creation cooldown. */
   lastRetiredAt?: Date;
   /** Cumulative anchor-unit amount wired in the current 24h quota window. */

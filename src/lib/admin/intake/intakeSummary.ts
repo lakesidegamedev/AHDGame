@@ -104,7 +104,7 @@ export async function computeIntakeSummary(
         $match: {
           createdAt: { $gte: since },
           isAdmin: { $ne: true },
-          role: { $nin: ["admin", "moderator", "junior_dev"] },
+          role: { $nin: ["admin", "moderator"] },
         },
       },
       firstCharacter("characters"),
