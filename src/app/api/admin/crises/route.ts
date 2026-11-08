@@ -6,7 +6,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { ALL_CRISIS_TEMPLATES, getTemplateDuration } from "@/lib/crises/templates";
 import type { Crisis } from "@/lib/db/types/crisis";
-import { isCrisisInteractionEnabled } from "@/lib/crises/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { createCrisisInteraction } from "@/lib/crises/interactionEngine";
@@ -65,9 +64,6 @@ export async function GET() {
 
     const db = await getDb();
     const crises = await db.collection<Crisis>("crises").find({}).sort({ createdAt: -1 }).toArray();
-    // Surface the feature flag so the admin client can gate the template UI
-    // without importing the server-only DB helper into the browser bundle.
-    const interactionEnabled = await isCrisisInteractionEnabled();
     // Surface the game's starting year so the admin client labels start dates
     // against the active preset's calendar (e.g. 1991-default) rather than the
     // 2019 fallback baked into turnToLarpDate.
@@ -97,7 +93,6 @@ export async function GET() {
 
     return NextResponse.json({
       crises,
-      interactionEnabled,
       autoDisastersEnabled,
       autoCrisisPaused,
       startingYear,
@@ -140,12 +135,6 @@ export async function POST(req: Request) {
     let crisis: Omit<Crisis, "_id">;
 
     if ("templateKey" in body) {
-      // Template-based creation — only available when crisis interactions are enabled
-      const enabled = await isCrisisInteractionEnabled();
-      if (!enabled) {
-        return errorResponse(403, "Crisis interaction templates are not enabled");
-      }
-
       const template = ALL_CRISIS_TEMPLATES[body.templateKey];
       if (!template) {
         return errorResponse(400, "Unknown template");
@@ -211,8 +200,8 @@ export async function POST(req: Request) {
 
     // Create the interaction document immediately rather than waiting for the
     // turn processor's `turn === startTurn` branch (which is skipped once the
-    // turn advances past the creation turn). Only when the feature is enabled.
-    if (insertedCrisis.interactionDefinition && (await isCrisisInteractionEnabled())) {
+    // turn advances past the creation turn).
+    if (insertedCrisis.interactionDefinition) {
       await createCrisisInteraction(db, insertedCrisis);
     }
 

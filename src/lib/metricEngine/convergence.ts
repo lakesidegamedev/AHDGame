@@ -2,8 +2,7 @@
  * Macro-growth v1 (design §4) — the convergence term (O2) and sector-signal
  * blend (O3) that fold corporate/tangible growth and historical catch-up into
  * potential growth. Pure functions + calibration constants; the phase wires the
- * inputs and gates the whole thing on `macroGrowthV1`. Flag-on only — off,
- * `phase.ts` never calls these.
+ * inputs.
  */
 
 /** Convergence slope: pp of catch-up per natural-log unit of relative-income gap. */

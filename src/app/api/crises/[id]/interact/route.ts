@@ -11,7 +11,6 @@ import {
   resolveCharacterRoles,
   getCrisisInteraction,
 } from "@/lib/crises/interactionEngine";
-import { isCrisisInteractionEnabled, isCrisisAidBillsEnabled } from "@/lib/crises/featureFlag";
 import { submitCrisisAidPledge } from "@/lib/crises/aidPledge";
 import type { CountryId } from "@/lib/constants/countries";
 import { ObjectId } from "mongodb";
@@ -28,12 +27,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
     const user = auth.user;
-
-    // Feature gate: reject if crisis interaction system is disabled
-    const enabled = await isCrisisInteractionEnabled();
-    if (!enabled) {
-      return errorResponse(403, "Crisis interactions are not enabled");
-    }
 
     if (!ObjectId.isValid(id)) {
       return errorResponse(400, "Invalid crisis interaction ID");
@@ -66,9 +59,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       (n) => n.nodeId === interaction.currentNodeId
     );
     if (currentNode?.type === "aid") {
-      if (!(await isCrisisAidBillsEnabled())) {
-        return errorResponse(403, "Aid bills are not enabled");
-      }
       // Decline: advance via the normal engine path using the provided optionId.
       if (decline === true) {
         if (!optionId) {

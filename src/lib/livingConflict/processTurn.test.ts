@@ -4,11 +4,6 @@ import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { LivingConflictState } from "./types";
 
-vi.mock("@/lib/crises/featureFlag", () => ({
-  isCrisisInteractionEnabled: vi.fn().mockResolvedValue(true),
-  isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false),
-}));
-
 import { processLivingConflictsTurn } from "./processTurn";
 
 function pathValue(value: Record<string, unknown>, path: string): unknown {

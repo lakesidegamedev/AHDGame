@@ -75,7 +75,6 @@ describe("/api/admin/settlement", () => {
       _id: "current",
       currentTurn: 412,
       currentYear: 1953,
-      settlementCrisisEnabled: true,
     } as never);
     prime(db, "settlementCrises").findOne.mockResolvedValue(null);
     prime(db, "settlementCrises").find.mockReturnValue(cursor([]));
@@ -99,10 +98,10 @@ describe("/api/admin/settlement", () => {
     expect((await GET()).status).toBe(403);
   });
 
-  it("reports the gate, the era and no crisis when none is live", async () => {
+  it("reports the turn and no crisis when none is live", async () => {
     const { GET } = await import("./route");
     const body = await (await GET()).json();
-    expect(body).toMatchObject({ enabled: true, currentTurn: 412, crisis: null });
+    expect(body).toMatchObject({ currentTurn: 412, crisis: null });
   });
 
   it("tells the operator when the next World News briefing is due", async () => {

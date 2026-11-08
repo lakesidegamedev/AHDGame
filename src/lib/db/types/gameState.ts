@@ -298,17 +298,6 @@ export interface GameState {
   playerRandomEventsEnabled?: boolean;
   playerRandomEventsEnabledBy?: string;
   playerRandomEventsEnabledAt?: string;
-  /**
-   * When true, country-scope World Events v1 offers new events (Phase 0: only
-   * manual admin-trigger produces them — no scheduler yet). Default false.
-   */
-  worldEventsEnabled?: boolean;
-  worldEventsEnabledBy?: string;
-  worldEventsEnabledAt?: string;
-  /** When true, the crisis interaction system (decision trees, collective contributions, input nodes) is active. */
-  crisisInteractionEnabled?: boolean;
-  crisisInteractionEnabledBy?: string;
-  crisisInteractionEnabledAt?: string;
   /** Master gate for the automatic crisis system (disasters + economic/political). */
   autoDisastersEnabled?: boolean;
   autoDisastersEnabledBy?: string;
@@ -361,10 +350,6 @@ export interface GameState {
   nppForeignPolicyStage?: NppForeignPolicyStage;
   nppForeignPolicyStageBy?: string;
   nppForeignPolicyStageAt?: string;
-  /** When true, crisis international-aid nodes use the slider + legislature-bill flow. */
-  crisisAidBillsEnabled?: boolean;
-  crisisAidBillsEnabledBy?: string;
-  crisisAidBillsEnabledAt?: string;
   /** Temporary pause: the system stays enabled/configured but no new crises or
    *  disasters spawn while true. Existing crises continue to run. */
   autoCrisisPaused?: boolean;
@@ -446,10 +431,6 @@ export interface GameState {
   processingEngine?: "v1" | "v2" | null;
   /** Behaviour version of the in-flight turn's engine (e.g. "2.0.0"); stamped with `processingEngine`. */
   processingEngineVersion?: string | null;
-  /** Master gate for the automatic sector seeding system (fires every 48 turns). */
-  autoSectorSeedEnabled?: boolean;
-  autoSectorSeedEnabledBy?: string;
-  autoSectorSeedEnabledAt?: string;
   /** Turn on which the auto-sector seeding last fired. Guards the 48-turn interval. */
   lastAutoSeedTurn?: number;
   /**
@@ -506,16 +487,6 @@ export interface GameState {
   subsidiaryCorporationsEnabled?: boolean;
   subsidiaryCorporationsEnabledBy?: string;
   subsidiaryCorporationsEnabledAt?: string;
-  /**
-   * Master gate for legislation demographic effects v2: lean/turnout
-   * DemographicEffect targets (economicLean/socialLean/turnout) plus their
-   * decay-toward-baseline. The legacy population channel is NOT gated. Absent
-   * reads as false (fail-closed); fresh worlds seed it true via
-   * DEFAULT_GAME_STATE_FLAGS.
-   */
-  legislationDemographicEffectsV2Enabled?: boolean;
-  legislationDemographicEffectsV2EnabledBy?: string;
-  legislationDemographicEffectsV2EnabledAt?: string;
   /** Reset-era metrics engine. Absent and invalid values run the live v1 path. */
   /** Changes on every world reset; an opening-seed receipt is valid only for this world. */
   resetWorldId?: string;
@@ -540,27 +511,6 @@ export interface GameState {
   demographicsSystemVersionBy?: string;
   demographicsSystemVersionAt?: string;
   /**
-   * Master gate for the new-player onboarding checklist (profile checklist
-   * card, page-visit step tracking, welcome mail, completion reward). When
-   * off, the profile shows the legacy NewPlayerBanner and no onboarding
-   * writes happen. Fresh worlds seed this on (featureFlagDefaults.ts).
-   */
-  onboardingChecklistEnabled?: boolean;
-  onboardingChecklistEnabledBy?: string;
-  onboardingChecklistEnabledAt?: string;
-  /**
-   * Master gate for the end-of-iteration Season Recap ("Wrapped"). When on,
-   * `resetGameWorld` builds each character's recap before the runtime wipe and
-   * stamps it onto their `retiredCharacters` doc, the post-reset gate surfaces
-   * it on next login, and it becomes re-viewable in character history. Voluntary
-   * and admin retirements also build a recap while on. Fail-closed: absent/false
-   * = system inert (no recaps written, gate returns nothing). Fresh worlds seed
-   * it on (DEFAULT_GAME_STATE_FLAGS).
-   */
-  seasonRecapEnabled?: boolean;
-  seasonRecapEnabledBy?: string;
-  seasonRecapEnabledAt?: string;
-  /**
    * Master gate for IntOrg alignment. When false or absent the system is inert:
    * the alignment turn phase writes nothing, no drift accrues, plays cannot be
    * committed, and neither the Cold War Ledger nor the Influence tab renders.
@@ -572,14 +522,6 @@ export interface GameState {
   intOrgAlignmentEnabled?: boolean;
   intOrgAlignmentEnabledBy?: string;
   intOrgAlignmentEnabledAt?: string;
-  /**
-   * Master gate for settlement crises (the German Question). Fail-closed: only
-   * an explicit `true` enables. Fresh worlds seed it on
-   * (DEFAULT_GAME_STATE_FLAGS).
-   */
-  settlementCrisisEnabled?: boolean;
-  settlementCrisisEnabledBy?: string;
-  settlementCrisisEnabledAt?: string;
   /**
    * Highest Bundestag cycle whose AMS list-seat reconciliation has completed.
    * Scopes `maybeReconcileBundestag` so each cycle reconciles exactly once and
@@ -642,16 +584,6 @@ export interface GameState {
   eraSystemEnabled?: boolean;
   eraSystemEnabledBy?: string;
   eraSystemEnabledAt?: string;
-  /**
-   * Macro-growth v1 (design 2026-07-09 §4): enables the Solow convergence term
-   * (O2) + sector-signal blend (O3) on potential growth. Staged rollout, OFF by
-   * default — flip only after reviewing scripts/debug/macro-growth-dryrun.mjs
-   * (per-country openness gate + convergence bonus). Independent of
-   * eraSystemEnabled; flag-off is byte-identical to legacy potential growth.
-   */
-  macroGrowthV1?: boolean;
-  macroGrowthV1By?: string;
-  macroGrowthV1At?: string;
   /**
    * Per-country GDP-per-capita baseline for the era income band (metric era
    * catalog). Self-healed by computeNationalMetrics on the first flag-on turn

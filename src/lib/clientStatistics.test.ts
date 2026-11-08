@@ -24,7 +24,7 @@ function validReport() {
       featureFlags: {
         forexEnabled: true,
         rpgStatsEnabled: false,
-        onboardingChecklistEnabled: true,
+        playerRandomEventsEnabled: true,
       },
     },
     metrics: {

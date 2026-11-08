@@ -382,7 +382,7 @@ export async function loadGermanQuestionDossier(
   characterId: ObjectId
 ): Promise<DossierView | null> {
   const ctx = await loadSettlementActorContext(db, characterId);
-  if (!ctx || !ctx.crisisId) return null;
+  if (!ctx.crisisId) return null;
 
   const crises = await getSettlementCrisesCollection(db);
   const crisis = await crises.findOne({ status: "open" });

@@ -895,8 +895,6 @@ export interface EffectTargetWeighted {
  * - "population": group population share (legacy channel, always active).
  * - "economicLean" / "socialLean": group lean on the shared −5..+5 axis.
  * - "turnout": group turnout percentage (0-100).
- * Lean/turnout targets only apply when the `legislationDemographicEffectsV2Enabled`
- * game-state flag is on (fail-closed: absent flag = population channel only).
  */
 export type DemographicEffectTarget = "population" | "economicLean" | "socialLean" | "turnout";
 

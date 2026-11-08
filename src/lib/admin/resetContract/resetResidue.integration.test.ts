@@ -23,7 +23,10 @@ vi.mock("@/lib/world/careerEvidence", () => ({
   archiveRetiredCareerLegislation: vi.fn(async () => undefined),
   loadCareerLoans: vi.fn(async () => []),
 }));
-vi.mock("@/lib/world/forex", () => ({ fetchExchangeRateMap: vi.fn(async () => new Map()) }));
+vi.mock("@/lib/world/forex", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/world/forex")>()),
+  fetchExchangeRateMap: vi.fn(async () => new Map()),
+}));
 vi.mock("@/lib/retireCharacter", () => ({
   // Archive and delete, as the real retirement does after its office cleanup.
   retireCharacter: vi.fn(async (db: Db, character: { _id: ObjectId }) => {

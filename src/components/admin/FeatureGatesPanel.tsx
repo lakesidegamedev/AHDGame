@@ -59,11 +59,6 @@ export const BOOLEAN_GATES: BooleanGate[] = [
     desc: "PREE offers new players random events.",
   },
   {
-    key: "crisisInteractionEnabled",
-    label: "Crisis interaction",
-    desc: "Decision trees, collective contributions, input nodes.",
-  },
-  {
     key: "livingConflictsEnabled",
     label: "Living conflicts and global responses",
     desc: "1.3 phased world conflicts, role-specific government responses, and aggregate outcomes. Enabling retires the legacy Vietnam choice chain.",
@@ -74,11 +69,6 @@ export const BOOLEAN_GATES: BooleanGate[] = [
     desc: "Master gate for the automatic crisis/disaster system.",
   },
   {
-    key: "crisisAidBillsEnabled",
-    label: "Crisis aid bills",
-    desc: "Aid nodes use the slider + legislature-bill flow.",
-  },
-  {
     key: "demographicsLayer1PositionsEnabled",
     label: "Demographics Layer-1 positions",
     desc: "Seed derives archetype econ/social from Layer-1 positions.",
@@ -87,11 +77,6 @@ export const BOOLEAN_GATES: BooleanGate[] = [
     key: "rpgStatsEnabled",
     label: "RPG stats",
     desc: "Character stat allocation, drift, debates.",
-  },
-  {
-    key: "autoSectorSeedEnabled",
-    label: "Auto sector seeding",
-    desc: "Re-seeds unowned sectors every 48 turns.",
   },
   {
     key: "redistrictingEnabled",
@@ -109,40 +94,9 @@ export const BOOLEAN_GATES: BooleanGate[] = [
     desc: "Decade eras: era stamps + wire news at rollover, and approval/metric thresholds drift with the in-game decade. Review scripts/debug/era-approval-dryrun.ts before enabling.",
   },
   {
-    key: "legislationDemographicEffectsV2Enabled",
-    label: "Legislation demographic effects v2",
-    desc: "Bills shift voter-group lean and turnout over time (economicLean/socialLean/turnout targets + decay toward seeded baselines). Population channel is always on.",
-  },
-  {
-    key: "onboardingChecklistEnabled",
-    label: "Onboarding checklist",
-    desc: "New-player 7-step checklist on the profile page, welcome mail at character creation, and one-time completion reward. Off = legacy new-player banner.",
-  },
-  {
-    key: "macroGrowthV1",
-    label: "Macro-growth v1 (convergence)",
-    desc: "Folds corporate buildout + historical catch-up into region GDP growth: a Solow convergence bonus toward the frontier (O2, gated by a state-ownership/trade/freedom openness index), a sector-signal blend into potential (O3), and paid corp growth-cost into the capital stock (O1c, capped at 5% of region GDP/yr). Review scripts/debug/macro-growth-dryrun.mjs before enabling.",
-  },
-  // ── Three gates below were in the route's enum but missing from this panel,
-  // so they were unreachable from the UI. Found by featureGateParity.test.ts,
-  // which now holds the two lists in agreement.
-  {
-    // `isSeasonRecapEnabled` documents this as "flipped from the admin Feature
-    // Gates panel" — but the entry was never added, so the doc described a
-    // control that did not exist.
-    key: "seasonRecapEnabled",
-    label: "Season recap (Wrapped)",
-    desc: "End-of-iteration Season Recap. Off or absent = inert: resetGameWorld builds no recaps, voluntary/admin retirements attach none, and the post-reset gate surfaces nothing.",
-  },
-  {
     key: "intOrgAlignmentEnabled",
     label: "IntOrg alignment",
     desc: "Cold War alignment: every nation holds a share per bloc pole plus a non-aligned remainder, drifting each turn and moved by influence plays. Adds the Cold War Ledger and the per-org Influence tab. On for fresh worlds. Seeded values are written regardless, so flipping this on shows a populated map rather than blank rows.",
-  },
-  {
-    key: "settlementCrisisEnabled",
-    label: "Settlement crises",
-    desc: "The German Question: a standing contest over whether West Germany stays sovereign in NATO or reunifies into the Warsaw Pact, fought across four weighted institutions by the GDR, USSR, USA and UK. On for fresh worlds but incomplete: the turn phase runs and nothing creates a crisis yet, so the switch currently does nothing.",
   },
 ];
 

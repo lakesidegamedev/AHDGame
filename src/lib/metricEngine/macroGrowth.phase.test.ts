@@ -5,13 +5,11 @@ import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital"
 import { runMetricEngine } from "./phase";
 
 /**
- * Macro-growth v1 (design §4): the ONLY variable under test is
- * gameState.macroGrowthV1. Era system is off (isolate O2/O3). Two regions in two
- * countries — US is the rich frontier, CN is poor + market-open (low SOCI) — so
- * the convergence bonus lands on CN. Asserts CN's persisted potentialGrowth is
- * strictly higher with the flag ON.
+ * Macro-growth v1 (design §4). Era system is off (isolate O2/O3). Two regions in
+ * two countries: US is the frontier, CN is poor + market-open (low SOCI), so the
+ * convergence bonus lands on CN and grows with the distance to the frontier.
  */
-function seedWorld(db: MockDb, macroGrowthV1: boolean): void {
+function seedWorld(db: MockDb, usGdp = 5_000_000): void {
   const setupCollection = <T>(name: string, data: T[]): void => {
     db.collection(name);
     db.collectionMocks[name]!.find = vi.fn().mockReturnValue({
@@ -23,7 +21,7 @@ function seedWorld(db: MockDb, macroGrowthV1: boolean): void {
   db.collection("gameState");
   db.collectionMocks.gameState!.findOne = vi
     .fn()
-    .mockResolvedValue({ _id: "current", eraSystemEnabled: false, macroGrowthV1 });
+    .mockResolvedValue({ _id: "current", eraSystemEnabled: false });
 
   // US region (rich → the frontier) + CN region (poor). Same fx (exchangeRates
   // empty ⇒ fx 1) so anchor pc == local pc.
@@ -33,7 +31,7 @@ function seedWorld(db: MockDb, macroGrowthV1: boolean): void {
       name: "s_us",
       countryId: "US",
       population: 100,
-      gdp: 5_000_000,
+      gdp: usGdp,
       workingAgePopulation: 70,
       militaryServicePopulation: 0,
     },
@@ -123,30 +121,30 @@ function capitalFor(db: MockDb, stateId: string): number {
   return doc!.updateOne.update.$set.capitalStock;
 }
 
-describe("macroGrowthV1: O2 convergence on potential", () => {
+describe("macro growth: O2 convergence on potential", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetCorpFxRateCacheForTests();
   });
 
-  it("a poor, market-open region's potentialGrowth is higher with the flag ON", async () => {
-    const dbOff = createMockDb();
-    seedWorld(dbOff, false);
-    await runMetricEngine(dbOff as unknown as Db, 100);
-    const off = cnPotential(dbOff);
+  it("a poor, market-open region's potentialGrowth is higher the further it trails the frontier", async () => {
+    const dbLevel = createMockDb();
+    seedWorld(dbLevel, 100_000);
+    await runMetricEngine(dbLevel as unknown as Db, 100);
+    const atFrontier = cnPotential(dbLevel);
 
     resetCorpFxRateCacheForTests();
-    const dbOn = createMockDb();
-    seedWorld(dbOn, true);
-    await runMetricEngine(dbOn as unknown as Db, 100);
-    const on = cnPotential(dbOn);
+    const dbBehind = createMockDb();
+    seedWorld(dbBehind);
+    await runMetricEngine(dbBehind as unknown as Db, 100);
+    const behind = cnPotential(dbBehind);
 
-    expect(Number.isFinite(off)).toBe(true);
-    expect(on).toBeGreaterThan(off);
+    expect(Number.isFinite(atFrontier)).toBe(true);
+    expect(behind).toBeGreaterThan(atFrontier);
   });
 });
 
-describe("macroGrowthV1: O1c corp investment on capital → potential", () => {
+describe("macro growth: O1c corp investment on capital → potential", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetCorpFxRateCacheForTests();
@@ -179,7 +177,7 @@ describe("macroGrowthV1: O1c corp investment on capital → potential", () => {
 
   const runWithStates = async (states: unknown[]): Promise<number> => {
     const db = createMockDb();
-    seedWorld(db, true);
+    seedWorld(db);
     db.collectionMocks.states!.find = vi.fn().mockReturnValue({
       project: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(states) }),
       toArray: vi.fn().mockResolvedValue(states),
@@ -202,7 +200,7 @@ describe("macroGrowthV1: O1c corp investment on capital → potential", () => {
   });
 });
 
-describe("macroGrowthV1: budget-backed public capital", () => {
+describe("macro growth: budget-backed public capital", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetCorpFxRateCacheForTests();
@@ -210,7 +208,7 @@ describe("macroGrowthV1: budget-backed public capital", () => {
 
   const runWithInfrastructure = async (annualLocalMillions: number): Promise<number> => {
     const db = createMockDb();
-    seedWorld(db, true);
+    seedWorld(db);
     db.collectionMocks.federalBudget!.find = vi.fn().mockReturnValue({
       project: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([

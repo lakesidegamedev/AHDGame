@@ -3,6 +3,7 @@
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { displayEffect } from "@/lib/country/rules/approvalBreakdown";
 import { buildModifierTitle, toneFor } from "./modifierTitle";
+import { ApprovalEffectIcon } from "@/components/approval/ApprovalEffectIcon";
 
 function marginForModifier(modifier: ActiveModifier): number | null {
   if (
@@ -15,55 +16,6 @@ function marginForModifier(modifier: ActiveModifier): number | null {
     return null;
   if (modifier.marginEffect === 0) return null;
   return modifier.marginEffect ?? null;
-}
-
-function EffectIcon({ effect }: { effect: number }) {
-  // A war that nets to zero gets a flat bar rather than the falling arrow: it is
-  // neither costing nor earning the government approval this turn.
-  if (effect === 0) {
-    return (
-      <svg
-        className="h-3.5 w-3.5 text-slate-500 shrink-0"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden
-      >
-        <path d="M5.75 10.75a.75.75 0 010-1.5h8.5a.75.75 0 010 1.5h-8.5z" />
-      </svg>
-    );
-  }
-  if (effect > 0) {
-    return (
-      <svg
-        className="h-3.5 w-3.5 text-emerald-500 shrink-0"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden
-      >
-        <path
-          fillRule="evenodd"
-          d="M10 3a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V3.75A.75.75 0 0110 3z"
-          clipRule="evenodd"
-        />
-        <path d="M5.75 8.25a.75.75 0 010-1.5h8.5a.75.75 0 010 1.5h-8.5z" />
-      </svg>
-    );
-  }
-  return (
-    <svg
-      className="h-3.5 w-3.5 text-rose-500 shrink-0"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 3a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V3.75A.75.75 0 0110 3z"
-        clipRule="evenodd"
-      />
-      <path d="M5.75 11.75a.75.75 0 010-1.5h8.5a.75.75 0 010 1.5h-8.5z" />
-    </svg>
-  );
 }
 
 const TONE_CLASSES: Record<ReturnType<typeof toneFor>, string> = {
@@ -88,7 +40,7 @@ function ModifierChip({ modifier }: { modifier: ActiveModifier }) {
       }
       title={buildModifierTitle(modifier)}
     >
-      <EffectIcon effect={modifier.effect} />
+      <ApprovalEffectIcon sizeClass="h-3.5 w-3.5" effect={modifier.effect} />
       <span>{modifier.label}</span>
       <span className="tabular-nums font-semibold">
         {positive ? "+" : ""}

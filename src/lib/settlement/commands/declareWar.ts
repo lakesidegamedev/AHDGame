@@ -43,7 +43,6 @@ export async function declareSettlementWar(
   characterId: ObjectId
 ): Promise<DeclareWarResult> {
   const ctx = await loadSettlementActorContext(db, characterId);
-  if (!ctx) return fail(404, "The German Question is not running.");
   if (!ctx.crisisId) return fail(404, "No settlement crisis is open.");
 
   const seat = ctx.seat;

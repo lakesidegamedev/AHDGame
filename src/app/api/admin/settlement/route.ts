@@ -83,13 +83,9 @@ export const GET = withAdminRoute(async (_auth) => {
   // Asked ONLY when the Open button is the one on screen. With a question
   // already live the answer changes nothing an operator can act on, and this
   // is a scan of the conflicts collection on every poll of the admin board.
-  const openWarning =
-    !live && gameState?.settlementCrisisEnabled === true
-      ? await describeQualifyingWar(db).catch(() => null)
-      : null;
+  const openWarning = !live ? await describeQualifyingWar(db).catch(() => null) : null;
 
   return NextResponse.json({
-    enabled: gameState?.settlementCrisisEnabled === true,
     currentTurn,
     // Present before anything is pressed, so the caution arrives while it can
     // still change the operator's mind rather than after the fact.

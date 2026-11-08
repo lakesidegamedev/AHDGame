@@ -1056,13 +1056,6 @@ async function main() {
     .collection<GameConfig>("gameConfig")
     .updateOne({ _id: "default" }, { $set: { simSandbox: true } }, { upsert: true });
 
-  if (macroGrowth) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { macroGrowthV1: true } });
-    log("Set macroGrowthV1=true on sandbox gameState");
-  }
-
   if (allFeatureFlags) {
     const { DEFAULT_GAME_STATE_FLAGS } = await import("@/lib/seeds/reference/featureFlagDefaults");
     // Experimental gates stay out: arming the frontier-entry trial as a side
