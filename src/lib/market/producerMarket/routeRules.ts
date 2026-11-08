@@ -56,7 +56,7 @@ export function routeEligibility(
   for (const order of orders) {
     const key = `${order.commodity}|${order.buyerCountry}`;
     let list = cache.get(key);
-    if (!list) {
+    if (!cache.has(key)) {
       const ids: string[] = [];
       let closed = false;
       const byCountry = byCommodityCountry.get(order.commodity);
